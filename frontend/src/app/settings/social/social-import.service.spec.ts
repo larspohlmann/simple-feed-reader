@@ -70,6 +70,7 @@ describe('SocialImportService', () => {
       .importSelection(4, {
         subscribe: [{ feedUrl: 'https://bsky.app/profile/did:plc:bob/rss', title: 'Bob' }],
         unsubscribe: [],
+        collections: [],
       })
       .subscribe((answer) => (answered = answer));
     expect(service.importing()).toBe(true);

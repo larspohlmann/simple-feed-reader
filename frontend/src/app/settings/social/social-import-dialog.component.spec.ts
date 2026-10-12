@@ -10,7 +10,7 @@ import { TagsStore } from '../../reader/state/tags.store';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { SocialNetwork } from './social-accounts.service';
 import { SocialImportDialogComponent } from './social-import-dialog.component';
-import { FollowCandidate, ImportCandidates } from './social-import.service';
+import { CollectionCandidate, FollowCandidate, ImportCandidates } from './social-import.service';
 
 const BASE = 'https://api.test';
 const CANDIDATES = `${BASE}/api/me/social-accounts/4/import-candidates`;
@@ -44,6 +44,20 @@ const DAVE = follow({
   state: 'no_longer_followed',
   subscriptionId: 10,
 });
+
+function collection(overrides: Partial<CollectionCandidate> = {}): CollectionCandidate {
+  return {
+    kind: 'list',
+    id: 'at://list/a',
+    name: 'News',
+    state: 'new',
+    subscriptionId: null,
+    ...overrides,
+  };
+}
+
+const HOME = collection({ kind: 'home', id: null, name: 'Home' });
+const DISCOVER = collection({ kind: 'custom_feed', id: 'at://feed/a', name: 'Discover' });
 
 function candidates(overrides: Partial<ImportCandidates> = {}): ImportCandidates {
   return { follows: [], lists: [], customFeeds: [], truncated: false, ...overrides };
@@ -105,6 +119,14 @@ describe('SocialImportDialogComponent', () => {
       'input[type="checkbox"]',
     ) as HTMLInputElement;
 
+  const collectionBox = (
+    fixture: ComponentFixture<SocialImportDialogComponent>,
+    key: string,
+  ): HTMLInputElement =>
+    byTestId(fixture, `social-import-collection-${key}`)?.querySelector(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+
   function tick(fixture: ComponentFixture<SocialImportDialogComponent>, identity: string): void {
     checkboxOf(fixture, identity).click();
     fixture.detectChanges();
@@ -143,9 +165,7 @@ describe('SocialImportDialogComponent', () => {
   });
 
   it('labels each group with its count', () => {
-    const fixture = loaded(
-      candidates({ follows: [follow(), CAROL], lists: [{ id: 'at://list/a', name: 'News' }] }),
-    );
+    const fixture = loaded(candidates({ follows: [follow(), CAROL], lists: [collection()] }));
 
     expect(byTestId(fixture, 'social-import-follows')?.textContent).toContain(
       'Accounts you follow (2)',
@@ -174,19 +194,48 @@ describe('SocialImportDialogComponent', () => {
     expect(text).toContain('No longer followed');
   });
 
-  it('lists lists and custom feeds without a checkbox', () => {
+  it('offers lists and custom feeds as checkboxes, the added ones checked and fixed', () => {
     const fixture = loaded(
       candidates({
-        lists: [{ id: 'at://list/a', name: 'News' }],
-        customFeeds: [{ id: 'at://feed/a', name: 'Discover' }],
+        lists: [HOME, collection({ state: 'subscribed', subscriptionId: 12 })],
+        customFeeds: [DISCOVER],
       }),
     );
 
     const lists = byTestId(fixture, 'social-import-lists') as HTMLElement;
-    expect(lists.textContent).toContain('News');
-    expect(lists.textContent).toContain('arrives with private timeline feeds');
-    expect(lists.querySelector('input')).toBeNull();
-    expect(byTestId(fixture, 'social-import-feeds')?.querySelector('input')).toBeNull();
+    expect(lists.textContent).toContain('Home timeline');
+    expect(lists.textContent).not.toContain('arrives with private timeline feeds');
+    expect(collectionBox(fixture, 'home:').checked).toBe(false);
+    expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(true);
+    expect(collectionBox(fixture, 'list:at://list/a').disabled).toBe(true);
+    expect(collectionBox(fixture, 'list:at://list/a').getAttribute('aria-label')).toBe(
+      'Already added: News',
+    );
+    expect(collectionBox(fixture, 'custom_feed:at://feed/a').getAttribute('aria-label')).toBe(
+      'Add Discover',
+    );
+  });
+
+  it('imports the chosen collections and refreshes the reader', () => {
+    const fixture = loaded(candidates({ lists: [HOME], customFeeds: [DISCOVER] }));
+    collectionBox(fixture, 'home:').click();
+    collectionBox(fixture, 'custom_feed:at://feed/a').click();
+    fixture.detectChanges();
+
+    press(fixture, 'social-import-apply');
+    const post = http.expectOne(IMPORT);
+    expect(post.request.body).toEqual({
+      subscribe: [],
+      unsubscribe: [],
+      collections: [
+        { kind: 'home', id: null, name: 'Home' },
+        { kind: 'custom_feed', id: 'at://feed/a', name: 'Discover' },
+      ],
+    });
+    post.flush({ imported: 2, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 0 });
+
+    expect(subscriptionsStub.load).toHaveBeenCalled();
+    expect(refreshStub.run).toHaveBeenCalled();
   });
 
   it('filters by handle or display name', () => {
@@ -232,6 +281,7 @@ describe('SocialImportDialogComponent', () => {
     expect(post.request.body).toEqual({
       subscribe: [{ feedUrl: 'https://bsky.app/profile/did:plc:bob/rss', title: 'Bob' }],
       unsubscribe: [],
+      collections: [],
     });
     post.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 0 });
   });
@@ -256,6 +306,7 @@ describe('SocialImportDialogComponent', () => {
         { feedUrl: 'https://bsky.app/profile/did:plc:fay/rss', title: null },
       ],
       unsubscribe: [10],
+      collections: [],
     });
     const result = {
       imported: 2,

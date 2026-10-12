@@ -77,11 +77,29 @@
         [attr.data-testid]="section.testId"
         [label]="section.labelKey | transloco: { count: section.items.length }"
       >
-        <p class="note">{{ 'settings.social.importCollectionsLater' | transloco }}</p>
         <ul class="rows">
-          @for (item of section.items; track item.id) {
-            <li class="row">
-              <span class="handle">{{ item.name }}</span>
+          @for (item of section.items; track collectionKey(item)) {
+            <li>
+              <label
+                class="row"
+                [attr.data-testid]="'social-import-collection-' + collectionKey(item)"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="isCollected(item)"
+                  [disabled]="item.state === 'subscribed'"
+                  [attr.aria-label]="
+                    collectionCheckboxKeys[item.state] | transloco: { name: collectionName(item) }
+                  "
+                  (change)="toggleCollection(item)"
+                />
+                <span class="who">
+                  <span class="handle">{{ collectionName(item) }}</span>
+                </span>
+                <span class="state" [class.is-new]="item.state === 'new'">
+                  {{ stateKeys[item.state] | transloco }}
+                </span>
+              </label>
             </li>
           } @empty {
             <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
