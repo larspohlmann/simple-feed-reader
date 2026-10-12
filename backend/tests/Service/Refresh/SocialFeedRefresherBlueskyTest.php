@@ -6,6 +6,7 @@ namespace App\Tests\Service\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\ShareKind;
@@ -35,6 +36,7 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
 {
     private const string PDS = 'https://pds.example.test';
     private const string IMAGE_POST = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mv3shqdfuc2e';
+    private const string FACET_POST = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3facetonly';
     private const string LINK_POST = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t';
 
     private RoutedHttpClient $http;
@@ -60,7 +62,7 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
         $result = $this->refresher()->refresh($home->getFeed(), new \DateTimeImmutable('2026-10-12 12:00:00'));
 
         self::assertSame(FeedOutcome::Fetched, $result->outcome);
-        self::assertSame(2, $result->entriesCreated);
+        self::assertSame(3, $result->entriesCreated);
         $repost = $this->entry(self::IMAGE_POST);
         self::assertSame('', $repost->getTitle());
         self::assertTrue($repost->isTitleDerived());
@@ -69,8 +71,38 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
         self::assertSame(ShareKind::Link, $link->getShareKind());
         $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$link->requireId()]);
         self::assertSame(Bluesky::CARD, ($cards[$link->requireId()] ?? [])[0]->url ?? null);
-        self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count());
+        self::assertSame(1, $this->entityManager->getRepository(ShareEnrichment::class)->count());
         self::assertSame([self::PDS . '/xrpc/app.bsky.feed.getTimeline?limit=50'], $this->timelineRequests());
+    }
+
+    public function testATimelinePostWithALinkFacetAndNoEmbedIsAShareAwaitingItsCard(): void
+    {
+        $home = $this->blueskyHome();
+
+        $this->refresher()->refresh($home->getFeed(), new \DateTimeImmutable('2026-10-12 12:00:00'));
+
+        $post = $this->entry(self::FACET_POST);
+        self::assertSame(ShareKind::Link, $post->getShareKind());
+        $rows = $this->entityManager->getRepository(ShareEnrichment::class)->findAll();
+        self::assertCount(1, $rows);
+        self::assertSame(ShareEnrichmentKind::LinkCards, $rows[0]->getKind());
+        self::assertSame($post->requireId(), $rows[0]->getEntry()->requireId());
+    }
+
+    /** @return array{record: array<string, mixed>, embed?: array<string, mixed>, uri?: string} */
+    private static function linkOnlyPost(): array
+    {
+        $url = 'https://github.com/webx-ui/module-blog';
+        $post = self::postView('external');
+        unset($post['embed']);
+        $post['uri'] = self::FACET_POST;
+        $post['record']['text'] = 'module-blog v0.69.0 ' . $url;
+        $post['record']['facets'] = [[
+            'index' => ['byteStart' => 20, 'byteEnd' => 20 + \strlen($url)],
+            'features' => [['$type' => 'app.bsky.richtext.facet#link', 'uri' => $url]],
+        ]];
+
+        return $post;
     }
 
     private function blueskyHome(): SocialFeed
@@ -122,10 +154,12 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
             ],
         ];
 
-        return json_encode(['feed' => [$repost, ['post' => self::postView('external')]]], \JSON_THROW_ON_ERROR);
+        $posts = [$repost, ['post' => self::postView('external')], ['post' => self::linkOnlyPost()]];
+
+        return json_encode(['feed' => $posts], \JSON_THROW_ON_ERROR);
     }
 
-    /** @return array{record: array<string, mixed>} */
+    /** @return array{record: array<string, mixed>, embed?: array<string, mixed>, uri?: string} */
     private static function postView(string $fixture): array
     {
         /** @var array{posts: list<array{record: array<string, mixed>}>} $answer */

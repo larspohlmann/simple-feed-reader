@@ -29,7 +29,7 @@ final readonly class KnownShareSettler
     ) {
     }
 
-    /** Ends where PostEnricher::settle() leaves an RSS Bluesky post: one without an embed shares nothing. */
+    /** Ends where PostEnricher::settle() leaves an RSS Bluesky post: one without an embed or a link shares nothing. */
     public function settleEmbedded(Entry $entry, JsonNodeModel $post, \DateTimeImmutable $queuedAt): void
     {
         $outcome = $this->filled($entry, $post);

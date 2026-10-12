@@ -162,9 +162,9 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         self::assertCount(1, $this->storedCards($stored));
     }
 
-    public function testAKnownBlueskyPostWithoutAnEmbedSharesNothing(): void
+    public function testAKnownBlueskyPostWithoutAnEmbedOrALinkSharesNothing(): void
     {
-        $post = $this->post(self::AT_POST, '<p>See <a href="https://example.com/a">https://example.com/a</a></p>');
+        $post = $this->post(self::AT_POST, '<p>Just words.</p>');
 
         $this->queue->queueWithKnownShares(
             [$post],
@@ -174,6 +174,20 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         self::assertSame([], $this->queuedKinds());
         self::assertNull($this->reload($post)->getShareKind());
+    }
+
+    public function testAKnownBlueskyPostWithALinkAndNoEmbedAwaitsItsLinkCard(): void
+    {
+        $post = $this->post(self::AT_POST, '<p>See <a href="https://example.com/a">https://example.com/a</a></p>');
+
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::ofBlueskyPosts([self::AT_POST => JsonNodeModel::of(['uri' => self::AT_POST])]),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([self::AT_POST => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
+        self::assertSame(ShareKind::Link, $this->reload($post)->getShareKind());
     }
 
     public function testAMastodonCardCardsItsLinkWithoutAPageFetch(): void

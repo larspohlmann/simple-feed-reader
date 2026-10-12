@@ -37,7 +37,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
     {
         $embed = $this->renderer->render($post);
         if ($embed === null) {
-            return FillOutcome::Unfilled;
+            return $this->fillFromText($entry);
         }
 
         $body = self::sharedBody($entry->getContentHtml() ?? '', $embed);
@@ -56,6 +56,20 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         $entry->setShareKind(self::shareKindOf($embed, $outcome, $assembled->media));
 
         return $outcome;
+    }
+
+    private function fillFromText(Entry $entry): FillOutcome
+    {
+        $shared = SharedLinks::of($entry->getContentHtml() ?? '');
+        if ($shared->urls === []) {
+            return FillOutcome::Unfilled;
+        }
+
+        $entry->setContentHtml($this->sanitizer->sanitize($shared->linkedHtml));
+        $entry->setSummary(EntrySnippet::from($shared->linkedHtml));
+        $entry->setShareKind(ShareKind::Link);
+
+        return FillOutcome::AwaitingLinkCards;
     }
 
     /** @param list<EntryMedium> $media */

@@ -53,6 +53,47 @@ final class EntryEmbedWriterTest extends DbTestCase
         )], $this->storedCards($entry));
     }
 
+    public function testAPostWithALinkInItsTextAndNoEmbedBecomesALinkShareAwaitingItsCard(): void
+    {
+        $entry = $this->entry(
+            '<p>v0.69.0 <a href="https://github.com/webx-ui/module-blog">github.com/webx-ui/mod…</a></p>',
+        );
+
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, self::postWithoutEmbed()));
+
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
+        self::assertStringContainsString(
+            '<a href="https://github.com/webx-ui/module-blog"',
+            (string) $entry->getContentHtml(),
+        );
+    }
+
+    public function testABareUrlInTheTextOfAPostWithoutAnEmbedIsLinkedAndAwaitsItsCard(): void
+    {
+        $entry = $this->entry('<p>v0.69.0 https://github.com/webx-ui/module-blog</p>');
+
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, self::postWithoutEmbed()));
+
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
+        self::assertStringContainsString(
+            '<a href="https://github.com/webx-ui/module-blog"',
+            (string) $entry->getContentHtml(),
+        );
+    }
+
+    public function testAPostWithNeitherAnEmbedNorALinkStaysUnfilledWithoutAShareKind(): void
+    {
+        $entry = $this->entry('<p>Just words, and a <a href="https://bsky.app/hashtag/php">#php</a> tag.</p>');
+
+        self::assertSame(FillOutcome::Unfilled, $this->writer()->fill($entry, self::postWithoutEmbed()));
+
+        self::assertNull($entry->getShareKind());
+        self::assertSame(
+            '<p>Just words, and a <a href="https://bsky.app/hashtag/php">#php</a> tag.</p>',
+            $entry->getContentHtml(),
+        );
+    }
+
     public function testAnotherUrlInTheTextIsLinkedAndAwaitsItsCard(): void
     {
         $entry = $this->entry('<p>See https://example.com/other</p>');
@@ -296,6 +337,11 @@ final class EntryEmbedWriterTest extends DbTestCase
     private static function untitledLinkPost(): JsonNodeModel
     {
         return JsonNodeModel::of(Bluesky::untitledLinkView('at://did:plc:a/app.bsky.feed.post/b'));
+    }
+
+    private static function postWithoutEmbed(): JsonNodeModel
+    {
+        return JsonNodeModel::of(['uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t']);
     }
 
     private function entry(?string $contentHtml): Entry
