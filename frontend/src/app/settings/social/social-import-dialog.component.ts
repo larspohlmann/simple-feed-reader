@@ -3,12 +3,14 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { pluralKey } from '../../core/i18n/plural-key';
+import { toggled } from '../../core/toggled-set';
 import { RefreshService } from '../../reader/state/refresh.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
+import { inputValue } from '../../shared/input-value';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
@@ -17,6 +19,7 @@ import { SocialNetwork } from './social-accounts.service';
 import {
   FollowCandidate,
   ImportCandidateState,
+  SocialCollection,
   SocialImportResult,
   SocialImportService,
 } from './social-import.service';
@@ -38,6 +41,12 @@ const CHECKBOX_KEYS: Readonly<Record<ImportCandidateState, string>> = {
   subscribed: 'settings.social.importAlreadySubscribed',
   no_longer_followed: 'settings.social.importUnsubscribe',
 };
+
+interface CollectionSection {
+  readonly labelKey: string;
+  readonly testId: string;
+  readonly items: readonly SocialCollection[];
+}
 
 @Component({
   selector: 'app-social-import-dialog',
@@ -66,58 +75,58 @@ export class SocialImportDialogComponent {
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
 
-  protected readonly showsCustomFeeds = this.data.network === 'bluesky';
+  protected readonly stateKeys = STATE_KEYS;
+  protected readonly checkboxKeys = CHECKBOX_KEYS;
+  protected readonly inputValue = inputValue;
+  private readonly showsCustomFeeds = this.data.network === 'bluesky';
   protected readonly filter = signal('');
   protected readonly toSubscribe = signal<ReadonlySet<string>>(new Set());
   protected readonly toUnsubscribe = signal<ReadonlySet<number>>(new Set());
 
   private readonly needle = computed(() => this.filter().trim().toLowerCase());
 
-  protected readonly follows = computed(() =>
-    (this.importer.candidates()?.follows ?? []).filter((follow) =>
-      this.matches(follow.handle, follow.displayName),
-    ),
-  );
-  protected readonly lists = computed(() =>
-    (this.importer.candidates()?.lists ?? []).filter((list) => this.matches(list.name)),
-  );
-  protected readonly customFeeds = computed(() =>
-    (this.importer.candidates()?.customFeeds ?? []).filter((feed) => this.matches(feed.name)),
-  );
-  protected readonly visibleNew = computed(() =>
-    this.follows().filter((follow) => follow.state === 'new'),
-  );
-  protected readonly hasLeftovers = computed(() =>
-    this.follows().some((follow) => follow.state === 'no_longer_followed'),
-  );
+  protected readonly followView = computed(() => {
+    const follows: FollowCandidate[] = [];
+    const visibleNew: FollowCandidate[] = [];
+    let hasLeftovers = false;
+    for (const follow of this.importer.candidates()?.follows ?? []) {
+      if (!this.matches(follow.handle, follow.displayName)) continue;
+      follows.push(follow);
+      if (follow.state === 'new') visibleNew.push(follow);
+      if (follow.state === 'no_longer_followed') hasLeftovers = true;
+    }
+    return { follows, visibleNew, hasLeftovers };
+  });
   protected readonly selectedCount = computed(
     () => this.toSubscribe().size + this.toUnsubscribe().size,
   );
 
   protected readonly followsKey = computed(() =>
-    pluralKey('settings.social.importFollows', this.follows().length),
+    pluralKey('settings.social.importFollows', this.followView().follows.length),
   );
-  protected readonly listsKey = computed(() =>
-    pluralKey('settings.social.importLists', this.lists().length),
-  );
-  protected readonly customFeedsKey = computed(() =>
-    pluralKey('settings.social.importCustomFeeds', this.customFeeds().length),
-  );
+  protected readonly collections = computed<readonly CollectionSection[]>(() => {
+    const candidates = this.importer.candidates();
+    const sections = [
+      this.collection('settings.social.importLists', 'social-import-lists', candidates?.lists),
+    ];
+    if (this.showsCustomFeeds) {
+      sections.push(
+        this.collection(
+          'settings.social.importCustomFeeds',
+          'social-import-feeds',
+          candidates?.customFeeds,
+        ),
+      );
+    }
+    return sections;
+  });
 
   constructor() {
+    this.load();
+  }
+
+  protected load(): void {
     this.importer.load(this.data.accountId);
-  }
-
-  protected typed(event: Event): string {
-    return (event.target as HTMLInputElement).value;
-  }
-
-  protected stateKey(follow: FollowCandidate): string {
-    return STATE_KEYS[follow.state];
-  }
-
-  protected checkboxKey(follow: FollowCandidate): string {
-    return CHECKBOX_KEYS[follow.state];
   }
 
   protected isChosen(follow: FollowCandidate): boolean {
@@ -144,12 +153,8 @@ export class SocialImportDialogComponent {
   }
 
   protected selectAllNew(): void {
-    const feedUrls = this.visibleNew().map((follow) => follow.feedUrl);
+    const feedUrls = this.followView().visibleNew.map((follow) => follow.feedUrl);
     this.toSubscribe.update((current) => new Set([...current, ...feedUrls]));
-  }
-
-  protected retry(): void {
-    this.importer.load(this.data.accountId);
   }
 
   protected apply(): void {
@@ -199,18 +204,17 @@ export class SocialImportDialogComponent {
     this.toast.show({ message: done + overLimit, durationMs: CONFIRMATION_DURATION_MS });
   }
 
+  private collection(
+    label: string,
+    testId: string,
+    items: readonly SocialCollection[] = [],
+  ): CollectionSection {
+    const shown = items.filter((item) => this.matches(item.name));
+    return { labelKey: pluralKey(label, shown.length), testId, items: shown };
+  }
+
   private matches(...texts: readonly (string | null)[]): boolean {
     const needle = this.needle();
     return needle === '' || texts.some((text) => (text ?? '').toLowerCase().includes(needle));
   }
-}
-
-function toggled<T>(current: ReadonlySet<T>, value: T): ReadonlySet<T> {
-  const next = new Set(current);
-  if (next.has(value)) {
-    next.delete(value);
-  } else {
-    next.add(value);
-  }
-  return next;
 }

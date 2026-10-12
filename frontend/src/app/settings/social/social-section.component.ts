@@ -8,6 +8,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { inputValue } from '../../shared/input-value';
 import { PasswordInputComponent } from '../../shared/password-input/password-input.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
@@ -57,6 +58,7 @@ export class SocialSectionComponent {
   protected readonly mastodonToken = signal('');
   protected readonly mastodonHost = computed(() => hostOf(this.mastodonInstance()));
   protected readonly reconnectSecrets = signal<Readonly<Record<number, string>>>({});
+  protected readonly inputValue = inputValue;
 
   constructor() {
     this.svc.load();
@@ -65,10 +67,6 @@ export class SocialSectionComponent {
   protected describeSince(account: SocialAccount): string {
     const date = formatLongDate(account.connectedAt, this.language.lang());
     return this.i18n.translate('settings.social.connectedSince', { date });
-  }
-
-  protected typed(event: Event): string {
-    return (event.target as HTMLInputElement).value;
   }
 
   protected setReconnectSecret(id: number, secret: string): void {

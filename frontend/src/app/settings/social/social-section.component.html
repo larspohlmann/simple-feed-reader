@@ -65,7 +65,7 @@
             autocomplete="off"
             [attr.data-testid]="'social-reconnect-secret-' + account.id"
             [value]="reconnectSecret(account.id)"
-            (input)="setReconnectSecret(account.id, typed($event))"
+            (input)="setReconnectSecret(account.id, inputValue($event))"
           />
         </app-password-input>
         <app-button
@@ -103,7 +103,7 @@
             autocapitalize="none"
             data-testid="social-bluesky-handle"
             [value]="blueskyHandle()"
-            (input)="blueskyHandle.set(typed($event))"
+            (input)="blueskyHandle.set(inputValue($event))"
           />
         </app-settings-row>
         <app-settings-row
@@ -117,7 +117,7 @@
               autocomplete="off"
               data-testid="social-bluesky-password"
               [value]="blueskyPassword()"
-              (input)="blueskyPassword.set(typed($event))"
+              (input)="blueskyPassword.set(inputValue($event))"
             />
           </app-password-input>
           <app-button
@@ -175,7 +175,7 @@
             autocapitalize="none"
             data-testid="social-mastodon-instance"
             [value]="mastodonInstance()"
-            (input)="mastodonInstance.set(typed($event))"
+            (input)="mastodonInstance.set(inputValue($event))"
           />
         </app-settings-row>
         <app-settings-row
@@ -189,7 +189,7 @@
               autocomplete="off"
               data-testid="social-mastodon-token"
               [value]="mastodonToken()"
-              (input)="mastodonToken.set(typed($event))"
+              (input)="mastodonToken.set(inputValue($event))"
             />
           </app-password-input>
           <app-button

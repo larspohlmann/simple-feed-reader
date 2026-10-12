@@ -12,12 +12,12 @@
         [attr.aria-label]="'settings.social.importFilter' | transloco"
         [placeholder]="'settings.social.importFilter' | transloco"
         [value]="filter()"
-        (input)="filter.set(typed($event))"
+        (input)="filter.set(inputValue($event))"
       />
       <app-button
         size="sm"
         data-testid="social-import-select-new"
-        [disabled]="visibleNew().length === 0"
+        [disabled]="followView().visibleNew.length === 0"
         (click)="selectAllNew()"
       >
         {{ 'settings.social.importSelectAllNew' | transloco }}
@@ -33,20 +33,22 @@
     <app-disclosure
       appearance="row"
       data-testid="social-import-follows"
-      [label]="followsKey() | transloco: { count: follows().length }"
+      [label]="followsKey() | transloco: { count: followView().follows.length }"
     >
-      @if (hasLeftovers()) {
+      @if (followView().hasLeftovers) {
         <p class="note">{{ 'settings.social.importUnsubscribeHint' | transloco }}</p>
       }
       <ul class="rows">
-        @for (follow of follows(); track follow.feedUrl) {
+        @for (follow of followView().follows; track follow.feedUrl) {
           <li>
             <label class="row" [attr.data-testid]="'social-import-follow-' + follow.identity">
               <input
                 type="checkbox"
                 [checked]="isChosen(follow)"
                 [disabled]="follow.state === 'subscribed'"
-                [attr.aria-label]="checkboxKey(follow) | transloco: { handle: follow.handle }"
+                [attr.aria-label]="
+                  checkboxKeys[follow.state] | transloco: { handle: follow.handle }
+                "
                 (change)="toggle(follow)"
               />
               <span class="who">
@@ -60,7 +62,7 @@
                 [class.is-new]="follow.state === 'new'"
                 [class.is-gone]="follow.state === 'no_longer_followed'"
               >
-                {{ stateKey(follow) | transloco }}
+                {{ stateKeys[follow.state] | transloco }}
               </span>
             </label>
           </li>
@@ -70,34 +72,17 @@
       </ul>
     </app-disclosure>
 
-    <app-disclosure
-      appearance="row"
-      data-testid="social-import-lists"
-      [label]="listsKey() | transloco: { count: lists().length }"
-    >
-      <p class="note">{{ 'settings.social.importCollectionsLater' | transloco }}</p>
-      <ul class="rows">
-        @for (list of lists(); track list.id) {
-          <li class="row">
-            <span class="handle">{{ list.name }}</span>
-          </li>
-        } @empty {
-          <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
-        }
-      </ul>
-    </app-disclosure>
-
-    @if (showsCustomFeeds) {
+    @for (section of collections(); track section.testId) {
       <app-disclosure
         appearance="row"
-        data-testid="social-import-feeds"
-        [label]="customFeedsKey() | transloco: { count: customFeeds().length }"
+        [attr.data-testid]="section.testId"
+        [label]="section.labelKey | transloco: { count: section.items.length }"
       >
         <p class="note">{{ 'settings.social.importCollectionsLater' | transloco }}</p>
         <ul class="rows">
-          @for (feed of customFeeds(); track feed.id) {
+          @for (item of section.items; track item.id) {
             <li class="row">
-              <span class="handle">{{ feed.name }}</span>
+              <span class="handle">{{ item.name }}</span>
             </li>
           } @empty {
             <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
@@ -117,7 +102,7 @@
       data-testid="social-import-failure"
       [message]="message"
       [actionLabel]="importer.candidates() === null ? ('common.retry' | transloco) : null"
-      (action)="retry()"
+      (action)="load()"
     />
   }
 
