@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
+use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\Support\PlainText;
@@ -32,7 +33,7 @@ final class SubscriptionJson
     public static function list(
         array $subscriptions,
         SubscriptionTalliesModel $tallies,
-        array $socialAccounts = [],
+        array $socialAccounts,
     ): array {
         return [
             'subscriptions' => array_map(
@@ -114,17 +115,19 @@ final class SubscriptionJson
      */
     private static function social(Feed $feed): ?array
     {
-        $network = SocialFeedClassifier::networkOf($feed);
-        if (null === $network) {
-            return null;
-        }
         $address = SocialFeedClassifier::privateAddressOf($feed);
+        if (null !== $address) {
+            return [
+                'network' => $address->network->value,
+                'accountId' => $address->accountId,
+                'kind' => $address->kind->value,
+            ];
+        }
+        $network = ProfileFeedUrl::networkOf($feed->getUrl());
 
-        return [
-            'network' => $network->value,
-            'accountId' => $address?->accountId,
-            'kind' => $address?->kind->value ?? self::PROFILE_KIND,
-        ];
+        return null === $network
+            ? null
+            : ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND];
     }
 
     /** @return array{id: int, network: string, handle: string} */

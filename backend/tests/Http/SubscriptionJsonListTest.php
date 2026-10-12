@@ -26,7 +26,7 @@ final class SubscriptionJsonListTest extends DbTestCase
             ['favorites' => 8, 'kept' => 2, 'viewed' => 41],
         );
 
-        $payload = SubscriptionJson::list([$counted, $silent], $tallies);
+        $payload = SubscriptionJson::list([$counted, $silent], $tallies, []);
 
         self::assertSame(
             ['subscriptions', 'favoritesCount', 'keptCount', 'viewedCount', 'socialAccounts'],

@@ -31,29 +31,44 @@ final class ProfileFeedUrl
     /** @return string|null the DID, handle or user@host the URL follows; null when it is no profile feed of $network */
     public static function identityOf(SocialNetwork $network, string $url): ?string
     {
-        $parts = parse_url($url);
-        if (false === $parts || !isset($parts['host']) || !self::isWeb($parts['scheme'] ?? '')) {
-            return null;
-        }
-        $host = strtolower($parts['host']);
-        $path = $parts['path'] ?? '';
+        $parts = self::webPartsOf($url);
 
-        return match ($network) {
-            SocialNetwork::Bluesky => self::blueskyIdentity($host, $path),
-            SocialNetwork::Mastodon => self::mastodonIdentity($host, $path),
-        };
+        return null === $parts ? null : self::identityIn($network, $parts['host'], $parts['path']);
     }
 
     /** @return SocialNetwork|null the network whose profile feed $url is; null when it is no profile feed */
     public static function networkOf(string $url): ?SocialNetwork
     {
+        $parts = self::webPartsOf($url);
+        if (null === $parts) {
+            return null;
+        }
         foreach (SocialNetwork::cases() as $network) {
-            if (null !== self::identityOf($network, $url)) {
+            if (null !== self::identityIn($network, $parts['host'], $parts['path'])) {
                 return $network;
             }
         }
 
         return null;
+    }
+
+    /** @return array{host: string, path: string}|null */
+    private static function webPartsOf(string $url): ?array
+    {
+        $parts = parse_url($url);
+        if (false === $parts || !isset($parts['host']) || !self::isWeb($parts['scheme'] ?? '')) {
+            return null;
+        }
+
+        return ['host' => strtolower($parts['host']), 'path' => $parts['path'] ?? ''];
+    }
+
+    private static function identityIn(SocialNetwork $network, string $host, string $path): ?string
+    {
+        return match ($network) {
+            SocialNetwork::Bluesky => self::blueskyIdentity($host, $path),
+            SocialNetwork::Mastodon => self::mastodonIdentity($host, $path),
+        };
     }
 
     private static function isWeb(string $scheme): bool
