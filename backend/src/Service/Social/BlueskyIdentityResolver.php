@@ -87,8 +87,20 @@ final readonly class BlueskyIdentityResolver
     private function documentUrl(string $did): string
     {
         return str_starts_with($did, self::WEB_DID_PREFIX)
-            ? 'https://' . substr($did, \strlen(self::WEB_DID_PREFIX)) . '/.well-known/did.json'
+            ? 'https://' . self::webDidHost($did) . '/.well-known/did.json'
             : self::PLC_DIRECTORY . $did;
+    }
+
+    private static function webDidHost(string $did): string
+    {
+        $host = substr($did, \strlen(self::WEB_DID_PREFIX));
+        if (str_contains($host, ':') || str_contains($host, '%')) {
+            throw new SocialAccountUnresolvableException(
+                sprintf('The account %s uses a did:web with a path or a port, which is not supported.', $did),
+            );
+        }
+
+        return $host;
     }
 
     /** @phpstan-assert-if-true array{id: string, serviceEndpoint: string} $service */

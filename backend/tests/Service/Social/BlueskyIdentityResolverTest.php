@@ -12,6 +12,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -163,18 +164,48 @@ final class BlueskyIdentityResolverTest extends TestCase
         $this->resolver($http)->resolve('alice.bsky.social');
     }
 
-    public function testAPlainHttpEndpointIsUnresolvable(): void
+    /** @return iterable<string, array{string}> */
+    public static function unusableEndpoints(): iterable
+    {
+        yield 'plain http' => ['http://pds.example.test'];
+        yield 'no host' => ['https:///x'];
+        yield 'not a url' => ['not a url'];
+    }
+
+    #[DataProvider('unusableEndpoints')]
+    public function testAnUnusableEndpointIsUnresolvable(string $endpoint): void
     {
         $http = new RoutedHttpClient([
             self::RESOLVE_ALICE => new MockResponse('{"did":"did:plc:alice"}'),
-            'GET https://plc.directory/did:plc:alice' => new MockResponse(
-                $this->documentWithEndpoint('http://pds.example.test'),
-            ),
+            'GET https://plc.directory/did:plc:alice' => new MockResponse($this->documentWithEndpoint($endpoint)),
         ]);
 
         $this->expectException(SocialAccountUnresolvableException::class);
+        $this->expectExceptionMessage('is not reachable over https');
 
         $this->resolver($http)->resolve('alice.bsky.social');
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function unsupportedWebDids(): iterable
+    {
+        yield 'path style' => ['did:web:alice.example.com:user:alice'];
+        yield 'encoded port' => ['did:web:alice.example.com%3A8443'];
+        yield 'encoded port, lowercase' => ['did:web:alice.example.com%3a8443'];
+    }
+
+    #[DataProvider('unsupportedWebDids')]
+    public function testAWebDidWithAPathOrAPortIsUnsupported(string $did): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        try {
+            $this->resolver($http)->resolve($did);
+            self::fail('Expected SocialAccountUnresolvableException');
+        } catch (SocialAccountUnresolvableException $exception) {
+            self::assertStringContainsString('not supported', $exception->getMessage());
+            self::assertSame([], $http->requestedUrls());
+        }
     }
 
     public function testAnEndpointIsReducedToItsOrigin(): void
