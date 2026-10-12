@@ -37,6 +37,18 @@ export function isPrivateFeed(subscription: SubscriptionDto): boolean {
   return isSocialFeed(subscription) && subscription.social?.kind !== 'profile';
 }
 
+/** A person, list or custom feed is shown by its picture; Home keeps the network's favicon, an ordinary feed its own. */
+export function feedAvatarUrl(subscription: SubscriptionDto | null): string | null {
+  if (
+    subscription === null ||
+    !isSocialFeed(subscription) ||
+    subscription.social?.kind === 'home'
+  ) {
+    return null;
+  }
+  return subscription.imageUrl;
+}
+
 /** One section per network holding a social feed: private feeds per account by id, each Home first, then the people. */
 export function buildSocialSections(
   subscriptions: readonly SubscriptionDto[],

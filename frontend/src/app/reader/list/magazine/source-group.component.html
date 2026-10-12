@@ -1,7 +1,11 @@
 <div class="group">
   <div class="ghead">
     <p class="gname">
-      <app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" /><a
+      <app-favicon
+        [url]="entries()[0]?.faviconUrl ?? null"
+        [avatarUrl]="avatarUrl()"
+        [size]="14"
+      /><a
         class="gsource"
         [routerLink]="['/']"
         [queryParams]="selectionQueryParams({ subscription: subscriptionId() })"

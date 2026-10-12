@@ -6,6 +6,8 @@ import { EntryDto, SubscriptionTagDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { anEntry } from '../../../../testing/entry-testing';
 import { holdUnrenamedHome } from '../../../../testing/feed-names-testing';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { makeSubscription } from '../../testing/subscription.factory';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -47,6 +49,32 @@ describe('SourceGroupComponent', () => {
     fixture.detectChanges();
     return fixture;
   }
+
+  it("heads a profile feed's group with the person's picture", () => {
+    const element = mount([entryAt(1)], 1, () =>
+      TestBed.inject(SubscriptionRows).all.set([
+        makeSubscription({
+          id: 7,
+          imageUrl: 'https://cdn.example/amy.jpg',
+          social: { network: 'bluesky', accountId: null, kind: 'profile' },
+        }),
+      ]),
+    ).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.gname img.avatar')?.getAttribute('src')).toBe(
+      'https://cdn.example/amy.jpg',
+    );
+  });
+
+  it("keeps the favicon for an ordinary feed's group", () => {
+    const element = mount([entryAt(1)], 1, () =>
+      TestBed.inject(SubscriptionRows).all.set([
+        makeSubscription({ id: 7, imageUrl: 'https://example.com/logo.png' }),
+      ]),
+    ).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.gname img.avatar')).toBeNull();
+  });
 
   it("heads a Home's group with the Home's label", () => {
     const element = mount([entryAt(1)], 1, () => holdUnrenamedHome(7)).nativeElement as HTMLElement;

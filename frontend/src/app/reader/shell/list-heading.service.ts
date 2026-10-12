@@ -12,7 +12,7 @@ import { isUnrenamedHome } from '../feeds/display-title';
 import { FeedNames } from '../state/feed-names';
 import { SubscriptionDto } from '../models';
 import { ReaderRouteState } from './reader-route-state.service';
-import { NetworkCounts, networkCounts } from '../state/social-sections';
+import { NetworkCounts, feedAvatarUrl, networkCounts } from '../state/social-sections';
 
 @Injectable()
 export class ListHeading {
@@ -53,6 +53,8 @@ export class ListHeading {
       null
     );
   });
+
+  readonly titleAvatarUrl = computed(() => feedAvatarUrl(this.selectedSubscription()));
 
   /** Magazine only: in the dense list layout the intro would be a slab above the rows. */
   readonly feedIntroSubscription = computed(() => {

@@ -47,6 +47,14 @@ describe('MagazineBlockComponent', () => {
     expect(mount(blockOf(kind, entry())).querySelector('.title')).not.toBeNull();
   });
 
+  it.each(ENTRY_KINDS)("shows the poster's avatar in a %s block", (kind) => {
+    const avatarEntry = entry({ sourceImageUrl: 'https://cdn.example/amy.jpg' });
+
+    const avatar = mount(blockOf(kind, avatarEntry)).querySelector('img.avatar');
+
+    expect(avatar?.getAttribute('src')).toBe('https://cdn.example/amy.jpg');
+  });
+
   it.each(ENTRY_KINDS)('renders no empty headline in a %s block', (kind) => {
     expect(mount(blockOf(kind, entry({ title: '' }))).querySelector('.title')).toBeNull();
   });

@@ -776,6 +776,24 @@ describe('ReaderViewComponent', () => {
     expect(emitted).toHaveBeenCalled();
   });
 
+  it("shows the poster's avatar in the nameplate of the split pane and of full screen", () => {
+    const poster = entry({ sourceImageUrl: 'https://cdn.example/amy.jpg' });
+    const pane = mount(poster).nativeElement as HTMLElement;
+    expect(pane.querySelector('.bar-name img.avatar')?.getAttribute('src')).toBe(
+      'https://cdn.example/amy.jpg',
+    );
+
+    const fixture = TestBed.createComponent(ReaderViewComponent);
+    fixture.componentRef.setInput('entry', poster);
+    fixture.componentRef.setInput('fullscreen', true);
+    fixture.detectChanges();
+    const full = fixture.nativeElement as HTMLElement;
+    expect(full.querySelector('.mini img.avatar')?.getAttribute('src')).toBe(
+      'https://cdn.example/amy.jpg',
+    );
+    fixture.destroy();
+  });
+
   it('carries the full-screen back button in its own toolbar, sliding out before close', () => {
     // Full-screen chrome belongs to the article, not the shell's bar (#128):
     // the toolbar rides the overlay, so the list's header underneath never has

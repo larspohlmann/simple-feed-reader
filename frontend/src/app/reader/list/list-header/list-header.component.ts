@@ -79,6 +79,7 @@ export class ListHeaderComponent {
   readonly titleCount = input<TitleCount>({ value: 0, counts: 'items' });
   readonly titleTag = input<TagDto | null>(null);
   readonly titleFaviconUrl = input<string | null>(null);
+  readonly titleAvatarUrl = input<string | null>(null);
   readonly lastRefreshed = input<string | null>(null);
   readonly nextRefresh = input<string | null>(null);
   readonly titleLeading = input<TemplateRef<unknown> | null>(null);

@@ -104,6 +104,7 @@ export class EntryListComponent implements OnDestroy {
    *  — mirrors the sidebar row's icon so heading and row read as the same feed.
    *  Null, and unrendered, for every other selection. */
   readonly titleFaviconUrl = input<string | null>(null);
+  readonly titleAvatarUrl = input<string | null>(null);
   readonly entries = input.required<EntryDto[]>();
   /** Ids of rows collapsed out of the list (un-favourited/un-kept/marked-unread
    *  in their saved view). A leaving row fades then collapses in place, staying

@@ -33,6 +33,7 @@ import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
+import { SubscriptionRows } from '../state/subscription-rows';
 import { EntriesStore } from '../state/entries.store';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
@@ -1493,6 +1494,36 @@ describe('ReaderShellComponent', () => {
     expect(testRequest.request.params.get('network')).toBe('bluesky');
     expect(testRequest.request.params.has('tag')).toBe(false);
     testRequest.flush(refreshDone);
+  });
+
+  it("heads a profile feed's view with the person's picture, an ordinary feed's with its favicon", () => {
+    const fixture = boot();
+    qp.next(convertToParamMap({ subscription: '5' }));
+    fixture.detectChanges();
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    fixture.detectChanges();
+    const heading = () =>
+      (fixture.nativeElement as HTMLElement).querySelector('app-list-header h2') as HTMLElement;
+    expect(heading().querySelector('img.avatar')).toBeNull();
+
+    TestBed.inject(SubscriptionRows).all.update((rows) =>
+      rows.map((row) =>
+        row.id === 5
+          ? {
+              ...row,
+              imageUrl: 'https://cdn.example/amy.jpg',
+              social: { network: 'bluesky', accountId: null, kind: 'profile' },
+            }
+          : row,
+      ),
+    );
+    fixture.detectChanges();
+
+    expect(heading().querySelector('img.avatar')?.getAttribute('src')).toBe(
+      'https://cdn.example/amy.jpg',
+    );
   });
 
   it('scopes a subscription refresh to the underlying feed id', () => {
