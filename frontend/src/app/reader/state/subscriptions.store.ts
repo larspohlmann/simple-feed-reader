@@ -213,7 +213,7 @@ export class SubscriptionsStore {
     this.favoritesCount.set(response.favoritesCount);
     this.keptCount.set(response.keptCount);
     this.viewedCount.set(response.viewedCount);
-    this.socialAccounts.set(response.socialAccounts ?? []);
+    this.socialAccounts.set(response.socialAccounts);
   }
 
   /** Patch unread and entry counts into the list already held, replacing the

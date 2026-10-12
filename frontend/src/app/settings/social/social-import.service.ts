@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem, problemMessage } from '../../core/problem';
+import { SocialFeedRefDto } from '../../reader/social-feed';
 
 export type ImportCandidateState = 'new' | 'subscribed' | 'no_longer_followed';
 
@@ -15,7 +16,7 @@ export interface FollowCandidate {
   readonly subscriptionId: number | null;
 }
 
-export type CollectionKind = 'home' | 'list' | 'custom_feed';
+export type CollectionKind = Exclude<SocialFeedRefDto['kind'], 'profile'>;
 export type CollectionState = 'new' | 'subscribed';
 
 export interface CollectionCandidate {
