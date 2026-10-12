@@ -11,6 +11,8 @@ enum ResponseSizeLimit: int
     case Feed = 20;
     /** Images and the pages fetched for their cookies. */
     case Download = 5;
+    /** A JSON API answer: a timeline page or a session, never a document. */
+    case Api = 2;
 
     public function bytes(): int
     {
