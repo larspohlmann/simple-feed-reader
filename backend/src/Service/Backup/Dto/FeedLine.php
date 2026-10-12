@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Enum\SourceFormat;
+use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Support\LineField;
+use App\Service\Social\Support\SocialFeedUrl;
 
 /**
  * One feed the account (or another account sharing it) subscribes to.
@@ -24,10 +27,13 @@ final readonly class FeedLine
 
     /**
      * @param array<string, mixed> $line
+     *
+     * @throws InvalidBackupException for a private social feed: referenced by URL, it would hand over another
+     *                                user's timeline, and created anew it could never be read
      */
     public static function fromLine(array $line): self
     {
-        return new self(
+        $feedLine = new self(
             url: LineField::string($line, 'url'),
             siteUrl: LineField::stringOrNull($line, 'siteUrl'),
             title: LineField::stringOrNull($line, 'title'),
@@ -36,5 +42,12 @@ final readonly class FeedLine
             imageUrl: LineField::stringOrNull($line, 'imageUrl'),
             sourceFormat: LineField::string($line, 'sourceFormat'),
         );
+        if (SocialFeedUrl::isPrivate($feedLine->url) || SourceFormat::isSocial($feedLine->sourceFormat)) {
+            throw new InvalidBackupException(
+                sprintf('Feed "%s" is a private social feed, which a backup never carries.', $feedLine->url),
+            );
+        }
+
+        return $feedLine;
     }
 }

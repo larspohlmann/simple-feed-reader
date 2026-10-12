@@ -61,7 +61,7 @@ final readonly class AccountBackupExporter
 
     private function foundationSnapshot(int $userId): FoundationSnapshotModel
     {
-        $subscriptions = $this->subscriptions->findForUserWithTags($userId);
+        $subscriptions = $this->subscriptions->findExportableForUserWithTags($userId);
         $feedsById = $this->feedsById($subscriptions);
 
         return new FoundationSnapshotModel(

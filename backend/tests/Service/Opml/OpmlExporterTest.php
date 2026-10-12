@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SourceFormat;
 use App\Service\Opml\OpmlExporter;
 use App\Tests\DbTestCase;
 
@@ -88,5 +89,25 @@ final class OpmlExporterTest extends DbTestCase
 
         self::assertStringContainsString('text="My title" title="My title"', $xml);
         self::assertStringNotContainsString('Feed title', $xml);
+    }
+
+    public function testAPrivateSocialFeedIsLeftOut(): void
+    {
+        $user = new User('opml-social@example.com', new \DateTimeImmutable('2026-10-12T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $now = new \DateTimeImmutable('2026-10-12T00:00:00Z');
+        $rss = new Feed('https://blog.example.com/feed.xml');
+        $private = new Feed('social:bluesky:1:home');
+        $private->setSourceFormat(SourceFormat::BLUESKY_API);
+        foreach ([$rss, $private] as $feed) {
+            $this->entityManager->persist($feed);
+            $this->entityManager->persist(new Subscription($user, $feed, $now));
+        }
+        $this->entityManager->flush();
+
+        $xml = $this->exporter()->export($user);
+
+        self::assertStringContainsString('xmlUrl="https://blog.example.com/feed.xml"', $xml);
+        self::assertStringNotContainsString('social:', $xml);
     }
 }

@@ -197,7 +197,7 @@ final class SubscriptionControllerTest extends WebTestCase
     }
 
     /**
-     * A feed with zero items leaves no row in entryCountsForUser()'s grouped
+     * A feed with zero items leaves no row in SubscriptionEntryCountRepository::forUser()'s grouped
      * query, so the list and counts endpoints fall back to a default — proving
      * that default is 0, not a stray increment or decrement of it.
      */

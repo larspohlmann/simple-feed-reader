@@ -341,6 +341,10 @@ are left out of backups (docs/backup.md §6.2).
   instance key, bound to the owner; a reconnect changes the cache key. A token the PDS calls expired or invalid is
   replaced once with a fresh session.
 - The picker follows a Mastodon `Link` next page only on the instance's own origin, and reads at most 5000 follows.
+- A private feed's synthetic `social:` URL never reaches `UrlGuard` or the feed fetcher: only `SocialFeedRefresher`
+  reads the feed, through its account. The URL names the owning account, not the network identity, so two users of one
+  network account get separate rows. Subscribing by URL refuses the scheme. OPML and backups leave private feeds out,
+  and a restore refuses a `social:` feed line, which could otherwise attach another user's timeline by URL.
 
 ## AI provider endpoints
 
