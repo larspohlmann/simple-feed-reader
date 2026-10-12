@@ -8,6 +8,7 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 
 final readonly class BlueskyApiClient
@@ -16,10 +17,22 @@ final readonly class BlueskyApiClient
     {
     }
 
-    /** @throws SocialNetworkUnreachableException on anything but a 2xx answer */
+    /**
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException on anything but a 2xx answer
+     */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
-        $answer = $this->answer($request);
+        return self::accepted($this->answer($request));
+    }
+
+    /**
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException on anything but a 2xx answer
+     */
+    public static function accepted(ApiResponseModel $answer): ApiResponseModel
+    {
+        SocialNetworkThrottledException::throwIfThrottled($answer, 'Bluesky asked for fewer requests.');
         if (!$answer->isSuccessful()) {
             throw new SocialNetworkUnreachableException(sprintf('Bluesky answered %d.', $answer->status));
         }

@@ -61,11 +61,10 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
         $remoteId = rawurlencode($socialFeed->getRemoteId() ?? '');
 
         return match ($socialFeed->getKind()) {
-            SocialFeedKind::Home => '/xrpc/app.bsky.feed.getTimeline?limit=' . self::PAGE_SIZE,
-            SocialFeedKind::UserList
-                => '/xrpc/app.bsky.feed.getListFeed?list=' . $remoteId . '&limit=' . self::PAGE_SIZE,
-            SocialFeedKind::CustomFeed => '/xrpc/app.bsky.feed.getFeed?feed=' . $remoteId . '&limit=' . self::PAGE_SIZE,
-        };
+            SocialFeedKind::Home => '/xrpc/app.bsky.feed.getTimeline?',
+            SocialFeedKind::UserList => '/xrpc/app.bsky.feed.getListFeed?list=' . $remoteId . '&',
+            SocialFeedKind::CustomFeed => '/xrpc/app.bsky.feed.getFeed?feed=' . $remoteId . '&',
+        } . 'limit=' . self::PAGE_SIZE;
     }
 
     private static function isStaleSession(ApiResponseModel $answer): bool
@@ -83,15 +82,11 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
      */
     private static function itemsOf(ApiResponseModel $answer): array
     {
-        SocialNetworkThrottledException::throwIfThrottled($answer, 'Bluesky asked for fewer requests.');
         if (Response::HTTP_UNAUTHORIZED === $answer->status || self::isStaleSession($answer)) {
             throw new SocialCredentialsRejectedException('Bluesky refused the session of this account.');
         }
-        if (!$answer->isSuccessful()) {
-            throw new SocialNetworkUnreachableException(sprintf('Bluesky answered %d.', $answer->status));
-        }
 
-        return JsonNodeModel::of($answer->json())->listAt('feed')
+        return JsonNodeModel::of(BlueskyApiClient::accepted($answer)->json())->listAt('feed')
             ?? throw new SocialNetworkUnreachableException('Bluesky answered without a feed.');
     }
 }
