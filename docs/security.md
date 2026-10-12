@@ -344,7 +344,7 @@ are left out of backups (docs/backup.md §6.2).
 - A private feed's synthetic `social:` URL never reaches `UrlGuard` or the feed fetcher: only `SocialFeedRefresher`
   reads the feed, through its account. The URL names the owning account, not the network identity, so two users of one
   network account get separate rows. Subscribing by URL refuses the scheme. OPML and backups leave private feeds out,
-  and a restore refuses a `social:` feed line, which could otherwise attach another user's timeline by URL.
+  and a restore refuses a `social:` feed, entry or entry-state line, which could otherwise attach another user's timeline by URL.
 
 ## AI provider endpoints
 

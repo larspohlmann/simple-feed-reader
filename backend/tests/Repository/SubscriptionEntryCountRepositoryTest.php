@@ -12,7 +12,7 @@ use App\Repository\SubscriptionEntryCountRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 
-final class SubscriptionEntryCountsTest extends DbTestCase
+final class SubscriptionEntryCountRepositoryTest extends DbTestCase
 {
     use SeedsUsers;
 

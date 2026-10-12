@@ -7,6 +7,8 @@ namespace App\Tests\Service\Backup\Pass;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Backup\Dto\EntryStateLine;
+use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Backup\Pass\RestoreDestination;
 use App\Service\Backup\Pass\RestoreEntryLoader;
@@ -66,6 +68,34 @@ final class RestoreEntryLoaderTest extends TestCase
         $loader->finish();
     }
 
+    public function testAnEntryOfAPrivateSocialFeedIsRefused(): void
+    {
+        $loader = $this->loader($this->createStub(RestoreEntriesInterface::class));
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('private social feed');
+        $loader->bufferEntry($this->line('guid-private', 'social:bluesky:1:home'));
+    }
+
+    public function testAnEntryStateOfAPrivateSocialFeedIsRefused(): void
+    {
+        $loader = $this->loader($this->createStub(RestoreEntriesInterface::class));
+        $state = new EntryStateLine(
+            'social:bluesky:1:home',
+            hash('sha256', 'guid'),
+            false,
+            true,
+            false,
+            null,
+            false,
+            null,
+        );
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('private social feed');
+        $loader->loadState($state);
+    }
+
     private function loader(RestoreEntriesInterface $entries): RestoreEntryLoader
     {
         return new RestoreEntryLoader(
@@ -92,10 +122,10 @@ final class RestoreEntryLoaderTest extends TestCase
         return new User('loader@example.com', new \DateTimeImmutable('2026-08-01'));
     }
 
-    private function line(string $guid): EntryLine
+    private function line(string $guid, string $feedUrl = self::FEED_URL): EntryLine
     {
         return new EntryLine(
-            feedUrl: self::FEED_URL,
+            feedUrl: $feedUrl,
             guid: $guid,
             guidHash: hash('sha256', $guid),
             url: 'https://example.test/' . $guid,

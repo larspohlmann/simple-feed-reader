@@ -17,6 +17,7 @@ final class FeedLineTest extends TestCase
     public function testAPrivateSocialFeedIsRefused(array $line): void
     {
         $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('private social feed');
 
         FeedLine::fromLine($line);
     }
