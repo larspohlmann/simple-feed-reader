@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh\Model;
 
+use App\Service\Refresh\Model\RefreshFeedSetModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use PHPUnit\Framework\TestCase;
 
@@ -88,5 +89,27 @@ final class RefreshRequestModelTest extends TestCase
 
         self::assertSame(5, $request->withoutPruning()->batchLimit);
         self::assertSame(5, $request->ignoringSchedule()->batchLimit);
+    }
+
+    public function testAFeedSetRequestRefreshesThoseFeedsOfTheUserIgnoringTheSchedule(): void
+    {
+        $request = RefreshRequestModel::forUserFeedSet(7, new RefreshFeedSetModel('network-bluesky', [3, 4]), 30);
+
+        self::assertSame(7, $request->userId);
+        self::assertSame([3, 4], $request->feedSet?->feedIds);
+        self::assertNull($request->feedId);
+        self::assertNull($request->tagId);
+        self::assertTrue($request->force);
+        self::assertFalse($request->prune);
+    }
+
+    public function testDerivedRequestsKeepTheFeedSet(): void
+    {
+        $feedSet = new RefreshFeedSetModel('network-bluesky', [3]);
+        $request = RefreshRequestModel::forUserFeedSet(7, $feedSet, 30);
+
+        self::assertSame($feedSet, $request->withoutPruning()->feedSet);
+        self::assertSame($feedSet, $request->ignoringSchedule()->feedSet);
+        self::assertSame($feedSet, $request->limitedTo(5)->feedSet);
     }
 }

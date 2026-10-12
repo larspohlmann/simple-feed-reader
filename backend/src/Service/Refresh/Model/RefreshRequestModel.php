@@ -16,6 +16,7 @@ final readonly class RefreshRequestModel
         public int $budgetSeconds,
         public bool $prune,
         public int $batchLimit = self::DEFAULT_BATCH_LIMIT,
+        public ?RefreshFeedSetModel $feedSet = null,
     ) {
     }
 
@@ -32,6 +33,11 @@ final readonly class RefreshRequestModel
     public static function forUserTag(int $userId, int $tagId, int $budgetSeconds): self
     {
         return new self($userId, null, $tagId, true, $budgetSeconds, false);
+    }
+
+    public static function forUserFeedSet(int $userId, RefreshFeedSetModel $feedSet, int $budgetSeconds): self
+    {
+        return new self($userId, null, null, true, $budgetSeconds, false, feedSet: $feedSet);
     }
 
     public static function forFeed(int $feedId, int $budgetSeconds): self
@@ -54,6 +60,7 @@ final readonly class RefreshRequestModel
             $this->budgetSeconds,
             false,
             $this->batchLimit,
+            $this->feedSet,
         );
     }
 
@@ -67,6 +74,7 @@ final readonly class RefreshRequestModel
             $this->budgetSeconds,
             $this->prune,
             $this->batchLimit,
+            $this->feedSet,
         );
     }
 
@@ -80,6 +88,7 @@ final readonly class RefreshRequestModel
             $this->budgetSeconds,
             $this->prune,
             $batchLimit,
+            $this->feedSet,
         );
     }
 }

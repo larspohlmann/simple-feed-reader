@@ -80,6 +80,10 @@ final readonly class RefreshRunStore
             return 'tag-' . $request->tagId;
         }
 
+        if (null !== $request->feedSet) {
+            return 'set-' . $request->feedSet->key;
+        }
+
         return 'all';
     }
 }

@@ -414,6 +414,9 @@ describe('canScopedRefresh', () => {
     expect(canScopedRefresh({ kind: 'all', id: null, unread: true })).toBe(true);
     expect(canScopedRefresh({ kind: 'tag', id: 3, unread: true })).toBe(true);
     expect(canScopedRefresh({ kind: 'subscription', id: 7, unread: true })).toBe(true);
+    expect(canScopedRefresh({ kind: 'network', id: null, unread: true, network: 'mastodon' })).toBe(
+      true,
+    );
   });
   it('is disallowed for the cross-feed saved views', () => {
     expect(canScopedRefresh({ kind: 'favorites', id: null, unread: false })).toBe(false);

@@ -180,6 +180,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
         $this->restrictToSchedule($qb, $criteria);
         $this->restrictToOwnership($qb, $criteria);
+        $this->restrictToFeedSet($qb, $criteria);
         $this->restrictToUnhandled($qb, $criteria);
         $this->restrictToConnectedAccounts($qb);
 
@@ -248,6 +249,20 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
             . 'WHERE ts.feed = f AND ts.user = :userId AND tst.tag = :tagId)',
             Subscription::class,
         ))->setParameter('tagId', $criteria->tagId);
+    }
+
+    private function restrictToFeedSet(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    {
+        if ($criteria->feedIds === null) {
+            return;
+        }
+        if ($criteria->feedIds === []) {
+            $qb->andWhere('1 = 0');
+
+            return;
+        }
+
+        $qb->andWhere('f.id IN (:feedSetIds)')->setParameter('feedSetIds', $criteria->feedIds);
     }
 
     private function restrictToUnhandled(QueryBuilder $qb, DueFeedCriteria $criteria): void

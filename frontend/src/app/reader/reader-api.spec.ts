@@ -344,6 +344,13 @@ describe('ReaderApi', () => {
     testRequest.flush(refreshReport());
   });
 
+  it("scopes refresh to a network's feeds when given a network", () => {
+    api.refresh({ network: 'mastodon' }).subscribe();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+    expect(testRequest.request.params.get('network')).toBe('mastodon');
+    testRequest.flush(refreshReport());
+  });
+
   it('scopes refresh to a single feed when given a feedId', () => {
     api.refresh({ feedId: 42 }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');

@@ -1481,6 +1481,20 @@ describe('ReaderShellComponent', () => {
     testRequest.flush(refreshDone);
   });
 
+  it("scopes a network view's refresh to the network", () => {
+    const fixture = boot();
+    qp.next(convertToParamMap({ network: 'bluesky' }));
+    fixture.detectChanges();
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    fixture.componentInstance.refresh.refreshScoped();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+    expect(testRequest.request.params.get('network')).toBe('bluesky');
+    expect(testRequest.request.params.has('tag')).toBe(false);
+    testRequest.flush(refreshDone);
+  });
+
   it('scopes a subscription refresh to the underlying feed id', () => {
     const fixture = boot();
     qp.next(convertToParamMap({ subscription: '5' }));

@@ -12,7 +12,8 @@ namespace App\Repository;
 final readonly class DueFeedCriteria
 {
     /**
-     * @param list<int> $excludedFeedIds
+     * @param list<int>      $excludedFeedIds
+     * @param list<int>|null $feedIds         a set of the user's feeds, such as a network's
      */
     public function __construct(
         public \DateTimeImmutable $now,
@@ -22,6 +23,7 @@ final readonly class DueFeedCriteria
         public bool $force = false,
         public ?\DateTimeImmutable $cooldownCutoff = null,
         public array $excludedFeedIds = [],
+        public ?array $feedIds = null,
     ) {
     }
 
@@ -38,6 +40,7 @@ final readonly class DueFeedCriteria
             $this->force,
             $this->cooldownCutoff,
             $feedIds,
+            $this->feedIds,
         );
     }
 }

@@ -112,10 +112,11 @@ export function searchWords(term: string): string[] {
 }
 
 /** How a scoped refresh is keyed. Empty = all the user's due feeds; feedId =
- *  one feed; tagId = every feed carrying that tag. */
+ *  one feed; tagId = every feed carrying that tag; network = that network's feeds. */
 export interface RefreshScope {
   feedId?: number;
   tagId?: number;
+  network?: SocialNetworkName;
 }
 
 /** Whether two selections name the same list. Selections are rebuilt from the
@@ -151,7 +152,6 @@ export function visibleSearchTerm(term: string): string {
 export function hasUnreadFilter(selection: Selection): boolean {
   return (
     canScopedRefresh(selection) ||
-    selection.kind === 'network' ||
     selection.kind === 'for-you' ||
     selection.kind === 'saved-searches' ||
     selection.kind === 'saved-search' ||
@@ -190,7 +190,12 @@ export function listOrderKey(selection: Selection): string | null {
 /** Whether the current selection supports a scoped refresh — the cross-feed
  *  saved views (favorites/kept) don't map to any feed scope, so they can't. */
 export function canScopedRefresh(selection: Selection): boolean {
-  return selection.kind === 'all' || selection.kind === 'tag' || selection.kind === 'subscription';
+  return (
+    selection.kind === 'all' ||
+    selection.kind === 'tag' ||
+    selection.kind === 'network' ||
+    selection.kind === 'subscription'
+  );
 }
 
 /** A view that shows one logical stream, not an aggregation of feeds: a single
