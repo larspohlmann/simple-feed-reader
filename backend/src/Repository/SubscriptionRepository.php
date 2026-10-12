@@ -54,6 +54,22 @@ final class SubscriptionRepository extends ServiceEntityRepository
         return $rows;
     }
 
+    /** @return list<array{id: int, customTitle: ?string, feedUrl: string, feedTitle: ?string}> creation order */
+    public function findFeedUrlsForUser(int $userId): array
+    {
+        /** @var list<array{id: int, customTitle: ?string, feedUrl: string, feedTitle: ?string}> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->select('s.id', 's.customTitle', 'f.url AS feedUrl', 'f.title AS feedTitle')
+            ->join('s.feed', 'f')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->orderBy('s.createdAt', 'ASC')
+            ->addOrderBy('s.id', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return $rows;
+    }
+
     /** @return list<Subscription> */
     public function findIncludedInAllItemsForUser(int $userId): array
     {
