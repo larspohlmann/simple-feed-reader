@@ -32,6 +32,58 @@ final class SocialCredentialsModelTest extends TestCase
         self::assertSame('1234', $credentials->hint());
     }
 
+    public function testABlueskyAppPasswordTypedWithSurroundingWhitespaceIsStoredTrimmed(): void
+    {
+        $credentials = SocialCredentialsModel::bluesky('alice.bsky.social', " abcd-efgh-ijkl-mnop\n");
+
+        self::assertSame('abcd-efgh-ijkl-mnop', $credentials->secret);
+    }
+
+    public function testAReconnectSecretTypedWithSurroundingWhitespaceIsTrimmed(): void
+    {
+        $account = $this->account(SocialNetwork::Bluesky, 'did:plc:abc123', '');
+
+        $credentials = SocialCredentialsModel::forReconnect($account, "  abcd-efgh-ijkl-mnop \n");
+
+        self::assertSame('abcd-efgh-ijkl-mnop', $credentials->secret);
+    }
+
+    public function testAnInstanceUrlTypedWithSurroundingWhitespaceIsTrimmed(): void
+    {
+        self::assertSame(
+            'https://mastodon.social',
+            SocialCredentialsModel::mastodon("  https://mastodon.social \n", 'token-1234')->address,
+        );
+    }
+
+    public function testAnUppercaseSchemeIsAcceptedAsHttps(): void
+    {
+        self::assertSame(
+            'https://mastodon.social',
+            SocialCredentialsModel::mastodon('HTTPS://mastodon.social', 'token-1234')->address,
+        );
+    }
+
+    public function testAnInstanceUrlWithoutAHostNamesNoInstance(): void
+    {
+        $this->expectException(InvalidInstanceUrlException::class);
+        $this->expectExceptionMessage('names no instance');
+
+        SocialCredentialsModel::mastodon('https://', 'token-1234');
+    }
+
+    public function testAnInstanceUrlWithOnlyAUserOrOnlyAPasswordIsRefused(): void
+    {
+        foreach (['https://user@mastodon.social', 'https://:pass@mastodon.social'] as $typed) {
+            try {
+                SocialCredentialsModel::mastodon($typed, 'token-1234');
+                self::fail('Expected InvalidInstanceUrlException for ' . $typed);
+            } catch (InvalidInstanceUrlException $exception) {
+                self::assertStringContainsString('credentials', $exception->getMessage());
+            }
+        }
+    }
+
     public function testABlueskyDidIsKeptVerbatim(): void
     {
         self::assertSame(

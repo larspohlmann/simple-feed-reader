@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Service\Fetch\Exception\FetchException;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ApiRequestModel;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
@@ -56,6 +59,44 @@ final class GuardedApiClientTest extends TestCase
         self::assertContains('User-Agent: TestAgent/1.0', $seenOptions['headers']);
         self::assertTrue($response->isSuccessful());
         self::assertSame(['ok' => true], $response->json());
+    }
+
+    public function testTheCallCarriesItsTimeoutsJsonAcceptHeaderAndNoFreshConnectionExtra(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{}');
+        });
+
+        $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
+
+        self::assertSame(10.0, $seenOptions['timeout']);
+        self::assertSame(20.0, $seenOptions['max_duration']);
+        self::assertIsArray($seenOptions['headers']);
+        self::assertContains('Accept: application/json', $seenOptions['headers']);
+        self::assertArrayNotHasKey('extra', $seenOptions);
+        self::assertArrayNotHasKey('json', $seenOptions);
+    }
+
+    public function testAnAnswerBeyondTheApiSizeLimitIsRefused(): void
+    {
+        $oversize = new MockResponse(str_repeat('a', ResponseSizeLimit::Api->bytes() + 1));
+        $http = new MockHttpClient($oversize);
+
+        $this->expectException(ResponseTooLargeException::class);
+
+        $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
+    }
+
+    public function testATransportFailureBecomesAFetchException(): void
+    {
+        $http = new MockHttpClient(new MockResponse('', ['error' => 'connection reset']));
+
+        $this->expectException(FetchException::class);
+
+        $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
     }
 
     public function testAnErrorStatusIsReturnedNotThrown(): void

@@ -147,6 +147,32 @@ final class SocialAccountConnectorTest extends DbTestCase
         );
     }
 
+    public function testTheConnectionTimeIsStoredInUtcWhateverTheClockZone(): void
+    {
+        $this->clock = new MockClock('2026-10-12 12:00:00 Europe/Berlin');
+
+        $account = $this->connector($this->bluesky('did:plc:alice'))->connect($this->user, $this->blueskyCredentials());
+
+        self::assertSame('2026-10-12 10:00:00', $account->getConnectedAt()->format('Y-m-d H:i:s'));
+    }
+
+    public function testReconnectStoresTheNewTimeInUtcAndPersistsIt(): void
+    {
+        $account = $this->storedAccount('did:plc:alice');
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+        $accountId = $account->requireId();
+        $this->clock = new MockClock('2026-10-12 12:00:00 Europe/Berlin');
+
+        $this->connector($this->bluesky('did:plc:alice'))->reconnect($account, 'wxyz-wxyz-wxyz-9999');
+        $this->entityManager->clear();
+
+        $reloaded = $this->repository()->find($accountId);
+        self::assertNotNull($reloaded);
+        self::assertSame('9999', $reloaded->getCredentialHint());
+        self::assertSame('2026-10-12 10:00:00', $reloaded->getConnectedAt()->format('Y-m-d H:i:s'));
+    }
+
     public function testReconnectSendsTheStoredIdentityAsTheAddress(): void
     {
         $account = $this->storedAccount('did:plc:alice');
