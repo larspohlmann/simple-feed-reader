@@ -104,6 +104,13 @@ framework:
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
+        # Each picker load logs in to the network and pages the whole follow list.
+        social_import:
+            policy: 'sliding_window'
+            limit: 10
+            interval: '15 minutes'
+            cache_pool: cache.rate_limiter
+
         # Starting a run is what spends money: its snapshot fixes how many provider calls it can make. Ten a quarter
         # hour is far beyond honest use (a run takes minutes and supersedes the last).
         ai_recommendation_starts:

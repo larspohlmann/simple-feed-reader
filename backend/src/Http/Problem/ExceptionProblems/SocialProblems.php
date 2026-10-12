@@ -10,6 +10,7 @@ use App\Service\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Exception\NotAnAppPasswordException;
 use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
 use App\Service\Social\Exception\SocialAccountMismatchException;
+use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialAccountNotFoundException;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
@@ -37,6 +38,12 @@ final readonly class SocialProblems implements ExceptionProblemsInterface
             $exception instanceof SocialAccountAlreadyConnectedException => new ResolvedProblem(new ApiProblem(
                 'social_account_already_connected',
                 'Account already connected',
+                Response::HTTP_CONFLICT,
+                $exception->getMessage(),
+            )),
+            $exception instanceof SocialAccountNeedsReconnectException => new ResolvedProblem(new ApiProblem(
+                'social_account_needs_reconnect',
+                'The account needs reconnecting',
                 Response::HTTP_CONFLICT,
                 $exception->getMessage(),
             )),
