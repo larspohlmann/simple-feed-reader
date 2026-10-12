@@ -471,7 +471,7 @@ final class AccountRestorerTest extends DbTestCase
             [
                 'feed', 'guid.value', 'mediaSet.media', 'mediaSet.attachments', 'location.url', 'image.renditions',
                 'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
-                'headline.title', 'headline.derived', 'author.name',
+                'headline.title', 'headline.derived', 'author.name', 'author.profileUrl', 'author.avatarUrl',
             ],
         );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
@@ -485,6 +485,10 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame($sourceRows['entry']->getUrl(), $targetRows['entry']->getUrl());
         self::assertSame($sourceRows['entry']->getTitle(), $targetRows['entry']->getTitle());
         self::assertSame($sourceRows['entry']->getAuthor(), $targetRows['entry']->getAuthor());
+        self::assertNotNull($sourceRows['entry']->getAuthorUrl());
+        self::assertSame($sourceRows['entry']->getAuthorUrl(), $targetRows['entry']->getAuthorUrl());
+        self::assertNotNull($sourceRows['entry']->getAuthorAvatarUrl());
+        self::assertSame($sourceRows['entry']->getAuthorAvatarUrl(), $targetRows['entry']->getAuthorAvatarUrl());
         self::assertTrue($sourceRows['entry']->isTitleDerived());
         self::assertTrue($targetRows['entry']->isTitleDerived());
         self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());

@@ -145,6 +145,8 @@ final readonly class BackupLines
             'titleDerived' => $entry->isTitleDerived(),
             'shareKind' => $entry->getShareKind()?->value,
             'author' => $entry->getAuthor(),
+            'authorUrl' => $entry->getAuthorUrl(),
+            'authorAvatarUrl' => $entry->getAuthorAvatarUrl(),
             'summary' => $entry->getSummary(),
             'contentHtml' => $entry->getContentHtml(),
             'imageUrl' => $entry->getImageUrl(),

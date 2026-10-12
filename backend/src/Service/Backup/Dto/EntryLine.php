@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Entity\EntryAuthor;
 use App\Entity\LinkCardContent;
 use App\Service\Backup\Support\LineField;
 use App\Service\Backup\Support\LineFieldWithDefault;
 use App\Service\LinkCard\Support\StorableLinkCard;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /**
  * One entry belonging to a feed the account subscribes to.
@@ -45,6 +47,8 @@ final readonly class EntryLine
         public ?string $shareKind = null,
         /** @var list<LinkCardContent> */
         public array $linkCards = [],
+        public ?string $authorUrl = null,
+        public ?string $authorAvatarUrl = null,
     ) {
     }
 
@@ -77,7 +81,15 @@ final readonly class EntryLine
             titleDerived: LineFieldWithDefault::bool($line, 'titleDerived', false),
             shareKind: LineField::stringOrNull($line, 'shareKind'),
             linkCards: self::linkCardsOf($line),
+            authorUrl: self::authorUrlOf($line, 'authorUrl'),
+            authorAvatarUrl: self::authorUrlOf($line, 'authorAvatarUrl'),
         );
+    }
+
+    /** @param array<string, mixed> $line */
+    private static function authorUrlOf(array $line, string $key): ?string
+    {
+        return AbsoluteHttpUrl::orNullWithin(LineField::stringOrNull($line, $key), EntryAuthor::URL_MAX_LENGTH);
     }
 
     /**

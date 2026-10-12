@@ -122,4 +122,34 @@ final class EntryLineTest extends TestCase
     {
         self::assertSame([], EntryLine::fromLine($this->baseLine())->imageRenditions);
     }
+
+    public function testReadsTheAuthorsProfileAndPicture(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + [
+            'authorUrl' => 'https://www.youtube.com/channel/UC1',
+            'authorAvatarUrl' => 'https://cdn.example/a.jpg',
+        ]);
+
+        self::assertSame('https://www.youtube.com/channel/UC1', $line->authorUrl);
+        self::assertSame('https://cdn.example/a.jpg', $line->authorAvatarUrl);
+    }
+
+    public function testAnOlderFileWithoutTheAuthorsProfileReadsAsNone(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine());
+
+        self::assertNull($line->authorUrl);
+        self::assertNull($line->authorAvatarUrl);
+    }
+
+    public function testAnAuthorUrlNoEntryMayHoldIsDropped(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + [
+            'authorUrl' => 'javascript:alert(1)',
+            'authorAvatarUrl' => 'https://cdn.example/' . str_repeat('a', 2029),
+        ]);
+
+        self::assertNull($line->authorUrl);
+        self::assertNull($line->authorAvatarUrl);
+    }
 }

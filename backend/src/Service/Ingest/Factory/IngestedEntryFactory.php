@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ingest\Factory;
 
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\Model\IncomingEntryModel;
@@ -43,8 +44,10 @@ final readonly class IngestedEntryFactory
         );
         $entry->setHeadline($parsed->headline);
         $entry->setAuthor(self::cut($parsed->author, self::AUTHOR_MAX));
-        $entry->setAuthorUrl(self::storableUrlOrNull($parsed->authorUrl));
-        $entry->setAuthorAvatarUrl(self::storableUrlOrNull($parsed->authorAvatarUrl));
+        $entry->setAuthorUrl(AbsoluteHttpUrl::orNullWithin($parsed->authorUrl, EntryAuthor::URL_MAX_LENGTH));
+        $entry->setAuthorAvatarUrl(
+            AbsoluteHttpUrl::orNullWithin($parsed->authorAvatarUrl, EntryAuthor::URL_MAX_LENGTH),
+        );
         $entry->setSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml));
         $entry->setContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
         $entry->setPublishedAt($parsed->publishedAt);
@@ -58,13 +61,6 @@ final readonly class IngestedEntryFactory
     private static function cut(?string $value, int $maxLength): ?string
     {
         return null === $value ? null : mb_substr($value, 0, $maxLength);
-    }
-
-    private static function storableUrlOrNull(?string $url): ?string
-    {
-        $absolute = AbsoluteHttpUrl::orNull($url);
-
-        return null !== $absolute && mb_strlen($absolute) <= self::URL_MAX ? $absolute : null;
     }
 
     private static function attachMedia(Entry $entry, ParsedEntryModel $parsed): void

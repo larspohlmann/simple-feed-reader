@@ -126,6 +126,8 @@ final readonly class FullyPopulatedAccount
             (new UrlNormalizer())->hash($url),
         );
         $entry->setAuthor('A. Author');
+        $entry->setAuthorUrl('https://populated.example/authors/a');
+        $entry->setAuthorAvatarUrl('https://populated.example/authors/a.jpg');
         $entry->setSummary('A summary of the article.');
         $entry->setContentHtml('<p>The body of the article.</p>');
         $entry->getImage()->storePending('https://populated.example/lead.jpg', 1200, 630);
