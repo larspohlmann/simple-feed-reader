@@ -303,7 +303,7 @@ spent just before the challenge expired could find its replay entry already evic
 ## Stored secrets
 
 The secrets the server must use while their owner is away (a user's AI provider key, the mail password, the proxy
-password, the Grafana API token) are sealed by `InstanceSecretCipher` (XChaCha20-Poly1305).
+password, the Grafana API token, a user's Bluesky app password or Mastodon access token) are sealed by `InstanceSecretCipher` (XChaCha20-Poly1305).
 
 - The master key is `INSTANCE_SECRET_KEY`, at least 32 characters, and lives only in the environment. The cipher
   refuses to construct with a shorter one: a short key would still derive a key and encrypt, and nothing downstream
@@ -320,6 +320,17 @@ password, the Grafana API token) are sealed by `InstanceSecretCipher` (XChaCha20
 
 What this does not protect against: someone who holds both a database dump and the environment file. The server has
 to read the secret while its owner is away, so the server can always reach it.
+
+## Social accounts
+
+A user connects Bluesky and Mastodon accounts with credentials, not OAuth, because some installs are unreachable from
+outside and could not receive an OAuth redirect. The credential is sealed like any stored secret, and social accounts
+are left out of backups (docs/backup.md §6.2).
+
+- Every call goes through `UrlGuard` via `GuardedApiClient`: no redirects, the resolved IP pinned.
+- The Bluesky PDS comes from the account's DID document, must be `https`, and is normalised to its origin.
+- The app-password format check refuses a main password, which would grant far more than the app needs.
+- The Mastodon token needs only `read` and `write:favourites`.
 
 ## AI provider endpoints
 
