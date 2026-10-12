@@ -206,9 +206,8 @@
   }
 }
 
-/* Collapsible section headers — Tags, Feeds (#612) and the social networks (#1599). The row reproduces
-   `.label`'s vertical margins, since inside the toggle button `.label` is inline and its block margins no
-   longer apply; the horizontal margin stays. */
+/* Collapsible section headers — Tags, Feeds (#612) and the social networks (#1599). Collapsed heads stack
+   one under another, so a head stays as short as its chevron glyph. */
 @mixin section-head {
   .label {
     font-size: var(--fs-sm);
@@ -221,7 +220,7 @@
   .section-head {
     display: flex;
     align-items: center;
-    margin-block: var(--space-3) var(--space-1);
+    margin-block-start: var(--space-2);
   }
 
   /* A `<button>` standing in for the plain `.label` text: reset it and let it absorb the row's spare width so
@@ -253,14 +252,14 @@
     border: none;
     color: var(--text-muted);
     cursor: pointer;
-    margin: var(--space-1);
+    margin: 0 var(--space-1);
   }
 
-  /* The glyph carries a `.chevzone` glyph's box metrics, its border transparent, so its centre lines up with
-     the tag and saved-search chevrons. */
+  /* The glyph keeps a `.chevzone` glyph's box width, its border transparent, so its centre lines up with the
+     tag and saved-search chevrons; only the height is trimmed. */
   .section-chevron app-icon {
     display: inline-flex;
-    padding: var(--space-2);
+    padding: var(--space-1) var(--space-2);
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
   }
