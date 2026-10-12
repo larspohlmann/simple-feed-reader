@@ -1,4 +1,5 @@
 import { LinkCardDto } from './link-card/link-card';
+import { SocialAccountRefDto, SocialFeedRefDto } from './social-feed';
 
 /** One saved search an entry belongs to, as embedded on the entry itself
  *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup
@@ -118,6 +119,8 @@ export interface SubscriptionDto {
   includeInAllItems: boolean;
   /** False excludes this feed's entries from For-you recommendations. */
   includeInForYou: boolean;
+  /** Set for a private timeline, list or custom feed of a connected account (#1599); null for any other feed. */
+  social: SocialFeedRefDto | null;
 }
 
 /** The sidebar bootstrap payload: the feed list plus the user-wide favourite,
@@ -128,6 +131,7 @@ export interface SubscriptionsResponse {
   favoritesCount: number;
   keptCount: number;
   viewedCount: number;
+  socialAccounts: SocialAccountRefDto[];
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed
@@ -497,20 +501,4 @@ export interface RecommendationRunReport {
     generatedAt: string | null;
     newestRunId: number | null;
   };
-}
-
-/** The two per-feed inclusion switches, as a bulk change. An omitted field
- *  leaves the stored value alone — the API's null-means-unchanged convention. */
-export interface SubscriptionFlags {
-  includeInAllItems?: boolean;
-  includeInForYou?: boolean;
-}
-
-/** One bulk change across many feeds. At most one tag is added and at most one
- *  removed per request; the page never needs more, and a single tag keeps the
- *  confirmation text exact. */
-export interface BulkSubscriptionUpdate extends SubscriptionFlags {
-  subscriptionIds: number[];
-  addTagIds?: number[];
-  removeTagIds?: number[];
 }

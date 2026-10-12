@@ -1114,6 +1114,8 @@
     "toggleTags": "Toggle tags",
     "feeds": "Feeds",
     "toggleFeeds": "Toggle feeds",
+    "toggleSocialSection": "Toggle {{network}}",
+    "socialHome": "Home",
     "organise": "Organise",
     "account": "Account",
     "settings": "Settings",

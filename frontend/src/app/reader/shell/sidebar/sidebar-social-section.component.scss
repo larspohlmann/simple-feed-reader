@@ -1,0 +1,20 @@
+@use 'sidebar-row' as row;
+@include row.section-head;
+
+:host {
+  display: contents;
+}
+
+.feedrow {
+  display: flex;
+  align-items: center;
+}
+
+.account-handle {
+  margin: var(--space-2) var(--space-2) var(--space-1);
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

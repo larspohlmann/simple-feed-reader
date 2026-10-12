@@ -7,6 +7,8 @@ import { unhealthyFeeds } from '../feeds/feed-health';
 import { ReaderApi } from '../reader-api';
 import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
+import { SocialAccountRefDto } from '../social-feed';
+import { buildSocialSections, isPrivateFeed } from './social-sections';
 import {
   SubscriptionCountsResponse,
   SubscriptionDto,
@@ -118,6 +120,7 @@ export class SubscriptionsStore {
   readonly favoritesCount = signal(0);
   readonly keptCount = signal(0);
   readonly viewedCount = signal(0);
+  readonly socialAccounts = signal<SocialAccountRefDto[]>([]);
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
@@ -126,8 +129,16 @@ export class SubscriptionsStore {
    *  fire against an empty list the server has not answered on yet. */
   readonly resolved = signal(false);
 
-  readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
-  readonly untagged = computed(() => untaggedSubscriptions(this.subscriptions()));
+  /** Private feeds have their own sidebar sections, so the tag tree and the Feeds list leave them out. */
+  private readonly publicSubscriptions = computed(() =>
+    this.subscriptions().filter((subscription) => !isPrivateFeed(subscription)),
+  );
+
+  readonly tagTree = computed(() => buildTagTree(this.publicSubscriptions(), this.tags.tags()));
+  readonly untagged = computed(() => untaggedSubscriptions(this.publicSubscriptions()));
+  readonly socialSections = computed(() =>
+    buildSocialSections(this.subscriptions(), this.socialAccounts()),
+  );
   readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
   readonly totalEntries = computed(() => sumEntries(this.subscriptions()));
   readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
@@ -203,6 +214,7 @@ export class SubscriptionsStore {
     this.favoritesCount.set(0);
     this.keptCount.set(0);
     this.viewedCount.set(0);
+    this.socialAccounts.set([]);
     this.loading.set(false);
     this.error.set(null);
     this.resolved.set(false);
@@ -291,6 +303,7 @@ export class SubscriptionsStore {
     this.favoritesCount.set(response.favoritesCount);
     this.keptCount.set(response.keptCount);
     this.viewedCount.set(response.viewedCount);
+    this.socialAccounts.set(response.socialAccounts ?? []);
   }
 
   /** Patch unread and entry counts into the list already held, replacing the

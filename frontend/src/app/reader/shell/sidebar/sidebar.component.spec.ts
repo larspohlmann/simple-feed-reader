@@ -12,6 +12,7 @@ import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { TagNode } from '../../state/subscriptions.store';
+import { SocialSection } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -90,6 +91,7 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  social: null,
 });
 
 const savedSearchesOf = (
@@ -101,6 +103,7 @@ function inputDefaults() {
   return {
     tagTree: [] as TagNode[],
     untagged: [] as SubscriptionDto[],
+    socialSections: [] as SocialSection[],
     totalUnread: 0,
     favoritesCount: 0,
     keptCount: 0,
@@ -119,6 +122,7 @@ function mount(
   over: Partial<{
     tagTree: TagNode[];
     untagged: SubscriptionDto[];
+    socialSections: SocialSection[];
     totalUnread: number;
     favoritesCount: number;
     keptCount: number;
@@ -1892,6 +1896,52 @@ describe('organise mode', () => {
       const element = fixture.nativeElement as HTMLElement;
       (element.querySelector('.collapse') as HTMLButtonElement).click();
       expect(TestBed.inject(SidebarVisibilityService).hidden()).toBe(true);
+    });
+  });
+
+  describe('social sections', () => {
+    const section: SocialSection = {
+      network: 'bluesky',
+      accounts: [
+        {
+          accountId: 3,
+          handle: '@alice.bsky.social',
+          subscriptions: [
+            {
+              ...sub(9, 2),
+              title: 'Home',
+              social: { network: 'bluesky', accountId: 3, kind: 'home' },
+            },
+          ],
+        },
+      ],
+    };
+    const node: TagNode = {
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      subscriptions: [],
+      unreadCount: 0,
+      entryCount: 0,
+    };
+
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
+
+    it('sit between the saved searches and the tags', () => {
+      const element = mount({ tagTree: [node], socialSections: [section] })
+        .nativeElement as HTMLElement;
+      const saved = element.querySelector('app-sidebar-saved-searches') as Element;
+      const social = element.querySelector('app-sidebar-social-section') as Element;
+      const tags = element.querySelector('.tags-head') as Element;
+
+      expect(saved.compareDocumentPosition(social) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(social.compareDocumentPosition(tags) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('step aside while organising', () => {
+      const element = mount({ organising: true, coarse: true, socialSections: [section] })
+        .nativeElement as HTMLElement;
+
+      expect(element.querySelector('app-sidebar-social-section')).toBeNull();
     });
   });
 });

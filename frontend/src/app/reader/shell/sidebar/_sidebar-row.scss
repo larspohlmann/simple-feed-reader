@@ -205,3 +205,71 @@
     }
   }
 }
+
+/* Collapsible section headers — Tags, Feeds (#612) and the social networks (#1599). The row reproduces
+   `.label`'s vertical margins, since inside the toggle button `.label` is inline and its block margins no
+   longer apply; the horizontal margin stays. */
+@mixin section-head {
+  .label {
+    font-size: var(--fs-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin: var(--space-3) var(--space-2) var(--space-1);
+  }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    margin-block: var(--space-3) var(--space-1);
+  }
+
+  /* A `<button>` standing in for the plain `.label` text: reset it and let it absorb the row's spare width so
+     the whole title toggles. */
+  .section-toggle {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .section-toggle .label {
+    margin-block: 0;
+  }
+
+  /* A borderless chevron in the title's muted colour: `chevron_right` collapsed, `expand_more` open. It keeps
+     the same button margin as `.chevzone`. */
+  .section-chevron {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin: var(--space-1);
+  }
+
+  /* The glyph carries a `.chevzone` glyph's box metrics, its border transparent, so its centre lines up with
+     the tag and saved-search chevrons. */
+  .section-chevron app-icon {
+    display: inline-flex;
+    padding: var(--space-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+  }
+
+  @media (pointer: coarse) {
+    .section-chevron {
+      width: var(--tap-target);
+      height: var(--tap-target);
+      margin: 0;
+    }
+  }
+}

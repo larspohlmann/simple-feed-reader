@@ -7,14 +7,13 @@ import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
 import {
-  BulkSubscriptionUpdate,
   MoveFeedToTag,
   RefreshReport,
   SubscriptionDto,
-  SubscriptionFlags,
   SubscriptionTagDto,
   TagDto,
 } from '../../models';
+import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bulk';
 import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';

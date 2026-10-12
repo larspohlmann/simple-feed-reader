@@ -7,7 +7,6 @@ import { PAGE_SIZE } from './list/paging';
 import { RefreshScope } from './query/query';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
 import {
-  BulkSubscriptionUpdate,
   CommentsResponse,
   EntriesPage,
   EntryQuery,
@@ -28,6 +27,7 @@ import {
   TagDto,
   TagInput,
 } from './models';
+import { BulkSubscriptionUpdate } from './subscription-bulk';
 
 export interface SavedSearchDraft {
   term: string;

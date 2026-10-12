@@ -28,10 +28,12 @@ import { SearchFieldComponent } from '../search-field/search-field.component';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
+import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { TagNode } from '../../state/subscriptions.store';
+import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
 import { isSubscriptionDrag } from '../../drag-payload';
@@ -71,6 +73,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     SidebarFootComponent,
     SidebarFeedRowComponent,
     SidebarSavedSearchesComponent,
+    SidebarSocialSectionComponent,
     TranslocoPipe,
     CdkDropListGroup,
     CdkDropList,
@@ -90,6 +93,7 @@ export class SidebarComponent {
 
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();
+  readonly socialSections = input<SocialSection[]>([]);
   readonly totalUnread = input.required<number>();
   readonly favoritesCount = input(0);
   readonly keptCount = input(0);

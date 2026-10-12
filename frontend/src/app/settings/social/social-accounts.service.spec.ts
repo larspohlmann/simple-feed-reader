@@ -2,10 +2,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from '../../core/api';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { SocialAccount, SocialAccountsService } from './social-accounts.service';
 
 const BASE = 'https://api.test';
 const ENDPOINT = `${BASE}/api/me/social-accounts`;
+const subscriptionsStub = { load: jest.fn() };
 
 function account(over: Partial<SocialAccount> = {}): SocialAccount {
   return {
@@ -26,12 +28,14 @@ describe('SocialAccountsService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
+    subscriptionsStub.load.mockReset();
     TestBed.configureTestingModule({
       providers: [
         SocialAccountsService,
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: BASE },
+        { provide: SubscriptionsStore, useValue: subscriptionsStub },
       ],
     });
     service = TestBed.inject(SocialAccountsService);
@@ -177,5 +181,24 @@ describe('SocialAccountsService', () => {
 
     expect(service.failure()).toBeNull();
     http.expectOne(`${ENDPOINT}/1/default`).flush({ accounts: [] });
+  });
+
+  it('reloads the reader once a connect has created the Home feed', () => {
+    loadAccounts([]);
+
+    service.connectBluesky('alice.bsky.social', 'abcd-efgh-ijkl-mnop').subscribe();
+    http.expectOne(`${ENDPOINT}/bluesky`).flush(account());
+
+    expect(subscriptionsStub.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('reloads the reader once a disconnect has removed the private feeds', () => {
+    loadAccounts([account()]);
+
+    service.disconnect(1);
+    expect(subscriptionsStub.load).not.toHaveBeenCalled();
+    http.expectOne(`${ENDPOINT}/1`).flush({ accounts: [] });
+
+    expect(subscriptionsStub.load).toHaveBeenCalledTimes(1);
   });
 });

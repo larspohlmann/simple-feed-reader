@@ -1114,6 +1114,8 @@
     "toggleTags": "Tags ein-/ausklappen",
     "feeds": "Feeds",
     "toggleFeeds": "Feeds ein-/ausklappen",
+    "toggleSocialSection": "{{network}} ein-/ausklappen",
+    "socialHome": "Startseite",
     "organise": "Organisieren",
     "account": "Konto",
     "settings": "Einstellungen",

@@ -37,6 +37,8 @@ export class SidebarFeedRowComponent {
   readonly organising = input(false);
   /** The tag the row is listed under, or null in the untagged list. */
   readonly tagId = input<number | null>(null);
+  /** Shown instead of the feed's title: the social section names an unrenamed Home timeline through i18n. */
+  readonly label = input<string | null>(null);
 
   protected readonly menuKey = computed(() => {
     const tagId = this.tagId();

@@ -32,6 +32,7 @@ const sub: SubscriptionDto = {
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  social: null,
 };
 
 describe('EditSubscriptionDialogComponent', () => {

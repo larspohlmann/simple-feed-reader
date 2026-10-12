@@ -5,6 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { API_BASE_URL } from '../../core/api';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
@@ -46,6 +47,7 @@ describe('SocialSectionComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: BASE },
+        { provide: SubscriptionsStore, useValue: { load: jest.fn() } },
         { provide: ToastService, useValue: toastStub },
         { provide: ConfirmService, useValue: confirmStub },
         { provide: Dialog, useValue: dialogStub },

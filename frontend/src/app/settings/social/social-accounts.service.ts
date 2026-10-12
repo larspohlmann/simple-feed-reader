@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem, problemMessage } from '../../core/problem';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 
 export type SocialNetwork = 'bluesky' | 'mastodon';
 export type SocialAccountStatus = 'connected' | 'needs_reconnect';
@@ -26,6 +27,7 @@ interface SocialAccountList {
 export class SocialAccountsService {
   private readonly http = inject(HttpClient);
   private readonly endpoint = `${inject(API_BASE_URL)}/api/me/social-accounts`;
+  private readonly subscriptions = inject(SubscriptionsStore);
 
   readonly accounts = signal<readonly SocialAccount[] | null>(null);
   readonly failure = signal<string | null>(null);
@@ -60,16 +62,24 @@ export class SocialAccountsService {
     this.replacingList(this.http.put<SocialAccountList>(`${this.endpoint}/${id}/default`, {}));
   }
 
+  /** Disconnecting removes the account's private feeds, so the reader reloads once the account is gone. */
   disconnect(id: number): void {
-    this.replacingList(this.http.delete<SocialAccountList>(`${this.endpoint}/${id}`));
+    this.replacingList(
+      this.http
+        .delete<SocialAccountList>(`${this.endpoint}/${id}`)
+        .pipe(tap(() => this.subscriptions.load())),
+    );
   }
 
+  /** A connect creates the Home feed and a reconnect resumes the private feeds: the reader reloads either way. */
   private upserting(request: Observable<SocialAccount>): Observable<SocialAccount> {
     this.begin();
     return request.pipe(
       tap({
-        next: (account) =>
-          this.accounts.update((current) => this.withAccount(current ?? [], account)),
+        next: (account) => {
+          this.accounts.update((current) => this.withAccount(current ?? [], account));
+          this.subscriptions.load();
+        },
         error: (error: HttpErrorResponse) => this.fail(error),
       }),
       finalize(() => this.busy.set(false)),

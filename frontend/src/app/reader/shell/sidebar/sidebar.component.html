@@ -113,6 +113,12 @@
     (toggleDigest)="toggleDigest.emit($event)"
   />
 
+  @if (!organising()) {
+    @for (section of socialSections(); track section.network) {
+      <app-sidebar-social-section [section]="section" [selection]="selection()" />
+    }
+  }
+
   @if (tagTree().length) {
     <!-- The whole "Tags" section collapses (#612): a full-width toggle plus a
          borderless `.section-chevron` that lines up with the tag chevrons below.

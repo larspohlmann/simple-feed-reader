@@ -36,7 +36,7 @@ const EXEMPT: readonly Exemption[] = [
     reason: 'a 2px selection ring around a user colour, not chrome',
   },
   {
-    file: 'app/reader/shell/sidebar/sidebar.component.scss',
+    file: 'app/reader/shell/sidebar/_sidebar-row.scss',
     selector: '.section-chevron app-icon',
     reason: 'a transparent border that only matches the .chevzone glyph box metrics',
   },

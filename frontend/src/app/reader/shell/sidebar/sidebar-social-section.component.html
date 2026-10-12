@@ -1,0 +1,34 @@
+@let current = section();
+<div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
+  <button class="section-toggle" type="button" [attr.aria-expanded]="expanded()" (click)="toggle()">
+    <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
+  </button>
+  <button
+    class="section-chevron"
+    type="button"
+    [attr.aria-expanded]="expanded()"
+    [attr.aria-label]="
+      'reader.toggleSocialSection'
+        | transloco: { network: ('settings.social.' + current.network | transloco) }
+    "
+    (click)="toggle()"
+  >
+    <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="sm" />
+  </button>
+</div>
+@if (expanded()) {
+  @for (group of current.accounts; track group.accountId) {
+    @if (showsHandles()) {
+      <p class="account-handle">{{ group.handle ?? '' }}</p>
+    }
+    @for (subscription of group.subscriptions; track subscription.id) {
+      <div class="feedrow">
+        <app-sidebar-feed-row
+          [subscription]="subscription"
+          [selection]="selection()"
+          [label]="isUnrenamedHome(subscription) ? ('reader.socialHome' | transloco) : null"
+        />
+      </div>
+    }
+  }
+}

@@ -46,6 +46,7 @@ const sub = (
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  social: null,
 });
 
 interface CountTotals {
@@ -712,5 +713,34 @@ describe('SubscriptionsStore counts-only reload', () => {
     ctrl.expectNone(countsUrl);
     expect(pendingLoad.cancelled).toBe(false);
     pendingLoad.flush(counts([sub(1, 4)]));
+  });
+
+  it('keeps private feeds out of the tag tree and the untagged list, and groups them by network', () => {
+    store.load();
+    const home: SubscriptionDto = {
+      ...sub(5, 2, [tag(20, 'Tech')]),
+      includeInAllItems: false,
+      social: { network: 'bluesky', accountId: 3, kind: 'home' },
+    };
+    const untaggedHome: SubscriptionDto = {
+      ...sub(6, 4),
+      social: { network: 'bluesky', accountId: 3, kind: 'list' },
+    };
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      ...counts([sub(1, 1, []), home, untaggedHome]),
+      socialAccounts: [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social' }],
+    });
+
+    expect(store.untagged().map((subscription) => subscription.id)).toEqual([1]);
+    expect(store.tagTree()).toEqual([]);
+    expect(store.socialSections()).toEqual([
+      {
+        network: 'bluesky',
+        accounts: [
+          { accountId: 3, handle: '@alice.bsky.social', subscriptions: [home, untaggedHome] },
+        ],
+      },
+    ]);
+    expect(store.totalUnread()).toBe(5);
   });
 });

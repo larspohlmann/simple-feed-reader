@@ -35,7 +35,8 @@ import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
-import { SubscriptionDto, SubscriptionFlags, TagDto } from '../../reader/models';
+import { SubscriptionDto, TagDto } from '../../reader/models';
+import { SubscriptionFlags } from '../../reader/subscription-bulk';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
  *  value, and the i18n key for its label. A readonly literal array so the
