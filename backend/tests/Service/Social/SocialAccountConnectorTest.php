@@ -107,7 +107,8 @@ final class SocialAccountConnectorTest extends DbTestCase
 
     public function testAConnectRacedByAnIdenticalOneIsRefusedAsAlreadyConnected(): void
     {
-        $this->entityManager->getEventManager()->addEventListener(Events::onFlush, $this->racingConnect('did:plc:alice'));
+        $eventManager = $this->entityManager->getEventManager();
+        $eventManager->addEventListener(Events::onFlush, $this->racingConnect('did:plc:alice'));
 
         $this->expectException(SocialAccountAlreadyConnectedException::class);
 
