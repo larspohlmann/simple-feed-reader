@@ -14,7 +14,8 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { SocialAccount, SocialAccountsService, SocialNetwork } from './social-accounts.service';
+import { SocialNetworkName } from '../../reader/social-feed';
+import { SocialAccount, SocialAccountsService } from './social-accounts.service';
 import {
   SocialImportDialogComponent,
   SocialImportDialogData,
@@ -164,7 +165,7 @@ export class SocialSectionComponent {
     );
   }
 
-  private accountsOf(network: SocialNetwork) {
+  private accountsOf(network: SocialNetworkName) {
     return computed(() =>
       (this.svc.accounts() ?? []).filter((account) => account.network === network),
     );

@@ -123,7 +123,7 @@ describe('SidebarSocialSectionComponent', () => {
           subscriptions: [
             feed(2, 'home', {
               title: 'Home',
-              ...{ social: { network: 'bluesky', accountId: 4, kind: 'home' } },
+              social: { network: 'bluesky', accountId: 4, kind: 'home' },
             }),
           ],
         },
@@ -154,5 +154,31 @@ describe('SidebarSocialSectionComponent', () => {
     expect(localStorage.getItem('sfr.bluesky.collapsed')).toBe('true');
     expect(localStorage.getItem('sfr.mastodon.collapsed')).toBeNull();
     expect(element(mount(ONE_ACCOUNT)).querySelectorAll('app-sidebar-feed-row').length).toBe(0);
+  });
+
+  it('leaves out the heading of an account whose handle is unknown', () => {
+    const unknownHandle: SocialSection = {
+      network: 'bluesky',
+      accounts: [
+        { accountId: 3, handle: null, subscriptions: [feed(1, 'home')] },
+        { accountId: 4, handle: '@work.bsky.social', subscriptions: [feed(2, 'home')] },
+      ],
+    };
+
+    const handles = [...element(mount(unknownHandle)).querySelectorAll('.account-handle')].map(
+      (handle) => handle.textContent?.trim(),
+    );
+    expect(handles).toEqual(['@work.bsky.social']);
+  });
+
+  it('marks no private feed as excluded, since the section already says what they are', () => {
+    const excluded = (id: number) =>
+      feed(id, 'list', { includeInAllItems: false, includeInForYou: false });
+    const section: SocialSection = {
+      network: 'bluesky',
+      accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
+    };
+
+    expect(element(mount(section)).querySelector('.feed-exclusion-marker')).toBeNull();
   });
 });

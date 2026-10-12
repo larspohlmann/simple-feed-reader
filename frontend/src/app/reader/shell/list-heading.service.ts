@@ -8,6 +8,8 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { Selection, visibleSearchTerm } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
+import { displayTitle } from '../feeds/display-title';
+import { SubscriptionDto } from '../models';
 import { ReaderRouteState } from './reader-route-state.service';
 
 @Injectable()
@@ -91,9 +93,30 @@ export class ListHeading {
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
     search: () => `${this.searchTitlePrefix()} ${this.searchTitleBody()}`,
-    subscription: () =>
-      this.selectedSubscription()?.title ?? this.i18n.translate('reader.feedFallback'),
+    subscription: () => {
+      const subscription = this.selectedSubscription();
+      return subscription
+        ? this.feedTitle(subscription)
+        : this.i18n.translate('reader.feedFallback');
+    },
   };
+
+  private feedTitle(subscription: SubscriptionDto): string {
+    const title = displayTitle(subscription, this.i18n.translate('reader.socialHome'));
+    const handle = this.sharedNetworkHandle(subscription);
+    return handle !== null && title !== subscription.title ? `${title} · ${handle}` : title;
+  }
+
+  /** The account's handle when its network has several, so a Home says whose it is. */
+  private sharedNetworkHandle(subscription: SubscriptionDto): string | null {
+    const social = subscription.social;
+    if (social === null) return null;
+    const section = this.subscriptions
+      .socialSections()
+      .find((candidate) => candidate.network === social.network);
+    if (!section || section.accounts.length < 2) return null;
+    return section.accounts.find((group) => group.accountId === social.accountId)?.handle ?? null;
+  }
 
   private readonly countByKind: Record<Selection['kind'], (selection: Selection) => TitleCount> = {
     all: (selection) =>

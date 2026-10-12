@@ -3,7 +3,6 @@ import { SocialAccountRefDto, SocialNetworkName } from '../social-feed';
 
 export interface SocialAccountGroup {
   readonly accountId: number;
-  /** null when the answer named no such account, e.g. one disconnected since the list loaded. */
   readonly handle: string | null;
   readonly subscriptions: readonly SubscriptionDto[];
 }

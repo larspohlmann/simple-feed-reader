@@ -205,4 +205,34 @@ describe('EditSubscriptionDialogComponent', () => {
     });
     testRequest.flush({ subscription: excludedFromAllItems });
   });
+
+  it('prefills an unrenamed Home with its label and sends no custom title when left as is', () => {
+    const home: SubscriptionDto = {
+      ...sub,
+      title: 'Timeline',
+      customTitle: null,
+      social: { network: 'bluesky', accountId: 3, kind: 'home' },
+    };
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: DialogRef, useValue: { close } },
+        { provide: DIALOG_DATA, useValue: home },
+      ],
+    });
+    const fixture = TestBed.createComponent(EditSubscriptionDialogComponent);
+    fixture.detectChanges();
+    ctrl = TestBed.inject(HttpTestingController);
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+
+    expect(fixture.componentInstance.form.controls.customTitle.value).toBe('Home');
+    fixture.componentInstance.submit();
+
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.body.customTitle).toBeNull();
+    testRequest.flush({ subscription: home });
+  });
 });

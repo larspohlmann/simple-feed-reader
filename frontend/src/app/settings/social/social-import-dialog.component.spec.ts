@@ -8,7 +8,7 @@ import { RefreshService } from '../../reader/state/refresh.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { SocialNetwork } from './social-accounts.service';
+import { SocialNetworkName } from '../../reader/social-feed';
 import { SocialImportDialogComponent } from './social-import-dialog.component';
 import { CollectionCandidate, FollowCandidate, ImportCandidates } from './social-import.service';
 
@@ -72,7 +72,7 @@ describe('SocialImportDialogComponent', () => {
   const toastStub = { show: jest.fn() };
 
   function mount(
-    network: SocialNetwork = 'bluesky',
+    network: SocialNetworkName = 'bluesky',
   ): ComponentFixture<SocialImportDialogComponent> {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -97,7 +97,7 @@ describe('SocialImportDialogComponent', () => {
 
   function loaded(
     body: ImportCandidates,
-    network: SocialNetwork = 'bluesky',
+    network: SocialNetworkName = 'bluesky',
   ): ComponentFixture<SocialImportDialogComponent> {
     const fixture = mount(network);
     http.expectOne(CANDIDATES).flush(body);

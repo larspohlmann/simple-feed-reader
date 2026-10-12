@@ -1,7 +1,7 @@
 import { Component, computed, input, linkedSignal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { SubscriptionDto } from '../../models';
+import { isUnrenamedHome } from '../../feeds/display-title';
 import { SocialNetworkName } from '../../social-feed';
 import { Selection } from '../../query/query';
 import { SocialSection } from '../../state/social-sections';
@@ -20,9 +20,10 @@ export class SidebarSocialSectionComponent {
   readonly section = input.required<SocialSection>();
   readonly selection = input.required<Selection>();
 
-  protected readonly expanded = linkedSignal(
-    () => localStorage.getItem(collapsedKey(this.section().network)) !== 'true',
-  );
+  protected readonly expanded = linkedSignal({
+    source: () => this.section().network,
+    computation: (network) => localStorage.getItem(collapsedKey(network)) !== 'true',
+  });
   protected readonly showsHandles = computed(() => this.section().accounts.length > 1);
 
   protected toggle(): void {
@@ -31,7 +32,5 @@ export class SidebarSocialSectionComponent {
     localStorage.setItem(collapsedKey(this.section().network), String(!open));
   }
 
-  protected isUnrenamedHome(subscription: SubscriptionDto): boolean {
-    return subscription.social?.kind === 'home' && subscription.customTitle === null;
-  }
+  protected readonly isUnrenamedHome = isUnrenamedHome;
 }

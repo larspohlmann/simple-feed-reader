@@ -15,7 +15,7 @@ import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
-import { SocialNetwork } from './social-accounts.service';
+import { SocialNetworkName } from '../../reader/social-feed';
 import {
   CollectionCandidate,
   CollectionState,
@@ -29,7 +29,7 @@ import {
 
 export interface SocialImportDialogData {
   readonly accountId: number;
-  readonly network: SocialNetwork;
+  readonly network: SocialNetworkName;
   readonly handle: string;
 }
 

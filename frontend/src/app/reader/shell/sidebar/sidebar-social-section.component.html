@@ -1,4 +1,5 @@
 @let current = section();
+@let homeLabel = 'reader.socialHome' | transloco;
 <div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
   <button class="section-toggle" type="button" [attr.aria-expanded]="expanded()" (click)="toggle()">
     <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
@@ -18,15 +19,15 @@
 </div>
 @if (expanded()) {
   @for (group of current.accounts; track group.accountId) {
-    @if (showsHandles()) {
-      <p class="account-handle">{{ group.handle ?? '' }}</p>
+    @if (showsHandles() && group.handle) {
+      <p class="account-handle">{{ group.handle }}</p>
     }
     @for (subscription of group.subscriptions; track subscription.id) {
       <div class="feedrow">
         <app-sidebar-feed-row
           [subscription]="subscription"
           [selection]="selection()"
-          [label]="isUnrenamedHome(subscription) ? ('reader.socialHome' | transloco) : null"
+          [label]="isUnrenamedHome(subscription) ? homeLabel : null"
         />
       </div>
     }

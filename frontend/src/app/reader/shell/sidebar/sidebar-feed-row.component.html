@@ -9,7 +9,7 @@
   <button
     class="dots"
     type="button"
-    [attr.aria-label]="'reader.manage' | transloco: { name: feed.title }"
+    [attr.aria-label]="'reader.manage' | transloco: { name: label() ?? feed.title }"
     (click)="rows.openFeedSheet(feed)"
   >
     <app-icon name="more_horiz" size="sm" />
@@ -24,7 +24,7 @@
     queryParamsHandling="merge"
   >
     <app-favicon [url]="feed.faviconUrl" /><span>{{ label() ?? feed.title }}</span>
-    @if (!feed.includeInAllItems || !feed.includeInForYou) {
+    @if (!feed.social && (!feed.includeInAllItems || !feed.includeInForYou)) {
       <app-icon
         class="feed-exclusion-marker"
         name="visibility_off"
@@ -45,7 +45,7 @@
       <button
         class="dots"
         type="button"
-        [attr.aria-label]="'reader.manage' | transloco: { name: feed.title }"
+        [attr.aria-label]="'reader.manage' | transloco: { name: label() ?? feed.title }"
         (click)="rows.toggleMenu(menuKey(), $event)"
       >
         <app-icon name="more_horiz" size="sm" />

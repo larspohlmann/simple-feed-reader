@@ -201,4 +201,24 @@ describe('SocialAccountsService', () => {
 
     expect(subscriptionsStub.load).toHaveBeenCalledTimes(1);
   });
+
+  it('reloads the reader once a reconnect has resumed the private feeds', () => {
+    loadAccounts([account({ status: 'needs_reconnect' })]);
+
+    service.reconnect(1, 'new-secret').subscribe();
+    http.expectOne(`${ENDPOINT}/1/credential`).flush(account());
+
+    expect(subscriptionsStub.load).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reload the reader when a disconnect fails', () => {
+    loadAccounts([account()]);
+
+    service.disconnect(1);
+    http
+      .expectOne(`${ENDPOINT}/1`)
+      .flush({ title: 'Boom' }, { status: 500, statusText: 'Server Error' });
+
+    expect(subscriptionsStub.load).not.toHaveBeenCalled();
+  });
 });
