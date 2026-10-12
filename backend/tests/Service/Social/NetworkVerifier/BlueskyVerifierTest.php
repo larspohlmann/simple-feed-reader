@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\NetworkVerifier;
 
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\BlueskySessionOpener;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
@@ -56,7 +57,7 @@ final class BlueskyVerifierTest extends TestCase
             ]),
             new IpValidator(),
         );
-        $api = FetchWiring::guardedApiClient($http->client(), $guard);
+        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
 
         return new BlueskyVerifier(
             new BlueskyIdentityResolver($api),

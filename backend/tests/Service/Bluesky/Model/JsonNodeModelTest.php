@@ -61,10 +61,24 @@ final class JsonNodeModelTest extends TestCase
     {
         $node = JsonNodeModel::of(['empty' => [], 'images' => [['alt' => 'one']], 'map' => ['a' => 1], 'text' => 'x']);
 
-        self::assertTrue($node->hasList('empty'));
-        self::assertTrue($node->hasList('images'));
-        self::assertFalse($node->hasList('map'));
-        self::assertFalse($node->hasList('text'));
-        self::assertFalse($node->hasList('missing'));
+        self::assertSame([], $node->listAt('empty'));
+        self::assertSame('one', ($node->listAt('images') ?? [])[0]->string('alt'));
+        self::assertNull($node->listAt('map'));
+        self::assertNull($node->listAt('text'));
+        self::assertNull($node->listAt('missing'));
+    }
+
+    public function testOnlyAListValueReadsAsNodes(): void
+    {
+        $nodes = JsonNodeModel::listOf([['alt' => 'one'], ['alt' => 'two']]) ?? [];
+
+        self::assertSame(
+            ['one', 'two'],
+            array_map(static fn (JsonNodeModel $node): ?string => $node->string('alt'), $nodes),
+        );
+        self::assertSame([], JsonNodeModel::listOf([]));
+        self::assertNull(JsonNodeModel::listOf(['a' => 1]));
+        self::assertNull(JsonNodeModel::listOf('text'));
+        self::assertNull(JsonNodeModel::listOf(null));
     }
 }

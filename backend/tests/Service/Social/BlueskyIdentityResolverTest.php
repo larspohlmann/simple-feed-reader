@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social;
 
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -35,7 +36,9 @@ final class BlueskyIdentityResolverTest extends TestCase
             new IpValidator(),
         );
 
-        return new BlueskyIdentityResolver(FetchWiring::guardedApiClient($http->client(), $guard));
+        return new BlueskyIdentityResolver(
+            new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard)),
+        );
     }
 
     public function testAHandleResolvesThroughPlcToItsPds(): void

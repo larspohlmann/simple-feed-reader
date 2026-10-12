@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social;
 use App\Enum\SocialNetwork;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\FollowMatcher;
 use App\Service\Social\Model\FollowedAccountModel;
@@ -29,7 +30,9 @@ final class FollowMatcherTest extends TestCase
     {
         $guard = new UrlGuard(new StaticDnsResolver(['public.api.bsky.app' => ['93.184.216.34']]), new IpValidator());
 
-        return new FollowMatcher(new BlueskyIdentityResolver(FetchWiring::guardedApiClient($http->client(), $guard)));
+        return new FollowMatcher(new BlueskyIdentityResolver(
+            new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard)),
+        ));
     }
 
     private static function bob(): FollowedAccountModel

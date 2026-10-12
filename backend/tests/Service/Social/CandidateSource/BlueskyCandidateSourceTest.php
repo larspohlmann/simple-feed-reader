@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\CandidateSource;
 
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessionOpener;
 use App\Service\Social\CandidateSource\BlueskyCandidateSource;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
@@ -42,7 +43,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             new StaticDnsResolver(['public.api.bsky.app' => $address, 'pds.example.test' => $address]),
             new IpValidator(),
         );
-        $api = FetchWiring::guardedApiClient($http->client(), $guard);
+        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
 
         return new BlueskyCandidateSource(
             $api,

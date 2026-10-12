@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social;
 
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessionOpener;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -28,7 +29,7 @@ final class BlueskySessionOpenerTest extends TestCase
         $guard = new UrlGuard(new StaticDnsResolver(['pds.example.test' => ['93.184.216.34']]), new IpValidator());
 
         return new BlueskySessionOpener(
-            FetchWiring::guardedApiClient($http->client(), $guard),
+            new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard)),
             new StoredCredential(SocialAccounts::cipher()),
         );
     }

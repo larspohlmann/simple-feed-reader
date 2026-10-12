@@ -6,10 +6,10 @@ namespace App\Service\Social\CandidateSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ApiRequestModel;
+use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessionOpener;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskySessionModel;
@@ -21,7 +21,7 @@ use App\Service\Social\Support\ProfileFeedUrl;
 
 final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 {
-    private const string APP_VIEW = 'https://public.api.bsky.app/xrpc/';
+    private const string GET_FEED_GENERATORS = AppViewClient::BASE_URL . 'app.bsky.feed.getFeedGenerators';
     private const string GET_PREFERENCES = '/xrpc/app.bsky.actor.getPreferences';
     private const string SAVED_FEEDS = 'app.bsky.actor.defs#savedFeedsPrefV2';
     private const string CURATED_LIST = 'app.bsky.graph.defs#curatelist';
@@ -29,7 +29,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     private const int GENERATORS_PER_CALL = 25;
 
     public function __construct(
-        private GuardedApiClient $api,
+        private BlueskyApiClient $bluesky,
         private BlueskySessionOpener $sessions,
     ) {
     }
@@ -55,7 +55,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 
     private static function actorPage(string $method, string $did): string
     {
-        return self::APP_VIEW . $method . '?actor=' . rawurlencode($did) . '&limit=' . self::PAGE_SIZE;
+        return AppViewClient::BASE_URL . $method . '?actor=' . rawurlencode($did) . '&limit=' . self::PAGE_SIZE;
     }
 
     private function collect(string $firstPage, string $field): CollectedItemsModel
@@ -63,9 +63,11 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
         $items = [];
         $cursor = null;
         do {
-            $page = $this->publicJson(null === $cursor ? $firstPage : $firstPage . '&cursor=' . rawurlencode($cursor));
+            $page = $this->json(ApiRequestModel::get(
+                null === $cursor ? $firstPage : $firstPage . '&cursor=' . rawurlencode($cursor),
+            ));
             $fresh = self::collectionIn($page, $field);
-            $items = [...$items, ...$fresh];
+            array_push($items, ...$fresh);
             $cursor = $page->string('cursor');
         } while (null !== $cursor && [] !== $fresh && \count($items) <= CollectedItemsModel::MAX_ITEMS);
 
@@ -173,7 +175,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
         $names = [];
         foreach (array_chunk($uris, self::GENERATORS_PER_CALL) as $batch) {
             $query = implode('&', array_map(static fn (string $uri): string => 'feeds=' . rawurlencode($uri), $batch));
-            $answer = $this->publicJson(self::APP_VIEW . 'app.bsky.feed.getFeedGenerators?' . $query);
+            $answer = $this->json(ApiRequestModel::get(self::GET_FEED_GENERATORS . '?' . $query));
             $names = [...$names, ...self::namesIn($answer)];
         }
 
@@ -198,29 +200,12 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     /** @return list<JsonNodeModel> */
     private static function collectionIn(JsonNodeModel $answer, string $field): array
     {
-        if (!$answer->hasList($field)) {
-            throw new SocialNetworkUnreachableException(sprintf('Bluesky answered without %s.', $field));
-        }
-
-        return $answer->nodes($field);
-    }
-
-    private function publicJson(string $url): JsonNodeModel
-    {
-        return $this->json(ApiRequestModel::get($url));
+        return $answer->listAt($field)
+            ?? throw new SocialNetworkUnreachableException(sprintf('Bluesky answered without %s.', $field));
     }
 
     private function json(ApiRequestModel $request): JsonNodeModel
     {
-        try {
-            $answer = $this->api->send($request);
-        } catch (FetchException $exception) {
-            throw new SocialNetworkUnreachableException('Bluesky could not be reached.', previous: $exception);
-        }
-        if (!$answer->isSuccessful()) {
-            throw new SocialNetworkUnreachableException(sprintf('Bluesky answered %d.', $answer->status));
-        }
-
-        return JsonNodeModel::of($answer->json());
+        return JsonNodeModel::of($this->bluesky->send($request)->json());
     }
 }

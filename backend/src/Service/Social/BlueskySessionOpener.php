@@ -6,8 +6,6 @@ namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
@@ -21,7 +19,7 @@ final readonly class BlueskySessionOpener
     private const string CREATE_SESSION = '/xrpc/com.atproto.server.createSession';
 
     public function __construct(
-        private GuardedApiClient $api,
+        private BlueskyApiClient $bluesky,
         private StoredCredential $storedCredential,
     ) {
     }
@@ -65,16 +63,9 @@ final readonly class BlueskySessionOpener
 
     private function createSession(BlueskyIdentityModel $identity, string $appPassword): ApiResponseModel
     {
-        try {
-            return $this->api->send(ApiRequestModel::postJson(
-                $identity->pdsUrl . self::CREATE_SESSION,
-                ['identifier' => $identity->did, 'password' => $appPassword],
-            ));
-        } catch (FetchException $exception) {
-            throw new SocialNetworkUnreachableException(
-                'The Bluesky server could not be reached.',
-                previous: $exception,
-            );
-        }
+        return $this->bluesky->answer(ApiRequestModel::postJson(
+            $identity->pdsUrl . self::CREATE_SESSION,
+            ['identifier' => $identity->did, 'password' => $appPassword],
+        ));
     }
 }

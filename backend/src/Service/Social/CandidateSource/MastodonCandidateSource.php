@@ -64,7 +64,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
         do {
             $answer = $this->mastodon->send($session->get($url));
             $fresh = self::nodesOf($answer);
-            $items = [...$items, ...$fresh];
+            array_push($items, ...$fresh);
             $url = LinkHeader::next($answer->header('link'));
             if (null !== $url && !LinkHeader::isOn($session->instanceUrl, $url)) {
                 return CollectedItemsModel::cutShort($items);
@@ -110,11 +110,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
     /** @return list<JsonNodeModel> */
     private static function nodesOf(ApiResponseModel $answer): array
     {
-        $decoded = json_decode($answer->body, true);
-        if (!\is_array($decoded) || !array_is_list($decoded)) {
-            throw new SocialNetworkUnreachableException('The Mastodon instance answered without a list.');
-        }
-
-        return array_map(JsonNodeModel::of(...), $decoded);
+        return JsonNodeModel::listOf(json_decode($answer->body, true))
+            ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without a list.');
     }
 }

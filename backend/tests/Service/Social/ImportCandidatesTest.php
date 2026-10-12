@@ -11,6 +11,7 @@ use App\Enum\SocialAccountStatus;
 use App\Repository\SubscriptionRepository;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -50,7 +51,7 @@ final class ImportCandidatesTest extends DbTestCase
         self::assertInstanceOf(SubscriptionRepository::class, $subscriptions);
         $guard = new UrlGuard(new StaticDnsResolver([]), new IpValidator());
         $resolver = new BlueskyIdentityResolver(
-            FetchWiring::guardedApiClient((new RoutedHttpClient([]))->client(), $guard),
+            new BlueskyApiClient(FetchWiring::guardedApiClient((new RoutedHttpClient([]))->client(), $guard)),
         );
 
         return new ImportCandidates($network, $subscriptions, new FollowMatcher($resolver), $this->entityManager);
