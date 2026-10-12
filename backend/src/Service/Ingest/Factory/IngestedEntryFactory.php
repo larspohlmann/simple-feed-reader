@@ -43,11 +43,11 @@ final readonly class IngestedEntryFactory
             $incoming->urlHash,
         );
         $entry->setHeadline($parsed->headline);
-        $entry->setAuthor(self::cut($parsed->author, self::AUTHOR_MAX));
-        $entry->setAuthorUrl(AbsoluteHttpUrl::orNullWithin($parsed->authorUrl, EntryAuthor::URL_MAX_LENGTH));
-        $entry->setAuthorAvatarUrl(
+        $entry->setAuthor(new EntryAuthor(
+            self::cut($parsed->author, self::AUTHOR_MAX),
+            AbsoluteHttpUrl::orNullWithin($parsed->authorUrl, EntryAuthor::URL_MAX_LENGTH),
             AbsoluteHttpUrl::orNullWithin($parsed->authorAvatarUrl, EntryAuthor::URL_MAX_LENGTH),
-        );
+        ));
         $entry->setSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml));
         $entry->setContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
         $entry->setPublishedAt($parsed->publishedAt);

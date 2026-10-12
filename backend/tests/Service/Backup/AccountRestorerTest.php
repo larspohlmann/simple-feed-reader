@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup;
 
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
@@ -228,7 +229,7 @@ final class AccountRestorerTest extends DbTestCase
             new \DateTimeImmutable($day . ' 06:00:00'),
             new \DateTimeImmutable($day . ' 05:00:00'),
         );
-        $entry->setAuthor('An Author');
+        $entry->setAuthor(new EntryAuthor('An Author'));
         $entry->setSummary('Summary of ' . $title);
         $entry->setContentHtml('<p>Body of ' . $title . '</p>');
         $entry->getImage()->storePending('https://example.test/' . $guid . '.png', 640, 480);

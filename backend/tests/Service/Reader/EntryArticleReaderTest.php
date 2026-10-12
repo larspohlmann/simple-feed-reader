@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Service\Reader\EntryArticleReader;
@@ -71,7 +72,7 @@ final class EntryArticleReaderTest extends TestCase
     public function testExtractsTheEntryPageWithItsHints(): void
     {
         $entry = $this->entry('https://example.com/article');
-        $entry->setAuthor('Jana Steger');
+        $entry->setAuthor(new EntryAuthor('Jana Steger'));
         $extracted = $this->extraction('<p>Body</p>');
         $this->extractor->willReturn($extracted);
 

@@ -146,9 +146,9 @@ final class Entry
         return $this->author->getName();
     }
 
-    public function setAuthor(?string $author): void
+    public function setAuthor(EntryAuthor $author): void
     {
-        $this->author->storeName($author);
+        $this->author = $author;
     }
 
     public function getAuthorUrl(): ?string
@@ -156,19 +156,9 @@ final class Entry
         return $this->author->getProfileUrl();
     }
 
-    public function setAuthorUrl(?string $authorUrl): void
-    {
-        $this->author->storeProfileUrl($authorUrl);
-    }
-
     public function getAuthorAvatarUrl(): ?string
     {
         return $this->author->getAvatarUrl();
-    }
-
-    public function setAuthorAvatarUrl(?string $authorAvatarUrl): void
-    {
-        $this->author->storeAvatarUrl($authorAvatarUrl);
     }
 
     public function getSummary(): ?string

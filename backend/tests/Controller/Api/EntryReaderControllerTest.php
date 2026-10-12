@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Headline;
@@ -202,7 +203,7 @@ final class EntryReaderControllerTest extends WebTestCase
             null,
         ));
         $entry = $this->seedEntry($user, 'https://example.com/article');
-        $entry->setAuthor('Jana Steger');
+        $entry->setAuthor(new EntryAuthor('Jana Steger'));
         $this->flush();
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
