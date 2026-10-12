@@ -23,7 +23,7 @@ final class RetryAfterHeaderTest extends TestCase
         yield 'padded' => [' 30 ', 30];
         yield 'a date' => ['Wed, 21 Oct 2026 07:28:00 GMT', null];
         yield 'negative' => ['-5', null];
-        yield 'too long to be a wait' => ['1234567890', null];
+        yield 'longer than any wait, left to the caller to clamp' => ['1234567890', 1234567890];
         yield 'absent' => [null, null];
     }
 

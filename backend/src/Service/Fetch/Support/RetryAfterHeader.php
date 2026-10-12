@@ -6,7 +6,7 @@ namespace App\Service\Fetch\Support;
 
 final class RetryAfterHeader
 {
-    private const string DELAY = '/^\d{1,9}$/';
+    private const string DELAY = '/^\d+$/D';
 
     /** Only the delay form; a value we cannot read, a date included, names no wait. */
     public static function seconds(?string $header): ?int

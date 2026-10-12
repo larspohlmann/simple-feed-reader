@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Enum\FeedStatus;
 use App\Enum\SourceFormat;
 use App\Service\Fetch\HostThrottle;
+use App\Service\Fetch\Support\RetryAfterHeader;
 use App\Tests\Support\FeedSchedulers;
 use App\Service\Feed\FeedScheduler;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -143,6 +144,16 @@ final class FeedSchedulerTest extends TestCase
         $this->scheduler->recordThrottled($feed, $retryAfterSeconds);
 
         self::assertSame($expectedNextFetch, $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
+    }
+
+    public function testAnAbsurdRetryAfterHeaderStillWaitsTheFullDay(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 60);
+
+        $this->scheduler->recordThrottled($feed, RetryAfterHeader::seconds('9999999999'));
+
+        self::assertSame('2026-07-22 12:00:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
     }
 
     public function testThrottlingRecordsAHostThrottleForTheWholeHost(): void
