@@ -50,7 +50,7 @@ final class SocialFeedRepository extends ServiceEntityRepository
         $subscriptions = $this->getEntityManager()->createQueryBuilder()
             ->select('s')
             ->from(Subscription::class, 's')
-            ->join(SocialFeed::class, 'sf', 'WITH', 'sf.feed = s.feed')
+            ->join(SocialFeed::class, 'sf', 'ON', 'sf.feed = s.feed')
             ->andWhere('sf.socialAccount = :account')
             ->setParameter('account', $account)
             ->orderBy('s.id', 'ASC')

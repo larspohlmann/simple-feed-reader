@@ -10,7 +10,6 @@ use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
-use App\Repository\SocialFeedRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\SocialAccounts;
@@ -34,16 +33,21 @@ final class SocialFeedRepositoryTest extends DbTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $this->user = (new UserFactory($this->entityManager, $hasher))->create('social-feeds@example.test');
-        $this->account = $this->persistedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->account = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::blueskyOf($this->user),
+        );
     }
 
     public function testAHomeFeedIsFoundByItsAbsentRemoteId(): void
     {
         $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
 
-        self::assertSame($home, $this->repository()->findOneFor($this->account, SocialFeedKind::Home, null));
+        self::assertSame($home, SocialFeeds::repository($this->entityManager)
+            ->findOneFor($this->account, SocialFeedKind::Home, null));
         self::assertNull($home->getRemoteId());
-        self::assertNull($this->repository()->findOneFor($this->account, SocialFeedKind::UserList, null));
+        self::assertNull(SocialFeeds::repository($this->entityManager)
+            ->findOneFor($this->account, SocialFeedKind::UserList, null));
     }
 
     public function testASecondHomeFeedOfTheSameAccountIsRefusedByTheDatabase(): void
@@ -59,16 +63,20 @@ final class SocialFeedRepositoryTest extends DbTestCase
     {
         $list = $this->socialFeed($this->account, SocialFeedKind::UserList, self::WRITERS);
 
-        $found = $this->repository()->findOneFor($this->account, SocialFeedKind::UserList, self::WRITERS);
+        $found = SocialFeeds::repository($this->entityManager)
+            ->findOneFor($this->account, SocialFeedKind::UserList, self::WRITERS);
 
         self::assertSame($list, $found);
-        self::assertSame($list, $this->repository()->findOneByFeed($list->getFeed()));
+        self::assertSame($list, SocialFeeds::repository($this->entityManager)->findOneByFeed($list->getFeed()));
         self::assertSame(self::WRITERS, $list->getRemoteId());
     }
 
     public function testAnAccountsFeedsAndSubscriptionsAreItsOwnOnly(): void
     {
-        $other = $this->persistedAccount(SocialAccounts::mastodonOf($this->user));
+        $other = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonOf($this->user),
+        );
         $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
         $theirs = $this->socialFeed($other, SocialFeedKind::Home, null);
         $own = $this->subscribe($home);
@@ -76,8 +84,8 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $profileFeeds = new ProfileFeedSubscriptions($this->entityManager);
         $profileFeeds->subscribe($this->user, 'https://bsky.app/profile/did:plc:bob/rss');
 
-        self::assertSame([$own], $this->repository()->subscriptionsOf($this->account));
-        self::assertSame([$home], $this->repository()->findAllOf($this->account));
+        self::assertSame([$own], SocialFeeds::repository($this->entityManager)->subscriptionsOf($this->account));
+        self::assertSame([$home], SocialFeeds::repository($this->entityManager)->findAllOf($this->account));
     }
 
     public function testThePageNewestIdIsKeptAndAnEmptyPageKeepsTheLastOne(): void
@@ -88,6 +96,30 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $home->recordNewestSeen(null);
 
         self::assertSame('109', $home->getNewestSeenId());
+    }
+
+    public function testDeletingTheAccountRemovesItsSocialFeeds(): void
+    {
+        $this->socialFeed($this->account, SocialFeedKind::Home, null);
+        $accountId = $this->account->requireId();
+
+        $this->entityManager->remove($this->account);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        self::assertSame([], $this->entityManager->getRepository(SocialFeed::class)->findAll());
+        self::assertNull($this->entityManager->find(SocialAccount::class, $accountId));
+    }
+
+    public function testDeletingTheFeedRemovesItsSocialFeed(): void
+    {
+        $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
+
+        $this->entityManager->remove($home->getFeed());
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        self::assertSame([], $this->entityManager->getRepository(SocialFeed::class)->findAll());
     }
 
     private function socialFeed(SocialAccount $account, SocialFeedKind $kind, ?string $remoteId): SocialFeed
@@ -109,15 +141,5 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         return $subscription;
-    }
-
-    private function persistedAccount(SocialAccount $account): SocialAccount
-    {
-        return SocialFeeds::persistedAccount($this->entityManager, $account);
-    }
-
-    private function repository(): SocialFeedRepository
-    {
-        return SocialFeeds::repository($this->entityManager);
     }
 }
