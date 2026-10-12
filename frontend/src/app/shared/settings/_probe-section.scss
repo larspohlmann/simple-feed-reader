@@ -2,6 +2,7 @@
 // fields: the proxy and mail sections. Grouped chrome comes from the shared
 // primitives; what lives here is field widths and the banner inset.
 @use '../../theme/breakpoints' as bp;
+@use 'field-width';
 
 @mixin probe-section {
   // The Test row's control slot: outcome glyph, then button. The glyph's box is
@@ -43,7 +44,7 @@
   }
 
   .credential-field {
-    width: 24ch;
+    @include field-width.credential-field;
   }
 
   // Narrow viewport: the row stacks, so every field takes the full line rather
@@ -52,7 +53,6 @@
   @media (width <= bp.$bp-sm) {
     .host-field,
     .port-field,
-    .credential-field,
     .select-field {
       width: 100%;
     }

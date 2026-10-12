@@ -1,4 +1,4 @@
-@use '../../theme/breakpoints' as bp;
+@use '../../shared/settings/field-width';
 @use '../../theme/glass-rim';
 
 :host app-button {
@@ -6,41 +6,22 @@
   white-space: nowrap;
 }
 
-// Field widths in `ch` like the proxy section's credential-field: the row's control
-// slot is sized to its content, so a percentage width would collapse it.
 .text-field,
 .secret-field {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: 24ch;
-}
-
-// Narrow viewport: the row stacks and the control takes the line; the field fills what the button leaves.
-@media (width <= bp.$bp-sm) {
-  .text-field,
-  .secret-field {
-    width: auto;
-  }
-
-  .text-field {
-    width: 100%;
-  }
+  @include field-width.credential-field-beside-button;
 }
 
 .status-chip {
   @include glass-rim.filled(var(--bg-warning), var(--border-warning));
 
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   padding: var(--space-0) var(--space-3);
   border-radius: var(--radius-pill);
   color: var(--warning);
   font-size: var(--fs-sm);
   white-space: nowrap;
-}
-
-.status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
 }
 
 .status-chip.connected {
@@ -49,7 +30,6 @@
   color: var(--success);
 }
 
-// Chips and buttons wrap onto a second line rather than crushing the handle beside them.
 .account-actions {
   display: flex;
   flex-wrap: wrap;
