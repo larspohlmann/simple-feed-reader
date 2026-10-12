@@ -42,7 +42,6 @@ export class SocialSectionComponent {
   protected readonly blueskyAccounts = this.accountsOf('bluesky');
   protected readonly mastodonAccounts = this.accountsOf('mastodon');
 
-  // Secrets live only in these component signals; each is cleared once its request succeeds.
   protected readonly blueskyFormOpen = signal(false);
   protected readonly mastodonFormOpen = signal(false);
   protected readonly blueskyHandle = signal('');
