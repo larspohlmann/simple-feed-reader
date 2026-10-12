@@ -112,7 +112,7 @@
               queryParamsHandling="merge"
               >{{ e.source }}</a
             >
-            @if (e.author) {
+            @if (e.author && e.author !== e.source) {
               · {{ e.author }}
             }
             · {{ when(e) }}

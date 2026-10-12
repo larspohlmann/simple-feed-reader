@@ -225,6 +225,21 @@ describe('ReaderViewComponent', () => {
     expect(link.rel).toContain('noopener');
   });
 
+  describe('the meta line author', () => {
+    const metaText = (over: Partial<EntryDto>): string =>
+      (mount(entry(over)).nativeElement as HTMLElement).querySelector('.meta')!.textContent!;
+
+    it('names the author after a differing source', () => {
+      expect(metaText({ source: 'Ars', author: 'Ada' })).toContain('· Ada');
+    });
+
+    it('does not repeat an author equal to the source', () => {
+      expect(metaText({ source: 'POLITICO Europe', author: 'POLITICO Europe' })).not.toContain(
+        '· POLITICO Europe',
+      );
+    });
+  });
+
   describe('an untitled entry', () => {
     const untitled = () => entry({ title: '', source: 'Ars' });
 

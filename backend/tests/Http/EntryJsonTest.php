@@ -12,6 +12,7 @@ use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
+use App\Enum\SourceFormat;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnrichment;
@@ -408,6 +409,44 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
+    }
+
+    public function testAPrivateFeedEntryNamesItsAuthorAsTheSource(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::BLUESKY_API, 'POLITICO Europe');
+
+        self::assertSame('POLITICO Europe', EntryJson::listRow($this->row($entry))['source']);
+    }
+
+    public function testAPrivateFeedEntryWithoutAnAuthorKeepsTheSubscriptionTitleAsTheSource(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::MASTODON_API, null);
+
+        self::assertSame('Source', EntryJson::listRow($this->row($entry))['source']);
+    }
+
+    public function testAnOrdinaryFeedEntryKeepsTheSubscriptionTitleAsTheSource(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::XML, 'A. Writer');
+
+        self::assertSame('Source', EntryJson::listRow($this->row($entry))['source']);
+    }
+
+    private function entryOfFeedWithFormat(string $sourceFormat, ?string $author): Entry
+    {
+        $feed = new Feed('https://example.com/feed');
+        $feed->setSourceFormat($sourceFormat);
+        $entry = new Entry(
+            $feed,
+            'guid',
+            'https://example.com/a',
+            'Post',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $entry->setAuthor($author);
+
+        return $entry;
     }
 
     private function row(Entry $entry, EntryListRowEnrichment $enrichment = new EntryListRowEnrichment()): EntryListRow

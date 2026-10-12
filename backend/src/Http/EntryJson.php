@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
+use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Service\Text\Support\EntryExcerpt;
 use App\Service\Url\Support\YouTubeUrl;
@@ -70,7 +71,7 @@ final class EntryJson
             'publishedAt' => $entry->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
-            'source' => $row->subscriptionTitle,
+            'source' => self::sourceName($row),
             // The feed is fetch-joined in the row query, so this adds no N+1.
             'faviconUrl' => $entry->getFeed()->getFaviconUrl(),
             'isHidden' => $row->isHidden,
@@ -115,6 +116,15 @@ final class EntryJson
     public static function detail(EntryListRow $row): array
     {
         return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
+    }
+
+    private static function sourceName(EntryListRow $row): string
+    {
+        $author = $row->entry->getAuthor();
+
+        return SourceFormat::isSocial($row->entry->getFeed()->getSourceFormat()) && $author !== null && $author !== ''
+            ? $author
+            : $row->subscriptionTitle;
     }
 
     /**
