@@ -228,7 +228,7 @@ describe('EditSubscriptionDialogComponent', () => {
     ctrl = TestBed.inject(HttpTestingController);
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
 
-    expect(fixture.componentInstance.form.controls.customTitle.value).toBe('Home');
+    expect(fixture.componentInstance.form.controls.customTitle.value).toBe('Home@bsky');
     fixture.componentInstance.submit();
 
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');

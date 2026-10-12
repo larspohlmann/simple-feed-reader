@@ -13,7 +13,7 @@ import { parseProblem } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
 import { SubscriptionDto } from '../../models';
-import { displayTitle, isUnrenamedHome } from '../display-title';
+import { displayTitle, homeLabel, isUnrenamedHome } from '../display-title';
 import { ButtonComponent } from '../../../shared/button/button.component';
 
 @Component({
@@ -39,9 +39,8 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly tagsStore = inject(TagsStore);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly i18n = inject(TranslocoService);
-  private readonly prefilledTitle = displayTitle(
-    this.data,
-    this.i18n.translate('reader.socialHome'),
+  private readonly prefilledTitle = displayTitle(this.data, (network) =>
+    homeLabel(this.i18n, network),
   );
 
   // Prefilled with the title as it reads now, so renaming is an edit rather

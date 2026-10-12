@@ -220,6 +220,10 @@ export interface EntryDto {
   createdAt: string;
   subscriptionId: number;
   source: string;
+  /** The author's profile when `source` names a private feed's poster, else null. */
+  sourceUrl: string | null;
+  /** The poster's avatar, set exactly when `sourceUrl`'s decision picked the author, else null. */
+  sourceImageUrl: string | null;
   /** Absolute https favicon URL for the entry's feed, or null if unresolved. */
   faviconUrl: string | null;
   isHidden: boolean;

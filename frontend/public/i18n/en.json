@@ -1115,7 +1115,11 @@
     "feeds": "Feeds",
     "toggleFeeds": "Toggle feeds",
     "toggleSocialSection": "Toggle {{network}}",
-    "socialHome": "Home",
+    "socialHome": "Home@{{network}}",
+    "socialNetworkShort": {
+      "bluesky": "bsky",
+      "mastodon": "mastodon"
+    },
     "organise": "Organise",
     "account": "Account",
     "settings": "Settings",

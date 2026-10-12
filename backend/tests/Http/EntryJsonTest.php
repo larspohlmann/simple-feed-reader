@@ -266,7 +266,8 @@ final class EntryJsonTest extends TestCase
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
                 'imageRenditions', 'media', 'linkCards', 'share', 'title', 'url', 'discussionUrl', 'comments',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
-                'subscriptionId', 'source', 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',
+                'subscriptionId', 'source', 'sourceUrl', 'sourceImageUrl',
+                'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',
                 'shortPlayerUrl', 'titleDerived', 'savedSearches', 'duplicates',
             ],
             array_keys($json),
@@ -430,6 +431,46 @@ final class EntryJsonTest extends TestCase
         $entry = $this->entryOfFeedWithFormat(SourceFormat::XML, 'A. Writer');
 
         self::assertSame('Source', EntryJson::listRow($this->row($entry))['source']);
+    }
+
+    public function testAPrivateFeedEntryLinksItsAuthorProfileAsTheSourceUrl(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::BLUESKY_API, 'POLITICO Europe');
+        $entry->setAuthorUrl('https://bsky.app/profile/politico.eu');
+
+        self::assertSame('https://bsky.app/profile/politico.eu', EntryJson::listRow($this->row($entry))['sourceUrl']);
+    }
+
+    public function testAPrivateFeedEntryExposesItsAuthorAvatarAsTheSourceImage(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::MASTODON_API, 'Bob');
+        $entry->setAuthorAvatarUrl('https://cdn.example/bob.png');
+
+        self::assertSame('https://cdn.example/bob.png', EntryJson::listRow($this->row($entry))['sourceImageUrl']);
+    }
+
+    public function testAnOrdinaryFeedEntryHasNoSourceImage(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::XML, 'A. Writer');
+        $entry->setAuthorAvatarUrl('https://cdn.example/writer.png');
+
+        self::assertNull(EntryJson::listRow($this->row($entry))['sourceImageUrl']);
+    }
+
+    public function testAPrivateFeedEntryWithoutAnAuthorHasNoSourceUrl(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::BLUESKY_API, null);
+        $entry->setAuthorUrl('https://bsky.app/profile/politico.eu');
+
+        self::assertNull(EntryJson::listRow($this->row($entry))['sourceUrl']);
+    }
+
+    public function testAnOrdinaryFeedEntryHasNoSourceUrl(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::XML, 'A. Writer');
+        $entry->setAuthorUrl('https://example.com/writer');
+
+        self::assertNull(EntryJson::listRow($this->row($entry))['sourceUrl']);
     }
 
     private function entryOfFeedWithFormat(string $sourceFormat, ?string $author): Entry

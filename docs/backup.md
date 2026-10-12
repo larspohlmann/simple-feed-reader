@@ -287,6 +287,8 @@ article mark all hold one pointer to their owner.
 | Field | Why the file leaves it out |
 |---|---|
 | `location.urlHash` | A value the application calculates from the article address, which the file already carries. The restore calculates it again for each article. Therefore it is never old, and the format never has to drop it later. |
+| `author.profileUrl` | The profile a private feed's post links its author to (#1599). Social entries are re-fetched from the network, and the link only decorates the author name, so a restored entry simply shows it unlinked. |
+| `author.avatarUrl` | The picture a private feed's post shows its author with (#1599). Social entries are re-fetched from the network, and the picture only decorates the author name, so a restored entry simply shows none. |
 | `image.checkedAt` | The time at which this instance judged the image. A restored image was not judged here, so the field stays empty. An empty field does not put the image into the check queue. |
 | `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
 

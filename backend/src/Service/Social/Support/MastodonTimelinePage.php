@@ -67,6 +67,7 @@ final class MastodonTimelinePage
             publishedAt: DateParser::parse($status->string('created_at')),
             media: self::mediaOf($post->nodes('media_attachments')),
             authorUrl: self::profileOf($account),
+            authorAvatarUrl: AbsoluteHttpUrl::orNull($account->string('avatar')),
         );
     }
 

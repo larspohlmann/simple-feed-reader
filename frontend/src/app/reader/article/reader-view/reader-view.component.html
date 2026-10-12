@@ -105,13 +105,24 @@
             </h1>
           </div>
           <p class="meta">
-            <app-favicon [url]="e.faviconUrl" [size]="16" /><a
-              class="source-link"
-              [routerLink]="['/']"
-              [queryParams]="selectionQueryParams({ subscription: e.subscriptionId })"
-              queryParamsHandling="merge"
-              >{{ e.source }}</a
-            >
+            <app-favicon [url]="e.faviconUrl" [avatarUrl]="e.sourceImageUrl" [size]="16" />
+            @if (e.sourceUrl; as profileUrl) {
+              <a
+                class="source-link"
+                [href]="profileUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ e.source }}</a
+              >
+            } @else {
+              <a
+                class="source-link"
+                [routerLink]="['/']"
+                [queryParams]="selectionQueryParams({ subscription: e.subscriptionId })"
+                queryParamsHandling="merge"
+                >{{ e.source }}</a
+              >
+            }
             @if (e.author && e.author !== e.source) {
               · {{ e.author }}
             }

@@ -85,7 +85,7 @@ describe('SidebarSocialSectionComponent', () => {
     const rows = [...root.querySelectorAll('app-sidebar-feed-row')].map(
       (row) => row.textContent ?? '',
     );
-    expect(rows[0]).toContain('Home');
+    expect(rows[0]).toContain('Home@bsky');
     expect(rows[0]).not.toContain('Timeline');
     expect(rows[1]).toContain('Writers');
     expect(root.querySelector('.account-handle')).toBeNull();

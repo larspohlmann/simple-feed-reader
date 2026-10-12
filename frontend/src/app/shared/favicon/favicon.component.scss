@@ -19,3 +19,8 @@
      against the dark surface. Full-bleed opaque favicons simply cover it. */
   background: var(--favicon-backdrop);
 }
+
+.avatar {
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+}

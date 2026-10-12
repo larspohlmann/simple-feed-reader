@@ -15,6 +15,7 @@ use App\Service\Ingest\Support\EntrySnippet;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /** Builds the Entry row for an incoming item, cut to its column limits. It persists nothing. */
 final readonly class IngestedEntryFactory
@@ -42,6 +43,8 @@ final readonly class IngestedEntryFactory
         );
         $entry->setHeadline($parsed->headline);
         $entry->setAuthor(self::cut($parsed->author, self::AUTHOR_MAX));
+        $entry->setAuthorUrl(self::cut(AbsoluteHttpUrl::orNull($parsed->authorUrl), self::URL_MAX));
+        $entry->setAuthorAvatarUrl(self::cut(AbsoluteHttpUrl::orNull($parsed->authorAvatarUrl), self::URL_MAX));
         $entry->setSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml));
         $entry->setContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
         $entry->setPublishedAt($parsed->publishedAt);

@@ -65,6 +65,30 @@ function pressSpace(target: HTMLElement): void {
 }
 
 describe('EntryRowComponent', () => {
+  it('links an author source out to their profile and shows their avatar', () => {
+    const fixture = mount(
+      entry({
+        source: 'Bob',
+        sourceUrl: 'https://bsky.app/profile/bob',
+        sourceImageUrl: 'https://cdn.example/bob.png',
+      }),
+    );
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('.meta a');
+
+    expect(link.getAttribute('href')).toBe('https://bsky.app/profile/bob');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toBe('noopener noreferrer');
+    expect(link.textContent).toContain('Bob');
+    expect(fixture.nativeElement.querySelector('.meta img.avatar')).not.toBeNull();
+  });
+
+  it('keeps a plain source label when the entry has no profile', () => {
+    const meta: HTMLElement = mount(entry()).nativeElement.querySelector('.meta');
+
+    expect(meta.querySelector('a')).toBeNull();
+    expect(meta.textContent).toContain('heise');
+  });
+
   describeShortMarking((over) => mount(entry(over)));
   describePortraitCover((over) => mount(entry(over)));
 

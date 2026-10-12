@@ -30,7 +30,8 @@ use App\Service\Url\Support\YouTubeUrl;
  *   categories: list<string>,
  *   linkCards: list<LinkCardRow>,
  *   publishedAt: string|null,
- *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
+ *   createdAt: string, subscriptionId: int, source: string,
+ *   sourceUrl: string|null, sourceImageUrl: string|null, faviconUrl: string|null,
  *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, shortPlayerUrl: string|null, titleDerived: bool,
  *   share: 'link'|'media'|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
@@ -58,6 +59,7 @@ final class EntryJson
         $entry = $row->entry;
         $discussion = $entry->getDiscussion();
         $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
+        $poster = self::posterOf($row);
 
         return self::completed($row) + [
             'title' => $entry->getTitle(),
@@ -71,7 +73,9 @@ final class EntryJson
             'publishedAt' => $entry->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
-            'source' => self::sourceName($row),
+            'source' => $poster ?? $row->subscriptionTitle,
+            'sourceUrl' => $poster === null ? null : $entry->getAuthorUrl(),
+            'sourceImageUrl' => $poster === null ? null : $entry->getAuthorAvatarUrl(),
             // The feed is fetch-joined in the row query, so this adds no N+1.
             'faviconUrl' => $entry->getFeed()->getFaviconUrl(),
             'isHidden' => $row->isHidden,
@@ -118,13 +122,12 @@ final class EntryJson
         return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
     }
 
-    private static function sourceName(EntryListRow $row): string
+    private static function posterOf(EntryListRow $row): ?string
     {
         $author = $row->entry->getAuthor();
+        $isPrivateFeed = SourceFormat::isSocial($row->entry->getFeed()->getSourceFormat());
 
-        return SourceFormat::isSocial($row->entry->getFeed()->getSourceFormat()) && $author !== null && $author !== ''
-            ? $author
-            : $row->subscriptionTitle;
+        return $isPrivateFeed && $author !== null && $author !== '' ? $author : null;
     }
 
     /**

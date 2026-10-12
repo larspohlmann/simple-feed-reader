@@ -39,6 +39,29 @@ describe('EntryKickerLineComponent', () => {
     expect(element.querySelector('.when')!.textContent).toContain('5');
   });
 
+  it('links an author source out to their profile, and keeps the in-app filter otherwise', () => {
+    const external = mount(
+      entry({ source: 'Bob', sourceUrl: 'https://bsky.app/profile/bob', subscriptionId: 4 }),
+    ).querySelector<HTMLAnchorElement>('.source')!;
+    const internal = mount(entry({ subscriptionId: 4 })).querySelector<HTMLAnchorElement>(
+      '.source',
+    )!;
+
+    expect(external.getAttribute('href')).toBe('https://bsky.app/profile/bob');
+    expect(external.target).toBe('_blank');
+    expect(external.rel).toBe('noopener noreferrer');
+    expect(internal.getAttribute('href')).toContain('subscription=4');
+    expect(internal.target).toBe('');
+  });
+
+  it('shows the author avatar in place of the favicon', () => {
+    const element = mount(entry({ sourceImageUrl: 'https://cdn.example/bob.png' }));
+
+    expect(element.querySelector('img.avatar')?.getAttribute('src')).toBe(
+      'https://cdn.example/bob.png',
+    );
+  });
+
   it('fills the dot while the entry is unread, empties it once read', () => {
     expect(mount(entry()).querySelector('.dot')!.classList).toContain('on');
     expect(mount(entry({ isHidden: true })).querySelector('.dot')!.classList).not.toContain('on');

@@ -1,5 +1,7 @@
 @let current = section();
-@let homeLabel = 'reader.socialHome' | transloco;
+@let homeLabel =
+  'reader.socialHome'
+    | transloco: { network: ('reader.socialNetworkShort.' + current.network | transloco) };
 <div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
   <button class="section-toggle" type="button" [attr.aria-expanded]="expanded()" (click)="toggle()">
     <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>

@@ -1115,7 +1115,11 @@
     "feeds": "Feeds",
     "toggleFeeds": "Feeds ein-/ausklappen",
     "toggleSocialSection": "{{network}} ein-/ausklappen",
-    "socialHome": "Startseite",
+    "socialHome": "Startseite@{{network}}",
+    "socialNetworkShort": {
+      "bluesky": "bsky",
+      "mastodon": "mastodon"
+    },
     "organise": "Organisieren",
     "account": "Konto",
     "settings": "Einstellungen",

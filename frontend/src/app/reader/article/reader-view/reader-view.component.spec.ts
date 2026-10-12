@@ -225,6 +225,34 @@ describe('ReaderViewComponent', () => {
     expect(link.rel).toContain('noopener');
   });
 
+  describe('the source link', () => {
+    const sourceLink = (over: Partial<EntryDto>): HTMLAnchorElement =>
+      (mount(entry(over)).nativeElement as HTMLElement).querySelector('.source-link')!;
+
+    it('goes out to the poster profile with their avatar when the entry has one', () => {
+      const element = mount(
+        entry({
+          source: 'Bob',
+          sourceUrl: 'https://bsky.app/profile/bob',
+          sourceImageUrl: 'https://cdn.example/bob.png',
+        }),
+      ).nativeElement as HTMLElement;
+      const link = element.querySelector<HTMLAnchorElement>('.source-link')!;
+
+      expect(link.getAttribute('href')).toBe('https://bsky.app/profile/bob');
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toBe('noopener noreferrer');
+      expect(element.querySelector('.meta img.avatar')).not.toBeNull();
+    });
+
+    it('stays the in-app subscription filter otherwise', () => {
+      const link = sourceLink({ sourceUrl: null });
+
+      expect(link.target).toBe('');
+      expect(link.getAttribute('href')).toContain('subscription=');
+    });
+  });
+
   describe('the meta line author', () => {
     const metaText = (over: Partial<EntryDto>): string =>
       (mount(entry(over)).nativeElement as HTMLElement).querySelector('.meta')!.textContent!;

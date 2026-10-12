@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest\Factory;
 
+use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Service\Ingest\EntryImageWriter;
@@ -123,6 +124,53 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertSame('https://example.com/' . str_repeat('ä', 2028), $entry->getUrl());
         self::assertSame(str_repeat('é', 1024), $entry->getTitle());
         self::assertSame(str_repeat('ü', 255), $entry->getAuthor());
+    }
+
+    public function testStoresAnAbsoluteHttpAuthorUrl(): void
+    {
+        $entry = $this->createWithAuthorUrl('https://bsky.app/profile/politico.eu');
+
+        self::assertSame('https://bsky.app/profile/politico.eu', $entry->getAuthorUrl());
+    }
+
+    public function testNeverStoresAnAuthorUrlThatIsNotHttp(): void
+    {
+        self::assertNull($this->createWithAuthorUrl('javascript:alert(1)')->getAuthorUrl());
+    }
+
+    public function testStoresAnAbsoluteHttpAuthorAvatarUrl(): void
+    {
+        $entry = $this->createWithAuthorUrl('https://bsky.app/profile/a', 'https://cdn.example/a.jpg');
+
+        self::assertSame('https://cdn.example/a.jpg', $entry->getAuthorAvatarUrl());
+    }
+
+    public function testNeverStoresAnAuthorAvatarUrlThatIsNotHttp(): void
+    {
+        $entry = $this->createWithAuthorUrl('https://bsky.app/profile/a', 'javascript:alert(1)');
+
+        self::assertNull($entry->getAuthorAvatarUrl());
+    }
+
+    private function createWithAuthorUrl(string $authorUrl, ?string $authorAvatarUrl = null): Entry
+    {
+        $parsed = new ParsedEntryModel(
+            guid: 'g-4',
+            url: 'https://example.com/a',
+            headline: Headline::fromFeed('Post'),
+            author: 'POLITICO Europe',
+            summary: null,
+            contentHtml: null,
+            publishedAt: null,
+            authorUrl: $authorUrl,
+            authorAvatarUrl: $authorAvatarUrl,
+        );
+
+        return $this->factory()->create(
+            new Feed('https://example.com/feed'),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-4'), 'url-hash'),
+            self::context(),
+        );
     }
 
     private function factory(): IngestedEntryFactory

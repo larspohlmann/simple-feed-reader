@@ -11,6 +11,7 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /** A getTimeline / getListFeed / getFeed answer as entries; each post view rides along for its embed. */
 final class BlueskyTimelinePage
@@ -67,6 +68,7 @@ final class BlueskyTimelinePage
             contentHtml: self::withRepostAttribution($text, $item->node('reason')),
             publishedAt: DateParser::parse(self::postedAt($item)),
             authorUrl: self::profileOf($author),
+            authorAvatarUrl: AbsoluteHttpUrl::orNull($author->string('avatar')),
         );
     }
 

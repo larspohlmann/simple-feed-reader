@@ -10,7 +10,20 @@
       </h3>
     }
     <p class="meta">
-      <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
+      <app-favicon [url]="entry().faviconUrl" [avatarUrl]="entry().sourceImageUrl" [size]="14" />
+      @if (entry().sourceUrl; as profileUrl) {
+        <a
+          class="source"
+          [href]="profileUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          (click)="$event.stopPropagation()"
+          >{{ entry().source }}</a
+        >
+      } @else {
+        {{ entry().source }}
+      }
+      · {{ when() }}
       <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
     </p>
     @if (snippet()) {

@@ -1,4 +1,16 @@
-@if (src(); as url) {
+@if (avatarSrc(); as avatar) {
+  <img
+    class="avatar"
+    [src]="avatar"
+    [width]="size()"
+    [height]="size()"
+    alt=""
+    loading="lazy"
+    decoding="async"
+    referrerpolicy="no-referrer"
+    (error)="avatarBroken.set(true)"
+  />
+} @else if (src(); as url) {
   <img
     class="favicon"
     [src]="url"

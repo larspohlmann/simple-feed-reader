@@ -23,6 +23,7 @@ final class BlueskyTimelinePageTest extends TestCase
         self::assertSame('https://bsky.app/profile/did:plc:bob/post/3abc', $entry->url);
         self::assertSame('Bob', $entry->author);
         self::assertSame('https://bsky.app/profile/bob.bsky.social', $entry->authorUrl);
+        self::assertSame('https://cdn.bsky.app/img/avatar/plain/did:plc:bob/abc@jpeg', $entry->authorAvatarUrl);
         self::assertSame('<p>Hello world. More text</p>', $entry->contentHtml);
         self::assertEquals(EntryTitle::of(null, '<p>Hello world. More text</p>'), $entry->headline);
         self::assertTrue($entry->headline->derived);
@@ -118,7 +119,9 @@ final class BlueskyTimelinePageTest extends TestCase
         return JsonNodeModel::of($overrides + [
             'post' => [
                 'uri' => self::POST_URI,
-                'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social', 'displayName' => 'Bob'],
+                'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social', 'displayName' => 'Bob',
+                    'avatar' => 'https://cdn.bsky.app/img/avatar/plain/did:plc:bob/abc@jpeg',
+                ],
                 'record' => [
                     '$type' => 'app.bsky.feed.post',
                     'text' => 'Hello world. More text',

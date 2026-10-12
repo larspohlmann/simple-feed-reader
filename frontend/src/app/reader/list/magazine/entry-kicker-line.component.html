@@ -1,14 +1,29 @@
 <p class="kicker">
   @if (showSource()) {
-    <app-favicon [url]="entry().faviconUrl" [size]="faviconSize()" />
-    <a
-      class="source"
-      [routerLink]="['/']"
-      [queryParams]="selectionQueryParams({ subscription: entry().subscriptionId })"
-      queryParamsHandling="merge"
-      (click)="$event.stopPropagation()"
-      >{{ entry().source }}</a
-    >
+    <app-favicon
+      [url]="entry().faviconUrl"
+      [avatarUrl]="entry().sourceImageUrl"
+      [size]="faviconSize()"
+    />
+    @if (entry().sourceUrl; as profileUrl) {
+      <a
+        class="source"
+        [href]="profileUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        (click)="$event.stopPropagation()"
+        >{{ entry().source }}</a
+      >
+    } @else {
+      <a
+        class="source"
+        [routerLink]="['/']"
+        [queryParams]="selectionQueryParams({ subscription: entry().subscriptionId })"
+        queryParamsHandling="merge"
+        (click)="$event.stopPropagation()"
+        >{{ entry().source }}</a
+      >
+    }
     <span class="separator" aria-hidden="true">·</span>
   }
   <span class="when">

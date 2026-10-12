@@ -471,7 +471,7 @@ final class AccountRestorerTest extends DbTestCase
             [
                 'feed', 'guid.value', 'mediaSet.media', 'mediaSet.attachments', 'location.url', 'image.renditions',
                 'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
-                'headline.title', 'headline.derived',
+                'headline.title', 'headline.derived', 'author.name',
             ],
         );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
@@ -484,6 +484,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame($sourceRows['entry']->getGuid(), $targetRows['entry']->getGuid());
         self::assertSame($sourceRows['entry']->getUrl(), $targetRows['entry']->getUrl());
         self::assertSame($sourceRows['entry']->getTitle(), $targetRows['entry']->getTitle());
+        self::assertSame($sourceRows['entry']->getAuthor(), $targetRows['entry']->getAuthor());
         self::assertTrue($sourceRows['entry']->isTitleDerived());
         self::assertTrue($targetRows['entry']->isTitleDerived());
         self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());

@@ -28,6 +28,7 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertSame('https://mastodon.example/@bob/109', $entry->url);
         self::assertSame('Bob', $entry->author);
         self::assertSame('https://mastodon.example/@bob', $entry->authorUrl);
+        self::assertSame('https://files.mastodon.example/avatars/bob.png', $entry->authorAvatarUrl);
         self::assertSame(self::CONTENT, $entry->contentHtml);
         self::assertEquals(EntryTitle::of(null, self::CONTENT), $entry->headline);
         self::assertSame('2026-10-12 08:00:00', $entry->publishedAt?->format('Y-m-d H:i:s'));
@@ -182,6 +183,13 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertNull(MastodonTimelinePage::of([$status])->parsed->entries[0]->authorUrl);
     }
 
+    public function testAnAvatarThatIsNoWebImageIsDropped(): void
+    {
+        $status = self::timelineStatus(['account' => ['display_name' => 'Bob', 'avatar' => 'javascript:alert(1)']]);
+
+        self::assertNull(MastodonTimelinePage::of([$status])->parsed->entries[0]->authorAvatarUrl);
+    }
+
     /** @param array<string, string> $booster */
     #[DataProvider('malformedBoosters')]
     public function testABoosterWithoutANameOrAWebPageIsAttributedAsFarAsItCanBe(array $booster, string $expected): void
@@ -226,7 +234,12 @@ final class MastodonTimelinePageTest extends TestCase
             'created_at' => '2026-10-12T10:00:00.000+02:00',
             'content' => self::CONTENT,
             'spoiler_text' => '',
-            'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
+            'account' => [
+                'acct' => 'bob',
+                'display_name' => 'Bob',
+                'url' => 'https://mastodon.example/@bob',
+                'avatar' => 'https://files.mastodon.example/avatars/bob.png',
+            ],
             'media_attachments' => [],
             'reblog' => null,
             'card' => null,

@@ -54,12 +54,12 @@ const accountsOf = (...handles: string[]): SocialSection => ({
 
 describe('ListHeading for a Home timeline', () => {
   it('reads Home through i18n, not the backend title', () => {
-    expect(headingFor(home(1), [accountsOf('@alice.bsky.social')])).toBe('Home');
+    expect(headingFor(home(1), [accountsOf('@alice.bsky.social')])).toBe('Home@bsky');
   });
 
   it('says whose Home it is when the network has several accounts', () => {
     expect(headingFor(home(2), [accountsOf('@alice.bsky.social', '@work.bsky.social')])).toBe(
-      'Home · @work.bsky.social',
+      'Home@bsky · @work.bsky.social',
     );
   });
 

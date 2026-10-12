@@ -8,7 +8,7 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { Selection, visibleSearchTerm } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
-import { displayTitle, isUnrenamedHome } from '../feeds/display-title';
+import { displayTitle, homeLabel, isUnrenamedHome } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
 import { ReaderRouteState } from './reader-route-state.service';
 
@@ -102,7 +102,7 @@ export class ListHeading {
   };
 
   private feedTitle(subscription: SubscriptionDto): string {
-    const title = displayTitle(subscription, this.i18n.translate('reader.socialHome'));
+    const title = displayTitle(subscription, (network) => homeLabel(this.i18n, network));
     const handle = this.sharedNetworkHandle(subscription);
     return handle !== null && isUnrenamedHome(subscription) ? `${title} · ${handle}` : title;
   }
