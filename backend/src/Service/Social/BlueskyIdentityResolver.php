@@ -36,7 +36,11 @@ final readonly class BlueskyIdentityResolver
         return new BlueskyIdentityModel($did, $this->pdsOf($did));
     }
 
-    private function didOf(string $handle): string
+    /**
+     * @throws SocialAccountUnresolvableException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function didOf(string $handle): string
     {
         $answer = $this->call(ApiRequestModel::get(self::RESOLVE_HANDLE . '?handle=' . rawurlencode($handle)));
 
