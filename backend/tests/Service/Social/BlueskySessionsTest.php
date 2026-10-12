@@ -113,6 +113,21 @@ final class BlueskySessionsTest extends TestCase
         self::assertSame('jwt-new', $this->sessions($http, $cache)->current($account)->accessJwt);
     }
 
+    public function testASessionSealedUnderAnotherKeyOpensAFreshOne(): void
+    {
+        $cache = new ArrayAdapter();
+        $account = self::account();
+        $rotatedCipher = new BlueskySessionCipher(new InstanceSecretCipher(str_repeat('r', 32)));
+        (new BlueskySessionCache($cache, $rotatedCipher))->remember(
+            $account,
+            new BlueskySessionModel('unreadable-jwt', 'alice.bsky.social'),
+        );
+        $http = new RoutedHttpClient([self::SESSION => self::sessionAnswer('jwt-fresh')]);
+
+        self::assertSame('jwt-fresh', $this->sessions($http, $cache)->current($account)->accessJwt);
+        self::assertCount(1, $http->requests);
+    }
+
     private function sessions(RoutedHttpClient $http, ArrayAdapter $cache): BlueskySessions
     {
         $guard = new UrlGuard(new StaticDnsResolver(['pds.example.test' => ['93.184.216.34']]), new IpValidator());
