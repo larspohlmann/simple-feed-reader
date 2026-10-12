@@ -9,6 +9,7 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessionOpener;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\StoredCredential;
 use App\Tests\Support\FetchWiring;
@@ -95,5 +96,20 @@ final class BlueskySessionOpenerTest extends TestCase
         $this->expectException(SocialNetworkUnreachableException::class);
 
         $this->opener($http)->openForAccount(SocialAccounts::bluesky());
+    }
+
+    public function testTooManySessionsIsAThrottleCarryingItsDelay(): void
+    {
+        $http = new RoutedHttpClient([self::SESSION => new MockResponse('{}', [
+            'http_code' => Response::HTTP_TOO_MANY_REQUESTS,
+            'response_headers' => ['Retry-After' => '600'],
+        ])]);
+
+        try {
+            $this->opener($http)->openForAccount(SocialAccounts::bluesky());
+            self::fail('A 429 must not read as a session.');
+        } catch (SocialNetworkThrottledException $exception) {
+            self::assertSame(600, $exception->retryAfterSeconds);
+        }
     }
 }

@@ -9,6 +9,8 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Fetch\Support\RetryAfterHeader;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskyIdentityModel;
 use App\Service\Social\Model\BlueskySessionModel;
@@ -38,11 +40,18 @@ final readonly class BlueskySessionOpener
 
     /**
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function open(BlueskyIdentityModel $identity, string $appPassword): BlueskySessionModel
     {
         $answer = $this->createSession($identity, $appPassword);
+        if (Response::HTTP_TOO_MANY_REQUESTS === $answer->status) {
+            throw new SocialNetworkThrottledException(
+                'Bluesky asked for fewer sessions.',
+                RetryAfterHeader::seconds($answer->header('retry-after')),
+            );
+        }
         if (Response::HTTP_UNAUTHORIZED === $answer->status) {
             throw new SocialCredentialsRejectedException('Bluesky refused this handle and app password.');
         }

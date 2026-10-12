@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ai\Support;
 
 use App\Service\Fetch\Support\ResponseHeader;
+use App\Service\Fetch\Support\RetryAfterHeader;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class RetryAfter
@@ -15,9 +16,7 @@ final class RetryAfter
      */
     public static function secondsIn(ResponseInterface $response): ?int
     {
-        $header = ResponseHeader::first($response, 'retry-after');
-
-        return null !== $header && ctype_digit($header) ? (int) $header : null;
+        return RetryAfterHeader::seconds(ResponseHeader::first($response, 'retry-after'));
     }
 
     private function __construct()

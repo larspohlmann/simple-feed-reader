@@ -14,6 +14,7 @@ use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\HeaderVerdictModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Support\ResponseHeader;
+use App\Service\Fetch\Support\RetryAfterHeader;
 use App\Service\Fetch\Support\UrlResolver;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -119,27 +120,9 @@ final readonly class ResponseClassifier
             : HeaderVerdictModel::temporaryRedirectTo($target);
     }
 
-    /** Retry-After as a delay or an HTTP date (RFC 9110); anything else, or a date already past, names no delay. */
     private function retryAfterSeconds(ResponseInterface $response): ?int
     {
-        $header = ResponseHeader::first($response, 'retry-after');
-        if (null === $header) {
-            return null;
-        }
-
-        $value = trim($header);
-        if (1 === preg_match('/^\\d+$/', $value)) {
-            return (int) $value;
-        }
-
-        $reopensAt = \DateTimeImmutable::createFromFormat(\DATE_RFC7231, $value);
-        if (false === $reopensAt) {
-            return null;
-        }
-
-        $seconds = $reopensAt->getTimestamp() - $this->clock->now()->getTimestamp();
-
-        return $seconds > 0 ? $seconds : null;
+        return RetryAfterHeader::secondsFrom(ResponseHeader::first($response, 'retry-after'), $this->clock->now());
     }
 
     private function statusCode(ResponseInterface $response, string $url): int

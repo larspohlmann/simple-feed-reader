@@ -332,10 +332,14 @@ are left out of backups (docs/backup.md §6.2).
 - The app-password format check refuses a main password, which would grant far more than the app needs. It runs in
   the domain model (`SocialCredentialsModel`) on connect and on reconnect, before the rate limit and any network call.
 - The Mastodon token needs only `read` and `write:favourites`.
-- The stored credential is read back only to load the import picker (#1598): Bluesky opens one session per load
+- The stored credential is read back to load the import picker (#1598): Bluesky opens one session per load
   (`BlueskySessionOpener`), Mastodon sends the token as a bearer header. A load is rate-limited per user
   (`social_import`, 10 per 15 minutes). A refused or unreadable credential marks the account as needing a reconnect,
   and an account in that state is refused before any network call.
+- The refresh worker reads the stored credential for every poll of an account's private feeds (#1599). A Bluesky
+  session is cached per account for 90 minutes in the `bluesky.session.cache` pool. Its access token is sealed with the
+  instance key, bound to the owner; a reconnect changes the cache key. A token the PDS calls expired or invalid is
+  replaced once with a fresh session.
 - The picker follows a Mastodon `Link` next page only on the instance's own origin, and reads at most 5000 follows.
 
 ## AI provider endpoints

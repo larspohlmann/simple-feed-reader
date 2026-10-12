@@ -33,6 +33,19 @@ final readonly class JsonNodeModel
         return $trimmed === '' ? null : $trimmed;
     }
 
+    /** The string as sent: Bluesky facets index its UTF-8 bytes, which trimming would shift. */
+    public function text(string $key): ?string
+    {
+        $value = $this->fields[$key] ?? null;
+
+        return \is_string($value) ? $value : null;
+    }
+
+    public function has(string $key): bool
+    {
+        return null !== ($this->fields[$key] ?? null);
+    }
+
     public function int(string $key): ?int
     {
         $value = $this->fields[$key] ?? null;
