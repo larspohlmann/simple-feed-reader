@@ -144,11 +144,7 @@ final class SocialAccountControllerTest extends ApiTestCase
         $client = $this->clientVerifying($stub);
         $this->accountOn($client, 'social-mastodon@example.test');
 
-        $this->postJson(
-            $client,
-            '/api/me/social-accounts/mastodon',
-            '{"instanceUrl":"mastodon.example.test/","accessToken":"token-1234567890"}',
-        );
+        $this->connectMastodon($client, 'mastodon.example.test/');
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame('https://mastodon.example.test', $stub->lastCredentials?->address);
@@ -160,14 +156,26 @@ final class SocialAccountControllerTest extends ApiTestCase
         $client = $this->clientVerifying($this->alice());
         $this->accountOn($client, 'social-http@example.test');
 
-        $this->postJson(
-            $client,
-            '/api/me/social-accounts/mastodon',
-            '{"instanceUrl":"http://mastodon.example.test","accessToken":"token-1234567890"}',
-        );
+        $this->connectMastodon($client, 'http://mastodon.example.test');
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame('social_account_unresolvable', $this->payload($client)['type']);
+    }
+
+    public function testAnInvalidInstanceUrlSpendsNoConnectBudget(): void
+    {
+        $client = $this->clientVerifying(new StubAccountVerifier(
+            new VerifiedAccountModel('42', 'alice@mastodon.example.test', 'https://mastodon.example.test'),
+        ));
+        $this->accountOn($client, 'social-http-budget@example.test');
+
+        for ($attempt = 0; $attempt < self::CONNECT_BUDGET; ++$attempt) {
+            $this->connectMastodon($client, 'http://mastodon.example.test');
+            $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        $this->connectMastodon($client, 'https://mastodon.example.test');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
     }
 
     public function testRejectedCredentialsAnswer422(): void
@@ -344,6 +352,15 @@ final class SocialAccountControllerTest extends ApiTestCase
             $client,
             '/api/me/social-accounts/bluesky',
             sprintf('{"handle":"%s","appPassword":"%s"}', $handle, $appPassword),
+        );
+    }
+
+    private function connectMastodon(KernelBrowser $client, string $instanceUrl): void
+    {
+        $this->postJson(
+            $client,
+            '/api/me/social-accounts/mastodon',
+            sprintf('{"instanceUrl":"%s","accessToken":"token-1234567890"}', $instanceUrl),
         );
     }
 
