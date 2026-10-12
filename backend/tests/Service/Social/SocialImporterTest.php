@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\Feed;
-use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -45,11 +44,6 @@ final class SocialImporterTest extends DbTestCase
         return $importer;
     }
 
-    private function blueskyAccount(): SocialAccount
-    {
-        return SocialAccounts::blueskyOf($this->user);
-    }
-
     private function subscribedId(User $user, string $feedUrl): int
     {
         return $this->subscriptions->subscribe($user, $feedUrl)->requireId();
@@ -79,7 +73,7 @@ final class SocialImporterTest extends DbTestCase
 
     public function testChosenFollowsBecomeSubscriptionsUnderTheNetworksTagWithTheirTitle(): void
     {
-        $result = $this->importer()->import($this->blueskyAccount(), new SocialImportModel([
+        $result = $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
             new SocialImportFeedModel('https://bsky.app/profile/did:plc:bob/rss', 'Bob'),
             new SocialImportFeedModel('https://bsky.app/profile/did:plc:carol/rss', null),
         ], []));
@@ -108,7 +102,7 @@ final class SocialImporterTest extends DbTestCase
         $keptId = $this->subscribedId($this->user, 'https://bsky.app/profile/did:plc:gone/rss');
 
         try {
-            $this->importer()->import($this->blueskyAccount(), new SocialImportModel([
+            $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
                 new SocialImportFeedModel('https://bsky.app/profile/did:plc:bob/rss', 'Bob'),
                 new SocialImportFeedModel('https://mastodon.example/@bob.rss', 'Bob'),
             ], [$keptId]));
@@ -124,7 +118,9 @@ final class SocialImporterTest extends DbTestCase
     {
         $goneId = $this->subscribedId($this->user, 'https://bsky.app/profile/did:plc:gone/rss');
 
-        $result = $this->importer()->import($this->blueskyAccount(), new SocialImportModel([], [$goneId]));
+        $account = SocialAccounts::blueskyOf($this->user);
+
+        $result = $this->importer()->import($account, new SocialImportModel([], [$goneId]));
 
         self::assertSame(1, $result->removed);
         $this->entityManager->clear();
@@ -138,8 +134,27 @@ final class SocialImporterTest extends DbTestCase
         $stranger = (new UserFactory($this->entityManager, $hasher))->create('social-importer-stranger@example.test');
         $theirsId = $this->subscribedId($stranger, 'https://bsky.app/profile/did:plc:theirs/rss');
 
-        $this->expectException(InvalidSelectionException::class);
+        try {
+            $account = SocialAccounts::blueskyOf($this->user);
+            $this->importer()->import($account, new SocialImportModel([], [$theirsId]));
+            self::fail('Another user\'s subscription must not be removable.');
+        } catch (InvalidSelectionException) {
+            $this->entityManager->clear();
+            self::assertNotNull($this->entityManager->find(Subscription::class, $theirsId));
+        }
+    }
 
-        $this->importer()->import($this->blueskyAccount(), new SocialImportModel([], [$theirsId]));
+    public function testRemovalsFreeSlotsForTheSubscriptionsImportedInTheSameRun(): void
+    {
+        $this->user->setMaxSubscriptions(1);
+        $goneId = $this->subscribedId($this->user, 'https://bsky.app/profile/did:plc:gone/rss');
+
+        $result = $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
+            new SocialImportFeedModel('https://bsky.app/profile/did:plc:bob/rss', 'Bob'),
+        ], [$goneId]));
+
+        self::assertSame(1, $result->imported);
+        self::assertSame(0, $result->skippedOverLimit);
+        self::assertSame(1, $result->removed);
     }
 }

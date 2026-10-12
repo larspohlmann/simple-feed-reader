@@ -185,6 +185,20 @@ final class SocialImportControllerTest extends ApiTestCase
         );
     }
 
+    public function testImportAcceptsAFollowWithoutADisplayName(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-null-title@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), [
+            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => null]],
+            'unsubscribe' => [],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(1, $this->payload($client)['imported']);
+    }
+
     public function testImportRefusesAFeedOfAnotherNetworkAndWritesNothing(): void
     {
         $client = $this->clientWith($this->nothingFollowed());
@@ -233,6 +247,8 @@ final class SocialImportControllerTest extends ApiTestCase
         ]);
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->entityManager()->clear();
+        self::assertNotNull($this->entityManager()->find(Subscription::class, $theirs->requireId()));
     }
 
     public function testImportOnAnotherUsersAccountAnswers404(): void

@@ -14,13 +14,13 @@ final readonly class SocialImportFeedItem
         #[Assert\Length(max: 750)]
         public string $feedUrl = '',
         #[Assert\Length(max: 512)]
-        public string $title = '',
+        public ?string $title = null,
     ) {
     }
 
     public function toFeed(): SocialImportFeedModel
     {
-        $title = trim($this->title);
+        $title = trim($this->title ?? '');
 
         return new SocialImportFeedModel(trim($this->feedUrl), '' === $title ? null : $title);
     }

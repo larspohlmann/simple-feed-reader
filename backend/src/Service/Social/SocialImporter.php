@@ -16,10 +16,12 @@ use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
 use App\Service\Subscription\OwnedSubscriptions;
 use App\Service\Subscription\SubscriptionService;
+use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SocialImporter
 {
     public function __construct(
+        private EntityManagerInterface $entityManager,
         private BulkSubscriber $bulkSubscriber,
         private OwnedSubscriptions $ownedSubscriptions,
         private SubscriptionService $subscriptionService,
@@ -37,10 +39,15 @@ final readonly class SocialImporter
         $this->assertProfileFeedsOf($network, $import->subscribe);
         $toRemove = $this->ownedSubscriptions->resolve($user->requireId(), $import->unsubscribe);
 
-        $subscribed = $this->bulkSubscriber->subscribeAll($user, self::items($network, $import->subscribe));
-        $removed = $this->subscriptionService->unsubscribeAll(array_values($toRemove));
+        // Removals first, so the slots they free count toward the subscription cap.
+        return $this->entityManager->wrapInTransaction(
+            function () use ($user, $network, $import, $toRemove): SocialImportResultModel {
+                $removed = $this->subscriptionService->unsubscribeAll(array_values($toRemove));
+                $subscribed = $this->bulkSubscriber->subscribeAll($user, self::items($network, $import->subscribe));
 
-        return SocialImportResultModel::from($subscribed, $removed);
+                return SocialImportResultModel::from($subscribed, $removed);
+            },
+        );
     }
 
     /** @param list<SocialImportFeedModel> $feeds */
