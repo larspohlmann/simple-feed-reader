@@ -23,6 +23,7 @@ use App\Entity\ProfileRun;
 use App\Entity\ProxyServerSettings;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\SocialAccount;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
@@ -125,6 +126,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private const array ACCOUNT_SCOPED_WHOLLY_DROPPED = [
         AiProviderSettings::class => 'Model endpoints and API keys. A backup is a file the '
             . 'user handles and mails around; credentials do not belong in one.',
+        SocialAccount::class => 'Connected Bluesky/Mastodon accounts and their sealed credentials. A backup is a file '
+            . 'that leaves the server, and the credential is bound to this instance\'s key; a restore reconnects.',
         UserIdentity::class => 'OAuth identity links — see NEVER_BACKED_UP\'s reasoning.',
         ActionToken::class => 'Short-lived, single-use verification and reset tokens.',
         RecommendationSettings::class => 'The "For you" settings — guidance prompt, learned profile, '

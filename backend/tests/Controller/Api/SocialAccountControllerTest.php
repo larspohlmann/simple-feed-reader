@@ -36,7 +36,7 @@ final class SocialAccountControllerTest extends ApiTestCase
 
     public function testTheListRefusesAnAnonymousCaller(): void
     {
-        $client = $this->clientVerifying($this->alice());
+        $client = static::createClient();
 
         $client->request('GET', '/api/me/social-accounts');
 
@@ -99,6 +99,7 @@ final class SocialAccountControllerTest extends ApiTestCase
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertNull($stub->lastCredentials);
+        self::assertStringNotContainsString('hunter2hunter2', (string) $client->getResponse()->getContent());
     }
 
     public function testConnectingMastodonNormalisesTheInstance(): void
@@ -144,6 +145,7 @@ final class SocialAccountControllerTest extends ApiTestCase
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame('social_credentials_rejected', $this->payload($client)['type']);
+        self::assertStringNotContainsString(self::APP_PASSWORD, (string) $client->getResponse()->getContent());
     }
 
     public function testAnUnreachableNetworkAnswers502(): void
@@ -180,6 +182,7 @@ final class SocialAccountControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $account = $this->payload($client);
         self::assertSame('9876', $account['credentialHint']);
+        self::assertStringNotContainsString('wxyz-wxyz-wxyz-9876', (string) $client->getResponse()->getContent());
         self::assertSame('connected', $account['status']);
     }
 
@@ -195,6 +198,21 @@ final class SocialAccountControllerTest extends ApiTestCase
         $this->putJson($client, sprintf('/api/me/social-accounts/%d/default', $id), '');
         $this->assertNotFound($client);
         $client->request('DELETE', sprintf('/api/me/social-accounts/%d', $id));
+        $this->assertNotFound($client);
+    }
+
+    public function testOwnershipIsCheckedBeforeTheBudget(): void
+    {
+        $client = $this->clientVerifying($this->echoingVerifier());
+        $this->accountOn($client, 'social-budget-owner@example.test');
+        $ownerId = $this->connectedId($client);
+        $this->accountOn($client, 'social-budget-intruder@example.test');
+        for ($attempt = 0; $attempt < self::CONNECT_BUDGET; ++$attempt) {
+            $this->connectBluesky($client);
+        }
+
+        $this->replaceCredential($client, $ownerId);
+
         $this->assertNotFound($client);
     }
 

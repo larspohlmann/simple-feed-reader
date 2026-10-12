@@ -20,7 +20,6 @@ use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/** Every `{id}` resolves through SocialAccountForUser: another user's account answers 404. */
 #[Route('/api/me/social-accounts')]
 final readonly class SocialAccountController
 {
@@ -45,8 +44,9 @@ final readonly class SocialAccountController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ConnectBlueskyRequest $request,
     ): JsonResponse {
+        $credentials = $request->toCredentials();
         $this->rateLimitGuard->enforceForUser($this->socialAccountLimiter, $user);
-        $account = $this->connector->connect($user, $request->toCredentials());
+        $account = $this->connector->connect($user, $credentials);
 
         return new JsonResponse($this->accountJson->account($account), Response::HTTP_CREATED);
     }
@@ -56,8 +56,9 @@ final readonly class SocialAccountController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ConnectMastodonRequest $request,
     ): JsonResponse {
+        $credentials = $request->toCredentials();
         $this->rateLimitGuard->enforceForUser($this->socialAccountLimiter, $user);
-        $account = $this->connector->connect($user, $request->toCredentials());
+        $account = $this->connector->connect($user, $credentials);
 
         return new JsonResponse($this->accountJson->account($account), Response::HTTP_CREATED);
     }
