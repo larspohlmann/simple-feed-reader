@@ -66,6 +66,14 @@ export const SETTINGS_ROUTES: Routes = [
       },
       { path: 'profile', redirectTo: 'ai', pathMatch: 'full' },
       {
+        path: 'social',
+        title: sectionLabelKey('social'),
+        loadComponent: () =>
+          import('./social/social-section.component').then(
+            (module) => module.SocialSectionComponent,
+          ),
+      },
+      {
         path: 'about',
         title: sectionLabelKey('about'),
         loadComponent: () =>
