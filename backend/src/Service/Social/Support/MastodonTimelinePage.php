@@ -62,7 +62,7 @@ final class MastodonTimelinePage
             guid: $uri,
             url: $url,
             headline: EntryTitle::of(null, $body),
-            author: $account->string('display_name') ?? $account->string('acct'),
+            author: self::nameOf($account),
             summary: null,
             contentHtml: self::withBoostAttribution($body, $status),
             publishedAt: DateParser::parse($status->string('created_at')),
@@ -74,9 +74,12 @@ final class MastodonTimelinePage
 
     private static function originalOf(JsonNodeModel $status): JsonNodeModel
     {
-        $reblog = $status->node('reblog');
+        return self::isBoost($status) ? $status->node('reblog') : $status;
+    }
 
-        return null === $reblog->string('uri') ? $status : $reblog;
+    private static function isBoost(JsonNodeModel $status): bool
+    {
+        return null !== $status->node('reblog')->string('uri');
     }
 
     private static function bodyOf(JsonNodeModel $post): ?string
@@ -90,13 +93,17 @@ final class MastodonTimelinePage
 
     private static function withBoostAttribution(?string $body, JsonNodeModel $status): ?string
     {
-        if (null === $status->node('reblog')->string('uri')) {
+        if (!self::isBoost($status)) {
             return $body;
         }
         $booster = $status->node('account');
-        $name = $booster->string('display_name') ?? $booster->string('acct');
 
-        return ($body ?? '') . ShareAttribution::line('Boosted by', $name, self::profileOf($booster));
+        return ($body ?? '') . ShareAttribution::line('Boosted by', self::nameOf($booster), self::profileOf($booster));
+    }
+
+    private static function nameOf(JsonNodeModel $account): ?string
+    {
+        return $account->string('display_name') ?? $account->string('acct');
     }
 
     private static function profileOf(JsonNodeModel $account): ?string

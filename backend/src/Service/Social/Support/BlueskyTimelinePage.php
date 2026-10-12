@@ -6,8 +6,8 @@ namespace App\Service\Social\Support;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Support\AtPostUri;
-use App\Service\Bluesky\Support\BlueskyWeb;
 use App\Service\Bluesky\Support\BlueskyRichText;
+use App\Service\Bluesky\Support\BlueskyWeb;
 use App\Service\Completion\Model\KnownSharesModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Support\DateParser;
@@ -65,7 +65,7 @@ final class BlueskyTimelinePage
             guid: $uri,
             url: $url,
             headline: EntryTitle::of(null, $text),
-            author: $author->string('displayName') ?? $author->string('handle'),
+            author: self::nameOf($author),
             summary: null,
             contentHtml: self::withRepostAttribution($text, $item->node('reason')),
             publishedAt: DateParser::parse(self::postedAt($item)),
@@ -92,9 +92,15 @@ final class BlueskyTimelinePage
             return $html;
         }
         $reposter = $reason->node('by');
-        $name = $reposter->string('displayName') ?? $reposter->string('handle');
 
-        return ($html ?? '') . ShareAttribution::line('Reposted by', $name, self::profileOf($reposter));
+        $attribution = ShareAttribution::line('Reposted by', self::nameOf($reposter), self::profileOf($reposter));
+
+        return ($html ?? '') . $attribution;
+    }
+
+    private static function nameOf(JsonNodeModel $actor): ?string
+    {
+        return $actor->string('displayName') ?? $actor->string('handle');
     }
 
     private static function profileOf(JsonNodeModel $actor): ?string
