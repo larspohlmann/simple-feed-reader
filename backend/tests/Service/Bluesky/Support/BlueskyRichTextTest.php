@@ -59,6 +59,16 @@ final class BlueskyRichTextTest extends TestCase
         self::assertNull(BlueskyRichText::asHtml("  \n", []));
     }
 
+    public function testOnlyAWebLinkFacetLinksAWebPage(): void
+    {
+        $mention = ['$type' => 'app.bsky.richtext.facet#mention', 'did' => 'did:plc:alice'];
+        $unsafe = ['$type' => 'app.bsky.richtext.facet#link', 'uri' => 'javascript:alert(1)'];
+        $web = ['$type' => 'app.bsky.richtext.facet#link', 'uri' => 'https://example.com'];
+
+        self::assertFalse(BlueskyRichText::linksAWebPage([self::facet(0, 3, $mention), self::facet(3, 6, $unsafe)]));
+        self::assertTrue(BlueskyRichText::linksAWebPage([self::facet(0, 3, $mention), self::facet(3, 6, $web)]));
+    }
+
     /** @param array<string, string> $feature */
     private static function facet(int $byteStart, int $byteEnd, array $feature): JsonNodeModel
     {

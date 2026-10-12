@@ -37,6 +37,19 @@ final class BlueskyRichText
         return ParagraphedText::asHtml($html, static fn (string $line): string => $line);
     }
 
+    /** @param list<JsonNodeModel> $facets */
+    public static function linksAWebPage(array $facets): bool
+    {
+        foreach ($facets as $facet) {
+            $feature = $facet->first('features');
+            if (self::LINK === $feature->type() && null !== AbsoluteHttpUrl::orNull($feature->string('uri'))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @param list<JsonNodeModel> $facets
      *
