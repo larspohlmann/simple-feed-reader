@@ -11,7 +11,6 @@ final readonly class FollowedAccountModel
         public string $handle,
         public ?string $displayName,
         public string $feedUrl,
-        public ?string $avatarUrl = null,
     ) {
     }
 }

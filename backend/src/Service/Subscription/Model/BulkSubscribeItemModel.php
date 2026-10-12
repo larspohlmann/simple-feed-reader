@@ -7,8 +7,8 @@ namespace App\Service\Subscription\Model;
 use App\Enum\SourceFormat;
 
 /**
- * One feed to subscribe to in a batch. $feedTitle and $feedImageUrl seed a NEW shared Feed row so
- * the sidebar reads properly before the first fetch; they are ignored when the Feed
+ * One feed to subscribe to in a batch. $feedTitle seeds a NEW shared Feed row so
+ * the sidebar reads properly before the first fetch; it is ignored when the Feed
  * already exists, because another user's row is not ours to retitle.
  */
 final readonly class BulkSubscribeItemModel
@@ -19,7 +19,6 @@ final readonly class BulkSubscribeItemModel
         public ?string $tagName = null,
         public ?TagStyleModel $tagStyle = null,
         public string $sourceFormat = SourceFormat::XML,
-        public ?string $feedImageUrl = null,
     ) {
     }
 }

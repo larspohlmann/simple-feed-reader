@@ -239,11 +239,7 @@ export class SocialImportDialogComponent {
   private chosenFollows(): SocialImportFeed[] {
     return (this.importer.candidates()?.follows ?? [])
       .filter((follow) => follow.state === 'new' && this.toSubscribe().has(follow.feedUrl))
-      .map((follow) => ({
-        feedUrl: follow.feedUrl,
-        title: follow.displayName,
-        avatarUrl: follow.avatarUrl,
-      }));
+      .map((follow) => ({ feedUrl: follow.feedUrl, title: follow.displayName }));
   }
 
   private chosenCollections(): SocialImportCollection[] {
@@ -253,7 +249,7 @@ export class SocialImportDialogComponent {
         (collection) =>
           collection.state === 'new' && this.toCollect().has(collectionKey(collection)),
       )
-      .map(({ kind, id, name, avatarUrl }) => ({ kind, id, name, avatarUrl }));
+      .map(({ kind, id, name }) => ({ kind, id, name }));
   }
 
   private collection(

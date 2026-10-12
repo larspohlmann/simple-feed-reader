@@ -22,7 +22,6 @@ function follow(overrides: Partial<FollowCandidate> = {}): FollowCandidate {
     handle: '@bob.bsky.social',
     displayName: 'Bob',
     feedUrl: 'https://bsky.app/profile/did:plc:bob/rss',
-    avatarUrl: null,
     state: 'new',
     subscriptionId: null,
     ...overrides,
@@ -51,7 +50,6 @@ function collection(overrides: Partial<CollectionCandidate> = {}): CollectionCan
     kind: 'list',
     id: 'at://list/a',
     name: 'News',
-    avatarUrl: null,
     state: 'new',
     subscriptionId: null,
     ...overrides,
@@ -59,12 +57,7 @@ function collection(overrides: Partial<CollectionCandidate> = {}): CollectionCan
 }
 
 const HOME = collection({ kind: 'home', id: null, name: 'Home' });
-const DISCOVER = collection({
-  kind: 'custom_feed',
-  id: 'at://feed/a',
-  name: 'Discover',
-  avatarUrl: 'https://cdn.example/d.jpg',
-});
+const DISCOVER = collection({ kind: 'custom_feed', id: 'at://feed/a', name: 'Discover' });
 
 function candidates(overrides: Partial<ImportCandidates> = {}): ImportCandidates {
   return { follows: [], lists: [], customFeeds: [], truncated: false, ...overrides };
@@ -284,13 +277,8 @@ describe('SocialImportDialogComponent', () => {
       subscribe: [],
       unsubscribe: [],
       collections: [
-        { kind: 'home', id: null, name: 'Home', avatarUrl: null },
-        {
-          kind: 'custom_feed',
-          id: 'at://feed/a',
-          name: 'Discover',
-          avatarUrl: 'https://cdn.example/d.jpg',
-        },
+        { kind: 'home', id: null, name: 'Home' },
+        { kind: 'custom_feed', id: 'at://feed/a', name: 'Discover' },
       ],
     });
     post.flush({ imported: 2, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 0 });
@@ -340,9 +328,7 @@ describe('SocialImportDialogComponent', () => {
 
     const post = http.expectOne(IMPORT);
     expect(post.request.body).toEqual({
-      subscribe: [
-        { feedUrl: 'https://bsky.app/profile/did:plc:bob/rss', title: 'Bob', avatarUrl: null },
-      ],
+      subscribe: [{ feedUrl: 'https://bsky.app/profile/did:plc:bob/rss', title: 'Bob' }],
       unsubscribe: [],
       collections: [],
     });
@@ -356,8 +342,7 @@ describe('SocialImportDialogComponent', () => {
       displayName: null,
       feedUrl: 'https://bsky.app/profile/did:plc:fay/rss',
     });
-    const bob = follow({ avatarUrl: 'https://cdn.example/bob.jpg' });
-    const fixture = loaded(candidates({ follows: [bob, nameless, DAVE] }));
+    const fixture = loaded(candidates({ follows: [follow(), nameless, DAVE] }));
     tick(fixture, 'did:plc:bob');
     tick(fixture, 'did:plc:fay');
     tick(fixture, 'did:plc:dave');
@@ -366,12 +351,8 @@ describe('SocialImportDialogComponent', () => {
     const post = http.expectOne(IMPORT);
     expect(post.request.body).toEqual({
       subscribe: [
-        {
-          feedUrl: 'https://bsky.app/profile/did:plc:bob/rss',
-          title: 'Bob',
-          avatarUrl: 'https://cdn.example/bob.jpg',
-        },
-        { feedUrl: 'https://bsky.app/profile/did:plc:fay/rss', title: null, avatarUrl: null },
+        { feedUrl: 'https://bsky.app/profile/did:plc:bob/rss', title: 'Bob' },
+        { feedUrl: 'https://bsky.app/profile/did:plc:fay/rss', title: null },
       ],
       unsubscribe: [10],
       collections: [],

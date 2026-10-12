@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Social\CandidateSource;
 
 use App\Entity\SocialAccount;
-use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\Model\JsonNodeModel;
@@ -18,7 +17,6 @@ use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\Support\ProfileFeedUrl;
-use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 {
@@ -92,7 +90,6 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
                     '@' . $handle,
                     $node->string('displayName'),
                     ProfileFeedUrl::bluesky($did),
-                    self::avatarOf($node),
                 );
             }
         }
@@ -112,7 +109,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
             $uri = $node->string('uri');
             $name = $node->string('name');
             if (self::CURATED_LIST === $node->string('purpose') && null !== $uri && null !== $name) {
-                $lists[] = new SocialCollectionModel($uri, $name, self::avatarOf($node));
+                $lists[] = new SocialCollectionModel($uri, $name);
             }
         }
 
@@ -123,11 +120,10 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     private function customFeeds(SocialAccount $account): array
     {
         $uris = $this->savedFeedUris($account);
-        $generators = $this->generators($uris);
+        $names = $this->generatorNames($uris);
 
         return array_map(
-            static fn (string $uri): SocialCollectionModel
-                => $generators[$uri] ?? new SocialCollectionModel($uri, $uri),
+            static fn (string $uri): SocialCollectionModel => new SocialCollectionModel($uri, $names[$uri] ?? $uri),
             $uris,
         );
     }
@@ -172,38 +168,33 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     /**
      * @param list<string> $uris
      *
-     * @return array<string, SocialCollectionModel>
+     * @return array<string, string>
      */
-    private function generators(array $uris): array
+    private function generatorNames(array $uris): array
     {
         $names = [];
         foreach (array_chunk($uris, self::GENERATORS_PER_CALL) as $batch) {
             $query = implode('&', array_map(static fn (string $uri): string => 'feeds=' . rawurlencode($uri), $batch));
             $answer = $this->json(ApiRequestModel::get(self::GET_FEED_GENERATORS . '?' . $query));
-            $names = [...$names, ...self::generatorsIn($answer)];
+            $names = [...$names, ...self::namesIn($answer)];
         }
 
         return $names;
     }
 
-    /** @return array<string, SocialCollectionModel> */
-    private static function generatorsIn(JsonNodeModel $answer): array
+    /** @return array<string, string> */
+    private static function namesIn(JsonNodeModel $answer): array
     {
-        $generators = [];
+        $names = [];
         foreach (self::collectionIn($answer, 'feeds') as $generator) {
             $uri = $generator->string('uri');
             $name = $generator->string('displayName');
             if (null !== $uri && null !== $name) {
-                $generators[$uri] = new SocialCollectionModel($uri, $name, self::avatarOf($generator));
+                $names[$uri] = $name;
             }
         }
 
-        return $generators;
-    }
-
-    private static function avatarOf(JsonNodeModel $node): ?string
-    {
-        return AbsoluteHttpUrl::orNullWithin($node->string('avatar'), Feed::IMAGE_URL_MAX);
+        return $names;
     }
 
     /** @return list<JsonNodeModel> */

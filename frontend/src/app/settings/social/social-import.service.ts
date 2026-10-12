@@ -11,7 +11,6 @@ export interface FollowCandidate {
   readonly handle: string;
   readonly displayName: string | null;
   readonly feedUrl: string;
-  readonly avatarUrl: string | null;
   readonly state: ImportCandidateState;
   readonly subscriptionId: number | null;
 }
@@ -23,7 +22,6 @@ export interface CollectionCandidate {
   readonly kind: CollectionKind;
   readonly id: string | null;
   readonly name: string;
-  readonly avatarUrl: string | null;
   readonly state: CollectionState;
   readonly subscriptionId: number | null;
 }
@@ -32,7 +30,6 @@ export interface SocialImportCollection {
   readonly kind: CollectionKind;
   readonly id: string | null;
   readonly name: string;
-  readonly avatarUrl: string | null;
 }
 
 export interface ImportCandidates {
@@ -45,7 +42,6 @@ export interface ImportCandidates {
 export interface SocialImportFeed {
   readonly feedUrl: string;
   readonly title: string | null;
-  readonly avatarUrl: string | null;
 }
 
 export interface SocialImportSelection {

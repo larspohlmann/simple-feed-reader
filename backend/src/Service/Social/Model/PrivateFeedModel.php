@@ -14,7 +14,6 @@ final readonly class PrivateFeedModel
         public SocialFeedKind $kind,
         public ?string $remoteId,
         public string $name,
-        public ?string $imageUrl = null,
     ) {
     }
 
@@ -40,11 +39,6 @@ final readonly class PrivateFeedModel
             SocialFeedKind::UserList => self::userList($remoteId ?? '', $name),
             SocialFeedKind::CustomFeed => self::customFeed($remoteId ?? '', $name),
         };
-    }
-
-    public function withImageUrl(?string $imageUrl): self
-    {
-        return new self($this->kind, $this->remoteId, $this->name, $imageUrl);
     }
 
     public static function keyOf(SocialFeedKind $kind, ?string $remoteId): string

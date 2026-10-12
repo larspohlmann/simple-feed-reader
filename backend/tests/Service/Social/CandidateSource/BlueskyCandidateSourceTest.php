@@ -227,36 +227,6 @@ final class BlueskyCandidateSourceTest extends TestCase
         self::assertContains('Authorization: Bearer jwt-1', $http->requests[1]['headers']);
     }
 
-    public function testFollowsListsAndCustomFeedsCarryTheirWebAvatars(): void
-    {
-        $curated = 'app.bsky.graph.defs#curatelist';
-        $http = new RoutedHttpClient($this->routes([
-            self::FOLLOWS => self::json(['follows' => [
-                ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social', 'avatar' => 'https://cdn.example/bob.jpg'],
-                ['did' => 'did:plc:eve', 'handle' => 'eve.bsky.social', 'avatar' => 'javascript:alert(1)'],
-            ]]),
-            self::LISTS => self::json(['lists' => [[
-                'uri' => 'at://did:plc:alice/app.bsky.graph.list/news',
-                'name' => 'News',
-                'purpose' => $curated,
-                'avatar' => 'https://cdn.example/news.jpg',
-            ]]]),
-            self::PREFERENCES => self::savedFeeds([self::DISCOVER]),
-            self::GENERATORS . self::feedsQuery([self::DISCOVER]) => self::json(['feeds' => [
-                ['uri' => self::DISCOVER, 'displayName' => 'Discover', 'avatar' => 'https://cdn.example/d.jpg'],
-            ]]),
-        ]));
-
-        $candidates = $this->source($http)->candidates(SocialAccounts::bluesky());
-
-        self::assertSame(
-            ['https://cdn.example/bob.jpg', null],
-            array_map(static fn (FollowedAccountModel $follow): ?string => $follow->avatarUrl, $candidates->follows),
-        );
-        self::assertSame('https://cdn.example/news.jpg', $candidates->lists[0]->avatarUrl);
-        self::assertSame('https://cdn.example/d.jpg', $candidates->customFeeds[0]->avatarUrl);
-    }
-
     public function testGeneratorNamesAreAskedForTwentyFiveFeedsAtATime(): void
     {
         $uris = array_map(
