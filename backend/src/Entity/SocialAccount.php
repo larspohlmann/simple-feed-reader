@@ -155,6 +155,11 @@ final class SocialAccount
         $this->status = SocialAccountStatus::Connected;
     }
 
+    public function moveTo(string $serviceUrl): void
+    {
+        $this->serviceUrl = $serviceUrl;
+    }
+
     public function markNeedsReconnect(): void
     {
         $this->status = SocialAccountStatus::NeedsReconnect;

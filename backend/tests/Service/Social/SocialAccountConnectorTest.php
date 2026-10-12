@@ -173,6 +173,20 @@ final class SocialAccountConnectorTest extends DbTestCase
         self::assertSame('2026-10-12 10:00:00', $reloaded->getConnectedAt()->format('Y-m-d H:i:s'));
     }
 
+    public function testReconnectStoresAPdsTheAccountMovedTo(): void
+    {
+        $account = $this->storedAccount('did:plc:alice');
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+        $accountId = $account->requireId();
+        $verified = new VerifiedAccountModel('did:plc:alice', '@did:plc:alice', 'https://pds.moved.example.test');
+
+        $this->reconnect(new StubAccountVerifier($verified), $account);
+        $this->entityManager->clear();
+
+        self::assertSame('https://pds.moved.example.test', $this->repository()->find($accountId)?->getServiceUrl());
+    }
+
     public function testReconnectSendsTheStoredIdentityAsTheAddress(): void
     {
         $account = $this->storedAccount('did:plc:alice');

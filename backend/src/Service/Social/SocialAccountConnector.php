@@ -70,6 +70,7 @@ final readonly class SocialAccountConnector
             $credentials->hint(),
             $this->clock->now()->setTimezone(new \DateTimeZone('UTC')),
         );
+        $account->moveTo($verified->serviceUrl);
         $this->entityManager->flush();
 
         return $account;
