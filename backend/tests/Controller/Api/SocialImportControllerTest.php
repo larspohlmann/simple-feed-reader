@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -163,6 +164,117 @@ final class SocialImportControllerTest extends ApiTestCase
         $this->requestCandidates($client, $account);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    public function testImportSubscribesTheChosenFollowsAndRemovesTheChosenSubscriptions(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-post@example.test');
+        $account = $this->blueskyAccountOf($user);
+        $gone = $this->subscribe($user, 'https://bsky.app/profile/did:plc:gone/rss');
+
+        $this->postImport($client, $account, [
+            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob']],
+            'unsubscribe' => [$gone->requireId()],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['imported' => 1, 'alreadySubscribed' => 0, 'invalid' => 0, 'skippedOverLimit' => 0, 'removed' => 1],
+            $this->payload($client),
+        );
+    }
+
+    public function testImportRefusesAFeedOfAnotherNetworkAndWritesNothing(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-foreign-feed@example.test');
+        $gone = $this->subscribe($user, 'https://bsky.app/profile/did:plc:gone/rss');
+        $goneId = $gone->requireId();
+
+        $this->postImport($client, $this->blueskyAccountOf($user), [
+            'subscribe' => [
+                ['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob'],
+                ['feedUrl' => 'https://mastodon.example/@bob.rss', 'title' => 'Bob'],
+            ],
+            'unsubscribe' => [$goneId],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_import_invalid_feed', $this->payload($client)['type']);
+        $this->entityManager()->clear();
+        self::assertNotNull($this->entityManager()->find(Subscription::class, $goneId));
+        self::assertNull($this->entityManager()->getRepository(Feed::class)->findOneBy([
+            'url' => 'https://bsky.app/profile/did:plc:bob/rss',
+        ]));
+    }
+
+    public function testImportWithNothingChosenIsAValidationError(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-empty@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['subscribe' => [], 'unsubscribe' => []]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('validation_error', $this->payload($client)['type']);
+    }
+
+    public function testImportCannotRemoveAnotherUsersSubscription(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $stranger = $this->signIn($client, 'import-stranger@example.test');
+        $theirs = $this->subscribe($stranger, 'https://bsky.app/profile/did:plc:theirs/rss');
+        $user = $this->signIn($client, 'import-thief@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), [
+            'subscribe' => [],
+            'unsubscribe' => [$theirs->requireId()],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testImportOnAnotherUsersAccountAnswers404(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $owner = $this->signIn($client, 'import-post-owner@example.test');
+        $account = $this->blueskyAccountOf($owner);
+        $this->signIn($client, 'import-post-intruder@example.test');
+
+        $this->postImport($client, $account, [
+            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob']],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+    }
+
+    public function testImportSpendsNoCandidatesBudget(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-no-budget@example.test');
+        $account = $this->blueskyAccountOf($user);
+        for ($attempt = 0; $attempt <= self::IMPORT_BUDGET; ++$attempt) {
+            $this->requestCandidates($client, $account);
+        }
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+
+        $this->postImport($client, $account, [
+            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob']],
+        ]);
+
+        self::assertResponseIsSuccessful();
+    }
+
+    /** @param array<string, mixed> $body */
+    private function postImport(KernelBrowser $client, SocialAccount $account, array $body): void
+    {
+        $client->request(
+            'POST',
+            sprintf('/api/me/social-accounts/%d/import', $account->requireId()),
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($body, \JSON_THROW_ON_ERROR),
+        );
     }
 
     /**

@@ -7,6 +7,7 @@ namespace App\Http\Problem\ExceptionProblems;
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
 use App\Service\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\Exception\NotAnAppPasswordException;
 use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
 use App\Service\Social\Exception\SocialAccountMismatchException;
@@ -50,6 +51,12 @@ final readonly class SocialProblems implements ExceptionProblemsInterface
             $exception instanceof NotAnAppPasswordException => new ResolvedProblem(new ApiProblem(
                 'social_app_password_required',
                 'An app password is required',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
+            $exception instanceof InvalidSocialImportFeedException => new ResolvedProblem(new ApiProblem(
+                'social_import_invalid_feed',
+                'Not a profile feed of this network',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),

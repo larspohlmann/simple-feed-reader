@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Service\Social\Model\ImportCandidateModel;
 use App\Service\Social\Model\ImportCandidatesModel;
 use App\Service\Social\Model\SocialCollectionModel;
+use App\Service\Social\Model\SocialImportResultModel;
 
 final readonly class SocialImportJson
 {
@@ -18,6 +19,18 @@ final readonly class SocialImportJson
             'lists' => array_map(self::collection(...), $candidates->lists),
             'customFeeds' => array_map(self::collection(...), $candidates->customFeeds),
             'truncated' => $candidates->truncated,
+        ];
+    }
+
+    /** @return array<string, int> */
+    public function result(SocialImportResultModel $result): array
+    {
+        return [
+            'imported' => $result->imported,
+            'alreadySubscribed' => $result->alreadySubscribed,
+            'invalid' => $result->invalid,
+            'skippedOverLimit' => $result->skippedOverLimit,
+            'removed' => $result->removed,
         ];
     }
 
