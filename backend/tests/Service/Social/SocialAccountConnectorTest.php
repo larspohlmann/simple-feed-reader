@@ -23,6 +23,8 @@ use App\Service\Social\SocialAccountConnector;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StubAccountVerifier;
 use App\Tests\Support\UserFactory;
+use Doctrine\DBAL\Connection;
+use Doctrine\ORM\Events;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -101,6 +103,15 @@ final class SocialAccountConnectorTest extends DbTestCase
         } catch (SocialAccountAlreadyConnectedException) {
             self::assertSame(1, $this->repository()->countForUser($this->user));
         }
+    }
+
+    public function testAConnectRacedByAnIdenticalOneIsRefusedAsAlreadyConnected(): void
+    {
+        $this->entityManager->getEventManager()->addEventListener(Events::onFlush, $this->racingConnect('did:plc:alice'));
+
+        $this->expectException(SocialAccountAlreadyConnectedException::class);
+
+        $this->connector($this->bluesky('did:plc:alice'))->connect($this->user, $this->blueskyCredentials());
     }
 
     public function testTheTwentyFirstAccountIsRefusedBeforeAnyNetworkCall(): void
@@ -237,6 +248,40 @@ final class SocialAccountConnectorTest extends DbTestCase
     private function blueskyCredentials(): SocialCredentialsModel
     {
         return SocialCredentialsModel::bluesky('alice.bsky.social', self::APP_PASSWORD);
+    }
+
+    private function racingConnect(string $identity): object
+    {
+        $connection = $this->entityManager->getConnection();
+        $user = $this->user;
+
+        return new class ($connection, $user, $identity) {
+            public function __construct(
+                private readonly Connection $connection,
+                private readonly User $user,
+                private readonly string $identity,
+            ) {
+            }
+
+            public function onFlush(): void
+            {
+                $this->connection->insert('social_account', [
+                    'user_id' => $this->user->requireId(),
+                    'network' => SocialNetwork::Bluesky->value,
+                    'identity' => $this->identity,
+                    'handle' => '@' . $this->identity,
+                    'service_url' => 'https://bsky.social',
+                    'credential_ciphertext' => 'c',
+                    'credential_nonce' => 'n',
+                    'credential_salt' => 's',
+                    'credential_hint' => 'mnop',
+                    'credential_version' => 1,
+                    'status' => SocialAccountStatus::Connected->value,
+                    'is_default' => 0,
+                    'connected_at' => '2026-10-12 09:00:00',
+                ]);
+            }
+        };
     }
 
     private function reconnect(StubAccountVerifier $verifier, SocialAccount $account): SocialAccount

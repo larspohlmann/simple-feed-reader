@@ -14,6 +14,8 @@ use App\Service\Social\Exception\SocialAccountMismatchException;
 use App\Service\Social\Exception\TooManySocialAccountsException;
 use App\Service\Social\Factory\SocialAccountFactory;
 use App\Service\Social\Model\SocialCredentialsModel;
+use App\Service\Social\Model\VerifiedAccountModel;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -41,7 +43,7 @@ final readonly class SocialAccountConnector
 
         $verified = $this->verifier->verify($credentials);
         if (null !== $this->socialAccounts->findOneByIdentity($user, $credentials->network, $verified->identity)) {
-            throw new SocialAccountAlreadyConnectedException(sprintf('%s is already connected.', $verified->handle));
+            throw self::alreadyConnected($verified);
         }
 
         $account = $this->accountFactory->create($user, $credentials, $verified);
@@ -50,7 +52,11 @@ final readonly class SocialAccountConnector
         }
 
         $this->entityManager->persist($account);
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException $exception) {
+            throw self::alreadyConnected($verified, $exception);
+        }
 
         return $account;
     }
@@ -74,5 +80,15 @@ final readonly class SocialAccountConnector
         $this->entityManager->flush();
 
         return $account;
+    }
+
+    private static function alreadyConnected(
+        VerifiedAccountModel $verified,
+        ?\Throwable $previous = null,
+    ): SocialAccountAlreadyConnectedException {
+        return new SocialAccountAlreadyConnectedException(
+            sprintf('%s is already connected.', $verified->handle),
+            previous: $previous,
+        );
     }
 }
