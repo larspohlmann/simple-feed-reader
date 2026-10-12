@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Completion;
 
 use App\Entity\Entry;
+use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Completion\Model\KnownSharesModel;
+use App\Service\Completion\Support\PostedLinkCard;
 use App\Service\Share\EntryShareClassifier;
 use App\Service\Share\PendingEmbed\PendingEmbedInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,7 +24,7 @@ final readonly class ShareEnrichmentQueue
         private NaiveUtcClock $clock,
         private EntryShareClassifier $classifier,
         private PendingEmbedInterface $pendingEmbed,
-        private KnownShareSettler $knownShares,
+        private KnownShareSettler $knownShareSettler,
     ) {
     }
 
@@ -45,18 +47,28 @@ final readonly class ShareEnrichmentQueue
     {
         $post = $knownShares->blueskyPostFor($entry->getGuid());
         if ($post !== null) {
-            $this->knownShares->settleEmbedded($entry, $post, $queuedAt);
+            $this->knownShareSettler->settleEmbedded($entry, $post, $queuedAt);
 
             return;
         }
         $this->classifier->classify($entry);
-        $card = $knownShares->linkCardFor($entry->getGuid());
-        if ($card !== null && $entry->getShareKind() === ShareKind::Link) {
-            $this->knownShares->settleCarded($entry, $card, $queuedAt);
+        $card = self::postedCardOf($entry, $knownShares);
+        if ($card !== null) {
+            $this->knownShareSettler->settleCarded($entry, $card, $queuedAt);
 
             return;
         }
         $this->queueCreated($entry, $queuedAt);
+    }
+
+    private static function postedCardOf(Entry $entry, KnownSharesModel $knownShares): ?LinkCardContent
+    {
+        $card = $knownShares->linkCardFor($entry->getGuid());
+        if ($card === null || $entry->getShareKind() !== ShareKind::Link) {
+            return null;
+        }
+
+        return PostedLinkCard::of($entry, $card);
     }
 
     private function queueCreated(Entry $entry, \DateTimeImmutable $queuedAt): void

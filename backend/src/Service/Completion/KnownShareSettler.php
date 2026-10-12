@@ -43,7 +43,7 @@ final readonly class KnownShareSettler
         }
     }
 
-    /** Takes a classified link share: only links the card does not cover still wait for a page fetch. */
+    /** Takes a classified link share and its card under a posted link: only the other links still wait for a page. */
     public function settleCarded(Entry $entry, LinkCardContent $card, \DateTimeImmutable $queuedAt): void
     {
         $this->cardWriter->write($entry, new EntryCardsModel([], [new PageCardModel($card, null)]));

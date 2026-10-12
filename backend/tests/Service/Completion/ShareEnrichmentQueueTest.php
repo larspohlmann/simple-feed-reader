@@ -236,6 +236,46 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         self::assertSame([], $this->storedCards($stored));
     }
 
+    public function testACardUnderACanonicalUrlIsFiledUnderThePostedLink(): void
+    {
+        $guid = 'https://mastodon.example/@someone/6';
+        $posted = 'https://example.com/story?utm_source=mastodon';
+        $post = $this->post($guid, '<p>So true.</p><p>RE: <a href="' . $posted . '">' . $posted . '</a></p>');
+        $card = new LinkCardContent('https://example.com/story', 'The story', 'What happened.', null, 'Example');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->queuedKinds());
+        $stored = $this->reload($post);
+        self::assertSame('<p>So true.</p>', $stored->getContentHtml());
+        self::assertSame(ShareKind::Link, $stored->getShareKind());
+        self::assertEquals(
+            [new LinkCardContent($posted, 'The story', 'What happened.', null, 'Example')],
+            $this->storedCards($stored),
+        );
+    }
+
+    public function testACardForNoPostedLinkIsFiledUnderTheFirstAndTheOthersWaitForTheirOwn(): void
+    {
+        $guid = 'https://mastodon.example/@someone/7';
+        $post = $this->post(
+            $guid,
+            '<p><a href="https://example.com/a">https://example.com/a</a>'
+            . ' and <a href="https://other.example/b?ref=x">https://other.example/b?ref=x</a></p>',
+        );
+        $card = new LinkCardContent('https://other.example/b', 'B', null, null, 'Other');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
+        self::assertEquals(
+            [new LinkCardContent('https://example.com/a', 'B', null, null, 'Other')],
+            $this->storedCards($this->reload($post)),
+        );
+    }
+
     public function testALinkTheCardDoesNotCoverStillWaitsForItsOwnCard(): void
     {
         $guid = 'https://mastodon.example/@someone/2';
