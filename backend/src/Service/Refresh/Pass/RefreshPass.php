@@ -14,6 +14,8 @@ final readonly class RefreshPass
 {
     public RefreshTally $tally;
 
+    public ThrottledSocialAccounts $throttledSocialAccounts;
+
     private BudgetedFeedQueue $queue;
 
     /** @var array<int, Feed> */
@@ -34,6 +36,7 @@ final readonly class RefreshPass
         }
         $this->feedsById = $feedsById;
         $this->tally = new RefreshTally();
+        $this->throttledSocialAccounts = new ThrottledSocialAccounts();
     }
 
     /** @return \Generator<int, FetchTicketModel, mixed, void> */

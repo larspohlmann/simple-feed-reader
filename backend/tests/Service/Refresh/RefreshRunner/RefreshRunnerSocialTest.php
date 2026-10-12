@@ -10,6 +10,7 @@ use App\Entity\Subscription;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Support\MastodonTimelinePage;
 use App\Tests\DbTestCase;
@@ -76,5 +77,37 @@ final class RefreshRunnerSocialTest extends DbTestCase
         $home = $this->entityManager->getRepository(Feed::class)->findOneBy(['url' => $homeUrl]);
         self::assertNotNull($home);
         self::assertSame(1, $this->entityManager->getRepository(Entry::class)->count(['feed' => $home]));
+    }
+
+    public function testAThrottledAccountIsAskedOnceAPass(): void
+    {
+        $clock = new MockClock('2026-10-12 12:00:00', 'UTC');
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $user = (new UserFactory($this->entityManager, $hasher))->create('refresh-social-throttled@example.test');
+        $account = SocialAccounts::mastodonOf($user);
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+        $privateFeeds = PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $clock);
+        $privateFeeds->create($account, PrivateFeedModel::home());
+        $privateFeeds->create($account, PrivateFeedModel::userList('42', 'Friends'));
+        $throttled = new SocialNetworkThrottledException('The Mastodon instance asked for fewer requests.', 120);
+        $reader = new StubTimelineReader([
+            sprintf('social:mastodon:%d:home', $account->requireId()) => $throttled,
+            sprintf('social:mastodon:%d:list:42', $account->requireId()) => $throttled,
+        ]);
+        $homepages = new StubFeedFetcher();
+        $homepages->willReturn(
+            'https://mastodon.example',
+            FetchResponseModel::fetched('https://mastodon.example', false, '<html lang="en"></html>', null, null),
+        );
+
+        $report = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
+            ->readingTimelinesFrom($reader)
+            ->build(new StubFeedFetcher($clock), $homepages)
+            ->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(2, $report->throttled);
+        self::assertCount(1, $reader->asked);
     }
 }

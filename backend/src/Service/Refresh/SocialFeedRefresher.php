@@ -12,6 +12,7 @@ use App\Service\Refresh\Exception\PrivateFeedOrphanedException;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\Model\IncomingFeedModel;
+use App\Service\Refresh\Pass\ThrottledSocialAccounts;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -29,20 +30,29 @@ final readonly class SocialFeedRefresher
     }
 
     /** @throws \DateMalformedStringException */
-    public function refresh(Feed $feed, \DateTimeImmutable $now): FeedRefreshResultModel
-    {
+    public function refresh(
+        Feed $feed,
+        \DateTimeImmutable $now,
+        ThrottledSocialAccounts $throttledAccounts,
+    ): FeedRefreshResultModel {
         $socialFeed = $this->socialFeeds->findOneByFeed($feed);
         if (null === $socialFeed) {
             return $this->outcomePersister->storeFailure($feed, new PrivateFeedOrphanedException());
         }
-        // Refused earlier in this pass: its other feeds keep their schedule, as findDue() skips them from now on.
-        if (SocialAccountStatus::NeedsReconnect === $socialFeed->getSocialAccount()->getStatus()) {
+        $account = $socialFeed->getSocialAccount();
+        // Refused or throttled earlier in this pass: its other feeds keep their schedule for the next one.
+        if (SocialAccountStatus::NeedsReconnect === $account->getStatus()) {
             return FeedRefreshResultModel::of(FeedOutcome::Failed);
+        }
+        if ($throttledAccounts->contains($account)) {
+            return FeedRefreshResultModel::of(FeedOutcome::Throttled);
         }
 
         try {
             $page = $this->pageOf($socialFeed);
         } catch (SocialNetworkThrottledException $exception) {
+            $throttledAccounts->add($account);
+
             return $this->outcomePersister->storeThrottled($feed, $exception->retryAfterSeconds);
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $exception) {
             return $this->outcomePersister->storeFailure($feed, $exception);

@@ -14,6 +14,8 @@ use App\Enum\SourceFormat;
 use App\Repository\SocialFeedRepository;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Refresh\Model\FeedOutcome;
+use App\Service\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Refresh\Pass\ThrottledSocialAccounts;
 use App\Service\Refresh\SocialFeedRefresher;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
@@ -56,7 +58,7 @@ final class SocialFeedRefresherTest extends DbTestCase
 
     public function testAPageIsStoredAndItsNewestIdKeptForTheNextPoll(): void
     {
-        $result = $this->refresher(self::page())->refresh($this->home->getFeed(), $this->clock->now());
+        $result = $this->firstOfPass($this->refresher(self::page()), $this->home->getFeed());
 
         self::assertSame(FeedOutcome::Fetched, $result->outcome);
         self::assertSame(1, $result->entriesCreated);
@@ -70,7 +72,7 @@ final class SocialFeedRefresherTest extends DbTestCase
     {
         $refused = new SocialCredentialsRejectedException('The Mastodon instance refused this access token.');
 
-        $result = $this->refresher($refused)->refresh($this->home->getFeed(), $this->clock->now());
+        $result = $this->firstOfPass($this->refresher($refused), $this->home->getFeed());
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         $this->entityManager->clear();
@@ -90,7 +92,7 @@ final class SocialFeedRefresherTest extends DbTestCase
         $this->entityManager->flush();
         $reader = new StubTimelineReader();
 
-        $result = $this->refresherReading($reader)->refresh($this->home->getFeed(), $this->clock->now());
+        $result = $this->firstOfPass($this->refresherReading($reader), $this->home->getFeed());
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         self::assertSame([], $reader->asked);
@@ -100,20 +102,44 @@ final class SocialFeedRefresherTest extends DbTestCase
     {
         $throttled = new SocialNetworkThrottledException('The Mastodon instance asked for fewer requests.', 120);
 
-        $result = $this->refresher($throttled)->refresh($this->home->getFeed(), $this->clock->now());
+        $result = $this->firstOfPass($this->refresher($throttled), $this->home->getFeed());
 
         self::assertSame(FeedOutcome::Throttled, $result->outcome);
         self::assertSame(0, $this->home->getFeed()->getConsecutiveFailures());
         self::assertSame('2026-10-12 12:02:00', $this->home->getFeed()->getNextFetchAt()?->format('Y-m-d H:i:s'));
     }
 
+    public function testAThrottledAccountIsNotAskedForItsOtherFeedsThisPass(): void
+    {
+        $list = $this->listFeed();
+        $nextFetchAt = $list->getNextFetchAt();
+        $reader = new StubTimelineReader([
+            $this->home->getFeed()->getUrl() => new SocialNetworkThrottledException('Fewer requests, please.', 120),
+            $list->getUrl() => self::page(),
+        ]);
+        $refresher = $this->refresherReading($reader);
+        $throttledAccounts = new ThrottledSocialAccounts();
+        $refresher->refresh($this->home->getFeed(), $this->clock->now(), $throttledAccounts);
+
+        $result = $refresher->refresh($list, $this->clock->now(), $throttledAccounts);
+
+        self::assertSame(FeedOutcome::Throttled, $result->outcome);
+        self::assertSame([$this->home], $reader->asked);
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->find(Feed::class, $list->requireId());
+        self::assertNotNull($reloaded);
+        self::assertSame(0, $reloaded->getConsecutiveFailures());
+        self::assertNull($reloaded->getLastErrorMessage());
+        self::assertEquals($nextFetchAt, $reloaded->getNextFetchAt());
+    }
+
     public function testAnUnreachableNetworkBacksOffAndKeepsTheCursor(): void
     {
         $this->home->recordNewestSeen('100');
         $this->entityManager->flush();
+        $unreachable = new SocialNetworkUnreachableException('The Mastodon instance answered 502.');
 
-        $result = $this->refresher(new SocialNetworkUnreachableException('The Mastodon instance answered 502.'))
-            ->refresh($this->home->getFeed(), $this->clock->now());
+        $result = $this->firstOfPass($this->refresher($unreachable), $this->home->getFeed());
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         self::assertSame(1, $this->home->getFeed()->getConsecutiveFailures());
@@ -123,15 +149,13 @@ final class SocialFeedRefresherTest extends DbTestCase
 
     public function testARefusalLeavesTheAccountsOtherFeedsAsTheyWere(): void
     {
-        PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock)
-            ->create($this->account, PrivateFeedModel::userList('42', 'Friends'));
-        $list = $this->socialFeeds()->findOneFor($this->account, SocialFeedKind::UserList, '42')?->getFeed();
-        self::assertNotNull($list);
+        $list = $this->listFeed();
         $nextFetchAt = $list->getNextFetchAt();
         $refresher = $this->refresher(new SocialCredentialsRejectedException('The Mastodon instance refused it.'));
-        $refresher->refresh($this->home->getFeed(), $this->clock->now());
+        $throttledAccounts = new ThrottledSocialAccounts();
+        $refresher->refresh($this->home->getFeed(), $this->clock->now(), $throttledAccounts);
 
-        $result = $refresher->refresh($list, $this->clock->now());
+        $result = $refresher->refresh($list, $this->clock->now(), $throttledAccounts);
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         $this->entityManager->clear();
@@ -150,11 +174,26 @@ final class SocialFeedRefresherTest extends DbTestCase
         $this->entityManager->flush();
         $reader = new StubTimelineReader();
 
-        $result = $this->refresherReading($reader)->refresh($orphan, $this->clock->now());
+        $result = $this->firstOfPass($this->refresherReading($reader), $orphan);
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         self::assertSame('This private feed has lost its social account.', $orphan->getLastErrorMessage());
         self::assertSame([], $reader->asked);
+    }
+
+    private function firstOfPass(SocialFeedRefresher $refresher, Feed $feed): FeedRefreshResultModel
+    {
+        return $refresher->refresh($feed, $this->clock->now(), new ThrottledSocialAccounts());
+    }
+
+    private function listFeed(): Feed
+    {
+        PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock)
+            ->create($this->account, PrivateFeedModel::userList('42', 'Friends'));
+        $list = $this->socialFeeds()->findOneFor($this->account, SocialFeedKind::UserList, '42')?->getFeed();
+        self::assertNotNull($list);
+
+        return $list;
     }
 
     private function refresher(TimelinePageModel|\Throwable $outcome): SocialFeedRefresher

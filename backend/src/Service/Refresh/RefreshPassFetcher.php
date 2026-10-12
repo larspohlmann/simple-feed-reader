@@ -29,7 +29,7 @@ final readonly class RefreshPassFetcher
         }
 
         foreach ($pass->socialFeeds() as $feed) {
-            $pass->tally->record($this->socialRefresher->refresh($feed, $now), $feed);
+            $pass->tally->record($this->socialRefresher->refresh($feed, $now, $pass->throttledSocialAccounts), $feed);
             if ($pass->tally->isAborted()) {
                 return;
             }
