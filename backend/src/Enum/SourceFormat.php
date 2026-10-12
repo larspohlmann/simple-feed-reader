@@ -18,4 +18,18 @@ final class SourceFormat
 
     /** WordPress REST posts endpoint (wp/v2/posts with `_fields`, never `_embed`): full-content JSON. */
     public const string WP_JSON = 'wp-json';
+
+    /** A Bluesky timeline, list or custom feed, read through the account's session (#1599). */
+    public const string BLUESKY_API = 'bluesky-api';
+
+    /** A Mastodon home or list timeline, read with the account's token (#1599). */
+    public const string MASTODON_API = 'mastodon-api';
+
+    /** The formats of private feeds: read through an account, never fetched by URL, never exported. */
+    public const array SOCIAL = [self::BLUESKY_API, self::MASTODON_API];
+
+    public static function isSocial(string $sourceFormat): bool
+    {
+        return \in_array($sourceFormat, self::SOCIAL, true);
+    }
 }

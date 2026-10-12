@@ -77,8 +77,7 @@ final class SubscriptionJson
             'description' => self::description($feed),
             'imageUrl' => $feed->getImageUrl(),
             'status' => $feed->getStatus()->value,
-            // 'xml' or 'scraped' — lets the UI mark synthesized feeds, whose
-            // entries are teasers rather than the feed author's own content.
+            // A SourceFormat value: lets the UI mark synthesized feeds and private social feeds.
             'sourceFormat' => $feed->getSourceFormat(),
             'createdAt' => $subscription->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'lastFetchedAt' => $feed->getLastFetchedAt()?->format(\DateTimeInterface::ATOM),
