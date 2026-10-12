@@ -26,7 +26,7 @@ final class MastodonAccount
             $identity,
             '@' . $identity,
             $account->string('display_name'),
-            self::profileFeed($account->string('url')) ?? 'https://' . $domain . '/@' . $user . '.rss',
+            self::profileFeed($account->string('url')) ?? ProfileFeedUrl::mastodon($user, $domain),
         );
     }
 

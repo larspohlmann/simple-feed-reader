@@ -56,7 +56,7 @@ final readonly class SocialImporter
         foreach ($feeds as $feed) {
             if (null === ProfileFeedUrl::identityOf($network, $feed->feedUrl)) {
                 throw new InvalidSocialImportFeedException(
-                    sprintf('%s is no %s profile feed.', $feed->feedUrl, self::nameOf($network)),
+                    sprintf('%s is no %s profile feed.', $feed->feedUrl, $network->displayName()),
                 );
             }
         }
@@ -69,7 +69,7 @@ final readonly class SocialImporter
      */
     private static function items(SocialNetwork $network, array $feeds): array
     {
-        $tagName = self::nameOf($network);
+        $tagName = $network->displayName();
 
         return array_map(
             static fn (SocialImportFeedModel $feed): BulkSubscribeItemModel => new BulkSubscribeItemModel(
@@ -79,13 +79,5 @@ final readonly class SocialImporter
             ),
             $feeds,
         );
-    }
-
-    private static function nameOf(SocialNetwork $network): string
-    {
-        return match ($network) {
-            SocialNetwork::Bluesky => 'Bluesky',
-            SocialNetwork::Mastodon => 'Mastodon',
-        };
     }
 }

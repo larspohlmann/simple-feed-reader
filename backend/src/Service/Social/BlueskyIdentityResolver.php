@@ -9,6 +9,7 @@ use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskyIdentityModel;
+use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\UrlOrigin;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -29,7 +30,7 @@ final readonly class BlueskyIdentityResolver
      */
     public function resolve(string $handleOrDid): BlueskyIdentityModel
     {
-        $did = str_starts_with($handleOrDid, 'did:') ? $handleOrDid : $this->didOf($handleOrDid);
+        $did = ProfileFeedUrl::isDid($handleOrDid) ? $handleOrDid : $this->didOf($handleOrDid);
 
         return new BlueskyIdentityModel($did, $this->pdsOf($did));
     }

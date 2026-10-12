@@ -8,6 +8,7 @@ use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Exception\NotAnAppPasswordException;
+use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\UrlOrigin;
 
 final readonly class SocialCredentialsModel
@@ -26,7 +27,7 @@ final readonly class SocialCredentialsModel
     public static function bluesky(string $handle, string $appPassword): self
     {
         $address = trim($handle);
-        if (!str_starts_with($address, 'did:')) {
+        if (!ProfileFeedUrl::isDid($address)) {
             $address = strtolower(ltrim($address, '@'));
         }
 

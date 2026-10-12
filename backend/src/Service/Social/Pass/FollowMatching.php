@@ -51,7 +51,7 @@ final class FollowMatching
         return array_values(array_filter(
             $this->unmatched,
             static fn (ProfileFeedSubscriptionModel $profileFeed): bool
-                => !str_starts_with($profileFeed->identity, 'did:'),
+                => !ProfileFeedUrl::isDid($profileFeed->identity),
         ));
     }
 

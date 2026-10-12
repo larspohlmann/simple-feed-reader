@@ -11,10 +11,21 @@ final class ProfileFeedUrl
     private const string BLUESKY_HOST = 'bsky.app';
     private const string BLUESKY_PATH = '#^/profile/([^/]+)/rss/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
+    private const string DID_PREFIX = 'did:';
 
     public static function bluesky(string $did): string
     {
         return 'https://' . self::BLUESKY_HOST . '/profile/' . $did . '/rss';
+    }
+
+    public static function mastodon(string $user, string $domain): string
+    {
+        return 'https://' . $domain . '/@' . $user . '.rss';
+    }
+
+    public static function isDid(string $identity): bool
+    {
+        return str_starts_with($identity, self::DID_PREFIX);
     }
 
     /** @return string|null the DID, handle or user@host the URL follows; null when it is no profile feed of $network */
@@ -45,7 +56,7 @@ final class ProfileFeedUrl
         }
         $actor = rawurldecode($match[1]);
 
-        return str_starts_with($actor, 'did:') ? $actor : strtolower($actor);
+        return self::isDid($actor) ? $actor : strtolower($actor);
     }
 
     private static function mastodonIdentity(string $host, string $path): ?string

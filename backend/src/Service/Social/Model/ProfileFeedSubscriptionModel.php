@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model;
 
+use App\Service\Social\Support\ProfileFeedUrl;
+
 final readonly class ProfileFeedSubscriptionModel
 {
     public function __construct(
@@ -16,6 +18,6 @@ final readonly class ProfileFeedSubscriptionModel
 
     public function handle(): string
     {
-        return str_starts_with($this->identity, 'did:') ? $this->identity : '@' . $this->identity;
+        return ProfileFeedUrl::isDid($this->identity) ? $this->identity : '@' . $this->identity;
     }
 }
