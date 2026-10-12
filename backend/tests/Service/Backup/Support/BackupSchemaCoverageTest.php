@@ -585,21 +585,22 @@ final class BackupSchemaCoverageTest extends DbTestCase
     /** @return list<string> the keys one kind of line is allowed to carry */
     private function claimedKeysOf(string $kind): array
     {
-        $keys = array_merge(
-            self::EVERY_LINE,
-            self::FILE_SCAFFOLDING[$kind] ?? [],
-            $this->nestedValueObjectKeysOf($kind),
-        );
+        $declaredKeys = [];
         foreach (self::BACKED_UP as $entityClass => $fields) {
             if (self::KIND_OF[$entityClass] !== $kind) {
                 continue;
             }
             foreach ($fields as $declared) {
-                $keys = array_merge($keys, $this->exportedKeysFor($declared));
+                $declaredKeys[] = $this->exportedKeysFor($declared);
             }
         }
 
-        return $keys;
+        return array_merge(
+            self::EVERY_LINE,
+            self::FILE_SCAFFOLDING[$kind] ?? [],
+            $this->nestedValueObjectKeysOf($kind),
+            ...$declaredKeys,
+        );
     }
 
     /** @return list<string> */
