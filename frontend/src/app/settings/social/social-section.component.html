@@ -35,6 +35,7 @@
           size="sm"
           [attr.data-testid]="'social-import-' + account.id"
           [disabled]="svc.busy() || account.status !== 'connected'"
+          [description]="'settings.social.importDescription' | transloco"
           (click)="openImport(account)"
         >
           {{ 'settings.social.import' | transloco }}
@@ -82,6 +83,14 @@
   } @empty {
     <p class="empty-note" [attr.data-testid]="'social-empty-' + network">
       {{ 'settings.social.empty' | transloco }}
+    </p>
+  }
+  @if (accounts.length > 0) {
+    <p class="import-hint" [attr.data-testid]="'social-import-hint-' + network">
+      {{
+        'settings.social.importHint'
+          | transloco: { network: ('settings.social.' + network | transloco) }
+      }}
     </p>
   }
 </ng-template>

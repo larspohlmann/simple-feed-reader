@@ -15,7 +15,6 @@
         (input)="filter.set(inputValue($event))"
       />
       <app-button
-        size="sm"
         data-testid="social-import-select-new"
         [disabled]="followView().visibleNew.length === 0"
         (click)="selectAllNew()"

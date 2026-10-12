@@ -49,6 +49,9 @@ export class ButtonComponent {
    */
   readonly ariaLabel = input<string>();
 
+  /** What the action does, beyond its label: a tooltip and the button's accessible description. */
+  readonly description = input<string>();
+
   /** Stretch to the container's width instead of hugging the label. */
   readonly block = input(false, { transform: booleanAttribute });
 

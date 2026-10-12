@@ -107,8 +107,18 @@ describe('SocialSectionComponent', () => {
     const button = (id: number) =>
       byTestId(fixture, `social-import-${id}`)?.querySelector('button') as HTMLButtonElement;
     expect(button(1).disabled).toBe(false);
-    expect(button(1).textContent).toContain('Import…');
+    expect(button(1).textContent).toContain('Import follows…');
+    expect(button(1).title).toBe('Subscribe to accounts you follow on this network as feeds');
     expect(button(2).disabled).toBe(true);
+  });
+
+  it('explains the import under a network with accounts, naming its tag', () => {
+    const fixture = mount([account()]);
+
+    expect(byTestId(fixture, 'social-import-hint-bluesky')?.textContent).toContain(
+      'subscribes to accounts you follow as feeds, tagged Bluesky.',
+    );
+    expect(byTestId(fixture, 'social-import-hint-mastodon')).toBeNull();
   });
 
   it('opens the picker for the account and reloads the accounts when it closes', () => {

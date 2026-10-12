@@ -17,7 +17,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-0) var(--space-3);
+  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
   color: var(--warning);
   font-size: var(--fs-sm);
@@ -51,6 +51,13 @@
 .empty-note {
   margin: 0;
   padding: var(--panel-inset-y) var(--panel-inset-x);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.import-hint {
+  margin: 0;
+  padding: var(--space-2) var(--panel-inset-x) 0;
   color: var(--text-muted);
   font-size: var(--fs-sm);
 }
