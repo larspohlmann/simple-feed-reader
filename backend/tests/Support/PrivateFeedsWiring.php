@@ -31,7 +31,14 @@ final class PrivateFeedsWiring
         /** @var SubscriptionRepository $subscriptions */
         $subscriptions = $entityManager->getRepository(Subscription::class);
 
-        return new PrivateFeeds($socialFeeds, $subscriptions, $creator, $subscriptionService, $entityManager, new NaiveUtcClock($clock));
+        return new PrivateFeeds(
+            $socialFeeds,
+            $subscriptions,
+            $creator,
+            $subscriptionService,
+            $entityManager,
+            new NaiveUtcClock($clock),
+        );
     }
 
     private function __construct()
