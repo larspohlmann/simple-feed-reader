@@ -79,11 +79,35 @@ final class BlueskyEntryRuleTest extends TestCase
             Headline::derived('stale'),
             null,
             '<p>Summary words.</p>',
-            '<p>Body words.</p>',
+            '<p>Body words.</p><p>' . self::PLACEHOLDER . '</p>',
             null,
         ));
 
         self::assertEquals(Headline::derived('Body words.'), $entry->headline);
+    }
+
+    public function testABodyWithoutThePlaceholderKeepsItsTitle(): void
+    {
+        $entry = (new BlueskyEntryRule())->apply(new ParsedEntryModel(
+            self::POST,
+            null,
+            Headline::untitledPost(),
+            null,
+            null,
+            '<p>Reposted by <a href="https://bsky.app/profile/carol.bsky.social">Carol</a></p>',
+            null,
+        ));
+
+        self::assertEquals(Headline::untitledPost(), $entry->headline);
+    }
+
+    public function testABodyWithThePlaceholderIsTitledFromWhatRemains(): void
+    {
+        $entry = (new BlueskyEntryRule())->apply(
+            self::post(self::POST, 'Hello world.', '<p>' . self::PLACEHOLDER . '</p><p>Reposted by Carol</p>'),
+        );
+
+        self::assertEquals(Headline::derived('Reposted by Carol'), $entry->headline);
     }
 
     public function testAFeedTitleIsKept(): void
