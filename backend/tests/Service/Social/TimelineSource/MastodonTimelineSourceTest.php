@@ -18,6 +18,7 @@ use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -66,6 +67,37 @@ final class MastodonTimelineSourceTest extends TestCase
         $this->expectException(SocialNetworkUnreachableException::class);
 
         $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, null));
+    }
+
+    public function testAnHtmlAnswerIsAnUnreachableNetwork(): void
+    {
+        $http = new RoutedHttpClient([self::HOME => new MockResponse('<html>maintenance</html>')]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, null));
+    }
+
+    #[DataProvider('foreignListIds')]
+    public function testAListIdThatIsNotANumberIsNeverRequested(string $listId): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        try {
+            $this->source($http)->page(self::socialFeed(SocialFeedKind::UserList, $listId));
+            self::fail('A foreign list id must not be requested.');
+        } catch (SocialNetworkUnreachableException) {
+            self::assertSame([], $http->requests);
+        }
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function foreignListIds(): iterable
+    {
+        yield 'parent path' => ['..'];
+        yield 'empty' => [''];
+        yield 'letters' => ['abc'];
+        yield 'too long' => [str_repeat('1', 33)];
     }
 
     private function source(RoutedHttpClient $http): MastodonTimelineSource

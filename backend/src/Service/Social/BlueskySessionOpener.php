@@ -28,6 +28,7 @@ final readonly class BlueskySessionOpener
 
     /**
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function openForAccount(SocialAccount $account): BlueskySessionModel

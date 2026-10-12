@@ -21,7 +21,6 @@ use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\BlueskyTimelinePage;
 use Symfony\Component\HttpFoundation\Response;
 
-/** The newest page only: posts already stored are recognised by their guid, which is the newest-seen cutoff. */
 final readonly class BlueskyTimelineSource implements TimelineSourceInterface
 {
     private const int PAGE_SIZE = 50;
@@ -92,7 +91,7 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
             );
         }
         if (Response::HTTP_UNAUTHORIZED === $answer->status || self::isStaleSession($answer)) {
-            throw new SocialCredentialsRejectedException('Bluesky refused a fresh session for this account.');
+            throw new SocialCredentialsRejectedException('Bluesky refused the session of this account.');
         }
         if (!$answer->isSuccessful()) {
             throw new SocialNetworkUnreachableException(sprintf('Bluesky answered %d.', $answer->status));

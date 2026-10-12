@@ -6,6 +6,7 @@ namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskySessionModel;
 
@@ -20,6 +21,7 @@ final readonly class BlueskySessions
 
     /**
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function current(SocialAccount $account): BlueskySessionModel
@@ -29,6 +31,7 @@ final readonly class BlueskySessions
 
     /**
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function fresh(SocialAccount $account): BlueskySessionModel

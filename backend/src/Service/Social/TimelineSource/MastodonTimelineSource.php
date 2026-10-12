@@ -18,6 +18,7 @@ use App\Service\Social\Support\MastodonTimelinePage;
 final readonly class MastodonTimelineSource implements TimelineSourceInterface
 {
     private const int PAGE_SIZE = 40;
+    private const string LIST_ID = '/^\d{1,32}$/';
 
     public function __construct(
         private MastodonApiClient $mastodon,
@@ -35,16 +36,25 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
         $account = $socialFeed->getSocialAccount();
         $session = new MastodonSessionModel($account->getServiceUrl(), $this->storedCredential->open($account));
         $answer = $this->mastodon->send($session->get($session->url(self::pathOf($socialFeed))));
-        $statuses = JsonNodeModel::listOf($answer->json())
+        $statuses = JsonNodeModel::listOf(json_decode($answer->body, true))
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without a timeline.');
 
         return MastodonTimelinePage::of($statuses);
     }
 
+    private static function listId(SocialFeed $socialFeed): string
+    {
+        $listId = $socialFeed->getRemoteId() ?? '';
+
+        return 1 === preg_match(self::LIST_ID, $listId)
+            ? $listId
+            : throw new SocialNetworkUnreachableException('The Mastodon list id is not a number.');
+    }
+
     private static function pathOf(SocialFeed $socialFeed): string
     {
         $path = SocialFeedKind::UserList === $socialFeed->getKind()
-            ? '/api/v1/timelines/list/' . rawurlencode($socialFeed->getRemoteId() ?? '')
+            ? '/api/v1/timelines/list/' . self::listId($socialFeed)
             : '/api/v1/timelines/home';
         $newestSeen = $socialFeed->getNewestSeenId();
 

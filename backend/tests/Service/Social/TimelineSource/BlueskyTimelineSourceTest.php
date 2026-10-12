@@ -148,6 +148,42 @@ final class BlueskyTimelineSourceTest extends TestCase
         $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, null));
     }
 
+    public function testACachedSessionRefusedAsUnauthenticatedIsARefusedCredentialWithoutANewSession(): void
+    {
+        $this->sessionCache()->remember(
+            $this->account,
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social', self::PDS),
+        );
+        $http = new RoutedHttpClient([
+            self::TIMELINE => self::json(['error' => 'AuthenticationRequired'], Response::HTTP_UNAUTHORIZED),
+        ]);
+
+        try {
+            $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, null));
+            self::fail('A refused token must not read as a page.');
+        } catch (SocialCredentialsRejectedException) {
+            self::assertSame(['GET'], array_column($http->requests, 'method'));
+        }
+    }
+
+    public function testASecondExpiredTokenAfterAFreshSessionIsARefusedCredential(): void
+    {
+        $this->sessionCache()->remember(
+            $this->account,
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social', self::PDS),
+        );
+        $expired = ['error' => 'ExpiredToken'];
+        $http = new MockHttpClient([
+            self::json($expired, Response::HTTP_BAD_REQUEST),
+            self::session('jwt-2'),
+            self::json($expired, Response::HTTP_BAD_REQUEST),
+        ]);
+
+        $this->expectException(SocialCredentialsRejectedException::class);
+
+        $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, null));
+    }
+
     public function testTooManyRequestsIsAThrottleCarryingItsDelay(): void
     {
         $http = new RoutedHttpClient([
