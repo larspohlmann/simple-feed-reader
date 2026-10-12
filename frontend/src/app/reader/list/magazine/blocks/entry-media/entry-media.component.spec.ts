@@ -259,7 +259,39 @@ describe('EntryMediaComponent', () => {
     expect(frame.getAttribute('sandbox')).toBe(EMBED_FRAME_ATTRIBUTES.sandbox);
     expect(frame.getAttribute('referrerpolicy')).toBe(EMBED_FRAME_ATTRIBUTES.referrerpolicy);
     expect(frame.hasAttribute('allowfullscreen')).toBe(true);
+    expect(frame.getAttribute('allow')).toBe('autoplay; fullscreen');
     expect(entryActions.open).not.toHaveBeenCalled();
+  });
+
+  it('sets a Short player’s src before the frame enters the document, so iOS keeps its referrer policy', async () => {
+    const connectedAtSource: boolean[] = [];
+    const sourceSetter = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'src')!.set!;
+    const setAttribute = Element.prototype.setAttribute;
+    const sourceProperty = jest
+      .spyOn(HTMLIFrameElement.prototype, 'src', 'set')
+      .mockImplementation(function (this: HTMLIFrameElement, value: string) {
+        connectedAtSource.push(this.isConnected);
+        sourceSetter.call(this, value);
+      });
+    const sourceAttribute = jest
+      .spyOn(Element.prototype, 'setAttribute')
+      .mockImplementation(function (this: Element, name: string, value: string) {
+        if (this instanceof HTMLIFrameElement && name === 'src')
+          connectedAtSource.push(this.isConnected);
+        setAttribute.call(this, name, value);
+      });
+    const fixture = await mountFixture(short());
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.isConnected).toBe(true);
+
+    element.querySelector<HTMLButtonElement>('.play')!.click();
+    fixture.detectChanges();
+    sourceProperty.mockRestore();
+    sourceAttribute.mockRestore();
+
+    expect(element.querySelector('iframe')).not.toBeNull();
+    expect(connectedAtSource).not.toHaveLength(0);
+    expect(connectedAtSource).not.toContain(true);
   });
 
   it('puts a Short’s player away when the list pauses its media', async () => {

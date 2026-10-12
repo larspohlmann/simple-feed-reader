@@ -8,7 +8,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DomSanitizer } from '@angular/platform-browser';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
@@ -16,7 +15,7 @@ import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
 import { sharedMedia } from '../../magazine-slot-fit';
 import { EntryMediumDto } from '../../../../models';
-import { EmbedFrameDirective } from '../../../../embed-frame.directive';
+import { PlayingEmbedDirective } from '../../../../media/playing-embed.directive';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 import { armHlsStreams, releaseHlsStreams } from '../../../../media/hls-streams';
 import { pauseMedia } from './pause-media';
@@ -33,7 +32,7 @@ const UNKNOWN_RATIO = 16 / 9;
     EntryKickerLineComponent,
     EntryMetaComponent,
     EntryDuplicatesComponent,
-    EmbedFrameDirective,
+    PlayingEmbedDirective,
     ProxiedImageDirective,
     TranslocoPipe,
   ],
@@ -45,14 +44,8 @@ export class EntryMediaComponent extends EntryBlockBase {
   private scrollAway?: IntersectionObserver;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
-  private readonly sanitizer = inject(DomSanitizer);
-
   readonly media = computed(() => sharedMedia(this.entry()));
-  // autoplayingShortPlayer admits only an allow-listed player, so the URL can be trusted as a frame source.
-  readonly shortPlayer = computed(() => {
-    const url = autoplayingShortPlayer(this.entry().shortPlayerUrl);
-    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
-  });
+  readonly shortPlayer = computed(() => autoplayingShortPlayer(this.entry().shortPlayerUrl));
   protected readonly playingShort = signal(false);
 
   constructor() {

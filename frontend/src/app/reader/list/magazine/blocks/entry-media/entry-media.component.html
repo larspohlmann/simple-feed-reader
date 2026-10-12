@@ -15,13 +15,11 @@
     @if (shortPlayer(); as player) {
       <div class="item short-player">
         @if (playingShort()) {
-          <iframe
-            class="item"
-            appEmbedFrame
-            [src]="player"
-            [title]="headline() || ('reader.playShort' | transloco)"
-            allow="autoplay; fullscreen"
-          ></iframe>
+          <div
+            class="item frame"
+            [appPlayingEmbed]="player"
+            [embedTitle]="headline() || ('reader.playShort' | transloco)"
+          ></div>
         } @else {
           <img
             class="item"
