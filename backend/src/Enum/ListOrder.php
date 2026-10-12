@@ -8,6 +8,8 @@ use App\Exception\ValidationException;
 
 enum ListOrder: string
 {
+    use RequestValueParsing;
+
     case NewestFirst = 'desc';
     case OldestFirst = 'asc';
 
@@ -20,8 +22,7 @@ enum ListOrder: string
             return self::NewestFirst;
         }
 
-        return self::tryFrom($value)
-            ?? throw new ValidationException(['order' => ['Unknown order. Use one of: desc, asc.']]);
+        return self::caseOrRefusal($value, 'order');
     }
 
     public function sqlDirection(): string

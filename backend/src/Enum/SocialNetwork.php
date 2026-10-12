@@ -8,6 +8,8 @@ use App\Exception\ValidationException;
 
 enum SocialNetwork: string
 {
+    use RequestValueParsing;
+
     case Bluesky = 'bluesky';
     case Mastodon = 'mastodon';
 
@@ -20,9 +22,7 @@ enum SocialNetwork: string
             return null;
         }
 
-        return self::tryFrom($value) ?? throw new ValidationException([
-            'network' => ['Unknown network. Use one of: ' . self::valueList() . '.'],
-        ]);
+        return self::caseOrRefusal($value, 'network');
     }
 
     public function displayName(): string
@@ -31,10 +31,5 @@ enum SocialNetwork: string
             self::Bluesky => 'Bluesky',
             self::Mastodon => 'Mastodon',
         };
-    }
-
-    private static function valueList(): string
-    {
-        return implode(', ', array_map(static fn (self $network): string => $network->value, self::cases()));
     }
 }

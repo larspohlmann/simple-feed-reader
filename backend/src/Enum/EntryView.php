@@ -8,6 +8,8 @@ use App\Exception\ValidationException;
 
 enum EntryView: string
 {
+    use RequestValueParsing;
+
     case All = 'all';
     case Unread = 'unread';
     case Favorites = 'favorites';
@@ -24,17 +26,11 @@ enum EntryView: string
             return self::All;
         }
 
-        return self::tryFrom($value)
-            ?? throw new ValidationException(['view' => ['Unknown view. Use one of: ' . self::valueList() . '.']]);
+        return self::caseOrRefusal($value, 'view');
     }
 
     public function isChronological(): bool
     {
         return $this === self::All || $this === self::Unread;
-    }
-
-    private static function valueList(): string
-    {
-        return implode(', ', array_map(static fn (self $view): string => $view->value, self::cases()));
     }
 }
