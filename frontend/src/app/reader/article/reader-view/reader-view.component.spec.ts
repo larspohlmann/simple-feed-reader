@@ -24,6 +24,7 @@ import {
   MockResizeObserver,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -223,6 +224,57 @@ describe('ReaderViewComponent', () => {
     const link = element.querySelector('.content a') as HTMLAnchorElement;
     expect(link.target).toBe('_blank');
     expect(link.rel).toContain('noopener');
+  });
+
+  describe('the source link', () => {
+    const sourceLink = (over: Partial<EntryDto>): HTMLAnchorElement =>
+      (mount(entry(over)).nativeElement as HTMLElement).querySelector('.meta .source')!;
+
+    it('goes out to the poster profile with their avatar when the entry has one', () => {
+      const element = mount(
+        entry({
+          poster: {
+            name: 'Bob',
+            url: 'https://bsky.app/profile/bob',
+            imageUrl: 'https://cdn.example/bob.png',
+          },
+        }),
+      ).nativeElement as HTMLElement;
+      const link = element.querySelector<HTMLAnchorElement>('.meta .source')!;
+
+      expect(link.getAttribute('href')).toBe('https://bsky.app/profile/bob');
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toBe('noopener noreferrer');
+      expect(element.querySelector('.meta img.avatar')).not.toBeNull();
+    });
+
+    it("names an authorless Home post by the Home's label", () => {
+      holdUnrenamedHome(1);
+
+      expect(sourceLink(authorlessHomePost(1)).textContent?.trim()).toBe('Home@bsky');
+    });
+
+    it('stays the in-app subscription filter otherwise', () => {
+      const link = sourceLink({ poster: null });
+
+      expect(link.target).toBe('');
+      expect(link.getAttribute('href')).toContain('subscription=');
+    });
+  });
+
+  describe('the meta line author', () => {
+    const metaText = (over: Partial<EntryDto>): string =>
+      (mount(entry(over)).nativeElement as HTMLElement).querySelector('.meta')!.textContent!;
+
+    it('names the author after a differing source', () => {
+      expect(metaText({ source: 'Ars', author: 'Ada' })).toContain('· Ada');
+    });
+
+    it('does not repeat an author equal to the source', () => {
+      expect(metaText({ source: 'POLITICO Europe', author: 'POLITICO Europe' })).not.toContain(
+        '· POLITICO Europe',
+      );
+    });
   });
 
   describe('an untitled entry', () => {
@@ -724,6 +776,26 @@ describe('ReaderViewComponent', () => {
     link.triggerEventHandler('click', null);
 
     expect(emitted).toHaveBeenCalled();
+  });
+
+  it("shows the poster's avatar in the nameplate of the split pane and of full screen", () => {
+    const poster = entry({
+      poster: { name: 'Amy', url: null, imageUrl: 'https://cdn.example/amy.jpg' },
+    });
+    const pane = mount(poster).nativeElement as HTMLElement;
+    expect(pane.querySelector('.bar-name img.avatar')?.getAttribute('src')).toBe(
+      'https://cdn.example/amy.jpg',
+    );
+
+    const fixture = TestBed.createComponent(ReaderViewComponent);
+    fixture.componentRef.setInput('entry', poster);
+    fixture.componentRef.setInput('fullscreen', true);
+    fixture.detectChanges();
+    const full = fixture.nativeElement as HTMLElement;
+    expect(full.querySelector('.mini img.avatar')?.getAttribute('src')).toBe(
+      'https://cdn.example/amy.jpg',
+    );
+    fixture.destroy();
   });
 
   it('carries the full-screen back button in its own toolbar, sliding out before close', () => {

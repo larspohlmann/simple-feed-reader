@@ -26,6 +26,7 @@ final readonly class ParsedEntryModel
         public array $categories = [],
         ?Discussion $discussion = null,
         public ?string $authorUrl = null,
+        public ?string $authorAvatarUrl = null,
     ) {
         $this->discussion = $discussion ?? Discussion::none();
     }
@@ -49,6 +50,7 @@ final readonly class ParsedEntryModel
             categories: $this->categories,
             discussion: $thread,
             authorUrl: $this->authorUrl,
+            authorAvatarUrl: $this->authorAvatarUrl,
         );
     }
 
@@ -66,6 +68,7 @@ final readonly class ParsedEntryModel
             categories: $this->categories,
             discussion: $this->discussion,
             authorUrl: $this->authorUrl,
+            authorAvatarUrl: $this->authorAvatarUrl,
         );
     }
 
@@ -88,6 +91,7 @@ final readonly class ParsedEntryModel
             categories: $this->categories,
             discussion: $this->discussion,
             authorUrl: $this->authorUrl,
+            authorAvatarUrl: $this->authorAvatarUrl,
         );
     }
 }

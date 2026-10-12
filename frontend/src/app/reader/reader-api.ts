@@ -4,16 +4,14 @@ import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
-import { RefreshScope } from './query/query';
+import { RefreshScope, ScopedMarkReadTarget } from './query/query';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
 import {
-  BulkSubscriptionUpdate,
   CommentsResponse,
   EntriesPage,
   EntryQuery,
   EntryStatePatch,
   FeedPreview,
-  MarkReadScope,
   MoveFeedToTag,
   ReaderContent,
   RecommendationRunReport,
@@ -28,6 +26,7 @@ import {
   TagDto,
   TagInput,
 } from './models';
+import { BulkSubscriptionUpdate } from './subscription-bulk';
 
 export interface SavedSearchDraft {
   term: string;
@@ -101,6 +100,7 @@ export class ReaderApi {
     let listParams = params.set('view', query.view);
     if (query.subscription != null) listParams = listParams.set('subscription', query.subscription);
     if (query.tag != null) listParams = listParams.set('tag', query.tag);
+    if (query.network != null) listParams = listParams.set('network', query.network);
     return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams, context });
   }
 
@@ -116,10 +116,8 @@ export class ReaderApi {
     return this.http.patch<{ state: EntryStateDto }>(`${this.base}/api/entries/${id}/state`, patch);
   }
 
-  markRead(scope: MarkReadScope, until: string, id?: number): Observable<void> {
-    const body: Record<string, unknown> = { scope, until };
-    if (id != null) body['id'] = id;
-    return this.http.post<void>(`${this.base}/api/entries/mark-read`, body);
+  markRead(target: ScopedMarkReadTarget, until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/mark-read`, { ...target, until });
   }
 
   markSearchRead(term: string, until: string): Observable<void> {
@@ -167,11 +165,12 @@ export class ReaderApi {
 
   /** Omit the scope (or pass an empty one) to refresh all the caller's due
    *  feeds; scope by feedId for a single feed (e.g. a just-added one) or by
-   *  tagId for every feed carrying that tag. */
+   *  tagId for every feed carrying that tag, or by network for that network's feeds. */
   refresh(scope?: RefreshScope): Observable<RefreshReport> {
     let params = new HttpParams();
     if (scope?.feedId != null) params = params.set('feedId', scope.feedId);
     else if (scope?.tagId != null) params = params.set('tag', scope.tagId);
+    else if (scope?.network != null) params = params.set('network', scope.network);
     return this.http.post<RefreshReport>(`${this.base}/api/refresh`, {}, { params });
   }
 

@@ -13,7 +13,9 @@ final readonly class SocialAccountEditor
 {
     public function __construct(
         private SocialAccountRepository $socialAccounts,
+        private PrivateFeeds $privateFeeds,
         private EntityManagerInterface $entityManager,
+        private BlueskySessionCache $sessionCache,
     ) {
     }
 
@@ -35,10 +37,14 @@ final readonly class SocialAccountEditor
     public function disconnect(SocialAccount $account): void
     {
         $successor = $account->isDefault() ? ($this->siblingsOf($account)[0] ?? null) : null;
+        $this->sessionCache->forget($account);
 
-        $this->entityManager->remove($account);
-        $successor?->becomeDefault();
-        $this->entityManager->flush();
+        $this->entityManager->wrapInTransaction(function () use ($account, $successor): void {
+            $this->privateFeeds->removeAllOf($account);
+            $this->entityManager->remove($account);
+            $successor?->becomeDefault();
+            $this->entityManager->flush();
+        });
     }
 
     /** @return list<SocialAccount> the user's other accounts on the same network, oldest first */

@@ -25,7 +25,7 @@ final readonly class EntryBatchInserter
         'media', 'attachments',
         'published_at', 'created_at', 'effective_date',
         'discussion_url', 'comments_feed_url', 'comments_load',
-        'title_derived', 'share_kind',
+        'title_derived', 'share_kind', 'author_url', 'author_avatar_url',
     ];
 
     public function __construct(
@@ -104,6 +104,7 @@ final readonly class EntryBatchInserter
             CommentsLoad::tryFrom((string) $line->commentsLoad)?->value,
             (int) $line->titleDerived,
             ShareKind::tryFrom((string) $line->shareKind)?->value,
+            $line->authorUrl, $line->authorAvatarUrl,
         ];
     }
 

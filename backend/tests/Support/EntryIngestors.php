@@ -15,6 +15,7 @@ use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Social\ProfileFeedTitle;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -47,6 +48,7 @@ final class EntryIngestors
             $platformRules,
             new IngestedEntryFactory(new EntrySanitizer(new TrailingBlankRemover()), $imageWriter),
             $imageWriter,
+            new ProfileFeedTitle(),
         );
     }
 }

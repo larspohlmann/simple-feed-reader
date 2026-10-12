@@ -541,6 +541,17 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame('D' . str_repeat('d', 3999), $feed->getDescription());
     }
 
+    public function testAMultibyteFeedTitleIsCutByCharactersNotBytes(): void
+    {
+        $feed = $this->feed();
+
+        $parsed = new ParsedFeedModel(str_repeat('é', 600), null, null, null, []);
+
+        $this->ingestor->ingest($feed, $parsed, self::context());
+
+        self::assertSame(str_repeat('é', 512), $feed->getTitle());
+    }
+
     public function testAMultibyteSiteUrlIsCutByCharactersNotBytes(): void
     {
         $feed = $this->feed();
@@ -817,6 +828,22 @@ final class EntryIngestorTest extends DbTestCase
 
         self::assertCount(0, $created);
         self::assertSame('New Title', $feed->getTitle());
+    }
+
+    public function testABlueskyProfileFeedStoresOnlyTheDisplayNameAsItsTitle(): void
+    {
+        $feed = new Feed('https://bsky.app/profile/motherjones.com/rss');
+        $feed->setTitle('@motherjones.com - Mother Jones');
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+
+        $this->ingestor->ingest(
+            $feed,
+            new ParsedFeedModel('@motherjones.com - Mother Jones', null, null, null, []),
+            self::context(),
+        );
+
+        self::assertSame('Mother Jones', $feed->getTitle());
     }
 
     public function testNullMetadataDoesNotWipeExistingFeedFields(): void

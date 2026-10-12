@@ -8,7 +8,7 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { FaviconComponent } from '../../../shared/favicon/favicon.component';
+import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
 import { MarkedTextComponent } from '../../../shared/marked-text/marked-text.component';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
@@ -32,7 +32,7 @@ import { OpensEntryDirective } from '../opens-entry.directive';
   // EntryDuplicatesComponent mid-import-cycle and read as undefined.
   imports: [
     OpensEntryDirective,
-    FaviconComponent,
+    EntrySourceComponent,
     MarkedTextComponent,
     EntryPillsComponent,
     EntryActionsComponent,

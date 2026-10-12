@@ -1,3 +1,4 @@
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { effect } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
@@ -7,13 +8,14 @@ import { API_BASE_URL } from '../../core/api';
 import { TokenStore } from '../../core/auth/token.store';
 import { ReaderApi } from '../reader-api';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
+import { SubscriptionsStore } from './subscriptions.store';
+import { SubscriptionRows } from './subscription-rows';
 import {
-  SubscriptionsStore,
   buildTagTree,
   sumEntries,
   sumUnread,
   untaggedSubscriptions,
-} from './subscriptions.store';
+} from './subscription-derivations';
 import { SubscriptionDto } from '../models';
 
 const tag = (id: number, name: string) => ({ id, name, color: null, icon: null, position: 0 });
@@ -46,6 +48,7 @@ const sub = (
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  social: null,
 });
 
 interface CountTotals {
@@ -150,6 +153,7 @@ describe('SubscriptionsStore', () => {
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -367,7 +371,7 @@ describe('SubscriptionsStore', () => {
   });
 
   it('exposes unhealthy feeds and their count', () => {
-    store.subscriptions.set([
+    store.storedSubscriptions.set([
       {
         ...sub(1, 0),
         title: 'Bravo',
@@ -389,6 +393,114 @@ describe('SubscriptionsStore', () => {
     expect(store.error()?.status).toBe(500);
     expect(store.loading()).toBe(false);
   });
+
+  describe('with social feeds', () => {
+    const taggedList: SubscriptionDto = {
+      ...sub(5, 2, [tag(20, 'Tech')]),
+      includeInAllItems: false,
+      social: { network: 'bluesky', accountId: 3, kind: 'list' },
+    };
+    const untaggedHome: SubscriptionDto = {
+      ...sub(6, 4),
+      includeInAllItems: false,
+      social: { network: 'bluesky', accountId: 3, kind: 'home' },
+    };
+    const untaggedProfile: SubscriptionDto = {
+      ...sub(7, 8),
+      social: { network: 'mastodon', accountId: null, kind: 'profile' },
+    };
+
+    beforeEach(() => {
+      store.load();
+      ctrl.expectOne('https://api.test/api/subscriptions').flush({
+        ...counts([
+          sub(1, 1, [tag(20, 'Tech')]),
+          sub(2, 16, []),
+          taggedList,
+          untaggedHome,
+          untaggedProfile,
+        ]),
+        socialAccounts: [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social' }],
+      });
+    });
+
+    it('lists a tagged private feed under its tag and counts its unread there', () => {
+      const tech = store.tagTree().find((node) => node.tag.name === 'Tech');
+
+      expect(tech?.subscriptions.map((subscription) => subscription.id)).toEqual([1, 5]);
+      expect(tech?.unreadCount).toBe(3);
+    });
+
+    it('never lists a social feed in the untagged feeds', () => {
+      expect(store.untagged().map((subscription) => subscription.id)).toEqual([2]);
+    });
+
+    it('keeps a private feed out of the All items total but counts a profile feed', () => {
+      expect(store.totalUnread()).toBe(1 + 16 + 8);
+    });
+
+    it('groups social feeds by network, private ones per account and profiles as people, each Home titled', () => {
+      expect(store.socialSections()).toEqual([
+        {
+          network: 'bluesky',
+          accounts: [
+            {
+              accountId: 3,
+              handle: '@alice.bsky.social',
+              subscriptions: [{ ...untaggedHome, title: 'Home@bsky' }, taggedList],
+            },
+          ],
+          people: [],
+          unreadCount: 6,
+          entryCount: 0,
+          showsHandles: false,
+        },
+        {
+          network: 'mastodon',
+          accounts: [],
+          people: [untaggedProfile],
+          unreadCount: 8,
+          entryCount: 0,
+          showsHandles: false,
+        },
+      ]);
+    });
+
+    it('zeroes exactly the feeds of a network marked read', () => {
+      store.zeroUnread({ network: 'bluesky' });
+
+      const unread = (id: number) =>
+        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
+      expect([unread(1), unread(2), unread(5), unread(6), unread(7)]).toEqual([1, 16, 0, 0, 8]);
+    });
+
+    it('marks All items read only in the feeds All items holds, as the backend does', () => {
+      store.zeroUnread('all');
+
+      const unread = (id: number) =>
+        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
+      expect([unread(1), unread(2), unread(5), unread(6), unread(7)]).toEqual([0, 0, 2, 4, 0]);
+    });
+
+    it("reads each feed's network from the loaded list and forgets it on logout", () => {
+      const rows = TestBed.inject(SubscriptionRows);
+      const networkOf = (id: number) => rows.find(id)?.social?.network ?? null;
+      expect([networkOf(6), networkOf(7), networkOf(1)]).toEqual(['bluesky', 'mastodon', null]);
+
+      tokens.clear();
+      TestBed.tick();
+
+      expect(networkOf(6)).toBeNull();
+    });
+
+    it("zeroes a tag's private feeds along with the rest when the tag is marked read", () => {
+      store.zeroUnread({ tag: 20 });
+
+      const unread = (id: number) =>
+        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
+      expect([unread(1), unread(5), unread(6)]).toEqual([0, 0, 4]);
+    });
+  });
 });
 
 describe('SubscriptionsStore quiet reload', () => {
@@ -408,6 +520,7 @@ describe('SubscriptionsStore quiet reload', () => {
     localStorage.clear();
     jest.useFakeTimers({ now: new Date('2026-08-29T16:00:00Z') });
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -571,6 +684,7 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
     let unread = 1;
     const subscriptions = jest.fn(() => of(respond(++unread)));
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [SubscriptionsStore, { provide: ReaderApi, useValue: { subscriptions } }],
     });
     const store = TestBed.inject(SubscriptionsStore);
@@ -614,6 +728,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     localStorage.clear();
     jest.useFakeTimers({ now: new Date('2026-08-29T16:00:00Z') });
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),

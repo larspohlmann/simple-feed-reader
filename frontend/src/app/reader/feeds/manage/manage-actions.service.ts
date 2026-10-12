@@ -7,14 +7,13 @@ import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
 import {
-  BulkSubscriptionUpdate,
   MoveFeedToTag,
   RefreshReport,
   SubscriptionDto,
-  SubscriptionFlags,
   SubscriptionTagDto,
   TagDto,
 } from '../../models';
+import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bulk';
 import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
@@ -69,7 +68,7 @@ export class ManageActions {
    *  at once, then let the reload reconcile the exact order the server chose. */
   moveFeedToTag(sub: SubscriptionDto, move: MoveFeedToTag): void {
     if (move.fromTagId === move.toTagId) return;
-    this.subs.subscriptions.update((current) =>
+    this.subs.storedSubscriptions.update((current) =>
       current.map((subscription) =>
         subscription.id === sub.id ? this.afterMove(subscription, move) : subscription,
       ),
@@ -152,7 +151,7 @@ export class ManageActions {
   /** Persist a new order for the untagged "Feeds" list. Optimistic: update
    *  positions immediately, reconcile on response. */
   reorderUntagged(subscriptionIds: number[]): void {
-    this.subs.subscriptions.update((current) =>
+    this.subs.storedSubscriptions.update((current) =>
       current.map((subscription) => {
         const index = subscriptionIds.indexOf(subscription.id);
         if (index >= 0) return { ...subscription, position: index };
@@ -165,7 +164,7 @@ export class ManageActions {
   /** Persist a new order for the feeds within one tag. Optimistic: update
    *  per-tag positions immediately, reconcile on response. */
   reorderTagFeeds(tagId: number, subscriptionIds: number[]): void {
-    this.subs.subscriptions.update((current) =>
+    this.subs.storedSubscriptions.update((current) =>
       current.map((subscription) => {
         const tagEntry = subscription.tags.find((tag) => tag.id === tagId);
         if (!tagEntry) return subscription;
@@ -316,7 +315,9 @@ export class ManageActions {
       map((report: RefreshReport) => {
         if (!isFeedRecovered(report)) return true;
         this.toast.show({
-          message: this.i18n.translate('settings.health.retry.recovered', { title: sub.title }),
+          message: this.i18n.translate('settings.health.retry.recovered', {
+            title: sub.title,
+          }),
           durationMs: CONFIRMATION_DURATION_MS,
         });
         return false;

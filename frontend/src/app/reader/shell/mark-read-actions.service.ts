@@ -81,11 +81,11 @@ export class MarkReadActions {
         return this.api.markSavedSearchesRead(until);
       case 'saved-search':
         return this.api.markSingleSavedSearchRead(target.id, until);
+      case 'network':
       case 'all':
-        return this.api.markRead(target.scope, until);
       case 'tag':
       case 'feed':
-        return this.api.markRead(target.scope, until, target.id);
+        return this.api.markRead(target, until);
     }
   }
 
@@ -109,6 +109,8 @@ function watermarkOf(target: MarkReadTarget): ZeroTarget | null {
       return { tag: target.id };
     case 'feed':
       return { subscription: target.id };
+    case 'network':
+      return { network: target.network };
     default:
       return null;
   }

@@ -28,10 +28,12 @@ import { SearchFieldComponent } from '../search-field/search-field.component';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
+import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
-import { TagNode } from '../../state/subscriptions.store';
+import { TagNode } from '../../state/subscription-derivations';
+import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
 import { isSubscriptionDrag } from '../../drag-payload';
@@ -42,6 +44,7 @@ import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TOUCH_DRAG_START_DELAY } from '../../../shared/touch-drag-delay';
+import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -71,6 +74,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     SidebarFootComponent,
     SidebarFeedRowComponent,
     SidebarSavedSearchesComponent,
+    SidebarSocialSectionComponent,
     TranslocoPipe,
     CdkDropListGroup,
     CdkDropList,
@@ -90,6 +94,7 @@ export class SidebarComponent {
 
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();
+  readonly socialSections = input<SocialSection[]>([]);
   readonly totalUnread = input.required<number>();
   readonly favoritesCount = input(0);
   readonly keptCount = input(0);
@@ -172,24 +177,21 @@ export class SidebarComponent {
   });
   readonly expanded = signal<Set<number>>(new Set());
 
-  /** Whether the "Tags" section is expanded. Unlike the in-memory Saved-searches
-   *  and per-tag toggles, this one persists across reloads (localStorage). It
-   *  defaults to expanded, so an untouched sidebar looks exactly as before. */
-  readonly tagsExpanded = signal(localStorage.getItem(TAGS_COLLAPSED_KEY) !== 'true');
+  /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */
+  private readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
+  readonly tagsExpanded = this.tagsSection.expanded;
 
   toggleTags(): void {
-    this.tagsExpanded.update((open) => !open);
-    localStorage.setItem(TAGS_COLLAPSED_KEY, String(!this.tagsExpanded()));
+    this.tagsSection.toggle();
   }
 
-  /** Whether the "Feeds" (untagged) section is expanded. Persisted like the
-   *  Tags section; default expanded. The drop list it heads stays mounted while
-   *  collapsed (see the template), so a feed drag out of a tag still lands. */
-  readonly feedsExpanded = signal(localStorage.getItem(FEEDS_COLLAPSED_KEY) !== 'true');
+  /** The drop list the Feeds section heads stays mounted while collapsed (see the template), so a feed drag out of
+   *  a tag still lands. */
+  private readonly feedsSection = persistedToggle(() => FEEDS_COLLAPSED_KEY);
+  readonly feedsExpanded = this.feedsSection.expanded;
 
   toggleFeeds(): void {
-    this.feedsExpanded.update((open) => !open);
-    localStorage.setItem(FEEDS_COLLAPSED_KEY, String(!this.feedsExpanded()));
+    this.feedsSection.toggle();
   }
 
   /** True while a feed row is being dragged (reveals the empty Feeds drop zone). */

@@ -48,6 +48,7 @@ final class ParsedEntryModelTest extends TestCase
             null,
             categories: [new ParsedCategoryModel('Politics', 'https://example.test/tax')],
             authorUrl: 'https://example.com/author',
+            authorAvatarUrl: 'https://example.com/avatar.png',
         );
 
         $copy = $entry->withPostText(Headline::derived('New title'), null, '<p>New</p>');
@@ -59,6 +60,7 @@ final class ParsedEntryModelTest extends TestCase
         self::assertSame('Author', $copy->author);
         self::assertSame($entry->categories, $copy->categories);
         self::assertSame('https://example.com/author', $copy->authorUrl);
+        self::assertSame('https://example.com/avatar.png', $copy->authorAvatarUrl);
         self::assertSame('Old summary', $entry->withContentHtml('<p>x</p>')->summary);
     }
 }

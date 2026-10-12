@@ -8,7 +8,11 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { Selection, visibleSearchTerm } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
+import { isUnrenamedHome } from '../feeds/display-title';
+import { SubscriptionDto } from '../models';
+import { SocialNetworkName } from '../../core/social-network';
 import { ReaderRouteState } from './reader-route-state.service';
+import { SocialSection, feedAvatarUrl } from '../state/social-sections';
 
 @Injectable()
 export class ListHeading {
@@ -49,6 +53,8 @@ export class ListHeading {
     );
   });
 
+  readonly titleAvatarUrl = computed(() => feedAvatarUrl(this.selectedSubscription()));
+
   /** Magazine only: in the dense list layout the intro would be a slab above the rows. */
   readonly feedIntroSubscription = computed(() => {
     if (this.layout.mode() !== 'magazine') return null;
@@ -59,6 +65,16 @@ export class ListHeading {
       subscription.imageUrl !== null ||
       subscription.siteUrl !== null;
     return hasIntro ? subscription : null;
+  });
+
+  readonly feedIntroTitle = computed(() => {
+    const subscription = this.feedIntroSubscription();
+    return subscription?.title ?? null;
+  });
+
+  private readonly selectedNetworkSection = computed<SocialSection | null>(() => {
+    const network = this.routeState.selection().network;
+    return network ? this.sectionOf(network) : null;
   });
 
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
@@ -90,10 +106,35 @@ export class ListHeading {
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
+    network: () => this.i18n.translate(`settings.social.${this.routeState.selection().network}`),
     search: () => `${this.searchTitlePrefix()} ${this.searchTitleBody()}`,
-    subscription: () =>
-      this.selectedSubscription()?.title ?? this.i18n.translate('reader.feedFallback'),
+    subscription: () => {
+      const subscription = this.selectedSubscription();
+      return subscription
+        ? this.feedTitle(subscription)
+        : this.i18n.translate('reader.feedFallback');
+    },
   };
+
+  private feedTitle(subscription: SubscriptionDto): string {
+    const handle = this.sharedNetworkHandle(subscription);
+    return handle !== null && isUnrenamedHome(subscription)
+      ? `${subscription.title} · ${handle}`
+      : subscription.title;
+  }
+
+  private sharedNetworkHandle(subscription: SubscriptionDto): string | null {
+    const social = subscription.social;
+    const section = social ? this.sectionOf(social.network) : null;
+    if (!social || !section?.showsHandles) return null;
+    return section.accounts.find((group) => group.accountId === social.accountId)?.handle ?? null;
+  }
+
+  private sectionOf(network: SocialNetworkName): SocialSection | null {
+    return (
+      this.subscriptions.socialSections().find((section) => section.network === network) ?? null
+    );
+  }
 
   private readonly countByKind: Record<Selection['kind'], (selection: Selection) => TitleCount> = {
     all: (selection) =>
@@ -101,6 +142,10 @@ export class ListHeading {
     tag: (selection) => {
       const node = this.selectedTagNode();
       return bySwitch(selection, node?.unreadCount ?? 0, node?.entryCount ?? 0);
+    },
+    network: (selection) => {
+      const section = this.selectedNetworkSection();
+      return bySwitch(selection, section?.unreadCount ?? 0, section?.entryCount ?? 0);
     },
     subscription: (selection) => {
       const subscription = this.selectedSubscription();

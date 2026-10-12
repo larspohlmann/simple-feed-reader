@@ -134,6 +134,13 @@ describe('ReaderApi', () => {
     testRequest.flush({ entries: [], nextCursor: null });
   });
 
+  it("GETs a network's combined view by its name", () => {
+    api.entries({ view: 'all', network: 'bluesky' }).subscribe();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+    expect(testRequest.request.params.get('network')).toBe('bluesky');
+    testRequest.flush({ entries: [], nextCursor: null });
+  });
+
   // #91: the STRATO host is slow, so the client asks for the biggest page the
   // backend allows rather than falling back to its smaller default.
   it('asks for a full page on both the first request and a paged one', () => {
@@ -208,13 +215,24 @@ describe('ReaderApi', () => {
   });
 
   it('POSTs mark-read with scope/until/id', () => {
-    api.markRead('feed', '2026-01-01T00:00:00Z', 9).subscribe();
+    api.markRead({ scope: 'feed', id: 9 }, '2026-01-01T00:00:00Z').subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/entries/mark-read');
     expect(testRequest.request.method).toBe('POST');
     expect(testRequest.request.body).toEqual({
       scope: 'feed',
       until: '2026-01-01T00:00:00Z',
       id: 9,
+    });
+    testRequest.flush(null);
+  });
+
+  it('POSTs a network mark-read with scope/network/until', () => {
+    api.markRead({ scope: 'network', network: 'mastodon' }, '2026-01-01T00:00:00Z').subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/mark-read');
+    expect(testRequest.request.body).toEqual({
+      scope: 'network',
+      network: 'mastodon',
+      until: '2026-01-01T00:00:00Z',
     });
     testRequest.flush(null);
   });
@@ -323,6 +341,13 @@ describe('ReaderApi', () => {
     const testRequest = ctrl.expectOne('https://api.test/api/refresh');
     expect(testRequest.request.method).toBe('POST');
     expect(testRequest.request.params.has('feedId')).toBe(false);
+    testRequest.flush(refreshReport());
+  });
+
+  it("scopes refresh to a network's feeds when given a network", () => {
+    api.refresh({ network: 'mastodon' }).subscribe();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+    expect(testRequest.request.params.get('network')).toBe('mastodon');
     testRequest.flush(refreshReport());
   });
 

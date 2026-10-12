@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -61,7 +62,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $entry->setAuthor('/u/Background_Lie11');
+        $entry->setAuthor(new EntryAuthor('/u/Background_Lie11'));
         $entry->setDiscussion($discussion);
         $this->entityManager()->persist($entry);
         $this->entityManager()->flush();

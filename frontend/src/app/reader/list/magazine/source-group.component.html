@@ -1,15 +1,19 @@
 <div class="group">
   <div class="ghead">
     <p class="gname">
-      <app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" /><a
+      <app-favicon
+        [url]="entries()[0]?.faviconUrl ?? null"
+        [avatarUrl]="avatarUrl()"
+        [size]="14"
+      /><a
         class="gsource"
         [routerLink]="['/']"
         [queryParams]="selectionQueryParams({ subscription: subscriptionId() })"
         queryParamsHandling="merge"
-        >{{ source() }}</a
+        >{{ name() }}</a
       >
     </p>
-    <app-entry-pills [tags]="tags()" />
+    <app-entry-pills [tags]="tags()" [subscriptionId]="subscriptionId()" />
   </div>
   <div class="items">
     @for (item of visibleEntries(); track item.id) {
@@ -24,7 +28,7 @@
         {{ 'reader.showLess' | transloco }}
         <app-icon name="expand_less" size="sm" />
       } @else {
-        {{ 'reader.moreFromCount' | transloco: { count: hiddenCount(), source: source() } }}
+        {{ 'reader.moreFromCount' | transloco: { count: hiddenCount(), source: name() } }}
         <app-icon name="expand_more" size="sm" />
       }
     </button>

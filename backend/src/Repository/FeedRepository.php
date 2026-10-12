@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Feed;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Enum\FeedStatus;
+use App\Enum\SocialAccountStatus;
+use App\Enum\SourceFormat;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
+use App\Service\Bluesky\Support\BlueskyWeb;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -172,13 +176,41 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         return $idsByUrl;
     }
 
+    /**
+     * Subscribed Bluesky profile feeds whose picture was never asked for or not since $checkedBefore, never-asked
+     * first. The URL prefixes only narrow the scan; the caller still judges each URL with ProfileFeedUrl.
+     *
+     * @return list<Feed>
+     */
+    public function findBlueskyProfileFeedsWithImageDue(\DateTimeImmutable $checkedBefore, int $limit): array
+    {
+        $profilePath = BlueskyWeb::HOST . '/profile/%';
+        /** @var list<Feed> $feeds */
+        $feeds = $this->createQueryBuilder('f')
+            ->andWhere('f.url LIKE :httpsProfile OR f.url LIKE :httpProfile')
+            ->setParameter('httpsProfile', 'https://' . $profilePath)
+            ->setParameter('httpProfile', 'http://' . $profilePath)
+            ->andWhere(sprintf('EXISTS (SELECT s.id FROM %s s WHERE s.feed = f)', Subscription::class))
+            ->andWhere('f.imageCheckedAt IS NULL OR f.imageCheckedAt < :checkedBefore')
+            ->setParameter('checkedBefore', $checkedBefore)
+            ->orderBy('f.imageCheckedAt', 'ASC')
+            ->addOrderBy('f.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $feeds;
+    }
+
     private function dueQueryBuilder(DueFeedCriteria $criteria): QueryBuilder
     {
         $qb = $this->createQueryBuilder('f');
 
         $this->restrictToSchedule($qb, $criteria);
         $this->restrictToOwnership($qb, $criteria);
+        $this->restrictToFeedSet($qb, $criteria);
         $this->restrictToUnhandled($qb, $criteria);
+        $this->restrictToConnectedAccounts($qb);
 
         return $qb;
     }
@@ -247,6 +279,20 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         ))->setParameter('tagId', $criteria->tagId);
     }
 
+    private function restrictToFeedSet(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    {
+        if ($criteria->feedIds === null) {
+            return;
+        }
+        if ($criteria->feedIds === []) {
+            $qb->andWhere('1 = 0');
+
+            return;
+        }
+
+        $qb->andWhere('f.id IN (:feedSetIds)')->setParameter('feedSetIds', $criteria->feedIds);
+    }
+
     private function restrictToUnhandled(QueryBuilder $qb, DueFeedCriteria $criteria): void
     {
         if ($criteria->excludedFeedIds === []) {
@@ -255,5 +301,17 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
         $qb->andWhere('f.id NOT IN (:excludedFeedIds)')
             ->setParameter('excludedFeedIds', $criteria->excludedFeedIds);
+    }
+
+    /** A private feed of an account whose credential was refused waits for the reconnect, which makes it due again. */
+    private function restrictToConnectedAccounts(QueryBuilder $qb): void
+    {
+        $qb->andWhere(sprintf(
+            'f.sourceFormat NOT IN (:socialFormats) OR NOT EXISTS (SELECT sf.id FROM %s sf JOIN sf.socialAccount sa'
+            . ' WHERE sf.feed = f AND sa.status = :needsReconnect)',
+            SocialFeed::class,
+        ))
+            ->setParameter('socialFormats', SourceFormat::SOCIAL)
+            ->setParameter('needsReconnect', SocialAccountStatus::NeedsReconnect);
     }
 }

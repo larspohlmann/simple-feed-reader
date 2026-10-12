@@ -9,6 +9,7 @@ use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -22,11 +23,13 @@ final readonly class MastodonApiClient
 
     /**
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
         $answer = $this->transport($request);
+        SocialNetworkThrottledException::throwIfThrottled($answer, 'The Mastodon instance asked for fewer requests.');
         if (\in_array($answer->status, self::REFUSALS, true)) {
             throw new SocialCredentialsRejectedException('The Mastodon instance refused this access token.');
         }

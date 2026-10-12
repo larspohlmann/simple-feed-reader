@@ -39,4 +39,19 @@ final class AbsoluteHttpUrlTest extends TestCase
         self::assertNull(AbsoluteHttpUrl::orNull('/a/b'));
         self::assertNull(AbsoluteHttpUrl::orNull(null));
     }
+
+    public function testWithinALengthKeepsAUrlThatFitsAndDropsOneThatDoesNot(): void
+    {
+        self::assertSame('https://example.org/a', AbsoluteHttpUrl::orNullWithin('https://example.org/a', 21));
+        self::assertNull(AbsoluteHttpUrl::orNullWithin('https://example.org/ab', 21));
+        self::assertNull(AbsoluteHttpUrl::orNullWithin('javascript:alert(1)', 100));
+        self::assertNull(AbsoluteHttpUrl::orNullWithin(null, 100));
+    }
+
+    public function testTheLengthIsCountedInCharactersNotBytes(): void
+    {
+        $url = 'https://example.org/' . str_repeat('é', 5);
+
+        self::assertSame($url, AbsoluteHttpUrl::orNullWithin($url, 25));
+    }
 }

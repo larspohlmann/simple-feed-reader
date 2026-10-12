@@ -53,6 +53,100 @@ final class EntryEmbedWriterTest extends DbTestCase
         )], $this->storedCards($entry));
     }
 
+    public function testAPostWithALinkInItsTextAndNoEmbedBecomesALinkShareAwaitingItsCard(): void
+    {
+        $entry = $this->entry(
+            '<p>v0.69.0 <a href="https://github.com/webx-ui/module-blog">github.com/webx-ui/mod…</a></p>',
+        );
+
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, self::postWithoutEmbed()));
+
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
+        self::assertStringContainsString(
+            '<a href="https://github.com/webx-ui/module-blog"',
+            (string) $entry->getContentHtml(),
+        );
+        self::assertStringStartsWith('v0.69.0', (string) $entry->getSummary());
+    }
+
+    public function testAPostWhoseFacetsLinkNoWebPageKeepsTheRssBodyAndItsLink(): void
+    {
+        $entry = $this->entry('<p>Read https://example.com/a</p>');
+        $post = JsonNodeModel::of([
+            'uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t',
+            'record' => [
+                'text' => 'Read @bob',
+                'facets' => [[
+                    'index' => ['byteStart' => 5, 'byteEnd' => 9],
+                    'features' => [['$type' => 'app.bsky.richtext.facet#mention', 'did' => 'did:plc:bob']],
+                ]],
+            ],
+        ]);
+
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, $post));
+        self::assertStringContainsString('https://example.com/a', (string) $entry->getContentHtml());
+    }
+
+    public function testABareUrlInTheTextOfAPostWithoutAnEmbedIsLinkedAndAwaitsItsCard(): void
+    {
+        $entry = $this->entry('<p>v0.69.0 https://github.com/webx-ui/module-blog</p>');
+
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, self::postWithoutEmbed()));
+
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
+        self::assertStringContainsString(
+            '<a href="https://github.com/webx-ui/module-blog"',
+            (string) $entry->getContentHtml(),
+        );
+    }
+
+    public function testAShortenedLinkInAnRssBodyIsSharedByItsFullUrlFromThePostsFacet(): void
+    {
+        $entry = $this->entry('<p>v0.69.0 github.com/webx-ui/mod…</p>');
+
+        $outcome = $this->writer()->fill($entry, self::postWithLinkFacet('https://github.com/webx-ui/module-blog'));
+
+        self::assertSame(FillOutcome::AwaitingLinkCards, $outcome);
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
+        self::assertStringContainsString(
+            '<a href="https://github.com/webx-ui/module-blog"',
+            (string) $entry->getContentHtml(),
+        );
+        self::assertStringContainsString('github.com/webx-ui/mod…</a>', (string) $entry->getContentHtml());
+    }
+
+    public function testALinkFacetThatIsNoWebPageSharesNothing(): void
+    {
+        $entry = $this->entry('<p>v0.69.0 github.com/webx-ui/mod…</p>');
+
+        $outcome = $this->writer()->fill($entry, self::postWithLinkFacet('javascript:alert(1)'));
+
+        self::assertSame(FillOutcome::Unfilled, $outcome);
+        self::assertNull($entry->getShareKind());
+    }
+
+    public function testALinkToAnotherBlueskyPostIsNoShare(): void
+    {
+        $entry = $this->entry('<p>Look https://bsky.app/profile/alice.bsky.social/post/3mxjuesq6v62t</p>');
+
+        self::assertSame(FillOutcome::Unfilled, $this->writer()->fill($entry, self::postWithoutEmbed()));
+
+        self::assertNull($entry->getShareKind());
+    }
+
+    public function testAPostWithNeitherAnEmbedNorALinkStaysUnfilledWithoutAShareKind(): void
+    {
+        $entry = $this->entry('<p>Just words, and a <a href="https://bsky.app/hashtag/php">#php</a> tag.</p>');
+
+        self::assertSame(FillOutcome::Unfilled, $this->writer()->fill($entry, self::postWithoutEmbed()));
+
+        self::assertNull($entry->getShareKind());
+        self::assertSame(
+            '<p>Just words, and a <a href="https://bsky.app/hashtag/php">#php</a> tag.</p>',
+            $entry->getContentHtml(),
+        );
+    }
+
     public function testAnotherUrlInTheTextIsLinkedAndAwaitsItsCard(): void
     {
         $entry = $this->entry('<p>See https://example.com/other</p>');
@@ -296,6 +390,27 @@ final class EntryEmbedWriterTest extends DbTestCase
     private static function untitledLinkPost(): JsonNodeModel
     {
         return JsonNodeModel::of(Bluesky::untitledLinkView('at://did:plc:a/app.bsky.feed.post/b'));
+    }
+
+    private static function postWithLinkFacet(string $uri): JsonNodeModel
+    {
+        $text = 'v0.69.0 github.com/webx-ui/mod…';
+
+        return JsonNodeModel::of([
+            'uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t',
+            'record' => [
+                'text' => $text,
+                'facets' => [[
+                    'index' => ['byteStart' => 8, 'byteEnd' => \strlen($text)],
+                    'features' => [['$type' => 'app.bsky.richtext.facet#link', 'uri' => $uri]],
+                ]],
+            ],
+        ]);
+    }
+
+    private static function postWithoutEmbed(): JsonNodeModel
+    {
+        return JsonNodeModel::of(['uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t']);
     }
 
     private function entry(?string $contentHtml): Entry

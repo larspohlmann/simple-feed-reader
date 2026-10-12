@@ -10,9 +10,8 @@ use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\BlueskyApiClient;
-use App\Service\Social\BlueskySessionOpener;
+use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Model\CollectedItemsModel;
 use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
@@ -30,7 +29,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 
     public function __construct(
         private BlueskyApiClient $bluesky,
-        private BlueskySessionOpener $sessions,
+        private BlueskySessions $sessions,
     ) {
     }
 
@@ -41,7 +40,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 
     public function candidates(SocialAccount $account): NetworkCandidatesModel
     {
-        $customFeeds = $this->customFeeds($this->sessions->openForAccount($account));
+        $customFeeds = $this->customFeeds($account);
         $follows = $this->collect(self::actorPage('app.bsky.graph.getFollows', $account->getIdentity()), 'follows');
         $lists = $this->collect(self::actorPage('app.bsky.graph.getLists', $account->getIdentity()), 'lists');
 
@@ -118,9 +117,9 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     }
 
     /** @return list<SocialCollectionModel> */
-    private function customFeeds(BlueskySessionModel $session): array
+    private function customFeeds(SocialAccount $account): array
     {
-        $uris = $this->savedFeedUris($session);
+        $uris = $this->savedFeedUris($account);
         $names = $this->generatorNames($uris);
 
         return array_map(
@@ -130,12 +129,10 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     }
 
     /** @return list<string> */
-    private function savedFeedUris(BlueskySessionModel $session): array
+    private function savedFeedUris(SocialAccount $account): array
     {
-        $preferences = $this->json(ApiRequestModel::get(
-            $session->pdsUrl . self::GET_PREFERENCES,
-            ['Authorization' => 'Bearer ' . $session->accessJwt],
-        ))->nodes('preferences');
+        $answer = BlueskyApiClient::accepted($this->sessions->askAs($account, self::GET_PREFERENCES));
+        $preferences = JsonNodeModel::of($answer->json())->nodes('preferences');
 
         $uris = [];
         foreach ($preferences as $preference) {

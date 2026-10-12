@@ -9,12 +9,14 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
+use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpFoundation\Response;
 
 final class RefreshControllerTest extends WebTestCase
 {
@@ -185,6 +187,51 @@ final class RefreshControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         $this->assertReportsARunOfOneFeed($body);
+    }
+
+    public function testNetworkRefreshSweepsOnlyThatNetworksFeeds(): void
+    {
+        $client = self::createClient();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
+        $user = $factory->create('network-refresh@example.com');
+        $fixtures = new NetworkFeedSubscriptions($entityManager);
+        $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
+        $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN);
+
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            NetworkFeedSubscriptions::MASTODON_PROFILE,
+            FetchResponseModel::notModified(NetworkFeedSubscriptions::MASTODON_PROFILE, false, null, null),
+        );
+        $fetcher->willReturn(
+            'https://mastodon.social',
+            FetchResponseModel::fetched('https://mastodon.social', false, '<html lang="en"></html>', null, null),
+        );
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
+
+        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
+        $client->request(
+            'POST',
+            '/api/refresh?network=mastodon',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        $this->assertReportsARunOfOneFeed($body);
+        self::assertIsArray($body);
+        self::assertSame(0, $body['remaining'], 'the plain feed outside the network is never due');
+    }
+
+    public function testRefreshOfAnUnknownNetworkIsAValidationError(): void
+    {
+        $client = self::createClient();
+        $headers = $this->auth('unknown-network-refresh@example.com');
+
+        $client->request('POST', '/api/refresh?network=myspace', server: $headers);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
@@ -25,6 +26,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class SocialImportControllerTest extends ApiTestCase
 {
+    private const string BOB_FEED = 'https://bsky.app/profile/did:plc:bob/rss';
+
     /** Must match framework.rate_limiter.social_import.limit in rate_limiter.yaml. */
     private const int IMPORT_BUDGET = 10;
 
@@ -82,10 +85,14 @@ final class SocialImportControllerTest extends ApiTestCase
             ]),
         ], $payload['follows']);
         self::assertSame(
-            [['id' => 'at://list/a', 'name' => 'Artists'], ['id' => 'at://list/b', 'name' => 'Writers']],
+            [
+                self::collection('home', null, 'Home'),
+                self::collection('list', 'at://list/a', 'Artists'),
+                self::collection('list', 'at://list/b', 'Writers'),
+            ],
             $payload['lists'],
         );
-        self::assertSame([['id' => 'at://feed/a', 'name' => 'Discover']], $payload['customFeeds']);
+        self::assertSame([self::collection('custom_feed', 'at://feed/a', 'Discover')], $payload['customFeeds']);
         self::assertFalse($payload['truncated']);
     }
 
@@ -164,6 +171,37 @@ final class SocialImportControllerTest extends ApiTestCase
         $this->requestCandidates($client, $account);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    public function testAnImportCannotSetTheImageOfAFeed(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-no-client-image@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), [
+            'subscribe' => [[
+                'feedUrl' => self::BOB_FEED,
+                'title' => 'Bob',
+                'avatarUrl' => 'https://tracker.example/pixel.gif',
+                'imageUrl' => 'https://tracker.example/pixel.gif',
+            ]],
+            'collections' => [[
+                'kind' => 'list',
+                'id' => 'at://did:plc:bob/app.bsky.graph.list/3l1',
+                'name' => 'Writers',
+                'avatarUrl' => 'https://tracker.example/pixel.gif',
+                'imageUrl' => 'https://tracker.example/pixel.gif',
+            ]],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $this->entityManager()->clear();
+        $profileFeed = $this->entityManager()->getRepository(Feed::class)->findOneBy(['url' => self::BOB_FEED]);
+        $listFeed = $this->entityManager()->getRepository(SocialFeed::class)->findOneBy([]);
+        self::assertNotNull($profileFeed);
+        self::assertNotNull($listFeed);
+        self::assertNull($profileFeed->getImageUrl());
+        self::assertNull($listFeed->getFeed()->getImageUrl());
     }
 
     public function testImportSubscribesTheChosenFollowsAndRemovesTheChosenSubscriptions(): void
@@ -265,6 +303,23 @@ final class SocialImportControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_NOT_FOUND);
     }
 
+    public function testImportOfCollectionsOnAnotherUsersAccountAnswers404AndAddsNothing(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $owner = $this->signIn($client, 'import-collections-owner@example.test');
+        $account = $this->blueskyAccountOf($owner);
+        $this->signIn($client, 'import-collections-intruder@example.test');
+
+        $this->postImport($client, $account, ['collections' => [
+            ['kind' => 'home', 'id' => null, 'name' => 'Home'],
+            ['kind' => 'list', 'id' => 'at://did:plc:bob/app.bsky.graph.list/3l1', 'name' => 'Writers'],
+        ]]);
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame('social_account_not_found', $this->payload($client)['type']);
+        self::assertSame(0, $this->entityManager()->getRepository(SocialFeed::class)->count());
+    }
+
     public function testImportSpendsNoCandidatesBudget(): void
     {
         $client = $this->clientWith($this->nothingFollowed());
@@ -280,6 +335,129 @@ final class SocialImportControllerTest extends ApiTestCase
         ]);
 
         self::assertResponseIsSuccessful();
+    }
+
+    public function testImportAddsTheChosenCollectionsAsPrivateFeeds(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-collections@example.test');
+        $account = $this->blueskyAccountOf($user);
+
+        $this->postImport($client, $account, ['collections' => [
+            ['kind' => 'home', 'id' => null, 'name' => 'Home'],
+            ['kind' => 'list', 'id' => 'at://did:plc:bob/app.bsky.graph.list/3l1', 'name' => 'Writers'],
+        ]]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(2, $this->payload($client)['imported']);
+        self::assertSame(2, $this->entityManager()->getRepository(SocialFeed::class)->count());
+    }
+
+    public function testImportTakesHomeAsHomeWhateverIdAndNameItCarries(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-home-with-id@example.test');
+        $account = $this->blueskyAccountOf($user);
+
+        $this->postImport($client, $account, ['collections' => [
+            ['kind' => 'home', 'id' => 'at://did:plc:bob/app.bsky.graph.list/3l1', 'name' => 'Mine'],
+        ]]);
+
+        self::assertResponseIsSuccessful();
+        $feed = $this->entityManager()->getRepository(Feed::class)->findOneBy([
+            'url' => sprintf('social:bluesky:%d:home', $account->requireId()),
+        ]);
+        self::assertSame('Home', $feed?->getTitle());
+        self::assertSame(1, $this->entityManager()->getRepository(SocialFeed::class)->count());
+    }
+
+    public function testImportRefusesACollectionOfTheWrongShape(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-bad-collection@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['collections' => [
+            ['kind' => 'custom_feed', 'id' => '42', 'name' => 'Not a feed'],
+        ]]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_import_invalid_feed', $this->payload($client)['type']);
+    }
+
+    public function testImportRefusesACustomFeedOnMastodon(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-mastodon-feed@example.test');
+
+        $this->postImport($client, $this->stored(SocialAccounts::mastodonOf($user)), ['collections' => [
+            ['kind' => 'custom_feed', 'id' => 'at://did:plc:bob/app.bsky.feed.generator/news', 'name' => 'News'],
+        ]]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_import_invalid_feed', $this->payload($client)['type']);
+    }
+
+    public function testARefusedCollectionWritesNothingElseOfTheImport(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-refused-collection@example.test');
+        $goneId = $this->subscribe($user, 'https://bsky.app/profile/did:plc:gone/rss')->requireId();
+
+        $this->postImport($client, $this->blueskyAccountOf($user), [
+            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob']],
+            'unsubscribe' => [$goneId],
+            'collections' => [
+                ['kind' => 'home', 'id' => null, 'name' => 'Home'],
+                ['kind' => 'list', 'id' => '42', 'name' => 'Friends'],
+            ],
+        ]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->entityManager()->clear();
+        self::assertNotNull($this->entityManager()->find(Subscription::class, $goneId));
+        self::assertNull($this->entityManager()->getRepository(Feed::class)->findOneBy([
+            'url' => 'https://bsky.app/profile/did:plc:bob/rss',
+        ]));
+        self::assertSame(0, $this->entityManager()->getRepository(SocialFeed::class)->count());
+    }
+
+    public function testImportRefusesAnUnknownCollectionKind(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-unknown-kind@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['collections' => [
+            ['kind' => 'starter_pack', 'id' => 'x', 'name' => 'Pack'],
+        ]]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame(['collections[0].kind'], $this->invalidFields($client));
+    }
+
+    public function testImportTakesAtMostAHundredCollections(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-too-many-collections@example.test');
+        $collections = array_map(
+            static fn (int $index): array => ['kind' => 'list', 'id' => (string) $index, 'name' => 'List ' . $index],
+            range(1, 101),
+        );
+
+        $this->postImport($client, $this->stored(SocialAccounts::mastodonOf($user)), ['collections' => $collections]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame(['collections'], $this->invalidFields($client));
+        self::assertSame(0, $this->entityManager()->getRepository(SocialFeed::class)->count());
+    }
+
+    /** @return list<int|string> */
+    private function invalidFields(KernelBrowser $client): array
+    {
+        $problem = $this->payload($client);
+        self::assertSame('validation_error', $problem['type']);
+        self::assertIsArray($problem['errors']);
+
+        return array_keys($problem['errors']);
     }
 
     /** @param array<string, mixed> $body */
@@ -307,6 +485,12 @@ final class SocialImportControllerTest extends ApiTestCase
             'state' => 'new',
             'subscriptionId' => null,
         ], $overrides);
+    }
+
+    /** @return array{kind: string, id: ?string, name: string, state: string, subscriptionId: null} */
+    private static function collection(string $kind, ?string $id, string $name): array
+    {
+        return ['kind' => $kind, 'id' => $id, 'name' => $name, 'state' => 'new', 'subscriptionId' => null];
     }
 
     private static function follow(string $did, string $handle): FollowedAccountModel
@@ -341,7 +525,11 @@ final class SocialImportControllerTest extends ApiTestCase
 
     private function blueskyAccountOf(User $user): SocialAccount
     {
-        $account = SocialAccounts::blueskyOf($user);
+        return $this->stored(SocialAccounts::blueskyOf($user));
+    }
+
+    private function stored(SocialAccount $account): SocialAccount
+    {
         $this->entityManager()->persist($account);
         $this->entityManager()->flush();
 

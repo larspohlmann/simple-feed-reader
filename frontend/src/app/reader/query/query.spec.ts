@@ -41,6 +41,17 @@ describe('selectionFromParams', () => {
     expect(selection).toEqual({ kind: 'subscription', id: 7, unread: false });
     expect(entryId).toBe(42);
   });
+  it("reads a network's combined view", () => {
+    expect(selectionFromParams(pm({ network: 'mastodon' })).selection).toEqual({
+      kind: 'network',
+      id: null,
+      unread: false,
+      network: 'mastodon',
+    });
+  });
+  it('ignores a network it does not know', () => {
+    expect(selectionFromParams(pm({ network: 'myspace' })).selection.kind).toBe('all');
+  });
   it('reads a tag selection', () => {
     expect(selectionFromParams(pm({ tag: '3' })).selection).toEqual({
       kind: 'tag',
@@ -145,13 +156,14 @@ describe('listSelectionFrom (#579)', () => {
 describe('selectionQueryParams', () => {
   it('pins the selection vocabulary — this must not shrink silently', () => {
     expect(Object.keys(selectionQueryParams({})).sort()).toEqual(
-      ['entry', 'q', 'subscription', 'tag', 'view'].sort(),
+      ['entry', 'network', 'q', 'subscription', 'tag', 'view'].sort(),
     );
   });
   it('nulls every selection parameter the caller did not set', () => {
     expect(selectionQueryParams({})).toEqual({
       view: null,
       tag: null,
+      network: null,
       subscription: null,
       entry: null,
       q: null,
@@ -161,6 +173,7 @@ describe('selectionQueryParams', () => {
     expect(selectionQueryParams({ tag: 3 })).toEqual({
       view: null,
       tag: 3,
+      network: null,
       subscription: null,
       entry: null,
       q: null,
@@ -168,6 +181,7 @@ describe('selectionQueryParams', () => {
     expect(selectionQueryParams({ subscription: 7 })).toEqual({
       view: null,
       tag: null,
+      network: null,
       subscription: 7,
       entry: null,
       q: null,
@@ -175,6 +189,7 @@ describe('selectionQueryParams', () => {
     expect(selectionQueryParams({ view: 'favorites' })).toEqual({
       view: 'favorites',
       tag: null,
+      network: null,
       subscription: null,
       entry: null,
       q: null,
@@ -184,6 +199,7 @@ describe('selectionQueryParams', () => {
     expect(selectionQueryParams({ q: null })).toEqual({
       view: null,
       tag: null,
+      network: null,
       subscription: null,
       entry: null,
       q: null,
@@ -219,6 +235,7 @@ describe('selectionQueryParams', () => {
       expect(selectionQueryParams({ tag: 9 })).toEqual({
         view: null,
         tag: 9,
+        network: null,
         subscription: null,
         entry: null,
         q: null,
@@ -230,6 +247,7 @@ describe('selectionQueryParams', () => {
     expect(selectionQueryParams({ q: 'angular' })).toEqual({
       view: null,
       tag: null,
+      network: null,
       subscription: null,
       entry: null,
       q: 'angular',
@@ -249,6 +267,11 @@ describe('queryFromSelection', () => {
       view: 'all',
       subscription: 7,
     });
+  });
+  it("maps a network's view through the unread toggle", () => {
+    expect(
+      queryFromSelection({ kind: 'network', id: null, unread: true, network: 'bluesky' }),
+    ).toEqual({ view: 'unread', network: 'bluesky' });
   });
   it('maps curated views directly', () => {
     expect(queryFromSelection({ kind: 'favorites', id: null, unread: false })).toEqual({
@@ -324,6 +347,15 @@ describe('markReadTarget', () => {
     });
     expect(markReadTarget({ kind: 'search', id: null, unread: false, term: '' })).toBeNull();
   });
+  it('marks a network read by its name', () => {
+    expect(
+      markReadTarget({ kind: 'network', id: null, unread: false, network: 'mastodon' }),
+    ).toEqual({
+      scope: 'network',
+      network: 'mastodon',
+    });
+    expect(markReadTarget({ kind: 'network', id: null, unread: false })).toBeNull();
+  });
   it('marks a single saved search read by its id', () => {
     expect(markReadTarget({ kind: 'saved-search', id: 42, unread: false })).toEqual({
       scope: 'saved-search',
@@ -339,6 +371,9 @@ describe('hasUnreadFilter', () => {
     expect(hasUnreadFilter({ kind: 'tag', id: 3, unread: true })).toBe(true);
     expect(hasUnreadFilter({ kind: 'subscription', id: 7, unread: true })).toBe(true);
     expect(hasUnreadFilter({ kind: 'for-you', id: null, unread: true })).toBe(true);
+    expect(hasUnreadFilter({ kind: 'network', id: null, unread: true, network: 'bluesky' })).toBe(
+      true,
+    );
     expect(hasUnreadFilter({ kind: 'saved-search', id: 42, unread: false })).toBe(true);
     expect(hasUnreadFilter({ kind: 'search', id: null, unread: false, term: 'x' })).toBe(true);
   });
@@ -379,6 +414,9 @@ describe('canScopedRefresh', () => {
     expect(canScopedRefresh({ kind: 'all', id: null, unread: true })).toBe(true);
     expect(canScopedRefresh({ kind: 'tag', id: 3, unread: true })).toBe(true);
     expect(canScopedRefresh({ kind: 'subscription', id: 7, unread: true })).toBe(true);
+    expect(canScopedRefresh({ kind: 'network', id: null, unread: true, network: 'mastodon' })).toBe(
+      true,
+    );
   });
   it('is disallowed for the cross-feed saved views', () => {
     expect(canScopedRefresh({ kind: 'favorites', id: null, unread: false })).toBe(false);
@@ -447,8 +485,20 @@ describe('list order', () => {
     expect(key(tag)).toBe('tag:3');
     expect(key({ kind: 'subscription', id: 12, unread: false })).toBe('subscription:12');
     expect(key({ kind: 'saved-search', id: 7, unread: false })).toBe('saved-search:7');
+    expect(key({ kind: 'network', id: null, unread: false, network: 'bluesky' })).toBe(
+      'network:bluesky',
+    );
     expect(key({ kind: 'search', id: null, unread: false, term: 'angular' })).toBe('search');
     expect(key({ kind: 'search', id: null, unread: false, term: 'react' })).toBe('search');
+  });
+
+  it('tells two networks apart', () => {
+    expect(
+      sameSelection(
+        { kind: 'network', id: null, unread: false, network: 'bluesky' },
+        { kind: 'network', id: null, unread: false, network: 'mastodon' },
+      ),
+    ).toBe(false);
   });
 
   it('tells a list and its reversed self apart', () => {

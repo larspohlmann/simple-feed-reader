@@ -6,6 +6,7 @@ import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { anEntry } from '../../../../testing/entry-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -25,11 +26,12 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-function mount(testEntry: EntryDto) {
+function mount(testEntry: EntryDto, arrange?: () => void) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
+  arrange?.();
   const fixture = TestBed.createComponent(EntryDuplicatesComponent);
   fixture.componentRef.setInput('entry', testEntry);
   fixture.detectChanges();
@@ -41,12 +43,32 @@ it('renders nothing without duplicates', () => {
   expect(element.querySelector('.also-foot')).toBeNull();
 });
 
-it('renders one chip per duplicate with its source', () => {
+it('renders one chip per duplicate with its feed', () => {
   const dup = entry({ id: 2, source: 'NDR Schleswig-Holstein' });
   const element = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
   const chips = element.querySelectorAll('.also-entry');
   expect(chips.length).toBe(1);
   expect(chips[0].textContent).toContain('NDR Schleswig-Holstein');
+});
+
+it("names a duplicate from a Home by the Home's label", () => {
+  const dup = authorlessHomePost(7, { id: 2, source: 'Bob' });
+  const element = mount(entry({ duplicates: [dup] }), () => holdUnrenamedHome(7))
+    .nativeElement as HTMLElement;
+
+  expect(element.querySelector('.also-entry')!.textContent).toContain('Home@bsky');
+});
+
+it('names a duplicate by its feed, not by the poster', () => {
+  const dup = entry({
+    id: 2,
+    source: 'Home@bsky',
+    poster: { name: 'Bob', url: null, imageUrl: null },
+  });
+  const element = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
+  const chip = element.querySelector('.also-entry')!;
+  expect(chip.textContent).toContain('Home@bsky');
+  expect(chip.textContent).not.toContain('Bob');
 });
 
 it('opens a popover with the copy card and re-emits open for that copy', () => {

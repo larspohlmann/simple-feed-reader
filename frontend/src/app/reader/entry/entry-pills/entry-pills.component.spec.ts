@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryPillsComponent } from './entry-pills.component';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { makeSubscription } from '../../testing/subscription.factory';
 import { SavedSearchMembershipDto, SubscriptionTagDto } from '../../models';
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({
@@ -94,5 +96,65 @@ describe('EntryPillsComponent', () => {
       pill.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     }
     expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  describe('network pill', () => {
+    function mountFor(subscriptionId: number | null, networks: [number, 'bluesky' | 'mastodon'][]) {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [EntryPillsComponent, provideTranslocoTesting()],
+        providers: [provideRouter([{ path: '**', children: [] }])],
+      });
+      TestBed.inject(SubscriptionRows).stored.set(
+        networks.map(([id, network]) =>
+          makeSubscription({ id, social: { network, accountId: 1, kind: 'home' } }),
+        ),
+      );
+      const fixture = TestBed.createComponent(EntryPillsComponent);
+      fixture.componentRef.setInput('tags', [tag(1, 'Tech')]);
+      fixture.componentRef.setInput('subscriptionId', subscriptionId);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('leads with the short network name before the tags', () => {
+      const element = mountFor(5, [[5, 'bluesky']]);
+      const first = element.querySelector('.pill')!;
+
+      expect(first.textContent?.trim()).toBe('bsky');
+      expect(first.querySelector('app-network-logo svg.bluesky')).not.toBeNull();
+      expect(element.querySelectorAll('.pill')[1].textContent).toContain('Tech');
+    });
+
+    it("links to the network's combined view", () => {
+      const pill = mountFor(5, [[5, 'mastodon']]).querySelector('a.pill.network')!;
+
+      expect(pill.getAttribute('href')).toContain('network=mastodon');
+    });
+
+    it('stops its click from bubbling so the parent entry does not open', () => {
+      const element = mountFor(5, [[5, 'bluesky']]);
+      const parentClick = jest.fn();
+      element.addEventListener('click', parentClick);
+
+      element
+        .querySelector('a.pill.network')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+      expect(parentClick).not.toHaveBeenCalled();
+    });
+
+    it('names Mastodon too', () => {
+      expect(
+        mountFor(5, [[5, 'mastodon']])
+          .querySelector('.pill')
+          ?.textContent?.trim(),
+      ).toBe('mastodon');
+    });
+
+    it('shows nothing for an ordinary feed or no subscription', () => {
+      expect(mountFor(6, [[5, 'bluesky']]).querySelectorAll('.pill').length).toBe(1);
+      expect(mountFor(null, [[5, 'bluesky']]).querySelectorAll('.pill').length).toBe(1);
+    });
   });
 });

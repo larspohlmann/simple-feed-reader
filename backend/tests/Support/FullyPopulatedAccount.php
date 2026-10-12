@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\EntryState;
@@ -125,7 +126,11 @@ final readonly class FullyPopulatedAccount
             new \DateTimeImmutable('2026-08-03T10:00:00Z'),
             (new UrlNormalizer())->hash($url),
         );
-        $entry->setAuthor('A. Author');
+        $entry->setAuthor(new EntryAuthor(
+            'A. Author',
+            'https://populated.example/authors/a',
+            'https://populated.example/authors/a.jpg',
+        ));
         $entry->setSummary('A summary of the article.');
         $entry->setContentHtml('<p>The body of the article.</p>');
         $entry->getImage()->storePending('https://populated.example/lead.jpg', 1200, 630);

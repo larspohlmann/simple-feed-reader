@@ -15,6 +15,7 @@ use App\Entity\User;
 use App\Http\SubscribeOutcomeJson;
 use App\Http\SubscriptionCountsJson;
 use App\Http\SubscriptionJson;
+use App\Repository\SocialAccountRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Subscription\BulkSubscriptionUpdater;
@@ -34,6 +35,7 @@ final readonly class SubscriptionController
     public function __construct(
         private SubscriptionService $subscriber,
         private SubscriptionRepository $subscriptions,
+        private SocialAccountRepository $socialAccounts,
         private TagRepository $tags,
         private SubscriptionTallyReader $tallies,
         private OwnedSubscriptions $ownedSubscriptions,
@@ -48,6 +50,7 @@ final readonly class SubscriptionController
         return new JsonResponse(SubscriptionJson::list(
             $this->subscriptions->findForUserWithTags($user->requireId()),
             $this->tallies->forUser($user->requireId()),
+            $this->socialAccounts->findAllForUser($user),
         ));
     }
 

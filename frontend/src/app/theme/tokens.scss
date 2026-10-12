@@ -68,6 +68,10 @@
 
 // Mode-invariant tokens (same in every theme).
 :root {
+  /* Network brand marks (#1599): fixed like the mascot, readable on the light and the dark surface. */
+  --brand-bluesky: #1185fe;
+  --brand-mastodon: #6364ff;
+
   /* Spacing scale. --space-0 is a real half-step for tight gaps (rail rows,
      icon-grid padding), not a stray. Anything off this scale is a Stylelint
      failure outside theme/ and styles/. */

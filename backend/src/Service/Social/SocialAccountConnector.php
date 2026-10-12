@@ -13,8 +13,10 @@ use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
 use App\Service\Social\Exception\SocialAccountMismatchException;
 use App\Service\Social\Exception\TooManySocialAccountsException;
 use App\Service\Social\Factory\SocialAccountFactory;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Model\VerifiedAccountModel;
+use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -30,6 +32,7 @@ final readonly class SocialAccountConnector
         private SocialCredentialCipher $cipher,
         private ClockInterface $clock,
         private EntityManagerInterface $entityManager,
+        private PrivateFeeds $privateFeeds,
     ) {
     }
 
@@ -58,6 +61,8 @@ final readonly class SocialAccountConnector
             throw self::alreadyConnected($verified, $exception);
         }
 
+        $this->createHome($account);
+
         return $account;
     }
 
@@ -77,9 +82,19 @@ final readonly class SocialAccountConnector
             $this->clock->now()->setTimezone(new \DateTimeZone('UTC')),
         );
         $account->moveTo($verified->serviceUrl);
+        $this->privateFeeds->resume($account);
         $this->entityManager->flush();
 
         return $account;
+    }
+
+    private function createHome(SocialAccount $account): void
+    {
+        try {
+            $this->privateFeeds->create($account, PrivateFeedModel::home());
+        } catch (SubscriptionLimitReachedException) {
+            // A full account still connects; the import picker offers Home again once a slot is free.
+        }
     }
 
     private static function alreadyConnected(

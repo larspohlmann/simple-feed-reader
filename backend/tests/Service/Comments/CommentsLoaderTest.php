@@ -6,6 +6,7 @@ namespace App\Tests\Service\Comments;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\Feed;
 use App\Enum\CommentsLoad;
 use App\Service\Comments\CommentsLoader;
@@ -80,7 +81,7 @@ final class CommentsLoaderTest extends KernelTestCase
             new \DateTimeImmutable(),
             new \DateTimeImmutable(),
         );
-        $entry->setAuthor($author);
+        $entry->setAuthor(new EntryAuthor($author));
         $entry->setDiscussion(Discussion::withCommentsFeed(self::THREAD, self::FEED, CommentsLoad::Auto));
 
         return $entry;

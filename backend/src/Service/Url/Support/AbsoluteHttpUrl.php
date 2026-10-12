@@ -16,6 +16,13 @@ final class AbsoluteHttpUrl
         return $url !== null && self::matches($url) ? $url : null;
     }
 
+    public static function orNullWithin(?string $url, int $maxLength): ?string
+    {
+        $absolute = self::orNull($url);
+
+        return null !== $absolute && mb_strlen($absolute) <= $maxLength ? $absolute : null;
+    }
+
     private function __construct()
     {
     }

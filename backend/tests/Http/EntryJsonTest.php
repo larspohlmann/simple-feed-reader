@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
@@ -12,6 +13,7 @@ use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
+use App\Enum\SourceFormat;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnrichment;
@@ -231,7 +233,7 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
         $entry->setPublishedAt(new \DateTimeImmutable('2026-09-06T10:00:00Z'));
-        $entry->setAuthor('A. Writer');
+        $entry->setAuthor(new EntryAuthor('A. Writer'));
         $entry->setSummary('A short summary.');
 
         $json = EntryJson::listRow($this->row($entry));
@@ -265,7 +267,8 @@ final class EntryJsonTest extends TestCase
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
                 'imageRenditions', 'media', 'linkCards', 'share', 'title', 'url', 'discussionUrl', 'comments',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
-                'subscriptionId', 'source', 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',
+                'subscriptionId', 'source', 'poster',
+                'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',
                 'shortPlayerUrl', 'titleDerived', 'savedSearches', 'duplicates',
             ],
             array_keys($json),
@@ -408,6 +411,128 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
+    }
+
+    public function testAPrivateFeedEntryNamesItsAuthorAsThePosterAndKeepsTheFeedAsTheSource(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(
+            SourceFormat::BLUESKY_API,
+            new EntryAuthor('POLITICO Europe', 'https://bsky.app/profile/politico.eu', 'https://cdn.example/p.png'),
+        );
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('Source', $json['source']);
+        self::assertSame([
+            'name' => 'POLITICO Europe',
+            'url' => 'https://bsky.app/profile/politico.eu',
+            'imageUrl' => 'https://cdn.example/p.png',
+        ], $json['poster']);
+    }
+
+    public function testAPrivateFeedEntryWithoutAnAuthorHasNoPoster(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(
+            SourceFormat::MASTODON_API,
+            new EntryAuthor(profileUrl: 'https://bsky.app/profile/politico.eu'),
+        );
+
+        self::assertNull(EntryJson::listRow($this->row($entry))['poster']);
+    }
+
+    public function testAPrivateFeedEntryWithAnEmptyAuthorHasNoPoster(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::MASTODON_API, new EntryAuthor(''));
+
+        self::assertNull(EntryJson::listRow($this->row($entry))['poster']);
+    }
+
+    public function testAnOrdinaryFeedEntryHasNoPosterEvenWithAnAuthorProfile(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(
+            SourceFormat::XML,
+            new EntryAuthor('A. Writer', 'https://example.com/writer', 'https://cdn.example/writer.png'),
+        );
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('Source', $json['source']);
+        self::assertNull($json['poster']);
+    }
+
+    public function testAProfileFeedEntryShowsThePersonsPictureAndLinksTheirProfile(): void
+    {
+        $entry = $this->profileFeedEntry('https://cdn.example/politico.jpg');
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('Source', $json['source']);
+        self::assertSame([
+            'name' => 'Source',
+            'url' => 'https://bsky.app/profile/politico.eu',
+            'imageUrl' => 'https://cdn.example/politico.jpg',
+        ], $json['poster']);
+    }
+
+    public function testAProfileFeedEntryNeverLinksASiteThatIsNoWebPage(): void
+    {
+        $entry = $this->profileFeedEntry(null);
+        $entry->getFeed()->setSiteUrl('javascript://evil.example/%0Aalert(1)');
+
+        self::assertNull(EntryJson::listRow($this->row($entry))['poster']['url'] ?? null);
+        self::assertNotNull(EntryJson::listRow($this->row($entry))['poster']);
+    }
+
+    public function testAProfileFeedEntryWithAnAvatarOfItsOwnShowsThatOne(): void
+    {
+        $entry = $this->profileFeedEntry('https://cdn.example/politico.jpg');
+        $entry->setAuthor(new EntryAuthor(avatarUrl: 'https://cdn.example/reposted.jpg'));
+
+        self::assertSame(
+            'https://cdn.example/reposted.jpg',
+            EntryJson::listRow($this->row($entry))['poster']['imageUrl'] ?? null,
+        );
+    }
+
+    public function testAProfileFeedEntryWithoutAPictureHasAPosterWithoutAnImage(): void
+    {
+        $poster = EntryJson::listRow($this->row($this->profileFeedEntry(null)))['poster'];
+
+        self::assertNotNull($poster);
+        self::assertNull($poster['imageUrl']);
+    }
+
+    private function profileFeedEntry(?string $feedImageUrl): Entry
+    {
+        $feed = new Feed('https://bsky.app/profile/politico.eu/rss');
+        $feed->setSiteUrl('https://bsky.app/profile/politico.eu');
+        $feed->setImageUrl($feedImageUrl);
+
+        return new Entry(
+            $feed,
+            'guid',
+            'https://bsky.app/profile/politico.eu/post/1',
+            'Post',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+    }
+
+    private function entryOfFeedWithFormat(string $sourceFormat, EntryAuthor $author): Entry
+    {
+        $feed = new Feed('https://example.com/feed');
+        $feed->setSourceFormat($sourceFormat);
+        $entry = new Entry(
+            $feed,
+            'guid',
+            'https://example.com/a',
+            'Post',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $entry->setAuthor($author);
+
+        return $entry;
     }
 
     private function row(Entry $entry, EntryListRowEnrichment $enrichment = new EntryListRowEnrichment()): EntryListRow

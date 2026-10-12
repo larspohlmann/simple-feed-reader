@@ -40,7 +40,13 @@ use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\StubGuardedImageDownloader;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubLokiEndpoint;
+use App\Repository\FeedRepository;
+use App\Service\Bluesky\AppViewClient;
+use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\HostThrottle;
+use App\Service\Social\ProfileImageSweep;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 
@@ -145,6 +151,52 @@ final class MaintenanceTickTest extends DbTestCase
         $this->assertLinkCardSweepOfATickWhoseRefreshTakes(18, new LinkCardSweepReportModel(0, 0), 0);
     }
 
+    public function testAsksForProfilePicturesInTheSpareWindowOfATickWhoseRefreshTakesNoTime(): void
+    {
+        self::assertSame(1, $this->profilePicturesCheckedByATickWhoseRefreshTakes(0));
+    }
+
+    public function testLeavesProfilePicturesForLaterWhenTheRefreshSpentTheWindow(): void
+    {
+        self::assertSame(0, $this->profilePicturesCheckedByATickWhoseRefreshTakes(18));
+    }
+
+    private function profilePicturesCheckedByATickWhoseRefreshTakes(int $refreshSeconds): int
+    {
+        $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
+        $now = $clock->now();
+        $subscriber = new User('tick-profile-pictures@example.com', $now);
+        $this->entityManager->persist($subscriber);
+        $feed = new Feed('https://one.example.com/feed');
+        $feed->scheduleNextFetchAt($now->modify('-1 hour'));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($subscriber, $feed, $now));
+        $profileFeed = new Feed('https://bsky.app/profile/tick.bsky.social/rss');
+        $profileFeed->scheduleNextFetchAt($now->modify('+1 hour'));
+        $this->entityManager->persist($profileFeed);
+        $this->entityManager->persist(new Subscription($subscriber, $profileFeed, $now));
+        $this->entityManager->flush();
+        $fetcher = new StubFeedFetcher($clock);
+        $fetcher->secondsPerFetch = $refreshSeconds;
+        $fetcher->willReturnBody(
+            'https://one.example.com/feed',
+            /** @lang TEXT */ '<?xml version="1.0"?><rss version="2.0"><channel><title>F</title></channel></rss>',
+        );
+        $fetcher->willReturnBody(
+            'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles?actors=tick.bsky.social',
+            '{"profiles":[]}',
+        );
+        $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
+            ->build($fetcher, $fetcher);
+        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
+        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
+        $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock);
+
+        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock, $fetcher)->run();
+
+        return $report->sweeps->profileImages->checked;
+    }
+
     private function assertLinkCardSweepOfATickWhoseRefreshTakes(
         int $refreshSeconds,
         LinkCardSweepReportModel $expectedSweep,
@@ -195,6 +247,7 @@ final class MaintenanceTickTest extends DbTestCase
         SendDueDigests $sendDueDigests,
         LinkCardSweep $linkCardSweep,
         MockClock $clock,
+        ?StubFeedFetcher $appViewFetcher = null,
     ): MaintenanceTick {
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
         self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
@@ -211,6 +264,7 @@ final class MaintenanceTickTest extends DbTestCase
                 $this->entityManager,
             ),
             $linkCardSweep,
+            $this->profileImageSweep($appViewFetcher ?? self::unreachableAppView(), $clock),
             MembershipSweepFactory::fromContainer(
                 self::getContainer(),
                 $this->entityManager,
@@ -223,5 +277,27 @@ final class MaintenanceTickTest extends DbTestCase
             ),
             $clock,
         );
+    }
+
+    private function profileImageSweep(StubFeedFetcher $fetcher, MockClock $clock): ProfileImageSweep
+    {
+        $feeds = $this->entityManager->getRepository(Feed::class);
+        self::assertInstanceOf(FeedRepository::class, $feeds);
+
+        return new ProfileImageSweep(
+            $feeds,
+            new AppViewClient($fetcher, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
+            $this->entityManager,
+            new NaiveUtcClock($clock),
+            new NullLogger(),
+        );
+    }
+
+    private static function unreachableAppView(): StubFeedFetcher
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrowForEverythingElse(new FeedUnreachableException('no AppView in this test'));
+
+        return $fetcher;
     }
 }

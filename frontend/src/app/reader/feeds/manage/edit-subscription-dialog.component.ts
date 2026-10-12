@@ -13,6 +13,7 @@ import { parseProblem } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
 import { SubscriptionDto } from '../../models';
+import { isUnrenamedHome } from '../display-title';
 import { ButtonComponent } from '../../../shared/button/button.component';
 
 @Component({
@@ -37,12 +38,13 @@ export class EditSubscriptionDialogComponent implements OnInit {
   private readonly api = inject(ReaderApi);
   readonly tagsStore = inject(TagsStore);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly prefilledTitle = this.data.title;
 
   // Prefilled with the title as it reads now, so renaming is an edit rather
   // than a retype. Saving it unchanged does pin the current name against a
   // later feed rename -- which is what the reset below is for.
   readonly form = this.fb.group({
-    customTitle: [this.data.title, [Validators.maxLength(512)]],
+    customTitle: [this.prefilledTitle, [Validators.maxLength(512)]],
   });
   readonly checked = signal<Set<number>>(new Set(this.data.tags.map((tag) => tag.id)));
   readonly includeInAllItems = signal<boolean>(this.data.includeInAllItems);
@@ -60,6 +62,13 @@ export class EditSubscriptionDialogComponent implements OnInit {
     this.form.controls.customTitle.setValue('');
   }
 
+  /** An unrenamed Home left as prefilled stays unrenamed, so its label keeps following the language. */
+  private submittedTitle(): string | null {
+    const title = this.form.getRawValue().customTitle.trim();
+    if (isUnrenamedHome(this.data) && title === this.prefilledTitle) return null;
+    return title || null;
+  }
+
   toggle(id: number): void {
     this.checked.update((set) => {
       const next = new Set(set);
@@ -75,7 +84,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) return;
     const body = {
-      customTitle: this.form.getRawValue().customTitle.trim() || null,
+      customTitle: this.submittedTitle(),
       tagIds: [...this.checked()],
       includeInAllItems: this.includeInAllItems(),
       includeInForYou: this.includeInForYou(),

@@ -1,0 +1,48 @@
+@use 'sidebar-row' as row;
+@include row.section-head;
+@include row.nav-states('.section-link', '.section-count');
+
+:host {
+  display: contents;
+}
+
+/* The title opens the network's combined view, so it reads as a nav row: hover, active and a tag-row count. */
+.section-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding-block: var(--space-1);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+.section-link .label {
+  margin-block: 0;
+}
+
+.section-count {
+  margin-inline: auto var(--space-2);
+}
+
+.section-link.active .label {
+  color: var(--accent);
+}
+
+.feedrow {
+  display: flex;
+  align-items: center;
+}
+
+.account-handle,
+.people-heading {
+  /* The sidebar is a scrolling flex column, and `overflow: hidden` drops the auto min-height: without this the
+     line shrinks to nothing once the sidebar overflows. */
+  flex: none;
+  margin: var(--space-2) var(--space-2) var(--space-1);
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

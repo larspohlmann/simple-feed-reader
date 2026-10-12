@@ -8,11 +8,15 @@ use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Headline;
+use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
+use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Completion\Model\KnownSharesModel;
 use App\Service\Completion\ShareEnrichmentQueue;
 use App\Tests\DbTestCase;
+use App\Tests\Support\Bluesky;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReloadsEntities;
 use Symfony\Component\Clock\MockClock;
@@ -138,6 +142,198 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         self::assertSame(ShareKind::Media, $this->reload($post)->getShareKind());
     }
 
+    public function testAKnownBlueskyEmbedSettlesThePostWithoutTheAppView(): void
+    {
+        $guid = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t';
+        $post = $this->post(
+            $guid,
+            '<p>Progressives are calling on her to step down. www.motherjones.com/politics/202...</p>',
+        );
+
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::ofBlueskyPosts([$guid => Bluesky::post('external')]),
+        );
+        $this->entityManager->flush();
+
+        self::assertNotContains(ShareEnrichmentKind::AppView, $this->queuedKinds());
+        $stored = $this->reload($post);
+        self::assertSame(ShareKind::Link, $stored->getShareKind());
+        self::assertCount(1, $this->storedCards($stored));
+    }
+
+    public function testAKnownBlueskyPostWithoutAnEmbedOrALinkSharesNothing(): void
+    {
+        $post = $this->post(self::AT_POST, '<p>Just words.</p>');
+
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::ofBlueskyPosts([self::AT_POST => JsonNodeModel::of(['uri' => self::AT_POST])]),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->queuedKinds());
+        self::assertNull($this->reload($post)->getShareKind());
+    }
+
+    public function testAKnownBlueskyPostWithALinkAndNoEmbedAwaitsItsLinkCard(): void
+    {
+        $post = $this->post(self::AT_POST, '<p>See <a href="https://example.com/a">https://example.com/a</a></p>');
+
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::ofBlueskyPosts([self::AT_POST => JsonNodeModel::of(['uri' => self::AT_POST])]),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([self::AT_POST => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
+        self::assertSame(ShareKind::Link, $this->reload($post)->getShareKind());
+    }
+
+    public function testAMastodonCardCardsItsLinkWithoutAPageFetch(): void
+    {
+        $guid = 'https://mastodon.example/@someone/1';
+        $post = $this->post($guid, '<p>Read <a href="https://example.com/story">https://example.com/story</a></p>');
+        $card = new LinkCardContent(
+            'https://example.com/story',
+            'The story',
+            'What happened.',
+            'https://example.com/story.jpg',
+            'Example',
+        );
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->queuedKinds());
+        $stored = $this->reload($post);
+        self::assertSame(ShareKind::Link, $stored->getShareKind());
+        self::assertEquals([$card], $this->storedCards($stored));
+    }
+
+    public function testACardedMastodonQuoteLosesItsQuoteLine(): void
+    {
+        $guid = 'https://mastodon.example/@someone/4';
+        $post = $this->post(
+            $guid,
+            '<p>So true.</p><p>RE: <a href="https://other.example/@them/9">https://other.example/@them/9</a></p>',
+        );
+        $card = new LinkCardContent('https://other.example/@them/9', 'Them', 'The quoted post.', null, 'Other');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->queuedKinds());
+        $stored = $this->reload($post);
+        self::assertSame('<p>So true.</p>', $stored->getContentHtml());
+        self::assertSame('So true.', $stored->getSummary());
+        self::assertSame(ShareKind::Link, $stored->getShareKind());
+        self::assertEquals([$card], $this->storedCards($stored));
+    }
+
+    public function testAPostWithMoreOwnProseThanAPostHoldsIgnoresItsCard(): void
+    {
+        $guid = 'https://mastodon.example/@someone/5';
+        $prose = str_repeat('word ', 101);
+        $post = $this->post(
+            $guid,
+            '<p>' . $prose . '<a href="https://example.com/story">https://example.com/story</a></p>',
+        );
+        $card = new LinkCardContent('https://example.com/story', 'The story', null, null, 'Example');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->queuedKinds());
+        $stored = $this->reload($post);
+        self::assertNull($stored->getShareKind());
+        self::assertSame([], $this->storedCards($stored));
+    }
+
+    public function testACardUnderACanonicalUrlIsFiledUnderThePostedLink(): void
+    {
+        $guid = 'https://mastodon.example/@someone/6';
+        $posted = 'https://example.com/story?utm_source=mastodon';
+        $post = $this->post($guid, '<p>So true.</p><p>RE: <a href="' . $posted . '">' . $posted . '</a></p>');
+        $card = new LinkCardContent('https://example.com/story', 'The story', 'What happened.', null, 'Example');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->queuedKinds());
+        $stored = $this->reload($post);
+        self::assertSame('<p>So true.</p>', $stored->getContentHtml());
+        self::assertSame(ShareKind::Link, $stored->getShareKind());
+        self::assertEquals(
+            [new LinkCardContent($posted, 'The story', 'What happened.', null, 'Example')],
+            $this->storedCards($stored),
+        );
+    }
+
+    public function testACardForNoPostedLinkIsFiledUnderTheFirstAndTheOthersWaitForTheirOwn(): void
+    {
+        $guid = 'https://mastodon.example/@someone/7';
+        $post = $this->post(
+            $guid,
+            '<p><a href="https://example.com/a">https://example.com/a</a>'
+            . ' and <a href="https://other.example/b?ref=x">https://other.example/b?ref=x</a></p>',
+        );
+        $card = new LinkCardContent('https://other.example/b', 'B', null, null, 'Other');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
+        self::assertEquals(
+            [new LinkCardContent('https://example.com/a', 'B', null, null, 'Other')],
+            $this->storedCards($this->reload($post)),
+        );
+    }
+
+    public function testALinkTheCardDoesNotCoverStillWaitsForItsOwnCard(): void
+    {
+        $guid = 'https://mastodon.example/@someone/2';
+        $post = $this->post(
+            $guid,
+            '<p><a href="https://example.com/story">https://example.com/story</a>'
+            . ' and <a href="https://other.example/b">https://other.example/b</a></p>',
+        );
+        $card = new LinkCardContent('https://example.com/story', 'The story', null, null, 'Example');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
+    }
+
+    public function testACardForTheSecondPostedLinkIsFiledUnderThatLink(): void
+    {
+        $guid = 'https://mastodon.example/@someone/8';
+        $post = $this->post(
+            $guid,
+            '<p><a href="https://example.com/a">https://example.com/a</a>'
+            . ' and <a href="https://other.example/b">https://other.example/b</a></p>',
+        );
+        $card = new LinkCardContent('https://other.example/b', 'B', null, null, 'Other');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertEquals([$card], $this->storedCards($this->reload($post)));
+    }
+
+    public function testWithoutACardALinkPostWaitsForThePageFetchAsBefore(): void
+    {
+        $guid = 'https://mastodon.example/@someone/3';
+        $post = $this->post($guid, '<p>Read <a href="https://example.com/story">https://example.com/story</a></p>');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::none());
+        $this->entityManager->flush();
+
+        self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
+        self::assertSame(ShareKind::Link, $this->reload($post)->getShareKind());
+    }
+
     private function post(string $guid, ?string $contentHtml): Entry
     {
         $entry = $this->entry($guid, $contentHtml);
@@ -166,6 +362,14 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         }
 
         return $kinds;
+    }
+
+    /** @return list<LinkCardContent> */
+    private function storedCards(Entry $entry): array
+    {
+        $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$entry->requireId()]);
+
+        return $cards[$entry->requireId()] ?? [];
     }
 
     private function storedQueuedAt(string $guid): string

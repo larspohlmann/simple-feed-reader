@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Feed;
 
 use App\Entity\Feed;
+use App\Enum\SourceFormat;
 use App\Service\Fetch\HostThrottle;
 use Symfony\Component\Clock\ClockInterface;
 
 final readonly class FeedScheduler
 {
     private const int FLOOR_MINUTES = 5;
+    private const int SOCIAL_FLOOR_MINUTES = 15;
     private const int CEILING_MINUTES = 120;       // 2 h
     private const int FAILURE_CAP_MINUTES = 10080; // 7 days
     private const int FAILURES_UNTIL_GONE = 30;
@@ -29,7 +31,7 @@ final readonly class FeedScheduler
     public function recordSuccess(Feed $feed, int $newEntryCount): void
     {
         // New entries reset to the floor at once, not by halving, or a burst blocks the top of All items (#643).
-        $interval = $newEntryCount > 0 ? self::FLOOR_MINUTES : $this->grownInterval($feed);
+        $interval = $newEntryCount > 0 ? self::floorOf($feed) : $this->grownInterval($feed);
 
         $now = $this->clock->now();
         $feed->recordSuccessfulFetch($now, $interval);
@@ -92,7 +94,7 @@ final readonly class FeedScheduler
     {
         return (int) min(
             self::FAILURE_CAP_MINUTES,
-            max($feed->getFetchIntervalMinutes(), self::FLOOR_MINUTES)
+            max($feed->getFetchIntervalMinutes(), self::floorOf($feed))
                 * (2 ** min($failures, self::MAX_BACKOFF_EXPONENT)),
         );
     }
@@ -102,6 +104,12 @@ final readonly class FeedScheduler
     {
         $minutes = $feed->getFetchIntervalMinutes();
 
-        return max(self::FLOOR_MINUTES, min(self::CEILING_MINUTES, $minutes + intdiv($minutes + 1, 2)));
+        return max(self::floorOf($feed), min(self::CEILING_MINUTES, $minutes + intdiv($minutes + 1, 2)));
+    }
+
+    /** A private social feed costs its account an API call per poll, so it polls at most every 15 minutes. */
+    private static function floorOf(Feed $feed): int
+    {
+        return SourceFormat::isSocial($feed->getSourceFormat()) ? self::SOCIAL_FLOOR_MINUTES : self::FLOOR_MINUTES;
     }
 }

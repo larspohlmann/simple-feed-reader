@@ -157,7 +157,13 @@ export class AboutSectionComponent implements OnInit {
       const subscription = byFeedId.get(rank.feedId);
 
       return subscription
-        ? [{ subscriptionId: subscription.id, title: subscription.title, value: rank.readCount }]
+        ? [
+            {
+              subscriptionId: subscription.id,
+              title: subscription.title,
+              value: rank.readCount,
+            },
+          ]
         : [];
     });
 

@@ -10,7 +10,8 @@
       </h3>
     }
     <p class="meta">
-      <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
+      <app-entry-source [entry]="entry()" layout="row" [size]="14" />
+      · {{ when() }}
       <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
     </p>
     @if (snippet()) {
@@ -25,6 +26,7 @@
     <div class="tagline">
       <app-entry-pills
         [tags]="tags()"
+        [subscriptionId]="entry().subscriptionId"
         [savedSearches]="entry().savedSearches ?? []"
         [short]="shortPill()"
       />

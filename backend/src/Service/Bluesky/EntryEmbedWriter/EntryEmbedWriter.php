@@ -13,6 +13,8 @@ use App\Service\Bluesky\Model\FillOutcome;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Bluesky\PostEmbedRenderer;
+use App\Service\Bluesky\Support\AtPostUri;
+use App\Service\Bluesky\Support\BlueskyRichText;
 use App\Service\LinkCard\Support\TrailingUrl;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
@@ -37,7 +39,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
     {
         $embed = $this->renderer->render($post);
         if ($embed === null) {
-            return FillOutcome::Unfilled;
+            return $this->fillFromText($entry, $post);
         }
 
         $body = self::sharedBody($entry->getContentHtml() ?? '', $embed);
@@ -56,6 +58,33 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         $entry->setShareKind(self::shareKindOf($embed, $outcome, $assembled->media));
 
         return $outcome;
+    }
+
+    private function fillFromText(Entry $entry, JsonNodeModel $post): FillOutcome
+    {
+        $shared = SharedLinks::of(self::textBodyOf($entry, $post));
+        $pages = array_filter($shared->urls, static fn (string $url): bool => !AtPostUri::isWebUrl($url));
+        if ($pages === []) {
+            return FillOutcome::Unfilled;
+        }
+
+        $entry->setContentHtml($this->sanitizer->sanitize($shared->linkedHtml));
+        $entry->setSummary(EntrySnippet::from($shared->linkedHtml));
+        $entry->setShareKind(ShareKind::Link);
+
+        return FillOutcome::AwaitingLinkCards;
+    }
+
+    /** An RSS body shows a link shortened; the post's own facets know where it goes. */
+    private static function textBodyOf(Entry $entry, JsonNodeModel $post): string
+    {
+        $body = $entry->getContentHtml() ?? '';
+        $record = $post->node('record');
+        if (!BlueskyRichText::linksAWebPage($record->nodes('facets'))) {
+            return $body;
+        }
+
+        return BlueskyRichText::asHtml($record->text('text') ?? '', $record->nodes('facets')) ?? $body;
     }
 
     /** @param list<EntryMedium> $media */

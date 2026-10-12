@@ -4,23 +4,39 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
+use App\Entity\Feed;
 use App\Entity\SealedSecret;
 use App\Entity\SocialAccount;
+use App\Entity\SocialFeed;
+use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
+use App\Service\Crypto\InstanceSecretCipher;
+use App\Service\Social\BlueskySessionCache;
+use App\Service\Social\Crypto\BlueskySessionCipher;
+use App\Service\Social\Model\BlueskySessionModel;
+use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Social\PrivateFeeds;
 use App\Service\Social\SocialAccountEditor;
 use App\Tests\DbTestCase;
+use App\Tests\Support\PrivateFeedsWiring;
+use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\UserFactory;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialAccountEditorTest extends DbTestCase
 {
     private User $user;
+    private ArrayAdapter $sessionCacheStore;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->sessionCacheStore = new ArrayAdapter();
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
@@ -77,6 +93,52 @@ final class SocialAccountEditorTest extends DbTestCase
         self::assertSame([], $this->repository()->findAllOnNetwork($this->user, SocialNetwork::Bluesky));
     }
 
+    public function testDisconnectingRemovesThePrivateFeedsAndKeepsTheImportedFollows(): void
+    {
+        $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
+        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $follow = (new ProfileFeedSubscriptions($this->entityManager))
+            ->subscribe($this->user, 'https://bsky.app/profile/did:plc:bob/rss');
+        $homeUrl = sprintf('social:bluesky:%d:home', $account->requireId());
+
+        $this->editor()->disconnect($account);
+        $this->entityManager->clear();
+
+        self::assertNull($this->entityManager->getRepository(Feed::class)->findOneBy(['url' => $homeUrl]));
+        self::assertSame(0, $this->entityManager->getRepository(SocialFeed::class)->count([]));
+        self::assertNotNull($this->entityManager->find(Subscription::class, $follow->requireId()));
+    }
+
+    public function testDisconnectingLeavesAnotherUsersSubscriptionToTheSameFeed(): void
+    {
+        $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
+        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $home = $this->entityManager->getRepository(SocialFeed::class)->findOneBy(['socialAccount' => $account]);
+        self::assertNotNull($home);
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $stranger = (new UserFactory($this->entityManager, $hasher))->create('stranger@example.test');
+        $theirs = new Subscription($stranger, $home->getFeed(), new \DateTimeImmutable('2026-10-12 10:00:00'));
+        $this->entityManager->persist($theirs);
+        $this->entityManager->flush();
+        $theirsId = $theirs->requireId();
+
+        $this->editor()->disconnect($account);
+        $this->entityManager->clear();
+
+        self::assertNotNull($this->entityManager->find(Subscription::class, $theirsId));
+    }
+
+    public function testDisconnectingForgetsTheCachedBlueskySession(): void
+    {
+        $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
+        $this->sessionCache()->remember($account, new BlueskySessionModel('jwt-1', 'one.bsky.social'));
+
+        $this->editor()->disconnect($account);
+
+        self::assertSame([], $this->sessionCacheStore->getValues());
+    }
+
     private function stored(SocialNetwork $network, string $identity, bool $default): SocialAccount
     {
         $account = new SocialAccount(
@@ -105,7 +167,29 @@ final class SocialAccountEditorTest extends DbTestCase
 
     private function editor(): SocialAccountEditor
     {
-        return new SocialAccountEditor($this->repository(), $this->entityManager);
+        return new SocialAccountEditor(
+            $this->repository(),
+            $this->privateFeeds(),
+            $this->entityManager,
+            $this->sessionCache(),
+        );
+    }
+
+    private function sessionCache(): BlueskySessionCache
+    {
+        return new BlueskySessionCache(
+            $this->sessionCacheStore,
+            new BlueskySessionCipher(new InstanceSecretCipher(str_repeat('k', 32))),
+        );
+    }
+
+    private function privateFeeds(): PrivateFeeds
+    {
+        return PrivateFeedsWiring::build(
+            self::getContainer(),
+            $this->entityManager,
+            new MockClock('2026-10-12 12:00:00', 'UTC'),
+        );
     }
 
     private function repository(): SocialAccountRepository

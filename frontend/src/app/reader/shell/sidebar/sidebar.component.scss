@@ -5,6 +5,8 @@
 @include row.drag-handle;
 @include row.chevzone;
 @include row.row-menu;
+@include row.section-head;
+@include row.section-toggle;
 
 .sidebar {
   padding: var(--space-3) var(--space-2);
@@ -79,74 +81,6 @@
 
   50% {
     opacity: 0.35;
-  }
-}
-
-.label {
-  font-size: var(--fs-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  margin: var(--space-3) var(--space-2) var(--space-1);
-}
-
-/* Collapsible section headers — "Tags" and "Feeds" (#612). The row reproduces
-   `.label`'s vertical margins, since inside the toggle button `.label` is
-   inline and its block margins no longer apply; the horizontal margin stays. */
-.section-head {
-  display: flex;
-  align-items: center;
-  margin-block: var(--space-3) var(--space-1);
-}
-
-/* A `<button>` standing in for what is normally the plain `.label` text: reset
-   it and let it absorb the row's spare width so the whole title toggles. */
-.section-toggle {
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-  background: none;
-  border: none;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.section-toggle .label {
-  margin-block: 0;
-}
-
-/* A borderless chevron in the title's own muted colour (not the bordered
-   `.chevzone` box the tag rows use): `chevron_right` collapsed, `expand_more`
-   open. It keeps the same button margin as `.chevzone`. */
-.section-chevron {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  margin: var(--space-1);
-}
-
-/* The glyph carries the exact box metrics of a `.chevzone` glyph — same padding,
-   same 1px border, only transparent — so its centre lands in the same column as
-   the tag and saved-search chevrons, without drawing an outline. */
-.section-chevron app-icon {
-  display: inline-flex;
-  padding: var(--space-2);
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-}
-
-@media (pointer: coarse) {
-  .section-chevron {
-    width: var(--tap-target);
-    height: var(--tap-target);
-    margin: 0;
   }
 }
 

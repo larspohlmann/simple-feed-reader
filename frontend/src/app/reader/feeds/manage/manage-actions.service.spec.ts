@@ -10,6 +10,7 @@ import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
 import { RefreshReport, SubscriptionDto, TagDto } from '../../models';
 import { makeSubscription } from '../../testing/subscription.factory';
+import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
 import { TranslocoService } from '@jsverse/transloco';
 
@@ -67,6 +68,13 @@ describe('ManageActions', () => {
     expect(spy).toHaveBeenCalled();
   });
 
+  it("unsubscribe: names an unrenamed Home by the Home's label", () => {
+    closed = undefined;
+    service.unsubscribe(heldUnrenamedHome(6));
+
+    expect(JSON.stringify(open.mock.calls[0])).toContain('Home@bsky');
+  });
+
   it('unsubscribe: on cancel, does nothing', () => {
     closed = undefined;
     service.unsubscribe(sub);
@@ -90,7 +98,7 @@ describe('ManageActions', () => {
   it('moveFeedToTag: PATCHes /move-to-tag with from/to/position then reloads', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
-    store.subscriptions.set([tagged]);
+    store.storedSubscriptions.set([tagged]);
     const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
     service.moveFeedToTag(tagged, { fromTagId: 3, toTagId: 7, position: 1 });
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5/move-to-tag');
@@ -106,7 +114,7 @@ describe('ManageActions', () => {
     const news: TagDto = { id: 7, name: 'News', color: null, icon: null, position: 1 };
     tags.tags.set([tag, news]);
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
-    store.subscriptions.set([tagged]);
+    store.storedSubscriptions.set([tagged]);
     jest.spyOn(store, 'load').mockImplementation(() => undefined);
     service.moveFeedToTag(tagged, { fromTagId: 3, toTagId: 7, position: 0 });
     expect(
@@ -128,7 +136,7 @@ describe('ManageActions', () => {
   it('setIncludeInAllItems: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
-    store.subscriptions.set([tagged]);
+    store.storedSubscriptions.set([tagged]);
     const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
     service.setIncludeInAllItems(tagged, false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInAllItems).toBe(false);
@@ -147,7 +155,7 @@ describe('ManageActions', () => {
   it('setIncludeInForYou: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
-    store.subscriptions.set([tagged]);
+    store.storedSubscriptions.set([tagged]);
     const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
     service.setIncludeInForYou(tagged, false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInForYou).toBe(false);

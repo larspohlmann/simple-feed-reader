@@ -1,0 +1,47 @@
+@let current = section();
+<div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
+  <a
+    class="section-link"
+    [class.active]="active()"
+    [routerLink]="['/']"
+    [queryParams]="selectionQueryParams({ network: current.network })"
+    queryParamsHandling="merge"
+  >
+    <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
+    @if (current.unreadCount > 0) {
+      <span class="section-count">{{ current.unreadCount }}</span>
+    }
+  </a>
+  <button
+    class="section-chevron"
+    type="button"
+    [attr.aria-expanded]="expanded()"
+    [attr.aria-label]="
+      'reader.toggleSocialSection'
+        | transloco: { network: ('settings.social.' + current.network | transloco) }
+    "
+    (click)="toggle()"
+  >
+    <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="sm" />
+  </button>
+</div>
+@if (expanded()) {
+  @for (group of current.accounts; track group.accountId) {
+    @if (current.showsHandles && group.handle) {
+      <p class="account-handle">{{ group.handle }}</p>
+    }
+    @for (subscription of group.subscriptions; track subscription.id) {
+      <div class="feedrow">
+        <app-sidebar-feed-row [subscription]="subscription" [selection]="selection()" />
+      </div>
+    }
+  }
+  @if (current.people.length) {
+    <p class="people-heading">{{ 'reader.socialPeople' | transloco }}</p>
+    @for (subscription of current.people; track subscription.id) {
+      <div class="feedrow">
+        <app-sidebar-feed-row [subscription]="subscription" [selection]="selection()" />
+      </div>
+    }
+  }
+}

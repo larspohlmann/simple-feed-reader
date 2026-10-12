@@ -10,10 +10,13 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Service\Reading\MarkReadService;
 use App\Service\Reading\Model\ReadScopeModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\NetworkFeedSubscriptions;
 
 final class MarkReadServiceTest extends DbTestCase
 {
@@ -310,5 +313,55 @@ final class MarkReadServiceTest extends DbTestCase
             ->findOneForUserEntry($user->requireId(), $excludedEntry->requireId());
         self::assertNotNull($flipped);
         self::assertTrue($flipped->isHidden(), 'scope "tag" must still mark an excluded feed');
+    }
+
+    public function testNetworkScopeMarksExactlyTheNetworksFeedsExcludedOnesIncluded(): void
+    {
+        [$user, $plain] = $this->seed();
+        $fixtures = new NetworkFeedSubscriptions($this->entityManager);
+        $home = $fixtures->subscribe($user, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
+        $home->setIncludeInAllItems(false);
+        $profile = $fixtures->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $mastodon = $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
+        $stranger = new User('network-stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($stranger);
+        $foreign = $fixtures->subscribe($stranger, 'https://bsky.app/profile/bob.bsky.social/rss');
+        $this->entityManager->flush();
+
+        $this->service()->mark(
+            $user,
+            ReadScopeModel::network(SocialNetwork::Bluesky),
+            new \DateTimeImmutable('2026-07-25T00:00:00Z'),
+        );
+        $this->entityManager->clear();
+
+        self::assertSame(
+            [
+                $home->requireId() => '2026-07-25T00:00:00+00:00',
+                $profile->requireId() => '2026-07-25T00:00:00+00:00',
+                $mastodon->requireId() => null,
+                $plain->requireId() => null,
+                $foreign->requireId() => null,
+            ],
+            $this->watermarksOf([$home, $profile, $mastodon, $plain, $foreign]),
+        );
+    }
+
+    /**
+     * @param list<Subscription> $subscriptions
+     *
+     * @return array<int, string|null>
+     */
+    private function watermarksOf(array $subscriptions): array
+    {
+        $watermarks = [];
+        foreach ($subscriptions as $subscription) {
+            $reloaded = $this->entityManager->getRepository(Subscription::class)->find($subscription->requireId());
+            self::assertNotNull($reloaded);
+            $watermark = $reloaded->getMarkedReadUntil();
+            $watermarks[$subscription->requireId()] = $watermark?->format(\DateTimeInterface::ATOM);
+        }
+
+        return $watermarks;
     }
 }

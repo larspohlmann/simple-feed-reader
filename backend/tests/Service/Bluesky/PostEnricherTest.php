@@ -137,6 +137,25 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame(0, $this->pendingCount());
     }
 
+    public function testAPostWhoseLinkIsOnlyInItsTextIsAShareAwaitingItsCard(): void
+    {
+        $this->appView->knowsPost(['uri' => self::TEST_POST . 'text-link']);
+        $post = $this->queuedEntry(
+            self::TEST_POST . 'text-link',
+            '<p>v0.69.0 <a href="https://github.com/webx-ui/module-blog">github.com/webx-ui/mod…</a></p>',
+        );
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame(ShareKind::Link, $this->reload($post)->getShareKind());
+        $rows = $this->entityManager->getRepository(ShareEnrichment::class)->findAll();
+        self::assertSame([ShareEnrichmentKind::LinkCards], array_map(
+            static fn (ShareEnrichment $row): ShareEnrichmentKind => $row->getKind(),
+            $rows,
+        ));
+    }
+
     public function testAnUnfilledPostSharesNothingOnceDequeued(): void
     {
         $post = $this->queuedEntry(self::TEST_POST . 'deleted', '<p>Deleted since.</p>');

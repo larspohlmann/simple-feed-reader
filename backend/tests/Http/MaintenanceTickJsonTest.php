@@ -14,6 +14,7 @@ use App\Service\Maintenance\Model\MaintenanceTickReportModel;
 use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Refresh\Model\RefreshReportModel;
 use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Social\Model\ProfileImageSweepReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class MaintenanceTickJsonTest extends TestCase
@@ -27,6 +28,7 @@ final class MaintenanceTickJsonTest extends TestCase
                 new DigestSweepReportModel(4, 5, 6),
                 new ImageVerificationReportModel(7, 8, 9, 10),
                 new LinkCardSweepReportModel(16, 17),
+                new ProfileImageSweepReportModel(18, 19),
                 new SavedSearchMembershipSweepReportModel(11, 12, 13, true),
             ),
             new LokiSpoolReportModel(14, 15),
@@ -56,6 +58,7 @@ final class MaintenanceTickJsonTest extends TestCase
                 'digests' => ['considered' => 4, 'sent' => 5, 'skippedEmpty' => 6],
                 'imageVerification' => ['measured' => 7, 'kept' => 8, 'dropped' => 9, 'retried' => 10],
                 'linkCards' => ['considered' => 16, 'completed' => 17],
+                'profileImages' => ['checked' => 18, 'changed' => 19],
                 'savedSearchMemberships' => [
                     'searchesSwept' => 11,
                     'entriesScanned' => 12,
@@ -108,6 +111,7 @@ final class MaintenanceTickJsonTest extends TestCase
                     'skipped' => $reason,
                 ],
                 'linkCards' => ['considered' => 0, 'completed' => 0, 'skipped' => $reason],
+                'profileImages' => ['checked' => 0, 'changed' => 0, 'skipped' => $reason],
                 'savedSearchMemberships' => [
                     'searchesSwept' => 0,
                     'entriesScanned' => 0,

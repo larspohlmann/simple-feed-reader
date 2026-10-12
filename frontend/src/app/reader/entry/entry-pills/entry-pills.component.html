@@ -1,3 +1,15 @@
+@if (network(); as network) {
+  <a
+    class="pill network"
+    [routerLink]="['/']"
+    [queryParams]="selectionQueryParams({ network })"
+    queryParamsHandling="merge"
+    (click)="$event.stopPropagation()"
+  >
+    <app-network-logo [network]="network" />
+    <span class="name">{{ 'reader.socialNetworkShort.' + network | transloco }}</span>
+  </a>
+}
 @if (short()) {
   <span class="pill short">{{ 'reader.shortBadge' | transloco }}</span>
 }

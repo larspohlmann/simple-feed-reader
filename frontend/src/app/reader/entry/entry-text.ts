@@ -16,7 +16,7 @@ export function entryDek(entry: EntryDto): string {
   return isPost(entry) ? '' : entry.excerpt;
 }
 
-/** What names an entry where some text is required: its title, or its source when it has none. */
-export function entryDisplayTitle(entry: Pick<EntryDto, 'title' | 'source'>): string {
-  return entry.title || entry.source;
+/** What names an entry where some text is required: its title, or who posted it when it has none. */
+export function entryDisplayTitle(entry: Pick<EntryDto, 'title' | 'source' | 'poster'>): string {
+  return entry.title || (entry.poster?.name ?? entry.source);
 }

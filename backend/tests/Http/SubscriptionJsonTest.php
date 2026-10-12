@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SourceFormat;
 use App\Http\SubscriptionJson;
 use PHPUnit\Framework\TestCase;
 
@@ -319,5 +320,67 @@ final class SubscriptionJsonTest extends TestCase
 
         self::assertSame(0, $shape['unreadCount']);
         self::assertSame(0, $shape['entryCount']);
+    }
+
+    public function testAPrivateFeedNamesItsNetworkAccountAndKind(): void
+    {
+        $feed = new Feed('social:bluesky:12:list:at://did:plc:bob/app.bsky.graph.list/3l1');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        self::assertSame(
+            ['network' => 'bluesky', 'accountId' => 12, 'kind' => 'list'],
+            SubscriptionJson::one($this->subscriptionTo($feed))['social'],
+        );
+    }
+
+    public function testAnOrdinaryFeedHasNoSocialPart(): void
+    {
+        $json = SubscriptionJson::one($this->subscriptionTo(new Feed('https://example.com/feed.xml')));
+
+        self::assertNull($json['social']);
+    }
+
+    public function testASocialLookingUrlOfAnRssFeedIsNoPrivateFeed(): void
+    {
+        $feed = new Feed('social:bluesky:12:home');
+        $feed->setSourceFormat(SourceFormat::XML);
+
+        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['social']);
+    }
+
+    public function testASocialFormatWithAnUnparsableUrlHasNoSocialPart(): void
+    {
+        $feed = new Feed('social:bluesky:0:home');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['social']);
+    }
+
+    public function testABlueskyProfileFeedIsAProfileFeedOfThatNetwork(): void
+    {
+        $feed = new Feed('https://bsky.app/profile/did:plc:bob/rss');
+
+        self::assertSame(
+            ['network' => 'bluesky', 'accountId' => null, 'kind' => 'profile'],
+            SubscriptionJson::one($this->subscriptionTo($feed))['social'],
+        );
+    }
+
+    public function testAMastodonProfileFeedIsAProfileFeedOfThatNetwork(): void
+    {
+        $feed = new Feed('https://mastodon.example/@bob.rss');
+
+        self::assertSame(
+            ['network' => 'mastodon', 'accountId' => null, 'kind' => 'profile'],
+            SubscriptionJson::one($this->subscriptionTo($feed))['social'],
+        );
+    }
+
+    public function testAPrivateFeedKeepsItsOwnSocialPartOverAProfileFeedReading(): void
+    {
+        $feed = new Feed('social:bluesky:12:home');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        self::assertSame('home', SubscriptionJson::one($this->subscriptionTo($feed))['social']['kind'] ?? null);
     }
 }

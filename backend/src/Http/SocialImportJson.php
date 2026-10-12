@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Service\Social\Model\CollectionCandidateModel;
 use App\Service\Social\Model\ImportCandidateModel;
 use App\Service\Social\Model\ImportCandidatesModel;
-use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\Model\SocialImportResultModel;
 
 final readonly class SocialImportJson
@@ -47,9 +47,15 @@ final readonly class SocialImportJson
         ];
     }
 
-    /** @return array{id: string, name: string} */
-    private static function collection(SocialCollectionModel $collection): array
+    /** @return array{kind: string, id: string|null, name: string, state: string, subscriptionId: int|null} */
+    private static function collection(CollectionCandidateModel $candidate): array
     {
-        return ['id' => $collection->id, 'name' => $collection->name];
+        return [
+            'kind' => $candidate->privateFeed->kind->value,
+            'id' => '' === $candidate->privateFeed->remoteId ? null : $candidate->privateFeed->remoteId,
+            'name' => $candidate->privateFeed->name,
+            'state' => $candidate->state->value,
+            'subscriptionId' => $candidate->subscriptionId,
+        ];
     }
 }

@@ -7,27 +7,21 @@ namespace App\Tests\Service\Refresh;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
-use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Bluesky\BlueskyEntryRule;
-use App\Service\Ingest\PlatformEntryRules;
-use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
-use App\Service\Search\EntryIndexer;
 use App\Service\Search\Index\Model\IndexedEntryModel;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
-use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FakeAppView;
-use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReadsFixtures;
 use Psr\Log\NullLogger;
@@ -168,26 +162,9 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
 
     private function persisterWith(PostEnricher $postEnricher): FeedOutcomePersister
     {
-        /** @var FeedRepository $feedRepository */
-        $feedRepository = $this->entityManager->getRepository(Feed::class);
-        $bodyParser = self::getContainer()->get(FeedBodyParser::class);
-        self::assertInstanceOf(FeedBodyParser::class, $bodyParser);
-
-        return new FeedOutcomePersister(
-            $this->entityManager,
-            $feedRepository,
-            $bodyParser,
-            EntryIngestors::withPlatformRules(
-                $this->entityManager,
-                $this->clock,
-                new PlatformEntryRules([new BlueskyEntryRule()]),
-            ),
-            FeedSchedulers::build($this->clock),
-            new EntryIndexer($this->indexWriter, new NullLogger()),
-            PostEnrichers::queue($this->entityManager, $this->clock),
-            $postEnricher,
-            new NullLogger(),
-        );
+        return FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->indexingInto($this->indexWriter)
+            ->enrichingWith($postEnricher);
     }
 
     private function entry(string $guid): Entry

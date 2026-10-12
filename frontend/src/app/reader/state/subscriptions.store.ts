@@ -7,117 +7,34 @@ import { unhealthyFeeds } from '../feeds/feed-health';
 import { ReaderApi } from '../reader-api';
 import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
+import { SocialAccountRefDto } from '../social-feed';
+import { SubscriptionRows } from './subscription-rows';
+import { buildSocialSections, isSocialFeed } from './social-sections';
+import { SocialNetworkName } from '../../core/social-network';
+import { SubscriptionCountsResponse, SubscriptionDto, SubscriptionsResponse } from '../models';
 import {
-  SubscriptionCountsResponse,
-  SubscriptionDto,
-  SubscriptionsResponse,
-  TagDto,
-} from '../models';
+  buildTagTree,
+  sumEntries,
+  sumUnread,
+  untaggedSubscriptions,
+} from './subscription-derivations';
 
-export interface TagNode {
-  tag: TagDto;
-  subscriptions: SubscriptionDto[];
-  unreadCount: number;
-  entryCount: number;
-}
-
-/**
- * Build the sidebar tag tree. Tag NODES and their order come from
- * `orderedTags` (already in `tag.position` order) so every tag shows,
- * including empty ones; each node's feeds come from `subs` carrying the tag.
- * Falls back to the tags embedded on subscriptions, name-ordered, before the
- * tag list has loaded, so tagged feeds never briefly vanish.
- */
-export function buildTagTree(
-  subscriptions: SubscriptionDto[],
-  orderedTags: TagDto[] = [],
-): TagNode[] {
-  const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subscriptions);
-
-  // One pass over subscriptions buckets each feed under every tag it carries,
-  // capturing the per-tag position up front so the sort reads it once.
-  const byTagId = new Map<number, { sub: SubscriptionDto; pos: number }[]>();
-  for (const sub of subscriptions) {
-    for (const tag of sub.tags) {
-      let bucket = byTagId.get(tag.id);
-      if (!bucket) {
-        bucket = [];
-        byTagId.set(tag.id, bucket);
-      }
-      bucket.push({ sub, pos: tag.position });
-    }
-  }
-
-  return tags.map((tag) => {
-    const feeds = (byTagId.get(tag.id) ?? [])
-      .sort((left, right) => left.pos - right.pos || left.sub.title.localeCompare(right.sub.title))
-      .map((tagged) => tagged.sub);
-    return {
-      tag,
-      subscriptions: feeds,
-      unreadCount: feeds.reduce((total, subscription) => total + subscription.unreadCount, 0),
-      entryCount: feeds.reduce((total, subscription) => total + subscription.entryCount, 0),
-    };
-  });
-}
-
-/** Fallback tag set derived from subscriptions (only non-empty tags), by name. */
-function embeddedTagsByName(subscriptions: SubscriptionDto[]): TagDto[] {
-  const byId = new Map<number, TagDto>();
-  for (const subscription of subscriptions) {
-    for (const tag of subscription.tags) {
-      if (!byId.has(tag.id)) {
-        byId.set(tag.id, {
-          id: tag.id,
-          name: tag.name,
-          color: tag.color,
-          icon: tag.icon,
-          position: 0,
-        });
-      }
-    }
-  }
-  return [...byId.values()].sort((left, right) => left.name.localeCompare(right.name));
-}
-
-export function untaggedSubscriptions(subscriptions: SubscriptionDto[]): SubscriptionDto[] {
-  return subscriptions
-    .filter((subscription) => subscription.tags.length === 0)
-    .sort((left, right) => left.position - right.position);
-}
-
-/** All-items badge total: a feed excluded from All items (`includeInAllItems:
- *  false`) contributes nothing here, though it still counts under its own
- *  per-feed row and any tag it carries (see `buildTagTree`). */
-export function sumUnread(subscriptions: SubscriptionDto[]): number {
-  return subscriptions.reduce(
-    (total, subscription) =>
-      subscription.includeInAllItems ? total + subscription.unreadCount : total,
-    0,
-  );
-}
-
-/** All-items list total: the same inclusion rule as `sumUnread`, over entry
- *  counts instead of unread counts. */
-export function sumEntries(subscriptions: SubscriptionDto[]): number {
-  return subscriptions.reduce(
-    (total, subscription) =>
-      subscription.includeInAllItems ? total + subscription.entryCount : total,
-    0,
-  );
-}
-
-export type ZeroTarget = 'all' | { tag: number } | { subscription: number };
+export type ZeroTarget =
+  'all' | { tag: number } | { subscription: number } | { network: SocialNetworkName };
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
   private readonly api = inject(ReaderApi);
   private readonly tags = inject(TagsStore);
-
-  readonly subscriptions = signal<SubscriptionDto[]>([]);
+  private readonly rows = inject(SubscriptionRows);
+  /** Every title resolved for display. */
+  readonly subscriptions = this.rows.all;
+  /** The rows as the server sent them, which an optimistic edit patches. */
+  readonly storedSubscriptions = this.rows.stored;
   readonly favoritesCount = signal(0);
   readonly keptCount = signal(0);
   readonly viewedCount = signal(0);
+  readonly socialAccounts = signal<SocialAccountRefDto[]>([]);
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
@@ -127,7 +44,15 @@ export class SubscriptionsStore {
   readonly resolved = signal(false);
 
   readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
-  readonly untagged = computed(() => untaggedSubscriptions(this.subscriptions()));
+  /** Social feeds live in their network's section, so the Feeds list leaves them out. */
+  readonly untagged = computed(() =>
+    untaggedSubscriptions(
+      this.subscriptions().filter((subscription) => !isSocialFeed(subscription)),
+    ),
+  );
+  readonly socialSections = computed(() =>
+    buildSocialSections(this.subscriptions(), this.socialAccounts()),
+  );
   readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
   readonly totalEntries = computed(() => sumEntries(this.subscriptions()));
   readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
@@ -199,10 +124,11 @@ export class SubscriptionsStore {
     this.inFlight?.unsubscribe();
     this.inFlight = null;
     this.lastLoadedAt = 0;
-    this.subscriptions.set([]);
+    this.storedSubscriptions.set([]);
     this.favoritesCount.set(0);
     this.keptCount.set(0);
     this.viewedCount.set(0);
+    this.socialAccounts.set([]);
     this.loading.set(false);
     this.error.set(null);
     this.resolved.set(false);
@@ -287,10 +213,11 @@ export class SubscriptionsStore {
   }
 
   private applyCounts(response: SubscriptionsResponse): void {
-    this.subscriptions.set(response.subscriptions);
+    this.storedSubscriptions.set(response.subscriptions);
     this.favoritesCount.set(response.favoritesCount);
     this.keptCount.set(response.keptCount);
     this.viewedCount.set(response.viewedCount);
+    this.socialAccounts.set(response.socialAccounts);
   }
 
   /** Patch unread and entry counts into the list already held, replacing the
@@ -299,14 +226,14 @@ export class SubscriptionsStore {
   private applyCountsOnly(response: SubscriptionCountsResponse): void {
     const countsById = new Map(response.subscriptions.map((counts) => [counts.id, counts]));
     let moved = false;
-    const next = this.subscriptions().map((sub) => {
+    const next = this.storedSubscriptions().map((sub) => {
       const unreadCount = countsById.get(sub.id)?.unreadCount ?? 0;
       const entryCount = countsById.get(sub.id)?.entryCount ?? 0;
       if (unreadCount === sub.unreadCount && entryCount === sub.entryCount) return sub;
       moved = true;
       return { ...sub, unreadCount, entryCount };
     });
-    if (moved) this.subscriptions.set(next);
+    if (moved) this.storedSubscriptions.set(next);
 
     this.setIfMoved(this.favoritesCount, response.favoritesCount);
     this.setIfMoved(this.keptCount, response.keptCount);
@@ -368,9 +295,14 @@ export class SubscriptionsStore {
 
   zeroUnread(target: ZeroTarget): void {
     this.patchSubscriptions((subscription) => {
-      if (target === 'all') return { ...subscription, unreadCount: 0 };
+      if (target === 'all')
+        return subscription.includeInAllItems ? { ...subscription, unreadCount: 0 } : subscription;
       if ('tag' in target)
         return subscription.tags.some((tag) => tag.id === target.tag)
+          ? { ...subscription, unreadCount: 0 }
+          : subscription;
+      if ('network' in target)
+        return subscription.social?.network === target.network
           ? { ...subscription, unreadCount: 0 }
           : subscription;
       return subscription.id === target.subscription
@@ -383,6 +315,6 @@ export class SubscriptionsStore {
    *  here so none can forget to register itself against an in-flight reload. */
   private patchSubscriptions(patch: (sub: SubscriptionDto) => SubscriptionDto): void {
     ++this.localEdits;
-    this.subscriptions.update((subscriptions) => subscriptions.map(patch));
+    this.storedSubscriptions.update((subscriptions) => subscriptions.map(patch));
   }
 }

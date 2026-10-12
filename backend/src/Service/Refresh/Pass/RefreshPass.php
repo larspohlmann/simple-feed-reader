@@ -42,6 +42,18 @@ final readonly class RefreshPass
         return $this->queue->tickets();
     }
 
+    /** @return \Generator<int, Feed, mixed, void> */
+    public function socialFeeds(): \Generator
+    {
+        return $this->queue->socialFeeds();
+    }
+
+    /** @return list<int> */
+    public function socialFeedIds(): array
+    {
+        return $this->queue->socialFeedIds();
+    }
+
     public function feed(int|string $feedId): Feed
     {
         return $this->feedsById[$feedId];

@@ -75,6 +75,7 @@
       [(organising)]="sidebarOrganising"
       [tagTree]="subs.tagTree()"
       [untagged]="subs.untagged()"
+      [socialSections]="subs.socialSections()"
       [totalUnread]="subs.totalUnread()"
       [favoritesCount]="subs.favoritesCount()"
       [keptCount]="subs.keptCount()"
@@ -128,6 +129,7 @@
         [title]="heading.title()"
         [titleTag]="heading.selectedTag()"
         [titleFaviconUrl]="heading.selectedSubscription()?.faviconUrl ?? null"
+        [titleAvatarUrl]="heading.titleAvatarUrl()"
         [searchTitlePrefix]="heading.searchTitlePrefix()"
         [searchTitleTerm]="heading.searchTitleTerm()"
         [searchCountLabel]="heading.searchCountLabel()"
@@ -217,7 +219,7 @@
 <ng-template #feedIntro>
   @if (heading.feedIntroSubscription(); as sub) {
     <app-feed-intro
-      [title]="sub.title"
+      [title]="heading.feedIntroTitle()"
       [description]="sub.description"
       [imageUrl]="sub.imageUrl"
       [faviconUrl]="sub.faviconUrl"

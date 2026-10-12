@@ -9,6 +9,7 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskyIdentityModel;
 use App\Service\Social\Model\BlueskySessionModel;
@@ -26,6 +27,7 @@ final readonly class BlueskySessionOpener
 
     /**
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function openForAccount(SocialAccount $account): BlueskySessionModel
@@ -38,11 +40,13 @@ final readonly class BlueskySessionOpener
 
     /**
      * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
     public function open(BlueskyIdentityModel $identity, string $appPassword): BlueskySessionModel
     {
         $answer = $this->createSession($identity, $appPassword);
+        SocialNetworkThrottledException::throwIfThrottled($answer, 'Bluesky asked for fewer sessions.');
         if (Response::HTTP_UNAUTHORIZED === $answer->status) {
             throw new SocialCredentialsRejectedException('Bluesky refused this handle and app password.');
         }
@@ -58,7 +62,7 @@ final readonly class BlueskySessionOpener
             throw new SocialCredentialsRejectedException('Bluesky opened a session for a different account.');
         }
 
-        return new BlueskySessionModel($accessJwt, $handle, $identity->pdsUrl);
+        return new BlueskySessionModel($accessJwt, $handle);
     }
 
     private function createSession(BlueskyIdentityModel $identity, string $appPassword): ApiResponseModel

@@ -1,15 +1,16 @@
 @let feed = subscription();
+@let name = subscription().title;
 @if (organising()) {
   <span class="handle" cdkDragHandle aria-hidden="true">
     <app-icon name="drag_indicator" size="sm" />
   </span>
   <span class="feedname"
-    ><app-favicon [url]="feed.faviconUrl" /><span>{{ feed.title }}</span></span
+    ><app-favicon [url]="feed.faviconUrl" [avatarUrl]="avatarUrl()" /><span>{{ name }}</span></span
   >
   <button
     class="dots"
     type="button"
-    [attr.aria-label]="'reader.manage' | transloco: { name: feed.title }"
+    [attr.aria-label]="'reader.manage' | transloco: { name: name }"
     (click)="rows.openFeedSheet(feed)"
   >
     <app-icon name="more_horiz" size="sm" />
@@ -23,8 +24,12 @@
     [queryParams]="selectionQueryParams({ subscription: feed.id })"
     queryParamsHandling="merge"
   >
-    <app-favicon [url]="feed.faviconUrl" /><span>{{ feed.title }}</span>
-    @if (!feed.includeInAllItems || !feed.includeInForYou) {
+    <app-favicon
+      [url]="feed.faviconUrl"
+      [avatarUrl]="avatarUrl()"
+      [class.has-avatar]="avatarUrl() !== null"
+    /><span>{{ name }}</span>
+    @if (!isPrivate() && (!feed.includeInAllItems || !feed.includeInForYou)) {
       <app-icon
         class="feed-exclusion-marker"
         name="visibility_off"
@@ -45,7 +50,7 @@
       <button
         class="dots"
         type="button"
-        [attr.aria-label]="'reader.manage' | transloco: { name: feed.title }"
+        [attr.aria-label]="'reader.manage' | transloco: { name: name }"
         (click)="rows.toggleMenu(menuKey(), $event)"
       >
         <app-icon name="more_horiz" size="sm" />

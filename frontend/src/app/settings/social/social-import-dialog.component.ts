@@ -15,18 +15,21 @@ import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
-import { SocialNetwork } from './social-accounts.service';
+import { SocialNetworkName } from '../../core/social-network';
 import {
+  CollectionCandidate,
+  CollectionState,
   FollowCandidate,
   ImportCandidateState,
-  SocialCollection,
+  SocialImportCollection,
+  SocialImportFeed,
   SocialImportResult,
   SocialImportService,
 } from './social-import.service';
 
 export interface SocialImportDialogData {
   readonly accountId: number;
-  readonly network: SocialNetwork;
+  readonly network: SocialNetworkName;
   readonly handle: string;
 }
 
@@ -42,10 +45,20 @@ const CHECKBOX_KEYS: Readonly<Record<ImportCandidateState, string>> = {
   no_longer_followed: 'settings.social.importUnsubscribe',
 };
 
+const COLLECTION_CHECKBOX_KEYS: Readonly<Record<CollectionState, string>> = {
+  new: 'settings.social.importAddCollection',
+  subscribed: 'settings.social.importCollectionAdded',
+};
+
+/** Home has no id, and a list and a custom feed could share one, so the kind is part of the key. */
+export function collectionKey(collection: CollectionCandidate): string {
+  return `${collection.kind}:${collection.id ?? ''}`;
+}
+
 interface CollectionSection {
   readonly labelKey: string;
   readonly testId: string;
-  readonly items: readonly SocialCollection[];
+  readonly items: readonly CollectionCandidate[];
 }
 
 @Component({
@@ -77,11 +90,14 @@ export class SocialImportDialogComponent {
 
   protected readonly stateKeys = STATE_KEYS;
   protected readonly checkboxKeys = CHECKBOX_KEYS;
+  protected readonly collectionCheckboxKeys = COLLECTION_CHECKBOX_KEYS;
+  protected readonly collectionKey = collectionKey;
   protected readonly inputValue = inputValue;
   private readonly showsCustomFeeds = this.data.network === 'bluesky';
   protected readonly filter = signal('');
   protected readonly toSubscribe = signal<ReadonlySet<string>>(new Set());
   protected readonly toUnsubscribe = signal<ReadonlySet<number>>(new Set());
+  protected readonly toCollect = signal<ReadonlySet<string>>(new Set());
 
   private readonly needle = computed(() => this.filter().trim().toLowerCase());
 
@@ -98,7 +114,7 @@ export class SocialImportDialogComponent {
     return { follows, visibleNew, hasLeftovers };
   });
   protected readonly selectedCount = computed(
-    () => this.toSubscribe().size + this.toUnsubscribe().size,
+    () => this.toSubscribe().size + this.toUnsubscribe().size + this.toCollect().size,
   );
 
   protected readonly followsKey = computed(() =>
@@ -158,15 +174,31 @@ export class SocialImportDialogComponent {
   }
 
   protected apply(): void {
-    const subscribe = (this.importer.candidates()?.follows ?? [])
-      .filter((follow) => follow.state === 'new' && this.toSubscribe().has(follow.feedUrl))
-      .map((follow) => ({ feedUrl: follow.feedUrl, title: follow.displayName }));
-    const unsubscribe = [...this.toUnsubscribe()];
+    const selection = {
+      subscribe: this.chosenFollows(),
+      unsubscribe: [...this.toUnsubscribe()],
+      collections: this.chosenCollections(),
+    };
 
-    this.importer.importSelection(this.data.accountId, { subscribe, unsubscribe }).subscribe({
+    this.importer.importSelection(this.data.accountId, selection).subscribe({
       next: (result) => this.finish(result),
       error: () => undefined,
     });
+  }
+
+  protected collectionName(collection: CollectionCandidate): string {
+    return collection.kind === 'home'
+      ? this.i18n.translate('settings.social.importHome')
+      : collection.name;
+  }
+
+  protected isCollected(collection: CollectionCandidate): boolean {
+    return collection.state === 'subscribed' || this.toCollect().has(collectionKey(collection));
+  }
+
+  protected toggleCollection(collection: CollectionCandidate): void {
+    if (collection.state === 'subscribed') return;
+    this.toCollect.update((current) => toggled(current, collectionKey(collection)));
   }
 
   protected cancel(): void {
@@ -204,12 +236,28 @@ export class SocialImportDialogComponent {
     this.toast.show({ message: done + overLimit, durationMs: CONFIRMATION_DURATION_MS });
   }
 
+  private chosenFollows(): SocialImportFeed[] {
+    return (this.importer.candidates()?.follows ?? [])
+      .filter((follow) => follow.state === 'new' && this.toSubscribe().has(follow.feedUrl))
+      .map((follow) => ({ feedUrl: follow.feedUrl, title: follow.displayName }));
+  }
+
+  private chosenCollections(): SocialImportCollection[] {
+    const candidates = this.importer.candidates();
+    return [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
+      .filter(
+        (collection) =>
+          collection.state === 'new' && this.toCollect().has(collectionKey(collection)),
+      )
+      .map(({ kind, id, name }) => ({ kind, id, name }));
+  }
+
   private collection(
     label: string,
     testId: string,
-    items: readonly SocialCollection[] = [],
+    items: readonly CollectionCandidate[] = [],
   ): CollectionSection {
-    const shown = items.filter((item) => this.matches(item.name));
+    const shown = items.filter((item) => this.matches(this.collectionName(item)));
     return { labelKey: pluralKey(label, shown.length), testId, items: shown };
   }
 

@@ -1,10 +1,8 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { EntryDto } from '../../models';
 import { relativeTime, relativeTimeNarrow } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { FaviconComponent } from '../../../shared/favicon/favicon.component';
-import { selectionQueryParams } from '../../query/query';
+import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
 
 /**
  * The one-line attribution every magazine block carries: unread dot, favicon,
@@ -14,13 +12,11 @@ import { selectionQueryParams } from '../../query/query';
  */
 @Component({
   selector: 'app-entry-kicker-line',
-  imports: [FaviconComponent, RouterLink],
+  imports: [EntrySourceComponent],
   templateUrl: './entry-kicker-line.component.html',
   styleUrl: './entry-kicker-line.component.scss',
 })
 export class EntryKickerLineComponent {
-  protected readonly selectionQueryParams = selectionQueryParams;
-
   readonly entry = input.required<EntryDto>();
   /** Off inside a source group, whose header already names the source. */
   readonly showSource = input(true);

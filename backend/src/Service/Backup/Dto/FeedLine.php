@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Support\LineField;
+use App\Service\Backup\Support\PrivateFeedRefusal;
 
 /**
  * One feed the account (or another account sharing it) subscribes to.
@@ -24,10 +26,12 @@ final readonly class FeedLine
 
     /**
      * @param array<string, mixed> $line
+     *
+     * @throws InvalidBackupException for a private social feed
      */
     public static function fromLine(array $line): self
     {
-        return new self(
+        $feedLine = new self(
             url: LineField::string($line, 'url'),
             siteUrl: LineField::stringOrNull($line, 'siteUrl'),
             title: LineField::stringOrNull($line, 'title'),
@@ -36,5 +40,8 @@ final readonly class FeedLine
             imageUrl: LineField::stringOrNull($line, 'imageUrl'),
             sourceFormat: LineField::string($line, 'sourceFormat'),
         );
+        PrivateFeedRefusal::ofFeed($feedLine->url, $feedLine->sourceFormat);
+
+        return $feedLine;
     }
 }

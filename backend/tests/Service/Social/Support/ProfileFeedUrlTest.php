@@ -86,4 +86,12 @@ final class ProfileFeedUrlTest extends TestCase
     {
         self::assertSame($identity, ProfileFeedUrl::identityOf($network, $url));
     }
+
+    public function testNetworkOfNamesTheNetworkWhoseProfileFeedTheUrlIs(): void
+    {
+        $bluesky = ProfileFeedUrl::networkOf('https://bsky.app/profile/bob.bsky.social/rss');
+        self::assertSame(SocialNetwork::Bluesky, $bluesky);
+        self::assertSame(SocialNetwork::Mastodon, ProfileFeedUrl::networkOf('https://mastodon.example/@bob.rss'));
+        self::assertNull(ProfileFeedUrl::networkOf('https://example.com/feed.xml'));
+    }
 }

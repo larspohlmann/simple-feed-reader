@@ -16,6 +16,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\SourceFormat;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\BackupReader;
 use App\Service\Backup\Model\BackupPartModel;
@@ -492,5 +493,27 @@ final class AccountBackupExporterTest extends DbTestCase
             }
             self::assertGreaterThan(0, $lineCount);
         }
+    }
+
+    public function testAPrivateSocialFeedAndItsPostsStayOutOfTheBackup(): void
+    {
+        $user = $this->makeUser('backup-social@example.test');
+        $rss = new Feed('https://example.com/feed.xml');
+        $private = new Feed('social:bluesky:1:home');
+        $private->setSourceFormat(SourceFormat::BLUESKY_API);
+        $now = new \DateTimeImmutable('2026-10-12 10:00:00');
+        foreach ([$rss, $private] as $feed) {
+            $this->entityManager->persist($feed);
+            $this->entityManager->persist(new Subscription($user, $feed, $now));
+            $entry = new Entry($feed, $feed->getUrl() . '#post', null, 'Post', $now, $now);
+            $entry->getImage()->storePending(null, null, null);
+            $this->entityManager->persist($entry);
+        }
+        $this->entityManager->flush();
+
+        $exported = json_encode($this->decodedParts($user), \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES);
+
+        self::assertStringContainsString('https://example.com/feed.xml', $exported);
+        self::assertStringNotContainsString('social:', $exported);
     }
 }

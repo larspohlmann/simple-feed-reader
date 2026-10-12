@@ -9,6 +9,7 @@ use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Social\Model\ProfileImageSweepReportModel;
 
 /** The tick's sweeps that flush through the default EntityManager, which an aborted refresh leaves closed. */
 final readonly class MaintenanceSweepsModel
@@ -18,6 +19,7 @@ final readonly class MaintenanceSweepsModel
         public DigestSweepReportModel $digests,
         public ImageVerificationReportModel $imageVerification,
         public LinkCardSweepReportModel $linkCards,
+        public ProfileImageSweepReportModel $profileImages,
         public SavedSearchMembershipSweepReportModel $savedSearchMemberships,
         public bool $skipped = false,
     ) {
@@ -30,6 +32,7 @@ final readonly class MaintenanceSweepsModel
             new DigestSweepReportModel(0, 0, 0),
             new ImageVerificationReportModel(0, 0, 0, 0),
             LinkCardSweepReportModel::none(),
+            ProfileImageSweepReportModel::none(),
             new SavedSearchMembershipSweepReportModel(0, 0, 0, false),
             skipped: true,
         );

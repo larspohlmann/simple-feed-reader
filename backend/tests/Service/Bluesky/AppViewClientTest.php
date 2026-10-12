@@ -31,6 +31,8 @@ final class AppViewClientTest extends TestCase
     private const string GONE_QUERY = 'uris=at%3A%2F%2Fdid%3Aplc%3Aqobvnkudcv3zlaklxxjduqoi%2Fapp.bsky.feed.post'
         . '%2F3mxgone';
 
+    private const string GET_PROFILES = 'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles';
+
     private StubFeedFetcher $fetcher;
     private HostThrottle $throttle;
 
@@ -131,7 +133,7 @@ final class AppViewClientTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function unusableAnswers(): iterable
     {
-        yield 'not JSON' => ['<html>Bad gateway</html>'];
+        yield 'not JSON' => [/** @lang TEXT */ '<html>Bad gateway</html>'];
         yield 'an error object' => ['{"error":"InvalidRequest","message":"Missing required key \"uris\""}'];
         yield 'posts that are not a list' => ['{"posts":{"first":{"uri":"at://x"}}}'];
     }
@@ -144,6 +146,50 @@ final class AppViewClientTest extends TestCase
         $this->expectException(AppViewAnswerException::class);
 
         $this->client()->posts([self::TISCH]);
+    }
+
+    public function testAsksForUpToAPageOfActorsInOneRequestAndKeysTheProfilesByDidAndHandle(): void
+    {
+        $url = self::GET_PROFILES . '?actors=did%3Aplc%3Aalice&actors=bob.bsky.social';
+        $this->fetcher->willReturnBody(
+            $url,
+            '{"profiles":[{"handle":"no-did.bsky.social"},'
+            . '{"did":"did:plc:alice","handle":"alice.bsky.social","avatar":"https://cdn.example/a.jpg"},'
+            . '{"did":"did:plc:bob","handle":"Bob.bsky.social"}]}',
+        );
+
+        $profiles = $this->client()->profiles(['did:plc:alice', 'bob.bsky.social']);
+
+        self::assertSame([$url], $this->fetcher->fetchedUrls);
+        self::assertSame(
+            ['did:plc:alice', 'alice.bsky.social', 'did:plc:bob', 'bob.bsky.social'],
+            array_keys($profiles),
+        );
+        self::assertSame('https://cdn.example/a.jpg', $profiles['alice.bsky.social']->string('avatar'));
+    }
+
+    public function testAThrottledProfilesAnswerIsRecordedForTheHostAndRethrown(): void
+    {
+        $failure = new FeedThrottledException('429', 60);
+        $this->fetcher->willThrow(self::GET_PROFILES . '?actors=did%3Aplc%3Aalice', $failure);
+        $client = $this->client();
+
+        try {
+            $client->profiles(['did:plc:alice']);
+            self::fail('A throttled answer must be rethrown.');
+        } catch (FeedThrottledException) {
+        }
+
+        self::assertTrue($client->isThrottled());
+    }
+
+    public function testAProfilesAnswerWithoutAProfilesListIsRejected(): void
+    {
+        $this->fetcher->willReturnBody(self::GET_PROFILES . '?actors=did%3Aplc%3Aalice', '{"posts":[]}');
+
+        $this->expectException(AppViewAnswerException::class);
+
+        $this->client()->profiles(['did:plc:alice']);
     }
 
     private function client(): AppViewClient

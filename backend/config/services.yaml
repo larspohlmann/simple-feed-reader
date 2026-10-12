@@ -84,6 +84,7 @@ services:
     App\Service\Reader\ArticleExtractor\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor\ArticleExtractor'
     App\Service\Settings\ServingHost\ServingHostInterface: '@App\Http\RequestServingHost'
     App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface: '@App\Http\SymfonyStatusReasonPhrases'
+    App\Service\Ingest\FeedTitle\FeedTitleInterface: '@App\Service\Social\ProfileFeedTitle'
 
     # Page repairs, in this order, before readability scores the page: the class-reading repairs precede
     # ImageWrapperClassRemover and HeadingClassRemover, which strip the classes they key on.

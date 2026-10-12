@@ -1,14 +1,6 @@
 <p class="kicker">
   @if (showSource()) {
-    <app-favicon [url]="entry().faviconUrl" [size]="faviconSize()" />
-    <a
-      class="source"
-      [routerLink]="['/']"
-      [queryParams]="selectionQueryParams({ subscription: entry().subscriptionId })"
-      queryParamsHandling="merge"
-      (click)="$event.stopPropagation()"
-      >{{ entry().source }}</a
-    >
+    <app-entry-source [entry]="entry()" layout="kicker" [size]="faviconSize()" />
     <span class="separator" aria-hidden="true">·</span>
   }
   <span class="when">

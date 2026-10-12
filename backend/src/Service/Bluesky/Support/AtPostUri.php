@@ -8,6 +8,7 @@ namespace App\Service\Bluesky\Support;
 final class AtPostUri
 {
     private const string PATTERN = '#^at://([^/\s]+)/app\.bsky\.feed\.post/([^/\s]+)\z#';
+    private const string WEB_PATTERN = '#^https?://(?:www\.)?bsky\.app/profile/[^/\s]+/post/[^/\s]+#i';
 
     public static function matches(string $uri): bool
     {
@@ -20,7 +21,12 @@ final class AtPostUri
             return null;
         }
 
-        return 'https://bsky.app/profile/' . $parts[1] . '/post/' . $parts[2];
+        return BlueskyWeb::profileUrl($parts[1]) . '/post/' . $parts[2];
+    }
+
+    public static function isWebUrl(string $url): bool
+    {
+        return preg_match(self::WEB_PATTERN, $url) === 1;
     }
 
     private function __construct()

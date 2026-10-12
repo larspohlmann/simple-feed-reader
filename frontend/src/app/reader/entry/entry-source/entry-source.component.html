@@ -1,0 +1,27 @@
+@let current = entry();
+<app-favicon
+  [url]="current.faviconUrl"
+  [avatarUrl]="current.poster?.imageUrl ?? null"
+  [size]="size()"
+/>
+@if (current.poster?.url; as profileUrl) {
+  <a
+    class="source"
+    [href]="profileUrl"
+    target="_blank"
+    rel="noopener noreferrer"
+    (click)="keepFromCard($event)"
+    >{{ name() }}</a
+  >
+} @else if (layout() !== 'row') {
+  <a
+    class="source"
+    [routerLink]="['/']"
+    [queryParams]="selectionQueryParams({ subscription: current.subscriptionId })"
+    queryParamsHandling="merge"
+    (click)="keepFromCard($event)"
+    >{{ name() }}</a
+  >
+} @else {
+  {{ name() }}
+}

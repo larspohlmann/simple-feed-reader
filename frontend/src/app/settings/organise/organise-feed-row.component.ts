@@ -103,7 +103,7 @@ export class OrganiseFeedRowComponent {
     const sub = this.subscription();
     this.sheet
       .open({
-        title: sub.title,
+        title: this.subscription().title,
         actions: [
           { id: 'edit', label: this.i18n.translate('reader.editFeed') },
           {

@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem, problemMessage } from '../../core/problem';
+import { SocialFeedRefDto } from '../../reader/social-feed';
 
 export type ImportCandidateState = 'new' | 'subscribed' | 'no_longer_followed';
 
@@ -15,15 +16,27 @@ export interface FollowCandidate {
   readonly subscriptionId: number | null;
 }
 
-export interface SocialCollection {
-  readonly id: string;
+export type CollectionKind = Exclude<SocialFeedRefDto['kind'], 'profile'>;
+export type CollectionState = 'new' | 'subscribed';
+
+export interface CollectionCandidate {
+  readonly kind: CollectionKind;
+  readonly id: string | null;
+  readonly name: string;
+  readonly state: CollectionState;
+  readonly subscriptionId: number | null;
+}
+
+export interface SocialImportCollection {
+  readonly kind: CollectionKind;
+  readonly id: string | null;
   readonly name: string;
 }
 
 export interface ImportCandidates {
   readonly follows: readonly FollowCandidate[];
-  readonly lists: readonly SocialCollection[];
-  readonly customFeeds: readonly SocialCollection[];
+  readonly lists: readonly CollectionCandidate[];
+  readonly customFeeds: readonly CollectionCandidate[];
   readonly truncated: boolean;
 }
 
@@ -35,6 +48,7 @@ export interface SocialImportFeed {
 export interface SocialImportSelection {
   readonly subscribe: readonly SocialImportFeed[];
   readonly unsubscribe: readonly number[];
+  readonly collections: readonly SocialImportCollection[];
 }
 
 export interface SocialImportResult {

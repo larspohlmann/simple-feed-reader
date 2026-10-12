@@ -39,8 +39,8 @@ final class Entry
     #[ORM\Embedded(class: EntryHeadline::class, columnPrefix: false)]
     private EntryHeadline $headline;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $author = null;
+    #[ORM\Embedded(class: EntryAuthor::class, columnPrefix: false)]
+    private EntryAuthor $author;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $summary = null;
@@ -92,6 +92,7 @@ final class Entry
         $this->effectiveDate = $effectiveDate;
         $this->image = new EntryImage();
         $this->mediaSet = new EntryMedia();
+        $this->author = new EntryAuthor();
         $this->discussion = new EntryDiscussion();
     }
 
@@ -142,12 +143,22 @@ final class Entry
 
     public function getAuthor(): ?string
     {
-        return $this->author;
+        return $this->author->getName();
     }
 
-    public function setAuthor(?string $author): void
+    public function setAuthor(EntryAuthor $author): void
     {
         $this->author = $author;
+    }
+
+    public function getAuthorUrl(): ?string
+    {
+        return $this->author->getProfileUrl();
+    }
+
+    public function getAuthorAvatarUrl(): ?string
+    {
+        return $this->author->getAvatarUrl();
     }
 
     public function getSummary(): ?string

@@ -179,6 +179,7 @@ final class ResponseClassifierTest extends TestCase
         // RFC 9110 allows the date the door reopens instead of a delay.
         yield 'the date it reopens' => ['Wed, 05 Aug 2026 12:02:30 GMT', 150];
         yield 'a date already past' => ['Wed, 05 Aug 2026 11:59:00 GMT', null];
+        yield 'an absurd delay, clamped later' => ['9999999999', 9999999999];
         yield 'no header at all' => [null, null];
         yield 'something unparseable' => ['soon-ish', null];
     }

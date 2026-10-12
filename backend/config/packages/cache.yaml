@@ -73,6 +73,12 @@ framework:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 86400
 
+            # Bluesky sessions per connected account (#1599). createSession allows about 300 a day, and every private
+            # feed polls every 15 minutes. The access token is stored sealed; BlueskySessionCache sets each lifetime.
+            bluesky.session.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 5400
+
             # Cookies an image host sets on a first visit, which some hosts require before serving an image (#475).
             # OriginCookies expires each entry after an hour; this lifetime is the backstop.
             image_proxy.cookie.cache:

@@ -14,6 +14,7 @@ use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
 use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
+use App\Service\Backup\Support\PrivateFeedRefusal;
 use App\Service\Search\EntryIndexer;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -61,6 +62,7 @@ final class RestoreEntryLoader
 
     public function bufferEntry(EntryLine $line): void
     {
+        PrivateFeedRefusal::ofUrl($line->feedUrl);
         if ($line->feedUrl !== $this->bufferedFeedUrl) {
             $this->closeBufferedFeed();
             $this->bufferedFeedUrl = $line->feedUrl;
@@ -74,6 +76,7 @@ final class RestoreEntryLoader
 
     public function loadState(EntryStateLine $line): void
     {
+        PrivateFeedRefusal::ofUrl($line->feedUrl);
         // Every entry the file carries is written before the first state is
         // read, so the hash maps below are final by now.
         $this->closeBufferedFeed();

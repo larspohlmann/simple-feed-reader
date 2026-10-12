@@ -32,7 +32,7 @@ final class LinkedPlainText
 
     private static function link(string $url): string
     {
-        return $url === '' ? '' : '<a href="' . HtmlEscape::text($url) . '">' . HtmlEscape::text($url) . '</a>';
+        return $url === '' ? '' : HtmlAnchor::to($url, $url);
     }
 
     private function __construct()

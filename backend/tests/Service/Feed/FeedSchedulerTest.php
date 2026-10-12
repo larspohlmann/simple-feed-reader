@@ -6,7 +6,10 @@ namespace App\Tests\Service\Feed;
 
 use App\Entity\Feed;
 use App\Enum\FeedStatus;
+use App\Enum\SourceFormat;
 use App\Service\Fetch\HostThrottle;
+use App\Service\Fetch\Support\RetryAfterHeader;
+use App\Tests\Support\FeedSchedulers;
 use App\Service\Feed\FeedScheduler;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -141,6 +144,16 @@ final class FeedSchedulerTest extends TestCase
         $this->scheduler->recordThrottled($feed, $retryAfterSeconds);
 
         self::assertSame($expectedNextFetch, $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
+    }
+
+    public function testAnAbsurdRetryAfterHeaderStillWaitsTheFullDay(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 60);
+
+        $this->scheduler->recordThrottled($feed, RetryAfterHeader::seconds('9999999999'));
+
+        self::assertSame('2026-07-22 12:00:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
     }
 
     public function testThrottlingRecordsAHostThrottleForTheWholeHost(): void
@@ -288,5 +301,48 @@ final class FeedSchedulerTest extends TestCase
         for ($attempt = 0; $attempt < $failures; ++$attempt) {
             $feed->recordFailedFetch(new \DateTimeImmutable(self::EARLIER), 'boom', 60);
         }
+    }
+
+    #[DataProvider('floors')]
+    public function testNewEntriesResetTheIntervalToTheFeedsOwnFloor(string $sourceFormat, int $floorMinutes): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setSourceFormat($sourceFormat);
+
+        FeedSchedulers::build(new MockClock('2026-10-12 12:00:00', 'UTC'))->recordSuccess($feed, 3);
+
+        self::assertSame($floorMinutes, $feed->getFetchIntervalMinutes());
+    }
+
+    /** @return iterable<string, array{string, int}> */
+    public static function floors(): iterable
+    {
+        yield 'rss' => [SourceFormat::XML, 5];
+        yield 'bluesky timeline' => [SourceFormat::BLUESKY_API, 15];
+        yield 'mastodon timeline' => [SourceFormat::MASTODON_API, 15];
+    }
+
+    public function testAQuietSocialFeedNeverPollsMoreOftenThanItsFloor(): void
+    {
+        $clock = new MockClock('2026-10-12 12:00:00', 'UTC');
+        $feed = new Feed('social:bluesky:1:home');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+        $feed->recordSuccessfulFetch($clock->now(), 1);
+
+        FeedSchedulers::build($clock)->recordSuccess($feed, 0);
+
+        self::assertSame(15, $feed->getFetchIntervalMinutes());
+    }
+
+    public function testASocialFeedsBackoffStartsFromItsFloor(): void
+    {
+        $clock = new MockClock('2026-10-12 12:00:00', 'UTC');
+        $feed = new Feed('social:mastodon:1:home');
+        $feed->setSourceFormat(SourceFormat::MASTODON_API);
+        $feed->recordSuccessfulFetch($clock->now(), 1);
+
+        FeedSchedulers::build($clock)->recordFailure($feed, 'The Mastodon instance answered 502.');
+
+        self::assertSame('2026-10-12 12:30:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
     }
 }

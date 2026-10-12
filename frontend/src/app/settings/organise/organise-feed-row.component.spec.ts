@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { heldUnrenamedHome } from '../../../testing/unrenamed-home-testing';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -53,6 +54,15 @@ describe('OrganiseFeedRowComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('heise online');
     expect(text).toContain('Tech');
+  });
+
+  it("names an unrenamed Home by the Home's label", async () => {
+    await render();
+    fixture.componentRef.setInput('subscription', heldUnrenamedHome(1));
+    fixture.detectChanges();
+
+    const link = fixture.debugElement.query(By.css('a.title')).nativeElement as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Home@bsky');
   });
 
   it('links the feed name to its list view in a new tab', async () => {

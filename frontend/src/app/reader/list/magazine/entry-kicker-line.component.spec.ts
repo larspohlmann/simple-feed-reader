@@ -4,6 +4,7 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryDto } from '../../models';
 import { anEntry } from '../../../../testing/entry-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
@@ -12,7 +13,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-function mount(testEntry: EntryDto, inputs: Record<string, unknown> = {}) {
+function mount(testEntry: EntryDto, inputs: Record<string, unknown> = {}, arrange?: () => void) {
   // Several cases mount twice to compare two states, and a configured TestBed
   // cannot be reconfigured once instantiated.
   TestBed.resetTestingModule();
@@ -20,6 +21,7 @@ function mount(testEntry: EntryDto, inputs: Record<string, unknown> = {}) {
     imports: [EntryKickerLineComponent, provideTranslocoTesting()],
     providers: [provideRouter([])],
   });
+  arrange?.();
   const fixture = TestBed.createComponent(EntryKickerLineComponent);
   fixture.componentRef.setInput('entry', testEntry);
   for (const [name, value] of Object.entries(inputs)) {
@@ -30,6 +32,12 @@ function mount(testEntry: EntryDto, inputs: Record<string, unknown> = {}) {
 }
 
 describe('EntryKickerLineComponent', () => {
+  it("names an authorless Home post by the Home's label", () => {
+    const element = mount(authorlessHomePost(7), {}, () => holdUnrenamedHome(7));
+
+    expect(element.querySelector('.source')?.textContent?.trim()).toBe('Home@bsky');
+  });
+
   it('renders the source in full and the relative time beside it', () => {
     const element = mount(entry());
 
@@ -37,6 +45,34 @@ describe('EntryKickerLineComponent', () => {
       'NDR.de - Das Beste am Norden - Radio - Fernsehen - Nachrichten',
     );
     expect(element.querySelector('.when')!.textContent).toContain('5');
+  });
+
+  it('links an author source out to their profile, and keeps the in-app filter otherwise', () => {
+    const external = mount(
+      entry({
+        poster: { name: 'Bob', url: 'https://bsky.app/profile/bob', imageUrl: null },
+        subscriptionId: 4,
+      }),
+    ).querySelector<HTMLAnchorElement>('.source')!;
+    const internal = mount(entry({ subscriptionId: 4 })).querySelector<HTMLAnchorElement>(
+      '.source',
+    )!;
+
+    expect(external.getAttribute('href')).toBe('https://bsky.app/profile/bob');
+    expect(external.target).toBe('_blank');
+    expect(external.rel).toBe('noopener noreferrer');
+    expect(internal.getAttribute('href')).toContain('subscription=4');
+    expect(internal.target).toBe('');
+  });
+
+  it('shows the author avatar in place of the favicon', () => {
+    const element = mount(
+      entry({ poster: { name: 'Bob', url: null, imageUrl: 'https://cdn.example/bob.png' } }),
+    );
+
+    expect(element.querySelector('img.avatar')?.getAttribute('src')).toBe(
+      'https://cdn.example/bob.png',
+    );
   });
 
   it('fills the dot while the entry is unread, empties it once read', () => {

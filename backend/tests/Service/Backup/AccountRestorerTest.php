@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup;
 
 use App\Entity\Entry;
+use App\Entity\EntryAuthor;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
@@ -228,7 +229,7 @@ final class AccountRestorerTest extends DbTestCase
             new \DateTimeImmutable($day . ' 06:00:00'),
             new \DateTimeImmutable($day . ' 05:00:00'),
         );
-        $entry->setAuthor('An Author');
+        $entry->setAuthor(new EntryAuthor('An Author'));
         $entry->setSummary('Summary of ' . $title);
         $entry->setContentHtml('<p>Body of ' . $title . '</p>');
         $entry->getImage()->storePending('https://example.test/' . $guid . '.png', 640, 480);
@@ -471,7 +472,7 @@ final class AccountRestorerTest extends DbTestCase
             [
                 'feed', 'guid.value', 'mediaSet.media', 'mediaSet.attachments', 'location.url', 'image.renditions',
                 'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
-                'headline.title', 'headline.derived',
+                'headline.title', 'headline.derived', 'author.name', 'author.profileUrl', 'author.avatarUrl',
             ],
         );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
@@ -484,6 +485,11 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame($sourceRows['entry']->getGuid(), $targetRows['entry']->getGuid());
         self::assertSame($sourceRows['entry']->getUrl(), $targetRows['entry']->getUrl());
         self::assertSame($sourceRows['entry']->getTitle(), $targetRows['entry']->getTitle());
+        self::assertSame($sourceRows['entry']->getAuthor(), $targetRows['entry']->getAuthor());
+        self::assertNotNull($sourceRows['entry']->getAuthorUrl());
+        self::assertSame($sourceRows['entry']->getAuthorUrl(), $targetRows['entry']->getAuthorUrl());
+        self::assertNotNull($sourceRows['entry']->getAuthorAvatarUrl());
+        self::assertSame($sourceRows['entry']->getAuthorAvatarUrl(), $targetRows['entry']->getAuthorAvatarUrl());
         self::assertTrue($sourceRows['entry']->isTitleDerived());
         self::assertTrue($targetRows['entry']->isTitleDerived());
         self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());

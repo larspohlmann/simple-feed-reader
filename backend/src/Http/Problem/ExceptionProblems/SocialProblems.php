@@ -56,7 +56,7 @@ final readonly class SocialProblems implements ExceptionProblemsInterface
             )),
             $exception instanceof InvalidSocialImportFeedException => new ResolvedProblem(new ApiProblem(
                 'social_import_invalid_feed',
-                'Not a profile feed of this network',
+                'Not importable from this account',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),

@@ -33,6 +33,7 @@ import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
+import { SubscriptionRows } from '../state/subscription-rows';
 import { EntriesStore } from '../state/entries.store';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
@@ -99,6 +100,7 @@ describe('ReaderShellComponent', () => {
         includeInForYou: true,
       },
     ],
+    socialAccounts: [],
   };
   const entry = anEntry({
     title: 'e1',
@@ -259,7 +261,7 @@ describe('ReaderShellComponent', () => {
     fixture.detectChanges();
     ctrl
       .expectOne('https://api.test/api/subscriptions')
-      .flush({ subscriptions, favoritesCount: 0, keptCount: 0 });
+      .flush({ subscriptions, favoritesCount: 0, keptCount: 0, socialAccounts: [] });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
@@ -1426,6 +1428,7 @@ describe('ReaderShellComponent', () => {
           testRequest.flush({
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
             favoritesCount: 0,
+            socialAccounts: [],
             keptCount: 0,
           }),
         );
@@ -1460,6 +1463,7 @@ describe('ReaderShellComponent', () => {
             nextCursor: null,
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
             favoritesCount: 0,
+            socialAccounts: [],
             keptCount: 0,
             tags: [],
           }),
@@ -1479,6 +1483,50 @@ describe('ReaderShellComponent', () => {
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.params.get('tag')).toBe('3');
     testRequest.flush(refreshDone);
+  });
+
+  it("scopes a network view's refresh to the network", () => {
+    const fixture = boot();
+    qp.next(convertToParamMap({ network: 'bluesky' }));
+    fixture.detectChanges();
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    fixture.componentInstance.refresh.refreshScoped();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+    expect(testRequest.request.params.get('network')).toBe('bluesky');
+    expect(testRequest.request.params.has('tag')).toBe(false);
+    testRequest.flush(refreshDone);
+  });
+
+  it("heads a profile feed's view with the person's picture, an ordinary feed's with its favicon", () => {
+    const fixture = boot();
+    qp.next(convertToParamMap({ subscription: '5' }));
+    fixture.detectChanges();
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    fixture.detectChanges();
+    const heading = () =>
+      (fixture.nativeElement as HTMLElement).querySelector('app-list-header h2') as HTMLElement;
+    expect(heading().querySelector('img.avatar')).toBeNull();
+
+    TestBed.inject(SubscriptionRows).stored.update((rows) =>
+      rows.map((row) =>
+        row.id === 5
+          ? {
+              ...row,
+              imageUrl: 'https://cdn.example/amy.jpg',
+              social: { network: 'bluesky', accountId: null, kind: 'profile' },
+            }
+          : row,
+      ),
+    );
+    fixture.detectChanges();
+
+    expect(heading().querySelector('img.avatar')?.getAttribute('src')).toBe(
+      'https://cdn.example/amy.jpg',
+    );
   });
 
   it('scopes a subscription refresh to the underlying feed id', () => {
@@ -2002,6 +2050,7 @@ describe('ReaderShellComponent', () => {
           queryParams: {
             view: null,
             tag: null,
+            network: null,
             subscription: 9,
             entry: null,
             q: null,
@@ -2484,6 +2533,7 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/subscriptions').flush({
         subscriptions: [],
         favoritesCount: 0,
+        socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
       });
@@ -2525,6 +2575,7 @@ describe('ReaderShellComponent', () => {
       currentSubscriptions.flush({
         subscriptions: [SUBSCRIPTION_FIXTURE],
         favoritesCount: 0,
+        socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
       });
@@ -2938,6 +2989,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
+            socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
           }),
@@ -2987,6 +3039,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
+            socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
           }),
@@ -3016,6 +3069,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
+            socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
           }),
@@ -3062,6 +3116,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
+            socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
           }),
@@ -3214,6 +3269,8 @@ describe('ReaderShellComponent', () => {
         description: string | null;
         imageUrl: string | null;
         siteUrl: string | null;
+        title?: string;
+        social?: { network: string; accountId: number; kind: string };
       },
       layout: ReadingLayout = 'magazine',
     ): HTMLElement {
@@ -3256,6 +3313,18 @@ describe('ReaderShellComponent', () => {
       });
 
       expect(host.querySelector('app-feed-intro')).not.toBeNull();
+    });
+
+    it("names an unrenamed Home as the list heading does, not by the backend's title", () => {
+      const host = mountWithSubscriptionSelected({
+        description: null,
+        imageUrl: null,
+        siteUrl: 'https://bsky.app/',
+        title: 'Home',
+        social: { network: 'bluesky', accountId: 3, kind: 'home' },
+      });
+
+      expect(host.querySelector('app-feed-intro .title')?.textContent?.trim()).toBe('Home@bsky');
     });
 
     it('shows no feed intro in the list layout', () => {
@@ -3336,6 +3405,49 @@ describe('ReaderShellComponent', () => {
       fixture.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/search/mark-read');
+    });
+  });
+
+  describe("mark all read for a network's combined view", () => {
+    it("leads the heading with the network's logo", () => {
+      const fixture = boot();
+      qp.next(convertToParamMap({ network: 'mastodon' }));
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      fixture.detectChanges();
+
+      const heading = (fixture.nativeElement as HTMLElement).querySelector('app-list-header h2');
+      expect(heading?.querySelector('app-network-logo svg.mastodon')).not.toBeNull();
+      expect(heading?.textContent).toContain('Mastodon');
+    });
+
+    it('marks the network read by name, reloads the list and zeroes its feeds locally', () => {
+      const fixture = boot();
+      qp.next(convertToParamMap({ network: 'bluesky' }));
+      fixture.detectChanges();
+      const list = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+      expect(list.request.params.get('network')).toBe('bluesky');
+      list.flush({ entries: [], nextCursor: null });
+      fixture.detectChanges();
+      const zeroUnread = jest.spyOn(TestBed.inject(SubscriptionsStore), 'zeroUnread');
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+
+      fixture.componentInstance.markRead.confirmMarkAllRead();
+
+      const testRequest = ctrl.expectOne('https://api.test/api/entries/mark-read');
+      expect(testRequest.request.body).toEqual({
+        scope: 'network',
+        network: 'bluesky',
+        until: expect.any(String),
+      });
+      testRequest.flush(null);
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      expect(zeroUnread).toHaveBeenCalledWith({ network: 'bluesky' });
     });
   });
 
@@ -4089,6 +4201,7 @@ describe('ReaderShellComponent', () => {
     const countsBody = {
       subscriptions: [{ id: 5, unreadCount: 2 }],
       favoritesCount: 0,
+      socialAccounts: [],
       keptCount: 0,
       viewedCount: 0,
     };

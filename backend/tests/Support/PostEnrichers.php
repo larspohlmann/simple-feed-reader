@@ -14,6 +14,7 @@ use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Completion\KnownShareSettler;
 use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryImageWriter;
@@ -48,12 +49,7 @@ final class PostEnrichers
             $entityManager,
             self::enrichments($entityManager),
             $appView,
-            new EntryEmbedWriter(
-                new PostEmbedRenderer(),
-                new EntrySanitizer(new TrailingBlankRemover()),
-                new EntryImageWriter(),
-                self::linkCards($entityManager),
-            ),
+            self::embedWriter($entityManager),
             new EntryIndexer($indexWriter, new NullLogger()),
             $naiveUtcClock,
             $logger,
@@ -75,6 +71,22 @@ final class PostEnrichers
             new NaiveUtcClock($clock),
             new EntryShareClassifier(new BlueskyPendingEmbed(), new EntrySanitizer(new TrailingBlankRemover())),
             new BlueskyPendingEmbed(),
+            new KnownShareSettler(
+                $entityManager,
+                self::embedWriter($entityManager),
+                ShareLinkCardsWiring::cardWriter($entityManager),
+                new NullLogger(),
+            ),
+        );
+    }
+
+    public static function embedWriter(EntityManagerInterface $entityManager): EntryEmbedWriter
+    {
+        return new EntryEmbedWriter(
+            new PostEmbedRenderer(),
+            new EntrySanitizer(new TrailingBlankRemover()),
+            new EntryImageWriter(),
+            self::linkCards($entityManager),
         );
     }
 

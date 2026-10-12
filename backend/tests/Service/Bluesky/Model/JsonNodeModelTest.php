@@ -81,4 +81,23 @@ final class JsonNodeModelTest extends TestCase
         self::assertNull(JsonNodeModel::listOf('text'));
         self::assertNull(JsonNodeModel::listOf(null));
     }
+
+    public function testTextKeepsTheStringAsSentWhereStringTrimsIt(): void
+    {
+        $node = JsonNodeModel::of(['text' => "  hi\n", 'count' => 3]);
+
+        self::assertSame("  hi\n", $node->text('text'));
+        self::assertSame('hi', $node->string('text'));
+        self::assertNull($node->text('count'));
+        self::assertNull($node->text('absent'));
+    }
+
+    public function testHasTellsAPresentFieldFromAnAbsentOrNullOne(): void
+    {
+        $node = JsonNodeModel::of(['reply' => ['parent' => []], 'reblog' => null]);
+
+        self::assertTrue($node->has('reply'));
+        self::assertFalse($node->has('reblog'));
+        self::assertFalse($node->has('reason'));
+    }
 }

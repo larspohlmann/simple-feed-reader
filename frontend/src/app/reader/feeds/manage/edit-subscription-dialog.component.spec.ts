@@ -1,3 +1,4 @@
+import { inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
@@ -6,6 +7,7 @@ import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { API_BASE_URL } from '../../../core/api';
 import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.component';
 import { SubscriptionDto } from '../../models';
+import { SubscriptionRows } from '../../state/subscription-rows';
 
 const sub: SubscriptionDto = {
   id: 5,
@@ -32,6 +34,7 @@ const sub: SubscriptionDto = {
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  social: null,
 };
 
 describe('EditSubscriptionDialogComponent', () => {
@@ -203,5 +206,42 @@ describe('EditSubscriptionDialogComponent', () => {
       includeInForYou: false,
     });
     testRequest.flush({ subscription: excludedFromAllItems });
+  });
+
+  it('prefills an unrenamed Home with its label and sends no custom title when left as is', () => {
+    const home: SubscriptionDto = {
+      ...sub,
+      title: 'Timeline',
+      customTitle: null,
+      social: { network: 'bluesky', accountId: 3, kind: 'home' },
+    };
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: DialogRef, useValue: { close } },
+        {
+          provide: DIALOG_DATA,
+          useFactory: () => {
+            const rows = inject(SubscriptionRows);
+            rows.stored.set([home]);
+            return rows.find(home.id);
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(EditSubscriptionDialogComponent);
+    fixture.detectChanges();
+    ctrl = TestBed.inject(HttpTestingController);
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+
+    expect(fixture.componentInstance.form.controls.customTitle.value).toBe('Home@bsky');
+    fixture.componentInstance.submit();
+
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.body.customTitle).toBeNull();
+    testRequest.flush({ subscription: home });
   });
 });

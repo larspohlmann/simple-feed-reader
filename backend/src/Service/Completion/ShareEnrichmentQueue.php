@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Completion;
 
 use App\Entity\Entry;
+use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Completion\Model\KnownSharesModel;
+use App\Service\Completion\Support\PostedLinkCard;
 use App\Service\Share\EntryShareClassifier;
 use App\Service\Share\PendingEmbed\PendingEmbedInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,17 +24,51 @@ final readonly class ShareEnrichmentQueue
         private NaiveUtcClock $clock,
         private EntryShareClassifier $classifier,
         private PendingEmbedInterface $pendingEmbed,
+        private KnownShareSettler $knownShareSettler,
     ) {
     }
 
     /** @param list<Entry> $createdEntries persisted, not yet flushed: the caller flushes */
     public function queue(array $createdEntries): void
     {
+        $this->queueWithKnownShares($createdEntries, KnownSharesModel::none());
+    }
+
+    /** @param list<Entry> $createdEntries persisted, not yet flushed: the caller flushes */
+    public function queueWithKnownShares(array $createdEntries, KnownSharesModel $knownShares): void
+    {
         $queuedAt = $this->clock->now();
         foreach ($createdEntries as $entry) {
-            $this->classifier->classify($entry);
-            $this->queueCreated($entry, $queuedAt);
+            $this->queueOne($entry, $knownShares, $queuedAt);
         }
+    }
+
+    private function queueOne(Entry $entry, KnownSharesModel $knownShares, \DateTimeImmutable $queuedAt): void
+    {
+        $post = $knownShares->blueskyPostFor($entry->getGuid());
+        if ($post !== null) {
+            $this->knownShareSettler->settleEmbedded($entry, $post, $queuedAt);
+
+            return;
+        }
+        $this->classifier->classify($entry);
+        $card = self::postedCardOf($entry, $knownShares);
+        if ($card !== null) {
+            $this->knownShareSettler->settleCarded($entry, $card, $queuedAt);
+
+            return;
+        }
+        $this->queueCreated($entry, $queuedAt);
+    }
+
+    private static function postedCardOf(Entry $entry, KnownSharesModel $knownShares): ?LinkCardContent
+    {
+        $card = $knownShares->linkCardFor($entry->getGuid());
+        if ($card === null || $entry->getShareKind() !== ShareKind::Link) {
+            return null;
+        }
+
+        return PostedLinkCard::of($entry, $card);
     }
 
     private function queueCreated(Entry $entry, \DateTimeImmutable $queuedAt): void

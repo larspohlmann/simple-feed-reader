@@ -8,11 +8,11 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionEntryCountRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 
-final class SubscriptionEntryCountsTest extends DbTestCase
+final class SubscriptionEntryCountRepositoryTest extends DbTestCase
 {
     use SeedsUsers;
 
@@ -31,7 +31,7 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        $counts = $this->repository()->entryCountsForUser($user->requireId());
+        $counts = $this->repository()->forUser($user->requireId());
 
         self::assertSame([$subscription->requireId() => 3], $counts);
     }
@@ -49,7 +49,7 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $this->entry($theirs, 'x', '2026-07-20');
         $this->entityManager->flush();
 
-        self::assertSame([], $this->repository()->entryCountsForUser($user->requireId()));
+        self::assertSame([], $this->repository()->forUser($user->requireId()));
     }
 
     /**
@@ -70,15 +70,15 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $this->entry($second, 'c', '2026-07-03');
         $this->entityManager->flush();
 
-        $counts = $this->repository()->entryCountsForUser($user->requireId());
+        $counts = $this->repository()->forUser($user->requireId());
 
         self::assertSame([$firstSubscription->requireId() => 1, $secondSubscription->requireId() => 2], $counts);
     }
 
-    private function repository(): SubscriptionRepository
+    private function repository(): SubscriptionEntryCountRepository
     {
-        $repository = $this->entityManager->getRepository(Subscription::class);
-        self::assertInstanceOf(SubscriptionRepository::class, $repository);
+        $repository = self::getContainer()->get(SubscriptionEntryCountRepository::class);
+        self::assertInstanceOf(SubscriptionEntryCountRepository::class, $repository);
 
         return $repository;
     }

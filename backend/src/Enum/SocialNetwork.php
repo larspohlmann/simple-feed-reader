@@ -4,10 +4,26 @@ declare(strict_types=1);
 
 namespace App\Enum;
 
+use App\Exception\ValidationException;
+
 enum SocialNetwork: string
 {
+    use RequestValueParsing;
+
     case Bluesky = 'bluesky';
     case Mastodon = 'mastodon';
+
+    /**
+     * @throws ValidationException when the value names no network
+     */
+    public static function fromRequestValue(?string $value): ?self
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return self::caseOrRefusal($value, 'network');
+    }
 
     public function displayName(): string
     {

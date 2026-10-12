@@ -12,6 +12,7 @@ import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testi
 import { describeShortMarking } from '../../../../testing/short-marking-testing';
 import { describePortraitCover } from '../../../../testing/portrait-cover-testing';
 import { anEntry } from '../../../../testing/entry-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -65,6 +66,32 @@ function pressSpace(target: HTMLElement): void {
 }
 
 describe('EntryRowComponent', () => {
+  it('links an author source out to their profile and shows their avatar', () => {
+    const fixture = mount(
+      entry({
+        poster: {
+          name: 'Bob',
+          url: 'https://bsky.app/profile/bob',
+          imageUrl: 'https://cdn.example/bob.png',
+        },
+      }),
+    );
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('.meta a');
+
+    expect(link.getAttribute('href')).toBe('https://bsky.app/profile/bob');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toBe('noopener noreferrer');
+    expect(link.textContent).toContain('Bob');
+    expect(fixture.nativeElement.querySelector('.meta img.avatar')).not.toBeNull();
+  });
+
+  it('keeps a plain source label when the entry has no profile', () => {
+    const meta: HTMLElement = mount(entry()).nativeElement.querySelector('.meta');
+
+    expect(meta.querySelector('a')).toBeNull();
+    expect(meta.textContent).toContain('heise');
+  });
+
   describeShortMarking((over) => mount(entry(over)));
   describePortraitCover((over) => mount(entry(over)));
 
@@ -80,6 +107,13 @@ describe('EntryRowComponent', () => {
         provideRouter([]),
       ],
     });
+  });
+
+  it("names an authorless Home post by the Home's label", () => {
+    holdUnrenamedHome(7);
+    const element = mount(authorlessHomePost(7)).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.meta')?.textContent).toContain('Home@bsky');
   });
 
   it('renders title, source, snippet and the https thumbnail', () => {

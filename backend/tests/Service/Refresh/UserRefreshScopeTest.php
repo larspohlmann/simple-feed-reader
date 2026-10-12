@@ -8,9 +8,12 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Service\Refresh\UserRefreshScope;
 use App\Tests\DbTestCase;
+use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -94,6 +97,26 @@ final class UserRefreshScopeTest extends DbTestCase
 
         self::assertSame($this->feed->requireId(), $request->feedId);
         self::assertNull($request->tagId);
+    }
+
+    public function testANetworkRefreshesExactlyItsFeedsOfTheUser(): void
+    {
+        $fixtures = new NetworkFeedSubscriptions($this->entityManager);
+        $home = $fixtures->subscribe($this->user, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
+        $profile = $fixtures->subscribe($this->user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $fixtures->subscribe($this->user, NetworkFeedSubscriptions::MASTODON_PROFILE);
+        $stranger = $this->userFactory()->create('refresh-scope-network-stranger@example.com');
+        $fixtures->subscribe($stranger, 'https://bsky.app/profile/bob.bsky.social/rss');
+
+        $request = $this->scope()->requestForNetwork($this->user->requireId(), SocialNetwork::Bluesky);
+
+        self::assertSame($this->user->requireId(), $request->userId);
+        self::assertSame(
+            [$home->getFeed()->requireId(), $profile->getFeed()->requireId()],
+            $request->feedSet?->feedIds,
+        );
+        self::assertSame('network-bluesky', $request->feedSet->key);
+        self::assertSame(25, $request->budgetSeconds);
     }
 
     private function scope(): UserRefreshScope

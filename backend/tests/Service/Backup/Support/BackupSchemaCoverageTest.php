@@ -28,6 +28,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\SocialAccount;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -128,6 +129,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'user handles and mails around; credentials do not belong in one.',
         SocialAccount::class => 'Connected Bluesky/Mastodon accounts and their sealed credentials. A backup is a file '
             . 'that leaves the server, and the credential is bound to this instance\'s key; a restore reconnects.',
+        SocialFeed::class => 'Which feeds are a connected account\'s private timeline, lists and custom feeds (#1599). '
+            . 'They belong to an account a backup drops; the export leaves their feeds and posts out too.',
         UserIdentity::class => 'OAuth identity links — see NEVER_BACKED_UP\'s reasoning.',
         ActionToken::class => 'Short-lived, single-use verification and reset tokens.',
         RecommendationSettings::class => 'The "For you" settings — guidance prompt, learned profile, '
@@ -207,6 +210,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ],
         Feed::class => [
             'status' => 'Live fetch state, not the user\'s data. A restored feed starts clean.',
+            'imageCheckedAt' => 'Sweep bookkeeping: unset, a restored profile feed is asked for its picture at once.',
             'etag' => 'The HTTP validator for the last body this instance fetched. A restore has '
                 . 'no such body, and a carried-over validator would make the first refresh take a '
                 . '304 over an empty feed.',

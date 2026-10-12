@@ -8,15 +8,20 @@ use App\Entity\AiProviderSettings;
 use App\Entity\Feed;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationSettings;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Account\Exception\LastAdminException;
 use App\Exception\ValidationException;
 use App\Service\Account\AccountDeleter;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
+use Symfony\Component\Clock\MockClock;
 
 final class AccountDeleterTest extends DbTestCase
 {
@@ -190,5 +195,31 @@ final class AccountDeleterTest extends DbTestCase
 
         $this->entityManager->clear();
         self::assertNull($this->entityManager->getRepository(User::class)->find($userId));
+    }
+
+    public function testDeletionTakesTheAccountsPrivateSocialFeeds(): void
+    {
+        $admin = $this->userFactory->create('admin-social@example.com', roles: ['ROLE_ADMIN']);
+        $target = $this->userFactory->create('target-social@example.com');
+        $account = SocialAccounts::blueskyOf($target);
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+        $privateFeeds = PrivateFeedsWiring::build(
+            self::getContainer(),
+            $this->entityManager,
+            new MockClock('2026-10-12 12:00:00', 'UTC'),
+        );
+        $privateFeeds->create($account, PrivateFeedModel::home());
+        $feed = $this->entityManager->getRepository(Feed::class)->findOneBy([
+            'url' => sprintf('social:bluesky:%d:home', $account->requireId()),
+        ]);
+        self::assertNotNull($feed);
+        $feedId = $feed->requireId();
+
+        $this->deleter->deleteAsAdmin($target, $admin);
+
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(Feed::class, $feedId));
+        self::assertSame(0, $this->entityManager->getRepository(SocialFeed::class)->count([]));
     }
 }

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\Feed;
+use App\Entity\SocialAccount;
 use App\Entity\Subscription;
+use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\Support\PlainText;
 use App\Service\Url\Support\FeedWebsite;
@@ -19,13 +22,19 @@ final class SubscriptionJson
      */
     private const int DESCRIPTION_MAX = 1000;
 
+    private const string PROFILE_KIND = 'profile';
+
     /**
-     * @param list<Subscription> $subscriptions
+     * @param list<Subscription>  $subscriptions
+     * @param list<SocialAccount> $socialAccounts the handles the sidebar labels a network's accounts with
      *
      * @return array<string, mixed>
      */
-    public static function list(array $subscriptions, SubscriptionTalliesModel $tallies): array
-    {
+    public static function list(
+        array $subscriptions,
+        SubscriptionTalliesModel $tallies,
+        array $socialAccounts,
+    ): array {
         return [
             'subscriptions' => array_map(
                 static fn (Subscription $subscription): array => self::one(
@@ -36,6 +45,7 @@ final class SubscriptionJson
                 $subscriptions,
             ),
             ...SubscriptionCountsJson::surfaceTotals($tallies),
+            'socialAccounts' => array_map(self::socialAccount(...), $socialAccounts),
         ];
     }
 
@@ -53,7 +63,8 @@ final class SubscriptionJson
      *   consecutiveFailures: int, lastErrorMessage: string|null,
      *   position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
-     *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool
+     *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
+     *   social: array{network: string, accountId: int|null, kind: string}|null
      * }
      */
     public static function one(Subscription $subscription, int $unreadCount = 0, int $entryCount = 0): array
@@ -77,8 +88,7 @@ final class SubscriptionJson
             'description' => self::description($feed),
             'imageUrl' => $feed->getImageUrl(),
             'status' => $feed->getStatus()->value,
-            // 'xml' or 'scraped' — lets the UI mark synthesized feeds, whose
-            // entries are teasers rather than the feed author's own content.
+            // A SourceFormat value: lets the UI mark synthesized feeds and private social feeds.
             'sourceFormat' => $feed->getSourceFormat(),
             'createdAt' => $subscription->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'lastFetchedAt' => $feed->getLastFetchedAt()?->format(\DateTimeInterface::ATOM),
@@ -93,6 +103,40 @@ final class SubscriptionJson
             'entryCount' => $entryCount,
             'includeInAllItems' => $subscription->isIncludeInAllItems(),
             'includeInForYou' => $subscription->isIncludeInForYou(),
+            'social' => self::social($feed),
+        ];
+    }
+
+    /**
+     * Read from the feed's own URL, so every endpoint that returns a subscription carries it without a query. A
+     * private feed's synthetic URL names its account; any other feed that is a network's profile feed is `profile`.
+     *
+     * @return array{network: string, accountId: int|null, kind: string}|null
+     */
+    private static function social(Feed $feed): ?array
+    {
+        $address = SocialFeedClassifier::privateAddressOf($feed);
+        if (null !== $address) {
+            return [
+                'network' => $address->network->value,
+                'accountId' => $address->accountId,
+                'kind' => $address->kind->value,
+            ];
+        }
+        $network = ProfileFeedUrl::networkOf($feed->getUrl());
+
+        return null === $network
+            ? null
+            : ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND];
+    }
+
+    /** @return array{id: int, network: string, handle: string} */
+    private static function socialAccount(SocialAccount $account): array
+    {
+        return [
+            'id' => $account->requireId(),
+            'network' => $account->getNetwork()->value,
+            'handle' => $account->getHandle(),
         ];
     }
 

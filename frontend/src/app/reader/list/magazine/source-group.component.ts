@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
@@ -7,6 +7,8 @@ import { EntryCompactComponent } from './blocks/entry-compact/entry-compact.comp
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { feedAvatarUrl } from '../../state/social-sections';
 
 @Component({
   selector: 'app-source-group',
@@ -32,6 +34,11 @@ export class SourceGroupComponent {
   /** How many rows to show before the tail is expanded. */
   readonly previewCount = input.required<number>();
   readonly tags = input<SubscriptionTagDto[]>([]);
+
+  private readonly rows = inject(SubscriptionRows);
+  private readonly subscription = computed(() => this.rows.find(this.subscriptionId()));
+  protected readonly avatarUrl = computed(() => feedAvatarUrl(this.subscription()));
+  protected readonly name = computed(() => this.subscription()?.title ?? this.source());
 
   /** Ephemeral: the widget starts collapsed on every fresh render. Survives an
    *  article open/close (the list stays mounted), resets on reload/reselect. */

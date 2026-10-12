@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\Entry;
 use App\Entity\Subscription;
+use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -41,17 +42,37 @@ final class SubscriptionRepository extends ServiceEntityRepository
     public function findForUserWithTags(int $userId): array
     {
         /** @var list<Subscription> $rows */
-        $rows = $this->createQueryBuilder('s')
+        $rows = $this->withTagsForUser($userId)->getQuery()->getResult();
+
+        return $rows;
+    }
+
+    /**
+     * What an OPML or backup export carries: a private social feed is read through an account neither file holds.
+     *
+     * @return list<Subscription>
+     */
+    public function findExportableForUserWithTags(int $userId): array
+    {
+        /** @var list<Subscription> $rows */
+        $rows = $this->withTagsForUser($userId)
+            ->andWhere('f.sourceFormat NOT IN (:socialFormats)')
+            ->setParameter('socialFormats', SourceFormat::SOCIAL)
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
+    private function withTagsForUser(int $userId): QueryBuilder
+    {
+        return $this->createQueryBuilder('s')
             ->leftJoin('s.feed', 'f')->addSelect('f')
             ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
             ->leftJoin('st.tag', 't')->addSelect('t')
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->orderBy('s.createdAt', 'ASC')
-            ->addOrderBy('s.id', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        return $rows;
+            ->addOrderBy('s.id', 'ASC');
     }
 
     /** @return list<Subscription> */
@@ -168,28 +189,5 @@ final class SubscriptionRepository extends ServiceEntityRepository
             ->getResult();
 
         return $rows;
-    }
-
-    /**
-     * @return array<int, int> subscription id => entries in its feed, read or not
-     */
-    public function entryCountsForUser(int $userId): array
-    {
-        /** @var list<array{subscriptionId: int, entryCount: int}> $rows */
-        $rows = $this->createQueryBuilder('s')
-            ->select('s.id AS subscriptionId', 'COUNT(e.id) AS entryCount')
-            ->join(Entry::class, 'e', 'ON', 'e.feed = s.feed')
-            ->andWhere('s.user = :user')
-            ->groupBy('s.id')
-            ->setParameter('user', $userId)
-            ->getQuery()
-            ->getScalarResult();
-
-        $counts = [];
-        foreach ($rows as $row) {
-            $counts[$row['subscriptionId']] = (int) $row['entryCount'];
-        }
-
-        return $counts;
     }
 }

@@ -344,5 +344,11 @@
     }
   </div>
 
+  @if (!organising()) {
+    @for (section of socialSections(); track section.network) {
+      <app-sidebar-social-section [section]="section" [selection]="selection()" />
+    }
+  }
+
   <app-sidebar-foot [(organising)]="organising" />
 </nav>

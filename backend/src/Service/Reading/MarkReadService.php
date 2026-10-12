@@ -10,6 +10,7 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Reading\Model\ReadScopeKind;
 use App\Service\Reading\Model\ReadScopeModel;
+use App\Service\Social\NetworkSubscriptions;
 
 /** "Mark all read until T" for a scope: every subscription the scope covers is marked by watermark. */
 final readonly class MarkReadService
@@ -18,6 +19,7 @@ final readonly class MarkReadService
         private EntryReadMarker $readMarker,
         private SubscriptionRepository $subscriptions,
         private TagRepository $tags,
+        private NetworkSubscriptions $networkSubscriptions,
     ) {
     }
 
@@ -37,6 +39,7 @@ final readonly class MarkReadService
                 $userId,
                 $this->tags->getOneForUser($userId, $scope->targetId())->requireId(),
             ),
+            ReadScopeKind::Network => $this->networkSubscriptions->of($userId, $scope->targetNetwork()),
         };
     }
 }

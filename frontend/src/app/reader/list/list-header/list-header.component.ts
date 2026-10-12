@@ -14,6 +14,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
+import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { ListOrder, TagDto } from '../../models';
 import {
   Selection,
@@ -60,6 +61,7 @@ export interface TitleCount {
     ListActionDirective,
     FaviconComponent,
     TagGlyphComponent,
+    NetworkLogoComponent,
   ],
   templateUrl: './list-header.component.html',
   styleUrl: './list-header.component.scss',
@@ -77,6 +79,7 @@ export class ListHeaderComponent {
   readonly titleCount = input<TitleCount>({ value: 0, counts: 'items' });
   readonly titleTag = input<TagDto | null>(null);
   readonly titleFaviconUrl = input<string | null>(null);
+  readonly titleAvatarUrl = input<string | null>(null);
   readonly lastRefreshed = input<string | null>(null);
   readonly nextRefresh = input<string | null>(null);
   readonly titleLeading = input<TemplateRef<unknown> | null>(null);

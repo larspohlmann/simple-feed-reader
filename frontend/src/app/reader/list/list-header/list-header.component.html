@@ -17,7 +17,14 @@
         <!-- The feed's own favicon, the same icon the sidebar row shows, so the
              heading and the row that led here read as the same feed. It sits
              inside the ellipsised h2 so the clip (from the end) never touches it. -->
-        <app-favicon [url]="titleFaviconUrl()" [size]="collapsed() ? 16 : 20" />
+        <app-favicon
+          [url]="titleFaviconUrl()"
+          [avatarUrl]="titleAvatarUrl()"
+          [size]="collapsed() ? 16 : 20"
+        />
+      }
+      @if (selection().network; as network) {
+        <app-network-logo [network]="network" />
       }
       @if (titleIcon(); as icon) {
         <!-- The fixed views (All items, Favorites, Kept, Recently read, For you,

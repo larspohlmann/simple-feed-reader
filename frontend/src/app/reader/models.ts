@@ -1,4 +1,6 @@
 import { LinkCardDto } from './link-card/link-card';
+import { SocialAccountRefDto, SocialFeedRefDto } from './social-feed';
+import { SocialNetworkName } from '../core/social-network';
 
 /** One saved search an entry belongs to, as embedded on the entry itself
  *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup
@@ -118,6 +120,8 @@ export interface SubscriptionDto {
   includeInAllItems: boolean;
   /** False excludes this feed's entries from For-you recommendations. */
   includeInForYou: boolean;
+  /** Set for a private timeline, list or custom feed of a connected account (#1599); null for any other feed. */
+  social: SocialFeedRefDto | null;
 }
 
 /** The sidebar bootstrap payload: the feed list plus the user-wide favourite,
@@ -128,6 +132,7 @@ export interface SubscriptionsResponse {
   favoritesCount: number;
   keptCount: number;
   viewedCount: number;
+  socialAccounts: SocialAccountRefDto[];
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed
@@ -216,6 +221,8 @@ export interface EntryDto {
   createdAt: string;
   subscriptionId: number;
   source: string;
+  /** Who posted it when that is someone other than the feed: a private feed's author, a profile feed's person. */
+  poster: { name: string; url: string | null; imageUrl: string | null } | null;
   /** Absolute https favicon URL for the entry's feed, or null if unresolved. */
   faviconUrl: string | null;
   isHidden: boolean;
@@ -360,6 +367,8 @@ export interface EntryQuery {
   view: EntryView;
   subscription?: number;
   tag?: number;
+  /** A network's combined view: every feed of that network, private and profile alike. */
+  network?: SocialNetworkName;
   /** Views that cannot express "only unread" through `view=unread` carry the
    *  refinement as a flag beside their own view or search term. */
   unread?: boolean;
@@ -371,11 +380,10 @@ export interface EntryQuery {
   order?: ListOrder;
 }
 
-/** The scopes `POST /api/entries/mark-read` accepts, each identified by an
- *  optional id. A search is deliberately NOT one of them: it has its own
- *  endpoint, and widening this union would let `markRead('search', …)`
- *  type-check against a request the backend rejects. See `MarkReadTarget` in query.ts. */
-export type MarkReadScope = 'all' | 'feed' | 'tag';
+/** The scopes `POST /api/entries/mark-read` accepts. A search is deliberately NOT one of them: it has its own
+ *  endpoint, and widening this union would let `markRead` type-check a search against a request the backend
+ *  rejects. See `MarkReadTarget` in query.ts. */
+export type MarkReadScope = 'all' | 'feed' | 'tag' | 'network';
 
 export interface EntryStatePatch {
   isHidden?: boolean;
@@ -497,20 +505,4 @@ export interface RecommendationRunReport {
     generatedAt: string | null;
     newestRunId: number | null;
   };
-}
-
-/** The two per-feed inclusion switches, as a bulk change. An omitted field
- *  leaves the stored value alone — the API's null-means-unchanged convention. */
-export interface SubscriptionFlags {
-  includeInAllItems?: boolean;
-  includeInForYou?: boolean;
-}
-
-/** One bulk change across many feeds. At most one tag is added and at most one
- *  removed per request; the page never needs more, and a single tag keeps the
- *  confirmation text exact. */
-export interface BulkSubscriptionUpdate extends SubscriptionFlags {
-  subscriptionIds: number[];
-  addTagIds?: number[];
-  removeTagIds?: number[];
 }

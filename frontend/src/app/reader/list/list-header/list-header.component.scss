@@ -58,6 +58,19 @@ h2 app-favicon {
   margin-right: var(--space-2);
 }
 
+/* A network's logo, at the tag glyph's size and nudge; it steps down with the heading on collapse. */
+h2 app-network-logo {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  margin-right: var(--space-2);
+  transform: translateY(-0.1em);
+}
+
+:host(.collapsed) h2 app-network-logo {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
 /* Fixed-view lead icon (All items, Favorites, …), nudged to match the tag
    glyph above. `> app-icon` (direct child) so it never also reaches the
    app-icon the tag glyph nests, already nudged once (#411). */
