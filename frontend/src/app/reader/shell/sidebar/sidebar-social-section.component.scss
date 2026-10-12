@@ -1,5 +1,6 @@
 @use 'sidebar-row' as row;
 @include row.section-head;
+@include row.nav-states('.section-link', '.section-count');
 
 :host {
   display: contents;
@@ -22,22 +23,9 @@
 
 .section-count {
   margin-inline: auto var(--space-2);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
 }
 
-@media (hover: hover) {
-  .section-link:hover {
-    background: var(--surface-0);
-  }
-}
-
-.section-link.active {
-  background: var(--accent-soft);
-}
-
-.section-link.active .label,
-.section-link.active .section-count {
+.section-link.active .label {
   color: var(--accent);
 }
 

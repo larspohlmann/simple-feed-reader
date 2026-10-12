@@ -6,6 +6,7 @@
 @include row.chevzone;
 @include row.row-menu;
 @include row.section-head;
+@include row.section-toggle;
 
 .sidebar {
   padding: var(--space-3) var(--space-2);
