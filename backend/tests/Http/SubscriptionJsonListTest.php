@@ -41,23 +41,28 @@ final class SubscriptionJsonListTest extends DbTestCase
         self::assertSame(41, $payload['viewedCount']);
     }
 
-    public function testTheListNamesEachConnectedAccountsHandleOnce(): void
+    public function testTheListNamesEachConnectedAccountInOrder(): void
     {
         $user = new User('subscription-list-social@example.com', new \DateTimeImmutable('2026-10-12T00:00:00Z'));
         $this->entityManager->persist($user);
         $this->entityManager->flush();
-        $account = SocialAccounts::blueskyOf($user);
-        $this->entityManager->persist($account);
+        $bluesky = SocialAccounts::blueskyOf($user);
+        $mastodon = SocialAccounts::mastodonOf($user);
+        $this->entityManager->persist($bluesky);
+        $this->entityManager->persist($mastodon);
         $this->entityManager->flush();
 
         $payload = SubscriptionJson::list(
             [],
             new SubscriptionTalliesModel([], [], ['favorites' => 0, 'kept' => 0, 'viewed' => 0]),
-            [$account],
+            [$bluesky, $mastodon],
         );
 
         self::assertSame(
-            [['id' => $account->requireId(), 'network' => 'bluesky', 'handle' => '@alice.bsky.social']],
+            [
+                ['id' => $bluesky->requireId(), 'network' => 'bluesky', 'handle' => '@alice.bsky.social'],
+                ['id' => $mastodon->requireId(), 'network' => 'mastodon', 'handle' => '@alice@mastodon.example'],
+            ],
             $payload['socialAccounts'],
         );
     }

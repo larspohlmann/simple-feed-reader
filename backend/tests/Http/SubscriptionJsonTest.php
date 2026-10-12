@@ -342,6 +342,17 @@ final class SubscriptionJsonTest extends TestCase
 
     public function testASocialLookingUrlOfAnRssFeedIsNoPrivateFeed(): void
     {
-        self::assertNull(SubscriptionJson::one($this->subscriptionTo(new Feed('social:bluesky:12:home')))['social']);
+        $feed = new Feed('social:bluesky:12:home');
+        $feed->setSourceFormat(SourceFormat::XML);
+
+        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['social']);
+    }
+
+    public function testASocialFormatWithAnUnparsableUrlHasNoSocialPart(): void
+    {
+        $feed = new Feed('social:bluesky:0:home');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['social']);
     }
 }

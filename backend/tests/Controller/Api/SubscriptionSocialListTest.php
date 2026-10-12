@@ -19,6 +19,9 @@ final class SubscriptionSocialListTest extends ApiTestCase
         $account = SocialAccounts::blueskyOf($user);
         $this->entityManager()->persist($account);
         $this->entityManager()->flush();
+        $stranger = $this->factory()->create('social-list-stranger@example.test');
+        $this->entityManager()->persist(SocialAccounts::mastodonOf($stranger));
+        $this->entityManager()->flush();
         $privateFeeds = self::getContainer()->get(PrivateFeeds::class);
         self::assertInstanceOf(PrivateFeeds::class, $privateFeeds);
         $privateFeeds->create($account, PrivateFeedModel::home());

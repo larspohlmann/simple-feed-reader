@@ -106,8 +106,7 @@ final class SubscriptionJson
     }
 
     /**
-     * Read from the feed's own synthetic URL, so every endpoint that returns one subscription carries it without a
-     * query. The format must agree: only refreshes route by it.
+     * Read from the feed's own synthetic URL, so every endpoint that returns a subscription carries it without a query.
      *
      * @return array{network: string, accountId: int, kind: string}|null
      */
