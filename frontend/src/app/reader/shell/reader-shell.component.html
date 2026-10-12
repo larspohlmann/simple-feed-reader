@@ -218,7 +218,7 @@
 <ng-template #feedIntro>
   @if (heading.feedIntroSubscription(); as sub) {
     <app-feed-intro
-      [title]="sub.title"
+      [title]="heading.feedIntroTitle()"
       [description]="sub.description"
       [imageUrl]="sub.imageUrl"
       [faviconUrl]="sub.faviconUrl"

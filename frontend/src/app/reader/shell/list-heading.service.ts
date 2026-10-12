@@ -63,6 +63,11 @@ export class ListHeading {
     return hasIntro ? subscription : null;
   });
 
+  readonly feedIntroTitle = computed(() => {
+    const subscription = this.feedIntroSubscription();
+    return subscription === null ? null : this.nameOf(subscription);
+  });
+
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
 
   /** A search request in flight, not merely any list loading. */
@@ -101,8 +106,12 @@ export class ListHeading {
     },
   };
 
+  private nameOf(subscription: SubscriptionDto): string {
+    return displayTitle(subscription, (network) => homeLabel(this.i18n, network));
+  }
+
   private feedTitle(subscription: SubscriptionDto): string {
-    const title = displayTitle(subscription, (network) => homeLabel(this.i18n, network));
+    const title = this.nameOf(subscription);
     const handle = this.sharedNetworkHandle(subscription);
     return handle !== null && isUnrenamedHome(subscription) ? `${title} · ${handle}` : title;
   }

@@ -23,6 +23,10 @@ const home = (accountId: number, over: Partial<SubscriptionDto> = {}): Subscript
   });
 
 function headingFor(subscription: SubscriptionDto, sections: SocialSection[]): string {
+  return listHeadingFor(subscription, sections).title();
+}
+
+function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]): ListHeading {
   const selection: Selection = { kind: 'subscription', id: subscription.id, unread: true };
   TestBed.configureTestingModule({
     imports: [provideTranslocoTesting()],
@@ -37,10 +41,10 @@ function headingFor(subscription: SubscriptionDto, sections: SocialSection[]): s
       { provide: EntriesStore, useValue: {} },
       { provide: RecommendationsService, useValue: {} },
       { provide: SavedSearchesStore, useValue: {} },
-      { provide: ReadingLayoutService, useValue: {} },
+      { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
     ],
   });
-  return TestBed.inject(ListHeading).title();
+  return TestBed.inject(ListHeading);
 }
 
 const accountsOf = (...handles: string[]): SocialSection => ({
@@ -68,5 +72,21 @@ describe('ListHeading for a Home timeline', () => {
     const renamed = home(1, { title: 'Main', customTitle: 'Main' });
 
     expect(headingFor(renamed, [accountsOf('@a', '@b')])).toBe('Main');
+  });
+});
+
+describe('ListHeading feed intro for a Home timeline', () => {
+  const site = { siteUrl: 'https://bsky.app' };
+
+  it('names an unrenamed Home through i18n, as the heading does', () => {
+    const heading = listHeadingFor(home(1, site), [accountsOf('@alice.bsky.social')]);
+
+    expect(heading.feedIntroTitle()).toBe('Home@bsky');
+  });
+
+  it('keeps a renamed Home under its own name', () => {
+    const renamed = home(1, { ...site, title: 'Main', customTitle: 'Main' });
+
+    expect(listHeadingFor(renamed, [accountsOf('@a')]).feedIntroTitle()).toBe('Main');
   });
 });

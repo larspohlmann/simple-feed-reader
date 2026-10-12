@@ -3214,6 +3214,8 @@ describe('ReaderShellComponent', () => {
         description: string | null;
         imageUrl: string | null;
         siteUrl: string | null;
+        title?: string;
+        social?: { network: string; accountId: number; kind: string };
       },
       layout: ReadingLayout = 'magazine',
     ): HTMLElement {
@@ -3256,6 +3258,18 @@ describe('ReaderShellComponent', () => {
       });
 
       expect(host.querySelector('app-feed-intro')).not.toBeNull();
+    });
+
+    it("names an unrenamed Home as the list heading does, not by the backend's title", () => {
+      const host = mountWithSubscriptionSelected({
+        description: null,
+        imageUrl: null,
+        siteUrl: 'https://bsky.app/',
+        title: 'Home',
+        social: { network: 'bluesky', accountId: 3, kind: 'home' },
+      });
+
+      expect(host.querySelector('app-feed-intro .title')?.textContent?.trim()).toBe('Home@bsky');
     });
 
     it('shows no feed intro in the list layout', () => {
