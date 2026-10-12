@@ -9,6 +9,7 @@ final readonly class SocialImportFeedModel
     public function __construct(
         public string $feedUrl,
         public ?string $title,
+        public ?string $imageUrl = null,
     ) {
     }
 }

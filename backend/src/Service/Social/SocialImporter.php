@@ -125,6 +125,7 @@ final readonly class SocialImporter
             static fn (SocialImportFeedModel $feed): BulkSubscribeItemModel => new BulkSubscribeItemModel(
                 $feed->feedUrl,
                 feedTitle: $feed->title,
+                feedImageUrl: $feed->imageUrl,
             ),
             $feeds,
         );

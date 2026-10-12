@@ -70,7 +70,7 @@ final readonly class ImportCandidates
     {
         return array_map(
             static fn (SocialCollectionModel $collection): CollectionCandidateModel => CollectionCandidateModel::of(
-                PrivateFeedModel::of($kind, $collection->id, $collection->name),
+                PrivateFeedModel::of($kind, $collection->id, $collection->name)->withImageUrl($collection->avatarUrl),
                 $subscribed,
             ),
             CandidateOrder::collections($collections),

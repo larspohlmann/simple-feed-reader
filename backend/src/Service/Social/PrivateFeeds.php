@@ -81,6 +81,9 @@ final readonly class PrivateFeeds
         $subscription->setIncludeInForYou(false);
         $feed = $subscription->getFeed();
         $feed->setSiteUrl(PrivateFeedSite::of($account, $privateFeed));
+        if (null !== $privateFeed->imageUrl) {
+            $feed->setImageUrl($privateFeed->imageUrl);
+        }
         if (null === $socialFeed) {
             $this->entityManager->persist(new SocialFeed($account, $feed, $privateFeed->kind, $privateFeed->remoteId));
         }

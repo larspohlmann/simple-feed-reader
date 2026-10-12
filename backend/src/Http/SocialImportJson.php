@@ -42,18 +42,24 @@ final readonly class SocialImportJson
             'handle' => $candidate->account->handle,
             'displayName' => $candidate->account->displayName,
             'feedUrl' => $candidate->account->feedUrl,
+            'avatarUrl' => $candidate->account->avatarUrl,
             'state' => $candidate->state->value,
             'subscriptionId' => $candidate->subscriptionId,
         ];
     }
 
-    /** @return array{kind: string, id: string|null, name: string, state: string, subscriptionId: int|null} */
+    /**
+     * @return array{
+     *   kind: string, id: string|null, name: string, avatarUrl: string|null, state: string, subscriptionId: int|null
+     * }
+     */
     private static function collection(CollectionCandidateModel $candidate): array
     {
         return [
             'kind' => $candidate->privateFeed->kind->value,
             'id' => $candidate->privateFeed->remoteId,
             'name' => $candidate->privateFeed->name,
+            'avatarUrl' => $candidate->privateFeed->imageUrl,
             'state' => $candidate->state->value,
             'subscriptionId' => $candidate->subscriptionId,
         ];

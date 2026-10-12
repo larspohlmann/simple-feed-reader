@@ -26,6 +26,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class SocialImportControllerTest extends ApiTestCase
 {
+    private const string BOB_FEED = 'https://bsky.app/profile/did:plc:bob/rss';
+    private const string EVE_FEED = 'https://bsky.app/profile/did:plc:eve/rss';
+
     /** Must match framework.rate_limiter.social_import.limit in rate_limiter.yaml. */
     private const int IMPORT_BUDGET = 10;
 
@@ -169,6 +172,77 @@ final class SocialImportControllerTest extends ApiTestCase
         $this->requestCandidates($client, $account);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    public function testTheCandidatesCarryTheirAvatars(): void
+    {
+        $client = $this->clientWith(new StubSocialCandidates(new NetworkCandidatesModel(
+            [new FollowedAccountModel('did:plc:bob', '@bob', null, self::BOB_FEED, 'https://cdn.example/bob.jpg')],
+            [new SocialCollectionModel('at://list/a', 'Artists', 'https://cdn.example/list.jpg')],
+            [],
+            false,
+        )));
+        $user = $this->signIn($client, 'import-candidates-avatars@example.test');
+
+        $this->requestCandidates($client, $this->blueskyAccountOf($user));
+
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['follows']);
+        self::assertIsArray($payload['follows'][0]);
+        self::assertSame('https://cdn.example/bob.jpg', $payload['follows'][0]['avatarUrl']);
+        self::assertIsArray($payload['lists']);
+        self::assertSame(
+            self::collection('list', 'at://list/a', 'Artists', 'https://cdn.example/list.jpg'),
+            $payload['lists'][1],
+        );
+    }
+
+    public function testImportGivesANewProfileFeedTheFollowsWebAvatar(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-avatar@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['subscribe' => [
+            ['feedUrl' => self::BOB_FEED, 'title' => 'Bob', 'avatarUrl' => 'https://cdn.example/bob.jpg'],
+            ['feedUrl' => self::EVE_FEED, 'title' => 'Eve', 'avatarUrl' => 'javascript:alert(1)'],
+        ]]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('https://cdn.example/bob.jpg', $this->feedAt(self::BOB_FEED)->getImageUrl());
+        self::assertNull($this->feedAt(self::EVE_FEED)->getImageUrl());
+    }
+
+    public function testImportLeavesTheImageOfAFeedThatAlreadyExists(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $other = $this->signIn($client, 'import-avatar-first@example.test');
+        $this->subscribe($other, self::BOB_FEED);
+        $user = $this->signIn($client, 'import-avatar-second@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['subscribe' => [
+            ['feedUrl' => self::BOB_FEED, 'title' => 'Bob', 'avatarUrl' => 'https://cdn.example/elsewhere.jpg'],
+        ]]);
+
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->feedAt(self::BOB_FEED)->getImageUrl());
+    }
+
+    public function testImportGivesAListItsAvatar(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-list-avatar@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['collections' => [[
+            'kind' => 'list',
+            'id' => 'at://did:plc:bob/app.bsky.graph.list/3l1',
+            'name' => 'Writers',
+            'avatarUrl' => 'https://cdn.example/writers.jpg',
+        ]]]);
+
+        self::assertResponseIsSuccessful();
+        $socialFeed = $this->entityManager()->getRepository(SocialFeed::class)->findOneBy([]);
+        self::assertNotNull($socialFeed);
+        self::assertSame('https://cdn.example/writers.jpg', $socialFeed->getFeed()->getImageUrl());
     }
 
     public function testImportSubscribesTheChosenFollowsAndRemovesTheChosenSubscriptions(): void
@@ -449,15 +523,34 @@ final class SocialImportControllerTest extends ApiTestCase
             'handle' => $handle,
             'displayName' => null,
             'feedUrl' => 'https://bsky.app/profile/' . $identity . '/rss',
+            'avatarUrl' => null,
             'state' => 'new',
             'subscriptionId' => null,
         ], $overrides);
     }
 
-    /** @return array{kind: string, id: ?string, name: string, state: string, subscriptionId: null} */
-    private static function collection(string $kind, ?string $id, string $name): array
+    /**
+     * @return array{kind: string, id: ?string, name: string, avatarUrl: ?string, state: string, subscriptionId: null}
+     */
+    private static function collection(string $kind, ?string $id, string $name, ?string $avatarUrl = null): array
     {
-        return ['kind' => $kind, 'id' => $id, 'name' => $name, 'state' => 'new', 'subscriptionId' => null];
+        return [
+            'kind' => $kind,
+            'id' => $id,
+            'name' => $name,
+            'avatarUrl' => $avatarUrl,
+            'state' => 'new',
+            'subscriptionId' => null,
+        ];
+    }
+
+    private function feedAt(string $url): Feed
+    {
+        $this->entityManager()->clear();
+        $feed = $this->entityManager()->getRepository(Feed::class)->findOneBy(['url' => $url]);
+        self::assertNotNull($feed);
+
+        return $feed;
     }
 
     private static function follow(string $did, string $handle): FollowedAccountModel

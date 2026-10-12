@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Dto\Social;
 
+use App\Entity\Feed;
 use App\Enum\SocialFeedKind;
 use App\Service\Social\Model\PrivateFeedModel;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class SocialImportCollectionItem
@@ -22,6 +24,7 @@ final readonly class SocialImportCollectionItem
         #[Assert\NotBlank]
         #[Assert\Length(max: 512)]
         public string $name = '',
+        public ?string $avatarUrl = null,
     ) {
     }
 
@@ -29,6 +32,7 @@ final readonly class SocialImportCollectionItem
     {
         $id = trim($this->id ?? '');
 
-        return PrivateFeedModel::of(SocialFeedKind::from($this->kind), '' === $id ? null : $id, trim($this->name));
+        return PrivateFeedModel::of(SocialFeedKind::from($this->kind), '' === $id ? null : $id, trim($this->name))
+            ->withImageUrl(AbsoluteHttpUrl::orNullWithin($this->avatarUrl, Feed::IMAGE_URL_MAX));
     }
 }

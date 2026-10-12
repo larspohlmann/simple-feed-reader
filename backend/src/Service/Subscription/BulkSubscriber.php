@@ -116,6 +116,7 @@ final readonly class BulkSubscriber
     {
         // Seeded for the sidebar before the first fetch; only on creation, since a shared row is not ours to retitle.
         $feed = $this->feedFactory->create($item->feedUrl, $item->sourceFormat, $item->feedTitle);
+        $feed->setImageUrl($item->feedImageUrl);
         $feed->scheduleNextFetchAt($this->clock->now());
         $this->entityManager->persist($feed);
 
