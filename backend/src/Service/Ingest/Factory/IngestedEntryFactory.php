@@ -43,8 +43,8 @@ final readonly class IngestedEntryFactory
         );
         $entry->setHeadline($parsed->headline);
         $entry->setAuthor(self::cut($parsed->author, self::AUTHOR_MAX));
-        $entry->setAuthorUrl(self::cut(AbsoluteHttpUrl::orNull($parsed->authorUrl), self::URL_MAX));
-        $entry->setAuthorAvatarUrl(self::cut(AbsoluteHttpUrl::orNull($parsed->authorAvatarUrl), self::URL_MAX));
+        $entry->setAuthorUrl(self::storableUrlOrNull($parsed->authorUrl));
+        $entry->setAuthorAvatarUrl(self::storableUrlOrNull($parsed->authorAvatarUrl));
         $entry->setSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml));
         $entry->setContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
         $entry->setPublishedAt($parsed->publishedAt);
@@ -58,6 +58,13 @@ final readonly class IngestedEntryFactory
     private static function cut(?string $value, int $maxLength): ?string
     {
         return null === $value ? null : mb_substr($value, 0, $maxLength);
+    }
+
+    private static function storableUrlOrNull(?string $url): ?string
+    {
+        $absolute = AbsoluteHttpUrl::orNull($url);
+
+        return null !== $absolute && mb_strlen($absolute) <= self::URL_MAX ? $absolute : null;
     }
 
     private static function attachMedia(Entry $entry, ParsedEntryModel $parsed): void

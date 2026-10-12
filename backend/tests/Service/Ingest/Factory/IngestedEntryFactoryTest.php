@@ -152,6 +152,24 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertNull($entry->getAuthorAvatarUrl());
     }
 
+    public function testAnAuthorUrlLongerThanItsColumnIsDroppedNotCut(): void
+    {
+        $tooLong = 'https://example.com/' . str_repeat('a', 2029);
+        self::assertSame(2049, \strlen($tooLong));
+
+        $entry = $this->createWithAuthorUrl($tooLong, $tooLong);
+
+        self::assertNull($entry->getAuthorUrl());
+        self::assertNull($entry->getAuthorAvatarUrl());
+    }
+
+    public function testAnAuthorUrlThatFillsItsColumnIsKept(): void
+    {
+        $fits = 'https://example.com/' . str_repeat('a', 2028);
+
+        self::assertSame($fits, $this->createWithAuthorUrl($fits)->getAuthorUrl());
+    }
+
     private function createWithAuthorUrl(string $authorUrl, ?string $authorAvatarUrl = null): Entry
     {
         $parsed = new ParsedEntryModel(
