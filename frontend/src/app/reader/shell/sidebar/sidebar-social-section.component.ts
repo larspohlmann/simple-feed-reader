@@ -1,8 +1,9 @@
-import { Component, computed, input, linkedSignal } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SocialNetworkName } from '../../../core/social-network';
+import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SocialSection } from '../../state/social-sections';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
@@ -20,10 +21,8 @@ export class SidebarSocialSectionComponent {
   readonly section = input.required<SocialSection>();
   readonly selection = input.required<Selection>();
 
-  protected readonly expanded = linkedSignal({
-    source: () => this.section().network,
-    computation: (network) => localStorage.getItem(collapsedKey(network)) !== 'true',
-  });
+  private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
+  protected readonly expanded = this.collapsible.expanded;
   protected readonly active = computed(() => {
     const selection = this.selection();
     return selection.kind === 'network' && selection.network === this.section().network;
@@ -31,8 +30,6 @@ export class SidebarSocialSectionComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
 
   protected toggle(): void {
-    const open = !this.expanded();
-    this.expanded.set(open);
-    localStorage.setItem(collapsedKey(this.section().network), String(!open));
+    this.collapsible.toggle();
   }
 }
