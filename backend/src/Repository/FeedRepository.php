@@ -187,7 +187,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         $profilePath = BlueskyWeb::HOST . '/profile/%';
         /** @var list<Feed> $feeds */
         $feeds = $this->createQueryBuilder('f')
-            ->andWhere('LOWER(f.url) LIKE :httpsProfile OR LOWER(f.url) LIKE :httpProfile')
+            ->andWhere('f.url LIKE :httpsProfile OR f.url LIKE :httpProfile')
             ->setParameter('httpsProfile', 'https://' . $profilePath)
             ->setParameter('httpProfile', 'http://' . $profilePath)
             ->andWhere(sprintf('EXISTS (SELECT s.id FROM %s s WHERE s.feed = f)', Subscription::class))
