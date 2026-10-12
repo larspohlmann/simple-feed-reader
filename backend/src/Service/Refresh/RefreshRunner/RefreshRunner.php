@@ -6,14 +6,13 @@ namespace App\Service\Refresh\RefreshRunner;
 
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Refresh\ContentChangeMarker\ContentChangeMarkerInterface;
-use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\MissingFaviconResolver;
 use App\Service\Refresh\Model\RefreshReportModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\RefreshHousekeeping;
+use App\Service\Refresh\RefreshPassFetcher;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\Exception\ORMException;
 use Psr\Log\LoggerInterface;
@@ -32,8 +31,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
 
     public function __construct(
         private FeedRepository $feeds,
-        private BatchFeedFetcherInterface $fetcher,
-        private FeedOutcomePersister $outcomePersister,
+        private RefreshPassFetcher $passFetcher,
         private MissingFaviconResolver $missingFavicons,
         private RefreshHousekeeping $housekeeping,
         private LockFactory $lockFactory,
@@ -68,7 +66,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         $feeds = $this->feeds->findDue($criteria, $request->batchLimit);
         // The deadline gates when a fetch may start, not finish: a request's own 20 s max_duration can overrun it.
         $pass = new RefreshPass($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
-        $this->persistOutcomes($pass, $now);
+        $this->passFetcher->fetchAndPersist($pass, $now);
 
         // Before the abort branch: what an aborted run created before the failure is already committed.
         if ($pass->tally->entriesCreated() > 0) {
@@ -98,18 +96,6 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
             $request->force,
             $cooldownCutoff,
         );
-    }
-
-    /** @throws \DateMalformedStringException */
-    private function persistOutcomes(RefreshPass $pass, \DateTimeImmutable $now): void
-    {
-        foreach ($this->fetcher->fetchAll($pass->tickets()) as $feedId => $outcome) {
-            $feed = $pass->feed($feedId);
-            $pass->tally->record($this->outcomePersister->persist($feed, $outcome, $now), $feed);
-            if ($pass->tally->isAborted()) {
-                break;
-            }
-        }
     }
 
     private function resolveFaviconsAndReport(

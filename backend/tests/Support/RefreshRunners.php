@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\Feed;
+use App\Entity\SocialFeed;
 use App\Repository\FeedRepository;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
+use App\Repository\SocialFeedRepository;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
@@ -21,11 +23,14 @@ use App\Service\Refresh\FeedBodyParser\XmlBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\MissingFaviconResolver;
 use App\Service\Refresh\RefreshHousekeeping;
+use App\Service\Refresh\RefreshPassFetcher;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
+use App\Service\Refresh\SocialFeedRefresher;
 use App\Service\Retention\EntryPruner;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
+use App\Service\Social\TimelineReader\TimelineReaderInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
@@ -48,6 +53,7 @@ final readonly class RefreshRunners
         private ContentChangeMarkerInterface $changeMarker,
         private SearchIndexWriterInterface $indexWriter,
         private LoggerInterface $logger,
+        private TimelineReaderInterface $timelines,
     ) {
     }
 
@@ -65,6 +71,7 @@ final readonly class RefreshRunners
             new RecordingContentChangeMarker(),
             new RecordingSearchIndexWriter(),
             new NullLogger(),
+            new StubTimelineReader(),
         );
     }
 
@@ -80,6 +87,7 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $this->logger,
+            $this->timelines,
         );
     }
 
@@ -94,6 +102,7 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $this->logger,
+            $this->timelines,
         );
     }
 
@@ -108,6 +117,7 @@ final readonly class RefreshRunners
             $changeMarker,
             $this->indexWriter,
             $this->logger,
+            $this->timelines,
         );
     }
 
@@ -122,6 +132,7 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $indexWriter,
             $this->logger,
+            $this->timelines,
         );
     }
 
@@ -136,6 +147,22 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $logger,
+            $this->timelines,
+        );
+    }
+
+    public function readingTimelinesFrom(TimelineReaderInterface $timelines): self
+    {
+        return new self(
+            $this->entityManager,
+            $this->clock,
+            $this->bodyParser,
+            $this->flushingEntityManager,
+            $this->lockFactory,
+            $this->changeMarker,
+            $this->indexWriter,
+            $this->logger,
+            $timelines,
         );
     }
 
@@ -145,21 +172,27 @@ final readonly class RefreshRunners
     ): RefreshRunner {
         /** @var FeedRepository $feedRepository */
         $feedRepository = $this->entityManager->getRepository(Feed::class);
+        /** @var SocialFeedRepository $socialFeeds */
+        $socialFeeds = $this->entityManager->getRepository(SocialFeed::class);
         $indexer = new EntryIndexer($this->indexWriter, new NullLogger());
+        $outcomePersister = new FeedOutcomePersister(
+            $this->flushingEntityManager,
+            $feedRepository,
+            $this->bodyParser,
+            EntryIngestors::build($this->entityManager, $this->clock),
+            FeedSchedulers::build($this->clock),
+            $indexer,
+            PostEnrichers::queue($this->entityManager, $this->clock),
+            PostEnrichers::idle($this->entityManager, $this->clock),
+            new NullLogger(),
+        );
 
         return new RefreshRunner(
             $feedRepository,
-            $feedFetcher,
-            new FeedOutcomePersister(
-                $this->flushingEntityManager,
-                $feedRepository,
-                $this->bodyParser,
-                EntryIngestors::build($this->entityManager, $this->clock),
-                FeedSchedulers::build($this->clock),
-                $indexer,
-                PostEnrichers::queue($this->entityManager, $this->clock),
-                PostEnrichers::idle($this->entityManager, $this->clock),
-                new NullLogger(),
+            new RefreshPassFetcher(
+                $feedFetcher,
+                $outcomePersister,
+                new SocialFeedRefresher($socialFeeds, $this->timelines, $outcomePersister),
             ),
             new MissingFaviconResolver(
                 new FaviconResolver($homepageFetcher, new NullLogger()),

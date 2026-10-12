@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Refresh\Pass;
 
 use App\Entity\Feed;
+use App\Enum\SourceFormat;
 use App\Service\Fetch\Model\FetchTicketModel;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -30,19 +31,18 @@ final class BudgetedFeedQueue
     /** @return \Generator<int, FetchTicketModel, mixed, void> */
     public function tickets(): \Generator
     {
-        foreach ($this->feeds as $feed) {
-            if (!$this->mayStartAnother()) {
-                return;
-            }
-
-            $this->startedFeedIds[] = $feed->requireId();
-
-            yield $feed->requireId() => new FetchTicketModel(
-                $feed->getUrl(),
-                $feed->getEtag(),
-                $feed->getLastModified(),
-            );
+        $fetched = static fn (Feed $feed): bool => !SourceFormat::isSocial($feed->getSourceFormat());
+        foreach ($this->startedAmong($fetched) as $feedId => $feed) {
+            yield $feedId => new FetchTicketModel($feed->getUrl(), $feed->getEtag(), $feed->getLastModified());
         }
+    }
+
+    /** @return \Generator<int, Feed, mixed, void> */
+    public function socialFeeds(): \Generator
+    {
+        $social = static fn (Feed $feed): bool => SourceFormat::isSocial($feed->getSourceFormat());
+
+        yield from $this->startedAmong($social);
     }
 
     /** @return list<int> */
@@ -72,5 +72,26 @@ final class BudgetedFeedQueue
         }
 
         return $this->deadline - $this->clock->now()->getTimestamp() >= self::SAFETY_MARGIN_SECONDS;
+    }
+
+    /**
+     * @param \Closure(Feed): bool $belongs
+     *
+     * @return \Generator<int, Feed, mixed, void>
+     */
+    private function startedAmong(\Closure $belongs): \Generator
+    {
+        foreach ($this->feeds as $feed) {
+            if (!$belongs($feed)) {
+                continue;
+            }
+            if (!$this->mayStartAnother()) {
+                return;
+            }
+
+            $this->startedFeedIds[] = $feed->requireId();
+
+            yield $feed->requireId() => $feed;
+        }
     }
 }

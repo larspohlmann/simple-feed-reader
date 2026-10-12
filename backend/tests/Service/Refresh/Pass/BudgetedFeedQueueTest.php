@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh\Pass;
 
 use App\Entity\Feed;
+use App\Enum\SourceFormat;
 use App\Service\Refresh\Pass\BudgetedFeedQueue;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
@@ -93,5 +94,41 @@ final class BudgetedFeedQueueTest extends TestCase
         self::assertSame([], iterator_to_array($queue->tickets(), preserve_keys: false));
         self::assertSame(0, $queue->startedCount());
         self::assertSame(0, $queue->skippedCount());
+    }
+
+    public function testASocialFeedGetsNoTicketButItsOwnTurnAfterTheTickets(): void
+    {
+        $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
+        $rss = self::withId(new Feed('https://feed1.example.com/rss'), 1);
+        $timeline = self::withId(self::socialFeed('social:bluesky:1:home'), 2);
+        $queue = new BudgetedFeedQueue([$timeline, $rss], $clock, $clock->now()->getTimestamp() + 300);
+
+        $tickets = iterator_to_array($queue->tickets());
+        $social = iterator_to_array($queue->socialFeeds());
+
+        self::assertSame([1], array_keys($tickets));
+        self::assertSame([2 => $timeline], $social);
+        self::assertSame([1, 2], $queue->startedFeedIds());
+    }
+
+    public function testASocialFeedWaitsForTheBudgetLikeAnyOther(): void
+    {
+        $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
+        $rss = self::withId(new Feed('https://feed1.example.com/rss'), 1);
+        $timeline = self::withId(self::socialFeed('social:bluesky:1:home'), 2);
+        $queue = new BudgetedFeedQueue([$rss, $timeline], $clock, $clock->now()->getTimestamp() + 5);
+
+        iterator_to_array($queue->tickets());
+
+        self::assertSame([], iterator_to_array($queue->socialFeeds()));
+        self::assertSame(1, $queue->skippedCount());
+    }
+
+    private static function socialFeed(string $url): Feed
+    {
+        $feed = new Feed($url);
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        return $feed;
     }
 }
