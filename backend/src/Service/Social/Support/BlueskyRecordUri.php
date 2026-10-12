@@ -38,14 +38,18 @@ final class BlueskyRecordUri
     /** @return array{did: string, collection: string, recordKey: string}|null */
     private static function partsOf(string $uri): ?array
     {
-        $pattern = '#^at://(?<did>' . BlueskyActor::DID_SYNTAX . ')/(?<collection>'
-            . preg_quote(self::LIST, '#') . '|' . preg_quote(self::FEED_GENERATOR, '#')
-            . ')/(?<recordKey>' . self::RECORD_KEY . ')$#D';
-        if (1 !== preg_match($pattern, $uri, $match)) {
+        $pattern = '#^at://(?<did>' . BlueskyActor::DID_SYNTAX . ')/(?<collection>[a-z.]+)/(?<recordKey>'
+            . self::RECORD_KEY . ')$#D';
+        if (1 !== preg_match($pattern, $uri, $match) || !self::isListOrFeed($match['collection'])) {
             return null;
         }
 
         return ['did' => $match['did'], 'collection' => $match['collection'], 'recordKey' => $match['recordKey']];
+    }
+
+    private static function isListOrFeed(string $collection): bool
+    {
+        return \in_array($collection, [self::LIST, self::FEED_GENERATOR], true);
     }
 
     private function __construct()
