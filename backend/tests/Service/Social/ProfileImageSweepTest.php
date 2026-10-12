@@ -233,9 +233,13 @@ final class ProfileImageSweepTest extends DbTestCase
         $this->fetcher->willThrow(self::profilesUrl(\array_slice($handles, 0, 25)), $refusal);
         $this->answer(\array_slice($handles, 25), []);
 
-        $report = $this->sweep(2);
+        $logger = new RecordingLogger();
+
+        $report = $this->sweep(2, $logger);
 
         self::assertCount(2, $this->fetcher->fetchedUrls);
+        self::assertSame(0, $report->changed);
+        self::assertSame($refusal, $logger->records[0]['context']['exception']);
         self::assertSame(self::NOW, $feeds[0]->getImageCheckedAt()?->format('Y-m-d H:i:s'));
         self::assertSame(self::NOW, $feeds[25]->getImageCheckedAt()?->format('Y-m-d H:i:s'));
         self::assertSame(26, $report->checked);

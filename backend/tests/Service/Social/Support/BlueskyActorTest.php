@@ -22,6 +22,7 @@ final class BlueskyActorTest extends TestCase
         yield 'a single label' => ['localhost', false];
         yield 'a top-level label starting with a digit' => ['alice.123', false];
         yield 'a DID ending in a colon' => ['did:plc:', false];
+        yield 'a handle of the longest length' => [str_repeat(str_repeat('a', 62) . '.', 4) . 'c', true];
         yield 'a handle too long' => [str_repeat(str_repeat('a', 60) . '.', 5) . 'com', false];
     }
 
