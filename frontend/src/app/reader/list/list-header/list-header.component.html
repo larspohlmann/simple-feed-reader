@@ -19,6 +19,9 @@
              inside the ellipsised h2 so the clip (from the end) never touches it. -->
         <app-favicon [url]="titleFaviconUrl()" [size]="collapsed() ? 16 : 20" />
       }
+      @if (selection().network; as network) {
+        <app-network-logo [network]="network" />
+      }
       @if (titleIcon(); as icon) {
         <!-- The fixed views (All items, Favorites, Kept, Recently read, For you,
              search) lead with the same glyph their sidebar row shows. Sized like

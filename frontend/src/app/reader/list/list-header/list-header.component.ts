@@ -14,6 +14,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
+import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { ListOrder, TagDto } from '../../models';
 import {
   Selection,
@@ -60,6 +61,7 @@ export interface TitleCount {
     ListActionDirective,
     FaviconComponent,
     TagGlyphComponent,
+    NetworkLogoComponent,
   ],
   templateUrl: './list-header.component.html',
   styleUrl: './list-header.component.scss',

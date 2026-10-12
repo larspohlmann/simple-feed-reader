@@ -3355,6 +3355,20 @@ describe('ReaderShellComponent', () => {
   });
 
   describe("mark all read for a network's combined view", () => {
+    it("leads the heading with the network's logo", () => {
+      const fixture = boot();
+      qp.next(convertToParamMap({ network: 'mastodon' }));
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      fixture.detectChanges();
+
+      const heading = (fixture.nativeElement as HTMLElement).querySelector('app-list-header h2');
+      expect(heading?.querySelector('app-network-logo svg.mastodon')).not.toBeNull();
+      expect(heading?.textContent).toContain('Mastodon');
+    });
+
     it('marks the network read by name, reloads the list and zeroes its feeds locally', () => {
       const fixture = boot();
       qp.next(convertToParamMap({ network: 'bluesky' }));
