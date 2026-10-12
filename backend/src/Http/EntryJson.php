@@ -9,6 +9,7 @@ use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
+use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Text\Support\EntryExcerpt;
 use App\Service\Url\Support\YouTubeUrl;
 
@@ -59,8 +60,6 @@ final class EntryJson
         $entry = $row->entry;
         $discussion = $entry->getDiscussion();
         $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
-        $poster = self::posterOf($row);
-
         return self::completed($row) + [
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
@@ -74,9 +73,7 @@ final class EntryJson
             'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
             'subscriptionTitle' => $row->subscriptionTitle,
-            'source' => $poster ?? $row->subscriptionTitle,
-            'sourceUrl' => $poster === null ? null : $entry->getAuthorUrl(),
-            'sourceImageUrl' => $poster === null ? null : $entry->getAuthorAvatarUrl(),
+            ...self::posterOf($row),
             // The feed is fetch-joined in the row query, so this adds no N+1.
             'faviconUrl' => $entry->getFeed()->getFaviconUrl(),
             'isHidden' => $row->isHidden,
@@ -123,12 +120,34 @@ final class EntryJson
         return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
     }
 
-    private static function posterOf(EntryListRow $row): ?string
+    /**
+     * Who a post is by. A private feed's post names its own author; every post of a profile feed is that person's, so
+     * it shows their picture and profile unless the post brings an avatar of its own (a repost).
+     *
+     * @return array{source: string, sourceUrl: string|null, sourceImageUrl: string|null}
+     */
+    private static function posterOf(EntryListRow $row): array
     {
-        $author = $row->entry->getAuthor();
-        $isPrivateFeed = SourceFormat::isSocial($row->entry->getFeed()->getSourceFormat());
+        $entry = $row->entry;
+        $feed = $entry->getFeed();
+        $author = $entry->getAuthor();
+        $isPrivateFeed = SourceFormat::isSocial($feed->getSourceFormat());
+        if ($isPrivateFeed && $author !== null && $author !== '') {
+            return [
+                'source' => $author,
+                'sourceUrl' => $entry->getAuthorUrl(),
+                'sourceImageUrl' => $entry->getAuthorAvatarUrl(),
+            ];
+        }
+        if (!$isPrivateFeed && null !== SocialFeedClassifier::networkOf($feed)) {
+            return [
+                'source' => $row->subscriptionTitle,
+                'sourceUrl' => $feed->getSiteUrl(),
+                'sourceImageUrl' => $entry->getAuthorAvatarUrl() ?? $feed->getImageUrl(),
+            ];
+        }
 
-        return $isPrivateFeed && $author !== null && $author !== '' ? $author : null;
+        return ['source' => $row->subscriptionTitle, 'sourceUrl' => null, 'sourceImageUrl' => null];
     }
 
     /**

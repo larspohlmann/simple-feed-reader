@@ -480,6 +480,46 @@ final class EntryJsonTest extends TestCase
         self::assertNull(EntryJson::listRow($this->row($entry))['sourceUrl']);
     }
 
+    public function testAProfileFeedEntryShowsThePersonsPictureAndLinksTheirProfile(): void
+    {
+        $entry = $this->profileFeedEntry('https://cdn.example/politico.jpg');
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('Source', $json['source']);
+        self::assertSame('https://bsky.app/profile/politico.eu', $json['sourceUrl']);
+        self::assertSame('https://cdn.example/politico.jpg', $json['sourceImageUrl']);
+    }
+
+    public function testAProfileFeedEntryWithAnAvatarOfItsOwnShowsThatOne(): void
+    {
+        $entry = $this->profileFeedEntry('https://cdn.example/politico.jpg');
+        $entry->setAuthorAvatarUrl('https://cdn.example/reposted.jpg');
+
+        self::assertSame('https://cdn.example/reposted.jpg', EntryJson::listRow($this->row($entry))['sourceImageUrl']);
+    }
+
+    public function testAProfileFeedEntryWithoutAPictureHasNoSourceImage(): void
+    {
+        self::assertNull(EntryJson::listRow($this->row($this->profileFeedEntry(null)))['sourceImageUrl']);
+    }
+
+    private function profileFeedEntry(?string $feedImageUrl): Entry
+    {
+        $feed = new Feed('https://bsky.app/profile/politico.eu/rss');
+        $feed->setSiteUrl('https://bsky.app/profile/politico.eu');
+        $feed->setImageUrl($feedImageUrl);
+
+        return new Entry(
+            $feed,
+            'guid',
+            'https://bsky.app/profile/politico.eu/post/1',
+            'Post',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+    }
+
     private function entryOfFeedWithFormat(string $sourceFormat, ?string $author): Entry
     {
         $feed = new Feed('https://example.com/feed');
