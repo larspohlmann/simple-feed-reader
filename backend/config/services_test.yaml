@@ -51,6 +51,11 @@ services:
         alias: App\Service\Image\ImageProxy\ImageProxy
         public: true
 
+    # Public: nothing takes it yet, so the container would inline it away; TimelineReaderWiringTest resolves it.
+    App\Service\Social\TimelineReader\TimelineReaderInterface:
+        alias: App\Service\Social\TimelineReader\NetworkTimelineReader
+        public: true
+
     test.cache.passkey_challenge:
         alias: passkey.challenge.cache
 
