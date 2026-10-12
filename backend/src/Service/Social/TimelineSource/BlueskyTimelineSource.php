@@ -10,7 +10,6 @@ use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Support\RetryAfterHeader;
 use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
@@ -84,12 +83,7 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
      */
     private static function itemsOf(ApiResponseModel $answer): array
     {
-        if (Response::HTTP_TOO_MANY_REQUESTS === $answer->status) {
-            throw new SocialNetworkThrottledException(
-                'Bluesky asked for fewer requests.',
-                RetryAfterHeader::seconds($answer->header('retry-after')),
-            );
-        }
+        SocialNetworkThrottledException::throwIfThrottled($answer, 'Bluesky asked for fewer requests.');
         if (Response::HTTP_UNAUTHORIZED === $answer->status || self::isStaleSession($answer)) {
             throw new SocialCredentialsRejectedException('Bluesky refused the session of this account.');
         }
