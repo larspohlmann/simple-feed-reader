@@ -37,7 +37,7 @@ export function isPrivateFeed(subscription: SubscriptionDto): boolean {
   return isSocialFeed(subscription) && subscription.social?.kind !== 'profile';
 }
 
-/** A person, list or custom feed is shown by its picture; Home keeps the network's favicon, an ordinary feed its own. */
+/** A social feed other than Home is shown by its picture when it has one; today only profile feeds get one. */
 export function feedAvatarUrl(subscription: SubscriptionDto | null): string | null {
   if (
     subscription === null ||

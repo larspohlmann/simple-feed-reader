@@ -1,4 +1,4 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, input, linkedSignal } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
 
 /**
@@ -19,8 +19,11 @@ export class FaviconComponent {
   readonly avatarUrl = input<string | null>(null);
   readonly size = input(16);
 
-  protected readonly broken = signal(false);
-  protected readonly avatarBroken = signal(false);
+  protected readonly broken = linkedSignal({ source: this.url, computation: () => false });
+  protected readonly avatarBroken = linkedSignal({
+    source: this.avatarUrl,
+    computation: () => false,
+  });
   protected readonly src = computed(() => (this.broken() ? null : this.url()));
   protected readonly avatarSrc = computed(() => (this.avatarBroken() ? null : this.avatarUrl()));
 }

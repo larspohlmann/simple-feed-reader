@@ -223,9 +223,9 @@ export interface EntryDto {
   /** The feed's own title; `source` names the poster instead for a private feed's post. */
   subscriptionTitle: string;
   source: string;
-  /** The author's profile when `source` names a private feed's poster, else null. */
+  /** The poster's web profile: a private feed's author, or a profile feed's own page; else null. */
   sourceUrl: string | null;
-  /** The poster's avatar, set exactly when `sourceUrl`'s decision picked the author, else null. */
+  /** The poster's picture: a private feed's author, or a profile feed's person; else null. */
   sourceImageUrl: string | null;
   /** Absolute https favicon URL for the entry's feed, or null if unresolved. */
   faviconUrl: string | null;

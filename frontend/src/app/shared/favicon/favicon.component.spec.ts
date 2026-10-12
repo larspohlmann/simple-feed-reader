@@ -48,6 +48,21 @@ describe('FaviconComponent', () => {
     expect(fixture.nativeElement.querySelector('app-icon')).not.toBeNull();
   });
 
+  it('tries the next favicon after one failed to load', () => {
+    const fixture = render();
+    fixture.componentInstance.url.set('https://example.com/broken.png');
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('img').dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+
+    fixture.componentInstance.url.set('https://other.example/favicon.ico');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('img')?.getAttribute('src')).toBe(
+      'https://other.example/favicon.ico',
+    );
+  });
+
   describe('with an avatar', () => {
     const renderWithAvatar = () => {
       const fixture = render();
@@ -79,6 +94,19 @@ describe('FaviconComponent', () => {
       const img: HTMLImageElement = fixture.nativeElement.querySelector('img');
       expect(img.getAttribute('src')).toBe('https://example.com/favicon.ico');
       expect(img.classList).not.toContain('avatar');
+    });
+
+    it('tries the next avatar after one failed to load', () => {
+      const fixture = renderWithAvatar();
+      fixture.nativeElement.querySelector('img').dispatchEvent(new Event('error'));
+      fixture.detectChanges();
+
+      fixture.componentInstance.avatarUrl.set('https://cdn.example/amy.png');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('img.avatar')?.getAttribute('src')).toBe(
+        'https://cdn.example/amy.png',
+      );
     });
 
     it('shows the favicon when there is no avatar', () => {
