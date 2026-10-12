@@ -37,7 +37,6 @@ import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { SubscriptionFlags } from '../../reader/subscription-bulk';
-import { FeedNames } from '../../reader/state/feed-names';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
  *  value, and the i18n key for its label. A readonly literal array so the
@@ -86,7 +85,6 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly subs = inject(SubscriptionsStore);
   protected readonly tags = inject(TagsStore);
   private readonly dialog = inject(Dialog);
-  private readonly names = inject(FeedNames);
 
   /** The last refused bulk write, shown as a banner above the list. */
   readonly error = signal<Problem | null>(null);
@@ -126,7 +124,7 @@ export class OrganiseSectionComponent implements OnInit {
   protected retryFeed(feed: SubscriptionDto): void {
     this.manage.retryFeed(feed).subscribe((stillFailing) => {
       if (!stillFailing) return;
-      const data: HealthErrorData = { feedId: feed.feedId, title: this.names.titleOf(feed) };
+      const data: HealthErrorData = { feedId: feed.feedId, title: feed.title };
       this.dialog.open<void, HealthErrorData>(HealthErrorDialogComponent, {
         data,
         panelClass: 'app-dialog',

@@ -1,5 +1,5 @@
 @let feed = subscription();
-@let name = this.name();
+@let name = subscription().title;
 @if (organising()) {
   <span class="handle" cdkDragHandle aria-hidden="true">
     <app-icon name="drag_indicator" size="sm" />

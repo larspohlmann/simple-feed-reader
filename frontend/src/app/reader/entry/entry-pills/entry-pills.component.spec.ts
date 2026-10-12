@@ -105,7 +105,7 @@ describe('EntryPillsComponent', () => {
         imports: [EntryPillsComponent, provideTranslocoTesting()],
         providers: [provideRouter([{ path: '**', children: [] }])],
       });
-      TestBed.inject(SubscriptionRows).all.set(
+      TestBed.inject(SubscriptionRows).stored.set(
         networks.map(([id, network]) =>
           makeSubscription({ id, social: { network, accountId: 1, kind: 'home' } }),
         ),

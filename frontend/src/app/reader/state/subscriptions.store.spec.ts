@@ -1,3 +1,4 @@
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { effect } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
@@ -152,6 +153,7 @@ describe('SubscriptionsStore', () => {
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -369,7 +371,7 @@ describe('SubscriptionsStore', () => {
   });
 
   it('exposes unhealthy feeds and their count', () => {
-    store.subscriptions.set([
+    store.storedSubscriptions.set([
       {
         ...sub(1, 0),
         title: 'Bravo',
@@ -437,7 +439,7 @@ describe('SubscriptionsStore', () => {
       expect(store.totalUnread()).toBe(1 + 16 + 8);
     });
 
-    it('groups social feeds by network, private ones per account and profiles as people', () => {
+    it('groups social feeds by network, private ones per account and profiles as people, each Home titled', () => {
       expect(store.socialSections()).toEqual([
         {
           network: 'bluesky',
@@ -445,7 +447,7 @@ describe('SubscriptionsStore', () => {
             {
               accountId: 3,
               handle: '@alice.bsky.social',
-              subscriptions: [untaggedHome, taggedList],
+              subscriptions: [{ ...untaggedHome, title: 'Home@bsky' }, taggedList],
             },
           ],
           people: [],
@@ -483,11 +485,7 @@ describe('SubscriptionsStore', () => {
     it("reads each feed's network from the loaded list and forgets it on logout", () => {
       const rows = TestBed.inject(SubscriptionRows);
       const networkOf = (id: number) => rows.find(id)?.social?.network ?? null;
-      expect([networkOf(6), networkOf(7), networkOf(1)]).toEqual([
-        'bluesky',
-        'mastodon',
-        null,
-      ]);
+      expect([networkOf(6), networkOf(7), networkOf(1)]).toEqual(['bluesky', 'mastodon', null]);
 
       tokens.clear();
       TestBed.tick();
@@ -522,6 +520,7 @@ describe('SubscriptionsStore quiet reload', () => {
     localStorage.clear();
     jest.useFakeTimers({ now: new Date('2026-08-29T16:00:00Z') });
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -685,6 +684,7 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
     let unread = 1;
     const subscriptions = jest.fn(() => of(respond(++unread)));
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [SubscriptionsStore, { provide: ReaderApi, useValue: { subscriptions } }],
     });
     const store = TestBed.inject(SubscriptionsStore);
@@ -728,6 +728,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     localStorage.clear();
     jest.useFakeTimers({ now: new Date('2026-08-29T16:00:00Z') });
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),

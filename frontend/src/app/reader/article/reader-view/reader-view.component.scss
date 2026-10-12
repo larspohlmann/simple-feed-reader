@@ -249,35 +249,11 @@ article {
   text-decoration: none;
 }
 
-/* The source name is a link to the feed's list, but it names the source rather
-   than inviting an action, so it keeps the muted meta colour instead of the
-   accent the "open original" link takes, underlining only on hover. */
-.meta a.source-link {
-  color: inherit;
-}
-
-.meta a.source-link:hover {
-  text-decoration: underline;
-}
-
 /* The only icon in a genuine run of text rather than a flex row, so vertical
    alignment matters. Reads as a superscript footnote mark on the link, not a
    glyph sharing the line — scoped here since flex-row icons centre exactly. */
 .meta a app-icon {
   vertical-align: super;
-}
-
-/* `vertical-align: middle` centres on x-height, right only when the box is
-   about text-sized. This 16px favicon against 13px text hangs below the
-   baseline; lift it onto the text's centre, in `em` so it tracks the type. */
-.meta app-favicon {
-  position: relative;
-  bottom: 0.15em;
-
-  /* This line is a true text run, so nothing but the margin separates the
-     favicon from the source name; it needs more than the component's inline
-     default. Rows elsewhere get their spacing from a flex gap instead. */
-  margin-inline-end: 0.55em;
 }
 
 /* Feed-declared categories (#953): a muted footnote line closing the

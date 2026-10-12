@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { heldUnrenamedHome } from '../../../testing/unrenamed-home-testing';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -56,11 +57,9 @@ describe('OrganiseFeedRowComponent', () => {
   });
 
   it("names an unrenamed Home by the Home's label", async () => {
-    const home = makeSubscription({
-      title: 'Home',
-      social: { network: 'bluesky', accountId: 1, kind: 'home' },
-    });
-    await render({ subscription: home });
+    await render();
+    fixture.componentRef.setInput('subscription', heldUnrenamedHome(1));
+    fixture.detectChanges();
 
     const link = fixture.debugElement.query(By.css('a.title')).nativeElement as HTMLAnchorElement;
     expect(link.textContent?.trim()).toBe('Home@bsky');

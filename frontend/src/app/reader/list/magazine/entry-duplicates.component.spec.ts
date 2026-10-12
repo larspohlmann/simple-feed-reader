@@ -6,7 +6,7 @@ import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { anEntry } from '../../../../testing/entry-testing';
-import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/feed-names-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -44,7 +44,7 @@ it('renders nothing without duplicates', () => {
 });
 
 it('renders one chip per duplicate with its feed', () => {
-  const dup = entry({ id: 2, subscriptionTitle: 'NDR Schleswig-Holstein' });
+  const dup = entry({ id: 2, source: 'NDR Schleswig-Holstein' });
   const element = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
   const chips = element.querySelectorAll('.also-entry');
   expect(chips.length).toBe(1);
@@ -60,7 +60,11 @@ it("names a duplicate from a Home by the Home's label", () => {
 });
 
 it('names a duplicate by its feed, not by the poster', () => {
-  const dup = entry({ id: 2, source: 'Bob', subscriptionTitle: 'Home@bsky' });
+  const dup = entry({
+    id: 2,
+    source: 'Home@bsky',
+    poster: { name: 'Bob', url: null, imageUrl: null },
+  });
   const element = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
   const chip = element.querySelector('.also-entry')!;
   expect(chip.textContent).toContain('Home@bsky');

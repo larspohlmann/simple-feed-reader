@@ -33,8 +33,8 @@ use App\Service\Url\Support\YouTubeUrl;
  *   categories: list<string>,
  *   linkCards: list<LinkCardRow>,
  *   publishedAt: string|null,
- *   createdAt: string, subscriptionId: int, subscriptionTitle: string, source: string,
- *   sourceUrl: string|null, sourceImageUrl: string|null, faviconUrl: string|null,
+ *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
+ *   poster: array{name: string, url: string|null, imageUrl: string|null}|null,
  *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, shortPlayerUrl: string|null, titleDerived: bool,
  *   share: 'link'|'media'|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
@@ -62,6 +62,7 @@ final class EntryJson
         $entry = $row->entry;
         $discussion = $entry->getDiscussion();
         $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
+
         return self::completed($row) + [
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
@@ -74,8 +75,8 @@ final class EntryJson
             'publishedAt' => $entry->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
-            'subscriptionTitle' => $row->subscriptionTitle,
-            ...self::posterOf($row),
+            'source' => $row->subscriptionTitle,
+            'poster' => self::posterOf($row),
             // The feed is fetch-joined in the row query, so this adds no N+1.
             'faviconUrl' => $entry->getFeed()->getFaviconUrl(),
             'isHidden' => $row->isHidden,
@@ -123,33 +124,30 @@ final class EntryJson
     }
 
     /**
-     * Who a post is by. A private feed's post names its own author; every post of a profile feed is that person's, so
-     * it shows their picture and profile unless the post brings an avatar of its own (a repost).
+     * Who posted the entry when that is someone other than the feed. A private feed's post names its own author; every
+     * post of a profile feed is that person's, so it shows their picture and profile unless the post brings an avatar
+     * of its own (a repost).
      *
-     * @return array{source: string, sourceUrl: string|null, sourceImageUrl: string|null}
+     * @return array{name: string, url: string|null, imageUrl: string|null}|null
      */
-    private static function posterOf(EntryListRow $row): array
+    private static function posterOf(EntryListRow $row): ?array
     {
         $entry = $row->entry;
         $feed = $entry->getFeed();
         $author = $entry->getAuthor();
         $isPrivateFeed = SourceFormat::isSocial($feed->getSourceFormat());
         if ($isPrivateFeed && $author !== null && $author !== '') {
-            return [
-                'source' => $author,
-                'sourceUrl' => $entry->getAuthorUrl(),
-                'sourceImageUrl' => $entry->getAuthorAvatarUrl(),
-            ];
+            return ['name' => $author, 'url' => $entry->getAuthorUrl(), 'imageUrl' => $entry->getAuthorAvatarUrl()];
         }
         if (!$isPrivateFeed && null !== SocialFeedClassifier::networkOf($feed)) {
             return [
-                'source' => $row->subscriptionTitle,
-                'sourceUrl' => AbsoluteHttpUrl::orNull(FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl())),
-                'sourceImageUrl' => $entry->getAuthorAvatarUrl() ?? $feed->getImageUrl(),
+                'name' => $row->subscriptionTitle,
+                'url' => AbsoluteHttpUrl::orNull(FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl())),
+                'imageUrl' => $entry->getAuthorAvatarUrl() ?? $feed->getImageUrl(),
             ];
         }
 
-        return ['source' => $row->subscriptionTitle, 'sourceUrl' => null, 'sourceImageUrl' => null];
+        return null;
     }
 
     /**

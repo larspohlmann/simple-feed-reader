@@ -48,7 +48,9 @@ describe('MagazineBlockComponent', () => {
   });
 
   it.each(ENTRY_KINDS)("shows the poster's avatar in a %s block", (kind) => {
-    const avatarEntry = entry({ sourceImageUrl: 'https://cdn.example/amy.jpg' });
+    const avatarEntry = entry({
+      poster: { name: 'Amy', url: null, imageUrl: 'https://cdn.example/amy.jpg' },
+    });
 
     const avatar = mount(blockOf(kind, avatarEntry)).querySelector('img.avatar');
 

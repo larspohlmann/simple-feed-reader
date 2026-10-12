@@ -100,7 +100,7 @@ describe('EntryMetaComponent', () => {
       imports: [EntryMetaComponent, provideTranslocoTesting()],
       providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
-    TestBed.inject(SubscriptionRows).all.set([
+    TestBed.inject(SubscriptionRows).stored.set([
       makeSubscription({ id: 7, social: { network: 'mastodon', accountId: 1, kind: 'home' } }),
     ]);
     const fixture = TestBed.createComponent(EntryMetaComponent);

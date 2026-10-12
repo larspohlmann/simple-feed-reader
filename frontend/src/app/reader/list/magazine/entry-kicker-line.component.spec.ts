@@ -4,7 +4,7 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryDto } from '../../models';
 import { anEntry } from '../../../../testing/entry-testing';
-import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/feed-names-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
@@ -49,7 +49,10 @@ describe('EntryKickerLineComponent', () => {
 
   it('links an author source out to their profile, and keeps the in-app filter otherwise', () => {
     const external = mount(
-      entry({ source: 'Bob', sourceUrl: 'https://bsky.app/profile/bob', subscriptionId: 4 }),
+      entry({
+        poster: { name: 'Bob', url: 'https://bsky.app/profile/bob', imageUrl: null },
+        subscriptionId: 4,
+      }),
     ).querySelector<HTMLAnchorElement>('.source')!;
     const internal = mount(entry({ subscriptionId: 4 })).querySelector<HTMLAnchorElement>(
       '.source',
@@ -63,7 +66,9 @@ describe('EntryKickerLineComponent', () => {
   });
 
   it('shows the author avatar in place of the favicon', () => {
-    const element = mount(entry({ sourceImageUrl: 'https://cdn.example/bob.png' }));
+    const element = mount(
+      entry({ poster: { name: 'Bob', url: null, imageUrl: 'https://cdn.example/bob.png' } }),
+    );
 
     expect(element.querySelector('img.avatar')?.getAttribute('src')).toBe(
       'https://cdn.example/bob.png',

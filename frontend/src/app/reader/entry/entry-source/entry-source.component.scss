@@ -1,0 +1,37 @@
+/* No box of its own: the favicon and the name join the host's line, flex row or text run. */
+:host {
+  display: contents;
+}
+
+/* It names the source rather than inviting an action, so it keeps the surrounding muted colour and reveals its
+   link only on hover. */
+.source {
+  color: inherit;
+  text-decoration: none;
+}
+
+.source:hover {
+  text-decoration: underline;
+}
+
+/* The kicker never wraps: the source is its only elastic item, shrinking and ellipsising while the rest render
+   whole. The row's `gap` spaces the favicon, so its own inline margin would double the space on one side. */
+:host(.kicker) .source {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+:host(.kicker) app-favicon {
+  flex: none;
+  margin-inline-end: 0;
+}
+
+/* The article's meta line is a true text run: `vertical-align: middle` centres on x-height, so this favicon,
+   larger than the text, is lifted onto the text's centre in `em`, and only its margin separates it from the name. */
+:host(.article) app-favicon {
+  position: relative;
+  bottom: 0.15em;
+  margin-inline-end: 0.55em;
+}

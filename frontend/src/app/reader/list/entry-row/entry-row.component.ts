@@ -8,7 +8,7 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { FaviconComponent } from '../../../shared/favicon/favicon.component';
+import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
 import { MarkedTextComponent } from '../../../shared/marked-text/marked-text.component';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
@@ -22,7 +22,6 @@ import { RenditionsDirective } from '../renditions.directive';
 import { ShortBadgeComponent } from '../short-badge/short-badge.component';
 import { COVER_BOX_SIZES } from '../rendition-sizes';
 import { OpensEntryDirective } from '../opens-entry.directive';
-import { FeedNames } from '../../state/feed-names';
 
 @Component({
   selector: 'app-entry-row',
@@ -33,7 +32,7 @@ import { FeedNames } from '../../state/feed-names';
   // EntryDuplicatesComponent mid-import-cycle and read as undefined.
   imports: [
     OpensEntryDirective,
-    FaviconComponent,
+    EntrySourceComponent,
     MarkedTextComponent,
     EntryPillsComponent,
     EntryActionsComponent,
@@ -69,8 +68,6 @@ export class EntryRowComponent {
   readonly isPost = computed(() => isPost(this.entry()));
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
-  private readonly names = inject(FeedNames);
-  protected readonly source = computed(() => this.names.sourceOf(this.entry()));
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),

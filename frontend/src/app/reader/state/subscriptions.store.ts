@@ -26,7 +26,11 @@ export type ZeroTarget =
 export class SubscriptionsStore {
   private readonly api = inject(ReaderApi);
   private readonly tags = inject(TagsStore);
-  readonly subscriptions = inject(SubscriptionRows).all;
+  private readonly rows = inject(SubscriptionRows);
+  /** Every title resolved for display. */
+  readonly subscriptions = this.rows.all;
+  /** The rows as the server sent them, which an optimistic edit patches. */
+  readonly storedSubscriptions = this.rows.stored;
   readonly favoritesCount = signal(0);
   readonly keptCount = signal(0);
   readonly viewedCount = signal(0);
@@ -120,7 +124,7 @@ export class SubscriptionsStore {
     this.inFlight?.unsubscribe();
     this.inFlight = null;
     this.lastLoadedAt = 0;
-    this.subscriptions.set([]);
+    this.storedSubscriptions.set([]);
     this.favoritesCount.set(0);
     this.keptCount.set(0);
     this.viewedCount.set(0);
@@ -209,7 +213,7 @@ export class SubscriptionsStore {
   }
 
   private applyCounts(response: SubscriptionsResponse): void {
-    this.subscriptions.set(response.subscriptions);
+    this.storedSubscriptions.set(response.subscriptions);
     this.favoritesCount.set(response.favoritesCount);
     this.keptCount.set(response.keptCount);
     this.viewedCount.set(response.viewedCount);
@@ -222,14 +226,14 @@ export class SubscriptionsStore {
   private applyCountsOnly(response: SubscriptionCountsResponse): void {
     const countsById = new Map(response.subscriptions.map((counts) => [counts.id, counts]));
     let moved = false;
-    const next = this.subscriptions().map((sub) => {
+    const next = this.storedSubscriptions().map((sub) => {
       const unreadCount = countsById.get(sub.id)?.unreadCount ?? 0;
       const entryCount = countsById.get(sub.id)?.entryCount ?? 0;
       if (unreadCount === sub.unreadCount && entryCount === sub.entryCount) return sub;
       moved = true;
       return { ...sub, unreadCount, entryCount };
     });
-    if (moved) this.subscriptions.set(next);
+    if (moved) this.storedSubscriptions.set(next);
 
     this.setIfMoved(this.favoritesCount, response.favoritesCount);
     this.setIfMoved(this.keptCount, response.keptCount);
@@ -311,6 +315,6 @@ export class SubscriptionsStore {
    *  here so none can forget to register itself against an in-flight reload. */
   private patchSubscriptions(patch: (sub: SubscriptionDto) => SubscriptionDto): void {
     ++this.localEdits;
-    this.subscriptions.update((subscriptions) => subscriptions.map(patch));
+    this.storedSubscriptions.update((subscriptions) => subscriptions.map(patch));
   }
 }

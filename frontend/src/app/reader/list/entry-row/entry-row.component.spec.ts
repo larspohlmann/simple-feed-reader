@@ -12,7 +12,7 @@ import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testi
 import { describeShortMarking } from '../../../../testing/short-marking-testing';
 import { describePortraitCover } from '../../../../testing/portrait-cover-testing';
 import { anEntry } from '../../../../testing/entry-testing';
-import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/feed-names-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -69,9 +69,11 @@ describe('EntryRowComponent', () => {
   it('links an author source out to their profile and shows their avatar', () => {
     const fixture = mount(
       entry({
-        source: 'Bob',
-        sourceUrl: 'https://bsky.app/profile/bob',
-        sourceImageUrl: 'https://cdn.example/bob.png',
+        poster: {
+          name: 'Bob',
+          url: 'https://bsky.app/profile/bob',
+          imageUrl: 'https://cdn.example/bob.png',
+        },
       }),
     );
     const link: HTMLAnchorElement = fixture.nativeElement.querySelector('.meta a');

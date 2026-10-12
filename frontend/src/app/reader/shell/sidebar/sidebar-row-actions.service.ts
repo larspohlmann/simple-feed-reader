@@ -4,7 +4,6 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SubscriptionDto, TagDto } from '../../models';
-import { FeedNames } from '../../state/feed-names';
 
 /** The row menus and action sheets of the sidebar's tag and feed rows. Provided
  *  on the sidebar, so all rows share one open menu and a late sheet choice dies
@@ -15,7 +14,6 @@ export class SidebarRowActions {
   private readonly sheet = inject(ActionSheet);
   private readonly transloco = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly names = inject(FeedNames);
 
   readonly menuFor = signal<string | null>(null);
 
@@ -52,7 +50,7 @@ export class SidebarRowActions {
   openFeedSheet(subscription: SubscriptionDto): void {
     this.sheet
       .open({
-        title: this.names.titleOf(subscription),
+        title: subscription.title,
         actions: [
           { id: 'edit', label: this.transloco.translate('reader.editFeed') },
           {

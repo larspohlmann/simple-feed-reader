@@ -1511,7 +1511,7 @@ describe('ReaderShellComponent', () => {
       (fixture.nativeElement as HTMLElement).querySelector('app-list-header h2') as HTMLElement;
     expect(heading().querySelector('img.avatar')).toBeNull();
 
-    TestBed.inject(SubscriptionRows).all.update((rows) =>
+    TestBed.inject(SubscriptionRows).stored.update((rows) =>
       rows.map((row) =>
         row.id === 5
           ? {

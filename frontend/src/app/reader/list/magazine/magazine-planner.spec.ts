@@ -295,8 +295,8 @@ describe('planMagazine', () => {
       ...many(8, (index) =>
         big(100 + index, {
           subscriptionId: 1,
-          subscriptionTitle: 'Home@bsky',
-          source: `Poster ${index}`,
+          source: 'Home@bsky',
+          poster: { name: `Poster ${index}`, url: null, imageUrl: null },
         }),
       ),
       ...many(30, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),

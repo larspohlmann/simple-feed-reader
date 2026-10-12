@@ -220,13 +220,9 @@ export interface EntryDto {
   publishedAt: string | null;
   createdAt: string;
   subscriptionId: number;
-  /** The feed's own title; `source` names the poster instead for a private feed's post. */
-  subscriptionTitle: string;
   source: string;
-  /** The poster's web profile: a private feed's author, or a profile feed's own page; else null. */
-  sourceUrl: string | null;
-  /** The poster's picture: a private feed's author, or a profile feed's person; else null. */
-  sourceImageUrl: string | null;
+  /** Who posted it when that is someone other than the feed: a private feed's author, a profile feed's person. */
+  poster: { name: string; url: string | null; imageUrl: string | null } | null;
   /** Absolute https favicon URL for the entry's feed, or null if unresolved. */
   faviconUrl: string | null;
   isHidden: boolean;

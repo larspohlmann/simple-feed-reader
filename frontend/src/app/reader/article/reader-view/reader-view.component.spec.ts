@@ -24,7 +24,7 @@ import {
   MockResizeObserver,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
-import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/feed-names-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -228,17 +228,19 @@ describe('ReaderViewComponent', () => {
 
   describe('the source link', () => {
     const sourceLink = (over: Partial<EntryDto>): HTMLAnchorElement =>
-      (mount(entry(over)).nativeElement as HTMLElement).querySelector('.source-link')!;
+      (mount(entry(over)).nativeElement as HTMLElement).querySelector('.meta .source')!;
 
     it('goes out to the poster profile with their avatar when the entry has one', () => {
       const element = mount(
         entry({
-          source: 'Bob',
-          sourceUrl: 'https://bsky.app/profile/bob',
-          sourceImageUrl: 'https://cdn.example/bob.png',
+          poster: {
+            name: 'Bob',
+            url: 'https://bsky.app/profile/bob',
+            imageUrl: 'https://cdn.example/bob.png',
+          },
         }),
       ).nativeElement as HTMLElement;
-      const link = element.querySelector<HTMLAnchorElement>('.source-link')!;
+      const link = element.querySelector<HTMLAnchorElement>('.meta .source')!;
 
       expect(link.getAttribute('href')).toBe('https://bsky.app/profile/bob');
       expect(link.target).toBe('_blank');
@@ -253,7 +255,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('stays the in-app subscription filter otherwise', () => {
-      const link = sourceLink({ sourceUrl: null });
+      const link = sourceLink({ poster: null });
 
       expect(link.target).toBe('');
       expect(link.getAttribute('href')).toContain('subscription=');
@@ -777,7 +779,9 @@ describe('ReaderViewComponent', () => {
   });
 
   it("shows the poster's avatar in the nameplate of the split pane and of full screen", () => {
-    const poster = entry({ sourceImageUrl: 'https://cdn.example/amy.jpg' });
+    const poster = entry({
+      poster: { name: 'Amy', url: null, imageUrl: 'https://cdn.example/amy.jpg' },
+    });
     const pane = mount(poster).nativeElement as HTMLElement;
     expect(pane.querySelector('.bar-name img.avatar')?.getAttribute('src')).toBe(
       'https://cdn.example/amy.jpg',

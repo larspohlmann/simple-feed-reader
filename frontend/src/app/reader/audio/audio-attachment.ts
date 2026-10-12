@@ -23,7 +23,7 @@ export function toAudioTrack(entry: EntryDto, attachment: EntryAttachmentDto): A
     entry: {
       id: entry.id,
       title: entry.title,
-      feedTitle: entry.source,
+      feedTitle: entry.poster?.name ?? entry.source,
       publishedAt: entry.publishedAt ?? entry.createdAt,
       excerpt: entry.excerpt,
     },

@@ -267,7 +267,7 @@ final class EntryJsonTest extends TestCase
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
                 'imageRenditions', 'media', 'linkCards', 'share', 'title', 'url', 'discussionUrl', 'comments',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
-                'subscriptionId', 'subscriptionTitle', 'source', 'sourceUrl', 'sourceImageUrl',
+                'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',
                 'shortPlayerUrl', 'titleDerived', 'savedSearches', 'duplicates',
             ],
@@ -413,82 +413,51 @@ final class EntryJsonTest extends TestCase
         );
     }
 
-    public function testAPrivateFeedEntryNamesItsAuthorAsTheSource(): void
-    {
-        $entry = $this->entryOfFeedWithFormat(SourceFormat::BLUESKY_API, new EntryAuthor('POLITICO Europe'));
-
-        self::assertSame('POLITICO Europe', EntryJson::listRow($this->row($entry))['source']);
-    }
-
-    public function testAPrivateFeedEntryWithoutAnAuthorKeepsTheSubscriptionTitleAsTheSource(): void
-    {
-        $entry = $this->entryOfFeedWithFormat(SourceFormat::MASTODON_API, new EntryAuthor());
-
-        self::assertSame('Source', EntryJson::listRow($this->row($entry))['source']);
-    }
-
-    public function testAPrivateFeedEntryStillNamesTheSubscriptionTitle(): void
-    {
-        $entry = $this->entryOfFeedWithFormat(SourceFormat::BLUESKY_API, new EntryAuthor('POLITICO Europe'));
-
-        self::assertSame('Source', EntryJson::listRow($this->row($entry))['subscriptionTitle']);
-    }
-
-    public function testAnOrdinaryFeedEntryKeepsTheSubscriptionTitleAsTheSource(): void
-    {
-        $entry = $this->entryOfFeedWithFormat(SourceFormat::XML, new EntryAuthor('A. Writer'));
-
-        self::assertSame('Source', EntryJson::listRow($this->row($entry))['source']);
-    }
-
-    public function testAPrivateFeedEntryLinksItsAuthorProfileAsTheSourceUrl(): void
+    public function testAPrivateFeedEntryNamesItsAuthorAsThePosterAndKeepsTheFeedAsTheSource(): void
     {
         $entry = $this->entryOfFeedWithFormat(
             SourceFormat::BLUESKY_API,
-            new EntryAuthor('POLITICO Europe', 'https://bsky.app/profile/politico.eu'),
+            new EntryAuthor('POLITICO Europe', 'https://bsky.app/profile/politico.eu', 'https://cdn.example/p.png'),
         );
 
-        self::assertSame('https://bsky.app/profile/politico.eu', EntryJson::listRow($this->row($entry))['sourceUrl']);
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('Source', $json['source']);
+        self::assertSame([
+            'name' => 'POLITICO Europe',
+            'url' => 'https://bsky.app/profile/politico.eu',
+            'imageUrl' => 'https://cdn.example/p.png',
+        ], $json['poster']);
     }
 
-    public function testAPrivateFeedEntryExposesItsAuthorAvatarAsTheSourceImage(): void
+    public function testAPrivateFeedEntryWithoutAnAuthorHasNoPoster(): void
     {
         $entry = $this->entryOfFeedWithFormat(
             SourceFormat::MASTODON_API,
-            new EntryAuthor('Bob', avatarUrl: 'https://cdn.example/bob.png'),
-        );
-
-        self::assertSame('https://cdn.example/bob.png', EntryJson::listRow($this->row($entry))['sourceImageUrl']);
-    }
-
-    public function testAnOrdinaryFeedEntryHasNoSourceImage(): void
-    {
-        $entry = $this->entryOfFeedWithFormat(
-            SourceFormat::XML,
-            new EntryAuthor('A. Writer', avatarUrl: 'https://cdn.example/writer.png'),
-        );
-
-        self::assertNull(EntryJson::listRow($this->row($entry))['sourceImageUrl']);
-    }
-
-    public function testAPrivateFeedEntryWithoutAnAuthorHasNoSourceUrl(): void
-    {
-        $entry = $this->entryOfFeedWithFormat(
-            SourceFormat::BLUESKY_API,
             new EntryAuthor(profileUrl: 'https://bsky.app/profile/politico.eu'),
         );
 
-        self::assertNull(EntryJson::listRow($this->row($entry))['sourceUrl']);
+        self::assertNull(EntryJson::listRow($this->row($entry))['poster']);
     }
 
-    public function testAnOrdinaryFeedEntryHasNoSourceUrl(): void
+    public function testAPrivateFeedEntryWithAnEmptyAuthorHasNoPoster(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::MASTODON_API, new EntryAuthor(''));
+
+        self::assertNull(EntryJson::listRow($this->row($entry))['poster']);
+    }
+
+    public function testAnOrdinaryFeedEntryHasNoPosterEvenWithAnAuthorProfile(): void
     {
         $entry = $this->entryOfFeedWithFormat(
             SourceFormat::XML,
-            new EntryAuthor('A. Writer', 'https://example.com/writer'),
+            new EntryAuthor('A. Writer', 'https://example.com/writer', 'https://cdn.example/writer.png'),
         );
 
-        self::assertNull(EntryJson::listRow($this->row($entry))['sourceUrl']);
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('Source', $json['source']);
+        self::assertNull($json['poster']);
     }
 
     public function testAProfileFeedEntryShowsThePersonsPictureAndLinksTheirProfile(): void
@@ -498,8 +467,11 @@ final class EntryJsonTest extends TestCase
         $json = EntryJson::listRow($this->row($entry));
 
         self::assertSame('Source', $json['source']);
-        self::assertSame('https://bsky.app/profile/politico.eu', $json['sourceUrl']);
-        self::assertSame('https://cdn.example/politico.jpg', $json['sourceImageUrl']);
+        self::assertSame([
+            'name' => 'Source',
+            'url' => 'https://bsky.app/profile/politico.eu',
+            'imageUrl' => 'https://cdn.example/politico.jpg',
+        ], $json['poster']);
     }
 
     public function testAProfileFeedEntryNeverLinksASiteThatIsNoWebPage(): void
@@ -507,7 +479,8 @@ final class EntryJsonTest extends TestCase
         $entry = $this->profileFeedEntry(null);
         $entry->getFeed()->setSiteUrl('javascript://evil.example/%0Aalert(1)');
 
-        self::assertNull(EntryJson::listRow($this->row($entry))['sourceUrl']);
+        self::assertNull(EntryJson::listRow($this->row($entry))['poster']['url'] ?? null);
+        self::assertNotNull(EntryJson::listRow($this->row($entry))['poster']);
     }
 
     public function testAProfileFeedEntryWithAnAvatarOfItsOwnShowsThatOne(): void
@@ -515,12 +488,18 @@ final class EntryJsonTest extends TestCase
         $entry = $this->profileFeedEntry('https://cdn.example/politico.jpg');
         $entry->setAuthor(new EntryAuthor(avatarUrl: 'https://cdn.example/reposted.jpg'));
 
-        self::assertSame('https://cdn.example/reposted.jpg', EntryJson::listRow($this->row($entry))['sourceImageUrl']);
+        self::assertSame(
+            'https://cdn.example/reposted.jpg',
+            EntryJson::listRow($this->row($entry))['poster']['imageUrl'] ?? null,
+        );
     }
 
-    public function testAProfileFeedEntryWithoutAPictureHasNoSourceImage(): void
+    public function testAProfileFeedEntryWithoutAPictureHasAPosterWithoutAnImage(): void
     {
-        self::assertNull(EntryJson::listRow($this->row($this->profileFeedEntry(null)))['sourceImageUrl']);
+        $poster = EntryJson::listRow($this->row($this->profileFeedEntry(null)))['poster'];
+
+        self::assertNotNull($poster);
+        self::assertNull($poster['imageUrl']);
     }
 
     private function profileFeedEntry(?string $feedImageUrl): Entry

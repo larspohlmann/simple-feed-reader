@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -10,6 +10,7 @@ import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SocialSection, buildSocialSections } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
+import { SubscriptionRows } from '../state/subscription-rows';
 import { makeSubscription } from '../testing/subscription.factory';
 import { ListHeading } from './list-heading.service';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -35,7 +36,11 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
       { provide: ReaderRouteState, useValue: { selection: signal(selection) } },
       {
         provide: SubscriptionsStore,
-        useValue: { subscriptions: signal([subscription]), socialSections: signal(sections) },
+        useFactory: () => {
+          const rows = inject(SubscriptionRows);
+          rows.stored.set([subscription]);
+          return { subscriptions: rows.all, socialSections: signal(sections) };
+        },
       },
       { provide: LanguageService, useValue: { lang: signal('en') } },
       { provide: EntriesStore, useValue: {} },

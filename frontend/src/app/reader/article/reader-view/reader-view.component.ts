@@ -14,12 +14,12 @@ import { ProgressRailComponent } from '../../../shared/progress-rail/progress-ra
 import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
-import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
+import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import {
@@ -48,11 +48,9 @@ import { ArticleBody } from './article-body.service';
 import { ArticleGestures } from './article-gestures.service';
 import { relativeTime } from '../../format';
 import { estimateReadingMinutes } from '../decorators/reading-time';
-import { selectionQueryParams } from '../../query/query';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
-import { FeedNames } from '../../state/feed-names';
 
 @Component({
   selector: 'app-reader-view',
@@ -64,12 +62,12 @@ import { FeedNames } from '../../state/feed-names';
     ListActionDirective,
     FlagToggleDirective,
     FaviconComponent,
+    EntrySourceComponent,
     SpinnerComponent,
     LoadingOverlayComponent,
     EntryPillsComponent,
     EntryActionsComponent,
     ToTopButtonComponent,
-    RouterLink,
     TranslocoPipe,
     PaywallNoticeComponent,
     WarningBoxComponent,
@@ -83,7 +81,6 @@ import { FeedNames } from '../../state/feed-names';
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
 })
 export class ReaderViewComponent {
-  protected readonly selectionQueryParams = selectionQueryParams;
   protected readonly entryDisplayTitle = entryDisplayTitle;
   protected readonly isPost = isPost;
 
@@ -122,11 +119,6 @@ export class ReaderViewComponent {
   private readonly restore = inject(ArticleScrollRestore);
   protected readonly gestures = inject(ArticleGestures);
   protected readonly source = inject(ArticleSource);
-  private readonly names = inject(FeedNames);
-  protected readonly sourceName = computed(() => {
-    const entry = this.entry();
-    return entry === null ? '' : this.names.sourceOf(entry);
-  });
   protected readonly scope = inject(ReadingScope);
   private readonly body = inject(ArticleBody);
   protected readonly progressRail = new ScrollProgressRail({

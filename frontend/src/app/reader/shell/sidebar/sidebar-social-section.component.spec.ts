@@ -41,7 +41,7 @@ const ONE_ACCOUNT: SocialSection = {
       accountId: 3,
       handle: '@alice.bsky.social',
       subscriptions: [
-        feed(1, 'home', { title: 'Timeline' }),
+        feed(1, 'home', { title: 'Home@bsky' }),
         feed(2, 'list', { title: 'Writers' }),
       ],
     },
@@ -90,7 +90,7 @@ describe('SidebarSocialSectionComponent', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
 
-  it('titles the section by its network and names an unrenamed Home through i18n', () => {
+  it('titles the section by its network and lists each feed by its display title', () => {
     const root = element(mount(ONE_ACCOUNT));
 
     expect(root.querySelector('.section-link')?.textContent).toContain('Bluesky');
@@ -98,7 +98,6 @@ describe('SidebarSocialSectionComponent', () => {
       (row) => row.textContent ?? '',
     );
     expect(rows[0]).toContain('Home@bsky');
-    expect(rows[0]).not.toContain('Timeline');
     expect(rows[1]).toContain('Writers');
     expect(root.querySelector('.account-handle')).toBeNull();
   });

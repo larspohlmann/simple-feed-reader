@@ -1,3 +1,4 @@
+import { inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
@@ -6,6 +7,7 @@ import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { API_BASE_URL } from '../../../core/api';
 import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.component';
 import { SubscriptionDto } from '../../models';
+import { SubscriptionRows } from '../../state/subscription-rows';
 
 const sub: SubscriptionDto = {
   id: 5,
@@ -220,7 +222,14 @@ describe('EditSubscriptionDialogComponent', () => {
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: DialogRef, useValue: { close } },
-        { provide: DIALOG_DATA, useValue: home },
+        {
+          provide: DIALOG_DATA,
+          useFactory: () => {
+            const rows = inject(SubscriptionRows);
+            rows.stored.set([home]);
+            return rows.find(home.id);
+          },
+        },
       ],
     });
     const fixture = TestBed.createComponent(EditSubscriptionDialogComponent);

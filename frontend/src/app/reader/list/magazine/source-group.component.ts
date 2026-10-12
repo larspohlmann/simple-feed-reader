@@ -7,7 +7,6 @@ import { EntryCompactComponent } from './blocks/entry-compact/entry-compact.comp
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
-import { FeedNames } from '../../state/feed-names';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { feedAvatarUrl } from '../../state/social-sections';
 
@@ -36,14 +35,10 @@ export class SourceGroupComponent {
   readonly previewCount = input.required<number>();
   readonly tags = input<SubscriptionTagDto[]>([]);
 
-  private readonly names = inject(FeedNames);
   private readonly rows = inject(SubscriptionRows);
-  protected readonly avatarUrl = computed(() =>
-    feedAvatarUrl(this.rows.find(this.subscriptionId())),
-  );
-  protected readonly name = computed(
-    () => this.names.nameOf(this.subscriptionId()) ?? this.source(),
-  );
+  private readonly subscription = computed(() => this.rows.find(this.subscriptionId()));
+  protected readonly avatarUrl = computed(() => feedAvatarUrl(this.subscription()));
+  protected readonly name = computed(() => this.subscription()?.title ?? this.source());
 
   /** Ephemeral: the widget starts collapsed on every fresh render. Survives an
    *  article open/close (the list stays mounted), resets on reload/reselect. */

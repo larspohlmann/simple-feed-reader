@@ -21,7 +21,6 @@ import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.comp
 import { TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { pluralKey } from '../../../core/i18n/plural-key';
-import { FeedNames } from '../../state/feed-names';
 
 /** The most feed titles a bulk confirmation names before it says "and N more".
  *  Five is enough to recognise the selection and short enough to read. */
@@ -43,7 +42,6 @@ export class ManageActions {
   private readonly subs = inject(SubscriptionsStore);
   private readonly tags = inject(TagsStore);
   private readonly i18n = inject(TranslocoService);
-  private readonly names = inject(FeedNames);
   private readonly toast = inject(ToastService);
 
   editSubscription(sub: SubscriptionDto): void {
@@ -70,7 +68,7 @@ export class ManageActions {
    *  at once, then let the reload reconcile the exact order the server chose. */
   moveFeedToTag(sub: SubscriptionDto, move: MoveFeedToTag): void {
     if (move.fromTagId === move.toTagId) return;
-    this.subs.subscriptions.update((current) =>
+    this.subs.storedSubscriptions.update((current) =>
       current.map((subscription) =>
         subscription.id === sub.id ? this.afterMove(subscription, move) : subscription,
       ),
@@ -153,7 +151,7 @@ export class ManageActions {
   /** Persist a new order for the untagged "Feeds" list. Optimistic: update
    *  positions immediately, reconcile on response. */
   reorderUntagged(subscriptionIds: number[]): void {
-    this.subs.subscriptions.update((current) =>
+    this.subs.storedSubscriptions.update((current) =>
       current.map((subscription) => {
         const index = subscriptionIds.indexOf(subscription.id);
         if (index >= 0) return { ...subscription, position: index };
@@ -166,7 +164,7 @@ export class ManageActions {
   /** Persist a new order for the feeds within one tag. Optimistic: update
    *  per-tag positions immediately, reconcile on response. */
   reorderTagFeeds(tagId: number, subscriptionIds: number[]): void {
-    this.subs.subscriptions.update((current) =>
+    this.subs.storedSubscriptions.update((current) =>
       current.map((subscription) => {
         const tagEntry = subscription.tags.find((tag) => tag.id === tagId);
         if (!tagEntry) return subscription;
@@ -186,7 +184,7 @@ export class ManageActions {
   unsubscribe(sub: SubscriptionDto): void {
     const data: ConfirmData = {
       title: this.i18n.translate('manage.unsubscribeTitle'),
-      message: this.i18n.translate('manage.unsubscribeMessage', { title: this.names.titleOf(sub) }),
+      message: this.i18n.translate('manage.unsubscribeMessage', { title: sub.title }),
       confirmLabel: this.i18n.translate('manage.unsubscribeConfirm'),
       danger: true,
     };
@@ -318,7 +316,7 @@ export class ManageActions {
         if (!isFeedRecovered(report)) return true;
         this.toast.show({
           message: this.i18n.translate('settings.health.retry.recovered', {
-            title: this.names.titleOf(sub),
+            title: sub.title,
           }),
           durationMs: CONFIRMATION_DURATION_MS,
         });
@@ -344,7 +342,7 @@ export class ManageActions {
     const count = subscriptions.length;
     const named = subscriptions
       .slice(0, CONFIRM_TITLE_LIMIT)
-      .map((subscription) => this.names.titleOf(subscription))
+      .map((subscription) => subscription.title)
       .join(', ');
     const rest = count - Math.min(count, CONFIRM_TITLE_LIMIT);
 

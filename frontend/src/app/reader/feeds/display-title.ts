@@ -11,11 +11,3 @@ export function homeLabel(i18n: TranslocoService, network: SocialNetworkName): s
     network: i18n.translate(`reader.socialNetworkShort.${network}`),
   });
 }
-
-export function displayTitle(
-  subscription: SubscriptionDto,
-  homeLabelOf: (network: SocialNetworkName) => string,
-): string {
-  const social = subscription.social;
-  return social && isUnrenamedHome(subscription) ? homeLabelOf(social.network) : subscription.title;
-}

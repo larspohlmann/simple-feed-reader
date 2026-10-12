@@ -9,7 +9,6 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { Selection, visibleSearchTerm } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
 import { isUnrenamedHome } from '../feeds/display-title';
-import { FeedNames } from '../state/feed-names';
 import { SubscriptionDto } from '../models';
 import { SocialNetworkName } from '../../core/social-network';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -25,7 +24,6 @@ export class ListHeading {
   private readonly layout = inject(ReadingLayoutService);
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
-  private readonly names = inject(FeedNames);
 
   readonly activeSavedSearchId = computed(() => {
     const selection = this.routeState.selection();
@@ -71,7 +69,7 @@ export class ListHeading {
 
   readonly feedIntroTitle = computed(() => {
     const subscription = this.feedIntroSubscription();
-    return subscription === null ? null : this.names.titleOf(subscription);
+    return subscription?.title ?? null;
   });
 
   private readonly selectedNetworkSection = computed<SocialSection | null>(() => {
@@ -119,9 +117,10 @@ export class ListHeading {
   };
 
   private feedTitle(subscription: SubscriptionDto): string {
-    const title = this.names.titleOf(subscription);
     const handle = this.sharedNetworkHandle(subscription);
-    return handle !== null && isUnrenamedHome(subscription) ? `${title} · ${handle}` : title;
+    return handle !== null && isUnrenamedHome(subscription)
+      ? `${subscription.title} · ${handle}`
+      : subscription.title;
   }
 
   private sharedNetworkHandle(subscription: SubscriptionDto): string | null {

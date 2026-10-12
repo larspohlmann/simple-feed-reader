@@ -10,7 +10,7 @@
            a strip of its own. aria-hidden: the h1 carries the same title, so
            announcing this too would read the headline twice. -->
       <div class="mini" aria-hidden="true">
-        <app-favicon [url]="e.faviconUrl" [avatarUrl]="e.sourceImageUrl" [size]="14" />
+        <app-favicon [url]="e.faviconUrl" [avatarUrl]="e.poster?.imageUrl ?? null" [size]="14" />
         <span class="mini-title">{{ entryDisplayTitle(e) }}</span>
       </div>
     }
@@ -28,7 +28,7 @@
              inside it rather than in a strip of its own. aria-hidden for the
              same reason as .mini above. -->
         <span class="bar-name" aria-hidden="true">
-          <app-favicon [url]="e.faviconUrl" [avatarUrl]="e.sourceImageUrl" [size]="18" />
+          <app-favicon [url]="e.faviconUrl" [avatarUrl]="e.poster?.imageUrl ?? null" [size]="18" />
           <span class="bar-title">{{ entryDisplayTitle(e) }}</span>
         </span>
       }
@@ -105,25 +105,8 @@
             </h1>
           </div>
           <p class="meta">
-            <app-favicon [url]="e.faviconUrl" [avatarUrl]="e.sourceImageUrl" [size]="16" />
-            @if (e.sourceUrl; as profileUrl) {
-              <a
-                class="source-link"
-                [href]="profileUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                >{{ sourceName() }}</a
-              >
-            } @else {
-              <a
-                class="source-link"
-                [routerLink]="['/']"
-                [queryParams]="selectionQueryParams({ subscription: e.subscriptionId })"
-                queryParamsHandling="merge"
-                >{{ sourceName() }}</a
-              >
-            }
-            @if (e.author && e.author !== e.source) {
+            <app-entry-source [entry]="e" layout="article" [size]="16" />
+            @if (e.author && e.author !== (e.poster?.name ?? e.source)) {
               · {{ e.author }}
             }
             · {{ when(e) }}

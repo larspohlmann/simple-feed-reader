@@ -58,15 +58,6 @@
   color: var(--text-muted);
 }
 
-.meta .source {
-  color: inherit;
-  text-decoration: none;
-}
-
-.meta .source:hover {
-  text-decoration: underline;
-}
-
 .snippet {
   margin: 0;
   font-size: var(--fs-sm);

@@ -11,7 +11,6 @@ import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
-import { FeedNames } from '../../state/feed-names';
 
 /** The inside of one feed row, tagged or untagged. The `cdkDrag` row itself
  *  stays in the sidebar; the handle here registers with it through DI. */
@@ -39,9 +38,6 @@ export class SidebarFeedRowComponent {
   readonly organising = input(false);
   /** The tag the row is listed under, or null in the untagged list. */
   readonly tagId = input<number | null>(null);
-
-  private readonly names = inject(FeedNames);
-  protected readonly name = computed(() => this.names.titleOf(this.subscription()));
 
   /** A private feed's exclusion is its inherent state, so it carries no marker; a profile feed is ordinary RSS. */
   protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));

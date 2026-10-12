@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { WritableSignal, signal } from '@angular/core';
+import { WritableSignal, inject, signal } from '@angular/core';
 import { OrganiseStore } from './organise.store';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { SubscriptionRows } from '../../reader/state/subscription-rows';
 import { TagsStore } from '../../reader/state/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
@@ -50,7 +51,14 @@ describe('OrganiseStore', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         OrganiseStore,
-        { provide: SubscriptionsStore, useValue: { subscriptions: signal(subscriptions) } },
+        {
+          provide: SubscriptionsStore,
+          useFactory: () => {
+            const rows = inject(SubscriptionRows);
+            rows.stored.set(subscriptions);
+            return { subscriptions: rows.all };
+          },
+        },
         { provide: TagsStore, useValue: { tags: signal(tags) } },
       ],
     });
