@@ -124,6 +124,17 @@ final class BudgetedFeedQueueTest extends TestCase
         self::assertSame(1, $queue->skippedCount());
     }
 
+    public function testNamesEverySocialFeedIdInOrderWhetherTheBudgetStartsItOrNot(): void
+    {
+        $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
+        $rss = self::withId(new Feed('https://feed1.example.com/rss'), 1);
+        $home = self::withId(self::socialFeed('social:bluesky:1:home'), 7);
+        $list = self::withId(self::socialFeed('social:bluesky:1:list:x'), 4);
+        $queue = new BudgetedFeedQueue([$rss, $home, $list], $clock, $clock->now()->getTimestamp() + 5);
+
+        self::assertSame([7, 4], $queue->socialFeedIds());
+    }
+
     private static function socialFeed(string $url): Feed
     {
         $feed = new Feed($url);

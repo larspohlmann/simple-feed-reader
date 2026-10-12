@@ -22,6 +22,12 @@ final class BlueskyRecordUriTest extends TestCase
     {
         yield 'a list' => ['at://did:plc:bob/app.bsky.graph.list/3l1', true, false];
         yield 'a feed generator' => ['at://did:web:example.com/app.bsky.feed.generator/news', false, true];
+        yield 'a list collection with its dots replaced' => ['at://did:plc:bob/appxbsky.graph.list/3l1', false, false];
+        yield 'a generator collection with its dots replaced' => [
+            'at://did:plc:bob/app.bsky.feedxgenerator/news',
+            false,
+            false,
+        ];
         yield 'a post' => ['at://did:plc:bob/app.bsky.feed.post/3l1', false, false];
         yield 'a handle for the repository' => ['at://bob.bsky.social/app.bsky.graph.list/3l1', false, false];
         yield 'a DID method with a digit' => ['at://did:pl4:bob/app.bsky.graph.list/3l1', false, false];

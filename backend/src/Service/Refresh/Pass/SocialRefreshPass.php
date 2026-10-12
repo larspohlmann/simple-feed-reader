@@ -11,7 +11,7 @@ use App\Entity\SocialFeed;
 /** One refresh pass's private feeds, loaded with their accounts at once, and the accounts throttled so far. */
 final class SocialRefreshPass
 {
-    /** @var array<int, true> */
+    /** @var list<int> */
     private array $throttledAccountIds = [];
 
     /** @param array<int, SocialFeed> $socialFeedsByFeedId */
@@ -26,11 +26,11 @@ final class SocialRefreshPass
 
     public function throttle(SocialAccount $account): void
     {
-        $this->throttledAccountIds[$account->requireId()] = true;
+        $this->throttledAccountIds[] = $account->requireId();
     }
 
     public function isThrottled(SocialAccount $account): bool
     {
-        return isset($this->throttledAccountIds[$account->requireId()]);
+        return \in_array($account->requireId(), $this->throttledAccountIds, true);
     }
 }

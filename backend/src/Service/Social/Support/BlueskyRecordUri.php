@@ -15,19 +15,19 @@ final class BlueskyRecordUri
 
     public static function isList(string $uri): bool
     {
-        return self::LIST === self::partsOf($uri)['collection'];
+        return self::LIST === (self::partsOf($uri)['collection'] ?? null);
     }
 
     public static function isFeedGenerator(string $uri): bool
     {
-        return self::FEED_GENERATOR === self::partsOf($uri)['collection'];
+        return self::FEED_GENERATOR === (self::partsOf($uri)['collection'] ?? null);
     }
 
     /** @return string|null the record's page on the Bluesky web app; null when $uri is no list or feed generator */
     public static function webUrl(string $uri): ?string
     {
         $parts = self::partsOf($uri);
-        if (null === $parts['collection']) {
+        if (null === $parts) {
             return null;
         }
         $section = self::LIST === $parts['collection'] ? 'lists' : 'feed';
@@ -35,14 +35,14 @@ final class BlueskyRecordUri
         return BlueskyWeb::profileUrl($parts['did']) . '/' . $section . '/' . $parts['recordKey'];
     }
 
-    /** @return array{did: string, collection: string|null, recordKey: string} */
-    private static function partsOf(string $uri): array
+    /** @return array{did: string, collection: string, recordKey: string}|null */
+    private static function partsOf(string $uri): ?array
     {
         $pattern = '#^at://(?<did>' . BlueskyActor::DID_SYNTAX . ')/(?<collection>'
             . preg_quote(self::LIST, '#') . '|' . preg_quote(self::FEED_GENERATOR, '#')
             . ')/(?<recordKey>' . self::RECORD_KEY . ')$#D';
         if (1 !== preg_match($pattern, $uri, $match)) {
-            return ['did' => '', 'collection' => null, 'recordKey' => ''];
+            return null;
         }
 
         return ['did' => $match['did'], 'collection' => $match['collection'], 'recordKey' => $match['recordKey']];
