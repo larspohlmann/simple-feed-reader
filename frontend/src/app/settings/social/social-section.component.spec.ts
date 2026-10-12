@@ -1,12 +1,15 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Dialog } from '@angular/cdk/dialog';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { API_BASE_URL } from '../../core/api';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { SocialAccount } from './social-accounts.service';
+import { SocialImportDialogComponent } from './social-import-dialog.component';
 import { SocialSectionComponent } from './social-section.component';
 
 const BASE = 'https://api.test';
@@ -33,6 +36,8 @@ describe('SocialSectionComponent', () => {
     confirmThen: jest.fn((_data: ConfirmData, action: () => void) => action()),
   };
 
+  const dialogStub = { open: jest.fn(() => ({ closed: of(undefined) })) };
+
   function mount(accounts: SocialAccount[]): ComponentFixture<SocialSectionComponent> {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -43,6 +48,7 @@ describe('SocialSectionComponent', () => {
         { provide: API_BASE_URL, useValue: BASE },
         { provide: ToastService, useValue: toastStub },
         { provide: ConfirmService, useValue: confirmStub },
+        { provide: Dialog, useValue: dialogStub },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -87,9 +93,46 @@ describe('SocialSectionComponent', () => {
   beforeEach(() => {
     toastStub.show.mockReset();
     confirmStub.confirmThen.mockClear();
+    dialogStub.open.mockClear();
   });
 
   afterEach(() => http.verify());
+
+  it('offers Import on a connected account and disables it on one that needs reconnecting', () => {
+    const fixture = mount([
+      account(),
+      account({ id: 2, handle: 'bob.bsky.social', isDefault: false, status: 'needs_reconnect' }),
+    ]);
+
+    const button = (id: number) =>
+      byTestId(fixture, `social-import-${id}`)?.querySelector('button') as HTMLButtonElement;
+    expect(button(1).disabled).toBe(false);
+    expect(button(1).textContent).toContain('Import…');
+    expect(button(2).disabled).toBe(true);
+  });
+
+  it('opens the picker for the account and reloads the accounts when it closes', () => {
+    const fixture = mount([account()]);
+
+    press(fixture, 'social-import-1');
+
+    expect(dialogStub.open).toHaveBeenCalledWith(SocialImportDialogComponent, {
+      data: { accountId: 1, network: 'bluesky', handle: 'alice.bsky.social' },
+      panelClass: 'app-dialog',
+    });
+    http.expectOne(ENDPOINT).flush({ accounts: [account({ status: 'needs_reconnect' })] });
+    fixture.detectChanges();
+    expect(byTestId(fixture, 'social-needs-reconnect-1')).not.toBeNull();
+  });
+
+  it('reloads the accounts when the picker closes without a result', () => {
+    const fixture = mount([account()]);
+    dialogStub.open.mockReturnValueOnce({ closed: of(undefined) });
+
+    press(fixture, 'social-import-1');
+
+    http.expectOne(ENDPOINT).flush({ accounts: [account()] });
+  });
 
   it('renders a Bluesky and a Mastodon group with their accounts', () => {
     const fixture = mount([

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Dialog } from '@angular/cdk/dialog';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { formatLongDate } from '../../reader/format';
@@ -13,6 +14,11 @@ import { SettingsRowComponent } from '../../shared/settings/settings-row/setting
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { SocialAccount, SocialAccountsService, SocialNetwork } from './social-accounts.service';
+import {
+  SocialImportDialogComponent,
+  SocialImportDialogData,
+} from './social-import-dialog.component';
+import { SocialImportResult } from './social-import.service';
 
 @Component({
   selector: 'app-social-section',
@@ -35,6 +41,7 @@ import { SocialAccount, SocialAccountsService, SocialNetwork } from './social-ac
 export class SocialSectionComponent {
   protected readonly svc = inject(SocialAccountsService);
   private readonly confirm = inject(ConfirmService);
+  private readonly dialog = inject(Dialog);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
@@ -118,6 +125,20 @@ export class SocialSectionComponent {
       },
       error: () => undefined,
     });
+  }
+
+  protected openImport(account: SocialAccount): void {
+    const data: SocialImportDialogData = {
+      accountId: account.id,
+      network: account.network,
+      handle: account.handle,
+    };
+    this.dialog
+      .open<SocialImportResult | undefined>(SocialImportDialogComponent, {
+        data,
+        panelClass: 'app-dialog',
+      })
+      .closed.subscribe(() => this.svc.load());
   }
 
   protected makeDefault(account: SocialAccount): void {
