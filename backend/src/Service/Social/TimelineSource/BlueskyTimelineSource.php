@@ -51,7 +51,7 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
     private function ask(SocialFeed $socialFeed, BlueskySessionModel $session): ApiResponseModel
     {
         return $this->bluesky->answer(ApiRequestModel::get(
-            $session->pdsUrl . self::pathOf($socialFeed),
+            $socialFeed->getSocialAccount()->getServiceUrl() . self::pathOf($socialFeed),
             ['Authorization' => 'Bearer ' . $session->accessJwt],
         ));
     }

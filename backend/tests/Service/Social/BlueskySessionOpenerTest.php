@@ -47,7 +47,6 @@ final class BlueskySessionOpenerTest extends TestCase
 
         self::assertSame('jwt-1', $session->accessJwt);
         self::assertSame('alice.bsky.social', $session->handle);
-        self::assertSame('https://pds.example.test', $session->pdsUrl);
         self::assertSame('{"identifier":"did:plc:alice","password":"abcd-efgh-ijkl-mnop"}', $http->requests[0]['body']);
     }
 

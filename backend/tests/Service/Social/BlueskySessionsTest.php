@@ -52,7 +52,7 @@ final class BlueskySessionsTest extends TestCase
         $account = self::account();
         self::cacheOver($cache)->remember(
             $account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social', 'https://pds.example.test'),
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
         );
         $http = new RoutedHttpClient([self::SESSION => self::sessionAnswer('jwt-2')]);
         $sessions = $this->sessions($http, $cache);
@@ -69,7 +69,7 @@ final class BlueskySessionsTest extends TestCase
         $account = self::account();
         self::cacheOver($cache)->remember(
             $account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social', 'https://pds.example.test'),
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
         );
         $http = new RoutedHttpClient([self::SESSION => new MockResponse('', [
             'http_code' => Response::HTTP_SERVICE_UNAVAILABLE,
@@ -100,7 +100,7 @@ final class BlueskySessionsTest extends TestCase
         $account = self::account();
         self::cacheOver($cache)->remember(
             $account,
-            new BlueskySessionModel('old-jwt', 'alice.bsky.social', 'https://pds.example.test'),
+            new BlueskySessionModel('old-jwt', 'alice.bsky.social'),
         );
         $account->replaceCredential(
             '@alice.bsky.social',

@@ -38,7 +38,7 @@ final readonly class BlueskySessionCache
             return null;
         }
 
-        return new BlueskySessionModel($accessJwt, $sealed->handle, $sealed->pdsUrl);
+        return new BlueskySessionModel($accessJwt, $sealed->handle);
     }
 
     public function remember(SocialAccount $account, BlueskySessionModel $session): void
@@ -46,7 +46,6 @@ final readonly class BlueskySessionCache
         $sealed = new SealedBlueskySessionModel(
             $this->cipher->seal($account->getUser()->requireId(), $session->accessJwt),
             $session->handle,
-            $session->pdsUrl,
         );
         $item = $this->cache->getItem(self::keyOf($account));
         $item->set($sealed->toCacheEntry());

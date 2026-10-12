@@ -111,7 +111,7 @@ final class BlueskyTimelineSourceTest extends TestCase
     {
         $this->sessionCache()->remember(
             $this->account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social', self::PDS),
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
         );
         $sessionAnswer = self::session('jwt-2');
         $timelineAnswer = self::timeline();
@@ -135,7 +135,7 @@ final class BlueskyTimelineSourceTest extends TestCase
     {
         $this->sessionCache()->remember(
             $this->account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social', self::PDS),
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
         );
         $http = new MockHttpClient([
             self::json(['error' => 'InvalidToken'], Response::HTTP_UNAUTHORIZED),
@@ -152,7 +152,7 @@ final class BlueskyTimelineSourceTest extends TestCase
     {
         $this->sessionCache()->remember(
             $this->account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social', self::PDS),
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
         );
         $http = new RoutedHttpClient([
             self::TIMELINE => self::json(['error' => 'AuthenticationRequired'], Response::HTTP_UNAUTHORIZED),
@@ -170,7 +170,7 @@ final class BlueskyTimelineSourceTest extends TestCase
     {
         $this->sessionCache()->remember(
             $this->account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social', self::PDS),
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
         );
         $expired = ['error' => 'ExpiredToken'];
         $http = new MockHttpClient([
@@ -182,6 +182,20 @@ final class BlueskyTimelineSourceTest extends TestCase
         $this->expectException(SocialCredentialsRejectedException::class);
 
         $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, null));
+    }
+
+    public function testACachedSessionsTokenGoesOnlyToTheAccountsOwnService(): void
+    {
+        $this->sessionCache()->remember(
+            $this->account,
+            new BlueskySessionModel('cached-jwt', 'alice.bsky.social'),
+        );
+        $this->rewriteCachedEntry(['pdsUrl' => 'https://elsewhere.example.test']);
+        $http = new RoutedHttpClient([self::TIMELINE => self::timeline()]);
+
+        $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, null));
+
+        self::assertSame([self::PDS . '/xrpc/app.bsky.feed.getTimeline?limit=50'], $http->requestedUrls());
     }
 
     public function testTooManyRequestsIsAThrottleCarryingItsDelay(): void
@@ -232,6 +246,15 @@ final class BlueskyTimelineSourceTest extends TestCase
                 $this->sessionCache(),
             ),
         );
+    }
+
+    /** @param array<string, string> $fields */
+    private function rewriteCachedEntry(array $fields): void
+    {
+        $item = $this->cache->getItem((string) array_key_first($this->cache->getValues()));
+        $entry = $item->get();
+        self::assertIsArray($entry);
+        $this->cache->save($item->set($fields + $entry));
     }
 
     private function sessionCache(): BlueskySessionCache
