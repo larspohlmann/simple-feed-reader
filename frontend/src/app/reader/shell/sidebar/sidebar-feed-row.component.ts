@@ -7,7 +7,7 @@ import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
-import { isPrivateFeed } from '../../state/social-sections';
+import { isPrivateFeed, isSocialFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -45,6 +45,12 @@ export class SidebarFeedRowComponent {
 
   /** A private feed's exclusion is its inherent state, so it carries no marker; a profile feed is ordinary RSS. */
   protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));
+
+  /** A person, list or custom feed shows its picture; Home keeps the network's favicon. */
+  protected readonly avatarUrl = computed(() => {
+    const feed = this.subscription();
+    return isSocialFeed(feed) && feed.social?.kind !== 'home' ? feed.imageUrl : null;
+  });
 
   protected readonly menuKey = computed(() => {
     const tagId = this.tagId();

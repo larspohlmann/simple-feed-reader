@@ -12,6 +12,11 @@
   min-width: 0;
 }
 
+/* A picture of a person stays at full strength; only the site favicons are muted. */
+.nav app-favicon.has-avatar {
+  opacity: 1;
+}
+
 .tag-sub {
   padding-left: var(--space-6);
 }

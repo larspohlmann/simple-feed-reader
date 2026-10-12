@@ -5,7 +5,7 @@
     <app-icon name="drag_indicator" size="sm" />
   </span>
   <span class="feedname"
-    ><app-favicon [url]="feed.faviconUrl" /><span>{{ name }}</span></span
+    ><app-favicon [url]="feed.faviconUrl" [avatarUrl]="avatarUrl()" /><span>{{ name }}</span></span
   >
   <button
     class="dots"
@@ -24,7 +24,11 @@
     [queryParams]="selectionQueryParams({ subscription: feed.id })"
     queryParamsHandling="merge"
   >
-    <app-favicon [url]="feed.faviconUrl" /><span>{{ name }}</span>
+    <app-favicon
+      [url]="feed.faviconUrl"
+      [avatarUrl]="avatarUrl()"
+      [class.has-avatar]="avatarUrl() !== null"
+    /><span>{{ name }}</span>
     @if (!isPrivate() && (!feed.includeInAllItems || !feed.includeInForYou)) {
       <app-icon
         class="feed-exclusion-marker"

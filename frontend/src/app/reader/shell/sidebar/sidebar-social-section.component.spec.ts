@@ -286,4 +286,55 @@ describe('SidebarSocialSectionComponent', () => {
 
     expect(element(mount(quiet)).querySelector('.section-count')).toBeNull();
   });
+
+  describe('row avatars', () => {
+    const avatarOf = (subscription: SubscriptionDto): string | null => {
+      const section: SocialSection = {
+        network: 'bluesky',
+        accounts: [],
+        people: [subscription],
+        unreadCount: 0,
+      };
+      const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;
+      return row.querySelector('img.avatar')?.getAttribute('src') ?? null;
+    };
+
+    it("shows a profile feed's image as a round avatar", () => {
+      const amy = { ...person(7, 'Amy'), imageUrl: 'https://cdn.example/amy.jpg' };
+
+      expect(avatarOf(amy)).toBe('https://cdn.example/amy.jpg');
+    });
+
+    it("shows a list's image as its avatar", () => {
+      expect(avatarOf(feed(2, 'list', { imageUrl: 'https://cdn.example/list.jpg' }))).toBe(
+        'https://cdn.example/list.jpg',
+      );
+    });
+
+    it('keeps the favicon for a Home timeline', () => {
+      expect(avatarOf(feed(1, 'home', { imageUrl: 'https://cdn.example/me.jpg' }))).toBeNull();
+    });
+
+    it("never shows an ordinary feed's channel logo as an avatar", () => {
+      expect(
+        avatarOf(makeSubscription({ id: 9, imageUrl: 'https://example.com/logo.png' })),
+      ).toBeNull();
+    });
+
+    it('falls back to the favicon without an image', () => {
+      const amy = { ...person(7, 'Amy'), faviconUrl: 'https://bsky.app/favicon.ico' };
+      const section: SocialSection = {
+        network: 'bluesky',
+        accounts: [],
+        people: [amy],
+        unreadCount: 0,
+      };
+      const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;
+
+      expect(row.querySelector('img.avatar')).toBeNull();
+      expect(row.querySelector('img.favicon')?.getAttribute('src')).toBe(
+        'https://bsky.app/favicon.ico',
+      );
+    });
+  });
 });
