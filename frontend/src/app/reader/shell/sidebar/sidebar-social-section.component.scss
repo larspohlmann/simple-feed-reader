@@ -12,6 +12,9 @@
 
 .account-handle,
 .people-heading {
+  /* The sidebar is a scrolling flex column, and `overflow: hidden` drops the auto min-height: without this the
+     line shrinks to nothing once the sidebar overflows. */
+  flex: none;
   margin: var(--space-2) var(--space-2) var(--space-1);
   overflow: hidden;
   color: var(--text-muted);
