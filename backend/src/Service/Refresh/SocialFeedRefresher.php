@@ -9,9 +9,9 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialAccountStatus;
 use App\Repository\SocialFeedRepository;
 use App\Service\Refresh\Exception\PrivateFeedOrphanedException;
+use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\Model\IncomingFeedModel;
-use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -35,20 +35,19 @@ final readonly class SocialFeedRefresher
         if (null === $socialFeed) {
             return $this->outcomePersister->storeFailure($feed, new PrivateFeedOrphanedException());
         }
+        // Refused earlier in this pass: its other feeds keep their schedule, as findDue() skips them from now on.
+        if (SocialAccountStatus::NeedsReconnect === $socialFeed->getSocialAccount()->getStatus()) {
+            return FeedRefreshResultModel::of(FeedOutcome::Failed);
+        }
 
         try {
             $page = $this->pageOf($socialFeed);
         } catch (SocialNetworkThrottledException $exception) {
             return $this->outcomePersister->storeThrottled($feed, $exception->retryAfterSeconds);
-        } catch (
-            SocialAccountNeedsReconnectException |
-            SocialCredentialsRejectedException |
-            SocialNetworkUnreachableException $exception
-        ) {
+        } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $exception) {
             return $this->outcomePersister->storeFailure($feed, $exception);
         }
 
-        // Set before the store's flush, which writes it with the page's entries, or not at all.
         $socialFeed->recordNewestSeen($page->newestId);
 
         return $this->outcomePersister->storeParsed(
@@ -59,23 +58,15 @@ final readonly class SocialFeedRefresher
     }
 
     /**
-     * An account refused earlier in this pass is not asked again: findDue() chose its feeds before the refusal.
-     *
-     * @throws SocialAccountNeedsReconnectException
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkUnreachableException
      */
     private function pageOf(SocialFeed $socialFeed): TimelinePageModel
     {
-        $account = $socialFeed->getSocialAccount();
-        if (SocialAccountStatus::NeedsReconnect === $account->getStatus()) {
-            throw new SocialAccountNeedsReconnectException(sprintf('%s needs reconnecting.', $account->getHandle()));
-        }
-
         try {
             return $this->timelines->page($socialFeed);
         } catch (SocialCredentialsRejectedException $exception) {
-            $account->markNeedsReconnect();
+            $socialFeed->getSocialAccount()->markNeedsReconnect();
 
             throw $exception;
         }

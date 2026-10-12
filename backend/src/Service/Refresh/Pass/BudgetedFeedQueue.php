@@ -31,8 +31,8 @@ final class BudgetedFeedQueue
     /** @return \Generator<int, FetchTicketModel, mixed, void> */
     public function tickets(): \Generator
     {
-        $fetched = static fn (Feed $feed): bool => !SourceFormat::isSocial($feed->getSourceFormat());
-        foreach ($this->startedAmong($fetched) as $feedId => $feed) {
+        $isFetchedByUrl = static fn (Feed $feed): bool => !SourceFormat::isSocial($feed->getSourceFormat());
+        foreach ($this->startedAmong($isFetchedByUrl) as $feedId => $feed) {
             yield $feedId => new FetchTicketModel($feed->getUrl(), $feed->getEtag(), $feed->getLastModified());
         }
     }

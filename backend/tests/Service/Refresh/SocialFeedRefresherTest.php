@@ -56,7 +56,7 @@ final class SocialFeedRefresherTest extends DbTestCase
 
     public function testAPageIsStoredAndItsNewestIdKeptForTheNextPoll(): void
     {
-        $result = $this->refresher(self::page('109'))->refresh($this->home->getFeed(), $this->clock->now());
+        $result = $this->refresher(self::page())->refresh($this->home->getFeed(), $this->clock->now());
 
         self::assertSame(FeedOutcome::Fetched, $result->outcome);
         self::assertSame(1, $result->entriesCreated);
@@ -117,7 +117,29 @@ final class SocialFeedRefresherTest extends DbTestCase
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         self::assertSame(1, $this->home->getFeed()->getConsecutiveFailures());
-        self::assertSame('100', $this->home->getNewestSeenId());
+        $this->entityManager->clear();
+        self::assertSame('100', $this->socialFeeds()->find($this->home->requireId())?->getNewestSeenId());
+    }
+
+    public function testARefusalLeavesTheAccountsOtherFeedsAsTheyWere(): void
+    {
+        PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock)
+            ->create($this->account, PrivateFeedModel::userList('42', 'Friends'));
+        $list = $this->socialFeeds()->findOneFor($this->account, SocialFeedKind::UserList, '42')?->getFeed();
+        self::assertNotNull($list);
+        $nextFetchAt = $list->getNextFetchAt();
+        $refresher = $this->refresher(new SocialCredentialsRejectedException('The Mastodon instance refused it.'));
+        $refresher->refresh($this->home->getFeed(), $this->clock->now());
+
+        $result = $refresher->refresh($list, $this->clock->now());
+
+        self::assertSame(FeedOutcome::Failed, $result->outcome);
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->find(Feed::class, $list->requireId());
+        self::assertNotNull($reloaded);
+        self::assertSame(0, $reloaded->getConsecutiveFailures());
+        self::assertNull($reloaded->getLastErrorMessage());
+        self::assertEquals($nextFetchAt, $reloaded->getNextFetchAt());
     }
 
     public function testAFeedWithoutItsSocialAccountFailsWithoutAsking(): void
@@ -149,12 +171,12 @@ final class SocialFeedRefresherTest extends DbTestCase
         );
     }
 
-    private static function page(string $newestId): TimelinePageModel
+    private static function page(): TimelinePageModel
     {
         return MastodonTimelinePage::of([JsonNodeModel::of([
-            'id' => $newestId,
-            'uri' => 'https://mastodon.example/users/bob/statuses/' . $newestId,
-            'url' => 'https://mastodon.example/@bob/' . $newestId,
+            'id' => '109',
+            'uri' => 'https://mastodon.example/users/bob/statuses/109',
+            'url' => 'https://mastodon.example/@bob/109',
             'created_at' => '2026-10-12T11:59:00Z',
             'content' => '<p>Hello</p>',
             'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
