@@ -398,6 +398,7 @@
       "importStateNoLongerFollowed": "Nicht mehr gefolgt",
       "importSubscribe": "{{handle}} abonnieren",
       "importUnsubscribe": "{{handle}} abbestellen",
+      "importAlreadySubscribed": "{{handle}} bereits abonniert",
       "importUnsubscribeHint": "Hake ein als „Nicht mehr gefolgt“ markiertes Konto an, um es abzubestellen.",
       "importCollectionsLater": "Listen und eigene Feeds lassen sich importieren, sobald private Timeline-Feeds kommen.",
       "importEmpty": "Nichts anzuzeigen.",

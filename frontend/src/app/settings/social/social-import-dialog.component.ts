@@ -35,7 +35,7 @@ const STATE_KEYS: Readonly<Record<ImportCandidateState, string>> = {
 
 const CHECKBOX_KEYS: Readonly<Record<ImportCandidateState, string>> = {
   new: 'settings.social.importSubscribe',
-  subscribed: 'settings.social.importStateSubscribed',
+  subscribed: 'settings.social.importAlreadySubscribed',
   no_longer_followed: 'settings.social.importUnsubscribe',
 };
 
@@ -132,13 +132,15 @@ export class SocialImportDialogComponent {
   }
 
   protected toggle(follow: FollowCandidate): void {
-    if (follow.state === 'new') {
-      this.toSubscribe.update((current) => toggled(current, follow.feedUrl));
-      return;
+    switch (follow.state) {
+      case 'subscribed':
+        return;
+      case 'new':
+        this.toSubscribe.update((current) => toggled(current, follow.feedUrl));
+        return;
+      case 'no_longer_followed':
+        this.toggleRemoval(follow.subscriptionId);
     }
-    const subscriptionId = follow.subscriptionId;
-    if (follow.state !== 'no_longer_followed' || subscriptionId === null) return;
-    this.toUnsubscribe.update((current) => toggled(current, subscriptionId));
   }
 
   protected selectAllNew(): void {
@@ -164,6 +166,11 @@ export class SocialImportDialogComponent {
 
   protected cancel(): void {
     this.dialogRef.close(undefined);
+  }
+
+  private toggleRemoval(subscriptionId: number | null): void {
+    if (subscriptionId === null) return;
+    this.toUnsubscribe.update((current) => toggled(current, subscriptionId));
   }
 
   private finish(result: SocialImportResult): void {

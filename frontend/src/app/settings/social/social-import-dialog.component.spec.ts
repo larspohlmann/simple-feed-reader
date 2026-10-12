@@ -317,4 +317,55 @@ describe('SocialImportDialogComponent', () => {
 
     expect(close).toHaveBeenCalledWith(undefined);
   });
+
+  it('names the handle on the checkbox of every row state', () => {
+    const fixture = loaded(candidates({ follows: [follow(), CAROL, DAVE] }));
+
+    expect(checkboxOf(fixture, 'did:plc:bob').getAttribute('aria-label')).toBe(
+      'Subscribe to @bob.bsky.social',
+    );
+    expect(checkboxOf(fixture, 'did:plc:carol').getAttribute('aria-label')).toBe(
+      'Already subscribed to @carol.bsky.social',
+    );
+    expect(checkboxOf(fixture, 'did:plc:dave').getAttribute('aria-label')).toBe(
+      'Unsubscribe from did:plc:dave',
+    );
+  });
+
+  it('stays open and shows the problem without a retry when the import fails', () => {
+    const fixture = loaded(candidates({ follows: [follow()] }));
+    tick(fixture, 'did:plc:bob');
+
+    press(fixture, 'social-import-apply');
+    http.expectOne(IMPORT).flush(
+      {
+        type: 'social_network_unreachable',
+        title: 'x',
+        status: 502,
+        detail: 'Bluesky could not be reached.',
+      },
+      { status: 502, statusText: 'Bad Gateway' },
+    );
+    fixture.detectChanges();
+
+    const banner = byTestId(fixture, 'social-import-failure') as HTMLElement;
+    expect(banner.textContent).toContain('Bluesky could not be reached.');
+    expect(banner.querySelector('button.action')).toBeNull();
+    expect(toastStub.show).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('keeps Cancel disabled while the import is in flight', () => {
+    const fixture = loaded(candidates({ follows: [follow()] }));
+    const cancel = () =>
+      byTestId(fixture, 'social-import-cancel')?.querySelector('button') as HTMLButtonElement;
+    tick(fixture, 'did:plc:bob');
+
+    press(fixture, 'social-import-apply');
+
+    expect(cancel().disabled).toBe(true);
+    http
+      .expectOne(IMPORT)
+      .flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 0 });
+  });
 });

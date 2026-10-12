@@ -398,6 +398,7 @@
       "importStateNoLongerFollowed": "No longer followed",
       "importSubscribe": "Subscribe to {{handle}}",
       "importUnsubscribe": "Unsubscribe from {{handle}}",
+      "importAlreadySubscribed": "Already subscribed to {{handle}}",
       "importUnsubscribeHint": "Tick an account marked “No longer followed” to unsubscribe from it.",
       "importCollectionsLater": "Importing lists and custom feeds arrives with private timeline feeds.",
       "importEmpty": "Nothing to show.",

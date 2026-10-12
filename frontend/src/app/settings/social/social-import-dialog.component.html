@@ -121,7 +121,12 @@
     />
   }
 
-  <app-button footer data-testid="social-import-cancel" (click)="cancel()">
+  <app-button
+    footer
+    data-testid="social-import-cancel"
+    [disabled]="importer.importing()"
+    (click)="cancel()"
+  >
     {{ 'common.cancel' | transloco }}
   </app-button>
   <app-button
