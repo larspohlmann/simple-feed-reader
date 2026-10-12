@@ -71,7 +71,8 @@ final class MastodonTimelineSourceTest extends TestCase
 
     public function testAnHtmlAnswerIsAnUnreachableNetwork(): void
     {
-        $http = new RoutedHttpClient([self::HOME => new MockResponse('<html>maintenance</html>')]);
+        $maintenancePage = '<!doctype html><html lang="en"><body>maintenance</body></html>';
+        $http = new RoutedHttpClient([self::HOME => new MockResponse($maintenancePage)]);
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
