@@ -391,8 +391,7 @@ describe('SubscriptionsStore', () => {
     expect(store.loading()).toBe(false);
   });
 
-  it('keeps private feeds out of the tag tree and the untagged list, and groups them by network', () => {
-    store.load();
+  describe('with social feeds', () => {
     const taggedList: SubscriptionDto = {
       ...sub(5, 2, [tag(20, 'Tech')]),
       includeInAllItems: false,
@@ -403,22 +402,64 @@ describe('SubscriptionsStore', () => {
       includeInAllItems: false,
       social: { network: 'bluesky', accountId: 3, kind: 'home' },
     };
-    ctrl.expectOne('https://api.test/api/subscriptions').flush({
-      ...counts([sub(1, 1, []), taggedList, untaggedHome]),
-      socialAccounts: [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social' }],
+    const untaggedProfile: SubscriptionDto = {
+      ...sub(7, 8),
+      social: { network: 'mastodon', accountId: null, kind: 'profile' },
+    };
+
+    beforeEach(() => {
+      store.load();
+      ctrl.expectOne('https://api.test/api/subscriptions').flush({
+        ...counts([
+          sub(1, 1, [tag(20, 'Tech')]),
+          sub(2, 16, []),
+          taggedList,
+          untaggedHome,
+          untaggedProfile,
+        ]),
+        socialAccounts: [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social' }],
+      });
     });
 
-    expect(store.untagged().map((subscription) => subscription.id)).toEqual([1]);
-    expect(store.tagTree()).toEqual([]);
-    expect(store.socialSections()).toEqual([
-      {
-        network: 'bluesky',
-        accounts: [
-          { accountId: 3, handle: '@alice.bsky.social', subscriptions: [untaggedHome, taggedList] },
-        ],
-      },
-    ]);
-    expect(store.totalUnread()).toBe(1);
+    it('lists a tagged private feed under its tag and counts its unread there', () => {
+      const tech = store.tagTree().find((node) => node.tag.name === 'Tech');
+
+      expect(tech?.subscriptions.map((subscription) => subscription.id)).toEqual([1, 5]);
+      expect(tech?.unreadCount).toBe(3);
+    });
+
+    it('never lists a social feed in the untagged feeds', () => {
+      expect(store.untagged().map((subscription) => subscription.id)).toEqual([2]);
+    });
+
+    it('keeps a private feed out of the All items total but counts a profile feed', () => {
+      expect(store.totalUnread()).toBe(1 + 16 + 8);
+    });
+
+    it('groups social feeds by network, private ones per account and profiles as people', () => {
+      expect(store.socialSections()).toEqual([
+        {
+          network: 'bluesky',
+          accounts: [
+            {
+              accountId: 3,
+              handle: '@alice.bsky.social',
+              subscriptions: [untaggedHome, taggedList],
+            },
+          ],
+          people: [],
+        },
+        { network: 'mastodon', accounts: [], people: [untaggedProfile] },
+      ]);
+    });
+
+    it("zeroes a tag's private feeds along with the rest when the tag is marked read", () => {
+      store.zeroUnread({ tag: 20 });
+
+      const unread = (id: number) =>
+        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
+      expect([unread(1), unread(5), unread(6)]).toEqual([0, 0, 4]);
+    });
   });
 });
 

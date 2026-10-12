@@ -126,13 +126,13 @@ describe('SocialSectionComponent', () => {
     expect(accountRow?.querySelector('[data-testid="social-import-1"]')).toBeNull();
   });
 
-  it('explains the import in plain words, naming the tags', () => {
+  it('explains the import in plain words, naming where the feeds appear', () => {
     const fixture = mount([account()]);
 
     const section = byTestId(fixture, 'social-import-section');
     expect(section?.textContent).toContain('Import follows');
     expect(section?.textContent).toContain('Subscribe to the accounts you follow');
-    expect(section?.textContent).toContain('tagged Bluesky or Mastodon');
+    expect(section?.textContent).toContain('under the People heading');
   });
 
   it('hides the import section while no account is connected', () => {

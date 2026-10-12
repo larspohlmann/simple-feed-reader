@@ -7,8 +7,9 @@ import { unhealthyFeeds } from '../feeds/feed-health';
 import { ReaderApi } from '../reader-api';
 import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
-import { SocialAccountRefDto } from '../social-feed';
-import { buildSocialSections, isPrivateFeed } from './social-sections';
+import { SocialAccountRefDto, SocialNetworkName } from '../social-feed';
+import { FeedNetworks } from './feed-networks';
+import { buildSocialSections, isSocialFeed } from './social-sections';
 import {
   SubscriptionCountsResponse,
   SubscriptionDto,
@@ -109,12 +110,20 @@ export function sumEntries(subscriptions: SubscriptionDto[]): number {
   );
 }
 
+function networksOf(subscriptions: SubscriptionDto[]): Map<number, SocialNetworkName> {
+  const networks = new Map<number, SocialNetworkName>();
+  for (const subscription of subscriptions)
+    if (subscription.social) networks.set(subscription.id, subscription.social.network);
+  return networks;
+}
+
 export type ZeroTarget = 'all' | { tag: number } | { subscription: number };
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
   private readonly api = inject(ReaderApi);
   private readonly tags = inject(TagsStore);
+  private readonly feedNetworks = inject(FeedNetworks);
 
   readonly subscriptions = signal<SubscriptionDto[]>([]);
   readonly favoritesCount = signal(0);
@@ -129,13 +138,13 @@ export class SubscriptionsStore {
    *  fire against an empty list the server has not answered on yet. */
   readonly resolved = signal(false);
 
-  /** Private feeds have their own sidebar sections, so the tag tree and the Feeds list leave them out. */
-  private readonly publicSubscriptions = computed(() =>
-    this.subscriptions().filter((subscription) => !isPrivateFeed(subscription)),
+  readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
+  /** Social feeds live in their network's section, so the Feeds list leaves them out. */
+  readonly untagged = computed(() =>
+    untaggedSubscriptions(
+      this.subscriptions().filter((subscription) => !isSocialFeed(subscription)),
+    ),
   );
-
-  readonly tagTree = computed(() => buildTagTree(this.publicSubscriptions(), this.tags.tags()));
-  readonly untagged = computed(() => untaggedSubscriptions(this.publicSubscriptions()));
   readonly socialSections = computed(() =>
     buildSocialSections(this.subscriptions(), this.socialAccounts()),
   );
@@ -215,6 +224,7 @@ export class SubscriptionsStore {
     this.keptCount.set(0);
     this.viewedCount.set(0);
     this.socialAccounts.set([]);
+    this.feedNetworks.replace(new Map());
     this.loading.set(false);
     this.error.set(null);
     this.resolved.set(false);
@@ -304,6 +314,7 @@ export class SubscriptionsStore {
     this.keptCount.set(response.keptCount);
     this.viewedCount.set(response.viewedCount);
     this.socialAccounts.set(response.socialAccounts ?? []);
+    this.feedNetworks.replace(networksOf(response.subscriptions));
   }
 
   /** Patch unread and entry counts into the list already held, replacing the

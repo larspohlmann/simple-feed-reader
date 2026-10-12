@@ -1902,6 +1902,7 @@ describe('organise mode', () => {
   describe('social sections', () => {
     const section: SocialSection = {
       network: 'bluesky',
+      people: [],
       accounts: [
         {
           accountId: 3,
@@ -1926,15 +1927,15 @@ describe('organise mode', () => {
     beforeEach(() => localStorage.clear());
     afterEach(() => localStorage.clear());
 
-    it('sit between the saved searches and the tags', () => {
-      const element = mount({ tagTree: [node], socialSections: [section] })
+    it('come last, after the tags and the untagged feeds', () => {
+      const element = mount({ tagTree: [node], untagged: [sub(4)], socialSections: [section] })
         .nativeElement as HTMLElement;
-      const saved = element.querySelector('app-sidebar-saved-searches') as Element;
       const social = element.querySelector('app-sidebar-social-section') as Element;
       const tags = element.querySelector('.tags-head') as Element;
+      const feeds = element.querySelector('.feedlist') as Element;
 
-      expect(saved.compareDocumentPosition(social) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(social.compareDocumentPosition(tags) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(tags.compareDocumentPosition(social) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(feeds.compareDocumentPosition(social) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it('step aside while organising', () => {

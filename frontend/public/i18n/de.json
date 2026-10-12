@@ -1116,6 +1116,7 @@
     "toggleFeeds": "Feeds ein-/ausklappen",
     "toggleSocialSection": "{{network}} ein-/ausklappen",
     "socialHome": "Startseite@{{network}}",
+    "socialPeople": "Personen",
     "socialNetworkShort": {
       "bluesky": "bsky",
       "mastodon": "mastodon"

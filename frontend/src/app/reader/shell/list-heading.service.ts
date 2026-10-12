@@ -110,7 +110,7 @@ export class ListHeading {
   /** The account's handle when its network has several, so a Home says whose it is. */
   private sharedNetworkHandle(subscription: SubscriptionDto): string | null {
     const social = subscription.social;
-    if (social === null) return null;
+    if (!social) return null;
     const section = this.subscriptions
       .socialSections()
       .find((candidate) => candidate.network === social.network);

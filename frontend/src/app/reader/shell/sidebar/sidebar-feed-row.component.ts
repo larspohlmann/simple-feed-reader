@@ -6,7 +6,9 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
 import { Selection, selectionQueryParams } from '../../query/query';
+import { isUnrenamedHome } from '../../feeds/display-title';
 import { SubscriptionDto } from '../../models';
+import { isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -37,8 +39,15 @@ export class SidebarFeedRowComponent {
   readonly organising = input(false);
   /** The tag the row is listed under, or null in the untagged list. */
   readonly tagId = input<number | null>(null);
-  /** Shown instead of the feed's title: the social section names an unrenamed Home timeline through i18n. */
-  readonly label = input<string | null>(null);
+
+  /** An unrenamed Home timeline reads "Home@<network>" through i18n instead of the backend's title. */
+  protected readonly unrenamedHomeNetwork = computed(() => {
+    const subscription = this.subscription();
+    return isUnrenamedHome(subscription) ? (subscription.social?.network ?? null) : null;
+  });
+
+  /** A private feed's exclusion is its inherent state, so it carries no marker; a profile feed is ordinary RSS. */
+  protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));
 
   protected readonly menuKey = computed(() => {
     const tagId = this.tagId();

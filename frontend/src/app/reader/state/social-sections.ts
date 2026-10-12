@@ -10,33 +10,46 @@ export interface SocialAccountGroup {
 export interface SocialSection {
   readonly network: SocialNetworkName;
   readonly accounts: readonly SocialAccountGroup[];
+  /** Profile feeds of the network, alphabetically: the people followed rather than an account's own feeds. */
+  readonly people: readonly SubscriptionDto[];
 }
 
 const NETWORKS: readonly SocialNetworkName[] = ['bluesky', 'mastodon'];
 
-const KIND_ORDER: Readonly<Record<'home' | 'list' | 'custom_feed', number>> = {
+const KIND_ORDER: Readonly<Record<NonNullable<SubscriptionDto['social']>['kind'], number>> = {
   home: 0,
   list: 1,
   custom_feed: 2,
+  profile: 3,
 };
 
-export function isPrivateFeed(subscription: SubscriptionDto): boolean {
+export function isSocialFeed(subscription: SubscriptionDto): boolean {
   return Boolean(subscription.social);
 }
 
-/** One section per network that holds a private feed; its accounts by id; each account's Home first. */
+/** A timeline, list or custom feed read through a connected account; a profile feed is ordinary RSS. */
+export function isPrivateFeed(subscription: SubscriptionDto): boolean {
+  return isSocialFeed(subscription) && subscription.social?.kind !== 'profile';
+}
+
+/** One section per network holding a social feed: private feeds per account by id, each Home first, then the people. */
 export function buildSocialSections(
   subscriptions: readonly SubscriptionDto[],
   accounts: readonly SocialAccountRefDto[],
 ): SocialSection[] {
   const handles = new Map(accounts.map((account) => [account.id, account.handle]));
-  return NETWORKS.map((network) => ({
-    network,
-    accounts: accountGroups(
-      subscriptions.filter((subscription) => subscription.social?.network === network),
-      handles,
-    ),
-  })).filter((section) => section.accounts.length > 0);
+  return NETWORKS.map((network) => {
+    const ofNetwork = subscriptions.filter(
+      (subscription) => subscription.social?.network === network,
+    );
+    return {
+      network,
+      accounts: accountGroups(ofNetwork.filter(isPrivateFeed), handles),
+      people: ofNetwork
+        .filter((subscription) => !isPrivateFeed(subscription))
+        .sort((left, right) => left.title.localeCompare(right.title)),
+    };
+  }).filter((section) => section.accounts.length > 0 || section.people.length > 0);
 }
 
 function accountGroups(

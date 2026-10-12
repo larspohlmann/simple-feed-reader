@@ -17,7 +17,5 @@ export function displayTitle(
   homeLabelOf: (network: SocialNetworkName) => string,
 ): string {
   const social = subscription.social;
-  return social !== null && isUnrenamedHome(subscription)
-    ? homeLabelOf(social.network)
-    : subscription.title;
+  return social && isUnrenamedHome(subscription) ? homeLabelOf(social.network) : subscription.title;
 }

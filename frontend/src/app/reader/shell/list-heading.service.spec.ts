@@ -45,6 +45,7 @@ function headingFor(subscription: SubscriptionDto, sections: SocialSection[]): s
 
 const accountsOf = (...handles: string[]): SocialSection => ({
   network: 'bluesky',
+  people: [],
   accounts: handles.map((handle, index) => ({
     accountId: index + 1,
     handle,

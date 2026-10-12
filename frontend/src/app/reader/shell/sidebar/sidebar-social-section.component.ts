@@ -1,7 +1,6 @@
 import { Component, computed, input, linkedSignal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { isUnrenamedHome } from '../../feeds/display-title';
 import { SocialNetworkName } from '../../social-feed';
 import { Selection } from '../../query/query';
 import { SocialSection } from '../../state/social-sections';
@@ -9,7 +8,7 @@ import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 
 const collapsedKey = (network: SocialNetworkName): string => `sfr.${network}.collapsed`;
 
-/** One network's private feeds, collapsible and remembered like Tags; a handle heads each of several accounts. */
+/** One network's social feeds, collapsible and remembered like Tags; a handle heads each of several accounts. */
 @Component({
   selector: 'app-sidebar-social-section',
   imports: [TranslocoPipe, IconComponent, SidebarFeedRowComponent],
@@ -31,6 +30,4 @@ export class SidebarSocialSectionComponent {
     this.expanded.set(open);
     localStorage.setItem(collapsedKey(this.section().network), String(!open));
   }
-
-  protected readonly isUnrenamedHome = isUnrenamedHome;
 }

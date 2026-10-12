@@ -10,7 +10,8 @@
   align-items: center;
 }
 
-.account-handle {
+.account-handle,
+.people-heading {
   margin: var(--space-2) var(--space-2) var(--space-1);
   overflow: hidden;
   color: var(--text-muted);

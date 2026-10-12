@@ -14,6 +14,9 @@ import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 
+const person = (id: number, title: string): SubscriptionDto =>
+  makeSubscription({ id, title, social: { network: 'bluesky', accountId: null, kind: 'profile' } });
+
 const feed = (
   id: number,
   kind: 'home' | 'list',
@@ -29,6 +32,7 @@ const feed = (
 
 const ONE_ACCOUNT: SocialSection = {
   network: 'bluesky',
+  people: [],
   accounts: [
     {
       accountId: 3,
@@ -94,6 +98,7 @@ describe('SidebarSocialSectionComponent', () => {
   it('keeps a renamed Home under the name it was given', () => {
     const renamed: SocialSection = {
       network: 'bluesky',
+      people: [],
       accounts: [
         {
           accountId: 3,
@@ -111,6 +116,7 @@ describe('SidebarSocialSectionComponent', () => {
   it('heads each account with its handle when the network has several', () => {
     const twoAccounts: SocialSection = {
       network: 'bluesky',
+      people: [],
       accounts: [
         {
           accountId: 3,
@@ -159,6 +165,7 @@ describe('SidebarSocialSectionComponent', () => {
   it('leaves out the heading of an account whose handle is unknown', () => {
     const unknownHandle: SocialSection = {
       network: 'bluesky',
+      people: [],
       accounts: [
         { accountId: 3, handle: null, subscriptions: [feed(1, 'home')] },
         { accountId: 4, handle: '@work.bsky.social', subscriptions: [feed(2, 'home')] },
@@ -176,9 +183,51 @@ describe('SidebarSocialSectionComponent', () => {
       feed(id, 'list', { includeInAllItems: false, includeInForYou: false });
     const section: SocialSection = {
       network: 'bluesky',
+      people: [],
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
 
     expect(element(mount(section)).querySelector('.feed-exclusion-marker')).toBeNull();
+  });
+
+  it('lists profile feeds under a People heading after the private feeds', () => {
+    const section: SocialSection = {
+      network: 'bluesky',
+      accounts: ONE_ACCOUNT.accounts,
+      people: [person(7, 'Amy'), person(8, 'Zed')],
+    };
+
+    const root = element(mount(section));
+
+    expect(root.querySelector('.people-heading')?.textContent).toContain('People');
+    const names = [...root.querySelectorAll('app-sidebar-feed-row .nav > span:not(.count)')].map(
+      (name) => name.textContent,
+    );
+    expect(names).toEqual(['Home@bsky', 'Writers', 'Amy', 'Zed']);
+  });
+
+  it('shows no People heading without profile feeds', () => {
+    expect(element(mount(ONE_ACCOUNT)).querySelector('.people-heading')).toBeNull();
+  });
+
+  it('shows a network that has only people, without an account heading', () => {
+    const section: SocialSection = {
+      network: 'mastodon',
+      accounts: [],
+      people: [person(7, 'Amy')],
+    };
+
+    const root = element(mount(section));
+
+    expect(root.querySelector('.section-toggle')?.textContent).toContain('Mastodon');
+    expect(root.querySelector('.account-handle')).toBeNull();
+    expect(root.querySelectorAll('app-sidebar-feed-row').length).toBe(1);
+  });
+
+  it('keeps the exclusion marker on an excluded profile feed, which is ordinary RSS', () => {
+    const excluded = { ...person(7, 'Amy'), includeInAllItems: false };
+    const section: SocialSection = { network: 'bluesky', accounts: [], people: [excluded] };
+
+    expect(element(mount(section)).querySelector('.feed-exclusion-marker')).not.toBeNull();
   });
 });

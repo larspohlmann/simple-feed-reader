@@ -1,7 +1,4 @@
 @let current = section();
-@let homeLabel =
-  'reader.socialHome'
-    | transloco: { network: ('reader.socialNetworkShort.' + current.network | transloco) };
 <div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
   <button class="section-toggle" type="button" [attr.aria-expanded]="expanded()" (click)="toggle()">
     <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
@@ -26,11 +23,15 @@
     }
     @for (subscription of group.subscriptions; track subscription.id) {
       <div class="feedrow">
-        <app-sidebar-feed-row
-          [subscription]="subscription"
-          [selection]="selection()"
-          [label]="isUnrenamedHome(subscription) ? homeLabel : null"
-        />
+        <app-sidebar-feed-row [subscription]="subscription" [selection]="selection()" />
+      </div>
+    }
+  }
+  @if (current.people.length) {
+    <p class="people-heading">{{ 'reader.socialPeople' | transloco }}</p>
+    @for (subscription of current.people; track subscription.id) {
+      <div class="feedrow">
+        <app-sidebar-feed-row [subscription]="subscription" [selection]="selection()" />
       </div>
     }
   }

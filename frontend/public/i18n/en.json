@@ -1116,6 +1116,7 @@
     "toggleFeeds": "Toggle feeds",
     "toggleSocialSection": "Toggle {{network}}",
     "socialHome": "Home@{{network}}",
+    "socialPeople": "People",
     "socialNetworkShort": {
       "bluesky": "bsky",
       "mastodon": "mastodon"
