@@ -270,6 +270,23 @@ final class SocialImportControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_NOT_FOUND);
     }
 
+    public function testImportOfCollectionsOnAnotherUsersAccountAnswers404AndAddsNothing(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $owner = $this->signIn($client, 'import-collections-owner@example.test');
+        $account = $this->blueskyAccountOf($owner);
+        $this->signIn($client, 'import-collections-intruder@example.test');
+
+        $this->postImport($client, $account, ['collections' => [
+            ['kind' => 'home', 'id' => null, 'name' => 'Home'],
+            ['kind' => 'list', 'id' => 'at://did:plc:bob/app.bsky.graph.list/3l1', 'name' => 'Writers'],
+        ]]);
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame('social_account_not_found', $this->payload($client)['type']);
+        self::assertSame(0, $this->entityManager()->getRepository(SocialFeed::class)->count());
+    }
+
     public function testImportSpendsNoCandidatesBudget(): void
     {
         $client = $this->clientWith($this->nothingFollowed());

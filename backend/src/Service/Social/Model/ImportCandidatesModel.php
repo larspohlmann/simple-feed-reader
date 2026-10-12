@@ -7,7 +7,7 @@ namespace App\Service\Social\Model;
 final readonly class ImportCandidatesModel
 {
     /**
-     * @param list<ImportCandidateModel>  $follows
+     * @param list<ImportCandidateModel>     $follows
      * @param list<CollectionCandidateModel> $lists
      * @param list<CollectionCandidateModel> $customFeeds
      */

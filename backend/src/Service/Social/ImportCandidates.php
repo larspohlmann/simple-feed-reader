@@ -80,18 +80,10 @@ final readonly class ImportCandidates
     /** @return array<string, int> subscription id by PrivateFeedModel::key() */
     private function privateFeedSubscriptionsOf(SocialAccount $account): array
     {
-        $subscriptionIdsByFeed = [];
-        foreach ($this->socialFeeds->subscriptionsOf($account) as $subscription) {
-            $subscriptionIdsByFeed[$subscription->getFeed()->requireId()] = $subscription->requireId();
-        }
-
         $subscribed = [];
-        foreach ($this->socialFeeds->findAllOf($account) as $socialFeed) {
-            $subscriptionId = $subscriptionIdsByFeed[$socialFeed->getFeed()->requireId()] ?? null;
-            if (null !== $subscriptionId) {
-                $key = PrivateFeedModel::keyOf($socialFeed->getKind(), $socialFeed->getRemoteId());
-                $subscribed[$key] = $subscriptionId;
-            }
+        foreach ($this->socialFeeds->subscribedCollectionsOf($account) as $collection) {
+            $key = PrivateFeedModel::keyOf($collection['kind'], $collection['remoteId']);
+            $subscribed[$key] = $collection['subscriptionId'];
         }
 
         return $subscribed;

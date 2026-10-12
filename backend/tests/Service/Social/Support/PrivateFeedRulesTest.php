@@ -15,6 +15,7 @@ final class PrivateFeedRulesTest extends TestCase
 {
     private const string LIST = 'at://did:plc:bob/app.bsky.graph.list/3l1';
     private const string FEED = 'at://did:plc:bob/app.bsky.feed.generator/news';
+    private const string LIST_REPOSITORY = 'at://did:plc:bob/app.bsky.graph.list/';
 
     #[DataProvider('verdicts')]
     public function testACollectionMustSuitItsNetwork(
@@ -23,6 +24,31 @@ final class PrivateFeedRulesTest extends TestCase
         bool $allowed,
     ): void {
         self::assertSame($allowed, PrivateFeedRules::allows($network, $privateFeed));
+    }
+
+    #[DataProvider('mastodonListIds')]
+    public function testAMastodonListIdIsDigitsOnly(string $listId, bool $allowed): void
+    {
+        self::assertSame($allowed, PrivateFeedRules::isMastodonListId($listId));
+        self::assertSame(
+            $allowed,
+            PrivateFeedRules::allows(SocialNetwork::Mastodon, PrivateFeedModel::userList($listId, 'Friends')),
+        );
+    }
+
+    /** @return iterable<string, array{string, bool}> */
+    public static function mastodonListIds(): iterable
+    {
+        yield 'digits' => ['42', true];
+        yield 'the longest id' => [str_repeat('9', 32), true];
+        yield 'an id over 32 digits' => [str_repeat('9', 33), false];
+        yield 'empty' => ['', false];
+        yield 'a trailing newline' => ["42\n", false];
+        yield 'negative' => ['-1', false];
+        yield 'a query' => ['42?limit=1', false];
+        yield 'a parameter' => ['42&limit=1', false];
+        yield 'a parent path' => ['42/../1', false];
+        yield 'a trailing letter' => ['42a', false];
     }
 
     /** @return iterable<string, array{SocialNetwork, PrivateFeedModel, bool}> */
@@ -48,14 +74,49 @@ final class PrivateFeedRulesTest extends TestCase
             PrivateFeedModel::userList(self::LIST, 'Friends'),
             false,
         ];
-        yield 'mastodon list id with a trailing letter' => [
-            SocialNetwork::Mastodon,
-            PrivateFeedModel::userList('42a', 'Friends'),
-            false,
-        ];
         yield 'mastodon has no custom feeds' => [
             SocialNetwork::Mastodon,
             PrivateFeedModel::customFeed(self::FEED, 'News'),
+            false,
+        ];
+        yield 'bluesky list with a trailing newline' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::userList(self::LIST . "\n", 'Writers'),
+            false,
+        ];
+        yield 'bluesky list with a query' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::userList(self::LIST . '?limit=100', 'Writers'),
+            false,
+        ];
+        yield 'bluesky list with a parameter' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::userList(self::LIST . '&limit=100', 'Writers'),
+            false,
+        ];
+        yield 'bluesky list with a parent path' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::userList(self::LIST . '/../other', 'Writers'),
+            false,
+        ];
+        yield 'bluesky list with a slash inside the did' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::userList('at://did:plc:bob/evil/app.bsky.graph.list/3l1', 'Writers'),
+            false,
+        ];
+        yield 'bluesky custom feed with a trailing newline' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::customFeed(self::FEED . "\n", 'News'),
+            false,
+        ];
+        yield 'bluesky list with the longest record key' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::userList(self::LIST_REPOSITORY . str_repeat('a', 512), 'Writers'),
+            true,
+        ];
+        yield 'bluesky list with a record key over 512 characters' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::userList(self::LIST_REPOSITORY . str_repeat('a', 513), 'Writers'),
             false,
         ];
         yield 'a list without an id' => [

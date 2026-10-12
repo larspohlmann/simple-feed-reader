@@ -224,6 +224,7 @@ final class SocialImporterTest extends DbTestCase
     public function testACollectionItsNetworkCannotHoldRefusesTheWholeImport(
         SocialNetwork $network,
         PrivateFeedModel $collection,
+        string $message,
     ): void {
         $account = $this->storedAccount(SocialNetwork::Bluesky === $network
             ? SocialAccounts::blueskyOf($this->user)
@@ -235,18 +236,25 @@ final class SocialImporterTest extends DbTestCase
                 new SocialImportModel([], [], [PrivateFeedModel::home(), $collection]),
             );
             self::fail('A collection of the wrong shape must refuse the import.');
-        } catch (InvalidSocialImportFeedException) {
+        } catch (InvalidSocialImportFeedException $exception) {
+            self::assertSame($message, $exception->getMessage());
+            self::assertTrue($this->entityManager->isOpen(), 'The refusal must come before the import transaction.');
             self::assertSame(0, $this->entityManager->getRepository(SocialFeed::class)->count());
         }
     }
 
-    /** @return iterable<string, array{SocialNetwork, PrivateFeedModel}> */
+    /** @return iterable<string, array{SocialNetwork, PrivateFeedModel, string}> */
     public static function foreignCollections(): iterable
     {
-        yield 'a mastodon list id on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::userList('42', 'Friends')];
+        yield 'a mastodon list id on bluesky' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::userList('42', 'Friends'),
+            '42 is no Bluesky list.',
+        ];
         yield 'a custom feed on mastodon' => [
             SocialNetwork::Mastodon,
             PrivateFeedModel::customFeed(self::NEWS, 'News'),
+            self::NEWS . ' is no Mastodon custom feed.',
         ];
     }
 

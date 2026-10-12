@@ -88,6 +88,30 @@ final class SocialFeedRepositoryTest extends DbTestCase
         self::assertSame([$home], SocialFeeds::repository($this->entityManager)->findAllOf($this->account));
     }
 
+    public function testSubscribedCollectionsAreTheAccountsOwnSubscribedOnesOnly(): void
+    {
+        $other = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonOf($this->user),
+        );
+        $home = $this->subscribe($this->socialFeed($this->account, SocialFeedKind::Home, null));
+        $writers = $this->subscribe($this->socialFeed($this->account, SocialFeedKind::UserList, self::WRITERS));
+        $this->socialFeed($this->account, SocialFeedKind::CustomFeed, 'at://did:plc:x/app.bsky.feed.generator/news');
+        $this->subscribe($this->socialFeed($other, SocialFeedKind::Home, null));
+
+        self::assertSame(
+            [
+                ['kind' => SocialFeedKind::Home, 'remoteId' => null, 'subscriptionId' => $home->requireId()],
+                [
+                    'kind' => SocialFeedKind::UserList,
+                    'remoteId' => self::WRITERS,
+                    'subscriptionId' => $writers->requireId(),
+                ],
+            ],
+            SocialFeeds::repository($this->entityManager)->subscribedCollectionsOf($this->account),
+        );
+    }
+
     public function testThePageNewestIdIsKeptAndAnEmptyPageKeepsTheLastOne(): void
     {
         $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);

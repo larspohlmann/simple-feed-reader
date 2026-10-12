@@ -46,7 +46,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
     {
         $listId = $socialFeed->getRemoteId() ?? '';
 
-        return 1 === preg_match(PrivateFeedRules::MASTODON_LIST, $listId)
+        return PrivateFeedRules::isMastodonListId($listId)
             ? $listId
             : throw new SocialNetworkUnreachableException('The Mastodon list id is not a number.');
     }

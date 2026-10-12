@@ -59,4 +59,27 @@ final class SocialFeedRepository extends ServiceEntityRepository
 
         return $subscriptions;
     }
+
+    /** @return list<array{kind: SocialFeedKind, remoteId: ?string, subscriptionId: int}> */
+    public function subscribedCollectionsOf(SocialAccount $account): array
+    {
+        /** @var list<array{kind: SocialFeedKind, remoteId: string, subscriptionId: int}> $rows */
+        $rows = $this->createQueryBuilder('sf')
+            ->select('sf.kind AS kind', 'sf.remoteId AS remoteId', 's.id AS subscriptionId')
+            ->join(Subscription::class, 's', 'ON', 's.feed = sf.feed')
+            ->andWhere('sf.socialAccount = :account')
+            ->setParameter('account', $account)
+            ->orderBy('s.id', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(
+            static fn (array $row): array => [
+                'kind' => $row['kind'],
+                'remoteId' => SocialFeed::storedRemoteId(null) === $row['remoteId'] ? null : $row['remoteId'],
+                'subscriptionId' => $row['subscriptionId'],
+            ],
+            $rows,
+        );
+    }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
+use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Exception\InvalidSelectionException;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
@@ -71,25 +72,34 @@ final readonly class SocialImporter
                     '%s is no %s %s.',
                     $collection->remoteId ?? $collection->name,
                     $network->displayName(),
-                    str_replace('_', ' ', $collection->kind->value),
+                    self::kindLabel($collection->kind),
                 ));
             }
         }
     }
 
+    private static function kindLabel(SocialFeedKind $kind): string
+    {
+        return match ($kind) {
+            SocialFeedKind::Home => 'home timeline',
+            SocialFeedKind::UserList => 'list',
+            SocialFeedKind::CustomFeed => 'custom feed',
+        };
+    }
+
     /** @param list<PrivateFeedModel> $collections */
     private function addCollections(SocialAccount $account, array $collections): CollectionImportModel
     {
-        $added = new CollectionImportModel();
+        $tally = new CollectionImportModel();
         foreach ($collections as $collection) {
             try {
-                $added = $added->counting($this->privateFeeds->create($account, $collection));
+                $tally = $tally->counting($this->privateFeeds->create($account, $collection));
             } catch (SubscriptionLimitReachedException) {
-                $added = $added->countingOverLimit();
+                $tally = $tally->countingOverLimit();
             }
         }
 
-        return $added;
+        return $tally;
     }
 
     /** @param list<SocialImportFeedModel> $feeds */

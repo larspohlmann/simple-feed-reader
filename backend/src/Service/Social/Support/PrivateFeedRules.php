@@ -10,9 +10,9 @@ use App\Service\Social\Model\PrivateFeedModel;
 
 final class PrivateFeedRules
 {
-    public const string MASTODON_LIST = '/^\d{1,32}$/';
+    private const string MASTODON_LIST = '/^\d{1,32}$/D';
     private const string AT_URI_REPOSITORY = '#^at://did:[a-z0-9]+:[A-Za-z0-9._:%-]+/';
-    private const string RECORD_KEY = '/[A-Za-z0-9._~:-]{1,512}$#';
+    private const string RECORD_KEY = '/[A-Za-z0-9._~:-]{1,512}$#D';
     private const string BLUESKY_LIST = self::AT_URI_REPOSITORY . 'app\.bsky\.graph\.list' . self::RECORD_KEY;
     private const string BLUESKY_FEED = self::AT_URI_REPOSITORY . 'app\.bsky\.feed\.generator' . self::RECORD_KEY;
 
@@ -27,6 +27,11 @@ final class PrivateFeedRules
             SocialFeedKind::CustomFeed => SocialNetwork::Bluesky === $network
                 && self::matches(self::BLUESKY_FEED, $privateFeed->remoteId),
         };
+    }
+
+    public static function isMastodonListId(string $listId): bool
+    {
+        return self::matches(self::MASTODON_LIST, $listId);
     }
 
     private static function matches(string $pattern, ?string $remoteId): bool
