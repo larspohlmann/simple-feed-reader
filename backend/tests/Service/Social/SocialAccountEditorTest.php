@@ -12,6 +12,10 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
+use App\Service\Crypto\InstanceSecretCipher;
+use App\Service\Social\BlueskySessionCache;
+use App\Service\Social\Crypto\BlueskySessionCipher;
+use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\PrivateFeeds;
 use App\Service\Social\SocialAccountEditor;
@@ -19,16 +23,20 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\UserFactory;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialAccountEditorTest extends DbTestCase
 {
     private User $user;
+    private ArrayAdapter $sessionCacheStore;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->sessionCacheStore = new ArrayAdapter();
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
@@ -121,6 +129,16 @@ final class SocialAccountEditorTest extends DbTestCase
         self::assertNotNull($this->entityManager->find(Subscription::class, $theirsId));
     }
 
+    public function testDisconnectingForgetsTheCachedBlueskySession(): void
+    {
+        $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
+        $this->sessionCache()->remember($account, new BlueskySessionModel('jwt-1', 'one.bsky.social'));
+
+        $this->editor()->disconnect($account);
+
+        self::assertSame([], $this->sessionCacheStore->getValues());
+    }
+
     private function stored(SocialNetwork $network, string $identity, bool $default): SocialAccount
     {
         $account = new SocialAccount(
@@ -149,7 +167,20 @@ final class SocialAccountEditorTest extends DbTestCase
 
     private function editor(): SocialAccountEditor
     {
-        return new SocialAccountEditor($this->repository(), $this->privateFeeds(), $this->entityManager);
+        return new SocialAccountEditor(
+            $this->repository(),
+            $this->privateFeeds(),
+            $this->entityManager,
+            $this->sessionCache(),
+        );
+    }
+
+    private function sessionCache(): BlueskySessionCache
+    {
+        return new BlueskySessionCache(
+            $this->sessionCacheStore,
+            new BlueskySessionCipher(new InstanceSecretCipher(str_repeat('k', 32))),
+        );
     }
 
     private function privateFeeds(): PrivateFeeds

@@ -15,6 +15,7 @@ final readonly class SocialAccountEditor
         private SocialAccountRepository $socialAccounts,
         private PrivateFeeds $privateFeeds,
         private EntityManagerInterface $entityManager,
+        private BlueskySessionCache $sessionCache,
     ) {
     }
 
@@ -36,6 +37,7 @@ final readonly class SocialAccountEditor
     public function disconnect(SocialAccount $account): void
     {
         $successor = $account->isDefault() ? ($this->siblingsOf($account)[0] ?? null) : null;
+        $this->sessionCache->forget($account);
 
         $this->entityManager->wrapInTransaction(function () use ($account, $successor): void {
             $this->privateFeeds->removeAllOf($account);

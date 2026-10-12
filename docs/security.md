@@ -338,8 +338,9 @@ are left out of backups (docs/backup.md §6.2).
   and an account in that state is refused before any network call.
 - The refresh worker reads the stored credential for every poll of an account's private feeds (#1599). A Bluesky
   session is cached per account for 90 minutes in the `bluesky.session.cache` pool. Its access token is sealed with the
-  instance key, bound to the owner; a reconnect changes the cache key. A token the PDS calls expired or invalid is
-  replaced once with a fresh session.
+  instance key, bound to the owner; a reconnect changes the cache key, and a disconnect deletes the entry. The token
+  is only ever sent to the account's stored service URL, never to a URL read from the cache. A token the PDS calls
+  expired or invalid is replaced once with a fresh session.
 - The picker follows a Mastodon `Link` next page only on the instance's own origin, and reads at most 5000 follows.
 - A private feed's synthetic `social:` URL never reaches `UrlGuard` or the feed fetcher: only `SocialFeedRefresher`
   reads the feed, through its account. The URL names the owning account, not the network identity, so two users of one
