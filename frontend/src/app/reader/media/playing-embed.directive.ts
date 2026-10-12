@@ -1,4 +1,4 @@
-import { Directive, ElementRef, effect, inject, input } from '@angular/core';
+import { Directive, ElementRef, effect, inject, input, untracked } from '@angular/core';
 import { embedFrame } from './media-embeds';
 
 /** Fills its host with a player that starts on load; the frame comes whole from `embedFrame`, never a template `[src]` (#1594). */
@@ -10,7 +10,7 @@ export class PlayingEmbedDirective {
 
   constructor() {
     effect(() => {
-      const frame = embedFrame(this.appPlayingEmbed(), this.embedTitle());
+      const frame = embedFrame(this.appPlayingEmbed(), untracked(this.embedTitle));
       frame.setAttribute('allow', 'autoplay; fullscreen');
       this.host.replaceChildren(frame);
     });

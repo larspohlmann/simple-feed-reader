@@ -82,7 +82,7 @@
   font-size: var(--fs-xl);
 }
 
-.frame iframe {
+.frame ::ng-deep iframe {
   display: block;
   width: 100%;
   height: 100%;
