@@ -1,8 +1,8 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, finalize, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
-import { parseProblem } from '../../core/problem';
+import { parseProblem, problemMessage } from '../../core/problem';
 
 export type SocialNetwork = 'bluesky' | 'mastodon';
 export type SocialAccountStatus = 'connected' | 'needs_reconnect';
@@ -68,12 +68,11 @@ export class SocialAccountsService {
     this.begin();
     return request.pipe(
       tap({
-        next: (account) => {
-          this.busy.set(false);
-          this.accounts.update((current) => this.withAccount(current ?? [], account));
-        },
+        next: (account) =>
+          this.accounts.update((current) => this.withAccount(current ?? [], account)),
         error: (error: HttpErrorResponse) => this.fail(error),
       }),
+      finalize(() => this.busy.set(false)),
     );
   }
 
@@ -88,11 +87,8 @@ export class SocialAccountsService {
 
   private replacingList(request: Observable<SocialAccountList>): void {
     this.begin();
-    request.subscribe({
-      next: (list) => {
-        this.busy.set(false);
-        this.accounts.set(list.accounts);
-      },
+    request.pipe(finalize(() => this.busy.set(false))).subscribe({
+      next: (list) => this.accounts.set(list.accounts),
       error: (error: HttpErrorResponse) => this.fail(error),
     });
   }
@@ -103,9 +99,6 @@ export class SocialAccountsService {
   }
 
   private fail(error: HttpErrorResponse): void {
-    const problem = parseProblem(error);
-    const fieldMessage = Object.values(problem.errors ?? {})[0]?.[0];
-    this.busy.set(false);
-    this.failure.set(fieldMessage ?? problem.detail ?? problem.title);
+    this.failure.set(problemMessage(parseProblem(error)));
   }
 }

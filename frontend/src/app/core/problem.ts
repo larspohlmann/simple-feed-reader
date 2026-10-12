@@ -23,6 +23,11 @@ export interface Problem {
   ceremonyRejected?: true;
 }
 
+/** The most specific message a problem carries: its first field message, else its detail, else its title. */
+export function problemMessage(problem: Problem): string {
+  return Object.values(problem.errors ?? {})[0]?.[0] ?? problem.detail ?? problem.title;
+}
+
 /** A request whose outcome the response cannot prove: a dropped connection
  *  (status 0) or a 5xx -- gateway timeout, OOM-killed worker -- may have run
  *  server-side before it failed. Callers that must not act as if the server
