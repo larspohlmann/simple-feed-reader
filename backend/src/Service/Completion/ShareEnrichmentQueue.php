@@ -9,6 +9,7 @@ use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Completion\Model\KnownSharesModel;
 use App\Service\Share\EntryShareClassifier;
 use App\Service\Share\PendingEmbed\PendingEmbedInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,17 +22,41 @@ final readonly class ShareEnrichmentQueue
         private NaiveUtcClock $clock,
         private EntryShareClassifier $classifier,
         private PendingEmbedInterface $pendingEmbed,
+        private KnownShareSettler $knownShares,
     ) {
     }
 
     /** @param list<Entry> $createdEntries persisted, not yet flushed: the caller flushes */
     public function queue(array $createdEntries): void
     {
+        $this->queueWithKnownShares($createdEntries, KnownSharesModel::none());
+    }
+
+    /** @param list<Entry> $createdEntries persisted, not yet flushed: the caller flushes */
+    public function queueWithKnownShares(array $createdEntries, KnownSharesModel $knownShares): void
+    {
         $queuedAt = $this->clock->now();
         foreach ($createdEntries as $entry) {
-            $this->classifier->classify($entry);
-            $this->queueCreated($entry, $queuedAt);
+            $this->queueOne($entry, $knownShares, $queuedAt);
         }
+    }
+
+    private function queueOne(Entry $entry, KnownSharesModel $knownShares, \DateTimeImmutable $queuedAt): void
+    {
+        $post = $knownShares->blueskyPostFor($entry->getGuid());
+        if ($post !== null) {
+            $this->knownShares->settleEmbedded($entry, $post, $queuedAt);
+
+            return;
+        }
+        $this->classifier->classify($entry);
+        $card = $knownShares->linkCardFor($entry->getGuid());
+        if ($card !== null && $entry->getShareKind() === ShareKind::Link) {
+            $this->knownShares->settleCarded($entry, $card, $queuedAt);
+
+            return;
+        }
+        $this->queueCreated($entry, $queuedAt);
     }
 
     private function queueCreated(Entry $entry, \DateTimeImmutable $queuedAt): void
