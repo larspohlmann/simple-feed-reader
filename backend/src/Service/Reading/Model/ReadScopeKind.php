@@ -9,4 +9,5 @@ enum ReadScopeKind: string
     case All = 'all';
     case Feed = 'feed';
     case Tag = 'tag';
+    case Network = 'network';
 }

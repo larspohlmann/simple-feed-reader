@@ -1,6 +1,6 @@
 import { SubscriptionDto } from '../models';
 import { SocialAccountRefDto } from '../social-feed';
-import { SocialNetworkName } from '../../core/social-network';
+import { SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
 
 export interface SocialAccountGroup {
   readonly accountId: number;
@@ -13,9 +13,13 @@ export interface SocialSection {
   readonly accounts: readonly SocialAccountGroup[];
   /** Profile feeds of the network, alphabetically: the people followed rather than an account's own feeds. */
   readonly people: readonly SubscriptionDto[];
+  readonly unreadCount: number;
 }
 
-const NETWORKS: readonly SocialNetworkName[] = ['bluesky', 'mastodon'];
+export interface NetworkCounts {
+  readonly unreadCount: number;
+  readonly entryCount: number;
+}
 
 const KIND_ORDER: Readonly<Record<NonNullable<SubscriptionDto['social']>['kind'], number>> = {
   home: 0,
@@ -39,7 +43,7 @@ export function buildSocialSections(
   accounts: readonly SocialAccountRefDto[],
 ): SocialSection[] {
   const handles = new Map(accounts.map((account) => [account.id, account.handle]));
-  return NETWORKS.map((network) => {
+  return SOCIAL_NETWORKS.map((network) => {
     const ofNetwork = subscriptions.filter(
       (subscription) => subscription.social?.network === network,
     );
@@ -49,8 +53,25 @@ export function buildSocialSections(
       people: ofNetwork
         .filter((subscription) => !isPrivateFeed(subscription))
         .sort((left, right) => left.title.localeCompare(right.title)),
+      unreadCount: networkCounts(ofNetwork, network).unreadCount,
     };
   }).filter((section) => section.accounts.length > 0 || section.people.length > 0);
+}
+
+/** What a network's view holds: every feed of the network, a feed excluded from All items too, as a tag counts. */
+export function networkCounts(
+  subscriptions: readonly SubscriptionDto[],
+  network: SocialNetworkName,
+): NetworkCounts {
+  return subscriptions
+    .filter((subscription) => subscription.social?.network === network)
+    .reduce(
+      (counts, subscription) => ({
+        unreadCount: counts.unreadCount + subscription.unreadCount,
+        entryCount: counts.entryCount + subscription.entryCount,
+      }),
+      { unreadCount: 0, entryCount: 0 },
+    );
 }
 
 function accountGroups(

@@ -10,6 +10,7 @@ import { TagsStore } from './tags.store';
 import { SocialAccountRefDto } from '../social-feed';
 import { SubscriptionRows } from './subscription-rows';
 import { buildSocialSections, isSocialFeed } from './social-sections';
+import { SocialNetworkName } from '../../core/social-network';
 import { SubscriptionCountsResponse, SubscriptionDto, SubscriptionsResponse } from '../models';
 import {
   buildTagTree,
@@ -18,7 +19,8 @@ import {
   untaggedSubscriptions,
 } from './subscription-derivations';
 
-export type ZeroTarget = 'all' | { tag: number } | { subscription: number };
+export type ZeroTarget =
+  'all' | { tag: number } | { subscription: number } | { network: SocialNetworkName };
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
@@ -293,6 +295,10 @@ export class SubscriptionsStore {
         return subscription.includeInAllItems ? { ...subscription, unreadCount: 0 } : subscription;
       if ('tag' in target)
         return subscription.tags.some((tag) => tag.id === target.tag)
+          ? { ...subscription, unreadCount: 0 }
+          : subscription;
+      if ('network' in target)
+        return subscription.social?.network === target.network
           ? { ...subscription, unreadCount: 0 }
           : subscription;
       return subscription.id === target.subscription

@@ -1,11 +1,13 @@
 import { ParamMap, Params, convertToParamMap } from '@angular/router';
 import { EntryQuery, ListOrder, MarkReadScope } from '../models';
 import { entryIdFromParam } from './slug';
+import { SocialNetworkName, isSocialNetworkName } from '../../core/social-network';
 
 export interface Selection {
   kind:
     | 'all'
     | 'tag'
+    | 'network'
     | 'subscription'
     | 'favorites'
     | 'kept'
@@ -19,6 +21,8 @@ export interface Selection {
   /** Only a search carries one. Part of the list's identity, so it belongs to
    *  the selection rather than to a service beside it. */
   term?: string;
+  /** Only a network's combined view carries one. */
+  network?: SocialNetworkName;
   /** Absent means newest first; only a list `hasListOrder` accepts ever carries one. */
   order?: ListOrder;
 }
@@ -122,6 +126,7 @@ export function sameSelection(left: Selection, right: Selection): boolean {
     left.id === right.id &&
     left.unread === right.unread &&
     left.term === right.term &&
+    left.network === right.network &&
     listOrderOf(left) === listOrderOf(right)
   );
 }
@@ -146,6 +151,7 @@ export function visibleSearchTerm(term: string): string {
 export function hasUnreadFilter(selection: Selection): boolean {
   return (
     canScopedRefresh(selection) ||
+    selection.kind === 'network' ||
     selection.kind === 'for-you' ||
     selection.kind === 'saved-searches' ||
     selection.kind === 'saved-search' ||
@@ -177,6 +183,7 @@ export function withListOrder(selection: Selection, order: ListOrder): Selection
 export function listOrderKey(selection: Selection): string | null {
   if (!hasListOrder(selection)) return null;
   if (selection.kind === 'search') return 'search';
+  if (selection.network) return `network:${selection.network}`;
   return selection.id === null ? selection.kind : `${selection.kind}:${selection.id}`;
 }
 
@@ -196,7 +203,7 @@ export function isSingleStreamView(selection: Selection): boolean {
 /** Every query parameter that names which list is on screen. A navigation that
  *  changes the list must clear all of them — `selectionFromParams` gives `q`
  *  priority, so a leftover `q` the caller forgot to null strands the user (#408). */
-const SELECTION_PARAM_NAMES = ['view', 'tag', 'subscription', 'entry', 'q'] as const;
+const SELECTION_PARAM_NAMES = ['view', 'tag', 'network', 'subscription', 'entry', 'q'] as const;
 
 type SelectionParamName = (typeof SELECTION_PARAM_NAMES)[number];
 
@@ -245,8 +252,6 @@ export function selectionFromParams(paramMap: ParamMap): {
   entryId: number | null;
 } {
   const view = selectionParam(paramMap, 'view');
-  const tag = posInt(selectionParam(paramMap, 'tag'));
-  const subscription = posInt(selectionParam(paramMap, 'subscription'));
   // The entry param is an id or an id-prefixed slug ("514-some-title").
   const entryId = entryIdFromParam(selectionParam(paramMap, 'entry'));
 
@@ -269,14 +274,21 @@ export function selectionFromParams(paramMap: ParamMap): {
     selection = { kind: 'for-you', id: null, unread: false };
   } else if (view === 'saved-searches') {
     selection = { kind: 'saved-searches', id: null, unread: false };
-  } else if (subscription != null) {
-    selection = { kind: 'subscription', id: subscription, unread: false };
-  } else if (tag != null) {
-    selection = { kind: 'tag', id: tag, unread: false };
   } else {
-    selection = { kind: 'all', id: null, unread: false };
+    selection = feedScopedSelection(paramMap);
   }
   return { selection, entryId };
+}
+
+/** The lists drawn from feeds: one subscription, a tag, a network's feeds, or all of them. */
+function feedScopedSelection(paramMap: ParamMap): Selection {
+  const subscription = posInt(selectionParam(paramMap, 'subscription'));
+  if (subscription != null) return { kind: 'subscription', id: subscription, unread: false };
+  const tag = posInt(selectionParam(paramMap, 'tag'));
+  if (tag != null) return { kind: 'tag', id: tag, unread: false };
+  const network = selectionParam(paramMap, 'network');
+  if (isSocialNetworkName(network)) return { kind: 'network', id: null, unread: false, network };
+  return { kind: 'all', id: null, unread: false };
 }
 
 /** The list a URL names with any search set aside: the list a search is layered
@@ -306,6 +318,7 @@ const VIEW_QUERY: Record<SelectionKind, (selection: Selection) => EntryQuery> = 
   // feed IS the view, so the filter travels beside it (#710).
   'for-you': (selection) => withUnread({ view: 'for-you' }, selection.unread),
   tag: (selection) => ({ view: listView(selection), tag: selection.id ?? undefined }),
+  network: (selection) => ({ view: listView(selection), network: selection.network }),
   subscription: (selection) => ({
     view: listView(selection),
     subscription: selection.id ?? undefined,
@@ -334,6 +347,7 @@ export type MarkReadTarget =
   | { scope: Extract<MarkReadScope, 'all'> }
   | { scope: Exclude<MarkReadScope, 'all'>; id: number }
   | { scope: 'search'; term: string }
+  | { scope: 'network'; network: SocialNetworkName }
   | { scope: 'for-you' }
   | { scope: 'saved-searches' }
   | { scope: 'saved-search'; id: number };
@@ -347,6 +361,8 @@ const MARK_READ_TARGET: Partial<
 > = {
   all: () => ({ scope: 'all' }),
   tag: idScoped('tag'),
+  network: (selection) =>
+    selection.network ? { scope: 'network', network: selection.network } : null,
   subscription: idScoped('feed'),
   search: (selection) => (selection.term ? { scope: 'search', term: selection.term } : null),
   // No id and no term: the list is the reader's own ranked feed, so the

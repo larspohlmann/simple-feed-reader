@@ -1903,6 +1903,7 @@ describe('organise mode', () => {
     const section: SocialSection = {
       network: 'bluesky',
       people: [],
+      unreadCount: 2,
       accounts: [
         {
           accountId: 3,

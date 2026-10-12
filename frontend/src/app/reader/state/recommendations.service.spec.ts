@@ -131,6 +131,7 @@ describe('RecommendationsService', () => {
       queryParams: {
         view: 'for-you',
         tag: null,
+        network: null,
         subscription: null,
         entry: null,
         q: null,

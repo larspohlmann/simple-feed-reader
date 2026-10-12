@@ -36,6 +36,9 @@ final readonly class EntryScopePredicates
                 \sprintf('IDENTITY(%s.tag) = :tagId', $aliases->tag),
             )->setParameter('tagId', $query->tagId);
         }
+        if ($query->subscriptionIds !== null) {
+            $this->inSubscriptions($qb, $aliases, $query->subscriptionIds);
+        }
         if ($query->hidesExcludedFeeds()) {
             $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
         }
@@ -56,6 +59,18 @@ final readonly class EntryScopePredicates
     public function applyIds(QueryBuilder $qb, EntryAliases $aliases, array $entryIds): void
     {
         $qb->andWhere(\sprintf('%s.id IN (:ids)', $aliases->entry))->setParameter('ids', $entryIds);
+    }
+
+    /** @param list<int> $subscriptionIds */
+    private function inSubscriptions(QueryBuilder $qb, EntryAliases $aliases, array $subscriptionIds): void
+    {
+        if ($subscriptionIds === []) {
+            $qb->andWhere('1 = 0');
+
+            return;
+        }
+        $qb->andWhere(\sprintf('%s.id IN (:subscriptionIds)', $aliases->subscription))
+            ->setParameter('subscriptionIds', $subscriptionIds);
     }
 
     private function applyView(QueryBuilder $qb, EntryAliases $aliases, EntryView $view): void

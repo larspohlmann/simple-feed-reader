@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Entry;
 
 use App\Dto\Entry\MarkReadRequest;
+use App\Enum\SocialNetwork;
 use App\Exception\ValidationException;
 use App\Service\Reading\Model\ReadScopeKind;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -37,6 +38,30 @@ final class MarkReadRequestTest extends TestCase
         self::assertSame(6, $scope->targetId());
     }
 
+    public function testNetworkCarriesItsNetwork(): void
+    {
+        $scope = $this->networkRequest('bluesky')->toScope();
+
+        self::assertSame(ReadScopeKind::Network, $scope->kind);
+        self::assertSame(SocialNetwork::Bluesky, $scope->targetNetwork());
+    }
+
+    public function testANetworkScopeWithoutANetworkIsAValidationError(): void
+    {
+        $this->assertRejectedWith(
+            ['network' => ['A network is required when scope is "network".']],
+            $this->networkRequest(null),
+        );
+    }
+
+    public function testAnUnknownNetworkIsAValidationError(): void
+    {
+        $this->assertRejectedWith(
+            ['network' => ['Unknown network. Use one of: bluesky, mastodon.']],
+            $this->networkRequest('myspace'),
+        );
+    }
+
     #[DataProvider('scopesThatNeedAnId')]
     public function testAFeedOrTagScopeWithoutAnIdIsAValidationError(string $scope, string $message): void
     {
@@ -58,6 +83,11 @@ final class MarkReadRequestTest extends TestCase
     private function request(string $scope, ?int $id): MarkReadRequest
     {
         return new MarkReadRequest($scope, new \DateTimeImmutable('2026-07-10T00:00:00Z'), $id);
+    }
+
+    private function networkRequest(?string $network): MarkReadRequest
+    {
+        return new MarkReadRequest('network', new \DateTimeImmutable('2026-07-10T00:00:00Z'), network: $network);
     }
 
     /** @param array<string, list<string>> $errors */

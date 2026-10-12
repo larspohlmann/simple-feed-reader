@@ -1,8 +1,17 @@
 @let current = section();
 <div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
-  <button class="section-toggle" type="button" [attr.aria-expanded]="expanded()" (click)="toggle()">
+  <a
+    class="section-link"
+    [class.active]="active()"
+    [routerLink]="['/']"
+    [queryParams]="selectionQueryParams({ network: current.network })"
+    queryParamsHandling="merge"
+  >
     <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
-  </button>
+    @if (current.unreadCount > 0) {
+      <span class="section-count">{{ current.unreadCount }}</span>
+    }
+  </a>
   <button
     class="section-chevron"
     type="button"

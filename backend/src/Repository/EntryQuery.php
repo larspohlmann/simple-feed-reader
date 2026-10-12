@@ -25,6 +25,7 @@ final readonly class EntryQuery
     /** The effective page size — already clamped, never the raw request value. */
     public int $limit;
 
+    /** @param list<int>|null $subscriptionIds a set of the user's subscriptions, such as a network's feeds */
     public function __construct(
         public int $userId,
         public EntryView $view = EntryView::All,
@@ -33,6 +34,7 @@ final readonly class EntryQuery
         public ?EntryCursor $cursor = null,
         int $limit = self::DEFAULT_LIMIT,
         public ListOrder $order = ListOrder::NewestFirst,
+        public ?array $subscriptionIds = null,
     ) {
         if ($view === EntryView::ForYou) {
             throw new \LogicException('The for-you feed pages through ForYouFeedQuery, never an EntryQuery.');
@@ -47,7 +49,7 @@ final readonly class EntryQuery
 
     public function hidesExcludedFeeds(): bool
     {
-        if ($this->subscriptionId !== null || $this->tagId !== null) {
+        if ($this->subscriptionId !== null || $this->isNarrowed()) {
             return false;
         }
 
@@ -69,11 +71,16 @@ final readonly class EntryQuery
     }
 
     /**
-     * A fan-in list narrowed to one tag — the shape that can be sparse enough
+     * A fan-in list narrowed to one tag or a subscription set — the shape that can be sparse enough
      * to make the join-order hint a loss rather than a win (#1099).
      */
-    public function isTagScopedFanIn(): bool
+    public function isNarrowedFanIn(): bool
     {
-        return $this->isDateOrderedFanIn() && $this->tagId !== null;
+        return $this->isDateOrderedFanIn() && $this->isNarrowed();
+    }
+
+    private function isNarrowed(): bool
+    {
+        return $this->tagId !== null || $this->subscriptionIds !== null;
     }
 }

@@ -2002,6 +2002,7 @@ describe('ReaderShellComponent', () => {
           queryParams: {
             view: null,
             tag: null,
+            network: null,
             subscription: 9,
             entry: null,
             q: null,
@@ -3350,6 +3351,35 @@ describe('ReaderShellComponent', () => {
       fixture.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/search/mark-read');
+    });
+  });
+
+  describe("mark all read for a network's combined view", () => {
+    it('marks the network read by name, reloads the list and zeroes its feeds locally', () => {
+      const fixture = boot();
+      qp.next(convertToParamMap({ network: 'bluesky' }));
+      fixture.detectChanges();
+      const list = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+      expect(list.request.params.get('network')).toBe('bluesky');
+      list.flush({ entries: [], nextCursor: null });
+      fixture.detectChanges();
+      const zeroUnread = jest.spyOn(TestBed.inject(SubscriptionsStore), 'zeroUnread');
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+
+      fixture.componentInstance.markRead.confirmMarkAllRead();
+
+      const testRequest = ctrl.expectOne('https://api.test/api/entries/mark-read');
+      expect(testRequest.request.body).toEqual({
+        scope: 'network',
+        network: 'bluesky',
+        until: expect.any(String),
+      });
+      testRequest.flush(null);
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      expect(zeroUnread).toHaveBeenCalledWith({ network: 'bluesky' });
     });
   });
 

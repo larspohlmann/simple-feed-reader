@@ -165,6 +165,18 @@ final class EntryListTest extends DbTestCase
         return [$feed, $tag];
     }
 
+    /** @return array{0: Feed, 1: Subscription} */
+    private function secondSubscription(string $feedUrl): array
+    {
+        $feed = new Feed($feedUrl);
+        $this->entityManager->persist($feed);
+        $subscription = new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
+
+        return [$feed, $subscription];
+    }
+
     private function entryIn(Feed $feed, string $guid, string $effectiveDate): Entry
     {
         return $this->entryAt($guid, $effectiveDate, $effectiveDate, $feed);
@@ -506,6 +518,50 @@ final class EntryListTest extends DbTestCase
         $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
         self::assertCount(1, $rows);
         self::assertSame('tagged', $rows[0]->entry->getGuid());
+    }
+
+    public function testASubscriptionSetListsOnlyItsFeedsExcludedOnesIncluded(): void
+    {
+        [$excluded, $excludedSubscription] = $this->secondSubscription('https://excluded.example.com/feed.xml');
+        $excludedSubscription->setIncludeInAllItems(false);
+        [$outside] = $this->secondSubscription('https://outside.example.com/feed.xml');
+        $this->entityManager->flush();
+        $this->entry('own', '2026-07-05T00:00:00Z');
+        $this->entryIn($excluded, 'excluded', '2026-07-06T00:00:00Z');
+        $this->entryIn($outside, 'outside', '2026-07-07T00:00:00Z');
+
+        $rows = $this->repository()->listForUser(new EntryQuery(
+            $this->user->requireId(),
+            subscriptionIds: [$this->subscription->requireId(), $excludedSubscription->requireId()],
+        ));
+
+        self::assertSame(['excluded', 'own'], $this->guids($rows));
+    }
+
+    public function testAnEmptySubscriptionSetListsNothing(): void
+    {
+        $this->entry('own', '2026-07-05T00:00:00Z');
+
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), subscriptionIds: []));
+
+        self::assertSame([], $rows);
+    }
+
+    public function testASubscriptionSetIsWindowedLikeATag(): void
+    {
+        $firstEntry = $this->entry('s1', '2026-07-10T00:00:00Z');
+        $secondEntry = $this->entry('s2', '2026-07-09T00:00:00Z');
+        $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
+        $query = new EntryQuery(
+            $this->user->requireId(),
+            subscriptionIds: [$this->subscription->requireId()],
+            limit: 2,
+        );
+
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
+
+        self::assertCount(2, $recorded['queries'], 'a full windowed page must never fall back');
+        self::assertSame([$firstEntry->getGuid(), $secondEntry->getGuid()], $this->guids($recorded['rows']));
     }
 
     public function testSubscriptionFilterAndCursorPaginate(): void

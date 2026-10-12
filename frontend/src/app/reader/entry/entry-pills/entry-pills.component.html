@@ -1,8 +1,14 @@
 @if (network(); as network) {
-  <span class="pill network">
+  <a
+    class="pill network"
+    [routerLink]="['/']"
+    [queryParams]="selectionQueryParams({ network })"
+    queryParamsHandling="merge"
+    (click)="$event.stopPropagation()"
+  >
     <app-network-logo [network]="network" />
     <span class="name">{{ 'reader.socialNetworkShort.' + network | transloco }}</span>
-  </span>
+  </a>
 }
 @if (short()) {
   <span class="pill short">{{ 'reader.shortBadge' | transloco }}</span>

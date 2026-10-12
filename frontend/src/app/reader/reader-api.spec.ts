@@ -134,6 +134,13 @@ describe('ReaderApi', () => {
     testRequest.flush({ entries: [], nextCursor: null });
   });
 
+  it("GETs a network's combined view by its name", () => {
+    api.entries({ view: 'all', network: 'bluesky' }).subscribe();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+    expect(testRequest.request.params.get('network')).toBe('bluesky');
+    testRequest.flush({ entries: [], nextCursor: null });
+  });
+
   // #91: the STRATO host is slow, so the client asks for the biggest page the
   // backend allows rather than falling back to its smaller default.
   it('asks for a full page on both the first request and a paged one', () => {
@@ -215,6 +222,17 @@ describe('ReaderApi', () => {
       scope: 'feed',
       until: '2026-01-01T00:00:00Z',
       id: 9,
+    });
+    testRequest.flush(null);
+  });
+
+  it('POSTs a network mark-read with scope/network/until', () => {
+    api.markNetworkRead('mastodon', '2026-01-01T00:00:00Z').subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/mark-read');
+    expect(testRequest.request.body).toEqual({
+      scope: 'network',
+      network: 'mastodon',
+      until: '2026-01-01T00:00:00Z',
     });
     testRequest.flush(null);
   });

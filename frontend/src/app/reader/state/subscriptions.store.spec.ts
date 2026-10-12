@@ -449,9 +449,18 @@ describe('SubscriptionsStore', () => {
             },
           ],
           people: [],
+          unreadCount: 6,
         },
-        { network: 'mastodon', accounts: [], people: [untaggedProfile] },
+        { network: 'mastodon', accounts: [], people: [untaggedProfile], unreadCount: 8 },
       ]);
+    });
+
+    it('zeroes exactly the feeds of a network marked read', () => {
+      store.zeroUnread({ network: 'bluesky' });
+
+      const unread = (id: number) =>
+        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
+      expect([unread(1), unread(2), unread(5), unread(6), unread(7)]).toEqual([1, 16, 0, 0, 8]);
     });
 
     it('marks All items read only in the feeds All items holds, as the backend does', () => {

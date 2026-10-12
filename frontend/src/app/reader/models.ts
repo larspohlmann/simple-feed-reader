@@ -1,5 +1,6 @@
 import { LinkCardDto } from './link-card/link-card';
 import { SocialAccountRefDto, SocialFeedRefDto } from './social-feed';
+import { SocialNetworkName } from '../core/social-network';
 
 /** One saved search an entry belongs to, as embedded on the entry itself
  *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup
@@ -370,6 +371,8 @@ export interface EntryQuery {
   view: EntryView;
   subscription?: number;
   tag?: number;
+  /** A network's combined view: every feed of that network, private and profile alike. */
+  network?: SocialNetworkName;
   /** Views that cannot express "only unread" through `view=unread` carry the
    *  refinement as a flag beside their own view or search term. */
   unread?: boolean;

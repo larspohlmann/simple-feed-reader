@@ -30,6 +30,12 @@ final class EntryQueryTest extends TestCase
         self::assertFalse((new EntryQuery(1, EntryView::Unread, tagId: 3))->hidesExcludedFeeds());
     }
 
+    public function testASubscriptionSetScopedViewNeverHides(): void
+    {
+        self::assertFalse((new EntryQuery(1, EntryView::All, subscriptionIds: [5, 6]))->hidesExcludedFeeds());
+        self::assertFalse((new EntryQuery(1, EntryView::Unread, subscriptionIds: []))->hidesExcludedFeeds());
+    }
+
     public function testFavoritesKeptAndViewedNeverHide(): void
     {
         foreach ([EntryView::Favorites, EntryView::Kept, EntryView::Viewed] as $view) {
@@ -47,6 +53,14 @@ final class EntryQueryTest extends TestCase
     {
         self::assertTrue((new EntryQuery(1, EntryView::All, tagId: 3))->isDateOrderedFanIn());
         self::assertTrue((new EntryQuery(1, EntryView::Unread, tagId: 3))->isDateOrderedFanIn());
+    }
+
+    public function testATagOrSubscriptionSetNarrowsTheFanIn(): void
+    {
+        self::assertTrue((new EntryQuery(1, EntryView::All, tagId: 3))->isNarrowedFanIn());
+        self::assertTrue((new EntryQuery(1, EntryView::Unread, subscriptionIds: [5, 6]))->isDateOrderedFanIn());
+        self::assertTrue((new EntryQuery(1, EntryView::Unread, subscriptionIds: [5, 6]))->isNarrowedFanIn());
+        self::assertFalse((new EntryQuery(1, EntryView::All))->isNarrowedFanIn());
     }
 
     public function testASingleSubscriptionScopeNeverFansIn(): void

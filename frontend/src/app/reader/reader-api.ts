@@ -28,6 +28,7 @@ import {
   TagInput,
 } from './models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
+import { SocialNetworkName } from '../core/social-network';
 
 export interface SavedSearchDraft {
   term: string;
@@ -101,6 +102,7 @@ export class ReaderApi {
     let listParams = params.set('view', query.view);
     if (query.subscription != null) listParams = listParams.set('subscription', query.subscription);
     if (query.tag != null) listParams = listParams.set('tag', query.tag);
+    if (query.network != null) listParams = listParams.set('network', query.network);
     return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams, context });
   }
 
@@ -120,6 +122,14 @@ export class ReaderApi {
     const body: Record<string, unknown> = { scope, until };
     if (id != null) body['id'] = id;
     return this.http.post<void>(`${this.base}/api/entries/mark-read`, body);
+  }
+
+  markNetworkRead(network: SocialNetworkName, until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/mark-read`, {
+      scope: 'network',
+      network,
+      until,
+    });
   }
 
   markSearchRead(term: string, until: string): Observable<void> {

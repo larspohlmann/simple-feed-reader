@@ -12,7 +12,7 @@ use Doctrine\ORM\QueryBuilder;
 
 /**
  * Runs a fan-in page: unhinted for a single scope, hinted for the dense all/unread
- * views, and for a possibly-sparse tag scope probed, windowed, with an unhinted
+ * views, and for a possibly-sparse tag or subscription-set scope probed, windowed, with an unhinted
  * fallback when the window is short (#1099).
  */
 final readonly class DateOrderedPage
@@ -34,11 +34,11 @@ final readonly class DateOrderedPage
         if (!$query->isDateOrderedFanIn()) {
             return $this->plainResult($pageQuery());
         }
-        if (!$query->isTagScopedFanIn()) {
+        if (!$query->isNarrowedFanIn()) {
             return $this->hintedResult($pageQuery());
         }
 
-        return $this->tagScopedRows($query, $pageQuery, $windowProbe);
+        return $this->narrowedRows($query, $pageQuery, $windowProbe);
     }
 
     /**
@@ -47,7 +47,7 @@ final readonly class DateOrderedPage
      *
      * @return list<array<array-key, mixed>>
      */
-    private function tagScopedRows(EntryQuery $query, callable $pageQuery, callable $windowProbe): array
+    private function narrowedRows(EntryQuery $query, callable $pageQuery, callable $windowProbe): array
     {
         $windowEdge = $this->windowEdge($windowProbe);
         if ($windowEdge === null) {

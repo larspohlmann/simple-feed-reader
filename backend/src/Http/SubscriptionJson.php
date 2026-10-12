@@ -7,9 +7,7 @@ namespace App\Http;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
-use App\Enum\SourceFormat;
-use App\Service\Social\Support\ProfileFeedUrl;
-use App\Service\Social\Support\SocialFeedUrl;
+use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\Support\PlainText;
 use App\Service\Url\Support\FeedWebsite;
@@ -116,33 +114,17 @@ final class SubscriptionJson
      */
     private static function social(Feed $feed): ?array
     {
-        return self::privateFeed($feed) ?? self::profileFeed($feed);
-    }
-
-    /** @return array{network: string, accountId: int, kind: string}|null */
-    private static function privateFeed(Feed $feed): ?array
-    {
-        $address = SourceFormat::isSocial($feed->getSourceFormat()) ? SocialFeedUrl::addressOf($feed->getUrl()) : null;
-        if (null === $address) {
-            return null;
-        }
-
-        return [
-            'network' => $address->network->value,
-            'accountId' => $address->accountId,
-            'kind' => $address->kind->value,
-        ];
-    }
-
-    /** @return array{network: string, accountId: null, kind: string}|null */
-    private static function profileFeed(Feed $feed): ?array
-    {
-        $network = ProfileFeedUrl::networkOf($feed->getUrl());
+        $network = SocialFeedClassifier::networkOf($feed);
         if (null === $network) {
             return null;
         }
+        $address = SocialFeedClassifier::privateAddressOf($feed);
 
-        return ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND];
+        return [
+            'network' => $network->value,
+            'accountId' => $address?->accountId,
+            'kind' => $address?->kind->value ?? self::PROFILE_KIND,
+        ];
     }
 
     /** @return array{id: int, network: string, handle: string} */

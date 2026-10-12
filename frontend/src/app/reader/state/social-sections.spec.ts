@@ -1,7 +1,7 @@
 import { SubscriptionDto } from '../models';
 import { SocialFeedRefDto } from '../social-feed';
 import { makeSubscription } from '../testing/subscription.factory';
-import { buildSocialSections, isPrivateFeed, isSocialFeed } from './social-sections';
+import { buildSocialSections, isPrivateFeed, isSocialFeed, networkCounts } from './social-sections';
 
 const ref = (
   network: 'bluesky' | 'mastodon',
@@ -92,5 +92,22 @@ describe('buildSocialSections', () => {
   it('tells a private feed from an ordinary one', () => {
     expect(isPrivateFeed(feed(1, ref('bluesky', 3, 'home')))).toBe(true);
     expect(isPrivateFeed(makeSubscription())).toBe(false);
+  });
+
+  it("sums a network's unread over its private and profile feeds, excluded ones included", () => {
+    const subscriptions = [
+      {
+        ...feed(1, ref('bluesky', 3, 'home')),
+        unreadCount: 2,
+        entryCount: 20,
+        includeInAllItems: false,
+      },
+      { ...profile(2, 'bluesky', 'Amy'), unreadCount: 5, entryCount: 50 },
+      { ...profile(3, 'mastodon', 'Bob'), unreadCount: 7, entryCount: 70 },
+      { ...makeSubscription({ id: 4 }), unreadCount: 11, entryCount: 110 },
+    ];
+
+    expect(networkCounts(subscriptions, 'bluesky')).toEqual({ unreadCount: 7, entryCount: 70 });
+    expect(buildSocialSections(subscriptions, [])[0].unreadCount).toBe(7);
   });
 });

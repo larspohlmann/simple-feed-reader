@@ -33,6 +33,7 @@ const feed = (
 const ONE_ACCOUNT: SocialSection = {
   network: 'bluesky',
   people: [],
+  unreadCount: 3,
   accounts: [
     {
       accountId: 3,
@@ -45,7 +46,12 @@ const ONE_ACCOUNT: SocialSection = {
   ],
 };
 
-function mount(section: SocialSection): ComponentFixture<SidebarSocialSectionComponent> {
+const ALL: Selection = { kind: 'all', id: null, unread: true };
+
+function mount(
+  section: SocialSection,
+  selection: Selection = ALL,
+): ComponentFixture<SidebarSocialSectionComponent> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [SidebarSocialSectionComponent, provideTranslocoTesting()],
@@ -70,7 +76,7 @@ function mount(section: SocialSection): ComponentFixture<SidebarSocialSectionCom
   });
   const fixture = TestBed.createComponent(SidebarSocialSectionComponent);
   fixture.componentRef.setInput('section', section);
-  fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true } as Selection);
+  fixture.componentRef.setInput('selection', selection);
   fixture.detectChanges();
   return fixture;
 }
@@ -85,7 +91,7 @@ describe('SidebarSocialSectionComponent', () => {
   it('titles the section by its network and names an unrenamed Home through i18n', () => {
     const root = element(mount(ONE_ACCOUNT));
 
-    expect(root.querySelector('.section-toggle')?.textContent).toContain('Bluesky');
+    expect(root.querySelector('.section-link')?.textContent).toContain('Bluesky');
     const rows = [...root.querySelectorAll('app-sidebar-feed-row')].map(
       (row) => row.textContent ?? '',
     );
@@ -98,6 +104,7 @@ describe('SidebarSocialSectionComponent', () => {
   it('keeps a renamed Home under the name it was given', () => {
     const renamed: SocialSection = {
       network: 'bluesky',
+      unreadCount: 0,
       people: [],
       accounts: [
         {
@@ -116,6 +123,7 @@ describe('SidebarSocialSectionComponent', () => {
   it('heads each account with its handle when the network has several', () => {
     const twoAccounts: SocialSection = {
       network: 'bluesky',
+      unreadCount: 0,
       people: [],
       accounts: [
         {
@@ -153,7 +161,7 @@ describe('SidebarSocialSectionComponent', () => {
   it('collapses and remembers it for its own network only', () => {
     const fixture = mount(ONE_ACCOUNT);
 
-    (element(fixture).querySelector('.section-toggle') as HTMLButtonElement).click();
+    (element(fixture).querySelector('.section-chevron') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     expect(element(fixture).querySelectorAll('app-sidebar-feed-row').length).toBe(0);
@@ -165,6 +173,7 @@ describe('SidebarSocialSectionComponent', () => {
   it('leaves out the heading of an account whose handle is unknown', () => {
     const unknownHandle: SocialSection = {
       network: 'bluesky',
+      unreadCount: 0,
       people: [],
       accounts: [
         { accountId: 3, handle: null, subscriptions: [feed(1, 'home')] },
@@ -183,6 +192,7 @@ describe('SidebarSocialSectionComponent', () => {
       feed(id, 'list', { includeInAllItems: false, includeInForYou: false });
     const section: SocialSection = {
       network: 'bluesky',
+      unreadCount: 0,
       people: [],
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
@@ -193,6 +203,7 @@ describe('SidebarSocialSectionComponent', () => {
   it('lists profile feeds under a People heading after the private feeds', () => {
     const section: SocialSection = {
       network: 'bluesky',
+      unreadCount: 0,
       accounts: ONE_ACCOUNT.accounts,
       people: [person(7, 'Amy'), person(8, 'Zed')],
     };
@@ -213,21 +224,66 @@ describe('SidebarSocialSectionComponent', () => {
   it('shows a network that has only people, without an account heading', () => {
     const section: SocialSection = {
       network: 'mastodon',
+      unreadCount: 0,
       accounts: [],
       people: [person(7, 'Amy')],
     };
 
     const root = element(mount(section));
 
-    expect(root.querySelector('.section-toggle')?.textContent).toContain('Mastodon');
+    expect(root.querySelector('.section-link')?.textContent).toContain('Mastodon');
     expect(root.querySelector('.account-handle')).toBeNull();
     expect(root.querySelectorAll('app-sidebar-feed-row').length).toBe(1);
   });
 
   it('keeps the exclusion marker on an excluded profile feed, which is ordinary RSS', () => {
     const excluded = { ...person(7, 'Amy'), includeInAllItems: false };
-    const section: SocialSection = { network: 'bluesky', accounts: [], people: [excluded] };
+    const section: SocialSection = {
+      network: 'bluesky',
+      accounts: [],
+      people: [excluded],
+      unreadCount: 0,
+    };
 
     expect(element(mount(section)).querySelector('.feed-exclusion-marker')).not.toBeNull();
+  });
+
+  it("links the title to the network's combined view", () => {
+    const link = element(mount(ONE_ACCOUNT)).querySelector('a.section-link') as HTMLAnchorElement;
+
+    expect(link.getAttribute('href')).toContain('network=bluesky');
+  });
+
+  it('opens the view from the title without collapsing the section', () => {
+    const fixture = mount(ONE_ACCOUNT);
+
+    (element(fixture).querySelector('a.section-link') as HTMLAnchorElement).click();
+    fixture.detectChanges();
+
+    expect(element(fixture).querySelectorAll('app-sidebar-feed-row').length).toBe(2);
+    expect(localStorage.getItem('sfr.bluesky.collapsed')).toBeNull();
+  });
+
+  it("marks the title active while the network's view is open", () => {
+    const bluesky: Selection = { kind: 'network', id: null, unread: true, network: 'bluesky' };
+    const mastodon: Selection = { ...bluesky, network: 'mastodon' };
+
+    expect(
+      element(mount(ONE_ACCOUNT, bluesky)).querySelector('.section-link.active'),
+    ).not.toBeNull();
+    expect(element(mount(ONE_ACCOUNT, mastodon)).querySelector('.section-link.active')).toBeNull();
+  });
+
+  it("shows the network's unread count between the title and the chevron", () => {
+    const head = element(mount(ONE_ACCOUNT)).querySelector('.section-head') as HTMLElement;
+
+    expect(head.querySelector('.section-link .section-count')?.textContent?.trim()).toBe('3');
+    expect(head.lastElementChild?.classList).toContain('section-chevron');
+  });
+
+  it('shows no count for a network with nothing unread', () => {
+    const quiet: SocialSection = { ...ONE_ACCOUNT, unreadCount: 0 };
+
+    expect(element(mount(quiet)).querySelector('.section-count')).toBeNull();
   });
 });

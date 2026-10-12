@@ -5,6 +5,42 @@
   display: contents;
 }
 
+/* The title opens the network's combined view, so it reads as a nav row: hover, active and a tag-row count. */
+.section-link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding-block: var(--space-1);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+.section-link .label {
+  margin-block: 0;
+}
+
+.section-count {
+  margin-inline: auto var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+@media (hover: hover) {
+  .section-link:hover {
+    background: var(--surface-0);
+  }
+}
+
+.section-link.active {
+  background: var(--accent-soft);
+}
+
+.section-link.active .label,
+.section-link.active .section-count {
+  color: var(--accent);
+}
+
 .feedrow {
   display: flex;
   align-items: center;

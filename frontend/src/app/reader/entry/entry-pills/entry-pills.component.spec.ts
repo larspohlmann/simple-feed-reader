@@ -117,14 +117,31 @@ describe('EntryPillsComponent', () => {
       return fixture.nativeElement as HTMLElement;
     }
 
-    it('leads with the short network name, as plain text, before the tags', () => {
+    it('leads with the short network name before the tags', () => {
       const element = mountFor(5, [[5, 'bluesky']]);
       const first = element.querySelector('.pill')!;
 
       expect(first.textContent?.trim()).toBe('bsky');
-      expect(first.tagName).toBe('SPAN');
       expect(first.querySelector('app-network-logo svg.bluesky')).not.toBeNull();
       expect(element.querySelectorAll('.pill')[1].textContent).toContain('Tech');
+    });
+
+    it("links to the network's combined view", () => {
+      const pill = mountFor(5, [[5, 'mastodon']]).querySelector('a.pill.network')!;
+
+      expect(pill.getAttribute('href')).toContain('network=mastodon');
+    });
+
+    it('stops its click from bubbling so the parent entry does not open', () => {
+      const element = mountFor(5, [[5, 'bluesky']]);
+      const parentClick = jest.fn();
+      element.addEventListener('click', parentClick);
+
+      element
+        .querySelector('a.pill.network')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+      expect(parentClick).not.toHaveBeenCalled();
     });
 
     it('names Mastodon too', () => {

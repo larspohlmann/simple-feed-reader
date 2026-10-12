@@ -12,6 +12,7 @@ import { isUnrenamedHome } from '../feeds/display-title';
 import { FeedNames } from '../state/feed-names';
 import { SubscriptionDto } from '../models';
 import { ReaderRouteState } from './reader-route-state.service';
+import { NetworkCounts, networkCounts } from '../state/social-sections';
 
 @Injectable()
 export class ListHeading {
@@ -70,6 +71,13 @@ export class ListHeading {
     return subscription === null ? null : this.names.titleOf(subscription);
   });
 
+  private readonly selectedNetworkCounts = computed<NetworkCounts>(() => {
+    const network = this.routeState.selection().network;
+    return network
+      ? networkCounts(this.subscriptions.subscriptions(), network)
+      : { unreadCount: 0, entryCount: 0 };
+  });
+
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
 
   /** A search request in flight, not merely any list loading. */
@@ -99,6 +107,7 @@ export class ListHeading {
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
+    network: () => this.i18n.translate(`settings.social.${this.routeState.selection().network}`),
     search: () => `${this.searchTitlePrefix()} ${this.searchTitleBody()}`,
     subscription: () => {
       const subscription = this.selectedSubscription();
@@ -131,6 +140,10 @@ export class ListHeading {
     tag: (selection) => {
       const node = this.selectedTagNode();
       return bySwitch(selection, node?.unreadCount ?? 0, node?.entryCount ?? 0);
+    },
+    network: (selection) => {
+      const counts = this.selectedNetworkCounts();
+      return bySwitch(selection, counts.unreadCount, counts.entryCount);
     },
     subscription: (selection) => {
       const subscription = this.selectedSubscription();

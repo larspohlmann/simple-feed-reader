@@ -50,6 +50,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
 const accountsOf = (...handles: string[]): SocialSection => ({
   network: 'bluesky',
   people: [],
+  unreadCount: 0,
   accounts: handles.map((handle, index) => ({
     accountId: index + 1,
     handle,
@@ -88,5 +89,57 @@ describe('ListHeading feed intro for a Home timeline', () => {
     const renamed = home(1, { ...site, title: 'Main', customTitle: 'Main' });
 
     expect(listHeadingFor(renamed, [accountsOf('@a')]).feedIntroTitle()).toBe('Main');
+  });
+});
+
+describe("ListHeading for a network's combined view", () => {
+  const subscriptions: SubscriptionDto[] = [
+    home(1, { unreadCount: 3, entryCount: 30, includeInAllItems: false }),
+    makeSubscription({
+      id: 2,
+      unreadCount: 4,
+      entryCount: 40,
+      social: { network: 'bluesky', accountId: null, kind: 'profile' },
+    }),
+    makeSubscription({
+      id: 3,
+      unreadCount: 9,
+      entryCount: 90,
+      social: { network: 'mastodon', accountId: null, kind: 'profile' },
+    }),
+    makeSubscription({ id: 4, unreadCount: 20, entryCount: 200 }),
+  ];
+
+  function networkHeading(unread: boolean): ListHeading {
+    const selection: Selection = { kind: 'network', id: null, unread, network: 'bluesky' };
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        ListHeading,
+        { provide: ReaderRouteState, useValue: { selection: signal(selection) } },
+        {
+          provide: SubscriptionsStore,
+          useValue: { subscriptions: signal(subscriptions), socialSections: signal([]) },
+        },
+        { provide: LanguageService, useValue: { lang: signal('en') } },
+        { provide: EntriesStore, useValue: {} },
+        { provide: RecommendationsService, useValue: {} },
+        { provide: SavedSearchesStore, useValue: {} },
+        { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+      ],
+    });
+    return TestBed.inject(ListHeading);
+  }
+
+  it('is titled by the network', () => {
+    expect(networkHeading(true).title()).toBe('Bluesky');
+  });
+
+  it("counts the unread of the network's feeds, excluded ones included", () => {
+    expect(networkHeading(true).titleCount()).toEqual({ value: 7, counts: 'unread' });
+  });
+
+  it("counts every post of the network's feeds under All posts", () => {
+    expect(networkHeading(false).titleCount()).toEqual({ value: 70, counts: 'items' });
   });
 });
