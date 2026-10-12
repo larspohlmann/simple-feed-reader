@@ -9,6 +9,7 @@ use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Enum\FeedStatus;
 use App\Enum\SocialAccountStatus;
+use App\Enum\SourceFormat;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use App\Service\Bluesky\Support\BlueskyWeb;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -306,9 +307,11 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
     private function restrictToConnectedAccounts(QueryBuilder $qb): void
     {
         $qb->andWhere(sprintf(
-            'NOT EXISTS (SELECT sf.id FROM %s sf JOIN sf.socialAccount sa'
+            'f.sourceFormat NOT IN (:socialFormats) OR NOT EXISTS (SELECT sf.id FROM %s sf JOIN sf.socialAccount sa'
             . ' WHERE sf.feed = f AND sa.status = :needsReconnect)',
             SocialFeed::class,
-        ))->setParameter('needsReconnect', SocialAccountStatus::NeedsReconnect);
+        ))
+            ->setParameter('socialFormats', SourceFormat::SOCIAL)
+            ->setParameter('needsReconnect', SocialAccountStatus::NeedsReconnect);
     }
 }
