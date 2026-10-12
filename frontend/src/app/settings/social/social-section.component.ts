@@ -1,9 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { formatLongDate } from '../../reader/format';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { PasswordInputComponent } from '../../shared/password-input/password-input.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
@@ -16,6 +19,7 @@ import { SocialAccount, SocialAccountsService, SocialNetwork } from './social-ac
   imports: [
     ButtonComponent,
     ErrorBannerComponent,
+    IconComponent,
     NgTemplateOutlet,
     PasswordInputComponent,
     SettingsGroupComponent,
@@ -33,11 +37,14 @@ export class SocialSectionComponent {
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
+  private readonly language = inject(LanguageService);
 
   protected readonly blueskyAccounts = this.accountsOf('bluesky');
   protected readonly mastodonAccounts = this.accountsOf('mastodon');
 
   // Secrets live only in these component signals; each is cleared once its request succeeds.
+  protected readonly blueskyFormOpen = signal(false);
+  protected readonly mastodonFormOpen = signal(false);
   protected readonly blueskyHandle = signal('');
   protected readonly blueskyPassword = signal('');
   protected readonly mastodonInstance = signal('');
@@ -47,6 +54,11 @@ export class SocialSectionComponent {
 
   constructor() {
     this.svc.load();
+  }
+
+  protected describeSince(account: SocialAccount): string {
+    const date = formatLongDate(account.connectedAt, this.language.lang());
+    return this.i18n.translate('settings.social.connectedSince', { date });
   }
 
   protected typed(event: Event): string {
@@ -72,6 +84,7 @@ export class SocialSectionComponent {
       next: () => {
         this.blueskyHandle.set('');
         this.blueskyPassword.set('');
+        this.blueskyFormOpen.set(false);
         this.announceConnected();
       },
       error: () => undefined,
@@ -83,6 +96,7 @@ export class SocialSectionComponent {
       next: () => {
         this.mastodonInstance.set('');
         this.mastodonToken.set('');
+        this.mastodonFormOpen.set(false);
         this.announceConnected();
       },
       error: () => undefined,

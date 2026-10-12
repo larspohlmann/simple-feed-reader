@@ -184,6 +184,7 @@ describe('SocialSectionComponent', () => {
     });
     post.flush(account({ handle: 'bob.bsky.social' }));
     fixture.detectChanges();
+    press(fixture, 'social-bluesky-add');
     expect(byTestId<HTMLInputElement>(fixture, 'social-bluesky-password')?.value).toBe('');
     expect(byTestId<HTMLInputElement>(fixture, 'social-bluesky-handle')?.value).toBe('');
     expect(root(fixture).textContent).toContain('bob.bsky.social');
@@ -222,6 +223,67 @@ describe('SocialSectionComponent', () => {
     expect(link?.getAttribute('rel')).toBe('noopener');
   });
 
+  it('shows a positive Connected chip with a check icon on a connected account', () => {
+    const fixture = mount([account()]);
+
+    const chip = byTestId(fixture, 'social-connected-1');
+    expect(chip?.textContent).toContain('Connected');
+    expect(chip?.querySelector('app-icon')?.textContent).toContain('check_circle');
+    expect(byTestId(fixture, 'social-needs-reconnect-1')).toBeNull();
+  });
+
+  it('shows the warning chip instead of the Connected chip when reconnecting is needed', () => {
+    const fixture = mount([account({ status: 'needs_reconnect' })]);
+
+    expect(byTestId(fixture, 'social-connected-1')).toBeNull();
+    expect(byTestId(fixture, 'social-needs-reconnect-1')).not.toBeNull();
+  });
+
+  it('shows since when the account was connected', () => {
+    const fixture = mount([account({ connectedAt: '2026-10-12T08:00:00+00:00' })]);
+
+    expect(
+      byTestId(fixture, 'social-connected-1')?.closest('app-settings-row')?.textContent,
+    ).toContain('Connected since October 12, 2026');
+  });
+
+  it('collapses the connect form behind a button once the network has an account', () => {
+    const fixture = mount([account()]);
+
+    expect(byTestId(fixture, 'social-bluesky-handle')).toBeNull();
+    expect(byTestId(fixture, 'social-bluesky-connect')).toBeNull();
+    expect(byTestId(fixture, 'social-bluesky-link')).toBeNull();
+    expect(byTestId(fixture, 'social-bluesky-add')?.textContent).toContain(
+      'Connect another account',
+    );
+    expect(byTestId(fixture, 'social-mastodon-instance')).not.toBeNull();
+    expect(byTestId(fixture, 'social-mastodon-add')).toBeNull();
+  });
+
+  it('shows the form directly when the network has no account', () => {
+    const fixture = mount([]);
+
+    expect(byTestId(fixture, 'social-bluesky-handle')).not.toBeNull();
+    expect(byTestId(fixture, 'social-bluesky-add')).toBeNull();
+  });
+
+  it('expands the form on click and collapses it again after a successful connect', () => {
+    const fixture = mount([account()]);
+
+    press(fixture, 'social-bluesky-add');
+    expect(byTestId(fixture, 'social-bluesky-handle')).not.toBeNull();
+    expect(byTestId(fixture, 'social-bluesky-add')).toBeNull();
+
+    type(fixture, 'social-bluesky-handle', 'bob.bsky.social');
+    type(fixture, 'social-bluesky-password', 'abcd-efgh-ijkl-mnop');
+    press(fixture, 'social-bluesky-connect');
+    http.expectOne(`${ENDPOINT}/bluesky`).flush(account({ id: 2, handle: 'bob.bsky.social' }));
+    fixture.detectChanges();
+
+    expect(byTestId(fixture, 'social-bluesky-handle')).toBeNull();
+    expect(byTestId(fixture, 'social-bluesky-add')).not.toBeNull();
+  });
+
   it('says what the Mastodon instance field wants', () => {
     const fixture = mount([]);
 
@@ -248,6 +310,7 @@ describe('SocialSectionComponent', () => {
 
     press(fixture, 'social-disconnect-1');
     http.expectOne(`${ENDPOINT}/1`).flush({ accounts: [] });
+    fixture.detectChanges();
     type(fixture, 'social-bluesky-handle', 'alice.bsky.social');
     type(fixture, 'social-bluesky-password', 'abcd-efgh-ijkl-mnop');
     press(fixture, 'social-bluesky-connect');
@@ -279,6 +342,7 @@ describe('SocialSectionComponent', () => {
     });
     post.flush(account({ id: 5, network: 'mastodon', handle: 'bob@example.social' }));
     fixture.detectChanges();
+    press(fixture, 'social-mastodon-add');
     expect(byTestId<HTMLInputElement>(fixture, 'social-mastodon-token')?.value).toBe('');
   });
 

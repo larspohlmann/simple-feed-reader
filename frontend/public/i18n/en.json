@@ -378,7 +378,10 @@
       "empty": "No account connected.",
       "openAppPasswords": "Open app passwords",
       "openOnInstance": "Open on {{host}}",
-      "instanceHint": "The address of your Mastodon server: the part of your handle after the second @ (for @lars@mastodon.social, mastodon.social). A full https:// address works too."
+      "instanceHint": "The address of your Mastodon server: the part of your handle after the second @ (for @lars@mastodon.social, mastodon.social). A full https:// address works too.",
+      "statusConnected": "Connected",
+      "connectedSince": "Connected since {{date}}",
+      "connectAnother": "Connect another account"
     },
     "profile": {
       "title": "Profile",
