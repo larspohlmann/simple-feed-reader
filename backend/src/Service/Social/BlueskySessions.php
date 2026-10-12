@@ -10,7 +10,6 @@ use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskySessionModel;
 
-/** Bluesky allows about 300 createSession calls a day, and every private feed polls every 15 minutes. */
 final readonly class BlueskySessions
 {
     public function __construct(

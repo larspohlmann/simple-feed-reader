@@ -7,7 +7,6 @@ namespace App\Service\Refresh;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Refresh\Pass\RefreshPass;
 
-/** Stores each due feed's outcome as it lands: fetched feeds through the batch engine, private ones per account. */
 final readonly class RefreshPassFetcher
 {
     public function __construct(

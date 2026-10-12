@@ -7,7 +7,6 @@ namespace App\Service\Refresh\Model;
 use App\Service\Completion\Model\KnownSharesModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 
-/** A feed's entries ready to store, with whatever its source already said about their shares. */
 final readonly class IncomingFeedModel
 {
     public function __construct(

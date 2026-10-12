@@ -19,7 +19,6 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\TimelineReader\TimelineReaderInterface;
 
-/** Polls one private feed through its account and stores the page the way a fetched feed is stored. */
 final readonly class SocialFeedRefresher
 {
     public function __construct(
