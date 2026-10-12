@@ -101,6 +101,26 @@ final class SocialAccountEditorTest extends DbTestCase
         self::assertNotNull($this->entityManager->find(Subscription::class, $follow->requireId()));
     }
 
+    public function testDisconnectingLeavesAnotherUsersSubscriptionToTheSameFeed(): void
+    {
+        $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
+        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $home = $this->entityManager->getRepository(SocialFeed::class)->findOneBy(['socialAccount' => $account]);
+        self::assertNotNull($home);
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $stranger = (new UserFactory($this->entityManager, $hasher))->create('stranger@example.test');
+        $theirs = new Subscription($stranger, $home->getFeed(), new \DateTimeImmutable('2026-10-12 10:00:00'));
+        $this->entityManager->persist($theirs);
+        $this->entityManager->flush();
+        $theirsId = $theirs->requireId();
+
+        $this->editor()->disconnect($account);
+        $this->entityManager->clear();
+
+        self::assertNotNull($this->entityManager->find(Subscription::class, $theirsId));
+    }
+
     private function stored(SocialNetwork $network, string $identity, bool $default): SocialAccount
     {
         $account = new SocialAccount(

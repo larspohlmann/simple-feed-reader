@@ -112,6 +112,19 @@ final class SocialFeedRepositoryTest extends DbTestCase
         );
     }
 
+    public function testAnotherUsersSubscriptionToTheAccountsFeedIsNotTheAccountsOwn(): void
+    {
+        $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
+        $own = $this->subscribe($home);
+        $this->subscribeAs($this->stranger(), $home);
+
+        self::assertSame([$own], SocialFeeds::repository($this->entityManager)->subscriptionsOf($this->account));
+        self::assertSame(
+            [['kind' => SocialFeedKind::Home, 'remoteId' => null, 'subscriptionId' => $own->requireId()]],
+            SocialFeeds::repository($this->entityManager)->subscribedCollectionsOf($this->account),
+        );
+    }
+
     public function testThePageNewestIdIsKeptAndAnEmptyPageKeepsTheLastOne(): void
     {
         $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
@@ -159,11 +172,24 @@ final class SocialFeedRepositoryTest extends DbTestCase
 
     private function subscribe(SocialFeed $socialFeed): Subscription
     {
+        return $this->subscribeAs($this->user, $socialFeed);
+    }
+
+    private function subscribeAs(User $user, SocialFeed $socialFeed): Subscription
+    {
         $subscribedAt = new \DateTimeImmutable('2026-10-12 10:00:00');
-        $subscription = new Subscription($this->user, $socialFeed->getFeed(), $subscribedAt);
+        $subscription = new Subscription($user, $socialFeed->getFeed(), $subscribedAt);
         $this->entityManager->persist($subscription);
         $this->entityManager->flush();
 
         return $subscription;
+    }
+
+    private function stranger(): User
+    {
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+
+        return (new UserFactory($this->entityManager, $hasher))->create('stranger@example.test');
     }
 }
