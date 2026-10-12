@@ -51,7 +51,8 @@ final class MastodonTimelinePage
     {
         $post = self::originalOf($status);
         $uri = $post->string('uri');
-        if (null === $uri) {
+        $url = AbsoluteHttpUrl::orNull($post->string('url')) ?? AbsoluteHttpUrl::orNull($uri);
+        if (null === $uri || null === $url) {
             return null;
         }
         $body = self::bodyOf($post);
@@ -59,7 +60,7 @@ final class MastodonTimelinePage
 
         return new ParsedEntryModel(
             guid: $uri,
-            url: $post->string('url') ?? $uri,
+            url: $url,
             headline: EntryTitle::of(null, $body),
             author: $account->string('display_name') ?? $account->string('acct'),
             summary: null,

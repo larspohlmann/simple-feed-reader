@@ -183,6 +183,20 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertNull(MastodonTimelinePage::of([$status])->parsed->entries[0]->authorUrl);
     }
 
+    public function testAnEntryUrlThatIsNoWebPageFallsBackToTheUri(): void
+    {
+        $status = self::timelineStatus(['url' => 'javascript:alert(1)']);
+
+        self::assertSame(self::URI, MastodonTimelinePage::of([$status])->parsed->entries[0]->url);
+    }
+
+    public function testAStatusWithNoWebPageAtAllIsSkipped(): void
+    {
+        $status = self::timelineStatus(['url' => 'javascript:alert(1)', 'uri' => 'tag:mastodon.example,2026:109']);
+
+        self::assertSame([], MastodonTimelinePage::of([$status])->parsed->entries);
+    }
+
     public function testAnAvatarThatIsNoWebImageIsDropped(): void
     {
         $status = self::timelineStatus(['account' => ['display_name' => 'Bob', 'avatar' => 'javascript:alert(1)']]);
