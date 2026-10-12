@@ -64,11 +64,11 @@ final class SocialCredentialsModelTest extends TestCase
         SocialCredentialsModel::forReconnect($account, 'hunter2hunter2');
     }
 
-    public function testReconnectingAMastodonAccountTakesATokenOfAnyShape(): void
+    public function testReconnectingAMastodonAccountTakesATrimmedTokenOfAnyShape(): void
     {
         $account = $this->account(SocialNetwork::Mastodon, '42', 'https://mastodon.social');
 
-        self::assertSame('hunter2hunter2', SocialCredentialsModel::forReconnect($account, 'hunter2hunter2')->secret);
+        self::assertSame('hunter2hunter2', SocialCredentialsModel::forReconnect($account, " hunter2hunter2\n")->secret);
     }
 
     public function testAReconnectSecretTypedWithSurroundingWhitespaceIsTrimmed(): void

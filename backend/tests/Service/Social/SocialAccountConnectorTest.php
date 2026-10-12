@@ -101,6 +101,7 @@ final class SocialAccountConnectorTest extends DbTestCase
             $connector->connect($this->user, $this->blueskyCredentials());
             self::fail('Expected SocialAccountAlreadyConnectedException');
         } catch (SocialAccountAlreadyConnectedException) {
+            self::assertTrue($this->entityManager->isOpen());
             self::assertSame(1, $this->repository()->countForUser($this->user));
         }
     }

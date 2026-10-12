@@ -14,7 +14,6 @@ final readonly class ConnectBlueskyRequest
         #[Assert\Length(max: 255)]
         public string $handle,
         #[Assert\NotBlank]
-        #[Assert\Length(max: 255)]
         public string $appPassword,
     ) {
     }

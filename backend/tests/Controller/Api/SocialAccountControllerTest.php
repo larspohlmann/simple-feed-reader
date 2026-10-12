@@ -258,6 +258,21 @@ final class SocialAccountControllerTest extends ApiTestCase
         $this->assertNotFound($client);
     }
 
+    public function testReconnectSpendsTheConnectBudget(): void
+    {
+        $client = $this->clientVerifying($this->alice());
+        $this->accountOn($client, 'social-reconnect-budget@example.test');
+        $id = $this->connectedId($client);
+        for ($attempt = 1; $attempt < self::CONNECT_BUDGET; ++$attempt) {
+            $this->replaceCredential($client, $id);
+            self::assertResponseIsSuccessful();
+        }
+
+        $this->replaceCredential($client, $id);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
     public function testMakeDefaultReturnsTheListWithTheFlagMoved(): void
     {
         $client = $this->clientVerifying($this->echoingVerifier());
