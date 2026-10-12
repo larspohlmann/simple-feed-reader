@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\Support;
+namespace App\Service\Bluesky\Support;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Text\Support\HtmlAnchor;
 use App\Service\Text\Support\HtmlEscape;
 use App\Service\Text\Support\ParagraphedText;

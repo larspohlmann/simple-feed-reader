@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\Support;
+namespace App\Tests\Service\Bluesky\Support;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Social\Support\BlueskyRichText;
+use App\Service\Bluesky\Support\BlueskyRichText;
 use PHPUnit\Framework\TestCase;
 
 final class BlueskyRichTextTest extends TestCase

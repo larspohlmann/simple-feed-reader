@@ -6,6 +6,7 @@ namespace App\Service\Social\Support;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Support\AtPostUri;
+use App\Service\Bluesky\Support\BlueskyRichText;
 use App\Service\Completion\Model\KnownSharesModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Support\DateParser;
