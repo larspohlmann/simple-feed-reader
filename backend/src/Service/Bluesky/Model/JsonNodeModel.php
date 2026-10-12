@@ -53,8 +53,18 @@ final readonly class JsonNodeModel
     /** @return list<self> */
     public function nodes(string $key): array
     {
-        $value = $this->fields[$key] ?? null;
+        return $this->listAt($key) ?? [];
+    }
 
-        return \is_array($value) && array_is_list($value) ? array_map(self::of(...), $value) : [];
+    /** @return list<self>|null null when the field is no list */
+    public function listAt(string $key): ?array
+    {
+        return self::listOf($this->fields[$key] ?? null);
+    }
+
+    /** @return list<self>|null null when the value is no list */
+    public static function listOf(mixed $value): ?array
+    {
+        return \is_array($value) && array_is_list($value) ? array_map(self::of(...), $value) : null;
     }
 }

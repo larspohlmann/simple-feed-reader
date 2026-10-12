@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Url;
 
+use App\Service\Url\Support\UrlOrigin;
+
 /** Keeps the path and every non-tracking parameter verbatim: two articles differing by `?id=` must never collapse. */
 final readonly class UrlNormalizer
 {
     /** Query keys, or key prefixes, that never identify the article itself. */
     private const array TRACKING_PREFIXES = ['utm_', 'at_', 'wt_'];
     private const array TRACKING_KEYS = ['fbclid', 'gclid'];
-    private const array DEFAULT_PORTS = ['http' => 80, 'https' => 443];
 
     public function normalize(?string $url): ?string
     {
@@ -42,7 +43,7 @@ final readonly class UrlNormalizer
 
     private function port(string $scheme, ?int $port): string
     {
-        if ($port === null || $port === (self::DEFAULT_PORTS[$scheme] ?? null)) {
+        if ($port === null || UrlOrigin::isDefaultPort($scheme, $port)) {
             return '';
         }
 

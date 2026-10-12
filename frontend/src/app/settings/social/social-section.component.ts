@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Dialog } from '@angular/cdk/dialog';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { formatLongDate } from '../../reader/format';
@@ -7,12 +8,18 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { inputValue } from '../../shared/input-value';
 import { PasswordInputComponent } from '../../shared/password-input/password-input.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { SocialAccount, SocialAccountsService, SocialNetwork } from './social-accounts.service';
+import {
+  SocialImportDialogComponent,
+  SocialImportDialogData,
+} from './social-import-dialog.component';
+import { SocialImportResult } from './social-import.service';
 
 @Component({
   selector: 'app-social-section',
@@ -35,6 +42,7 @@ import { SocialAccount, SocialAccountsService, SocialNetwork } from './social-ac
 export class SocialSectionComponent {
   protected readonly svc = inject(SocialAccountsService);
   private readonly confirm = inject(ConfirmService);
+  private readonly dialog = inject(Dialog);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
@@ -50,6 +58,7 @@ export class SocialSectionComponent {
   protected readonly mastodonToken = signal('');
   protected readonly mastodonHost = computed(() => hostOf(this.mastodonInstance()));
   protected readonly reconnectSecrets = signal<Readonly<Record<number, string>>>({});
+  protected readonly inputValue = inputValue;
 
   constructor() {
     this.svc.load();
@@ -60,8 +69,10 @@ export class SocialSectionComponent {
     return this.i18n.translate('settings.social.connectedSince', { date });
   }
 
-  protected typed(event: Event): string {
-    return (event.target as HTMLInputElement).value;
+  protected describeImportSource(account: SocialAccount): string {
+    const network = this.i18n.translate(`settings.social.${account.network}`);
+    if (account.status === 'connected') return network;
+    return `${network} · ${this.i18n.translate('settings.social.needsReconnect')}`;
   }
 
   protected setReconnectSecret(id: number, secret: string): void {
@@ -118,6 +129,20 @@ export class SocialSectionComponent {
       },
       error: () => undefined,
     });
+  }
+
+  protected openImport(account: SocialAccount): void {
+    const data: SocialImportDialogData = {
+      accountId: account.id,
+      network: account.network,
+      handle: account.handle,
+    };
+    this.dialog
+      .open<SocialImportResult | undefined>(SocialImportDialogComponent, {
+        data,
+        panelClass: 'app-dialog',
+      })
+      .closed.subscribe(() => this.svc.load());
   }
 
   protected makeDefault(account: SocialAccount): void {

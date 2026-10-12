@@ -17,8 +17,9 @@ use App\Service\Fetch\HostThrottle;
 final readonly class AppViewClient
 {
     public const int URIS_PER_CALL = 25;
+    public const string BASE_URL = 'https://public.api.bsky.app/xrpc/';
 
-    private const string GET_POSTS = 'https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts';
+    private const string GET_POSTS = self::BASE_URL . 'app.bsky.feed.getPosts';
     private const int UNREACHABLE_BACKOFF_SECONDS = 300;
     private const int FIRST_CLIENT_ERROR = 400;
     private const int LAST_CLIENT_ERROR = 499;

@@ -1,6 +1,7 @@
 import { Injectable, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
 import { SubscriptionsStore, untaggedSubscriptions } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
+import { toggled } from '../../core/toggled-set';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 
 /** A group is one tag, or the untagged bucket that always sits last. */
@@ -185,13 +186,7 @@ export class OrganiseStore {
   });
 
   toggleFeed(id: number): void {
-    this.selectedIds.update((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-
-      return next;
-    });
+    this.selectedIds.update((current) => toggled(current, id));
   }
 
   setGroupSelected(group: OrganiseGroup, selected: boolean): void {

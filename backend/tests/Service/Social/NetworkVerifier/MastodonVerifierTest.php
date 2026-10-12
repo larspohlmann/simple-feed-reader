@@ -8,6 +8,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\NetworkVerifier\MastodonVerifier;
 use App\Tests\Support\FetchWiring;
@@ -31,7 +32,7 @@ final class MastodonVerifierTest extends TestCase
             new IpValidator(),
         );
 
-        return new MastodonVerifier(FetchWiring::guardedApiClient($http->client(), $guard));
+        return new MastodonVerifier(new MastodonApiClient(FetchWiring::guardedApiClient($http->client(), $guard)));
     }
 
     private function credentials(): SocialCredentialsModel
@@ -80,7 +81,7 @@ final class MastodonVerifierTest extends TestCase
 
     public function testAnUnexpectedAnswerIsUnreachable(): void
     {
-        $http = new RoutedHttpClient([self::VERIFY => new MockResponse('<html>')]);
+        $http = new RoutedHttpClient([self::VERIFY => new MockResponse('not json')]);
 
         $this->expectException(SocialNetworkUnreachableException::class);
 

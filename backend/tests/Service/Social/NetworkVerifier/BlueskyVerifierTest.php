@@ -6,14 +6,18 @@ namespace App\Tests\Service\Social\NetworkVerifier;
 
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskyIdentityResolver;
+use App\Service\Social\BlueskySessionOpener;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\NetworkVerifier\BlueskyVerifier;
+use App\Service\Social\StoredCredential;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
+use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -53,9 +57,12 @@ final class BlueskyVerifierTest extends TestCase
             ]),
             new IpValidator(),
         );
-        $api = FetchWiring::guardedApiClient($http->client(), $guard);
+        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
 
-        return new BlueskyVerifier(new BlueskyIdentityResolver($api), $api);
+        return new BlueskyVerifier(
+            new BlueskyIdentityResolver($api),
+            new BlueskySessionOpener($api, new StoredCredential(SocialAccounts::cipher())),
+        );
     }
 
     private function credentials(): SocialCredentialsModel
@@ -66,7 +73,7 @@ final class BlueskyVerifierTest extends TestCase
     public function testAnAcceptedAppPasswordVerifiesTheAccountAtItsPds(): void
     {
         $http = new RoutedHttpClient($this->identityRoutes() + [
-            self::SESSION => new MockResponse('{"did":"did:plc:alice","handle":"alice.bsky.social"}'),
+            self::SESSION => new MockResponse('{"did":"did:plc:alice","handle":"alice.bsky.social","accessJwt":"jwt"}'),
         ]);
 
         $account = $this->verifier($http)->verify($this->credentials());
@@ -96,7 +103,9 @@ final class BlueskyVerifierTest extends TestCase
     public function testASessionForAnotherDidIsRejected(): void
     {
         $http = new RoutedHttpClient($this->identityRoutes() + [
-            self::SESSION => new MockResponse('{"did":"did:plc:mallory","handle":"mallory.bsky.social"}'),
+            self::SESSION => new MockResponse(
+                '{"did":"did:plc:mallory","handle":"mallory.bsky.social","accessJwt":"jwt"}',
+            ),
         ]);
 
         $this->expectException(SocialCredentialsRejectedException::class);
@@ -123,7 +132,7 @@ final class BlueskyVerifierTest extends TestCase
     public function testAMalformedSessionAnswerIsUnreachable(): void
     {
         $http = new RoutedHttpClient($this->identityRoutes() + [
-            self::SESSION => new MockResponse('<html>'),
+            self::SESSION => new MockResponse('<html lang="en">'),
         ]);
 
         $this->expectException(SocialNetworkUnreachableException::class);
@@ -153,7 +162,9 @@ final class BlueskyVerifierTest extends TestCase
         $routes['GET https://plc.directory/did:plc:alice'] = new MockResponse(
             $this->documentWithEndpoint('https://PDS.example.test/'),
         );
-        $routes[self::SESSION] = new MockResponse('{"did":"did:plc:alice","handle":"alice.bsky.social"}');
+        $routes[self::SESSION] = new MockResponse(
+            '{"did":"did:plc:alice","handle":"alice.bsky.social","accessJwt":"jwt"}',
+        );
         $http = new RoutedHttpClient($routes);
 
         $account = $this->verifier($http)->verify($this->credentials());

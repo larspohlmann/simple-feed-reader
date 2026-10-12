@@ -11,6 +11,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Observable } from 'rxjs';
+import { toggled } from '../../core/toggled-set';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
@@ -107,13 +108,7 @@ export class OrganiseSectionComponent implements OnInit {
   ];
 
   protected toggleTagFilter(key: GroupKey): void {
-    this.store.tagFilter.update((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-
-      return next;
-    });
+    this.store.tagFilter.update((current) => toggled(current, key));
   }
 
   ngOnInit(): void {

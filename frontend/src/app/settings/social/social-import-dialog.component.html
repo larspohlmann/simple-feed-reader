@@ -1,0 +1,126 @@
+<app-overlay-panel
+  cdkTrapFocus
+  [heading]="'settings.social.importTitle' | transloco: { handle: data.handle }"
+>
+  @if (importer.candidates(); as candidates) {
+    <div class="toolbar">
+      <input
+        type="search"
+        class="filter"
+        cdkFocusInitial
+        data-testid="social-import-filter"
+        [attr.aria-label]="'settings.social.importFilter' | transloco"
+        [placeholder]="'settings.social.importFilter' | transloco"
+        [value]="filter()"
+        (input)="filter.set(inputValue($event))"
+      />
+      <app-button
+        data-testid="social-import-select-new"
+        [disabled]="followView().visibleNew.length === 0"
+        (click)="selectAllNew()"
+      >
+        {{ 'settings.social.importSelectAllNew' | transloco }}
+      </app-button>
+    </div>
+
+    @if (candidates.truncated) {
+      <app-warning-box data-testid="social-import-truncated">
+        {{ 'settings.social.importTruncated' | transloco }}
+      </app-warning-box>
+    }
+
+    <app-disclosure
+      appearance="row"
+      data-testid="social-import-follows"
+      [label]="followsKey() | transloco: { count: followView().follows.length }"
+    >
+      @if (followView().hasLeftovers) {
+        <p class="note">{{ 'settings.social.importUnsubscribeHint' | transloco }}</p>
+      }
+      <ul class="rows">
+        @for (follow of followView().follows; track follow.feedUrl) {
+          <li>
+            <label class="row" [attr.data-testid]="'social-import-follow-' + follow.identity">
+              <input
+                type="checkbox"
+                [checked]="isChosen(follow)"
+                [disabled]="follow.state === 'subscribed'"
+                [attr.aria-label]="
+                  checkboxKeys[follow.state] | transloco: { handle: follow.handle }
+                "
+                (change)="toggle(follow)"
+              />
+              <span class="who">
+                <span class="handle">{{ follow.handle }}</span>
+                @if (follow.displayName) {
+                  <span class="name">{{ follow.displayName }}</span>
+                }
+              </span>
+              <span
+                class="state"
+                [class.is-new]="follow.state === 'new'"
+                [class.is-gone]="follow.state === 'no_longer_followed'"
+              >
+                {{ stateKeys[follow.state] | transloco }}
+              </span>
+            </label>
+          </li>
+        } @empty {
+          <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
+        }
+      </ul>
+    </app-disclosure>
+
+    @for (section of collections(); track section.testId) {
+      <app-disclosure
+        appearance="row"
+        [attr.data-testid]="section.testId"
+        [label]="section.labelKey | transloco: { count: section.items.length }"
+      >
+        <p class="note">{{ 'settings.social.importCollectionsLater' | transloco }}</p>
+        <ul class="rows">
+          @for (item of section.items; track item.id) {
+            <li class="row">
+              <span class="handle">{{ item.name }}</span>
+            </li>
+          } @empty {
+            <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
+          }
+        </ul>
+      </app-disclosure>
+    }
+  } @else if (importer.loading()) {
+    <p class="loading" role="status" data-testid="social-import-loading">
+      <app-spinner [size]="16" [decorative]="true" />
+      {{ 'settings.social.importLoading' | transloco }}
+    </p>
+  }
+
+  @if (importer.failure(); as message) {
+    <app-error-banner
+      data-testid="social-import-failure"
+      [message]="message"
+      [actionLabel]="importer.candidates() === null ? ('common.retry' | transloco) : null"
+      (action)="load()"
+    />
+  }
+
+  <app-button
+    footer
+    data-testid="social-import-cancel"
+    [disabled]="importer.importing()"
+    (click)="cancel()"
+  >
+    {{ 'common.cancel' | transloco }}
+  </app-button>
+  <app-button
+    footer
+    variant="primary"
+    data-testid="social-import-apply"
+    [disabled]="selectedCount() === 0"
+    [loading]="importer.importing()"
+    (click)="apply()"
+  >
+    {{ 'settings.social.importApply' | transloco }}
+  </app-button>
+</app-overlay-panel>

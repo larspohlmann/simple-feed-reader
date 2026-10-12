@@ -1,0 +1,82 @@
+@use '../../theme/glass-rim';
+
+:host {
+  display: contents;
+
+  --panel-w: 520px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.filter {
+  flex: 1;
+  min-width: 0;
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.handle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.state {
+  @include glass-rim.filled(var(--surface-1), var(--border));
+
+  padding: var(--space-0) var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.state.is-new {
+  color: var(--accent);
+}
+
+.state.is-gone {
+  color: var(--warning);
+}
+
+.note,
+.empty,
+.loading {
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

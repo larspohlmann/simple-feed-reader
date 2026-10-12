@@ -4,24 +4,23 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\GuardedApiClient;
+use App\Service\Bluesky\AppViewClient;
 use App\Service\Fetch\Model\ApiRequestModel;
-use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskyIdentityModel;
+use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\UrlOrigin;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskyIdentityResolver
 {
-    private const string RESOLVE_HANDLE = 'https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle';
+    private const string RESOLVE_HANDLE = AppViewClient::BASE_URL . 'com.atproto.identity.resolveHandle';
     private const string PLC_DIRECTORY = 'https://plc.directory/';
     private const string WEB_DID_PREFIX = 'did:web:';
     private const string PDS_SERVICE_SUFFIX = '#atproto_pds';
 
-    public function __construct(private GuardedApiClient $api)
+    public function __construct(private BlueskyApiClient $bluesky)
     {
     }
 
@@ -31,14 +30,20 @@ final readonly class BlueskyIdentityResolver
      */
     public function resolve(string $handleOrDid): BlueskyIdentityModel
     {
-        $did = str_starts_with($handleOrDid, 'did:') ? $handleOrDid : $this->didOf($handleOrDid);
+        $did = ProfileFeedUrl::isDid($handleOrDid) ? $handleOrDid : $this->didOf($handleOrDid);
 
         return new BlueskyIdentityModel($did, $this->pdsOf($did));
     }
 
-    private function didOf(string $handle): string
+    /**
+     * @throws SocialAccountUnresolvableException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function didOf(string $handle): string
     {
-        $answer = $this->call(ApiRequestModel::get(self::RESOLVE_HANDLE . '?handle=' . rawurlencode($handle)));
+        $answer = $this->bluesky->answer(
+            ApiRequestModel::get(self::RESOLVE_HANDLE . '?handle=' . rawurlencode($handle)),
+        );
 
         if (Response::HTTP_BAD_REQUEST === $answer->status) {
             throw new SocialAccountUnresolvableException(sprintf('No Bluesky account has the handle "%s".', $handle));
@@ -54,7 +59,7 @@ final readonly class BlueskyIdentityResolver
 
     private function pdsOf(string $did): string
     {
-        $answer = $this->call(ApiRequestModel::get($this->documentUrl($did)));
+        $answer = $this->bluesky->answer(ApiRequestModel::get($this->documentUrl($did)));
 
         if (Response::HTTP_NOT_FOUND === $answer->status) {
             throw new SocialAccountUnresolvableException(sprintf('The account %s has no DID document.', $did));
@@ -110,14 +115,5 @@ final readonly class BlueskyIdentityResolver
             && \is_string($service['id'] ?? null)
             && str_ends_with($service['id'], self::PDS_SERVICE_SUFFIX)
             && \is_string($service['serviceEndpoint'] ?? null);
-    }
-
-    private function call(ApiRequestModel $request): ApiResponseModel
-    {
-        try {
-            return $this->api->send($request);
-        } catch (FetchException $exception) {
-            throw new SocialNetworkUnreachableException('Bluesky could not be reached.', previous: $exception);
-        }
     }
 }

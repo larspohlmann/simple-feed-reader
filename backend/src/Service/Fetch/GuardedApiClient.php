@@ -45,7 +45,11 @@ final readonly class GuardedApiClient
                 ...(null === $request->json ? [] : ['json' => $request->json]),
             ]);
 
-            return new ApiResponseModel($response->getStatusCode(), $response->getContent(false));
+            return new ApiResponseModel(
+                $response->getStatusCode(),
+                $response->getContent(false),
+                $response->getHeaders(false),
+            );
         } catch (ExceptionInterface $exception) {
             throw FetchException::from($request->url, $exception);
         }

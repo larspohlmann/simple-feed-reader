@@ -57,7 +57,7 @@
             autocomplete="off"
             [attr.data-testid]="'social-reconnect-secret-' + account.id"
             [value]="reconnectSecret(account.id)"
-            (input)="setReconnectSecret(account.id, typed($event))"
+            (input)="setReconnectSecret(account.id, inputValue($event))"
           />
         </app-password-input>
         <app-button
@@ -95,7 +95,7 @@
             autocapitalize="none"
             data-testid="social-bluesky-handle"
             [value]="blueskyHandle()"
-            (input)="blueskyHandle.set(typed($event))"
+            (input)="blueskyHandle.set(inputValue($event))"
           />
         </app-settings-row>
         <app-settings-row
@@ -109,7 +109,7 @@
               autocomplete="off"
               data-testid="social-bluesky-password"
               [value]="blueskyPassword()"
-              (input)="blueskyPassword.set(typed($event))"
+              (input)="blueskyPassword.set(inputValue($event))"
             />
           </app-password-input>
           <app-button
@@ -167,7 +167,7 @@
             autocapitalize="none"
             data-testid="social-mastodon-instance"
             [value]="mastodonInstance()"
-            (input)="mastodonInstance.set(typed($event))"
+            (input)="mastodonInstance.set(inputValue($event))"
           />
         </app-settings-row>
         <app-settings-row
@@ -181,7 +181,7 @@
               autocomplete="off"
               data-testid="social-mastodon-token"
               [value]="mastodonToken()"
-              (input)="mastodonToken.set(typed($event))"
+              (input)="mastodonToken.set(inputValue($event))"
             />
           </app-password-input>
           <app-button
@@ -221,6 +221,32 @@
         </p>
       }
     </app-settings-group>
+
+    @if (svc.accounts()?.length) {
+      <app-settings-group
+        icon="group_add"
+        data-testid="social-import-section"
+        [title]="'settings.social.importSectionTitle' | transloco"
+        [caption]="'settings.social.importSectionCaption' | transloco"
+      >
+        @for (account of svc.accounts(); track account.id) {
+          <app-settings-row
+            [stackable]="true"
+            [title]="account.handle"
+            [description]="describeImportSource(account)"
+          >
+            <app-button
+              size="sm"
+              [attr.data-testid]="'social-import-' + account.id"
+              [disabled]="svc.busy() || account.status !== 'connected'"
+              (click)="openImport(account)"
+            >
+              {{ 'settings.social.importChoose' | transloco }}
+            </app-button>
+          </app-settings-row>
+        }
+      </app-settings-group>
+    }
   }
 
   @if (svc.failure(); as message) {
