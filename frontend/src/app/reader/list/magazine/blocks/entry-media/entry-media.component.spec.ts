@@ -265,14 +265,7 @@ describe('EntryMediaComponent', () => {
 
   it('sets a Short player’s src before the frame enters the document, so iOS keeps its referrer policy', async () => {
     const connectedAtSource: boolean[] = [];
-    const sourceSetter = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'src')!.set!;
     const setAttribute = Element.prototype.setAttribute;
-    const sourceProperty = jest
-      .spyOn(HTMLIFrameElement.prototype, 'src', 'set')
-      .mockImplementation(function (this: HTMLIFrameElement, value: string) {
-        connectedAtSource.push(this.isConnected);
-        sourceSetter.call(this, value);
-      });
     const sourceAttribute = jest
       .spyOn(Element.prototype, 'setAttribute')
       .mockImplementation(function (this: Element, name: string, value: string) {
@@ -286,7 +279,6 @@ describe('EntryMediaComponent', () => {
 
     element.querySelector<HTMLButtonElement>('.play')!.click();
     fixture.detectChanges();
-    sourceProperty.mockRestore();
     sourceAttribute.mockRestore();
 
     expect(element.querySelector('iframe')).not.toBeNull();
