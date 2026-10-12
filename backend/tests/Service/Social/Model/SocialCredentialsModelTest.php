@@ -24,6 +24,14 @@ final class SocialCredentialsModelTest extends TestCase
         self::assertSame('mnop', $credentials->hint());
     }
 
+    public function testASecretTypedWithTrailingWhitespaceIsStoredTrimmedWithTheRightHint(): void
+    {
+        $credentials = SocialCredentialsModel::mastodon('mastodon.social', "token-1234\n");
+
+        self::assertSame('token-1234', $credentials->secret);
+        self::assertSame('1234', $credentials->hint());
+    }
+
     public function testABlueskyDidIsKeptVerbatim(): void
     {
         self::assertSame(

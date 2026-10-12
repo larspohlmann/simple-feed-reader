@@ -26,13 +26,13 @@ final readonly class SocialCredentialsModel
             $address = strtolower(ltrim($address, '@'));
         }
 
-        return new self(SocialNetwork::Bluesky, $address, $appPassword);
+        return new self(SocialNetwork::Bluesky, $address, trim($appPassword));
     }
 
     /** @throws InvalidInstanceUrlException */
     public static function mastodon(string $instanceUrl, string $accessToken): self
     {
-        return new self(SocialNetwork::Mastodon, self::instanceOrigin($instanceUrl), $accessToken);
+        return new self(SocialNetwork::Mastodon, self::instanceOrigin($instanceUrl), trim($accessToken));
     }
 
     public static function forReconnect(SocialAccount $account, string $secret): self
@@ -41,7 +41,7 @@ final readonly class SocialCredentialsModel
             ? $account->getIdentity()
             : $account->getServiceUrl();
 
-        return new self($account->getNetwork(), $address, $secret);
+        return new self($account->getNetwork(), $address, trim($secret));
     }
 
     public function hint(): string
