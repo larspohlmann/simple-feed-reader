@@ -16,6 +16,7 @@ final class Feed
 {
     use PersistedId;
 
+    public const int IMAGE_URL_MAX = 2048;
     private const int ETAG_MAX = 512;
     private const int LAST_MODIFIED_MAX = 255;
 
@@ -43,8 +44,12 @@ final class Feed
      * The feed's own logo or banner (RSS <channel><image>, Atom <logo>). The site's icon is $faviconUrl, which
      * MissingFaviconResolver looks up from the homepage.
      */
-    #[ORM\Column(length: 2048, nullable: true)]
+    #[ORM\Column(length: self::IMAGE_URL_MAX, nullable: true)]
     private ?string $imageUrl = null;
+
+    /** When a network's profile was last asked for this feed's picture; null when it never was (#1599). */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $imageCheckedAt = null;
 
     #[ORM\Column(length: 20, enumType: FeedStatus::class)]
     private FeedStatus $status = FeedStatus::Active;
@@ -131,6 +136,22 @@ final class Feed
     public function setImageUrl(?string $imageUrl): void
     {
         $this->imageUrl = $imageUrl;
+    }
+
+    public function getImageCheckedAt(): ?\DateTimeImmutable
+    {
+        return $this->imageCheckedAt;
+    }
+
+    public function recordImageCheck(?string $imageUrl, \DateTimeImmutable $checkedAt): void
+    {
+        $this->imageUrl = $imageUrl;
+        $this->imageCheckedAt = $checkedAt;
+    }
+
+    public function markImageCheckedAt(\DateTimeImmutable $checkedAt): void
+    {
+        $this->imageCheckedAt = $checkedAt;
     }
 
     public function getStatus(): FeedStatus

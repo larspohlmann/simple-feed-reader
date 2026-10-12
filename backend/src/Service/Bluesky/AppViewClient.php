@@ -20,6 +20,7 @@ final readonly class AppViewClient
     public const string BASE_URL = 'https://public.api.bsky.app/xrpc/';
 
     private const string GET_POSTS = self::BASE_URL . 'app.bsky.feed.getPosts';
+    private const string GET_PROFILES = self::BASE_URL . 'app.bsky.actor.getProfiles';
     private const int UNREACHABLE_BACKOFF_SECONDS = 300;
     private const int FIRST_CLIENT_ERROR = 400;
     private const int LAST_CLIENT_ERROR = 499;
@@ -45,21 +46,66 @@ final readonly class AppViewClient
      */
     public function posts(array $uris): array
     {
+        $posts = [];
+        foreach ($this->views(self::listUrl(self::GET_POSTS, 'uris', $uris), 'posts') as $post) {
+            $uri = $post->string('uri');
+            if ($uri !== null) {
+                $posts[$uri] = $post;
+            }
+        }
+
+        return $posts;
+    }
+
+    /**
+     * @param list<string> $actors at most URIS_PER_CALL DIDs or handles
+     *
+     * @return array<string, JsonNodeModel> the profile views by DID and lower-cased handle; an unknown actor is absent
+     *
+     * @throws FetchException
+     * @throws AppViewAnswerException
+     */
+    public function profiles(array $actors): array
+    {
+        $profiles = [];
+        foreach ($this->views(self::listUrl(self::GET_PROFILES, 'actors', $actors), 'profiles') as $profile) {
+            $did = $profile->string('did');
+            if ($did === null) {
+                continue;
+            }
+            $profiles[$did] = $profile;
+            $handle = $profile->string('handle');
+            if ($handle !== null) {
+                $profiles[strtolower($handle)] = $profile;
+            }
+        }
+
+        return $profiles;
+    }
+
+    /**
+     * @return list<JsonNodeModel>
+     *
+     * @throws FetchException
+     * @throws AppViewAnswerException
+     */
+    private function views(string $url, string $field): array
+    {
         try {
-            $body = $this->fetcher->fetch(self::postsUrl($uris))->modifiedBody();
+            $body = $this->fetcher->fetch($url)->modifiedBody();
         } catch (FeedThrottledException $exception) {
-            $this->hostThrottle->record(self::GET_POSTS, $exception->retryAfterSeconds);
+            $this->hostThrottle->record($url, $exception->retryAfterSeconds);
 
             throw $exception;
         } catch (FetchException $exception) {
             if (!self::rejectedTheRequest($exception)) {
-                $this->hostThrottle->record(self::GET_POSTS, self::UNREACHABLE_BACKOFF_SECONDS);
+                $this->hostThrottle->record($url, self::UNREACHABLE_BACKOFF_SECONDS);
             }
 
             throw $exception;
         }
 
-        return self::byUri($body);
+        return self::listIn($body, $field);
     }
 
     private static function rejectedTheRequest(FetchException $failure): bool
@@ -70,36 +116,27 @@ final readonly class AppViewClient
             || ($status !== null && $status >= self::FIRST_CLIENT_ERROR && $status <= self::LAST_CLIENT_ERROR);
     }
 
-    /** @param list<string> $uris */
-    private static function postsUrl(array $uris): string
+    /** @param list<string> $values */
+    private static function listUrl(string $endpoint, string $parameter, array $values): string
     {
-        $query = array_map(static fn (string $uri): string => 'uris=' . rawurlencode($uri), $uris);
+        $query = array_map(static fn (string $value): string => $parameter . '=' . rawurlencode($value), $values);
 
-        return self::GET_POSTS . '?' . implode('&', $query);
+        return $endpoint . '?' . implode('&', $query);
     }
 
     /**
-     * @return array<string, JsonNodeModel>
+     * @return list<JsonNodeModel>
      *
      * @throws AppViewAnswerException
      */
-    private static function byUri(string $body): array
+    private static function listIn(string $body, string $field): array
     {
         $answer = json_decode($body, true);
-        $views = \is_array($answer) ? $answer['posts'] ?? null : null;
+        $views = \is_array($answer) ? $answer[$field] ?? null : null;
         if (!\is_array($views) || !array_is_list($views)) {
-            throw new AppViewAnswerException('The AppView answered without a list of posts.');
+            throw new AppViewAnswerException(sprintf('The AppView answered without a list of %s.', $field));
         }
 
-        $posts = [];
-        foreach ($views as $view) {
-            $post = JsonNodeModel::of($view);
-            $uri = $post->string('uri');
-            if ($uri !== null) {
-                $posts[$uri] = $post;
-            }
-        }
-
-        return $posts;
+        return array_map(JsonNodeModel::of(...), $views);
     }
 }

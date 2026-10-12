@@ -19,6 +19,8 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class FeedRepository extends ServiceEntityRepository implements RestoreFeedsInterface
 {
+    private const string BLUESKY_PROFILE_PREFIX = 'https://bsky.app/profile/';
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Feed::class);
@@ -172,6 +174,29 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         }
 
         return $idsByUrl;
+    }
+
+    /**
+     * Bluesky profile feeds whose picture was never asked for or not since $checkedBefore, never-asked first. The URL
+     * prefix only narrows the scan; the caller still judges each URL with ProfileFeedUrl.
+     *
+     * @return list<Feed>
+     */
+    public function findBlueskyProfileFeedsWithImageDue(\DateTimeImmutable $checkedBefore, int $limit): array
+    {
+        /** @var list<Feed> $feeds */
+        $feeds = $this->createQueryBuilder('f')
+            ->andWhere('f.url LIKE :profilePrefix')
+            ->setParameter('profilePrefix', self::BLUESKY_PROFILE_PREFIX . '%')
+            ->andWhere('f.imageCheckedAt IS NULL OR f.imageCheckedAt < :checkedBefore')
+            ->setParameter('checkedBefore', $checkedBefore)
+            ->orderBy('f.imageCheckedAt', 'ASC')
+            ->addOrderBy('f.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $feeds;
     }
 
     private function dueQueryBuilder(DueFeedCriteria $criteria): QueryBuilder

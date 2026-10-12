@@ -268,6 +268,7 @@ article mark all hold one pointer to their owner.
 | `status` | The live fetch state of the feed on this instance. A restored feed starts clean. |
 | `etag` | The HTTP validator for the last feed body this instance fetched. The new instance has no such body. If it kept the old validator, the first refresh would get "not modified" for a feed it has never read. |
 | `lastModified` | The second half of the same pair of conditional-request values as `etag`. It is left out for the same reason. |
+| `imageCheckedAt` | When this instance last asked a Bluesky profile for its picture. Left unset, the new instance asks at once. |
 | `fetchSchedule.lastFetchedAt` | Fetch bookkeeping of the instance. A restored feed has never been fetched by the new instance. |
 | `fetchSchedule.lastSuccessfulFetchAt` | The same bookkeeping. If it were carried, the new instance would report the feed as healthy before it had reached the feed once. |
 | `fetchSchedule.lastNewEntryAt` | The same bookkeeping: when the instance last saw new entries. A restored feed has seen none yet, so it stays empty. |
