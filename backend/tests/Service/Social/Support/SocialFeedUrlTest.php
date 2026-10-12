@@ -73,7 +73,18 @@ final class SocialFeedUrlTest extends TestCase
         yield 'an rss feed' => ['https://bsky.app/profile/did:plc:bob/rss', null];
         yield 'an unknown network' => ['social:threads:4:home', null];
         yield 'an unknown kind' => ['social:bluesky:4:starter-pack:x', null];
+        yield 'the stored kind, not its segment' => ['social:bluesky:4:custom_feed:x', null];
         yield 'no account id' => ['social:bluesky:alice:home', null];
+    }
+
+    public function testEveryKindIsReadBackFromItsOwnUrl(): void
+    {
+        $account = self::withId(SocialAccounts::bluesky(), 12);
+        foreach (SocialFeedKind::cases() as $kind) {
+            $url = SocialFeedUrl::of($account, PrivateFeedModel::of($kind, 'remote', 'Name'));
+
+            self::assertSame($kind, SocialFeedUrl::addressOf($url)?->kind);
+        }
     }
 
     public function testOnlyTheSocialSchemeIsPrivate(): void

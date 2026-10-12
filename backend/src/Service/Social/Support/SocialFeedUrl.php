@@ -18,6 +18,7 @@ final class SocialFeedUrl
 {
     private const string SCHEME = 'social:';
     private const string ACCOUNT_ID = '/^[1-9]\d*$/';
+    private const array SEGMENTS = ['home' => 'home', 'list' => 'list', 'custom_feed' => 'feed'];
 
     public static function of(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
@@ -50,21 +51,14 @@ final class SocialFeedUrl
 
     private static function segmentOf(SocialFeedKind $kind): string
     {
-        return match ($kind) {
-            SocialFeedKind::Home => 'home',
-            SocialFeedKind::UserList => 'list',
-            SocialFeedKind::CustomFeed => 'feed',
-        };
+        return self::SEGMENTS[$kind->value];
     }
 
     private static function kindOf(string $segment): ?SocialFeedKind
     {
-        return match ($segment) {
-            'home' => SocialFeedKind::Home,
-            'list' => SocialFeedKind::UserList,
-            'feed' => SocialFeedKind::CustomFeed,
-            default => null,
-        };
+        $kind = array_search($segment, self::SEGMENTS, true);
+
+        return false === $kind ? null : SocialFeedKind::from($kind);
     }
 
     private function __construct()
