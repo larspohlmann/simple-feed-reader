@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Feed;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Enum\FeedStatus;
+use App\Enum\SocialAccountStatus;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -179,6 +181,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         $this->restrictToSchedule($qb, $criteria);
         $this->restrictToOwnership($qb, $criteria);
         $this->restrictToUnhandled($qb, $criteria);
+        $this->restrictToConnectedAccounts($qb);
 
         return $qb;
     }
@@ -255,5 +258,15 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
         $qb->andWhere('f.id NOT IN (:excludedFeedIds)')
             ->setParameter('excludedFeedIds', $criteria->excludedFeedIds);
+    }
+
+    /** A private feed of an account whose credential was refused waits for the reconnect, which makes it due again. */
+    private function restrictToConnectedAccounts(QueryBuilder $qb): void
+    {
+        $qb->andWhere(sprintf(
+            'NOT EXISTS (SELECT sf.id FROM %s sf JOIN sf.socialAccount sa'
+            . ' WHERE sf.feed = f AND sa.status = :needsReconnect)',
+            SocialFeed::class,
+        ))->setParameter('needsReconnect', SocialAccountStatus::NeedsReconnect);
     }
 }
