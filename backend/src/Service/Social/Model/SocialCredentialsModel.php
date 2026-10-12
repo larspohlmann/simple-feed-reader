@@ -7,6 +7,7 @@ namespace App\Service\Social\Model;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Url\Support\UrlOrigin;
 
 final readonly class SocialCredentialsModel
 {
@@ -37,9 +38,10 @@ final readonly class SocialCredentialsModel
 
     public static function forReconnect(SocialAccount $account, string $secret): self
     {
-        $address = SocialNetwork::Bluesky === $account->getNetwork()
-            ? $account->getIdentity()
-            : $account->getServiceUrl();
+        $address = match ($account->getNetwork()) {
+            SocialNetwork::Bluesky => $account->getIdentity(),
+            SocialNetwork::Mastodon => $account->getServiceUrl(),
+        };
 
         return new self($account->getNetwork(), $address, trim($secret));
     }
@@ -65,8 +67,6 @@ final readonly class SocialCredentialsModel
             throw new InvalidInstanceUrlException('An instance URL carries no credentials.');
         }
 
-        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
-
-        return 'https://' . strtolower($parts['host']) . $port;
+        return UrlOrigin::fromParts('https', strtolower($parts['host']), $parts['port'] ?? null);
     }
 }

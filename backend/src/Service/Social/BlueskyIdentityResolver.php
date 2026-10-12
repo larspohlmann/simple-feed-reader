@@ -11,6 +11,7 @@ use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskyIdentityModel;
+use App\Service\Url\Support\UrlOrigin;
 use Symfony\Component\HttpFoundation\Response;
 
 /** Finds the PDS that hosts a Bluesky account, so a self-hosted account signs in where it lives. */
@@ -81,9 +82,7 @@ final readonly class BlueskyIdentityResolver
             throw new SocialAccountUnresolvableException(sprintf('The PDS of %s is not reachable over https.', $did));
         }
 
-        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
-
-        return 'https://' . strtolower($parts['host']) . $port;
+        return UrlOrigin::fromParts('https', strtolower($parts['host']), $parts['port'] ?? null);
     }
 
     private function documentUrl(string $did): string
