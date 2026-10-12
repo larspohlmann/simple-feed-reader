@@ -383,7 +383,7 @@
       "connectedSince": "Verbunden seit {{date}}",
       "connectAnother": "Weiteres Konto verbinden",
       "importSectionTitle": "Gefolgte Konten importieren",
-      "importSectionCaption": "Abonniere die Konten, denen du auf Bluesky und Mastodon folgst, damit ihre Beiträge hier als Feeds mit dem Tag Bluesky oder Mastodon ankommen. Du wählst die Konten selbst aus und kannst es jederzeit erneut ausführen, um neu Gefolgte hinzuzufügen oder nicht mehr Gefolgte zu entfernen.",
+      "importSectionCaption": "Abonniere die Konten, denen du auf Bluesky und Mastodon folgst, damit ihre Beiträge hier als Feeds unter der Überschrift Personen im Bluesky- oder Mastodon-Bereich ankommen. Du wählst die Konten selbst aus und kannst es jederzeit erneut ausführen, um neu Gefolgte hinzuzufügen oder nicht mehr Gefolgte zu entfernen.",
       "importChoose": "Konten auswählen…",
       "importTitle": "Gefolgte von {{handle}} importieren",
       "importLoading": "Lade die Konten, denen du folgst…",

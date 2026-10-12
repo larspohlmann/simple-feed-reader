@@ -355,4 +355,32 @@ final class SubscriptionJsonTest extends TestCase
 
         self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['social']);
     }
+
+    public function testABlueskyProfileFeedIsAProfileFeedOfThatNetwork(): void
+    {
+        $feed = new Feed('https://bsky.app/profile/did:plc:bob/rss');
+
+        self::assertSame(
+            ['network' => 'bluesky', 'accountId' => null, 'kind' => 'profile'],
+            SubscriptionJson::one($this->subscriptionTo($feed))['social'],
+        );
+    }
+
+    public function testAMastodonProfileFeedIsAProfileFeedOfThatNetwork(): void
+    {
+        $feed = new Feed('https://mastodon.example/@bob.rss');
+
+        self::assertSame(
+            ['network' => 'mastodon', 'accountId' => null, 'kind' => 'profile'],
+            SubscriptionJson::one($this->subscriptionTo($feed))['social'],
+        );
+    }
+
+    public function testAPrivateFeedKeepsItsOwnSocialPartOverAProfileFeedReading(): void
+    {
+        $feed = new Feed('social:bluesky:12:home');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        self::assertSame('home', SubscriptionJson::one($this->subscriptionTo($feed))['social']['kind'] ?? null);
+    }
 }

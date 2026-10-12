@@ -44,6 +44,18 @@ final class ProfileFeedUrl
         };
     }
 
+    /** @return SocialNetwork|null the network whose profile feed $url is; null when it is no profile feed */
+    public static function networkOf(string $url): ?SocialNetwork
+    {
+        foreach (SocialNetwork::cases() as $network) {
+            if (null !== self::identityOf($network, $url)) {
+                return $network;
+            }
+        }
+
+        return null;
+    }
+
     private static function isWeb(string $scheme): bool
     {
         return \in_array(strtolower($scheme), ['http', 'https'], true);

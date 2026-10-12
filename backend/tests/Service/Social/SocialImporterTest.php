@@ -79,7 +79,7 @@ final class SocialImporterTest extends DbTestCase
         self::fail('No subscription to ' . $url);
     }
 
-    public function testChosenFollowsBecomeSubscriptionsUnderTheNetworksTagWithTheirTitle(): void
+    public function testChosenFollowsBecomeUntaggedSubscriptionsWithTheirTitle(): void
     {
         $result = $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
             new SocialImportFeedModel('https://bsky.app/profile/did:plc:bob/rss', 'Bob'),
@@ -88,7 +88,7 @@ final class SocialImporterTest extends DbTestCase
 
         self::assertSame(2, $result->imported);
         self::assertSame(0, $result->removed);
-        self::assertSame(['Bluesky'], $this->tagNamesOf('https://bsky.app/profile/did:plc:bob/rss'));
+        self::assertSame([], $this->tagNamesOf('https://bsky.app/profile/did:plc:bob/rss'));
         self::assertSame('Bob', $this->feedAt('https://bsky.app/profile/did:plc:bob/rss')?->getTitle());
     }
 

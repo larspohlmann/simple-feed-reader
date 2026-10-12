@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Enum\SourceFormat;
+use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Social\Support\SocialFeedUrl;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\Support\PlainText;
@@ -21,6 +22,8 @@ final class SubscriptionJson
      * whole reader down for a block that shows a few lines.
      */
     private const int DESCRIPTION_MAX = 1000;
+
+    private const string PROFILE_KIND = 'profile';
 
     /**
      * @param list<Subscription>  $subscriptions
@@ -62,7 +65,7 @@ final class SubscriptionJson
      *   position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
      *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
-     *   social: array{network: string, accountId: int, kind: string}|null
+     *   social: array{network: string, accountId: int|null, kind: string}|null
      * }
      */
     public static function one(Subscription $subscription, int $unreadCount = 0, int $entryCount = 0): array
@@ -106,11 +109,18 @@ final class SubscriptionJson
     }
 
     /**
-     * Read from the feed's own synthetic URL, so every endpoint that returns a subscription carries it without a query.
+     * Read from the feed's own URL, so every endpoint that returns a subscription carries it without a query. A
+     * private feed's synthetic URL names its account; any other feed that is a network's profile feed is `profile`.
      *
-     * @return array{network: string, accountId: int, kind: string}|null
+     * @return array{network: string, accountId: int|null, kind: string}|null
      */
     private static function social(Feed $feed): ?array
+    {
+        return self::privateFeed($feed) ?? self::profileFeed($feed);
+    }
+
+    /** @return array{network: string, accountId: int, kind: string}|null */
+    private static function privateFeed(Feed $feed): ?array
     {
         $address = SourceFormat::isSocial($feed->getSourceFormat()) ? SocialFeedUrl::addressOf($feed->getUrl()) : null;
         if (null === $address) {
@@ -122,6 +132,17 @@ final class SubscriptionJson
             'accountId' => $address->accountId,
             'kind' => $address->kind->value,
         ];
+    }
+
+    /** @return array{network: string, accountId: null, kind: string}|null */
+    private static function profileFeed(Feed $feed): ?array
+    {
+        $network = ProfileFeedUrl::networkOf($feed->getUrl());
+        if (null === $network) {
+            return null;
+        }
+
+        return ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND];
     }
 
     /** @return array{id: int, network: string, handle: string} */

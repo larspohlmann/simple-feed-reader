@@ -51,7 +51,7 @@ final readonly class SocialImporter
                 $removed = $this->subscriptionService->unsubscribeAll(array_values($toRemove));
                 $subscribed = $this->bulkSubscriber->subscribeAll(
                     $account->getUser(),
-                    self::items($account->getNetwork(), $import->subscribe),
+                    self::items($import->subscribe),
                 );
 
                 return SocialImportResultModel::from(
@@ -119,15 +119,12 @@ final readonly class SocialImporter
      *
      * @return list<BulkSubscribeItemModel>
      */
-    private static function items(SocialNetwork $network, array $feeds): array
+    private static function items(array $feeds): array
     {
-        $tagName = $network->displayName();
-
         return array_map(
             static fn (SocialImportFeedModel $feed): BulkSubscribeItemModel => new BulkSubscribeItemModel(
                 $feed->feedUrl,
                 feedTitle: $feed->title,
-                tagName: $tagName,
             ),
             $feeds,
         );
