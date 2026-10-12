@@ -51,7 +51,7 @@ final class SocialFeedRefresherTest extends DbTestCase
         $this->entityManager->flush();
         PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock)
             ->create($this->account, PrivateFeedModel::home());
-        $home = SocialFeeds::repository($this->entityManager)->findOneFor($this->account, SocialFeedKind::Home, null);
+        $home = SocialFeeds::repository($this->entityManager)->findOneFor($this->account, SocialFeedKind::Home, '');
         self::assertNotNull($home);
         $this->home = $home;
     }

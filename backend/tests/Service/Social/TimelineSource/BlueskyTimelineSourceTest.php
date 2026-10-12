@@ -59,7 +59,7 @@ final class BlueskyTimelineSourceTest extends TestCase
     {
         $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1'), self::TIMELINE => self::timeline()]);
 
-        $page = $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, null));
+        $page = $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
 
         self::assertCount(1, $page->parsed->entries);
         self::assertContains('Authorization: Bearer jwt-1', $http->requests[1]['headers']);
@@ -97,8 +97,8 @@ final class BlueskyTimelineSourceTest extends TestCase
         $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1'), self::TIMELINE => self::timeline()]);
         $source = $this->source($http->client());
 
-        $source->page($this->socialFeed(SocialFeedKind::Home, null));
-        $source->page($this->socialFeed(SocialFeedKind::Home, null));
+        $source->page($this->socialFeed(SocialFeedKind::Home, ''));
+        $source->page($this->socialFeed(SocialFeedKind::Home, ''));
 
         $sessionOpenings = array_filter(
             $http->requests,
@@ -121,7 +121,7 @@ final class BlueskyTimelineSourceTest extends TestCase
             $timelineAnswer,
         ]);
 
-        $page = $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, null));
+        $page = $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, ''));
 
         self::assertCount(1, $page->parsed->entries);
         self::assertSame('POST', $sessionAnswer->getRequestMethod());
@@ -145,7 +145,7 @@ final class BlueskyTimelineSourceTest extends TestCase
 
         $this->expectException(SocialCredentialsRejectedException::class);
 
-        $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, null));
+        $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, ''));
     }
 
     public function testACachedSessionRefusedAsUnauthenticatedIsARefusedCredentialWithoutANewSession(): void
@@ -159,7 +159,7 @@ final class BlueskyTimelineSourceTest extends TestCase
         ]);
 
         try {
-            $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, null));
+            $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
             self::fail('A refused token must not read as a page.');
         } catch (SocialCredentialsRejectedException) {
             self::assertSame(['GET'], array_column($http->requests, 'method'));
@@ -181,7 +181,7 @@ final class BlueskyTimelineSourceTest extends TestCase
 
         $this->expectException(SocialCredentialsRejectedException::class);
 
-        $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, null));
+        $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, ''));
     }
 
     public function testACachedSessionsTokenGoesOnlyToTheAccountsOwnService(): void
@@ -193,7 +193,7 @@ final class BlueskyTimelineSourceTest extends TestCase
         $this->rewriteCachedEntry(['pdsUrl' => 'https://elsewhere.example.test']);
         $http = new RoutedHttpClient([self::TIMELINE => self::timeline()]);
 
-        $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, null));
+        $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
 
         self::assertSame([self::PDS . '/xrpc/app.bsky.feed.getTimeline?limit=50'], $http->requestedUrls());
     }
@@ -210,7 +210,7 @@ final class BlueskyTimelineSourceTest extends TestCase
         ]);
 
         try {
-            $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, null));
+            $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
             self::fail('A 429 must not read as a page.');
         } catch (SocialNetworkThrottledException $exception) {
             self::assertSame(120, $exception->retryAfterSeconds);
@@ -224,7 +224,7 @@ final class BlueskyTimelineSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, null));
+        $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
     }
 
     /** @return iterable<string, array{MockResponse}> */
@@ -265,7 +265,7 @@ final class BlueskyTimelineSourceTest extends TestCase
         return new BlueskySessionCache($this->cache, $cipher);
     }
 
-    private function socialFeed(SocialFeedKind $kind, ?string $remoteId): SocialFeed
+    private function socialFeed(SocialFeedKind $kind, string $remoteId): SocialFeed
     {
         return new SocialFeed($this->account, new Feed('social:bluesky:3:home'), $kind, $remoteId);
     }

@@ -238,7 +238,7 @@ final class SocialAccountConnectorTest extends DbTestCase
     {
         $account = $this->connector($this->bluesky('did:plc:alice'))->connect($this->user, $this->blueskyCredentials());
 
-        $home = SocialFeeds::repository($this->entityManager)->findOneFor($account, SocialFeedKind::Home, null);
+        $home = SocialFeeds::repository($this->entityManager)->findOneFor($account, SocialFeedKind::Home, '');
         self::assertNotNull($home);
         self::assertSame(sprintf('social:bluesky:%d:home', $account->requireId()), $home->getFeed()->getUrl());
     }
@@ -252,14 +252,14 @@ final class SocialAccountConnectorTest extends DbTestCase
 
         self::assertSame(SocialAccountStatus::Connected, $account->getStatus());
         $socialFeeds = SocialFeeds::repository($this->entityManager);
-        self::assertNull($socialFeeds->findOneFor($account, SocialFeedKind::Home, null));
+        self::assertNull($socialFeeds->findOneFor($account, SocialFeedKind::Home, ''));
     }
 
     public function testReconnectingMakesTheAccountsPrivateFeedsDueAgain(): void
     {
         $account = $this->connector($this->bluesky('did:plc:alice'))->connect($this->user, $this->blueskyCredentials());
         $socialFeeds = SocialFeeds::repository($this->entityManager);
-        $feed = $socialFeeds->findOneFor($account, SocialFeedKind::Home, null)?->getFeed();
+        $feed = $socialFeeds->findOneFor($account, SocialFeedKind::Home, '')?->getFeed();
         self::assertNotNull($feed);
         $feed->scheduleNextFetchAt(new \DateTimeImmutable('2026-10-13 10:00:00'));
         $account->markNeedsReconnect();

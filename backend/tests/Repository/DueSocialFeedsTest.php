@@ -53,7 +53,7 @@ final class DueSocialFeedsTest extends DbTestCase
         $feed = new Feed($url);
         $feed->setSourceFormat($sourceFormat);
         $this->entityManager->persist($feed);
-        $this->entityManager->persist(new SocialFeed($account, $feed, SocialFeedKind::Home, null));
+        $this->entityManager->persist(new SocialFeed($account, $feed, SocialFeedKind::Home, ''));
 
         return $feed;
     }

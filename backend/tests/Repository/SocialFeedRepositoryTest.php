@@ -39,33 +39,33 @@ final class SocialFeedRepositoryTest extends DbTestCase
         );
     }
 
-    public function testAHomeFeedIsFoundByItsAbsentRemoteId(): void
+    public function testAHomeFeedIsFoundByItsEmptyRemoteId(): void
     {
-        $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
+        $home = $this->socialFeed($this->account, SocialFeedKind::Home, '');
 
         self::assertSame($home, SocialFeeds::repository($this->entityManager)
-            ->findOneFor($this->account, SocialFeedKind::Home, null));
-        self::assertNull($home->getRemoteId());
+            ->findOneFor($this->account, SocialFeedKind::Home, ''));
+        self::assertSame('', $home->getRemoteId());
         self::assertNull(SocialFeeds::repository($this->entityManager)
-            ->findOneFor($this->account, SocialFeedKind::UserList, null));
+            ->findOneFor($this->account, SocialFeedKind::UserList, ''));
     }
 
     public function testAnotherAccountsHomeIsNeverFound(): void
     {
         $other = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
-        $this->socialFeed($other, SocialFeedKind::Home, null);
+        $this->socialFeed($other, SocialFeedKind::Home, '');
 
         self::assertNull(SocialFeeds::repository($this->entityManager)
-            ->findOneFor($this->account, SocialFeedKind::Home, null));
+            ->findOneFor($this->account, SocialFeedKind::Home, ''));
     }
 
     public function testASecondHomeFeedOfTheSameAccountIsRefusedByTheDatabase(): void
     {
-        $this->socialFeed($this->account, SocialFeedKind::Home, null);
+        $this->socialFeed($this->account, SocialFeedKind::Home, '');
 
         $this->expectException(UniqueConstraintViolationException::class);
 
-        $this->socialFeed($this->account, SocialFeedKind::Home, null);
+        $this->socialFeed($this->account, SocialFeedKind::Home, '');
     }
 
     public function testAListIsFoundByItsRemoteIdAndByItsFeed(): void
@@ -86,8 +86,8 @@ final class SocialFeedRepositoryTest extends DbTestCase
             $this->entityManager,
             SocialAccounts::mastodonOf($this->user),
         );
-        $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
-        $theirs = $this->socialFeed($other, SocialFeedKind::Home, null);
+        $home = $this->socialFeed($this->account, SocialFeedKind::Home, '');
+        $theirs = $this->socialFeed($other, SocialFeedKind::Home, '');
         $own = $this->subscribe($home);
         $this->subscribe($theirs);
         $profileFeeds = new ProfileFeedSubscriptions($this->entityManager);
@@ -103,14 +103,14 @@ final class SocialFeedRepositoryTest extends DbTestCase
             $this->entityManager,
             SocialAccounts::mastodonOf($this->user),
         );
-        $home = $this->subscribe($this->socialFeed($this->account, SocialFeedKind::Home, null));
+        $home = $this->subscribe($this->socialFeed($this->account, SocialFeedKind::Home, ''));
         $writers = $this->subscribe($this->socialFeed($this->account, SocialFeedKind::UserList, self::WRITERS));
         $this->socialFeed($this->account, SocialFeedKind::CustomFeed, 'at://did:plc:x/app.bsky.feed.generator/news');
-        $this->subscribe($this->socialFeed($other, SocialFeedKind::Home, null));
+        $this->subscribe($this->socialFeed($other, SocialFeedKind::Home, ''));
 
         self::assertSame(
             [
-                ['kind' => SocialFeedKind::Home, 'remoteId' => null, 'subscriptionId' => $home->requireId()],
+                ['kind' => SocialFeedKind::Home, 'remoteId' => '', 'subscriptionId' => $home->requireId()],
                 [
                     'kind' => SocialFeedKind::UserList,
                     'remoteId' => self::WRITERS,
@@ -123,20 +123,20 @@ final class SocialFeedRepositoryTest extends DbTestCase
 
     public function testAnotherUsersSubscriptionToTheAccountsFeedIsNotTheAccountsOwn(): void
     {
-        $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
+        $home = $this->socialFeed($this->account, SocialFeedKind::Home, '');
         $own = $this->subscribe($home);
         $this->subscribeAs($this->stranger(), $home);
 
         self::assertSame([$own], SocialFeeds::repository($this->entityManager)->subscriptionsOf($this->account));
         self::assertSame(
-            [['kind' => SocialFeedKind::Home, 'remoteId' => null, 'subscriptionId' => $own->requireId()]],
+            [['kind' => SocialFeedKind::Home, 'remoteId' => '', 'subscriptionId' => $own->requireId()]],
             SocialFeeds::repository($this->entityManager)->subscribedCollectionsOf($this->account),
         );
     }
 
     public function testThePageNewestIdIsKeptAndAnEmptyPageKeepsTheLastOne(): void
     {
-        $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
+        $home = $this->socialFeed($this->account, SocialFeedKind::Home, '');
 
         $home->recordNewestSeen('109');
         $home->recordNewestSeen(null);
@@ -146,7 +146,7 @@ final class SocialFeedRepositoryTest extends DbTestCase
 
     public function testDeletingTheAccountRemovesItsSocialFeeds(): void
     {
-        $this->socialFeed($this->account, SocialFeedKind::Home, null);
+        $this->socialFeed($this->account, SocialFeedKind::Home, '');
         $accountId = $this->account->requireId();
 
         $this->entityManager->remove($this->account);
@@ -159,7 +159,7 @@ final class SocialFeedRepositoryTest extends DbTestCase
 
     public function testDeletingTheFeedRemovesItsSocialFeed(): void
     {
-        $home = $this->socialFeed($this->account, SocialFeedKind::Home, null);
+        $home = $this->socialFeed($this->account, SocialFeedKind::Home, '');
 
         $this->entityManager->remove($home->getFeed());
         $this->entityManager->flush();
@@ -168,7 +168,7 @@ final class SocialFeedRepositoryTest extends DbTestCase
         self::assertSame([], $this->entityManager->getRepository(SocialFeed::class)->findAll());
     }
 
-    private function socialFeed(SocialAccount $account, SocialFeedKind $kind, ?string $remoteId): SocialFeed
+    private function socialFeed(SocialAccount $account, SocialFeedKind $kind, string $remoteId): SocialFeed
     {
         $feed = new Feed('social:test:' . ++$this->feedCount);
         $this->entityManager->persist($feed);

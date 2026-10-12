@@ -52,7 +52,7 @@ final readonly class SocialImportJson
     {
         return [
             'kind' => $candidate->privateFeed->kind->value,
-            'id' => $candidate->privateFeed->remoteId,
+            'id' => '' === $candidate->privateFeed->remoteId ? null : $candidate->privateFeed->remoteId,
             'name' => $candidate->privateFeed->name,
             'state' => $candidate->state->value,
             'subscriptionId' => $candidate->subscriptionId,

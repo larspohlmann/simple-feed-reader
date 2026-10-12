@@ -23,7 +23,7 @@ final class PrivateFeedSite
 
     private static function bluesky(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
-        return BlueskyRecordUri::webUrl($privateFeed->remoteId ?? '')
+        return BlueskyRecordUri::webUrl($privateFeed->remoteId)
             ?? BlueskyWeb::profileUrl($account->getIdentity());
     }
 
@@ -34,7 +34,7 @@ final class PrivateFeedSite
             return $instance;
         }
 
-        return $instance . '/lists/' . rawurlencode($privateFeed->remoteId ?? '');
+        return $instance . '/lists/' . rawurlencode($privateFeed->remoteId);
     }
 
     private function __construct()

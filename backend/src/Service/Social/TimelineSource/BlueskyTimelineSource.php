@@ -40,7 +40,7 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
 
     private static function pathOf(SocialFeed $socialFeed): string
     {
-        $remoteId = rawurlencode($socialFeed->getRemoteId() ?? '');
+        $remoteId = rawurlencode($socialFeed->getRemoteId());
 
         return match ($socialFeed->getKind()) {
             SocialFeedKind::Home => '/xrpc/app.bsky.feed.getTimeline?',

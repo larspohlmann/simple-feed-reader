@@ -44,7 +44,7 @@ final class NetworkTimelineReaderTest extends TestCase
             SocialAccounts::mastodon(),
             new Feed('social:mastodon:4:home'),
             SocialFeedKind::Home,
-            null,
+            '',
         );
 
         self::assertSame($page, $reader->page($socialFeed));

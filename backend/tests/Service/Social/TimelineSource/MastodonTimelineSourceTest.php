@@ -31,7 +31,7 @@ final class MastodonTimelineSourceTest extends TestCase
     {
         $http = new RoutedHttpClient([self::HOME => self::statuses('109')]);
 
-        $page = $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, null));
+        $page = $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, ''));
 
         self::assertCount(1, $page->parsed->entries);
         self::assertSame('109', $page->newestId);
@@ -57,7 +57,7 @@ final class MastodonTimelineSourceTest extends TestCase
 
         $this->expectException(SocialCredentialsRejectedException::class);
 
-        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, null));
+        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, ''));
     }
 
     public function testAnAnswerThatIsNoListIsAnUnreachableNetwork(): void
@@ -66,7 +66,7 @@ final class MastodonTimelineSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, null));
+        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, ''));
     }
 
     public function testAnHtmlAnswerIsAnUnreachableNetwork(): void
@@ -76,7 +76,7 @@ final class MastodonTimelineSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, null));
+        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, ''));
     }
 
     #[DataProvider('foreignListIds')]
@@ -111,7 +111,7 @@ final class MastodonTimelineSourceTest extends TestCase
         );
     }
 
-    private static function socialFeed(SocialFeedKind $kind, ?string $remoteId): SocialFeed
+    private static function socialFeed(SocialFeedKind $kind, string $remoteId): SocialFeed
     {
         return new SocialFeed(SocialAccounts::mastodon(), new Feed('social:mastodon:4:home'), $kind, $remoteId);
     }

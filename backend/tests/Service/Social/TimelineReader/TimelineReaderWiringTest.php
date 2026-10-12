@@ -78,6 +78,6 @@ final class TimelineReaderWiringTest extends KernelTestCase
             );
         self::assignId($account, 11);
 
-        return new SocialFeed($account, new Feed('social:x:11:home'), SocialFeedKind::Home, null);
+        return new SocialFeed($account, new Feed('social:x:11:home'), SocialFeedKind::Home, '');
     }
 }

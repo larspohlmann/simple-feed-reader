@@ -12,14 +12,15 @@ final readonly class PrivateFeedModel
 
     private function __construct(
         public SocialFeedKind $kind,
-        public ?string $remoteId,
+        /** '' for Home */
+        public string $remoteId,
         public string $name,
     ) {
     }
 
     public static function home(): self
     {
-        return new self(SocialFeedKind::Home, null, self::HOME_NAME);
+        return new self(SocialFeedKind::Home, '', self::HOME_NAME);
     }
 
     public static function userList(string $listId, string $name): self
@@ -32,18 +33,18 @@ final readonly class PrivateFeedModel
         return new self(SocialFeedKind::CustomFeed, $feedUri, $name);
     }
 
-    public static function of(SocialFeedKind $kind, ?string $remoteId, string $name): self
+    public static function of(SocialFeedKind $kind, string $remoteId, string $name): self
     {
         return match ($kind) {
             SocialFeedKind::Home => self::home(),
-            SocialFeedKind::UserList => self::userList($remoteId ?? '', $name),
-            SocialFeedKind::CustomFeed => self::customFeed($remoteId ?? '', $name),
+            SocialFeedKind::UserList => self::userList($remoteId, $name),
+            SocialFeedKind::CustomFeed => self::customFeed($remoteId, $name),
         };
     }
 
-    public static function keyOf(SocialFeedKind $kind, ?string $remoteId): string
+    public static function keyOf(SocialFeedKind $kind, string $remoteId): string
     {
-        return $kind->value . ':' . ($remoteId ?? '');
+        return $kind->value . ':' . $remoteId;
     }
 
     public function key(): string

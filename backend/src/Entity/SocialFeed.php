@@ -18,9 +18,6 @@ final class SocialFeed
 {
     use PersistedId;
 
-    /** Home has no remote id; stored as '' because SQL never finds two NULLs equal, which would let Home repeat. */
-    private const string NO_REMOTE_ID = '';
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -37,23 +34,19 @@ final class SocialFeed
     #[ORM\Column(length: 16, enumType: SocialFeedKind::class)]
     private SocialFeedKind $kind;
 
+    /** '' for Home, never NULL: SQL never finds two NULLs equal, which would let Home repeat. */
     #[ORM\Column(length: 512)]
     private string $remoteId;
 
     #[ORM\Column(length: 64, nullable: true)]
     private ?string $newestSeenId = null;
 
-    public function __construct(SocialAccount $socialAccount, Feed $feed, SocialFeedKind $kind, ?string $remoteId)
+    public function __construct(SocialAccount $socialAccount, Feed $feed, SocialFeedKind $kind, string $remoteId)
     {
         $this->socialAccount = $socialAccount;
         $this->feed = $feed;
         $this->kind = $kind;
-        $this->remoteId = self::storedRemoteId($remoteId);
-    }
-
-    public static function storedRemoteId(?string $remoteId): string
-    {
-        return $remoteId ?? self::NO_REMOTE_ID;
+        $this->remoteId = $remoteId;
     }
 
     public function getId(): ?int
@@ -76,9 +69,9 @@ final class SocialFeed
         return $this->kind;
     }
 
-    public function getRemoteId(): ?string
+    public function getRemoteId(): string
     {
-        return self::NO_REMOTE_ID === $this->remoteId ? null : $this->remoteId;
+        return $this->remoteId;
     }
 
     public function getNewestSeenId(): ?string

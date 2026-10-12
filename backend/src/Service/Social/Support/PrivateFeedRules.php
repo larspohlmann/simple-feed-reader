@@ -17,10 +17,10 @@ final class PrivateFeedRules
         return match ($privateFeed->kind) {
             SocialFeedKind::Home => true,
             SocialFeedKind::UserList => SocialNetwork::Bluesky === $network
-                ? BlueskyRecordUri::isList($privateFeed->remoteId ?? '')
+                ? BlueskyRecordUri::isList($privateFeed->remoteId)
                 : self::matches(self::MASTODON_LIST, $privateFeed->remoteId),
             SocialFeedKind::CustomFeed => SocialNetwork::Bluesky === $network
-                && BlueskyRecordUri::isFeedGenerator($privateFeed->remoteId ?? ''),
+                && BlueskyRecordUri::isFeedGenerator($privateFeed->remoteId),
         };
     }
 
@@ -29,9 +29,9 @@ final class PrivateFeedRules
         return self::matches(self::MASTODON_LIST, $listId);
     }
 
-    private static function matches(string $pattern, ?string $remoteId): bool
+    private static function matches(string $pattern, string $remoteId): bool
     {
-        return null !== $remoteId && 1 === preg_match($pattern, $remoteId);
+        return 1 === preg_match($pattern, $remoteId);
     }
 
     private function __construct()

@@ -70,7 +70,7 @@ final readonly class SocialImporter
             if (!PrivateFeedRules::allows($network, $collection)) {
                 throw new InvalidSocialImportFeedException(sprintf(
                     '%s is no %s %s.',
-                    $collection->remoteId ?? $collection->name,
+                    '' === $collection->remoteId ? $collection->name : $collection->remoteId,
                     $network->displayName(),
                     self::kindLabel($collection->kind),
                 ));

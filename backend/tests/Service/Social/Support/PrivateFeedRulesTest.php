@@ -121,7 +121,7 @@ final class PrivateFeedRulesTest extends TestCase
         ];
         yield 'a list without an id' => [
             SocialNetwork::Bluesky,
-            PrivateFeedModel::of(SocialFeedKind::UserList, null, 'X'),
+            PrivateFeedModel::of(SocialFeedKind::UserList, '', 'X'),
             false,
         ];
     }

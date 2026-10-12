@@ -44,7 +44,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 
     private static function listId(SocialFeed $socialFeed): string
     {
-        $listId = $socialFeed->getRemoteId() ?? '';
+        $listId = $socialFeed->getRemoteId();
 
         return PrivateFeedRules::isMastodonListId($listId)
             ? $listId

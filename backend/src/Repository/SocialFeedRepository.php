@@ -27,13 +27,9 @@ final class SocialFeedRepository extends ServiceEntityRepository
         return $this->findOneBy(['feed' => $feed]);
     }
 
-    public function findOneFor(SocialAccount $account, SocialFeedKind $kind, ?string $remoteId): ?SocialFeed
+    public function findOneFor(SocialAccount $account, SocialFeedKind $kind, string $remoteId): ?SocialFeed
     {
-        return $this->findOneBy([
-            'socialAccount' => $account,
-            'kind' => $kind,
-            'remoteId' => SocialFeed::storedRemoteId($remoteId),
-        ]);
+        return $this->findOneBy(['socialAccount' => $account, 'kind' => $kind, 'remoteId' => $remoteId]);
     }
 
     /** @return list<SocialFeed> */
@@ -62,7 +58,7 @@ final class SocialFeedRepository extends ServiceEntityRepository
         return $subscriptions;
     }
 
-    /** @return list<array{kind: SocialFeedKind, remoteId: ?string, subscriptionId: int}> */
+    /** @return list<array{kind: SocialFeedKind, remoteId: string, subscriptionId: int}> */
     public function subscribedCollectionsOf(SocialAccount $account): array
     {
         /** @var list<array{kind: SocialFeedKind, remoteId: string, subscriptionId: int}> $rows */
@@ -77,13 +73,6 @@ final class SocialFeedRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
 
-        return array_map(
-            static fn (array $row): array => [
-                'kind' => $row['kind'],
-                'remoteId' => SocialFeed::storedRemoteId(null) === $row['remoteId'] ? null : $row['remoteId'],
-                'subscriptionId' => $row['subscriptionId'],
-            ],
-            $rows,
-        );
+        return $rows;
     }
 }

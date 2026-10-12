@@ -25,7 +25,7 @@ final class SocialFeedUrl
         $url = self::SCHEME . $account->getNetwork()->value . ':' . $account->requireId() . ':'
             . self::segmentOf($privateFeed->kind);
 
-        return null === $privateFeed->remoteId ? $url : $url . ':' . $privateFeed->remoteId;
+        return '' === $privateFeed->remoteId ? $url : $url . ':' . $privateFeed->remoteId;
     }
 
     public static function isPrivate(string $url): bool
