@@ -75,9 +75,10 @@ final readonly class SocialAccountController
         #[MapRequestPayload] ReplaceCredentialRequest $request,
     ): JsonResponse {
         $account = $this->socialAccount->require($user, $id);
+        $credentials = $request->toCredentials($account);
         $this->rateLimitGuard->enforceForUser($this->socialAccountLimiter, $user);
 
-        return new JsonResponse($this->accountJson->account($this->connector->reconnect($account, $request->secret)));
+        return new JsonResponse($this->accountJson->account($this->connector->reconnect($account, $credentials)));
     }
 
     #[Route('/{id}/default', name: 'api_me_social_accounts_default', requirements: ['id' => '\d+'], methods: ['PUT'])]

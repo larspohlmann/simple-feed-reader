@@ -55,9 +55,8 @@ final readonly class SocialAccountConnector
         return $account;
     }
 
-    public function reconnect(SocialAccount $account, string $secret): SocialAccount
+    public function reconnect(SocialAccount $account, SocialCredentialsModel $credentials): SocialAccount
     {
-        $credentials = SocialCredentialsModel::forReconnect($account, $secret);
         $verified = $this->verifier->verify($credentials);
         if ($verified->identity !== $account->getIdentity()) {
             throw new SocialAccountMismatchException(

@@ -7,6 +7,7 @@ namespace App\Http\Problem\ExceptionProblems;
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
 use App\Service\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Social\Exception\NotAnAppPasswordException;
 use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
 use App\Service\Social\Exception\SocialAccountMismatchException;
 use App\Service\Social\Exception\SocialAccountNotFoundException;
@@ -37,6 +38,12 @@ final readonly class SocialProblems implements ExceptionProblemsInterface
                 'social_account_already_connected',
                 'Account already connected',
                 Response::HTTP_CONFLICT,
+                $exception->getMessage(),
+            )),
+            $exception instanceof NotAnAppPasswordException => new ResolvedProblem(new ApiProblem(
+                'social_app_password_required',
+                'An app password is required',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),
             self::isCredentialRefusal($exception) => new ResolvedProblem(new ApiProblem(

@@ -14,10 +14,7 @@ final readonly class ConnectBlueskyRequest
         #[Assert\Length(max: 255)]
         public string $handle,
         #[Assert\NotBlank]
-        #[Assert\Regex(
-            pattern: '/^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/',
-            message: 'Use an app password, not your account password.',
-        )]
+        #[Assert\Length(max: 255)]
         public string $appPassword,
     ) {
     }

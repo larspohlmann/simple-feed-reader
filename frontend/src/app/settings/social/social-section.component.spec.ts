@@ -346,23 +346,22 @@ describe('SocialSectionComponent', () => {
     expect(byTestId<HTMLInputElement>(fixture, 'social-mastodon-token')?.value).toBe('');
   });
 
-  it('shows the field message of a 422 in the banner and keeps the typed password', () => {
+  it('shows the app-password refusal in the banner and keeps the typed password', () => {
     const fixture = mount([]);
     type(fixture, 'social-bluesky-handle', 'bob.bsky.social');
     type(fixture, 'social-bluesky-password', 'main-password');
     press(fixture, 'social-bluesky-connect');
 
     http.expectOne(`${ENDPOINT}/bluesky`).flush(
-      problem('validation_error', 422, {
-        detail: 'One or more fields are invalid.',
-        errors: { appPassword: ['Use an app password, not your main password.'] },
+      problem('social_app_password_required', 422, {
+        detail: 'Use an app password, not your account password.',
       }),
       { status: 422, statusText: 'Unprocessable Entity' },
     );
     fixture.detectChanges();
 
     expect(root(fixture).querySelector('app-error-banner')?.textContent).toContain(
-      'Use an app password, not your main password.',
+      'Use an app password, not your account password.',
     );
     expect(byTestId<HTMLInputElement>(fixture, 'social-bluesky-password')?.value).toBe(
       'main-password',

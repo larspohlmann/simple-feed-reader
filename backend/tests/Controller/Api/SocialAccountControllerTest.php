@@ -98,8 +98,42 @@ final class SocialAccountControllerTest extends ApiTestCase
         $this->connectBluesky($client, self::ALICE, 'hunter2hunter2');
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_app_password_required', $this->payload($client)['type']);
         self::assertNull($stub->lastCredentials);
         self::assertStringNotContainsString('hunter2hunter2', (string) $client->getResponse()->getContent());
+    }
+
+    public function testAnAppPasswordTypedWithATrailingSpaceConnects(): void
+    {
+        $client = $this->clientVerifying($this->alice());
+        $this->accountOn($client, 'social-trailing-space@example.test');
+
+        $this->connectBluesky($client, self::ALICE, self::APP_PASSWORD . ' ');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+    }
+
+    public function testReconnectingBlueskyWithAMainPasswordIsRefusedBeforeTheBudgetAndTheNetwork(): void
+    {
+        $stub = $this->alice();
+        $client = $this->clientVerifying($stub);
+        $this->accountOn($client, 'social-reconnect-main-password@example.test');
+        $id = $this->connectedId($client);
+        $stub->lastCredentials = null;
+
+        for ($attempt = 0; $attempt < self::CONNECT_BUDGET; ++$attempt) {
+            $this->putJson(
+                $client,
+                sprintf('/api/me/social-accounts/%d/credential', $id),
+                '{"secret":"hunter2hunter2"}',
+            );
+            $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+            self::assertSame('social_app_password_required', $this->payload($client)['type']);
+        }
+        self::assertNull($stub->lastCredentials);
+
+        $this->replaceCredential($client, $id);
+        self::assertResponseIsSuccessful();
     }
 
     public function testConnectingMastodonNormalisesTheInstance(): void

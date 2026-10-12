@@ -7,11 +7,13 @@ namespace App\Service\Social\Model;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Social\Exception\NotAnAppPasswordException;
 use App\Service\Url\Support\UrlOrigin;
 
 final readonly class SocialCredentialsModel
 {
     private const int HINT_LENGTH = 4;
+    private const string APP_PASSWORD = '/^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/';
 
     private function __construct(
         public SocialNetwork $network,
@@ -20,6 +22,7 @@ final readonly class SocialCredentialsModel
     ) {
     }
 
+    /** @throws NotAnAppPasswordException */
     public static function bluesky(string $handle, string $appPassword): self
     {
         $address = trim($handle);
@@ -27,7 +30,7 @@ final readonly class SocialCredentialsModel
             $address = strtolower(ltrim($address, '@'));
         }
 
-        return new self(SocialNetwork::Bluesky, $address, trim($appPassword));
+        return new self(SocialNetwork::Bluesky, $address, self::appPassword($appPassword));
     }
 
     /** @throws InvalidInstanceUrlException */
@@ -36,19 +39,33 @@ final readonly class SocialCredentialsModel
         return new self(SocialNetwork::Mastodon, self::instanceOrigin($instanceUrl), trim($accessToken));
     }
 
+    /** @throws NotAnAppPasswordException */
     public static function forReconnect(SocialAccount $account, string $secret): self
     {
-        $address = match ($account->getNetwork()) {
-            SocialNetwork::Bluesky => $account->getIdentity(),
-            SocialNetwork::Mastodon => $account->getServiceUrl(),
+        return match ($account->getNetwork()) {
+            SocialNetwork::Bluesky => new self(
+                SocialNetwork::Bluesky,
+                $account->getIdentity(),
+                self::appPassword($secret),
+            ),
+            SocialNetwork::Mastodon => new self(SocialNetwork::Mastodon, $account->getServiceUrl(), trim($secret)),
         };
-
-        return new self($account->getNetwork(), $address, trim($secret));
     }
 
     public function hint(): string
     {
         return substr($this->secret, -self::HINT_LENGTH);
+    }
+
+    /** @throws NotAnAppPasswordException */
+    private static function appPassword(string $typed): string
+    {
+        $appPassword = trim($typed);
+        if (1 !== preg_match(self::APP_PASSWORD, $appPassword)) {
+            throw new NotAnAppPasswordException('Use an app password, not your account password.');
+        }
+
+        return $appPassword;
     }
 
     /** @throws InvalidInstanceUrlException */

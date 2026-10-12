@@ -45,7 +45,10 @@ final class NetworkAccountVerifierTest extends TestCase
             'mastodon' => fn () => $this->stubFor($mastodon),
         ]));
 
-        self::assertSame($bluesky, $verifier->verify(SocialCredentialsModel::bluesky('alice.bsky.social', 'pw')));
+        self::assertSame(
+            $bluesky,
+            $verifier->verify(SocialCredentialsModel::bluesky('alice.bsky.social', 'abcd-efgh-ijkl-mnop')),
+        );
         self::assertSame(
             $mastodon,
             $verifier->verify(SocialCredentialsModel::mastodon('mastodon.example.test', 'token')),

@@ -9,6 +9,7 @@ use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Exception\InvalidInstanceUrlException;
+use App\Service\Social\Exception\NotAnAppPasswordException;
 use App\Service\Social\Model\SocialCredentialsModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -37,6 +38,37 @@ final class SocialCredentialsModelTest extends TestCase
         $credentials = SocialCredentialsModel::bluesky('alice.bsky.social', " abcd-efgh-ijkl-mnop\n");
 
         self::assertSame('abcd-efgh-ijkl-mnop', $credentials->secret);
+    }
+
+    public function testABlueskyAppPasswordWithATrailingSpaceIsAccepted(): void
+    {
+        $credentials = SocialCredentialsModel::bluesky('alice.bsky.social', 'abcd-efgh-ijkl-mnop ');
+
+        self::assertSame('abcd-efgh-ijkl-mnop', $credentials->secret);
+    }
+
+    public function testABlueskyMainPasswordIsRefused(): void
+    {
+        $this->expectException(NotAnAppPasswordException::class);
+        $this->expectExceptionMessage('Use an app password, not your account password.');
+
+        SocialCredentialsModel::bluesky('alice.bsky.social', 'hunter2hunter2');
+    }
+
+    public function testReconnectingABlueskyAccountWithAMainPasswordIsRefused(): void
+    {
+        $account = $this->account(SocialNetwork::Bluesky, 'did:plc:abc123', '');
+
+        $this->expectException(NotAnAppPasswordException::class);
+
+        SocialCredentialsModel::forReconnect($account, 'hunter2hunter2');
+    }
+
+    public function testReconnectingAMastodonAccountTakesATokenOfAnyShape(): void
+    {
+        $account = $this->account(SocialNetwork::Mastodon, '42', 'https://mastodon.social');
+
+        self::assertSame('hunter2hunter2', SocialCredentialsModel::forReconnect($account, 'hunter2hunter2')->secret);
     }
 
     public function testAReconnectSecretTypedWithSurroundingWhitespaceIsTrimmed(): void

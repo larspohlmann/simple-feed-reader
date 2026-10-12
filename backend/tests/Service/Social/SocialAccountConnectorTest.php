@@ -136,7 +136,7 @@ final class SocialAccountConnectorTest extends DbTestCase
         $this->entityManager->flush();
         $verified = new VerifiedAccountModel('did:plc:alice', '@alice.renamed.social', 'https://bsky.social');
 
-        $this->connector(new StubAccountVerifier($verified))->reconnect($account, 'wxyz-wxyz-wxyz-9999');
+        $this->reconnect(new StubAccountVerifier($verified), $account);
 
         self::assertSame(SocialAccountStatus::Connected, $account->getStatus());
         self::assertSame('9999', $account->getCredentialHint());
@@ -164,7 +164,7 @@ final class SocialAccountConnectorTest extends DbTestCase
         $accountId = $account->requireId();
         $this->clock = new MockClock('2026-10-12 12:00:00 Europe/Berlin');
 
-        $this->connector($this->bluesky('did:plc:alice'))->reconnect($account, 'wxyz-wxyz-wxyz-9999');
+        $this->reconnect($this->bluesky('did:plc:alice'), $account);
         $this->entityManager->clear();
 
         $reloaded = $this->repository()->find($accountId);
@@ -179,7 +179,7 @@ final class SocialAccountConnectorTest extends DbTestCase
         $this->entityManager->persist($account);
         $stub = $this->bluesky('did:plc:alice');
 
-        $this->connector($stub)->reconnect($account, 'wxyz-wxyz-wxyz-9999');
+        $this->reconnect($stub, $account);
 
         self::assertSame('did:plc:alice', $stub->lastCredentials?->address);
     }
@@ -191,7 +191,7 @@ final class SocialAccountConnectorTest extends DbTestCase
         $this->entityManager->flush();
 
         try {
-            $this->connector($this->bluesky('did:plc:mallory'))->reconnect($account, 'wxyz-wxyz-wxyz-9999');
+            $this->reconnect($this->bluesky('did:plc:mallory'), $account);
             self::fail('Expected SocialAccountMismatchException');
         } catch (SocialAccountMismatchException) {
             self::assertSame('mnop', $account->getCredentialHint());
@@ -218,6 +218,14 @@ final class SocialAccountConnectorTest extends DbTestCase
     private function blueskyCredentials(): SocialCredentialsModel
     {
         return SocialCredentialsModel::bluesky('alice.bsky.social', self::APP_PASSWORD);
+    }
+
+    private function reconnect(StubAccountVerifier $verifier, SocialAccount $account): SocialAccount
+    {
+        return $this->connector($verifier)->reconnect(
+            $account,
+            SocialCredentialsModel::forReconnect($account, 'wxyz-wxyz-wxyz-9999'),
+        );
     }
 
     private function storedAccount(string $identity): SocialAccount
