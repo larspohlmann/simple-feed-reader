@@ -8,8 +8,8 @@ final readonly class ImportCandidatesModel
 {
     /**
      * @param list<ImportCandidateModel>  $follows
-     * @param list<SocialCollectionModel> $lists
-     * @param list<SocialCollectionModel> $customFeeds
+     * @param list<CollectionCandidateModel> $lists
+     * @param list<CollectionCandidateModel> $customFeeds
      */
     public function __construct(
         public array $follows,

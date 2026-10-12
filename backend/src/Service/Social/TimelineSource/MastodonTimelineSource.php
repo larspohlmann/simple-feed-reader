@@ -14,11 +14,11 @@ use App\Service\Social\Model\MastodonSessionModel;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\StoredCredential;
 use App\Service\Social\Support\MastodonTimelinePage;
+use App\Service\Social\Support\PrivateFeedRules;
 
 final readonly class MastodonTimelineSource implements TimelineSourceInterface
 {
     private const int PAGE_SIZE = 40;
-    private const string LIST_ID = '/^\d{1,32}$/';
 
     public function __construct(
         private MastodonApiClient $mastodon,
@@ -46,7 +46,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
     {
         $listId = $socialFeed->getRemoteId() ?? '';
 
-        return 1 === preg_match(self::LIST_ID, $listId)
+        return 1 === preg_match(PrivateFeedRules::MASTODON_LIST, $listId)
             ? $listId
             : throw new SocialNetworkUnreachableException('The Mastodon list id is not a number.');
     }

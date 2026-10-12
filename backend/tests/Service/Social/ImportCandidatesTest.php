@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\SocialAccount;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
+use App\Repository\SocialFeedRepository;
 use App\Repository\SubscriptionFeedUrls;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
@@ -17,19 +19,23 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\FollowMatcher;
 use App\Service\Social\ImportCandidates;
+use App\Service\Social\Model\CollectionCandidateModel;
 use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\ImportCandidateModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\StubSocialCandidates;
 use App\Tests\Support\UserFactory;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class ImportCandidatesTest extends DbTestCase
@@ -58,8 +64,17 @@ final class ImportCandidatesTest extends DbTestCase
             $network,
             $subscriptionFeedUrls,
             new FollowMatcher($resolver),
+            $this->socialFeeds(),
             $this->entityManager,
         );
+    }
+
+    private function socialFeeds(): SocialFeedRepository
+    {
+        /** @var SocialFeedRepository $socialFeeds */
+        $socialFeeds = $this->entityManager->getRepository(SocialFeed::class);
+
+        return $socialFeeds;
     }
 
     private function account(): SocialAccount
@@ -178,12 +193,18 @@ final class ImportCandidatesTest extends DbTestCase
         $candidates = $this->importCandidates($network)->forAccount($this->account());
 
         self::assertSame(
-            ['Artists', 'writers'],
-            array_map(static fn (SocialCollectionModel $list): string => $list->name, $candidates->lists),
+            ['Home', 'Artists', 'writers'],
+            array_map(
+                static fn (CollectionCandidateModel $list): string => $list->privateFeed->name,
+                $candidates->lists,
+            ),
         );
         self::assertSame(
             ['Feed 9', 'Feed 10'],
-            array_map(static fn (SocialCollectionModel $feed): string => $feed->name, $candidates->customFeeds),
+            array_map(
+                static fn (CollectionCandidateModel $feed): string => $feed->privateFeed->name,
+                $candidates->customFeeds,
+            ),
         );
         self::assertTrue($candidates->truncated);
     }
@@ -216,5 +237,43 @@ final class ImportCandidatesTest extends DbTestCase
             $reloaded = $this->entityManager->find(SocialAccount::class, $account->requireId());
             self::assertSame(SocialAccountStatus::Connected, $reloaded?->getStatus());
         }
+    }
+
+    public function testHomeLeadsTheListsAndAnAddedCollectionReadsAsSubscribed(): void
+    {
+        $account = $this->account();
+        $writers = 'at://did:plc:alice/app.bsky.graph.list/writers';
+        $clock = new MockClock('2026-10-12 12:00:00', 'UTC');
+        PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $clock)
+            ->create($account, PrivateFeedModel::userList($writers, 'Writers'));
+        $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy([]);
+        self::assertNotNull($subscription);
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [],
+            [
+                new SocialCollectionModel($writers, 'Writers'),
+                new SocialCollectionModel('at://did:plc:alice/app.bsky.graph.list/art', 'Artists'),
+            ],
+            [new SocialCollectionModel('at://did:plc:x/app.bsky.feed.generator/news', 'News')],
+            false,
+        ));
+
+        $candidates = $this->importCandidates($network)->forAccount($account);
+
+        $summary = static fn (CollectionCandidateModel $candidate): array => [
+            $candidate->privateFeed->kind->value,
+            $candidate->privateFeed->name,
+            $candidate->state->value,
+            $candidate->subscriptionId,
+        ];
+        self::assertSame(
+            [
+                ['home', 'Home', 'new', null],
+                ['list', 'Artists', 'new', null],
+                ['list', 'Writers', 'subscribed', $subscription->requireId()],
+            ],
+            array_map($summary, $candidates->lists),
+        );
+        self::assertSame([['custom_feed', 'News', 'new', null]], array_map($summary, $candidates->customFeeds));
     }
 }

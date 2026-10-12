@@ -5,15 +5,20 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
+use App\Enum\SocialFeedKind;
+use App\Repository\SocialFeedRepository;
 use App\Repository\SubscriptionDisplayTitle;
 use App\Repository\SubscriptionFeedUrls;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Model\CollectionCandidateModel;
 use App\Service\Social\Model\ImportCandidateModel;
 use App\Service\Social\Model\ImportCandidateState;
 use App\Service\Social\Model\ImportCandidatesModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\ProfileFeedSubscriptionModel;
+use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\Pass\FollowMatching;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Social\Support\CandidateOrder;
@@ -26,6 +31,7 @@ final readonly class ImportCandidates
         private SocialCandidatesInterface $networkCandidates,
         private SubscriptionFeedUrls $subscriptionFeedUrls,
         private FollowMatcher $followMatcher,
+        private SocialFeedRepository $socialFeeds,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -41,13 +47,54 @@ final readonly class ImportCandidates
             new FollowMatching($account->getNetwork(), $network->follows),
             $this->profileFeedsOf($account),
         );
+        $subscribed = $this->privateFeedSubscriptionsOf($account);
 
         return new ImportCandidatesModel(
             CandidateOrder::follows(self::trustedFollows($network, $follows)),
-            CandidateOrder::collections($network->lists),
-            CandidateOrder::collections($network->customFeeds),
+            [
+                CollectionCandidateModel::of(PrivateFeedModel::home(), $subscribed),
+                ...self::collections(SocialFeedKind::UserList, $network->lists, $subscribed),
+            ],
+            self::collections(SocialFeedKind::CustomFeed, $network->customFeeds, $subscribed),
             $network->truncated,
         );
+    }
+
+    /**
+     * @param list<SocialCollectionModel> $collections
+     * @param array<string, int>          $subscribed subscription id by PrivateFeedModel::key()
+     *
+     * @return list<CollectionCandidateModel> by name
+     */
+    private static function collections(SocialFeedKind $kind, array $collections, array $subscribed): array
+    {
+        return array_map(
+            static fn (SocialCollectionModel $collection): CollectionCandidateModel => CollectionCandidateModel::of(
+                PrivateFeedModel::of($kind, $collection->id, $collection->name),
+                $subscribed,
+            ),
+            CandidateOrder::collections($collections),
+        );
+    }
+
+    /** @return array<string, int> subscription id by PrivateFeedModel::key() */
+    private function privateFeedSubscriptionsOf(SocialAccount $account): array
+    {
+        $subscriptionIdsByFeed = [];
+        foreach ($this->socialFeeds->subscriptionsOf($account) as $subscription) {
+            $subscriptionIdsByFeed[$subscription->getFeed()->requireId()] = $subscription->requireId();
+        }
+
+        $subscribed = [];
+        foreach ($this->socialFeeds->findAllOf($account) as $socialFeed) {
+            $subscriptionId = $subscriptionIdsByFeed[$socialFeed->getFeed()->requireId()] ?? null;
+            if (null !== $subscriptionId) {
+                $key = PrivateFeedModel::keyOf($socialFeed->getKind(), $socialFeed->getRemoteId());
+                $subscribed[$key] = $subscriptionId;
+            }
+        }
+
+        return $subscribed;
     }
 
     /**

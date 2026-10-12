@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\Feed;
+use App\Entity\SocialAccount;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Exception\InvalidSelectionException;
 use App\Repository\SubscriptionRepository;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Model\SocialImportModel;
 use App\Service\Social\SocialImporter;
@@ -18,10 +23,13 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialImporterTest extends DbTestCase
 {
+    private const string NEWS = 'at://did:plc:bob/app.bsky.feed.generator/news';
+
     private User $user;
 
     private ProfileFeedSubscriptions $subscriptions;
@@ -156,5 +164,97 @@ final class SocialImporterTest extends DbTestCase
         self::assertSame(1, $result->imported);
         self::assertSame(0, $result->skippedOverLimit);
         self::assertSame(1, $result->removed);
+    }
+
+    public function testChosenCollectionsBecomePrivateFeedsCountedAsImported(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+
+        $result = $this->importer()->import($account, new SocialImportModel([], [], [
+            PrivateFeedModel::home(),
+            PrivateFeedModel::customFeed(self::NEWS, 'News'),
+        ]));
+
+        self::assertSame(2, $result->imported);
+        $feed = $this->feedAt(sprintf('social:bluesky:%d:feed:%s', $account->requireId(), self::NEWS));
+        self::assertNotNull($feed);
+        self::assertSame(SourceFormat::BLUESKY_API, $feed->getSourceFormat());
+        self::assertSame('News', $feed->getTitle());
+    }
+
+    public function testAnAlreadyAddedCollectionCountsAsAlreadySubscribed(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->importer()->import($account, new SocialImportModel([], [], [PrivateFeedModel::home()]));
+
+        $result = $this->importer()->import($account, new SocialImportModel([], [], [PrivateFeedModel::home()]));
+
+        self::assertSame(0, $result->imported);
+        self::assertSame(1, $result->alreadySubscribed);
+    }
+
+    public function testACollectionOverTheCapIsSkippedNotFailed(): void
+    {
+        $this->user->setMaxSubscriptions(0);
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+
+        $result = $this->importer()->import($account, new SocialImportModel([], [], [PrivateFeedModel::home()]));
+
+        self::assertSame(0, $result->imported);
+        self::assertSame(1, $result->skippedOverLimit);
+    }
+
+    public function testACollectionOverTheCapLeavesTheNextOneToBeCounted(): void
+    {
+        $this->user->setMaxSubscriptions(1);
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->importer()->import($account, new SocialImportModel([], [], [PrivateFeedModel::home()]));
+
+        $result = $this->importer()->import($account, new SocialImportModel([], [], [
+            PrivateFeedModel::customFeed(self::NEWS, 'News'),
+            PrivateFeedModel::home(),
+        ]));
+
+        self::assertSame(0, $result->imported);
+        self::assertSame(1, $result->skippedOverLimit);
+        self::assertSame(1, $result->alreadySubscribed);
+    }
+
+    #[DataProvider('foreignCollections')]
+    public function testACollectionItsNetworkCannotHoldRefusesTheWholeImport(
+        SocialNetwork $network,
+        PrivateFeedModel $collection,
+    ): void {
+        $account = $this->storedAccount(SocialNetwork::Bluesky === $network
+            ? SocialAccounts::blueskyOf($this->user)
+            : SocialAccounts::mastodonOf($this->user));
+
+        try {
+            $this->importer()->import(
+                $account,
+                new SocialImportModel([], [], [PrivateFeedModel::home(), $collection]),
+            );
+            self::fail('A collection of the wrong shape must refuse the import.');
+        } catch (InvalidSocialImportFeedException) {
+            self::assertSame(0, $this->entityManager->getRepository(SocialFeed::class)->count());
+        }
+    }
+
+    /** @return iterable<string, array{SocialNetwork, PrivateFeedModel}> */
+    public static function foreignCollections(): iterable
+    {
+        yield 'a mastodon list id on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::userList('42', 'Friends')];
+        yield 'a custom feed on mastodon' => [
+            SocialNetwork::Mastodon,
+            PrivateFeedModel::customFeed(self::NEWS, 'News'),
+        ];
+    }
+
+    private function storedAccount(SocialAccount $account): SocialAccount
+    {
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+
+        return $account;
     }
 }
