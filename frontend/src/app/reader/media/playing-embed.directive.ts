@@ -1,7 +1,7 @@
 import { Directive, ElementRef, effect, inject, input, untracked } from '@angular/core';
 import { embedFrame } from './media-embeds';
 
-/** Fills its host with a player that starts on load; the frame comes whole from `embedFrame`, never a template `[src]` (#1594). */
+/** Builds its frame through `embedFrame`, never a template `[src]` (#1594). */
 @Directive({ selector: '[appPlayingEmbed]' })
 export class PlayingEmbedDirective {
   readonly appPlayingEmbed = input.required<string>();
