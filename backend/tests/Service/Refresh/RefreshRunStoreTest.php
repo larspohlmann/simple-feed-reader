@@ -183,6 +183,12 @@ final class RefreshRunStoreTest extends TestCase
             ['refresh_run_3.tag-9'],
             $this->rawKeyFor(RefreshRequestModel::forUserTag(3, 9, self::BUDGET)),
         );
+        self::assertSame(
+            ['refresh_run_3.set-network-bluesky'],
+            $this->rawKeyFor(
+                RefreshRequestModel::forUserFeedSet(3, new RefreshFeedSetModel('network-bluesky', [7]), self::BUDGET),
+            ),
+        );
     }
 
     /**

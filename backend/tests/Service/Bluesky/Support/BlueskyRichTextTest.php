@@ -69,6 +69,54 @@ final class BlueskyRichTextTest extends TestCase
         self::assertTrue(BlueskyRichText::linksAWebPage([self::facet(0, 3, $mention), self::facet(3, 6, $web)]));
     }
 
+    public function testFacetsGivenOutOfOrderAreLinkedInTextOrder(): void
+    {
+        self::assertSame(
+            '<p><a href="https://a.example">ab</a>c<a href="https://d.example">de</a></p>',
+            BlueskyRichText::asHtml('abcde', [
+                self::facet(3, 5, self::link('https://d.example')),
+                self::facet(0, 2, self::link('https://a.example')),
+            ]),
+        );
+    }
+
+    public function testAFacetWithANegativeStartOrNoLengthIsIgnored(): void
+    {
+        self::assertSame('<p>abc</p>', BlueskyRichText::asHtml('abc', [
+            self::facet(-1, 2, self::link('https://example.com')),
+            self::facet(1, 1, self::link('https://example.com')),
+        ]));
+    }
+
+    public function testAFacetAfterAMultiByteCharacterIsMeasuredFromItsOwnStart(): void
+    {
+        self::assertSame(
+            '<p>a<a href="https://example.com">b</a>€</p>',
+            BlueskyRichText::asHtml('ab€', [self::facet(1, 2, self::link('https://example.com'))]),
+        );
+    }
+
+    public function testAFacetOfAnUnknownFeatureIsIgnored(): void
+    {
+        self::assertSame('<p>abc</p>', BlueskyRichText::asHtml('abc', [
+            self::facet(0, 2, ['$type' => 'app.bsky.richtext.facet#unknown', 'uri' => 'https://example.com']),
+        ]));
+    }
+
+    public function testALinkSpanningALineBreakStaysOnOneLine(): void
+    {
+        self::assertSame(
+            '<p><a href="https://example.com">a b</a></p>',
+            BlueskyRichText::asHtml("a\r\nb", [self::facet(0, 4, self::link('https://example.com'))]),
+        );
+    }
+
+    /** @return array<string, string> */
+    private static function link(string $uri): array
+    {
+        return ['$type' => 'app.bsky.richtext.facet#link', 'uri' => $uri];
+    }
+
     /** @param array<string, string> $feature */
     private static function facet(int $byteStart, int $byteEnd, array $feature): JsonNodeModel
     {

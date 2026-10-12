@@ -197,6 +197,25 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertSame([], MastodonTimelinePage::of([$status])->parsed->entries);
     }
 
+    public function testAnAttachmentWithoutAnHttpsUrlIsLeftOut(): void
+    {
+        $entry = MastodonTimelinePage::of([self::timelineStatus(['media_attachments' => [
+            ['type' => 'image', 'url' => 'http://files.mastodon.example/a.jpg'],
+        ]])])->parsed->entries[0];
+
+        self::assertNull($entry->media->image);
+    }
+
+    public function testAStatusWithoutAWebPageDoesNotEndThePage(): void
+    {
+        $page = MastodonTimelinePage::of([
+            self::timelineStatus(['uri' => 'tag:x', 'url' => null]),
+            self::timelineStatus(),
+        ]);
+
+        self::assertCount(1, $page->parsed->entries);
+    }
+
     public function testAnAvatarThatIsNoWebImageIsDropped(): void
     {
         $status = self::timelineStatus(['account' => ['display_name' => 'Bob', 'avatar' => 'javascript:alert(1)']]);

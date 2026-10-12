@@ -66,6 +66,25 @@ final class EntryEmbedWriterTest extends DbTestCase
             '<a href="https://github.com/webx-ui/module-blog"',
             (string) $entry->getContentHtml(),
         );
+        self::assertStringStartsWith('v0.69.0', (string) $entry->getSummary());
+    }
+
+    public function testAPostWhoseFacetsLinkNoWebPageKeepsTheRssBodyAndItsLink(): void
+    {
+        $entry = $this->entry('<p>Read https://example.com/a</p>');
+        $post = JsonNodeModel::of([
+            'uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t',
+            'record' => [
+                'text' => 'Read @bob',
+                'facets' => [[
+                    'index' => ['byteStart' => 5, 'byteEnd' => 9],
+                    'features' => [['$type' => 'app.bsky.richtext.facet#mention', 'did' => 'did:plc:bob']],
+                ]],
+            ],
+        ]);
+
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, $post));
+        self::assertStringContainsString('https://example.com/a', (string) $entry->getContentHtml());
     }
 
     public function testABareUrlInTheTextOfAPostWithoutAnEmbedIsLinkedAndAwaitsItsCard(): void

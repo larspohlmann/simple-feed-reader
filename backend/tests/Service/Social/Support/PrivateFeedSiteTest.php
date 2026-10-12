@@ -47,4 +47,15 @@ final class PrivateFeedSiteTest extends TestCase
             PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::userList('42', 'Friends')),
         );
     }
+
+    public function testAnInstanceUrlWithATrailingSlashLinksWithoutADoubleSlash(): void
+    {
+        self::assertSame(
+            'https://mastodon.example/lists/42',
+            PrivateFeedSite::of(
+                SocialAccounts::mastodonOn('https://mastodon.example/'),
+                PrivateFeedModel::userList('42', 'Friends'),
+            ),
+        );
+    }
 }

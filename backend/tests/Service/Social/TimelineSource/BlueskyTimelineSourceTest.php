@@ -231,6 +231,7 @@ final class BlueskyTimelineSourceTest extends TestCase
     public static function unusableAnswers(): iterable
     {
         yield 'server error' => [self::json([], Response::HTTP_BAD_GATEWAY)];
+        yield 'server error that still names a feed' => [self::json(['feed' => []], Response::HTTP_BAD_GATEWAY)];
         yield 'no feed' => [self::json(['cursor' => 'x'])];
     }
 

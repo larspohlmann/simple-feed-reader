@@ -153,8 +153,9 @@ final class AppViewClientTest extends TestCase
         $url = self::GET_PROFILES . '?actors=did%3Aplc%3Aalice&actors=bob.bsky.social';
         $this->fetcher->willReturnBody(
             $url,
-            '{"profiles":[{"did":"did:plc:alice","handle":"alice.bsky.social","avatar":"https://cdn.example/a.jpg"},'
-            . '{"did":"did:plc:bob","handle":"Bob.bsky.social"},{"handle":"no-did.bsky.social"}]}',
+            '{"profiles":[{"handle":"no-did.bsky.social"},'
+            . '{"did":"did:plc:alice","handle":"alice.bsky.social","avatar":"https://cdn.example/a.jpg"},'
+            . '{"did":"did:plc:bob","handle":"Bob.bsky.social"}]}',
         );
 
         $profiles = $this->client()->profiles(['did:plc:alice', 'bob.bsky.social']);

@@ -34,6 +34,13 @@ final class ProfileFeedTitleTest extends TestCase
         );
     }
 
+    public function testTheDisplayNameLosesTheSpaceAroundIt(): void
+    {
+        $title = (new ProfileFeedTitle())->of(self::BLUESKY_PROFILE, '@motherjones.com -  Mother Jones ');
+
+        self::assertSame('Mother Jones', $title);
+    }
+
     /** @return iterable<string, array{string, string}> */
     public static function untouchedTitles(): iterable
     {

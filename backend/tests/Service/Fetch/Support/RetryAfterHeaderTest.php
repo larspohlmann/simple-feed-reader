@@ -41,6 +41,8 @@ final class RetryAfterHeaderTest extends TestCase
         yield 'seconds' => ['45', 45];
         yield 'a future date' => ['Wed, 21 Oct 2026 07:28:00 GMT', 60];
         yield 'a past date' => ['Wed, 21 Oct 2026 07:26:00 GMT', null];
+        yield 'a date of this very instant' => ['Wed, 21 Oct 2026 07:27:00 GMT', null];
+        yield 'a date padded with whitespace' => [' Wed, 21 Oct 2026 07:28:00 GMT ', 60];
         yield 'nonsense' => ['soon', null];
         yield 'absent' => [null, null];
     }

@@ -50,6 +50,15 @@ final class SocialFeedRepositoryTest extends DbTestCase
             ->findOneFor($this->account, SocialFeedKind::UserList, null));
     }
 
+    public function testAnotherAccountsHomeIsNeverFound(): void
+    {
+        $other = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $this->socialFeed($other, SocialFeedKind::Home, null);
+
+        self::assertNull(SocialFeeds::repository($this->entityManager)
+            ->findOneFor($this->account, SocialFeedKind::Home, null));
+    }
+
     public function testASecondHomeFeedOfTheSameAccountIsRefusedByTheDatabase(): void
     {
         $this->socialFeed($this->account, SocialFeedKind::Home, null);

@@ -14,6 +14,8 @@ use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\ProfileImageSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\RecordingLogger;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -25,6 +27,7 @@ final class ProfileImageSweepTest extends DbTestCase
 
     private StubFeedFetcher $fetcher;
     private MockClock $clock;
+    private ?HostThrottle $throttle = null;
 
     protected function setUp(): void
     {
@@ -153,6 +156,73 @@ final class ProfileImageSweepTest extends DbTestCase
         self::assertSame(0, $report->checked);
     }
 
+    public function testAThrottledAppViewIsNotAsked(): void
+    {
+        $this->profileFeed('alice.bsky.social');
+        $this->throttle()->record(self::GET_PROFILES, 60);
+
+        self::assertSame(0, $this->sweep(1)->checked);
+        self::assertSame([], $this->fetcher->fetchedUrls);
+    }
+
+    public function testAnUnreachableAppViewEndsThePassAndIsLogged(): void
+    {
+        $handles = array_map(static fn (int $index): string => sprintf('user%02d.bsky.social', $index), range(1, 26));
+        array_map($this->profileFeed(...), $handles);
+        $this->fetcher->willThrowForEverythingElse(new FeedUnreachableException('timeout'));
+        $logger = new RecordingLogger();
+
+        $this->sweep(2, $logger);
+
+        self::assertCount(1, $this->fetcher->fetchedUrls);
+        self::assertSame('warning', $logger->records[0]['level']);
+        self::assertInstanceOf(FeedUnreachableException::class, $logger->records[0]['context']['exception']);
+    }
+
+    public function testTheCheckIsStored(): void
+    {
+        $feed = $this->profileFeed('alice.bsky.social');
+        $this->answer(['alice.bsky.social'], [
+            ['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'avatar' => 'https://cdn.example/a.jpg'],
+        ]);
+
+        $this->sweep(1);
+        $this->entityManager->clear();
+
+        $stored = $this->entityManager->find(Feed::class, $feed->requireId());
+        self::assertSame('https://cdn.example/a.jpg', $stored?->getImageUrl());
+    }
+
+    public function testTwoFeedsOfOneActorAskForItOnce(): void
+    {
+        $first = $this->profileFeed('alice.bsky.social');
+        $second = new Feed('https://bsky.app/profile/alice.bsky.social/rss/');
+        $this->entityManager->persist($second);
+        $this->entityManager->flush();
+        $this->answer(['alice.bsky.social'], [
+            ['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'avatar' => 'https://cdn.example/a.jpg'],
+        ]);
+
+        $this->sweep(1);
+
+        self::assertSame('https://cdn.example/a.jpg', $first->getImageUrl());
+        self::assertSame('https://cdn.example/a.jpg', $second->getImageUrl());
+    }
+
+    public function testAnUnchangedOrUnknownPictureCountsAsCheckedButNotChanged(): void
+    {
+        $this->profileFeed('same.bsky.social', null, 'https://cdn.example/same.jpg');
+        $this->profileFeed('gone.bsky.social', null, 'https://cdn.example/gone.jpg');
+        $this->answer(['same.bsky.social', 'gone.bsky.social'], [
+            ['did' => 'did:plc:same', 'handle' => 'same.bsky.social', 'avatar' => 'https://cdn.example/same.jpg'],
+        ]);
+
+        $report = $this->sweep(1);
+
+        self::assertSame(2, $report->checked);
+        self::assertSame(0, $report->changed);
+    }
+
     /**
      * @param list<string>                     $actors
      * @param list<array<string, string>>      $profiles
@@ -167,21 +237,25 @@ final class ProfileImageSweepTest extends DbTestCase
         );
     }
 
-    private function sweep(int $calls): ProfileImageSweepReportModel
+    private function sweep(int $calls, LoggerInterface $logger = new NullLogger()): ProfileImageSweepReportModel
     {
         $feeds = $this->entityManager->getRepository(Feed::class);
         self::assertInstanceOf(FeedRepository::class, $feeds);
-        $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
 
         $sweep = new ProfileImageSweep(
             $feeds,
-            new AppViewClient($this->fetcher, $throttle),
+            new AppViewClient($this->fetcher, $this->throttle()),
             $this->entityManager,
             $this->clock,
-            new NullLogger(),
+            $logger,
         );
 
         return $sweep->sweep(ProfileImageBudgetModel::calls($calls));
+    }
+
+    private function throttle(): HostThrottle
+    {
+        return $this->throttle ??= new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
     }
 
     private function profileFeed(string $actor, ?string $checkedAt = null, ?string $imageUrl = null): Feed

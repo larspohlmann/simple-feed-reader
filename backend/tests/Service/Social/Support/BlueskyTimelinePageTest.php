@@ -113,6 +113,20 @@ final class BlueskyTimelinePageTest extends TestCase
         self::assertSame([], BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries);
     }
 
+    public function testAnItemWhoseUriIsNoPostIsSkipped(): void
+    {
+        $item = JsonNodeModel::of(['post' => ['uri' => 'at://did:plc:bob/app.bsky.feed.like/1']]);
+
+        self::assertSame([], BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries);
+    }
+
+    public function testAHiddenReplyDoesNotEndThePage(): void
+    {
+        $hidden = self::item(['reply' => ['parent' => ['author' => ['did' => 'did:plc:eve', 'viewer' => []]]]]);
+
+        self::assertCount(1, BlueskyTimelinePage::of([$hidden, self::item()], self::ALICE)->parsed->entries);
+    }
+
     /** @param array<string, mixed> $overrides */
     private static function item(array $overrides = []): JsonNodeModel
     {

@@ -20,6 +20,7 @@ use App\Service\Social\ImportCandidates;
 use App\Service\Social\Model\CollectionCandidateModel;
 use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\ImportCandidateModel;
+use App\Service\Social\Model\ImportCandidateState;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SocialCollectionModel;
@@ -267,5 +268,30 @@ final class ImportCandidatesTest extends DbTestCase
             array_map($summary, $candidates->lists),
         );
         self::assertSame([['custom_feed', 'News', 'new', null]], array_map($summary, $candidates->customFeeds));
+    }
+
+    public function testEveryAddedCollectionReadsAsSubscribed(): void
+    {
+        $account = $this->account();
+        $writers = 'at://did:plc:alice/app.bsky.graph.list/writers';
+        $news = 'at://did:plc:x/app.bsky.feed.generator/news';
+        $privateFeeds = PrivateFeedsWiring::build(
+            self::getContainer(),
+            $this->entityManager,
+            new MockClock('2026-10-12 12:00:00', 'UTC'),
+        );
+        $privateFeeds->create($account, PrivateFeedModel::userList($writers, 'Writers'));
+        $privateFeeds->create($account, PrivateFeedModel::customFeed($news, 'News'));
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [],
+            [new SocialCollectionModel($writers, 'Writers')],
+            [new SocialCollectionModel($news, 'News')],
+            false,
+        ));
+
+        $candidates = $this->importCandidates($network)->forAccount($account);
+
+        self::assertSame(ImportCandidateState::Subscribed, $candidates->lists[1]->state);
+        self::assertSame(ImportCandidateState::Subscribed, $candidates->customFeeds[0]->state);
     }
 }

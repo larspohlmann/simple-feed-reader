@@ -306,6 +306,22 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
     }
 
+    public function testACardForTheSecondPostedLinkIsFiledUnderThatLink(): void
+    {
+        $guid = 'https://mastodon.example/@someone/8';
+        $post = $this->post(
+            $guid,
+            '<p><a href="https://example.com/a">https://example.com/a</a>'
+            . ' and <a href="https://other.example/b">https://other.example/b</a></p>',
+        );
+        $card = new LinkCardContent('https://other.example/b', 'B', null, null, 'Other');
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->entityManager->flush();
+
+        self::assertEquals([$card], $this->storedCards($this->reload($post)));
+    }
+
     public function testWithoutACardALinkPostWaitsForThePageFetchAsBefore(): void
     {
         $guid = 'https://mastodon.example/@someone/3';
