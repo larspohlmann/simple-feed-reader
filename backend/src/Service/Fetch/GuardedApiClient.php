@@ -11,7 +11,7 @@ use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
-/** One JSON call to a public API, through the same SSRF guard, egress proxy and IP pin as a feed fetch. A redirect is an answer. */
+/** One JSON call to a public API, guarded and routed like a feed fetch. A redirect is an answer. */
 final readonly class GuardedApiClient
 {
     private const float TIMEOUT_SECONDS = 10.0;

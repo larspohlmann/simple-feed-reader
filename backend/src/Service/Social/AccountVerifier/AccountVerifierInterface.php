@@ -10,7 +10,6 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Model\VerifiedAccountModel;
 
-/** Checks a credential against its network before anything is stored. */
 interface AccountVerifierInterface
 {
     /**

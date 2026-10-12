@@ -10,7 +10,6 @@ use App\Repository\SocialAccountRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** A Bluesky or Mastodon account the user connected. No readable secret is stored; the hint is its last four characters. */
 #[ORM\Entity(repositoryClass: SocialAccountRepository::class)]
 #[ORM\Table(name: 'social_account')]
 #[ORM\UniqueConstraint(name: 'uniq_social_account_identity', columns: ['user_id', 'network', 'identity'])]

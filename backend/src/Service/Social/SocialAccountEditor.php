@@ -9,7 +9,6 @@ use App\Entity\User;
 use App\Repository\SocialAccountRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** One default per network and user: the account a like from an RSS post goes out as (#1600). */
 final readonly class SocialAccountEditor
 {
     public function __construct(

@@ -8,7 +8,6 @@ use App\Entity\SealedSecret;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Crypto\Model\SecretBindingModel;
 
-/** A connected social account's app password or access token, bound to its user. */
 final readonly class SocialCredentialCipher
 {
     private const string PURPOSE = 'social-account-credential';

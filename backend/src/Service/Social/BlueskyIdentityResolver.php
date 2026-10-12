@@ -14,7 +14,6 @@ use App\Service\Social\Model\BlueskyIdentityModel;
 use App\Service\Url\Support\UrlOrigin;
 use Symfony\Component\HttpFoundation\Response;
 
-/** Finds the PDS that hosts a Bluesky account, so a self-hosted account signs in where it lives. */
 final readonly class BlueskyIdentityResolver
 {
     private const string RESOLVE_HANDLE = 'https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle';

@@ -17,7 +17,6 @@ use App\Service\Social\Model\SocialCredentialsModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
-/** Every write here follows a successful live check; a failed one persists nothing. */
 final readonly class SocialAccountConnector
 {
     private const int MAX_ACCOUNTS = 20;
