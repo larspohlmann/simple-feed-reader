@@ -57,12 +57,22 @@ final class SocialAccounts
 
     public static function mastodonOf(User $owner): SocialAccount
     {
+        return self::mastodonAt($owner, 'https://mastodon.example');
+    }
+
+    public static function mastodonOn(string $instanceUrl): SocialAccount
+    {
+        return self::mastodonAt(self::owner(), $instanceUrl);
+    }
+
+    private static function mastodonAt(User $owner, string $instanceUrl): SocialAccount
+    {
         return new SocialAccount(
             $owner,
             SocialNetwork::Mastodon,
             'alice@mastodon.example',
             '@alice@mastodon.example',
-            'https://mastodon.example',
+            $instanceUrl,
             self::cipher()->seal($owner->requireId(), self::ACCESS_TOKEN),
             '7890',
             new \DateTimeImmutable('2026-10-12 10:00:00'),

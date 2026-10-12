@@ -13,6 +13,9 @@ use App\Service\Social\Support\ProfileFeedUrl;
 /** One picker load's matching: each follow answers to its identity, its handle and its own feed's key. */
 final class FollowMatching
 {
+    /** @var list<FollowedAccountModel> */
+    private readonly array $follows;
+
     /** @var array<string, int> lower-cased key => follow position */
     private readonly array $followByKey;
 
@@ -25,8 +28,9 @@ final class FollowMatching
     /** @param list<FollowedAccountModel> $follows */
     public function __construct(
         private readonly SocialNetwork $network,
-        private readonly array $follows,
+        array $follows,
     ) {
+        $this->follows = self::firstOfEachIdentity($follows);
         $this->followByKey = $this->indexFollows();
     }
 
@@ -84,6 +88,21 @@ final class FollowMatching
         $this->subscriptionOfFollow[$position] ??= $profileFeed->subscriptionId;
 
         return true;
+    }
+
+    /**
+     * @param list<FollowedAccountModel> $follows
+     *
+     * @return list<FollowedAccountModel>
+     */
+    private static function firstOfEachIdentity(array $follows): array
+    {
+        $byIdentity = [];
+        foreach ($follows as $follow) {
+            $byIdentity[strtolower($follow->identity)] ??= $follow;
+        }
+
+        return array_values($byIdentity);
     }
 
     /** @return array<string, int> */

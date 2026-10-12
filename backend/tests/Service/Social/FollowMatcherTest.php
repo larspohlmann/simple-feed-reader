@@ -42,6 +42,11 @@ final class FollowMatcherTest extends TestCase
         );
     }
 
+    private static function mastodonFollow(string $identity, string $feedUrl): FollowedAccountModel
+    {
+        return new FollowedAccountModel($identity, '@' . $identity, null, $feedUrl);
+    }
+
     private static function blueskyFeed(int $subscriptionId, string $url): ProfileFeedSubscriptionModel
     {
         $identity = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $url);
@@ -184,18 +189,8 @@ final class FollowMatcherTest extends TestCase
     public function testAMastodonFeedMatchesByIdentityOrByTheFollowsOwnFeedAndNeverResolves(): void
     {
         $follows = [
-            new FollowedAccountModel(
-                'bob@mastodon.example',
-                '@bob@mastodon.example',
-                'Bob',
-                'https://mastodon.example/@bob.rss',
-            ),
-            new FollowedAccountModel(
-                'carol@example.com',
-                '@carol@example.com',
-                'Carol',
-                'https://social.example.com/@carol.rss',
-            ),
+            self::mastodonFollow('bob@mastodon.example', 'https://mastodon.example/@bob.rss'),
+            self::mastodonFollow('carol@example.com', 'https://social.example.com/@carol.rss'),
         ];
 
         $candidates = $this->matcher(new RoutedHttpClient([]))->match(
@@ -212,6 +207,50 @@ final class FollowMatcherTest extends TestCase
             ['@carol@example.com', 'subscribed', 2],
             ['@dave@other.example', 'no_longer_followed', 3],
         ], self::summary($candidates));
+    }
+
+    public function testAFollowOnAnInstanceWithAPortMatchesItsFeedOnThatPort(): void
+    {
+        $bob = self::mastodonFollow('bob@host.example:8443', 'https://host.example:8443/@bob.rss');
+
+        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
+            new FollowMatching(SocialNetwork::Mastodon, [$bob]),
+            [self::mastodonFeed(1, 'https://host.example:8443/@bob.rss')],
+        );
+
+        self::assertSame([['@bob@host.example:8443', 'subscribed', 1]], self::summary($candidates));
+    }
+
+    public function testAFollowListedTwiceIsOfferedOnceAsItsFirstListing(): void
+    {
+        $again = new FollowedAccountModel(
+            'did:plc:bob',
+            '@bob.example.com',
+            'Bob again',
+            'https://bsky.app/profile/did:plc:bob/rss',
+        );
+
+        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
+            new FollowMatching(SocialNetwork::Bluesky, [self::bob(), $again]),
+            [],
+        );
+
+        self::assertEquals([ImportCandidateModel::notYetSubscribed(self::bob())], $candidates);
+    }
+
+    public function testAFollowListedTwiceInAnotherCaseIsOfferedOnce(): void
+    {
+        $follows = [
+            self::mastodonFollow('bob@mastodon.example', 'https://mastodon.example/@bob.rss'),
+            self::mastodonFollow('Bob@mastodon.example', 'https://mastodon.example/@Bob.rss'),
+        ];
+
+        $candidates = $this->matcher(new RoutedHttpClient([]))->match(
+            new FollowMatching(SocialNetwork::Mastodon, $follows),
+            [],
+        );
+
+        self::assertSame([['@bob@mastodon.example', 'new', null]], self::summary($candidates));
     }
 
     public function testANoLongerFollowedFeedCarriesItsSubscriptionsTitleAndUrl(): void

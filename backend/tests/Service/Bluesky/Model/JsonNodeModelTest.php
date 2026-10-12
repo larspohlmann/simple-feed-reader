@@ -56,4 +56,15 @@ final class JsonNodeModelTest extends TestCase
         self::assertNull($node->first('none')->type());
         self::assertNull($node->first('missing')->string('alt'));
     }
+
+    public function testOnlyAListFieldCountsAsAList(): void
+    {
+        $node = JsonNodeModel::of(['empty' => [], 'images' => [['alt' => 'one']], 'map' => ['a' => 1], 'text' => 'x']);
+
+        self::assertTrue($node->hasList('empty'));
+        self::assertTrue($node->hasList('images'));
+        self::assertFalse($node->hasList('map'));
+        self::assertFalse($node->hasList('text'));
+        self::assertFalse($node->hasList('missing'));
+    }
 }

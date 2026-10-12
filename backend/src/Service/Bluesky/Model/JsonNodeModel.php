@@ -50,11 +50,22 @@ final readonly class JsonNodeModel
         return $this->nodes($key)[0] ?? self::of(null);
     }
 
+    public function hasList(string $key): bool
+    {
+        return null !== $this->listAt($key);
+    }
+
     /** @return list<self> */
     public function nodes(string $key): array
     {
+        return array_map(self::of(...), $this->listAt($key) ?? []);
+    }
+
+    /** @return list<mixed>|null */
+    private function listAt(string $key): ?array
+    {
         $value = $this->fields[$key] ?? null;
 
-        return \is_array($value) && array_is_list($value) ? array_map(self::of(...), $value) : [];
+        return \is_array($value) && array_is_list($value) ? $value : null;
     }
 }

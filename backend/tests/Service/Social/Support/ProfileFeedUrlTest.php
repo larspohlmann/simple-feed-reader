@@ -64,6 +64,7 @@ final class ProfileFeedUrlTest extends TestCase
             null,
         ];
         yield 'no host' => [SocialNetwork::Mastodon, 'https:///@bob.rss', null];
+        yield 'a web scheme without a host' => [SocialNetwork::Mastodon, 'https:/@bob.rss', null];
     }
 
     #[DataProvider('urls')]

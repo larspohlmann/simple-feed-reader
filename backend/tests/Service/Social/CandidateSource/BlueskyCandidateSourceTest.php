@@ -18,6 +18,7 @@ use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -70,6 +71,14 @@ final class BlueskyCandidateSourceTest extends TestCase
     private static function json(array $body): MockResponse
     {
         return new MockResponse(json_encode($body, \JSON_THROW_ON_ERROR));
+    }
+
+    /** @param list<string> $uris */
+    private static function savedFeeds(array $uris): MockResponse
+    {
+        $items = array_map(static fn (string $uri): array => ['type' => 'feed', 'value' => $uri], $uris);
+
+        return self::json(['preferences' => [['$type' => 'app.bsky.actor.defs#savedFeedsPrefV2', 'items' => $items]]]);
     }
 
     /** @param list<string> $uris */
@@ -148,6 +157,45 @@ final class BlueskyCandidateSourceTest extends TestCase
         self::assertEquals([new SocialCollectionModel('at://did:plc:alice/app.bsky.graph.list/news', 'News')], $lists);
     }
 
+    public function testEveryCuratedListWithAUriAndANameIsOffered(): void
+    {
+        $curated = 'app.bsky.graph.defs#curatelist';
+        $http = new RoutedHttpClient($this->routes([
+            self::LISTS => self::json(['lists' => [
+                ['uri' => 'at://did:plc:alice/app.bsky.graph.list/news', 'name' => 'News', 'purpose' => $curated],
+                ['uri' => 'at://did:plc:alice/app.bsky.graph.list/art', 'name' => 'Art', 'purpose' => $curated],
+                ['uri' => 'at://did:plc:alice/app.bsky.graph.list/unnamed', 'purpose' => $curated],
+                ['name' => 'Nowhere', 'purpose' => $curated],
+            ]]),
+        ]));
+
+        $lists = $this->source($http)->candidates(SocialAccounts::bluesky())->lists;
+
+        self::assertEquals([
+            new SocialCollectionModel('at://did:plc:alice/app.bsky.graph.list/news', 'News'),
+            new SocialCollectionModel('at://did:plc:alice/app.bsky.graph.list/art', 'Art'),
+        ], $lists);
+    }
+
+    public function testANamelessRepeatOfAGeneratorKeepsItsName(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedFeeds([self::DISCOVER, self::GONE]),
+            self::GENERATORS . self::feedsQuery([self::DISCOVER, self::GONE]) => self::json(['feeds' => [
+                ['uri' => self::DISCOVER, 'displayName' => 'Discover'],
+                ['uri' => self::GONE, 'displayName' => 'Gone'],
+                ['uri' => self::DISCOVER],
+            ]]),
+        ]));
+
+        $customFeeds = $this->source($http)->candidates(SocialAccounts::bluesky())->customFeeds;
+
+        self::assertEquals([
+            new SocialCollectionModel(self::DISCOVER, 'Discover'),
+            new SocialCollectionModel(self::GONE, 'Gone'),
+        ], $customFeeds);
+    }
+
     public function testSavedFeedsAreNamedByTheirGeneratorAndAnUnknownOneKeepsItsUri(): void
     {
         $http = new RoutedHttpClient($this->routes([
@@ -184,11 +232,8 @@ final class BlueskyCandidateSourceTest extends TestCase
             static fn (int $index): string => 'at://did:plc:maker/app.bsky.feed.generator/f' . $index,
             range(1, 26),
         );
-        $items = array_map(static fn (string $uri): array => ['type' => 'feed', 'value' => $uri], $uris);
         $http = new RoutedHttpClient($this->routes([
-            self::PREFERENCES => self::json(['preferences' => [
-                ['$type' => 'app.bsky.actor.defs#savedFeedsPrefV2', 'items' => $items],
-            ]]),
+            self::PREFERENCES => self::savedFeeds($uris),
             self::GENERATORS . self::feedsQuery(\array_slice($uris, 0, 25)) => self::json(['feeds' => []]),
             self::GENERATORS . self::feedsQuery(\array_slice($uris, 25)) => self::json(['feeds' => []]),
         ]));
@@ -277,10 +322,51 @@ final class BlueskyCandidateSourceTest extends TestCase
     public function testAFailingPublicCallIsUnreachable(): void
     {
         $http = new RoutedHttpClient($this->routes([
-            self::LISTS => new MockResponse('', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]),
+            self::LISTS => new MockResponse('{"lists":[]}', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]),
         ]));
 
         $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectExceptionMessage('Bluesky answered 503.');
+
+        $this->source($http)->candidates(SocialAccounts::bluesky());
+    }
+
+    /** @return iterable<string, array{array<string, MockResponse>, string}> */
+    public static function answersWithoutTheirCollection(): iterable
+    {
+        yield 'follows that are not JSON' => [
+            [self::FOLLOWS => new MockResponse('Down for maintenance')],
+            'Bluesky answered without follows.',
+        ];
+        yield 'follows without the field' => [
+            [self::FOLLOWS => self::json(['cursor' => 'more'])],
+            'Bluesky answered without follows.',
+        ];
+        yield 'follows that are no list' => [
+            [self::FOLLOWS => self::json(['follows' => ['did' => 'did:plc:bob']])],
+            'Bluesky answered without follows.',
+        ];
+        yield 'lists without the field' => [
+            [self::LISTS => self::json(['error' => 'InternalServerError'])],
+            'Bluesky answered without lists.',
+        ];
+        yield 'generators without the field' => [
+            [
+                self::PREFERENCES => self::savedFeeds([self::DISCOVER]),
+                self::GENERATORS . self::feedsQuery([self::DISCOVER]) => self::json([]),
+            ],
+            'Bluesky answered without feeds.',
+        ];
+    }
+
+    /** @param array<string, MockResponse> $overrides */
+    #[DataProvider('answersWithoutTheirCollection')]
+    public function testASuccessfulAnswerWithoutItsCollectionIsUnreachable(array $overrides, string $message): void
+    {
+        $http = new RoutedHttpClient($this->routes($overrides));
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectExceptionMessage($message);
 
         $this->source($http)->candidates(SocialAccounts::bluesky());
     }

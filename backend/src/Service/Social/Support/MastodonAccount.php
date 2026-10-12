@@ -41,11 +41,20 @@ final class MastodonAccount
     private static function profileFeed(?string $profileUrl): ?string
     {
         $parts = null === $profileUrl ? false : parse_url($profileUrl);
-        if (false === $parts || 'https' !== ($parts['scheme'] ?? null) || !isset($parts['host'])) {
+        if (false === $parts || !self::isPlainHttps($parts)) {
             return null;
         }
 
         return 1 === preg_match(self::PROFILE_PATH, $parts['path'] ?? '') ? $profileUrl . '.rss' : null;
+    }
+
+    /** @param array<string, int|string> $parts */
+    private static function isPlainHttps(array $parts): bool
+    {
+        return 'https' === ($parts['scheme'] ?? null)
+            && isset($parts['host'])
+            && !isset($parts['query'])
+            && !isset($parts['fragment']);
     }
 
     private function __construct()

@@ -22,4 +22,10 @@ final readonly class CollectedItemsModel
     {
         return new self(\array_slice($items, 0, self::MAX_ITEMS), \count($items) > self::MAX_ITEMS);
     }
+
+    /** @param list<JsonNodeModel> $items what was paged in before paging had to stop early */
+    public static function cutShort(array $items): self
+    {
+        return new self(\array_slice($items, 0, self::MAX_ITEMS), true);
+    }
 }

@@ -64,7 +64,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
         $cursor = null;
         do {
             $page = $this->publicJson(null === $cursor ? $firstPage : $firstPage . '&cursor=' . rawurlencode($cursor));
-            $fresh = $page->nodes($field);
+            $fresh = self::collectionIn($page, $field);
             $items = [...$items, ...$fresh];
             $cursor = $page->string('cursor');
         } while (null !== $cursor && [] !== $fresh && \count($items) <= CollectedItemsModel::MAX_ITEMS);
@@ -184,7 +184,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     private static function namesIn(JsonNodeModel $answer): array
     {
         $names = [];
-        foreach ($answer->nodes('feeds') as $generator) {
+        foreach (self::collectionIn($answer, 'feeds') as $generator) {
             $uri = $generator->string('uri');
             $name = $generator->string('displayName');
             if (null !== $uri && null !== $name) {
@@ -193,6 +193,16 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
         }
 
         return $names;
+    }
+
+    /** @return list<JsonNodeModel> */
+    private static function collectionIn(JsonNodeModel $answer, string $field): array
+    {
+        if (!$answer->hasList($field)) {
+            throw new SocialNetworkUnreachableException(sprintf('Bluesky answered without %s.', $field));
+        }
+
+        return $answer->nodes($field);
     }
 
     private function publicJson(string $url): JsonNodeModel

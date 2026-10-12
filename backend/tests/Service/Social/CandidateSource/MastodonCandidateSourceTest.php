@@ -140,7 +140,7 @@ final class MastodonCandidateSourceTest extends TestCase
         );
     }
 
-    public function testANextPageOnAnotherOriginEndsPaging(): void
+    public function testANextPageOnAnotherOriginEndsPagingAsTruncated(): void
     {
         $http = new RoutedHttpClient($this->routes([
             self::FOLLOWING => self::json(
@@ -149,9 +149,27 @@ final class MastodonCandidateSourceTest extends TestCase
             ),
         ]));
 
-        $this->source($http)->candidates(SocialAccounts::mastodon());
+        $candidates = $this->source($http)->candidates(SocialAccounts::mastodon());
 
         self::assertNotContains('https://evil.example/api/v1/accounts/109/following?max_id=5', $http->requestedUrls());
+        self::assertCount(1, $candidates->follows);
+        self::assertTrue($candidates->truncated);
+    }
+
+    public function testAnInstanceStoredWithItsDefaultPortKeepsPagingALinkWithoutIt(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::FOLLOWING => self::json(
+                [self::account('bob', 'https://mastodon.example/@bob', '')],
+                '<' . self::NEXT_PAGE . '>; rel="next"',
+            ),
+            'GET ' . self::NEXT_PAGE => self::json([self::account('carol', 'https://mastodon.example/@carol', '')]),
+        ]));
+
+        $candidates = $this->source($http)->candidates(SocialAccounts::mastodonOn('https://mastodon.example:443'));
+
+        self::assertCount(2, $candidates->follows);
+        self::assertFalse($candidates->truncated);
     }
 
     public function testListsAreOfferedAndThereAreNoCustomFeeds(): void
@@ -180,6 +198,21 @@ final class MastodonCandidateSourceTest extends TestCase
         self::assertCount(CollectedItemsModel::MAX_ITEMS, $candidates->follows);
         self::assertTrue($candidates->truncated);
         self::assertNotContains(self::NEXT_PAGE, $http->requestedUrls());
+    }
+
+    public function testAPageBeyondTheCapWithANextPageElsewhereIsCutToTheCap(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::FOLLOWING => self::json(
+                self::manyFollows(CollectedItemsModel::MAX_ITEMS + 1),
+                '<https://evil.example/api/v1/accounts/109/following?max_id=5>; rel="next"',
+            ),
+        ]));
+
+        $candidates = $this->source($http)->candidates(SocialAccounts::mastodon());
+
+        self::assertCount(CollectedItemsModel::MAX_ITEMS, $candidates->follows);
+        self::assertTrue($candidates->truncated);
     }
 
     public function testExactlyTheCapStillAsksForTheNextPageAndIsNotTruncated(): void
@@ -222,6 +255,10 @@ final class MastodonCandidateSourceTest extends TestCase
         yield 'a server error on the lists' => [
             self::LISTS,
             new MockResponse('', ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR]),
+        ];
+        yield 'a server error on the account despite a usable body' => [
+            self::VERIFY,
+            new MockResponse('{"id":"109"}', ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR]),
         ];
         yield 'an account without an id' => [self::VERIFY, new MockResponse('{"username":"alice"}')];
         yield 'a transport failure' => [self::FOLLOWING, new MockResponse('', ['error' => 'Connection refused'])];

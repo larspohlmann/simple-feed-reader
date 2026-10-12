@@ -65,7 +65,10 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
             $answer = $this->mastodon->send($session->get($url));
             $fresh = self::nodesOf($answer);
             $items = [...$items, ...$fresh];
-            $url = LinkHeader::nextOn($session->instanceUrl, $answer->header('link'));
+            $url = LinkHeader::next($answer->header('link'));
+            if (null !== $url && !LinkHeader::isOn($session->instanceUrl, $url)) {
+                return CollectedItemsModel::cutShort($items);
+            }
         } while (null !== $url && [] !== $fresh && \count($items) <= CollectedItemsModel::MAX_ITEMS);
 
         return CollectedItemsModel::capped($items);

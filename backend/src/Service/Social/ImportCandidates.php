@@ -9,6 +9,8 @@ use App\Repository\SubscriptionDisplayTitle;
 use App\Repository\SubscriptionRepository;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Model\ImportCandidateModel;
+use App\Service\Social\Model\ImportCandidateState;
 use App\Service\Social\Model\ImportCandidatesModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\ProfileFeedSubscriptionModel;
@@ -41,11 +43,28 @@ final readonly class ImportCandidates
         );
 
         return new ImportCandidatesModel(
-            CandidateOrder::follows($follows),
+            CandidateOrder::follows(self::trustedFollows($network, $follows)),
             CandidateOrder::collections($network->lists),
             CandidateOrder::collections($network->customFeeds),
             $network->truncated,
         );
+    }
+
+    /**
+     * @param list<ImportCandidateModel> $follows
+     *
+     * @return list<ImportCandidateModel> without unfollows when the follow list was cut off
+     */
+    private static function trustedFollows(NetworkCandidatesModel $network, array $follows): array
+    {
+        if (!$network->truncated) {
+            return $follows;
+        }
+
+        return array_values(array_filter(
+            $follows,
+            static fn (ImportCandidateModel $follow): bool => ImportCandidateState::NoLongerFollowed !== $follow->state,
+        ));
     }
 
     private function networkCandidatesOf(SocialAccount $account): NetworkCandidatesModel

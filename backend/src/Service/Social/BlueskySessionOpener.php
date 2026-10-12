@@ -60,7 +60,7 @@ final readonly class BlueskySessionOpener
             throw new SocialCredentialsRejectedException('Bluesky opened a session for a different account.');
         }
 
-        return new BlueskySessionModel($accessJwt, $did, $handle, $identity->pdsUrl);
+        return new BlueskySessionModel($accessJwt, $handle, $identity->pdsUrl);
     }
 
     private function createSession(BlueskyIdentityModel $identity, string $appPassword): ApiResponseModel

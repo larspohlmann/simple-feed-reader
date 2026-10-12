@@ -75,6 +75,23 @@ final class ImportCandidatesTest extends DbTestCase
         return new FollowedAccountModel($did, $handle, null, 'https://bsky.app/profile/' . $did . '/rss');
     }
 
+    /**
+     * @param list<ImportCandidateModel> $candidates
+     *
+     * @return list<array{string, string, ?int}>
+     */
+    private static function summary(array $candidates): array
+    {
+        return array_map(
+            static fn (ImportCandidateModel $candidate): array => [
+                $candidate->account->handle,
+                $candidate->state->value,
+                $candidate->subscriptionId,
+            ],
+            $candidates,
+        );
+    }
+
     public function testFollowsAreListedNewThenSubscribedThenNoLongerFollowedEachByHandle(): void
     {
         $account = $this->account();
@@ -101,16 +118,46 @@ final class ImportCandidatesTest extends DbTestCase
                 ['@bob.bsky.social', 'subscribed', $bob->requireId()],
                 ['did:plc:gone', 'no_longer_followed', $gone->requireId()],
             ],
-            array_map(
-                static fn (ImportCandidateModel $candidate): array => [
-                    $candidate->account->handle,
-                    $candidate->state->value,
-                    $candidate->subscriptionId,
-                ],
-                $follows,
-            ),
+            self::summary($follows),
         );
         self::assertSame('Gone Account', $follows[3]->account->displayName);
+    }
+
+    public function testACutOffFollowListOffersNothingAsNoLongerFollowed(): void
+    {
+        $account = $this->account();
+        $bob = $this->subscribe('https://bsky.app/profile/did:plc:bob/rss');
+        $this->subscribe('https://bsky.app/profile/did:plc:beyond-the-cut/rss');
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [self::follow('did:plc:bob', '@bob.bsky.social'), self::follow('did:plc:amy', '@amy.bsky.social')],
+            [],
+            [],
+            true,
+        ));
+
+        $follows = $this->importCandidates($network)->forAccount($account)->follows;
+
+        self::assertSame(
+            [['@amy.bsky.social', 'new', null], ['@bob.bsky.social', 'subscribed', $bob->requireId()]],
+            self::summary($follows),
+        );
+    }
+
+    public function testAnOrdinaryFeedBeforeAProfileFeedDoesNotEndTheScan(): void
+    {
+        $account = $this->account();
+        $this->subscribe('https://example.com/feed.xml');
+        $bob = $this->subscribe('https://bsky.app/profile/did:plc:bob/rss');
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [self::follow('did:plc:bob', '@bob.bsky.social')],
+            [],
+            [],
+            false,
+        ));
+
+        $follows = $this->importCandidates($network)->forAccount($account)->follows;
+
+        self::assertSame([['@bob.bsky.social', 'subscribed', $bob->requireId()]], self::summary($follows));
     }
 
     public function testListsAndCustomFeedsAreSortedByNameAndTruncationIsKept(): void
