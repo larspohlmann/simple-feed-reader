@@ -4,7 +4,7 @@ import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
-import { RefreshScope } from './query/query';
+import { RefreshScope, ScopedMarkReadTarget } from './query/query';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
 import {
   CommentsResponse,
@@ -12,7 +12,6 @@ import {
   EntryQuery,
   EntryStatePatch,
   FeedPreview,
-  MarkReadScope,
   MoveFeedToTag,
   ReaderContent,
   RecommendationRunReport,
@@ -28,7 +27,6 @@ import {
   TagInput,
 } from './models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
-import { SocialNetworkName } from '../core/social-network';
 
 export interface SavedSearchDraft {
   term: string;
@@ -118,18 +116,8 @@ export class ReaderApi {
     return this.http.patch<{ state: EntryStateDto }>(`${this.base}/api/entries/${id}/state`, patch);
   }
 
-  markRead(scope: MarkReadScope, until: string, id?: number): Observable<void> {
-    const body: Record<string, unknown> = { scope, until };
-    if (id != null) body['id'] = id;
-    return this.http.post<void>(`${this.base}/api/entries/mark-read`, body);
-  }
-
-  markNetworkRead(network: SocialNetworkName, until: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/api/entries/mark-read`, {
-      scope: 'network',
-      network,
-      until,
-    });
+  markRead(target: ScopedMarkReadTarget, until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/mark-read`, { ...target, until });
   }
 
   markSearchRead(term: string, until: string): Observable<void> {

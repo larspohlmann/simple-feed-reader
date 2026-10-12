@@ -384,11 +384,10 @@ export interface EntryQuery {
   order?: ListOrder;
 }
 
-/** The scopes `POST /api/entries/mark-read` accepts, each identified by an
- *  optional id. A search is deliberately NOT one of them: it has its own
- *  endpoint, and widening this union would let `markRead('search', …)`
- *  type-check against a request the backend rejects. See `MarkReadTarget` in query.ts. */
-export type MarkReadScope = 'all' | 'feed' | 'tag';
+/** The scopes `POST /api/entries/mark-read` accepts. A search is deliberately NOT one of them: it has its own
+ *  endpoint, and widening this union would let `markRead` type-check a search against a request the backend
+ *  rejects. See `MarkReadTarget` in query.ts. */
+export type MarkReadScope = 'all' | 'feed' | 'tag' | 'network';
 
 export interface EntryStatePatch {
   isHidden?: boolean;

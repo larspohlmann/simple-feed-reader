@@ -350,12 +350,15 @@ function listView(selection: Selection): EntryQuery['view'] {
  *  term never coexist, and a bag would make every consumer re-assert the case. */
 export type MarkReadTarget =
   | { scope: Extract<MarkReadScope, 'all'> }
-  | { scope: Exclude<MarkReadScope, 'all'>; id: number }
+  | { scope: Extract<MarkReadScope, 'feed' | 'tag'>; id: number }
+  | { scope: Extract<MarkReadScope, 'network'>; network: SocialNetworkName }
   | { scope: 'search'; term: string }
-  | { scope: 'network'; network: SocialNetworkName }
   | { scope: 'for-you' }
   | { scope: 'saved-searches' }
   | { scope: 'saved-search'; id: number };
+
+/** The targets the mark-read endpoint itself takes, sent as its body. */
+export type ScopedMarkReadTarget = Extract<MarkReadTarget, { scope: MarkReadScope }>;
 
 export function markReadTarget(selection: Selection): MarkReadTarget | null {
   return MARK_READ_TARGET[selection.kind]?.(selection) ?? null;

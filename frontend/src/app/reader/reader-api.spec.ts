@@ -215,7 +215,7 @@ describe('ReaderApi', () => {
   });
 
   it('POSTs mark-read with scope/until/id', () => {
-    api.markRead('feed', '2026-01-01T00:00:00Z', 9).subscribe();
+    api.markRead({ scope: 'feed', id: 9 }, '2026-01-01T00:00:00Z').subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/entries/mark-read');
     expect(testRequest.request.method).toBe('POST');
     expect(testRequest.request.body).toEqual({
@@ -227,7 +227,7 @@ describe('ReaderApi', () => {
   });
 
   it('POSTs a network mark-read with scope/network/until', () => {
-    api.markNetworkRead('mastodon', '2026-01-01T00:00:00Z').subscribe();
+    api.markRead({ scope: 'network', network: 'mastodon' }, '2026-01-01T00:00:00Z').subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/entries/mark-read');
     expect(testRequest.request.body).toEqual({
       scope: 'network',

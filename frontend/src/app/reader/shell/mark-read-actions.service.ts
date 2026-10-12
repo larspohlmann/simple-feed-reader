@@ -82,12 +82,10 @@ export class MarkReadActions {
       case 'saved-search':
         return this.api.markSingleSavedSearchRead(target.id, until);
       case 'network':
-        return this.api.markNetworkRead(target.network, until);
       case 'all':
-        return this.api.markRead(target.scope, until);
       case 'tag':
       case 'feed':
-        return this.api.markRead(target.scope, until, target.id);
+        return this.api.markRead(target, until);
     }
   }
 
