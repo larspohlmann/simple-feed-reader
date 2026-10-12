@@ -31,7 +31,7 @@ final class BudgetedFeedQueue
     /** @return \Generator<int, FetchTicketModel, mixed, void> */
     public function tickets(): \Generator
     {
-        $isFetchedByUrl = static fn (Feed $feed): bool => !SourceFormat::isSocial($feed->getSourceFormat());
+        $isFetchedByUrl = static fn (Feed $feed): bool => !self::isSocial($feed);
         foreach ($this->startedAmong($isFetchedByUrl) as $feedId => $feed) {
             yield $feedId => new FetchTicketModel($feed->getUrl(), $feed->getEtag(), $feed->getLastModified());
         }
@@ -40,9 +40,16 @@ final class BudgetedFeedQueue
     /** @return \Generator<int, Feed, mixed, void> */
     public function socialFeeds(): \Generator
     {
-        $social = static fn (Feed $feed): bool => SourceFormat::isSocial($feed->getSourceFormat());
+        yield from $this->startedAmong(self::isSocial(...));
+    }
 
-        yield from $this->startedAmong($social);
+    /** @return list<int> every social feed's id, started or not */
+    public function socialFeedIds(): array
+    {
+        return array_map(
+            static fn (Feed $feed): int => $feed->requireId(),
+            array_values(array_filter($this->feeds, self::isSocial(...))),
+        );
     }
 
     /** @return list<int> */
@@ -72,6 +79,11 @@ final class BudgetedFeedQueue
         }
 
         return $this->deadline - $this->clock->now()->getTimestamp() >= self::SAFETY_MARGIN_SECONDS;
+    }
+
+    private static function isSocial(Feed $feed): bool
+    {
+        return SourceFormat::isSocial($feed->getSourceFormat());
     }
 
     /**
