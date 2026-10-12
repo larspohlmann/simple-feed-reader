@@ -21,6 +21,7 @@ import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.comp
 import { TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { pluralKey } from '../../../core/i18n/plural-key';
+import { FeedNames } from '../../state/feed-names';
 
 /** The most feed titles a bulk confirmation names before it says "and N more".
  *  Five is enough to recognise the selection and short enough to read. */
@@ -42,6 +43,7 @@ export class ManageActions {
   private readonly subs = inject(SubscriptionsStore);
   private readonly tags = inject(TagsStore);
   private readonly i18n = inject(TranslocoService);
+  private readonly names = inject(FeedNames);
   private readonly toast = inject(ToastService);
 
   editSubscription(sub: SubscriptionDto): void {
@@ -184,7 +186,7 @@ export class ManageActions {
   unsubscribe(sub: SubscriptionDto): void {
     const data: ConfirmData = {
       title: this.i18n.translate('manage.unsubscribeTitle'),
-      message: this.i18n.translate('manage.unsubscribeMessage', { title: sub.title }),
+      message: this.i18n.translate('manage.unsubscribeMessage', { title: this.names.titleOf(sub) }),
       confirmLabel: this.i18n.translate('manage.unsubscribeConfirm'),
       danger: true,
     };
@@ -315,7 +317,9 @@ export class ManageActions {
       map((report: RefreshReport) => {
         if (!isFeedRecovered(report)) return true;
         this.toast.show({
-          message: this.i18n.translate('settings.health.retry.recovered', { title: sub.title }),
+          message: this.i18n.translate('settings.health.retry.recovered', {
+            title: this.names.titleOf(sub),
+          }),
           durationMs: CONFIRMATION_DURATION_MS,
         });
         return false;
@@ -340,7 +344,7 @@ export class ManageActions {
     const count = subscriptions.length;
     const named = subscriptions
       .slice(0, CONFIRM_TITLE_LIMIT)
-      .map((subscription) => subscription.title)
+      .map((subscription) => this.names.titleOf(subscription))
       .join(', ');
     const rest = count - Math.min(count, CONFIRM_TITLE_LIMIT);
 

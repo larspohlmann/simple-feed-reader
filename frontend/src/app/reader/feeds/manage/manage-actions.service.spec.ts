@@ -67,6 +67,19 @@ describe('ManageActions', () => {
     expect(spy).toHaveBeenCalled();
   });
 
+  it("unsubscribe: names an unrenamed Home by the Home's label", () => {
+    closed = undefined;
+    const home = makeSubscription({
+      id: 6,
+      title: 'Home',
+      social: { network: 'bluesky', accountId: 1, kind: 'home' },
+    });
+
+    service.unsubscribe(home);
+
+    expect(JSON.stringify(open.mock.calls[0])).toContain('Home@bsky');
+  });
+
   it('unsubscribe: on cancel, does nothing', () => {
     closed = undefined;
     service.unsubscribe(sub);

@@ -112,7 +112,7 @@
                 [href]="profileUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                >{{ e.source }}</a
+                >{{ sourceName() }}</a
               >
             } @else {
               <a
@@ -120,7 +120,7 @@
                 [routerLink]="['/']"
                 [queryParams]="selectionQueryParams({ subscription: e.subscriptionId })"
                 queryParamsHandling="merge"
-                >{{ e.source }}</a
+                >{{ sourceName() }}</a
               >
             }
             @if (e.author && e.author !== e.source) {

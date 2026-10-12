@@ -55,6 +55,17 @@ describe('OrganiseFeedRowComponent', () => {
     expect(text).toContain('Tech');
   });
 
+  it("names an unrenamed Home by the Home's label", async () => {
+    const home = makeSubscription({
+      title: 'Home',
+      social: { network: 'bluesky', accountId: 1, kind: 'home' },
+    });
+    await render({ subscription: home });
+
+    const link = fixture.debugElement.query(By.css('a.title')).nativeElement as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('Home@bsky');
+  });
+
   it('links the feed name to its list view in a new tab', async () => {
     await render({ subscription: makeSubscription({ id: 7, title: 'heise online' }) });
 

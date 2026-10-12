@@ -52,6 +52,7 @@ import { selectionQueryParams } from '../../query/query';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
+import { FeedNames } from '../../state/feed-names';
 
 @Component({
   selector: 'app-reader-view',
@@ -121,6 +122,11 @@ export class ReaderViewComponent {
   private readonly restore = inject(ArticleScrollRestore);
   protected readonly gestures = inject(ArticleGestures);
   protected readonly source = inject(ArticleSource);
+  private readonly names = inject(FeedNames);
+  protected readonly sourceName = computed(() => {
+    const entry = this.entry();
+    return entry === null ? '' : this.names.sourceOf(entry);
+  });
   protected readonly scope = inject(ReadingScope);
   private readonly body = inject(ArticleBody);
   protected readonly progressRail = new ScrollProgressRail({

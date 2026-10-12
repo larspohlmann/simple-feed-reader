@@ -8,7 +8,8 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { Selection, visibleSearchTerm } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
-import { displayTitle, homeLabel, isUnrenamedHome } from '../feeds/display-title';
+import { isUnrenamedHome } from '../feeds/display-title';
+import { FeedNames } from '../state/feed-names';
 import { SubscriptionDto } from '../models';
 import { ReaderRouteState } from './reader-route-state.service';
 
@@ -22,6 +23,7 @@ export class ListHeading {
   private readonly layout = inject(ReadingLayoutService);
   private readonly language = inject(LanguageService);
   private readonly i18n = inject(TranslocoService);
+  private readonly names = inject(FeedNames);
 
   readonly activeSavedSearchId = computed(() => {
     const selection = this.routeState.selection();
@@ -65,7 +67,7 @@ export class ListHeading {
 
   readonly feedIntroTitle = computed(() => {
     const subscription = this.feedIntroSubscription();
-    return subscription === null ? null : this.nameOf(subscription);
+    return subscription === null ? null : this.names.titleOf(subscription);
   });
 
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
@@ -106,12 +108,8 @@ export class ListHeading {
     },
   };
 
-  private nameOf(subscription: SubscriptionDto): string {
-    return displayTitle(subscription, (network) => homeLabel(this.i18n, network));
-  }
-
   private feedTitle(subscription: SubscriptionDto): string {
-    const title = this.nameOf(subscription);
+    const title = this.names.titleOf(subscription);
     const handle = this.sharedNetworkHandle(subscription);
     return handle !== null && isUnrenamedHome(subscription) ? `${title} · ${handle}` : title;
   }

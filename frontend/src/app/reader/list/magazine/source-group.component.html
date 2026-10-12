@@ -6,7 +6,7 @@
         [routerLink]="['/']"
         [queryParams]="selectionQueryParams({ subscription: subscriptionId() })"
         queryParamsHandling="merge"
-        >{{ source() }}</a
+        >{{ name() }}</a
       >
     </p>
     <app-entry-pills [tags]="tags()" [subscriptionId]="subscriptionId()" />
@@ -24,7 +24,7 @@
         {{ 'reader.showLess' | transloco }}
         <app-icon name="expand_less" size="sm" />
       } @else {
-        {{ 'reader.moreFromCount' | transloco: { count: hiddenCount(), source: source() } }}
+        {{ 'reader.moreFromCount' | transloco: { count: hiddenCount(), source: name() } }}
         <app-icon name="expand_more" size="sm" />
       }
     </button>

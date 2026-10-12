@@ -6,12 +6,12 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
 import { Selection, selectionQueryParams } from '../../query/query';
-import { isUnrenamedHome } from '../../feeds/display-title';
 import { SubscriptionDto } from '../../models';
 import { isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
+import { FeedNames } from '../../state/feed-names';
 
 /** The inside of one feed row, tagged or untagged. The `cdkDrag` row itself
  *  stays in the sidebar; the handle here registers with it through DI. */
@@ -40,11 +40,8 @@ export class SidebarFeedRowComponent {
   /** The tag the row is listed under, or null in the untagged list. */
   readonly tagId = input<number | null>(null);
 
-  /** An unrenamed Home timeline reads "Home@<network>" through i18n instead of the backend's title. */
-  protected readonly unrenamedHomeNetwork = computed(() => {
-    const subscription = this.subscription();
-    return isUnrenamedHome(subscription) ? (subscription.social?.network ?? null) : null;
-  });
+  private readonly names = inject(FeedNames);
+  protected readonly name = computed(() => this.names.titleOf(this.subscription()));
 
   /** A private feed's exclusion is its inherent state, so it carries no marker; a profile feed is ordinary RSS. */
   protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));

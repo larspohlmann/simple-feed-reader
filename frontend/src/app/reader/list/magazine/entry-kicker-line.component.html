@@ -12,7 +12,7 @@
         target="_blank"
         rel="noopener noreferrer"
         (click)="$event.stopPropagation()"
-        >{{ entry().source }}</a
+        >{{ source() }}</a
       >
     } @else {
       <a
@@ -21,7 +21,7 @@
         [queryParams]="selectionQueryParams({ subscription: entry().subscriptionId })"
         queryParamsHandling="merge"
         (click)="$event.stopPropagation()"
-        >{{ entry().source }}</a
+        >{{ source() }}</a
       >
     }
     <span class="separator" aria-hidden="true">·</span>

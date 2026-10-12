@@ -22,6 +22,7 @@ import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LayoutService } from '../../reader/layout.service';
 import { selectionQueryParams } from '../../reader/query/query';
 import { SubscriptionDto } from '../../reader/models';
+import { FeedNames } from '../../reader/state/feed-names';
 
 /**
  * One feed row on the Organise page. Presentational on purpose: the tree and
@@ -75,7 +76,10 @@ export class OrganiseFeedRowComponent {
   protected readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
+  private readonly names = inject(FeedNames);
   private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly name = computed(() => this.names.titleOf(this.subscription()));
 
   protected readonly menuOpen = signal(false);
 
@@ -103,7 +107,7 @@ export class OrganiseFeedRowComponent {
     const sub = this.subscription();
     this.sheet
       .open({
-        title: sub.title,
+        title: this.name(),
         actions: [
           { id: 'edit', label: this.i18n.translate('reader.editFeed') },
           {

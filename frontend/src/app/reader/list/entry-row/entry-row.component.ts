@@ -22,6 +22,7 @@ import { RenditionsDirective } from '../renditions.directive';
 import { ShortBadgeComponent } from '../short-badge/short-badge.component';
 import { COVER_BOX_SIZES } from '../rendition-sizes';
 import { OpensEntryDirective } from '../opens-entry.directive';
+import { FeedNames } from '../../state/feed-names';
 
 @Component({
   selector: 'app-entry-row',
@@ -68,6 +69,8 @@ export class EntryRowComponent {
   readonly isPost = computed(() => isPost(this.entry()));
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
+  private readonly names = inject(FeedNames);
+  protected readonly source = computed(() => this.names.sourceOf(this.entry()));
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),

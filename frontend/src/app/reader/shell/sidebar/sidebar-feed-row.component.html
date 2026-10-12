@@ -1,10 +1,5 @@
 @let feed = subscription();
-@let homeNetwork = unrenamedHomeNetwork();
-@let name =
-  homeNetwork
-    ? ('reader.socialHome'
-      | transloco: { network: ('reader.socialNetworkShort.' + homeNetwork | transloco) })
-    : feed.title;
+@let name = this.name();
 @if (organising()) {
   <span class="handle" cdkDragHandle aria-hidden="true">
     <app-icon name="drag_indicator" size="sm" />

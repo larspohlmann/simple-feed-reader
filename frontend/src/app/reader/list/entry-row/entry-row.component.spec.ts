@@ -12,6 +12,7 @@ import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testi
 import { describeShortMarking } from '../../../../testing/short-marking-testing';
 import { describePortraitCover } from '../../../../testing/portrait-cover-testing';
 import { anEntry } from '../../../../testing/entry-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/feed-names-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -104,6 +105,13 @@ describe('EntryRowComponent', () => {
         provideRouter([]),
       ],
     });
+  });
+
+  it("names an authorless Home post by the Home's label", () => {
+    holdUnrenamedHome(7);
+    const element = mount(authorlessHomePost(7)).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.meta')?.textContent).toContain('Home@bsky');
   });
 
   it('renders title, source, snippet and the https thumbnail', () => {

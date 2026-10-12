@@ -24,6 +24,7 @@ import { SettingsStackComponent } from '../../shared/settings/stack/settings-sta
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ReadingColumn, buildReadingChart } from './reading-chart';
+import { FeedNames } from '../../reader/state/feed-names';
 
 /** One line of the version table: which half of the app, and what it reports. */
 interface VersionRow {
@@ -69,6 +70,7 @@ export class AboutSectionComponent implements OnInit {
   private readonly versions = inject(VersionService);
   private readonly language = inject(LanguageService);
   private readonly subscriptions = inject(SubscriptionsStore);
+  private readonly names = inject(FeedNames);
   private readonly api = inject(SettingsApi);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -136,7 +138,7 @@ export class AboutSectionComponent implements OnInit {
     return this.toBars(
       ranked.map((subscription) => ({
         subscriptionId: subscription.id,
-        title: subscription.title,
+        title: this.names.titleOf(subscription),
         value: subscription.unreadCount,
       })),
     );
@@ -157,7 +159,13 @@ export class AboutSectionComponent implements OnInit {
       const subscription = byFeedId.get(rank.feedId);
 
       return subscription
-        ? [{ subscriptionId: subscription.id, title: subscription.title, value: rank.readCount }]
+        ? [
+            {
+              subscriptionId: subscription.id,
+              title: this.names.titleOf(subscription),
+              value: rank.readCount,
+            },
+          ]
         : [];
     });
 

@@ -18,10 +18,10 @@
           target="_blank"
           rel="noopener noreferrer"
           (click)="$event.stopPropagation()"
-          >{{ entry().source }}</a
+          >{{ source() }}</a
         >
       } @else {
-        {{ entry().source }}
+        {{ source() }}
       }
       · {{ when() }}
       <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>

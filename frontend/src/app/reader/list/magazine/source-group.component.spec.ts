@@ -5,6 +5,7 @@ import { SourceGroupComponent } from './source-group.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { anEntry } from '../../../../testing/entry-testing';
+import { holdUnrenamedHome } from '../../../../testing/feed-names-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -31,11 +32,12 @@ const entryAt = (id: number): EntryDto =>
   });
 
 describe('SourceGroupComponent', () => {
-  function mount(entries: EntryDto[], previewCount: number) {
+  function mount(entries: EntryDto[], previewCount: number, arrange?: () => void) {
     TestBed.configureTestingModule({
       imports: [SourceGroupComponent, provideTranslocoTesting()],
       providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
+    arrange?.();
     const fixture = TestBed.createComponent(SourceGroupComponent);
     fixture.componentRef.setInput('source', 'heise');
     fixture.componentRef.setInput('subscriptionId', 7);
@@ -45,6 +47,13 @@ describe('SourceGroupComponent', () => {
     fixture.detectChanges();
     return fixture;
   }
+
+  it("heads a Home's group with the Home's label", () => {
+    const element = mount([entryAt(1)], 1, () => holdUnrenamedHome(7)).nativeElement as HTMLElement;
+
+    expect(element.textContent).toContain('Home@bsky');
+    expect(element.textContent).not.toContain('heise');
+  });
 
   it('previews previewCount rows and counts the hidden tail', () => {
     const element = mount(

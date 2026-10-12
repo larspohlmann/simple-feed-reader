@@ -24,6 +24,7 @@ import {
   MockResizeObserver,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
+import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/feed-names-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -243,6 +244,12 @@ describe('ReaderViewComponent', () => {
       expect(link.target).toBe('_blank');
       expect(link.rel).toBe('noopener noreferrer');
       expect(element.querySelector('.meta img.avatar')).not.toBeNull();
+    });
+
+    it("names an authorless Home post by the Home's label", () => {
+      holdUnrenamedHome(1);
+
+      expect(sourceLink(authorlessHomePost(1)).textContent?.trim()).toBe('Home@bsky');
     });
 
     it('stays the in-app subscription filter otherwise', () => {

@@ -11,15 +11,13 @@
       type="checkbox"
       data-test="select"
       [checked]="selected()"
-      [attr.aria-label]="
-        'settings.organise.selectFeed' | transloco: { title: subscription().title }
-      "
+      [attr.aria-label]="'settings.organise.selectFeed' | transloco: { title: name() }"
       (change)="selectedChange.emit($any($event.target).checked)"
     />
 
     <app-favicon [url]="subscription().faviconUrl" />
     <a class="title" [routerLink]="['/']" [queryParams]="listParams()" target="_blank">{{
-      subscription().title
+      name()
     }}</a>
 
     <span class="pills">
@@ -77,7 +75,7 @@
           type="button"
           appIconButton
           data-test="more"
-          [attr.aria-label]="'reader.manage' | transloco: { name: subscription().title }"
+          [attr.aria-label]="'reader.manage' | transloco: { name: name() }"
           (click)="openSheet()"
         >
           <app-icon name="more_horiz" size="sm" />
@@ -88,7 +86,7 @@
             type="button"
             appIconButton
             data-test="more"
-            [attr.aria-label]="'reader.manage' | transloco: { name: subscription().title }"
+            [attr.aria-label]="'reader.manage' | transloco: { name: name() }"
             (click)="toggleMenu()"
           >
             <app-icon name="more_horiz" size="sm" />

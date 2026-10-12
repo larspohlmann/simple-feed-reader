@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { feedHealthReason, isGone as feedIsGone } from '../../../reader/feeds/feed-health';
 import { SubscriptionDto } from '../../../reader/models';
@@ -7,6 +7,7 @@ import { DisclosureComponent } from '../../../shared/disclosure/disclosure.compo
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { FeedHealthFactsComponent } from './feed-health-facts.component';
+import { FeedNames } from '../../../reader/state/feed-names';
 
 /** One row in the unhealthy-feeds list: a status glyph whose colour is the
  *  dead/failing signal, the title, a friendly reason line, Retry and
@@ -30,6 +31,9 @@ export class UnhealthyFeedRowComponent {
   readonly subscription = input.required<SubscriptionDto>();
   readonly retry = output<void>();
   readonly unsubscribe = output<void>();
+
+  private readonly names = inject(FeedNames);
+  protected readonly name = computed(() => this.names.titleOf(this.subscription()));
 
   protected readonly reason = computed(() => feedHealthReason(this.subscription(), new Date()));
   protected readonly isGone = computed(() => feedIsGone(this.subscription()));

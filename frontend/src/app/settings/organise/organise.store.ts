@@ -4,6 +4,7 @@ import { untaggedSubscriptions } from '../../reader/state/subscription-derivatio
 import { TagsStore } from '../../reader/state/tags.store';
 import { toggled } from '../../core/toggled-set';
 import { SubscriptionDto, TagDto } from '../../reader/models';
+import { FeedNames } from '../../reader/state/feed-names';
 
 /** A group is one tag, or the untagged bucket that always sits last. */
 export type GroupKey = number | 'untagged';
@@ -68,6 +69,7 @@ function feedsInTag(subscriptions: SubscriptionDto[], tagId: number): Subscripti
 export class OrganiseStore {
   private readonly subs = inject(SubscriptionsStore);
   private readonly tagsStore = inject(TagsStore);
+  private readonly names = inject(FeedNames);
 
   readonly selectedIds = signal<ReadonlySet<number>>(new Set());
   readonly expandedKeys = signal<ReadonlySet<GroupKey>>(readExpanded());
@@ -106,7 +108,8 @@ export class OrganiseStore {
     const tagKeys = this.tagFilter();
 
     return this.subs.subscriptions().filter((subscription) => {
-      if (term !== '' && !subscription.title.toLocaleLowerCase().includes(term)) return false;
+      if (term !== '' && !this.names.titleOf(subscription).toLocaleLowerCase().includes(term))
+        return false;
       if (tagKeys.size === 0) return true;
       if (tagKeys.has('untagged') && subscription.tags.length === 0) return true;
       return subscription.tags.some((tag) => tagKeys.has(tag.id));

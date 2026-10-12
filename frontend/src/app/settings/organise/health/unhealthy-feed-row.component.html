@@ -10,7 +10,7 @@
     <span class="sr-only">
       {{ (isGone() ? 'settings.health.pill.dead' : 'settings.health.pill.failing') | transloco }}
     </span>
-    <span class="title">{{ subscription().title }}</span>
+    <span class="title">{{ name() }}</span>
 
     <span class="reason">{{ reason().key | transloco: reason().params }}</span>
 

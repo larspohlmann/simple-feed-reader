@@ -5,6 +5,7 @@ import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 const tag = (id: number, name: string, position: number): TagDto => ({
   id,
@@ -46,6 +47,7 @@ describe('OrganiseStore', () => {
   function make(subscriptions: SubscriptionDto[] = SUBS, tags: TagDto[] = TAGS): OrganiseStore {
     localStorage.clear();
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         OrganiseStore,
         { provide: SubscriptionsStore, useValue: { subscriptions: signal(subscriptions) } },
@@ -66,6 +68,7 @@ describe('OrganiseStore', () => {
     localStorage.clear();
     const subscriptionsSignal = signal(subscriptions);
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         OrganiseStore,
         { provide: SubscriptionsStore, useValue: { subscriptions: subscriptionsSignal } },
@@ -236,6 +239,19 @@ describe('OrganiseStore', () => {
 
     expect(store.groups().map((group) => group.key)).toEqual([2]);
     expect(store.groups()[0].subscriptions.map((subscription) => subscription.id)).toEqual([11]);
+  });
+
+  it("finds an unrenamed Home by the Home's label", () => {
+    const home = makeSubscription({
+      id: 20,
+      title: 'Home',
+      social: { network: 'bluesky', accountId: 1, kind: 'home' },
+    });
+    const store = make([...SUBS, home]);
+
+    store.titleFilter.set('@bsky');
+
+    expect(store.filteredSubscriptions().map((subscription) => subscription.id)).toEqual([20]);
   });
 
   it('expands every matching group while a filter is active', () => {

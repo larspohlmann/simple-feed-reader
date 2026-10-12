@@ -5,6 +5,7 @@ import { relativeTime, relativeTimeNarrow } from '../../format';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { selectionQueryParams } from '../../query/query';
+import { FeedNames } from '../../state/feed-names';
 
 /**
  * The one-line attribution every magazine block carries: unread dot, favicon,
@@ -28,6 +29,8 @@ export class EntryKickerLineComponent {
   readonly faviconSize = input(12);
 
   private readonly language = inject(LanguageService);
+  private readonly names = inject(FeedNames);
+  protected readonly source = computed(() => this.names.sourceOf(this.entry()));
   private readonly publishedOrCreated = computed(
     () => this.entry().publishedAt ?? this.entry().createdAt,
   );

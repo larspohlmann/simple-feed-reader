@@ -7,6 +7,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { relativeTime } from '../../format';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { FeedNames } from '../../state/feed-names';
 
 let nextId = 0;
 
@@ -34,9 +35,11 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
   private readonly shellActions = inject(EntryActionHandler, { skipSelf: true });
 
   private readonly language = inject(LanguageService);
+  private readonly names = inject(FeedNames);
   readonly copies = computed(() =>
     (this.entry().duplicates ?? []).map((copy) => ({
       copy,
+      feed: this.names.feedOf(copy),
       when: relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang()),
     })),
   );
