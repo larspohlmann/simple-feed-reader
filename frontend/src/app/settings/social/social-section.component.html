@@ -33,15 +33,6 @@
         }
         <app-button
           size="sm"
-          [attr.data-testid]="'social-import-' + account.id"
-          [disabled]="svc.busy() || account.status !== 'connected'"
-          [description]="'settings.social.importDescription' | transloco"
-          (click)="openImport(account)"
-        >
-          {{ 'settings.social.import' | transloco }}
-        </app-button>
-        <app-button
-          size="sm"
           variant="danger-outline"
           [attr.data-testid]="'social-disconnect-' + account.id"
           [disabled]="svc.busy()"
@@ -83,14 +74,6 @@
   } @empty {
     <p class="empty-note" [attr.data-testid]="'social-empty-' + network">
       {{ 'settings.social.empty' | transloco }}
-    </p>
-  }
-  @if (accounts.length > 0) {
-    <p class="import-hint" [attr.data-testid]="'social-import-hint-' + network">
-      {{
-        'settings.social.importHint'
-          | transloco: { network: ('settings.social.' + network | transloco) }
-      }}
     </p>
   }
 </ng-template>
@@ -238,6 +221,32 @@
         </p>
       }
     </app-settings-group>
+
+    @if (svc.accounts()?.length) {
+      <app-settings-group
+        icon="group_add"
+        data-testid="social-import-section"
+        [title]="'settings.social.importSectionTitle' | transloco"
+        [caption]="'settings.social.importSectionCaption' | transloco"
+      >
+        @for (account of svc.accounts(); track account.id) {
+          <app-settings-row
+            [stackable]="true"
+            [title]="account.handle"
+            [description]="describeImportSource(account)"
+          >
+            <app-button
+              size="sm"
+              [attr.data-testid]="'social-import-' + account.id"
+              [disabled]="svc.busy() || account.status !== 'connected'"
+              (click)="openImport(account)"
+            >
+              {{ 'settings.social.importChoose' | transloco }}
+            </app-button>
+          </app-settings-row>
+        }
+      </app-settings-group>
+    }
   }
 
   @if (svc.failure(); as message) {

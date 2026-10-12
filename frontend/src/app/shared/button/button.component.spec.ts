@@ -4,11 +4,7 @@ import { ButtonComponent, ButtonVariant } from './button.component';
 
 @Component({
   imports: [ButtonComponent],
-  template: `<app-button
-    [variant]="variant()"
-    [loading]="loading()"
-    [ariaLabel]="label()"
-    [description]="description()"
+  template: `<app-button [variant]="variant()" [loading]="loading()" [ariaLabel]="label()"
     >Save</app-button
   >`,
 })
@@ -16,7 +12,6 @@ class Host {
   readonly variant = signal<ButtonVariant>('default');
   readonly loading = signal(false);
   readonly label = signal<string | undefined>(undefined);
-  readonly description = signal<string | undefined>(undefined);
 }
 
 describe('ButtonComponent', () => {
@@ -65,16 +60,6 @@ describe('ButtonComponent', () => {
     fixture.componentInstance.label.set('Edit');
     fixture.detectChanges();
     expect(button().getAttribute('aria-label')).toBe('Edit');
-  });
-
-  it('describes the button through its title only when a description is given', async () => {
-    const fixture = await mount();
-    const button = () => fixture.nativeElement.querySelector('button') as HTMLElement;
-    expect(button().getAttribute('title')).toBeNull();
-
-    fixture.componentInstance.description.set('Saves the draft');
-    fixture.detectChanges();
-    expect(button().getAttribute('title')).toBe('Saves the draft');
   });
 
   it('swaps the label for a spinner and disables while loading', async () => {

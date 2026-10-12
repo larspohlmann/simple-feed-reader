@@ -69,6 +69,12 @@ export class SocialSectionComponent {
     return this.i18n.translate('settings.social.connectedSince', { date });
   }
 
+  protected describeImportSource(account: SocialAccount): string {
+    const network = this.i18n.translate(`settings.social.${account.network}`);
+    if (account.status === 'connected') return network;
+    return `${network} · ${this.i18n.translate('settings.social.needsReconnect')}`;
+  }
+
   protected setReconnectSecret(id: number, secret: string): void {
     this.reconnectSecrets.update((current) => ({ ...current, [id]: secret }));
   }

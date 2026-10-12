@@ -98,27 +98,46 @@ describe('SocialSectionComponent', () => {
 
   afterEach(() => http.verify());
 
-  it('offers Import on a connected account and disables it on one that needs reconnecting', () => {
+  it('offers "Choose accounts…" per account in the import section, disabled when reconnecting is needed', () => {
     const fixture = mount([
       account(),
       account({ id: 2, handle: 'bob.bsky.social', isDefault: false, status: 'needs_reconnect' }),
     ]);
 
+    const section = byTestId(fixture, 'social-import-section') as HTMLElement;
     const button = (id: number) =>
-      byTestId(fixture, `social-import-${id}`)?.querySelector('button') as HTMLButtonElement;
+      section.querySelector(`[data-testid="social-import-${id}"] button`) as HTMLButtonElement;
     expect(button(1).disabled).toBe(false);
-    expect(button(1).textContent).toContain('Import follows…');
-    expect(button(1).title).toBe('Subscribe to accounts you follow on this network as feeds');
+    expect(button(1).textContent).toContain('Choose accounts…');
     expect(button(2).disabled).toBe(true);
+    const row = (id: number) => button(id).closest('app-settings-row')?.textContent ?? '';
+    expect(row(1)).toContain('alice.bsky.social');
+    expect(row(1)).toContain('Bluesky');
+    expect(row(1)).not.toContain('Needs reconnecting');
+    expect(row(2)).toContain('Needs reconnecting');
   });
 
-  it('explains the import under a network with accounts, naming its tag', () => {
+  it('keeps the import out of the account rows', () => {
     const fixture = mount([account()]);
 
-    expect(byTestId(fixture, 'social-import-hint-bluesky')?.textContent).toContain(
-      'subscribes to accounts you follow as feeds, tagged Bluesky.',
-    );
-    expect(byTestId(fixture, 'social-import-hint-mastodon')).toBeNull();
+    const accountRow = byTestId(fixture, 'social-connected-1')?.closest('app-settings-row');
+    expect(accountRow?.querySelector('[data-testid="social-import-1"]')).toBeNull();
+  });
+
+  it('explains the import in plain words, naming the tags', () => {
+    const fixture = mount([account()]);
+
+    const section = byTestId(fixture, 'social-import-section');
+    expect(section?.textContent).toContain('Import follows');
+    expect(section?.textContent).toContain('Subscribe to the accounts you follow');
+    expect(section?.textContent).toContain('tagged Bluesky or Mastodon');
+  });
+
+  it('hides the import section while no account is connected', () => {
+    const fixture = mount([]);
+
+    expect(byTestId(fixture, 'social-import-section')).toBeNull();
+    expect(root(fixture).querySelectorAll('app-settings-group')).toHaveLength(2);
   });
 
   it('opens the picker for the account and reloads the accounts when it closes', () => {
@@ -144,17 +163,19 @@ describe('SocialSectionComponent', () => {
     http.expectOne(ENDPOINT).flush({ accounts: [account()] });
   });
 
-  it('renders a Bluesky and a Mastodon group with their accounts', () => {
+  it('renders a Bluesky and a Mastodon group with their accounts, then the import group', () => {
     const fixture = mount([
       account(),
       account({ id: 2, network: 'mastodon', handle: 'alice@example.social', isDefault: true }),
     ]);
 
     const groups = root(fixture).querySelectorAll('app-settings-group');
-    expect(groups).toHaveLength(2);
+    expect(groups).toHaveLength(3);
     expect(groups[0].textContent).toContain('alice.bsky.social');
     expect(groups[0].textContent).not.toContain('alice@example.social');
     expect(groups[1].textContent).toContain('alice@example.social');
+    expect(groups[2].textContent).toContain('alice.bsky.social');
+    expect(groups[2].textContent).toContain('alice@example.social');
   });
 
   it('says so when a network has no account', () => {
