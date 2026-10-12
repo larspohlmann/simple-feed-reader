@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Http\SubscriptionJson;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SocialAccounts;
 
 final class SubscriptionJsonListTest extends DbTestCase
 {
@@ -27,7 +28,10 @@ final class SubscriptionJsonListTest extends DbTestCase
 
         $payload = SubscriptionJson::list([$counted, $silent], $tallies);
 
-        self::assertSame(['subscriptions', 'favoritesCount', 'keptCount', 'viewedCount'], array_keys($payload));
+        self::assertSame(
+            ['subscriptions', 'favoritesCount', 'keptCount', 'viewedCount', 'socialAccounts'],
+            array_keys($payload),
+        );
         self::assertSame(
             [SubscriptionJson::one($counted, 3, 40), SubscriptionJson::one($silent)],
             $payload['subscriptions'],
@@ -35,6 +39,27 @@ final class SubscriptionJsonListTest extends DbTestCase
         self::assertSame(8, $payload['favoritesCount']);
         self::assertSame(2, $payload['keptCount']);
         self::assertSame(41, $payload['viewedCount']);
+    }
+
+    public function testTheListNamesEachConnectedAccountsHandleOnce(): void
+    {
+        $user = new User('subscription-list-social@example.com', new \DateTimeImmutable('2026-10-12T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $account = SocialAccounts::blueskyOf($user);
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+
+        $payload = SubscriptionJson::list(
+            [],
+            new SubscriptionTalliesModel([], [], ['favorites' => 0, 'kept' => 0, 'viewed' => 0]),
+            [$account],
+        );
+
+        self::assertSame(
+            [['id' => $account->requireId(), 'network' => 'bluesky', 'handle' => '@alice.bsky.social']],
+            $payload['socialAccounts'],
+        );
     }
 
     private function subscription(User $user, string $url): Subscription

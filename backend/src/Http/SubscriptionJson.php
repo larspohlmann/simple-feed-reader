@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\Feed;
+use App\Entity\SocialAccount;
 use App\Entity\Subscription;
+use App\Enum\SourceFormat;
+use App\Service\Social\Support\SocialFeedUrl;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\Support\PlainText;
 use App\Service\Url\Support\FeedWebsite;
@@ -20,12 +23,16 @@ final class SubscriptionJson
     private const int DESCRIPTION_MAX = 1000;
 
     /**
-     * @param list<Subscription> $subscriptions
+     * @param list<Subscription>  $subscriptions
+     * @param list<SocialAccount> $socialAccounts the handles the sidebar labels a network's accounts with
      *
      * @return array<string, mixed>
      */
-    public static function list(array $subscriptions, SubscriptionTalliesModel $tallies): array
-    {
+    public static function list(
+        array $subscriptions,
+        SubscriptionTalliesModel $tallies,
+        array $socialAccounts = [],
+    ): array {
         return [
             'subscriptions' => array_map(
                 static fn (Subscription $subscription): array => self::one(
@@ -36,6 +43,7 @@ final class SubscriptionJson
                 $subscriptions,
             ),
             ...SubscriptionCountsJson::surfaceTotals($tallies),
+            'socialAccounts' => array_map(self::socialAccount(...), $socialAccounts),
         ];
     }
 
@@ -53,7 +61,8 @@ final class SubscriptionJson
      *   consecutiveFailures: int, lastErrorMessage: string|null,
      *   position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
-     *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool
+     *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
+     *   social: array{network: string, accountId: int, kind: string}|null
      * }
      */
     public static function one(Subscription $subscription, int $unreadCount = 0, int $entryCount = 0): array
@@ -92,6 +101,37 @@ final class SubscriptionJson
             'entryCount' => $entryCount,
             'includeInAllItems' => $subscription->isIncludeInAllItems(),
             'includeInForYou' => $subscription->isIncludeInForYou(),
+            'social' => self::social($feed),
+        ];
+    }
+
+    /**
+     * Read from the feed's own synthetic URL, so every endpoint that returns one subscription carries it without a
+     * query. The format must agree: only refreshes route by it.
+     *
+     * @return array{network: string, accountId: int, kind: string}|null
+     */
+    private static function social(Feed $feed): ?array
+    {
+        $address = SourceFormat::isSocial($feed->getSourceFormat()) ? SocialFeedUrl::addressOf($feed->getUrl()) : null;
+        if (null === $address) {
+            return null;
+        }
+
+        return [
+            'network' => $address->network->value,
+            'accountId' => $address->accountId,
+            'kind' => $address->kind->value,
+        ];
+    }
+
+    /** @return array{id: int, network: string, handle: string} */
+    private static function socialAccount(SocialAccount $account): array
+    {
+        return [
+            'id' => $account->requireId(),
+            'network' => $account->getNetwork()->value,
+            'handle' => $account->getHandle(),
         ];
     }
 
