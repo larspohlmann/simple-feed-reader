@@ -473,7 +473,8 @@ describe('SubscriptionsStore', () => {
 
     it("reads each feed's network from the loaded list and forgets it on logout", () => {
       const rows = TestBed.inject(SubscriptionRows);
-      expect([rows.networkOf(6), rows.networkOf(7), rows.networkOf(1)]).toEqual([
+      const networkOf = (id: number) => rows.find(id)?.social?.network ?? null;
+      expect([networkOf(6), networkOf(7), networkOf(1)]).toEqual([
         'bluesky',
         'mastodon',
         null,
@@ -482,7 +483,7 @@ describe('SubscriptionsStore', () => {
       tokens.clear();
       TestBed.tick();
 
-      expect(rows.networkOf(6)).toBeNull();
+      expect(networkOf(6)).toBeNull();
     });
 
     it("zeroes a tag's private feeds along with the rest when the tag is marked read", () => {

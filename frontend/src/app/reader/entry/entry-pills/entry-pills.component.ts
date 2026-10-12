@@ -29,6 +29,8 @@ export class EntryPillsComponent {
   private readonly rows = inject(SubscriptionRows);
   protected readonly network = computed(() => {
     const subscriptionId = this.subscriptionId();
-    return subscriptionId === null ? null : this.rows.networkOf(subscriptionId);
+    return subscriptionId === null
+      ? null
+      : (this.rows.find(subscriptionId)?.social?.network ?? null);
   });
 }

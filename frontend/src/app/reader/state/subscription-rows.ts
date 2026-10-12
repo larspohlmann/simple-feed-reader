@@ -1,5 +1,4 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { SocialNetworkName } from '../../core/social-network';
 import { SubscriptionDto } from '../models';
 
 /**
@@ -16,9 +15,5 @@ export class SubscriptionRows {
 
   find(subscriptionId: number): SubscriptionDto | null {
     return this.byId().get(subscriptionId) ?? null;
-  }
-
-  networkOf(subscriptionId: number): SocialNetworkName | null {
-    return this.find(subscriptionId)?.social?.network ?? null;
   }
 }
