@@ -5,6 +5,7 @@ import { EntryMetaComponent } from './entry-meta.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
+import { FeedNetworks } from '../../state/feed-networks';
 import { anEntry } from '../../../../testing/entry-testing';
 
 const entryActions = {
@@ -90,5 +91,20 @@ describe('EntryMetaComponent', () => {
     it('marks no other entry', () => {
       expect(shortPill(anEntry(), false)).toBeNull();
     });
+  });
+
+  it("shows the network pill of the entry's subscription", () => {
+    const testEntry = { ...anEntry(), subscriptionId: 7 };
+    TestBed.configureTestingModule({
+      imports: [EntryMetaComponent, provideTranslocoTesting()],
+      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+    });
+    TestBed.inject(FeedNetworks).replace(new Map([[7, 'mastodon']]));
+    const fixture = TestBed.createComponent(EntryMetaComponent);
+    fixture.componentRef.setInput('entry', testEntry);
+    fixture.detectChanges();
+
+    const pill = (fixture.nativeElement as HTMLElement).querySelector('.pill.network');
+    expect(pill?.textContent?.trim()).toBe('mastodon');
   });
 });

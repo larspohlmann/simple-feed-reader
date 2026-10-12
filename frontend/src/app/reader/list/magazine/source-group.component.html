@@ -9,7 +9,7 @@
         >{{ source() }}</a
       >
     </p>
-    <app-entry-pills [tags]="tags()" />
+    <app-entry-pills [tags]="tags()" [subscriptionId]="subscriptionId()" />
   </div>
   <div class="items">
     @for (item of visibleEntries(); track item.id) {

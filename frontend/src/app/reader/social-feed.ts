@@ -1,10 +1,12 @@
-export type SocialNetworkName = 'bluesky' | 'mastodon';
+import { SocialNetworkName } from '../core/social-network';
 
-/** Where a private feed comes from: the network, the connected account it is read through, which of its feeds. */
+export type { SocialNetworkName };
+
+/** Where a social feed comes from: the network, the connected account a private feed is read through (null for a profile feed), which of its feeds. */
 export interface SocialFeedRefDto {
   network: SocialNetworkName;
-  accountId: number;
-  kind: 'home' | 'list' | 'custom_feed';
+  accountId: number | null;
+  kind: 'home' | 'list' | 'custom_feed' | 'profile';
 }
 
 /** A connected account, named once per subscriptions answer for the sidebar's account labels. */

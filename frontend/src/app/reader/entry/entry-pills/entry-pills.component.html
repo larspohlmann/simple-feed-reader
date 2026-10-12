@@ -1,3 +1,9 @@
+@if (network(); as network) {
+  <span class="pill network">
+    <app-network-logo [network]="network" />
+    <span class="name">{{ 'reader.socialNetworkShort.' + network | transloco }}</span>
+  </span>
+}
 @if (short()) {
   <span class="pill short">{{ 'reader.shortBadge' | transloco }}</span>
 }

@@ -1,0 +1,22 @@
+:host {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+  vertical-align: middle;
+}
+
+svg {
+  width: 100%;
+  height: 100%;
+}
+
+.bluesky {
+  fill: var(--brand-bluesky);
+}
+
+.mastodon {
+  fill: var(--brand-mastodon);
+}
