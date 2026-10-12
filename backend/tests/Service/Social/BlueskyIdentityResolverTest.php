@@ -108,4 +108,86 @@ final class BlueskyIdentityResolverTest extends TestCase
 
         $this->resolver($http)->resolve('alice.bsky.social');
     }
+
+    public function testAMissingDidDocumentIsUnresolvable(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE_ALICE => new MockResponse('{"did":"did:plc:alice"}'),
+            'GET https://plc.directory/did:plc:alice' => new MockResponse('Not Found', ['http_code' => 404]),
+        ]);
+
+        $this->expectException(SocialAccountUnresolvableException::class);
+
+        $this->resolver($http)->resolve('alice.bsky.social');
+    }
+
+    public function testAnOutageOnTheHandleLookupIsUnreachable(): void
+    {
+        $http = new RoutedHttpClient([self::RESOLVE_ALICE => new MockResponse('', ['http_code' => 503])]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->resolver($http)->resolve('alice.bsky.social');
+    }
+
+    public function testAnOutageOnTheDidDocumentIsUnreachable(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE_ALICE => new MockResponse('{"did":"did:plc:alice"}'),
+            'GET https://plc.directory/did:plc:alice' => new MockResponse('', ['http_code' => 503]),
+        ]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->resolver($http)->resolve('alice.bsky.social');
+    }
+
+    public function testAMalformedHandleAnswerIsUnreachable(): void
+    {
+        $http = new RoutedHttpClient([self::RESOLVE_ALICE => new MockResponse('<html>')]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->resolver($http)->resolve('alice.bsky.social');
+    }
+
+    public function testAPlainHttpEndpointIsUnresolvable(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE_ALICE => new MockResponse('{"did":"did:plc:alice"}'),
+            'GET https://plc.directory/did:plc:alice' => new MockResponse(
+                $this->documentWithEndpoint('http://pds.example.test'),
+            ),
+        ]);
+
+        $this->expectException(SocialAccountUnresolvableException::class);
+
+        $this->resolver($http)->resolve('alice.bsky.social');
+    }
+
+    public function testAnEndpointIsReducedToItsOrigin(): void
+    {
+        $http = new RoutedHttpClient([
+            self::RESOLVE_ALICE => new MockResponse('{"did":"did:plc:alice"}'),
+            'GET https://plc.directory/did:plc:alice' => new MockResponse(
+                $this->documentWithEndpoint('https://PDS.example.test:8443/some/path?x=1'),
+            ),
+        ]);
+
+        $identity = $this->resolver($http)->resolve('alice.bsky.social');
+
+        self::assertSame('https://pds.example.test:8443', $identity->pdsUrl);
+    }
+
+    private function documentWithEndpoint(string $endpoint): string
+    {
+        return json_encode([
+            'id' => 'did:plc:alice',
+            'service' => [[
+                'id' => '#atproto_pds',
+                'type' => 'AtprotoPersonalDataServer',
+                'serviceEndpoint' => $endpoint,
+            ]],
+        ], \JSON_THROW_ON_ERROR);
+    }
 }

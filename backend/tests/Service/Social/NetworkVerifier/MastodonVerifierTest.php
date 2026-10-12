@@ -23,7 +23,10 @@ final class MastodonVerifierTest extends TestCase
     private function verifier(RoutedHttpClient $http): MastodonVerifier
     {
         $guard = new UrlGuard(
-            new StaticDnsResolver(['mastodon.example.test' => ['93.184.216.34']]),
+            new StaticDnsResolver([
+                'mastodon.example.test' => ['93.184.216.34'],
+                'social.example.test' => ['93.184.216.34'],
+            ]),
             new IpValidator(),
         );
 
@@ -91,5 +94,21 @@ final class MastodonVerifierTest extends TestCase
     public function testTheNetworkKeyIsMastodon(): void
     {
         self::assertSame('mastodon', MastodonVerifier::network());
+    }
+
+    public function testANonDefaultPortStaysInTheIdentityAndHandle(): void
+    {
+        $http = new RoutedHttpClient([
+            'GET https://social.example.test:8443/api/v1/accounts/verify_credentials' => new MockResponse(
+                '{"id":"1","username":"lars"}',
+            ),
+        ]);
+
+        $credentials = SocialCredentialsModel::mastodon('social.example.test:8443', 'token-1234');
+        $account = $this->verifier($http)->verify($credentials);
+
+        self::assertSame('lars@social.example.test:8443', $account->identity);
+        self::assertSame('@lars@social.example.test:8443', $account->handle);
+        self::assertSame('https://social.example.test:8443', $account->serviceUrl);
     }
 }

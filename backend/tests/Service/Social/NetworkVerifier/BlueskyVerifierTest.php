@@ -8,7 +8,9 @@ use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Social\BlueskyIdentityResolver;
+use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\NetworkVerifier\BlueskyVerifier;
 use App\Tests\Support\RoutedHttpClient;
@@ -101,5 +103,70 @@ final class BlueskyVerifierTest extends TestCase
     public function testTheNetworkKeyIsBluesky(): void
     {
         self::assertSame('bluesky', BlueskyVerifier::network());
+    }
+
+    public function testAnOutageOnTheSessionCallIsUnreachable(): void
+    {
+        $http = new RoutedHttpClient($this->identityRoutes() + [
+            self::SESSION => new MockResponse('', ['http_code' => 503]),
+        ]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->verifier($http)->verify($this->credentials());
+    }
+
+    public function testAMalformedSessionAnswerIsUnreachable(): void
+    {
+        $http = new RoutedHttpClient($this->identityRoutes() + [
+            self::SESSION => new MockResponse('<html>'),
+        ]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->verifier($http)->verify($this->credentials());
+    }
+
+    public function testAPlainHttpPdsIsUnresolvableAndNeverReceivesThePassword(): void
+    {
+        $routes = $this->identityRoutes();
+        $routes['GET https://plc.directory/did:plc:alice'] = new MockResponse(
+            $this->documentWithEndpoint('http://pds.example.test'),
+        );
+        $http = new RoutedHttpClient($routes);
+
+        try {
+            $this->verifier($http)->verify($this->credentials());
+            self::fail('A plain http PDS must be refused.');
+        } catch (SocialAccountUnresolvableException) {
+            self::assertNotContains('POST', array_column($http->requests, 'method'));
+        }
+    }
+
+    public function testATrailingSlashEndpointCreatesTheSessionWithoutADoubleSlash(): void
+    {
+        $routes = $this->identityRoutes();
+        $routes['GET https://plc.directory/did:plc:alice'] = new MockResponse(
+            $this->documentWithEndpoint('https://PDS.example.test/'),
+        );
+        $routes[self::SESSION] = new MockResponse('{"did":"did:plc:alice","handle":"alice.bsky.social"}');
+        $http = new RoutedHttpClient($routes);
+
+        $account = $this->verifier($http)->verify($this->credentials());
+
+        self::assertSame('https://pds.example.test', $account->serviceUrl);
+        self::assertSame('https://pds.example.test/xrpc/com.atproto.server.createSession', $http->requests[2]['url']);
+    }
+
+    private function documentWithEndpoint(string $endpoint): string
+    {
+        return json_encode([
+            'id' => 'did:plc:alice',
+            'service' => [[
+                'id' => '#atproto_pds',
+                'type' => 'AtprotoPersonalDataServer',
+                'serviceEndpoint' => $endpoint,
+            ]],
+        ], \JSON_THROW_ON_ERROR);
     }
 }

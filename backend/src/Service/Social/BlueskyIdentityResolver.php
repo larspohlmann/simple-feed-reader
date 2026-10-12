@@ -19,6 +19,8 @@ final readonly class BlueskyIdentityResolver
     private const string PLC_DIRECTORY = 'https://plc.directory/';
     private const string WEB_DID_PREFIX = 'did:web:';
     private const string PDS_SERVICE_SUFFIX = '#atproto_pds';
+    private const int UNKNOWN_HANDLE_STATUS = 400;
+    private const int MISSING_DOCUMENT_STATUS = 404;
 
     public function __construct(private GuardedApiClient $api)
     {
@@ -38,10 +40,14 @@ final readonly class BlueskyIdentityResolver
     private function didOf(string $handle): string
     {
         $answer = $this->call(ApiRequestModel::get(self::RESOLVE_HANDLE . '?handle=' . rawurlencode($handle)));
-        $did = $answer->json()['did'] ?? null;
 
-        if (!$answer->isSuccessful() || !\is_string($did)) {
+        if (self::UNKNOWN_HANDLE_STATUS === $answer->status) {
             throw new SocialAccountUnresolvableException(sprintf('No Bluesky account has the handle "%s".', $handle));
+        }
+
+        $did = $answer->isSuccessful() ? ($answer->json()['did'] ?? null) : null;
+        if (!\is_string($did)) {
+            throw new SocialNetworkUnreachableException('Bluesky gave no usable answer for the handle.');
         }
 
         return $did;
@@ -50,15 +56,35 @@ final readonly class BlueskyIdentityResolver
     private function pdsOf(string $did): string
     {
         $answer = $this->call(ApiRequestModel::get($this->documentUrl($did)));
-        $services = $answer->isSuccessful() ? ($answer->json()['service'] ?? []) : [];
 
+        if (self::MISSING_DOCUMENT_STATUS === $answer->status) {
+            throw new SocialAccountUnresolvableException(sprintf('The account %s has no DID document.', $did));
+        }
+        if (!$answer->isSuccessful()) {
+            throw new SocialNetworkUnreachableException('Bluesky gave no usable DID document.');
+        }
+
+        $services = $answer->json()['service'] ?? [];
         foreach (\is_array($services) ? $services : [] as $service) {
             if (self::isPds($service)) {
-                return $service['serviceEndpoint'];
+                return $this->originOf($service['serviceEndpoint'], $did);
             }
         }
 
         throw new SocialAccountUnresolvableException(sprintf('The account %s names no PDS.', $did));
+    }
+
+    private function originOf(string $endpoint, string $did): string
+    {
+        $parts = parse_url($endpoint);
+
+        if (false === $parts || 'https' !== strtolower($parts['scheme'] ?? '') || '' === ($parts['host'] ?? '')) {
+            throw new SocialAccountUnresolvableException(sprintf('The PDS of %s is not reachable over https.', $did));
+        }
+
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+
+        return 'https://' . strtolower($parts['host']) . $port;
     }
 
     private function documentUrl(string $did): string

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use PHPUnit\Framework\Assert;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -32,7 +33,8 @@ final class RoutedHttpClient
                 'headers' => $headers,
             ];
 
-            return $this->routes[$method . ' ' . $url] ?? new MockResponse('', ['http_code' => 404]);
+            return $this->routes[$method . ' ' . $url]
+                ?? Assert::fail(sprintf('Unrouted request: %s %s', $method, $url));
         });
     }
 

@@ -17,6 +17,7 @@ use App\Service\Social\Model\VerifiedAccountModel;
 final readonly class BlueskyVerifier implements NetworkVerifierInterface
 {
     private const string CREATE_SESSION = '/xrpc/com.atproto.server.createSession';
+    private const int REFUSED_STATUS = 401;
 
     public function __construct(
         private BlueskyIdentityResolver $identities,
@@ -45,10 +46,17 @@ final readonly class BlueskyVerifier implements NetworkVerifierInterface
             );
         }
 
-        $session = $answer->json();
-        $handle = $session['handle'] ?? null;
-        if (!$answer->isSuccessful() || ($session['did'] ?? null) !== $identity->did || !\is_string($handle)) {
+        if (self::REFUSED_STATUS === $answer->status) {
             throw new SocialCredentialsRejectedException('Bluesky refused this handle and app password.');
+        }
+
+        $session = $answer->isSuccessful() ? $answer->json() : [];
+        $handle = $session['handle'] ?? null;
+        if (!\is_string($handle) || !\is_string($session['did'] ?? null)) {
+            throw new SocialNetworkUnreachableException('Bluesky gave no usable session.');
+        }
+        if ($session['did'] !== $identity->did) {
+            throw new SocialCredentialsRejectedException('Bluesky opened a session for a different account.');
         }
 
         return new VerifiedAccountModel($identity->did, '@' . $handle, $identity->pdsUrl);

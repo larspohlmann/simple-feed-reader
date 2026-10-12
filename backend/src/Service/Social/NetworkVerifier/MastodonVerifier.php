@@ -50,8 +50,15 @@ final readonly class MastodonVerifier implements NetworkVerifierInterface
             throw new SocialNetworkUnreachableException('The Mastodon instance gave no account for this token.');
         }
 
-        $host = (string) parse_url($credentials->address, \PHP_URL_HOST);
+        $host = $this->hostOf($credentials->address);
 
         return new VerifiedAccountModel($username . '@' . $host, '@' . $username . '@' . $host, $credentials->address);
+    }
+
+    private function hostOf(string $origin): string
+    {
+        $port = parse_url($origin, \PHP_URL_PORT);
+
+        return (string) parse_url($origin, \PHP_URL_HOST) . (null === $port ? '' : ':' . $port);
     }
 }
