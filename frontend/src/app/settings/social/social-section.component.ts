@@ -81,9 +81,7 @@ export class SocialSectionComponent {
   protected connectBluesky(): void {
     this.svc.connectBluesky(this.blueskyHandle(), this.blueskyPassword()).subscribe({
       next: () => {
-        this.blueskyHandle.set('');
-        this.blueskyPassword.set('');
-        this.blueskyFormOpen.set(false);
+        this.resetBlueskyForm();
         this.announceConnected();
       },
       error: () => undefined,
@@ -93,13 +91,23 @@ export class SocialSectionComponent {
   protected connectMastodon(): void {
     this.svc.connectMastodon(this.mastodonInstance(), this.mastodonToken()).subscribe({
       next: () => {
-        this.mastodonInstance.set('');
-        this.mastodonToken.set('');
-        this.mastodonFormOpen.set(false);
+        this.resetMastodonForm();
         this.announceConnected();
       },
       error: () => undefined,
     });
+  }
+
+  protected resetBlueskyForm(): void {
+    this.blueskyHandle.set('');
+    this.blueskyPassword.set('');
+    this.blueskyFormOpen.set(false);
+  }
+
+  protected resetMastodonForm(): void {
+    this.mastodonInstance.set('');
+    this.mastodonToken.set('');
+    this.mastodonFormOpen.set(false);
   }
 
   protected reconnect(account: SocialAccount): void {

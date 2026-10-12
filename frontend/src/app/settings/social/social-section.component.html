@@ -13,6 +13,7 @@
           </span>
         } @else {
           <span class="status-chip" [attr.data-testid]="'social-needs-reconnect-' + account.id">
+            <app-icon name="warning" size="text" />
             {{ 'settings.social.needsReconnect' | transloco }}
           </span>
         }
@@ -119,6 +120,11 @@
           >
             {{ 'settings.social.connect' | transloco }}
           </app-button>
+          @if (blueskyAccounts().length > 0) {
+            <app-button data-testid="social-bluesky-cancel" (click)="resetBlueskyForm()">
+              {{ 'common.cancel' | transloco }}
+            </app-button>
+          }
         </app-settings-row>
         <p class="hint-link">
           <a
@@ -186,6 +192,11 @@
           >
             {{ 'settings.social.connect' | transloco }}
           </app-button>
+          @if (mastodonAccounts().length > 0) {
+            <app-button data-testid="social-mastodon-cancel" (click)="resetMastodonForm()">
+              {{ 'common.cancel' | transloco }}
+            </app-button>
+          }
         </app-settings-row>
         @if (mastodonHost(); as host) {
           <p class="hint-link">

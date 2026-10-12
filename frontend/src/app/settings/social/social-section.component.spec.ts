@@ -153,6 +153,17 @@ describe('SocialSectionComponent', () => {
     expect(byTestId(fixture, 'social-reconnect-secret-2')).toBeNull();
   });
 
+  it('renders a needs_reconnect account with a warning chip, a secret field and a reconnect button', () => {
+    const fixture = mount([account({ status: 'needs_reconnect' })]);
+
+    expect(
+      byTestId(fixture, 'social-needs-reconnect-1')?.querySelector('app-icon')?.textContent,
+    ).toContain('warning');
+    expect(byTestId(fixture, 'social-connected-1')).toBeNull();
+    expect(byTestId<HTMLInputElement>(fixture, 'social-reconnect-secret-1')?.type).toBe('password');
+    expect(byTestId(fixture, 'social-reconnect-1')?.textContent).toContain('Reconnect');
+  });
+
   it('reconnects with the typed secret and clears the field', () => {
     const fixture = mount([account({ status: 'needs_reconnect' })]);
 
@@ -282,6 +293,43 @@ describe('SocialSectionComponent', () => {
 
     expect(byTestId(fixture, 'social-bluesky-handle')).toBeNull();
     expect(byTestId(fixture, 'social-bluesky-add')).not.toBeNull();
+  });
+
+  it('cancels an opened Bluesky form: clears what was typed and collapses it', () => {
+    const fixture = mount([account()]);
+    press(fixture, 'social-bluesky-add');
+    type(fixture, 'social-bluesky-handle', 'bob.bsky.social');
+    type(fixture, 'social-bluesky-password', 'abcd-efgh-ijkl-mnop');
+
+    expect(byTestId(fixture, 'social-bluesky-cancel')?.textContent).toContain('Cancel');
+    press(fixture, 'social-bluesky-cancel');
+
+    expect(byTestId(fixture, 'social-bluesky-handle')).toBeNull();
+    press(fixture, 'social-bluesky-add');
+    expect(byTestId<HTMLInputElement>(fixture, 'social-bluesky-handle')?.value).toBe('');
+    expect(byTestId<HTMLInputElement>(fixture, 'social-bluesky-password')?.value).toBe('');
+    http.expectNone(`${ENDPOINT}/bluesky`);
+  });
+
+  it('cancels an opened Mastodon form: clears what was typed and collapses it', () => {
+    const fixture = mount([account({ network: 'mastodon', handle: 'alice@example.social' })]);
+    press(fixture, 'social-mastodon-add');
+    type(fixture, 'social-mastodon-instance', 'example.social');
+    type(fixture, 'social-mastodon-token', 'the-token');
+
+    press(fixture, 'social-mastodon-cancel');
+
+    expect(byTestId(fixture, 'social-mastodon-instance')).toBeNull();
+    press(fixture, 'social-mastodon-add');
+    expect(byTestId<HTMLInputElement>(fixture, 'social-mastodon-instance')?.value).toBe('');
+    expect(byTestId<HTMLInputElement>(fixture, 'social-mastodon-token')?.value).toBe('');
+  });
+
+  it('offers no cancel on the form a network without accounts shows directly', () => {
+    const fixture = mount([]);
+
+    expect(byTestId(fixture, 'social-bluesky-cancel')).toBeNull();
+    expect(byTestId(fixture, 'social-mastodon-cancel')).toBeNull();
   });
 
   it('says what the Mastodon instance field wants', () => {
