@@ -216,6 +216,55 @@ describe('SocialImportDialogComponent', () => {
     );
   });
 
+  it('selects follows only with Select all new, and stays off when only collections are new', () => {
+    const withFollow = loaded(candidates({ follows: [follow()], lists: [HOME] }));
+    press(withFollow, 'social-import-select-new');
+    expect(checkboxOf(withFollow, 'did:plc:bob').checked).toBe(true);
+    expect(collectionBox(withFollow, 'home:').checked).toBe(false);
+    expect(
+      byTestId(withFollow, 'social-import-select-new')?.querySelector('button')?.disabled,
+    ).toBe(false);
+
+    const collectionsOnly = loaded(candidates({ lists: [HOME], customFeeds: [DISCOVER] }));
+    expect(
+      byTestId(collectionsOnly, 'social-import-select-new')?.querySelector('button')?.disabled,
+    ).toBe(true);
+  });
+
+  it('does not toggle an already added collection', () => {
+    const added = collection({ state: 'subscribed', subscriptionId: 12 });
+    const fixture = loaded(candidates({ lists: [added] }));
+
+    (
+      fixture.componentInstance as unknown as { toggleCollection(item: CollectionCandidate): void }
+    ).toggleCollection(added);
+    fixture.detectChanges();
+
+    expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(true);
+    expect(byTestId(fixture, 'social-import-apply')?.querySelector('button')?.disabled).toBe(true);
+  });
+
+  it('filters collections by the translated Home name', () => {
+    const fixture = loaded(candidates({ lists: [HOME, collection()] }));
+
+    filterBy(fixture, 'timeline');
+
+    expect(byTestId(fixture, 'social-import-collection-home:')).not.toBeNull();
+    expect(byTestId(fixture, 'social-import-collection-list:at://list/a')).toBeNull();
+  });
+
+  it('enables Apply for a selection made only of collections', () => {
+    const fixture = loaded(candidates({ lists: [HOME] }));
+    const applyButton = (): HTMLButtonElement | null | undefined =>
+      byTestId(fixture, 'social-import-apply')?.querySelector('button');
+    expect(applyButton()?.disabled).toBe(true);
+
+    collectionBox(fixture, 'home:').click();
+    fixture.detectChanges();
+
+    expect(applyButton()?.disabled).toBe(false);
+  });
+
   it('imports the chosen collections and refreshes the reader', () => {
     const fixture = loaded(candidates({ lists: [HOME], customFeeds: [DISCOVER] }));
     collectionBox(fixture, 'home:').click();
