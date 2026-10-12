@@ -13,6 +13,7 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Social\Model\ProfileImageBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Social\Support\BlueskyActor;
 use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use Doctrine\ORM\EntityManagerInterface;
@@ -51,16 +52,38 @@ final readonly class ProfileImageSweep
         foreach (array_chunk($due, AppViewClient::URIS_PER_CALL) as $batch) {
             try {
                 $report = $report->adding($this->check($batch, $now));
-            } catch (FetchException | AppViewAnswerException $exception) {
-                $this->logger->warning('Profile picture sweep stopped: the AppView did not answer.', [
-                    'exception' => $exception,
-                ]);
-                break;
+            } catch (AppViewAnswerException $exception) {
+                $report = $report->adding($this->setAside($batch, $now, $exception));
+            } catch (FetchException $exception) {
+                if (!AppViewClient::isRejection($exception)) {
+                    $this->logger->warning('Profile picture sweep stopped: the AppView did not answer.', [
+                        'exception' => $exception,
+                    ]);
+                    break;
+                }
+                $report = $report->adding($this->setAside($batch, $now, $exception));
             }
         }
         $this->entityManager->flush();
 
         return $report;
+    }
+
+    /**
+     * Stamped as asked, so a batch the AppView keeps refusing moves behind the others instead of blocking them.
+     *
+     * @param list<Feed> $batch
+     */
+    private function setAside(array $batch, \DateTimeImmutable $now, \Exception $refusal): ProfileImageSweepReportModel
+    {
+        $this->logger->warning('Profile picture sweep set aside a batch the AppView refused.', [
+            'exception' => $refusal,
+        ]);
+        foreach ($batch as $feed) {
+            $feed->markImageCheckedAt($now);
+        }
+
+        return new ProfileImageSweepReportModel(\count($batch), 0);
     }
 
     /**
@@ -107,7 +130,7 @@ final readonly class ProfileImageSweep
         $actors = [];
         foreach ($batch as $index => $feed) {
             $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $feed->getUrl());
-            if (null !== $actor) {
+            if (null !== $actor && BlueskyActor::isValid($actor)) {
                 $actors[$index] = $actor;
             }
         }

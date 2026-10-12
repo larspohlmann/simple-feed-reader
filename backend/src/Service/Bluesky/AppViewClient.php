@@ -98,7 +98,7 @@ final readonly class AppViewClient
 
             throw $exception;
         } catch (FetchException $exception) {
-            if (!self::rejectedTheRequest($exception)) {
+            if (!self::isRejection($exception)) {
                 $this->hostThrottle->record($url, self::UNREACHABLE_BACKOFF_SECONDS);
             }
 
@@ -108,7 +108,8 @@ final readonly class AppViewClient
         return self::listIn($body, $field);
     }
 
-    private static function rejectedTheRequest(FetchException $failure): bool
+    /** Whether the AppView refused the request itself, which asking again would not change. */
+    public static function isRejection(FetchException $failure): bool
     {
         $status = $failure instanceof FeedUnreachableException ? $failure->statusCode : null;
 

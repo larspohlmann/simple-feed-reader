@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\User;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -28,6 +30,7 @@ final class ProfileImageSweepTest extends DbTestCase
     private StubFeedFetcher $fetcher;
     private MockClock $clock;
     private ?HostThrottle $throttle = null;
+    private ?User $subscriber = null;
 
     protected function setUp(): void
     {
@@ -197,8 +200,7 @@ final class ProfileImageSweepTest extends DbTestCase
     {
         $first = $this->profileFeed('alice.bsky.social');
         $second = new Feed('https://bsky.app/profile/alice.bsky.social/rss/');
-        $this->entityManager->persist($second);
-        $this->entityManager->flush();
+        $this->persistSubscribed($second);
         $this->answer(['alice.bsky.social'], [
             ['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'avatar' => 'https://cdn.example/a.jpg'],
         ]);
@@ -223,16 +225,55 @@ final class ProfileImageSweepTest extends DbTestCase
         self::assertSame(0, $report->changed);
     }
 
+    public function testABatchTheAppViewRefusesIsSetAsideAndTheNextBatchIsAsked(): void
+    {
+        $handles = array_map(static fn (int $index): string => sprintf('user%02d.bsky.social', $index), range(1, 26));
+        $feeds = array_map($this->profileFeed(...), $handles);
+        $refusal = new FeedUnreachableException('400', 400);
+        $this->fetcher->willThrow(self::profilesUrl(\array_slice($handles, 0, 25)), $refusal);
+        $this->answer(\array_slice($handles, 25), []);
+
+        $report = $this->sweep(2);
+
+        self::assertCount(2, $this->fetcher->fetchedUrls);
+        self::assertSame(self::NOW, $feeds[0]->getImageCheckedAt()?->format('Y-m-d H:i:s'));
+        self::assertSame(self::NOW, $feeds[25]->getImageCheckedAt()?->format('Y-m-d H:i:s'));
+        self::assertSame(26, $report->checked);
+    }
+
+    public function testAMalformedAnswerSetsTheBatchAside(): void
+    {
+        $feed = $this->profileFeed('alice.bsky.social');
+        $this->fetcher->willReturnBody(self::profilesUrl(['alice.bsky.social']), '{"posts":[]}');
+
+        $this->sweep(1);
+
+        self::assertNotNull($feed->getImageCheckedAt());
+    }
+
+    public function testAnActorThatIsNoHandleOrDidIsNeverAsked(): void
+    {
+        $odd = $this->profileFeed('some%20name');
+        $alice = $this->profileFeed('alice.bsky.social');
+        $this->answer(['alice.bsky.social'], [
+            ['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'avatar' => 'https://cdn.example/a.jpg'],
+        ]);
+
+        $this->sweep(1);
+
+        self::assertSame([self::profilesUrl(['alice.bsky.social'])], $this->fetcher->fetchedUrls);
+        self::assertNotNull($odd->getImageCheckedAt());
+        self::assertSame('https://cdn.example/a.jpg', $alice->getImageUrl());
+    }
+
     /**
      * @param list<string>                     $actors
      * @param list<array<string, string>>      $profiles
      */
     private function answer(array $actors, array $profiles): void
     {
-        $pairs = array_map(static fn (string $actor): string => 'actors=' . rawurlencode($actor), $actors);
-        $query = implode('&', $pairs);
         $this->fetcher->willReturnBody(
-            self::GET_PROFILES . '?' . $query,
+            self::profilesUrl($actors),
             json_encode(['profiles' => $profiles], \JSON_THROW_ON_ERROR),
         );
     }
@@ -253,6 +294,34 @@ final class ProfileImageSweepTest extends DbTestCase
         return $sweep->sweep(ProfileImageBudgetModel::calls($calls));
     }
 
+    /** @param list<string> $actors */
+    private static function profilesUrl(array $actors): string
+    {
+        $pairs = array_map(static fn (string $actor): string => 'actors=' . rawurlencode($actor), $actors);
+
+        return self::GET_PROFILES . '?' . implode('&', $pairs);
+    }
+
+    public function testAFeedNobodySubscribesToIsNeverAsked(): void
+    {
+        $orphan = new Feed('https://bsky.app/profile/orphan.bsky.social/rss');
+        $this->entityManager->persist($orphan);
+        $this->entityManager->flush();
+
+        $this->sweep(1);
+
+        self::assertSame([], $this->fetcher->fetchedUrls);
+    }
+
+    private function persistSubscribed(Feed $feed): void
+    {
+        $this->subscriber ??= new User('profile-image-sweep@example.com', $this->clock->now());
+        $this->entityManager->persist($this->subscriber);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
+        $this->entityManager->flush();
+    }
+
     private function throttle(): HostThrottle
     {
         return $this->throttle ??= new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
@@ -265,8 +334,7 @@ final class ProfileImageSweepTest extends DbTestCase
         if (null !== $checkedAt) {
             $feed->markImageCheckedAt(new \DateTimeImmutable($checkedAt));
         }
-        $this->entityManager->persist($feed);
-        $this->entityManager->flush();
+        $this->persistSubscribed($feed);
 
         return $feed;
     }

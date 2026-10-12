@@ -491,6 +491,14 @@ final class EntryJsonTest extends TestCase
         self::assertSame('https://cdn.example/politico.jpg', $json['sourceImageUrl']);
     }
 
+    public function testAProfileFeedEntryNeverLinksASiteThatIsNoWebPage(): void
+    {
+        $entry = $this->profileFeedEntry(null);
+        $entry->getFeed()->setSiteUrl('javascript://evil.example/%0Aalert(1)');
+
+        self::assertNull(EntryJson::listRow($this->row($entry))['sourceUrl']);
+    }
+
     public function testAProfileFeedEntryWithAnAvatarOfItsOwnShowsThatOne(): void
     {
         $entry = $this->profileFeedEntry('https://cdn.example/politico.jpg');

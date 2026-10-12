@@ -10,6 +10,7 @@ use App\Entity\Subscription;
 use App\Enum\FeedStatus;
 use App\Enum\SocialAccountStatus;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
+use App\Service\Social\Support\ProfileFeedUrl;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -19,8 +20,6 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class FeedRepository extends ServiceEntityRepository implements RestoreFeedsInterface
 {
-    private const string BLUESKY_PROFILE_PREFIX = 'https://bsky.app/profile/';
-
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Feed::class);
@@ -177,17 +176,20 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
     }
 
     /**
-     * Bluesky profile feeds whose picture was never asked for or not since $checkedBefore, never-asked first. The URL
-     * prefix only narrows the scan; the caller still judges each URL with ProfileFeedUrl.
+     * Subscribed Bluesky profile feeds whose picture was never asked for or not since $checkedBefore, never-asked
+     * first. The URL prefixes only narrow the scan; the caller still judges each URL with ProfileFeedUrl.
      *
      * @return list<Feed>
      */
     public function findBlueskyProfileFeedsWithImageDue(\DateTimeImmutable $checkedBefore, int $limit): array
     {
+        $profilePath = ProfileFeedUrl::BLUESKY_HOST . '/profile/%';
         /** @var list<Feed> $feeds */
         $feeds = $this->createQueryBuilder('f')
-            ->andWhere('f.url LIKE :profilePrefix')
-            ->setParameter('profilePrefix', self::BLUESKY_PROFILE_PREFIX . '%')
+            ->andWhere('LOWER(f.url) LIKE :httpsProfile OR LOWER(f.url) LIKE :httpProfile')
+            ->setParameter('httpsProfile', 'https://' . $profilePath)
+            ->setParameter('httpProfile', 'http://' . $profilePath)
+            ->andWhere(sprintf('EXISTS (SELECT s.id FROM %s s WHERE s.feed = f)', Subscription::class))
             ->andWhere('f.imageCheckedAt IS NULL OR f.imageCheckedAt < :checkedBefore')
             ->setParameter('checkedBefore', $checkedBefore)
             ->orderBy('f.imageCheckedAt', 'ASC')

@@ -8,7 +8,7 @@ use App\Enum\SocialNetwork;
 
 final class ProfileFeedUrl
 {
-    private const string BLUESKY_HOST = 'bsky.app';
+    public const string BLUESKY_HOST = 'bsky.app';
     private const string BLUESKY_PATH = '#^/profile/([^/]+)/rss/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
     private const string DID_PREFIX = 'did:';

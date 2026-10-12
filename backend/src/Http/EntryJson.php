@@ -11,6 +11,8 @@ use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Text\Support\EntryExcerpt;
+use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Url\Support\FeedWebsite;
 use App\Service\Url\Support\YouTubeUrl;
 
 /**
@@ -142,7 +144,7 @@ final class EntryJson
         if (!$isPrivateFeed && null !== SocialFeedClassifier::networkOf($feed)) {
             return [
                 'source' => $row->subscriptionTitle,
-                'sourceUrl' => $feed->getSiteUrl(),
+                'sourceUrl' => AbsoluteHttpUrl::orNull(FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl())),
                 'sourceImageUrl' => $entry->getAuthorAvatarUrl() ?? $feed->getImageUrl(),
             ];
         }
