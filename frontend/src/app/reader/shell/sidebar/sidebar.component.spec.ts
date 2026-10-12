@@ -11,7 +11,7 @@ import { RecommendationsService } from '../../state/recommendations.service';
 import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
-import { TagNode } from '../../state/subscriptions.store';
+import { TagNode } from '../../state/subscription-derivations';
 import { SocialSection } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';

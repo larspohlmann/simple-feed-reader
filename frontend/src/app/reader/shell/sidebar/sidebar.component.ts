@@ -32,7 +32,7 @@ import { SidebarSocialSectionComponent } from './sidebar-social-section.componen
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
-import { TagNode } from '../../state/subscriptions.store';
+import { TagNode } from '../../state/subscription-derivations';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
