@@ -117,6 +117,46 @@ final class PrivateFeedsTest extends DbTestCase
         }
     }
 
+    public function testTheCapExceptionLeavesTheEntityManagerUsable(): void
+    {
+        $this->user->setMaxSubscriptions(0);
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        try {
+            $this->privateFeeds()->create($account, PrivateFeedModel::home());
+            self::fail('The cap must hold.');
+        } catch (SubscriptionLimitReachedException) {
+            self::assertTrue($this->entityManager->isOpen());
+        }
+        $this->user->setMaxSubscriptions(5);
+
+        $outcome = $this->privateFeeds()->create($account, PrivateFeedModel::home());
+
+        self::assertSame(PrivateFeedOutcome::Created, $outcome);
+    }
+
+    public function testACapExceptionCaughtInsideAnOuterTransactionKeepsTheEarlierFeeds(): void
+    {
+        $this->user->setMaxSubscriptions(1);
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+
+        $this->entityManager->wrapInTransaction(function () use ($account): void {
+            $this->privateFeeds()->create($account, PrivateFeedModel::home());
+            try {
+                $this->privateFeeds()->create(
+                    $account,
+                    PrivateFeedModel::userList('at://did:plc:bob/app.bsky.graph.list/1', 'Writers'),
+                );
+                self::fail('The cap must hold.');
+            } catch (SubscriptionLimitReachedException) {
+                self::assertTrue($this->entityManager->isOpen());
+            }
+        });
+
+        $this->entityManager->clear();
+        self::assertSame(1, $this->entityManager->getRepository(Subscription::class)->count([]));
+        self::assertSame(1, $this->entityManager->getRepository(SocialFeed::class)->count([]));
+    }
+
     public function testRemovingAnAccountsPrivateFeedsKeepsItsOtherSubscriptions(): void
     {
         $account = $this->stored(SocialAccounts::blueskyOf($this->user));

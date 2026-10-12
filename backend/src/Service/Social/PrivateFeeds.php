@@ -33,13 +33,20 @@ final readonly class PrivateFeeds
     ) {
     }
 
-    /** @throws SubscriptionLimitReachedException before anything is written */
+    /** @throws SubscriptionLimitReachedException with nothing written and the entity manager still open */
     public function create(SocialAccount $account, PrivateFeedModel $privateFeed): PrivateFeedOutcome
     {
-        /** @var PrivateFeedOutcome */
-        return $this->entityManager->wrapInTransaction(
-            fn (): PrivateFeedOutcome => $this->createOnce($account, $privateFeed),
-        );
+        $this->entityManager->beginTransaction();
+        try {
+            $outcome = $this->createOnce($account, $privateFeed);
+            $this->entityManager->commit();
+        } catch (\Throwable $exception) {
+            $this->entityManager->rollback();
+
+            throw $exception;
+        }
+
+        return $outcome;
     }
 
     /** Makes the account's private feeds due at once, after a reconnect lifted their pause. The caller flushes. */
