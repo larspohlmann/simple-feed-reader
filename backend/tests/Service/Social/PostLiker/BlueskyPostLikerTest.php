@@ -107,6 +107,7 @@ final class BlueskyPostLikerTest extends TestCase
     {
         yield 'did:plc and a tid' => ['at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.like/3kqz2abcdef2k'];
         yield 'did:web' => ['at://did:web:example.com/app.bsky.feed.like/3lk2'];
+        yield 'exactly 512 characters' => [self::likeUriOfLength(512)];
         yield 'did:web with a port' => ['at://did:web:localhost%3A3000/app.bsky.feed.like/3lk2'];
     }
 
@@ -131,7 +132,14 @@ final class BlueskyPostLikerTest extends TestCase
         yield 'another collection' => ['at://did:plc:alice/app.bsky.feed.post/3lk2'];
         yield 'no did' => ['at://alice.test/app.bsky.feed.like/3lk2'];
         yield 'a nested record key' => ['at://did:plc:alice/app.bsky.feed.like/3lk2/extra'];
-        yield 'over 512 characters' => ['at://did:plc:alice/app.bsky.feed.like/' . str_repeat('a', 480)];
+        yield 'over 512 characters' => [self::likeUriOfLength(513)];
+    }
+
+    private static function likeUriOfLength(int $length): string
+    {
+        $prefix = 'at://did:plc:alice/app.bsky.feed.like/';
+
+        return $prefix . str_repeat('a', $length - \strlen($prefix));
     }
 
     public function testAThrottledLikeCarriesItsDelay(): void
