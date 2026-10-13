@@ -7,7 +7,6 @@ namespace App\Http;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
-use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\Support\PlainText;
@@ -108,26 +107,21 @@ final class SubscriptionJson
     }
 
     /**
-     * Read from the feed's own URL, so every endpoint that returns a subscription carries it without a query. A
-     * private feed's synthetic URL names its account; any other feed that is a network's profile feed is `profile`.
+     * A private feed's synthetic URL also names its account and kind; any other networked feed is a profile feed.
      *
      * @return array{network: string, accountId: int|null, kind: string}|null
      */
     private static function social(Feed $feed): ?array
     {
-        $address = SocialFeedClassifier::privateAddressOf($feed);
-        if (null !== $address) {
-            return [
-                'network' => $address->network->value,
-                'accountId' => $address->accountId,
-                'kind' => $address->kind->value,
-            ];
+        $network = $feed->getNetwork();
+        if (null === $network) {
+            return null;
         }
-        $network = ProfileFeedUrl::networkOf($feed->getUrl());
+        $address = SocialFeedClassifier::privateAddressOf($feed);
 
-        return null === $network
-            ? null
-            : ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND];
+        return null === $address
+            ? ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND]
+            : ['network' => $network->value, 'accountId' => $address->accountId, 'kind' => $address->kind->value];
     }
 
     /** @return array{id: int, network: string, handle: string} */

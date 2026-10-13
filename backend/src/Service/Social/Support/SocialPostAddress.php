@@ -15,11 +15,10 @@ final class SocialPostAddress
 {
     public static function of(Entry $entry): ?SocialPostAddressModel
     {
-        return self::onFeedNetwork($entry, SocialFeedClassifier::networkOf($entry->getFeed()));
+        return self::onFeedNetwork($entry, $entry->getFeed()->getNetwork());
     }
 
-    /** For a caller that classified the entry's feed already, so a page of entries classifies each feed once. */
-    public static function onFeedNetwork(Entry $entry, ?SocialNetwork $feedNetwork): ?SocialPostAddressModel
+    private static function onFeedNetwork(Entry $entry, ?SocialNetwork $feedNetwork): ?SocialPostAddressModel
     {
         return match ($feedNetwork) {
             SocialNetwork::Bluesky => self::blueskyPost($entry->getGuid()),

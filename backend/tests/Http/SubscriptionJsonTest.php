@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Http\SubscriptionJson;
 use PHPUnit\Framework\TestCase;
@@ -326,6 +327,7 @@ final class SubscriptionJsonTest extends TestCase
     {
         $feed = new Feed('social:bluesky:12:list:at://did:plc:bob/app.bsky.graph.list/3l1');
         $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+        $feed->classifyAs(SocialNetwork::Bluesky);
 
         self::assertSame(
             ['network' => 'bluesky', 'accountId' => 12, 'kind' => 'list'],
@@ -340,18 +342,9 @@ final class SubscriptionJsonTest extends TestCase
         self::assertNull($json['social']);
     }
 
-    public function testASocialLookingUrlOfAnRssFeedIsNoPrivateFeed(): void
+    public function testAFeedStoredWithoutANetworkHasNoSocialPartWhateverItsUrl(): void
     {
-        $feed = new Feed('social:bluesky:12:home');
-        $feed->setSourceFormat(SourceFormat::XML);
-
-        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['social']);
-    }
-
-    public function testASocialFormatWithAnUnparsableUrlHasNoSocialPart(): void
-    {
-        $feed = new Feed('social:bluesky:0:home');
-        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+        $feed = new Feed('https://bsky.app/profile/did:plc:bob/rss');
 
         self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['social']);
     }
@@ -359,6 +352,7 @@ final class SubscriptionJsonTest extends TestCase
     public function testABlueskyProfileFeedIsAProfileFeedOfThatNetwork(): void
     {
         $feed = new Feed('https://bsky.app/profile/did:plc:bob/rss');
+        $feed->classifyAs(SocialNetwork::Bluesky);
 
         self::assertSame(
             ['network' => 'bluesky', 'accountId' => null, 'kind' => 'profile'],
@@ -369,6 +363,7 @@ final class SubscriptionJsonTest extends TestCase
     public function testAMastodonProfileFeedIsAProfileFeedOfThatNetwork(): void
     {
         $feed = new Feed('https://mastodon.example/@bob.rss');
+        $feed->classifyAs(SocialNetwork::Mastodon);
 
         self::assertSame(
             ['network' => 'mastodon', 'accountId' => null, 'kind' => 'profile'],
@@ -380,6 +375,7 @@ final class SubscriptionJsonTest extends TestCase
     {
         $feed = new Feed('social:bluesky:12:home');
         $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+        $feed->classifyAs(SocialNetwork::Bluesky);
 
         self::assertSame('home', SubscriptionJson::one($this->subscriptionTo($feed))['social']['kind'] ?? null);
     }

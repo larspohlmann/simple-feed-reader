@@ -6,7 +6,6 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Enum\SocialNetwork;
-use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Social\Support\SocialPostAddress;
 
 /**
@@ -99,33 +98,15 @@ final readonly class EntryListRowEnricher
      */
     private static function postNetworksOf(array $entries): array
     {
-        $feedNetworks = self::feedNetworksOf($entries);
         $networks = [];
         foreach ($entries as $entryId => $entry) {
-            $feedNetwork = $feedNetworks[$entry->getFeed()->requireId()] ?? null;
-            $network = SocialPostAddress::onFeedNetwork($entry, $feedNetwork)?->network;
+            $network = SocialPostAddress::of($entry)?->network;
             if (null !== $network) {
                 $networks[$entryId] = $network;
             }
         }
 
         return $networks;
-    }
-
-    /**
-     * @param array<int, Entry> $entries
-     *
-     * @return array<int, SocialNetwork|null> by feed id
-     */
-    private static function feedNetworksOf(array $entries): array
-    {
-        $feeds = [];
-        foreach ($entries as $entry) {
-            $feed = $entry->getFeed();
-            $feeds[$feed->requireId()] = $feed;
-        }
-
-        return array_map(SocialFeedClassifier::networkOf(...), $feeds);
     }
 
     /**

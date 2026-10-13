@@ -9,7 +9,6 @@ use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
-use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Text\Support\EntryExcerpt;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\FeedWebsite;
@@ -149,7 +148,7 @@ final class EntryJson
         if ($isPrivateFeed && $author !== null && $author !== '') {
             return ['name' => $author, 'url' => $entry->getAuthorUrl(), 'imageUrl' => $entry->getAuthorAvatarUrl()];
         }
-        if (!$isPrivateFeed && null !== SocialFeedClassifier::networkOf($feed)) {
+        if (!$isPrivateFeed && null !== $feed->getNetwork()) {
             return [
                 'name' => $row->subscriptionTitle,
                 'url' => AbsoluteHttpUrl::orNull(FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl())),
