@@ -16,8 +16,8 @@ parameters:
     # In-flight timeline reads per social account: Bluesky and Mastodon ration requests per account (#1607).
     social_account_concurrency: 3
 
-    # In-flight timeline reads per Mastodon instance or Bluesky PDS, all its accounts together: half the default
-    # FETCH_CONCURRENCY, so one server can never hold a whole refresh (#1608).
+    # In-flight timeline reads per Mastodon instance or Bluesky PDS, all its accounts together: keeps one server
+    # from crowding out other hosts at the default FETCH_CONCURRENCY of 8 (#1608).
     social_host_concurrency: 4
 
     # The one User-Agent every request to a publisher sends. It names no host (#255): Akamai Bot Manager resets the
