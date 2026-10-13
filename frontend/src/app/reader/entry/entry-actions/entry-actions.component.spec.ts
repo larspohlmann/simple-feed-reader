@@ -16,7 +16,7 @@ import { OpensEntryDirective } from '../../list/opens-entry.directive';
 @Component({
   imports: [EntryActionsComponent, OpensEntryDirective],
   template: `<article class="card" [appOpensEntry]="entry">
-    <app-entry-actions [entry]="entry" [size]="size" [audio]="audio" />
+    <app-entry-actions [entry]="entry" [size]="size" [audio]="audio" [like]="likeShown" />
   </article>`,
   providers: [{ provide: EntryActionHandler, useExisting: forwardRef(() => HostComponent) }],
 })
@@ -24,6 +24,7 @@ class HostComponent implements EntryActionHandler {
   entry: EntryDto = anEntry();
   size: 'sm' | 'md' = 'sm';
   audio = true;
+  likeShown = true;
   cardOpened = false;
   favoriteCount = 0;
   kept: EntryDto | null = null;
@@ -381,6 +382,21 @@ describe('EntryActionsComponent', () => {
 
     it('offers no like on an entry that is no social post', () => {
       expect(mount().nativeElement.textContent).not.toContain('thumb_up');
+    });
+
+    it('leaves the like to the article view’s counts row when told to (#1615)', () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.entry = blueskyPost();
+      fixture.componentInstance.likeShown = false;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('thumb_up');
+    });
+
+    it('offers no like on a post the user has no account to like from (#1615)', () => {
+      const post = anEntry({ social: { network: 'mastodon', isLiked: false, canLike: false } });
+
+      expect(mount(post).nativeElement.textContent).not.toContain('thumb_up');
     });
   });
 });

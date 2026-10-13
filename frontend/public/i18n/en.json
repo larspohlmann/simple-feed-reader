@@ -1234,6 +1234,18 @@
       "throttledNow": "The site is rate-limiting. Try again now.",
       "failed": "Comments could not be loaded."
     },
+    "socialCounts": {
+      "likesOne": "{{count}} like",
+      "likesOther": "{{count}} likes",
+      "repostsOne": "{{count}} repost",
+      "repostsOther": "{{count}} reposts",
+      "boostsOne": "{{count}} boost",
+      "boostsOther": "{{count}} boosts",
+      "repliesOne": "{{count}} reply",
+      "repliesOther": "{{count}} replies",
+      "quotesOne": "{{count}} quote",
+      "quotesOther": "{{count}} quotes"
+    },
     "refreshArticle": "Reload article",
     "readingTime": "≈ {{minutes}} min",
     "fallback": {

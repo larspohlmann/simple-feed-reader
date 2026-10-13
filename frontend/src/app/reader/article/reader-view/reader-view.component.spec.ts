@@ -15,6 +15,7 @@ import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { AudioPlayerService } from '../../audio-player.service';
 import { CommentsService, CommentsState } from '../entry-comments/comments.service';
+import { SocialCountsService, SocialCountsState } from '../social-counts/social-counts.service';
 import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
@@ -765,6 +766,51 @@ describe('ReaderViewComponent', () => {
     expect(entryActions.keep).toHaveBeenCalledTimes(1);
     expect(entryActions.toggleRead).toHaveBeenCalledTimes(1);
     expect(closes).toBe(1);
+  });
+
+  describe('the counts row of a social post (#1615)', () => {
+    const realIntersectionObserver = globalThis.IntersectionObserver;
+    const post = (over: Partial<EntryDto> = {}): EntryDto =>
+      entry({ social: { network: 'bluesky', isLiked: false, canLike: true }, ...over });
+
+    beforeEach(() => {
+      globalThis.IntersectionObserver = jest.fn(() => ({
+        observe: jest.fn(),
+        disconnect: jest.fn(),
+      })) as unknown as typeof IntersectionObserver;
+      TestBed.overrideProvider(SocialCountsService, {
+        useValue: { state: () => signal<SocialCountsState>({ status: 'idle' }), load: jest.fn() },
+      });
+    });
+
+    afterEach(() => {
+      globalThis.IntersectionObserver = realIntersectionObserver;
+    });
+
+    it('sits below the post and before its categories', () => {
+      const element = mount(post({ categories: ['Tech'] })).nativeElement as HTMLElement;
+      const counts = element.querySelector('app-social-counts')!;
+      const following = Node.DOCUMENT_POSITION_FOLLOWING;
+
+      expect(element.querySelector('.content')!.compareDocumentPosition(counts) & following).toBe(
+        following,
+      );
+      const categories = element.querySelector('.categories')!;
+      expect(counts.compareDocumentPosition(categories) & following).toBe(following);
+    });
+
+    it('carries the like the article header no longer offers', () => {
+      const element = mount(post()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.actions')!.textContent).not.toContain('thumb_up');
+      expect(element.querySelector('app-social-counts button.like')).not.toBeNull();
+    });
+
+    it('is absent from an ordinary article', () => {
+      expect(
+        (mount(entry()).nativeElement as HTMLElement).querySelector('app-social-counts'),
+      ).toBeNull();
+    });
   });
 
   it('emits openOriginal when the original-article link is clicked', () => {

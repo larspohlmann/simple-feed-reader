@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
@@ -35,6 +35,12 @@ export class EntryActionsComponent {
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
   /** Off in the article view, whose own Listen row offers the same two controls. */
   readonly audio = input(true);
+  /** Off in the article view, whose counts row below the post carries the like (#1615). */
+  readonly like = input(true);
+  protected readonly likeable = computed(() => {
+    const social = this.entry().social;
+    return this.like() && social?.canLike ? social : null;
+  });
   protected readonly entryAudio = new EntryAudio(this.entry, inject(AudioPlayerService));
   protected readonly actions = inject(EntryActionHandler);
 }
