@@ -15,7 +15,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Refresh\RefreshPassFetcher;
+use App\Service\Refresh\RefreshPassRecorder;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
@@ -32,7 +32,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /** The container's own reader, mapper and store, platform rules included, from a getTimeline answer to the rows. */
-final class RefreshPassFetcherBlueskyTest extends DbTestCase
+final class RefreshPassRecorderBlueskyTest extends DbTestCase
 {
     private const string PDS = 'https://pds.example.test';
     private const string IMAGE_POST = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mv3shqdfuc2e';
@@ -137,17 +137,17 @@ final class RefreshPassFetcherBlueskyTest extends DbTestCase
     {
         $clock = new MockClock('2026-10-12 12:00:00', 'UTC');
         $pass = new RefreshPass([$socialFeed->getFeed()], $clock, $clock->now()->getTimestamp() + 300);
-        $this->fetcher()->fetchAndPersist($pass, $clock->now());
+        $this->recorder()->record($pass, $clock->now());
 
         return $pass;
     }
 
-    private function fetcher(): RefreshPassFetcher
+    private function recorder(): RefreshPassRecorder
     {
-        $fetcher = self::getContainer()->get(RefreshPassFetcher::class);
-        self::assertInstanceOf(RefreshPassFetcher::class, $fetcher);
+        $recorder = self::getContainer()->get(RefreshPassRecorder::class);
+        self::assertInstanceOf(RefreshPassRecorder::class, $recorder);
 
-        return $fetcher;
+        return $recorder;
     }
 
     private static function timeline(): string

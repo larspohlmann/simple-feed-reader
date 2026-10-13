@@ -21,7 +21,7 @@ use App\Service\Refresh\FeedBodyParser\XmlBodyParser;
 use App\Service\Refresh\MissingFaviconResolver;
 use App\Service\Refresh\PassFetcher\PassFetcherInterface;
 use App\Service\Refresh\RefreshHousekeeping;
-use App\Service\Refresh\RefreshPassFetcher;
+use App\Service\Refresh\RefreshPassRecorder;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Retention\EntryPruner;
 use App\Service\Scraper\HtmlItemExtractor;
@@ -154,7 +154,7 @@ final readonly class RefreshRunners
 
         return new RefreshRunner(
             $feedRepository,
-            new RefreshPassFetcher($passFetcher, $outcomePersister, SocialFeeds::repository($this->entityManager)),
+            new RefreshPassRecorder($passFetcher, $outcomePersister, SocialFeeds::repository($this->entityManager)),
             new MissingFaviconResolver(
                 new FaviconResolver($homepageFetcher, new NullLogger()),
                 $this->flushingEntityManager,

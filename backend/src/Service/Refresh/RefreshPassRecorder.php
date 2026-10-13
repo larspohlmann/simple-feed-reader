@@ -11,7 +11,7 @@ use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\PassFetcher\PassFetcherInterface;
 
 /** Stores each of a pass's outcomes as it lands, whatever its feed's kind, one at a time on the one EntityManager. */
-final readonly class RefreshPassFetcher
+final readonly class RefreshPassRecorder
 {
     public function __construct(
         private PassFetcherInterface $fetcher,
@@ -21,7 +21,7 @@ final readonly class RefreshPassFetcher
     }
 
     /** @throws \DateMalformedStringException */
-    public function fetchAndPersist(RefreshPass $pass, \DateTimeImmutable $now): void
+    public function record(RefreshPass $pass, \DateTimeImmutable $now): void
     {
         $outcomes = new PassOutcomeStore($this->outcomePersister, $now);
         foreach ($this->fetcher->fetchAll($this->feedsOf($pass)) as $feedId => $outcome) {

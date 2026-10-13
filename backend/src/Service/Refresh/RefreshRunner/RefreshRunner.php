@@ -12,7 +12,7 @@ use App\Service\Refresh\Model\RefreshReportModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\RefreshHousekeeping;
-use App\Service\Refresh\RefreshPassFetcher;
+use App\Service\Refresh\RefreshPassRecorder;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\Exception\ORMException;
 use Psr\Log\LoggerInterface;
@@ -31,7 +31,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
 
     public function __construct(
         private FeedRepository $feeds,
-        private RefreshPassFetcher $passFetcher,
+        private RefreshPassRecorder $passRecorder,
         private MissingFaviconResolver $missingFavicons,
         private RefreshHousekeeping $housekeeping,
         private LockFactory $lockFactory,
@@ -66,7 +66,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         $feeds = $this->feeds->findDue($criteria, $request->batchLimit);
         // The deadline gates when a fetch may start, not finish: a request's own 20 s max_duration can overrun it.
         $pass = new RefreshPass($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
-        $this->passFetcher->fetchAndPersist($pass, $now);
+        $this->passRecorder->record($pass, $now);
 
         // Before the abort branch: what an aborted run created before the failure is already committed.
         if ($pass->tally->entriesCreated() > 0) {

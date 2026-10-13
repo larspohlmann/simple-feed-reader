@@ -13,7 +13,7 @@ use App\Enum\SourceFormat;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Refresh\RefreshPassFetcher;
+use App\Service\Refresh\RefreshPassRecorder;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
@@ -34,7 +34,7 @@ use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class RefreshPassFetcherTest extends DbTestCase
+final class RefreshPassRecorderTest extends DbTestCase
 {
     private MockClock $clock;
     private SocialAccount $account;
@@ -122,7 +122,7 @@ final class RefreshPassFetcherTest extends DbTestCase
         $feedId = $feed->requireId();
         $this->passes->willReadTimeline($feed->getUrl(), new ThrottledTimelineModel(null));
 
-        $this->fetcher()->fetchAndPersist($this->pass([$feed]), $this->clock->now());
+        $this->recorder()->record($this->pass([$feed]), $this->clock->now());
 
         self::assertSame([$feedId], array_keys($this->passes->socialFeedsByFeedId));
         self::assertSame(
@@ -138,7 +138,7 @@ final class RefreshPassFetcherTest extends DbTestCase
         $this->passes->willReturn($rss->getUrl(), FetchResponseModel::notModified($rss->getUrl(), false, null, null));
         $pass = $this->pass([$rss]);
 
-        $this->fetcher()->fetchAndPersist($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now());
 
         self::assertSame(1, $pass->tally->notModified());
         self::assertSame([$rss->getUrl()], $this->passes->fetchedUrls());
@@ -151,7 +151,7 @@ final class RefreshPassFetcherTest extends DbTestCase
         $this->passes->willReadTimeline($this->home->getFeed()->getUrl(), new FetchedTimelineModel(self::page()));
         $pass = $this->pass([$this->home->getFeed(), $rss]);
 
-        $this->fetcher()->fetchAndPersist($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now());
 
         self::assertSame(1, $pass->tally->fetched());
         self::assertSame(1, $pass->tally->notModified());
@@ -179,7 +179,7 @@ final class RefreshPassFetcherTest extends DbTestCase
         $this->passes->willReadTimeline($home->getUrl(), new FetchedTimelineModel(self::page()));
         $pass = $this->pass($feeds);
 
-        $this->fetcher()->fetchAndPersist($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now());
 
         self::assertSame([$home->requireId()], $this->passes->asked);
         self::assertSame(1, $pass->tally->failed());
@@ -224,7 +224,7 @@ final class RefreshPassFetcherTest extends DbTestCase
     {
         $this->passes->willReadTimeline($this->home->getFeed()->getUrl(), $outcome);
         $pass = $this->pass([$this->home->getFeed()]);
-        $this->fetcher()->fetchAndPersist($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now());
 
         return $pass;
     }
@@ -235,9 +235,9 @@ final class RefreshPassFetcherTest extends DbTestCase
         return new RefreshPass($feeds, $this->clock, $this->clock->now()->getTimestamp() + 300);
     }
 
-    private function fetcher(): RefreshPassFetcher
+    private function recorder(): RefreshPassRecorder
     {
-        return new RefreshPassFetcher(
+        return new RefreshPassRecorder(
             $this->passes,
             FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)->idle(),
             SocialFeeds::repository($this->entityManager),
