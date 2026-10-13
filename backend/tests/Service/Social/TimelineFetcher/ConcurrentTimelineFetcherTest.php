@@ -21,12 +21,12 @@ use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher;
 use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\DecoratorTrait;
-use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -45,8 +45,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
     private ArrayAdapter $cache;
 
-    /** @var list<string> "METHOD url" of every request, in the order they went out */
-    private array $requests = [];
+    private RoutedHttpClient $http;
 
     /** @var \ArrayObject<int, ResponseInterface> every response handed out, in the order they went out */
     private \ArrayObject $responses;
@@ -242,7 +241,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
                 'GET https://pds.example.test/xrpc/app.bsky.feed.getListFeed?list='
                     . rawurlencode(self::BLUESKY_LIST) . '&limit=50',
             ],
-            $this->requests,
+            $this->http->requestLines(),
             'the list waits for the fresh session rather than going out on the stale one',
         );
     }
@@ -302,7 +301,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
         self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($list)]);
-        self::assertSame(self::SESSION, $this->requests[0]);
+        self::assertSame(self::SESSION, $this->http->requestLines()[0]);
         self::assertCount(1, $this->requestsTo('POST'));
     }
 
@@ -320,7 +319,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         self::assertInstanceOf(ThrottledTimelineModel::class, $outcomes[self::idOf($home)]);
         self::assertSame(60, self::delayOf($outcomes[self::idOf($home)]));
         self::assertInstanceOf(AccountThrottledTimelineModel::class, $outcomes[self::idOf($list)]);
-        self::assertSame([self::SESSION], $this->requests);
+        self::assertSame([self::SESSION], $this->http->requestLines());
     }
 
     public function testARefusedSessionOpeningPausesTheAccountsOtherFeeds(): void
@@ -339,7 +338,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         self::assertSame('Bluesky refused this handle and app password.', $failure->getMessage());
         self::assertInstanceOf(AccountPausedTimelineModel::class, $outcomes[self::idOf($list)]);
         self::assertSame(SocialAccountStatus::NeedsReconnect, $bluesky->getStatus());
-        self::assertSame([self::SESSION], $this->requests);
+        self::assertSame([self::SESSION], $this->http->requestLines());
     }
 
     public function testAnAccountThatNeedsReconnectingIsNotAsked(): void
@@ -351,7 +350,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         $outcomes = self::read($this->fetcher(static fn (): MockResponse => self::statuses()), [$home]);
 
         self::assertInstanceOf(AccountPausedTimelineModel::class, $outcomes[self::idOf($home)]);
-        self::assertSame([], $this->requests);
+        self::assertSame([], $this->http->requestLines());
     }
 
     public function testAFetchedPageRecordsTheFeedsNewestStatus(): void
@@ -400,7 +399,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
             break;
         }
 
-        self::assertCount(1, $this->requests);
+        self::assertCount(1, $this->http->requestLines());
     }
 
     public function testAbandoningTheReadCancelsWhatIsInFlight(): void
@@ -453,18 +452,13 @@ final class ConcurrentTimelineFetcherTest extends TestCase
     /** @param \Closure(string, string, list<string>): MockResponse $answer by method, url and request headers */
     private function fetcher(\Closure $answer, int $accountConcurrency = 3): ConcurrentTimelineFetcher
     {
-        $record = function (string $method, string $url, array $options) use ($answer): MockResponse {
-            $this->requests[] = $method . ' ' . $url;
-            $headers = [];
-            foreach (\is_array($options['headers'] ?? null) ? $options['headers'] : [] as $header) {
-                $headers[] = \is_string($header) ? $header : '';
-            }
+        $this->http = RoutedHttpClient::answering($answer);
 
-            return $answer($method, $url, $headers);
-        };
-        $client = new MockHttpClient($record);
-
-        return SocialApiWiring::timelineFetcher($this->recording($client), $this->cache, $accountConcurrency);
+        return SocialApiWiring::timelineFetcher(
+            $this->recording($this->http->client()),
+            $this->cache,
+            $accountConcurrency,
+        );
     }
 
     private function recording(HttpClientInterface $client): HttpClientInterface
@@ -496,7 +490,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         foreach ($outcomes as $outcome) {
             self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
 
-            return \count($this->requests);
+            return \count($this->http->requests);
         }
 
         return null;
@@ -506,7 +500,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
     private function requestsTo(string $prefix): array
     {
         return array_values(array_filter(
-            $this->requests,
+            $this->http->requestLines(),
             static fn (string $request): bool => str_contains($request, $prefix),
         ));
     }

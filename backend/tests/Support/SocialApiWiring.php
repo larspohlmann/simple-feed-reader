@@ -87,11 +87,7 @@ final class SocialApiWiring
         ArrayAdapter $cache,
         int $accountConcurrency = 3,
     ): ConcurrentTimelineFetcher {
-        $guard = new UrlGuard(new StaticDnsResolver([
-            self::BLUESKY_HOST => [self::PUBLIC_ADDRESS],
-            self::MASTODON_HOST => [self::PUBLIC_ADDRESS],
-            self::OTHER_MASTODON_HOST => [self::PUBLIC_ADDRESS],
-        ]), new IpValidator());
+        $guard = self::guardFor(self::BLUESKY_HOST, self::MASTODON_HOST, self::OTHER_MASTODON_HOST);
 
         return new ConcurrentTimelineFetcher(
             FetchWiring::requestEngine($http, $guard, FetchWiring::egressProxy(null), 8),
@@ -112,8 +108,10 @@ final class SocialApiWiring
         ]));
     }
 
-    private static function guardFor(string $host): UrlGuard
+    private static function guardFor(string ...$hosts): UrlGuard
     {
-        return new UrlGuard(new StaticDnsResolver([$host => [self::PUBLIC_ADDRESS]]), new IpValidator());
+        $addresses = array_fill_keys($hosts, [self::PUBLIC_ADDRESS]);
+
+        return new UrlGuard(new StaticDnsResolver($addresses), new IpValidator());
     }
 }
