@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\EntryView;
+use App\Enum\SocialNetwork;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
@@ -36,8 +37,8 @@ final readonly class EntryScopePredicates
                 \sprintf('IDENTITY(%s.tag) = :tagId', $aliases->tag),
             )->setParameter('tagId', $query->tagId);
         }
-        if ($query->subscriptionIds !== null) {
-            $this->inSubscriptions($qb, $aliases, $query->subscriptionIds);
+        if ($query->network !== null) {
+            $this->onNetwork($qb, $aliases, $query->network);
         }
         if ($query->hidesExcludedFeeds()) {
             $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
@@ -61,16 +62,14 @@ final readonly class EntryScopePredicates
         $qb->andWhere(\sprintf('%s.id IN (:ids)', $aliases->entry))->setParameter('ids', $entryIds);
     }
 
-    /** @param list<int> $subscriptionIds */
-    private function inSubscriptions(QueryBuilder $qb, EntryAliases $aliases, array $subscriptionIds): void
+    private function onNetwork(QueryBuilder $qb, EntryAliases $aliases, SocialNetwork $network): void
     {
-        if ($subscriptionIds === []) {
-            $qb->andWhere('1 = 0');
-
-            return;
-        }
-        $qb->andWhere(\sprintf('%s.id IN (:subscriptionIds)', $aliases->subscription))
-            ->setParameter('subscriptionIds', $subscriptionIds);
+        $qb->innerJoin(
+            \sprintf('%s.feed', $aliases->entry),
+            $aliases->networkFeed,
+            'WITH',
+            \sprintf('%s.network = :network', $aliases->networkFeed),
+        )->setParameter('network', $network);
     }
 
     private function applyView(QueryBuilder $qb, EntryAliases $aliases, EntryView $view): void

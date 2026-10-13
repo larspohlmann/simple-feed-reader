@@ -12,7 +12,7 @@ use Doctrine\ORM\QueryBuilder;
 
 /**
  * Runs a fan-in page: unhinted for a single scope, hinted for the dense all/unread
- * views, and for a possibly-sparse tag or subscription-set scope probed, windowed, with an unhinted
+ * views, and for a possibly-sparse tag or network scope probed, windowed, with an unhinted
  * fallback when the window is short (#1099).
  */
 final readonly class DateOrderedPage

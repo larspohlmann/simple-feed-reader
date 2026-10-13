@@ -28,7 +28,6 @@ use App\Service\Reading\ForYouMarkReadService;
 use App\Service\Reading\MarkEntriesReadService;
 use App\Service\Reading\MarkReadService;
 use App\Service\Recommendation\Feed\ForYouFeed;
-use App\Service\Social\NetworkSubscriptions;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -48,7 +47,6 @@ final readonly class EntryController
         private ForYouFeed $forYouFeed,
         private ForYouMarkReadService $forYouMarkRead,
         private MarkEntriesReadService $markEntriesRead,
-        private NetworkSubscriptions $networkSubscriptions,
     ) {
     }
 
@@ -83,9 +81,7 @@ final readonly class EntryController
             cursor: EntryCursor::fromRequestValue($page->cursor),
             limit: $page->limit,
             order: $listOrder,
-            subscriptionIds: $socialNetwork === null
-                ? null
-                : $this->networkSubscriptions->idsOf($user->requireId(), $socialNetwork),
+            network: $socialNetwork,
         );
 
         $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());
