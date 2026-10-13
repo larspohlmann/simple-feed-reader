@@ -9,6 +9,7 @@ use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
@@ -17,6 +18,7 @@ use App\Tests\Support\FetchWiring;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class ConcurrentFeedFetcherProxyTest extends TestCase
 {
@@ -211,5 +213,26 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         self::assertCount(1, $seenOptions);
         self::assertArrayHasKey('resolve', $seenOptions[0]);
         self::assertArrayNotHasKey('proxy', $seenOptions[0]);
+    }
+
+    public function testAProxiedTooManyRequestsAnswerIsNotRetriedDirectly(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
+        /** @var list<array<string, mixed>> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions[] = $options;
+
+                return new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]);
+            },
+            $proxy,
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertInstanceOf(FeedThrottledException::class, $outcomes[1]->failure());
+        self::assertCount(1, $seenOptions);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
     }
 }

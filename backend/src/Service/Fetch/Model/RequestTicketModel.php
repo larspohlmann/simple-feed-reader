@@ -4,38 +4,43 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\Model;
 
-use App\Service\Fetch\Support\HostKey;
-
-/** One request the concurrent engine sends: what goes on the wire, and which exchange reads the answer. */
+/** One request the concurrent engine sends: what goes on the wire, which exchange reads the answer, what it holds. */
 final readonly class RequestTicketModel
 {
+    public ResponseExchangeKind $exchange;
+
+    /** @param non-empty-list<RequestSlotModel> $slots */
     private function __construct(
-        public ResponseExchangeKind $exchange,
         public ApiRequestModel $request,
-        private ?string $slotName,
+        public array $slots,
         private ?FetchTicketModel $feedTicket,
     ) {
+        $this->exchange = null === $feedTicket ? ResponseExchangeKind::Api : ResponseExchangeKind::Feed;
     }
 
-    public static function feed(FetchTicketModel $ticket): self
+    public static function feed(FetchTicketModel $ticket, int $hostCapacity): self
     {
         return new self(
-            ResponseExchangeKind::Feed,
             ApiRequestModel::get($ticket->url, self::validatorHeaders($ticket)),
-            null,
+            [RequestSlotModel::perHost($hostCapacity)],
             $ticket,
         );
     }
 
-    /** Any status comes back as the answer; tickets sharing a slot name share its capacity, whatever their host. */
-    public static function api(ApiRequestModel $request, string $slotName): self
+    /**
+     * Any status comes back as the answer; the ticket goes out only while every slot it names has room.
+     *
+     * @param list<RequestSlotModel> $slots
+     *
+     * @throws \InvalidArgumentException when no slot is named, which would leave the ticket uncapped
+     */
+    public static function api(ApiRequestModel $request, array $slots): self
     {
-        return new self(ResponseExchangeKind::Api, $request, $slotName, null);
-    }
+        if ([] === $slots) {
+            throw new \InvalidArgumentException('An API ticket must name at least one slot.');
+        }
 
-    public function slotKeyFor(string $url): string
-    {
-        return null === $this->slotName ? 'host:' . HostKey::forUrl($url) : 'slot:' . $this->slotName;
+        return new self($request, $slots, null);
     }
 
     public function feedTicket(): FetchTicketModel

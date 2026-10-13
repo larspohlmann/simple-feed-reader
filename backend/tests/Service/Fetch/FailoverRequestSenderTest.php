@@ -11,6 +11,7 @@ use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 final class FailoverRequestSenderTest extends TestCase
@@ -192,5 +193,22 @@ final class FailoverRequestSenderTest extends TestCase
                 new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
                 [],
             );
+    }
+
+    public function testATooManyRequestsAnswerIsNotAskedAgainOverTheNextFamily(): void
+    {
+        $client = new MockHttpClient(
+            static fn (): MockResponse => new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]),
+        );
+
+        $response = $this->sender($client)->send(
+            'GET',
+            'https://dual.example.com/post',
+            new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+            [],
+        );
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->getStatusCode());
+        self::assertSame(1, $client->getRequestsCount());
     }
 }

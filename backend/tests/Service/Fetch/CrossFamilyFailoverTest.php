@@ -8,6 +8,7 @@ use App\Service\Fetch\CrossFamilyFailover;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TimeoutException;
 use Symfony\Component\HttpClient\Exception\TransportException;
+use Symfony\Component\HttpFoundation\Response;
 
 final class CrossFamilyFailoverTest extends TestCase
 {
@@ -57,5 +58,10 @@ final class CrossFamilyFailoverTest extends TestCase
         self::assertFalse($this->failover->isRetryableStatus(200));
         self::assertFalse($this->failover->isRetryableStatus(304));
         self::assertFalse($this->failover->isRetryableStatus(301));
+    }
+
+    public function testTooManyRequestsWarrantsNoOtherRoute(): void
+    {
+        self::assertFalse($this->failover->isRetryableStatus(Response::HTTP_TOO_MANY_REQUESTS));
     }
 }

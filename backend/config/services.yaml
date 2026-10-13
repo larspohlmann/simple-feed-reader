@@ -16,6 +16,10 @@ parameters:
     # In-flight timeline reads per social account: Bluesky and Mastodon ration requests per account (#1607).
     social_account_concurrency: 3
 
+    # In-flight timeline reads per Mastodon instance or Bluesky PDS, all its accounts together: keeps one server
+    # from crowding out other hosts at the default FETCH_CONCURRENCY of 8 (#1608).
+    social_host_concurrency: 4
+
     # The one User-Agent every request to a publisher sends. It names no host (#255): Akamai Bot Manager resets the
     # stream for any domain-shaped token, real or invented, so the site looks unreachable. A parameter, so the
     # catalog rot check probes with the fetcher's exact string. OutboundUserAgentWiringTest pins both.
@@ -80,6 +84,7 @@ services:
     App\Service\Fetch\DnsResolver\DnsResolverInterface: '@App\Service\Fetch\DnsResolver\NativeDnsResolver'
     App\Service\Fetch\FeedFetcher\FeedFetcherInterface: '@App\Service\Fetch\FeedFetcher\HttpFeedFetcher'
     App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface: '@App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher'
+    App\Service\Refresh\PassFetcher\PassFetcherInterface: '@App\Service\Refresh\PassFetcher\ConcurrentPassFetcher'
     App\Service\Fetch\EgressProxySource\EgressProxySourceInterface: '@App\Service\Proxy\ConfiguredProxySource\StoredProxy'
     App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface: '@App\Service\Proxy\ConfiguredProxySource\StoredProxy'
     App\Service\Refresh\RefreshRunner\RefreshRunnerInterface: '@App\Service\Refresh\RefreshRunner\RefreshRunner'
@@ -198,9 +203,14 @@ services:
         arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
 
-    App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher:
+    App\Service\Refresh\PassFetcher\ConcurrentPassFetcher:
+        arguments:
+            $hostConcurrency: '%fetch_host_concurrency%'
+
+    App\Service\Social\TimelineRounds:
         arguments:
             $accountConcurrency: '%social_account_concurrency%'
+            $hostConcurrency: '%social_host_concurrency%'
 
     # Account mail leaves on kernel.terminate, after the response (DeferredMailer says why). Bound here, not by
     # decorating `mailer.mailer`, so only AccountMailer takes the detour.

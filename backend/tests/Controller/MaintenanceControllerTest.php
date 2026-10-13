@@ -7,13 +7,14 @@ namespace App\Tests\Controller;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
+use App\Tests\Support\RefreshFetchers;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\StubPassFetcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -62,15 +63,9 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $feed = $this->feedFor($client, 'https://maint.example.com/feed');
 
-        $stub = new StubFeedFetcher();
-        $stub->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
-        // The runner's favicon phase fetches the site homepage through the
-        // same fetcher — stub the origin too, or it throws just as loudly.
-        $stub->willReturn(
-            'https://maint.example.com',
-            FetchResponseModel::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
-        );
-        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
+        $passes = new StubPassFetcher();
+        $passes->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://maint.example.com');
 
         // token from .env.test
         $client->request('POST', '/maintenance/refresh?token=test-maintenance-token');
@@ -88,15 +83,9 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $feed = $this->feedFor($client, 'https://maint.example.com/feed');
 
-        $stub = new StubFeedFetcher();
-        $stub->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
-        // The runner's favicon phase fetches the site homepage through the
-        // same fetcher — stub the origin too, or it throws just as loudly.
-        $stub->willReturn(
-            'https://maint.example.com',
-            FetchResponseModel::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
-        );
-        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
+        $passes = new StubPassFetcher();
+        $passes->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://maint.example.com');
 
         $client->request('POST', '/maintenance/refresh', server: [
             'HTTP_X_MAINTENANCE_TOKEN' => 'test-maintenance-token',
@@ -144,8 +133,8 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $feed = $this->feedFor($client, 'https://maint.example.com/feed');
 
-        $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn(
+        $passes = new StubPassFetcher();
+        $passes->willReturn(
             $feed->getUrl(),
             FetchResponseModel::fetched(
                 $feed->getUrl(),
@@ -167,7 +156,7 @@ final class MaintenanceControllerTest extends WebTestCase
             RefreshRunner::class,
             RefreshRunners::fromContainer(self::getContainer(), $entityManager, new MockClock())
                 ->flushingThrough($failingEntityManager)
-                ->build($fetcher, $fetcher),
+                ->build($passes, new StubFeedFetcher()),
         );
 
         $client->request('POST', '/maintenance/refresh?token=test-maintenance-token');
@@ -252,13 +241,9 @@ final class MaintenanceControllerTest extends WebTestCase
         $client = self::createClient();
         $feed = $this->feedFor($client, 'https://maint.example.com/feed');
 
-        $stub = new StubFeedFetcher();
-        $stub->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
-        $stub->willReturn(
-            'https://maint.example.com',
-            FetchResponseModel::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
-        );
-        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
+        $passes = new StubPassFetcher();
+        $passes->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://maint.example.com');
 
         $client->request('POST', '/maintenance/tick', server: [
             'HTTP_X_MAINTENANCE_TOKEN' => 'test-maintenance-token',

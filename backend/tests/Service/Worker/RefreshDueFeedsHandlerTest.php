@@ -6,22 +6,19 @@ namespace App\Tests\Service\Worker;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Worker\Handler\RefreshDueFeedsHandler;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use App\Service\Worker\RefreshWarmUp;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RefreshFetchers;
 use App\Tests\Support\SeedsUsers;
-use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\StubPassFetcher;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 
-/**
- * Runs the container's real RefreshRunner; only the outbound fetcher is swapped, as
- * RefreshControllerTest::testPerFeedRefreshOfOwnFeedIsAccepted() does, to keep the refresh off the network.
- */
+/** Runs the container's real RefreshRunner with the pass and homepage fetchers swapped, to keep it off the network. */
 final class RefreshDueFeedsHandlerTest extends DbTestCase
 {
     use SeedsUsers;
@@ -43,19 +40,12 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
         $this->entityManager->flush();
         self::assertNull($feed->getLastFetchedAt());
 
-        $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn(
+        $passes = new StubPassFetcher();
+        $passes->willReturn(
             $feed->getUrl(),
             FetchResponseModel::fetched($feed->getUrl(), false, $this->rss(), null, null),
         );
-        // The runner's favicon phase fetches the feed's site homepage through
-        // this same fetcher — stub the origin too, or it throws just as
-        // loudly (same idiom as RefreshControllerTest).
-        $fetcher->willReturn(
-            'https://example.com',
-            FetchResponseModel::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
-        );
-        self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://example.com');
 
         $this->handler()->__invoke(new RefreshDueFeeds());
 
@@ -68,20 +58,16 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
     public function testAFreshWorkersFirstFiringTakesOnlyTheWarmUpBatch(): void
     {
         $subscriber = $this->user('backlog@example.com');
-        $fetcher = new StubFeedFetcher();
+        $passes = new StubPassFetcher();
         foreach (range(1, 11) as $index) {
             $feed = new Feed(sprintf('https://example.com/backlog/%d.xml', $index));
             $feed->scheduleNextFetchAt(new \DateTimeImmutable('-1 hour'));
             $this->entityManager->persist($feed);
             $this->entityManager->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable('-1 day')));
-            $fetcher->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
+            $passes->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
         }
         $this->entityManager->flush();
-        $fetcher->willReturn(
-            'https://example.com',
-            FetchResponseModel::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
-        );
-        self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://example.com');
         $logSpy = new TestHandler();
         $handler = new RefreshDueFeedsHandler(
             $this->refreshRunner(),

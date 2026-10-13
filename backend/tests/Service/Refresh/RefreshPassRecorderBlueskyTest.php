@@ -6,16 +6,16 @@ namespace App\Tests\Service\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\ShareEnrichment;
-use App\Enum\ShareEnrichmentKind;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
+use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Refresh\SocialFeedRefresher;
+use App\Service\Refresh\RefreshPassRecorder;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
@@ -32,7 +32,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /** The container's own reader, mapper and store, platform rules included, from a getTimeline answer to the rows. */
-final class SocialFeedRefresherBlueskyTest extends DbTestCase
+final class RefreshPassRecorderBlueskyTest extends DbTestCase
 {
     private const string PDS = 'https://pds.example.test';
     private const string IMAGE_POST = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mv3shqdfuc2e';
@@ -137,17 +137,17 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
     {
         $clock = new MockClock('2026-10-12 12:00:00', 'UTC');
         $pass = new RefreshPass([$socialFeed->getFeed()], $clock, $clock->now()->getTimestamp() + 300);
-        $this->refresher()->refreshAll($pass, $clock->now());
+        $this->recorder()->record($pass, $clock->now());
 
         return $pass;
     }
 
-    private function refresher(): SocialFeedRefresher
+    private function recorder(): RefreshPassRecorder
     {
-        $refresher = self::getContainer()->get(SocialFeedRefresher::class);
-        self::assertInstanceOf(SocialFeedRefresher::class, $refresher);
+        $recorder = self::getContainer()->get(RefreshPassRecorder::class);
+        self::assertInstanceOf(RefreshPassRecorder::class, $recorder);
 
-        return $refresher;
+        return $recorder;
     }
 
     private static function timeline(): string

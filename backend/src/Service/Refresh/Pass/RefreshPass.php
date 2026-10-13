@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Refresh\Pass;
 
 use App\Entity\Feed;
-use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Refresh\Model\RefreshReportModel;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -23,7 +22,7 @@ final readonly class RefreshPass
      * @param list<Feed> $feeds
      */
     public function __construct(
-        private array $feeds,
+        public array $feeds,
         ClockInterface $clock,
         int $deadline,
     ) {
@@ -36,22 +35,10 @@ final readonly class RefreshPass
         $this->tally = new RefreshTally();
     }
 
-    /** @return \Generator<int, FetchTicketModel, mixed, void> */
-    public function tickets(): \Generator
-    {
-        return $this->queue->tickets();
-    }
-
     /** @return \Generator<int, Feed, mixed, void> */
-    public function socialFeeds(): \Generator
+    public function startedFeeds(): \Generator
     {
-        return $this->queue->socialFeeds();
-    }
-
-    /** @return list<int> */
-    public function socialFeedIds(): array
-    {
-        return $this->queue->socialFeedIds();
+        return $this->queue->startedFeeds();
     }
 
     public function feed(int|string $feedId): Feed

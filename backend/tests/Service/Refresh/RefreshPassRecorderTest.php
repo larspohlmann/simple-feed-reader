@@ -11,8 +11,9 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Refresh\SocialFeedRefresher;
+use App\Service\Refresh\RefreshPassRecorder;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
@@ -23,32 +24,32 @@ use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\MastodonTimelinePage;
-use App\Service\Social\TimelineFetcher\TimelineFetcherInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
-use App\Tests\Support\StubTimelineFetcher;
+use App\Tests\Support\StubPassFetcher;
 use App\Tests\Support\UserFactory;
-use PHPUnit\Framework\Assert;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class SocialFeedRefresherTest extends DbTestCase
+final class RefreshPassRecorderTest extends DbTestCase
 {
     private MockClock $clock;
     private SocialAccount $account;
     private SocialFeed $home;
+    private StubPassFetcher $passes;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->clock = new MockClock('2026-10-12 12:00:00', 'UTC');
+        $this->passes = new StubPassFetcher();
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $user = (new UserFactory($this->entityManager, $hasher))->create('social-refresher@example.test');
+        $user = (new UserFactory($this->entityManager, $hasher))->create('pass-fetcher@example.test');
         $this->account = SocialAccounts::mastodonOf($user);
         $this->entityManager->persist($this->account);
         $this->entityManager->flush();
@@ -115,32 +116,46 @@ final class SocialFeedRefresherTest extends DbTestCase
         $this->assertUntouched($nextFetchAt);
     }
 
-    public function testTheFetcherReadsThePassesPrivateFeedsWithTheirAccounts(): void
+    public function testThePassesPrivateFeedsAreReadWithTheirAccounts(): void
     {
         $feed = $this->home->getFeed();
         $feedId = $feed->requireId();
-        $timelines = new StubTimelineFetcher([$feed->getUrl() => new ThrottledTimelineModel(null)]);
+        $this->passes->willReadTimeline($feed->getUrl(), new ThrottledTimelineModel(null));
 
-        $this->refresher($timelines)->refreshAll($this->pass(), $this->clock->now());
+        $this->recorder()->record($this->pass([$feed]), $this->clock->now());
 
-        self::assertSame([$feedId], array_keys($timelines->socialFeedsByFeedId));
+        self::assertSame([$feedId], array_keys($this->passes->socialFeedsByFeedId));
         self::assertSame(
             $this->account->requireId(),
-            $timelines->socialFeedsByFeedId[$feedId]->getSocialAccount()->requireId(),
+            $this->passes->socialFeedsByFeedId[$feedId]->getSocialAccount()->requireId(),
         );
-        self::assertSame([$feedId], $timelines->asked);
+        self::assertSame([$feedId], $this->passes->asked);
     }
 
-    public function testAPassWithoutPrivateFeedsNeverStartsTheTimelineFetcher(): void
+    public function testAnRssOutcomeIsStoredThroughTheFeedPath(): void
     {
-        $rss = new Feed('https://example.com/feed.xml');
-        $this->entityManager->persist($rss);
-        $this->entityManager->flush();
-        $pass = new RefreshPass([$rss], $this->clock, $this->clock->now()->getTimestamp() + 300);
+        $rss = $this->rssFeed();
+        $this->passes->willReturn($rss->getUrl(), FetchResponseModel::notModified($rss->getUrl(), false, null, null));
+        $pass = $this->pass([$rss]);
 
-        $this->refresher(self::untouchedTimelines())->refreshAll($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now());
 
-        self::assertSame(0, $pass->tally->processed());
+        self::assertSame(1, $pass->tally->notModified());
+        self::assertSame([$rss->getUrl()], $this->passes->fetchedUrls());
+    }
+
+    public function testBothKindsOfOutcomeAreTalliedInOnePass(): void
+    {
+        $rss = $this->rssFeed();
+        $this->passes->willReturn($rss->getUrl(), FetchResponseModel::notModified($rss->getUrl(), false, null, null));
+        $this->passes->willReadTimeline($this->home->getFeed()->getUrl(), new FetchedTimelineModel(self::page()));
+        $pass = $this->pass([$this->home->getFeed(), $rss]);
+
+        $this->recorder()->record($pass, $this->clock->now());
+
+        self::assertSame(1, $pass->tally->fetched());
+        self::assertSame(1, $pass->tally->notModified());
+        self::assertSame(2, $pass->tally->processed());
     }
 
     public function testAPrivateFeedThatLostItsSocialFeedFailsWithoutAsking(): void
@@ -161,12 +176,12 @@ final class SocialFeedRefresherTest extends DbTestCase
     private function assertOrphanFailsWithoutAsking(Feed $orphan, array $feeds): void
     {
         $home = $this->home->getFeed();
-        $timelines = new StubTimelineFetcher([$home->getUrl() => new FetchedTimelineModel(self::page())]);
-        $pass = new RefreshPass($feeds, $this->clock, $this->clock->now()->getTimestamp() + 300);
+        $this->passes->willReadTimeline($home->getUrl(), new FetchedTimelineModel(self::page()));
+        $pass = $this->pass($feeds);
 
-        $this->refresher($timelines)->refreshAll($pass, $this->clock->now());
+        $this->recorder()->record($pass, $this->clock->now());
 
-        self::assertSame([$home->requireId()], $timelines->asked);
+        self::assertSame([$home->requireId()], $this->passes->asked);
         self::assertSame(1, $pass->tally->failed());
         self::assertSame(1, $pass->tally->fetched());
         $this->entityManager->clear();
@@ -186,6 +201,15 @@ final class SocialFeedRefresherTest extends DbTestCase
         return $orphan;
     }
 
+    private function rssFeed(): Feed
+    {
+        $rss = new Feed('https://example.com/feed.xml');
+        $this->entityManager->persist($rss);
+        $this->entityManager->flush();
+
+        return $rss;
+    }
+
     private function assertUntouched(?\DateTimeImmutable $nextFetchAt): void
     {
         $this->entityManager->clear();
@@ -198,35 +222,26 @@ final class SocialFeedRefresherTest extends DbTestCase
 
     private function refreshed(TimelineOutcomeModelInterface $outcome): RefreshPass
     {
-        $pass = $this->pass();
-        $timelines = new StubTimelineFetcher([$this->home->getFeed()->getUrl() => $outcome]);
-        $this->refresher($timelines)->refreshAll($pass, $this->clock->now());
+        $this->passes->willReadTimeline($this->home->getFeed()->getUrl(), $outcome);
+        $pass = $this->pass([$this->home->getFeed()]);
+        $this->recorder()->record($pass, $this->clock->now());
 
         return $pass;
     }
 
-    private function pass(): RefreshPass
+    /** @param list<Feed> $feeds */
+    private function pass(array $feeds): RefreshPass
     {
-        return new RefreshPass([$this->home->getFeed()], $this->clock, $this->clock->now()->getTimestamp() + 300);
+        return new RefreshPass($feeds, $this->clock, $this->clock->now()->getTimestamp() + 300);
     }
 
-    private function refresher(TimelineFetcherInterface $timelines): SocialFeedRefresher
+    private function recorder(): RefreshPassRecorder
     {
-        return new SocialFeedRefresher(
-            SocialFeeds::repository($this->entityManager),
-            $timelines,
+        return new RefreshPassRecorder(
+            $this->passes,
             FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)->idle(),
+            SocialFeeds::repository($this->entityManager),
         );
-    }
-
-    private static function untouchedTimelines(): TimelineFetcherInterface
-    {
-        return new class () implements TimelineFetcherInterface {
-            public function fetchAll(iterable $socialFeeds): iterable
-            {
-                Assert::fail('A pass without private feeds started the timeline fetcher.');
-            }
-        };
     }
 
     private static function page(): TimelinePageModel

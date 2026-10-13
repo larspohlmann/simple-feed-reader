@@ -14,6 +14,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -265,6 +266,27 @@ final class FailoverRequestSenderProxyTest extends TestCase
         } finally {
             self::assertSame([], $calls, 'no request may be sent, least of all a direct one');
         }
+    }
+
+    public function testAProxiedTooManyRequestsAnswerIsNotAskedAgainDirectly(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
+
+            return new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]);
+        });
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy($this->proxy()));
+
+        $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $status);
+        self::assertCount(1, $calls);
+        self::assertArrayHasKey('proxy', $calls[0]);
     }
 
     private function egressProxy(?ProxyConfigModel $config): EgressProxySourceInterface

@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
+use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DuplicateKeyViolation;
@@ -24,16 +25,18 @@ use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\UserFactory;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/** The real concurrent timeline fetcher behind RefreshRunner, over a routed HTTP client. */
+/** The real pass fetcher behind RefreshRunner, RSS and private feeds alike, over a routed HTTP client. */
 final class RefreshRunnerSocialTest extends DbTestCase
 {
-    private const string RSS_URL = 'https://example.com/feed.xml';
+    private const string RSS_URL = 'https://news.example/feed.xml';
+    private const string RSS = 'GET https://news.example/feed.xml';
     private const string HOME = 'GET https://mastodon.example/api/v1/timelines/home?limit=40';
     private const string FRIENDS = 'GET https://mastodon.example/api/v1/timelines/list/42?limit=40';
     private const string FAMILY = 'GET https://mastodon.example/api/v1/timelines/list/43?limit=40';
@@ -56,26 +59,15 @@ final class RefreshRunnerSocialTest extends DbTestCase
 
     public function testAPrivateFeedIsReadThroughItsAccountAndNeverFetchedByUrl(): void
     {
-        $rss = new Feed(self::RSS_URL);
-        $this->entityManager->persist($rss);
-        $this->entityManager->persist(new Subscription($this->user, $rss, $this->clock->now()));
-        $this->entityManager->flush();
+        $this->subscribeToRss();
         $homeId = $this->privateFeed(PrivateFeedModel::home())->requireId();
-        $feeds = new StubFeedFetcher($this->clock);
-        $feeds->willReturnBody(self::RSS_URL, /** @lang TEXT */ <<<XML
-            <?xml version="1.0" encoding="UTF-8"?>
-            <rss version="2.0"><channel><title>Example</title>
-            <item><title>Post</title><link>https://example.com/p</link><guid>p-1</guid></item>
-            </channel></rss>
-            XML);
-        $http = new RoutedHttpClient([self::HOME => self::statuses()]);
+        $http = new RoutedHttpClient([self::RSS => self::rssBody(), self::HOME => self::statuses()]);
 
-        $report = $this->runners($http)->build($feeds, $this->homepages())->run(RefreshRequestModel::allDue(300));
+        $report = $this->runner($http)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame(2, $report->total);
         self::assertSame(2, $report->fetched);
-        self::assertSame([self::RSS_URL], $feeds->fetchedUrls);
-        self::assertCount(1, $http->requests);
+        self::assertEqualsCanonicalizing([self::RSS, self::HOME], $http->requestLines());
         self::assertSame(1, $this->entityManager->getRepository(Entry::class)->count(['feed' => $homeId]));
         $this->entityManager->clear();
         $stored = SocialFeeds::repository($this->entityManager)->findWithAccountByFeedIds([$homeId])[$homeId] ?? null;
@@ -88,9 +80,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $http = new RoutedHttpClient([self::HOME => self::throttled(), self::FRIENDS => self::throttled()]);
 
-        $report = $this->runners($http, accountConcurrency: 1)
-            ->build(new StubFeedFetcher($this->clock), $this->homepages())
-            ->run(RefreshRequestModel::allDue(300));
+        $report = $this->runner($http, accountConcurrency: 1)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame(2, $report->throttled);
         self::assertCount(1, $http->requests);
@@ -102,9 +92,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $http = new RoutedHttpClient([self::HOME => self::refused(), self::FRIENDS => self::refused()]);
 
-        $report = $this->runners($http, accountConcurrency: 1)
-            ->build(new StubFeedFetcher($this->clock), $this->homepages())
-            ->run(RefreshRequestModel::allDue(300));
+        $report = $this->runner($http, accountConcurrency: 1)->run(RefreshRequestModel::allDue(300));
 
         $this->entityManager->clear();
         self::assertSame(
@@ -115,15 +103,13 @@ final class RefreshRunnerSocialTest extends DbTestCase
         self::assertCount(1, $http->requests);
     }
 
-    public function testTheBudgetGateStopsTheSocialWaveMidPass(): void
+    public function testTheBudgetGateStopsThePassMidway(): void
     {
         $this->privateFeed(PrivateFeedModel::home());
         $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
         $http = new RoutedHttpClient([self::HOME => self::statuses(), self::FRIENDS => self::statuses()]);
 
-        $report = $this->runners($http)
-            ->build(new StubFeedFetcher($this->clock), $this->homepages())
-            ->run(RefreshRequestModel::allDue(5));
+        $report = $this->runner($http)->run(RefreshRequestModel::allDue(5));
 
         self::assertSame('partial', $report->status);
         self::assertSame(1, $report->skippedForBudget);
@@ -147,21 +133,93 @@ final class RefreshRunnerSocialTest extends DbTestCase
             thrown: DuplicateKeyViolation::exception(),
         );
 
-        $report = $this->runners($http, accountConcurrency: 1)
-            ->flushingThrough($failing)
-            ->build(new StubFeedFetcher($this->clock), $this->homepages())
+        $report = $this->runner($http, accountConcurrency: 1, flushing: $failing)
             ->run(RefreshRequestModel::allDue(300));
 
         self::assertSame('aborted', $report->status);
+        self::assertSame(2, $report->remaining, 'the feed whose flush failed is still due, as is the unasked one');
         self::assertCount(2, $http->requests, 'the third timeline is never asked once the run aborted');
     }
 
-    private function runners(RoutedHttpClient $http, int $accountConcurrency = 3): RefreshRunners
+    public function testAMixedPassReadsFeedsAndTimelinesInOneRunAndLeavesNothingRemaining(): void
     {
+        $this->subscribeToRss();
+        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
+        $http = new RoutedHttpClient([
+            self::RSS => self::rssBody(),
+            self::HOME => self::statuses(),
+            self::FRIENDS => self::statuses(),
+        ]);
+
+        $report = $this->runner($http)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(3, $report->fetched);
+        self::assertSame(0, $report->remaining);
+    }
+
+    public function testAThrottledAccountsWithheldFeedIsTalliedSoNothingStaysRemaining(): void
+    {
+        $this->subscribeToRss();
+        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
+        $http = new RoutedHttpClient([
+            self::RSS => self::rssBody(),
+            self::HOME => self::throttled(),
+            self::FRIENDS => self::throttled(),
+        ]);
+
+        $report = $this->runner($http, accountConcurrency: 1)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(2, $report->throttled);
+        self::assertSame(0, $report->remaining);
+        self::assertEqualsCanonicalizing([self::RSS, self::HOME], $http->requestLines());
+    }
+
+    public function testAnAbortInAMixedPassLeavesEveryUnprocessedFeedRemaining(): void
+    {
+        $this->subscribeToRss();
+        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
+        $http = new RoutedHttpClient([
+            self::RSS => self::rssBody(),
+            self::HOME => self::statuses(),
+            self::FRIENDS => self::statuses(),
+        ]);
+        $failing = new FlushFailingEntityManager(
+            $this->entityManager,
+            failingFlush: 2,
+            thrown: DuplicateKeyViolation::exception(),
+        );
+
+        $report = $this->runner($http, flushing: $failing)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        self::assertSame(2, $report->remaining, 'three due, one stored before the failing one');
+    }
+
+    private function runner(
+        RoutedHttpClient $http,
+        int $accountConcurrency = 3,
+        ?EntityManagerInterface $flushing = null,
+    ): RefreshRunner {
         return RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
-            ->readingTimelinesFrom(
-                SocialApiWiring::timelineFetcher($http->client(), new ArrayAdapter(), $accountConcurrency),
+            ->flushingThrough($flushing ?? $this->entityManager)
+            ->build(
+                SocialApiWiring::passFetcher($http->client(), new ArrayAdapter(), $accountConcurrency),
+                $this->homepages(),
             );
+    }
+
+    private function subscribeToRss(): void
+    {
+        $rss = new Feed(self::RSS_URL);
+        $this->entityManager->persist($rss);
+        $this->entityManager->persist(new Subscription($this->user, $rss, $this->clock->now()));
+        $this->entityManager->flush();
     }
 
     private function privateFeed(PrivateFeedModel $privateFeed): Feed
@@ -178,7 +236,7 @@ final class RefreshRunnerSocialTest extends DbTestCase
     private function homepages(): StubFeedFetcher
     {
         $homepages = new StubFeedFetcher();
-        foreach (['https://example.com', 'https://mastodon.example'] as $origin) {
+        foreach (['https://news.example', 'https://mastodon.example'] as $origin) {
             $homepages->willReturn(
                 $origin,
                 FetchResponseModel::fetched($origin, false, '<html lang="en"></html>', null, null),
@@ -186,6 +244,16 @@ final class RefreshRunnerSocialTest extends DbTestCase
         }
 
         return $homepages;
+    }
+
+    private static function rssBody(): MockResponse
+    {
+        return new MockResponse(/** @lang TEXT */ <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0"><channel><title>Example</title>
+            <item><title>Post</title><link>https://news.example/p</link><guid>p-1</guid></item>
+            </channel></rss>
+            XML);
     }
 
     private static function statuses(): MockResponse

@@ -8,6 +8,7 @@ use App\Entity\SocialAccount;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessionCache;
 use App\Service\Social\BlueskySessionOpener;
@@ -16,7 +17,7 @@ use App\Service\Social\Crypto\BlueskySessionCipher;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
 use App\Service\Social\StoredCredential;
-use App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher;
+use App\Service\Social\TimelineRounds;
 use App\Service\Social\TimelineSource\BlueskyTimelineSource;
 use App\Service\Social\TimelineSource\MastodonTimelineSource;
 use App\Service\Social\TimelineSources;
@@ -28,6 +29,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class SocialApiWiring
 {
     use AssignsEntityIds;
+
+    public const string RSS_HOST = 'news.example';
 
     private const string BLUESKY_HOST = 'pds.example.test';
     private const string MASTODON_HOST = 'mastodon.example';
@@ -81,19 +84,27 @@ final class SocialApiWiring
         ));
     }
 
-    /** The timeline fetcher over the real engine; every test host resolves to one public address. */
-    public static function timelineFetcher(
+    /** The refresh's pass fetcher over the real engine; every test host, RSS_HOST included, resolves to one address. */
+    public static function passFetcher(
         HttpClientInterface $http,
         ArrayAdapter $cache,
         int $accountConcurrency = 3,
-    ): ConcurrentTimelineFetcher {
-        $guard = self::guardFor(self::BLUESKY_HOST, self::MASTODON_HOST, self::OTHER_MASTODON_HOST);
+    ): ConcurrentPassFetcher {
+        $guard = self::guardFor(self::BLUESKY_HOST, self::MASTODON_HOST, self::OTHER_MASTODON_HOST, self::RSS_HOST);
 
-        return new ConcurrentTimelineFetcher(
+        return new ConcurrentPassFetcher(
             FetchWiring::requestEngine($http, $guard, FetchWiring::egressProxy(null), 8),
-            self::timelineSources($http, $cache),
-            $accountConcurrency,
+            self::timelineRounds($http, $cache, $accountConcurrency),
+            2,
         );
+    }
+
+    public static function timelineRounds(
+        HttpClientInterface $http,
+        ArrayAdapter $cache,
+        int $accountConcurrency = 3,
+    ): TimelineRounds {
+        return new TimelineRounds(self::timelineSources($http, $cache), $accountConcurrency, 4);
     }
 
     public static function timelineSources(HttpClientInterface $http, ArrayAdapter $cache): TimelineSources

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Fetch\Model;
 
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Fetch\Model\RequestSlotModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Model\ResponseExchangeKind;
 use PHPUnit\Framework\TestCase;
@@ -17,7 +18,7 @@ final class RequestTicketModelTest extends TestCase
 
     public function testAFeedTicketIsAGetCarryingOnlyTheValidatorItHas(): void
     {
-        $ticket = RequestTicketModel::feed(new FetchTicketModel(self::FEED_URL, '"v1"'));
+        $ticket = RequestTicketModel::feed(new FetchTicketModel(self::FEED_URL, '"v1"'), 2);
 
         self::assertSame(ResponseExchangeKind::Feed, $ticket->exchange);
         self::assertSame('GET', $ticket->request->method);
@@ -28,7 +29,7 @@ final class RequestTicketModelTest extends TestCase
 
     public function testAFeedTicketSendsBothValidatorsWhenItHasBoth(): void
     {
-        $ticket = RequestTicketModel::feed(new FetchTicketModel(self::FEED_URL, '"v1"', self::LAST_MODIFIED));
+        $ticket = RequestTicketModel::feed(new FetchTicketModel(self::FEED_URL, '"v1"', self::LAST_MODIFIED), 2);
 
         self::assertSame(
             ['If-None-Match' => '"v1"', 'If-Modified-Since' => self::LAST_MODIFIED],
@@ -38,7 +39,7 @@ final class RequestTicketModelTest extends TestCase
 
     public function testAnUnconditionalFeedTicketSendsNoValidator(): void
     {
-        $ticket = RequestTicketModel::feed(new FetchTicketModel(self::FEED_URL));
+        $ticket = RequestTicketModel::feed(new FetchTicketModel(self::FEED_URL), 2);
 
         self::assertSame([], $ticket->request->headers);
     }
@@ -47,51 +48,53 @@ final class RequestTicketModelTest extends TestCase
     {
         $feedTicket = new FetchTicketModel(self::FEED_URL, '"v1"');
 
-        self::assertSame($feedTicket, RequestTicketModel::feed($feedTicket)->feedTicket());
-    }
-
-    public function testAFeedTicketsSlotIsTheHostOfTheUrlItHasReached(): void
-    {
-        $ticket = RequestTicketModel::feed(new FetchTicketModel('https://www.example.com/feed'));
-
-        $apexSlot = $ticket->slotKeyFor('https://example.com/a');
-
-        self::assertSame($apexSlot, $ticket->slotKeyFor('https://www.example.com:443/b'));
-        self::assertNotSame($apexSlot, $ticket->slotKeyFor('https://other.example.com/a'));
+        self::assertSame($feedTicket, RequestTicketModel::feed($feedTicket, 2)->feedTicket());
     }
 
     public function testAnApiTicketIsReadAsAnAnswer(): void
     {
         $request = ApiRequestModel::get('https://pds.example.test/xrpc/x', ['Authorization' => 'Bearer jwt-1']);
 
-        $ticket = RequestTicketModel::api($request, 'account-7');
+        $ticket = RequestTicketModel::api($request, [RequestSlotModel::named('account-7', 3)]);
 
         self::assertSame(ResponseExchangeKind::Api, $ticket->exchange);
         self::assertSame($request, $ticket->request);
-    }
-
-    public function testANamedSlotIgnoresTheHostAndNeverMeetsAHostSlot(): void
-    {
-        $api = RequestTicketModel::api(ApiRequestModel::get('https://example.com/a'), 'example.com');
-        $feed = RequestTicketModel::feed(new FetchTicketModel('https://example.com/feed'));
-
-        self::assertSame($api->slotKeyFor('https://example.com/a'), $api->slotKeyFor('https://other.example/b'));
-        self::assertNotSame($api->slotKeyFor('https://example.com/a'), $feed->slotKeyFor('https://example.com/a'));
     }
 
     public function testAnApiTicketCarriesNoFeedTicket(): void
     {
         $this->expectException(\LogicException::class);
 
-        RequestTicketModel::api(ApiRequestModel::get('https://example.com/a'), 'account-7')->feedTicket();
+        $slots = [RequestSlotModel::named('account-7', 3)];
+
+        RequestTicketModel::api(ApiRequestModel::get('https://example.com/a'), $slots)->feedTicket();
     }
 
-    public function testASlotKeyNamesWhetherItIsAHostOrANamedSlot(): void
+    public function testAFeedTicketHoldsOneSlotOnTheHostItsAttemptHasReached(): void
     {
-        $api = RequestTicketModel::api(ApiRequestModel::get('https://example.com/a'), 'account-7');
-        $feed = RequestTicketModel::feed(new FetchTicketModel('https://www.example.com/feed'));
+        $ticket = RequestTicketModel::feed(new FetchTicketModel('https://www.example.com/feed'), 2);
 
-        self::assertSame('slot:account-7', $api->slotKeyFor('https://example.com/a'));
-        self::assertSame('host:example.com', $feed->slotKeyFor('https://www.example.com/feed'));
+        self::assertCount(1, $ticket->slots);
+        self::assertSame(2, $ticket->slots[0]->capacity);
+        self::assertSame('host:example.com', $ticket->slots[0]->keyFor('https://www.example.com:443/b'));
+        self::assertSame('host:other.example.com', $ticket->slots[0]->keyFor('https://other.example.com/a'));
+    }
+
+    public function testAnApiTicketHoldsEverySlotItNamesInOrder(): void
+    {
+        $account = RequestSlotModel::named('social-account:7', 3);
+        $server = RequestSlotModel::named('social-host:example.com', 4);
+
+        $ticket = RequestTicketModel::api(ApiRequestModel::get('https://example.com/a'), [$account, $server]);
+
+        self::assertSame([$account, $server], $ticket->slots);
+    }
+
+    public function testAnApiTicketWithoutASlotIsRefusedBecauseItWouldBeUncapped(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('An API ticket must name at least one slot.');
+
+        RequestTicketModel::api(ApiRequestModel::get('https://example.com/a'), []);
     }
 }

@@ -10,7 +10,6 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\FetchTicketModel;
-use Symfony\Component\Clock\MockClock;
 
 final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInterface
 {
@@ -21,18 +20,6 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
 
     /** @var list<string> */
     public array $fetchedUrls = [];
-
-    /**
-     * Wall-clock cost of one wave of concurrent fetches, not of one fetch. A
-     * batch of `concurrency` feeds advances the clock once.
-     */
-    public int $secondsPerFetch = 0;
-
-    public function __construct(
-        private readonly ?MockClock $clock = null,
-        private readonly int $concurrency = 8,
-    ) {
-    }
 
     public function willReturn(string $url, FetchResponseModel $response): void
     {
@@ -73,36 +60,7 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
     /** @return \Generator<int|string, FetchOutcomeModel> */
     public function fetchAll(iterable $tickets): \Generator
     {
-        $wave = [];
-
         foreach ($tickets as $key => $ticket) {
-            $wave[$key] = $ticket;
-            if (\count($wave) < $this->concurrency) {
-                continue;
-            }
-
-            yield from $this->runWave($wave);
-            $wave = [];
-        }
-
-        if ([] !== $wave) {
-            yield from $this->runWave($wave);
-        }
-    }
-
-    /**
-     * @param array<int|string, FetchTicketModel> $wave
-     *
-     * @return \Generator<int|string, FetchOutcomeModel>
-     */
-    private function runWave(array $wave): \Generator
-    {
-        // Before the yield: a caller holding the first outcome has paid the whole wave, as with the real engine.
-        if ($this->secondsPerFetch > 0) {
-            $this->clock?->sleep($this->secondsPerFetch);
-        }
-
-        foreach ($wave as $key => $ticket) {
             $this->fetchedUrls[] = $ticket->url;
 
             $result = $this->results[$ticket->url]

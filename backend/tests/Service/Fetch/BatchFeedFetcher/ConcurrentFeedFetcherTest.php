@@ -7,6 +7,7 @@ namespace App\Tests\Service\Fetch\BatchFeedFetcher;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\FeedGoneException;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
@@ -22,6 +23,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class ConcurrentFeedFetcherTest extends TestCase
@@ -821,5 +823,23 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
         self::assertNotNull($client->lastResponse);
         self::assertTrue($client->lastResponse->getInfo('canceled'));
+    }
+
+    public function testATooManyRequestsAnswerIsNotFailedOverToAnotherFamily(): void
+    {
+        $requests = 0;
+        $fetcher = $this->fetcher(
+            static function () use (&$requests): MockResponse {
+                ++$requests;
+
+                return new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]);
+            },
+            dnsOverrides: ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://dual.example.com/feed')]));
+
+        self::assertInstanceOf(FeedThrottledException::class, $outcomes[1]->failure());
+        self::assertSame(1, $requests);
     }
 }

@@ -26,7 +26,11 @@ final class GuardedApiClientTest extends TestCase
     private function client(MockHttpClient $http, ?ProxyConfigModel $proxy = null): GuardedApiClient
     {
         $guard = new UrlGuard(
-            new StaticDnsResolver(['api.example.test' => ['93.184.216.34'], 'lan.example.test' => ['192.168.1.5']]),
+            new StaticDnsResolver([
+                'api.example.test' => ['93.184.216.34'],
+                'lan.example.test' => ['192.168.1.5'],
+                'dual.example.test' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34'],
+            ]),
             new IpValidator(),
         );
 
@@ -173,5 +177,30 @@ final class GuardedApiClientTest extends TestCase
         $response = $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
 
         self::assertSame('<https://api.example.test/x?page=2>; rel="next"', $response->header('link'));
+    }
+
+    public function testATooManyRequestsAnswerCostsOneRequestOverEveryFamily(): void
+    {
+        $http = new MockHttpClient(
+            static fn (): MockResponse => new MockResponse('{}', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]),
+        );
+
+        $response = $this->client($http)->send(ApiRequestModel::get('https://dual.example.test/x'));
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->status);
+        self::assertSame(1, $http->getRequestsCount());
+    }
+
+    public function testAProxiedTooManyRequestsAnswerCostsOneRequest(): void
+    {
+        $http = new MockHttpClient(
+            static fn (): MockResponse => new MockResponse('{}', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]),
+        );
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
+
+        $response = $this->client($http, $proxy)->send(ApiRequestModel::get('https://api.example.test/x'));
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->status);
+        self::assertSame(1, $http->getRequestsCount());
     }
 }

@@ -13,6 +13,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Fetch\Model\RequestSlotModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\ResponseClassifier;
@@ -53,9 +54,15 @@ final class ConcurrentRequestEngineTest extends TestCase
         return FetchWiring::requestEngine($client, self::guard(), FetchWiring::egressProxy($proxy));
     }
 
-    private static function ticket(string $url = self::API, string $slotName = 'account-1'): RequestTicketModel
-    {
-        return RequestTicketModel::api(ApiRequestModel::get($url, ['Authorization' => 'Bearer jwt-1']), $slotName);
+    private static function ticket(
+        string $url = self::API,
+        string $slotName = 'account-1',
+        int $capacity = 3,
+    ): RequestTicketModel {
+        return RequestTicketModel::api(
+            ApiRequestModel::get($url, ['Authorization' => 'Bearer jwt-1']),
+            [RequestSlotModel::named($slotName, $capacity)],
+        );
     }
 
     /**
@@ -75,7 +82,7 @@ final class ConcurrentRequestEngineTest extends TestCase
 
     private function onlyAnswer(HttpClientInterface $client, string $url = self::API): FetchOutcomeModel
     {
-        return self::collect($this->engine($client)->sendAll([1 => self::ticket($url)], 3))[1];
+        return self::collect($this->engine($client)->sendAll([1 => self::ticket($url)]))[1];
     }
 
     public function testAnErrorStatusIsAnAnswerWithItsBodyAndHeaders(): void
@@ -169,7 +176,7 @@ final class ConcurrentRequestEngineTest extends TestCase
             new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null),
         );
 
-        $answer = self::collect($engine->sendAll([1 => self::ticket()], 3))[1]->answerOrThrow();
+        $answer = self::collect($engine->sendAll([1 => self::ticket()]))[1]->answerOrThrow();
 
         self::assertSame(Response::HTTP_OK, $answer->status);
         self::assertSame([true, false], $proxied);
@@ -185,7 +192,7 @@ final class ConcurrentRequestEngineTest extends TestCase
         });
         $engine = $this->engine($client, new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, false));
 
-        $answer = self::collect($engine->sendAll([1 => self::ticket()], 3))[1]->answerOrThrow();
+        $answer = self::collect($engine->sendAll([1 => self::ticket()]))[1]->answerOrThrow();
 
         self::assertSame(Response::HTTP_FORBIDDEN, $answer->status);
         self::assertSame(1, $requests);
@@ -207,7 +214,7 @@ final class ConcurrentRequestEngineTest extends TestCase
             new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null),
         );
 
-        $answer = self::collect($engine->sendAll([1 => self::ticket()], 3))[1]->answerOrThrow();
+        $answer = self::collect($engine->sendAll([1 => self::ticket()]))[1]->answerOrThrow();
 
         self::assertSame(Response::HTTP_OK, $answer->status);
         self::assertSame([true, false], $proxied);
@@ -221,9 +228,9 @@ final class ConcurrentRequestEngineTest extends TestCase
             ['identifier' => 'did:plc:alice'],
             ['Authorization' => 'Bearer jwt-1'],
         );
-        $ticket = RequestTicketModel::api($request, 'account-1');
+        $ticket = RequestTicketModel::api($request, [RequestSlotModel::named('account-1', 3)]);
 
-        self::assertNull(self::collect($this->engine($http->client())->sendAll([1 => $ticket], 3))[1]->failure());
+        self::assertNull(self::collect($this->engine($http->client())->sendAll([1 => $ticket]))[1]->failure());
 
         self::assertSame('{"identifier":"did:plc:alice"}', $http->requests[0]['body']);
         self::assertContains('Accept: application/json', $http->requests[0]['headers']);
@@ -249,9 +256,9 @@ final class ConcurrentRequestEngineTest extends TestCase
             'User-Agent' => 'Spoofed/1.0',
             'Accept' => 'text/html',
             'Authorization' => 'Bearer jwt-1',
-        ]), 'account-1');
+        ]), [RequestSlotModel::named('account-1', 3)]);
 
-        self::assertNull(self::collect($this->engine($http->client())->sendAll([1 => $ticket], 3))[1]->failure());
+        self::assertNull(self::collect($this->engine($http->client())->sendAll([1 => $ticket]))[1]->failure());
 
         $sent = $http->requests[0]['headers'];
         self::assertContains('Accept-Encoding: identity', $sent);
@@ -279,13 +286,42 @@ final class ConcurrentRequestEngineTest extends TestCase
         });
 
         $outcomes = self::collect($this->engine($client)->sendAll([
-            1 => self::ticket(self::API),
-            2 => self::ticket(self::OTHER),
-            3 => self::ticket(self::API),
-        ], 1));
+            1 => self::ticket(self::API, 'account-1', 1),
+            2 => self::ticket(self::OTHER, 'account-1', 1),
+            3 => self::ticket(self::API, 'account-1', 1),
+        ]));
 
         self::assertCount(3, $outcomes);
         self::assertSame(1, $peak);
+    }
+
+    public function testATicketGoesOutOnlyWhileEverySlotItNamesHasRoom(): void
+    {
+        $inFlight = 0;
+        $peak = 0;
+        $client = new MockHttpClient(static function () use (&$inFlight, &$peak): MockResponse {
+            ++$inFlight;
+            $peak = max($peak, $inFlight);
+            $body = (static function () use (&$inFlight): \Generator {
+                yield '{}';
+                --$inFlight;
+            })();
+
+            return new MockResponse($body);
+        });
+        $onTheSharedServer = static fn (string $account): RequestTicketModel => RequestTicketModel::api(
+            ApiRequestModel::get(self::API),
+            [RequestSlotModel::named($account, 3), RequestSlotModel::named('server', 1)],
+        );
+
+        $outcomes = self::collect($this->engine($client)->sendAll([
+            1 => $onTheSharedServer('account-1'),
+            2 => $onTheSharedServer('account-2'),
+            3 => $onTheSharedServer('account-3'),
+        ]));
+
+        self::assertCount(3, $outcomes, 'every slot a ticket held is released when it retires');
+        self::assertSame(1, $peak, 'three accounts with room share one full server slot');
     }
 
     public function testAWithheldTicketGoesNowhere(): void
@@ -300,7 +336,6 @@ final class ConcurrentRequestEngineTest extends TestCase
 
         $outcomes = self::collect($this->engine($http->client())->sendAll(
             [1 => self::ticket(self::OTHER, 'account-2'), 2 => self::ticket(self::API)],
-            3,
             $gate,
         ));
 
@@ -322,7 +357,10 @@ final class ConcurrentRequestEngineTest extends TestCase
         $http = new RoutedHttpClient(['GET ' . self::API => new MockResponse('{}')]);
 
         $outcomes = [];
-        $sending = $this->engine($http->client())->sendAll([1 => self::ticket(), 2 => self::ticket()], 1, $gate);
+        $sending = $this->engine($http->client())->sendAll(
+            [1 => self::ticket(capacity: 1), 2 => self::ticket(capacity: 1)],
+            $gate,
+        );
         foreach ($sending as $key => $outcome) {
             $outcomes[$key] = $outcome;
             $gate->open = false;
@@ -355,7 +393,7 @@ final class ConcurrentRequestEngineTest extends TestCase
         };
 
         $outcomes = self::collect(
-            $this->engine(new MockHttpClient($respond))->sendAll([1 => self::ticket(self::DUAL)], 3, $gate),
+            $this->engine(new MockHttpClient($respond))->sendAll([1 => self::ticket(self::DUAL)], $gate),
         );
 
         self::assertSame(Response::HTTP_OK, $outcomes[1]->answerOrThrow()->status);
@@ -390,9 +428,40 @@ final class ConcurrentRequestEngineTest extends TestCase
             'TestAgent/1.0',
         );
 
-        $outcomes = self::collect($engine->sendAll([1 => self::ticket(), 2 => FeedTickets::of(self::FEED)], 3));
+        $outcomes = self::collect($engine->sendAll([1 => self::ticket(), 2 => FeedTickets::of(self::FEED)]));
 
         self::assertInstanceOf(FeedUnreachableException::class, $outcomes[1]->failure());
         self::assertNull($outcomes[2]->failure());
+    }
+
+    public function testATooManyRequestsAnswerIsNotAskedAgainOverTheNextFamily(): void
+    {
+        $requests = 0;
+        $client = new MockHttpClient(static function () use (&$requests): MockResponse {
+            ++$requests;
+
+            return new MockResponse('{}', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]);
+        });
+
+        $answer = $this->onlyAnswer($client, self::DUAL)->answerOrThrow();
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $answer->status);
+        self::assertSame(1, $requests);
+    }
+
+    public function testAProxiedTooManyRequestsAnswerIsNotAskedAgainDirectly(): void
+    {
+        $requests = 0;
+        $client = new MockHttpClient(static function () use (&$requests): MockResponse {
+            ++$requests;
+
+            return new MockResponse('{}', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]);
+        });
+        $engine = $this->engine($client, new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null));
+
+        $answer = self::collect($engine->sendAll([1 => self::ticket()]))[1]->answerOrThrow();
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $answer->status);
+        self::assertSame(1, $requests);
     }
 }

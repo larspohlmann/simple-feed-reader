@@ -14,6 +14,7 @@ use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\StubPassFetcher;
 use Symfony\Component\Clock\MockClock;
 
 /**
@@ -24,14 +25,14 @@ use Symfony\Component\Clock\MockClock;
 final class RefreshRunnerOrphanSweepTest extends DbTestCase
 {
     private MockClock $clock;
-    private StubFeedFetcher $fetcher;
+    private StubPassFetcher $fetcher;
     private StubFeedFetcher $faviconFetcher;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
-        $this->fetcher = new StubFeedFetcher($this->clock);
+        $this->fetcher = new StubPassFetcher($this->clock);
         $this->faviconFetcher = new StubFeedFetcher();
     }
 
@@ -73,7 +74,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
 
         $this->runner()->run(RefreshRequestModel::allDue(budgetSeconds: 30));
 
-        self::assertSame([$subscribed->getUrl()], $this->fetcher->fetchedUrls);
+        self::assertSame([$subscribed->getUrl()], $this->fetcher->fetchedUrls());
     }
 
     public function testAUserRefreshLeavesAnOrphanedFeedAlone(): void

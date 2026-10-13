@@ -19,15 +19,14 @@ use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedBodyParser\ScrapedBodyParser;
 use App\Service\Refresh\FeedBodyParser\XmlBodyParser;
 use App\Service\Refresh\MissingFaviconResolver;
+use App\Service\Refresh\PassFetcher\PassFetcherInterface;
 use App\Service\Refresh\RefreshHousekeeping;
-use App\Service\Refresh\RefreshPassFetcher;
+use App\Service\Refresh\RefreshPassRecorder;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
-use App\Service\Refresh\SocialFeedRefresher;
 use App\Service\Retention\EntryPruner;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
-use App\Service\Social\TimelineFetcher\TimelineFetcherInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
@@ -50,7 +49,6 @@ final readonly class RefreshRunners
         private ContentChangeMarkerInterface $changeMarker,
         private SearchIndexWriterInterface $indexWriter,
         private LoggerInterface $logger,
-        private TimelineFetcherInterface $timelines,
     ) {
     }
 
@@ -68,7 +66,6 @@ final readonly class RefreshRunners
             new RecordingContentChangeMarker(),
             new RecordingSearchIndexWriter(),
             new NullLogger(),
-            new StubTimelineFetcher(),
         );
     }
 
@@ -84,7 +81,6 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $this->logger,
-            $this->timelines,
         );
     }
 
@@ -99,7 +95,6 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $this->logger,
-            $this->timelines,
         );
     }
 
@@ -114,7 +109,6 @@ final readonly class RefreshRunners
             $changeMarker,
             $this->indexWriter,
             $this->logger,
-            $this->timelines,
         );
     }
 
@@ -129,7 +123,6 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $indexWriter,
             $this->logger,
-            $this->timelines,
         );
     }
 
@@ -144,27 +137,11 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $logger,
-            $this->timelines,
-        );
-    }
-
-    public function readingTimelinesFrom(TimelineFetcherInterface $timelines): self
-    {
-        return new self(
-            $this->entityManager,
-            $this->clock,
-            $this->bodyParser,
-            $this->flushingEntityManager,
-            $this->lockFactory,
-            $this->changeMarker,
-            $this->indexWriter,
-            $this->logger,
-            $timelines,
         );
     }
 
     public function build(
-        BatchFeedFetcherInterface $feedFetcher,
+        PassFetcherInterface $passFetcher,
         BatchFeedFetcherInterface $homepageFetcher,
     ): RefreshRunner {
         /** @var FeedRepository $feedRepository */
@@ -177,15 +154,7 @@ final readonly class RefreshRunners
 
         return new RefreshRunner(
             $feedRepository,
-            new RefreshPassFetcher(
-                $feedFetcher,
-                $outcomePersister,
-                new SocialFeedRefresher(
-                    SocialFeeds::repository($this->entityManager),
-                    $this->timelines,
-                    $outcomePersister,
-                ),
-            ),
+            new RefreshPassRecorder($passFetcher, $outcomePersister, SocialFeeds::repository($this->entityManager)),
             new MissingFaviconResolver(
                 new FaviconResolver($homepageFetcher, new NullLogger()),
                 $this->flushingEntityManager,

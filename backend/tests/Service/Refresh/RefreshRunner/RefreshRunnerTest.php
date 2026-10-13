@@ -24,6 +24,7 @@ use App\Tests\Support\RecordingContentChangeMarker;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\StubPassFetcher;
 use App\Tests\Support\TtlRecordingLockFactory;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
@@ -38,7 +39,7 @@ final class RefreshRunnerTest extends DbTestCase
     use ScrapedFixtures;
 
     private MockClock $clock;
-    private StubFeedFetcher $fetcher;
+    private StubPassFetcher $fetcher;
     private StubFeedFetcher $faviconFetcher;
     private TtlRecordingLockFactory $lockFactory;
     private User $subscriber;
@@ -52,7 +53,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
         $this->changeMarker = new RecordingContentChangeMarker();
         $this->logger = new RecordingLogger();
-        $this->fetcher = new StubFeedFetcher($this->clock);
+        $this->fetcher = new StubPassFetcher($this->clock);
         // Favicon resolution has its own fetcher so homepage fetches never
         // pollute assertions on which FEEDS the runner fetched.
         $this->faviconFetcher = new StubFeedFetcher();
@@ -589,7 +590,7 @@ final class RefreshRunnerTest extends DbTestCase
         $third = $this->dueFeed('https://three.example.com/feed');
         $this->entityManager->flush();
 
-        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -612,7 +613,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(2, $report->fetched);
         self::assertSame(1, $report->skippedForBudget);
         self::assertSame(1, $report->remaining);
-        self::assertCount(2, $this->fetcher->fetchedUrls);
+        self::assertCount(2, $this->fetcher->fetchedUrls());
         // The third feed never started, so the favicon pass must not spend the refused time on its homepage.
         self::assertNotContains('https://three.example.com', $this->faviconFetcher->fetchedUrls);
     }
@@ -655,7 +656,7 @@ final class RefreshRunnerTest extends DbTestCase
         $second = $this->dueFeed('https://two.example.com/feed');
         $this->entityManager->flush();
 
-        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second] as $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -668,7 +669,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         self::assertSame(1, $report->notModified);
         self::assertSame(1, $report->skippedForBudget);
-        self::assertSame([$first->getUrl()], $this->fetcher->fetchedUrls);
+        self::assertSame([$first->getUrl()], $this->fetcher->fetchedUrls());
         // Progress was made, so a polling caller converges instead of looping.
         self::assertSame(1, $report->remaining);
     }
@@ -690,7 +691,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->skippedForBudget);
         self::assertSame(0, $report->remaining);
         self::assertSame(0, $report->pruned);
-        self::assertSame([], $this->fetcher->fetchedUrls);
+        self::assertSame([], $this->fetcher->fetchedUrls());
         $lock->release();
     }
 
@@ -826,7 +827,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNotNull($userId);
         $report = $this->runner()->run(RefreshRequestModel::forUser($userId, 60));
 
-        self::assertSame([$mine->getUrl()], $this->fetcher->fetchedUrls);
+        self::assertSame([$mine->getUrl()], $this->fetcher->fetchedUrls());
         self::assertSame(1, $report->total);
     }
 
@@ -1049,7 +1050,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         // Concurrency 1 makes "the third feed is never started" deterministic
         // rather than a race against however many feeds a wave happens to fit.
-        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -1073,8 +1074,8 @@ final class RefreshRunnerTest extends DbTestCase
 
         self::assertSame('aborted', $report->status);
         // The run stopped: the third feed's outcome was never processed.
-        self::assertCount(2, $this->fetcher->fetchedUrls);
-        self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls);
+        self::assertCount(2, $this->fetcher->fetchedUrls());
+        self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls());
         // The first feed's entries were committed before the second flush failed.
         self::assertSame(1, $this->changeMarker->marks);
     }
@@ -1162,7 +1163,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->entityManager->flush();
 
         // Concurrency 1 fixes the order, so the third flush is the fetched feed's.
-        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
         $this->fetcher->willReturn(
             $unchanged->getUrl(),
             FetchResponseModel::notModified($unchanged->getUrl(), false, null, null),
@@ -1194,7 +1195,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->skippedForBudget);
         self::assertSame(2, $report->remaining);
         self::assertSame(0, $report->pruned);
-        self::assertNotContains($untouched->getUrl(), $this->fetcher->fetchedUrls);
+        self::assertNotContains($untouched->getUrl(), $this->fetcher->fetchedUrls());
     }
 
     public function testAForcedRefreshSkipsAFeedFetchedWithinTheCooldown(): void
@@ -1211,7 +1212,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $report = $this->runner()->run(RefreshRequestModel::forUser($this->subscriber->requireId(), 60));
 
-        self::assertSame([$stale->getUrl()], $this->fetcher->fetchedUrls);
+        self::assertSame([$stale->getUrl()], $this->fetcher->fetchedUrls());
         self::assertSame(1, $report->total);
         self::assertSame(1, $report->notModified);
     }

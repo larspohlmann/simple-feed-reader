@@ -51,6 +51,11 @@ services:
         alias: App\Service\Image\ImageProxy\ImageProxy
         public: true
 
+    # Public: the refresh tests replace it, and its one consumer would otherwise inline it away.
+    App\Service\Refresh\PassFetcher\PassFetcherInterface:
+        alias: App\Service\Refresh\PassFetcher\ConcurrentPassFetcher
+        public: true
+
     test.cache.passkey_challenge:
         alias: passkey.challenge.cache
 

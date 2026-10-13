@@ -40,6 +40,7 @@ use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\StubGuardedImageDownloader;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubLokiEndpoint;
+use App\Tests\Support\StubPassFetcher;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -80,8 +81,8 @@ final class MaintenanceTickTest extends DbTestCase
         $this->entityManager->persist(new Subscription($subscriber, $feed, $clock->now()));
         $this->entityManager->flush();
 
-        $fetcher = new StubFeedFetcher($clock);
-        $fetcher->willReturn(
+        $passes = new StubPassFetcher($clock);
+        $passes->willReturn(
             $feed->getUrl(),
             FetchResponseModel::fetched(
                 $feed->getUrl(),
@@ -101,7 +102,7 @@ final class MaintenanceTickTest extends DbTestCase
 
         $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
             ->flushingThrough($failingEntityManager)
-            ->build($fetcher, $fetcher);
+            ->build($passes, new StubFeedFetcher());
 
         $throwingPreferences = $this->createStub(DigestRecipientsInterface::class);
         $throwingPreferences->method('findWithDigestEnabled')->willThrowException(
@@ -176,23 +177,24 @@ final class MaintenanceTickTest extends DbTestCase
         $this->entityManager->persist($profileFeed);
         $this->entityManager->persist(new Subscription($subscriber, $profileFeed, $now));
         $this->entityManager->flush();
-        $fetcher = new StubFeedFetcher($clock);
-        $fetcher->secondsPerFetch = $refreshSeconds;
-        $fetcher->willReturnBody(
+        $passes = new StubPassFetcher($clock);
+        $passes->secondsPerFetch = $refreshSeconds;
+        $passes->willReturnBody(
             'https://one.example.com/feed',
             /** @lang TEXT */ '<?xml version="1.0"?><rss version="2.0"><channel><title>F</title></channel></rss>',
         );
-        $fetcher->willReturnBody(
+        $appView = new StubFeedFetcher();
+        $appView->willReturnBody(
             'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles?actors=tick.bsky.social',
             '{"profiles":[]}',
         );
         $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
-            ->build($fetcher, $fetcher);
+            ->build($passes, $appView);
         $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
         self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
         $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock);
 
-        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock, $fetcher)->run();
+        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock, $appView)->run();
 
         return $report->sweeps->profileImages->checked;
     }
@@ -206,14 +208,14 @@ final class MaintenanceTickTest extends DbTestCase
         $this->queueLinkPost($clock);
         $pages = ShareLinkCardsWiring::titledPages();
         $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, $pages, $clock);
-        $fetcher = new StubFeedFetcher($clock);
-        $fetcher->secondsPerFetch = $refreshSeconds;
-        $fetcher->willReturnBody(
+        $passes = new StubPassFetcher($clock);
+        $passes->secondsPerFetch = $refreshSeconds;
+        $passes->willReturnBody(
             'https://one.example.com/feed',
             /** @lang TEXT */ '<?xml version="1.0"?><rss version="2.0"><channel><title>F</title></channel></rss>',
         );
         $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
-            ->build($fetcher, $fetcher);
+            ->build($passes, new StubFeedFetcher());
         $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
         self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
 

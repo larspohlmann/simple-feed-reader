@@ -330,6 +330,7 @@ are left out of backups (docs/backup.md §6.2).
 - Every call goes through `UrlGuard`: a one-off call via `GuardedApiClient`, a refresh's timeline reads via the
   shared `ConcurrentRequestEngine`. No redirects; the resolved IP is pinned when direct, and a configured egress
   proxy carries the call, bearer token included, with a direct pinned call as the fallback when direct fallback is on.
+  A 429 is never asked again over another route, neither directly nor over another address family (#1608).
 - The Bluesky PDS comes from the account's DID document, must be `https`, and is normalised to its origin.
 - The app-password format check refuses a main password, which would grant far more than the app needs. It runs in
   the domain model (`SocialCredentialsModel`) on connect and on reconnect, before the rate limit and any network call.
@@ -339,23 +340,24 @@ are left out of backups (docs/backup.md §6.2).
   (`social_import`, 10 per 15 minutes). A refused or unreadable credential marks the account as needing a reconnect,
   and an account in that state is refused before any network call.
 - The refresh worker reads the stored credential for every poll of an account's private feeds (#1599). A Bluesky
-  session is cached per account for 90 minutes in the `bluesky.session.cache` pool. Its access token is sealed with the
-  instance key, bound to the owner; a reconnect changes the cache key, and a disconnect deletes the entry. The token
-  is only ever sent to the account's stored service URL, never to a URL read from the cache. A token the PDS calls
-  expired or invalid is replaced once with a fresh session. Timeline reads run concurrently, at most three in flight
-  per account (`social_account_concurrency`, #1607); a throttled or refused account's waiting reads are withheld
-  before they reach the wire.
+  session is cached per account for 90 minutes in the `bluesky.session.cache` pool. Its access token is sealed
+  with the instance key, bound to the owner; a reconnect changes the cache key, and a disconnect deletes the
+  entry. The token is only ever sent to the account's stored service URL, never to a URL read from the cache. A
+  token the PDS calls expired or invalid is replaced once with a fresh session. Timeline reads run concurrently,
+  at most three in flight per account (`social_account_concurrency`, #1607) and four per Mastodon instance or
+  Bluesky PDS across its accounts (`social_host_concurrency`, #1608); a throttled or refused account's waiting
+  reads are withheld before they reach the wire.
 - A like (#1600) is the one write. It acts through the account that owns the private feed, else the network's default
   account. It first resolves the post on that account's own server (`getPosts` on the PDS, `/api/v2/search?resolve=true`
   on the Mastodon instance), and a status id from that answer reaches a URL path only when it is 1–64 letters and digits.
   An account that needs reconnecting is refused before any call; a refused credential marks it. Like and unlike share a
   per-user budget (`social_like`, 60 per 5 minutes).
 - The picker follows a Mastodon `Link` next page only on the instance's own origin, and reads at most 5000 follows.
-- A private feed's synthetic `social:` URL never reaches `UrlGuard` or the feed fetcher: only
-  `ConcurrentTimelineFetcher` reads the feed, through its account. The URL names the owning account, not the network
-  identity, so two users of one network account get separate rows. Subscribing by URL refuses the scheme. OPML and
-  backups leave private feeds out, and a restore refuses a `social:` feed, entry or entry-state line, which could
-  otherwise attach another user's timeline by URL.
+- A private feed's synthetic `social:` URL never reaches `UrlGuard` or the feed fetcher: only the refresh's
+  `ConcurrentPassFetcher` reads it, through its account, on the same engine run as the RSS feeds (#1608). The URL names
+  the owning account, not the network identity, so two users of one network account get separate rows. Subscribing by
+  URL refuses the scheme. OPML and backups leave private feeds out, and a restore refuses a `social:` feed, entry or
+  entry-state line, which could otherwise attach another user's timeline by URL.
 
 ## AI provider endpoints
 

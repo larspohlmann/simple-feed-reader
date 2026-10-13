@@ -56,7 +56,7 @@ final readonly class ResponseClassifier
             throw new FeedGoneException(sprintf('%s: HTTP 410 Gone', $attempt->url));
         }
 
-        if (Response::HTTP_TOO_MANY_REQUESTS === $status) {
+        if (FeedThrottledException::STATUS_CODE === $status) {
             throw new FeedThrottledException(
                 sprintf('%s: HTTP 429', $attempt->url),
                 $this->retryAfterSeconds($response),
