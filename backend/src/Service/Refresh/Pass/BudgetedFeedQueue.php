@@ -43,6 +43,12 @@ final class BudgetedFeedQueue
         yield from $this->startedAmong(self::isSocial(...));
     }
 
+    /** @return \Generator<int, Feed, mixed, void> every kind of feed, in the order the pass was given */
+    public function startedFeeds(): \Generator
+    {
+        yield from $this->startedAmong(static fn (): bool => true);
+    }
+
     /** @return list<int> every social feed's id, started or not */
     public function socialFeedIds(): array
     {

@@ -48,6 +48,12 @@ final readonly class RefreshPass
         return $this->queue->socialFeeds();
     }
 
+    /** @return \Generator<int, Feed, mixed, void> */
+    public function startedFeeds(): \Generator
+    {
+        return $this->queue->startedFeeds();
+    }
+
     /** @return list<int> */
     public function socialFeedIds(): array
     {

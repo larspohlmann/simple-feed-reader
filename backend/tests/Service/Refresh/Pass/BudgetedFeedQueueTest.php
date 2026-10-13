@@ -135,6 +135,43 @@ final class BudgetedFeedQueueTest extends TestCase
         self::assertSame([7, 4], $queue->socialFeedIds());
     }
 
+    public function testStartsEveryKindOfFeedInTheOrderItWasGiven(): void
+    {
+        $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
+        $timeline = self::withId(self::socialFeed('social:bluesky:1:home'), 2);
+        $rss = self::withId(new Feed('https://feed1.example.com/rss'), 1);
+        $queue = new BudgetedFeedQueue([$timeline, $rss], $clock, $clock->now()->getTimestamp() + 300);
+
+        self::assertSame([2 => $timeline, 1 => $rss], iterator_to_array($queue->startedFeeds()));
+        self::assertSame([2, 1], $queue->startedFeedIds());
+    }
+
+    public function testAFeedCountsAsStartedOnlyOnceItIsPulled(): void
+    {
+        $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
+        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 300);
+
+        $queue->startedFeeds()->current();
+
+        self::assertSame([1], $queue->startedFeedIds());
+    }
+
+    public function testStartedFeedsStopOnceTheDeadlineIsWithinTheSafetyMargin(): void
+    {
+        $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
+        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 100);
+
+        $started = [];
+        foreach ($queue->startedFeeds() as $feed) {
+            $started[] = $feed;
+            $clock->sleep(95);
+        }
+
+        self::assertCount(1, $started);
+        self::assertSame(1, $queue->startedCount());
+        self::assertSame(2, $queue->skippedCount());
+    }
+
     private static function socialFeed(string $url): Feed
     {
         $feed = new Feed($url);

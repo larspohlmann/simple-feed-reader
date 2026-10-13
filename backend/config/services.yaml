@@ -202,6 +202,10 @@ services:
         arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
 
+    App\Service\Refresh\PassFetcher\ConcurrentPassFetcher:
+        arguments:
+            $hostConcurrency: '%fetch_host_concurrency%'
+
     App\Service\Social\TimelineRounds:
         arguments:
             $accountConcurrency: '%social_account_concurrency%'
