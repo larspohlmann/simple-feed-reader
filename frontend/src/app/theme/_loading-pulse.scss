@@ -1,6 +1,6 @@
 // The app's one loading motion (<app-skeleton>, link-card placeholders): a block that breathes.
 @mixin block {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
   animation: loading-pulse 1.4s ease-in-out infinite;
 
   /* A pulsing block is exactly the kind of motion that triggers vestibular

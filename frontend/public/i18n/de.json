@@ -408,6 +408,7 @@
       "importAddCollection": "{{name}} hinzufügen",
       "importCollectionAdded": "Bereits hinzugefügt: {{name}}",
       "importEmpty": "Nichts anzuzeigen.",
+      "importShowMore": "{{count}} weitere anzeigen",
       "importTruncated": "Nur die ersten 5.000 werden angezeigt.",
       "importApply": "Importieren",
       "importApplyCount": "{{count}} importieren",

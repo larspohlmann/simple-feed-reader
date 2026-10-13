@@ -77,7 +77,7 @@
     </div>
 
     <ul class="rows" [attr.data-testid]="tabTestIds[tab()]">
-      @for (row of visibleRows(); track row.key) {
+      @for (row of renderedRows(); track row.key) {
         @let picked = chosen().has(row.key);
         <li>
           <label
@@ -113,11 +113,23 @@
         <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
       }
     </ul>
+    @if (nextPageSize() > 0) {
+      <app-button
+        class="more"
+        variant="ghost"
+        size="sm"
+        data-testid="social-import-show-more"
+        (click)="showMore()"
+      >
+        {{ 'settings.social.importShowMore' | transloco: { count: nextPageSize() } }}
+      </app-button>
+    }
   } @else if (importer.loading()) {
-    <p class="loading" role="status" data-testid="social-import-loading">
-      <app-spinner [size]="16" [decorative]="true" />
-      {{ 'settings.social.importLoading' | transloco }}
-    </p>
+    <app-skeleton
+      data-testid="social-import-loading"
+      [label]="'settings.social.importLoading' | transloco"
+      [rows]="6"
+    />
   }
 
   @if (importer.failure(); as message) {
