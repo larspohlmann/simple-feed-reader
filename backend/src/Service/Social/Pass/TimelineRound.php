@@ -13,6 +13,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialSessionStaleException;
 use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
+use App\Service\Social\Model\TimelineSlotsModel;
 use App\Service\Social\TimelineSources;
 
 /**
@@ -30,8 +31,11 @@ final class TimelineRound implements DispatchGateInterface
     /** @var array<int, SocialFeed> every feed ticketed so far */
     private array $socialFeedsByFeedId = [];
 
-    public function __construct(private readonly TimelineSources $sources, private readonly TimelineAccounts $accounts)
-    {
+    public function __construct(
+        private readonly TimelineSources $sources,
+        private readonly TimelineAccounts $accounts,
+        private readonly TimelineSlotsModel $slots,
+    ) {
     }
 
     /**
@@ -123,7 +127,7 @@ final class TimelineRound implements DispatchGateInterface
             return;
         }
 
-        yield $feedId => RequestTicketModel::api($request, sprintf('social-account-%d', $account->requireId()));
+        yield $feedId => $this->slots->ticketFor($account, $request);
     }
 
     /** The settled outcome, or null once the feed is queued for the renewal wave. */

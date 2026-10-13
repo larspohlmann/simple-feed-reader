@@ -28,7 +28,7 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      */
     public function fetchAll(iterable $tickets): \Generator
     {
-        return $this->engine->sendAll($this->requestTickets($tickets), $this->hostConcurrency);
+        return $this->engine->sendAll($this->requestTickets($tickets));
     }
 
     /**
@@ -41,7 +41,7 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     private function requestTickets(iterable $tickets): \Generator
     {
         foreach ($tickets as $key => $ticket) {
-            yield $key => RequestTicketModel::feed($ticket);
+            yield $key => RequestTicketModel::feed($ticket, $this->hostConcurrency);
         }
     }
 }

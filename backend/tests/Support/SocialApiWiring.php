@@ -17,6 +17,7 @@ use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
 use App\Service\Social\StoredCredential;
 use App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher;
+use App\Service\Social\TimelineRounds;
 use App\Service\Social\TimelineSource\BlueskyTimelineSource;
 use App\Service\Social\TimelineSource\MastodonTimelineSource;
 use App\Service\Social\TimelineSources;
@@ -91,9 +92,16 @@ final class SocialApiWiring
 
         return new ConcurrentTimelineFetcher(
             FetchWiring::requestEngine($http, $guard, FetchWiring::egressProxy(null), 8),
-            self::timelineSources($http, $cache),
-            $accountConcurrency,
+            self::timelineRounds($http, $cache, $accountConcurrency),
         );
+    }
+
+    public static function timelineRounds(
+        HttpClientInterface $http,
+        ArrayAdapter $cache,
+        int $accountConcurrency = 3,
+    ): TimelineRounds {
+        return new TimelineRounds(self::timelineSources($http, $cache), $accountConcurrency, 4);
     }
 
     public static function timelineSources(HttpClientInterface $http, ArrayAdapter $cache): TimelineSources

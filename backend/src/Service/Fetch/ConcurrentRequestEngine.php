@@ -53,13 +53,14 @@ final readonly class ConcurrentRequestEngine
 
     /**
      * A failed request arrives as a failed outcome, never a throw, so one bad ticket cannot abandon the others;
-     * abandoning the generator cancels whatever is still in flight. A ticket the gate refuses is withheld.
+     * abandoning the generator cancels whatever is still in flight. A ticket goes out only while every slot it names
+     * has room. A ticket the gate refuses is withheld.
      *
      * @param iterable<int|string, RequestTicketModel> $tickets
      *
      * @return \Generator<int|string, FetchOutcomeModel>
      */
-    public function sendAll(iterable $tickets, int $slotCapacity, ?DispatchGateInterface $gate = null): \Generator
+    public function sendAll(iterable $tickets, ?DispatchGateInterface $gate = null): \Generator
     {
         try {
             $batchProxy = $this->egressProxySource->egressProxy();
@@ -75,7 +76,7 @@ final readonly class ConcurrentRequestEngine
         $lookAhead = $this->concurrency;
         $queue = new FetchQueue(
             $this->iterator($tickets),
-            new RequestSlots($slotCapacity),
+            new RequestSlots(),
             $lookAhead,
             $batchProxy,
         );

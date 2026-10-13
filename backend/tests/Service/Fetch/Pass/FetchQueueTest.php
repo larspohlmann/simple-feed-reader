@@ -26,7 +26,7 @@ final class FetchQueueTest extends TestCase
     ): FetchQueue {
         return new FetchQueue(
             new \ArrayIterator($tickets),
-            $slots ?? new RequestSlots(100),
+            $slots ?? new RequestSlots(),
             $lookAhead,
             $batchProxy,
         );
@@ -129,7 +129,7 @@ final class FetchQueueTest extends TestCase
             yield 22 => FeedTickets::of('https://two.example.com/feed');
         })();
 
-        $queue = new FetchQueue($tickets, new RequestSlots(100), 100);
+        $queue = new FetchQueue($tickets, new RequestSlots(), 100);
         $queue->takeRunnable();
 
         // Only the first yield has run: pulling one ticket must not resume the
@@ -158,11 +158,11 @@ final class FetchQueueTest extends TestCase
 
     public function testParksATicketWhoseHostIsFullAndServesAFreeHostFirst(): void
     {
-        $slots = new RequestSlots(1);
+        $slots = new RequestSlots();
         $slots->acquire($this->attempt('https://busy.example.com/inflight'));
 
         $queue = $this->queue([
-            11 => FeedTickets::of('https://busy.example.com/feed'),
+            11 => FeedTickets::cappedAt('https://busy.example.com/feed', 1),
             22 => FeedTickets::of('https://free.example.com/feed'),
         ], slots: $slots);
 
@@ -175,12 +175,12 @@ final class FetchQueueTest extends TestCase
 
     public function testAParkedTicketIsServedOnceItsHostFrees(): void
     {
-        $slots = new RequestSlots(1);
+        $slots = new RequestSlots();
         $inFlight = $this->attempt('https://busy.example.com/inflight');
         $slots->acquire($inFlight);
 
         $queue = $this->queue([
-            11 => FeedTickets::of('https://busy.example.com/feed'),
+            11 => FeedTickets::cappedAt('https://busy.example.com/feed', 1),
         ], slots: $slots);
 
         self::assertNull($queue->takeRunnable(), 'parked while the host is full');
@@ -194,14 +194,14 @@ final class FetchQueueTest extends TestCase
 
     public function testLookAheadPastAFullHostIsBounded(): void
     {
-        $slots = new RequestSlots(1);
+        $slots = new RequestSlots();
         $slots->acquire($this->attempt('https://busy.example.com/inflight'));
 
         $pulled = [];
         $tickets = (function () use (&$pulled): \Generator {
             foreach ([11, 22, 33, 44] as $key) {
                 $pulled[] = $key;
-                yield $key => FeedTickets::of('https://busy.example.com/feed' . $key);
+                yield $key => FeedTickets::cappedAt('https://busy.example.com/feed' . $key, 1);
             }
         })();
 
