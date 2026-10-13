@@ -100,7 +100,7 @@ describe('SocialSectionComponent', () => {
 
   afterEach(() => http.verify());
 
-  it('offers "Choose accounts…" per account in the import section, disabled when reconnecting is needed', () => {
+  it('offers "Select feeds…" per account in the import section, disabled when reconnecting is needed', () => {
     const fixture = mount([
       account(),
       account({ id: 2, handle: 'bob.bsky.social', isDefault: false, status: 'needs_reconnect' }),
@@ -110,7 +110,7 @@ describe('SocialSectionComponent', () => {
     const button = (id: number) =>
       section.querySelector(`[data-testid="social-import-${id}"] button`) as HTMLButtonElement;
     expect(button(1).disabled).toBe(false);
-    expect(button(1).textContent).toContain('Choose accounts…');
+    expect(button(1).textContent).toContain('Select feeds…');
     expect(button(2).disabled).toBe(true);
     const row = (id: number) => button(id).closest('app-settings-row')?.textContent ?? '';
     expect(row(1)).toContain('alice.bsky.social');
