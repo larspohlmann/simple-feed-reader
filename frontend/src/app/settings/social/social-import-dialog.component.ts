@@ -1,25 +1,34 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { pluralKey } from '../../core/i18n/plural-key';
 import { toggled } from '../../core/toggled-set';
 import { RefreshService } from '../../reader/state/refresh.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { ButtonComponent } from '../../shared/button/button.component';
-import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import { inputValue } from '../../shared/input-value';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
+import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { SocialNetworkName } from '../../core/social-network';
 import {
-  CollectionCandidate,
-  CollectionState,
-  FollowCandidate,
+  FILTER_KEYS,
+  ImportRow,
+  ImportTab,
+  StateFilter,
+  TAB_TEST_IDS,
+  buildRows,
+  collectionKey,
+  followKey,
+  tally,
+} from './social-import-rows';
+import {
   ImportCandidateState,
   SocialImportCollection,
   SocialImportFeed,
@@ -33,42 +42,21 @@ export interface SocialImportDialogData {
   readonly handle: string;
 }
 
-const STATE_KEYS: Readonly<Record<ImportCandidateState, string>> = {
-  new: 'settings.social.importStateNew',
-  subscribed: 'settings.social.importStateSubscribed',
-  no_longer_followed: 'settings.social.importStateNoLongerFollowed',
+const BADGE_CLASSES: Readonly<Record<ImportCandidateState, string>> = {
+  new: 'accent-pill',
+  subscribed: 'state',
+  no_longer_followed: 'state is-gone',
 };
-
-const CHECKBOX_KEYS: Readonly<Record<ImportCandidateState, string>> = {
-  new: 'settings.social.importSubscribe',
-  subscribed: 'settings.social.importAlreadySubscribed',
-  no_longer_followed: 'settings.social.importUnsubscribe',
-};
-
-const COLLECTION_CHECKBOX_KEYS: Readonly<Record<CollectionState, string>> = {
-  new: 'settings.social.importAddCollection',
-  subscribed: 'settings.social.importCollectionAdded',
-};
-
-/** Home has no id, and a list and a custom feed could share one, so the kind is part of the key. */
-export function collectionKey(collection: CollectionCandidate): string {
-  return `${collection.kind}:${collection.id ?? ''}`;
-}
-
-interface CollectionSection {
-  readonly labelKey: string;
-  readonly testId: string;
-  readonly items: readonly CollectionCandidate[];
-}
 
 @Component({
   selector: 'app-social-import-dialog',
   imports: [
     A11yModule,
     ButtonComponent,
-    DisclosureComponent,
     ErrorBannerComponent,
+    IconComponent,
     OverlayPanelComponent,
+    SegmentedChoiceComponent,
     SpinnerComponent,
     TranslocoPipe,
     WarningBoxComponent,
@@ -87,55 +75,57 @@ export class SocialImportDialogComponent {
   private readonly refresh = inject(RefreshService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
+  private readonly activeLang = toSignal(this.i18n.langChanges$, {
+    initialValue: this.i18n.getActiveLang(),
+  });
 
-  protected readonly stateKeys = STATE_KEYS;
-  protected readonly checkboxKeys = CHECKBOX_KEYS;
-  protected readonly collectionCheckboxKeys = COLLECTION_CHECKBOX_KEYS;
-  protected readonly collectionKey = collectionKey;
+  protected readonly filterKeys = FILTER_KEYS;
+  protected readonly badgeClasses = BADGE_CLASSES;
+  protected readonly tabTestIds = TAB_TEST_IDS;
   protected readonly inputValue = inputValue;
-  private readonly showsCustomFeeds = this.data.network === 'bluesky';
+  protected readonly tabs: readonly ImportTab[] =
+    this.data.network === 'bluesky' ? ['accounts', 'lists', 'customFeeds'] : ['accounts', 'lists'];
+  protected readonly tab = signal<ImportTab>('accounts');
+  protected readonly stateFilter = signal<StateFilter>('all');
   protected readonly filter = signal('');
-  protected readonly toSubscribe = signal<ReadonlySet<string>>(new Set());
-  protected readonly toUnsubscribe = signal<ReadonlySet<number>>(new Set());
-  protected readonly toCollect = signal<ReadonlySet<string>>(new Set());
+  protected readonly chosen = signal<ReadonlySet<string>>(new Set());
 
-  private readonly needle = computed(() => this.filter().trim().toLowerCase());
-
-  protected readonly followView = computed(() => {
-    const follows: FollowCandidate[] = [];
-    const visibleNew: FollowCandidate[] = [];
-    let hasLeftovers = false;
-    for (const follow of this.importer.candidates()?.follows ?? []) {
-      if (!this.matches(follow.handle, follow.displayName)) continue;
-      follows.push(follow);
-      if (follow.state === 'new') visibleNew.push(follow);
-      if (follow.state === 'no_longer_followed') hasLeftovers = true;
-    }
-    return { follows, visibleNew, hasLeftovers };
+  private readonly rows = computed(() => {
+    this.activeLang();
+    return buildRows(this.importer.candidates(), (key, params) => this.i18n.translate(key, params));
   });
-  protected readonly selectedCount = computed(
-    () => this.toSubscribe().size + this.toUnsubscribe().size + this.toCollect().size,
+  private readonly tally = computed(() =>
+    tally(this.rows(), {
+      tabs: this.tabs,
+      current: this.tab(),
+      needle: this.filter().trim().toLowerCase(),
+    }),
   );
 
-  protected readonly followsKey = computed(() =>
-    pluralKey('settings.social.importFollows', this.followView().follows.length),
+  protected readonly tabCounts = computed(() => this.tally().tabCounts);
+  protected readonly stateOptions = computed<readonly StateFilter[]>(() =>
+    this.tally().stateCounts.no_longer_followed > 0
+      ? ['all', 'new', 'subscribed', 'no_longer_followed']
+      : ['all', 'new', 'subscribed'],
   );
-  protected readonly collections = computed<readonly CollectionSection[]>(() => {
-    const candidates = this.importer.candidates();
-    const sections = [
-      this.collection('settings.social.importLists', 'social-import-lists', candidates?.lists),
-    ];
-    if (this.showsCustomFeeds) {
-      sections.push(
-        this.collection(
-          'settings.social.importCustomFeeds',
-          'social-import-feeds',
-          candidates?.customFeeds,
-        ),
-      );
-    }
-    return sections;
+  protected readonly stateCounts = computed(() => this.tally().stateCounts);
+  protected readonly activeFilter = computed<StateFilter>(() =>
+    this.stateOptions().includes(this.stateFilter()) ? this.stateFilter() : 'all',
+  );
+  protected readonly visibleRows = computed(() => {
+    const filter = this.activeFilter();
+    const matched = this.tally().matched;
+    return filter === 'all' ? matched : matched.filter((row) => row.state === filter);
   });
+  private readonly visibleNewKeys = computed(() =>
+    this.visibleRows()
+      .filter((row) => row.state === 'new')
+      .map((row) => row.key),
+  );
+  protected readonly visibleNewCount = computed(() => this.visibleNewKeys().length);
+  protected readonly hasLeftovers = computed(() =>
+    this.visibleRows().some((row) => row.state === 'no_longer_followed'),
+  );
 
   constructor() {
     this.load();
@@ -145,38 +135,19 @@ export class SocialImportDialogComponent {
     this.importer.load(this.data.accountId);
   }
 
-  protected isChosen(follow: FollowCandidate): boolean {
-    switch (follow.state) {
-      case 'subscribed':
-        return true;
-      case 'new':
-        return this.toSubscribe().has(follow.feedUrl);
-      case 'no_longer_followed':
-        return follow.subscriptionId !== null && this.toUnsubscribe().has(follow.subscriptionId);
-    }
-  }
-
-  protected toggle(follow: FollowCandidate): void {
-    switch (follow.state) {
-      case 'subscribed':
-        return;
-      case 'new':
-        this.toSubscribe.update((current) => toggled(current, follow.feedUrl));
-        return;
-      case 'no_longer_followed':
-        this.toggleRemoval(follow.subscriptionId);
-    }
+  protected toggle(row: ImportRow): void {
+    if (row.state === 'subscribed') return;
+    this.chosen.update((current) => toggled(current, row.key));
   }
 
   protected selectAllNew(): void {
-    const feedUrls = this.followView().visibleNew.map((follow) => follow.feedUrl);
-    this.toSubscribe.update((current) => new Set([...current, ...feedUrls]));
+    this.chosen.update((current) => new Set([...current, ...this.visibleNewKeys()]));
   }
 
   protected apply(): void {
     const selection = {
       subscribe: this.chosenFollows(),
-      unsubscribe: [...this.toUnsubscribe()],
+      unsubscribe: this.chosenRemovals(),
       collections: this.chosenCollections(),
     };
 
@@ -186,28 +157,8 @@ export class SocialImportDialogComponent {
     });
   }
 
-  protected collectionName(collection: CollectionCandidate): string {
-    return collection.kind === 'home'
-      ? this.i18n.translate('settings.social.importHome')
-      : collection.name;
-  }
-
-  protected isCollected(collection: CollectionCandidate): boolean {
-    return collection.state === 'subscribed' || this.toCollect().has(collectionKey(collection));
-  }
-
-  protected toggleCollection(collection: CollectionCandidate): void {
-    if (collection.state === 'subscribed') return;
-    this.toCollect.update((current) => toggled(current, collectionKey(collection)));
-  }
-
   protected cancel(): void {
     this.dialogRef.close(undefined);
-  }
-
-  private toggleRemoval(subscriptionId: number | null): void {
-    if (subscriptionId === null) return;
-    this.toUnsubscribe.update((current) => toggled(current, subscriptionId));
   }
 
   private finish(result: SocialImportResult): void {
@@ -238,31 +189,23 @@ export class SocialImportDialogComponent {
 
   private chosenFollows(): SocialImportFeed[] {
     return (this.importer.candidates()?.follows ?? [])
-      .filter((follow) => follow.state === 'new' && this.toSubscribe().has(follow.feedUrl))
+      .filter((follow) => follow.state === 'new' && this.chosen().has(followKey(follow)))
       .map((follow) => ({ feedUrl: follow.feedUrl, title: follow.displayName }));
+  }
+
+  private chosenRemovals(): number[] {
+    return (this.importer.candidates()?.follows ?? [])
+      .filter((follow) => follow.state === 'no_longer_followed')
+      .filter((follow) => this.chosen().has(followKey(follow)))
+      .flatMap((follow) => (follow.subscriptionId === null ? [] : [follow.subscriptionId]));
   }
 
   private chosenCollections(): SocialImportCollection[] {
     const candidates = this.importer.candidates();
     return [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
       .filter(
-        (collection) =>
-          collection.state === 'new' && this.toCollect().has(collectionKey(collection)),
+        (collection) => collection.state === 'new' && this.chosen().has(collectionKey(collection)),
       )
       .map(({ kind, id, name }) => ({ kind, id, name }));
-  }
-
-  private collection(
-    label: string,
-    testId: string,
-    items: readonly CollectionCandidate[] = [],
-  ): CollectionSection {
-    const shown = items.filter((item) => this.matches(this.collectionName(item)));
-    return { labelKey: pluralKey(label, shown.length), testId, items: shown };
-  }
-
-  private matches(...texts: readonly (string | null)[]): boolean {
-    const needle = this.needle();
-    return needle === '' || texts.some((text) => (text ?? '').toLowerCase().includes(needle));
   }
 }

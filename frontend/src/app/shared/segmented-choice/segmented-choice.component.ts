@@ -5,7 +5,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
  * A small segmented control over a fixed set of string options, labelled by
  * `<labelPrefix><option>` translation keys. A disabled option stays visible;
  * the consumer says beside the control why it cannot be picked, and passes
- * that text's id as `describedBy`.
+ * that text's id as `describedBy`. An option with an entry in `counts` shows
+ * that number after its label.
  */
 @Component({
   selector: 'app-segmented-choice',
@@ -21,5 +22,6 @@ export class SegmentedChoiceComponent<T extends string> {
   readonly labelPrefix = input.required<string>();
   readonly disabledOptions = input<readonly T[]>([]);
   readonly describedBy = input<string | null>(null);
+  readonly counts = input<Partial<Record<T, number>>>({});
   readonly pick = output<T>();
 }

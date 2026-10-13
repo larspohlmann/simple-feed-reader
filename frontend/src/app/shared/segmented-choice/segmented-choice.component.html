@@ -13,6 +13,9 @@
       (click)="pick.emit(option)"
     >
       {{ labelPrefix() + option | transloco }}
+      @if (counts()[option] !== undefined) {
+        <span class="count">{{ counts()[option] }}</span>
+      }
     </button>
   }
 </div>

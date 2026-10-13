@@ -8,9 +8,8 @@ let nextId = 0;
  * footer row, so a dialog's own stylesheet carries only what is specific to it.
  *
  * A dialog stays a card on a phone too — a short confirm has no business filling
- * the screen. The one exception is a route-level picker that *is* the page
- * rather than a modal over it (discover): it opts into the full-screen phone
- * layout with `fillOnMobile`.
+ * the screen. A panel whose content needs the whole screen there (discover, the
+ * add-feed and social import dialogs) opts in with `fillOnMobile`.
  *
  * Width is the one dimension that legitimately varies per consumer, so it is
  * read from --panel-w rather than being an input — that keeps it in the
@@ -39,11 +38,7 @@ export class OverlayPanelComponent {
    */
   readonly headingLevel = input<1 | 2>(2);
 
-  /**
-   * Opt into the full-screen phone layout. For the route-level picker that is
-   * the page rather than a modal over it (discover); every ordinary dialog
-   * leaves this false and stays a centred card at every width.
-   */
+  /** Opt into the full-screen phone layout; an ordinary dialog stays a centred card. */
   readonly fillOnMobile = input(false, { transform: booleanAttribute });
 
   /** Ties the panel to its heading; unique so several panels can coexist. */
