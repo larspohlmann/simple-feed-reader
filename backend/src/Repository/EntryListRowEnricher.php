@@ -121,7 +121,8 @@ final readonly class EntryListRowEnricher
     {
         $feeds = [];
         foreach ($entries as $entry) {
-            $feeds[$entry->getFeed()->requireId()] = $entry->getFeed();
+            $feed = $entry->getFeed();
+            $feeds[$feed->requireId()] = $feed;
         }
 
         return array_filter(array_map(SocialFeedClassifier::networkOf(...), $feeds));
