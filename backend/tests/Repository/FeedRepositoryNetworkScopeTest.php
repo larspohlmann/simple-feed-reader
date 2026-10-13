@@ -17,7 +17,7 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
 {
     private const string NOW = '2026-06-01T00:00:00Z';
 
-    public function testANetworkScopeSelectsOnlyThatNetworksFeedsOfTheUser(): void
+    public function testANetworkScopeSelectsOnlyThatNetworksFeedsOfTheUserEvenWhenHiddenFromAllItems(): void
     {
         $owner = $this->user('network-scope-owner@example.com');
         $home = $this->fixtures()->subscribe(
@@ -25,7 +25,10 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
             NetworkFeedSubscriptions::blueskyHome(1),
             SourceFormat::BLUESKY_API,
         )->getFeed();
-        $profile = $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::BLUESKY_PROFILE)->getFeed();
+        $hiddenSubscription = $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $hiddenSubscription->setIncludeInAllItems(false);
+        $this->entityManager->flush();
+        $profile = $hiddenSubscription->getFeed();
         $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::MASTODON_PROFILE);
         $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::PLAIN);
 
