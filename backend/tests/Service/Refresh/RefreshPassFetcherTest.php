@@ -141,7 +141,7 @@ final class RefreshPassFetcherTest extends DbTestCase
         $this->fetcher()->fetchAndPersist($pass, $this->clock->now());
 
         self::assertSame(1, $pass->tally->notModified());
-        self::assertSame([$rss->getUrl()], $this->passes->fetchedUrls);
+        self::assertSame([$rss->getUrl()], $this->passes->fetchedUrls());
     }
 
     public function testBothKindsOfOutcomeAreTalliedInOnePass(): void

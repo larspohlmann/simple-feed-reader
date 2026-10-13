@@ -18,10 +18,7 @@ use App\Tests\Support\StubPassFetcher;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 
-/**
- * Runs the container's real RefreshRunner; only the outbound fetcher is swapped, as
- * RefreshControllerTest::testPerFeedRefreshOfOwnFeedIsAccepted() does, to keep the refresh off the network.
- */
+/** Runs the container's real RefreshRunner with the pass and homepage fetchers swapped, to keep it off the network. */
 final class RefreshDueFeedsHandlerTest extends DbTestCase
 {
     use SeedsUsers;

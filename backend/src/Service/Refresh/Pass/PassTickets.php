@@ -85,6 +85,6 @@ final class PassTickets implements DispatchGateInterface
             return;
         }
 
-        yield from $this->round->tickets([$feedId => $socialFeed]);
+        yield from $this->round->ticketFor($feedId, $socialFeed);
     }
 }

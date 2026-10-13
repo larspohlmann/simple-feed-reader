@@ -7,7 +7,7 @@ namespace App\Tests\Support;
 use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 
-/** The engine ticket for a feed URL, as ConcurrentFeedFetcher maps it. */
+/** The engine ticket for a feed URL on a host that is not capped in practice. */
 final class FeedTickets
 {
     private const int UNCAPPED = 100;

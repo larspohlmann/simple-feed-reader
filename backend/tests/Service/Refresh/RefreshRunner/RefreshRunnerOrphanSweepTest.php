@@ -74,7 +74,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
 
         $this->runner()->run(RefreshRequestModel::allDue(budgetSeconds: 30));
 
-        self::assertSame([$subscribed->getUrl()], $this->fetcher->fetchedUrls);
+        self::assertSame([$subscribed->getUrl()], $this->fetcher->fetchedUrls());
     }
 
     public function testAUserRefreshLeavesAnOrphanedFeedAlone(): void

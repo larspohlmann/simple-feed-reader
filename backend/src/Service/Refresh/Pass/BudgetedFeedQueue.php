@@ -6,12 +6,12 @@ namespace App\Service\Refresh\Pass;
 
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Fetch\Model\FetchTicketModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Hands the fetch engine tickets while the time budget allows. The engine pulls one per free slot, so the deadline is
- * checked when a fetch would start, and a wave that finishes early buys the next feed its chance.
+ * Starts a pass's due feeds, whatever their kind, in the order the pass was given while the time budget allows. The
+ * engine pulls one per free slot, so the deadline is checked when a fetch would start, and a wave that finishes early
+ * buys the next feed its chance.
  */
 final class BudgetedFeedQueue
 {
@@ -28,25 +28,18 @@ final class BudgetedFeedQueue
     ) {
     }
 
-    /** @return \Generator<int, FetchTicketModel, mixed, void> */
-    public function tickets(): \Generator
-    {
-        $isFetchedByUrl = static fn (Feed $feed): bool => !self::isSocial($feed);
-        foreach ($this->startedAmong($isFetchedByUrl) as $feedId => $feed) {
-            yield $feedId => new FetchTicketModel($feed->getUrl(), $feed->getEtag(), $feed->getLastModified());
-        }
-    }
-
-    /** @return \Generator<int, Feed, mixed, void> */
-    public function socialFeeds(): \Generator
-    {
-        yield from $this->startedAmong(self::isSocial(...));
-    }
-
     /** @return \Generator<int, Feed, mixed, void> every kind of feed, in the order the pass was given */
     public function startedFeeds(): \Generator
     {
-        yield from $this->startedAmong(static fn (): bool => true);
+        foreach ($this->feeds as $feed) {
+            if (!$this->mayStartAnother()) {
+                return;
+            }
+
+            $this->startedFeedIds[] = $feed->requireId();
+
+            yield $feed->requireId() => $feed;
+        }
     }
 
     /** @return list<int> every social feed's id, started or not */
@@ -90,26 +83,5 @@ final class BudgetedFeedQueue
     private static function isSocial(Feed $feed): bool
     {
         return SourceFormat::isSocial($feed->getSourceFormat());
-    }
-
-    /**
-     * @param \Closure(Feed): bool $belongs
-     *
-     * @return \Generator<int, Feed, mixed, void>
-     */
-    private function startedAmong(\Closure $belongs): \Generator
-    {
-        foreach ($this->feeds as $feed) {
-            if (!$belongs($feed)) {
-                continue;
-            }
-            if (!$this->mayStartAnother()) {
-                return;
-            }
-
-            $this->startedFeedIds[] = $feed->requireId();
-
-            yield $feed->requireId() => $feed;
-        }
     }
 }

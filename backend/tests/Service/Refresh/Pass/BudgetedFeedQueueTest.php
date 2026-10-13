@@ -32,25 +32,11 @@ final class BudgetedFeedQueueTest extends TestCase
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 300);
 
-        $tickets = iterator_to_array($queue->tickets(), preserve_keys: false);
+        $tickets = iterator_to_array($queue->startedFeeds(), preserve_keys: false);
 
         self::assertCount(3, $tickets);
         self::assertSame(3, $queue->startedCount());
         self::assertSame(0, $queue->skippedCount());
-    }
-
-    public function testCarriesTheFeedsConditionalGetHeaders(): void
-    {
-        $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
-        $feed = self::withId(new Feed('https://one.example.com/feed'), 1);
-        $feed->recordCacheValidators('"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT');
-
-        $queue = new BudgetedFeedQueue([$feed], $clock, $clock->now()->getTimestamp() + 300);
-        $tickets = iterator_to_array($queue->tickets(), preserve_keys: false);
-
-        self::assertSame('https://one.example.com/feed', $tickets[0]->url);
-        self::assertSame('"v1"', $tickets[0]->etag);
-        self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $tickets[0]->lastModified);
     }
 
     public function testStopsYieldingOnceTheDeadlineIsWithinTheSafetyMargin(): void
@@ -59,7 +45,7 @@ final class BudgetedFeedQueueTest extends TestCase
         $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 100);
 
         $taken = [];
-        foreach ($queue->tickets() as $ticket) {
+        foreach ($queue->startedFeeds() as $ticket) {
             $taken[] = $ticket;
             // Simulate a wave that consumed almost the whole budget.
             $clock->sleep(95);
@@ -79,7 +65,7 @@ final class BudgetedFeedQueueTest extends TestCase
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() - 60);
 
-        $taken = iterator_to_array($queue->tickets(), preserve_keys: false);
+        $taken = iterator_to_array($queue->startedFeeds(), preserve_keys: false);
 
         self::assertCount(1, $taken);
         self::assertSame(1, $queue->startedCount());
@@ -91,36 +77,19 @@ final class BudgetedFeedQueueTest extends TestCase
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $queue = new BudgetedFeedQueue([], $clock, $clock->now()->getTimestamp() + 300);
 
-        self::assertSame([], iterator_to_array($queue->tickets(), preserve_keys: false));
+        self::assertSame([], iterator_to_array($queue->startedFeeds(), preserve_keys: false));
         self::assertSame(0, $queue->startedCount());
         self::assertSame(0, $queue->skippedCount());
     }
 
-    public function testASocialFeedGetsNoTicketButItsOwnTurnAfterTheTickets(): void
-    {
-        $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
-        $rss = self::withId(new Feed('https://feed1.example.com/rss'), 1);
-        $timeline = self::withId(self::socialFeed('social:bluesky:1:home'), 2);
-        $queue = new BudgetedFeedQueue([$timeline, $rss], $clock, $clock->now()->getTimestamp() + 300);
-
-        $tickets = iterator_to_array($queue->tickets());
-        $social = iterator_to_array($queue->socialFeeds());
-
-        self::assertSame([1], array_keys($tickets));
-        self::assertSame([2 => $timeline], $social);
-        self::assertSame([1, 2], $queue->startedFeedIds());
-    }
-
-    public function testASocialFeedWaitsForTheBudgetLikeAnyOther(): void
+    public function testAPrivateFeedWaitsForTheBudgetLikeAnyOther(): void
     {
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $rss = self::withId(new Feed('https://feed1.example.com/rss'), 1);
         $timeline = self::withId(self::socialFeed('social:bluesky:1:home'), 2);
         $queue = new BudgetedFeedQueue([$rss, $timeline], $clock, $clock->now()->getTimestamp() + 5);
 
-        iterator_to_array($queue->tickets());
-
-        self::assertSame([], iterator_to_array($queue->socialFeeds()));
+        self::assertSame([1 => $rss], iterator_to_array($queue->startedFeeds()));
         self::assertSame(1, $queue->skippedCount());
     }
 
@@ -154,22 +123,6 @@ final class BudgetedFeedQueueTest extends TestCase
         $queue->startedFeeds()->current();
 
         self::assertSame([1], $queue->startedFeedIds());
-    }
-
-    public function testStartedFeedsStopOnceTheDeadlineIsWithinTheSafetyMargin(): void
-    {
-        $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
-        $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 100);
-
-        $started = [];
-        foreach ($queue->startedFeeds() as $feed) {
-            $started[] = $feed;
-            $clock->sleep(95);
-        }
-
-        self::assertCount(1, $started);
-        self::assertSame(1, $queue->startedCount());
-        self::assertSame(2, $queue->skippedCount());
     }
 
     private static function socialFeed(string $url): Feed

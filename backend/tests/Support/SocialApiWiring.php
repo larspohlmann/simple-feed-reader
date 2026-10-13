@@ -17,7 +17,6 @@ use App\Service\Social\Crypto\BlueskySessionCipher;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
 use App\Service\Social\StoredCredential;
-use App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher;
 use App\Service\Social\TimelineRounds;
 use App\Service\Social\TimelineSource\BlueskyTimelineSource;
 use App\Service\Social\TimelineSource\MastodonTimelineSource;
@@ -83,20 +82,6 @@ final class SocialApiWiring
             ['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'accessJwt' => $accessJwt],
             \JSON_THROW_ON_ERROR,
         ));
-    }
-
-    /** The timeline fetcher over the real engine; every test host resolves to one public address. */
-    public static function timelineFetcher(
-        HttpClientInterface $http,
-        ArrayAdapter $cache,
-        int $accountConcurrency = 3,
-    ): ConcurrentTimelineFetcher {
-        $guard = self::guardFor(self::BLUESKY_HOST, self::MASTODON_HOST, self::OTHER_MASTODON_HOST);
-
-        return new ConcurrentTimelineFetcher(
-            FetchWiring::requestEngine($http, $guard, FetchWiring::egressProxy(null), 8),
-            self::timelineRounds($http, $cache, $accountConcurrency),
-        );
     }
 
     /** The refresh's pass fetcher over the real engine; every test host, RSS_HOST included, resolves to one address. */

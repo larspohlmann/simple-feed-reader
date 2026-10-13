@@ -38,18 +38,12 @@ final class TimelineRound implements DispatchGateInterface
     ) {
     }
 
-    /**
-     * @param iterable<int, SocialFeed> $socialFeeds
-     *
-     * @return \Generator<int|string, RequestTicketModel>
-     */
-    public function tickets(iterable $socialFeeds): \Generator
+    /** @return \Generator<int|string, RequestTicketModel> none when the feed settles without a request */
+    public function ticketFor(int $feedId, SocialFeed $socialFeed): \Generator
     {
-        foreach ($socialFeeds as $feedId => $socialFeed) {
-            $this->socialFeedsByFeedId[$feedId] = $socialFeed;
+        $this->socialFeedsByFeedId[$feedId] = $socialFeed;
 
-            yield from $this->ticketOf($feedId);
-        }
+        yield from $this->ticketOf($feedId);
     }
 
     /**

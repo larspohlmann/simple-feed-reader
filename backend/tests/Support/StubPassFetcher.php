@@ -26,9 +26,6 @@ final class StubPassFetcher implements PassFetcherInterface
     /** @var array<string, TimelineOutcomeModelInterface> */
     private array $timelines = [];
 
-    /** @var list<string> */
-    public array $fetchedUrls = [];
-
     /** @var list<int> */
     public array $asked = [];
 
@@ -61,6 +58,12 @@ final class StubPassFetcher implements PassFetcherInterface
     public function willReadTimeline(string $url, TimelineOutcomeModelInterface $outcome): void
     {
         $this->timelines[$url] = $outcome;
+    }
+
+    /** @return list<string> */
+    public function fetchedUrls(): array
+    {
+        return $this->feeds->fetchedUrls;
     }
 
     /** @return \Generator<int, FetchOutcomeModel|TimelineOutcomeModelInterface> */
@@ -100,8 +103,6 @@ final class StubPassFetcher implements PassFetcherInterface
 
     private function fetched(Feed $feed): FetchOutcomeModel
     {
-        $this->fetchedUrls[] = $feed->getUrl();
-
         return $this->feeds->fetchAll([new FetchTicketModel($feed->getUrl())])->current();
     }
 

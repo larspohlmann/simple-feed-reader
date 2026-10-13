@@ -613,7 +613,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(2, $report->fetched);
         self::assertSame(1, $report->skippedForBudget);
         self::assertSame(1, $report->remaining);
-        self::assertCount(2, $this->fetcher->fetchedUrls);
+        self::assertCount(2, $this->fetcher->fetchedUrls());
         // The third feed never started, so the favicon pass must not spend the refused time on its homepage.
         self::assertNotContains('https://three.example.com', $this->faviconFetcher->fetchedUrls);
     }
@@ -669,7 +669,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         self::assertSame(1, $report->notModified);
         self::assertSame(1, $report->skippedForBudget);
-        self::assertSame([$first->getUrl()], $this->fetcher->fetchedUrls);
+        self::assertSame([$first->getUrl()], $this->fetcher->fetchedUrls());
         // Progress was made, so a polling caller converges instead of looping.
         self::assertSame(1, $report->remaining);
     }
@@ -691,7 +691,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->skippedForBudget);
         self::assertSame(0, $report->remaining);
         self::assertSame(0, $report->pruned);
-        self::assertSame([], $this->fetcher->fetchedUrls);
+        self::assertSame([], $this->fetcher->fetchedUrls());
         $lock->release();
     }
 
@@ -827,7 +827,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNotNull($userId);
         $report = $this->runner()->run(RefreshRequestModel::forUser($userId, 60));
 
-        self::assertSame([$mine->getUrl()], $this->fetcher->fetchedUrls);
+        self::assertSame([$mine->getUrl()], $this->fetcher->fetchedUrls());
         self::assertSame(1, $report->total);
     }
 
@@ -1074,8 +1074,8 @@ final class RefreshRunnerTest extends DbTestCase
 
         self::assertSame('aborted', $report->status);
         // The run stopped: the third feed's outcome was never processed.
-        self::assertCount(2, $this->fetcher->fetchedUrls);
-        self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls);
+        self::assertCount(2, $this->fetcher->fetchedUrls());
+        self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls());
         // The first feed's entries were committed before the second flush failed.
         self::assertSame(1, $this->changeMarker->marks);
     }
@@ -1195,7 +1195,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->skippedForBudget);
         self::assertSame(2, $report->remaining);
         self::assertSame(0, $report->pruned);
-        self::assertNotContains($untouched->getUrl(), $this->fetcher->fetchedUrls);
+        self::assertNotContains($untouched->getUrl(), $this->fetcher->fetchedUrls());
     }
 
     public function testAForcedRefreshSkipsAFeedFetchedWithinTheCooldown(): void
@@ -1212,7 +1212,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $report = $this->runner()->run(RefreshRequestModel::forUser($this->subscriber->requireId(), 60));
 
-        self::assertSame([$stale->getUrl()], $this->fetcher->fetchedUrls);
+        self::assertSame([$stale->getUrl()], $this->fetcher->fetchedUrls());
         self::assertSame(1, $report->total);
         self::assertSame(1, $report->notModified);
     }

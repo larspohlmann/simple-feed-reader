@@ -10,10 +10,7 @@ use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Support\CapacityGuard;
 
-/**
- * Fetches many feeds at once on the shared request engine; the refresh sweep is network-wait-bound, so requests
- * overlap while the caller still processes results one at a time.
- */
+/** Fetches many feeds at once on the shared request engine; the caller still processes results one at a time. */
 final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 {
     public function __construct(private ConcurrentRequestEngine $engine, private int $hostConcurrency)
@@ -32,7 +29,7 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /**
-     * One ticket at a time: the source is budget-gated, and mapping ahead would start feeds no slot has opened for.
+     * One ticket at a time, so a lazy source is never read ahead of the engine's free slots.
      *
      * @param iterable<int|string, FetchTicketModel> $tickets
      *

@@ -58,7 +58,7 @@ final class RefreshFeedsCommandTest extends DbTestCase
         $display = $tester->getDisplay();
         self::assertStringContainsString('completed', $display);
         self::assertStringContainsString('notModified', $display);
-        self::assertSame([$feed->getUrl()], $passes->fetchedUrls);
+        self::assertSame([$feed->getUrl()], $passes->fetchedUrls());
     }
 
     public function testReportsBusyWithoutFailing(): void

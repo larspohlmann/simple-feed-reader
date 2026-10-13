@@ -40,7 +40,7 @@ final class RefreshPassTest extends DbTestCase
         [$one, $two] = $this->feeds(2);
         $pass = $this->pass([$one, $two], self::ONE_FEED_BUDGET);
 
-        self::assertCount(1, iterator_to_array($pass->tickets()));
+        self::assertCount(1, iterator_to_array($pass->startedFeeds()));
         self::assertSame([$one->requireId()], $pass->startedFeedIds());
     }
 
@@ -48,7 +48,7 @@ final class RefreshPassTest extends DbTestCase
     {
         $feeds = $this->feeds(10);
         $pass = $this->pass($feeds, self::WHOLE_BATCH_BUDGET);
-        iterator_to_array($pass->tickets());
+        iterator_to_array($pass->startedFeeds());
         // Every count gets a distinct value, so a swapped argument in RefreshPass::aborted() fails this test.
         $pass->tally->record(FeedRefreshResultModel::fetched(1), $feeds[0]);
         $pass->tally->record(FeedRefreshResultModel::fetched(1), $feeds[1]);
@@ -78,7 +78,7 @@ final class RefreshPassTest extends DbTestCase
     {
         [$one, $two, $three] = $this->feeds(3);
         $pass = $this->pass([$one, $two, $three], self::ONE_FEED_BUDGET);
-        iterator_to_array($pass->tickets());
+        iterator_to_array($pass->startedFeeds());
         $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Throttled), $one);
 
         $report = $pass->abortedAfterOutcomes();
@@ -98,7 +98,7 @@ final class RefreshPassTest extends DbTestCase
     {
         [$one, $two, $three] = $this->feeds(3);
         $pass = $this->pass([$one, $two, $three], self::ONE_FEED_BUDGET);
-        iterator_to_array($pass->tickets());
+        iterator_to_array($pass->startedFeeds());
 
         self::assertSame(3, $pass->abortedDuringOutcomes()->remaining);
         self::assertSame(2, $pass->abortedAfterOutcomes()->remaining);
@@ -108,7 +108,7 @@ final class RefreshPassTest extends DbTestCase
     {
         $feeds = $this->feeds(6);
         $pass = $this->pass($feeds, self::ONE_FEED_BUDGET);
-        iterator_to_array($pass->tickets());
+        iterator_to_array($pass->startedFeeds());
         // Every count gets a distinct value, so a swapped argument in RefreshPass::finished() fails this test.
         $pass->tally->record(FeedRefreshResultModel::fetched(1), $feeds[0]);
         $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::NotModified), $feeds[1]);
