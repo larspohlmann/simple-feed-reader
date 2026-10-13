@@ -12,7 +12,8 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { prefetchMargin } from '../../list/paging';
+import { observeOnSight } from '../../list/paging';
+import { likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialCountsService } from './social-counts.service';
 
@@ -24,7 +25,6 @@ interface ShownCount {
   count: number;
 }
 
-/** A social post's live counts below the article (#1615); the like ends the row. */
 @Component({
   selector: 'app-social-counts',
   imports: [IconComponent, TranslocoPipe],
@@ -50,10 +50,7 @@ export class SocialCountsComponent {
     return state.status === 'ok' ? state : null;
   });
 
-  protected readonly likeable = computed(() => {
-    const social = this.entry().social;
-    return social?.canLike ? social : null;
-  });
+  protected readonly likeable = computed(() => likeableSocial(this.entry()));
   protected readonly likes = computed(() => {
     const loaded = this.loaded();
     if (!loaded) return null;
@@ -78,7 +75,13 @@ export class SocialCountsComponent {
   protected readonly shown = computed(() => this.likeable() !== null || this.loaded() !== null);
 
   constructor() {
-    effect((onCleanup) => onCleanup(this.loadOnSight(this.entryId())));
+    effect((onCleanup) =>
+      onCleanup(
+        observeOnSight(this.host.nativeElement, this.scroller(), () =>
+          this.service.load({ id: this.entryId(), social: this.entry().social }),
+        ),
+      ),
+    );
   }
 
   protected format(count: number): string {
@@ -87,18 +90,5 @@ export class SocialCountsComponent {
 
   protected labelKey(kind: CountKind, count: number): string {
     return pluralKey(`reader.socialCounts.${kind}`, count);
-  }
-
-  private loadOnSight(id: number): () => void {
-    const host = this.host.nativeElement;
-    const scroller = this.scroller();
-    const observer = new IntersectionObserver(
-      ([sighting]) => {
-        if (sighting?.isIntersecting) this.service.load({ id, social: this.entry().social });
-      },
-      { root: scroller, rootMargin: prefetchMargin(scroller.clientHeight) },
-    );
-    observer.observe(host);
-    return () => observer.disconnect();
   }
 }

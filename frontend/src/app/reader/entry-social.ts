@@ -19,3 +19,8 @@ export interface SocialCountsDto {
   replies: number;
   quotes: number | null;
 }
+
+/** The entry's social data when the reader can like it, else null. */
+export function likeableSocial(entry: { social: EntrySocialDto | null }): EntrySocialDto | null {
+  return entry.social?.canLike ? entry.social : null;
+}

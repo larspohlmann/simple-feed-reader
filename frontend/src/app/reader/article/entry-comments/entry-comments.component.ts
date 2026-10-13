@@ -20,7 +20,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
-import { prefetchMargin } from '../../list/paging';
+import { observeOnSight } from '../../list/paging';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl'>;
 
@@ -66,7 +66,10 @@ export class EntryCommentsComponent {
   constructor() {
     effect((onCleanup) => {
       if (!this.loadsOnSight()) return;
-      onCleanup(this.loadOnSight(this.entryId()));
+      const id = this.entryId();
+      onCleanup(
+        observeOnSight(this.host.nativeElement, this.scroller(), () => this.service.load(id)),
+      );
     });
     effect((onCleanup) => {
       const until = this.throttledUntil();
@@ -84,19 +87,6 @@ export class EntryCommentsComponent {
 
   when(iso: string): string {
     return relativeTime(iso, this.language.lang());
-  }
-
-  private loadOnSight(id: number): () => void {
-    const host = this.host.nativeElement;
-    const scroller = this.scroller();
-    const observer = new IntersectionObserver(
-      ([sighting]) => {
-        if (sighting?.isIntersecting) this.service.load(id);
-      },
-      { root: scroller, rootMargin: prefetchMargin(scroller.clientHeight) },
-    );
-    observer.observe(host);
-    return () => observer.disconnect();
   }
 
   // Outside the zone: an in-zone interval never lets whenStable() settle.

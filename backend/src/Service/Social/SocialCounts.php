@@ -9,14 +9,12 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Exception\NotASocialPostException;
-use App\Service\Social\Exception\PostNotPubliclyCountableException;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\SocialCountsModel;
-use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\PostCountsSource\PostCountsSourceInterface;
 use App\Service\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
@@ -51,22 +49,13 @@ final readonly class SocialCounts
         }
 
         try {
-            $counts = $this->publicCountsOf($post);
+            $counts = $this->publicSourceOn($post->network)->countsOf($post->address);
         } catch (SocialPostNotFoundException | SocialNetworkUnreachableException $publicFailure) {
             $counts = $this->actingAccountCountsOf($user, $entry, $publicFailure);
         }
         $this->cache->remember($post, $counts);
 
         return $counts;
-    }
-
-    private function publicCountsOf(SocialPostAddressModel $post): SocialCountsModel
-    {
-        try {
-            return $this->publicSourceOn($post->network)->countsOf($post->address);
-        } catch (PostNotPubliclyCountableException $exception) {
-            throw new SocialNetworkUnreachableException('No public source counts this post.', previous: $exception);
-        }
     }
 
     private function actingAccountCountsOf(
