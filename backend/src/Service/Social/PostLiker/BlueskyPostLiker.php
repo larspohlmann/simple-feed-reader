@@ -7,13 +7,13 @@ namespace App\Service\Social\PostLiker;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyLikeUri;
-use Psr\Clock\ClockInterface;
 
 final readonly class BlueskyPostLiker implements PostLikerInterface
 {
@@ -23,7 +23,7 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
 
     public function __construct(
         private BlueskySessions $sessions,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
     ) {
     }
 
@@ -43,7 +43,7 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
             'record' => [
                 '$type' => self::LIKE_COLLECTION,
                 'subject' => ['uri' => $post->postId, 'cid' => $post->contentId],
-                'createdAt' => $this->clock->now()->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z'),
+                'createdAt' => $this->clock->now()->format('Y-m-d\TH:i:s.v\Z'),
             ],
         ]);
 

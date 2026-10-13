@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\PostLiker;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -59,7 +60,7 @@ final class BlueskyPostLikerTest extends TestCase
             ]);
             $liker = new BlueskyPostLiker(
                 SocialApiWiring::blueskySessions($http->client()),
-                new MockClock(new \DateTimeImmutable('2026-10-13T19:30:00.007+13:00')),
+                new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T19:30:00.007+13:00'))),
             );
 
             $liker->like(self::post());
@@ -265,7 +266,7 @@ final class BlueskyPostLikerTest extends TestCase
     {
         return new BlueskyPostLiker(
             SocialApiWiring::blueskySessions($http->client()),
-            new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00.123+02:00')),
+            new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00.123+02:00'))),
         );
     }
 

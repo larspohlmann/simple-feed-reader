@@ -9,10 +9,10 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Repository\SocialLikeRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\PostLiker\PostLikerInterface;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
@@ -25,7 +25,7 @@ final readonly class SocialLikes
         #[AutowireLocator('app.social_post_liker', defaultIndexMethod: 'network')]
         private ContainerInterface $likers,
         private EntityManagerInterface $entityManager,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
     ) {
     }
 
@@ -43,7 +43,7 @@ final readonly class SocialLikes
             $entry,
             $post->account,
             $result->likeId,
-            $this->clock->now()->setTimezone(new \DateTimeZone('UTC')),
+            $this->clock->now(),
         ));
         $this->entityManager->flush();
     }

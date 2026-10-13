@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
@@ -211,7 +212,7 @@ final class SocialLikesTest extends DbTestCase
             $guard,
             new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
             $this->entityManager,
-            new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00+02:00')),
+            new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00+02:00'))),
         );
     }
 
