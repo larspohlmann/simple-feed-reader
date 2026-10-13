@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Fetch\Pass;
 
 use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\RequestSlotModel;
 
 /**
  * In-flight requests per slot key. A ticket goes out only while every slot it names has room, so it waits for a full
@@ -49,9 +48,11 @@ final class RequestSlots
     /** @return list<string> */
     private function keysOf(FetchAttemptModel $attempt): array
     {
-        return array_map(
-            static fn (RequestSlotModel $slot): string => $slot->keyFor($attempt->url),
-            $attempt->ticket->slots,
-        );
+        $keys = [];
+        foreach ($attempt->ticket->slots as $slot) {
+            $keys[] = $slot->keyFor($attempt->url);
+        }
+
+        return $keys;
     }
 }
