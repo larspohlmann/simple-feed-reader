@@ -122,7 +122,7 @@ final class SubscriptionJson
         return [
             'network' => $network->value,
             'accountId' => $address?->accountId,
-            'kind' => $address?->kind->value ?? self::PROFILE_KIND,
+            'kind' => null === $address ? self::PROFILE_KIND : $address->kind->value,
         ];
     }
 
