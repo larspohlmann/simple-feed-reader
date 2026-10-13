@@ -11,6 +11,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\PostCounts;
 
 /** Asks the account's own instance for the post, so a post from any server gets the id that instance acts on. */
 final readonly class MastodonPostResolver implements PostResolverInterface
@@ -30,13 +31,13 @@ final readonly class MastodonPostResolver implements PostResolverInterface
     public function resolve(SocialAccount $account, string $address): SocialPostModel
     {
         $search = sprintf(self::SEARCH, rawurlencode($address));
-        $answer = $this->mastodon->askAboutPost($account, $search);
-        $statusId = JsonNodeModel::of($answer->json())->first('statuses')->string('id')
+        $status = JsonNodeModel::of($this->mastodon->askAboutPost($account, $search)->json())->first('statuses');
+        $statusId = $status->string('id')
             ?? throw new SocialPostNotFoundException('The post is no longer on Mastodon.');
         if (1 !== preg_match(self::STATUS_ID, $statusId)) {
             throw new SocialNetworkUnreachableException('The Mastodon instance named a status id it cannot mean.');
         }
 
-        return SocialPostModel::onMastodon($account, $statusId);
+        return SocialPostModel::onMastodon($account, $statusId)->withCounts(PostCounts::ofMastodonStatus($status));
     }
 }
