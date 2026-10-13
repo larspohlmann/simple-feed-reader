@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\PostLikerInterface;
@@ -21,6 +22,8 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
 
     private ?\Throwable $failure = null;
 
+    private ?SocialCountsModel $counts = null;
+
     public static function network(): string
     {
         return SocialNetwork::Mastodon->value;
@@ -31,11 +34,16 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
         $this->failure = $failure;
     }
 
+    public function knowsCounts(SocialCountsModel $counts): void
+    {
+        $this->counts = $counts;
+    }
+
     public function resolve(SocialAccount $account, string $address): SocialPostModel
     {
         $this->record('resolve ' . $address);
 
-        return SocialPostModel::onMastodon($account, self::STATUS_ID);
+        return SocialPostModel::onMastodon($account, self::STATUS_ID)->withCounts($this->counts);
     }
 
     public function like(SocialPostModel $post): SocialLikeResultModel

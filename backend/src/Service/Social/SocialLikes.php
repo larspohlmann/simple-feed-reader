@@ -12,6 +12,7 @@ use App\Repository\SocialLikeRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\PostLiker\PostLikerInterface;
+use App\Service\Social\Support\SocialPostAddress;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
@@ -26,6 +27,7 @@ final readonly class SocialLikes
         private ContainerInterface $likers,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
+        private SocialCountsCache $countsCache,
     ) {
     }
 
@@ -46,6 +48,7 @@ final readonly class SocialLikes
             $this->clock->now(),
         ));
         $this->entityManager->flush();
+        $this->forgetCountsOf($entry);
     }
 
     public function unlike(User $user, Entry $entry): void
@@ -62,6 +65,16 @@ final readonly class SocialLikes
 
         $this->entityManager->remove($like);
         $this->entityManager->flush();
+        $this->forgetCountsOf($entry);
+    }
+
+    private function forgetCountsOf(Entry $entry): void
+    {
+        $post = SocialPostAddress::of($entry);
+        if (null === $post) {
+            return;
+        }
+        $this->countsCache->forget($post);
     }
 
     private function likerOf(SocialAccount $account): PostLikerInterface
