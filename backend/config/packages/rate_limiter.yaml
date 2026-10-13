@@ -111,6 +111,13 @@ framework:
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
+        # Per user: each like or unlike spends two or three calls on the user's own network account.
+        social_like:
+            policy: 'sliding_window'
+            limit: 60
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
         # Starting a run is what spends money: its snapshot fixes how many provider calls it can make. Ten a quarter
         # hour is far beyond honest use (a run takes minutes and supersedes the last).
         ai_recommendation_starts:
