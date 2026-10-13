@@ -80,8 +80,8 @@ final readonly class RefreshRunStore
             return 'tag-' . $request->tagId;
         }
 
-        if (null !== $request->feedSet) {
-            return 'set-' . $request->feedSet->key;
+        if (null !== $request->network) {
+            return 'set-network-' . $request->network->value;
         }
 
         return 'all';

@@ -31,10 +31,14 @@ final class SocialPostAddressTest extends TestCase
     public static function posts(): iterable
     {
         $profile = new Feed('https://bsky.app/profile/did:plc:bob/rss');
+        $profile->classifyAs(SocialNetwork::Bluesky);
         $home = new Feed('social:bluesky:3:home');
         $home->setSourceFormat(SourceFormat::BLUESKY_API);
+        $home->classifyAs(SocialNetwork::Bluesky);
         $mastodon = new Feed('https://mastodon.social/@Gargron.rss');
+        $mastodon->classifyAs(SocialNetwork::Mastodon);
         $plain = new Feed('https://example.com/feed.xml');
+        $unclassified = new Feed('https://bsky.app/profile/did:plc:carol/rss');
 
         yield 'bluesky profile post by its at-uri' => [
             self::entry($profile, self::POST_URI, 'https://bsky.app/profile/did:plc:bob/post/3abc'),
@@ -92,6 +96,7 @@ final class SocialPostAddressTest extends TestCase
             self::entry($mastodon, 'tag:mastodon.social,2026:110', 'javascript:alert(1)'),
             null,
         ];
+        yield 'a profile url stored without a network' => [self::entry($unclassified, self::POST_URI, null), null];
         yield 'plain feed' => [self::entry($plain, self::POST_URI, self::STATUS_URL), null];
     }
 

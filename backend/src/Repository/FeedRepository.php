@@ -9,9 +9,9 @@ use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Enum\FeedStatus;
 use App\Enum\SocialAccountStatus;
+use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Service\Bluesky\Support\BlueskyWeb;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -178,18 +178,16 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
     /**
      * Subscribed Bluesky profile feeds whose picture was never asked for or not since $checkedBefore, never-asked
-     * first. The URL prefixes only narrow the scan; the caller still judges each URL with ProfileFeedUrl.
+     * first.
      *
      * @return list<Feed>
      */
     public function findBlueskyProfileFeedsWithImageDue(\DateTimeImmutable $checkedBefore, int $limit): array
     {
-        $profilePath = BlueskyWeb::HOST . '/profile/%';
         /** @var list<Feed> $feeds */
         $feeds = $this->createQueryBuilder('f')
-            ->andWhere('f.url LIKE :httpsProfile OR f.url LIKE :httpProfile')
-            ->setParameter('httpsProfile', 'https://' . $profilePath)
-            ->setParameter('httpProfile', 'http://' . $profilePath)
+            ->andWhere('f.network = :bluesky')->setParameter('bluesky', SocialNetwork::Bluesky)
+            ->andWhere('f.sourceFormat NOT IN (:socialFormats)')->setParameter('socialFormats', SourceFormat::SOCIAL)
             ->andWhere(sprintf('EXISTS (SELECT s.id FROM %s s WHERE s.feed = f)', Subscription::class))
             ->andWhere('f.imageCheckedAt IS NULL OR f.imageCheckedAt < :checkedBefore')
             ->setParameter('checkedBefore', $checkedBefore)
@@ -208,7 +206,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
         $this->restrictToSchedule($qb, $criteria);
         $this->restrictToOwnership($qb, $criteria);
-        $this->restrictToFeedSet($qb, $criteria);
+        $this->restrictToNetwork($qb, $criteria);
         $this->restrictToUnhandled($qb, $criteria);
         $this->restrictToConnectedAccounts($qb);
 
@@ -279,18 +277,13 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         ))->setParameter('tagId', $criteria->tagId);
     }
 
-    private function restrictToFeedSet(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    private function restrictToNetwork(QueryBuilder $qb, DueFeedCriteria $criteria): void
     {
-        if ($criteria->feedIds === null) {
-            return;
-        }
-        if ($criteria->feedIds === []) {
-            $qb->andWhere('1 = 0');
-
+        if ($criteria->network === null) {
             return;
         }
 
-        $qb->andWhere('f.id IN (:feedSetIds)')->setParameter('feedSetIds', $criteria->feedIds);
+        $qb->andWhere('f.network = :network')->setParameter('network', $criteria->network);
     }
 
     private function restrictToUnhandled(QueryBuilder $qb, DueFeedCriteria $criteria): void

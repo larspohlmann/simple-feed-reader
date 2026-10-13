@@ -171,23 +171,4 @@ final class SubscriptionRepository extends ServiceEntityRepository
 
         return $row ?? throw new RecordNotFoundException('No such subscription.');
     }
-
-    /**
-     * The user's subscriptions carrying a given tag (feed eager-loaded).
-     *
-     * @return list<Subscription>
-     */
-    public function findForUserByTagId(int $userId, int $tagId): array
-    {
-        /** @var list<Subscription> $rows */
-        $rows = $this->createQueryBuilder('s')
-            ->leftJoin('s.feed', 'f')->addSelect('f')
-            ->innerJoin('s.subscriptionTags', 'st')->innerJoin('st.tag', 't')
-            ->andWhere('s.user = :user')->setParameter('user', $userId)
-            ->andWhere('t.id = :tagId')->setParameter('tagId', $tagId)
-            ->getQuery()
-            ->getResult();
-
-        return $rows;
-    }
 }

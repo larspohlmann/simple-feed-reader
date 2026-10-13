@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Enum\FeedStatus;
+use App\Enum\SocialNetwork;
 use App\Repository\FeedRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -12,6 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: FeedRepository::class)]
 #[ORM\Table(name: 'feed')]
 #[ORM\UniqueConstraint(name: 'uniq_feed_url', columns: ['url'])]
+#[ORM\Index(name: 'idx_feed_network', columns: ['network'])]
 final class Feed
 {
     use PersistedId;
@@ -57,6 +59,9 @@ final class Feed
     /** How the body becomes entries: a SourceFormat value, an open string by design (SourceFormat says why). */
     #[ORM\Column(length: 20, options: ['default' => 'xml'])]
     private string $sourceFormat = 'xml';
+
+    #[ORM\Column(length: 16, nullable: true, enumType: SocialNetwork::class)]
+    private ?SocialNetwork $network = null;
 
     #[ORM\Embedded(class: FetchSchedule::class, columnPrefix: false)]
     private FetchSchedule $fetchSchedule;
@@ -162,6 +167,16 @@ final class Feed
     public function setSourceFormat(string $sourceFormat): void
     {
         $this->sourceFormat = $sourceFormat;
+    }
+
+    public function getNetwork(): ?SocialNetwork
+    {
+        return $this->network;
+    }
+
+    public function classifyAs(?SocialNetwork $network): void
+    {
+        $this->network = $network;
     }
 
     public function getLastFetchedAt(): ?\DateTimeImmutable

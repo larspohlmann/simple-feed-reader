@@ -12,6 +12,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\EntryView;
 use App\Enum\ListOrder;
+use App\Enum\SocialNetwork;
 use App\Pagination\EntryCursor;
 use App\Repository\DateOrderedPage;
 use App\Repository\DuplicateCollapseDql;
@@ -24,6 +25,7 @@ use App\Repository\EntryScopePredicates;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\SearchTermsPredicateBuilder;
 use App\Tests\DbTestCase;
+use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -520,48 +522,66 @@ final class EntryListTest extends DbTestCase
         self::assertSame('tagged', $rows[0]->entry->getGuid());
     }
 
-    public function testASubscriptionSetListsOnlyItsFeedsExcludedOnesIncluded(): void
+    public function testANetworkListsOnlyItsFeedsExcludedOnesIncluded(): void
     {
-        [$excluded, $excludedSubscription] = $this->secondSubscription('https://excluded.example.com/feed.xml');
-        $excludedSubscription->setIncludeInAllItems(false);
-        [$outside] = $this->secondSubscription('https://outside.example.com/feed.xml');
+        [$profile, $profileSubscription] = $this->secondSubscription(NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $profileSubscription->setIncludeInAllItems(false);
+        [$mastodon] = $this->secondSubscription(NetworkFeedSubscriptions::MASTODON_PROFILE);
         $this->entityManager->flush();
-        $this->entry('own', '2026-07-05T00:00:00Z');
-        $this->entryIn($excluded, 'excluded', '2026-07-06T00:00:00Z');
-        $this->entryIn($outside, 'outside', '2026-07-07T00:00:00Z');
+        $this->entry('plain', '2026-07-05T00:00:00Z');
+        $this->entryIn($profile, 'bluesky', '2026-07-06T00:00:00Z');
+        $this->entryIn($mastodon, 'mastodon', '2026-07-07T00:00:00Z');
 
-        $rows = $this->repository()->listForUser(new EntryQuery(
-            $this->user->requireId(),
-            subscriptionIds: [$this->subscription->requireId(), $excludedSubscription->requireId()],
-        ));
+        $rows = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), network: SocialNetwork::Bluesky),
+        );
 
-        self::assertSame(['excluded', 'own'], $this->guids($rows));
+        self::assertSame(['bluesky'], $this->guids($rows));
     }
 
-    public function testAnEmptySubscriptionSetListsNothing(): void
+    public function testANetworkWithoutFeedsListsNothing(): void
     {
-        $this->entry('own', '2026-07-05T00:00:00Z');
+        $this->entry('plain', '2026-07-05T00:00:00Z');
 
-        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), subscriptionIds: []));
+        $rows = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), network: SocialNetwork::Mastodon),
+        );
 
         self::assertSame([], $rows);
     }
 
-    public function testASubscriptionSetIsWindowedLikeATag(): void
+    public function testANetworkIsWindowedLikeATag(): void
     {
-        $firstEntry = $this->entry('s1', '2026-07-10T00:00:00Z');
-        $secondEntry = $this->entry('s2', '2026-07-09T00:00:00Z');
+        [$profile] = $this->secondSubscription(NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $firstEntry = $this->entryIn($profile, 's1', '2026-07-10T00:00:00Z');
+        $secondEntry = $this->entryIn($profile, 's2', '2026-07-09T00:00:00Z');
         $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
-        $query = new EntryQuery(
-            $this->user->requireId(),
-            subscriptionIds: [$this->subscription->requireId()],
-            limit: 2,
-        );
+        $query = new EntryQuery($this->user->requireId(), limit: 2, network: SocialNetwork::Bluesky);
 
         $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
         self::assertCount(2, $recorded['queries'], 'a full windowed page must never fall back');
         self::assertSame([$firstEntry->getGuid(), $secondEntry->getGuid()], $this->guids($recorded['rows']));
+    }
+
+    public function testACopyOutsideTheNetworkNeverHidesTheNetworksOwnCopy(): void
+    {
+        [$profile] = $this->secondSubscription(NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $at = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $this->entityManager->persist(
+            new Entry($this->feed, 'plain-copy', 'https://example.com/copy', 'Plain copy', $at, $at, 'shared-url-hash'),
+        );
+        $this->entityManager->persist(
+            new Entry($profile, 'network-copy', 'https://bsky.app/copy', 'Network copy', $at, $at, 'shared-url-hash'),
+        );
+        $this->entityManager->flush();
+
+        $rows = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), network: SocialNetwork::Bluesky),
+        );
+
+        self::assertSame(['network-copy'], $this->guids($rows));
+        self::assertSame([], $rows[0]->duplicates);
     }
 
     public function testSubscriptionFilterAndCursorPaginate(): void

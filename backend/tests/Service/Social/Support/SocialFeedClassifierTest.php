@@ -64,4 +64,13 @@ final class SocialFeedClassifierTest extends TestCase
 
         return $feed;
     }
+
+    #[DataProvider('feeds')]
+    public function testAStoredRowsUrlAndFormatNameTheSameNetwork(
+        string $url,
+        string $sourceFormat,
+        ?SocialNetwork $network,
+    ): void {
+        self::assertSame($network, SocialFeedClassifier::networkFor($url, $sourceFormat));
+    }
 }

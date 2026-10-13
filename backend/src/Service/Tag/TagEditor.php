@@ -6,7 +6,7 @@ namespace App\Service\Tag;
 
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionScopeRepository;
 use App\Repository\TagRepository;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Factory\TagFactory;
@@ -17,7 +17,7 @@ final readonly class TagEditor
 {
     public function __construct(
         private TagRepository $tags,
-        private SubscriptionRepository $subscriptions,
+        private SubscriptionScopeRepository $subscriptionScope,
         private EntityManagerInterface $entityManager,
         private TagFactory $tagFactory,
     ) {
@@ -50,7 +50,7 @@ final readonly class TagEditor
 
     public function delete(Tag $tag): void
     {
-        $carriers = $this->subscriptions->findForUserByTagId($tag->getUser()->requireId(), $tag->requireId());
+        $carriers = $this->subscriptionScope->findForUserByTagId($tag->getUser()->requireId(), $tag->requireId());
         foreach ($carriers as $subscription) {
             $subscription->removeTag($tag);
         }

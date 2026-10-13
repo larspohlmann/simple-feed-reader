@@ -519,11 +519,20 @@ final class EntryJsonTest extends TestCase
         self::assertNull($poster['imageUrl']);
     }
 
+    public function testAProfileFeedStoredWithoutANetworkHasNoPoster(): void
+    {
+        $entry = $this->profileFeedEntry('https://cdn.example/politico.jpg');
+        $entry->getFeed()->classifyAs(null);
+
+        self::assertNull(EntryJson::listRow($this->row($entry))['poster']);
+    }
+
     private function profileFeedEntry(?string $feedImageUrl): Entry
     {
         $feed = new Feed('https://bsky.app/profile/politico.eu/rss');
         $feed->setSiteUrl('https://bsky.app/profile/politico.eu');
         $feed->setImageUrl($feedImageUrl);
+        $feed->classifyAs(SocialNetwork::Bluesky);
 
         return new Entry(
             $feed,

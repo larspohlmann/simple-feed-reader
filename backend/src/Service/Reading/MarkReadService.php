@@ -7,10 +7,10 @@ namespace App\Service\Reading;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionScopeRepository;
 use App\Repository\TagRepository;
 use App\Service\Reading\Model\ReadScopeKind;
 use App\Service\Reading\Model\ReadScopeModel;
-use App\Service\Social\NetworkSubscriptions;
 
 /** "Mark all read until T" for a scope: every subscription the scope covers is marked by watermark. */
 final readonly class MarkReadService
@@ -18,8 +18,8 @@ final readonly class MarkReadService
     public function __construct(
         private EntryReadMarker $readMarker,
         private SubscriptionRepository $subscriptions,
+        private SubscriptionScopeRepository $subscriptionScope,
         private TagRepository $tags,
-        private NetworkSubscriptions $networkSubscriptions,
     ) {
     }
 
@@ -35,11 +35,11 @@ final readonly class MarkReadService
         return match ($scope->kind) {
             ReadScopeKind::All => $this->subscriptions->findIncludedInAllItemsForUser($userId),
             ReadScopeKind::Feed => [$this->subscriptions->getOneForUser($userId, $scope->targetId())],
-            ReadScopeKind::Tag => $this->subscriptions->findForUserByTagId(
+            ReadScopeKind::Tag => $this->subscriptionScope->findForUserByTagId(
                 $userId,
                 $this->tags->getOneForUser($userId, $scope->targetId())->requireId(),
             ),
-            ReadScopeKind::Network => $this->networkSubscriptions->of($userId, $scope->targetNetwork()),
+            ReadScopeKind::Network => $this->subscriptionScope->findForUserOnNetwork($userId, $scope->targetNetwork()),
         };
     }
 }

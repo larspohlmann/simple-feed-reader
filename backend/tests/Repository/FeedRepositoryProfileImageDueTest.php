@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SourceFormat;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
 
@@ -55,6 +56,22 @@ final class FeedRepositoryProfileImageDueTest extends DbTestCase
         self::assertSame(
             [$plain->requireId(), $shouting->requireId()],
             array_map(static fn (Feed $feed): int => $feed->requireId(), $due),
+        );
+    }
+
+    public function testAPrivateBlueskyFeedIsNeverDue(): void
+    {
+        $home = new Feed('social:bluesky:1:home');
+        $home->setSourceFormat(SourceFormat::BLUESKY_API);
+        $this->entityManager->persist($home);
+        $this->entityManager->persist(
+            new Subscription($this->subscriber(), $home, new \DateTimeImmutable(self::CHECKED_BEFORE)),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [],
+            $this->feeds()->findBlueskyProfileFeedsWithImageDue(new \DateTimeImmutable(self::CHECKED_BEFORE), 10),
         );
     }
 

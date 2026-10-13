@@ -12,16 +12,17 @@ final readonly class EntryAliases
         public string $state,
         public string $subscription,
         public string $tag,
+        public string $networkFeed,
     ) {
     }
 
     public static function primary(): self
     {
-        return new self('e', 'es', 's', 'st');
+        return new self('e', 'es', 's', 'st', 'nf');
     }
 
     public static function collapse(): self
     {
-        return new self('e2', 'es2', 's2', 'st2');
+        return new self('e2', 'es2', 's2', 'st2', 'nf2');
     }
 }

@@ -95,7 +95,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
             $request->tagId,
             $request->force,
             $cooldownCutoff,
-            feedIds: $request->feedSet?->feedIds,
+            network: $request->network,
         );
     }
 

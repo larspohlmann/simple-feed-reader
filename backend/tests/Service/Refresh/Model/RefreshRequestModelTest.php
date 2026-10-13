@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh\Model;
 
-use App\Service\Refresh\Model\RefreshFeedSetModel;
+use App\Enum\SocialNetwork;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use PHPUnit\Framework\TestCase;
 
@@ -91,25 +91,24 @@ final class RefreshRequestModelTest extends TestCase
         self::assertSame(5, $request->ignoringSchedule()->batchLimit);
     }
 
-    public function testAFeedSetRequestRefreshesThoseFeedsOfTheUserIgnoringTheSchedule(): void
+    public function testANetworkRequestRefreshesThatNetworksFeedsOfTheUserIgnoringTheSchedule(): void
     {
-        $request = RefreshRequestModel::forUserFeedSet(7, new RefreshFeedSetModel('network-bluesky', [3, 4]), 30);
+        $request = RefreshRequestModel::forUserNetwork(7, SocialNetwork::Bluesky, 30);
 
         self::assertSame(7, $request->userId);
-        self::assertSame([3, 4], $request->feedSet?->feedIds);
+        self::assertSame(SocialNetwork::Bluesky, $request->network);
         self::assertNull($request->feedId);
         self::assertNull($request->tagId);
         self::assertTrue($request->force);
         self::assertFalse($request->prune);
     }
 
-    public function testDerivedRequestsKeepTheFeedSet(): void
+    public function testDerivedRequestsKeepTheNetwork(): void
     {
-        $feedSet = new RefreshFeedSetModel('network-bluesky', [3]);
-        $request = RefreshRequestModel::forUserFeedSet(7, $feedSet, 30);
+        $request = RefreshRequestModel::forUserNetwork(7, SocialNetwork::Bluesky, 30);
 
-        self::assertSame($feedSet, $request->withoutPruning()->feedSet);
-        self::assertSame($feedSet, $request->ignoringSchedule()->feedSet);
-        self::assertSame($feedSet, $request->limitedTo(5)->feedSet);
+        self::assertSame(SocialNetwork::Bluesky, $request->withoutPruning()->network);
+        self::assertSame(SocialNetwork::Bluesky, $request->ignoringSchedule()->network);
+        self::assertSame(SocialNetwork::Bluesky, $request->limitedTo(5)->network);
     }
 }
