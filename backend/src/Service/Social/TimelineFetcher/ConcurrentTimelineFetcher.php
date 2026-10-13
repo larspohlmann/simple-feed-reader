@@ -32,9 +32,7 @@ final readonly class ConcurrentTimelineFetcher implements TimelineFetcherInterfa
         $round = new TimelineRound($socialFeedsByFeedId, $this->sources, new TimelineAccounts());
 
         yield from $this->wave($round, $round->tickets($feeds));
-        if ($round->hasStaleRetries()) {
-            yield from $this->wave($round, $round->staleRetries());
-        }
+        yield from $this->wave($round, $round->startRenewalWave());
     }
 
     /**

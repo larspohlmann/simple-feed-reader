@@ -49,17 +49,13 @@ final class TimelineRound implements DispatchGateInterface
         }
     }
 
-    public function hasStaleRetries(): bool
-    {
-        return [] !== $this->staleFeedIds;
-    }
-
     /**
-     * The feeds a stale session held back, sent again once each such account's session was dropped for a fresh one.
+     * Drops each stale account's session for a fresh one, then sends again the feeds it held back; empty when no
+     * session went stale.
      *
      * @return \Generator<int, RequestTicketModel>
      */
-    public function staleRetries(): \Generator
+    public function startRenewalWave(): \Generator
     {
         $feedIds = $this->staleFeedIds;
         $this->staleFeedIds = [];
