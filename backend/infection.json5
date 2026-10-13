@@ -66,8 +66,6 @@
                 'App\\Repository\\SubscriptionRepository::entryCountsForUser',
             ],
         },
-        // Same reason for intval() over a single-column IDENTITY() result: MySQL returns numeric strings, SQLite ints.
-        UnwrapArrayMap: { ignore: ['App\\Repository\\SocialLikeRepository::likedEntryIdsAmong'] },
         // Doctrine turns empty IN parameter into always-false predicate,
         // same empty result.
         ReturnRemoval: {

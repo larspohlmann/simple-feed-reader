@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Social\Support\SocialPostAddress;
 
 /**
@@ -81,7 +82,7 @@ final readonly class EntryListRowEnricher
             $postNetworks,
             static fn (SocialNetwork $network): bool => \in_array($network, $accountNetworks, true),
         );
-        $likedIds = array_flip($this->socialLikes->likedEntryIdsAmong($userId, array_keys($networks)));
+        $likedIds = $this->socialLikes->likedEntryIdsAmong($userId, array_keys($networks));
 
         $states = [];
         foreach ($networks as $entryId => $network) {
@@ -98,15 +99,32 @@ final readonly class EntryListRowEnricher
      */
     private static function postNetworksOf(array $entries): array
     {
+        $feedNetworks = self::feedNetworksOf($entries);
         $networks = [];
         foreach ($entries as $entryId => $entry) {
-            $network = SocialPostAddress::of($entry)?->network;
+            $feedNetwork = $feedNetworks[$entry->getFeed()->requireId()] ?? null;
+            $network = SocialPostAddress::onFeedNetwork($entry, $feedNetwork)?->network;
             if (null !== $network) {
                 $networks[$entryId] = $network;
             }
         }
 
         return $networks;
+    }
+
+    /**
+     * @param array<int, Entry> $entries
+     *
+     * @return array<int, SocialNetwork> by feed id, only for the feeds on a network
+     */
+    private static function feedNetworksOf(array $entries): array
+    {
+        $feeds = [];
+        foreach ($entries as $entry) {
+            $feeds[$entry->getFeed()->requireId()] = $entry->getFeed();
+        }
+
+        return array_filter(array_map(SocialFeedClassifier::networkOf(...), $feeds));
     }
 
     /**

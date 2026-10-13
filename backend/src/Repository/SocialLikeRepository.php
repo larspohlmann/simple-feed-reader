@@ -28,23 +28,24 @@ final class SocialLikeRepository extends ServiceEntityRepository
     /**
      * @param list<int> $entryIds
      *
-     * @return list<int>
+     * @return array<int, true> the liked ones, by entry id
      */
     public function likedEntryIdsAmong(int $userId, array $entryIds): array
     {
         if ([] === $entryIds) {
             return [];
         }
-        /** @var list<int|string> $likedEntryIds */
+        /** @var list<int> $likedEntryIds e.id, unlike IDENTITY(), is hydrated as an int on every driver */
         $likedEntryIds = $this->createQueryBuilder('sl')
-            ->select('IDENTITY(sl.entry)')
+            ->select('e.id')
+            ->join('sl.entry', 'e')
             ->andWhere('sl.user = :user')
-            ->andWhere('sl.entry IN (:entryIds)')
+            ->andWhere('e.id IN (:entryIds)')
             ->setParameter('user', $userId)
             ->setParameter('entryIds', $entryIds)
             ->getQuery()
             ->getSingleColumnResult();
 
-        return array_map(intval(...), $likedEntryIds);
+        return array_fill_keys($likedEntryIds, true);
     }
 }

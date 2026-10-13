@@ -65,9 +65,9 @@ final class SocialLikeRepositoryTest extends DbTestCase
             $this->owner->requireId(),
             [$first->requireId(), $second->requireId(), $strangersOnly->requireId()],
         );
-        sort($likedIds);
+        ksort($likedIds);
 
-        self::assertSame([$first->requireId(), $second->requireId()], $likedIds);
+        self::assertSame([$first->requireId() => true, $second->requireId() => true], $likedIds);
         self::assertSame([], $this->repository()->likedEntryIdsAmong($this->owner->requireId(), []));
     }
 
