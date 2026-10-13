@@ -17,9 +17,8 @@ export interface MagazinePlanInput {
   grouping: boolean;
   /** False while `hasMore` — a partial trailing page is held back. */
   complete: boolean;
-  /** Subscriptions whose entries come from many people (a social home timeline, list or
-   *  custom feed): never collapsed into a group widget, which would file them under one source. */
-  aggregatedSources?: ReadonlySet<number>;
+  /** Subscriptions whose runs never collapse into a group widget. */
+  uncollapsibleSources?: ReadonlySet<number>;
 }
 
 /** The fixed leading window for the template-FAMILY choice
@@ -75,7 +74,7 @@ interface PlanPass {
   readonly family: MagazineFamily;
   readonly complete: boolean;
   readonly collapseEnabled: boolean;
-  readonly aggregatedSources: ReadonlySet<number>;
+  readonly uncollapsibleSources: ReadonlySet<number>;
   readonly blocks: MagazineBlock[];
   page: number;
 }
@@ -100,9 +99,8 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
 }
 
 function startPass(input: MagazinePlanInput): PlanPass {
-  const { entries, grouping, complete, aggregatedSources = new Set<number>() } = input;
-  const sample = entries.slice(0, LEADING_WINDOW);
-  const useTextFamily = prefersTextFamily(sample);
+  const { entries, grouping, complete, uncollapsibleSources = new Set<number>() } = input;
+  const useTextFamily = prefersTextFamily(entries.slice(0, LEADING_WINDOW));
   return {
     // Land the reader on a picture: the image family pulls the nearest image entry
     // to the front when the first are image-less. The text family opens on a
@@ -111,7 +109,7 @@ function startPass(input: MagazinePlanInput): PlanPass {
     family: useTextFamily ? TEXT_FAMILY : IMAGE_FAMILY,
     complete,
     collapseEnabled: grouping && activeSourceCount(entries) >= MIN_VIEW_SOURCES,
-    aggregatedSources,
+    uncollapsibleSources,
     blocks: [],
     page: 0,
   };
@@ -217,7 +215,7 @@ function startsLongRun(pass: PlanPass, start: number): boolean {
 }
 
 function isCollapsible(pass: PlanPass, run: DetectedRun): boolean {
-  return run.sourceEntries.length >= RUN_MIN && !pass.aggregatedSources.has(run.source);
+  return run.sourceEntries.length >= RUN_MIN && !pass.uncollapsibleSources.has(run.source);
 }
 
 /** How many entries an ordinary page may take from `index` before it reaches the

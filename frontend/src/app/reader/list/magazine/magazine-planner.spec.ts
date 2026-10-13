@@ -321,7 +321,7 @@ describe('planMagazine', () => {
         entries: withRunOf(HOME),
         grouping: true,
         complete: true,
-        aggregatedSources: new Set([HOME]),
+        uncollapsibleSources: new Set([HOME]),
       });
 
       expect(kinds(blocks)).not.toContain('group');
@@ -334,7 +334,7 @@ describe('planMagazine', () => {
         entries: withRunOf(PROFILE),
         grouping: true,
         complete: true,
-        aggregatedSources: new Set([HOME]),
+        uncollapsibleSources: new Set([HOME]),
       });
 
       expect(kinds(blocks)).toContain('group');

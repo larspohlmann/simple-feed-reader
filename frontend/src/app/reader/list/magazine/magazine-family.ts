@@ -17,9 +17,7 @@ const IMAGE_POOR_SHARE = 0.15;
  *  entries have none. */
 const LEAD_IMAGE_REACH = 6;
 
-/** Whether a view's leading entries call for the text-forward family. An image-poor view
- *  always goes text-forward: with almost no pictures every image slot would collapse anyway.
- *  Otherwise the text family is worth it only when the copy fills its quotes (isTextRich). */
+/** Whether a view's leading entries call for the text-forward family. */
 export function prefersTextFamily(sample: EntryDto[]): boolean {
   return isImagePoor(sample) || (!isImageRich(sample) && isTextRich(sample));
 }
