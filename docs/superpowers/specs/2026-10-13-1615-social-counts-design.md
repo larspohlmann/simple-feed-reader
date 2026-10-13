@@ -88,8 +88,9 @@ exception so the caller falls back.
 - Mounted in the reader view directly below the post: after the content and its link cards, before the categories,
   under `@if (e.social)`. It renders as soon as the article does; the counts call fires when the row scrolls into view
   (the comments component's viewport trigger).
-- Order: like, reposts (`repeat`), replies (`chat_bubble`), quotes (`format_quote`, only when not null). Each count is a
-  muted, small, tabular number with a translated `title`/`aria-label` (de, en).
+- The row is right-aligned. Order: reposts (`repeat`), replies (`chat_bubble`), quotes (`format_quote`, only when not
+  null), then the like last, at the right edge. Each count is a muted, small, tabular number with a translated
+  `title`/`aria-label` (de, en).
 - **Like:** when `canLike`, a pill button (accent colour, `--border-strong` outline, `--radius-pill`); liked = filled
   icon, accent outline, `--accent-soft` background. It calls `EntryActionHandler.like(entry)`, keeps the #1600 hints
   (`reader.actionHint.like.*` / `unlike.*`) and is always shown, with the number appearing once counts load; on failure
