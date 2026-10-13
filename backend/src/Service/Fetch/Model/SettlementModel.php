@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Fetch\Model;
 
 /**
- * What a key comes to: its finished value, or a request for it, the first while a pass builds its tickets or one
- * more after an answer.
+ * What a key comes to: its finished value, or a request for it.
  *
  * @template-covariant T
  */
@@ -30,7 +29,7 @@ final readonly class SettlementModel
     }
 
     /** @return self<never> */
-    public static function followUp(RequestTicketModel $ticket): self
+    public static function request(RequestTicketModel $ticket): self
     {
         return new self([], $ticket);
     }
@@ -70,7 +69,7 @@ final readonly class SettlementModel
     public function mapOutcome(\Closure $mapping): self
     {
         if (null !== $this->ticket) {
-            return self::followUp($this->ticket);
+            return self::request($this->ticket);
         }
 
         return self::outcome($mapping($this->settledOutcome()));

@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
-use App\Entity\Feed;
-use App\Entity\SocialFeed;
-use App\Enum\SocialFeedKind;
 use App\Service\Social\Model\SocialAccountSlotModel;
 use App\Service\Social\Model\SocialServerSlotModel;
 use App\Service\Social\TimelineRounds;
 use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
@@ -21,23 +19,16 @@ final class TimelineRoundsTest extends TestCase
 {
     use AssignsEntityIds;
 
-    private const string HOME = 'https://mastodon.example/api/v1/timelines/home?limit=40';
-
     public function testATimelineTicketHoldsItsAccountsSlotAndItsServersSlot(): void
     {
         $rounds = SocialApiWiring::timelineRounds(new MockHttpClient(), new ArrayAdapter());
         $account = self::withId(SocialAccounts::mastodonOn('https://mastodon.example'), 7);
-        $socialFeed = new SocialFeed(
-            $account,
-            self::withId(new Feed('social:mastodon:7:home'), 1),
-            SocialFeedKind::Home,
-            '',
-        );
+        $socialFeed = PrivateFeeds::mastodon($account, 1);
 
         $tickets = iterator_to_array($rounds->start([1 => $socialFeed])->ticketFor(1));
 
         self::assertEquals(
-            [new SocialAccountSlotModel(7, 3), new SocialServerSlotModel(self::HOME, 4)],
+            [new SocialAccountSlotModel(7, 3), new SocialServerSlotModel(4)],
             $tickets[1]->slots,
         );
     }

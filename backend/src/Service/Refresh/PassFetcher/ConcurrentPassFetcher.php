@@ -8,7 +8,6 @@ use App\Entity\SocialFeed;
 use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\Support\CapacityGuard;
 use App\Service\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
-use App\Service\Refresh\Pass\PassFeeds;
 use App\Service\Refresh\Pass\PassLane\FeedLane;
 use App\Service\Refresh\Pass\PassLane\TimelineLane;
 use App\Service\Refresh\Pass\PassTickets;
@@ -34,7 +33,7 @@ final readonly class ConcurrentPassFetcher implements PassFetcherInterface
     public function fetchAll(RefreshPass $pass, array $socialFeedsByFeedId): \Generator
     {
         $timelineLane = new TimelineLane($this->timelineRounds->start($socialFeedsByFeedId));
-        $tickets = new PassTickets(new PassFeeds($pass, new FeedLane($this->hostConcurrency), $timelineLane));
+        $tickets = new PassTickets($pass, new FeedLane($this->hostConcurrency), $timelineLane);
 
         foreach ($this->engine->sendAll($tickets->tickets(), $tickets) as $feedId => $outcome) {
             yield from $tickets->drainUnasked();

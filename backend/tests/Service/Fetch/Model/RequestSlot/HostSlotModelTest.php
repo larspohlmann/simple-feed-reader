@@ -23,12 +23,4 @@ final class HostSlotModelTest extends TestCase
 
         self::assertSame(2, $slot->capacity());
     }
-
-    public function testRejectsACapacityBelowOne(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Slot capacity must be at least 1, got 0.');
-
-        new HostSlotModel(0);
-    }
 }

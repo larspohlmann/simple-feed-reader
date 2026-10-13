@@ -19,7 +19,7 @@ final readonly class TimelineSlotsModel
     {
         return RequestTicketModel::api($request, [
             new SocialAccountSlotModel($account->requireId(), $this->perAccount),
-            new SocialServerSlotModel($request->url, $this->perHost),
+            new SocialServerSlotModel($this->perHost),
         ]);
     }
 }

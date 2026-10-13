@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Pass;
 
-use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialAccountStatus;
@@ -18,8 +17,8 @@ use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
 use App\Service\Social\Model\TimelineSlotsModel;
 use App\Service\Social\Pass\TimelineRound;
-use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\CountingArrayAdapter;
+use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
@@ -29,8 +28,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class TimelineRoundTest extends TestCase
 {
-    use AssignsEntityIds;
-
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const int HOME = 1;
     private const int LIST = 2;
@@ -166,9 +163,7 @@ final class TimelineRoundTest extends TestCase
 
     private function socialFeed(int $feedId, SocialFeedKind $kind, string $remoteId): SocialFeed
     {
-        $feed = self::withId(new Feed(sprintf('social:bluesky:3:%d', $feedId)), $feedId);
-
-        return new SocialFeed($this->account, $feed, $kind, $remoteId);
+        return PrivateFeeds::bluesky($this->account, $feedId, $kind, $remoteId);
     }
 
     private static function stale(): FetchOutcomeModel

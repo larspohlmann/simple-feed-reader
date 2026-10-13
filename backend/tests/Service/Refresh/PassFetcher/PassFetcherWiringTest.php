@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh\PassFetcher;
 
-use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
-use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Enum\SourceFormat;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
@@ -22,6 +19,7 @@ use App\Service\Refresh\PassFetcher\PassFetcherInterface;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
 use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
@@ -122,11 +120,6 @@ final class PassFetcherWiringTest extends KernelTestCase
             );
         self::assignId($account, 10 + $id);
 
-        $feed = self::withId(new Feed('social:x:' . $id . ':home'), $id);
-        $feed->setSourceFormat(
-            SocialNetwork::Mastodon === $network ? SourceFormat::MASTODON_API : SourceFormat::BLUESKY_API,
-        );
-
-        return new SocialFeed($account, $feed, SocialFeedKind::Home, '');
+        return PrivateFeeds::of($account, $id);
     }
 }

@@ -22,8 +22,6 @@ use Symfony\Component\HttpClient\MockHttpClient;
 
 final class TimelineLaneTest extends TestCase
 {
-    private const string HOME = 'https://mastodon.example/api/v1/timelines/home?limit=40';
-
     public function testAPrivateFeedsTicketComesFromItsRound(): void
     {
         $timeline = PrivateFeeds::mastodon(PrivateFeeds::mastodonAccount(), 2);
@@ -33,7 +31,7 @@ final class TimelineLaneTest extends TestCase
         self::assertSame([2], array_keys($tickets));
         self::assertSame(ResponseExchangeKind::Api, $tickets[2]->exchange);
         self::assertEquals(
-            [new SocialAccountSlotModel(7, 3), new SocialServerSlotModel(self::HOME, 4)],
+            [new SocialAccountSlotModel(7, 3), new SocialServerSlotModel(4)],
             $tickets[2]->slots,
         );
     }

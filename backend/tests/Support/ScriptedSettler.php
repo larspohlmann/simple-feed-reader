@@ -57,6 +57,6 @@ final class ScriptedSettler implements AnswerSettlerInterface
         }
         $this->followUps[$key] = \array_slice($pending, 1);
 
-        return SettlementModel::followUp($pending[0]);
+        return SettlementModel::request($pending[0]);
     }
 }

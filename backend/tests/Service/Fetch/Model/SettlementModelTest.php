@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 
 final class SettlementModelTest extends TestCase
 {
-    public function testAnOutcomeCarriesItsValueAndAsksForNoFollowUp(): void
+    public function testAnOutcomeCarriesItsValueAndAsksForNoRequest(): void
     {
         $outcome = FetchOutcomeModel::withheld();
 
@@ -39,25 +39,25 @@ final class SettlementModelTest extends TestCase
         self::assertSame($value, $settlement->settledOutcome());
     }
 
-    public function testAFollowUpCarriesItsTicket(): void
+    public function testARequestCarriesItsTicket(): void
     {
         $ticket = FeedTickets::of('https://example.com/feed');
 
-        $settlement = SettlementModel::followUp($ticket);
+        $settlement = SettlementModel::request($ticket);
 
         self::assertTrue($settlement->isRequest());
         self::assertSame($ticket, $settlement->requestTicket());
     }
 
-    public function testAFollowUpCarriesNoOutcomeYet(): void
+    public function testARequestCarriesNoOutcomeYet(): void
     {
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('A request carries no outcome yet.');
 
-        SettlementModel::followUp(FeedTickets::of('https://example.com/feed'))->settledOutcome();
+        SettlementModel::request(FeedTickets::of('https://example.com/feed'))->settledOutcome();
     }
 
-    public function testAFinishedValueAsksForNoFollowUp(): void
+    public function testAFinishedValueAsksForNoRequest(): void
     {
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('A finished value asks for no request.');
@@ -72,11 +72,11 @@ final class SettlementModelTest extends TestCase
         self::assertSame(2, $mapped->settledOutcome());
     }
 
-    public function testMappingKeepsAFollowUpsTicket(): void
+    public function testMappingKeepsARequestsTicket(): void
     {
         $ticket = FeedTickets::of('https://example.com/feed');
 
-        $mapped = SettlementModel::followUp($ticket)->mapOutcome(static fn (mixed $value): mixed => $value);
+        $mapped = SettlementModel::request($ticket)->mapOutcome(static fn (mixed $value): mixed => $value);
 
         self::assertSame($ticket, $mapped->requestTicket());
     }

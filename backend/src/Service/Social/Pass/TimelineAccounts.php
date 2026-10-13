@@ -24,11 +24,6 @@ final class TimelineAccounts
     /** @var array<int, true> */
     private array $renewed = [];
 
-    public function mayAsk(SocialAccount $account): bool
-    {
-        return null === $this->heldOutcomeOf($account);
-    }
-
     /** Why the account's feeds stay unasked this refresh, or null when nothing holds them. */
     public function heldOutcomeOf(SocialAccount $account): ?TimelineOutcomeModelInterface
     {

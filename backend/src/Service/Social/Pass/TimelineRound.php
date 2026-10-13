@@ -67,7 +67,7 @@ final class TimelineRound
     public function admits(int|string $key): bool
     {
         $account = $this->socialFeedOf($key)->getSocialAccount();
-        if (!$this->accounts->mayAsk($account)) {
+        if (null !== $this->accounts->heldOutcomeOf($account)) {
             return false;
         }
 
@@ -154,7 +154,7 @@ final class TimelineRound
             $this->onRenewedSession[$feedId] = true;
         }
 
-        return SettlementModel::followUp($this->slots->ticketFor($account, $request));
+        return SettlementModel::request($this->slots->ticketFor($account, $request));
     }
 
     /** @throws PrivateFeedOrphanedException when the private feed has lost its social feed */

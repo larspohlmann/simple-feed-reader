@@ -9,8 +9,6 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
-use App\Enum\SocialNetwork;
-use App\Enum\SourceFormat;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
@@ -34,6 +32,7 @@ use App\Service\Social\Model\TimelinePageModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\CountingArrayAdapter;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
@@ -894,13 +893,7 @@ final class ConcurrentPassFetcherTest extends TestCase
         SocialFeedKind $kind = SocialFeedKind::Home,
         string $remoteId = '',
     ): SocialFeed {
-        $feedId = $this->nextFeedId++;
-        $feed = self::withId(new Feed(sprintf('social:test:%d', $feedId)), $feedId);
-        $feed->setSourceFormat(
-            SocialNetwork::Bluesky === $account->getNetwork() ? SourceFormat::BLUESKY_API : SourceFormat::MASTODON_API,
-        );
-
-        return new SocialFeed($account, $feed, $kind, $remoteId);
+        return PrivateFeeds::of($account, $this->nextFeedId++, $kind, $remoteId);
     }
 
     private function blueskyAccount(?string $cachedJwt, int $accountId = 3): SocialAccount

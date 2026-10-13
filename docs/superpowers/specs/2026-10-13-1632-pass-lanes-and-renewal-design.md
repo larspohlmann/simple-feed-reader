@@ -11,7 +11,7 @@ Issue: https://github.com/larspohlmann/simple-feed-reader/issues/1632. Follow-up
   - `settle(int|string $key, FetchOutcomeModel $outcome): SettlementModel` — turns a raw outcome into either a
     finished value the engine yields under the key, or a follow-up `RequestTicketModel` for the same key.
 - `SettlementModel` (Fetch `Model/`, PHPStan `@template`) has two named constructors: `outcome(T)` and
-  `followUp(RequestTicketModel)`. The engine output becomes `\Generator<int|string, T>`.
+  `request(RequestTicketModel)`. The engine output becomes `\Generator<int|string, T>`.
 - Every place the engine yields today (withheld by the gate, failed before sending, failed after retries, concluded)
   goes through `settle`. A follow-up is requeued as a fresh attempt for the same key (`FetchAttemptModel::start` with the
   batch proxy) through `FetchQueue`; it never passes through the ticket source, so `BudgetedFeedQueue` never counts it as
@@ -31,7 +31,7 @@ Issue: https://github.com/larspohlmann/simple-feed-reader/issues/1632. Follow-up
   - a stale answer to a ticket built before the renewal drops the session (`dropSession`) and marks the account renewed
     unless that already happened — at most one renewal, hence one session open, per account per pass;
   - then build the feed's ticket again (`ticketOf`): a held account yields its held outcome, a request that fails to
-    build yields its failure, else `followUp(ticket)`.
+    build yields its failure, else `request(ticket)`.
 - Behaviour change, named: several requests of one account in flight with the old token each come back stale; each is
   sent once more with the renewed session instead of waiting for a second run. Request count per stale feed is the same
   as today (one more). The session open (blocking) now happens while other requests are in flight — the same accepted

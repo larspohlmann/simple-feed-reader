@@ -6,6 +6,7 @@ namespace App\Tests\Service\Social\Pass;
 
 use App\Entity\SocialAccount;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
+use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
 use App\Service\Social\Pass\TimelineAccounts;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
@@ -35,14 +36,14 @@ final class TimelineAccountsTest extends TestCase
         self::assertFalse($accounts->isRenewed(self::bluesky(4)));
     }
 
-    public function testAThrottledAccountMayNotAskAgain(): void
+    public function testAThrottledAccountsFeedsAreHeldAsThrottled(): void
     {
         $accounts = new TimelineAccounts();
         $alice = self::bluesky(3);
 
         $accounts->settleFailure($alice, new SocialNetworkThrottledException('Bluesky is rate limiting.', 60));
 
-        self::assertFalse($accounts->mayAsk($alice));
+        self::assertInstanceOf(AccountThrottledTimelineModel::class, $accounts->heldOutcomeOf($alice));
     }
 
     private static function bluesky(int $accountId): SocialAccount

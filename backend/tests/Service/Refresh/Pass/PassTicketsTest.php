@@ -10,7 +10,6 @@ use App\Enum\SocialFeedKind;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
 use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
-use App\Service\Refresh\Pass\PassFeeds;
 use App\Service\Refresh\Pass\PassLane\FeedLane;
 use App\Service\Refresh\Pass\PassLane\TimelineLane;
 use App\Service\Refresh\Pass\PassTickets;
@@ -127,6 +126,20 @@ final class PassTicketsTest extends TestCase
         self::assertInstanceOf(AccountPausedTimelineModel::class, $held->outcome);
     }
 
+    public function testNamesEveryPrivateFeedIdInOrderWhetherTheBudgetStartsItOrNot(): void
+    {
+        $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
+        $rss = self::withId(new Feed('https://news.example/feed.xml'), 1);
+
+        $pass = new RefreshPass(
+            [$rss, PrivateFeeds::mastodonFeed(7), PrivateFeeds::mastodonFeed(4)],
+            $clock,
+            $clock->now()->getTimestamp() + 5,
+        );
+
+        self::assertSame([7, 4], PassTickets::privateFeedIdsOf($pass));
+    }
+
     /**
      * @param list<Feed>       $feeds       in due order
      * @param list<SocialFeed> $socialFeeds the private feeds' rows
@@ -141,6 +154,6 @@ final class PassTicketsTest extends TestCase
         }
         $round = SocialApiWiring::timelineRounds(new MockHttpClient(), new ArrayAdapter())->start($socialFeedsByFeedId);
 
-        return new PassTickets(new PassFeeds($this->pass, new FeedLane(2), new TimelineLane($round)));
+        return new PassTickets($this->pass, new FeedLane(2), new TimelineLane($round));
     }
 }
