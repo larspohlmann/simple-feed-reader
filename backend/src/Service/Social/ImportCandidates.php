@@ -23,7 +23,6 @@ use App\Service\Social\Pass\FollowMatching;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Social\Support\CandidateOrder;
 use App\Service\Social\Support\ProfileFeedUrl;
-use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class ImportCandidates
 {
@@ -32,7 +31,7 @@ final readonly class ImportCandidates
         private SubscriptionFeedUrls $subscriptionFeedUrls,
         private FollowMatcher $followMatcher,
         private SocialFeedRepository $socialFeeds,
-        private EntityManagerInterface $entityManager,
+        private ActingAccountGuard $guard,
     ) {
     }
 
@@ -108,14 +107,10 @@ final readonly class ImportCandidates
 
     private function networkCandidatesOf(SocialAccount $account): NetworkCandidatesModel
     {
-        try {
-            return $this->networkCandidates->candidates($account);
-        } catch (SocialCredentialsRejectedException $exception) {
-            $account->markNeedsReconnect();
-            $this->entityManager->flush();
-
-            throw $exception;
-        }
+        return $this->guard->actAs(
+            $account,
+            fn (): NetworkCandidatesModel => $this->networkCandidates->candidates($account),
+        );
     }
 
     /** @return list<ProfileFeedSubscriptionModel> */

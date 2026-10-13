@@ -11,6 +11,7 @@ use App\Enum\SocialAccountStatus;
 use App\Repository\SubscriptionFeedUrls;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
@@ -65,7 +66,7 @@ final class ImportCandidatesTest extends DbTestCase
             $subscriptionFeedUrls,
             new FollowMatcher($resolver),
             SocialFeeds::repository($this->entityManager),
-            $this->entityManager,
+            new ActingAccountGuard($this->entityManager),
         );
     }
 
