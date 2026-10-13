@@ -15,7 +15,6 @@ use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialAccountNotFoundException;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\TooManySocialAccountsException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -70,12 +69,6 @@ final readonly class SocialProblems implements ExceptionProblemsInterface
                 'social_account_unresolvable',
                 'Account not found on the network',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
-                $exception->getMessage(),
-            )),
-            $exception instanceof SocialNetworkUnreachableException => new ResolvedProblem(new ApiProblem(
-                'social_network_unreachable',
-                'The network could not be reached',
-                Response::HTTP_BAD_GATEWAY,
                 $exception->getMessage(),
             )),
             default => null,
