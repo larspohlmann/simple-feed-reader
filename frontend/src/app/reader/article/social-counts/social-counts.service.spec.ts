@@ -91,17 +91,21 @@ describe('SocialCountsService', () => {
     expect(service.state(1)()).toEqual({ status: 'loading' });
   });
 
-  it('forgets every count, and drops a late answer, once another account signs in', () => {
+  it.each([
+    ['answer', (late: Subject<SocialCountsDto>) => late.next(counts)],
+    ['error', (late: Subject<SocialCountsDto>) => late.error(new Error('offline'))],
+  ])('forgets every count, and drops a late %s, once another account signs in', (_, settle) => {
     const late = new Subject<SocialCountsDto>();
     service.load(post(1));
     api.socialCounts.mockReturnValue(late);
     service.load(post(2));
+    const held = service.state(2);
 
     tokens.set('account-b.jwt');
     TestBed.tick();
-    late.next(counts);
+    settle(late);
 
     expect(service.state(1)()).toEqual({ status: 'idle' });
-    expect(service.state(2)()).toEqual({ status: 'idle' });
+    expect(held()).toEqual({ status: 'loading' });
   });
 });

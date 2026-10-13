@@ -85,7 +85,11 @@ test('a post whose counts fail keeps its like button and shows no numbers', asyn
       status: 502,
     }),
   });
+  const failedAnswer = page.waitForResponse((response) =>
+    response.url().endsWith('/api/entries/1/social'),
+  );
   const view = await openPost(page);
+  await failedAnswer;
 
   const like = view.locator('app-social-counts button.like');
   await expect(like).toBeVisible();

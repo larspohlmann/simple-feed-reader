@@ -109,13 +109,7 @@ export function entryDetailJson(entry: EntryDto, contentHtml: string): EntryDeta
   };
 }
 
-/**
- * A `GET /api/subscriptions` body that matches the current contract.
- *
- * Typed as `SubscriptionsResponse`: a stub that misses a field the shell reads
- * (`socialAccounts` since #1599) throws inside a computed and renders an empty
- * reader, which reads as a layout bug rather than a stale fixture.
- */
+/** Typed so a field the shell reads but a stub misses is a compile error, not a blank reader. */
 export function subscriptionsJson(
   subscriptions: SubscriptionDto[],
   totals: Partial<Omit<SubscriptionsResponse, 'subscriptions'>> = {},
