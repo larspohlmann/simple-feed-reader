@@ -1198,10 +1198,14 @@
     "actionHint": {
       "favoriteAdd": "Add to favourites",
       "favoriteRemove": "Remove from favourites",
-      "likeBluesky": "Like on Bluesky — a public like the author sees",
-      "likeMastodon": "Like on Mastodon — a public like the author sees",
-      "unlikeBluesky": "Take back your like on Bluesky",
-      "unlikeMastodon": "Take back your like on Mastodon",
+      "like": {
+        "bluesky": "Like on Bluesky — a public like the author sees",
+        "mastodon": "Like on Mastodon — a public like the author sees"
+      },
+      "unlike": {
+        "bluesky": "Take back your like on Bluesky",
+        "mastodon": "Take back your like on Mastodon"
+      },
       "keepAdd": "Keep — never deleted when old entries are cleaned up",
       "keepRemove": "Stop keeping — old-entry cleanup may delete it again",
       "readAdd": "Mark as read — adds it to Recently read",

@@ -1198,10 +1198,14 @@
     "actionHint": {
       "favoriteAdd": "Zu Favoriten hinzufügen",
       "favoriteRemove": "Aus Favoriten entfernen",
-      "likeBluesky": "Auf Bluesky liken — ein öffentliches Like, das der Autor sieht",
-      "likeMastodon": "Auf Mastodon liken — ein öffentliches Like, das der Autor sieht",
-      "unlikeBluesky": "Dein Like auf Bluesky zurücknehmen",
-      "unlikeMastodon": "Dein Like auf Mastodon zurücknehmen",
+      "like": {
+        "bluesky": "Auf Bluesky liken — ein öffentliches Like, das der Autor sieht",
+        "mastodon": "Auf Mastodon liken — ein öffentliches Like, das der Autor sieht"
+      },
+      "unlike": {
+        "bluesky": "Dein Like auf Bluesky zurücknehmen",
+        "mastodon": "Dein Like auf Mastodon zurücknehmen"
+      },
       "keepAdd": "Merken — wird beim Aufräumen alter Einträge nie gelöscht",
       "keepRemove": "Nicht mehr merken — das Aufräumen alter Einträge darf ihn wieder löschen",
       "readAdd": "Als gelesen markieren — landet in „Zuletzt gelesen“",

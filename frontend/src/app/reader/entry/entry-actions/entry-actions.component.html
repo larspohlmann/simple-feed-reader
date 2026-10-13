@@ -45,12 +45,11 @@
   <app-icon name="star" [size]="size()" [fill]="entry().isFavorite" />
 </button>
 @if (entry().social; as social) {
+  @let likeKey = (social.isLiked ? 'unlike' : 'like') + '.' + social.network;
   <button
     type="button"
-    [attr.title]="likeHint(social) | transloco"
-    [attr.aria-label]="
-      'reader.' + (social.isLiked ? 'unlike' : 'like') + '.' + social.network | transloco
-    "
+    [attr.title]="'reader.actionHint.' + likeKey | transloco"
+    [attr.aria-label]="'reader.' + likeKey | transloco"
     [appFlagToggle]="social.isLiked"
     (click)="$event.stopPropagation(); actions.like(entry())"
     (keydown.enter)="$event.stopPropagation()"
