@@ -13,20 +13,28 @@ use App\Entity\LinkCardContent;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\ShareEnrichment;
+use App\Entity\SocialAccount;
+use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Enum\ShareEnrichmentKind;
+use App\Enum\SocialNetwork;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
+use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 
 final class EntryListRowEnricherTest extends DbTestCase
 {
     use SeedsUsers;
+
+    private const string POST = 'https://mastodon.social/@Gargron/';
 
     private Feed $feed;
     private User $user;
@@ -145,10 +153,72 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->enrich([$this->row($first), $this->row($second, [$this->row($duplicate)])]);
 
         $queries = implode("\n", $recorder->queries());
-        self::assertCount(4, $recorder->queries(), $queries);
-        foreach (['entry_category', 'saved_search_entry', 'link_card', 'share_enrichment'] as $table) {
+        self::assertCount(5, $recorder->queries(), $queries);
+        $tables = ['entry_category', 'saved_search_entry', 'link_card', 'share_enrichment', 'social_account'];
+        foreach ($tables as $table) {
             self::assertCount(1, $recorder->queriesMatching($table), $table . ":\n" . $queries);
         }
+    }
+
+    public function testAPostOnANetworkTheUserHasAnAccountOnCarriesItsSocialStateAndLike(): void
+    {
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $mastodon = $this->mastodonFeed();
+        $liked = $this->postOn($mastodon, self::POST . '1');
+        $unliked = $this->postOn($mastodon, self::POST . '2');
+        $article = $this->entry('article');
+        $this->likeOf($account, $this->user, $liked);
+
+        $rows = $this->enrich([$this->row($liked, [$this->row($unliked)]), $this->row($article)]);
+
+        self::assertEquals(new EntryListRowSocial(SocialNetwork::Mastodon, true), $rows[0]->enrichment->social);
+        self::assertEquals(
+            new EntryListRowSocial(SocialNetwork::Mastodon, false),
+            $rows[0]->duplicates[0]->enrichment->social,
+        );
+        self::assertNull($rows[1]->enrichment->social);
+    }
+
+    public function testAnotherUsersLikeNeverShowsAsLiked(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $stranger = $this->user('social-stranger@example.com');
+        $strangerAccount = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($stranger));
+        $post = $this->postOn($this->mastodonFeed(), self::POST . '5');
+        $this->likeOf($strangerAccount, $stranger, $post);
+
+        $social = $this->enrich([$this->row($post)])[0]->enrichment->social;
+
+        self::assertEquals(new EntryListRowSocial(SocialNetwork::Mastodon, false), $social);
+    }
+
+    public function testWithoutAnAccountOnItsNetworkAPostHasNoSocialState(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
+        $post = $this->postOn($this->mastodonFeed(), self::POST . '3');
+
+        self::assertNull($this->enrich([$this->row($post)])[0]->enrichment->social);
+    }
+
+    public function testTheLikeLookupIsOneQueryHoweverManyPostsThePageHolds(): void
+    {
+        SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $feed = $this->mastodonFeed();
+        $single = [$this->row($this->postOn($feed, self::POST . '4'))];
+        $many = array_map(
+            fn (int $number): EntryListRow => $this->row($this->postOn($feed, self::POST . 'many' . $number)),
+            range(1, 5),
+        );
+
+        $recorder = $this->recorder();
+        $this->enrich($single);
+        $singleCount = \count($recorder->queries());
+        $recorder = $this->recorder();
+        $this->enrich($many);
+
+        self::assertSame(6, $singleCount);
+        self::assertCount($singleCount, $recorder->queries(), implode("\n", $recorder->queries()));
+        self::assertCount(1, $recorder->queriesMatching('social_like'));
     }
 
     public function testNoRowsStayNoRowsWithoutAQuery(): void
@@ -195,6 +265,33 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function mastodonFeed(): Feed
+    {
+        $feed = new Feed('https://mastodon.social/@Gargron.rss');
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+
+        return $feed;
+    }
+
+    private function postOn(Feed $feed, string $url): Entry
+    {
+        $now = new \DateTimeImmutable('2026-10-13T00:00:00Z');
+        $entry = new Entry($feed, $url, $url, 'Post', $now, $now);
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    private function likeOf(SocialAccount $account, User $user, Entry $entry): void
+    {
+        $this->entityManager->persist(
+            new SocialLike($user, $entry, $account, '1', new \DateTimeImmutable('2026-10-13 10:00:00')),
+        );
+        $this->entityManager->flush();
     }
 
     private function category(Entry $entry, int $position, string $label): void

@@ -13,10 +13,12 @@ use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
+use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnrichment;
+use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use PHPUnit\Framework\TestCase;
@@ -245,6 +247,21 @@ final class EntryJsonTest extends TestCase
         self::assertSame('2026-09-07T00:00:00+00:00', $json['createdAt']);
     }
 
+    public function testAnEntryWithoutASocialStateSaysSo(): void
+    {
+        self::assertNull(EntryJson::listRow($this->row($this->entryTitled('Article')))['social']);
+    }
+
+    public function testASocialPostCarriesItsNetworkAndWhetherTheUserLikedIt(): void
+    {
+        $row = $this->row(
+            $this->entryTitled('Post'),
+            new EntryListRowEnrichment(social: new EntryListRowSocial(SocialNetwork::Bluesky, true)),
+        );
+
+        self::assertSame(['network' => 'bluesky', 'isLiked' => true], EntryJson::detail($row)['social']);
+    }
+
     public function testListRowKeepsItsShapeAndCarriesTheEnrichment(): void
     {
         $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
@@ -269,7 +286,7 @@ final class EntryJsonTest extends TestCase
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',
-                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'duplicates',
+                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'social', 'duplicates',
             ],
             array_keys($json),
         );
