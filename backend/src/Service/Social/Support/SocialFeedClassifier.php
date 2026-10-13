@@ -9,20 +9,27 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Social\Model\SocialFeedAddressModel;
 
-/**
- * Which network a feed belongs to: a private feed by its format and synthetic URL, any other feed when its URL is a
- * network's profile feed. The subscription JSON and the network scopes ask this one rule.
- */
+/** Which network a feed belongs to: by its private format and address, else by its URL as a profile feed. */
 final class SocialFeedClassifier
 {
     public static function networkOf(Feed $feed): ?SocialNetwork
     {
-        return self::privateAddressOf($feed)->network ?? ProfileFeedUrl::networkOf($feed->getUrl());
+        return self::networkFor($feed->getUrl(), $feed->getSourceFormat());
+    }
+
+    public static function networkFor(string $url, string $sourceFormat): ?SocialNetwork
+    {
+        return self::privateAddressFor($url, $sourceFormat)->network ?? ProfileFeedUrl::networkOf($url);
     }
 
     public static function privateAddressOf(Feed $feed): ?SocialFeedAddressModel
     {
-        return SourceFormat::isSocial($feed->getSourceFormat()) ? SocialFeedUrl::addressOf($feed->getUrl()) : null;
+        return self::privateAddressFor($feed->getUrl(), $feed->getSourceFormat());
+    }
+
+    private static function privateAddressFor(string $url, string $sourceFormat): ?SocialFeedAddressModel
+    {
+        return SourceFormat::isSocial($sourceFormat) ? SocialFeedUrl::addressOf($url) : null;
     }
 
     private function __construct()

@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\Feed;
 use App\Enum\FeedStatus;
+use App\Enum\SocialNetwork;
 use PHPUnit\Framework\TestCase;
 
 final class FeedTest extends TestCase
@@ -143,5 +144,17 @@ final class FeedTest extends TestCase
 
         self::assertNull($feed->getEtag());
         self::assertNull($feed->getLastModified());
+    }
+
+    public function testAFeedStartsWithoutANetworkAndKeepsTheOneItIsClassifiedAs(): void
+    {
+        $feed = new Feed('https://bsky.app/profile/alice.bsky.social/rss');
+        self::assertNull($feed->getNetwork());
+
+        $feed->classifyAs(SocialNetwork::Bluesky);
+        self::assertSame(SocialNetwork::Bluesky, $feed->getNetwork());
+
+        $feed->classifyAs(null);
+        self::assertNull($feed->getNetwork());
     }
 }

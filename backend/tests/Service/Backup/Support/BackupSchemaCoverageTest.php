@@ -214,6 +214,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
         Feed::class => [
             'status' => 'Live fetch state, not the user\'s data. A restored feed starts clean.',
             'imageCheckedAt' => 'Sweep bookkeeping: unset, a restored profile feed is asked for its picture at once.',
+            'network' => 'Derived from url and sourceFormat by SocialFeedClassifier; the restore\'s flush '
+                . 'recomputes it through FeedNetworkListener.',
             'etag' => 'The HTTP validator for the last body this instance fetched. A restore has '
                 . 'no such body, and a carried-over validator would make the first refresh take a '
                 . '304 over an empty feed.',
