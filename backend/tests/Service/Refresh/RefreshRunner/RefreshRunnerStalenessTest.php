@@ -71,7 +71,11 @@ final class RefreshRunnerStalenessTest extends DbTestCase
         }
 
         self::assertSame([1, 1, 1, 1], $startedByPass, 'each pass fits one feed, and every feed is due again');
-        self::assertCount(3, $this->passes->fetchedUrls(), 'the three stalest RSS feeds took the first three passes');
+        self::assertSame(
+            [self::SITE . '/feed-0.xml', self::SITE . '/feed-1.xml', self::SITE . '/feed-2.xml'],
+            $this->passes->fetchedUrls(),
+            'the three stalest RSS feeds took the first three passes, stalest first',
+        );
         self::assertSame([$privateFeedId], $this->passes->asked, 'the private feed took the fourth');
     }
 
