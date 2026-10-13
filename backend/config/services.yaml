@@ -84,6 +84,7 @@ services:
     App\Service\Fetch\DnsResolver\DnsResolverInterface: '@App\Service\Fetch\DnsResolver\NativeDnsResolver'
     App\Service\Fetch\FeedFetcher\FeedFetcherInterface: '@App\Service\Fetch\FeedFetcher\HttpFeedFetcher'
     App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface: '@App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher'
+    App\Service\Refresh\PassFetcher\PassFetcherInterface: '@App\Service\Refresh\PassFetcher\ConcurrentPassFetcher'
     App\Service\Fetch\EgressProxySource\EgressProxySourceInterface: '@App\Service\Proxy\ConfiguredProxySource\StoredProxy'
     App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface: '@App\Service\Proxy\ConfiguredProxySource\StoredProxy'
     App\Service\Refresh\RefreshRunner\RefreshRunnerInterface: '@App\Service\Refresh\RefreshRunner\RefreshRunner'

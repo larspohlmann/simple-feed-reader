@@ -24,6 +24,7 @@ use App\Tests\Support\RecordingContentChangeMarker;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\StubPassFetcher;
 use App\Tests\Support\TtlRecordingLockFactory;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
@@ -38,7 +39,7 @@ final class RefreshRunnerTest extends DbTestCase
     use ScrapedFixtures;
 
     private MockClock $clock;
-    private StubFeedFetcher $fetcher;
+    private StubPassFetcher $fetcher;
     private StubFeedFetcher $faviconFetcher;
     private TtlRecordingLockFactory $lockFactory;
     private User $subscriber;
@@ -52,7 +53,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
         $this->changeMarker = new RecordingContentChangeMarker();
         $this->logger = new RecordingLogger();
-        $this->fetcher = new StubFeedFetcher($this->clock);
+        $this->fetcher = new StubPassFetcher($this->clock);
         // Favicon resolution has its own fetcher so homepage fetches never
         // pollute assertions on which FEEDS the runner fetched.
         $this->faviconFetcher = new StubFeedFetcher();
@@ -589,7 +590,7 @@ final class RefreshRunnerTest extends DbTestCase
         $third = $this->dueFeed('https://three.example.com/feed');
         $this->entityManager->flush();
 
-        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -655,7 +656,7 @@ final class RefreshRunnerTest extends DbTestCase
         $second = $this->dueFeed('https://two.example.com/feed');
         $this->entityManager->flush();
 
-        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second] as $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -1049,7 +1050,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         // Concurrency 1 makes "the third feed is never started" deterministic
         // rather than a race against however many feeds a wave happens to fit.
-        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
@@ -1162,7 +1163,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->entityManager->flush();
 
         // Concurrency 1 fixes the order, so the third flush is the fetched feed's.
-        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
+        $this->fetcher = new StubPassFetcher($this->clock, concurrency: 1);
         $this->fetcher->willReturn(
             $unchanged->getUrl(),
             FetchResponseModel::notModified($unchanged->getUrl(), false, null, null),

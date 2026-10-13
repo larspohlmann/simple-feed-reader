@@ -7,10 +7,10 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\NetworkFeedSubscriptions;
-use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\RefreshFetchers;
+use App\Tests\Support\StubPassFetcher;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -94,20 +94,12 @@ final class RefreshControllerTest extends WebTestCase
         $entityManager->flush();
 
         $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
-        // Swap in a stub fetcher so no real network I/O happens.
-        $fetcher = new StubFeedFetcher();
-        // StubFeedFetcher throws LogicException on an unstubbed URL; stub the one feed as not-modified.
-        $fetcher->willReturn(
+        $passes = new StubPassFetcher();
+        $passes->willReturn(
             'https://example.com/mine.xml',
             FetchResponseModel::notModified('https://example.com/mine.xml', false, null, null),
         );
-        // The runner's favicon phase fetches the feed's site homepage through
-        // this same fetcher — stub the origin too, or it throws just as loudly.
-        $fetcher->willReturn(
-            'https://example.com',
-            FetchResponseModel::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
-        );
-        self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://example.com');
 
         $client->request(
             'POST',
@@ -165,18 +157,12 @@ final class RefreshControllerTest extends WebTestCase
         $entityManager->persist($subscription);
         $entityManager->flush();
 
-        $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn(
+        $passes = new StubPassFetcher();
+        $passes->willReturn(
             'https://example.com/tagged.xml',
             FetchResponseModel::notModified('https://example.com/tagged.xml', false, null, null),
         );
-        // The runner's favicon phase fetches the feed's site homepage through
-        // this same fetcher — stub the origin too, or it throws just as loudly.
-        $fetcher->willReturn(
-            'https://example.com',
-            FetchResponseModel::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
-        );
-        self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://example.com');
 
         $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
         $client->request(
@@ -199,16 +185,12 @@ final class RefreshControllerTest extends WebTestCase
         $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
         $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN);
 
-        $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn(
+        $passes = new StubPassFetcher();
+        $passes->willReturn(
             NetworkFeedSubscriptions::MASTODON_PROFILE,
             FetchResponseModel::notModified(NetworkFeedSubscriptions::MASTODON_PROFILE, false, null, null),
         );
-        $fetcher->willReturn(
-            'https://mastodon.social',
-            FetchResponseModel::fetched('https://mastodon.social', false, '<html lang="en"></html>', null, null),
-        );
-        self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://mastodon.social');
 
         $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
         $client->request(

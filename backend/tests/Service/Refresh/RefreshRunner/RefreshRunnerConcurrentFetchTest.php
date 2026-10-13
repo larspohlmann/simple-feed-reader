@@ -8,24 +8,26 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\FeedStatus;
-use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Refresh\Model\RefreshRequestModel;
+use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\RefreshRunners;
+use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\StubFeedFetcher;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 /**
- * Drives the REAL ConcurrentFeedFetcher through RefreshRunner: no other budget
+ * Drives the REAL ConcurrentPassFetcher through RefreshRunner: no other budget
  * test exercises BudgetedFeedQueue's lazy ticket generator against the real
  * concurrent engine once a budget forces a mid-batch stop.
  */
@@ -65,7 +67,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         return $feed;
     }
 
-    private function runner(ConcurrentFeedFetcher $fetcher): RefreshRunner
+    private function runner(ConcurrentPassFetcher $fetcher): RefreshRunner
     {
         return RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
             ->build($fetcher, $this->faviconFetcher);
@@ -79,7 +81,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         MockHttpClient $httpClient,
         int $concurrency = 8,
         int $hostConcurrency = 100,
-    ): ConcurrentFeedFetcher {
+    ): ConcurrentPassFetcher {
         $resolver = new class () implements DnsResolverInterface {
             public function resolve(string $hostname): array
             {
@@ -89,8 +91,9 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
 
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
-        return new ConcurrentFeedFetcher(
+        return new ConcurrentPassFetcher(
             FetchWiring::requestEngine($httpClient, $urlGuard, $this->noEgressProxy(), $concurrency, $this->clock),
+            SocialApiWiring::timelineRounds($httpClient, new ArrayAdapter()),
             $hostConcurrency,
         );
     }
@@ -165,7 +168,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         self::assertSame(3, $report->total);
         self::assertSame(2, $report->skippedForBudget);
         // The seam under test: skipped tickets were never yielded, so
-        // ConcurrentFeedFetcher never pulled them off BudgetedFeedQueue's
+        // ConcurrentPassFetcher never pulled them off BudgetedFeedQueue's
         // generator and never asked the HTTP client for them.
         self::assertSame(1, $requests);
         self::assertSame(1, $report->fetched + $report->notModified + $report->failed);

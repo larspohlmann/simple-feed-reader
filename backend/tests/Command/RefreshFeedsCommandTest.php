@@ -7,10 +7,10 @@ namespace App\Tests\Command;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\DbTestCase;
-use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\RefreshFetchers;
+use App\Tests\Support\StubPassFetcher;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\ApplicationTester;
@@ -47,15 +47,9 @@ final class RefreshFeedsCommandTest extends DbTestCase
     {
         $feed = $this->dueFeed('https://cli.example.com/feed');
 
-        $stub = new StubFeedFetcher();
-        $stub->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
-        // The runner's favicon phase fetches the site homepage through the
-        // same fetcher — stub the origin too, or it throws just as loudly.
-        $stub->willReturn(
-            'https://cli.example.com',
-            FetchResponseModel::fetched('https://cli.example.com', false, '<html lang="en"></html>', null, null),
-        );
-        self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
+        $passes = new StubPassFetcher();
+        $passes->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://cli.example.com');
 
         $tester = $this->tester();
         $exitCode = $tester->execute(['--budget' => '60']);
@@ -64,9 +58,7 @@ final class RefreshFeedsCommandTest extends DbTestCase
         $display = $tester->getDisplay();
         self::assertStringContainsString('completed', $display);
         self::assertStringContainsString('notModified', $display);
-        // The feed was fetched; a best-effort favicon lookup may also fetch the
-        // site homepage through the same client, so assert membership not equality.
-        self::assertContains($feed->getUrl(), $stub->fetchedUrls);
+        self::assertSame([$feed->getUrl()], $passes->fetchedUrls);
     }
 
     public function testReportsBusyWithoutFailing(): void

@@ -2,30 +2,34 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Social\TimelineFetcher;
+namespace App\Tests\Service\Refresh\PassFetcher;
 
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\DnsResolver\NativeDnsResolver;
+use App\Service\Refresh\Pass\PassFeeds;
+use App\Service\Refresh\Pass\RefreshPass;
+use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
+use App\Service\Refresh\PassFetcher\PassFetcherInterface;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
-use App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher;
-use App\Service\Social\TimelineFetcher\TimelineFetcherInterface;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-final class TimelineFetcherWiringTest extends KernelTestCase
+final class PassFetcherWiringTest extends KernelTestCase
 {
     use AssignsEntityIds;
 
@@ -45,13 +49,19 @@ final class TimelineFetcherWiringTest extends KernelTestCase
             NativeDnsResolver::class,
             new StaticDnsResolver(['mastodon.example' => ['93.184.216.34'], 'pds.example.test' => ['93.184.216.34']]),
         );
-        $fetcher = $container->get(TimelineFetcherInterface::class);
-        self::assertInstanceOf(TimelineFetcherInterface::class, $fetcher);
+        $fetcher = $container->get(PassFetcherInterface::class);
+        self::assertInstanceOf(PassFetcherInterface::class, $fetcher);
         $mastodon = $this->socialFeed(SocialNetwork::Mastodon, 1);
         $bluesky = $this->socialFeed(SocialNetwork::Bluesky, 2);
+        $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
+        $pass = new RefreshPass(
+            [$mastodon->getFeed(), $bluesky->getFeed()],
+            $clock,
+            $clock->now()->getTimestamp() + 300,
+        );
 
         $outcomes = [];
-        foreach ($fetcher->fetchAll([1 => $mastodon, 2 => $bluesky]) as $feedId => $outcome) {
+        foreach ($fetcher->fetchAll(new PassFeeds($pass, [1 => $mastodon, 2 => $bluesky])) as $feedId => $outcome) {
             $outcomes[$feedId] = $outcome::class;
         }
 
@@ -59,17 +69,17 @@ final class TimelineFetcherWiringTest extends KernelTestCase
         self::assertCount(3, $http->requests);
     }
 
-    public function testTimelinesAndFeedsAreReadOnTheOneRequestEngine(): void
+    public function testARefreshAndASingleFeedFetchUseTheOneRequestEngine(): void
     {
         $container = self::getContainer();
-        $timelines = $container->get(TimelineFetcherInterface::class);
+        $passes = $container->get(PassFetcherInterface::class);
         $feeds = $container->get(BatchFeedFetcherInterface::class);
-        self::assertInstanceOf(ConcurrentTimelineFetcher::class, $timelines);
+        self::assertInstanceOf(ConcurrentPassFetcher::class, $passes);
         self::assertInstanceOf(ConcurrentFeedFetcher::class, $feeds);
 
         self::assertSame(
             self::engineOf(ConcurrentFeedFetcher::class, $feeds),
-            self::engineOf(ConcurrentTimelineFetcher::class, $timelines),
+            self::engineOf(ConcurrentPassFetcher::class, $passes),
         );
     }
 
@@ -111,11 +121,11 @@ final class TimelineFetcherWiringTest extends KernelTestCase
             );
         self::assignId($account, 10 + $id);
 
-        return new SocialFeed(
-            $account,
-            self::withId(new Feed('social:x:' . $id . ':home'), $id),
-            SocialFeedKind::Home,
-            '',
+        $feed = self::withId(new Feed('social:x:' . $id . ':home'), $id);
+        $feed->setSourceFormat(
+            SocialNetwork::Mastodon === $network ? SourceFormat::MASTODON_API : SourceFormat::BLUESKY_API,
         );
+
+        return new SocialFeed($account, $feed, SocialFeedKind::Home, '');
     }
 }
