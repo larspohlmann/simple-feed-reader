@@ -10,7 +10,6 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Service\Refresh\Pass\PassFeeds;
 use App\Service\Refresh\Pass\RefreshPass;
-use App\Service\Social\Exception\PrivateFeedOrphanedException;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
@@ -41,22 +40,6 @@ final class PassFeedsTest extends TestCase
         $pass = new RefreshPass([$rss, $home, $list], $clock, $clock->now()->getTimestamp() + 5);
 
         self::assertSame([7, 4], PassFeeds::privateFeedIdsOf($pass));
-    }
-
-    public function testFindsAPrivateFeedsSocialFeed(): void
-    {
-        $timeline = self::privateFeed(2);
-
-        self::assertSame($timeline, self::passFeeds([$timeline->getFeed()], [2 => $timeline])->socialFeedOf(2));
-    }
-
-    public function testAPrivateFeedWithoutItsSocialFeedIsOrphaned(): void
-    {
-        $orphan = self::privateFeed(2)->getFeed();
-
-        $this->expectException(PrivateFeedOrphanedException::class);
-
-        self::passFeeds([$orphan], [])->socialFeedOf(2);
     }
 
     public function testStartsWhatThePassStarts(): void

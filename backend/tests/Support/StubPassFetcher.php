@@ -108,10 +108,9 @@ final class StubPassFetcher implements PassFetcherInterface
 
     private function timelineOf(PassFeeds $feeds, int $feedId): TimelineOutcomeModelInterface
     {
-        try {
-            $socialFeed = $feeds->socialFeedOf($feedId);
-        } catch (PrivateFeedOrphanedException $orphaned) {
-            return new FailedTimelineModel($orphaned);
+        $socialFeed = $feeds->socialFeedsByFeedId[$feedId] ?? null;
+        if (null === $socialFeed) {
+            return new FailedTimelineModel(new PrivateFeedOrphanedException());
         }
         $this->asked[] = $feedId;
         $this->socialFeedsByFeedId[$feedId] = $socialFeed;
