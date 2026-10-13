@@ -153,8 +153,8 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->enrich([$this->row($first), $this->row($second, [$this->row($duplicate)])]);
 
         $queries = implode("\n", $recorder->queries());
-        self::assertCount(5, $recorder->queries(), $queries);
-        $tables = ['entry_category', 'saved_search_entry', 'link_card', 'share_enrichment', 'social_account'];
+        self::assertCount(4, $recorder->queries(), $queries);
+        $tables = ['entry_category', 'saved_search_entry', 'link_card', 'share_enrichment'];
         foreach ($tables as $table) {
             self::assertCount(1, $recorder->queriesMatching($table), $table . ":\n" . $queries);
         }
@@ -219,6 +219,27 @@ final class EntryListRowEnricherTest extends DbTestCase
         self::assertSame(6, $singleCount);
         self::assertCount($singleCount, $recorder->queries(), implode("\n", $recorder->queries()));
         self::assertCount(1, $recorder->queriesMatching('social_like'));
+    }
+
+    public function testAPageOfPlainArticlesLooksUpNoSocialAccounts(): void
+    {
+        $recorder = $this->recorder();
+
+        $this->enrich([$this->row($this->entry('plain-one')), $this->row($this->entry('plain-two'))]);
+
+        self::assertSame([], $recorder->queriesMatching('social_account'));
+        self::assertSame([], $recorder->queriesMatching('social_like'));
+    }
+
+    public function testAPageWithAPostLooksUpTheSocialAccountsOnce(): void
+    {
+        $post = $this->postOn($this->mastodonFeed(), self::POST . '6');
+        $recorder = $this->recorder();
+
+        $this->enrich([$this->row($post), $this->row($this->entry('plain-three'))]);
+
+        self::assertCount(1, $recorder->queriesMatching('social_account'));
+        self::assertSame([], $recorder->queriesMatching('social_like'));
     }
 
     public function testNoRowsStayNoRowsWithoutAQuery(): void

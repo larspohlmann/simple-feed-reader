@@ -8,7 +8,10 @@ use App\Entity\Entry;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Support\SocialPostAddress;
 
-/** Gives a page of rows their categories, saved searches, link cards, pending flag and social state: one query per lookup. */
+/**
+ * Gives a page of rows their categories, saved searches, link cards, pending flag and social state: one query per
+ * lookup.
+ */
 final readonly class EntryListRowEnricher
 {
     public function __construct(
@@ -69,10 +72,15 @@ final readonly class EntryListRowEnricher
      */
     private function socialStatesOf(array $entries, int $userId): array
     {
-        if ([] === $entries) {
+        $postNetworks = self::postNetworksOf($entries);
+        if ([] === $postNetworks) {
             return [];
         }
-        $networks = self::postNetworksAmong($entries, $this->socialAccounts->networksOf($userId));
+        $accountNetworks = $this->socialAccounts->networksOf($userId);
+        $networks = array_filter(
+            $postNetworks,
+            static fn (SocialNetwork $network): bool => \in_array($network, $accountNetworks, true),
+        );
         $likedIds = array_flip($this->socialLikes->likedEntryIdsAmong($userId, array_keys($networks)));
 
         $states = [];
@@ -84,20 +92,16 @@ final readonly class EntryListRowEnricher
     }
 
     /**
-     * @param array<int, Entry>   $entries
-     * @param list<SocialNetwork> $accountNetworks
+     * @param array<int, Entry> $entries
      *
-     * @return array<int, SocialNetwork>
+     * @return array<int, SocialNetwork> the network of each entry that is a social post, decided without a query
      */
-    private static function postNetworksAmong(array $entries, array $accountNetworks): array
+    private static function postNetworksOf(array $entries): array
     {
-        if ([] === $accountNetworks) {
-            return [];
-        }
         $networks = [];
         foreach ($entries as $entryId => $entry) {
             $network = SocialPostAddress::of($entry)?->network;
-            if (null !== $network && \in_array($network, $accountNetworks, true)) {
+            if (null !== $network) {
                 $networks[$entryId] = $network;
             }
         }
