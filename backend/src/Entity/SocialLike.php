@@ -42,6 +42,7 @@ final class SocialLike
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $likedAt;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         User $user,
         Entry $entry,
