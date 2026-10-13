@@ -10,7 +10,7 @@ use App\Service\Fetch\Model\RequestTicketModel;
 
 /**
  * The engine's work list. Redirect continuations jump the queue so an open chain never sits half-finished. An attempt
- * whose host is full is parked, and the queue looks at most `$lookAhead` tickets past it instead of draining, and so
+ * whose slot is full is parked, and the queue looks at most `$lookAhead` tickets past it instead of draining, and so
  * committing, the budget-gated ticket source up front.
  */
 final class FetchQueue
@@ -26,7 +26,7 @@ final class FetchQueue
     /** @param \Iterator<int|string, RequestTicketModel> $tickets */
     public function __construct(
         private readonly \Iterator $tickets,
-        private readonly HostSlots $hostSlots,
+        private readonly RequestSlots $slots,
         private readonly int $lookAhead,
         private readonly ?ProxyConfigModel $batchProxy = null,
     ) {
@@ -39,17 +39,17 @@ final class FetchQueue
 
     public function onSent(FetchAttemptModel $attempt): void
     {
-        $this->hostSlots->acquire($attempt);
+        $this->slots->acquire($attempt);
     }
 
     public function onRetired(FetchAttemptModel $attempt): void
     {
-        $this->hostSlots->release($attempt);
+        $this->slots->release($attempt);
     }
 
     /**
      * The next attempt that may go on the wire now, or null when nothing can:
-     * either the work is done, or every candidate's host is full and the caller
+     * either the work is done, or every candidate's slot is full and the caller
      * must wait for an in-flight response to free a slot.
      */
     public function takeRunnable(): ?FetchAttemptModel
@@ -61,7 +61,7 @@ final class FetchQueue
 
         while (\count($this->parked) < $this->lookAhead && $this->hasFresh()) {
             $attempt = $this->takeFresh();
-            if ($this->hostSlots->hasCapacityFor($attempt)) {
+            if ($this->slots->hasCapacityFor($attempt)) {
                 return $attempt;
             }
 
@@ -74,7 +74,7 @@ final class FetchQueue
     private function takeFreedFromPark(): ?FetchAttemptModel
     {
         foreach ($this->parked as $index => $attempt) {
-            if ($this->hostSlots->hasCapacityFor($attempt)) {
+            if ($this->slots->hasCapacityFor($attempt)) {
                 array_splice($this->parked, $index, 1);
 
                 return $attempt;

@@ -30,7 +30,17 @@ final readonly class FetchRetryPolicy
             return $fallback;
         }
 
-        return $attempt->isProxied() ? null : $this->overNextFamily($attempt, $failure);
+        if ($attempt->isProxied() || !$this->warrantsAnotherFamily($failure)) {
+            return null;
+        }
+
+        return $this->overNextFamily($attempt);
+    }
+
+    /** An error status can be tied to the route: the one direct fallback, else the next address family, may differ. */
+    public function nextRouteAfterErrorStatus(FetchAttemptModel $attempt): ?FetchAttemptModel
+    {
+        return $this->directFallbackFor($attempt) ?? ($attempt->isProxied() ? null : $this->overNextFamily($attempt));
     }
 
     public function directFallbackFor(FetchAttemptModel $attempt): ?FetchAttemptModel
@@ -40,12 +50,8 @@ final readonly class FetchRetryPolicy
         return null !== $proxy && $proxy->directFallback ? $attempt->withoutProxy() : null;
     }
 
-    private function overNextFamily(FetchAttemptModel $attempt, FetchException $failure): ?FetchAttemptModel
+    private function overNextFamily(FetchAttemptModel $attempt): ?FetchAttemptModel
     {
-        if (!$this->warrantsAnotherFamily($failure)) {
-            return null;
-        }
-
         try {
             $familyCount = \count($this->urlGuard->assertSafe($attempt->url)->pinnedAddressAttempts());
         } catch (FetchException) {

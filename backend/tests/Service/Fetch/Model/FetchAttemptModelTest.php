@@ -100,4 +100,15 @@ final class FetchAttemptModelTest extends TestCase
 
         self::assertSame($proxy, $redirected->overNextPinnedAddress()->proxy);
     }
+
+    public function testOnlyATicketsFirstAttemptIsItsFirstSend(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example', 1080, null, null);
+        $first = FetchAttemptModel::start(7, FeedTickets::of('https://example.com/feed'), $proxy);
+
+        self::assertTrue($first->isFirstSend());
+        self::assertFalse($first->followedTo('https://example.com/moved', permanent: false)->isFirstSend());
+        self::assertFalse($first->overNextPinnedAddress()->isFirstSend());
+        self::assertFalse($first->withoutProxy()->isFirstSend());
+    }
 }

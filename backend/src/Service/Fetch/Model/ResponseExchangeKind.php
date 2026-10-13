@@ -11,11 +11,13 @@ enum ResponseExchangeKind: string
         'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.1';
 
     case Feed = 'feed';
+    case Api = 'api';
 
     public function accept(): string
     {
         return match ($this) {
             self::Feed => self::FEED_ACCEPT,
+            self::Api => 'application/json',
         };
     }
 
@@ -23,6 +25,7 @@ enum ResponseExchangeKind: string
     {
         return match ($this) {
             self::Feed => ResponseSizeLimit::Feed,
+            self::Api => ResponseSizeLimit::Api,
         };
     }
 }

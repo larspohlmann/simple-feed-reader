@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch\Pass;
 
+use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Pass\HostSlots;
+use App\Service\Fetch\Model\RequestTicketModel;
+use App\Service\Fetch\Pass\RequestSlots;
 use App\Tests\Support\FeedTickets;
 use PHPUnit\Framework\TestCase;
 
-final class HostSlotsTest extends TestCase
+final class RequestSlotsTest extends TestCase
 {
     private function attempt(string $url): FetchAttemptModel
     {
@@ -18,14 +20,14 @@ final class HostSlotsTest extends TestCase
 
     public function testAFreshHostHasCapacity(): void
     {
-        $slots = new HostSlots(2);
+        $slots = new RequestSlots(2);
 
         self::assertTrue($slots->hasCapacityFor($this->attempt('https://example.com/feed')));
     }
 
     public function testCapacityRemainsUntilTheCapIsReached(): void
     {
-        $slots = new HostSlots(2);
+        $slots = new RequestSlots(2);
         $attempt = $this->attempt('https://example.com/feed');
 
         $slots->acquire($attempt);
@@ -37,7 +39,7 @@ final class HostSlotsTest extends TestCase
 
     public function testReleasingASlotRestoresCapacity(): void
     {
-        $slots = new HostSlots(2);
+        $slots = new RequestSlots(2);
         $attempt = $this->attempt('https://example.com/feed');
 
         $slots->acquire($attempt);
@@ -49,7 +51,7 @@ final class HostSlotsTest extends TestCase
 
     public function testASingleReleaseFreesExactlyOneSlot(): void
     {
-        $slots = new HostSlots(2);
+        $slots = new RequestSlots(2);
         $attempt = $this->attempt('https://example.com/feed');
 
         $slots->acquire($attempt);
@@ -62,9 +64,20 @@ final class HostSlotsTest extends TestCase
         self::assertFalse($slots->hasCapacityFor($attempt));
     }
 
+    public function testReleasingAnIdleSlotBanksNoCapacity(): void
+    {
+        $slots = new RequestSlots(1);
+        $attempt = $this->attempt('https://example.com/feed');
+
+        $slots->release($attempt);
+        $slots->acquire($attempt);
+
+        self::assertFalse($slots->hasCapacityFor($attempt));
+    }
+
     public function testHostsAreCountedIndependently(): void
     {
-        $slots = new HostSlots(1);
+        $slots = new RequestSlots(1);
         $one = $this->attempt('https://one.example.com/feed');
         $two = $this->attempt('https://two.example.com/feed');
 
@@ -76,7 +89,7 @@ final class HostSlotsTest extends TestCase
 
     public function testNormalisedHostsShareTheSameSlots(): void
     {
-        $slots = new HostSlots(1);
+        $slots = new RequestSlots(1);
 
         $slots->acquire($this->attempt('https://www.example.com:443/feed'));
 
@@ -86,8 +99,32 @@ final class HostSlotsTest extends TestCase
     public function testRejectsACapBelowOne(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Per-host concurrency must be at least 1, got 0.');
+        $this->expectExceptionMessage('Slot capacity must be at least 1, got 0.');
 
-        new HostSlots(0);
+        new RequestSlots(0);
+    }
+
+    private function apiAttempt(string $url, string $slotName): FetchAttemptModel
+    {
+        return FetchAttemptModel::start(1, RequestTicketModel::api(ApiRequestModel::get($url), $slotName));
+    }
+
+    public function testANamedSlotIsSharedWhateverTheHost(): void
+    {
+        $slots = new RequestSlots(1);
+
+        $slots->acquire($this->apiAttempt('https://one.example.com/a', 'account-7'));
+
+        self::assertFalse($slots->hasCapacityFor($this->apiAttempt('https://two.example.com/b', 'account-7')));
+        self::assertTrue($slots->hasCapacityFor($this->apiAttempt('https://one.example.com/a', 'account-8')));
+    }
+
+    public function testANamedSlotNeverTakesAHostsCapacity(): void
+    {
+        $slots = new RequestSlots(1);
+
+        $slots->acquire($this->apiAttempt('https://example.com/a', 'example.com'));
+
+        self::assertTrue($slots->hasCapacityFor($this->attempt('https://example.com/feed')));
     }
 }

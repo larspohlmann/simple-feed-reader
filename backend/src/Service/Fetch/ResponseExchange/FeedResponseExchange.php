@@ -36,7 +36,7 @@ final readonly class FeedResponseExchange implements ResponseExchangeInterface
         if (HeaderDecision::Terminal === $verdict->decision) {
             \assert(null !== $verdict->response);
 
-            return ExchangeStepModel::answered(FetchOutcomeModel::succeeded($verdict->response));
+            return ExchangeStepModel::concluded(FetchOutcomeModel::succeeded($verdict->response));
         }
 
         if (!$attempt->canFollowRedirect()) {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\Model;
 
-/** One feed's position in its redirect chain. */
+/** One ticket's attempt on the wire: its redirect hop, its address family and its route. */
 final readonly class FetchAttemptModel
 {
     public const int MAX_REDIRECTS = 5;
@@ -18,12 +18,13 @@ final readonly class FetchAttemptModel
         private int $hop,
         public int $pinnedAddressAttempt = 0,
         public ?ProxyConfigModel $proxy = null,
+        private bool $firstSend = false,
     ) {
     }
 
     public static function start(int|string $key, RequestTicketModel $ticket, ?ProxyConfigModel $proxy = null): self
     {
-        return new self($key, $ticket, $ticket->request->url, false, 0, proxy: $proxy);
+        return new self($key, $ticket, $ticket->request->url, false, 0, proxy: $proxy, firstSend: true);
     }
 
     public function canFollowRedirect(): bool
@@ -59,6 +60,11 @@ final readonly class FetchAttemptModel
             $this->pinnedAddressAttempt + 1,
             $this->proxy,
         );
+    }
+
+    public function isFirstSend(): bool
+    {
+        return $this->firstSend;
     }
 
     public function isProxied(): bool

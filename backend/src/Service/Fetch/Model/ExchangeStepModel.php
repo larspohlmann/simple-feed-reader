@@ -18,7 +18,7 @@ final readonly class ExchangeStepModel
         return new self(null, null);
     }
 
-    public static function answered(FetchOutcomeModel $outcome): self
+    public static function concluded(FetchOutcomeModel $outcome): self
     {
         return new self($outcome, null);
     }

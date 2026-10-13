@@ -12,6 +12,7 @@ final readonly class RequestTicketModel
     private function __construct(
         public ResponseExchangeKind $exchange,
         public ApiRequestModel $request,
+        private ?string $slotName,
         private ?FetchTicketModel $feedTicket,
     ) {
     }
@@ -21,13 +22,20 @@ final readonly class RequestTicketModel
         return new self(
             ResponseExchangeKind::Feed,
             ApiRequestModel::get($ticket->url, self::validatorHeaders($ticket)),
+            null,
             $ticket,
         );
     }
 
+    /** Any status comes back as the answer; tickets sharing a slot name share its capacity, whatever their host. */
+    public static function api(ApiRequestModel $request, string $slotName): self
+    {
+        return new self(ResponseExchangeKind::Api, $request, $slotName, null);
+    }
+
     public function slotKeyFor(string $url): string
     {
-        return HostKey::forUrl($url);
+        return null === $this->slotName ? 'host:' . HostKey::forUrl($url) : 'slot:' . $this->slotName;
     }
 
     public function feedTicket(): FetchTicketModel

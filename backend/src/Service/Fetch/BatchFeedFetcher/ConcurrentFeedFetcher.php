@@ -8,6 +8,7 @@ use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\RequestTicketModel;
+use App\Service\Fetch\Support\CapacityGuard;
 
 /**
  * Fetches many feeds at once on the shared request engine; the refresh sweep is network-wait-bound, so requests
@@ -17,11 +18,7 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 {
     public function __construct(private ConcurrentRequestEngine $engine, private int $hostConcurrency)
     {
-        if ($hostConcurrency < 1) {
-            throw new \InvalidArgumentException(
-                sprintf('Per-host concurrency must be at least 1, got %d.', $hostConcurrency),
-            );
-        }
+        CapacityGuard::atLeastOne($hostConcurrency, 'Per-host concurrency');
     }
 
     /**

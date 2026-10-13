@@ -15,4 +15,10 @@ final class ResponseExchangeKindTest extends TestCase
         self::assertStringStartsWith('application/rss+xml, application/atom+xml', ResponseExchangeKind::Feed->accept());
         self::assertSame(ResponseSizeLimit::Feed, ResponseExchangeKind::Feed->sizeLimit());
     }
+
+    public function testAnApiAsksForJsonAndIsCappedAtTheApiLimit(): void
+    {
+        self::assertSame('application/json', ResponseExchangeKind::Api->accept());
+        self::assertSame(ResponseSizeLimit::Api, ResponseExchangeKind::Api->sizeLimit());
+    }
 }

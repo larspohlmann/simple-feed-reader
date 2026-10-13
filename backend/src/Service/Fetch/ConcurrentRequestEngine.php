@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Fetch;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Fetch\DispatchGate\DispatchGateInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
@@ -14,9 +15,11 @@ use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Pass\FetchQueue;
-use App\Service\Fetch\Pass\HostSlots;
+use App\Service\Fetch\Pass\RequestSlots;
 use App\Service\Fetch\ResponseExchange\ResponseExchangeInterface;
+use App\Service\Fetch\Support\CapacityGuard;
 use App\Service\Fetch\Support\EgressOptions;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Contracts\HttpClient\ChunkInterface;
@@ -45,22 +48,18 @@ final readonly class ConcurrentRequestEngine
     ) {
         // A cap below one opens no request, so an empty run would read as a clean one: the sweep's `remaining` never
         // decrements and the frontend polls forever on `partial`.
-        if ($concurrency < 1) {
-            throw new \InvalidArgumentException(
-                sprintf('Concurrency must be at least 1, got %d.', $concurrency),
-            );
-        }
+        CapacityGuard::atLeastOne($concurrency, 'Concurrency');
     }
 
     /**
      * A failed request arrives as a failed outcome, never a throw, so one bad ticket cannot abandon the others;
-     * abandoning the generator cancels whatever is still in flight.
+     * abandoning the generator cancels whatever is still in flight. A ticket the gate refuses is withheld.
      *
      * @param iterable<int|string, RequestTicketModel> $tickets
      *
      * @return \Generator<int|string, FetchOutcomeModel>
      */
-    public function sendAll(iterable $tickets, int $slotCapacity): \Generator
+    public function sendAll(iterable $tickets, int $slotCapacity, ?DispatchGateInterface $gate = null): \Generator
     {
         try {
             $batchProxy = $this->egressProxySource->egressProxy();
@@ -74,13 +73,18 @@ final readonly class ConcurrentRequestEngine
 
         // More full-slot candidates than there are slots cannot open a request this pass.
         $lookAhead = $this->concurrency;
-        $queue = new FetchQueue($this->iterator($tickets), new HostSlots($slotCapacity), $lookAhead, $batchProxy);
+        $queue = new FetchQueue(
+            $this->iterator($tickets),
+            new RequestSlots($slotCapacity),
+            $lookAhead,
+            $batchProxy,
+        );
         /** @var \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight */
         $inFlight = new \SplObjectStorage();
 
         try {
             while (true) {
-                yield from $this->fill($queue, $inFlight);
+                yield from $this->fill($queue, $inFlight, $gate);
 
                 if (0 === $inFlight->count()) {
                     return;
@@ -102,12 +106,16 @@ final readonly class ConcurrentRequestEngine
      *
      * @return \Generator<int|string, FetchOutcomeModel>
      */
-    private function fill(FetchQueue $queue, \SplObjectStorage $inFlight): \Generator
+    private function fill(FetchQueue $queue, \SplObjectStorage $inFlight, ?DispatchGateInterface $gate): \Generator
     {
         while ($inFlight->count() < $this->concurrency) {
             $attempt = $queue->takeRunnable();
             if (null === $attempt) {
                 return;
+            }
+            if (null !== $gate && $attempt->isFirstSend() && !$gate->admits($attempt->key)) {
+                yield $attempt->key => FetchOutcomeModel::withheld();
+                continue;
             }
 
             try {
@@ -184,9 +192,8 @@ final readonly class ConcurrentRequestEngine
         ChunkInterface $chunk,
         FetchAttemptModel $attempt,
     ): ExchangeStepModel {
-        $exchange = $this->exchangeFor($attempt);
-
         try {
+            $exchange = $this->exchangeFor($attempt);
             // Order is load-bearing: on a timeout chunk isFirst() throws while isTimeout() returns true, so asking
             // isFirst() first would report every timeout as a transport failure. On an error chunk isTimeout() throws,
             // and the catch below keeps the real cause.
@@ -199,16 +206,25 @@ final readonly class ConcurrentRequestEngine
             }
 
             return $chunk->isLast()
-                ? ExchangeStepModel::answered($exchange->onBody($response, $attempt))
+                ? ExchangeStepModel::concluded($exchange->onBody($response, $attempt))
                 : ExchangeStepModel::awaitBody();
         } catch (ExceptionInterface $exception) {
             throw FetchException::from($attempt->url, $exception);
         }
     }
 
+    /** @throws FeedUnreachableException when no exchange reads the ticket's kind of answer */
     private function exchangeFor(FetchAttemptModel $attempt): ResponseExchangeInterface
     {
-        $exchange = $this->exchanges->get($attempt->ticket->exchange->value);
+        $kind = $attempt->ticket->exchange->value;
+        try {
+            $exchange = $this->exchanges->get($kind);
+        } catch (ContainerExceptionInterface $exception) {
+            throw new FeedUnreachableException(
+                sprintf('%s: no exchange reads a %s answer', $attempt->url, $kind),
+                previous: $exception,
+            );
+        }
         \assert($exchange instanceof ResponseExchangeInterface);
 
         return $exchange;
@@ -253,18 +269,29 @@ final readonly class ConcurrentRequestEngine
         }
     }
 
-    /** @return array<string, string> */
+    /**
+     * The engine's headers win over a ticket's in any letter case: a differently cased copy goes out as a second value.
+     *
+     * @return array<string, string>
+     */
     private function headersOf(RequestTicketModel $ticket): array
     {
-        return [
+        $engineOwned = [
             'Accept' => $ticket->exchange->accept(),
             // Refuse transparent compression so the size limit (counted on the
             // wire in on_progress) also bounds the buffered body — a compressed
             // response would otherwise decompress unbounded before the size check.
             'Accept-Encoding' => 'identity',
             'User-Agent' => $this->userAgent,
-            ...$ticket->request->headers,
         ];
+        $ownedNames = array_change_key_case($engineOwned);
+        $ticketOwned = array_filter(
+            $ticket->request->headers,
+            static fn (string $name): bool => !isset($ownedNames[strtolower($name)]),
+            \ARRAY_FILTER_USE_KEY,
+        );
+
+        return [...$engineOwned, ...$ticketOwned];
     }
 
     /**

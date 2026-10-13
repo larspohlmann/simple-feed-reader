@@ -13,6 +13,7 @@ use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\ResponseClassifier;
+use App\Service\Fetch\ResponseExchange\ApiResponseExchange;
 use App\Service\Fetch\ResponseExchange\FeedResponseExchange;
 use App\Service\Fetch\UrlGuard;
 use App\Http\SymfonyStatusReasonPhrases;
@@ -42,7 +43,16 @@ final class FetchWiring
         UrlGuard $urlGuard,
         ?ProxyConfigModel $proxy = null,
     ): GuardedApiClient {
-        $egressProxy = new class ($proxy) implements EgressProxySourceInterface {
+        return new GuardedApiClient(
+            self::failoverSender($client, self::egressProxy($proxy)),
+            $urlGuard,
+            'TestAgent/1.0',
+        );
+    }
+
+    public static function egressProxy(?ProxyConfigModel $proxy): EgressProxySourceInterface
+    {
+        return new class ($proxy) implements EgressProxySourceInterface {
             public function __construct(private readonly ?ProxyConfigModel $proxy)
             {
             }
@@ -52,8 +62,6 @@ final class FetchWiring
                 return $this->proxy;
             }
         };
-
-        return new GuardedApiClient(self::failoverSender($client, $egressProxy), $urlGuard, 'TestAgent/1.0');
     }
 
     public static function retryPolicy(UrlGuard $urlGuard): FetchRetryPolicy
@@ -69,15 +77,22 @@ final class FetchWiring
         int $concurrency = 4,
         ClockInterface $clock = new MockClock(),
     ): ConcurrentRequestEngine {
-        $classifier = new ResponseClassifier($clock);
-        $feedExchange = static fn (): FeedResponseExchange => new FeedResponseExchange($classifier);
+        $retryPolicy = self::retryPolicy($urlGuard);
 
         return new ConcurrentRequestEngine(
             $client,
             $urlGuard,
             $egressProxy,
-            self::retryPolicy($urlGuard),
-            new ServiceLocator([FeedResponseExchange::kind() => $feedExchange]),
+            $retryPolicy,
+            new ServiceLocator([
+                FeedResponseExchange::kind() => static fn (): FeedResponseExchange => new FeedResponseExchange(
+                    new ResponseClassifier($clock),
+                ),
+                ApiResponseExchange::kind() => static fn (): ApiResponseExchange => new ApiResponseExchange(
+                    $retryPolicy,
+                    new CrossFamilyFailover(),
+                ),
+            ]),
             $concurrency,
             'TestAgent/1.0',
         );
