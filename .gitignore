@@ -1,6 +1,7 @@
 .idea/
 .DS_Store
-.claude/
+.claude/*
+!/.claude/settings.json
 .codex/
 .superpowers/
 .playwright-mcp/

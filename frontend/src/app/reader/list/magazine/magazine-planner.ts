@@ -1,6 +1,4 @@
 import { EntryDto } from '../../models';
-import { entryDek } from '../../entry/entry-text';
-import { entryImage } from '../preview-image';
 import {
   BLOCK_HEIGHT,
   DEMOTION,
@@ -9,7 +7,8 @@ import {
   ShareKind,
   TemplateKind,
 } from './magazine-block';
-import { fits, ImageBar, shareKind, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
+import { leadWithImage, prefersTextFamily } from './magazine-family';
+import { fits, ImageBar, shareKind, settle } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
@@ -18,26 +17,18 @@ export interface MagazinePlanInput {
   grouping: boolean;
   /** False while `hasMore` — a partial trailing page is held back. */
   complete: boolean;
+  /** Subscriptions whose runs never collapse into a group widget. */
+  uncollapsibleSources?: ReadonlySet<number>;
 }
 
-/** The fixed leading window for the template-FAMILY choice (isImageRich/
- *  isTextRich), judged over a fixed prefix — never the whole loaded set — so the
+/** The fixed leading window for the template-FAMILY choice
+ *  (prefersTextFamily), judged over a fixed prefix — never the whole loaded set — so the
  *  plan stays stable as pages load. Collapse diversity uses ACTIVE_WINDOW_MS. */
 const LEADING_WINDOW = 24;
 /** Run-collapse only fires when the view is genuinely mixed: at least this many
  *  distinct sources active within ACTIVE_WINDOW_MS. Collapsing one source must
  *  leave enough OTHER content to surface, so a near-mono view stays flat. */
 const MIN_VIEW_SOURCES = 3;
-/** The text-forward family is chosen only when the leading window is image-poor
- *  AND text-rich (see isImageRich/isTextRich). Both shares are judged over the
- *  same fixed LEADING_WINDOW, for prefix-stability. */
-const IMAGE_RICH_SHARE = 0.35;
-const TEXT_RICH_SHARE = 0.4;
-/** Below this share of entries carrying ANY usable image, the image family's
- *  slots would all collapse to text, so such a view uses the text family
- *  regardless of copy length. Well under IMAGE_RICH, so a useful minority of
- *  images (~a quarter, a link/dev blog) still keeps the image family. */
-const IMAGE_POOR_SHARE = 0.15;
 /** A same-source run collapses once it reaches this many entries in a row.
  *  Single foreign entries embedded in the run are bridged — see `detectRun`. */
 const RUN_MIN = 8;
@@ -52,9 +43,6 @@ const WIDGET_PREVIEW = 4;
 const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** The largest slot may reach this far ahead for an entry that fits it. */
 const LOOK_AHEAD = 2;
-/** How far back the opener may reach for an image to lead with when the first
- *  entries have none. */
-const LEAD_IMAGE_REACH = 6;
 /** Per-page height ceiling, in BLOCK_HEIGHT units — about one and a half phone
  *  screens. Without it three heroes can land in one page. */
 const PAGE_HEIGHT_CAP = 1100;
@@ -86,6 +74,7 @@ interface PlanPass {
   readonly family: MagazineFamily;
   readonly complete: boolean;
   readonly collapseEnabled: boolean;
+  readonly uncollapsibleSources: ReadonlySet<number>;
   readonly blocks: MagazineBlock[];
   page: number;
 }
@@ -110,12 +99,8 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
 }
 
 function startPass(input: MagazinePlanInput): PlanPass {
-  const { entries, grouping, complete } = input;
-  const sample = entries.slice(0, LEADING_WINDOW);
-  // An image-poor view always goes text-forward — with almost no pictures, every
-  // image slot would collapse anyway. Otherwise the text family is worth it only
-  // when the copy is long enough to fill its quotes (isTextRich).
-  const useTextFamily = isImagePoor(sample) || (!isImageRich(sample) && isTextRich(sample));
+  const { entries, grouping, complete, uncollapsibleSources = new Set<number>() } = input;
+  const useTextFamily = prefersTextFamily(entries.slice(0, LEADING_WINDOW));
   return {
     // Land the reader on a picture: the image family pulls the nearest image entry
     // to the front when the first are image-less. The text family opens on a
@@ -124,6 +109,7 @@ function startPass(input: MagazinePlanInput): PlanPass {
     family: useTextFamily ? TEXT_FAMILY : IMAGE_FAMILY,
     complete,
     collapseEnabled: grouping && activeSourceCount(entries) >= MIN_VIEW_SOURCES,
+    uncollapsibleSources,
     blocks: [],
     page: 0,
   };
@@ -134,7 +120,7 @@ function startPass(input: MagazinePlanInput): PlanPass {
 function planStep(pass: PlanPass, index: number): number | null {
   if (pass.collapseEnabled) {
     const run = detectRun(pass.ordered, index);
-    if (run.sourceEntries.length >= RUN_MIN) return collapseRun(pass, run);
+    if (isCollapsible(pass, run)) return collapseRun(pass, run);
   }
   return emitOrdinaryPage(pass, index);
 }
@@ -163,7 +149,7 @@ function emitOrdinaryPage(pass: PlanPass, index: number): number | null {
   // run start avoids this.
   const naturalLength = Math.min(template.length, remaining);
   const take = pass.collapseEnabled
-    ? cappedBeforeLongRun(pass.ordered, index, naturalLength)
+    ? cappedBeforeLongRun(pass, index, naturalLength)
     : naturalLength;
   const slice = pass.ordered.slice(index, index + take);
   pass.blocks.push(...layOutPage(pass, template, slice));
@@ -222,68 +208,24 @@ function activeSourceCount(entries: EntryDto[]): number {
  *  ordinary page can stop short of it. Independent of `complete`: partial and
  *  full renders must cap at identical points. The source-boundary guard stops
  *  this firing inside a run's own continuation. Precondition: `start >= 1`. */
-function startsLongRun(ordered: EntryDto[], start: number): boolean {
+function startsLongRun(pass: PlanPass, start: number): boolean {
+  const { ordered } = pass;
   if (ordered[start - 1].subscriptionId === ordered[start].subscriptionId) return false;
-  return detectRun(ordered, start).sourceEntries.length >= RUN_MIN;
+  return isCollapsible(pass, detectRun(ordered, start));
+}
+
+function isCollapsible(pass: PlanPass, run: DetectedRun): boolean {
+  return run.sourceEntries.length >= RUN_MIN && !pass.uncollapsibleSources.has(run.source);
 }
 
 /** How many entries an ordinary page may take from `index` before it reaches the
  *  head of a long run — that run must open its own iteration, so the page stops
  *  short of it rather than absorbing its first entries as flat blocks. */
-function cappedBeforeLongRun(ordered: EntryDto[], index: number, naturalLength: number): number {
+function cappedBeforeLongRun(pass: PlanPass, index: number, naturalLength: number): number {
   for (let ahead = 1; ahead < naturalLength; ahead++) {
-    if (startsLongRun(ordered, index + ahead)) return ahead;
+    if (startsLongRun(pass, index + ahead)) return ahead;
   }
   return naturalLength;
-}
-
-/** Whether the view leads with large images, mirroring `fits('split')`'s trust
- *  rule so the family choice agrees with what slots can hold. An empty view is
- *  treated as image-rich (the default family). */
-function isImageRich(entries: EntryDto[]): boolean {
-  if (entries.length === 0) return true;
-  const withLargeImage = entries.filter((entry) => {
-    const image = entryImage(entry);
-    const width = image?.width ?? 0;
-    return width >= 300 || (width === 0 && !!entry.imageUrl);
-  }).length;
-  return withLargeImage / entries.length >= IMAGE_RICH_SHARE;
-}
-
-/** Whether the view leads with substantial copy — enough entries with text long
- *  enough for a pull-quote (QUOTE_MIN_TEXT). The text family is only worth
- *  choosing when its quotes render for real, not demote to headlines. */
-function isTextRich(entries: EntryDto[]): boolean {
-  if (entries.length === 0) return false;
-  const withLongText = entries.filter((entry) => entryDek(entry).length >= QUOTE_MIN_TEXT).length;
-  return withLongText / entries.length >= TEXT_RICH_SHARE;
-}
-
-/** Whether the view has almost no images at all — even the image family's
- *  adaptive `thumb` fillers would find nothing, collapsing every slot to text.
- *  Any usable image counts (`entryImage`); an empty view is not image-poor. */
-function isImagePoor(entries: EntryDto[]): boolean {
-  if (entries.length === 0) return false;
-  const withImage = entries.filter((entry) => entryImage(entry) !== null).length;
-  return withImage / entries.length < IMAGE_POOR_SHARE;
-}
-
-/** If the first entry has no usable image but one sits within LEAD_IMAGE_REACH
- *  behind it, move it to the front so the opener leads on a picture — a single
- *  bounded move, tail order kept. `split` is the trust bar the opener's slot
- *  needs to render as an image rather than a headline. */
-function leadWithImage(entries: EntryDto[]): EntryDto[] {
-  if (entries.length === 0 || fits('split', entries[0])) return entries;
-  const reach = Math.min(entries.length, LEAD_IMAGE_REACH);
-  for (let candidate = 1; candidate < reach; candidate++) {
-    if (fits('split', entries[candidate])) {
-      const reordered = [...entries];
-      const [lead] = reordered.splice(candidate, 1);
-      reordered.unshift(lead);
-      return reordered;
-    }
-  }
-  return entries;
 }
 
 /** Deterministic and page-indexed, so re-planning a longer list re-emits an

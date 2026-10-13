@@ -13,6 +13,8 @@ import { planMagazine } from '../magazine/magazine-planner';
 import { REVEAL_STEP, isAppendedPage } from '../paging';
 import { EntryDto } from '../../models';
 import { Selection, isSingleStreamView } from '../../query/query';
+import { isPrivateFeed } from '../../state/social-sections';
+import { SubscriptionRows } from '../../state/subscription-rows';
 import { blocksWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
 
 export interface ListContentOptions {
@@ -28,6 +30,20 @@ export interface ListContentOptions {
  *  initializer, so its effects are created there. */
 export class ListContent {
   private readonly zone = inject(NgZone);
+  private readonly subscriptions = inject(SubscriptionRows);
+
+  /** A home timeline, list or custom feed carries many people: never filed under one source
+   *  in a group widget. Equal by members, so a counts-only refresh does not re-plan. */
+  private readonly uncollapsibleSources = computed<ReadonlySet<number>>(
+    () =>
+      new Set(
+        this.subscriptions
+          .stored()
+          .filter(isPrivateFeed)
+          .map(({ id }) => id),
+      ),
+    { equal: (left, right) => left.size === right.size && [...left].every((id) => right.has(id)) },
+  );
 
   /** How many of `entries()` are rendered. Trails the list while an appended
    *  page is revealed a step per frame (#501); equals the length otherwise. */
@@ -55,15 +71,18 @@ export class ListContent {
 
   readonly blocks = computed<ListBlock[]>(() => {
     const groups = this.runGroups();
-    // Only aggregated views collapse same-source runs into a group widget; a
+    // Only multi-feed views collapse same-source runs into a group widget; a
     // single-stream view (a feed, or the for-you list) must not.
-    const grouping = !isSingleStreamView(this.options.selection());
+    const collapse = {
+      grouping: !isSingleStreamView(this.options.selection()),
+      uncollapsibleSources: this.uncollapsibleSources(),
+    };
     const complete = !this.options.hasMore() && this.fullyRevealed();
 
     // Fast path: no dividers (every non-for-you view, and a for-you list showing
     // only the newest run). Plan the whole list at once — identical to before.
     if (!groups.some((group) => this.showRunHeader(group))) {
-      return planMagazine({ entries: this.rendered(), grouping, complete });
+      return planMagazine({ ...collapse, entries: this.rendered(), complete });
     }
 
     const out: ListBlock[] = [];
@@ -74,7 +93,7 @@ export class ListContent {
       // Only the last loaded group may still grow on the next page; every earlier
       // group is provably complete (a different run follows it).
       const groupComplete = index === groups.length - 1 ? complete : true;
-      out.push(...planMagazine({ entries: group.entries, grouping, complete: groupComplete }));
+      out.push(...planMagazine({ ...collapse, entries: group.entries, complete: groupComplete }));
     });
     return out;
   });

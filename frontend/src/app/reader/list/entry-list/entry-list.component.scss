@@ -8,7 +8,7 @@
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 
 /* Tail room so the last row can scroll up clear of the corner buttons. */
-$corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
+$corner-clear: calc(3 * (var(--space-5) + var(--tap-target) + var(--space-3)));
 
 :host {
   display: flex;
