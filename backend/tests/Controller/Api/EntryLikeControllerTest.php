@@ -183,6 +183,27 @@ final class EntryLikeControllerTest extends ApiTestCase
         );
     }
 
+    public function testAForbiddenLikeRefusesThePostAndKeepsTheAccountConnected(): void
+    {
+        $client = $this->clientRouting([
+            self::SEARCH => self::found(),
+            self::FAVOURITE => new MockResponse('{}', ['http_code' => Response::HTTP_FORBIDDEN]),
+        ]);
+        $user = $this->signIn($client, 'like-forbidden@example.test');
+        $accountId = $this->mastodonAccountOf($user)->requireId();
+
+        $client->request('PUT', sprintf('/api/entries/%d/like', $this->mastodonPostFor($user)));
+
+        $this->assertRejected($client, Response::HTTP_CONFLICT);
+        self::assertSame('social_post_refused', $this->payload($client)['type']);
+        self::assertSame(0, $this->likeRows());
+        $this->entityManager()->clear();
+        self::assertSame(
+            SocialAccountStatus::Connected,
+            $this->entityManager()->find(SocialAccount::class, $accountId)?->getStatus(),
+        );
+    }
+
     public function testAPostTheInstanceCannotFindIsNoLongerAvailable(): void
     {
         $client = $this->clientRouting([self::SEARCH => new MockResponse('{"statuses":[]}')]);

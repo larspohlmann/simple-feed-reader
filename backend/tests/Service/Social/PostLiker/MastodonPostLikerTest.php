@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\PostLiker;
 
+use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\MastodonPostLiker;
 use App\Tests\Support\RoutedHttpClient;
@@ -41,6 +43,39 @@ final class MastodonPostLikerTest extends TestCase
         ]);
 
         $this->expectException(SocialPostNotFoundException::class);
+
+        $this->liker($http)->like(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '110'));
+    }
+
+    public function testAForbiddenLikeIsARefusalOfThePostNotOfTheToken(): void
+    {
+        $http = new RoutedHttpClient([
+            self::FAVOURITE => new MockResponse('{}', ['http_code' => Response::HTTP_FORBIDDEN]),
+        ]);
+
+        $this->expectException(SocialPostRefusedException::class);
+
+        $this->liker($http)->like(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '110'));
+    }
+
+    public function testAForbiddenUnlikeIsARefusalOfThePostNotOfTheToken(): void
+    {
+        $http = new RoutedHttpClient([
+            self::UNFAVOURITE => new MockResponse('{}', ['http_code' => Response::HTTP_FORBIDDEN]),
+        ]);
+
+        $this->expectException(SocialPostRefusedException::class);
+
+        $this->liker($http)->unlike(SocialAccounts::mastodon(), '110');
+    }
+
+    public function testARefusedTokenIsStillARefusedCredential(): void
+    {
+        $http = new RoutedHttpClient([
+            self::FAVOURITE => new MockResponse('{}', ['http_code' => Response::HTTP_UNAUTHORIZED]),
+        ]);
+
+        $this->expectException(SocialCredentialsRejectedException::class);
 
         $this->liker($http)->like(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '110'));
     }

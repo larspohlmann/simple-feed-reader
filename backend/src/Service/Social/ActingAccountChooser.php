@@ -37,7 +37,7 @@ final readonly class ActingAccountChooser
         if (null === SocialFeedClassifier::privateAddressOf($feed)) {
             return $this->socialAccounts->findActingOnNetwork($user, $network);
         }
-        $account = $this->socialFeeds->findOneByFeed($feed)?->getSocialAccount();
+        $account = $this->socialFeeds->forFeed($feed)?->getSocialAccount();
 
         return $account?->getUser()->requireId() === $user->requireId() ? $account : null;
     }

@@ -11,6 +11,7 @@ use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\BlueskyLikeUri;
 use Psr\Clock\ClockInterface;
 
 final readonly class BlueskyPostLiker implements PostLikerInterface
@@ -45,7 +46,8 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
             ],
         ]);
 
-        $likeId = JsonNodeModel::of(BlueskySessions::accepted($answer)->json())->string('uri')
+        $createdUri = JsonNodeModel::of(BlueskySessions::accepted($answer)->json())->string('uri');
+        $likeId = BlueskyLikeUri::orNull($createdUri)
             ?? throw new SocialNetworkUnreachableException('Bluesky did not name the like it created.');
 
         return new SocialLikeResultModel($likeId);

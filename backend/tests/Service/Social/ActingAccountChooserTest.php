@@ -74,6 +74,17 @@ final class ActingAccountChooserTest extends DbTestCase
         );
     }
 
+    public function testAPrivateFeedWithoutItsSocialFeedRowHasNoAccountToActWith(): void
+    {
+        $this->account($this->owner, 'did:plc:mine', '2026-10-01 10:00:00');
+        $orphan = new Feed('social:bluesky:1:home');
+        $orphan->setSourceFormat(SourceFormat::BLUESKY_API);
+
+        $this->expectException(NoSocialAccountForNetworkException::class);
+
+        $this->chooser()->accountFor($this->owner, $this->entryOn($orphan), SocialNetwork::Bluesky);
+    }
+
     public function testNoAccountOnTheNetworkIsRefused(): void
     {
         $this->account($this->owner, 'did:plc:mine', '2026-10-01 10:00:00');

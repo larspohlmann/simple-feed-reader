@@ -51,6 +51,43 @@ final class BlueskyPostResolverTest extends TestCase
         self::assertSame('bafy-cid', $post->contentId);
     }
 
+    #[DataProvider('malformedLikeIds')]
+    public function testAMalformedViewerLikeReadsAsNoLike(string $like): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'viewer' => ['like' => $like],
+        ]]]);
+
+        $post = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI);
+
+        self::assertNull($post->existingLikeId);
+        self::assertSame('bafy-cid', $post->contentId);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function malformedLikeIds(): iterable
+    {
+        yield 'no slash' => ['3lk2'];
+        yield 'empty record key' => ['at://did:plc:alice/app.bsky.feed.like/'];
+        yield 'over 512 characters' => ['at://did:plc:alice/app.bsky.feed.like/' . str_repeat('a', 480)];
+    }
+
+    public function testADidWebViewerLikeIsCarried(): void
+    {
+        $like = 'at://did:web:example.com/app.bsky.feed.like/3lk2';
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'viewer' => ['like' => $like],
+        ]]]);
+
+        $post = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI);
+
+        self::assertSame($like, $post->existingLikeId);
+    }
+
     public function testAPostBlueskyNoLongerHasIsNotFound(): void
     {
         $this->expectException(SocialPostNotFoundException::class);

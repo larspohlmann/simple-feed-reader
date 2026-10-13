@@ -11,6 +11,7 @@ use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use Symfony\Component\HttpFoundation\Response;
 
 /** What acting on a network can end in. The throttled arm must stay above its parent, the unreachable one. */
@@ -35,6 +36,12 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 'social_post_not_found',
                 'Post no longer available',
                 Response::HTTP_NOT_FOUND,
+                $exception->getMessage(),
+            )),
+            $exception instanceof SocialPostRefusedException => new ResolvedProblem(new ApiProblem(
+                'social_post_refused',
+                'The network refused this action on the post',
+                Response::HTTP_CONFLICT,
                 $exception->getMessage(),
             )),
             $exception instanceof SocialNetworkThrottledException => self::throttled($exception),

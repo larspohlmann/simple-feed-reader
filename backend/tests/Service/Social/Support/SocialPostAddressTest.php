@@ -59,6 +59,10 @@ final class SocialPostAddressTest extends TestCase
             self::entry($mastodon, 'tag:mastodon.social,2026:110', self::STATUS_URL),
             new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),
         ];
+        yield 'mastodon private feed post by its url, not its differing status uri guid' => [
+            self::entry($mastodon, 'https://mastodon.social/users/Gargron/statuses/110', self::STATUS_URL),
+            new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),
+        ];
         yield 'mastodon post by its guid when it has no url' => [
             self::entry($mastodon, self::STATUS_URL, null),
             new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),

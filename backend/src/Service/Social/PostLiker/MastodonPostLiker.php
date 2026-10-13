@@ -6,7 +6,9 @@ namespace App\Service\Social\PostLiker;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\SocialLikeResultModel;
@@ -30,6 +32,7 @@ final readonly class MastodonPostLiker implements PostLikerInterface
         if (Response::HTTP_NOT_FOUND === $answer->status) {
             throw new SocialPostNotFoundException('The post is no longer on Mastodon.');
         }
+        self::refuseIfForbidden($answer);
         MastodonApiClient::accepted($answer);
 
         return new SocialLikeResultModel($post->postId);
@@ -41,7 +44,15 @@ final readonly class MastodonPostLiker implements PostLikerInterface
         if (Response::HTTP_NOT_FOUND === $answer->status) {
             return;
         }
+        self::refuseIfForbidden($answer);
         MastodonApiClient::accepted($answer);
+    }
+
+    private static function refuseIfForbidden(ApiResponseModel $answer): void
+    {
+        if (Response::HTTP_FORBIDDEN === $answer->status) {
+            throw new SocialPostRefusedException('Mastodon refused this action on the post.');
+        }
     }
 
     private static function statusAction(string $statusId, string $action): string

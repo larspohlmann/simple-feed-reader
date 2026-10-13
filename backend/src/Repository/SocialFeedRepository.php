@@ -97,7 +97,7 @@ final class SocialFeedRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    public function findOneByFeed(Feed $feed): ?SocialFeed
+    public function forFeed(Feed $feed): ?SocialFeed
     {
         return $this->findOneBy(['feed' => $feed]);
     }

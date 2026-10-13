@@ -35,16 +35,16 @@ final class SocialLikeRepository extends ServiceEntityRepository
         if ([] === $entryIds) {
             return [];
         }
-        /** @var list<array{entryId: int|string}> $rows */
-        $rows = $this->createQueryBuilder('sl')
-            ->select('IDENTITY(sl.entry) AS entryId')
+        /** @var list<int|string> $likedEntryIds */
+        $likedEntryIds = $this->createQueryBuilder('sl')
+            ->select('IDENTITY(sl.entry)')
             ->andWhere('sl.user = :user')
             ->andWhere('sl.entry IN (:entryIds)')
             ->setParameter('user', $userId)
             ->setParameter('entryIds', $entryIds)
             ->getQuery()
-            ->getArrayResult();
+            ->getSingleColumnResult();
 
-        return array_map(static fn (array $row): int => (int) $row['entryId'], $rows);
+        return array_map(intval(...), $likedEntryIds);
     }
 }

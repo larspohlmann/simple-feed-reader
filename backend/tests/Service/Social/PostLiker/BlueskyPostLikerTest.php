@@ -11,6 +11,7 @@ use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\BlueskyPostLiker;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -88,6 +89,49 @@ final class BlueskyPostLikerTest extends TestCase
         $this->expectException(SocialNetworkUnreachableException::class);
 
         $this->liker($http)->like(self::post());
+    }
+
+    #[DataProvider('likeUrisThatAreValid')]
+    public function testEveryRealLikeUriIsKept(string $uri): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::CREATE_RECORD => self::json(['uri' => $uri]),
+        ]);
+
+        self::assertSame($uri, $this->liker($http)->like(self::post())->likeId);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function likeUrisThatAreValid(): iterable
+    {
+        yield 'did:plc and a tid' => ['at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.like/3kqz2abcdef2k'];
+        yield 'did:web' => ['at://did:web:example.com/app.bsky.feed.like/3lk2'];
+        yield 'did:web with a port' => ['at://did:web:localhost%3A3000/app.bsky.feed.like/3lk2'];
+    }
+
+    #[DataProvider('likeUrisThatAreMalformed')]
+    public function testALikeUriThatIsNoLikeRecordIsAnUnreachableNetwork(string $uri): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::CREATE_RECORD => self::json(['uri' => $uri]),
+        ]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->liker($http)->like(self::post());
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function likeUrisThatAreMalformed(): iterable
+    {
+        yield 'no slash at all' => ['3lk2'];
+        yield 'empty record key' => ['at://did:plc:alice/app.bsky.feed.like/'];
+        yield 'another collection' => ['at://did:plc:alice/app.bsky.feed.post/3lk2'];
+        yield 'no did' => ['at://alice.test/app.bsky.feed.like/3lk2'];
+        yield 'a nested record key' => ['at://did:plc:alice/app.bsky.feed.like/3lk2/extra'];
+        yield 'over 512 characters' => ['at://did:plc:alice/app.bsky.feed.like/' . str_repeat('a', 480)];
     }
 
     public function testAThrottledLikeCarriesItsDelay(): void

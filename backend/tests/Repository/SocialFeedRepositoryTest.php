@@ -211,8 +211,8 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $this->entityManager->persist($ordinary);
         $this->entityManager->flush();
 
-        self::assertSame($home, SocialFeeds::repository($this->entityManager)->findOneByFeed($home->getFeed()));
-        self::assertNull(SocialFeeds::repository($this->entityManager)->findOneByFeed($ordinary));
+        self::assertSame($home, SocialFeeds::repository($this->entityManager)->forFeed($home->getFeed()));
+        self::assertNull(SocialFeeds::repository($this->entityManager)->forFeed($ordinary));
     }
 
     private function socialFeed(SocialAccount $account, SocialFeedKind $kind, string $remoteId): SocialFeed
