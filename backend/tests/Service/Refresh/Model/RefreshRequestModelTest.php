@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh\Model;
 
 use App\Enum\SocialNetwork;
-use App\Service\Refresh\Model\RefreshFeedSetModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use PHPUnit\Framework\TestCase;
 
@@ -92,25 +91,24 @@ final class RefreshRequestModelTest extends TestCase
         self::assertSame(5, $request->ignoringSchedule()->batchLimit);
     }
 
-    public function testAFeedSetRequestRefreshesThatNetworksFeedsOfTheUserIgnoringTheSchedule(): void
+    public function testANetworkRequestRefreshesThatNetworksFeedsOfTheUserIgnoringTheSchedule(): void
     {
-        $request = RefreshRequestModel::forUserFeedSet(7, new RefreshFeedSetModel(SocialNetwork::Bluesky), 30);
+        $request = RefreshRequestModel::forUserNetwork(7, SocialNetwork::Bluesky, 30);
 
         self::assertSame(7, $request->userId);
-        self::assertSame(SocialNetwork::Bluesky, $request->feedSet?->network);
+        self::assertSame(SocialNetwork::Bluesky, $request->network);
         self::assertNull($request->feedId);
         self::assertNull($request->tagId);
         self::assertTrue($request->force);
         self::assertFalse($request->prune);
     }
 
-    public function testDerivedRequestsKeepTheFeedSet(): void
+    public function testDerivedRequestsKeepTheNetwork(): void
     {
-        $feedSet = new RefreshFeedSetModel(SocialNetwork::Bluesky);
-        $request = RefreshRequestModel::forUserFeedSet(7, $feedSet, 30);
+        $request = RefreshRequestModel::forUserNetwork(7, SocialNetwork::Bluesky, 30);
 
-        self::assertSame($feedSet, $request->withoutPruning()->feedSet);
-        self::assertSame($feedSet, $request->ignoringSchedule()->feedSet);
-        self::assertSame($feedSet, $request->limitedTo(5)->feedSet);
+        self::assertSame(SocialNetwork::Bluesky, $request->withoutPruning()->network);
+        self::assertSame(SocialNetwork::Bluesky, $request->ignoringSchedule()->network);
+        self::assertSame(SocialNetwork::Bluesky, $request->limitedTo(5)->network);
     }
 }

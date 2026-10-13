@@ -97,14 +97,12 @@ final class UserRefreshScopeTest extends DbTestCase
         self::assertNull($request->tagId);
     }
 
-    public function testANetworkRefreshIsAForcedRunOverThatNetworksFeedSet(): void
+    public function testANetworkRefreshIsAForcedRunOverThatNetworksFeeds(): void
     {
         $request = $this->scope()->requestForNetwork($this->user->requireId(), SocialNetwork::Bluesky);
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertNotNull($request->feedSet);
-        self::assertSame(SocialNetwork::Bluesky, $request->feedSet->network);
-        self::assertSame('network-bluesky', $request->feedSet->key());
+        self::assertSame(SocialNetwork::Bluesky, $request->network);
         self::assertNull($request->feedId);
         self::assertNull($request->tagId);
         self::assertTrue($request->force);
