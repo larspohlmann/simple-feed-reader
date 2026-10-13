@@ -6,7 +6,6 @@ namespace App\Tests\Repository;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Tests\DbTestCase;
@@ -79,26 +78,6 @@ final class SubscriptionPositionAndLookupsTest extends DbTestCase
         $this->entityManager->flush();
 
         $rows = $this->subscriptions->findForUserWithTags($user->requireId());
-
-        self::assertSame(
-            [$first->requireId(), $second->requireId()],
-            array_map(static fn (Subscription $subscription): int => $subscription->requireId(), $rows),
-        );
-    }
-
-    /** TagEditor::delete() detaches through it: a missed subscription would keep wearing the deleted tag. */
-    public function testFindForUserByTagIdReturnsEveryCarryingSubscription(): void
-    {
-        $user = $this->user('find-by-tag-many@example.com');
-        $tag = new Tag($user, 'Shared');
-        $this->entityManager->persist($tag);
-        $first = $this->subscribe($user, $this->feed('https://a.example/feed.xml'));
-        $first->addTag($tag, 0);
-        $second = $this->subscribe($user, $this->feed('https://b.example/feed.xml'));
-        $second->addTag($tag, 1);
-        $this->entityManager->flush();
-
-        $rows = $this->subscriptions->findForUserByTagId($user->requireId(), $tag->requireId());
 
         self::assertSame(
             [$first->requireId(), $second->requireId()],

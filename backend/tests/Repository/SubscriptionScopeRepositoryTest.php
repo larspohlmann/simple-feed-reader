@@ -1,0 +1,108 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Repository;
+
+use App\Entity\Subscription;
+use App\Entity\Tag;
+use App\Entity\User;
+use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
+use App\Repository\SubscriptionScopeRepository;
+use App\Tests\DbTestCase;
+use App\Tests\Support\NetworkFeedSubscriptions;
+
+final class SubscriptionScopeRepositoryTest extends DbTestCase
+{
+    public function testANetworkHoldsItsPrivateAndProfileFeedsExcludedOnesIncluded(): void
+    {
+        $user = $this->user('network-owner@example.com');
+        $home = $this->fixtures()->subscribe(
+            $user,
+            NetworkFeedSubscriptions::blueskyHome(1),
+            SourceFormat::BLUESKY_API,
+        );
+        $home->setIncludeInAllItems(false);
+        $profile = $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
+        $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::PLAIN);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$home->requireId(), $profile->requireId()],
+            $this->idsOf($this->subscriptions()->findForUserOnNetwork($user->requireId(), SocialNetwork::Bluesky)),
+        );
+    }
+
+    public function testAnotherUsersFeedsOfTheNetworkAreNeverIncluded(): void
+    {
+        $user = $this->user('network-self@example.com');
+        $own = $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
+        $stranger = $this->user('network-stranger@example.com');
+        $this->fixtures()->subscribe($stranger, 'https://fosstodon.org/@bob.rss');
+
+        self::assertSame(
+            [$own->requireId()],
+            $this->idsOf($this->subscriptions()->findForUserOnNetwork($user->requireId(), SocialNetwork::Mastodon)),
+        );
+    }
+
+    public function testANetworkWithoutFeedsHoldsNone(): void
+    {
+        $user = $this->user('network-empty@example.com');
+        $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::PLAIN);
+
+        self::assertSame([], $this->subscriptions()->findForUserOnNetwork($user->requireId(), SocialNetwork::Bluesky));
+    }
+
+    /** TagEditor::delete() detaches through it: a missed subscription would keep wearing the deleted tag. */
+    public function testFindForUserByTagIdReturnsEveryCarryingSubscription(): void
+    {
+        $user = $this->user('find-by-tag-many@example.com');
+        $tag = new Tag($user, 'Shared');
+        $this->entityManager->persist($tag);
+        $first = $this->fixtures()->subscribe($user, 'https://a.example/feed.xml');
+        $first->addTag($tag, 0);
+        $second = $this->fixtures()->subscribe($user, 'https://b.example/feed.xml');
+        $second->addTag($tag, 1);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$first->requireId(), $second->requireId()],
+            $this->idsOf($this->subscriptions()->findForUserByTagId($user->requireId(), $tag->requireId())),
+        );
+    }
+
+    /**
+     * @param list<Subscription> $subscriptions
+     *
+     * @return list<int>
+     */
+    private function idsOf(array $subscriptions): array
+    {
+        return array_map(static fn (Subscription $subscription): int => $subscription->requireId(), $subscriptions);
+    }
+
+    private function user(string $email): User
+    {
+        $user = new User($email, new \DateTimeImmutable('2026-10-01T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        return $user;
+    }
+
+    private function fixtures(): NetworkFeedSubscriptions
+    {
+        return new NetworkFeedSubscriptions($this->entityManager);
+    }
+
+    private function subscriptions(): SubscriptionScopeRepository
+    {
+        $repository = self::getContainer()->get(SubscriptionScopeRepository::class);
+        self::assertInstanceOf(SubscriptionScopeRepository::class, $repository);
+
+        return $repository;
+    }
+}
