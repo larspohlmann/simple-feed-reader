@@ -20,14 +20,13 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-/** The per-network account APIs over a test HTTP client, wired as the container wires them, for the SocialAccounts fixtures. */
 final class SocialApiWiring
 {
     use AssignsEntityIds;
 
-    public const string BLUESKY_HOST = 'pds.example.test';
-    public const string MASTODON_HOST = 'mastodon.example';
-    public const int BLUESKY_ACCOUNT_ID = 3;
+    private const string BLUESKY_HOST = 'pds.example.test';
+    private const string MASTODON_HOST = 'mastodon.example';
+    private const int BLUESKY_ACCOUNT_ID = 3;
 
     private function __construct()
     {
@@ -49,7 +48,7 @@ final class SocialApiWiring
         return new BlueskySessionCache($cache, new BlueskySessionCipher(new InstanceSecretCipher(str_repeat('k', 32))));
     }
 
-    public static function mastodonApiClient(HttpClientInterface $http): MastodonApiClient
+    private static function mastodonApiClient(HttpClientInterface $http): MastodonApiClient
     {
         return new MastodonApiClient(FetchWiring::guardedApiClient($http, self::guardFor(self::MASTODON_HOST)));
     }
