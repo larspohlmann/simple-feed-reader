@@ -10,6 +10,7 @@ import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unren
 
 const entryActions = {
   favorite: jest.fn(),
+  like: jest.fn(),
   keep: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
@@ -124,4 +125,22 @@ it('flips the favorite icon in the popover and re-emits favorite for the copy', 
   expect(favorited).toHaveBeenCalledWith(dup);
   expect(favoriteButton.classList.contains('on')).toBe(true);
   expect(favoriteButton.getAttribute('aria-pressed')).toBe('true');
+});
+
+it('flips the like in the popover and re-emits like for the copy (#1600)', () => {
+  const dup = entry({ id: 2, title: 'Skeet', social: { network: 'bluesky', isLiked: false } });
+  const fixture = mount(entry({ duplicates: [dup] }));
+
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+  const likeButton = overlay.querySelector(
+    '.dup-popover button[aria-label="Like on Bluesky"]',
+  ) as HTMLElement;
+
+  likeButton.click();
+  fixture.detectChanges();
+
+  expect(entryActions.like).toHaveBeenCalledWith(dup);
+  expect(likeButton.getAttribute('aria-pressed')).toBe('true');
 });

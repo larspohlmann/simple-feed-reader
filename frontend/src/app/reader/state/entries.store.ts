@@ -22,11 +22,11 @@ function unionMatchedWords(existing: string[], incoming: string[]): string[] {
   return union;
 }
 
-/** A state PATCH still on the wire, kept so a list reload that lands meanwhile
+/** A row flag change still on the wire — a state PATCH or a like — kept so a list reload that lands meanwhile
  *  can lay the row's optimistic state back over the server's stale copy. */
 interface InFlightPatch {
   entryId: number;
-  patch: EntryStatePatch;
+  patch: EntryStatePatch & Pick<Partial<EntryDto>, 'social'>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -187,6 +187,33 @@ export class EntriesStore {
           onError?.();
         },
       });
+  }
+
+  /** Optimistic like on its own route, apart from `setState`'s PATCH; a failure puts back only the like and hands
+   *  `onError` the problem instead of raising the list's error banner. A click while the previous like of the
+   *  same entry is still on the wire is dropped, so the last answer the server gives is the final state. */
+  setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): void {
+    const before = entry.social;
+    if (!before || this.likeInFlight(entry.id)) return;
+    const inFlight: InFlightPatch = {
+      entryId: entry.id,
+      patch: { social: { ...before, isLiked } },
+    };
+    this.inFlightPatches.add(inFlight);
+    this.patchEntries([entry.id], (row) => ({ ...row, ...inFlight.patch }));
+    const request$ = isLiked ? this.api.like(entry.id) : this.api.unlike(entry.id);
+    request$.pipe(finalize(() => this.inFlightPatches.delete(inFlight))).subscribe({
+      error: (error: HttpErrorResponse) => {
+        this.patchEntries([entry.id], (row) => ({ ...row, social: before }));
+        onError(parseProblem(error));
+      },
+    });
+  }
+
+  private likeInFlight(entryId: number): boolean {
+    return [...this.inFlightPatches].some(
+      (inFlight) => inFlight.entryId === entryId && inFlight.patch.social,
+    );
   }
 
   mergeCompleted(rows: CompletedEntryDto[]): void {

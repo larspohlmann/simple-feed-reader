@@ -33,6 +33,7 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     share: null,
     linkCards: [],
     pending: false,
+    social: null,
     discussionUrl: null,
     comments: null,
     ...overrides,

@@ -27,9 +27,14 @@ class HostComponent implements EntryActionHandler {
   favoriteCount = 0;
   kept: EntryDto | null = null;
   marked: EntryDto | null = null;
+  liked: EntryDto | null = null;
 
   favorite(): void {
     this.favoriteCount++;
+  }
+
+  like(entry: EntryDto): void {
+    this.liked = entry;
   }
 
   keep(entry: EntryDto): void {
@@ -291,6 +296,42 @@ describe('EntryActionsComponent', () => {
       expect(player.queue()).toEqual([]);
       expect(queue().getAttribute('aria-label')).toBe('Add to playlist');
       expect(fixture.componentInstance.cardOpened).toBe(false);
+    });
+  });
+
+  describe('on a social post (#1600)', () => {
+    const blueskyPost = (isLiked = false): EntryDto =>
+      anEntry({ social: { network: 'bluesky', isLiked } });
+
+    it('offers the like right after favorite, named for the network', () => {
+      const labels = buttons(mount(blueskyPost())).map((button) =>
+        button.getAttribute('aria-label'),
+      );
+      expect(labels).toEqual(['Favorite', 'Like on Bluesky', 'Keep', 'Toggle read']);
+    });
+
+    it('names the undo once liked, pressed and filled', () => {
+      const fixture = mount(anEntry({ social: { network: 'mastodon', isLiked: true } }));
+      const like = buttons(fixture)[1];
+      expect(like.getAttribute('aria-label')).toBe('Unlike on Mastodon');
+      expect(like.getAttribute('aria-pressed')).toBe('true');
+      expect(like.textContent).toContain('thumb_up');
+      expect(
+        fixture.debugElement.queryAll(By.directive(IconComponent))[1].componentInstance.fill(),
+      ).toBe(true);
+    });
+
+    it('likes without opening the card', () => {
+      const fixture = mount(blueskyPost());
+
+      buttons(fixture)[1].click();
+
+      expect(fixture.componentInstance.liked).toBe(fixture.componentInstance.entry);
+      expect(fixture.componentInstance.cardOpened).toBe(false);
+    });
+
+    it('offers no like on an entry that is no social post', () => {
+      expect(mount().nativeElement.textContent).not.toContain('thumb_up');
     });
   });
 });

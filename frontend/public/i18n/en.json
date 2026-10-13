@@ -1180,6 +1180,14 @@
     "searchPhraseHint": "Double quotes around the query match the exact phrase — the words together and in order. Remove them to search for each word anywhere.",
     "loadMore": "Load more",
     "favorite": "Favorite",
+    "like": {
+      "bluesky": "Like on Bluesky",
+      "mastodon": "Like on Mastodon"
+    },
+    "unlike": {
+      "bluesky": "Unlike on Bluesky",
+      "mastodon": "Unlike on Mastodon"
+    },
     "keep": "Keep",
     "toggleRead": "Toggle read",
     "filterByTag": "Filter by {{name}}",

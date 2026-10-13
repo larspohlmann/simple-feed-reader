@@ -40,6 +40,18 @@
 >
   <app-icon name="star" [size]="size()" [fill]="entry().isFavorite" />
 </button>
+@if (entry().social; as social) {
+  <button
+    type="button"
+    [attr.aria-label]="likeLabel() | transloco"
+    [appFlagToggle]="social.isLiked"
+    (click)="$event.stopPropagation(); actions.like(entry())"
+    (keydown.enter)="$event.stopPropagation()"
+    (keydown.space)="$event.stopPropagation()"
+  >
+    <app-icon name="thumb_up" [size]="size()" [fill]="social.isLiked" />
+  </button>
+}
 <button
   type="button"
   [attr.aria-label]="'reader.keep' | transloco"

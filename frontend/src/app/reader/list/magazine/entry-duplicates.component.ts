@@ -76,6 +76,15 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     );
   }
 
+  like(copy: EntryDto): void {
+    this.shellActions.like(copy);
+    this.displayed.update((current) =>
+      current?.social
+        ? { ...current, social: { ...current.social, isLiked: !current.social.isLiked } }
+        : current,
+    );
+  }
+
   keep(copy: EntryDto): void {
     this.shellActions.keep(copy);
     this.displayed.update((current) =>

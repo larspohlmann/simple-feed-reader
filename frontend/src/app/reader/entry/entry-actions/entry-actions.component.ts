@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
@@ -8,7 +8,7 @@ import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
 
 /**
- * The per-entry actions — favorite, keep, mark read, led by the declared
+ * The per-entry actions — favorite, like on the post's network (#1600), keep, mark read, led by the declared
  * duration, play and add-to-playlist on an audio entry (#1436, #1449) — as one
  * control cluster. Lives here, not repeated per block: a second copy (hero vs
  * entry-row) once made actions read as unreliable across the view (#414).
@@ -36,4 +36,8 @@ export class EntryActionsComponent {
   readonly audio = input(true);
   protected readonly entryAudio = new EntryAudio(this.entry, inject(AudioPlayerService));
   protected readonly actions = inject(EntryActionHandler);
+  protected readonly likeLabel = computed(() => {
+    const social = this.entry().social;
+    return social ? `reader.${social.isLiked ? 'unlike' : 'like'}.${social.network}` : '';
+  });
 }
