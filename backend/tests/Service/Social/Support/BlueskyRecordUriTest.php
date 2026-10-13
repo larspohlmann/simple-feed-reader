@@ -57,5 +57,51 @@ final class BlueskyRecordUriTest extends TestCase
             'https://bsky.app/profile/did:plc:bob/feed/news',
         ];
         yield 'no record' => ['at://did:plc:bob/app.bsky.feed.post/3l1', null];
+        yield 'a like' => ['at://did:plc:bob/app.bsky.feed.like/3l1', null];
+    }
+
+    #[DataProvider('likes')]
+    public function testOnlyALikeRecordTheColumnCanHoldIsALike(?string $uri, ?string $like): void
+    {
+        self::assertSame($like, BlueskyRecordUri::likeOrNull($uri));
+    }
+
+    /** @return iterable<string, array{?string, ?string}> */
+    public static function likes(): iterable
+    {
+        $like = 'at://did:plc:alice/app.bsky.feed.like/3lk2';
+        yield 'a like' => [$like, $like];
+        yield 'did:web with a port' => [
+            'at://did:web:localhost%3A3000/app.bsky.feed.like/3lk2',
+            'at://did:web:localhost%3A3000/app.bsky.feed.like/3lk2',
+        ];
+        yield 'exactly 512 characters' => [self::likeOfLength(512), self::likeOfLength(512)];
+        yield 'over 512 characters' => [self::likeOfLength(513), null];
+        yield 'a post' => ['at://did:plc:alice/app.bsky.feed.post/3lk2', null];
+        yield 'a list' => ['at://did:plc:alice/app.bsky.graph.list/3lk2', null];
+        yield 'an empty record key' => ['at://did:plc:alice/app.bsky.feed.like/', null];
+        yield 'nothing' => [null, null];
+    }
+
+    #[DataProvider('recordKeys')]
+    public function testTheRecordKeyIsTheLastSegmentOfAKnownRecord(string $uri, ?string $recordKey): void
+    {
+        self::assertSame($recordKey, BlueskyRecordUri::recordKeyOf($uri));
+    }
+
+    /** @return iterable<string, array{string, ?string}> */
+    public static function recordKeys(): iterable
+    {
+        yield 'a like' => ['at://did:plc:alice/app.bsky.feed.like/3lk2', '3lk2'];
+        yield 'a list' => ['at://did:plc:alice/app.bsky.graph.list/3l1', '3l1'];
+        yield 'a post' => ['at://did:plc:alice/app.bsky.feed.post/3lk2', null];
+        yield 'no uri' => ['3lk2', null];
+    }
+
+    private static function likeOfLength(int $length): string
+    {
+        $prefix = 'at://did:plc:alice/app.bsky.feed.like/';
+
+        return $prefix . str_repeat('a', $length - \strlen($prefix));
     }
 }

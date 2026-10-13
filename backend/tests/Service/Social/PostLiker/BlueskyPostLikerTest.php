@@ -175,6 +175,18 @@ final class BlueskyPostLikerTest extends TestCase
         );
     }
 
+    public function testAStoredLikeThatIsNoLikeRecordIsRefusedWithoutAsking(): void
+    {
+        $http = new RoutedHttpClient([]);
+
+        try {
+            $this->liker($http)->unlike(SocialApiWiring::blueskyAccount(), self::POST_URI);
+            self::fail('Only a like record can be taken back.');
+        } catch (SocialPostRefusedException) {
+            self::assertSame([], $http->requests);
+        }
+    }
+
     public function testAThrottledUnlikeCarriesItsDelay(): void
     {
         $http = new RoutedHttpClient([

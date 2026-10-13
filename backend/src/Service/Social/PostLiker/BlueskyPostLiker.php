@@ -11,9 +11,10 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\BlueskyLikeUri;
+use App\Service\Social\Support\BlueskyRecordUri;
 
 final readonly class BlueskyPostLiker implements PostLikerInterface
 {
@@ -48,7 +49,7 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
         ]);
 
         $createdUri = JsonNodeModel::of($answer->json())->string('uri');
-        $likeId = BlueskyLikeUri::orNull($createdUri)
+        $likeId = BlueskyRecordUri::likeOrNull($createdUri)
             ?? throw new SocialNetworkUnreachableException('Bluesky did not name the like it created.');
 
         return new SocialLikeResultModel($likeId);
@@ -56,11 +57,13 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
 
     public function unlike(SocialAccount $account, string $likeId): void
     {
+        $recordKey = BlueskyRecordUri::recordKeyOf($likeId)
+            ?? throw new SocialPostRefusedException('The like to take back is no Bluesky like record.');
         try {
             $this->sessions->actAs($account, self::DELETE_RECORD, [
                 'repo' => $account->getIdentity(),
                 'collection' => self::LIKE_COLLECTION,
-                'rkey' => substr((string) strrchr($likeId, '/'), 1),
+                'rkey' => $recordKey,
             ]);
         } catch (SocialPostNotFoundException) {
             return;
