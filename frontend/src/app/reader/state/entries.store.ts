@@ -198,11 +198,11 @@ export class EntriesStore {
       patch: { social: { ...before, isLiked } },
     };
     this.inFlightPatches.add(inFlight);
-    this.patchEntries([entry.id], (row) => ({ ...row, ...inFlight.patch }));
+    this.patchEntryAndCopies(entry.id, (row) => ({ ...row, ...inFlight.patch }));
     const request$ = isLiked ? this.api.like(entry.id) : this.api.unlike(entry.id);
     request$.pipe(finalize(() => this.inFlightPatches.delete(inFlight))).subscribe({
       error: (error: HttpErrorResponse) => {
-        this.patchEntries([entry.id], (row) => ({ ...row, social: before }));
+        this.patchEntryAndCopies(entry.id, (row) => ({ ...row, social: before }));
         onError(parseProblem(error));
       },
     });
@@ -227,6 +227,23 @@ export class EntriesStore {
    *  all-items list, where the rows stay visible. */
   markHiddenLocally(ids: number[]): void {
     this.patchEntries(ids, (entry) => ({ ...entry, isHidden: true }));
+  }
+
+  /** Also reaches the entry's copy inside any row's `duplicates`, which the duplicates popover clones on open. */
+  private patchEntryAndCopies(entryId: number, patch: (entry: EntryDto) => EntryDto): void {
+    this.patchEntries([entryId], patch);
+    const holdsCopy = (row: EntryDto): boolean =>
+      row.duplicates?.some((copy) => copy.id === entryId) ?? false;
+    const withPatchedCopy = (row: EntryDto): EntryDto => ({
+      ...row,
+      duplicates: row.duplicates?.map((copy) => (copy.id === entryId ? patch(copy) : copy)),
+    });
+    this.unlisted.update((held) => (held && holdsCopy(held) ? withPatchedCopy(held) : held));
+    this.rawEntries.update((current) =>
+      current.some(holdsCopy)
+        ? current.map((row) => (holdsCopy(row) ? withPatchedCopy(row) : row))
+        : current,
+    );
   }
 
   /** The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */

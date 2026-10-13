@@ -184,3 +184,20 @@ it('reverts the popover like when the network refuses it (#1600)', () => {
 
   expect(button.getAttribute('aria-pressed')).toBe('false');
 });
+
+it('reopens the popover on the like the store wrote into the row copy (#1600)', () => {
+  const { fixture, button } = openLikePopover(true);
+  button.click();
+  fixture.componentInstance.close();
+  const likedCopy = entry({ id: 2, title: 'Skeet', social: { network: 'bluesky', isLiked: true } });
+  fixture.componentRef.setInput('entry', entry({ duplicates: [likedCopy] }));
+  fixture.detectChanges();
+
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+
+  const reopened = TestBed.inject(OverlayContainer)
+    .getContainerElement()
+    .querySelector('.dup-popover button[aria-label$="on Bluesky"]') as HTMLElement;
+  expect(reopened.getAttribute('aria-pressed')).toBe('true');
+});

@@ -937,6 +937,53 @@ describe('EntriesStore', () => {
       expect(ctrl.expectOne('https://api.test/api/entries/1/like').request.method).toBe('DELETE');
     });
 
+    describe('a copy shown inside another row (duplicates)', () => {
+      const copy = (isLiked = false): EntryDto =>
+        entry(2, { social: { network: 'mastodon', isLiked } });
+
+      const loadRowWithCopy = (): void => {
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1, { duplicates: [copy()] })], nextCursor: null });
+      };
+
+      it('likes the copy inside the row that holds it', () => {
+        loadRowWithCopy();
+
+        store.setLiked(copy(), true, () => undefined);
+
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
+        ctrl.expectOne('https://api.test/api/entries/2/like').flush({ isLiked: true });
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
+      });
+
+      it('puts the copy back when the network refuses the like', () => {
+        loadRowWithCopy();
+
+        store.setLiked(copy(), true, () => undefined);
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
+        ctrl
+          .expectOne('https://api.test/api/entries/2/like')
+          .flush({ title: 'Down', status: 500 }, { status: 500, statusText: 'Server Error' });
+
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(false);
+      });
+
+      it('leaves a row without the copy as it was', () => {
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1, { duplicates: [entry(3)] }), entry(4)], nextCursor: null });
+        const before = store.entries();
+
+        store.setLiked(copy(), true, () => undefined);
+        ctrl.expectOne('https://api.test/api/entries/2/like').flush({ isLiked: true });
+
+        expect(store.entries()).toBe(before);
+      });
+    });
+
     it('sends nothing for an entry that is no social post', () => {
       store.load({ view: 'all' });
       ctrl
