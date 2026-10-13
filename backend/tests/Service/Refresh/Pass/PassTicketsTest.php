@@ -101,6 +101,16 @@ final class PassTicketsTest extends TestCase
         self::assertSame([1, 2], $this->pass->startedFeedIds());
     }
 
+    public function testAnOrphanIsDrainedOnlyOnce(): void
+    {
+        $orphan = self::privateFeed(self::account(), 1)->getFeed();
+        $passTickets = $this->passTickets([$orphan], []);
+        iterator_to_array($passTickets->tickets());
+
+        self::assertSame([1], array_keys(iterator_to_array($passTickets->drainUnasked())));
+        self::assertSame([], iterator_to_array($passTickets->drainUnasked()));
+    }
+
     public function testAPausedAccountsFeedSettlesWithoutATicket(): void
     {
         $paused = self::account();

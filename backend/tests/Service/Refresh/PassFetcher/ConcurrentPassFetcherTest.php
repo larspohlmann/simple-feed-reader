@@ -601,19 +601,19 @@ final class ConcurrentPassFetcherTest extends TestCase
         $orphan = $this->feedOf(self::mastodonAccount(self::MASTODON, 1))->getFeed();
         $rss = $this->rssFeed(self::NEWS . '/one.xml');
 
-        $outcomes = self::read($this->fetcher(static fn (): MockResponse => self::rss()), [$orphan, $rss]);
+        $landings = self::landings($this->fetcher(static fn (): MockResponse => self::rss()), [$orphan, $rss]);
 
-        self::assertSame([$orphan->requireId(), $rss->requireId()], array_keys($outcomes));
-        self::assertInstanceOf(PrivateFeedOrphanedException::class, self::failureOf($outcomes[$orphan->requireId()]));
+        self::assertSame([$orphan->requireId(), $rss->requireId()], array_column($landings, 0));
+        self::assertInstanceOf(PrivateFeedOrphanedException::class, self::failureOf($landings[0][1]));
     }
 
     public function testAnOrphanAloneIsStillYielded(): void
     {
         $orphan = $this->feedOf(self::mastodonAccount(self::MASTODON, 1))->getFeed();
 
-        $outcomes = self::read($this->fetcher(static fn (): MockResponse => self::rss()), [$orphan]);
+        $landings = self::landings($this->fetcher(static fn (): MockResponse => self::rss()), [$orphan]);
 
-        self::assertSame([$orphan->requireId()], array_keys($outcomes));
+        self::assertSame([$orphan->requireId()], array_column($landings, 0));
         self::assertSame([], $this->http->requestLines());
     }
 
@@ -629,8 +629,10 @@ final class ConcurrentPassFetcherTest extends TestCase
             ? self::rss()
             : self::statuses();
 
-        $outcomes = self::read($this->fetcher($respond), [$orphan, $pausedHome, $rss, $home]);
+        $landings = self::landings($this->fetcher($respond), [$orphan, $pausedHome, $rss, $home]);
+        $outcomes = array_column($landings, 1, 0);
 
+        self::assertCount(4, $landings);
         self::assertCount(4, $outcomes);
         self::assertInstanceOf(AccountPausedTimelineModel::class, $outcomes[self::idOf($pausedHome)]);
         self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
@@ -788,12 +790,22 @@ final class ConcurrentPassFetcherTest extends TestCase
      */
     private static function read(ConcurrentPassFetcher $fetcher, array $entries): array
     {
-        $outcomes = [];
+        return array_column(self::landings($fetcher, $entries), 1, 0);
+    }
+
+    /**
+     * @param list<Feed|SocialFeed> $entries
+     *
+     * @return list<array{int|string, FetchOutcomeModel|TimelineOutcomeModelInterface}> each yield, a repeat included
+     */
+    private static function landings(ConcurrentPassFetcher $fetcher, array $entries): array
+    {
+        $landings = [];
         foreach ($fetcher->fetchAll(self::passFeeds($entries)) as $feedId => $outcome) {
-            $outcomes[$feedId] = $outcome;
+            $landings[] = [$feedId, $outcome];
         }
 
-        return $outcomes;
+        return $landings;
     }
 
     private function rssFeed(string $url): Feed
