@@ -34,9 +34,8 @@ class HostComponent implements EntryActionHandler {
     this.favoriteCount++;
   }
 
-  like(entry: EntryDto): boolean {
+  like(entry: EntryDto): void {
     this.liked = entry;
-    return true;
   }
 
   keep(entry: EntryDto): void {

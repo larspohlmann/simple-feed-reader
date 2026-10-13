@@ -47,11 +47,10 @@ export class EntryStateActions implements EntryActionHandler {
     );
   }
 
-  like(entry: EntryDto, onFailure?: () => void): boolean {
-    return this.entries.setLiked(entry, !entry.social?.isLiked, (problem) => {
-      this.toast.show({ message: problemMessage(problem) });
-      onFailure?.();
-    });
+  like(entry: EntryDto): void {
+    this.entries.setLiked(entry, !entry.social?.isLiked, (problem) =>
+      this.toast.show({ message: problemMessage(problem) }),
+    );
   }
 
   keep(entry: EntryDto): void {

@@ -845,7 +845,7 @@ describe('EntriesStore', () => {
     it('likes optimistically on its own route and keeps the like once the server agrees', () => {
       loadPost();
 
-      expect(store.setLiked(store.entries()[0], true, () => undefined)).toBe(true);
+      store.setLiked(store.entries()[0], true, () => undefined);
       expect(store.entries()[0].social?.isLiked).toBe(true);
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
       expect(like.request.method).toBe('PUT');
@@ -927,9 +927,8 @@ describe('EntriesStore', () => {
       store.setLiked(store.entries()[0], true, () => undefined);
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
 
-      const sent = store.setLiked(store.entries()[0], false, () => undefined);
+      store.setLiked(store.entries()[0], false, () => undefined);
 
-      expect(sent).toBe(false);
       ctrl.expectNone('https://api.test/api/entries/1/like');
       expect(store.entries()[0].social?.isLiked).toBe(true);
       like.flush({ isLiked: true });
@@ -968,6 +967,30 @@ describe('EntriesStore', () => {
           .flush({ title: 'Down', status: 500 }, { status: 500, statusText: 'Server Error' });
 
         expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(false);
+      });
+
+      it('patches a flag on the copy and puts it back when the PATCH fails', () => {
+        loadRowWithCopy();
+
+        store.setState(2, { isFavorite: true });
+
+        expect(store.entries()[0].duplicates?.[0].isFavorite).toBe(true);
+        ctrl
+          .expectOne('https://api.test/api/entries/2/state')
+          .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+        expect(store.entries()[0].duplicates?.[0].isFavorite).toBe(false);
+        expect(store.error()).not.toBeNull();
+      });
+
+      it("keeps the copy's in-flight like across a list reload that lands first", () => {
+        loadRowWithCopy();
+        store.setLiked(copy(), true, () => undefined);
+        const like = ctrl.expectOne('https://api.test/api/entries/2/like');
+
+        loadRowWithCopy();
+
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
+        like.flush({ isLiked: true });
       });
 
       it('leaves a row without the copy as it was', () => {

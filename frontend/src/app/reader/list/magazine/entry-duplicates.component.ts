@@ -44,22 +44,23 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     })),
   );
 
-  // The card shown in the popover: a clone of the clicked copy, flipped locally
-  // on each action so the icons react without the copy ever joining the list
-  // the shell keeps in sync with the backend.
-  protected readonly displayed = signal<EntryDto | null>(null);
+  private readonly displayedId = signal<number | null>(null);
+  /** The shown copy as the row the store keeps in sync holds it, so an action's optimistic flip and revert show. */
+  protected readonly displayed = computed(
+    () => this.entry().duplicates?.find((copy) => copy.id === this.displayedId()) ?? null,
+  );
   protected readonly origin = signal<HTMLElement | null>(null);
   protected readonly positions = OVERLAY_POSITIONS;
   protected readonly panelId = `dup-popover-${nextId++}`;
 
   toggle(copy: EntryDto, event: Event): void {
     event.stopPropagation();
-    if (this.displayed()?.id === copy.id) {
+    if (this.displayedId() === copy.id) {
       this.close();
       return;
     }
     this.origin.set(event.currentTarget as HTMLElement);
-    this.displayed.set({ ...copy });
+    this.displayedId.set(copy.id);
   }
 
   open(copy: EntryDto): void {
@@ -67,44 +68,23 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     this.close();
   }
 
-  // Call before flipping the clone: the shell reads the flag's pre-toggle
-  // value to decide which way to PATCH.
   favorite(copy: EntryDto): void {
     this.shellActions.favorite(copy);
-    this.displayed.update((current) =>
-      current ? { ...current, isFavorite: !current.isFavorite } : current,
-    );
   }
 
-  like(copy: EntryDto): boolean {
-    const sent = this.shellActions.like(copy, () => this.flipLike(copy.id));
-    if (sent) this.flipLike(copy.id);
-    return sent;
-  }
-
-  private flipLike(copyId: number): void {
-    this.displayed.update((current) =>
-      current?.id === copyId && current.social
-        ? { ...current, social: { ...current.social, isLiked: !current.social.isLiked } }
-        : current,
-    );
+  like(copy: EntryDto): void {
+    this.shellActions.like(copy);
   }
 
   keep(copy: EntryDto): void {
     this.shellActions.keep(copy);
-    this.displayed.update((current) =>
-      current ? { ...current, isKept: !current.isKept } : current,
-    );
   }
 
   toggleRead(copy: EntryDto): void {
     this.shellActions.toggleRead(copy);
-    this.displayed.update((current) =>
-      current ? { ...current, isViewed: !current.isViewed } : current,
-    );
   }
 
   close(): void {
-    this.displayed.set(null);
+    this.displayedId.set(null);
   }
 }

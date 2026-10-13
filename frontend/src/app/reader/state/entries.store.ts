@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, Subscription, finalize } from 'rxjs';
+import { Observable, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
@@ -26,8 +26,10 @@ function unionMatchedWords(existing: string[], incoming: string[]): string[] {
  *  can lay the row's optimistic state back over the server's stale copy. */
 interface InFlightPatch {
   entryId: number;
-  patch: EntryStatePatch & Pick<Partial<EntryDto>, 'social'>;
+  patch: RowPatch;
 }
+
+type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social'>;
 
 @Injectable({ providedIn: 'root' })
 export class EntriesStore {
@@ -144,7 +146,10 @@ export class EntriesStore {
   private withInFlightPatch(entry: EntryDto): EntryDto {
     let patched = entry;
     for (const inFlight of this.inFlightPatches) {
-      if (inFlight.entryId === entry.id) patched = { ...patched, ...inFlight.patch };
+      patched = withPatchedRow(patched, new Set([inFlight.entryId]), (target) => ({
+        ...target,
+        ...inFlight.patch,
+      }));
     }
     return patched;
   }
@@ -168,51 +173,59 @@ export class EntriesStore {
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
   setState(entryId: number, patch: EntryStatePatch, onError?: () => void): void {
-    const target = this.entry(entryId);
+    const target = this.entryOrCopy(entryId);
     if (!target) return;
     this.error.set(null);
     this.failedOperation.set(null);
-    const inFlight: InFlightPatch = { entryId, patch: localStatePatch(patch) };
-    const before = stateBefore(target, inFlight.patch);
-    this.inFlightPatches.add(inFlight);
-    this.patchEntries([entryId], (entry) => ({ ...entry, ...inFlight.patch }));
-    this.api
-      .updateState(entryId, patch)
-      .pipe(finalize(() => this.inFlightPatches.delete(inFlight)))
-      .subscribe({
-        error: (error: HttpErrorResponse) => {
-          this.patchEntries([entryId], (entry) => ({ ...entry, ...before }));
-          this.error.set(parseProblem(error));
-          this.failedOperation.set(() => this.setState(entryId, patch, onError));
-          onError?.();
-        },
-      });
-  }
-
-  /** Optimistic like apart from `setState`; false when dropped (no post, or its previous like is still on the wire). */
-  setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): boolean {
-    const before = entry.social;
-    if (!before || this.likeInFlight(entry.id)) return false;
-    const inFlight: InFlightPatch = {
-      entryId: entry.id,
-      patch: { social: { ...before, isLiked } },
-    };
-    this.inFlightPatches.add(inFlight);
-    this.patchEntryAndCopies(entry.id, (row) => ({ ...row, ...inFlight.patch }));
-    const request$ = isLiked ? this.api.like(entry.id) : this.api.unlike(entry.id);
-    request$.pipe(finalize(() => this.inFlightPatches.delete(inFlight))).subscribe({
+    this.optimistic(target, localStatePatch(patch), this.api.updateState(entryId, patch)).subscribe({
       error: (error: HttpErrorResponse) => {
-        this.patchEntryAndCopies(entry.id, (row) => ({ ...row, social: before }));
-        onError(parseProblem(error));
+        this.error.set(parseProblem(error));
+        this.failedOperation.set(() => this.setState(entryId, patch, onError));
+        onError?.();
       },
     });
-    return true;
+  }
+
+  /** Optimistic like apart from `setState`; dropped for no post, or while its previous like is still on the wire. */
+  setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): void {
+    const social = entry.social;
+    if (!social || this.likeInFlight(entry.id)) return;
+    const request$ = isLiked ? this.api.like(entry.id) : this.api.unlike(entry.id);
+    this.optimistic(entry, { social: { ...social, isLiked } }, request$).subscribe({
+      error: (error: HttpErrorResponse) => onError(parseProblem(error)),
+    });
+  }
+
+  /** Lays `patch` over `target` and its copies until `request$` settles, and puts the old values back if it fails. */
+  private optimistic(
+    target: EntryDto,
+    patch: RowPatch,
+    request$: Observable<unknown>,
+  ): Observable<unknown> {
+    const inFlight: InFlightPatch = { entryId: target.id, patch };
+    const before = valuesBefore(target, patch);
+    this.inFlightPatches.add(inFlight);
+    this.patchEntries([target.id], (entry) => ({ ...entry, ...patch }));
+    return request$.pipe(
+      tap({ error: () => this.patchEntries([target.id], (entry) => ({ ...entry, ...before })) }),
+      finalize(() => this.inFlightPatches.delete(inFlight)),
+    );
   }
 
   private likeInFlight(entryId: number): boolean {
-    return [...this.inFlightPatches].some(
-      (inFlight) => inFlight.entryId === entryId && inFlight.patch.social,
-    );
+    for (const inFlight of this.inFlightPatches) {
+      if (inFlight.entryId === entryId && inFlight.patch.social) return true;
+    }
+    return false;
+  }
+
+  /** The entry with `id`, or its copy inside a row's `duplicates`, which the duplicates popover acts on. */
+  private entryOrCopy(id: number): EntryDto | null {
+    const listed = this.entry(id);
+    if (listed) return listed;
+    const held = this.unlisted();
+    const rows = held ? [...this.rawEntries(), held] : this.rawEntries();
+    return rows.flatMap((row) => row.duplicates ?? []).find((copy) => copy.id === id) ?? null;
   }
 
   mergeCompleted(rows: CompletedEntryDto[]): void {
@@ -229,32 +242,15 @@ export class EntriesStore {
     this.patchEntries(ids, (entry) => ({ ...entry, isHidden: true }));
   }
 
-  /** Also reaches the entry's copy inside any row's `duplicates`, which the duplicates popover clones on open. */
-  private patchEntryAndCopies(entryId: number, patch: (entry: EntryDto) => EntryDto): void {
-    this.patchEntries([entryId], patch);
-    const holdsCopy = (row: EntryDto): boolean =>
-      row.duplicates?.some((copy) => copy.id === entryId) ?? false;
-    const withPatchedCopy = (row: EntryDto): EntryDto => ({
-      ...row,
-      duplicates: row.duplicates?.map((copy) => (copy.id === entryId ? patch(copy) : copy)),
-    });
-    this.unlisted.update((held) => (held && holdsCopy(held) ? withPatchedCopy(held) : held));
-    this.rawEntries.update((current) =>
-      current.some(holdsCopy)
-        ? current.map((row) => (holdsCopy(row) ? withPatchedCopy(row) : row))
-        : current,
-    );
-  }
-
-  /** The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
+  /** Reaches each target as a row and as a copy inside a row's `duplicates`. The list keeps its identity when
+   *  `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
-    this.unlisted.update((held) => (held && targets.has(held.id) ? patch(held) : held));
+    this.unlisted.update((held) => (held ? withPatchedRow(held, targets, patch) : held));
     this.rawEntries.update((current) => {
       let changed = false;
       const patched = current.map((entry) => {
-        if (!targets.has(entry.id)) return entry;
-        const next = patch(entry);
+        const next = withPatchedRow(entry, targets, patch);
         changed ||= next !== entry;
         return next;
       });
@@ -286,10 +282,24 @@ export class EntriesStore {
   }
 }
 
-/** What `entry` held under the keys `patch` changes, for a failed PATCH to put back. */
-function stateBefore(entry: EntryDto, patch: EntryStatePatch): EntryStatePatch {
-  const keys = Object.keys(patch) as (keyof EntryStatePatch)[];
+/** What `entry` held under the keys `patch` changes, for a failed request to put back. */
+function valuesBefore(entry: EntryDto, patch: RowPatch): RowPatch {
+  const keys = Object.keys(patch) as (keyof RowPatch)[];
   return Object.fromEntries(keys.map((key) => [key, entry[key]]));
+}
+
+/** `row` itself when neither it nor a copy in its `duplicates` is targeted. */
+function withPatchedRow(
+  row: EntryDto,
+  targets: ReadonlySet<number>,
+  patch: (entry: EntryDto) => EntryDto,
+): EntryDto {
+  const patched = targets.has(row.id) ? patch(row) : row;
+  if (!patched.duplicates?.some((copy) => targets.has(copy.id))) return patched;
+  return {
+    ...patched,
+    duplicates: patched.duplicates.map((copy) => (targets.has(copy.id) ? patch(copy) : copy)),
+  };
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides
