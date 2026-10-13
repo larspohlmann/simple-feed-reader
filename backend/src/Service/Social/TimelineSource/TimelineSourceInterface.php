@@ -26,13 +26,6 @@ interface TimelineSourceInterface
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
-    public function page(SocialFeed $socialFeed): TimelinePageModel;
-
-    /**
-     * @throws SocialCredentialsRejectedException
-     * @throws SocialNetworkThrottledException
-     * @throws SocialNetworkUnreachableException
-     */
     public function request(SocialFeed $socialFeed): ApiRequestModel;
 
     /**

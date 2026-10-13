@@ -34,14 +34,6 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
         return SocialNetwork::Bluesky->value;
     }
 
-    public function page(SocialFeed $socialFeed): TimelinePageModel
-    {
-        $account = $socialFeed->getSocialAccount();
-        $answer = $this->sessions->askAs($account, self::pathOf($socialFeed));
-
-        return BlueskyTimelinePage::of(self::itemsOf($answer), $account->getIdentity());
-    }
-
     public function request(SocialFeed $socialFeed): ApiRequestModel
     {
         return $this->sessions->authorizedGet($socialFeed->getSocialAccount(), self::pathOf($socialFeed));

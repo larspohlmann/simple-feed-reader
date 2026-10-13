@@ -20,77 +20,11 @@ use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 final class MastodonTimelineSourceTest extends TestCase
 {
     private const string HOME = 'GET https://mastodon.example/api/v1/timelines/home?limit=40';
-
-    public function testTheHomeTimelineIsReadWithTheTokenAndNamesItsNewestStatus(): void
-    {
-        $http = new RoutedHttpClient([self::HOME => self::statuses('109')]);
-
-        $page = $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, ''));
-
-        self::assertCount(1, $page->parsed->entries);
-        self::assertSame('109', $page->newestId);
-        self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[0]['headers']);
-    }
-
-    public function testAListAsksOnlyForWhatCameAfterTheNewestSeenStatus(): void
-    {
-        $http = new RoutedHttpClient([
-            'GET https://mastodon.example/api/v1/timelines/list/42?limit=40&min_id=100' => self::statuses('120'),
-        ]);
-        $list = self::socialFeed(SocialFeedKind::UserList, '42');
-        $list->recordNewestSeen('100');
-
-        self::assertSame('120', $this->source($http)->page($list)->newestId);
-    }
-
-    public function testARefusedTokenIsARefusedCredential(): void
-    {
-        $http = new RoutedHttpClient([
-            self::HOME => new MockResponse('{}', ['http_code' => Response::HTTP_UNAUTHORIZED]),
-        ]);
-
-        $this->expectException(SocialCredentialsRejectedException::class);
-
-        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, ''));
-    }
-
-    public function testAnAnswerThatIsNoListIsAnUnreachableNetwork(): void
-    {
-        $http = new RoutedHttpClient([self::HOME => new MockResponse('{"error":"odd"}')]);
-
-        $this->expectException(SocialNetworkUnreachableException::class);
-
-        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, ''));
-    }
-
-    public function testAnHtmlAnswerIsAnUnreachableNetwork(): void
-    {
-        $maintenancePage = '<!doctype html><html lang="en"><body>maintenance</body></html>';
-        $http = new RoutedHttpClient([self::HOME => new MockResponse($maintenancePage)]);
-
-        $this->expectException(SocialNetworkUnreachableException::class);
-
-        $this->source($http)->page(self::socialFeed(SocialFeedKind::Home, ''));
-    }
-
-    #[DataProvider('foreignListIds')]
-    public function testAListIdThatIsNotANumberIsNeverRequested(string $listId): void
-    {
-        $http = new RoutedHttpClient([]);
-
-        try {
-            $this->source($http)->page(self::socialFeed(SocialFeedKind::UserList, $listId));
-            self::fail('A foreign list id must not be requested.');
-        } catch (SocialNetworkUnreachableException) {
-            self::assertSame([], $http->requests);
-        }
-    }
 
     /** @return iterable<string, array{string}> */
     public static function foreignListIds(): iterable
@@ -205,11 +139,6 @@ final class MastodonTimelineSourceTest extends TestCase
     private static function socialFeed(SocialFeedKind $kind, string $remoteId): SocialFeed
     {
         return new SocialFeed(SocialAccounts::mastodon(), new Feed('social:mastodon:4:home'), $kind, $remoteId);
-    }
-
-    private static function statuses(string $newestId): MockResponse
-    {
-        return new MockResponse(self::statusesBody($newestId));
     }
 
     private static function statusesBody(string $newestId): string

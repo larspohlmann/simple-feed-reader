@@ -32,11 +32,6 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
         return SocialNetwork::Mastodon->value;
     }
 
-    public function page(SocialFeed $socialFeed): TimelinePageModel
-    {
-        return self::pageFrom($this->mastodon->get($socialFeed->getSocialAccount(), self::pathOf($socialFeed)));
-    }
-
     public function request(SocialFeed $socialFeed): ApiRequestModel
     {
         return $this->mastodon->authorizedGet($socialFeed->getSocialAccount(), self::pathOf($socialFeed));

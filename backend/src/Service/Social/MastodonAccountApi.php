@@ -29,18 +29,6 @@ final readonly class MastodonAccountApi
     ) {
     }
 
-    /**
-     * @throws SocialCredentialsRejectedException on a 401 or a 403
-     * @throws SocialNetworkThrottledException
-     * @throws SocialNetworkUnreachableException
-     */
-    public function get(SocialAccount $account, string $path): ApiResponseModel
-    {
-        $request = ApiRequestModel::get($account->getServiceUrl() . $path);
-
-        return MastodonApiClient::accepted($this->answer($account, $request));
-    }
-
     /** @throws SocialCredentialsRejectedException when the stored token no longer opens */
     public function authorizedGet(SocialAccount $account, string $path): ApiRequestModel
     {
