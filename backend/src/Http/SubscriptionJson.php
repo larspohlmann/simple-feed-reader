@@ -119,9 +119,11 @@ final class SubscriptionJson
         }
         $address = SocialFeedClassifier::privateAddressOf($feed);
 
-        return null === $address
-            ? ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND]
-            : ['network' => $network->value, 'accountId' => $address->accountId, 'kind' => $address->kind->value];
+        return [
+            'network' => $network->value,
+            'accountId' => $address?->accountId,
+            'kind' => $address?->kind->value ?? self::PROFILE_KIND,
+        ];
     }
 
     /** @return array{id: int, network: string, handle: string} */
