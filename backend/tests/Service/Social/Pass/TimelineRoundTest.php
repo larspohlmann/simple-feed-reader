@@ -77,8 +77,8 @@ final class TimelineRoundTest extends TestCase
         $home = $round->settle(self::HOME, self::stale());
         $list = $round->settle(self::LIST, self::stale());
 
-        self::assertSame('Bearer jwt-2', $home->followUpTicket()->request->headers['Authorization']);
-        self::assertSame('Bearer jwt-2', $list->followUpTicket()->request->headers['Authorization']);
+        self::assertSame('Bearer jwt-2', $home->requestTicket()->request->headers['Authorization']);
+        self::assertSame('Bearer jwt-2', $list->requestTicket()->request->headers['Authorization']);
         self::assertSame(
             2,
             $this->cache->deletedItems,
@@ -104,6 +104,21 @@ final class TimelineRoundTest extends TestCase
         );
     }
 
+    public function testAFeedsFirstStaleAnswerOnTheRenewedSessionRefusesItsAccountAtOnce(): void
+    {
+        $round = $this->round();
+        iterator_to_array($round->ticketFor(self::HOME));
+        $round->settle(self::HOME, self::stale());
+        iterator_to_array($round->ticketFor(self::LIST));
+
+        $refused = $round->settle(self::LIST, self::stale())->settledOutcome();
+
+        self::assertInstanceOf(FailedTimelineModel::class, $refused);
+        self::assertInstanceOf(SocialCredentialsRejectedException::class, $refused->failure);
+        self::assertSame(SocialAccountStatus::NeedsReconnect, $this->account->getStatus());
+        self::assertSame([self::SESSION], $this->http->requestLines(), 'opened once, never renewed again');
+    }
+
     public function testATicketBuiltBeforeItsAccountsRenewalIsWithheldAndBuiltAgain(): void
     {
         $round = $this->ticketedRound();
@@ -113,7 +128,7 @@ final class TimelineRoundTest extends TestCase
         self::assertFalse($round->admits(self::LIST), 'its ticket carries the dropped session');
         $rebuilt = $round->settle(self::LIST, FetchOutcomeModel::withheld());
 
-        self::assertSame('Bearer jwt-2', $rebuilt->followUpTicket()->request->headers['Authorization']);
+        self::assertSame('Bearer jwt-2', $rebuilt->requestTicket()->request->headers['Authorization']);
         self::assertTrue($round->admits(self::LIST));
     }
 

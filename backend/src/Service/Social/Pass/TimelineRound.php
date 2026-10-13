@@ -29,9 +29,6 @@ final class TimelineRound
     /** @var array<int|string, TimelineOutcomeModelInterface> */
     private array $unasked = [];
 
-    /** @var array<int|string, true> */
-    private array $staleOnce = [];
-
     /** @var array<int|string, true> feeds whose current ticket was built after their account's renewal */
     private array $onRenewedSession = [];
 
@@ -58,8 +55,8 @@ final class TimelineRound
         }
 
         $settlement = $this->ticketOf($feedId, $socialFeed);
-        if ($settlement->isFollowUp()) {
-            yield $feedId => $settlement->followUpTicket();
+        if ($settlement->isRequest()) {
+            yield $feedId => $settlement->requestTicket();
 
             return;
         }
@@ -109,7 +106,7 @@ final class TimelineRound
     }
 
     /**
-     * A feed's second stale answer is a refusal, whatever session it went out on.
+     * A stale answer on the renewed session is a refusal; one on the dropped session renews it once and asks again.
      *
      * @return SettlementModel<TimelineOutcomeModelInterface>
      */
@@ -119,13 +116,12 @@ final class TimelineRound
         SocialSessionStaleException $stale,
     ): SettlementModel {
         $account = $socialFeed->getSocialAccount();
-        if (isset($this->staleOnce[$feedId])) {
+        if (isset($this->onRenewedSession[$feedId])) {
             return SettlementModel::outcome($this->accounts->settleFailure(
                 $account,
                 new SocialCredentialsRejectedException($stale->getMessage(), previous: $stale),
             ));
         }
-        $this->staleOnce[$feedId] = true;
         $this->renewOnce($account);
 
         return $this->ticketOf($feedId, $socialFeed);

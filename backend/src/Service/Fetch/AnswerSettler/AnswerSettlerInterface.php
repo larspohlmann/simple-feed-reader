@@ -20,6 +20,10 @@ interface AnswerSettlerInterface
      */
     public function admits(int|string $key): bool;
 
-    /** @return SettlementModel<T> */
+    /**
+     * A request answering a withheld outcome must be admitted when next asked, or the engine asks forever.
+     *
+     * @return SettlementModel<T>
+     */
     public function settle(int|string $key, FetchOutcomeModel $outcome): SettlementModel;
 }

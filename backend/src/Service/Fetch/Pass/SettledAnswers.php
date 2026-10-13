@@ -30,8 +30,8 @@ final readonly class SettledAnswers
     public function settle(int|string $key, FetchOutcomeModel $outcome): \Generator
     {
         $settlement = $this->settler->settle($key, $outcome);
-        if ($settlement->isFollowUp()) {
-            $this->queue->followUp($key, $settlement->followUpTicket());
+        if ($settlement->isRequest()) {
+            $this->queue->followUp($key, $settlement->requestTicket());
 
             return;
         }

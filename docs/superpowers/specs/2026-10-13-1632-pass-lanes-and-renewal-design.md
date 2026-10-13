@@ -25,10 +25,11 @@ Issue: https://github.com/larspohlmann/simple-feed-reader/issues/1632. Follow-up
 ### Renewal rule (Social)
 
 - `TimelineRound::settle` returns `SettlementModel`, never null. On a stale-session answer for a feed:
-  - the feed's **second** stale answer in this pass is a rejection: `SocialCredentialsRejectedException`, the account is
-    marked needs-reconnect, the feed settles as failed (today's semantics, counted per feed instead of per account);
-  - otherwise, if the account's session was not yet renewed in this pass, drop it (`dropSession`) and mark the account
-    renewed — at most one renewal, hence one session open, per account per pass;
+  - a stale answer to a ticket built on the account's renewed session is a rejection:
+    `SocialCredentialsRejectedException`, the account is marked needs-reconnect, the feed settles as failed (today's
+    semantics);
+  - a stale answer to a ticket built before the renewal drops the session (`dropSession`) and marks the account renewed
+    unless that already happened — at most one renewal, hence one session open, per account per pass;
   - then build the feed's ticket again (`ticketOf`): a held account yields its held outcome, a request that fails to
     build yields its failure, else `followUp(ticket)`.
 - Behaviour change, named: several requests of one account in flight with the old token each come back stale; each is

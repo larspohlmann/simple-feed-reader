@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh\Pass;
 
 use App\Entity\Feed;
-use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
-use App\Enum\SourceFormat;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
 use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
@@ -21,7 +19,7 @@ use App\Service\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
 use App\Tests\Support\AssignsEntityIds;
-use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -36,10 +34,10 @@ final class PassTicketsTest extends TestCase
 
     public function testFeedsAreTicketedInTheOrderThePassStartsThemWhateverTheirLane(): void
     {
-        $account = self::account();
-        $home = self::privateFeed($account, 1);
+        $account = PrivateFeeds::mastodonAccount();
+        $home = PrivateFeeds::mastodon($account, 1);
         $rss = self::withId(new Feed('https://news.example/feed.xml'), 2);
-        $list = self::privateFeed($account, 3, SocialFeedKind::UserList, '42');
+        $list = PrivateFeeds::mastodon($account, 3, SocialFeedKind::UserList, '42');
 
         $tickets = $this->passTickets([$home->getFeed(), $rss, $list->getFeed()], [$home, $list])->tickets();
 
@@ -58,7 +56,7 @@ final class PassTicketsTest extends TestCase
 
     public function testAnOrphanSettlesWithoutATicketAndTheNextFeedStillStarts(): void
     {
-        $orphan = self::privateFeed(self::account(), 1)->getFeed();
+        $orphan = PrivateFeeds::mastodon(PrivateFeeds::mastodonAccount(), 1)->getFeed();
         $rss = self::withId(new Feed('https://news.example/feed.xml'), 2);
         $passTickets = $this->passTickets([$orphan, $rss], []);
 
@@ -75,7 +73,7 @@ final class PassTicketsTest extends TestCase
 
     public function testAnOrphanIsDrainedOnlyOnce(): void
     {
-        $orphan = self::privateFeed(self::account(), 1)->getFeed();
+        $orphan = PrivateFeeds::mastodon(PrivateFeeds::mastodonAccount(), 1)->getFeed();
         $passTickets = $this->passTickets([$orphan], []);
         iterator_to_array($passTickets->tickets());
 
@@ -85,9 +83,9 @@ final class PassTicketsTest extends TestCase
 
     public function testAPausedAccountsFeedSettlesWithoutATicket(): void
     {
-        $paused = self::account();
+        $paused = PrivateFeeds::mastodonAccount();
         $paused->markNeedsReconnect();
-        $timeline = self::privateFeed($paused, 1);
+        $timeline = PrivateFeeds::mastodon($paused, 1);
         $passTickets = $this->passTickets([$timeline->getFeed()], [$timeline]);
 
         self::assertSame([], iterator_to_array($passTickets->tickets()));
@@ -98,8 +96,8 @@ final class PassTicketsTest extends TestCase
 
     public function testTheGateAsksEachFeedsOwnLane(): void
     {
-        $account = self::account();
-        $timeline = self::privateFeed($account, 1);
+        $account = PrivateFeeds::mastodonAccount();
+        $timeline = PrivateFeeds::mastodon($account, 1);
         $rss = self::withId(new Feed('https://news.example/feed.xml'), 2);
         $passTickets = $this->passTickets([$timeline->getFeed(), $rss], [$timeline]);
         iterator_to_array($passTickets->tickets());
@@ -112,8 +110,8 @@ final class PassTicketsTest extends TestCase
 
     public function testEachOutcomeIsSettledByItsFeedsLane(): void
     {
-        $account = self::account();
-        $timeline = self::privateFeed($account, 1);
+        $account = PrivateFeeds::mastodonAccount();
+        $timeline = PrivateFeeds::mastodon($account, 1);
         $rss = self::withId(new Feed('https://news.example/feed.xml'), 2);
         $passTickets = $this->passTickets([$timeline->getFeed(), $rss], [$timeline]);
         iterator_to_array($passTickets->tickets());
@@ -144,22 +142,5 @@ final class PassTicketsTest extends TestCase
         $round = SocialApiWiring::timelineRounds(new MockHttpClient(), new ArrayAdapter())->start($socialFeedsByFeedId);
 
         return new PassTickets(new PassFeeds($this->pass, new FeedLane(2), new TimelineLane($round)));
-    }
-
-    private static function account(): SocialAccount
-    {
-        return self::withId(SocialAccounts::mastodonOn('https://mastodon.example'), 7);
-    }
-
-    private static function privateFeed(
-        SocialAccount $account,
-        int $feedId,
-        SocialFeedKind $kind = SocialFeedKind::Home,
-        string $remoteId = '',
-    ): SocialFeed {
-        $feed = self::withId(new Feed(sprintf('social:mastodon:7:%d', $feedId)), $feedId);
-        $feed->setSourceFormat(SourceFormat::MASTODON_API);
-
-        return new SocialFeed($account, $feed, $kind, $remoteId);
     }
 }

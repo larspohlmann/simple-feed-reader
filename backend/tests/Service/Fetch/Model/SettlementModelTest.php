@@ -18,7 +18,7 @@ final class SettlementModelTest extends TestCase
 
         $settlement = SettlementModel::outcome($outcome);
 
-        self::assertFalse($settlement->isFollowUp());
+        self::assertFalse($settlement->isRequest());
         self::assertSame($outcome, $settlement->settledOutcome());
     }
 
@@ -35,7 +35,7 @@ final class SettlementModelTest extends TestCase
     {
         $settlement = SettlementModel::outcome($value);
 
-        self::assertFalse($settlement->isFollowUp());
+        self::assertFalse($settlement->isRequest());
         self::assertSame($value, $settlement->settledOutcome());
     }
 
@@ -45,14 +45,14 @@ final class SettlementModelTest extends TestCase
 
         $settlement = SettlementModel::followUp($ticket);
 
-        self::assertTrue($settlement->isFollowUp());
-        self::assertSame($ticket, $settlement->followUpTicket());
+        self::assertTrue($settlement->isRequest());
+        self::assertSame($ticket, $settlement->requestTicket());
     }
 
     public function testAFollowUpCarriesNoOutcomeYet(): void
     {
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('A follow-up carries no outcome yet.');
+        $this->expectExceptionMessage('A request carries no outcome yet.');
 
         SettlementModel::followUp(FeedTickets::of('https://example.com/feed'))->settledOutcome();
     }
@@ -60,9 +60,9 @@ final class SettlementModelTest extends TestCase
     public function testAFinishedValueAsksForNoFollowUp(): void
     {
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('A finished value asks for no follow-up.');
+        $this->expectExceptionMessage('A finished value asks for no request.');
 
-        SettlementModel::outcome(1)->followUpTicket();
+        SettlementModel::outcome(1)->requestTicket();
     }
 
     public function testMappingChangesAFinishedValue(): void
@@ -78,6 +78,6 @@ final class SettlementModelTest extends TestCase
 
         $mapped = SettlementModel::followUp($ticket)->mapOutcome(static fn (mixed $value): mixed => $value);
 
-        self::assertSame($ticket, $mapped->followUpTicket());
+        self::assertSame($ticket, $mapped->requestTicket());
     }
 }

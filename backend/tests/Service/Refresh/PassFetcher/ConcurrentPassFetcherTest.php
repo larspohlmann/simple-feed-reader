@@ -224,23 +224,6 @@ final class ConcurrentPassFetcherTest extends TestCase
         self::assertSame([self::MASTODON_HOME], $this->requestsTo(self::MASTODON));
     }
 
-    public function testAStaleBlueskySessionIsRenewedOnceAndItsFeedsAskedAgain(): void
-    {
-        $bluesky = $this->blueskyAccount('stale-jwt');
-        $home = $this->feedOf($bluesky);
-        $list = $this->feedOf($bluesky, SocialFeedKind::UserList, self::BLUESKY_LIST);
-        $other = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
-
-        $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$home, $list, $other]);
-
-        foreach ([$home, $list, $other] as $socialFeed) {
-            self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($socialFeed)]);
-        }
-        self::assertSame([self::SESSION], $this->requestsTo('POST'));
-        self::assertCount(4, $this->requestsTo('GET ' . self::PDS));
-        self::assertSame(SocialAccountStatus::Connected, $bluesky->getStatus());
-    }
-
     public function testAFeedWaitingForARenewedSessionIsNotSentOnTheStaleOne(): void
     {
         $bluesky = $this->blueskyAccount('stale-jwt');
@@ -279,7 +262,7 @@ final class ConcurrentPassFetcherTest extends TestCase
         self::assertSame([self::SESSION, self::SESSION], $this->requestsTo('POST'));
     }
 
-    public function testAStaleAnswerToARenewedSessionRefusesTheAccount(): void
+    public function testEveryFeedRefusedAgainOnTheRenewedSessionFailsAndPausesOnlyItsAccount(): void
     {
         $respond = static function (string $method, string $url): MockResponse {
             if (self::SESSION === $method . ' ' . $url) {
@@ -610,18 +593,21 @@ final class ConcurrentPassFetcherTest extends TestCase
         $bluesky = $this->blueskyAccount('stale-jwt');
         $home = $this->feedOf($bluesky);
         $list = $this->feedOf($bluesky, SocialFeedKind::UserList, self::BLUESKY_LIST);
+        $other = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
 
-        $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$home, $list]);
+        $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$home, $list, $other]);
 
-        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
-        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($list)]);
+        foreach ([$home, $list, $other] as $socialFeed) {
+            self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($socialFeed)]);
+        }
+        self::assertSame(SocialAccountStatus::Connected, $bluesky->getStatus());
         self::assertSame(
             2,
             $this->cache->deletedItems,
             'one dropSession, plus the forget inside the one session open',
         );
         self::assertSame(
-            [self::BLUESKY_HOME => 2, self::BLUESKY_LIST_READ => 2, self::SESSION => 1],
+            [self::BLUESKY_HOME => 2, self::BLUESKY_LIST_READ => 2, self::MASTODON_HOME => 1, self::SESSION => 1],
             array_count_values($this->http->requestLines()),
         );
     }
@@ -645,6 +631,30 @@ final class ConcurrentPassFetcherTest extends TestCase
             [self::BLUESKY_HOME, self::SESSION, self::BLUESKY_HOME],
             $this->http->requestLines(),
             'the list never reaches the wire',
+        );
+    }
+
+    public function testAFeedsFirstStaleAnswerOnTheRenewedSessionFailsItAtOnce(): void
+    {
+        $respond = static function (string $method, string $url, array $headers): MockResponse {
+            return self::BLUESKY_LIST_READ === $method . ' ' . $url
+                ? self::expiredToken()
+                : (self::renewingStaleSessions())($method, $url, $headers);
+        };
+        $bluesky = $this->blueskyAccount('stale-jwt');
+        $home = $this->feedOf($bluesky);
+        $list = $this->feedOf($bluesky, SocialFeedKind::UserList, self::BLUESKY_LIST);
+
+        $outcomes = self::read($this->fetcher($respond, accountConcurrency: 1), [$home, $list]);
+
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
+        $refused = self::failureOf($outcomes[self::idOf($list)]);
+        self::assertInstanceOf(SocialCredentialsRejectedException::class, $refused);
+        self::assertSame(SocialAccountStatus::NeedsReconnect, $bluesky->getStatus());
+        self::assertSame(
+            [self::BLUESKY_HOME, self::SESSION, self::BLUESKY_HOME, self::BLUESKY_LIST_READ],
+            $this->http->requestLines(),
+            'the list, built on the fresh session, is not sent a second time',
         );
     }
 
@@ -784,7 +794,7 @@ final class ConcurrentPassFetcherTest extends TestCase
         );
     }
 
-    /** @return \Closure(string, string, list<string>): MockResponse a PDS that refuses the stale token only */
+    /** @return \Closure(string, string, array<mixed>): MockResponse a PDS that refuses the stale token only */
     private static function renewingStaleSessions(): \Closure
     {
         return static function (string $method, string $url, array $headers): MockResponse {
@@ -813,13 +823,8 @@ final class ConcurrentPassFetcherTest extends TestCase
                     yield from str_split('<rss/>' . str_repeat(' ', 14));
                 })());
             }
-            if (self::SESSION === $method . ' ' . $url) {
-                return self::freshSession();
-            }
 
-            return \in_array('Authorization: Bearer stale-jwt', $headers, true)
-                ? self::expiredToken()
-                : self::blueskyTimeline();
+            return (self::renewingStaleSessions())($method, $url, $headers);
         };
     }
 

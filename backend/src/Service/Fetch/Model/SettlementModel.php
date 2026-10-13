@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Fetch\Model;
 
 /**
- * What a pass made of one raw answer: the key's finished value, or one more request for the same key.
+ * What a key comes to: its finished value, or a request for it, the first while a pass builds its tickets or one
+ * more after an answer.
  *
  * @template-covariant T
  */
 final readonly class SettlementModel
 {
-    /** @param list<T> $outcomes empty for a follow-up, so a follow-up is a settlement of `never` */
-    private function __construct(private array $outcomes, private ?RequestTicketModel $followUpTicket)
+    /** @param list<T> $outcomes empty for a request, so a request is a settlement of `never` */
+    private function __construct(private array $outcomes, private ?RequestTicketModel $ticket)
     {
     }
 
@@ -34,26 +35,26 @@ final readonly class SettlementModel
         return new self([], $ticket);
     }
 
-    public function isFollowUp(): bool
+    public function isRequest(): bool
     {
-        return null !== $this->followUpTicket;
+        return null !== $this->ticket;
     }
 
     /** @throws \LogicException when this is a finished value */
-    public function followUpTicket(): RequestTicketModel
+    public function requestTicket(): RequestTicketModel
     {
-        return $this->followUpTicket ?? throw new \LogicException('A finished value asks for no follow-up.');
+        return $this->ticket ?? throw new \LogicException('A finished value asks for no request.');
     }
 
     /**
      * @return T
      *
-     * @throws \LogicException when this is a follow-up
+     * @throws \LogicException when this is a request
      */
     public function settledOutcome(): mixed
     {
         if ([] === $this->outcomes) {
-            throw new \LogicException('A follow-up carries no outcome yet.');
+            throw new \LogicException('A request carries no outcome yet.');
         }
 
         return $this->outcomes[0];
@@ -68,8 +69,8 @@ final readonly class SettlementModel
      */
     public function mapOutcome(\Closure $mapping): self
     {
-        if (null !== $this->followUpTicket) {
-            return self::followUp($this->followUpTicket);
+        if (null !== $this->ticket) {
+            return self::followUp($this->ticket);
         }
 
         return self::outcome($mapping($this->settledOutcome()));
