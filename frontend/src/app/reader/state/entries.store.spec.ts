@@ -845,7 +845,7 @@ describe('EntriesStore', () => {
     it('likes optimistically on its own route and keeps the like once the server agrees', () => {
       loadPost();
 
-      store.setLiked(store.entries()[0], true, () => undefined);
+      expect(store.setLiked(store.entries()[0], true, () => undefined)).toBe(true);
       expect(store.entries()[0].social?.isLiked).toBe(true);
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
       expect(like.request.method).toBe('PUT');
@@ -927,8 +927,9 @@ describe('EntriesStore', () => {
       store.setLiked(store.entries()[0], true, () => undefined);
       const like = ctrl.expectOne('https://api.test/api/entries/1/like');
 
-      store.setLiked(store.entries()[0], false, () => undefined);
+      const sent = store.setLiked(store.entries()[0], false, () => undefined);
 
+      expect(sent).toBe(false);
       ctrl.expectNone('https://api.test/api/entries/1/like');
       expect(store.entries()[0].social?.isLiked).toBe(true);
       like.flush({ isLiked: true });

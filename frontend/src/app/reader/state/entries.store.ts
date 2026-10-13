@@ -189,12 +189,10 @@ export class EntriesStore {
       });
   }
 
-  /** Optimistic like on its own route, apart from `setState`'s PATCH; a failure puts back only the like and hands
-   *  `onError` the problem instead of raising the list's error banner. A click while the previous like of the
-   *  same entry is still on the wire is dropped, so the last answer the server gives is the final state. */
-  setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): void {
+  /** Optimistic like apart from `setState`; false when dropped (no post, or its previous like is still on the wire). */
+  setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): boolean {
     const before = entry.social;
-    if (!before || this.likeInFlight(entry.id)) return;
+    if (!before || this.likeInFlight(entry.id)) return false;
     const inFlight: InFlightPatch = {
       entryId: entry.id,
       patch: { social: { ...before, isLiked } },
@@ -208,6 +206,7 @@ export class EntriesStore {
         onError(parseProblem(error));
       },
     });
+    return true;
   }
 
   private likeInFlight(entryId: number): boolean {

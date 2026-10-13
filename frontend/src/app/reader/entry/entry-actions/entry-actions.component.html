@@ -43,7 +43,9 @@
 @if (entry().social; as social) {
   <button
     type="button"
-    [attr.aria-label]="likeLabel() | transloco"
+    [attr.aria-label]="
+      'reader.' + (social.isLiked ? 'unlike' : 'like') + '.' + social.network | transloco
+    "
     [appFlagToggle]="social.isLiked"
     (click)="$event.stopPropagation(); actions.like(entry())"
     (keydown.enter)="$event.stopPropagation()"

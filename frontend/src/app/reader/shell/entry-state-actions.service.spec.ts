@@ -12,12 +12,13 @@ import { EntryDto } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
 
 describe('EntryStateActions liking (#1600)', () => {
-  const setLiked = jest.fn<void, [EntryDto, boolean, (problem: Problem) => void]>();
+  const setLiked = jest.fn<boolean, [EntryDto, boolean, (problem: Problem) => void]>();
   const show = jest.fn();
   let actions: EntryStateActions;
 
   beforeEach(() => {
     setLiked.mockReset();
+    setLiked.mockReturnValue(true);
     show.mockReset();
     TestBed.configureTestingModule({
       providers: [
@@ -61,5 +62,17 @@ describe('EntryStateActions liking (#1600)', () => {
     });
 
     expect(show).toHaveBeenCalledWith({ message: 'The post is no longer on Mastodon.' });
+  });
+
+  it('tells the caller whether the like was sent and when it failed', () => {
+    const onFailure = jest.fn();
+    const post = anEntry({ social: { network: 'mastodon', isLiked: false } });
+
+    expect(actions.like(post, onFailure)).toBe(true);
+    setLiked.mock.calls[0][2]({ type: 'x', title: 'Refused', status: 422 });
+    setLiked.mockReturnValue(false);
+
+    expect(onFailure).toHaveBeenCalledTimes(1);
+    expect(actions.like(post)).toBe(false);
   });
 });

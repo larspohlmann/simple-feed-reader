@@ -10,7 +10,7 @@ import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unren
 
 const entryActions = {
   favorite: jest.fn(),
-  like: jest.fn(),
+  like: jest.fn().mockReturnValue(true),
   keep: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
@@ -18,6 +18,7 @@ const entryActions = {
 
 beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
+  entryActions.like.mockReturnValue(true);
 });
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
@@ -141,6 +142,45 @@ it('flips the like in the popover and re-emits like for the copy (#1600)', () =>
   likeButton.click();
   fixture.detectChanges();
 
-  expect(entryActions.like).toHaveBeenCalledWith(dup);
+  expect(entryActions.like).toHaveBeenCalledWith(dup, expect.any(Function));
   expect(likeButton.getAttribute('aria-pressed')).toBe('true');
+});
+
+function openLikePopover(sent: boolean) {
+  const dup = entry({ id: 2, title: 'Skeet', social: { network: 'bluesky', isLiked: false } });
+  const fixture = mount(entry({ duplicates: [dup] }));
+  entryActions.like.mockReturnValue(sent);
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+  const button = overlay.querySelector(
+    '.dup-popover button[aria-label$="on Bluesky"]',
+  ) as HTMLElement;
+  return { fixture, button };
+}
+
+it('leaves the popover like alone when the shell dropped the click (#1600)', () => {
+  const { fixture, button } = openLikePopover(false);
+
+  button.click();
+  fixture.detectChanges();
+
+  expect(button.getAttribute('aria-pressed')).toBe('false');
+});
+
+it('reverts the popover like when the network refuses it (#1600)', () => {
+  const { fixture, button } = openLikePopover(true);
+  let refuse: () => void = () => undefined;
+  entryActions.like.mockImplementation((_copy: EntryDto, onFailure: () => void) => {
+    refuse = onFailure;
+    return true;
+  });
+
+  button.click();
+  fixture.detectChanges();
+  expect(button.getAttribute('aria-pressed')).toBe('true');
+  refuse();
+  fixture.detectChanges();
+
+  expect(button.getAttribute('aria-pressed')).toBe('false');
 });

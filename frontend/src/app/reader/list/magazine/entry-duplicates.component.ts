@@ -76,10 +76,15 @@ export class EntryDuplicatesComponent implements EntryActionHandler {
     );
   }
 
-  like(copy: EntryDto): void {
-    this.shellActions.like(copy);
+  like(copy: EntryDto): boolean {
+    const sent = this.shellActions.like(copy, () => this.flipLike(copy.id));
+    if (sent) this.flipLike(copy.id);
+    return sent;
+  }
+
+  private flipLike(copyId: number): void {
     this.displayed.update((current) =>
-      current?.social
+      current?.id === copyId && current.social
         ? { ...current, social: { ...current.social, isLiked: !current.social.isLiked } }
         : current,
     );
