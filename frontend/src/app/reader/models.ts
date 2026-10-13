@@ -1,6 +1,7 @@
 import { LinkCardDto } from './link-card/link-card';
 import { SocialAccountRefDto, SocialFeedRefDto } from './social-feed';
 import { SocialNetworkName } from '../core/social-network';
+import { EntrySocialDto } from './entry-social';
 
 /** One saved search an entry belongs to, as embedded on the entry itself
  *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup
@@ -240,6 +241,9 @@ export interface EntryDto {
   linkCards: LinkCardDto[];
   /** The post's cards or embed are still being filled in; `POST /api/entries/complete` finishes it (#1502). */
   pending: boolean;
+  /** The entry's post on a network the reader has an account on, and whether they liked it there; null for an
+   *  article or a post on a network without an account (#1600). */
+  social: EntrySocialDto | null;
   /** The entry's discussion page — Reddit thread, HN item — or null. */
   discussionUrl: string | null;
   /** Whether the entry has a comments feed, and whether it loads without a click. */

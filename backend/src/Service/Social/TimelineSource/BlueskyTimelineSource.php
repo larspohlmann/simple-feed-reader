@@ -9,14 +9,12 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\BlueskyTimelinePage;
-use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskyTimelineSource implements TimelineSourceInterface
 {
@@ -58,11 +56,7 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
      */
     private static function itemsOf(ApiResponseModel $answer): array
     {
-        if (Response::HTTP_UNAUTHORIZED === $answer->status || BlueskySessions::isStale($answer)) {
-            throw new SocialCredentialsRejectedException('Bluesky refused the session of this account.');
-        }
-
-        return JsonNodeModel::of(BlueskyApiClient::accepted($answer)->json())->listAt('feed')
+        return JsonNodeModel::of(BlueskySessions::accepted($answer)->json())->listAt('feed')
             ?? throw new SocialNetworkUnreachableException('Bluesky answered without a feed.');
     }
 }

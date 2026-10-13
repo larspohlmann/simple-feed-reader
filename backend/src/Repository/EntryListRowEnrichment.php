@@ -17,6 +17,8 @@ final readonly class EntryListRowEnrichment
         public array $linkCards = [],
         /** a post whose embed or link cards are still to come, which a client may ask to complete */
         public bool $pending = false,
+        /** null for an article, or for a post on a network the reader has no account on */
+        public ?EntryListRowSocial $social = null,
     ) {
     }
 }

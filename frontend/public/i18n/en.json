@@ -1185,8 +1185,32 @@
     "searchPhraseHint": "Double quotes around the query match the exact phrase — the words together and in order. Remove them to search for each word anywhere.",
     "loadMore": "Load more",
     "favorite": "Favorite",
+    "like": {
+      "bluesky": "Like on Bluesky",
+      "mastodon": "Like on Mastodon"
+    },
+    "unlike": {
+      "bluesky": "Unlike on Bluesky",
+      "mastodon": "Unlike on Mastodon"
+    },
     "keep": "Keep",
     "toggleRead": "Toggle read",
+    "actionHint": {
+      "favoriteAdd": "Add to favourites",
+      "favoriteRemove": "Remove from favourites",
+      "like": {
+        "bluesky": "Like on Bluesky — a public like the author sees",
+        "mastodon": "Like on Mastodon — a public like the author sees"
+      },
+      "unlike": {
+        "bluesky": "Take back your like on Bluesky",
+        "mastodon": "Take back your like on Mastodon"
+      },
+      "keepAdd": "Keep — never deleted when old entries are cleaned up",
+      "keepRemove": "Stop keeping — old-entry cleanup may delete it again",
+      "readAdd": "Mark as read — adds it to Recently read",
+      "readRemove": "Remove from Recently read"
+    },
     "filterByTag": "Filter by {{name}}",
     "shortBadge": "Short",
     "moreFrom": "More from {{source}}",

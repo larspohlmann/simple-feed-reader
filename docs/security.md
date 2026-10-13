@@ -341,6 +341,11 @@ are left out of backups (docs/backup.md §6.2).
   instance key, bound to the owner; a reconnect changes the cache key, and a disconnect deletes the entry. The token
   is only ever sent to the account's stored service URL, never to a URL read from the cache. A token the PDS calls
   expired or invalid is replaced once with a fresh session.
+- A like (#1600) is the one write. It acts through the account that owns the private feed, else the network's default
+  account. It first resolves the post on that account's own server (`getPosts` on the PDS, `/api/v2/search?resolve=true`
+  on the Mastodon instance), and a status id from that answer reaches a URL path only when it is 1–64 letters and digits.
+  An account that needs reconnecting is refused before any call; a refused credential marks it. Like and unlike share a
+  per-user budget (`social_like`, 60 per 5 minutes).
 - The picker follows a Mastodon `Link` next page only on the instance's own origin, and reads at most 5000 follows.
 - A private feed's synthetic `social:` URL never reaches `UrlGuard` or the feed fetcher: only `SocialFeedRefresher`
   reads the feed, through its account. The URL names the owning account, not the network identity, so two users of one

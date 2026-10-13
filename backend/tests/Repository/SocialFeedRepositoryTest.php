@@ -204,6 +204,17 @@ final class SocialFeedRepositoryTest extends DbTestCase
         self::assertSame([], $this->entityManager->getRepository(SocialFeed::class)->findAll());
     }
 
+    public function testAPrivateFeedIsFoundByItsFeedAndAnOrdinaryFeedIsNot(): void
+    {
+        $home = $this->socialFeed($this->account, SocialFeedKind::Home, '');
+        $ordinary = new Feed('https://example.com/ordinary.xml');
+        $this->entityManager->persist($ordinary);
+        $this->entityManager->flush();
+
+        self::assertSame($home, SocialFeeds::repository($this->entityManager)->forFeed($home->getFeed()));
+        self::assertNull(SocialFeeds::repository($this->entityManager)->forFeed($ordinary));
+    }
+
     private function socialFeed(SocialAccount $account, SocialFeedKind $kind, string $remoteId): SocialFeed
     {
         $feed = new Feed('social:test:' . ++$this->feedCount);

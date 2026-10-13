@@ -7,6 +7,8 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { Selection } from '../query/query';
 import { entryParam } from '../query/slug';
 import { EntryDto, EntryStatePatch } from '../models';
+import { ToastService } from '../../shared/toast/toast.service';
+import { problemMessage } from '../../core/problem';
 import { ReaderRouteState } from './reader-route-state.service';
 
 @Injectable()
@@ -17,6 +19,7 @@ export class EntryStateActions implements EntryActionHandler {
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly routeState = inject(ReaderRouteState);
+  private readonly toast = inject(ToastService);
 
   private readonly viewedOnOpen = new Set<number>();
   private readonly leaving = signal<ReadonlySet<number>>(new Set());
@@ -41,6 +44,12 @@ export class EntryStateActions implements EntryActionHandler {
     this.subscriptions.bumpFavorites(delta);
     this.patchInList(entry, { isFavorite: !entry.isFavorite }, () =>
       this.subscriptions.bumpFavorites(-delta),
+    );
+  }
+
+  like(entry: EntryDto): void {
+    this.entries.setLiked(entry, !entry.social?.isLiked, (problem) =>
+      this.toast.show({ message: problemMessage(problem) }),
     );
   }
 

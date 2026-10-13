@@ -11,6 +11,8 @@ use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Model\BlueskySessionModel;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -57,22 +59,68 @@ final readonly class BlueskySessions
      */
     public function askAs(SocialAccount $account, string $path): ApiResponseModel
     {
-        $answer = $this->ask($account, $path, $this->current($account));
-
-        return self::isStale($answer) ? $this->ask($account, $path, $this->fresh($account)) : $answer;
+        return $this->sendRetryingStale($account, ApiRequestModel::get($account->getServiceUrl() . $path));
     }
 
-    public static function isStale(ApiResponseModel $answer): bool
+    /**
+     * @param array<string, mixed> $json
+     *
+     * @throws SocialPostNotFoundException
+     * @throws SocialPostRefusedException on a 400 that is not a stale session
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function actAs(SocialAccount $account, string $path, array $json): ApiResponseModel
+    {
+        $request = ApiRequestModel::postJson($account->getServiceUrl() . $path, $json);
+
+        return self::actionAccepted($this->sendRetryingStale($account, $request));
+    }
+
+    /**
+     * @throws SocialCredentialsRejectedException when the session is refused even after the retry
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException on any other answer but a 2xx
+     */
+    public static function accepted(ApiResponseModel $answer): ApiResponseModel
+    {
+        if (Response::HTTP_UNAUTHORIZED === $answer->status || self::isStale($answer)) {
+            throw new SocialCredentialsRejectedException('Bluesky refused the session of this account.');
+        }
+
+        return BlueskyApiClient::accepted($answer);
+    }
+
+    private static function actionAccepted(ApiResponseModel $answer): ApiResponseModel
+    {
+        if (Response::HTTP_NOT_FOUND === $answer->status) {
+            throw new SocialPostNotFoundException('The post is no longer on Bluesky.');
+        }
+        if (Response::HTTP_BAD_REQUEST === $answer->status && !self::isStale($answer)) {
+            throw new SocialPostRefusedException('Bluesky refused this action on the post.');
+        }
+
+        return self::accepted($answer);
+    }
+
+    private static function isStale(ApiResponseModel $answer): bool
     {
         return \in_array($answer->status, self::STALE_SESSION_STATUSES, true)
             && \in_array(JsonNodeModel::of($answer->json())->string('error'), self::STALE_SESSION_ERRORS, true);
     }
 
-    private function ask(SocialAccount $account, string $path, BlueskySessionModel $session): ApiResponseModel
+    private function sendRetryingStale(SocialAccount $account, ApiRequestModel $request): ApiResponseModel
     {
-        return $this->bluesky->answer(ApiRequestModel::get(
-            $account->getServiceUrl() . $path,
-            ['Authorization' => 'Bearer ' . $session->accessJwt],
-        ));
+        $answer = $this->bluesky->answer(self::authorized($request, $this->current($account)));
+
+        return self::isStale($answer)
+            ? $this->bluesky->answer(self::authorized($request, $this->fresh($account)))
+            : $answer;
+    }
+
+    private static function authorized(ApiRequestModel $request, BlueskySessionModel $session): ApiRequestModel
+    {
+        return $request->withHeaders(['Authorization' => 'Bearer ' . $session->accessJwt]);
     }
 }

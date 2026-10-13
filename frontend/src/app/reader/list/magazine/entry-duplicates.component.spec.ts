@@ -10,6 +10,7 @@ import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unren
 
 const entryActions = {
   favorite: jest.fn(),
+  like: jest.fn(),
   keep: jest.fn(),
   toggleRead: jest.fn(),
   open: jest.fn(),
@@ -105,23 +106,76 @@ it('closes the popover once the copy is opened', () => {
   expect(overlay.querySelector('.dup-popover')).toBeNull();
 });
 
-it('flips the favorite icon in the popover and re-emits favorite for the copy', () => {
+it('re-emits favorite for the copy and shows the flag the store then holds', () => {
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
   const fixture = mount(entry({ duplicates: [dup] }));
-  const favorited = jest.fn();
-  entryActions.favorite.mockImplementation(favorited);
 
   (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
   fixture.detectChanges();
-  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
-  const favoriteButton = overlay.querySelector(
-    '.dup-popover button[aria-label="Favorite"]',
-  ) as HTMLElement;
+  const favoriteButton = () =>
+    TestBed.inject(OverlayContainer)
+      .getContainerElement()
+      .querySelector('.dup-popover button[aria-label="Favorite"]') as HTMLElement;
 
-  favoriteButton.click();
+  favoriteButton().click();
+  expect(entryActions.favorite).toHaveBeenCalledWith(dup);
+  fixture.componentRef.setInput('entry', entry({ duplicates: [{ ...dup, isFavorite: true }] }));
   fixture.detectChanges();
 
-  expect(favorited).toHaveBeenCalledWith(dup);
-  expect(favoriteButton.classList.contains('on')).toBe(true);
-  expect(favoriteButton.getAttribute('aria-pressed')).toBe('true');
+  expect(favoriteButton().classList.contains('on')).toBe(true);
+  expect(favoriteButton().getAttribute('aria-pressed')).toBe('true');
+});
+
+function openLikePopover() {
+  const dup = entry({ id: 2, title: 'Skeet', social: { network: 'bluesky', isLiked: false } });
+  const fixture = mount(entry({ duplicates: [dup] }));
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+  const button = () =>
+    TestBed.inject(OverlayContainer)
+      .getContainerElement()
+      .querySelector('.dup-popover button[aria-label$="on Bluesky"]') as HTMLElement;
+  const storeHolds = (isLiked: boolean) => {
+    fixture.componentRef.setInput(
+      'entry',
+      entry({ duplicates: [{ ...dup, social: { network: 'bluesky', isLiked } }] }),
+    );
+    fixture.detectChanges();
+  };
+  return { fixture, dup, button, storeHolds };
+}
+
+it('re-emits like for the copy and follows the store through the flip and its revert (#1600)', () => {
+  const { dup, button, storeHolds } = openLikePopover();
+
+  button().click();
+  expect(entryActions.like).toHaveBeenCalledWith(dup);
+  storeHolds(true);
+  expect(button().getAttribute('aria-pressed')).toBe('true');
+  storeHolds(false);
+
+  expect(button().getAttribute('aria-pressed')).toBe('false');
+});
+
+it('never flips the like on its own (#1600)', () => {
+  const { fixture, button } = openLikePopover();
+
+  button().click();
+  fixture.detectChanges();
+
+  expect(button().getAttribute('aria-pressed')).toBe('false');
+});
+
+it('reopens the popover on the like the store wrote into the row copy (#1600)', () => {
+  const { fixture, storeHolds } = openLikePopover();
+  fixture.componentInstance.close();
+  storeHolds(true);
+
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
+
+  const reopened = TestBed.inject(OverlayContainer)
+    .getContainerElement()
+    .querySelector('.dup-popover button[aria-label$="on Bluesky"]') as HTMLElement;
+  expect(reopened.getAttribute('aria-pressed')).toBe('true');
 });

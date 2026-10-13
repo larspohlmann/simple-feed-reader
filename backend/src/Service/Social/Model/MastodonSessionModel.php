@@ -21,7 +21,12 @@ final readonly class MastodonSessionModel
 
     public function get(string $url): ApiRequestModel
     {
-        return ApiRequestModel::get($url, ['Authorization' => 'Bearer ' . $this->accessToken]);
+        return $this->authorized(ApiRequestModel::get($url));
+    }
+
+    public function authorized(ApiRequestModel $request): ApiRequestModel
+    {
+        return $request->withHeaders(['Authorization' => 'Bearer ' . $this->accessToken]);
     }
 
     public function host(): string

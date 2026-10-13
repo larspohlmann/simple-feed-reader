@@ -1,6 +1,7 @@
 import { Component, forwardRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionsComponent } from './entry-actions.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -27,9 +28,14 @@ class HostComponent implements EntryActionHandler {
   favoriteCount = 0;
   kept: EntryDto | null = null;
   marked: EntryDto | null = null;
+  liked: EntryDto | null = null;
 
   favorite(): void {
     this.favoriteCount++;
+  }
+
+  like(entry: EntryDto): void {
+    this.liked = entry;
   }
 
   keep(entry: EntryDto): void {
@@ -205,6 +211,50 @@ describe('EntryActionsComponent', () => {
     expect(shared).toEqual([true, true, true]);
   });
 
+  describe('tooltips', () => {
+    const titles = (testEntry: EntryDto) =>
+      buttons(mount(testEntry)).map((button) => button.getAttribute('title'));
+
+    it('says what each click will do while the toggles are off', () => {
+      expect(titles(anEntry({ isFavorite: false, isKept: false, isViewed: false }))).toEqual([
+        'Add to favourites',
+        'Keep — never deleted when old entries are cleaned up',
+        'Mark as read — adds it to Recently read',
+      ]);
+    });
+
+    it('says what each click will undo while the toggles are on', () => {
+      expect(titles(anEntry({ isFavorite: true, isKept: true, isViewed: true }))).toEqual([
+        'Remove from favourites',
+        'Stop keeping — old-entry cleanup may delete it again',
+        'Remove from Recently read',
+      ]);
+    });
+
+    it.each([
+      ['bluesky', false, 'Like on Bluesky — a public like the author sees'],
+      ['bluesky', true, 'Take back your like on Bluesky'],
+      ['mastodon', false, 'Like on Mastodon — a public like the author sees'],
+      ['mastodon', true, 'Take back your like on Mastodon'],
+    ] as const)('words the %s like (liked: %s) for its network', (network, isLiked, title) => {
+      const like = buttons(mount(anEntry({ social: { network, isLiked } })))[1];
+      expect(like.getAttribute('title')).toBe(title);
+    });
+
+    it('translates them', () => {
+      const fixture = mount(anEntry({ social: { network: 'bluesky', isLiked: false } }));
+      const transloco = TestBed.inject(TranslocoService);
+      transloco.setActiveLang('de');
+      fixture.detectChanges();
+      expect(buttons(fixture).map((button) => button.getAttribute('title'))).toEqual([
+        'Zu Favoriten hinzufügen',
+        'Auf Bluesky liken — ein öffentliches Like, das der Autor sieht',
+        'Merken — wird beim Aufräumen alter Einträge nie gelöscht',
+        'Als gelesen markieren — landet in „Zuletzt gelesen“',
+      ]);
+    });
+  });
+
   describe('on an audio entry (#1436)', () => {
     const labels = (fixture: ReturnType<typeof mount>) =>
       buttons(fixture).map((button) => button.getAttribute('aria-label'));
@@ -291,6 +341,42 @@ describe('EntryActionsComponent', () => {
       expect(player.queue()).toEqual([]);
       expect(queue().getAttribute('aria-label')).toBe('Add to playlist');
       expect(fixture.componentInstance.cardOpened).toBe(false);
+    });
+  });
+
+  describe('on a social post (#1600)', () => {
+    const blueskyPost = (isLiked = false): EntryDto =>
+      anEntry({ social: { network: 'bluesky', isLiked } });
+
+    it('offers the like right after favorite, named for the network', () => {
+      const labels = buttons(mount(blueskyPost())).map((button) =>
+        button.getAttribute('aria-label'),
+      );
+      expect(labels).toEqual(['Favorite', 'Like on Bluesky', 'Keep', 'Toggle read']);
+    });
+
+    it('names the undo once liked, pressed and filled', () => {
+      const fixture = mount(anEntry({ social: { network: 'mastodon', isLiked: true } }));
+      const like = buttons(fixture)[1];
+      expect(like.getAttribute('aria-label')).toBe('Unlike on Mastodon');
+      expect(like.getAttribute('aria-pressed')).toBe('true');
+      expect(like.textContent).toContain('thumb_up');
+      expect(
+        fixture.debugElement.queryAll(By.directive(IconComponent))[1].componentInstance.fill(),
+      ).toBe(true);
+    });
+
+    it('likes without opening the card', () => {
+      const fixture = mount(blueskyPost());
+
+      buttons(fixture)[1].click();
+
+      expect(fixture.componentInstance.liked).toBe(fixture.componentInstance.entry);
+      expect(fixture.componentInstance.cardOpened).toBe(false);
+    });
+
+    it('offers no like on an entry that is no social post', () => {
+      expect(mount().nativeElement.textContent).not.toContain('thumb_up');
     });
   });
 });

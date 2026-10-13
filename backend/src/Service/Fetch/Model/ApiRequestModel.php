@@ -24,6 +24,12 @@ final readonly class ApiRequestModel
         return new self('GET', $url, $headers, null);
     }
 
+    /** @param array<string, string> $headers */
+    public static function post(string $url, array $headers = []): self
+    {
+        return new self('POST', $url, $headers, null);
+    }
+
     /**
      * @param array<string, mixed>  $json
      * @param array<string, string> $headers
@@ -31,5 +37,11 @@ final readonly class ApiRequestModel
     public static function postJson(string $url, array $json, array $headers = []): self
     {
         return new self('POST', $url, $headers, $json);
+    }
+
+    /** @param array<string, string> $headers */
+    public function withHeaders(array $headers): self
+    {
+        return new self($this->method, $this->url, [...$this->headers, ...$headers], $this->json);
     }
 }

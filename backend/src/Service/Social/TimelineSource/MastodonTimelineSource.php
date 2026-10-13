@@ -9,10 +9,8 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\Model\MastodonSessionModel;
+use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Social\StoredCredential;
 use App\Service\Social\Support\MastodonTimelinePage;
 use App\Service\Social\Support\PrivateFeedRules;
 
@@ -20,10 +18,8 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 {
     private const int PAGE_SIZE = 40;
 
-    public function __construct(
-        private MastodonApiClient $mastodon,
-        private StoredCredential $storedCredential,
-    ) {
+    public function __construct(private MastodonAccountApi $mastodon)
+    {
     }
 
     public static function network(): string
@@ -33,9 +29,7 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 
     public function page(SocialFeed $socialFeed): TimelinePageModel
     {
-        $account = $socialFeed->getSocialAccount();
-        $session = new MastodonSessionModel($account->getServiceUrl(), $this->storedCredential->open($account));
-        $answer = $this->mastodon->send($session->get($session->url(self::pathOf($socialFeed))));
+        $answer = $this->mastodon->get($socialFeed->getSocialAccount(), self::pathOf($socialFeed));
         $statuses = JsonNodeModel::listOf(json_decode($answer->body, true))
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without a timeline.');
 

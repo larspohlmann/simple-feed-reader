@@ -526,4 +526,16 @@ describe('ReaderApi', () => {
       forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
   });
+
+  it('PUTs a like and DELETEs it again', () => {
+    api.like(3).subscribe();
+    const like = ctrl.expectOne('https://api.test/api/entries/3/like');
+    expect(like.request.method).toBe('PUT');
+    like.flush({ isLiked: true });
+
+    api.unlike(3).subscribe();
+    const unlike = ctrl.expectOne('https://api.test/api/entries/3/like');
+    expect(unlike.request.method).toBe('DELETE');
+    unlike.flush({ isLiked: false });
+  });
 });

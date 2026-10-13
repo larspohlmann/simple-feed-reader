@@ -1185,8 +1185,32 @@
     "searchPhraseHint": "Anführungszeichen um die Suche finden die genaue Wortgruppe — die Wörter zusammen und in dieser Reihenfolge. Entfernen Sie sie, um jedes Wort an beliebiger Stelle zu suchen.",
     "loadMore": "Mehr laden",
     "favorite": "Favorit",
+    "like": {
+      "bluesky": "Auf Bluesky liken",
+      "mastodon": "Auf Mastodon liken"
+    },
+    "unlike": {
+      "bluesky": "Like auf Bluesky zurücknehmen",
+      "mastodon": "Like auf Mastodon zurücknehmen"
+    },
     "keep": "Merken",
     "toggleRead": "Gelesen umschalten",
+    "actionHint": {
+      "favoriteAdd": "Zu Favoriten hinzufügen",
+      "favoriteRemove": "Aus Favoriten entfernen",
+      "like": {
+        "bluesky": "Auf Bluesky liken — ein öffentliches Like, das der Autor sieht",
+        "mastodon": "Auf Mastodon liken — ein öffentliches Like, das der Autor sieht"
+      },
+      "unlike": {
+        "bluesky": "Dein Like auf Bluesky zurücknehmen",
+        "mastodon": "Dein Like auf Mastodon zurücknehmen"
+      },
+      "keepAdd": "Merken — wird beim Aufräumen alter Einträge nie gelöscht",
+      "keepRemove": "Nicht mehr merken — das Aufräumen alter Einträge darf ihn wieder löschen",
+      "readAdd": "Als gelesen markieren — landet in „Zuletzt gelesen“",
+      "readRemove": "Aus „Zuletzt gelesen“ entfernen"
+    },
     "filterByTag": "Nach {{name}} filtern",
     "shortBadge": "Short",
     "moreFrom": "Mehr von {{source}}",

@@ -28,7 +28,16 @@ final readonly class MastodonApiClient
      */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
-        $answer = $this->transport($request);
+        return self::accepted($this->answer($request));
+    }
+
+    /**
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException on any other answer but a 2xx
+     */
+    public static function accepted(ApiResponseModel $answer): ApiResponseModel
+    {
         SocialNetworkThrottledException::throwIfThrottled($answer, 'The Mastodon instance asked for fewer requests.');
         if (\in_array($answer->status, self::REFUSALS, true)) {
             throw new SocialCredentialsRejectedException('The Mastodon instance refused this access token.');
@@ -40,7 +49,8 @@ final readonly class MastodonApiClient
         return $answer;
     }
 
-    private function transport(ApiRequestModel $request): ApiResponseModel
+    /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
+    public function answer(ApiRequestModel $request): ApiResponseModel
     {
         try {
             return $this->api->send($request);

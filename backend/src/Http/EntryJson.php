@@ -38,6 +38,7 @@ use App\Service\Url\Support\YouTubeUrl;
  *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, shortPlayerUrl: string|null, titleDerived: bool,
  *   share: 'link'|'media'|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
+ *   social: array{network: 'bluesky'|'mastodon', isLiked: bool}|null,
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
  * }
@@ -86,6 +87,7 @@ final class EntryJson
             'shortPlayerUrl' => $shortPlayerUrl,
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->enrichment->savedSearches,
+            'social' => self::socialOf($row),
             'duplicates' => array_map(self::listRow(...), $row->duplicates),
         ];
     }
@@ -121,6 +123,14 @@ final class EntryJson
     public static function detail(EntryListRow $row): array
     {
         return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
+    }
+
+    /** @return array{network: 'bluesky'|'mastodon', isLiked: bool}|null */
+    private static function socialOf(EntryListRow $row): ?array
+    {
+        $social = $row->enrichment->social;
+
+        return null === $social ? null : ['network' => $social->network->value, 'isLiked' => $social->isLiked];
     }
 
     /**

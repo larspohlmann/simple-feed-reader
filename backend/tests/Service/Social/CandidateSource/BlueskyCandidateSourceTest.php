@@ -393,6 +393,20 @@ final class BlueskyCandidateSourceTest extends TestCase
         }
     }
 
+    public function testARefusedSessionWhileReadingThePreferencesIsARefusedCredential(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => new MockResponse(
+                '{"error":"AuthenticationRequired"}',
+                ['http_code' => Response::HTTP_UNAUTHORIZED],
+            ),
+        ]));
+
+        $this->expectException(SocialCredentialsRejectedException::class);
+
+        $this->source($http)->candidates($this->account);
+    }
+
     public function testAFailingPublicCallIsUnreachable(): void
     {
         $http = new RoutedHttpClient($this->routes([

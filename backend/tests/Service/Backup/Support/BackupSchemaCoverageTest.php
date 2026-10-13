@@ -29,6 +29,7 @@ use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
+use App\Entity\SocialLike;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -131,6 +132,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'that leaves the server, and the credential is bound to this instance\'s key; a restore reconnects.',
         SocialFeed::class => 'Which feeds are a connected account\'s private timeline, lists and custom feeds (#1599). '
             . 'They belong to an account a backup drops; the export leaves their feeds and posts out too.',
+        SocialLike::class => 'Likes given through a connected account (#1600). They belong to an account a backup '
+            . 'drops, and a restore cannot give them back without it.',
         UserIdentity::class => 'OAuth identity links — see NEVER_BACKED_UP\'s reasoning.',
         ActionToken::class => 'Short-lived, single-use verification and reset tokens.',
         RecommendationSettings::class => 'The "For you" settings — guidance prompt, learned profile, '

@@ -830,4 +830,192 @@ describe('EntriesStore', () => {
       patch.flush({});
     });
   });
+
+  describe('liking a post (#1600)', () => {
+    const post = (isLiked = false): EntryDto =>
+      entry(1, { social: { network: 'bluesky', isLiked } });
+
+    const loadPost = (isLiked = false): void => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [post(isLiked)], nextCursor: null });
+    };
+
+    it('likes optimistically on its own route and keeps the like once the server agrees', () => {
+      loadPost();
+
+      store.setLiked(store.entries()[0], true, () => undefined);
+      expect(store.entries()[0].social?.isLiked).toBe(true);
+      const like = ctrl.expectOne('https://api.test/api/entries/1/like');
+      expect(like.request.method).toBe('PUT');
+      like.flush({ isLiked: true });
+
+      expect(store.entries()[0].social).toEqual({ network: 'bluesky', isLiked: true });
+    });
+
+    it('unlikes on DELETE', () => {
+      loadPost(true);
+
+      store.setLiked(store.entries()[0], false, () => undefined);
+
+      expect(store.entries()[0].social?.isLiked).toBe(false);
+      expect(ctrl.expectOne('https://api.test/api/entries/1/like').request.method).toBe('DELETE');
+    });
+
+    it('keeps an in-flight like across a list reload that lands first', () => {
+      loadPost();
+      store.setLiked(store.entries()[0], true, () => undefined);
+      const like = ctrl.expectOne('https://api.test/api/entries/1/like');
+
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [post(false)], nextCursor: null });
+
+      expect(store.entries()[0].social?.isLiked).toBe(true);
+      like.flush({ isLiked: true });
+    });
+
+    it('stops overlaying the like once the request has finished', () => {
+      loadPost();
+      store.setLiked(store.entries()[0], true, () => undefined);
+      ctrl.expectOne('https://api.test/api/entries/1/like').flush({ isLiked: true });
+
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [post(false)], nextCursor: null });
+
+      expect(store.entries()[0].social?.isLiked).toBe(false);
+    });
+
+    it('puts the like back and hands the problem over when the network refuses', () => {
+      loadPost();
+      const problems: string[] = [];
+
+      store.setLiked(store.entries()[0], true, (problem) => problems.push(problem.title));
+      ctrl
+        .expectOne('https://api.test/api/entries/1/like')
+        .flush(
+          { type: 'social_post_not_found', title: 'Post no longer available', status: 404 },
+          { status: 404, statusText: 'Not Found' },
+        );
+
+      expect(store.entries()[0].social?.isLiked).toBe(false);
+      expect(problems).toEqual(['Post no longer available']);
+      expect(store.error()).toBeNull();
+    });
+
+    it('stops overlaying the like once the request has failed', () => {
+      loadPost();
+      store.setLiked(store.entries()[0], true, () => undefined);
+      ctrl
+        .expectOne('https://api.test/api/entries/1/like')
+        .flush({ title: 'Down', status: 500 }, { status: 500, statusText: 'Server Error' });
+
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [post(true)], nextCursor: null });
+
+      expect(store.entries()[0].social?.isLiked).toBe(true);
+    });
+
+    it('drops a second click while the first like is still on the wire', () => {
+      loadPost();
+      store.setLiked(store.entries()[0], true, () => undefined);
+      const like = ctrl.expectOne('https://api.test/api/entries/1/like');
+
+      store.setLiked(store.entries()[0], false, () => undefined);
+
+      ctrl.expectNone('https://api.test/api/entries/1/like');
+      expect(store.entries()[0].social?.isLiked).toBe(true);
+      like.flush({ isLiked: true });
+      store.setLiked(store.entries()[0], false, () => undefined);
+      expect(ctrl.expectOne('https://api.test/api/entries/1/like').request.method).toBe('DELETE');
+    });
+
+    describe('a copy shown inside another row (duplicates)', () => {
+      const copy = (isLiked = false): EntryDto =>
+        entry(2, { social: { network: 'mastodon', isLiked } });
+
+      const loadRowWithCopy = (): void => {
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1, { duplicates: [copy()] })], nextCursor: null });
+      };
+
+      it('likes the copy inside the row that holds it', () => {
+        loadRowWithCopy();
+
+        store.setLiked(copy(), true, () => undefined);
+
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
+        ctrl.expectOne('https://api.test/api/entries/2/like').flush({ isLiked: true });
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
+      });
+
+      it('puts the copy back when the network refuses the like', () => {
+        loadRowWithCopy();
+
+        store.setLiked(copy(), true, () => undefined);
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
+        ctrl
+          .expectOne('https://api.test/api/entries/2/like')
+          .flush({ title: 'Down', status: 500 }, { status: 500, statusText: 'Server Error' });
+
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(false);
+      });
+
+      it('patches a flag on the copy and puts it back when the PATCH fails', () => {
+        loadRowWithCopy();
+
+        store.setState(2, { isFavorite: true });
+
+        expect(store.entries()[0].duplicates?.[0].isFavorite).toBe(true);
+        ctrl
+          .expectOne('https://api.test/api/entries/2/state')
+          .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+        expect(store.entries()[0].duplicates?.[0].isFavorite).toBe(false);
+        expect(store.error()).not.toBeNull();
+      });
+
+      it("keeps the copy's in-flight like across a list reload that lands first", () => {
+        loadRowWithCopy();
+        store.setLiked(copy(), true, () => undefined);
+        const like = ctrl.expectOne('https://api.test/api/entries/2/like');
+
+        loadRowWithCopy();
+
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
+        like.flush({ isLiked: true });
+      });
+
+      it('leaves a row without the copy as it was', () => {
+        store.load({ view: 'all' });
+        ctrl
+          .expectOne((request) => request.url === 'https://api.test/api/entries')
+          .flush({ entries: [entry(1, { duplicates: [entry(3)] }), entry(4)], nextCursor: null });
+        const before = store.entries();
+
+        store.setLiked(copy(), true, () => undefined);
+        ctrl.expectOne('https://api.test/api/entries/2/like').flush({ isLiked: true });
+
+        expect(store.entries()).toBe(before);
+      });
+    });
+
+    it('sends nothing for an entry that is no social post', () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1)], nextCursor: null });
+
+      store.setLiked(store.entries()[0], true, () => undefined);
+
+      ctrl.expectNone('https://api.test/api/entries/1/like');
+    });
+  });
 });
