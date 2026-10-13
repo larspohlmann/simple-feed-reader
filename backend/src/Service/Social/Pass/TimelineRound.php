@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Social\Pass;
 
 use App\Entity\Feed;
-use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Service\Fetch\DispatchGate\DispatchGateInterface;
 use App\Service\Fetch\Model\FetchOutcomeModel;
@@ -78,13 +77,13 @@ final class TimelineRound implements DispatchGateInterface
         $socialFeed = $this->socialFeedOf($feedId);
         $account = $socialFeed->getSocialAccount();
         if ($outcome->isWithheld()) {
-            return $this->holdOrQueueForRenewal($feedId, $account);
+            return $this->settledOrQueued($feedId, $this->accounts->heldOutcomeOf($account));
         }
 
         try {
             $page = $this->sources->of($account)->pageOf($socialFeed, $outcome);
         } catch (SocialSessionStaleException $stale) {
-            return $this->settleStale($feedId, $account, $stale);
+            return $this->settledOrQueued($feedId, $this->accounts->settleStale($account, $stale));
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $failure) {
             return $this->accounts->settleFailure($account, $failure);
         }
@@ -113,7 +112,7 @@ final class TimelineRound implements DispatchGateInterface
         }
         $account = $socialFeed->getSocialAccount();
         if (!$this->accounts->mayAsk($account)) {
-            $held = $this->holdOrQueueForRenewal($feedId, $account);
+            $held = $this->settledOrQueued($feedId, $this->accounts->heldOutcomeOf($account));
             if (null !== $held) {
                 $this->unasked[$feedId] = $held;
             }
@@ -132,28 +131,14 @@ final class TimelineRound implements DispatchGateInterface
         yield $feedId => RequestTicketModel::api($request, sprintf('social-account-%d', $account->requireId()));
     }
 
-    /** The account's held outcome, or null once the feed is queued for the stale retry wave. */
-    private function holdOrQueueForRenewal(int $feedId, SocialAccount $account): ?TimelineOutcomeModel
+    /** The settled outcome, or null once the feed is queued for the renewal wave. */
+    private function settledOrQueued(int $feedId, ?TimelineOutcomeModel $settled): ?TimelineOutcomeModel
     {
-        $held = $this->accounts->heldOutcomeOf($account);
-        if (null === $held) {
+        if (null === $settled) {
             $this->staleFeedIds[] = $feedId;
         }
 
-        return $held;
-    }
-
-    private function settleStale(
-        int $feedId,
-        SocialAccount $account,
-        SocialSessionStaleException $stale,
-    ): ?TimelineOutcomeModel {
-        $refused = $this->accounts->settleStale($account, $stale);
-        if (null === $refused) {
-            $this->staleFeedIds[] = $feedId;
-        }
-
-        return $refused;
+        return $settled;
     }
 
     private function socialFeedOf(int|string $feedId): SocialFeed
