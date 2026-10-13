@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
@@ -13,7 +20,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { inputValue } from '../../shared/input-value';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
-import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { SocialNetworkName } from '../../core/social-network';
@@ -42,6 +49,9 @@ export interface SocialImportDialogData {
   readonly handle: string;
 }
 
+/** Rows rendered per step: a 5,000-follow account would otherwise build every row at once (#1626). */
+const ROWS_PER_PAGE = 100;
+
 const BADGE_CLASSES: Readonly<Record<ImportCandidateState, string>> = {
   new: 'accent-pill',
   subscribed: 'state',
@@ -57,7 +67,7 @@ const BADGE_CLASSES: Readonly<Record<ImportCandidateState, string>> = {
     IconComponent,
     OverlayPanelComponent,
     SegmentedChoiceComponent,
-    SpinnerComponent,
+    SkeletonComponent,
     TranslocoPipe,
     WarningBoxComponent,
   ],
@@ -117,6 +127,14 @@ export class SocialImportDialogComponent {
     const matched = this.tally().matched;
     return filter === 'all' ? matched : matched.filter((row) => row.state === filter);
   });
+  private readonly rowLimit = linkedSignal({
+    source: this.visibleRows,
+    computation: () => ROWS_PER_PAGE,
+  });
+  protected readonly renderedRows = computed(() => this.visibleRows().slice(0, this.rowLimit()));
+  protected readonly nextPageSize = computed(() =>
+    Math.min(ROWS_PER_PAGE, this.visibleRows().length - this.rowLimit()),
+  );
   private readonly visibleNewKeys = computed(() =>
     this.visibleRows()
       .filter((row) => row.state === 'new')
@@ -142,6 +160,10 @@ export class SocialImportDialogComponent {
 
   protected selectAllNew(): void {
     this.chosen.update((current) => new Set([...current, ...this.visibleNewKeys()]));
+  }
+
+  protected showMore(): void {
+    this.rowLimit.update((limit) => limit + ROWS_PER_PAGE);
   }
 
   protected apply(): void {

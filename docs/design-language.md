@@ -1190,6 +1190,10 @@ The pulse is the app's one loading idiom. It lives in `theme/_loading-pulse.scss
 anything else that is still loading pulses the same way. The link-card placeholder
 of a link share still being completed (#1502) is the second user.
 
+The pulse fills with a tint of `--text-primary` rather than a surface token, so
+the rows read on the page, on a card and inside an `<app-overlay-panel>` alike
+(#1623). A dialog needs no wrapper around the skeleton.
+
 **Not for:** a non-list fetch — use `<app-spinner>`, which does not pretend to
 know the shape of what is coming.
 
@@ -1774,6 +1778,10 @@ outranks `_base.scss`'s `:focus-visible { outline: … }` at (0,1,0) — which l
 checkboxes, radios and colour swatches, none of which have a border to tint, with
 no visible keyboard focus at all. That is a WCAG 2.4.7 failure, not a cosmetic
 one.
+
+**`_controls.scss` tints every checkbox and radio with `accent-color: var(--accent)`
+(#1624).** The user agent still paints them, but in the theme accent rather than
+the browser's blue, so no component sets its own.
 
 **`entry-list`'s `- 44px` and `reader-header`'s `top: 44px` are positioning
 offsets that coincidentally share the `--tap-target` number.** The first is how

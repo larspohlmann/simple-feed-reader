@@ -178,7 +178,7 @@ describe('SocialImportDialogComponent', () => {
 
   afterEach(() => http.verify());
 
-  it('shows a spinner until the candidates arrive', () => {
+  it('shows placeholder rows until the candidates arrive', () => {
     const fixture = mount();
     expect(byTestId(fixture, 'social-import-loading')).not.toBeNull();
 
@@ -438,6 +438,40 @@ describe('SocialImportDialogComponent', () => {
     expect(applyButton(fixture).disabled).toBe(true);
     tick(fixture, 'did:plc:bob');
     expect(applyButton(fixture).disabled).toBe(false);
+  });
+
+  it('renders long lists a hundred rows at a time', () => {
+    const many = Array.from({ length: 250 }, (_, index) =>
+      follow({ identity: `did:plc:${index}`, feedUrl: `https://bsky.app/${index}/rss` }),
+    );
+    const fixture = loaded(candidates({ follows: many }));
+    const rowCount = () =>
+      byTestId(fixture, 'social-import-follows')?.querySelectorAll('li').length ?? 0;
+    const showMore = () =>
+      textOf(fixture.nativeElement as HTMLElement, '[data-testid="social-import-show-more"]');
+    expect(rowCount()).toBe(100);
+    expect(showMore()).toBe('Show 100 more');
+    expect(tabLabels(fixture)[0]).toBe('Accounts 250');
+
+    press(fixture, 'social-import-show-more');
+    press(fixture, 'social-import-show-more');
+    expect(rowCount()).toBe(250);
+    expect(showMore()).toBeUndefined();
+
+    showState(fixture, 'new');
+    expect(rowCount()).toBe(100);
+  });
+
+  it('selects the new rows that are not rendered yet with Select all new', () => {
+    const many = Array.from({ length: 150 }, (_, index) =>
+      follow({ identity: `did:plc:${index}`, feedUrl: `https://bsky.app/${index}/rss` }),
+    );
+    const fixture = loaded(candidates({ follows: many }));
+
+    press(fixture, 'social-import-select-new');
+    expect(
+      textOf(fixture.nativeElement as HTMLElement, '[data-testid="social-import-selected"]'),
+    ).toBe('150 selected');
   });
 
   it('selects every visible new follow at once', () => {
