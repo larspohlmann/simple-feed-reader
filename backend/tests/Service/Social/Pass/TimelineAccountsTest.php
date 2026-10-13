@@ -6,7 +6,7 @@ namespace App\Tests\Service\Social\Pass;
 
 use App\Entity\SocialAccount;
 use App\Service\Social\Exception\SocialSessionStaleException;
-use App\Service\Social\Model\TimelineOutcome;
+use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
 use App\Service\Social\Pass\TimelineAccounts;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
@@ -28,7 +28,7 @@ final class TimelineAccountsTest extends TestCase
         $accounts->settleStale($carol, $stale);
         $accounts->renewSessions();
 
-        self::assertSame(TimelineOutcome::Failed, $accounts->settleStale($alice, $stale)?->outcome);
+        self::assertInstanceOf(FailedTimelineModel::class, $accounts->settleStale($alice, $stale));
     }
 
     private static function bluesky(int $accountId): SocialAccount

@@ -13,7 +13,9 @@ use App\Service\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialSessionStaleException;
-use App\Service\Social\Model\TimelineOutcomeModel;
+use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\TimelineSources;
 
 /**
@@ -22,7 +24,7 @@ use App\Service\Social\TimelineSources;
  */
 final class TimelineRound implements DispatchGateInterface
 {
-    /** @var array<int, TimelineOutcomeModel> */
+    /** @var array<int, TimelineOutcomeModelInterface> */
     private array $unasked = [];
 
     /** @var list<int> */
@@ -72,7 +74,7 @@ final class TimelineRound implements DispatchGateInterface
     }
 
     /** The feed's outcome, or null while it waits for the stale retry wave. */
-    public function settle(int $feedId, FetchOutcomeModel $outcome): ?TimelineOutcomeModel
+    public function settle(int $feedId, FetchOutcomeModel $outcome): ?TimelineOutcomeModelInterface
     {
         $socialFeed = $this->socialFeedOf($feedId);
         $account = $socialFeed->getSocialAccount();
@@ -89,10 +91,10 @@ final class TimelineRound implements DispatchGateInterface
         }
         $socialFeed->recordNewestSeen($page->newestId);
 
-        return TimelineOutcomeModel::fetched($page);
+        return new FetchedTimelineModel($page);
     }
 
-    /** @return \Generator<int, TimelineOutcomeModel> */
+    /** @return \Generator<int, TimelineOutcomeModelInterface> */
     public function drainUnasked(): \Generator
     {
         $unasked = $this->unasked;
@@ -106,7 +108,7 @@ final class TimelineRound implements DispatchGateInterface
     {
         $socialFeed = $this->socialFeedsByFeedId[$feedId] ?? null;
         if (null === $socialFeed) {
-            $this->unasked[$feedId] = TimelineOutcomeModel::failed(new PrivateFeedOrphanedException());
+            $this->unasked[$feedId] = new FailedTimelineModel(new PrivateFeedOrphanedException());
 
             return;
         }
@@ -132,8 +134,10 @@ final class TimelineRound implements DispatchGateInterface
     }
 
     /** The settled outcome, or null once the feed is queued for the renewal wave. */
-    private function settledOrQueued(int $feedId, ?TimelineOutcomeModel $settled): ?TimelineOutcomeModel
-    {
+    private function settledOrQueued(
+        int $feedId,
+        ?TimelineOutcomeModelInterface $settled,
+    ): ?TimelineOutcomeModelInterface {
         if (null === $settled) {
             $this->staleFeedIds[] = $feedId;
         }

@@ -10,7 +10,11 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialSessionStaleException;
-use App\Service\Social\Model\TimelineOutcomeModel;
+use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 
 /** One refresh's verdict per account: throttled, paused, or waiting for a fresh session. */
 final class TimelineAccounts
@@ -30,18 +34,20 @@ final class TimelineAccounts
     }
 
     /** Why the account's feeds stay unasked this refresh, or null when nothing holds them. */
-    public function heldOutcomeOf(SocialAccount $account): ?TimelineOutcomeModel
+    public function heldOutcomeOf(SocialAccount $account): ?TimelineOutcomeModelInterface
     {
         if (SocialAccountStatus::NeedsReconnect === $account->getStatus()) {
-            return TimelineOutcomeModel::accountPaused();
+            return new AccountPausedTimelineModel();
         }
 
-        return isset($this->throttled[$account->requireId()]) ? TimelineOutcomeModel::accountThrottled() : null;
+        return isset($this->throttled[$account->requireId()]) ? new AccountThrottledTimelineModel() : null;
     }
 
     /** Null while the account waits for its one renewal; a stale answer to a renewed session is a refusal. */
-    public function settleStale(SocialAccount $account, SocialSessionStaleException $stale): ?TimelineOutcomeModel
-    {
+    public function settleStale(
+        SocialAccount $account,
+        SocialSessionStaleException $stale,
+    ): ?TimelineOutcomeModelInterface {
         $accountId = $account->requireId();
         if (isset($this->renewed[$accountId])) {
             return $this->settleFailure(
@@ -67,16 +73,16 @@ final class TimelineAccounts
     public function settleFailure(
         SocialAccount $account,
         SocialCredentialsRejectedException|SocialNetworkUnreachableException $failure,
-    ): TimelineOutcomeModel {
+    ): TimelineOutcomeModelInterface {
         if ($failure instanceof SocialNetworkThrottledException) {
             $this->throttled[$account->requireId()] = $account;
 
-            return TimelineOutcomeModel::throttled($failure->retryAfterSeconds);
+            return new ThrottledTimelineModel($failure->retryAfterSeconds);
         }
         if ($failure instanceof SocialCredentialsRejectedException) {
             $account->markNeedsReconnect();
         }
 
-        return TimelineOutcomeModel::failed($failure);
+        return new FailedTimelineModel($failure);
     }
 }

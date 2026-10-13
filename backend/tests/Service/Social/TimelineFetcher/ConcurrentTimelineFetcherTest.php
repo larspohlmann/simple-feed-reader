@@ -13,8 +13,13 @@ use App\Service\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskySessionModel;
-use App\Service\Social\Model\TimelineOutcome;
-use App\Service\Social\Model\TimelineOutcomeModel;
+use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
+use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
@@ -100,7 +105,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         self::assertCount(3, $outcomes);
         foreach ($outcomes as $outcome) {
-            self::assertSame(TimelineOutcome::Fetched, $outcome->outcome);
+            self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
         }
     }
 
@@ -149,11 +154,11 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         $outcomes = self::read($fetcher, [$home, $friends, $family, $other]);
 
-        self::assertSame(TimelineOutcome::Throttled, $outcomes[self::idOf($home)]->outcome);
-        self::assertSame(120, $outcomes[self::idOf($home)]->retryAfterSeconds);
-        self::assertSame(TimelineOutcome::AccountThrottled, $outcomes[self::idOf($friends)]->outcome);
-        self::assertSame(TimelineOutcome::AccountThrottled, $outcomes[self::idOf($family)]->outcome);
-        self::assertSame(TimelineOutcome::Fetched, $outcomes[self::idOf($other)]->outcome);
+        self::assertInstanceOf(ThrottledTimelineModel::class, $outcomes[self::idOf($home)]);
+        self::assertSame(120, self::delayOf($outcomes[self::idOf($home)]));
+        self::assertInstanceOf(AccountThrottledTimelineModel::class, $outcomes[self::idOf($friends)]);
+        self::assertInstanceOf(AccountThrottledTimelineModel::class, $outcomes[self::idOf($family)]);
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($other)]);
         self::assertSame([self::MASTODON_HOME], $this->requestsTo(self::MASTODON));
     }
 
@@ -170,11 +175,11 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         $outcomes = self::read($this->fetcher($respond), [$home, $friends, $family, $parked]);
 
-        self::assertSame(TimelineOutcome::Throttled, $outcomes[self::idOf($home)]->outcome);
+        self::assertInstanceOf(ThrottledTimelineModel::class, $outcomes[self::idOf($home)]);
         foreach ([$friends, $family] as $inFlight) {
-            self::assertSame('109', $outcomes[self::idOf($inFlight)]->page()->newestId);
+            self::assertSame('109', self::pageOf($outcomes[self::idOf($inFlight)])->newestId);
         }
-        self::assertSame(TimelineOutcome::AccountThrottled, $outcomes[self::idOf($parked)]->outcome);
+        self::assertInstanceOf(AccountThrottledTimelineModel::class, $outcomes[self::idOf($parked)]);
         self::assertCount(3, $this->requestsTo(self::MASTODON));
     }
 
@@ -192,11 +197,11 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         $outcomes = self::read($fetcher, [$home, $friends, $otherHome]);
 
-        $failure = $outcomes[self::idOf($home)]->failure();
+        $failure = self::failureOf($outcomes[self::idOf($home)]);
         self::assertInstanceOf(SocialCredentialsRejectedException::class, $failure);
         self::assertSame('The Mastodon instance refused this access token.', $failure->getMessage());
-        self::assertSame(TimelineOutcome::AccountPaused, $outcomes[self::idOf($friends)]->outcome);
-        self::assertSame(TimelineOutcome::Fetched, $outcomes[self::idOf($otherHome)]->outcome);
+        self::assertInstanceOf(AccountPausedTimelineModel::class, $outcomes[self::idOf($friends)]);
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($otherHome)]);
         self::assertSame(SocialAccountStatus::NeedsReconnect, $refused->getStatus());
         self::assertSame(SocialAccountStatus::Connected, $other->getStatus());
         self::assertSame([self::MASTODON_HOME], $this->requestsTo(self::MASTODON));
@@ -212,7 +217,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$home, $list, $other]);
 
         foreach ([$home, $list, $other] as $socialFeed) {
-            self::assertSame(TimelineOutcome::Fetched, $outcomes[self::idOf($socialFeed)]->outcome);
+            self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($socialFeed)]);
         }
         self::assertSame([self::SESSION], $this->requestsTo('POST'));
         self::assertCount(4, $this->requestsTo('GET ' . self::PDS));
@@ -228,7 +233,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         $outcomes = self::read($this->fetcher(self::renewingStaleSessions(), accountConcurrency: 1), [$home, $list]);
 
         foreach ([$home, $list] as $socialFeed) {
-            self::assertSame(TimelineOutcome::Fetched, $outcomes[self::idOf($socialFeed)]->outcome);
+            self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($socialFeed)]);
         }
         self::assertSame(
             [
@@ -252,8 +257,8 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$aliceHome, $carolHome]);
 
-        self::assertSame(TimelineOutcome::Fetched, $outcomes[self::idOf($aliceHome)]->outcome);
-        self::assertSame(TimelineOutcome::Fetched, $outcomes[self::idOf($carolHome)]->outcome);
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($aliceHome)]);
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($carolHome)]);
         self::assertSame([self::SESSION, self::SESSION], $this->requestsTo('POST'));
     }
 
@@ -276,11 +281,11 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         $outcomes = self::read($this->fetcher($respond), [$home, $list, $other]);
 
         foreach ([$home, $list] as $socialFeed) {
-            $failure = $outcomes[self::idOf($socialFeed)]->failure();
+            $failure = self::failureOf($outcomes[self::idOf($socialFeed)]);
             self::assertInstanceOf(SocialCredentialsRejectedException::class, $failure);
             self::assertSame('Bluesky refused the session of this account.', $failure->getMessage());
         }
-        self::assertSame(TimelineOutcome::Fetched, $outcomes[self::idOf($other)]->outcome);
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($other)]);
         self::assertSame(SocialAccountStatus::NeedsReconnect, $bluesky->getStatus());
         self::assertCount(1, $this->requestsTo(self::SESSION));
     }
@@ -296,8 +301,8 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         $outcomes = self::read($this->fetcher($respond), [$home, $list]);
 
-        self::assertSame(TimelineOutcome::Fetched, $outcomes[self::idOf($home)]->outcome);
-        self::assertSame(TimelineOutcome::Fetched, $outcomes[self::idOf($list)]->outcome);
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($list)]);
         self::assertSame(self::SESSION, $this->requests[0]);
         self::assertCount(1, $this->requestsTo('POST'));
     }
@@ -313,9 +318,9 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         $outcomes = self::read($this->fetcher($respond), [$home, $list]);
 
-        self::assertSame(TimelineOutcome::Throttled, $outcomes[self::idOf($home)]->outcome);
-        self::assertSame(60, $outcomes[self::idOf($home)]->retryAfterSeconds);
-        self::assertSame(TimelineOutcome::AccountThrottled, $outcomes[self::idOf($list)]->outcome);
+        self::assertInstanceOf(ThrottledTimelineModel::class, $outcomes[self::idOf($home)]);
+        self::assertSame(60, self::delayOf($outcomes[self::idOf($home)]));
+        self::assertInstanceOf(AccountThrottledTimelineModel::class, $outcomes[self::idOf($list)]);
         self::assertSame([self::SESSION], $this->requests);
     }
 
@@ -330,10 +335,10 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         $outcomes = self::read($this->fetcher($respond), [$home, $list]);
 
-        $failure = $outcomes[self::idOf($home)]->failure();
+        $failure = self::failureOf($outcomes[self::idOf($home)]);
         self::assertInstanceOf(SocialCredentialsRejectedException::class, $failure);
         self::assertSame('Bluesky refused this handle and app password.', $failure->getMessage());
-        self::assertSame(TimelineOutcome::AccountPaused, $outcomes[self::idOf($list)]->outcome);
+        self::assertInstanceOf(AccountPausedTimelineModel::class, $outcomes[self::idOf($list)]);
         self::assertSame(SocialAccountStatus::NeedsReconnect, $bluesky->getStatus());
         self::assertSame([self::SESSION], $this->requests);
     }
@@ -346,7 +351,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         $outcomes = self::read($this->fetcher(static fn (): MockResponse => self::statuses()), [$home]);
 
-        self::assertSame(TimelineOutcome::AccountPaused, $outcomes[self::idOf($home)]->outcome);
+        self::assertInstanceOf(AccountPausedTimelineModel::class, $outcomes[self::idOf($home)]);
         self::assertSame([], $this->requests);
     }
 
@@ -360,7 +365,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
             $outcomes[$feedId] = $outcome;
         }
 
-        self::assertInstanceOf(PrivateFeedOrphanedException::class, $outcomes[99]->failure());
+        self::assertInstanceOf(PrivateFeedOrphanedException::class, self::failureOf($outcomes[99]));
         self::assertSame([], $this->requests);
     }
 
@@ -389,7 +394,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         $home = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
         $respond = static fn (): MockResponse => new MockResponse('', ['error' => 'Connection reset by peer']);
 
-        $failure = self::read($this->fetcher($respond), [$home])[self::idOf($home)]->failure();
+        $failure = self::failureOf(self::read($this->fetcher($respond), [$home])[self::idOf($home)]);
 
         self::assertInstanceOf(SocialNetworkUnreachableException::class, $failure);
         self::assertSame('The Mastodon instance could not be reached.', $failure->getMessage());
@@ -406,7 +411,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
 
         $outcomes = $fetcher->fetchAll(self::byFeedId($socialFeeds), self::feedsOf($socialFeeds));
         foreach ($outcomes as $outcome) {
-            self::assertSame(TimelineOutcome::Fetched, $outcome->outcome);
+            self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
             break;
         }
 
@@ -424,7 +429,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
             ->fetchAll(self::byFeedId($socialFeeds), self::feedsOf($socialFeeds));
 
         foreach ($outcomes as $outcome) {
-            self::assertSame(TimelineOutcome::Fetched, $outcome->outcome);
+            self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
             break;
         }
         unset($outcomes);
@@ -504,7 +509,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
     {
         $outcomes = $fetcher->fetchAll(self::byFeedId($socialFeeds), self::feedsOf($socialFeeds));
         foreach ($outcomes as $outcome) {
-            self::assertSame(TimelineOutcome::Fetched, $outcome->outcome);
+            self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
 
             return \count($this->requests);
         }
@@ -560,7 +565,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
     /**
      * @param list<SocialFeed> $socialFeeds
      *
-     * @return array<int, TimelineOutcomeModel>
+     * @return array<int, TimelineOutcomeModelInterface>
      */
     private static function read(ConcurrentTimelineFetcher $fetcher, array $socialFeeds): array
     {
@@ -598,6 +603,27 @@ final class ConcurrentTimelineFetcherTest extends TestCase
             static fn (SocialFeed $socialFeed): Feed => $socialFeed->getFeed(),
             self::byFeedId($socialFeeds),
         );
+    }
+
+    private static function pageOf(TimelineOutcomeModelInterface $outcome): TimelinePageModel
+    {
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
+
+        return $outcome->page;
+    }
+
+    private static function delayOf(TimelineOutcomeModelInterface $outcome): ?int
+    {
+        self::assertInstanceOf(ThrottledTimelineModel::class, $outcome);
+
+        return $outcome->retryAfterSeconds;
+    }
+
+    private static function failureOf(TimelineOutcomeModelInterface $outcome): \RuntimeException
+    {
+        self::assertInstanceOf(FailedTimelineModel::class, $outcome);
+
+        return $outcome->failure;
     }
 
     private static function statusesBody(): string

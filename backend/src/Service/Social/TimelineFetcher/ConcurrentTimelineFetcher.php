@@ -7,7 +7,7 @@ namespace App\Service\Social\TimelineFetcher;
 use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Support\CapacityGuard;
-use App\Service\Social\Model\TimelineOutcomeModel;
+use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\Pass\TimelineAccounts;
 use App\Service\Social\Pass\TimelineRound;
 use App\Service\Social\TimelineSources;
@@ -26,7 +26,7 @@ final readonly class ConcurrentTimelineFetcher implements TimelineFetcherInterfa
         CapacityGuard::atLeastOne($accountConcurrency, 'Per-account concurrency');
     }
 
-    /** @return \Generator<int, TimelineOutcomeModel> */
+    /** @return \Generator<int, TimelineOutcomeModelInterface> */
     public function fetchAll(array $socialFeedsByFeedId, iterable $feeds): \Generator
     {
         $round = new TimelineRound($socialFeedsByFeedId, $this->sources, new TimelineAccounts());
@@ -38,7 +38,7 @@ final readonly class ConcurrentTimelineFetcher implements TimelineFetcherInterfa
     /**
      * @param iterable<int, RequestTicketModel> $tickets
      *
-     * @return \Generator<int, TimelineOutcomeModel>
+     * @return \Generator<int, TimelineOutcomeModelInterface>
      */
     private function wave(TimelineRound $round, iterable $tickets): \Generator
     {

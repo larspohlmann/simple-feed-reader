@@ -14,7 +14,12 @@ use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\SocialFeedRefresher;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\PrivateFeedModel;
-use App\Service\Social\Model\TimelineOutcomeModel;
+use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\MastodonTimelinePage;
 use App\Service\Social\TimelineFetcher\TimelineFetcherInterface;
@@ -55,7 +60,7 @@ final class SocialFeedRefresherTest extends DbTestCase
 
     public function testAFetchedPageIsStoredAsTheFeedsEntries(): void
     {
-        $pass = $this->refreshed(TimelineOutcomeModel::fetched(self::page()));
+        $pass = $this->refreshed(new FetchedTimelineModel(self::page()));
 
         self::assertSame(1, $pass->tally->fetched());
         self::assertSame(1, $pass->tally->entriesCreated());
@@ -67,7 +72,7 @@ final class SocialFeedRefresherTest extends DbTestCase
 
     public function testAThrottledTimelineWaitsOutItsRetryAfter(): void
     {
-        $pass = $this->refreshed(TimelineOutcomeModel::throttled(120));
+        $pass = $this->refreshed(new ThrottledTimelineModel(120));
 
         self::assertSame(1, $pass->tally->throttled());
         self::assertSame(0, $this->home->getFeed()->getConsecutiveFailures());
@@ -78,7 +83,7 @@ final class SocialFeedRefresherTest extends DbTestCase
     {
         $unreachable = new SocialNetworkUnreachableException('The Mastodon instance answered 502.');
 
-        $pass = $this->refreshed(TimelineOutcomeModel::failed($unreachable));
+        $pass = $this->refreshed(new FailedTimelineModel($unreachable));
 
         self::assertSame(1, $pass->tally->failed());
         self::assertSame(1, $this->home->getFeed()->getConsecutiveFailures());
@@ -93,7 +98,7 @@ final class SocialFeedRefresherTest extends DbTestCase
     {
         $nextFetchAt = $this->home->getFeed()->getNextFetchAt();
 
-        $pass = $this->refreshed(TimelineOutcomeModel::accountThrottled());
+        $pass = $this->refreshed(new AccountThrottledTimelineModel());
 
         self::assertSame(1, $pass->tally->throttled());
         $this->assertUntouched($nextFetchAt);
@@ -103,7 +108,7 @@ final class SocialFeedRefresherTest extends DbTestCase
     {
         $nextFetchAt = $this->home->getFeed()->getNextFetchAt();
 
-        $pass = $this->refreshed(TimelineOutcomeModel::accountPaused());
+        $pass = $this->refreshed(new AccountPausedTimelineModel());
 
         self::assertSame(1, $pass->tally->failed());
         $this->assertUntouched($nextFetchAt);
@@ -113,7 +118,7 @@ final class SocialFeedRefresherTest extends DbTestCase
     {
         $feed = $this->home->getFeed();
         $feedId = $feed->requireId();
-        $timelines = new StubTimelineFetcher([$feed->getUrl() => TimelineOutcomeModel::throttled(null)]);
+        $timelines = new StubTimelineFetcher([$feed->getUrl() => new ThrottledTimelineModel(null)]);
 
         $this->refresher($timelines)->refreshAll($this->pass(), $this->clock->now());
 
@@ -147,7 +152,7 @@ final class SocialFeedRefresherTest extends DbTestCase
         self::assertEquals($nextFetchAt, $reloaded->getNextFetchAt());
     }
 
-    private function refreshed(TimelineOutcomeModel $outcome): RefreshPass
+    private function refreshed(TimelineOutcomeModelInterface $outcome): RefreshPass
     {
         $pass = $this->pass();
         $timelines = new StubTimelineFetcher([$this->home->getFeed()->getUrl() => $outcome]);

@@ -15,7 +15,7 @@ use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Social\Crypto\SocialCredentialCipher;
-use App\Service\Social\Model\TimelineOutcome;
+use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
 use App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher;
 use App\Service\Social\TimelineFetcher\TimelineFetcherInterface;
 use App\Tests\Support\AssignsEntityIds;
@@ -56,10 +56,10 @@ final class TimelineFetcherWiringTest extends KernelTestCase
             [1 => $mastodon->getFeed(), 2 => $bluesky->getFeed()],
         );
         foreach ($read as $feedId => $outcome) {
-            $outcomes[$feedId] = $outcome->outcome;
+            $outcomes[$feedId] = $outcome::class;
         }
 
-        self::assertSame([TimelineOutcome::Fetched, TimelineOutcome::Fetched], [$outcomes[1], $outcomes[2]]);
+        self::assertSame([FetchedTimelineModel::class, FetchedTimelineModel::class], [$outcomes[1], $outcomes[2]]);
         self::assertCount(3, $http->requests);
     }
 

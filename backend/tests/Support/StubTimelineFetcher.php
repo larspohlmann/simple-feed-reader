@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\SocialFeed;
-use App\Service\Social\Model\TimelineOutcomeModel;
+use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\TimelineFetcher\TimelineFetcherInterface;
 use PHPUnit\Framework\Assert;
 
@@ -17,7 +17,7 @@ final class StubTimelineFetcher implements TimelineFetcherInterface
     /** @var array<int, SocialFeed> */
     public array $socialFeedsByFeedId = [];
 
-    /** @param array<string, TimelineOutcomeModel> $outcomes by the private feed's URL */
+    /** @param array<string, TimelineOutcomeModelInterface> $outcomes by the private feed's URL */
     public function __construct(private readonly array $outcomes = [])
     {
     }

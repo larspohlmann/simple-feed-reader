@@ -6,7 +6,7 @@ namespace App\Service\Social\TimelineFetcher;
 
 use App\Entity\Feed;
 use App\Entity\SocialFeed;
-use App\Service\Social\Model\TimelineOutcomeModel;
+use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 
 interface TimelineFetcherInterface
 {
@@ -17,7 +17,7 @@ interface TimelineFetcherInterface
      * @param array<int, SocialFeed> $socialFeedsByFeedId the refresh's private feeds, their accounts loaded
      * @param iterable<int, Feed>    $feeds               pulled one at a time, as a request may start
      *
-     * @return iterable<int, TimelineOutcomeModel>
+     * @return iterable<int, TimelineOutcomeModelInterface>
      */
     public function fetchAll(array $socialFeedsByFeedId, iterable $feeds): iterable;
 }

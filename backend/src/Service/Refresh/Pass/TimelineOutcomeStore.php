@@ -9,8 +9,12 @@ use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\Model\IncomingFeedModel;
-use App\Service\Social\Model\TimelineOutcome;
-use App\Service\Social\Model\TimelineOutcomeModel;
+use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\FetchedTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
+use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 
 /** Stores one refresh's private-feed outcomes, each as of the moment the refresh started. */
 final readonly class TimelineOutcomeStore
@@ -20,19 +24,22 @@ final readonly class TimelineOutcomeStore
     }
 
     /** @throws \DateMalformedStringException */
-    public function store(Feed $feed, TimelineOutcomeModel $outcome): FeedRefreshResultModel
+    public function store(Feed $feed, TimelineOutcomeModelInterface $outcome): FeedRefreshResultModel
     {
-        return match ($outcome->outcome) {
-            TimelineOutcome::Fetched => $this->outcomePersister->storeParsed(
+        return match (true) {
+            $outcome instanceof FetchedTimelineModel => $this->outcomePersister->storeParsed(
                 $feed,
-                new IncomingFeedModel($outcome->page()->parsed, $outcome->page()->knownShares),
+                new IncomingFeedModel($outcome->page->parsed, $outcome->page->knownShares),
                 $this->now,
             ),
-            TimelineOutcome::Throttled => $this->outcomePersister->storeThrottled($feed, $outcome->retryAfterSeconds),
-            TimelineOutcome::Failed => $this->outcomePersister->storeFailure($feed, $outcome->failure()),
+            $outcome instanceof ThrottledTimelineModel => $this->outcomePersister->storeThrottled(
+                $feed,
+                $outcome->retryAfterSeconds,
+            ),
+            $outcome instanceof FailedTimelineModel => $this->outcomePersister->storeFailure($feed, $outcome->failure),
             // Held back this refresh: the feed keeps its schedule for the next one.
-            TimelineOutcome::AccountThrottled => FeedRefreshResultModel::of(FeedOutcome::Throttled),
-            TimelineOutcome::AccountPaused => FeedRefreshResultModel::of(FeedOutcome::Failed),
+            $outcome instanceof AccountThrottledTimelineModel => FeedRefreshResultModel::of(FeedOutcome::Throttled),
+            $outcome instanceof AccountPausedTimelineModel => FeedRefreshResultModel::of(FeedOutcome::Failed),
         };
     }
 }
