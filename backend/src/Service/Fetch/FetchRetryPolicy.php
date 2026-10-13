@@ -27,7 +27,10 @@ final readonly class FetchRetryPolicy
      */
     public function nextAttemptAfter(FetchAttemptModel $attempt, FetchException $failure): ?FetchAttemptModel
     {
-        if ($failure instanceof FeedThrottledException) {
+        if (
+            $failure instanceof FeedThrottledException
+            && !$this->failover->isRetryableStatus(FeedThrottledException::STATUS_CODE)
+        ) {
             return null;
         }
 
