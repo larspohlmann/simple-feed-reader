@@ -9,6 +9,7 @@ use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\MastodonPostLiker;
 use App\Tests\Support\RoutedHttpClient;
@@ -67,6 +68,20 @@ final class MastodonPostLikerTest extends TestCase
         $this->expectException(SocialPostRefusedException::class);
 
         $this->liker($http)->unlike(SocialAccounts::mastodon(), '110');
+    }
+
+    public function testALikeTheTokenHasNoScopeForIsAMissingPermissionNotARefusedCredential(): void
+    {
+        $http = new RoutedHttpClient([
+            self::FAVOURITE => new MockResponse(
+                '{"error":"This action is outside the authorized scopes"}',
+                ['http_code' => Response::HTTP_FORBIDDEN],
+            ),
+        ]);
+
+        $this->expectException(SocialTokenScopeMissingException::class);
+
+        $this->liker($http)->like(SocialPostModel::onMastodon(SocialAccounts::mastodon(), '110'));
     }
 
     public function testARefusedTokenIsStillARefusedCredential(): void

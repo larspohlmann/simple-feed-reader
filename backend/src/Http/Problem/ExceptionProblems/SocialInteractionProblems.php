@@ -12,6 +12,7 @@ use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use Symfony\Component\HttpFoundation\Response;
 
 /** What acting on a network can end in. The throttled arm must stay above its parent, the unreachable one. */
@@ -43,6 +44,12 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 'The network refused this action on the post',
                 Response::HTTP_CONFLICT,
                 $exception->getMessage(),
+            )),
+            $exception instanceof SocialTokenScopeMissingException => new ResolvedProblem(new ApiProblem(
+                'social_token_scope_missing',
+                "This account's token is missing a permission",
+                Response::HTTP_CONFLICT,
+                'Reconnect this account with an access token that has the read and write:favourites scopes.',
             )),
             $exception instanceof SocialNetworkThrottledException => self::throttled($exception),
             $exception instanceof SocialNetworkUnreachableException => new ResolvedProblem(new ApiProblem(

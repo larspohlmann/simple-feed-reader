@@ -11,6 +11,8 @@ use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,6 +39,12 @@ final class SocialInteractionProblemsTest extends TestCase
             Response::HTTP_CONFLICT,
         ];
         yield 'post gone' => [new SocialPostNotFoundException('x'), 'social_post_not_found', Response::HTTP_NOT_FOUND];
+        yield 'post refused' => [new SocialPostRefusedException('x'), 'social_post_refused', Response::HTTP_CONFLICT];
+        yield 'token scope missing' => [
+            new SocialTokenScopeMissingException('x'),
+            'social_token_scope_missing',
+            Response::HTTP_CONFLICT,
+        ];
         yield 'throttled' => [
             new SocialNetworkThrottledException('x', 90),
             'social_network_throttled',

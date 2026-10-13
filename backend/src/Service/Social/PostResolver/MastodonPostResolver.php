@@ -10,8 +10,8 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
-use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\SocialPostModel;
+use App\Service\Social\Support\MastodonInteractionAnswer;
 
 /** Asks the account's own instance for the post, so a post from any server gets the id that instance acts on. */
 final readonly class MastodonPostResolver implements PostResolverInterface
@@ -31,7 +31,7 @@ final readonly class MastodonPostResolver implements PostResolverInterface
     public function resolve(SocialAccount $account, string $address): SocialPostModel
     {
         $search = sprintf(self::SEARCH, rawurlencode($address));
-        $answer = MastodonApiClient::accepted($this->mastodon->get($account, $search));
+        $answer = MastodonInteractionAnswer::accepted($this->mastodon->get($account, $search));
         $statusId = JsonNodeModel::of($answer->json())->first('statuses')->string('id')
             ?? throw new SocialPostNotFoundException('The post is no longer on Mastodon.');
         if (1 !== preg_match(self::STATUS_ID, $statusId)) {

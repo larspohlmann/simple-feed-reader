@@ -9,6 +9,8 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -21,6 +23,8 @@ interface PostResolverInterface
     /**
      * @throws SocialPostNotFoundException
      * @throws SocialCredentialsRejectedException
+     * @throws SocialTokenScopeMissingException
+     * @throws SocialPostRefusedException
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
      */
