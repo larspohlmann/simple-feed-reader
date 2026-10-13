@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch;
 
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
@@ -20,11 +21,16 @@ final readonly class FetchRetryPolicy
     }
 
     /**
-     * The next attempt this failure earns, or null when it is terminal. A still-proxied attempt (no direct fallback)
-     * never retries over another family: that would re-send the same proxied request once per family.
+     * The next attempt this failure earns, or null when it is terminal (a 429 always is). A still-proxied attempt
+     * (no direct fallback) never retries over another family: that would re-send the same proxied request once per
+     * family.
      */
     public function nextAttemptAfter(FetchAttemptModel $attempt, FetchException $failure): ?FetchAttemptModel
     {
+        if ($failure instanceof FeedThrottledException) {
+            return null;
+        }
+
         $fallback = $this->directFallbackFor($attempt);
         if (null !== $fallback) {
             return $fallback;

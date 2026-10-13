@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use Symfony\Component\HttpFoundation\Response;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\FetchWiring;
@@ -192,5 +193,22 @@ final class FailoverRequestSenderTest extends TestCase
                 new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
                 [],
             );
+    }
+
+    public function testATooManyRequestsAnswerIsNotAskedAgainOverTheNextFamily(): void
+    {
+        $client = new MockHttpClient(
+            static fn (): MockResponse => new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]),
+        );
+
+        $response = $this->sender($client)->send(
+            'GET',
+            'https://dual.example.com/post',
+            new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+            [],
+        );
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->getStatusCode());
+        self::assertSame(1, $client->getRequestsCount());
     }
 }

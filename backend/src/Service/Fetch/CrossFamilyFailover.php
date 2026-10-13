@@ -14,7 +14,11 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
  */
 final readonly class CrossFamilyFailover
 {
-    private const array MISSING_RESOURCE_STATUSES = [Response::HTTP_NOT_FOUND, Response::HTTP_GONE];
+    private const array ROUTE_INDEPENDENT_STATUSES = [
+        Response::HTTP_NOT_FOUND,
+        Response::HTTP_GONE,
+        Response::HTTP_TOO_MANY_REQUESTS,
+    ];
 
     public function isWarranted(?\Throwable $transportError): bool
     {
@@ -22,10 +26,10 @@ final readonly class CrossFamilyFailover
             && !$transportError instanceof TimeoutExceptionInterface;
     }
 
-    /** A 4xx or 5xx can be tied to the source address, so another route may answer differently; a missing resource cannot. */
+    /** A 4xx or 5xx can be tied to the source address; a missing resource cannot, and a 429 rations the client on any route. */
     public function isRetryableStatus(int $statusCode): bool
     {
         return $statusCode >= Response::HTTP_BAD_REQUEST
-            && !\in_array($statusCode, self::MISSING_RESOURCE_STATUSES, true);
+            && !\in_array($statusCode, self::ROUTE_INDEPENDENT_STATUSES, true);
     }
 }

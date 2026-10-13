@@ -395,4 +395,35 @@ final class ConcurrentRequestEngineTest extends TestCase
         self::assertInstanceOf(FeedUnreachableException::class, $outcomes[1]->failure());
         self::assertNull($outcomes[2]->failure());
     }
+
+    public function testATooManyRequestsAnswerIsNotAskedAgainOverTheNextFamily(): void
+    {
+        $requests = 0;
+        $client = new MockHttpClient(static function () use (&$requests): MockResponse {
+            ++$requests;
+
+            return new MockResponse('{}', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]);
+        });
+
+        $answer = $this->onlyAnswer($client, self::DUAL)->answerOrThrow();
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $answer->status);
+        self::assertSame(1, $requests);
+    }
+
+    public function testAProxiedTooManyRequestsAnswerIsNotAskedAgainDirectly(): void
+    {
+        $requests = 0;
+        $client = new MockHttpClient(static function () use (&$requests): MockResponse {
+            ++$requests;
+
+            return new MockResponse('{}', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]);
+        });
+        $engine = $this->engine($client, new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null));
+
+        $answer = self::collect($engine->sendAll([1 => self::ticket()], 3))[1]->answerOrThrow();
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $answer->status);
+        self::assertSame(1, $requests);
+    }
 }

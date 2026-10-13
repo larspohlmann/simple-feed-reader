@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use Symfony\Component\HttpFoundation\Response;
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
@@ -283,5 +284,26 @@ final class FailoverRequestSenderProxyTest extends TestCase
     private function guarded(): GuardedUrlModel
     {
         return new GuardedUrlModel('page.example', ['203.0.113.9']);
+    }
+
+    public function testAProxiedTooManyRequestsAnswerIsNotAskedAgainDirectly(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
+
+            return new MockResponse('', ['http_code' => Response::HTTP_TOO_MANY_REQUESTS]);
+        });
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy($this->proxy()));
+
+        $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $status);
+        self::assertCount(1, $calls);
+        self::assertArrayHasKey('proxy', $calls[0]);
     }
 }
