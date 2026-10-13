@@ -15,12 +15,7 @@ final class SocialPostAddress
 {
     public static function of(Entry $entry): ?SocialPostAddressModel
     {
-        return self::onFeedNetwork($entry, $entry->getFeed()->getNetwork());
-    }
-
-    private static function onFeedNetwork(Entry $entry, ?SocialNetwork $feedNetwork): ?SocialPostAddressModel
-    {
-        return match ($feedNetwork) {
+        return match ($entry->getFeed()->getNetwork()) {
             SocialNetwork::Bluesky => self::blueskyPost($entry->getGuid()),
             SocialNetwork::Mastodon => self::mastodonPost($entry),
             null => null,
