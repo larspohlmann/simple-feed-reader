@@ -544,8 +544,11 @@ full-screen phone layout.
 | `fillOnMobile` | `boolean` | `false` |
 
 Content slots: default content becomes the scrolling body; `[headerActions]`
-lands beside the heading; `[footer]` lands in the footer row (which hides itself
-when empty).
+lands beside the heading; `[subheader]` lands between the heading and the body,
+outside the scroller, for controls that steer the body (the social import
+dialog's tabs and filters) and so must never scroll away or swallow a tap mid-fling;
+`[footer]` lands in the footer row. The subheader and the footer hide themselves
+when empty.
 
 ```html
 <app-overlay-panel [heading]="data.title" cdkTrapFocus>
@@ -582,11 +585,11 @@ percentage cannot do that job.
 The add-feed dialog is the wide variant: `--panel-w: 520px`, sized so a preview
 row's 88×66 thumbnail and four-line snippet sit comfortably. It sets
 `fillOnMobile`, so on a phone it becomes the full screen rather than a 92vw card
-— a card would squeeze the row's title to ~125px. The social import dialog (#1611) is the
-second: 520px for an avatar, a name and a state label per row, and `fillOnMobile`
-because a follow list runs to thousands of rows and its footer must stay in reach. This is the first non-default
+— a card would squeeze the row's title to ~125px. This was the first non-default
 `--panel-w`; keep new panels on the 460px default unless their content needs the
-room, and record the exception here.
+room, and record the exception here. The social import dialog (#1611) is the
+second: 520px for an avatar, a name and a state label per row, and `fillOnMobile`
+because a follow list runs to thousands of rows and its footer must stay in reach.
 
 **Not for:** a non-modal popover or dropdown menu. The panel declares
 `role="dialog" aria-modal="true"`.

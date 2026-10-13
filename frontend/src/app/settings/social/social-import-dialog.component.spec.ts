@@ -354,9 +354,7 @@ describe('SocialImportDialogComponent', () => {
     const fixture = loaded(candidates({ lists: [added] }));
     showTab(fixture, 'Lists');
 
-    (
-      fixture.componentInstance as unknown as { toggleCollection(item: CollectionCandidate): void }
-    ).toggleCollection(added);
+    collectionBox(fixture, 'list:at://list/a').dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
     expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(true);

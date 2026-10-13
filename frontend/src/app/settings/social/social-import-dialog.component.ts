@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { pluralKey } from '../../core/i18n/plural-key';
 import { toggled } from '../../core/toggled-set';
 import { RefreshService } from '../../reader/state/refresh.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
@@ -18,21 +18,17 @@ import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { SocialNetworkName } from '../../core/social-network';
 import {
-  CHECKBOX_KEYS,
-  COLLECTION_CHECKBOX_KEYS,
-  COLLECTION_ICONS,
   FILTER_KEYS,
+  ImportRow,
   ImportTab,
-  STATE_KEYS,
   StateFilter,
-  StateOption,
   TAB_TEST_IDS,
+  buildRows,
   collectionKey,
-  initialsOf,
+  followKey,
+  tally,
 } from './social-import-rows';
 import {
-  CollectionCandidate,
-  FollowCandidate,
   ImportCandidateState,
   SocialImportCollection,
   SocialImportFeed,
@@ -45,6 +41,12 @@ export interface SocialImportDialogData {
   readonly network: SocialNetworkName;
   readonly handle: string;
 }
+
+const BADGE_CLASSES: Readonly<Record<ImportCandidateState, string>> = {
+  new: 'accent-pill',
+  subscribed: 'state',
+  no_longer_followed: 'state is-gone',
+};
 
 @Component({
   selector: 'app-social-import-dialog',
@@ -73,89 +75,56 @@ export class SocialImportDialogComponent {
   private readonly refresh = inject(RefreshService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
+  private readonly activeLang = toSignal(this.i18n.langChanges$, {
+    initialValue: this.i18n.getActiveLang(),
+  });
 
-  protected readonly stateKeys = STATE_KEYS;
   protected readonly filterKeys = FILTER_KEYS;
-  protected readonly checkboxKeys = CHECKBOX_KEYS;
-  protected readonly collectionCheckboxKeys = COLLECTION_CHECKBOX_KEYS;
-  protected readonly collectionIcons = COLLECTION_ICONS;
+  protected readonly badgeClasses = BADGE_CLASSES;
   protected readonly tabTestIds = TAB_TEST_IDS;
-  protected readonly collectionKey = collectionKey;
   protected readonly inputValue = inputValue;
   protected readonly tabs: readonly ImportTab[] =
     this.data.network === 'bluesky' ? ['accounts', 'lists', 'customFeeds'] : ['accounts', 'lists'];
   protected readonly tab = signal<ImportTab>('accounts');
   protected readonly stateFilter = signal<StateFilter>('all');
   protected readonly filter = signal('');
-  protected readonly toSubscribe = signal<ReadonlySet<string>>(new Set());
-  protected readonly toUnsubscribe = signal<ReadonlySet<number>>(new Set());
-  protected readonly toCollect = signal<ReadonlySet<string>>(new Set());
+  protected readonly chosen = signal<ReadonlySet<string>>(new Set());
 
-  private readonly needle = computed(() => this.filter().trim().toLowerCase());
-
-  private readonly matchedFollows = computed(() =>
-    (this.importer.candidates()?.follows ?? []).filter((follow) =>
-      this.matches(follow.handle, follow.displayName),
-    ),
+  private readonly rows = computed(() => {
+    this.activeLang();
+    return buildRows(this.importer.candidates(), (key, params) => this.i18n.translate(key, params));
+  });
+  private readonly tally = computed(() =>
+    tally(this.rows(), {
+      tabs: this.tabs,
+      current: this.tab(),
+      needle: this.filter().trim().toLowerCase(),
+    }),
   );
-  private readonly matchedCollections = computed(() => {
-    const candidates = this.importer.candidates();
-    return {
-      lists: this.matchedOf(candidates?.lists),
-      customFeeds: this.matchedOf(candidates?.customFeeds),
-    };
-  });
-  private readonly tabItems = computed<readonly { readonly state: ImportCandidateState }[]>(() => {
-    const tab = this.tab();
-    return tab === 'accounts' ? this.matchedFollows() : this.matchedCollections()[tab];
-  });
 
-  protected readonly tabCounts = computed<Partial<Record<ImportTab, number>>>(() => ({
-    accounts: this.matchedFollows().length,
-    lists: this.matchedCollections().lists.length,
-    customFeeds: this.matchedCollections().customFeeds.length,
-  }));
-  protected readonly stateOptions = computed<readonly StateOption[]>(() => {
-    const items = this.tabItems();
-    const countOf = (state: ImportCandidateState) =>
-      items.filter((item) => item.state === state).length;
-    const options: StateOption[] = [
-      { state: 'all', count: items.length },
-      { state: 'new', count: countOf('new') },
-      { state: 'subscribed', count: countOf('subscribed') },
-    ];
-    const leftovers = countOf('no_longer_followed');
-    if (leftovers > 0) options.push({ state: 'no_longer_followed', count: leftovers });
-    return options;
-  });
+  protected readonly tabCounts = computed(() => this.tally().tabCounts);
+  protected readonly stateOptions = computed<readonly StateFilter[]>(() =>
+    this.tally().stateCounts.no_longer_followed > 0
+      ? ['all', 'new', 'subscribed', 'no_longer_followed']
+      : ['all', 'new', 'subscribed'],
+  );
+  protected readonly stateCounts = computed(() => this.tally().stateCounts);
   protected readonly activeFilter = computed<StateFilter>(() =>
-    this.stateOptions().some((option) => option.state === this.stateFilter())
-      ? this.stateFilter()
-      : 'all',
+    this.stateOptions().includes(this.stateFilter()) ? this.stateFilter() : 'all',
   );
-  protected readonly visibleFollows = computed(() =>
-    this.matchedFollows().filter((follow) => this.passesFilter(follow.state)),
-  );
-  protected readonly visibleCollections = computed(() => {
-    const tab = this.tab();
-    if (tab === 'accounts') return [];
-    return this.matchedCollections()[tab].filter((item) => this.passesFilter(item.state));
+  protected readonly visibleRows = computed(() => {
+    const filter = this.activeFilter();
+    const matched = this.tally().matched;
+    return filter === 'all' ? matched : matched.filter((row) => row.state === filter);
   });
-  protected readonly visibleNewCount = computed(() =>
-    this.tab() === 'accounts'
-      ? this.visibleFollows().filter((follow) => follow.state === 'new').length
-      : this.visibleCollections().filter((item) => item.state === 'new').length,
+  private readonly visibleNewKeys = computed(() =>
+    this.visibleRows()
+      .filter((row) => row.state === 'new')
+      .map((row) => row.key),
   );
-  protected readonly hasLeftovers = computed(
-    () =>
-      this.tab() === 'accounts' &&
-      this.visibleFollows().some((follow) => follow.state === 'no_longer_followed'),
-  );
-  protected readonly selectedCount = computed(
-    () => this.toSubscribe().size + this.toUnsubscribe().size + this.toCollect().size,
-  );
-  protected readonly selectedKey = computed(() =>
-    pluralKey('settings.social.importSelected', this.selectedCount()),
+  protected readonly visibleNewCount = computed(() => this.visibleNewKeys().length);
+  protected readonly hasLeftovers = computed(() =>
+    this.visibleRows().some((row) => row.state === 'no_longer_followed'),
   );
 
   constructor() {
@@ -166,45 +135,19 @@ export class SocialImportDialogComponent {
     this.importer.load(this.data.accountId);
   }
 
-  protected initials(follow: FollowCandidate): string {
-    return initialsOf(follow.displayName ?? follow.handle);
-  }
-
-  protected isChosen(follow: FollowCandidate): boolean {
-    switch (follow.state) {
-      case 'subscribed':
-        return true;
-      case 'new':
-        return this.toSubscribe().has(follow.feedUrl);
-      case 'no_longer_followed':
-        return follow.subscriptionId !== null && this.toUnsubscribe().has(follow.subscriptionId);
-    }
-  }
-
-  protected toggle(follow: FollowCandidate): void {
-    switch (follow.state) {
-      case 'subscribed':
-        return;
-      case 'new':
-        this.toSubscribe.update((current) => toggled(current, follow.feedUrl));
-        return;
-      case 'no_longer_followed':
-        this.toggleRemoval(follow.subscriptionId);
-    }
+  protected toggle(row: ImportRow): void {
+    if (row.state === 'subscribed') return;
+    this.chosen.update((current) => toggled(current, row.key));
   }
 
   protected selectAllNew(): void {
-    if (this.tab() === 'accounts') {
-      this.selectNewFollows();
-      return;
-    }
-    this.selectNewCollections();
+    this.chosen.update((current) => new Set([...current, ...this.visibleNewKeys()]));
   }
 
   protected apply(): void {
     const selection = {
       subscribe: this.chosenFollows(),
-      unsubscribe: [...this.toUnsubscribe()],
+      unsubscribe: this.chosenRemovals(),
       collections: this.chosenCollections(),
     };
 
@@ -214,42 +157,8 @@ export class SocialImportDialogComponent {
     });
   }
 
-  protected collectionName(collection: CollectionCandidate): string {
-    return collection.kind === 'home'
-      ? this.i18n.translate('settings.social.importHome')
-      : collection.name;
-  }
-
-  protected isCollected(collection: CollectionCandidate): boolean {
-    return collection.state === 'subscribed' || this.toCollect().has(collectionKey(collection));
-  }
-
-  protected toggleCollection(collection: CollectionCandidate): void {
-    if (collection.state === 'subscribed') return;
-    this.toCollect.update((current) => toggled(current, collectionKey(collection)));
-  }
-
   protected cancel(): void {
     this.dialogRef.close(undefined);
-  }
-
-  private selectNewFollows(): void {
-    const feedUrls = this.visibleFollows()
-      .filter((follow) => follow.state === 'new')
-      .map((follow) => follow.feedUrl);
-    this.toSubscribe.update((current) => new Set([...current, ...feedUrls]));
-  }
-
-  private selectNewCollections(): void {
-    const keys = this.visibleCollections()
-      .filter((item) => item.state === 'new')
-      .map(collectionKey);
-    this.toCollect.update((current) => new Set([...current, ...keys]));
-  }
-
-  private toggleRemoval(subscriptionId: number | null): void {
-    if (subscriptionId === null) return;
-    this.toUnsubscribe.update((current) => toggled(current, subscriptionId));
   }
 
   private finish(result: SocialImportResult): void {
@@ -280,31 +189,23 @@ export class SocialImportDialogComponent {
 
   private chosenFollows(): SocialImportFeed[] {
     return (this.importer.candidates()?.follows ?? [])
-      .filter((follow) => follow.state === 'new' && this.toSubscribe().has(follow.feedUrl))
+      .filter((follow) => follow.state === 'new' && this.chosen().has(followKey(follow)))
       .map((follow) => ({ feedUrl: follow.feedUrl, title: follow.displayName }));
+  }
+
+  private chosenRemovals(): number[] {
+    return (this.importer.candidates()?.follows ?? [])
+      .filter((follow) => follow.state === 'no_longer_followed')
+      .filter((follow) => this.chosen().has(followKey(follow)))
+      .flatMap((follow) => (follow.subscriptionId === null ? [] : [follow.subscriptionId]));
   }
 
   private chosenCollections(): SocialImportCollection[] {
     const candidates = this.importer.candidates();
     return [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
       .filter(
-        (collection) =>
-          collection.state === 'new' && this.toCollect().has(collectionKey(collection)),
+        (collection) => collection.state === 'new' && this.chosen().has(collectionKey(collection)),
       )
       .map(({ kind, id, name }) => ({ kind, id, name }));
-  }
-
-  private matchedOf(items: readonly CollectionCandidate[] = []): readonly CollectionCandidate[] {
-    return items.filter((item) => this.matches(this.collectionName(item)));
-  }
-
-  private passesFilter(state: ImportCandidateState): boolean {
-    const filter = this.activeFilter();
-    return filter === 'all' || filter === state;
-  }
-
-  private matches(...texts: readonly (string | null)[]): boolean {
-    const needle = this.needle();
-    return needle === '' || texts.some((text) => (text ?? '').toLowerCase().includes(needle));
   }
 }

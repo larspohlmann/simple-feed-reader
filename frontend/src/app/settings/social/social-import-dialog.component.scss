@@ -7,16 +7,11 @@
 }
 
 .controls {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin: 0 calc(-1 * var(--space-5));
-  padding: 0 var(--space-5) var(--space-3);
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border);
-  background: var(--panel-bg, var(--surface-2));
 }
 
 .tabs {
@@ -62,7 +57,8 @@
 }
 
 .state-chip.on {
-  @include glass-rim.filled(var(--accent-soft), var(--accent), control);
+  --rim-fill: var(--accent-soft);
+  --rim-base: var(--accent);
 
   color: var(--text-primary);
 }
@@ -171,18 +167,13 @@
 
 .state {
   padding: var(--space-0) var(--space-2);
-  border-radius: var(--radius-pill);
   color: var(--text-muted);
   font-size: var(--fs-xs);
   white-space: nowrap;
 }
 
-.state.is-new {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
 .state.is-gone {
+  border-radius: var(--radius-pill);
   background: var(--bg-warning);
   color: var(--warning);
 }

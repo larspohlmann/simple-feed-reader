@@ -411,8 +411,7 @@
       "importTruncated": "Nur die ersten 5.000 werden angezeigt.",
       "importApply": "Importieren",
       "importApplyCount": "{{count}} importieren",
-      "importSelectedOne": "{{count}} ausgewählt",
-      "importSelectedOther": "{{count}} ausgewählt",
+      "importSelected": "{{count}} ausgewählt",
       "importDone": "{{imported}} hinzugefügt, {{removed}} entfernt, {{alreadySubscribed}} schon abonniert.",
       "importOverLimit": "{{count}} nicht hinzugefügt: Abo-Limit erreicht."
     },
