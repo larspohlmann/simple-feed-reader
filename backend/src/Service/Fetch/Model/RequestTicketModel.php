@@ -29,10 +29,16 @@ final readonly class RequestTicketModel
     /**
      * Any status comes back as the answer; the ticket goes out only while every slot it names has room.
      *
-     * @param non-empty-list<RequestSlotModel> $slots
+     * @param list<RequestSlotModel> $slots
+     *
+     * @throws \InvalidArgumentException when no slot is named, which would leave the ticket uncapped
      */
     public static function api(ApiRequestModel $request, array $slots): self
     {
+        if ([] === $slots) {
+            throw new \InvalidArgumentException('An API ticket must name at least one slot.');
+        }
+
         return new self(ResponseExchangeKind::Api, $request, $slots, null);
     }
 

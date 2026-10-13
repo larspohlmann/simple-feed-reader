@@ -89,4 +89,12 @@ final class RequestTicketModelTest extends TestCase
 
         self::assertSame([$account, $server], $ticket->slots);
     }
+
+    public function testAnApiTicketWithoutASlotIsRefusedBecauseItWouldBeUncapped(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('An API ticket must name at least one slot.');
+
+        RequestTicketModel::api(ApiRequestModel::get('https://example.com/a'), []);
+    }
 }
