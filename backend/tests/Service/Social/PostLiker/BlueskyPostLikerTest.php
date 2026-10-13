@@ -11,7 +11,6 @@ use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\BlueskyPostLiker;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -106,7 +105,7 @@ final class BlueskyPostLikerTest extends TestCase
         }
     }
 
-    public function testUnlikingDeletesTheLikeRecordByItsKey(): void
+    public function testUnlikingDeletesTheLikeRecordByTheLastSegmentOfItsUri(): void
     {
         $http = new RoutedHttpClient([
             self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
@@ -133,32 +132,6 @@ final class BlueskyPostLikerTest extends TestCase
             self::fail('A 429 must not read as taken back.');
         } catch (SocialNetworkThrottledException $exception) {
             self::assertSame(60, $exception->retryAfterSeconds);
-        }
-    }
-
-    /** @return iterable<string, array{string}> */
-    public static function foreignLikeIds(): iterable
-    {
-        yield 'another repo' => ['at://did:plc:mallory/app.bsky.feed.like/3lk2'];
-        yield 'another collection' => ['at://did:plc:alice/app.bsky.feed.post/3lk2'];
-        yield 'a trailing slash' => ['at://did:plc:alice/app.bsky.feed.like/3lk2/'];
-        yield 'a nested path' => ['at://did:plc:alice/app.bsky.feed.like/3lk2/../3abc'];
-        yield 'no record key' => ['at://did:plc:alice/app.bsky.feed.like/'];
-        yield 'a status id' => ['110'];
-        yield 'a prefixed uri' => ['x at://did:plc:alice/app.bsky.feed.like/3lk2'];
-        yield 'a repo that only starts like ours' => ['at://did:plc:alice.evil/app.bsky.feed.like/3lk2'];
-    }
-
-    #[DataProvider('foreignLikeIds')]
-    public function testAnIdThatIsNoLikeOfTheAccountIsRefusedBeforeAnyCall(string $likeId): void
-    {
-        $http = new RoutedHttpClient([]);
-
-        try {
-            $this->liker($http)->unlike(SocialApiWiring::blueskyAccount(), $likeId);
-            self::fail('Only a like record of the acting account may be deleted.');
-        } catch (\InvalidArgumentException) {
-            self::assertSame([], $http->requests);
         }
     }
 

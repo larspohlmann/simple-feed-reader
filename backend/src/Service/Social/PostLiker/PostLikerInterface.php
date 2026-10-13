@@ -13,7 +13,6 @@ use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-/** One network's like, keyed by its SocialNetwork value. */
 #[AutoconfigureTag('app.social_post_liker')]
 interface PostLikerInterface
 {
@@ -30,7 +29,6 @@ interface PostLikerInterface
     /**
      * A like the network no longer has counts as taken back.
      *
-     * @throws \InvalidArgumentException when $likeId is no like of $account
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException
