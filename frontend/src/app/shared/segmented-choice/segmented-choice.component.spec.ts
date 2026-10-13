@@ -10,6 +10,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
     [selected]="selected()"
     [disabledOptions]="disabled()"
     [describedBy]="describedBy()"
+    [counts]="counts()"
     ariaLabelKey="lang.label"
     labelPrefix="lang."
     (pick)="picked = $event"
@@ -19,6 +20,7 @@ class HostComponent {
   readonly selected = signal<'en' | 'de'>('en');
   readonly disabled = signal<readonly ('en' | 'de')[]>([]);
   readonly describedBy = signal<string | null>(null);
+  readonly counts = signal<Partial<Record<'en' | 'de', number>>>({});
   picked: string | null = null;
 }
 
@@ -75,6 +77,17 @@ describe('SegmentedChoiceComponent', () => {
     const fixture = create();
     buttons(fixture)[1].click();
     expect(fixture.componentInstance.picked).toBe('de');
+  });
+
+  it('shows a count only after the options that have one, zero included', () => {
+    const fixture = create();
+    fixture.componentInstance.counts.set({ de: 0 });
+    fixture.detectChanges();
+
+    expect(buttons(fixture).map((button) => button.querySelector('.count')?.textContent)).toEqual([
+      undefined,
+      '0',
+    ]);
   });
 
   it('disables only the options it is told to, and a disabled one emits nothing', () => {

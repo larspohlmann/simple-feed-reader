@@ -140,6 +140,27 @@ describe('SocialImportDialogComponent', () => {
     fixture.detectChanges();
   }
 
+  function showTab(fixture: ComponentFixture<SocialImportDialogComponent>, label: string): void {
+    const tabs = Array.from(
+      byTestId(fixture, 'social-import-tabs')?.querySelectorAll('button') ?? [],
+    ) as HTMLButtonElement[];
+    tabs.find((tab) => tab.textContent?.trim().startsWith(label))?.click();
+    fixture.detectChanges();
+  }
+
+  function showState(fixture: ComponentFixture<SocialImportDialogComponent>, state: string): void {
+    byTestId<HTMLButtonElement>(fixture, `social-import-state-${state}`)?.click();
+    fixture.detectChanges();
+  }
+
+  const textOf = (root: HTMLElement, selector: string): string | undefined =>
+    root.querySelector(selector)?.textContent?.trim();
+
+  const tabLabels = (fixture: ComponentFixture<SocialImportDialogComponent>): string[] =>
+    Array.from(byTestId(fixture, 'social-import-tabs')?.querySelectorAll('button') ?? []).map(
+      (tab) => (tab.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    );
+
   function filterBy(fixture: ComponentFixture<SocialImportDialogComponent>, text: string): void {
     const input = byTestId<HTMLInputElement>(fixture, 'social-import-filter') as HTMLInputElement;
     input.value = text;
@@ -167,20 +188,110 @@ describe('SocialImportDialogComponent', () => {
     expect(byTestId(fixture, 'social-import-loading')).toBeNull();
   });
 
-  it('labels each group with its count', () => {
+  it('counts each tab, and the counts follow the filter', () => {
     const fixture = loaded(candidates({ follows: [follow(), CAROL], lists: [collection()] }));
+    expect(tabLabels(fixture)).toEqual(['Accounts 2', 'Lists 1', 'Feeds 0']);
 
-    expect(byTestId(fixture, 'social-import-follows')?.textContent).toContain(
-      'Accounts you follow (2)',
-    );
-    expect(byTestId(fixture, 'social-import-lists')?.textContent).toContain('List (1)');
-    expect(byTestId(fixture, 'social-import-feeds')?.textContent).toContain('Custom feeds (0)');
+    filterBy(fixture, 'carol');
+
+    expect(tabLabels(fixture)).toEqual(['Accounts 1', 'Lists 0', 'Feeds 0']);
   });
 
-  it('has no custom feeds group on Mastodon', () => {
+  it('opens on the accounts and shows one tab at a time', () => {
+    const fixture = loaded(candidates({ follows: [follow()], lists: [HOME] }));
+    expect(byTestId(fixture, 'social-import-follows')).not.toBeNull();
+    expect(byTestId(fixture, 'social-import-lists')).toBeNull();
+
+    showTab(fixture, 'Lists');
+
+    expect(byTestId(fixture, 'social-import-follows')).toBeNull();
+    expect(byTestId(fixture, 'social-import-collection-home:')).not.toBeNull();
+  });
+
+  it('has no custom feeds tab on Mastodon', () => {
     const fixture = loaded(candidates(), 'mastodon');
 
-    expect(byTestId(fixture, 'social-import-feeds')).toBeNull();
+    expect(tabLabels(fixture)).toEqual(['Accounts 0', 'Lists 0']);
+  });
+
+  it('narrows the rows to one state and drops the now redundant state labels', () => {
+    const fixture = loaded(candidates({ follows: [follow(), CAROL, DAVE] }));
+
+    showState(fixture, 'new');
+
+    expect(byTestId(fixture, 'social-import-follow-did:plc:bob')).not.toBeNull();
+    expect(byTestId(fixture, 'social-import-follow-did:plc:carol')).toBeNull();
+    expect(byTestId(fixture, 'social-import-follow-did:plc:dave')).toBeNull();
+    expect(byTestId(fixture, 'social-import-follows')?.querySelector('.state')).toBeNull();
+    expect(byTestId(fixture, 'social-import-state-new')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('counts each state, and offers No longer followed only when there is one', () => {
+    const chipText = (fixture: ComponentFixture<SocialImportDialogComponent>, state: string) =>
+      byTestId(fixture, `social-import-state-${state}`)?.textContent?.replace(/\s+/g, ' ').trim();
+    const withLeftover = loaded(candidates({ follows: [follow(), CAROL, DAVE] }));
+    expect(chipText(withLeftover, 'all')).toBe('All 3');
+    expect(chipText(withLeftover, 'new')).toBe('New 1');
+    expect(chipText(withLeftover, 'subscribed')).toBe('Subscribed 1');
+    expect(chipText(withLeftover, 'no_longer_followed')).toBe('No longer followed 1');
+
+    const without = loaded(candidates({ follows: [follow(), CAROL] }));
+    expect(byTestId(without, 'social-import-state-no_longer_followed')).toBeNull();
+  });
+
+  it('falls back to All on a tab that cannot show the chosen state', () => {
+    const fixture = loaded(candidates({ follows: [DAVE], lists: [HOME] }));
+    showState(fixture, 'no_longer_followed');
+
+    showTab(fixture, 'Lists');
+
+    expect(byTestId(fixture, 'social-import-collection-home:')).not.toBeNull();
+    expect(byTestId(fixture, 'social-import-state-all')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('hints how to unsubscribe only while a leftover is listed', () => {
+    const hint = 'Tick a “No longer followed” account to unsubscribe.';
+    const fixture = loaded(candidates({ follows: [follow(), DAVE] }));
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(hint);
+
+    showState(fixture, 'new');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(hint);
+
+    showState(fixture, 'all');
+    showTab(fixture, 'Lists');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(hint);
+  });
+
+  it('leads each account with its display name and initials, falling back to the handle', () => {
+    const nameless = follow({
+      identity: 'did:plc:fay',
+      handle: '@fay.bsky.social',
+      displayName: null,
+      feedUrl: 'https://bsky.app/profile/did:plc:fay/rss',
+    });
+    const fixture = loaded(candidates({ follows: [follow(), nameless] }));
+
+    const bob = byTestId(fixture, 'social-import-follow-did:plc:bob') as HTMLElement;
+    expect(textOf(bob, '.avatar')).toBe('B');
+    expect(textOf(bob, '.name')).toBe('Bob');
+    expect(textOf(bob, '.handle')).toBe('@bob.bsky.social');
+    const fay = byTestId(fixture, 'social-import-follow-did:plc:fay') as HTMLElement;
+    expect(textOf(fay, '.avatar')).toBe('F');
+    expect(textOf(fay, '.name')).toBe('@fay.bsky.social');
+    expect(fay.querySelector('.handle')).toBeNull();
+  });
+
+  it('counts the selection in the footer and on the Import button', () => {
+    const fixture = loaded(candidates({ follows: [follow(), DAVE] }));
+    expect(byTestId(fixture, 'social-import-selected')).toBeNull();
+    expect(applyButton(fixture).textContent?.trim()).toBe('Import');
+
+    tick(fixture, 'did:plc:bob');
+    expect(byTestId(fixture, 'social-import-selected')?.textContent?.trim()).toBe('1 selected');
+
+    tick(fixture, 'did:plc:dave');
+    expect(byTestId(fixture, 'social-import-selected')?.textContent?.trim()).toBe('2 selected');
+    expect(applyButton(fixture).textContent?.trim()).toBe('Import 2');
   });
 
   it('marks each follow with its state and shows subscribed ones checked and fixed', () => {
@@ -204,6 +315,7 @@ describe('SocialImportDialogComponent', () => {
         customFeeds: [DISCOVER],
       }),
     );
+    showTab(fixture, 'Lists');
 
     const lists = byTestId(fixture, 'social-import-lists') as HTMLElement;
     expect(lists.textContent).toContain('Home timeline');
@@ -214,33 +326,35 @@ describe('SocialImportDialogComponent', () => {
     expect(collectionBox(fixture, 'list:at://list/a').getAttribute('aria-label')).toBe(
       'Already added: News',
     );
+    showTab(fixture, 'Feeds');
     expect(collectionBox(fixture, 'custom_feed:at://feed/a').getAttribute('aria-label')).toBe(
       'Add Discover',
     );
   });
 
-  it('selects follows only with Select all new, and stays off when only collections are new', () => {
-    const withFollow = loaded(candidates({ follows: [follow()], lists: [HOME] }));
-    press(withFollow, 'social-import-select-new');
-    expect(checkboxOf(withFollow, 'did:plc:bob').checked).toBe(true);
-    expect(collectionBox(withFollow, 'home:').checked).toBe(false);
-    expect(
-      byTestId(withFollow, 'social-import-select-new')?.querySelector('button')?.disabled,
-    ).toBe(false);
+  it('selects the new rows of the open tab only with Select all new', () => {
+    const selectNew = (fixture: ComponentFixture<SocialImportDialogComponent>) =>
+      byTestId(fixture, 'social-import-select-new')?.querySelector('button') as HTMLButtonElement;
+    const fixture = loaded(candidates({ follows: [follow()], lists: [HOME] }));
+    expect(selectNew(fixture).textContent?.trim()).toBe('Select all new (1)');
 
-    const collectionsOnly = loaded(candidates({ lists: [HOME], customFeeds: [DISCOVER] }));
-    expect(
-      byTestId(collectionsOnly, 'social-import-select-new')?.querySelector('button')?.disabled,
-    ).toBe(true);
+    press(fixture, 'social-import-select-new');
+    expect(checkboxOf(fixture, 'did:plc:bob').checked).toBe(true);
+    showTab(fixture, 'Lists');
+    expect(collectionBox(fixture, 'home:').checked).toBe(false);
+
+    press(fixture, 'social-import-select-new');
+    expect(collectionBox(fixture, 'home:').checked).toBe(true);
+    showTab(fixture, 'Feeds');
+    expect(selectNew(fixture).disabled).toBe(true);
   });
 
   it('does not toggle an already added collection', () => {
     const added = collection({ state: 'subscribed', subscriptionId: 12 });
     const fixture = loaded(candidates({ lists: [added] }));
+    showTab(fixture, 'Lists');
 
-    (
-      fixture.componentInstance as unknown as { toggleCollection(item: CollectionCandidate): void }
-    ).toggleCollection(added);
+    collectionBox(fixture, 'list:at://list/a').dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
     expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(true);
@@ -249,6 +363,7 @@ describe('SocialImportDialogComponent', () => {
 
   it('filters collections by the translated Home name', () => {
     const fixture = loaded(candidates({ lists: [HOME, collection()] }));
+    showTab(fixture, 'Lists');
 
     filterBy(fixture, 'timeline');
 
@@ -258,6 +373,7 @@ describe('SocialImportDialogComponent', () => {
 
   it('enables Apply for a selection made only of collections', () => {
     const fixture = loaded(candidates({ lists: [HOME] }));
+    showTab(fixture, 'Lists');
     expect(applyButton(fixture).disabled).toBe(true);
 
     collectionBox(fixture, 'home:').click();
@@ -268,7 +384,10 @@ describe('SocialImportDialogComponent', () => {
 
   it('imports the chosen collections and refreshes the reader', () => {
     const fixture = loaded(candidates({ lists: [HOME], customFeeds: [DISCOVER] }));
+    showTab(fixture, 'Lists');
     collectionBox(fixture, 'home:').click();
+    fixture.detectChanges();
+    showTab(fixture, 'Feeds');
     collectionBox(fixture, 'custom_feed:at://feed/a').click();
     fixture.detectChanges();
 
