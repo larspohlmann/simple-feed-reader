@@ -157,6 +157,27 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         self::assertSame([self::MASTODON_HOME], $this->requestsTo(self::MASTODON));
     }
 
+    public function testAnInFlightSiblingOfAThrottledFeedIsSettledOnItsOwnAnswer(): void
+    {
+        $respond = static fn (string $method, string $url): MockResponse => self::MASTODON_HOME === $method . ' ' . $url
+            ? self::json(['error' => 'Too many requests'], Response::HTTP_TOO_MANY_REQUESTS, ['Retry-After' => '120'])
+            : self::statuses();
+        $account = self::mastodonAccount(self::MASTODON, 1);
+        $home = $this->feedOf($account);
+        $friends = $this->feedOf($account, SocialFeedKind::UserList, '42');
+        $family = $this->feedOf($account, SocialFeedKind::UserList, '43');
+        $parked = $this->feedOf($account, SocialFeedKind::UserList, '44');
+
+        $outcomes = self::read($this->fetcher($respond), [$home, $friends, $family, $parked]);
+
+        self::assertSame(TimelineOutcome::Throttled, $outcomes[self::idOf($home)]->outcome);
+        foreach ([$friends, $family] as $inFlight) {
+            self::assertSame('109', $outcomes[self::idOf($inFlight)]->page()->newestId);
+        }
+        self::assertSame(TimelineOutcome::AccountThrottled, $outcomes[self::idOf($parked)]->outcome);
+        self::assertCount(3, $this->requestsTo(self::MASTODON));
+    }
+
     public function testARefusedTokenPausesOnlyItsAccount(): void
     {
         $respond = static fn (string $method, string $url): MockResponse => str_starts_with($url, self::MASTODON)
