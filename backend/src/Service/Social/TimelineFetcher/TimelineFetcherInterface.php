@@ -16,7 +16,7 @@ interface TimelineFetcherInterface
      * @param iterable<int, SocialFeed> $socialFeeds by feed id, their accounts loaded; pulled one at a time, as a
      *                                               request may start
      *
-     * @return iterable<int, TimelineOutcomeModelInterface>
+     * @return iterable<int|string, TimelineOutcomeModelInterface>
      */
     public function fetchAll(iterable $socialFeeds): iterable;
 }

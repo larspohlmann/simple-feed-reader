@@ -550,7 +550,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
     /**
      * @param list<SocialFeed> $socialFeeds
      *
-     * @return array<int, TimelineOutcomeModelInterface>
+     * @return array<int|string, TimelineOutcomeModelInterface>
      */
     private static function read(ConcurrentTimelineFetcher $fetcher, array $socialFeeds): array
     {

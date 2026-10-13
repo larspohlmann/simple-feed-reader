@@ -21,10 +21,10 @@ use App\Service\Social\TimelineSources;
  */
 final class TimelineRound implements DispatchGateInterface
 {
-    /** @var array<int, TimelineOutcomeModelInterface> */
+    /** @var array<int|string, TimelineOutcomeModelInterface> */
     private array $unasked = [];
 
-    /** @var list<int> */
+    /** @var list<int|string> */
     private array $staleFeedIds = [];
 
     /** @var array<int, SocialFeed> every feed ticketed so far */
@@ -37,7 +37,7 @@ final class TimelineRound implements DispatchGateInterface
     /**
      * @param iterable<int, SocialFeed> $socialFeeds
      *
-     * @return \Generator<int, RequestTicketModel>
+     * @return \Generator<int|string, RequestTicketModel>
      */
     public function tickets(iterable $socialFeeds): \Generator
     {
@@ -52,7 +52,7 @@ final class TimelineRound implements DispatchGateInterface
      * Drops each stale account's session for a fresh one, then sends again the feeds it held back; empty when no
      * session went stale.
      *
-     * @return \Generator<int, RequestTicketModel>
+     * @return \Generator<int|string, RequestTicketModel>
      */
     public function startRenewalWave(): \Generator
     {
@@ -71,8 +71,8 @@ final class TimelineRound implements DispatchGateInterface
         return $this->accounts->mayAsk($this->socialFeedOf($key)->getSocialAccount());
     }
 
-    /** The feed's outcome, or null while it waits for the stale retry wave. */
-    public function settle(int $feedId, FetchOutcomeModel $outcome): ?TimelineOutcomeModelInterface
+    /** The feed's outcome, or null while it waits for the renewal wave. */
+    public function settle(int|string $feedId, FetchOutcomeModel $outcome): ?TimelineOutcomeModelInterface
     {
         $socialFeed = $this->socialFeedOf($feedId);
         $account = $socialFeed->getSocialAccount();
@@ -92,7 +92,7 @@ final class TimelineRound implements DispatchGateInterface
         return new FetchedTimelineModel($page);
     }
 
-    /** @return \Generator<int, TimelineOutcomeModelInterface> */
+    /** @return \Generator<int|string, TimelineOutcomeModelInterface> */
     public function drainUnasked(): \Generator
     {
         $unasked = $this->unasked;
@@ -101,8 +101,8 @@ final class TimelineRound implements DispatchGateInterface
         yield from $unasked;
     }
 
-    /** @return \Generator<int, RequestTicketModel> */
-    private function ticketOf(int $feedId): \Generator
+    /** @return \Generator<int|string, RequestTicketModel> */
+    private function ticketOf(int|string $feedId): \Generator
     {
         $socialFeed = $this->socialFeedOf($feedId);
         $account = $socialFeed->getSocialAccount();
@@ -128,7 +128,7 @@ final class TimelineRound implements DispatchGateInterface
 
     /** The settled outcome, or null once the feed is queued for the renewal wave. */
     private function settledOrQueued(
-        int $feedId,
+        int|string $feedId,
         ?TimelineOutcomeModelInterface $settled,
     ): ?TimelineOutcomeModelInterface {
         if (null === $settled) {

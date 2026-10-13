@@ -26,7 +26,7 @@ final readonly class ConcurrentTimelineFetcher implements TimelineFetcherInterfa
         CapacityGuard::atLeastOne($accountConcurrency, 'Per-account concurrency');
     }
 
-    /** @return \Generator<int, TimelineOutcomeModelInterface> */
+    /** @return \Generator<int|string, TimelineOutcomeModelInterface> */
     public function fetchAll(iterable $socialFeeds): \Generator
     {
         $round = new TimelineRound($this->sources, new TimelineAccounts());
@@ -36,15 +36,14 @@ final readonly class ConcurrentTimelineFetcher implements TimelineFetcherInterfa
     }
 
     /**
-     * @param iterable<int, RequestTicketModel> $tickets
+     * @param iterable<int|string, RequestTicketModel> $tickets
      *
-     * @return \Generator<int, TimelineOutcomeModelInterface>
+     * @return \Generator<int|string, TimelineOutcomeModelInterface>
      */
     private function wave(TimelineRound $round, iterable $tickets): \Generator
     {
         foreach ($this->engine->sendAll($tickets, $this->accountConcurrency, $round) as $feedId => $outcome) {
             yield from $round->drainUnasked();
-            \assert(\is_int($feedId));
             $settled = $round->settle($feedId, $outcome);
             if (null !== $settled) {
                 yield $feedId => $settled;

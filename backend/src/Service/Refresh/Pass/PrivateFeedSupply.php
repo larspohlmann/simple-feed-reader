@@ -38,9 +38,9 @@ final class PrivateFeedSupply
     }
 
     /**
-     * @param iterable<int, TimelineOutcomeModelInterface> $landed
+     * @param iterable<int|string, TimelineOutcomeModelInterface> $landed
      *
-     * @return \Generator<int, TimelineOutcomeModelInterface>
+     * @return \Generator<int|string, TimelineOutcomeModelInterface>
      */
     public function withOrphans(iterable $landed): \Generator
     {
