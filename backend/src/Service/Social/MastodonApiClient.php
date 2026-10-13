@@ -8,6 +8,7 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
+use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -55,10 +56,25 @@ final readonly class MastodonApiClient
         try {
             return $this->api->send($request);
         } catch (FetchException $exception) {
-            throw new SocialNetworkUnreachableException(
-                'The Mastodon instance could not be reached.',
-                previous: $exception,
-            );
+            throw self::unreachable($exception);
         }
+    }
+
+    /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
+    public static function answerOf(FetchOutcomeModel $outcome): ApiResponseModel
+    {
+        try {
+            return $outcome->answerOrThrow();
+        } catch (FetchException $exception) {
+            throw self::unreachable($exception);
+        }
+    }
+
+    private static function unreachable(FetchException $exception): SocialNetworkUnreachableException
+    {
+        return new SocialNetworkUnreachableException(
+            'The Mastodon instance could not be reached.',
+            previous: $exception,
+        );
     }
 }

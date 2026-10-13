@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\TimelineReader;
 
 use App\Entity\Feed;
+use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Completion\Model\KnownSharesModel;
+use App\Service\Fetch\Model\ApiRequestModel;
+use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\TimelineReader\NetworkTimelineReader;
 use App\Service\Social\TimelineSource\TimelineSourceInterface;
@@ -34,6 +37,20 @@ final class NetworkTimelineReaderTest extends TestCase
             public function page(SocialFeed $socialFeed): TimelinePageModel
             {
                 return $this->page;
+            }
+
+            public function request(SocialFeed $socialFeed): ApiRequestModel
+            {
+                throw new \LogicException('Not asked by the blocking reader.');
+            }
+
+            public function pageOf(SocialFeed $socialFeed, FetchOutcomeModel $outcome): TimelinePageModel
+            {
+                throw new \LogicException('Not asked by the blocking reader.');
+            }
+
+            public function dropSession(SocialAccount $account): void
+            {
             }
         };
         $reader = new NetworkTimelineReader(new ServiceLocator([

@@ -41,6 +41,12 @@ final readonly class MastodonAccountApi
         return MastodonApiClient::accepted($this->answer($account, $request));
     }
 
+    /** @throws SocialCredentialsRejectedException when the stored token no longer opens */
+    public function authorizedGet(SocialAccount $account, string $path): ApiRequestModel
+    {
+        return $this->authorized($account, ApiRequestModel::get($account->getServiceUrl() . $path));
+    }
+
     /**
      * @throws SocialPostNotFoundException
      * @throws SocialCredentialsRejectedException only on a 401; a 403 concerns the post or the token's scope
@@ -73,9 +79,14 @@ final readonly class MastodonAccountApi
 
     private function answer(SocialAccount $account, ApiRequestModel $request): ApiResponseModel
     {
+        return $this->mastodon->answer($this->authorized($account, $request));
+    }
+
+    private function authorized(SocialAccount $account, ApiRequestModel $request): ApiRequestModel
+    {
         $session = new MastodonSessionModel($account->getServiceUrl(), $this->storedCredential->open($account));
 
-        return $this->mastodon->answer($session->authorized($request));
+        return $session->authorized($request);
     }
 
     private static function postAnswerAccepted(ApiResponseModel $answer, string $scope): ApiResponseModel

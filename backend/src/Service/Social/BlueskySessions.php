@@ -18,6 +18,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskySessions
 {
+    public const string SESSION_REFUSED = 'Bluesky refused the session of this account.';
+
     private const array STALE_SESSION_ERRORS = ['ExpiredToken', 'InvalidToken'];
     private const array STALE_SESSION_STATUSES = [Response::HTTP_BAD_REQUEST, Response::HTTP_UNAUTHORIZED];
 
@@ -53,6 +55,23 @@ final readonly class BlueskySessions
     }
 
     /**
+     * A GET to the account's own service URL carrying its session's token, opening a session when none is cached.
+     *
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function authorizedGet(SocialAccount $account, string $path): ApiRequestModel
+    {
+        return self::authorized(ApiRequestModel::get($account->getServiceUrl() . $path), $this->current($account));
+    }
+
+    public function forget(SocialAccount $account): void
+    {
+        $this->cache->forget($account);
+    }
+
+    /**
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkThrottledException
      * @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned
@@ -85,8 +104,8 @@ final readonly class BlueskySessions
      */
     public static function accepted(ApiResponseModel $answer): ApiResponseModel
     {
-        if (Response::HTTP_UNAUTHORIZED === $answer->status || self::isStale($answer)) {
-            throw new SocialCredentialsRejectedException('Bluesky refused the session of this account.');
+        if (Response::HTTP_UNAUTHORIZED === $answer->status || self::isStaleSession($answer)) {
+            throw new SocialCredentialsRejectedException(self::SESSION_REFUSED);
         }
 
         return BlueskyApiClient::accepted($answer);
@@ -97,14 +116,14 @@ final readonly class BlueskySessions
         if (Response::HTTP_NOT_FOUND === $answer->status) {
             throw new SocialPostNotFoundException('The post is no longer on Bluesky.');
         }
-        if (Response::HTTP_BAD_REQUEST === $answer->status && !self::isStale($answer)) {
+        if (Response::HTTP_BAD_REQUEST === $answer->status && !self::isStaleSession($answer)) {
             throw new SocialPostRefusedException('Bluesky refused this action on the post.');
         }
 
         return self::accepted($answer);
     }
 
-    private static function isStale(ApiResponseModel $answer): bool
+    public static function isStaleSession(ApiResponseModel $answer): bool
     {
         return \in_array($answer->status, self::STALE_SESSION_STATUSES, true)
             && \in_array(JsonNodeModel::of($answer->json())->string('error'), self::STALE_SESSION_ERRORS, true);
@@ -114,7 +133,7 @@ final readonly class BlueskySessions
     {
         $answer = $this->bluesky->answer(self::authorized($request, $this->current($account)));
 
-        return self::isStale($answer)
+        return self::isStaleSession($answer)
             ? $this->bluesky->answer(self::authorized($request, $this->fresh($account)))
             : $answer;
     }
