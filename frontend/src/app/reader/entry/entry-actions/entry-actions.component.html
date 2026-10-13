@@ -33,6 +33,10 @@
 <button
   type="button"
   [attr.aria-label]="'reader.favorite' | transloco"
+  [attr.title]="
+    (entry().isFavorite ? 'reader.actionHint.favoriteRemove' : 'reader.actionHint.favoriteAdd')
+      | transloco
+  "
   [appFlagToggle]="entry().isFavorite"
   (click)="$event.stopPropagation(); actions.favorite(entry())"
   (keydown.enter)="$event.stopPropagation()"
@@ -43,6 +47,7 @@
 @if (entry().social; as social) {
   <button
     type="button"
+    [attr.title]="likeHint(social) | transloco"
     [attr.aria-label]="
       'reader.' + (social.isLiked ? 'unlike' : 'like') + '.' + social.network | transloco
     "
@@ -57,6 +62,9 @@
 <button
   type="button"
   [attr.aria-label]="'reader.keep' | transloco"
+  [attr.title]="
+    (entry().isKept ? 'reader.actionHint.keepRemove' : 'reader.actionHint.keepAdd') | transloco
+  "
   [appFlagToggle]="entry().isKept"
   (click)="$event.stopPropagation(); actions.keep(entry())"
   (keydown.enter)="$event.stopPropagation()"
@@ -67,6 +75,9 @@
 <button
   type="button"
   [attr.aria-label]="'reader.toggleRead' | transloco"
+  [attr.title]="
+    (entry().isViewed ? 'reader.actionHint.readRemove' : 'reader.actionHint.readAdd') | transloco
+  "
   [appFlagToggle]="entry().isViewed"
   (click)="$event.stopPropagation(); actions.toggleRead(entry())"
   (keydown.enter)="$event.stopPropagation()"

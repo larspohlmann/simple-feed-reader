@@ -1190,6 +1190,18 @@
     },
     "keep": "Merken",
     "toggleRead": "Gelesen umschalten",
+    "actionHint": {
+      "favoriteAdd": "Zu Favoriten hinzufügen",
+      "favoriteRemove": "Aus Favoriten entfernen",
+      "likeBluesky": "Auf Bluesky liken — ein öffentliches Like, das der Autor sieht",
+      "likeMastodon": "Auf Mastodon liken — ein öffentliches Like, das der Autor sieht",
+      "unlikeBluesky": "Dein Like auf Bluesky zurücknehmen",
+      "unlikeMastodon": "Dein Like auf Mastodon zurücknehmen",
+      "keepAdd": "Merken — wird beim Aufräumen alter Einträge nie gelöscht",
+      "keepRemove": "Nicht mehr merken — das Aufräumen alter Einträge darf ihn wieder löschen",
+      "readAdd": "Als gelesen markieren — landet in „Zuletzt gelesen“",
+      "readRemove": "Aus „Zuletzt gelesen“ entfernen"
+    },
     "filterByTag": "Nach {{name}} filtern",
     "shortBadge": "Short",
     "moreFrom": "Mehr von {{source}}",

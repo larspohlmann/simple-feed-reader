@@ -6,11 +6,18 @@ import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.dir
 import { EntryDto } from '../../models';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
+import { EntrySocialDto } from '../../entry-social';
+import { SocialNetworkName } from '../../../core/social-network';
+
+const LIKE_HINTS: Record<SocialNetworkName, { like: string; unlike: string }> = {
+  bluesky: { like: 'reader.actionHint.likeBluesky', unlike: 'reader.actionHint.unlikeBluesky' },
+  mastodon: { like: 'reader.actionHint.likeMastodon', unlike: 'reader.actionHint.unlikeMastodon' },
+};
 
 /**
  * The per-entry actions — favorite, like on the post's network (#1600), keep,
- * mark read, led by the declared duration, play and add-to-playlist on an audio entry (#1436, #1449) — as one
- * control cluster. Lives here, not repeated per block: a second copy (hero vs
+ * mark read, led by the declared duration, play and add-to-playlist on an audio
+ * entry (#1436, #1449) — as one control cluster. Lives here, not repeated per block: a second copy (hero vs
  * entry-row) once made actions read as unreliable across the view (#414).
  *
  * Clicks stop propagating — the surrounding card is itself clickable and would
@@ -36,4 +43,8 @@ export class EntryActionsComponent {
   readonly audio = input(true);
   protected readonly entryAudio = new EntryAudio(this.entry, inject(AudioPlayerService));
   protected readonly actions = inject(EntryActionHandler);
+  protected likeHint(social: EntrySocialDto): string {
+    const hints = LIKE_HINTS[social.network];
+    return social.isLiked ? hints.unlike : hints.like;
+  }
 }
