@@ -635,7 +635,7 @@ weights.
 | `variant` | `'default' \| 'primary' \| 'accent-outline' \| 'danger' \| 'danger-outline' \| 'ghost'` | `'default'` |
 | `size` | `'sm' \| 'md'` | `'md'` |
 | `loading` | `boolean` | `false` — swaps the label for a spinner and disables |
-| `disabled` | `boolean` | `false` |
+| `disabled` | `boolean` | `false` — a disabled `primary` or `danger` drops to the default weight with muted text |
 | `block` | `boolean` (attribute) | `false` — stretch to the container's width |
 | `focusInitial` | `boolean` (attribute) | `false` |
 
@@ -651,6 +651,10 @@ weights.
 `size="sm"` is for dense rows (a settings list, an admin table) where a 40px
 control would set the row height instead of the content; its height comes from
 padding, so the label and any leading icon still decide it.
+
+Bind `(click)` on `<app-button>` as usual: while `disabled` or `loading`, the
+component swallows clicks on its host before any consumer listener sees them,
+so the handler need not check the state again (#1610).
 
 `focusInitial` puts `cdkFocusInitial` on the real `<button>`. The CDK's focus
 trap calls `focus()` on the element carrying that attribute, and this component's

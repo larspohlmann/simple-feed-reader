@@ -1,7 +1,8 @@
 <button
   [type]="type()"
-  [disabled]="loading() || disabled()"
+  [disabled]="inert()"
   [class]="variant() + ' ' + size()"
+  [class.off]="disabled() && !loading()"
   [attr.aria-label]="ariaLabel() ?? null"
   [attr.cdkFocusInitial]="focusInitial() ? '' : null"
 >

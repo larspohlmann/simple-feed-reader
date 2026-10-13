@@ -4,13 +4,20 @@ import { ButtonComponent, ButtonVariant } from './button.component';
 
 @Component({
   imports: [ButtonComponent],
-  template: `<app-button [variant]="variant()" [loading]="loading()" [ariaLabel]="label()"
+  template: `<app-button
+    [variant]="variant()"
+    [loading]="loading()"
+    [disabled]="disabled()"
+    [ariaLabel]="label()"
+    (click)="presses = presses + 1"
     >Save</app-button
   >`,
 })
 class Host {
   readonly variant = signal<ButtonVariant>('default');
   readonly loading = signal(false);
+  readonly disabled = signal(false);
+  presses = 0;
   readonly label = signal<string | undefined>(undefined);
 }
 
@@ -71,5 +78,41 @@ describe('ButtonComponent', () => {
     expect(button.disabled).toBe(true);
     expect(fixture.nativeElement.querySelector('app-spinner')).not.toBeNull();
     expect(button.textContent?.trim()).toBe('');
+  });
+
+  it('passes a click on its host through while enabled', async () => {
+    const fixture = await mount();
+    (fixture.nativeElement.querySelector('app-button') as HTMLElement).click();
+
+    expect(fixture.componentInstance.presses).toBe(1);
+  });
+
+  it('swallows a click on its host while disabled or loading', async () => {
+    const fixture = await mount();
+    const host = fixture.nativeElement.querySelector('app-button') as HTMLElement;
+
+    fixture.componentInstance.disabled.set(true);
+    fixture.detectChanges();
+    host.click();
+    fixture.componentInstance.disabled.set(false);
+    fixture.componentInstance.loading.set(true);
+    fixture.detectChanges();
+    host.click();
+
+    expect(fixture.componentInstance.presses).toBe(0);
+  });
+
+  it('marks a disabled button off, but not a loading one', async () => {
+    const fixture = await mount();
+    const button = () => fixture.nativeElement.querySelector('button') as HTMLElement;
+    fixture.componentInstance.variant.set('primary');
+    fixture.componentInstance.disabled.set(true);
+    fixture.detectChanges();
+    expect(button().classList).toContain('off');
+    expect(button().classList).toContain('primary');
+
+    fixture.componentInstance.loading.set(true);
+    fixture.detectChanges();
+    expect(button().classList).not.toContain('off');
   });
 });

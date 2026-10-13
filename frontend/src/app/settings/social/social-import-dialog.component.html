@@ -135,7 +135,7 @@
     footer
     variant="primary"
     data-testid="social-import-apply"
-    [disabled]="selectedCount() === 0"
+    [disabled]="!canApply()"
     [loading]="importer.importing()"
     (click)="apply()"
   >

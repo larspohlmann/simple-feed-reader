@@ -302,6 +302,34 @@ describe('SocialImportDialogComponent', () => {
     expect(byTestId(fixture, 'social-import-truncated')?.textContent).toContain('first 5,000');
   });
 
+  it('keeps Import disabled and inert while the candidates load', () => {
+    const fixture = mount();
+    const apply = () =>
+      byTestId(fixture, 'social-import-apply')?.querySelector('button') as HTMLButtonElement;
+
+    expect(apply().disabled).toBe(true);
+    byTestId(fixture, 'social-import-apply')?.click();
+    http.expectNone(IMPORT);
+    http.expectOne(CANDIDATES).flush(candidates({ follows: [follow()] }));
+    fixture.detectChanges();
+    tick(fixture, 'did:plc:bob');
+    expect(apply().disabled).toBe(false);
+  });
+
+  it('keeps Import disabled when the candidates failed to load', () => {
+    const fixture = mount();
+    http
+      .expectOne(CANDIDATES)
+      .flush(
+        { type: 'about:blank', title: 'x', status: 502, detail: 'Bluesky is unreachable.' },
+        { status: 502, statusText: 'Bad Gateway' },
+      );
+    fixture.detectChanges();
+
+    const apply = byTestId(fixture, 'social-import-apply')?.querySelector('button');
+    expect(apply?.disabled).toBe(true);
+  });
+
   it('keeps Import disabled until something is chosen', () => {
     const fixture = loaded(candidates({ follows: [follow()] }));
     const apply = () =>
