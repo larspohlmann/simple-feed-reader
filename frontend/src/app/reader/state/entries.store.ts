@@ -177,7 +177,8 @@ export class EntriesStore {
     if (!target) return;
     this.error.set(null);
     this.failedOperation.set(null);
-    this.optimistic(target, localStatePatch(patch), this.api.updateState(entryId, patch)).subscribe({
+    const request$ = this.api.updateState(entryId, patch);
+    this.optimistic(target, localStatePatch(patch), request$).subscribe({
       error: (error: HttpErrorResponse) => {
         this.error.set(parseProblem(error));
         this.failedOperation.set(() => this.setState(entryId, patch, onError));
