@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Pass;
 
+use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
-use App\Service\Fetch\DispatchGate\DispatchGateInterface;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\RequestTicketModel;
+use App\Service\Fetch\Model\SettlementModel;
 use App\Service\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -19,16 +20,17 @@ use App\Service\Social\Model\TimelineSlotsModel;
 use App\Service\Social\TimelineSources;
 
 /**
- * One refresh's private-feed reads: a ticket per feed, a gate that keeps a held account's waiting tickets off the
- * wire, and each answer settled into an outcome. A feed settled without a request waits in `unasked` until drained.
+ * One refresh's private-feed reads: a ticket per feed, a gate that keeps a held account's tickets off the wire, and
+ * each answer settled into an outcome or a follow-up. A stale session is renewed once per account in the refresh; a
+ * feed settled without a request waits in `unasked` until drained.
  */
-final class TimelineRound implements DispatchGateInterface
+final class TimelineRound
 {
     /** @var array<int|string, TimelineOutcomeModelInterface> */
     private array $unasked = [];
 
-    /** @var list<int|string> */
-    private array $staleFeedIds = [];
+    /** @var array<int|string, true> feeds whose current ticket was built after their account's renewal */
+    private array $onRenewedSession = [];
 
     private readonly TimelineAccounts $accounts;
 
@@ -52,51 +54,46 @@ final class TimelineRound implements DispatchGateInterface
             return;
         }
 
-        yield from $this->ticketOf($feedId, $socialFeed);
-    }
+        $settlement = $this->ticketOf($feedId, $socialFeed);
+        if ($settlement->isRequest()) {
+            yield $feedId => $settlement->requestTicket();
 
-    /**
-     * Drops each stale account's session for a fresh one, then sends again the feeds it held back; empty when no
-     * session went stale.
-     *
-     * @return \Generator<int|string, RequestTicketModel>
-     */
-    public function startRenewalWave(): \Generator
-    {
-        $feedIds = $this->staleFeedIds;
-        $this->staleFeedIds = [];
-        foreach ($this->accounts->renewSessions() as $account) {
-            $this->sources->of($account)->dropSession($account);
+            return;
         }
-        foreach ($feedIds as $feedId) {
-            yield from $this->ticketFor($feedId);
-        }
+
+        $this->unasked[$feedId] = $settlement->settledOutcome();
     }
 
     public function admits(int|string $key): bool
     {
-        return $this->accounts->mayAsk($this->socialFeedOf($key)->getSocialAccount());
-    }
-
-    /** The feed's outcome, or null while it waits for the renewal wave. */
-    public function settle(int|string $feedId, FetchOutcomeModel $outcome): ?TimelineOutcomeModelInterface
-    {
-        $socialFeed = $this->socialFeedOf($feedId);
-        $account = $socialFeed->getSocialAccount();
-        if ($outcome->isWithheld()) {
-            return $this->settledOrQueued($feedId, $this->accounts->heldOutcomeOf($account));
+        $account = $this->socialFeedOf($key)->getSocialAccount();
+        if (null !== $this->accounts->heldOutcomeOf($account)) {
+            return false;
         }
 
+        // A ticket built before its account's renewal carries the dropped session: withheld, it is built again.
+        return !$this->accounts->isRenewed($account) || isset($this->onRenewedSession[$key]);
+    }
+
+    /** @return SettlementModel<TimelineOutcomeModelInterface> */
+    public function settle(int|string $feedId, FetchOutcomeModel $outcome): SettlementModel
+    {
+        $socialFeed = $this->socialFeedOf($feedId);
+        if ($outcome->isWithheld()) {
+            return $this->ticketOf($feedId, $socialFeed);
+        }
+
+        $account = $socialFeed->getSocialAccount();
         try {
             $page = $this->sources->of($account)->pageOf($socialFeed, $outcome);
         } catch (SocialSessionStaleException $stale) {
-            return $this->settledOrQueued($feedId, $this->accounts->settleStale($account, $stale));
+            return $this->settleStale($feedId, $socialFeed, $stale);
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $failure) {
-            return $this->accounts->settleFailure($account, $failure);
+            return SettlementModel::outcome($this->accounts->settleFailure($account, $failure));
         }
         $socialFeed->recordNewestSeen($page->newestId);
 
-        return new FetchedTimelineModel($page);
+        return SettlementModel::outcome(new FetchedTimelineModel($page));
     }
 
     /** @return \Generator<int|string, TimelineOutcomeModelInterface> */
@@ -108,40 +105,56 @@ final class TimelineRound implements DispatchGateInterface
         yield from $unasked;
     }
 
-    /** @return \Generator<int|string, RequestTicketModel> */
-    private function ticketOf(int|string $feedId, SocialFeed $socialFeed): \Generator
+    /**
+     * A stale answer on the renewed session is a refusal; one on the dropped session renews it once and asks again.
+     *
+     * @return SettlementModel<TimelineOutcomeModelInterface>
+     */
+    private function settleStale(
+        int|string $feedId,
+        SocialFeed $socialFeed,
+        SocialSessionStaleException $stale,
+    ): SettlementModel {
+        $account = $socialFeed->getSocialAccount();
+        if (isset($this->onRenewedSession[$feedId])) {
+            return SettlementModel::outcome($this->accounts->settleFailure(
+                $account,
+                new SocialCredentialsRejectedException($stale->getMessage(), previous: $stale),
+            ));
+        }
+        $this->renewOnce($account);
+
+        return $this->ticketOf($feedId, $socialFeed);
+    }
+
+    private function renewOnce(SocialAccount $account): void
+    {
+        if ($this->accounts->isRenewed($account)) {
+            return;
+        }
+        $this->accounts->markRenewed($account);
+        $this->sources->of($account)->dropSession($account);
+    }
+
+    /** @return SettlementModel<TimelineOutcomeModelInterface> the feed's ticket, or what it settles at without one */
+    private function ticketOf(int|string $feedId, SocialFeed $socialFeed): SettlementModel
     {
         $account = $socialFeed->getSocialAccount();
-        if (!$this->accounts->mayAsk($account)) {
-            $held = $this->settledOrQueued($feedId, $this->accounts->heldOutcomeOf($account));
-            if (null !== $held) {
-                $this->unasked[$feedId] = $held;
-            }
-
-            return;
+        $held = $this->accounts->heldOutcomeOf($account);
+        if (null !== $held) {
+            return SettlementModel::outcome($held);
         }
 
         try {
             $request = $this->sources->of($account)->request($socialFeed);
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $failure) {
-            $this->unasked[$feedId] = $this->accounts->settleFailure($account, $failure);
-
-            return;
+            return SettlementModel::outcome($this->accounts->settleFailure($account, $failure));
+        }
+        if ($this->accounts->isRenewed($account)) {
+            $this->onRenewedSession[$feedId] = true;
         }
 
-        yield $feedId => $this->slots->ticketFor($account, $request);
-    }
-
-    /** The settled outcome, or null once the feed is queued for the renewal wave. */
-    private function settledOrQueued(
-        int|string $feedId,
-        ?TimelineOutcomeModelInterface $settled,
-    ): ?TimelineOutcomeModelInterface {
-        if (null === $settled) {
-            $this->staleFeedIds[] = $feedId;
-        }
-
-        return $settled;
+        return SettlementModel::request($this->slots->ticketFor($account, $request));
     }
 
     /** @throws PrivateFeedOrphanedException when the private feed has lost its social feed */

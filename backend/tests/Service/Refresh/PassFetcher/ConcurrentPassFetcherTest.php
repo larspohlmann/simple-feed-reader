@@ -9,13 +9,13 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
-use App\Enum\SocialNetwork;
-use App\Enum\SourceFormat;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\UrlGuard;
-use App\Service\Refresh\Pass\PassFeeds;
+use App\Service\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
+use App\Service\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
+use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Social\Exception\PrivateFeedOrphanedException;
@@ -30,13 +30,14 @@ use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\CountingArrayAdapter;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\PrivateFeeds;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\DecoratorTrait;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -55,9 +56,12 @@ final class ConcurrentPassFetcherTest extends TestCase
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string MASTODON_HOME = 'GET https://mastodon.example/api/v1/timelines/home?limit=40';
     private const string BLUESKY_LIST = 'at://did:plc:bob/app.bsky.graph.list/3l1';
+    private const string BLUESKY_HOME = 'GET https://pds.example.test/xrpc/app.bsky.feed.getTimeline?limit=50';
+    private const string BLUESKY_LIST_READ = 'GET https://pds.example.test/xrpc/app.bsky.feed.getListFeed'
+        . '?list=at%3A%2F%2Fdid%3Aplc%3Abob%2Fapp.bsky.graph.list%2F3l1&limit=50';
     private const string NEWS = 'https://' . SocialApiWiring::RSS_HOST;
 
-    private ArrayAdapter $cache;
+    private CountingArrayAdapter $cache;
 
     private RoutedHttpClient $http;
 
@@ -68,7 +72,7 @@ final class ConcurrentPassFetcherTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->cache = new ArrayAdapter();
+        $this->cache = new CountingArrayAdapter();
         $this->responses = new \ArrayObject();
     }
 
@@ -219,23 +223,6 @@ final class ConcurrentPassFetcherTest extends TestCase
         self::assertSame([self::MASTODON_HOME], $this->requestsTo(self::MASTODON));
     }
 
-    public function testAStaleBlueskySessionIsRenewedOnceAndItsFeedsAskedAgain(): void
-    {
-        $bluesky = $this->blueskyAccount('stale-jwt');
-        $home = $this->feedOf($bluesky);
-        $list = $this->feedOf($bluesky, SocialFeedKind::UserList, self::BLUESKY_LIST);
-        $other = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
-
-        $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$home, $list, $other]);
-
-        foreach ([$home, $list, $other] as $socialFeed) {
-            self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($socialFeed)]);
-        }
-        self::assertSame([self::SESSION], $this->requestsTo('POST'));
-        self::assertCount(4, $this->requestsTo('GET ' . self::PDS));
-        self::assertSame(SocialAccountStatus::Connected, $bluesky->getStatus());
-    }
-
     public function testAFeedWaitingForARenewedSessionIsNotSentOnTheStaleOne(): void
     {
         $bluesky = $this->blueskyAccount('stale-jwt');
@@ -274,11 +261,11 @@ final class ConcurrentPassFetcherTest extends TestCase
         self::assertSame([self::SESSION, self::SESSION], $this->requestsTo('POST'));
     }
 
-    public function testAStaleAnswerToARenewedSessionRefusesTheAccount(): void
+    public function testEveryFeedRefusedAgainOnTheRenewedSessionFailsAndPausesOnlyItsAccount(): void
     {
         $respond = static function (string $method, string $url): MockResponse {
             if (self::SESSION === $method . ' ' . $url) {
-                return self::json(['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'accessJwt' => 'jwt-2']);
+                return self::freshSession();
             }
 
             return str_starts_with($url, self::PDS)
@@ -407,7 +394,7 @@ final class ConcurrentPassFetcherTest extends TestCase
         }
         $fetcher = $this->fetcher(static fn (): MockResponse => self::statuses(), accountConcurrency: 1);
 
-        $outcomes = $fetcher->fetchAll(self::passFeeds($socialFeeds));
+        $outcomes = self::fetchAllOf($fetcher, $socialFeeds);
         foreach ($outcomes as $outcome) {
             self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
             break;
@@ -423,8 +410,8 @@ final class ConcurrentPassFetcherTest extends TestCase
         foreach (['1', '2'] as $listId) {
             $socialFeeds[] = $this->feedOf($account, SocialFeedKind::UserList, $listId);
         }
-        $outcomes = $this->fetcher(static fn (): MockResponse => self::statuses())
-            ->fetchAll(self::passFeeds($socialFeeds));
+        $fetcher = $this->fetcher(static fn (): MockResponse => self::statuses());
+        $outcomes = self::fetchAllOf($fetcher, $socialFeeds);
 
         foreach ($outcomes as $outcome) {
             self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
@@ -584,16 +571,128 @@ final class ConcurrentPassFetcherTest extends TestCase
         self::assertSame([self::MASTODON_HOME], $this->requestsTo(self::MASTODON));
     }
 
-    public function testAStaleSessionsFeedsRunInASecondWaveAfterTheRssFeedsLanded(): void
+    public function testAStaleSessionsFeedIsSentAgainInsideTheOneRun(): void
     {
         $home = $this->feedOf($this->blueskyAccount('stale-jwt'));
         $rss = $this->rssFeed(self::NEWS . '/one.xml');
 
-        $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$home, $rss]);
+        $outcomes = self::read($this->fetcher(self::renewingBesideASlowFeed()), [$home, $rss]);
 
-        self::assertSame([$rss->requireId(), self::idOf($home)], array_keys($outcomes));
+        self::assertSame(
+            [self::idOf($home), $rss->requireId()],
+            array_keys($outcomes),
+            'the renewed read lands while the RSS feed is still on the wire: no second run',
+        );
         self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
         self::assertSame([self::SESSION], $this->requestsTo('POST'));
+    }
+
+    public function testTwoInFlightStaleReadsOfOneAccountRenewItsSessionOnceAndAreEachSentOnceMore(): void
+    {
+        $bluesky = $this->blueskyAccount('stale-jwt');
+        $home = $this->feedOf($bluesky);
+        $list = $this->feedOf($bluesky, SocialFeedKind::UserList, self::BLUESKY_LIST);
+        $other = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
+
+        $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$home, $list, $other]);
+
+        foreach ([$home, $list, $other] as $socialFeed) {
+            self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($socialFeed)]);
+        }
+        self::assertSame(SocialAccountStatus::Connected, $bluesky->getStatus());
+        self::assertSame(
+            2,
+            $this->cache->deletedItems,
+            'one dropSession, plus the forget inside the one session open',
+        );
+        self::assertSame(
+            [self::BLUESKY_HOME => 2, self::BLUESKY_LIST_READ => 2, self::MASTODON_HOME => 1, self::SESSION => 1],
+            array_count_values($this->http->requestLines()),
+        );
+    }
+
+    public function testAFeedsSecondStaleAnswerPausesItsAccountAndTheGateWithholdsItsOtherFeeds(): void
+    {
+        $respond = static fn (string $method, string $url): MockResponse => self::SESSION === $method . ' ' . $url
+            ? self::freshSession()
+            : self::expiredToken();
+        $bluesky = $this->blueskyAccount('stale-jwt');
+        $home = $this->feedOf($bluesky);
+        $list = $this->feedOf($bluesky, SocialFeedKind::UserList, self::BLUESKY_LIST);
+
+        $outcomes = self::read($this->fetcher($respond, accountConcurrency: 1), [$home, $list]);
+
+        $failure = self::failureOf($outcomes[self::idOf($home)]);
+        self::assertInstanceOf(SocialCredentialsRejectedException::class, $failure);
+        self::assertInstanceOf(AccountPausedTimelineModel::class, $outcomes[self::idOf($list)]);
+        self::assertSame(SocialAccountStatus::NeedsReconnect, $bluesky->getStatus());
+        self::assertSame(
+            [self::BLUESKY_HOME, self::SESSION, self::BLUESKY_HOME],
+            $this->http->requestLines(),
+            'the list never reaches the wire',
+        );
+    }
+
+    public function testAFeedsFirstStaleAnswerOnTheRenewedSessionFailsItAtOnce(): void
+    {
+        $respond = static function (string $method, string $url, array $headers): MockResponse {
+            return self::BLUESKY_LIST_READ === $method . ' ' . $url
+                ? self::expiredToken()
+                : (self::renewingStaleSessions())($method, $url, $headers);
+        };
+        $bluesky = $this->blueskyAccount('stale-jwt');
+        $home = $this->feedOf($bluesky);
+        $list = $this->feedOf($bluesky, SocialFeedKind::UserList, self::BLUESKY_LIST);
+
+        $outcomes = self::read($this->fetcher($respond, accountConcurrency: 1), [$home, $list]);
+
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
+        $refused = self::failureOf($outcomes[self::idOf($list)]);
+        self::assertInstanceOf(SocialCredentialsRejectedException::class, $refused);
+        self::assertSame(SocialAccountStatus::NeedsReconnect, $bluesky->getStatus());
+        self::assertSame(
+            [self::BLUESKY_HOME, self::SESSION, self::BLUESKY_HOME, self::BLUESKY_LIST_READ],
+            $this->http->requestLines(),
+            'the list, built on the fresh session, is not sent a second time',
+        );
+    }
+
+    public function testAFollowUpIsNeverCountedAsAStartAgainstTheBudget(): void
+    {
+        $home = $this->feedOf($this->blueskyAccount('stale-jwt'));
+        $rss = $this->rssFeed(self::NEWS . '/one.xml');
+        $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
+        $pass = new RefreshPass([$home->getFeed(), $rss], $clock, $clock->now()->getTimestamp() + 5);
+
+        $outcomes = [];
+        $fetcher = $this->fetcher(self::renewingStaleSessions());
+        foreach ($fetcher->fetchAll($pass, [self::idOf($home) => $home]) as $feedId => $outcome) {
+            $outcomes[$feedId] = self::unwrapped($outcome);
+        }
+
+        self::assertSame([self::idOf($home)], $pass->startedFeedIds(), 'the budget started one feed');
+        self::assertSame([self::idOf($home)], array_keys($outcomes));
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
+        self::assertSame([self::BLUESKY_HOME, self::SESSION, self::BLUESKY_HOME], $this->http->requestLines());
+    }
+
+    public function testAbandoningThePassCancelsAFollowUpInFlight(): void
+    {
+        $home = $this->feedOf($this->blueskyAccount('stale-jwt'));
+        $rss = $this->rssFeed(self::NEWS . '/one.xml');
+        $fetcher = $this->fetcher(self::renewingStaleSessions());
+        $outcomes = self::fetchAllOf($fetcher, [$home, $rss]);
+
+        self::assertSame($rss->requireId(), $outcomes->key(), 'the RSS feed lands while the follow-up is on the wire');
+        unset($outcomes);
+
+        self::assertSame(
+            [self::BLUESKY_HOME, 'GET ' . self::NEWS . '/one.xml', self::SESSION, self::BLUESKY_HOME],
+            $this->http->requestLines(),
+        );
+        $followUp = $this->responses[3];
+        self::assertInstanceOf(ResponseInterface::class, $followUp);
+        self::assertTrue($followUp->getInfo('canceled'), 'the follow-up was cancelled on the wire');
     }
 
     public function testAnOrphanIsYieldedBeforeTheNextOutcomeThatLands(): void
@@ -650,7 +749,8 @@ final class ConcurrentPassFetcherTest extends TestCase
         $respond = static fn (string $method, string $url): MockResponse => str_starts_with($url, self::NEWS)
             ? self::rss()
             : self::statuses();
-        $outcomes = $this->fetcher($respond)->fetchAll(self::passFeeds($entries));
+        $fetcher = $this->fetcher($respond);
+        $outcomes = self::fetchAllOf($fetcher, $entries);
 
         self::assertTrue($outcomes->valid());
         unset($outcomes);
@@ -659,6 +759,22 @@ final class ConcurrentPassFetcherTest extends TestCase
         foreach ($this->responses as $response) {
             self::assertTrue($response->getInfo('canceled'));
         }
+    }
+
+    public function testEachOutcomeComesInItsFeedsLane(): void
+    {
+        $respond = static fn (string $method, string $url): MockResponse => str_starts_with($url, self::NEWS)
+            ? self::rss()
+            : self::statuses();
+        $rss = $this->rssFeed(self::NEWS . '/one.xml');
+        $home = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
+        $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
+        $pass = new RefreshPass([$rss, $home->getFeed()], $clock, $clock->now()->getTimestamp() + 300);
+
+        $outcomes = iterator_to_array($this->fetcher($respond)->fetchAll($pass, [self::idOf($home) => $home]));
+
+        self::assertInstanceOf(FeedPassOutcomeModel::class, $outcomes[$rss->requireId()]);
+        self::assertInstanceOf(TimelinePassOutcomeModel::class, $outcomes[self::idOf($home)]);
     }
 
     public function testRejectsAFeedHostConcurrencyBelowOne(): void
@@ -677,12 +793,12 @@ final class ConcurrentPassFetcherTest extends TestCase
         );
     }
 
-    /** @return \Closure(string, string, list<string>): MockResponse a PDS that refuses the stale token only */
+    /** @return \Closure(string, string, array<mixed>): MockResponse a PDS that refuses the stale token only */
     private static function renewingStaleSessions(): \Closure
     {
         return static function (string $method, string $url, array $headers): MockResponse {
             if (self::SESSION === $method . ' ' . $url) {
-                return self::json(['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'accessJwt' => 'jwt-2']);
+                return self::freshSession();
             }
             if (str_starts_with($url, self::NEWS)) {
                 return self::rss();
@@ -692,9 +808,33 @@ final class ConcurrentPassFetcherTest extends TestCase
             }
 
             return \in_array('Authorization: Bearer stale-jwt', $headers, true)
-                ? self::json(['error' => 'ExpiredToken', 'message' => 'Token has expired'], Response::HTTP_BAD_REQUEST)
+                ? self::expiredToken()
                 : self::blueskyTimeline();
         };
+    }
+
+    /** @return \Closure(string, string, list<string>): MockResponse renewingStaleSessions(), its RSS answer slow */
+    private static function renewingBesideASlowFeed(): \Closure
+    {
+        return static function (string $method, string $url, array $headers): MockResponse {
+            if (str_starts_with($url, self::NEWS)) {
+                return new MockResponse((static function (): \Generator {
+                    yield from str_split('<rss/>' . str_repeat(' ', 14));
+                })());
+            }
+
+            return (self::renewingStaleSessions())($method, $url, $headers);
+        };
+    }
+
+    private static function freshSession(): MockResponse
+    {
+        return self::json(['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'accessJwt' => 'jwt-2']);
+    }
+
+    private static function expiredToken(): MockResponse
+    {
+        return self::json(['error' => 'ExpiredToken', 'message' => 'Token has expired'], Response::HTTP_BAD_REQUEST);
     }
 
     /** @param \Closure(string, string, list<string>): MockResponse $answer by method, url and request headers */
@@ -734,7 +874,7 @@ final class ConcurrentPassFetcherTest extends TestCase
     /** @param list<Feed|SocialFeed> $entries */
     private function onTheWireAtFirstAnswer(ConcurrentPassFetcher $fetcher, array $entries): int
     {
-        self::assertTrue($fetcher->fetchAll(self::passFeeds($entries))->valid(), 'an outcome lands');
+        self::assertTrue(self::fetchAllOf($fetcher, $entries)->valid(), 'an outcome lands');
 
         return \count($this->http->requests);
     }
@@ -753,13 +893,7 @@ final class ConcurrentPassFetcherTest extends TestCase
         SocialFeedKind $kind = SocialFeedKind::Home,
         string $remoteId = '',
     ): SocialFeed {
-        $feedId = $this->nextFeedId++;
-        $feed = self::withId(new Feed(sprintf('social:test:%d', $feedId)), $feedId);
-        $feed->setSourceFormat(
-            SocialNetwork::Bluesky === $account->getNetwork() ? SourceFormat::BLUESKY_API : SourceFormat::MASTODON_API,
-        );
-
-        return new SocialFeed($account, $feed, $kind, $remoteId);
+        return PrivateFeeds::of($account, $this->nextFeedId++, $kind, $remoteId);
     }
 
     private function blueskyAccount(?string $cachedJwt, int $accountId = 3): SocialAccount
@@ -801,7 +935,7 @@ final class ConcurrentPassFetcherTest extends TestCase
     private static function landings(ConcurrentPassFetcher $fetcher, array $entries): array
     {
         $landings = [];
-        foreach ($fetcher->fetchAll(self::passFeeds($entries)) as $feedId => $outcome) {
+        foreach (self::fetchAllOf($fetcher, $entries) as $feedId => $outcome) {
             $landings[] = [$feedId, $outcome];
         }
 
@@ -815,8 +949,12 @@ final class ConcurrentPassFetcherTest extends TestCase
         return self::withId(new Feed($url), $feedId);
     }
 
-    /** @param list<Feed|SocialFeed> $entries in due order: an RSS feed as itself, a private feed as its social feed */
-    private static function passFeeds(array $entries): PassFeeds
+    /**
+     * @param list<Feed|SocialFeed> $entries in due order: an RSS feed as itself, a private feed as its social feed
+     *
+     * @return \Generator<int|string, FetchOutcomeModel|TimelineOutcomeModelInterface> each lane's outcome, unwrapped
+     */
+    private static function fetchAllOf(ConcurrentPassFetcher $fetcher, array $entries): \Generator
     {
         $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
         $feeds = [];
@@ -828,11 +966,20 @@ final class ConcurrentPassFetcherTest extends TestCase
                 $socialFeedsByFeedId[$feed->requireId()] = $entry;
             }
         }
+        $pass = new RefreshPass($feeds, $clock, $clock->now()->getTimestamp() + 300);
 
-        return new PassFeeds(
-            new RefreshPass($feeds, $clock, $clock->now()->getTimestamp() + 300),
-            $socialFeedsByFeedId,
-        );
+        foreach ($fetcher->fetchAll($pass, $socialFeedsByFeedId) as $feedId => $outcome) {
+            yield $feedId => self::unwrapped($outcome);
+        }
+    }
+
+    private static function unwrapped(
+        PassOutcomeModelInterface $outcome,
+    ): FetchOutcomeModel|TimelineOutcomeModelInterface {
+        return match (true) {
+            $outcome instanceof FeedPassOutcomeModel => $outcome->outcome,
+            $outcome instanceof TimelinePassOutcomeModel => $outcome->outcome,
+        };
     }
 
     private static function feedResponseOf(

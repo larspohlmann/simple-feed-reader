@@ -4,58 +4,74 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh\Pass;
 
-use App\Service\Fetch\DispatchGate\DispatchGateInterface;
+use App\Enum\SourceFormat;
+use App\Service\Fetch\AnswerSettler\AnswerSettlerInterface;
 use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\RequestTicketModel;
-use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
-use App\Service\Social\Pass\TimelineRound;
+use App\Service\Fetch\Model\SettlementModel;
+use App\Service\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
+use App\Service\Refresh\Pass\PassLane\PassLaneInterface;
 
 /**
- * One pass's engine tickets in due order: an RSS or Atom feed by its URL, a private feed through its round. Only a
- * held account's private tickets are withheld.
+ * One pass's engine tickets in due order and the engine's settler: each feed id's lane is decided once, here,
+ * and every call for a key goes to its lane.
+ *
+ * @implements AnswerSettlerInterface<PassOutcomeModelInterface>
  */
-final readonly class PassTickets implements DispatchGateInterface
+final readonly class PassTickets implements AnswerSettlerInterface
 {
+    /** @var array<int, true> */
+    private array $privateFeedIds;
+
     public function __construct(
-        private PassFeeds $feeds,
-        private TimelineRound $round,
-        private int $hostCapacity,
+        private RefreshPass $pass,
+        private PassLaneInterface $feedLane,
+        private PassLaneInterface $timelineLane,
     ) {
+        $this->privateFeedIds = array_fill_keys(self::privateFeedIdsOf($pass), true);
+    }
+
+    /** @return list<int> every private feed's id, started or not */
+    public static function privateFeedIdsOf(RefreshPass $pass): array
+    {
+        $privateFeedIds = [];
+        foreach ($pass->feeds as $feed) {
+            if (SourceFormat::isSocial($feed->getSourceFormat())) {
+                $privateFeedIds[] = $feed->requireId();
+            }
+        }
+
+        return $privateFeedIds;
     }
 
     /** @return \Generator<int|string, RequestTicketModel> */
     public function tickets(): \Generator
     {
-        foreach ($this->feeds->started() as $feedId => $feed) {
-            if ($this->feeds->isPrivate($feedId)) {
-                yield from $this->round->ticketFor($feedId);
-                continue;
-            }
-
-            yield $feedId => RequestTicketModel::feed(
-                new FetchTicketModel($feed->getUrl(), $feed->getEtag(), $feed->getLastModified()),
-                $this->hostCapacity,
-            );
+        foreach ($this->pass->startedFeeds() as $feedId => $feed) {
+            yield from $this->laneOf($feedId)->ticketsFor($feed);
         }
     }
 
     public function admits(int|string $key): bool
     {
-        return !$this->feeds->isPrivate($key) || $this->round->admits($key);
+        return $this->laneOf($key)->admits($key);
     }
 
-    /** The feed's outcome, or null while a private feed waits for the renewal wave. */
-    public function settle(
-        int|string $feedId,
-        FetchOutcomeModel $outcome,
-    ): FetchOutcomeModel|TimelineOutcomeModelInterface|null {
-        return $this->feeds->isPrivate($feedId) ? $this->round->settle($feedId, $outcome) : $outcome;
+    /** @return SettlementModel<PassOutcomeModelInterface> */
+    public function settle(int|string $key, FetchOutcomeModel $outcome): SettlementModel
+    {
+        return $this->laneOf($key)->settle($key, $outcome);
     }
 
-    /** @return \Generator<int|string, TimelineOutcomeModelInterface> */
+    /** @return \Generator<int|string, PassOutcomeModelInterface> */
     public function drainUnasked(): \Generator
     {
-        return $this->round->drainUnasked();
+        yield from $this->feedLane->drainUnasked();
+        yield from $this->timelineLane->drainUnasked();
+    }
+
+    private function laneOf(int|string $feedId): PassLaneInterface
+    {
+        return isset($this->privateFeedIds[$feedId]) ? $this->timelineLane : $this->feedLane;
     }
 }

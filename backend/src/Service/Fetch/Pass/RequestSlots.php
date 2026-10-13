@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Fetch\Pass;
 
 use App\Service\Fetch\Model\FetchAttemptModel;
+use App\Service\Fetch\Model\RequestSlot\RequestSlotModelInterface;
 
 /**
- * In-flight requests per slot key. A ticket goes out only while every slot it names has room, so it waits for a full
- * slot instead of earning a 429, and it holds all of them until it retires.
+ * In-flight requests per slot, counted under the slot's class and its key, so two kinds of slot never share a cap. A
+ * ticket goes out only while every slot it names has room, so it waits instead of earning a 429, and it holds all of
+ * them until it retires.
  */
 final class RequestSlots
 {
@@ -18,7 +20,7 @@ final class RequestSlots
     public function hasCapacityFor(FetchAttemptModel $attempt): bool
     {
         foreach ($attempt->ticket->slots as $slot) {
-            if ($this->inFlightIn($slot->keyFor($attempt->url)) >= $slot->capacity) {
+            if ($this->inFlightIn(self::keyOf($slot, $attempt->url)) >= $slot->capacity()) {
                 return false;
             }
         }
@@ -50,9 +52,14 @@ final class RequestSlots
     {
         $keys = [];
         foreach ($attempt->ticket->slots as $slot) {
-            $keys[] = $slot->keyFor($attempt->url);
+            $keys[] = self::keyOf($slot, $attempt->url);
         }
 
         return $keys;
+    }
+
+    private static function keyOf(RequestSlotModelInterface $slot, string $url): string
+    {
+        return $slot::class . "\0" . $slot->keyFor($url);
     }
 }

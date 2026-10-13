@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\BatchFeedFetcher;
 
+use App\Service\Fetch\AnswerSettler\AnswerSettlerInterface;
 use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchTicketModel;
@@ -13,8 +14,12 @@ use App\Service\Fetch\Support\CapacityGuard;
 /** Fetches many feeds at once on the shared request engine; the caller still processes results one at a time. */
 final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 {
-    public function __construct(private ConcurrentRequestEngine $engine, private int $hostConcurrency)
-    {
+    /** @param AnswerSettlerInterface<FetchOutcomeModel> $settler */
+    public function __construct(
+        private ConcurrentRequestEngine $engine,
+        private int $hostConcurrency,
+        private AnswerSettlerInterface $settler,
+    ) {
         CapacityGuard::atLeastOne($hostConcurrency, 'Per-host concurrency');
     }
 
@@ -25,7 +30,7 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      */
     public function fetchAll(iterable $tickets): \Generator
     {
-        return $this->engine->sendAll($this->requestTickets($tickets));
+        return $this->engine->sendAll($this->requestTickets($tickets), $this->settler);
     }
 
     /**

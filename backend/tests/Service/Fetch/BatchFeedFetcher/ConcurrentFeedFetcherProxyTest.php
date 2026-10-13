@@ -6,6 +6,7 @@ namespace App\Tests\Service\Fetch\BatchFeedFetcher;
 
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
@@ -41,6 +42,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         return new ConcurrentFeedFetcher(
             FetchWiring::requestEngine(new MockHttpClient($responses), $urlGuard, $egressProxySource),
             100,
+            new PassThroughSettler(),
         );
     }
 
@@ -88,7 +90,11 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             new SecretUnreadableException('The stored secret failed its integrity check.'),
         );
         $urlGuard = new UrlGuard($this->dns(), new IpValidator());
-        $fetcher = new ConcurrentFeedFetcher(FetchWiring::requestEngine($client, $urlGuard, $egressProxySource), 100);
+        $fetcher = new ConcurrentFeedFetcher(
+            FetchWiring::requestEngine($client, $urlGuard, $egressProxySource),
+            100,
+            new PassThroughSettler(),
+        );
 
         $outcomes = $this->collect($fetcher->fetchAll([
             7 => new FetchTicketModel('https://one.example/feed'),

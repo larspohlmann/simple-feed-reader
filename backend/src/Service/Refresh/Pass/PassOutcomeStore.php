@@ -25,10 +25,15 @@ final readonly class PassOutcomeStore
     }
 
     /** @throws \DateMalformedStringException */
-    public function store(Feed $feed, FetchOutcomeModel|TimelineOutcomeModelInterface $outcome): FeedRefreshResultModel
+    public function storeFetched(Feed $feed, FetchOutcomeModel $outcome): FeedRefreshResultModel
+    {
+        return $this->outcomePersister->persist($feed, $outcome, $this->now);
+    }
+
+    /** @throws \DateMalformedStringException */
+    public function storeTimeline(Feed $feed, TimelineOutcomeModelInterface $outcome): FeedRefreshResultModel
     {
         return match (true) {
-            $outcome instanceof FetchOutcomeModel => $this->outcomePersister->persist($feed, $outcome, $this->now),
             $outcome instanceof FetchedTimelineModel => $this->outcomePersister->storeParsed(
                 $feed,
                 new IncomingFeedModel($outcome->page->parsed, $outcome->page->knownShares),

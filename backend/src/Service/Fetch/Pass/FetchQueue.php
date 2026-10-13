@@ -9,9 +9,9 @@ use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 
 /**
- * The engine's work list. Redirect continuations jump the queue so an open chain never sits half-finished. An attempt
- * whose slot is full is parked, and the queue looks at most `$lookAhead` tickets past it instead of draining, and so
- * committing, the budget-gated ticket source up front.
+ * The engine's work list. A redirect hop, a retry or a follow-up jumps the queue so an open feed never sits
+ * half-finished. An attempt whose slot is full is parked, and the queue looks at most `$lookAhead` tickets past it
+ * instead of draining, and so committing, the budget-gated ticket source up front.
  */
 final class FetchQueue
 {
@@ -35,6 +35,12 @@ final class FetchQueue
     public function requeue(FetchAttemptModel $attempt): void
     {
         $this->continuations[] = $attempt;
+    }
+
+    /** Another request for a key already sent: it joins the continuations and never draws on the ticket source. */
+    public function followUp(int|string $key, RequestTicketModel $ticket): void
+    {
+        $this->continuations[] = FetchAttemptModel::start($key, $ticket, $this->batchProxy);
     }
 
     public function onSent(FetchAttemptModel $attempt): void

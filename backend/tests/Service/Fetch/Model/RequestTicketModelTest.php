@@ -6,9 +6,10 @@ namespace App\Tests\Service\Fetch\Model;
 
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\FetchTicketModel;
-use App\Service\Fetch\Model\RequestSlotModel;
+use App\Service\Fetch\Model\RequestSlot\HostSlotModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Model\ResponseExchangeKind;
+use App\Tests\Support\FixedKeySlot;
 use PHPUnit\Framework\TestCase;
 
 final class RequestTicketModelTest extends TestCase
@@ -55,7 +56,7 @@ final class RequestTicketModelTest extends TestCase
     {
         $request = ApiRequestModel::get('https://pds.example.test/xrpc/x', ['Authorization' => 'Bearer jwt-1']);
 
-        $ticket = RequestTicketModel::api($request, [RequestSlotModel::named('account-7', 3)]);
+        $ticket = RequestTicketModel::api($request, [new FixedKeySlot('account-7', 3)]);
 
         self::assertSame(ResponseExchangeKind::Api, $ticket->exchange);
         self::assertSame($request, $ticket->request);
@@ -65,7 +66,7 @@ final class RequestTicketModelTest extends TestCase
     {
         $this->expectException(\LogicException::class);
 
-        $slots = [RequestSlotModel::named('account-7', 3)];
+        $slots = [new FixedKeySlot('account-7', 3)];
 
         RequestTicketModel::api(ApiRequestModel::get('https://example.com/a'), $slots)->feedTicket();
     }
@@ -74,16 +75,32 @@ final class RequestTicketModelTest extends TestCase
     {
         $ticket = RequestTicketModel::feed(new FetchTicketModel('https://www.example.com/feed'), 2);
 
-        self::assertCount(1, $ticket->slots);
-        self::assertSame(2, $ticket->slots[0]->capacity);
-        self::assertSame('host:example.com', $ticket->slots[0]->keyFor('https://www.example.com:443/b'));
-        self::assertSame('host:other.example.com', $ticket->slots[0]->keyFor('https://other.example.com/a'));
+        self::assertEquals([new HostSlotModel(2)], $ticket->slots);
+    }
+
+    public function testAFeedTicketRejectsAHostCapacityBelowOne(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Slot capacity must be at least 1, got 0.');
+
+        RequestTicketModel::feed(new FetchTicketModel(self::FEED_URL), 0);
+    }
+
+    public function testAnApiTicketRejectsAnySlotWithACapacityBelowOne(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Slot capacity must be at least 1, got 0.');
+
+        RequestTicketModel::api(
+            ApiRequestModel::get('https://example.com/a'),
+            [new FixedKeySlot('account-7', 1), new FixedKeySlot('server', 0)],
+        );
     }
 
     public function testAnApiTicketHoldsEverySlotItNamesInOrder(): void
     {
-        $account = RequestSlotModel::named('social-account:7', 3);
-        $server = RequestSlotModel::named('social-host:example.com', 4);
+        $account = new FixedKeySlot('account-7', 3);
+        $server = new FixedKeySlot('server', 4);
 
         $ticket = RequestTicketModel::api(ApiRequestModel::get('https://example.com/a'), [$account, $server]);
 

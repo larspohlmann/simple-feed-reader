@@ -4,17 +4,28 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\Model;
 
+use App\Service\Fetch\Model\RequestSlot\HostSlotModel;
+use App\Service\Fetch\Model\RequestSlot\RequestSlotModelInterface;
+use App\Service\Fetch\Support\CapacityGuard;
+
 /** One request the concurrent engine sends: what goes on the wire, which exchange reads the answer, what it holds. */
 final readonly class RequestTicketModel
 {
     public ResponseExchangeKind $exchange;
 
-    /** @param non-empty-list<RequestSlotModel> $slots */
+    /**
+     * @param non-empty-list<RequestSlotModelInterface> $slots
+     *
+     * @throws \InvalidArgumentException when a slot's capacity is below one
+     */
     private function __construct(
         public ApiRequestModel $request,
         public array $slots,
         private ?FetchTicketModel $feedTicket,
     ) {
+        foreach ($slots as $slot) {
+            CapacityGuard::atLeastOne($slot->capacity(), 'Slot capacity');
+        }
         $this->exchange = null === $feedTicket ? ResponseExchangeKind::Api : ResponseExchangeKind::Feed;
     }
 
@@ -22,7 +33,7 @@ final readonly class RequestTicketModel
     {
         return new self(
             ApiRequestModel::get($ticket->url, self::validatorHeaders($ticket)),
-            [RequestSlotModel::perHost($hostCapacity)],
+            [new HostSlotModel($hostCapacity)],
             $ticket,
         );
     }
@@ -30,9 +41,10 @@ final readonly class RequestTicketModel
     /**
      * Any status comes back as the answer; the ticket goes out only while every slot it names has room.
      *
-     * @param list<RequestSlotModel> $slots
+     * @param list<RequestSlotModelInterface> $slots
      *
-     * @throws \InvalidArgumentException when no slot is named, which would leave the ticket uncapped
+     * @throws \InvalidArgumentException when no slot is named, which would leave the ticket uncapped, or a slot's
+     *                                   capacity is below one
      */
     public static function api(ApiRequestModel $request, array $slots): self
     {

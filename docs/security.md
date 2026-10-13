@@ -343,10 +343,12 @@ are left out of backups (docs/backup.md §6.2).
   session is cached per account for 90 minutes in the `bluesky.session.cache` pool. Its access token is sealed
   with the instance key, bound to the owner; a reconnect changes the cache key, and a disconnect deletes the
   entry. The token is only ever sent to the account's stored service URL, never to a URL read from the cache. A
-  token the PDS calls expired or invalid is replaced once with a fresh session. Timeline reads run concurrently,
-  at most three in flight per account (`social_account_concurrency`, #1607) and four per Mastodon instance or
-  Bluesky PDS across its accounts (`social_host_concurrency`, #1608); a throttled or refused account's waiting
-  reads are withheld before they reach the wire.
+  token the PDS calls expired or invalid is replaced once per refresh with a fresh session, inside the refresh's one
+  engine run, and each read it refused goes out once more on the fresh session (#1632); a read refused again marks
+  the account as needing a reconnect. Timeline reads run concurrently, at most three in flight per account
+  (`social_account_concurrency`, #1607) and four per Mastodon instance or Bluesky PDS across its accounts
+  (`social_host_concurrency`, #1608), never counted against an RSS host's cap. A throttled or refused account's
+  waiting reads, and any read built on a session a renewal dropped, are withheld before they reach the wire.
 - A like (#1600) is the one write. It acts through the account that owns the private feed, else the network's default
   account. It first resolves the post on that account's own server (`getPosts` on the PDS, `/api/v2/search?resolve=true`
   on the Mastodon instance), and a status id from that answer reaches a URL path only when it is 1–64 letters and digits.

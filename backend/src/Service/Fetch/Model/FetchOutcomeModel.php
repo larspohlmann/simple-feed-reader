@@ -35,7 +35,7 @@ final readonly class FetchOutcomeModel
         return new self(null, null, $failure);
     }
 
-    /** The dispatch gate kept the request off the wire. */
+    /** The settler kept the request off the wire. */
     public static function withheld(): self
     {
         return new self(null, null, null);

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Fetch;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\DispatchGate\DispatchGateInterface;
+use App\Service\Fetch\AnswerSettler\AnswerSettlerInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
@@ -16,6 +16,7 @@ use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Pass\FetchQueue;
 use App\Service\Fetch\Pass\RequestSlots;
+use App\Service\Fetch\Pass\SettledAnswers;
 use App\Service\Fetch\ResponseExchange\ResponseExchangeInterface;
 use App\Service\Fetch\Support\CapacityGuard;
 use App\Service\Fetch\Support\EgressOptions;
@@ -28,9 +29,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Sends many guarded requests at once over Symfony's multiplexing HTTP client and yields each outcome under its
- * ticket's key as it lands. SECURITY: every attempt, a failover retry or a followed redirect included, passes UrlGuard
- * and goes out pinned or proxied with `max_redirects` 0; the ticket's exchange reads the answer.
+ * Sends many guarded requests at once over Symfony's multiplexing HTTP client and yields each settled outcome under its
+ * ticket's key as it lands. SECURITY: every attempt, a failover retry, a followed redirect or a follow-up included,
+ * passes UrlGuard and goes out pinned or proxied with `max_redirects` 0; the ticket's exchange reads the answer.
  */
 final readonly class ConcurrentRequestEngine
 {
@@ -53,45 +54,44 @@ final readonly class ConcurrentRequestEngine
 
     /**
      * A failed request arrives as a failed outcome, never a throw, so one bad ticket cannot abandon the others;
-     * abandoning the generator cancels whatever is still in flight. A ticket goes out only while every slot it names
-     * has room. A ticket the gate refuses is withheld.
+     * abandoning the generator cancels whatever is still in flight, follow-ups included. A request goes out only while
+     * every slot it names has room and the settler admits it, and every raw outcome is settled before it is yielded.
+     *
+     * @template T
      *
      * @param iterable<int|string, RequestTicketModel> $tickets
+     * @param AnswerSettlerInterface<T>                $settler
      *
-     * @return \Generator<int|string, FetchOutcomeModel>
+     * @return \Generator<int|string, T>
      */
-    public function sendAll(iterable $tickets, ?DispatchGateInterface $gate = null): \Generator
+    public function sendAll(iterable $tickets, AnswerSettlerInterface $settler): \Generator
     {
         try {
             $batchProxy = $this->egressProxySource->egressProxy();
         } catch (SecretUnreadableException $exception) {
             // An unreadable proxy password fails every ticket, one outcome each: the sweep's `remaining` only
             // decrements on a yielded outcome, so letting the exception escape would strand the run.
-            yield from $this->failEvery($tickets, $exception);
+            yield from $this->failEvery($tickets, $exception, $settler);
 
             return;
         }
 
         // More full-slot candidates than there are slots cannot open a request this pass.
         $lookAhead = $this->concurrency;
-        $queue = new FetchQueue(
-            $this->iterator($tickets),
-            new RequestSlots(),
-            $lookAhead,
-            $batchProxy,
-        );
+        $queue = new FetchQueue($this->iterator($tickets), new RequestSlots(), $lookAhead, $batchProxy);
+        $answers = new SettledAnswers($settler, $queue);
         /** @var \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight */
         $inFlight = new \SplObjectStorage();
 
         try {
             while (true) {
-                yield from $this->fill($queue, $inFlight, $gate);
+                yield from $this->fill($queue, $inFlight, $answers);
 
                 if (0 === $inFlight->count()) {
                     return;
                 }
 
-                yield from $this->awaitNext($queue, $inFlight);
+                yield from $this->awaitNext($queue, $inFlight, $answers);
             }
         } finally {
             // Reached on `break` as well as on completion: an aborted run must
@@ -103,19 +103,22 @@ final readonly class ConcurrentRequestEngine
     }
 
     /**
-     * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
+     * @template T
      *
-     * @return \Generator<int|string, FetchOutcomeModel>
+     * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
+     * @param SettledAnswers<T>                                       $answers
+     *
+     * @return \Generator<int|string, T>
      */
-    private function fill(FetchQueue $queue, \SplObjectStorage $inFlight, ?DispatchGateInterface $gate): \Generator
+    private function fill(FetchQueue $queue, \SplObjectStorage $inFlight, SettledAnswers $answers): \Generator
     {
         while ($inFlight->count() < $this->concurrency) {
             $attempt = $queue->takeRunnable();
             if (null === $attempt) {
                 return;
             }
-            if (null !== $gate && $attempt->isFirstSend() && !$gate->admits($attempt->key)) {
-                yield $attempt->key => FetchOutcomeModel::withheld();
+            if (!$answers->admits($attempt)) {
+                yield from $answers->settle($attempt->key, FetchOutcomeModel::withheld());
                 continue;
             }
 
@@ -128,7 +131,7 @@ final readonly class ConcurrentRequestEngine
                     continue;
                 }
 
-                yield $attempt->key => FetchOutcomeModel::failed($exception);
+                yield from $answers->settle($attempt->key, FetchOutcomeModel::failed($exception));
                 continue;
             }
 
@@ -138,14 +141,17 @@ final readonly class ConcurrentRequestEngine
     }
 
     /**
-     * Streams until one response resolves, then returns so the freed slot is refilled. A follow-up attempt goes back
+     * Streams until one response resolves, then returns so the freed slot is refilled. A redirect or a retry goes back
      * on the queue instead of being sent inline, so a feed on its fourth hop shares the loop with one on its first.
      *
-     * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
+     * @template T
      *
-     * @return \Generator<int|string, FetchOutcomeModel>
+     * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
+     * @param SettledAnswers<T>                                       $answers
+     *
+     * @return \Generator<int|string, T>
      */
-    private function awaitNext(FetchQueue $queue, \SplObjectStorage $inFlight): \Generator
+    private function awaitNext(FetchQueue $queue, \SplObjectStorage $inFlight, SettledAnswers $answers): \Generator
     {
         foreach ($this->httpClient->stream($inFlight, self::TIMEOUT_SECONDS) as $response => $chunk) {
             $attempt = $inFlight[$response];
@@ -162,7 +168,7 @@ final readonly class ConcurrentRequestEngine
                     return;
                 }
 
-                yield $attempt->key => FetchOutcomeModel::failed($exception);
+                yield from $answers->settle($attempt->key, FetchOutcomeModel::failed($exception));
 
                 return;
             }
@@ -181,7 +187,7 @@ final readonly class ConcurrentRequestEngine
 
             \assert(null !== $step->outcome);
 
-            yield $attempt->key => $step->outcome;
+            yield from $answers->settle($attempt->key, $step->outcome);
 
             return;
         }
@@ -310,17 +316,24 @@ final readonly class ConcurrentRequestEngine
     }
 
     /**
-     * @param iterable<int|string, RequestTicketModel> $tickets
+     * @template T
      *
-     * @return \Generator<int|string, FetchOutcomeModel>
+     * @param iterable<int|string, RequestTicketModel> $tickets
+     * @param AnswerSettlerInterface<T>                $settler
+     *
+     * @return \Generator<int|string, T>
+     *
+     * @throws \LogicException when the settler answers a failure with a follow-up: there is no queue to send it on
      */
-    private function failEvery(iterable $tickets, \Throwable $cause): \Generator
+    private function failEvery(iterable $tickets, \Throwable $cause, AnswerSettlerInterface $settler): \Generator
     {
         foreach ($tickets as $key => $ticket) {
-            yield $key => FetchOutcomeModel::failed(new FeedUnreachableException(
+            $failure = FetchOutcomeModel::failed(new FeedUnreachableException(
                 sprintf('%s: the instance egress proxy is unusable: %s', $ticket->request->url, $cause->getMessage()),
                 previous: $cause,
             ));
+
+            yield $key => $settler->settle($key, $failure)->settledOutcome();
         }
     }
 }
