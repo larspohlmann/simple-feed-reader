@@ -141,6 +141,66 @@ final class RefreshRunnerSocialTest extends DbTestCase
         self::assertCount(2, $http->requests, 'the third timeline is never asked once the run aborted');
     }
 
+    public function testAMixedPassReadsFeedsAndTimelinesInOneRunAndLeavesNothingRemaining(): void
+    {
+        $this->subscribeToRss();
+        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
+        $http = new RoutedHttpClient([
+            self::RSS => self::rssBody(),
+            self::HOME => self::statuses(),
+            self::FRIENDS => self::statuses(),
+        ]);
+
+        $report = $this->runner($http)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(3, $report->fetched);
+        self::assertSame(0, $report->remaining);
+    }
+
+    public function testAThrottledAccountsWithheldFeedIsTalliedSoNothingStaysRemaining(): void
+    {
+        $this->subscribeToRss();
+        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
+        $http = new RoutedHttpClient([
+            self::RSS => self::rssBody(),
+            self::HOME => self::throttled(),
+            self::FRIENDS => self::throttled(),
+        ]);
+
+        $report = $this->runner($http, accountConcurrency: 1)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('completed', $report->status);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(2, $report->throttled);
+        self::assertSame(0, $report->remaining);
+        self::assertEqualsCanonicalizing([self::RSS, self::HOME], $http->requestLines());
+    }
+
+    public function testAnAbortInAMixedPassLeavesEveryUnprocessedFeedRemaining(): void
+    {
+        $this->subscribeToRss();
+        $this->privateFeed(PrivateFeedModel::home());
+        $this->privateFeed(PrivateFeedModel::userList('42', 'Friends'));
+        $http = new RoutedHttpClient([
+            self::RSS => self::rssBody(),
+            self::HOME => self::statuses(),
+            self::FRIENDS => self::statuses(),
+        ]);
+        $failing = new FlushFailingEntityManager(
+            $this->entityManager,
+            failingFlush: 2,
+            thrown: DuplicateKeyViolation::exception(),
+        );
+
+        $report = $this->runner($http, flushing: $failing)->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame('aborted', $report->status);
+        self::assertSame(2, $report->remaining, 'three due, one stored before the failing one');
+    }
+
     private function runner(
         RoutedHttpClient $http,
         int $accountConcurrency = 3,

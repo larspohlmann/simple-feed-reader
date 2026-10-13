@@ -32,9 +32,9 @@ final class BudgetedFeedQueueTest extends TestCase
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 300);
 
-        $tickets = iterator_to_array($queue->startedFeeds(), preserve_keys: false);
+        $started = iterator_to_array($queue->startedFeeds(), preserve_keys: false);
 
-        self::assertCount(3, $tickets);
+        self::assertCount(3, $started);
         self::assertSame(3, $queue->startedCount());
         self::assertSame(0, $queue->skippedCount());
     }
@@ -44,14 +44,13 @@ final class BudgetedFeedQueueTest extends TestCase
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() + 100);
 
-        $taken = [];
-        foreach ($queue->startedFeeds() as $ticket) {
-            $taken[] = $ticket;
-            // Simulate a wave that consumed almost the whole budget.
+        $started = [];
+        foreach ($queue->startedFeeds() as $feed) {
+            $started[] = $feed;
             $clock->sleep(95);
         }
 
-        self::assertCount(1, $taken);
+        self::assertCount(1, $started);
         self::assertSame(1, $queue->startedCount());
         self::assertSame(2, $queue->skippedCount());
     }
@@ -65,9 +64,9 @@ final class BudgetedFeedQueueTest extends TestCase
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $queue = new BudgetedFeedQueue($this->feeds(3), $clock, $clock->now()->getTimestamp() - 60);
 
-        $taken = iterator_to_array($queue->startedFeeds(), preserve_keys: false);
+        $started = iterator_to_array($queue->startedFeeds(), preserve_keys: false);
 
-        self::assertCount(1, $taken);
+        self::assertCount(1, $started);
         self::assertSame(1, $queue->startedCount());
         self::assertSame(2, $queue->skippedCount());
     }
