@@ -303,6 +303,8 @@ control, not ceremony — do not "simplify" it away, and do not delete
 
 ## Workflow
 
+- **No Claude attribution anywhere**: no "Generated with Claude Code", `Co-Authored-By: Claude`
+  or session-link lines in commits, PR bodies or GitHub comments.
 - **git-flow.** Feature branches off `develop`; PRs merge into `develop`, never
   `main`. Every merge to `develop` is shippable.
 - **Branch names embed the GitHub issue number**: `feature/114-tag-triggered-deploy`,
