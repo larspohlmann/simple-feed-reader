@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch\BatchFeedFetcher;
 
+use App\Service\Fetch\AnswerSettler\PassThroughSettler;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\FeedGoneException;
@@ -72,6 +73,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
         return new ConcurrentFeedFetcher(
             FetchWiring::requestEngine($client, $urlGuard, $this->noEgressProxy(), $concurrency),
             $hostConcurrency,
+            new PassThroughSettler(),
         );
     }
 

@@ -156,6 +156,42 @@ final class FetchQueueTest extends TestCase
         self::assertNull($this->runnable($queue)->proxy);
     }
 
+    public function testAFollowUpGoesAheadOfUnstartedTicketsAsAFreshAttemptOverTheBatchProxy(): void
+    {
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.com', 1080, null, null);
+        $queue = $this->queue([
+            11 => FeedTickets::of('https://one.example.com/feed'),
+            22 => FeedTickets::of('https://two.example.com/feed'),
+        ], batchProxy: $proxy);
+        $this->runnable($queue);
+
+        $queue->followUp(11, FeedTickets::of('https://one.example.com/again'));
+        $followUp = $this->runnable($queue);
+
+        self::assertSame(11, $followUp->key);
+        self::assertSame('https://one.example.com/again', $followUp->url);
+        self::assertTrue($followUp->isFirstSend());
+        self::assertSame($proxy, $followUp->proxy);
+    }
+
+    public function testAFollowUpNeverAdvancesTheTicketSource(): void
+    {
+        $resumptions = [];
+        $tickets = (static function () use (&$resumptions): \Generator {
+            $resumptions[] = 1;
+            yield 11 => FeedTickets::of('https://one.example.com/feed');
+            $resumptions[] = 2;
+            yield 22 => FeedTickets::of('https://two.example.com/feed');
+        })();
+        $queue = new FetchQueue($tickets, new RequestSlots(), 100);
+        $queue->takeRunnable();
+
+        $queue->followUp(11, FeedTickets::of('https://one.example.com/again'));
+        $queue->takeRunnable();
+
+        self::assertSame([1], $resumptions);
+    }
+
     public function testParksATicketWhoseHostIsFullAndServesAFreeHostFirst(): void
     {
         $slots = new RequestSlots();

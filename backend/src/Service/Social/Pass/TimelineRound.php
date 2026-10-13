@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Social\Pass;
 
 use App\Entity\SocialFeed;
-use App\Service\Fetch\DispatchGate\DispatchGateInterface;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Social\Exception\PrivateFeedOrphanedException;
@@ -22,7 +21,7 @@ use App\Service\Social\TimelineSources;
  * One refresh's private-feed reads: a ticket per feed, a gate that keeps a held account's waiting tickets off the
  * wire, and each answer settled into an outcome. A feed settled without a request waits in `unasked` until drained.
  */
-final class TimelineRound implements DispatchGateInterface
+final class TimelineRound
 {
     /** @var array<int|string, TimelineOutcomeModelInterface> */
     private array $unasked = [];

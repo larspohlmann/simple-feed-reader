@@ -37,6 +37,12 @@ final class FetchQueue
         $this->continuations[] = $attempt;
     }
 
+    /** Another request for a key already sent: it joins the continuations and never draws on the ticket source. */
+    public function followUp(int|string $key, RequestTicketModel $ticket): void
+    {
+        $this->continuations[] = FetchAttemptModel::start($key, $ticket, $this->batchProxy);
+    }
+
     public function onSent(FetchAttemptModel $attempt): void
     {
         $this->slots->acquire($attempt);

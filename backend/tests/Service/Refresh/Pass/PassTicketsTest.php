@@ -148,10 +148,10 @@ final class PassTicketsTest extends TestCase
         $account->markNeedsReconnect();
         $rssOutcome = FetchOutcomeModel::withheld();
 
-        self::assertSame($rssOutcome, $passTickets->settle(2, $rssOutcome));
+        self::assertSame($rssOutcome, $passTickets->settle(2, $rssOutcome)->settledOutcome());
         self::assertInstanceOf(
             AccountPausedTimelineModel::class,
-            $passTickets->settle(1, FetchOutcomeModel::withheld()),
+            $passTickets->settle(1, FetchOutcomeModel::withheld())->settledOutcome(),
         );
     }
 

@@ -44,9 +44,8 @@ final readonly class ConcurrentPassFetcher implements PassFetcherInterface
      */
     private function run(iterable $requests, PassTickets $tickets): \Generator
     {
-        foreach ($this->engine->sendAll($requests, $tickets) as $feedId => $outcome) {
+        foreach ($this->engine->sendAll($requests, $tickets) as $feedId => $settled) {
             yield from $tickets->drainUnasked();
-            $settled = $tickets->settle($feedId, $outcome);
             if (null !== $settled) {
                 yield $feedId => $settled;
             }
