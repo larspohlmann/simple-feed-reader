@@ -6,11 +6,15 @@ namespace App\Tests\Support;
 
 use App\Entity\Feed;
 use App\Entity\SocialFeed;
+use App\Enum\SourceFormat;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\FetchTicketModel;
-use App\Service\Refresh\Pass\PassFeeds;
+use App\Service\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
+use App\Service\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
+use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
+use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\PassFetcher\PassFetcherInterface;
 use App\Service\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
@@ -66,38 +70,45 @@ final class StubPassFetcher implements PassFetcherInterface
         return $this->feeds->fetchedUrls;
     }
 
-    /** @return \Generator<int, FetchOutcomeModel|TimelineOutcomeModelInterface> */
-    public function fetchAll(PassFeeds $feeds): \Generator
+    /**
+     * @param array<int, SocialFeed> $socialFeedsByFeedId
+     *
+     * @return \Generator<int, PassOutcomeModelInterface>
+     */
+    public function fetchAll(RefreshPass $pass, array $socialFeedsByFeedId): \Generator
     {
         $wave = [];
-        foreach ($feeds->started() as $feedId => $feed) {
+        foreach ($pass->startedFeeds() as $feedId => $feed) {
             $wave[$feedId] = $feed;
             if (\count($wave) < $this->concurrency) {
                 continue;
             }
 
-            yield from $this->runWave($feeds, $wave);
+            yield from $this->runWave($socialFeedsByFeedId, $wave);
             $wave = [];
         }
 
         if ([] !== $wave) {
-            yield from $this->runWave($feeds, $wave);
+            yield from $this->runWave($socialFeedsByFeedId, $wave);
         }
     }
 
     /**
-     * @param array<int, Feed> $wave
+     * @param array<int, SocialFeed> $socialFeedsByFeedId
+     * @param array<int, Feed>       $wave
      *
-     * @return \Generator<int, FetchOutcomeModel|TimelineOutcomeModelInterface>
+     * @return \Generator<int, PassOutcomeModelInterface>
      */
-    private function runWave(PassFeeds $feeds, array $wave): \Generator
+    private function runWave(array $socialFeedsByFeedId, array $wave): \Generator
     {
         if ($this->secondsPerFetch > 0) {
             $this->clock?->sleep($this->secondsPerFetch);
         }
 
         foreach ($wave as $feedId => $feed) {
-            yield $feedId => $feeds->isPrivate($feedId) ? $this->timelineOf($feeds, $feedId) : $this->fetched($feed);
+            yield $feedId => SourceFormat::isSocial($feed->getSourceFormat())
+                ? new TimelinePassOutcomeModel($this->timelineOf($socialFeedsByFeedId, $feedId))
+                : new FeedPassOutcomeModel($this->fetched($feed));
         }
     }
 
@@ -106,9 +117,10 @@ final class StubPassFetcher implements PassFetcherInterface
         return $this->feeds->fetchAll([new FetchTicketModel($feed->getUrl())])->current();
     }
 
-    private function timelineOf(PassFeeds $feeds, int $feedId): TimelineOutcomeModelInterface
+    /** @param array<int, SocialFeed> $socialFeedsByFeedId */
+    private function timelineOf(array $socialFeedsByFeedId, int $feedId): TimelineOutcomeModelInterface
     {
-        $socialFeed = $feeds->socialFeedsByFeedId[$feedId] ?? null;
+        $socialFeed = $socialFeedsByFeedId[$feedId] ?? null;
         if (null === $socialFeed) {
             return new FailedTimelineModel(new PrivateFeedOrphanedException());
         }

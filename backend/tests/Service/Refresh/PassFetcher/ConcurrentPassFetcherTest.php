@@ -15,7 +15,9 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\UrlGuard;
-use App\Service\Refresh\Pass\PassFeeds;
+use App\Service\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
+use App\Service\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
+use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Social\Exception\PrivateFeedOrphanedException;
@@ -410,7 +412,7 @@ final class ConcurrentPassFetcherTest extends TestCase
         }
         $fetcher = $this->fetcher(static fn (): MockResponse => self::statuses(), accountConcurrency: 1);
 
-        $outcomes = $fetcher->fetchAll(self::passFeeds($socialFeeds));
+        $outcomes = self::fetchAllOf($fetcher, $socialFeeds);
         foreach ($outcomes as $outcome) {
             self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
             break;
@@ -426,8 +428,8 @@ final class ConcurrentPassFetcherTest extends TestCase
         foreach (['1', '2'] as $listId) {
             $socialFeeds[] = $this->feedOf($account, SocialFeedKind::UserList, $listId);
         }
-        $outcomes = $this->fetcher(static fn (): MockResponse => self::statuses())
-            ->fetchAll(self::passFeeds($socialFeeds));
+        $fetcher = $this->fetcher(static fn (): MockResponse => self::statuses());
+        $outcomes = self::fetchAllOf($fetcher, $socialFeeds);
 
         foreach ($outcomes as $outcome) {
             self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
@@ -653,9 +655,11 @@ final class ConcurrentPassFetcherTest extends TestCase
         $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
         $pass = new RefreshPass([$home->getFeed(), $rss], $clock, $clock->now()->getTimestamp() + 5);
 
-        $outcomes = iterator_to_array(
-            $this->fetcher(self::renewingStaleSessions())->fetchAll(new PassFeeds($pass, [self::idOf($home) => $home])),
-        );
+        $outcomes = [];
+        $fetcher = $this->fetcher(self::renewingStaleSessions());
+        foreach ($fetcher->fetchAll($pass, [self::idOf($home) => $home]) as $feedId => $outcome) {
+            $outcomes[$feedId] = self::unwrapped($outcome);
+        }
 
         self::assertSame([self::idOf($home)], $pass->startedFeedIds(), 'the budget started one feed');
         self::assertSame([self::idOf($home)], array_keys($outcomes));
@@ -667,7 +671,8 @@ final class ConcurrentPassFetcherTest extends TestCase
     {
         $home = $this->feedOf($this->blueskyAccount('stale-jwt'));
         $rss = $this->rssFeed(self::NEWS . '/one.xml');
-        $outcomes = $this->fetcher(self::renewingStaleSessions())->fetchAll(self::passFeeds([$home, $rss]));
+        $fetcher = $this->fetcher(self::renewingStaleSessions());
+        $outcomes = self::fetchAllOf($fetcher, [$home, $rss]);
 
         self::assertSame($rss->requireId(), $outcomes->key(), 'the RSS feed lands while the follow-up is on the wire');
         unset($outcomes);
@@ -735,7 +740,8 @@ final class ConcurrentPassFetcherTest extends TestCase
         $respond = static fn (string $method, string $url): MockResponse => str_starts_with($url, self::NEWS)
             ? self::rss()
             : self::statuses();
-        $outcomes = $this->fetcher($respond)->fetchAll(self::passFeeds($entries));
+        $fetcher = $this->fetcher($respond);
+        $outcomes = self::fetchAllOf($fetcher, $entries);
 
         self::assertTrue($outcomes->valid());
         unset($outcomes);
@@ -744,6 +750,22 @@ final class ConcurrentPassFetcherTest extends TestCase
         foreach ($this->responses as $response) {
             self::assertTrue($response->getInfo('canceled'));
         }
+    }
+
+    public function testEachOutcomeComesInItsFeedsLane(): void
+    {
+        $respond = static fn (string $method, string $url): MockResponse => str_starts_with($url, self::NEWS)
+            ? self::rss()
+            : self::statuses();
+        $rss = $this->rssFeed(self::NEWS . '/one.xml');
+        $home = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
+        $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
+        $pass = new RefreshPass([$rss, $home->getFeed()], $clock, $clock->now()->getTimestamp() + 300);
+
+        $outcomes = iterator_to_array($this->fetcher($respond)->fetchAll($pass, [self::idOf($home) => $home]));
+
+        self::assertInstanceOf(FeedPassOutcomeModel::class, $outcomes[$rss->requireId()]);
+        self::assertInstanceOf(TimelinePassOutcomeModel::class, $outcomes[self::idOf($home)]);
     }
 
     public function testRejectsAFeedHostConcurrencyBelowOne(): void
@@ -848,7 +870,7 @@ final class ConcurrentPassFetcherTest extends TestCase
     /** @param list<Feed|SocialFeed> $entries */
     private function onTheWireAtFirstAnswer(ConcurrentPassFetcher $fetcher, array $entries): int
     {
-        self::assertTrue($fetcher->fetchAll(self::passFeeds($entries))->valid(), 'an outcome lands');
+        self::assertTrue(self::fetchAllOf($fetcher, $entries)->valid(), 'an outcome lands');
 
         return \count($this->http->requests);
     }
@@ -915,7 +937,7 @@ final class ConcurrentPassFetcherTest extends TestCase
     private static function landings(ConcurrentPassFetcher $fetcher, array $entries): array
     {
         $landings = [];
-        foreach ($fetcher->fetchAll(self::passFeeds($entries)) as $feedId => $outcome) {
+        foreach (self::fetchAllOf($fetcher, $entries) as $feedId => $outcome) {
             $landings[] = [$feedId, $outcome];
         }
 
@@ -929,8 +951,12 @@ final class ConcurrentPassFetcherTest extends TestCase
         return self::withId(new Feed($url), $feedId);
     }
 
-    /** @param list<Feed|SocialFeed> $entries in due order: an RSS feed as itself, a private feed as its social feed */
-    private static function passFeeds(array $entries): PassFeeds
+    /**
+     * @param list<Feed|SocialFeed> $entries in due order: an RSS feed as itself, a private feed as its social feed
+     *
+     * @return \Generator<int|string, FetchOutcomeModel|TimelineOutcomeModelInterface> each lane's outcome, unwrapped
+     */
+    private static function fetchAllOf(ConcurrentPassFetcher $fetcher, array $entries): \Generator
     {
         $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
         $feeds = [];
@@ -942,11 +968,20 @@ final class ConcurrentPassFetcherTest extends TestCase
                 $socialFeedsByFeedId[$feed->requireId()] = $entry;
             }
         }
+        $pass = new RefreshPass($feeds, $clock, $clock->now()->getTimestamp() + 300);
 
-        return new PassFeeds(
-            new RefreshPass($feeds, $clock, $clock->now()->getTimestamp() + 300),
-            $socialFeedsByFeedId,
-        );
+        foreach ($fetcher->fetchAll($pass, $socialFeedsByFeedId) as $feedId => $outcome) {
+            yield $feedId => self::unwrapped($outcome);
+        }
+    }
+
+    private static function unwrapped(
+        PassOutcomeModelInterface $outcome,
+    ): FetchOutcomeModel|TimelineOutcomeModelInterface {
+        return match (true) {
+            $outcome instanceof FeedPassOutcomeModel => $outcome->outcome,
+            $outcome instanceof TimelinePassOutcomeModel => $outcome->outcome,
+        };
     }
 
     private static function feedResponseOf(

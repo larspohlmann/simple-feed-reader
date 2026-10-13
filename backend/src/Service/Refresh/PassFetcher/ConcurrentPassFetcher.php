@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh\PassFetcher;
 
+use App\Entity\SocialFeed;
 use App\Service\Fetch\ConcurrentRequestEngine;
-use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Support\CapacityGuard;
+use App\Service\Refresh\Model\PassOutcome\PassOutcomeModelInterface;
 use App\Service\Refresh\Pass\PassFeeds;
+use App\Service\Refresh\Pass\PassLane\FeedLane;
+use App\Service\Refresh\Pass\PassLane\TimelineLane;
 use App\Service\Refresh\Pass\PassTickets;
-use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
+use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Social\TimelineRounds;
 
 /** Reads a pass's due feeds on one engine run, in due order whatever their kind; a stale session renews inside it. */
@@ -23,11 +26,15 @@ final readonly class ConcurrentPassFetcher implements PassFetcherInterface
         CapacityGuard::atLeastOne($hostConcurrency, 'Per-host concurrency');
     }
 
-    /** @return \Generator<int|string, FetchOutcomeModel|TimelineOutcomeModelInterface> */
-    public function fetchAll(PassFeeds $feeds): \Generator
+    /**
+     * @param array<int, SocialFeed> $socialFeedsByFeedId
+     *
+     * @return \Generator<int|string, PassOutcomeModelInterface>
+     */
+    public function fetchAll(RefreshPass $pass, array $socialFeedsByFeedId): \Generator
     {
-        $round = $this->timelineRounds->start($feeds->socialFeedsByFeedId);
-        $tickets = new PassTickets($feeds, $round, $this->hostConcurrency);
+        $timelineLane = new TimelineLane($this->timelineRounds->start($socialFeedsByFeedId));
+        $tickets = new PassTickets(new PassFeeds($pass, new FeedLane($this->hostConcurrency), $timelineLane));
 
         foreach ($this->engine->sendAll($tickets->tickets(), $tickets) as $feedId => $outcome) {
             yield from $tickets->drainUnasked();

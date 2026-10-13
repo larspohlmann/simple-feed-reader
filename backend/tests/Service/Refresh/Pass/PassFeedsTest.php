@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh\Pass;
 
 use App\Entity\Feed;
-use App\Entity\SocialFeed;
-use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Service\Refresh\Pass\PassFeeds;
+use App\Service\Refresh\Pass\PassLane\FeedLane;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Tests\Support\AssignsEntityIds;
-use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -19,25 +17,29 @@ final class PassFeedsTest extends TestCase
 {
     use AssignsEntityIds;
 
-    public function testTellsAPrivateFeedFromAnRssFeed(): void
+    public function testGivesEachFeedTheLaneOfItsKind(): void
     {
+        $feedLane = new FeedLane(2);
+        $timelineLane = new FeedLane(3);
         $rss = self::withId(new Feed('https://news.example/feed.xml'), 1);
-        $timeline = self::privateFeed(2);
 
-        $feeds = self::passFeeds([$rss, $timeline->getFeed()], [2 => $timeline]);
+        $feeds = new PassFeeds(self::pass([$rss, self::privateFeed(2)]), $feedLane, $timelineLane);
 
-        self::assertFalse($feeds->isPrivate(1));
-        self::assertTrue($feeds->isPrivate(2));
+        self::assertSame($feedLane, $feeds->laneOf(1));
+        self::assertSame($timelineLane, $feeds->laneOf(2));
+        self::assertSame([$feedLane, $timelineLane], $feeds->lanes());
     }
 
     public function testNamesEveryPrivateFeedIdInOrderWhetherTheBudgetStartsItOrNot(): void
     {
         $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
         $rss = self::withId(new Feed('https://news.example/feed.xml'), 1);
-        $home = self::privateFeed(7)->getFeed();
-        $list = self::privateFeed(4)->getFeed();
 
-        $pass = new RefreshPass([$rss, $home, $list], $clock, $clock->now()->getTimestamp() + 5);
+        $pass = new RefreshPass(
+            [$rss, self::privateFeed(7), self::privateFeed(4)],
+            $clock,
+            $clock->now()->getTimestamp() + 5,
+        );
 
         self::assertSame([7, 4], PassFeeds::privateFeedIdsOf($pass));
     }
@@ -45,37 +47,24 @@ final class PassFeedsTest extends TestCase
     public function testStartsWhatThePassStarts(): void
     {
         $rss = self::withId(new Feed('https://news.example/feed.xml'), 1);
-        $timeline = self::privateFeed(2);
+        $feeds = new PassFeeds(self::pass([self::privateFeed(2), $rss]), new FeedLane(2), new FeedLane(3));
 
-        $started = iterator_to_array(self::passFeeds([$timeline->getFeed(), $rss], [2 => $timeline])->started());
-
-        self::assertSame([2, 1], array_keys($started));
+        self::assertSame([2, 1], array_keys(iterator_to_array($feeds->started())));
     }
 
-    /**
-     * @param list<Feed>             $feeds
-     * @param array<int, SocialFeed> $socialFeedsByFeedId
-     */
-    private static function passFeeds(array $feeds, array $socialFeedsByFeedId): PassFeeds
+    /** @param list<Feed> $feeds */
+    private static function pass(array $feeds): RefreshPass
     {
         $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
 
-        return new PassFeeds(
-            new RefreshPass($feeds, $clock, $clock->now()->getTimestamp() + 300),
-            $socialFeedsByFeedId,
-        );
+        return new RefreshPass($feeds, $clock, $clock->now()->getTimestamp() + 300);
     }
 
-    private static function privateFeed(int $feedId): SocialFeed
+    private static function privateFeed(int $feedId): Feed
     {
         $feed = self::withId(new Feed(sprintf('social:mastodon:7:%d', $feedId)), $feedId);
         $feed->setSourceFormat(SourceFormat::MASTODON_API);
 
-        return new SocialFeed(
-            self::withId(SocialAccounts::mastodonOn('https://mastodon.example'), 7),
-            $feed,
-            SocialFeedKind::Home,
-            '',
-        );
+        return $feed;
     }
 }

@@ -10,14 +10,14 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\RequestSlot\HostSlotModel;
-use App\Service\Fetch\Model\ResponseExchangeKind;
+use App\Service\Refresh\Model\PassOutcome\FeedPassOutcomeModel;
+use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
 use App\Service\Refresh\Pass\PassFeeds;
+use App\Service\Refresh\Pass\PassLane\FeedLane;
+use App\Service\Refresh\Pass\PassLane\TimelineLane;
 use App\Service\Refresh\Pass\PassTickets;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Social\Exception\PrivateFeedOrphanedException;
-use App\Service\Social\Model\SocialAccountSlotModel;
-use App\Service\Social\Model\SocialServerSlotModel;
 use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
 use App\Tests\Support\AssignsEntityIds;
@@ -32,40 +32,9 @@ final class PassTicketsTest extends TestCase
 {
     use AssignsEntityIds;
 
-    private const string HOME = 'https://mastodon.example/api/v1/timelines/home?limit=40';
-
     private RefreshPass $pass;
 
-    public function testAnRssFeedBecomesAFeedTicketOnItsHostCarryingItsValidators(): void
-    {
-        $rss = self::withId(new Feed('https://news.example/feed.xml'), 1);
-        $rss->recordCacheValidators('"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT');
-
-        $tickets = iterator_to_array($this->passTickets([$rss], [])->tickets());
-
-        self::assertSame(ResponseExchangeKind::Feed, $tickets[1]->exchange);
-        self::assertSame('https://news.example/feed.xml', $tickets[1]->request->url);
-        self::assertSame(
-            ['If-None-Match' => '"v1"', 'If-Modified-Since' => 'Mon, 20 Jul 2026 08:30:00 GMT'],
-            $tickets[1]->request->headers,
-        );
-        self::assertEquals([new HostSlotModel(2)], $tickets[1]->slots);
-    }
-
-    public function testAPrivateFeedBecomesItsTimelineTicketOnItsAccountAndServer(): void
-    {
-        $timeline = self::privateFeed(self::account(), 2);
-
-        $tickets = iterator_to_array($this->passTickets([$timeline->getFeed()], [$timeline])->tickets());
-
-        self::assertSame(ResponseExchangeKind::Api, $tickets[2]->exchange);
-        self::assertEquals(
-            [new SocialAccountSlotModel(7, 3), new SocialServerSlotModel(self::HOME, 4)],
-            $tickets[2]->slots,
-        );
-    }
-
-    public function testFeedsAreTicketedInTheOrderThePassStartsThemWhateverTheirKind(): void
+    public function testFeedsAreTicketedInTheOrderThePassStartsThemWhateverTheirLane(): void
     {
         $account = self::account();
         $home = self::privateFeed($account, 1);
@@ -98,8 +67,9 @@ final class PassTicketsTest extends TestCase
 
         self::assertSame([2], array_keys($tickets));
         self::assertSame([1], array_keys($unasked));
-        self::assertInstanceOf(FailedTimelineModel::class, $unasked[1]);
-        self::assertInstanceOf(PrivateFeedOrphanedException::class, $unasked[1]->failure);
+        self::assertInstanceOf(TimelinePassOutcomeModel::class, $unasked[1]);
+        self::assertInstanceOf(FailedTimelineModel::class, $unasked[1]->outcome);
+        self::assertInstanceOf(PrivateFeedOrphanedException::class, $unasked[1]->outcome->failure);
         self::assertSame([1, 2], $this->pass->startedFeedIds());
     }
 
@@ -121,10 +91,12 @@ final class PassTicketsTest extends TestCase
         $passTickets = $this->passTickets([$timeline->getFeed()], [$timeline]);
 
         self::assertSame([], iterator_to_array($passTickets->tickets()));
-        self::assertInstanceOf(AccountPausedTimelineModel::class, iterator_to_array($passTickets->drainUnasked())[1]);
+        $unasked = iterator_to_array($passTickets->drainUnasked());
+        self::assertInstanceOf(TimelinePassOutcomeModel::class, $unasked[1]);
+        self::assertInstanceOf(AccountPausedTimelineModel::class, $unasked[1]->outcome);
     }
 
-    public function testTheGateAdmitsEveryRssFeedAndAsksTheRoundAboutAPrivateOne(): void
+    public function testTheGateAsksEachFeedsOwnLane(): void
     {
         $account = self::account();
         $timeline = self::privateFeed($account, 1);
@@ -138,7 +110,7 @@ final class PassTicketsTest extends TestCase
         self::assertFalse($passTickets->admits(1));
     }
 
-    public function testAnRssOutcomeIsPassedThroughAndAPrivateOneIsSettledByItsRound(): void
+    public function testEachOutcomeIsSettledByItsFeedsLane(): void
     {
         $account = self::account();
         $timeline = self::privateFeed($account, 1);
@@ -148,11 +120,13 @@ final class PassTicketsTest extends TestCase
         $account->markNeedsReconnect();
         $rssOutcome = FetchOutcomeModel::withheld();
 
-        self::assertSame($rssOutcome, $passTickets->settle(2, $rssOutcome)->settledOutcome());
-        self::assertInstanceOf(
-            AccountPausedTimelineModel::class,
-            $passTickets->settle(1, FetchOutcomeModel::withheld())->settledOutcome(),
-        );
+        $fetched = $passTickets->settle(2, $rssOutcome)->settledOutcome();
+        $held = $passTickets->settle(1, FetchOutcomeModel::withheld())->settledOutcome();
+
+        self::assertInstanceOf(FeedPassOutcomeModel::class, $fetched);
+        self::assertSame($rssOutcome, $fetched->outcome);
+        self::assertInstanceOf(TimelinePassOutcomeModel::class, $held);
+        self::assertInstanceOf(AccountPausedTimelineModel::class, $held->outcome);
     }
 
     /**
@@ -169,7 +143,7 @@ final class PassTicketsTest extends TestCase
         }
         $round = SocialApiWiring::timelineRounds(new MockHttpClient(), new ArrayAdapter())->start($socialFeedsByFeedId);
 
-        return new PassTickets(new PassFeeds($this->pass, $socialFeedsByFeedId), $round, 2);
+        return new PassTickets(new PassFeeds($this->pass, new FeedLane(2), new TimelineLane($round)));
     }
 
     private static function account(): SocialAccount

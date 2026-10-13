@@ -15,7 +15,7 @@ use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\DnsResolver\NativeDnsResolver;
-use App\Service\Refresh\Pass\PassFeeds;
+use App\Service\Refresh\Model\PassOutcome\TimelinePassOutcomeModel;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\PassFetcher\ConcurrentPassFetcher;
 use App\Service\Refresh\PassFetcher\PassFetcherInterface;
@@ -61,8 +61,9 @@ final class PassFetcherWiringTest extends KernelTestCase
         );
 
         $outcomes = [];
-        foreach ($fetcher->fetchAll(new PassFeeds($pass, [1 => $mastodon, 2 => $bluesky])) as $feedId => $outcome) {
-            $outcomes[$feedId] = $outcome::class;
+        foreach ($fetcher->fetchAll($pass, [1 => $mastodon, 2 => $bluesky]) as $feedId => $outcome) {
+            self::assertInstanceOf(TimelinePassOutcomeModel::class, $outcome);
+            $outcomes[$feedId] = $outcome->outcome::class;
         }
 
         self::assertSame([FetchedTimelineModel::class, FetchedTimelineModel::class], [$outcomes[1], $outcomes[2]]);
