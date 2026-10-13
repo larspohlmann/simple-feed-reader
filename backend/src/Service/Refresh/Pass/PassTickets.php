@@ -14,9 +14,9 @@ use App\Service\Social\Pass\TimelineRound;
 
 /**
  * One pass's engine tickets in due order, an RSS or Atom feed by its URL, a private feed through its round, and the
- * engine's settler. Only a held account's private tickets are withheld.
+ * engine's settler. Only the private tickets the round holds back are withheld.
  *
- * @implements AnswerSettlerInterface<FetchOutcomeModel|TimelineOutcomeModelInterface|null>
+ * @implements AnswerSettlerInterface<FetchOutcomeModel|TimelineOutcomeModelInterface>
  */
 final readonly class PassTickets implements AnswerSettlerInterface
 {
@@ -48,15 +48,12 @@ final readonly class PassTickets implements AnswerSettlerInterface
         return !$this->feeds->isPrivate($key) || $this->round->admits($key);
     }
 
-    /**
-     * @return SettlementModel<FetchOutcomeModel|TimelineOutcomeModelInterface|null> null while a private feed waits
-     *     for the renewal wave
-     */
+    /** @return SettlementModel<FetchOutcomeModel|TimelineOutcomeModelInterface> */
     public function settle(int|string $key, FetchOutcomeModel $outcome): SettlementModel
     {
-        return SettlementModel::outcome(
-            $this->feeds->isPrivate($key) ? $this->round->settle($key, $outcome) : $outcome,
-        );
+        return $this->feeds->isPrivate($key)
+            ? $this->round->settle($key, $outcome)
+            : SettlementModel::outcome($outcome);
     }
 
     /** @return \Generator<int|string, TimelineOutcomeModelInterface> */

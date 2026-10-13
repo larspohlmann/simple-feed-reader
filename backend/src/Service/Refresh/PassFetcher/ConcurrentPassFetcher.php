@@ -6,17 +6,13 @@ namespace App\Service\Refresh\PassFetcher;
 
 use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Support\CapacityGuard;
 use App\Service\Refresh\Pass\PassFeeds;
 use App\Service\Refresh\Pass\PassTickets;
 use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\TimelineRounds;
 
-/**
- * Reads a pass's due feeds on one engine run, in due order whatever their kind. A stale Bluesky session sends its
- * feeds again in a second, small run once the account has a fresh session.
- */
+/** Reads a pass's due feeds on one engine run, in due order whatever their kind; a stale session renews inside it. */
 final readonly class ConcurrentPassFetcher implements PassFetcherInterface
 {
     public function __construct(
@@ -33,22 +29,9 @@ final readonly class ConcurrentPassFetcher implements PassFetcherInterface
         $round = $this->timelineRounds->start($feeds->socialFeedsByFeedId);
         $tickets = new PassTickets($feeds, $round, $this->hostConcurrency);
 
-        yield from $this->run($tickets->tickets(), $tickets);
-        yield from $this->run($round->startRenewalWave(), $tickets);
-    }
-
-    /**
-     * @param iterable<int|string, RequestTicketModel> $requests
-     *
-     * @return \Generator<int|string, FetchOutcomeModel|TimelineOutcomeModelInterface>
-     */
-    private function run(iterable $requests, PassTickets $tickets): \Generator
-    {
-        foreach ($this->engine->sendAll($requests, $tickets) as $feedId => $settled) {
+        foreach ($this->engine->sendAll($tickets->tickets(), $tickets) as $feedId => $outcome) {
             yield from $tickets->drainUnasked();
-            if (null !== $settled) {
-                yield $feedId => $settled;
-            }
+            yield $feedId => $outcome;
         }
 
         yield from $tickets->drainUnasked();

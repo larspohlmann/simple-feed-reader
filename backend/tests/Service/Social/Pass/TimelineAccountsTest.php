@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Pass;
 
 use App\Entity\SocialAccount;
-use App\Service\Social\Exception\SocialSessionStaleException;
-use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Pass\TimelineAccounts;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
@@ -16,19 +15,34 @@ final class TimelineAccountsTest extends TestCase
 {
     use AssignsEntityIds;
 
-    public function testAnAccountStaysRenewedThroughALaterRenewal(): void
+    public function testAnAccountCountsAsRenewedOnceMarked(): void
     {
         $accounts = new TimelineAccounts();
         $alice = self::bluesky(3);
-        $carol = self::bluesky(4);
-        $stale = new SocialSessionStaleException('Bluesky refused the session of this account.');
 
-        $accounts->settleStale($alice, $stale);
-        $accounts->renewSessions();
-        $accounts->settleStale($carol, $stale);
-        $accounts->renewSessions();
+        self::assertFalse($accounts->isRenewed($alice));
+        $accounts->markRenewed($alice);
 
-        self::assertInstanceOf(FailedTimelineModel::class, $accounts->settleStale($alice, $stale));
+        self::assertTrue($accounts->isRenewed($alice));
+    }
+
+    public function testARenewalBelongsToItsOwnAccount(): void
+    {
+        $accounts = new TimelineAccounts();
+
+        $accounts->markRenewed(self::bluesky(3));
+
+        self::assertFalse($accounts->isRenewed(self::bluesky(4)));
+    }
+
+    public function testAThrottledAccountMayNotAskAgain(): void
+    {
+        $accounts = new TimelineAccounts();
+        $alice = self::bluesky(3);
+
+        $accounts->settleFailure($alice, new SocialNetworkThrottledException('Bluesky is rate limiting.', 60));
+
+        self::assertFalse($accounts->mayAsk($alice));
     }
 
     private static function bluesky(int $accountId): SocialAccount

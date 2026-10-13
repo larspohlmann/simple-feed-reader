@@ -9,28 +9,24 @@ use App\Enum\SocialAccountStatus;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialSessionStaleException;
 use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 
-/** One refresh's verdict per account: throttled, paused, or waiting for a fresh session. */
+/** One refresh's verdict per account: throttled, paused, or renewed once already. */
 final class TimelineAccounts
 {
     /** @var array<int, SocialAccount> */
     private array $throttled = [];
 
-    /** @var array<int, SocialAccount> */
-    private array $awaitingSession = [];
-
-    /** @var array<int, SocialAccount> */
+    /** @var array<int, true> */
     private array $renewed = [];
 
     public function mayAsk(SocialAccount $account): bool
     {
-        return null === $this->heldOutcomeOf($account) && !isset($this->awaitingSession[$account->requireId()]);
+        return null === $this->heldOutcomeOf($account);
     }
 
     /** Why the account's feeds stay unasked this refresh, or null when nothing holds them. */
@@ -43,31 +39,14 @@ final class TimelineAccounts
         return isset($this->throttled[$account->requireId()]) ? new AccountThrottledTimelineModel() : null;
     }
 
-    /** Null while the account waits for its one renewal; a stale answer to a renewed session is a refusal. */
-    public function settleStale(
-        SocialAccount $account,
-        SocialSessionStaleException $stale,
-    ): ?TimelineOutcomeModelInterface {
-        $accountId = $account->requireId();
-        if (isset($this->renewed[$accountId])) {
-            return $this->settleFailure(
-                $account,
-                new SocialCredentialsRejectedException($stale->getMessage(), previous: $stale),
-            );
-        }
-        $this->awaitingSession[$accountId] = $account;
-
-        return null;
+    public function isRenewed(SocialAccount $account): bool
+    {
+        return isset($this->renewed[$account->requireId()]);
     }
 
-    /** @return array<int, SocialAccount> the accounts that waited, each counted as renewed from now on */
-    public function renewSessions(): array
+    public function markRenewed(SocialAccount $account): void
     {
-        $accounts = $this->awaitingSession;
-        $this->renewed += $accounts;
-        $this->awaitingSession = [];
-
-        return $accounts;
+        $this->renewed[$account->requireId()] = true;
     }
 
     public function settleFailure(

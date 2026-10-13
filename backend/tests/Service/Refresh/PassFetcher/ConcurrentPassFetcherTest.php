@@ -30,13 +30,13 @@ use App\Service\Social\Model\TimelineOutcome\ThrottledTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\TimelineOutcomeModelInterface;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\CountingArrayAdapter;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialApiWiring;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\DecoratorTrait;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -55,9 +55,12 @@ final class ConcurrentPassFetcherTest extends TestCase
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string MASTODON_HOME = 'GET https://mastodon.example/api/v1/timelines/home?limit=40';
     private const string BLUESKY_LIST = 'at://did:plc:bob/app.bsky.graph.list/3l1';
+    private const string BLUESKY_HOME = 'GET https://pds.example.test/xrpc/app.bsky.feed.getTimeline?limit=50';
+    private const string BLUESKY_LIST_READ = 'GET https://pds.example.test/xrpc/app.bsky.feed.getListFeed'
+        . '?list=at%3A%2F%2Fdid%3Aplc%3Abob%2Fapp.bsky.graph.list%2F3l1&limit=50';
     private const string NEWS = 'https://' . SocialApiWiring::RSS_HOST;
 
-    private ArrayAdapter $cache;
+    private CountingArrayAdapter $cache;
 
     private RoutedHttpClient $http;
 
@@ -68,7 +71,7 @@ final class ConcurrentPassFetcherTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->cache = new ArrayAdapter();
+        $this->cache = new CountingArrayAdapter();
         $this->responses = new \ArrayObject();
     }
 
@@ -278,7 +281,7 @@ final class ConcurrentPassFetcherTest extends TestCase
     {
         $respond = static function (string $method, string $url): MockResponse {
             if (self::SESSION === $method . ' ' . $url) {
-                return self::json(['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'accessJwt' => 'jwt-2']);
+                return self::freshSession();
             }
 
             return str_starts_with($url, self::PDS)
@@ -584,16 +587,98 @@ final class ConcurrentPassFetcherTest extends TestCase
         self::assertSame([self::MASTODON_HOME], $this->requestsTo(self::MASTODON));
     }
 
-    public function testAStaleSessionsFeedsRunInASecondWaveAfterTheRssFeedsLanded(): void
+    public function testAStaleSessionsFeedIsSentAgainInsideTheOneRun(): void
     {
         $home = $this->feedOf($this->blueskyAccount('stale-jwt'));
         $rss = $this->rssFeed(self::NEWS . '/one.xml');
 
-        $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$home, $rss]);
+        $outcomes = self::read($this->fetcher(self::renewingBesideASlowFeed()), [$home, $rss]);
 
-        self::assertSame([$rss->requireId(), self::idOf($home)], array_keys($outcomes));
+        self::assertSame(
+            [self::idOf($home), $rss->requireId()],
+            array_keys($outcomes),
+            'the renewed read lands while the RSS feed is still on the wire: no second run',
+        );
         self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
         self::assertSame([self::SESSION], $this->requestsTo('POST'));
+    }
+
+    public function testTwoInFlightStaleReadsOfOneAccountRenewItsSessionOnceAndAreEachSentOnceMore(): void
+    {
+        $bluesky = $this->blueskyAccount('stale-jwt');
+        $home = $this->feedOf($bluesky);
+        $list = $this->feedOf($bluesky, SocialFeedKind::UserList, self::BLUESKY_LIST);
+
+        $outcomes = self::read($this->fetcher(self::renewingStaleSessions()), [$home, $list]);
+
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($list)]);
+        self::assertSame(
+            2,
+            $this->cache->deletedItems,
+            'one dropSession, plus the forget inside the one session open',
+        );
+        self::assertSame(
+            [self::BLUESKY_HOME => 2, self::BLUESKY_LIST_READ => 2, self::SESSION => 1],
+            array_count_values($this->http->requestLines()),
+        );
+    }
+
+    public function testAFeedsSecondStaleAnswerPausesItsAccountAndTheGateWithholdsItsOtherFeeds(): void
+    {
+        $respond = static fn (string $method, string $url): MockResponse => self::SESSION === $method . ' ' . $url
+            ? self::freshSession()
+            : self::expiredToken();
+        $bluesky = $this->blueskyAccount('stale-jwt');
+        $home = $this->feedOf($bluesky);
+        $list = $this->feedOf($bluesky, SocialFeedKind::UserList, self::BLUESKY_LIST);
+
+        $outcomes = self::read($this->fetcher($respond, accountConcurrency: 1), [$home, $list]);
+
+        $failure = self::failureOf($outcomes[self::idOf($home)]);
+        self::assertInstanceOf(SocialCredentialsRejectedException::class, $failure);
+        self::assertInstanceOf(AccountPausedTimelineModel::class, $outcomes[self::idOf($list)]);
+        self::assertSame(SocialAccountStatus::NeedsReconnect, $bluesky->getStatus());
+        self::assertSame(
+            [self::BLUESKY_HOME, self::SESSION, self::BLUESKY_HOME],
+            $this->http->requestLines(),
+            'the list never reaches the wire',
+        );
+    }
+
+    public function testAFollowUpIsNeverCountedAsAStartAgainstTheBudget(): void
+    {
+        $home = $this->feedOf($this->blueskyAccount('stale-jwt'));
+        $rss = $this->rssFeed(self::NEWS . '/one.xml');
+        $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
+        $pass = new RefreshPass([$home->getFeed(), $rss], $clock, $clock->now()->getTimestamp() + 5);
+
+        $outcomes = iterator_to_array(
+            $this->fetcher(self::renewingStaleSessions())->fetchAll(new PassFeeds($pass, [self::idOf($home) => $home])),
+        );
+
+        self::assertSame([self::idOf($home)], $pass->startedFeedIds(), 'the budget started one feed');
+        self::assertSame([self::idOf($home)], array_keys($outcomes));
+        self::assertInstanceOf(FetchedTimelineModel::class, $outcomes[self::idOf($home)]);
+        self::assertSame([self::BLUESKY_HOME, self::SESSION, self::BLUESKY_HOME], $this->http->requestLines());
+    }
+
+    public function testAbandoningThePassCancelsAFollowUpInFlight(): void
+    {
+        $home = $this->feedOf($this->blueskyAccount('stale-jwt'));
+        $rss = $this->rssFeed(self::NEWS . '/one.xml');
+        $outcomes = $this->fetcher(self::renewingStaleSessions())->fetchAll(self::passFeeds([$home, $rss]));
+
+        self::assertSame($rss->requireId(), $outcomes->key(), 'the RSS feed lands while the follow-up is on the wire');
+        unset($outcomes);
+
+        self::assertSame(
+            [self::BLUESKY_HOME, 'GET ' . self::NEWS . '/one.xml', self::SESSION, self::BLUESKY_HOME],
+            $this->http->requestLines(),
+        );
+        $followUp = $this->responses[3];
+        self::assertInstanceOf(ResponseInterface::class, $followUp);
+        self::assertTrue($followUp->getInfo('canceled'), 'the follow-up was cancelled on the wire');
     }
 
     public function testAnOrphanIsYieldedBeforeTheNextOutcomeThatLands(): void
@@ -682,7 +767,7 @@ final class ConcurrentPassFetcherTest extends TestCase
     {
         return static function (string $method, string $url, array $headers): MockResponse {
             if (self::SESSION === $method . ' ' . $url) {
-                return self::json(['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'accessJwt' => 'jwt-2']);
+                return self::freshSession();
             }
             if (str_starts_with($url, self::NEWS)) {
                 return self::rss();
@@ -692,9 +777,38 @@ final class ConcurrentPassFetcherTest extends TestCase
             }
 
             return \in_array('Authorization: Bearer stale-jwt', $headers, true)
-                ? self::json(['error' => 'ExpiredToken', 'message' => 'Token has expired'], Response::HTTP_BAD_REQUEST)
+                ? self::expiredToken()
                 : self::blueskyTimeline();
         };
+    }
+
+    /** @return \Closure(string, string, list<string>): MockResponse renewingStaleSessions(), its RSS answer slow */
+    private static function renewingBesideASlowFeed(): \Closure
+    {
+        return static function (string $method, string $url, array $headers): MockResponse {
+            if (str_starts_with($url, self::NEWS)) {
+                return new MockResponse((static function (): \Generator {
+                    yield from str_split('<rss/>' . str_repeat(' ', 14));
+                })());
+            }
+            if (self::SESSION === $method . ' ' . $url) {
+                return self::freshSession();
+            }
+
+            return \in_array('Authorization: Bearer stale-jwt', $headers, true)
+                ? self::expiredToken()
+                : self::blueskyTimeline();
+        };
+    }
+
+    private static function freshSession(): MockResponse
+    {
+        return self::json(['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'accessJwt' => 'jwt-2']);
+    }
+
+    private static function expiredToken(): MockResponse
+    {
+        return self::json(['error' => 'ExpiredToken', 'message' => 'Token has expired'], Response::HTTP_BAD_REQUEST);
     }
 
     /** @param \Closure(string, string, list<string>): MockResponse $answer by method, url and request headers */
