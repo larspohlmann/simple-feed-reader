@@ -328,7 +328,8 @@ outside and could not receive an OAuth redirect. The credential is sealed like a
 are left out of backups (docs/backup.md §6.2).
 
 - Every call goes through `UrlGuard`: a one-off call via `GuardedApiClient`, a refresh's timeline reads via the
-  shared `ConcurrentRequestEngine`. No redirects, the resolved IP pinned.
+  shared `ConcurrentRequestEngine`. No redirects; the resolved IP is pinned when direct, and a configured egress
+  proxy carries the call, bearer token included, instead.
 - The Bluesky PDS comes from the account's DID document, must be `https`, and is normalised to its origin.
 - The app-password format check refuses a main password, which would grant far more than the app needs. It runs in
   the domain model (`SocialCredentialsModel`) on connect and on reconnect, before the rate limit and any network call.
