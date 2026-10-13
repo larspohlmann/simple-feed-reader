@@ -12,9 +12,26 @@ use App\Service\Social\Exception\PrivateFeedOrphanedException;
 /** One pass's feeds as its budget starts them, and the social feed behind each private one. */
 final readonly class PassFeeds
 {
+    /** @var array<int, true> */
+    private array $privateFeedIds;
+
     /** @param array<int, SocialFeed> $socialFeedsByFeedId each with its account loaded */
     public function __construct(private RefreshPass $pass, private array $socialFeedsByFeedId)
     {
+        $this->privateFeedIds = array_fill_keys(self::privateFeedIdsOf($pass), true);
+    }
+
+    /** @return list<int> every private feed's id, started or not */
+    public static function privateFeedIdsOf(RefreshPass $pass): array
+    {
+        $privateFeedIds = [];
+        foreach ($pass->feeds as $feed) {
+            if (SourceFormat::isSocial($feed->getSourceFormat())) {
+                $privateFeedIds[] = $feed->requireId();
+            }
+        }
+
+        return $privateFeedIds;
     }
 
     /** @return \Generator<int, Feed, mixed, void> */
@@ -25,7 +42,7 @@ final readonly class PassFeeds
 
     public function isPrivate(int|string $feedId): bool
     {
-        return SourceFormat::isSocial($this->pass->feed($feedId)->getSourceFormat());
+        return isset($this->privateFeedIds[$feedId]);
     }
 
     /** @throws PrivateFeedOrphanedException when the private feed has lost its social feed */

@@ -31,6 +31,18 @@ final class PassFeedsTest extends TestCase
         self::assertTrue($feeds->isPrivate(2));
     }
 
+    public function testNamesEveryPrivateFeedIdInOrderWhetherTheBudgetStartsItOrNot(): void
+    {
+        $clock = new MockClock('2026-10-13 12:00:00', 'UTC');
+        $rss = self::withId(new Feed('https://news.example/feed.xml'), 1);
+        $home = self::privateFeed(7)->getFeed();
+        $list = self::privateFeed(4)->getFeed();
+
+        $pass = new RefreshPass([$rss, $home, $list], $clock, $clock->now()->getTimestamp() + 5);
+
+        self::assertSame([7, 4], PassFeeds::privateFeedIdsOf($pass));
+    }
+
     public function testFindsAPrivateFeedsSocialFeed(): void
     {
         $timeline = self::privateFeed(2);

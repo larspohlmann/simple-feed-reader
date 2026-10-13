@@ -35,6 +35,6 @@ final readonly class RefreshPassFetcher
 
     private function feedsOf(RefreshPass $pass): PassFeeds
     {
-        return new PassFeeds($pass, $this->socialFeeds->findWithAccountByFeedIds($pass->socialFeedIds()));
+        return new PassFeeds($pass, $this->socialFeeds->findWithAccountByFeedIds(PassFeeds::privateFeedIdsOf($pass)));
     }
 }

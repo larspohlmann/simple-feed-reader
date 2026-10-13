@@ -22,7 +22,7 @@ final readonly class RefreshPass
      * @param list<Feed> $feeds
      */
     public function __construct(
-        private array $feeds,
+        public array $feeds,
         ClockInterface $clock,
         int $deadline,
     ) {
@@ -39,12 +39,6 @@ final readonly class RefreshPass
     public function startedFeeds(): \Generator
     {
         return $this->queue->startedFeeds();
-    }
-
-    /** @return list<int> */
-    public function socialFeedIds(): array
-    {
-        return $this->queue->socialFeedIds();
     }
 
     public function feed(int|string $feedId): Feed
