@@ -12,7 +12,6 @@ use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
@@ -91,14 +90,8 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
         return new ConcurrentFeedFetcher(
-            $httpClient,
-            $urlGuard,
-            new ResponseClassifier($this->clock),
-            $concurrency,
+            FetchWiring::requestEngine($httpClient, $urlGuard, $this->noEgressProxy(), $concurrency, $this->clock),
             $hostConcurrency,
-            'TestAgent/1.0',
-            $this->noEgressProxy(),
-            FetchWiring::retryPolicy($urlGuard),
         );
     }
 

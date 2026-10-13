@@ -185,11 +185,14 @@ services:
 
     App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface: '@App\Service\Mail\MailSendingSettings\EffectiveMailSettings'
 
-    # Wired on this service, not bound globally: a bind matches by parameter name, and `int $concurrency` would feed
+    # Wired on these services, not bound globally: a bind matches by parameter name, and `int $concurrency` would feed
     # any service that names a parameter that way.
-    App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher:
+    App\Service\Fetch\ConcurrentRequestEngine:
         arguments:
             $concurrency: '%fetch_concurrency%'
+
+    App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher:
+        arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
 
     # Account mail leaves on kernel.terminate, after the response (DeferredMailer says why). Bound here, not by

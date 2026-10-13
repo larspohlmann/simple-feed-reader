@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Fetch\Pass;
 
 use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Fetch\Model\RequestTicketModel;
 
 /**
  * The engine's work list. Redirect continuations jump the queue so an open chain never sits half-finished. An attempt
@@ -23,7 +23,7 @@ final class FetchQueue
 
     private bool $currentConsumed = false;
 
-    /** @param \Iterator<int|string, FetchTicketModel> $tickets */
+    /** @param \Iterator<int|string, RequestTicketModel> $tickets */
     public function __construct(
         private readonly \Iterator $tickets,
         private readonly HostSlots $hostSlots,

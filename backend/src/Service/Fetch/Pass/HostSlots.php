@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Fetch\Pass;
 
 use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Support\HostKey;
 
 /** In-flight requests per host, capped so a feed whose host is full waits for a slot instead of earning a 429. */
 final class HostSlots
@@ -49,6 +48,6 @@ final class HostSlots
 
     private function keyOf(FetchAttemptModel $attempt): string
     {
-        return HostKey::forUrl($attempt->url);
+        return $attempt->ticket->slotKeyFor($attempt->url);
     }
 }

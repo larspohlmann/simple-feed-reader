@@ -12,7 +12,7 @@ final readonly class FetchAttemptModel
     /** Private: only `start()` seeds `$url` from the ticket, a default a promoted parameter cannot express. */
     private function __construct(
         public int|string $key,
-        public FetchTicketModel $ticket,
+        public RequestTicketModel $ticket,
         public string $url,
         public bool $permanentRedirect,
         private int $hop,
@@ -21,9 +21,9 @@ final readonly class FetchAttemptModel
     ) {
     }
 
-    public static function start(int|string $key, FetchTicketModel $ticket, ?ProxyConfigModel $proxy = null): self
+    public static function start(int|string $key, RequestTicketModel $ticket, ?ProxyConfigModel $proxy = null): self
     {
-        return new self($key, $ticket, $ticket->url, false, 0, proxy: $proxy);
+        return new self($key, $ticket, $ticket->request->url, false, 0, proxy: $proxy);
     }
 
     public function canFollowRedirect(): bool

@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Service\Fetch\Pass;
 
 use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Pass\HostSlots;
+use App\Tests\Support\FeedTickets;
 use PHPUnit\Framework\TestCase;
 
 final class HostSlotsTest extends TestCase
 {
     private function attempt(string $url): FetchAttemptModel
     {
-        return FetchAttemptModel::start(1, new FetchTicketModel($url));
+        return FetchAttemptModel::start(1, FeedTickets::of($url));
     }
 
     public function testAFreshHostHasCapacity(): void

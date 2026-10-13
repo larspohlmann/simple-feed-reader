@@ -14,15 +14,15 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
+use App\Tests\Support\ResponseCapturingHttpClient;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class ConcurrentFeedFetcherTest extends TestCase
 {
@@ -38,6 +38,16 @@ final class ConcurrentFeedFetcherTest extends TestCase
      */
     private function fetcher(
         callable|iterable $responses,
+        int $concurrency = 4,
+        array $dnsOverrides = [],
+        int $hostConcurrency = 100,
+    ): ConcurrentFeedFetcher {
+        return $this->fetcherOver(new MockHttpClient($responses), $concurrency, $dnsOverrides, $hostConcurrency);
+    }
+
+    /** @param array<string, list<string>> $dnsOverrides */
+    private function fetcherOver(
+        HttpClientInterface $client,
         int $concurrency = 4,
         array $dnsOverrides = [],
         int $hostConcurrency = 100,
@@ -58,14 +68,8 @@ final class ConcurrentFeedFetcherTest extends TestCase
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
         return new ConcurrentFeedFetcher(
-            new MockHttpClient($responses),
-            $urlGuard,
-            new ResponseClassifier(new MockClock()),
-            $concurrency,
+            FetchWiring::requestEngine($client, $urlGuard, $this->noEgressProxy(), $concurrency),
             $hostConcurrency,
-            'TestAgent/1.0',
-            $this->noEgressProxy(),
-            FetchWiring::retryPolicy($urlGuard),
         );
     }
 
@@ -704,5 +708,118 @@ final class ConcurrentFeedFetcherTest extends TestCase
             $peakInFlight['free.example.com'],
             'the free host runs its own two in parallel rather than waiting behind the busy one',
         );
+    }
+
+    public function testSendsTheFeedAcceptTheAgentAndAnUncompressedBodyRequest(): void
+    {
+        $seenHeaders = [];
+        $fetcher = $this->fetcher(
+            static function (string $method, string $url, array $options) use (&$seenHeaders): MockResponse {
+                $seenHeaders = \is_array($options['normalized_headers'] ?? null) ? $options['normalized_headers'] : [];
+
+                return new MockResponse('<rss/>', ['http_code' => 200]);
+            },
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertNull($outcomes[1]->failure());
+
+        self::assertSame(
+            ['Accept: application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.1'],
+            $seenHeaders['accept'] ?? null,
+        );
+        self::assertSame(['Accept-Encoding: identity'], $seenHeaders['accept-encoding'] ?? null);
+        self::assertSame(['User-Agent: TestAgent/1.0'], $seenHeaders['user-agent'] ?? null);
+    }
+
+    public function testBoundsEveryRequestByAnIdleTimeoutAndTwiceItOverall(): void
+    {
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            static function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions = $options;
+
+                return new MockResponse('<rss/>', ['http_code' => 200]);
+            },
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertNull($outcomes[1]->failure());
+
+        self::assertSame(0, $seenOptions['max_redirects'] ?? null);
+        self::assertSame(10.0, $seenOptions['timeout'] ?? null);
+        self::assertSame(20.0, $seenOptions['max_duration'] ?? null);
+    }
+
+    public function testATicketThatCannotBeSentDoesNotHoldBackTheTicketsBehindIt(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse('<rss/>', ['http_code' => 200])]);
+
+        $outcomes = $this->collect($fetcher->fetchAll([
+            1 => new FetchTicketModel('https://blocked.example.com/feed'),
+            2 => new FetchTicketModel('https://example.com/feed'),
+        ]));
+
+        self::assertInstanceOf(SsrfBlockedException::class, $outcomes[1]->failure());
+        self::assertNull($outcomes[2]->failure());
+    }
+
+    public function testAFailedOverTicketYieldsOnlyTheOutcomeOfItsLastAttempt(): void
+    {
+        $fetcher = $this->fetcher(
+            static function (string $method, string $url, array $options): MockResponse {
+                /** @var array<string, string> $resolve */
+                $resolve = $options['resolve'];
+
+                return str_contains($resolve['dual.example.com'], ':')
+                    ? new MockResponse('', ['error' => 'Connection reset by peer'])
+                    : new MockResponse('<rss/>', ['http_code' => 200]);
+            },
+            dnsOverrides: ['dual.example.com' => ['2a02:2e0:3fe:1001:7777:772e:2:85', '93.184.216.34']],
+        );
+
+        $yielded = [];
+        foreach ($fetcher->fetchAll([1 => new FetchTicketModel('https://dual.example.com/feed')]) as $key => $outcome) {
+            $yielded[] = [$key, $outcome->failure()];
+        }
+
+        self::assertSame([[1, null]], $yielded);
+    }
+
+    public function testASettledResponseIsCancelledSoItsConnectionIsFreed(): void
+    {
+        $client = new ResponseCapturingHttpClient([new MockResponse('<rss/>', ['http_code' => 200])]);
+
+        $outcomes = $this->collect(
+            $this->fetcherOver($client)->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]),
+        );
+
+        self::assertNull($outcomes[1]->failure());
+
+        self::assertNotNull($client->lastResponse);
+        self::assertTrue($client->lastResponse->getInfo('canceled'));
+    }
+
+    public function testAbandoningTheGeneratorCancelsTheResponseStillInFlight(): void
+    {
+        $client = new ResponseCapturingHttpClient([
+            new MockResponse('', ['http_code' => 304]),
+            new MockResponse('<rss/>', ['http_code' => 200]),
+        ]);
+
+        $outcomes = $this->fetcherOver($client, concurrency: 2)->fetchAll([
+            1 => new FetchTicketModel('https://one.example.com/feed'),
+            2 => new FetchTicketModel('https://two.example.com/feed'),
+        ]);
+        foreach ($outcomes as $key => $outcome) {
+            self::assertSame(1, $key);
+            break;
+        }
+        unset($outcomes);
+
+        self::assertNotNull($client->lastResponse);
+        self::assertTrue($client->lastResponse->getInfo('canceled'));
     }
 }

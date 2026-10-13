@@ -6,8 +6,8 @@ namespace App\Tests\Service\Fetch\Model;
 
 use App\Enum\ProxyType;
 use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Tests\Support\FeedTickets;
 use PHPUnit\Framework\TestCase;
 
 final class FetchAttemptModelTest extends TestCase
@@ -16,7 +16,7 @@ final class FetchAttemptModelTest extends TestCase
     {
         return FetchAttemptModel::start(
             7,
-            new FetchTicketModel('https://example.com/feed', '"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT'),
+            FeedTickets::of('https://example.com/feed', '"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT'),
         );
     }
 
@@ -37,7 +37,7 @@ final class FetchAttemptModelTest extends TestCase
         self::assertSame('https://example.com/moved', $next->url);
         self::assertFalse($next->permanentRedirect);
         // The conditional-GET headers follow the chain.
-        self::assertSame('"v1"', $next->ticket->etag);
+        self::assertSame('"v1"', $next->ticket->feedTicket()->etag);
     }
 
     public function testAPermanentRedirectAnywhereInTheChainIsRemembered(): void
@@ -63,7 +63,7 @@ final class FetchAttemptModelTest extends TestCase
     public function testTheBatchProxyMakesTheAttemptProxied(): void
     {
         $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
-        $attempt = FetchAttemptModel::start(1, new FetchTicketModel('https://feed.example'), $proxy);
+        $attempt = FetchAttemptModel::start(1, FeedTickets::of('https://feed.example'), $proxy);
 
         self::assertTrue($attempt->isProxied());
         self::assertSame($proxy, $attempt->proxy);
@@ -72,7 +72,7 @@ final class FetchAttemptModelTest extends TestCase
     public function testWithoutProxyStripsTheEgressOnce(): void
     {
         $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
-        $attempt = FetchAttemptModel::start(1, new FetchTicketModel('https://feed.example'), $proxy);
+        $attempt = FetchAttemptModel::start(1, FeedTickets::of('https://feed.example'), $proxy);
 
         $direct = $attempt->withoutProxy();
 
@@ -85,7 +85,7 @@ final class FetchAttemptModelTest extends TestCase
 
     public function testDirectTicketIsNotProxied(): void
     {
-        $attempt = FetchAttemptModel::start(1, new FetchTicketModel('https://feed.example'));
+        $attempt = FetchAttemptModel::start(1, FeedTickets::of('https://feed.example'));
 
         self::assertFalse($attempt->isProxied());
     }
@@ -93,7 +93,7 @@ final class FetchAttemptModelTest extends TestCase
     public function testTheProxySurvivesARedirectAndAFamilyRetry(): void
     {
         $proxy = new ProxyConfigModel(ProxyType::Http, 'p', 8080, null, null);
-        $attempt = FetchAttemptModel::start(1, new FetchTicketModel('https://feed.example', 'etag', 'lm'), $proxy);
+        $attempt = FetchAttemptModel::start(1, FeedTickets::of('https://feed.example', 'etag', 'lm'), $proxy);
 
         $redirected = $attempt->followedTo('https://feed.example/moved', permanent: true);
         self::assertSame($proxy, $redirected->proxy);
