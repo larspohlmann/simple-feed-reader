@@ -213,12 +213,11 @@ final class BlueskyPostLikerTest extends TestCase
         $this->liker($http)->like(self::post());
     }
 
-    #[DataProvider('likeGoneStatuses')]
-    public function testUnlikingALikeBlueskyNoLongerHasSucceeds(int $status): void
+    public function testUnlikingALikeBlueskyNoLongerHasSucceeds(): void
     {
         $http = new RoutedHttpClient([
             self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
-            self::DELETE_RECORD => self::failed($status, 'InvalidRequest'),
+            self::DELETE_RECORD => self::failed(Response::HTTP_NOT_FOUND, 'RecordNotFound'),
         ]);
 
         $this->liker($http)->unlike(SocialApiWiring::blueskyAccount(), self::LIKE_URI);
@@ -226,11 +225,16 @@ final class BlueskyPostLikerTest extends TestCase
         self::assertCount(2, $http->requests);
     }
 
-    /** @return iterable<string, array{int}> */
-    public static function likeGoneStatuses(): iterable
+    public function testAnUnlikeBlueskyRejectsIsARefusalOfThePost(): void
     {
-        yield 'bad request' => [Response::HTTP_BAD_REQUEST];
-        yield 'not found' => [Response::HTTP_NOT_FOUND];
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::DELETE_RECORD => self::failed(Response::HTTP_BAD_REQUEST, 'AccountDeactivated'),
+        ]);
+
+        $this->expectException(SocialPostRefusedException::class);
+
+        $this->liker($http)->unlike(SocialApiWiring::blueskyAccount(), self::LIKE_URI);
     }
 
     public function testAnUnlikeWhoseSessionStaysStaleIsARefusedCredential(): void

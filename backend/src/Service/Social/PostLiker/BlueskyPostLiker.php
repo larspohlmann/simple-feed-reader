@@ -7,6 +7,7 @@ namespace App\Service\Social\PostLiker;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostRefusedException;
@@ -21,7 +22,6 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
     private const string CREATE_RECORD = '/xrpc/com.atproto.repo.createRecord';
     private const string DELETE_RECORD = '/xrpc/com.atproto.repo.deleteRecord';
     private const string LIKE_COLLECTION = 'app.bsky.feed.like';
-    private const array LIKE_GONE = [Response::HTTP_BAD_REQUEST, Response::HTTP_NOT_FOUND];
 
     public function __construct(
         private BlueskySessions $sessions,
@@ -49,9 +49,7 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
             ],
         ]);
 
-        if (Response::HTTP_BAD_REQUEST === $answer->status && !BlueskySessions::isStale($answer)) {
-            throw new SocialPostRefusedException('Bluesky refused this like on the post.');
-        }
+        self::refuseIfRejected($answer);
         $createdUri = JsonNodeModel::of(BlueskySessions::accepted($answer)->json())->string('uri');
         $likeId = BlueskyLikeUri::orNull($createdUri)
             ?? throw new SocialNetworkUnreachableException('Bluesky did not name the like it created.');
@@ -66,9 +64,18 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
             'collection' => self::LIKE_COLLECTION,
             'rkey' => substr((string) strrchr($likeId, '/'), 1),
         ]);
-        if (\in_array($answer->status, self::LIKE_GONE, true) && !BlueskySessions::isStale($answer)) {
+        if (Response::HTTP_NOT_FOUND === $answer->status) {
             return;
         }
+        self::refuseIfRejected($answer);
         BlueskySessions::accepted($answer);
+    }
+
+    /** @throws SocialPostRefusedException on a 400 that is not a stale session */
+    private static function refuseIfRejected(ApiResponseModel $answer): void
+    {
+        if (Response::HTTP_BAD_REQUEST === $answer->status && !BlueskySessions::isStale($answer)) {
+            throw new SocialPostRefusedException('Bluesky refused this action on the post.');
+        }
     }
 }
