@@ -6,15 +6,17 @@ namespace App\Tests\Repository;
 
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\SubscriptionScopeRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
+use App\Tests\Support\SeedsUsers;
 
 final class SubscriptionScopeRepositoryTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testANetworkHoldsItsPrivateAndProfileFeedsExcludedOnesIncluded(): void
     {
         $user = $this->user('network-owner@example.com');
@@ -82,15 +84,6 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
     private function idsOf(array $subscriptions): array
     {
         return array_map(static fn (Subscription $subscription): int => $subscription->requireId(), $subscriptions);
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-10-01T00:00:00Z'));
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
-
-        return $user;
     }
 
     private function fixtures(): NetworkFeedSubscriptions

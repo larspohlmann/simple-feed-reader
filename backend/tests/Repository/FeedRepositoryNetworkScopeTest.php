@@ -12,9 +12,12 @@ use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
+use App\Tests\Support\SeedsUsers;
 
 final class FeedRepositoryNetworkScopeTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private const string NOW = '2026-06-01T00:00:00Z';
 
     public function testANetworkScopeSelectsOnlyThatNetworksFeedsOfTheUserEvenWhenHiddenFromAllItems(): void
@@ -84,15 +87,6 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
     private function fixtures(): NetworkFeedSubscriptions
     {
         return new NetworkFeedSubscriptions($this->entityManager);
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
-
-        return $user;
     }
 
     private function feeds(): FeedRepository
