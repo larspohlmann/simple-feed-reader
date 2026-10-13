@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
-use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
@@ -12,10 +11,12 @@ use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Support\NetworkAnswer;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MastodonApiClient
 {
+    private const string NETWORK = 'The Mastodon instance';
     private const array REFUSALS = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
 
     public function __construct(private GuardedApiClient $api)
@@ -53,28 +54,12 @@ final readonly class MastodonApiClient
     /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
     public function answer(ApiRequestModel $request): ApiResponseModel
     {
-        try {
-            return $this->api->send($request);
-        } catch (FetchException $exception) {
-            throw self::unreachable($exception);
-        }
+        return NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
     }
 
     /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
     public static function answerOf(FetchOutcomeModel $outcome): ApiResponseModel
     {
-        try {
-            return $outcome->answerOrThrow();
-        } catch (FetchException $exception) {
-            throw self::unreachable($exception);
-        }
-    }
-
-    private static function unreachable(FetchException $exception): SocialNetworkUnreachableException
-    {
-        return new SocialNetworkUnreachableException(
-            'The Mastodon instance could not be reached.',
-            previous: $exception,
-        );
+        return NetworkAnswer::orUnreachable($outcome->answerOrThrow(...), self::NETWORK);
     }
 }
