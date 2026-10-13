@@ -80,7 +80,6 @@ export class ButtonComponent {
       'click',
       (event) => {
         if (!this.inert()) return;
-        event.preventDefault();
         event.stopImmediatePropagation();
       },
       { capture: true },

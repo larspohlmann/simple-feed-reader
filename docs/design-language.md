@@ -635,7 +635,7 @@ weights.
 | `variant` | `'default' \| 'primary' \| 'accent-outline' \| 'danger' \| 'danger-outline' \| 'ghost'` | `'default'` |
 | `size` | `'sm' \| 'md'` | `'md'` |
 | `loading` | `boolean` | `false` — swaps the label for a spinner and disables |
-| `disabled` | `boolean` | `false` — a disabled `primary` or `danger` drops to the default weight with muted text |
+| `disabled` | `boolean` | `false` — renders off in every variant: no fill, a faint outline, muted text; `loading` keeps the variant |
 | `block` | `boolean` (attribute) | `false` — stretch to the container's width |
 | `focusInitial` | `boolean` (attribute) | `false` |
 

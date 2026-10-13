@@ -116,10 +116,6 @@ export class SocialImportDialogComponent {
   protected readonly selectedCount = computed(
     () => this.toSubscribe().size + this.toUnsubscribe().size + this.toCollect().size,
   );
-  protected readonly canApply = computed(
-    () =>
-      !this.importer.loading() && this.importer.candidates() !== null && this.selectedCount() > 0,
-  );
 
   protected readonly followsKey = computed(() =>
     pluralKey('settings.social.importFollows', this.followView().follows.length),

@@ -127,12 +127,13 @@ button:disabled {
   opacity: 0.7;
 }
 
-// A faded accent or danger fill still reads as pressable, so a disabled filled
-// button drops to the default weight. While loading it keeps its fill: the
-// spinner is tinted for it.
-button.primary.off,
-button.danger.off {
-  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+// Disabled reads as off in every weight, not as a faded version of it: no fill,
+// no rim, a faint outline. While loading a button keeps its weight: the spinner
+// is tinted for it.
+button.off {
+  --rim-base: var(--border);
 
+  border-color: var(--border);
+  background: transparent;
   color: var(--text-muted);
 }
