@@ -1,46 +1,89 @@
 <app-overlay-panel
   cdkTrapFocus
+  fillOnMobile
   [heading]="'settings.social.importTitle' | transloco: { handle: data.handle }"
 >
   @if (importer.candidates(); as candidates) {
-    <div class="toolbar">
-      <input
-        type="search"
-        class="filter"
-        cdkFocusInitial
-        data-testid="social-import-filter"
-        [attr.aria-label]="'settings.social.importFilter' | transloco"
-        [placeholder]="'settings.social.importFilter' | transloco"
-        [value]="filter()"
-        (input)="filter.set(inputValue($event))"
+    <div class="controls">
+      <app-segmented-choice
+        class="tabs"
+        data-testid="social-import-tabs"
+        ariaLabelKey="settings.social.importTabs"
+        labelPrefix="settings.social.importTab."
+        [options]="tabs"
+        [selected]="tab()"
+        [counts]="tabCounts()"
+        (pick)="tab.set($event)"
       />
-      <app-button
-        data-testid="social-import-select-new"
-        [disabled]="followView().visibleNew.length === 0"
-        (click)="selectAllNew()"
+      <div class="search">
+        <app-icon class="search-icon" name="search" size="sm" />
+        <input
+          type="search"
+          class="filter"
+          cdkFocusInitial
+          data-testid="social-import-filter"
+          [attr.aria-label]="'settings.social.importFilter' | transloco"
+          [placeholder]="'settings.social.importFilter' | transloco"
+          [value]="filter()"
+          (input)="filter.set(inputValue($event))"
+        />
+      </div>
+      <div
+        class="states"
+        role="group"
+        [attr.aria-label]="'settings.social.importStates' | transloco"
       >
-        {{ 'settings.social.importSelectAllNew' | transloco }}
-      </app-button>
+        @for (option of stateOptions(); track option.state) {
+          <button
+            type="button"
+            class="state-chip"
+            [attr.data-testid]="'social-import-state-' + option.state"
+            [class.on]="activeFilter() === option.state"
+            [attr.aria-pressed]="activeFilter() === option.state"
+            (click)="stateFilter.set(option.state)"
+          >
+            <span>
+              {{ filterKeys[option.state] | transloco }}
+              <span class="count">{{ option.count }}</span>
+            </span>
+          </button>
+        }
+      </div>
     </div>
 
     @if (candidates.truncated) {
-      <app-warning-box data-testid="social-import-truncated">
+      <app-warning-box class="truncated" data-testid="social-import-truncated">
         {{ 'settings.social.importTruncated' | transloco }}
       </app-warning-box>
     }
 
-    <app-disclosure
-      appearance="row"
-      data-testid="social-import-follows"
-      [label]="followsKey() | transloco: { count: followView().follows.length }"
-    >
-      @if (followView().hasLeftovers) {
-        <p class="note">{{ 'settings.social.importUnsubscribeHint' | transloco }}</p>
-      }
-      <ul class="rows">
-        @for (follow of followView().follows; track follow.feedUrl) {
+    <div class="list-head">
+      <p class="note">
+        @if (hasLeftovers()) {
+          {{ 'settings.social.importUnsubscribeHint' | transloco }}
+        }
+      </p>
+      <app-button
+        variant="ghost"
+        size="sm"
+        data-testid="social-import-select-new"
+        [disabled]="visibleNewCount() === 0"
+        (click)="selectAllNew()"
+      >
+        {{ 'settings.social.importSelectAllNew' | transloco: { count: visibleNewCount() } }}
+      </app-button>
+    </div>
+
+    <ul class="rows" [attr.data-testid]="tabTestIds[tab()]">
+      @if (tab() === 'accounts') {
+        @for (follow of visibleFollows(); track follow.feedUrl) {
           <li>
-            <label class="row" [attr.data-testid]="'social-import-follow-' + follow.identity">
+            <label
+              class="row"
+              [class.is-chosen]="follow.state !== 'subscribed' && isChosen(follow)"
+              [class.is-done]="follow.state === 'subscribed'"
+              [attr.data-testid]="'social-import-follow-' + follow.identity"
+            >
               <input
                 type="checkbox"
                 [checked]="isChosen(follow)"
@@ -50,63 +93,63 @@
                 "
                 (change)="toggle(follow)"
               />
+              <span class="avatar" aria-hidden="true">{{ initials(follow) }}</span>
               <span class="who">
-                <span class="handle">{{ follow.handle }}</span>
+                <span class="name">{{ follow.displayName ?? follow.handle }}</span>
                 @if (follow.displayName) {
-                  <span class="name">{{ follow.displayName }}</span>
+                  <span class="handle">{{ follow.handle }}</span>
                 }
               </span>
-              <span
-                class="state"
-                [class.is-new]="follow.state === 'new'"
-                [class.is-gone]="follow.state === 'no_longer_followed'"
-              >
-                {{ stateKeys[follow.state] | transloco }}
-              </span>
+              @if (activeFilter() === 'all') {
+                <span
+                  class="state"
+                  [class.is-new]="follow.state === 'new'"
+                  [class.is-gone]="follow.state === 'no_longer_followed'"
+                >
+                  {{ stateKeys[follow.state] | transloco }}
+                </span>
+              }
             </label>
           </li>
         } @empty {
           <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
         }
-      </ul>
-    </app-disclosure>
-
-    @for (section of collections(); track section.testId) {
-      <app-disclosure
-        appearance="row"
-        [attr.data-testid]="section.testId"
-        [label]="section.labelKey | transloco: { count: section.items.length }"
-      >
-        <ul class="rows">
-          @for (item of section.items; track collectionKey(item)) {
-            <li>
-              <label
-                class="row"
-                [attr.data-testid]="'social-import-collection-' + collectionKey(item)"
-              >
-                <input
-                  type="checkbox"
-                  [checked]="isCollected(item)"
-                  [disabled]="item.state === 'subscribed'"
-                  [attr.aria-label]="
-                    collectionCheckboxKeys[item.state] | transloco: { name: collectionName(item) }
-                  "
-                  (change)="toggleCollection(item)"
-                />
-                <span class="who">
-                  <span class="handle">{{ collectionName(item) }}</span>
-                </span>
+      } @else {
+        @for (item of visibleCollections(); track collectionKey(item)) {
+          <li>
+            <label
+              class="row"
+              [class.is-chosen]="item.state === 'new' && isCollected(item)"
+              [class.is-done]="item.state === 'subscribed'"
+              [attr.data-testid]="'social-import-collection-' + collectionKey(item)"
+            >
+              <input
+                type="checkbox"
+                [checked]="isCollected(item)"
+                [disabled]="item.state === 'subscribed'"
+                [attr.aria-label]="
+                  collectionCheckboxKeys[item.state] | transloco: { name: collectionName(item) }
+                "
+                (change)="toggleCollection(item)"
+              />
+              <span class="tile" aria-hidden="true">
+                <app-icon [name]="collectionIcons[item.kind]" size="sm" />
+              </span>
+              <span class="who">
+                <span class="name">{{ collectionName(item) }}</span>
+              </span>
+              @if (activeFilter() === 'all') {
                 <span class="state" [class.is-new]="item.state === 'new'">
                   {{ stateKeys[item.state] | transloco }}
                 </span>
-              </label>
-            </li>
-          } @empty {
-            <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
-          }
-        </ul>
-      </app-disclosure>
-    }
+              }
+            </label>
+          </li>
+        } @empty {
+          <li class="empty">{{ 'settings.social.importEmpty' | transloco }}</li>
+        }
+      }
+    </ul>
   } @else if (importer.loading()) {
     <p class="loading" role="status" data-testid="social-import-loading">
       <app-spinner [size]="16" [decorative]="true" />
@@ -123,6 +166,11 @@
     />
   }
 
+  @if (selectedCount() > 0) {
+    <span footer class="summary" data-testid="social-import-selected">
+      {{ selectedKey() | transloco: { count: selectedCount() } }}
+    </span>
+  }
   <app-button
     footer
     data-testid="social-import-cancel"
@@ -139,6 +187,10 @@
     [loading]="importer.importing()"
     (click)="apply()"
   >
-    {{ 'settings.social.importApply' | transloco }}
+    @if (selectedCount() > 0) {
+      {{ 'settings.social.importApplyCount' | transloco: { count: selectedCount() } }}
+    } @else {
+      {{ 'settings.social.importApply' | transloco }}
+    }
   </app-button>
 </app-overlay-panel>

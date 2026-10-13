@@ -582,7 +582,9 @@ percentage cannot do that job.
 The add-feed dialog is the wide variant: `--panel-w: 520px`, sized so a preview
 row's 88×66 thumbnail and four-line snippet sit comfortably. It sets
 `fillOnMobile`, so on a phone it becomes the full screen rather than a 92vw card
-— a card would squeeze the row's title to ~125px. This is the first non-default
+— a card would squeeze the row's title to ~125px. The social import dialog (#1611) is the
+second: 520px for an avatar, a name and a state label per row, and `fillOnMobile`
+because a follow list runs to thousands of rows and its footer must stay in reach. This is the first non-default
 `--panel-w`; keep new panels on the 460px default unless their content needs the
 room, and record the exception here.
 
@@ -926,6 +928,7 @@ clicked option; the consumer owns the selection and passes it back as
 | `labelPrefix` | `string` (required) | — |
 | `disabledOptions` | `readonly T[]` | `[]` — options that cannot be picked now |
 | `describedBy` | `string \| null` | `null` — the id of the text that says why an option is disabled |
+| `counts` | `Partial<Record<T, number>>` | `{}` — a number shown after an option's label, such as how many items a tab holds |
 
 ```html
 <app-segmented-choice
@@ -941,6 +944,10 @@ A disabled option stays visible at the shared disabled look; say why in a
 hint beside the control (the AI model picker's "This provider offers no
 LLMs.") and pass that hint's id as `describedBy`, since a disabled button
 takes no focus and a keyboard user would otherwise never hear the reason.
+
+The control sizes to its labels; a consumer that wants it full width makes
+the host `display: flex` and the buttons share the width (the social import
+dialog's tabs).
 
 **Not inside `<app-field>`.** The field wraps its control in a `<label>`, and a
 click on the label's text presses the first button of the group. Name the group
