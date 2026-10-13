@@ -1,4 +1,12 @@
-import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@angular/core';
+import {
+  booleanAttribute,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+} from '@angular/core';
 import { SpinnerComponent } from '../spinner/spinner.component';
 
 /**
@@ -59,4 +67,22 @@ export class ButtonComponent {
    * and the dialog opens with nothing focused.
    */
   readonly focusInitial = input(false, { transform: booleanAttribute });
+
+  protected readonly inert = computed(() => this.loading() || this.disabled());
+
+  /**
+   * Consumers bind `(click)` on this host, not on the inner `<button>`, so its
+   * `disabled` alone does not stop them (#1610). A capture listener on the host
+   * runs before any of theirs and swallows the click while the button is inert.
+   */
+  constructor() {
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement.addEventListener(
+      'click',
+      (event) => {
+        if (!this.inert()) return;
+        event.stopImmediatePropagation();
+      },
+      { capture: true },
+    );
+  }
 }

@@ -127,6 +127,9 @@ describe('SocialImportDialogComponent', () => {
       'input[type="checkbox"]',
     ) as HTMLInputElement;
 
+  const applyButton = (fixture: ComponentFixture<SocialImportDialogComponent>): HTMLButtonElement =>
+    byTestId(fixture, 'social-import-apply')?.querySelector('button') as HTMLButtonElement;
+
   function tick(fixture: ComponentFixture<SocialImportDialogComponent>, identity: string): void {
     checkboxOf(fixture, identity).click();
     fixture.detectChanges();
@@ -241,7 +244,7 @@ describe('SocialImportDialogComponent', () => {
     fixture.detectChanges();
 
     expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(true);
-    expect(byTestId(fixture, 'social-import-apply')?.querySelector('button')?.disabled).toBe(true);
+    expect(applyButton(fixture).disabled).toBe(true);
   });
 
   it('filters collections by the translated Home name', () => {
@@ -255,14 +258,12 @@ describe('SocialImportDialogComponent', () => {
 
   it('enables Apply for a selection made only of collections', () => {
     const fixture = loaded(candidates({ lists: [HOME] }));
-    const applyButton = (): HTMLButtonElement | null | undefined =>
-      byTestId(fixture, 'social-import-apply')?.querySelector('button');
-    expect(applyButton()?.disabled).toBe(true);
+    expect(applyButton(fixture).disabled).toBe(true);
 
     collectionBox(fixture, 'home:').click();
     fixture.detectChanges();
 
-    expect(applyButton()?.disabled).toBe(false);
+    expect(applyButton(fixture).disabled).toBe(false);
   });
 
   it('imports the chosen collections and refreshes the reader', () => {
@@ -302,14 +303,22 @@ describe('SocialImportDialogComponent', () => {
     expect(byTestId(fixture, 'social-import-truncated')?.textContent).toContain('first 5,000');
   });
 
+  it('ignores a press on Import while the candidates load', () => {
+    const fixture = mount();
+    expect(applyButton(fixture).disabled).toBe(true);
+
+    byTestId(fixture, 'social-import-apply')?.click();
+
+    http.expectNone(IMPORT);
+    http.expectOne(CANDIDATES).flush(candidates());
+  });
+
   it('keeps Import disabled until something is chosen', () => {
     const fixture = loaded(candidates({ follows: [follow()] }));
-    const apply = () =>
-      byTestId(fixture, 'social-import-apply')?.querySelector('button') as HTMLButtonElement;
 
-    expect(apply().disabled).toBe(true);
+    expect(applyButton(fixture).disabled).toBe(true);
     tick(fixture, 'did:plc:bob');
-    expect(apply().disabled).toBe(false);
+    expect(applyButton(fixture).disabled).toBe(false);
   });
 
   it('selects every visible new follow at once', () => {
