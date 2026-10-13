@@ -208,7 +208,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
         $this->restrictToSchedule($qb, $criteria);
         $this->restrictToOwnership($qb, $criteria);
-        $this->restrictToFeedSet($qb, $criteria);
+        $this->restrictToNetwork($qb, $criteria);
         $this->restrictToUnhandled($qb, $criteria);
         $this->restrictToConnectedAccounts($qb);
 
@@ -279,18 +279,13 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         ))->setParameter('tagId', $criteria->tagId);
     }
 
-    private function restrictToFeedSet(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    private function restrictToNetwork(QueryBuilder $qb, DueFeedCriteria $criteria): void
     {
-        if ($criteria->feedIds === null) {
-            return;
-        }
-        if ($criteria->feedIds === []) {
-            $qb->andWhere('1 = 0');
-
+        if ($criteria->network === null) {
             return;
         }
 
-        $qb->andWhere('f.id IN (:feedSetIds)')->setParameter('feedSetIds', $criteria->feedIds);
+        $qb->andWhere('f.network = :network')->setParameter('network', $criteria->network);
     }
 
     private function restrictToUnhandled(QueryBuilder $qb, DueFeedCriteria $criteria): void

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Enum\SocialNetwork;
+
 /**
  * Which feeds one query counts as due. $feedId picks one feed, "gone" included; $force skips the schedule but not
  * $cooldownCutoff. $excludedFeedIds keeps a sweep finite: a throttled feed stamps no fetch time, so deriving
@@ -12,8 +14,7 @@ namespace App\Repository;
 final readonly class DueFeedCriteria
 {
     /**
-     * @param list<int>      $excludedFeedIds
-     * @param list<int>|null $feedIds         a set of the user's feeds, such as a network's
+     * @param list<int> $excludedFeedIds
      */
     public function __construct(
         public \DateTimeImmutable $now,
@@ -23,7 +24,7 @@ final readonly class DueFeedCriteria
         public bool $force = false,
         public ?\DateTimeImmutable $cooldownCutoff = null,
         public array $excludedFeedIds = [],
-        public ?array $feedIds = null,
+        public ?SocialNetwork $network = null,
     ) {
     }
 
@@ -40,7 +41,7 @@ final readonly class DueFeedCriteria
             $this->force,
             $this->cooldownCutoff,
             $feedIds,
-            $this->feedIds,
+            $this->network,
         );
     }
 }

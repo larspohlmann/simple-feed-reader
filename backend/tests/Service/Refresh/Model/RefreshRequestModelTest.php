@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh\Model;
 
+use App\Enum\SocialNetwork;
 use App\Service\Refresh\Model\RefreshFeedSetModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use PHPUnit\Framework\TestCase;
@@ -91,12 +92,12 @@ final class RefreshRequestModelTest extends TestCase
         self::assertSame(5, $request->ignoringSchedule()->batchLimit);
     }
 
-    public function testAFeedSetRequestRefreshesThoseFeedsOfTheUserIgnoringTheSchedule(): void
+    public function testAFeedSetRequestRefreshesThatNetworksFeedsOfTheUserIgnoringTheSchedule(): void
     {
-        $request = RefreshRequestModel::forUserFeedSet(7, new RefreshFeedSetModel('network-bluesky', [3, 4]), 30);
+        $request = RefreshRequestModel::forUserFeedSet(7, new RefreshFeedSetModel(SocialNetwork::Bluesky), 30);
 
         self::assertSame(7, $request->userId);
-        self::assertSame([3, 4], $request->feedSet?->feedIds);
+        self::assertSame(SocialNetwork::Bluesky, $request->feedSet?->network);
         self::assertNull($request->feedId);
         self::assertNull($request->tagId);
         self::assertTrue($request->force);
@@ -105,7 +106,7 @@ final class RefreshRequestModelTest extends TestCase
 
     public function testDerivedRequestsKeepTheFeedSet(): void
     {
-        $feedSet = new RefreshFeedSetModel('network-bluesky', [3]);
+        $feedSet = new RefreshFeedSetModel(SocialNetwork::Bluesky);
         $request = RefreshRequestModel::forUserFeedSet(7, $feedSet, 30);
 
         self::assertSame($feedSet, $request->withoutPruning()->feedSet);

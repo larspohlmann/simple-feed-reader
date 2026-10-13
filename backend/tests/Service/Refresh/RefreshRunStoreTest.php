@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
+use App\Enum\SocialNetwork;
 use App\Service\Refresh\Model\RefreshFeedSetModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\Model\RefreshRunProgressModel;
@@ -84,18 +85,18 @@ final class RefreshRunStoreTest extends TestCase
 
     public function testFeedSetRunsAreKeptApartFromEachOtherAndFromTheSweep(): void
     {
-        $bluesky = $this->feedSetRequest('network-bluesky');
+        $bluesky = $this->feedSetRequest(SocialNetwork::Bluesky);
         $this->store->save($bluesky, RefreshRunProgressModel::start()->advancedBy(1, 2));
 
-        $mastodon = $this->feedSetRequest('network-mastodon');
+        $mastodon = $this->feedSetRequest(SocialNetwork::Mastodon);
         self::assertSame(0, $this->store->open($mastodon)->done);
         self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(1, self::BUDGET))->done);
         self::assertSame(1, $this->store->open($bluesky)->done);
     }
 
-    private function feedSetRequest(string $key): RefreshRequestModel
+    private function feedSetRequest(SocialNetwork $network): RefreshRequestModel
     {
-        return RefreshRequestModel::forUserFeedSet(1, new RefreshFeedSetModel($key, [7]), self::BUDGET);
+        return RefreshRequestModel::forUserFeedSet(1, new RefreshFeedSetModel($network), self::BUDGET);
     }
 
     public function testAForgottenRunStartsOverNextTime(): void
@@ -186,7 +187,7 @@ final class RefreshRunStoreTest extends TestCase
         self::assertSame(
             ['refresh_run_3.set-network-bluesky'],
             $this->rawKeyFor(
-                RefreshRequestModel::forUserFeedSet(3, new RefreshFeedSetModel('network-bluesky', [7]), self::BUDGET),
+                RefreshRequestModel::forUserFeedSet(3, new RefreshFeedSetModel(SocialNetwork::Bluesky), self::BUDGET),
             ),
         );
     }

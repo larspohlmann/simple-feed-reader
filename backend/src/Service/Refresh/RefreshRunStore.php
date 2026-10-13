@@ -81,7 +81,7 @@ final readonly class RefreshRunStore
         }
 
         if (null !== $request->feedSet) {
-            return 'set-' . $request->feedSet->key;
+            return 'set-' . $request->feedSet->key();
         }
 
         return 'all';

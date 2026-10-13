@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh\Model;
 
-/** A named set of the user's feeds refreshed together, such as a network's; the key keeps its run apart. */
+use App\Enum\SocialNetwork;
+
 final readonly class RefreshFeedSetModel
 {
-    /** @param list<int> $feedIds */
-    public function __construct(
-        public string $key,
-        public array $feedIds,
-    ) {
+    public function __construct(public SocialNetwork $network)
+    {
+    }
+
+    public function key(): string
+    {
+        return 'network-' . $this->network->value;
     }
 }
