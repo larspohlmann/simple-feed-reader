@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
-use Symfony\Component\HttpFoundation\Response;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\FetchWiring;
@@ -12,6 +11,7 @@ use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 final class FailoverRequestSenderTest extends TestCase

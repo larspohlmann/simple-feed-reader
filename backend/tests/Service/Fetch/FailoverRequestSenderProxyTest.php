@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
-use Symfony\Component\HttpFoundation\Response;
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
@@ -15,6 +14,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -268,24 +268,6 @@ final class FailoverRequestSenderProxyTest extends TestCase
         }
     }
 
-    private function egressProxy(?ProxyConfigModel $config): EgressProxySourceInterface
-    {
-        $egressProxySource = $this->createStub(EgressProxySourceInterface::class);
-        $egressProxySource->method('egressProxy')->willReturn($config);
-
-        return $egressProxySource;
-    }
-
-    private function proxy(bool $directFallback = true): ProxyConfigModel
-    {
-        return new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, $directFallback);
-    }
-
-    private function guarded(): GuardedUrlModel
-    {
-        return new GuardedUrlModel('page.example', ['203.0.113.9']);
-    }
-
     public function testAProxiedTooManyRequestsAnswerIsNotAskedAgainDirectly(): void
     {
         $calls = [];
@@ -305,5 +287,23 @@ final class FailoverRequestSenderProxyTest extends TestCase
         self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $status);
         self::assertCount(1, $calls);
         self::assertArrayHasKey('proxy', $calls[0]);
+    }
+
+    private function egressProxy(?ProxyConfigModel $config): EgressProxySourceInterface
+    {
+        $egressProxySource = $this->createStub(EgressProxySourceInterface::class);
+        $egressProxySource->method('egressProxy')->willReturn($config);
+
+        return $egressProxySource;
+    }
+
+    private function proxy(bool $directFallback = true): ProxyConfigModel
+    {
+        return new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, $directFallback);
+    }
+
+    private function guarded(): GuardedUrlModel
+    {
+        return new GuardedUrlModel('page.example', ['203.0.113.9']);
     }
 }

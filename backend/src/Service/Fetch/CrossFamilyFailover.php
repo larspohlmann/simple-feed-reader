@@ -26,7 +26,10 @@ final readonly class CrossFamilyFailover
             && !$transportError instanceof TimeoutExceptionInterface;
     }
 
-    /** A 4xx or 5xx can be tied to the source address; a missing resource cannot, and a 429 rations the client on any route. */
+    /**
+     * A 4xx or 5xx can be tied to the source address; a missing resource cannot, and a 429 rations the client on any
+     * route.
+     */
     public function isRetryableStatus(int $statusCode): bool
     {
         return $statusCode >= Response::HTTP_BAD_REQUEST

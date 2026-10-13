@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch\BatchFeedFetcher;
 
-use Symfony\Component\HttpFoundation\Response;
-use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
@@ -19,6 +18,7 @@ use App\Tests\Support\FetchWiring;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class ConcurrentFeedFetcherProxyTest extends TestCase
 {

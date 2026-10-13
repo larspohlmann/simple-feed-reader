@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch\BatchFeedFetcher;
 
-use Symfony\Component\HttpFoundation\Response;
-use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\FeedGoneException;
+use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
@@ -24,6 +23,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class ConcurrentFeedFetcherTest extends TestCase

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
-use Symfony\Component\HttpFoundation\Response;
 use App\Service\Fetch\CrossFamilyFailover;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TimeoutException;
 use Symfony\Component\HttpClient\Exception\TransportException;
+use Symfony\Component\HttpFoundation\Response;
 
 final class CrossFamilyFailoverTest extends TestCase
 {
