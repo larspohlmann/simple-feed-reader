@@ -170,7 +170,7 @@ async function imageToKickerGap(page: Page, selector: string): Promise<number> {
   const block = page.locator(selector).first();
   await expect(block).toBeVisible();
   const image = block.locator('.img');
-  const kicker = block.locator('.kicker');
+  const kicker = block.locator('p.kicker');
   const [imageBox, kickerBox] = await Promise.all([image.boundingBox(), kicker.boundingBox()]);
   if (!imageBox || !kickerBox) throw new Error(`${selector}: image or kicker did not lay out`);
   return kickerBox.y - (imageBox.y + imageBox.height);

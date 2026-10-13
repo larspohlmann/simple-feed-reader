@@ -833,7 +833,7 @@ describe('EntriesStore', () => {
 
   describe('liking a post (#1600)', () => {
     const post = (isLiked = false): EntryDto =>
-      entry(1, { social: { network: 'bluesky', isLiked } });
+      entry(1, { social: { network: 'bluesky', isLiked, canLike: true } });
 
     const loadPost = (isLiked = false): void => {
       store.load({ view: 'all' });
@@ -851,7 +851,11 @@ describe('EntriesStore', () => {
       expect(like.request.method).toBe('PUT');
       like.flush({ isLiked: true });
 
-      expect(store.entries()[0].social).toEqual({ network: 'bluesky', isLiked: true });
+      expect(store.entries()[0].social).toEqual({
+        network: 'bluesky',
+        isLiked: true,
+        canLike: true,
+      });
     });
 
     it('unlikes on DELETE', () => {
@@ -938,7 +942,7 @@ describe('EntriesStore', () => {
 
     describe('a copy shown inside another row (duplicates)', () => {
       const copy = (isLiked = false): EntryDto =>
-        entry(2, { social: { network: 'mastodon', isLiked } });
+        entry(2, { social: { network: 'mastodon', isLiked, canLike: true } });
 
       const loadRowWithCopy = (): void => {
         store.load({ view: 'all' });
@@ -1016,6 +1020,21 @@ describe('EntriesStore', () => {
       store.setLiked(store.entries()[0], true, () => undefined);
 
       ctrl.expectNone('https://api.test/api/entries/1/like');
+    });
+
+    it('sends nothing for a post the user has no account to like from (#1615)', () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [entry(1, { social: { network: 'bluesky', isLiked: false, canLike: false } })],
+          nextCursor: null,
+        });
+
+      store.setLiked(store.entries()[0], true, () => undefined);
+
+      ctrl.expectNone('https://api.test/api/entries/1/like');
+      expect(store.entries()[0].social?.isLiked).toBe(false);
     });
   });
 });

@@ -1234,6 +1234,18 @@
       "throttledNow": "Die Seite drosselt Anfragen. Jetzt erneut versuchen.",
       "failed": "Kommentare konnten nicht geladen werden."
     },
+    "socialCounts": {
+      "likesOne": "{{count}} Like",
+      "likesOther": "{{count}} Likes",
+      "repostsOne": "{{count}} Repost",
+      "repostsOther": "{{count}} Reposts",
+      "boostsOne": "{{count}} Boost",
+      "boostsOther": "{{count}} Boosts",
+      "repliesOne": "{{count}} Antwort",
+      "repliesOther": "{{count}} Antworten",
+      "quotesOne": "{{count}} Zitat",
+      "quotesOther": "{{count}} Zitate"
+    },
     "refreshArticle": "Artikel neu laden",
     "readingTime": "≈ {{minutes}} Min.",
     "fallback": {

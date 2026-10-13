@@ -1,5 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
+import { aSubscription } from '../src/testing/subscription-testing';
 import { signInAsAdmin } from './support/auth';
+import { subscriptionsJson } from './support/reader';
 
 const TAGS = [
   { id: 1, name: 'Nachrichten', color: null, icon: null, position: 0 },
@@ -7,20 +9,9 @@ const TAGS = [
 ];
 
 function feed(id: number, title: string, tagIds: number[]) {
-  return {
+  return aSubscription({
     id,
-    feedId: id,
     title,
-    faviconUrl: null,
-    customTitle: null,
-    feedUrl: `https://fixtures.invalid/${id}/rss`,
-    siteUrl: null,
-    description: null,
-    imageUrl: null,
-    status: 'active',
-    sourceFormat: 'xml',
-    createdAt: '2026-01-01T00:00:00Z',
-    lastFetchedAt: null,
     position: id,
     tags: tagIds.map((tagId, index) => ({
       id: tagId,
@@ -29,11 +20,7 @@ function feed(id: number, title: string, tagIds: number[]) {
       icon: null,
       position: index,
     })),
-    unreadCount: 0,
-    entryCount: 0,
-    includeInAllItems: true,
-    includeInForYou: true,
-  };
+  });
 }
 
 const SUBSCRIPTIONS = [
@@ -56,12 +43,7 @@ async function stubFixture(page: Page): Promise<void> {
     if (route.request().method() !== 'GET') return route.fallback();
     await route.fulfill({
       status: 200,
-      json: {
-        subscriptions: SUBSCRIPTIONS,
-        favoritesCount: 0,
-        keptCount: 0,
-        viewedCount: 0,
-      },
+      json: subscriptionsJson(SUBSCRIPTIONS),
     });
   });
 }

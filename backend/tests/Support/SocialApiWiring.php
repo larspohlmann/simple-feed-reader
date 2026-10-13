@@ -58,7 +58,7 @@ final class SocialApiWiring
         return new BlueskySessionCache($cache, new BlueskySessionCipher(new InstanceSecretCipher(str_repeat('k', 32))));
     }
 
-    private static function mastodonApiClient(HttpClientInterface $http): MastodonApiClient
+    public static function mastodonApiClient(HttpClientInterface $http): MastodonApiClient
     {
         return new MastodonApiClient(FetchWiring::guardedApiClient($http, self::guardFor(self::MASTODON_HOST)));
     }

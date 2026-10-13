@@ -10,6 +10,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
+use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
 use App\Service\Clock\NaiveUtcClock;
@@ -21,30 +22,38 @@ use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\SocialCountsModel;
+use App\Service\Social\Model\SocialPostAddressModel;
+use App\Service\Social\SocialCountsCache;
 use App\Service\Social\SocialLikes;
 use App\Service\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AssertsRefusal;
 use App\Tests\Support\FakeMastodonNetwork;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class SocialLikesTest extends DbTestCase
 {
+    use AssertsRefusal;
     use SeedsUsers;
 
     private const string STATUS_URL = 'https://mastodon.social/@Gargron/110';
     private const string FEED_URL = 'https://mastodon.social/@Gargron.rss';
 
     private FakeMastodonNetwork $mastodon;
+    private SocialCountsCache $countsCache;
     private User $owner;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->mastodon = new FakeMastodonNetwork();
+        $this->countsCache = new SocialCountsCache(new ArrayAdapter());
         $this->owner = $this->user('social-likes-service@example.test');
     }
 
@@ -87,6 +96,60 @@ final class SocialLikesTest extends DbTestCase
 
         self::assertSame('unlike 110', $this->mastodon->calls[2]);
         self::assertNull($this->likeRepository()->findOneFor($this->owner, $entry));
+    }
+
+    public function testALikeDropsThePostsCachedCounts(): void
+    {
+        $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 0, 0, null));
+
+        $this->likes()->like($this->owner, $entry);
+
+        self::assertNull($this->countsCache->find(self::address()));
+    }
+
+    public function testAnUnlikeDropsThePostsCachedCounts(): void
+    {
+        $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->likes()->like($this->owner, $entry);
+        $this->countsCache->remember(self::address(), new SocialCountsModel(5, 0, 0, null));
+
+        $this->likes()->unlike($this->owner, $entry);
+
+        self::assertNull($this->countsCache->find(self::address()));
+    }
+
+    public function testAnUnlikeOfAnEntryThatIsNoPostLongerLeavesTheCacheAlone(): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn('https://example.com/feed.xml', self::STATUS_URL);
+        $likedAt = new \DateTimeImmutable('2026-10-13 10:00:00');
+        $this->entityManager->persist(new SocialLike($this->owner, $entry, $account, '110', $likedAt));
+        $this->entityManager->flush();
+        $this->countsCache->remember(self::address(), new SocialCountsModel(5, 0, 0, null));
+
+        $this->likes()->unlike($this->owner, $entry);
+
+        self::assertNull($this->likeRepository()->findOneFor($this->owner, $entry));
+        self::assertEquals(new SocialCountsModel(5, 0, 0, null), $this->countsCache->find(self::address()));
+    }
+
+    public function testAFailedLikeKeepsTheCachedCounts(): void
+    {
+        $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->countsCache->remember(self::address(), new SocialCountsModel(4, 0, 0, null));
+        $this->mastodon->failWith(new SocialNetworkUnreachableException('down'));
+
+        $this->assertRefused(
+            fn () => $this->likes()->like($this->owner, $entry),
+            SocialNetworkUnreachableException::class,
+            'An unreachable network must reach the caller.',
+        );
+
+        self::assertEquals(new SocialCountsModel(4, 0, 0, null), $this->countsCache->find(self::address()));
     }
 
     public function testUnlikingKeepsTheLikeWhenTheNetworkCannotBeReached(): void
@@ -183,6 +246,11 @@ final class SocialLikesTest extends DbTestCase
         return SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
     }
 
+    private static function address(): SocialPostAddressModel
+    {
+        return new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL);
+    }
+
     private function entryOn(string $feedUrl, string $postUrl): Entry
     {
         $feed = new Feed($feedUrl);
@@ -213,6 +281,7 @@ final class SocialLikesTest extends DbTestCase
             new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
             $this->entityManager,
             new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00+02:00'))),
+            $this->countsCache,
         );
     }
 

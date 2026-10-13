@@ -9,6 +9,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
+use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\PostResolver\MastodonPostResolver;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
@@ -37,6 +38,21 @@ final class MastodonPostResolverTest extends TestCase
         self::assertNull($post->contentId);
         self::assertNull($post->existingLikeId);
         self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[0]['headers']);
+        self::assertNull($post->counts);
+    }
+
+    public function testAPostCarriesTheCountsTheAccountsInstanceAnswered(): void
+    {
+        $http = new RoutedHttpClient([self::SEARCH => self::statuses([[
+            'id' => '109876',
+            'favourites_count' => 5,
+            'reblogs_count' => 2,
+            'replies_count' => 1,
+        ]])]);
+
+        $post = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL);
+
+        self::assertEquals(new SocialCountsModel(5, 2, 1, null), $post->counts);
     }
 
     public function testAnAddressCannotInjectSearchParameters(): void
@@ -127,7 +143,7 @@ final class MastodonPostResolverTest extends TestCase
         );
     }
 
-    /** @param list<array<string, string>> $statuses */
+    /** @param list<array<string, string|int>> $statuses */
     private static function statuses(array $statuses): MockResponse
     {
         return new MockResponse(json_encode(

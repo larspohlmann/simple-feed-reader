@@ -84,3 +84,9 @@ framework:
             image_proxy.cookie.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 3600
+
+            # Live counts of social posts (#1615), shared by every reader: counts are public. Two minutes keeps an
+            # open article current without asking the network on every open; failures are never stored.
+            social.counts.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 120

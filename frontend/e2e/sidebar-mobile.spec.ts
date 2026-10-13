@@ -1,49 +1,31 @@
 import { test, expect, Page } from '@playwright/test';
+import { aSubscription } from '../src/testing/subscription-testing';
 import { signInAsAdmin } from './support/auth';
+import { subscriptionsJson } from './support/reader';
 
 const NEWS_TAG = { id: 1, name: 'News', color: null, icon: null, position: 0 };
 
 /** A stubbed sidebar: one tagged feed under News, one untagged. Stubbed rather
  *  than seeded because this measures geometry and interaction, and a fixed
  *  tree keeps the assertions deterministic. */
-const SUBS = {
-  favoritesCount: 0,
-  keptCount: 0,
-  subscriptions: [
-    {
-      id: 5,
-      feedId: 55,
-      title: 'The Verge',
-      customTitle: null,
-      lastFetchedAt: '2026-07-25T10:00:00Z',
-      feedUrl: 'https://f/5',
-      siteUrl: null,
-      status: 'active',
-      sourceFormat: 'xml',
-      createdAt: 'x',
-      position: 0,
-      unreadCount: 3,
-      entryCount: 3,
-      tags: [NEWS_TAG],
-    },
-    {
-      id: 6,
-      feedId: 66,
-      title: 'Daring Fireball',
-      customTitle: null,
-      lastFetchedAt: '2026-07-25T10:00:00Z',
-      feedUrl: 'https://f/6',
-      siteUrl: null,
-      status: 'active',
-      sourceFormat: 'xml',
-      createdAt: 'x',
-      position: 1,
-      unreadCount: 1,
-      entryCount: 1,
-      tags: [],
-    },
-  ],
-};
+const SUBS = subscriptionsJson([
+  aSubscription({
+    id: 5,
+    feedId: 55,
+    title: 'The Verge',
+    unreadCount: 3,
+    entryCount: 3,
+    tags: [NEWS_TAG],
+  }),
+  aSubscription({
+    id: 6,
+    feedId: 66,
+    title: 'Daring Fireball',
+    position: 1,
+    unreadCount: 1,
+    entryCount: 1,
+  }),
+]);
 
 async function stubSidebarData(page: Page): Promise<void> {
   await page.route('**/api/subscriptions', (route) =>

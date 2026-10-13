@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\PostResolver;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\PostResolver\BlueskyPostResolver;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialApiWiring;
@@ -35,6 +36,40 @@ final class BlueskyPostResolverTest extends TestCase
         self::assertSame('bafy-cid', $post->contentId);
         self::assertNull($post->existingLikeId);
         self::assertContains('Authorization: Bearer jwt-1', $http->requests[1]['headers']);
+        self::assertNull($post->counts);
+    }
+
+    public function testAPostCarriesTheCountsTheAccountsServerAnswered(): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'likeCount' => 12,
+            'repostCount' => 3,
+            'replyCount' => 4,
+            'quoteCount' => 1,
+        ]]]);
+
+        $post = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI);
+
+        self::assertEquals(new SocialCountsModel(12, 3, 4, 1), $post->counts);
+    }
+
+    public function testCountsSurviveAnExistingLike(): void
+    {
+        $http = $this->answering(['posts' => [[
+            'uri' => self::POST_URI,
+            'cid' => 'bafy-cid',
+            'viewer' => ['like' => self::LIKE_URI],
+            'likeCount' => 12,
+            'repostCount' => 3,
+            'replyCount' => 4,
+        ]]]);
+
+        $post = $this->resolver($http)->resolve(SocialApiWiring::blueskyAccount(), self::POST_URI);
+
+        self::assertSame(self::LIKE_URI, $post->existingLikeId);
+        self::assertEquals(new SocialCountsModel(12, 3, 4, null), $post->counts);
     }
 
     public function testALikeTheAccountAlreadyMadeIsCarried(): void

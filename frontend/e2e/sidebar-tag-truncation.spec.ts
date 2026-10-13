@@ -1,5 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
+import { aSubscription } from '../src/testing/subscription-testing';
 import { signInAsAdmin } from './support/auth';
+import { subscriptionsJson } from './support/reader';
 
 // Above the 720px breakpoint, so the sidebar is an in-flow 260px column rather
 // than the mobile drawer — that fixed width is what the row has to fit into.
@@ -15,23 +17,14 @@ const TAGS = [
 ];
 
 function subscription(id: number, title: string, tagId: number) {
-  return {
+  return aSubscription({
     id,
-    feedId: id,
     title,
-    faviconUrl: null,
-    customTitle: null,
-    feedUrl: `https://example.invalid/${id}/feed.xml`,
-    siteUrl: null,
-    status: 'active',
-    sourceFormat: 'xml',
-    createdAt: '2026-07-25T10:00:00Z',
-    lastFetchedAt: null,
     position: id,
     tags: [{ ...TAGS.find((t) => t.id === tagId)!, position: 0 }],
     unreadCount: 1026,
     entryCount: 1026,
-  };
+  });
 }
 
 /**
@@ -47,11 +40,7 @@ async function stubTagTree(page: Page): Promise<void> {
     if (route.request().method() !== 'GET') return route.fallback();
     await route.fulfill({
       status: 200,
-      json: {
-        subscriptions: [subscription(5, 'A feed', 1), subscription(6, 'Another feed', 2)],
-        favoritesCount: 0,
-        keptCount: 0,
-      },
+      json: subscriptionsJson([subscription(5, 'A feed', 1), subscription(6, 'Another feed', 2)]),
     });
   });
 }

@@ -21,21 +21,27 @@ final readonly class SocialPostModel
         public string $postId,
         public ?string $contentId,
         public ?string $existingLikeId,
+        public ?SocialCountsModel $counts,
     ) {
     }
 
     public static function onBluesky(SocialAccount $account, string $uri, string $contentId): self
     {
-        return new self($account, $uri, $contentId, null);
+        return new self($account, $uri, $contentId, null, null);
     }
 
     public static function onMastodon(SocialAccount $account, string $statusId): self
     {
-        return new self($account, $statusId, null, null);
+        return new self($account, $statusId, null, null, null);
     }
 
     public function alreadyLikedAs(string $likeId): self
     {
-        return new self($this->account, $this->postId, $this->contentId, $likeId);
+        return new self($this->account, $this->postId, $this->contentId, $likeId, $this->counts);
+    }
+
+    public function withCounts(?SocialCountsModel $counts): self
+    {
+        return new self($this->account, $this->postId, $this->contentId, $this->existingLikeId, $counts);
     }
 }

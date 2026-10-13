@@ -252,14 +252,30 @@ final class EntryJsonTest extends TestCase
         self::assertNull(EntryJson::listRow($this->row($this->entryTitled('Article')))['social']);
     }
 
-    public function testASocialPostCarriesItsNetworkAndWhetherTheUserLikedIt(): void
+    public function testASocialPostCarriesItsNetworkWhetherTheUserLikedItAndWhetherTheyCan(): void
     {
         $row = $this->row(
             $this->entryTitled('Post'),
-            new EntryListRowEnrichment(social: new EntryListRowSocial(SocialNetwork::Bluesky, true)),
+            new EntryListRowEnrichment(social: new EntryListRowSocial(SocialNetwork::Bluesky, true, true)),
         );
 
-        self::assertSame(['network' => 'bluesky', 'isLiked' => true], EntryJson::detail($row)['social']);
+        self::assertSame(
+            ['network' => 'bluesky', 'isLiked' => true, 'canLike' => true],
+            EntryJson::detail($row)['social'],
+        );
+    }
+
+    public function testAPostOnANetworkWithoutAnAccountSaysItCannotBeLiked(): void
+    {
+        $row = $this->row(
+            $this->entryTitled('Post'),
+            new EntryListRowEnrichment(social: new EntryListRowSocial(SocialNetwork::Mastodon, false, false)),
+        );
+
+        self::assertSame(
+            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false],
+            EntryJson::listRow($row)['social'],
+        );
     }
 
     public function testListRowKeepsItsShapeAndCarriesTheEnrichment(): void

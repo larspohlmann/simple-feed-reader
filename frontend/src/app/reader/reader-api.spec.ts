@@ -451,6 +451,17 @@ describe('ReaderApi', () => {
     expect(received).toEqual({ status: 'failed' });
   });
 
+  it('GETs the live counts of a post (#1615)', () => {
+    let received: unknown;
+    api.socialCounts(7).subscribe((counts) => (received = counts));
+
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/7/social');
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush({ likes: 3, reposts: 1, replies: 0, quotes: null });
+
+    expect(received).toEqual({ likes: 3, reposts: 1, replies: 0, quotes: null });
+  });
+
   it('POSTs a feed preview request', () => {
     api.previewFeed('https://f').subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/feeds/preview');

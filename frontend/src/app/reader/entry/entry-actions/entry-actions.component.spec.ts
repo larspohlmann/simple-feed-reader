@@ -16,7 +16,7 @@ import { OpensEntryDirective } from '../../list/opens-entry.directive';
 @Component({
   imports: [EntryActionsComponent, OpensEntryDirective],
   template: `<article class="card" [appOpensEntry]="entry">
-    <app-entry-actions [entry]="entry" [size]="size" [audio]="audio" />
+    <app-entry-actions [entry]="entry" [size]="size" [audio]="audio" [like]="likeShown" />
   </article>`,
   providers: [{ provide: EntryActionHandler, useExisting: forwardRef(() => HostComponent) }],
 })
@@ -24,6 +24,7 @@ class HostComponent implements EntryActionHandler {
   entry: EntryDto = anEntry();
   size: 'sm' | 'md' = 'sm';
   audio = true;
+  likeShown = true;
   cardOpened = false;
   favoriteCount = 0;
   kept: EntryDto | null = null;
@@ -237,12 +238,14 @@ describe('EntryActionsComponent', () => {
       ['mastodon', false, 'Like on Mastodon — a public like the author sees'],
       ['mastodon', true, 'Take back your like on Mastodon'],
     ] as const)('words the %s like (liked: %s) for its network', (network, isLiked, title) => {
-      const like = buttons(mount(anEntry({ social: { network, isLiked } })))[1];
+      const like = buttons(mount(anEntry({ social: { network, isLiked, canLike: true } })))[1];
       expect(like.getAttribute('title')).toBe(title);
     });
 
     it('translates them', () => {
-      const fixture = mount(anEntry({ social: { network: 'bluesky', isLiked: false } }));
+      const fixture = mount(
+        anEntry({ social: { network: 'bluesky', isLiked: false, canLike: true } }),
+      );
       const transloco = TestBed.inject(TranslocoService);
       transloco.setActiveLang('de');
       fixture.detectChanges();
@@ -346,7 +349,7 @@ describe('EntryActionsComponent', () => {
 
   describe('on a social post (#1600)', () => {
     const blueskyPost = (isLiked = false): EntryDto =>
-      anEntry({ social: { network: 'bluesky', isLiked } });
+      anEntry({ social: { network: 'bluesky', isLiked, canLike: true } });
 
     it('offers the like right after favorite, named for the network', () => {
       const labels = buttons(mount(blueskyPost())).map((button) =>
@@ -356,7 +359,9 @@ describe('EntryActionsComponent', () => {
     });
 
     it('names the undo once liked, pressed and filled', () => {
-      const fixture = mount(anEntry({ social: { network: 'mastodon', isLiked: true } }));
+      const fixture = mount(
+        anEntry({ social: { network: 'mastodon', isLiked: true, canLike: true } }),
+      );
       const like = buttons(fixture)[1];
       expect(like.getAttribute('aria-label')).toBe('Unlike on Mastodon');
       expect(like.getAttribute('aria-pressed')).toBe('true');
@@ -377,6 +382,21 @@ describe('EntryActionsComponent', () => {
 
     it('offers no like on an entry that is no social post', () => {
       expect(mount().nativeElement.textContent).not.toContain('thumb_up');
+    });
+
+    it('leaves the like to the article view’s counts row when told to (#1615)', () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.entry = blueskyPost();
+      fixture.componentInstance.likeShown = false;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('thumb_up');
+    });
+
+    it('offers no like on a post the user has no account to like from (#1615)', () => {
+      const post = anEntry({ social: { network: 'mastodon', isLiked: false, canLike: false } });
+
+      expect(mount(post).nativeElement.textContent).not.toContain('thumb_up');
     });
   });
 });

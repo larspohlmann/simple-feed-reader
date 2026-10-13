@@ -1,0 +1,50 @@
+@use '../../../theme/glass-rim';
+
+:host {
+  display: block;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.count,
+.like {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+}
+
+.like {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+
+  @include glass-rim.ring(var(--border-strong), control);
+}
+
+.like.on {
+  --rim-base: var(--accent);
+
+  background: var(--accent-soft);
+}
+
+@media (pointer: coarse) {
+  .like {
+    min-height: var(--tap-target);
+  }
+}

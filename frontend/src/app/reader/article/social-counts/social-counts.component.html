@@ -1,0 +1,30 @@
+@if (shown()) {
+  <div class="row">
+    @for (shownCount of counts(); track shownCount.kind) {
+      @let label =
+        labelKey(shownCount.kind, shownCount.count) | transloco: { count: shownCount.count };
+      <span class="count" role="img" [attr.title]="label" [attr.aria-label]="label">
+        <app-icon [name]="shownCount.icon" size="sm" />
+        <span class="number">{{ format(shownCount.count) }}</span>
+      </span>
+    }
+    @if (likeable(); as social) {
+      @let likeKey = (social.isLiked ? 'unlike' : 'like') + '.' + social.network;
+      @let likeCount = likes();
+      <button
+        type="button"
+        class="like"
+        [class.on]="social.isLiked"
+        [attr.aria-pressed]="social.isLiked"
+        [attr.title]="'reader.actionHint.' + likeKey | transloco"
+        [attr.aria-label]="'reader.' + likeKey | transloco"
+        (click)="actions.like(entry())"
+      >
+        <app-icon name="thumb_up" size="sm" [fill]="social.isLiked" />
+        @if (likeCount !== null) {
+          <span class="number">{{ format(likeCount) }}</span>
+        }
+      </button>
+    }
+  </div>
+}

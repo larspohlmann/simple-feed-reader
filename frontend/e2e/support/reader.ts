@@ -1,8 +1,14 @@
 // Shared reader-endpoint fixtures for the article e2e specs.
 import type { Page } from '@playwright/test';
-import type { EntryDto, SavedSearchWire, SubscriptionDto } from '../../src/app/reader/models';
+import type {
+  EntryDto,
+  SavedSearchWire,
+  SubscriptionDto,
+  SubscriptionsResponse,
+} from '../../src/app/reader/models';
 import type { EntryDetailResponse } from '../../src/app/reader/state/completed-entry';
 import { anEntry } from '../../src/testing/entry-testing';
+import { aSubscription } from '../../src/testing/subscription-testing';
 import { stubAuthToken } from './auth';
 
 /** Reasons the backend reports when reader extraction produces no article. */
@@ -103,33 +109,25 @@ export function entryDetailJson(entry: EntryDto, contentHtml: string): EntryDeta
   };
 }
 
-/** A `GET /api/subscriptions` body with one feed; `overrides` reshapes that feed. */
-export function oneFeedJson(title: string, overrides: Partial<SubscriptionDto> = {}) {
+/** Typed so a field the shell reads but a stub misses is a compile error, not a blank reader. */
+export function subscriptionsJson(
+  subscriptions: SubscriptionDto[],
+  totals: Partial<Omit<SubscriptionsResponse, 'subscriptions'>> = {},
+): SubscriptionsResponse {
   return {
-    subscriptions: [
-      {
-        id: 1,
-        feedId: 1,
-        title,
-        faviconUrl: null,
-        imageUrl: null,
-        description: null,
-        customTitle: null,
-        feedUrl: 'https://fixtures.invalid/feed.xml',
-        siteUrl: null,
-        status: 'active',
-        sourceFormat: 'xml',
-        createdAt: '2026-08-28T00:00:00+00:00',
-        lastFetchedAt: '2026-08-28T00:00:00+00:00',
-        position: 0,
-        tags: [],
-        unreadCount: 1,
-        entryCount: 1,
-        ...overrides,
-      },
-    ],
+    subscriptions,
     favoritesCount: 0,
     keptCount: 0,
     viewedCount: 0,
+    socialAccounts: [],
+    ...totals,
   };
+}
+
+/** A `GET /api/subscriptions` body with one feed; `overrides` reshapes that feed. */
+export function oneFeedJson(
+  title: string,
+  overrides: Partial<SubscriptionDto> = {},
+): SubscriptionsResponse {
+  return subscriptionsJson([aSubscription({ title, unreadCount: 1, entryCount: 1, ...overrides })]);
 }

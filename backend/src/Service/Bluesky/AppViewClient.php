@@ -33,7 +33,12 @@ final readonly class AppViewClient
 
     public function isThrottled(): bool
     {
-        return $this->hostThrottle->remainingSeconds(self::GET_POSTS) > 0;
+        return $this->throttledForSeconds() > 0;
+    }
+
+    public function throttledForSeconds(): int
+    {
+        return $this->hostThrottle->remainingSeconds(self::GET_POSTS);
     }
 
     /**

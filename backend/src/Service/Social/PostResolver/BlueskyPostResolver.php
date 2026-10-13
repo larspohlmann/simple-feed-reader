@@ -12,6 +12,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyRecordUri;
+use App\Service\Social\Support\PostCounts;
 
 final readonly class BlueskyPostResolver implements PostResolverInterface
 {
@@ -36,7 +37,8 @@ final readonly class BlueskyPostResolver implements PostResolverInterface
         $post = $answerNode->first('posts');
         $contentId = $post->string('cid')
             ?? throw new SocialNetworkUnreachableException('Bluesky answered a post without a content id.');
-        $resolved = SocialPostModel::onBluesky($account, $address, $contentId);
+        $resolved = SocialPostModel::onBluesky($account, $address, $contentId)
+            ->withCounts(PostCounts::ofBlueskyPost($post));
         $likeId = BlueskyRecordUri::likeOrNull($post->node('viewer')->string('like'));
 
         return null === $likeId ? $resolved : $resolved->alreadyLikedAs($likeId);

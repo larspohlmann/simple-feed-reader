@@ -44,7 +44,7 @@
 >
   <app-icon name="star" [size]="size()" [fill]="entry().isFavorite" />
 </button>
-@if (entry().social; as social) {
+@if (likeable(); as social) {
   @let likeKey = (social.isLiked ? 'unlike' : 'like') + '.' + social.network;
   <button
     type="button"

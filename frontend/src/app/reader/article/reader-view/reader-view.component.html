@@ -140,7 +140,7 @@
             [subscriptionId]="e.subscriptionId"
             [savedSearches]="e.savedSearches ?? []"
           />
-          <app-entry-actions class="actions" size="md" [entry]="e" [audio]="false" />
+          <app-entry-actions class="actions" size="md" [entry]="e" [audio]="false" [like]="false" />
           @if (audio.attachment()) {
             <div class="listen-row">
               <button class="listen" type="button" (click)="audio.play()">
@@ -231,6 +231,9 @@
             <div #content class="content" [innerHTML]="source.displayHtml()"></div>
             @if (e.linkCards.length || e.pending) {
               <app-link-cards [entry]="e" />
+            }
+            @if (e.social) {
+              <app-social-counts [entry]="e" [scroller]="scroller" />
             }
           }
           @if (e.categories.length) {

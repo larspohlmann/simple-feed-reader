@@ -33,3 +33,19 @@ export function isAppendedPage<T>(previous: readonly T[], next: readonly T[]): b
   if (previous.length === 0 || next.length <= previous.length) return false;
   return next[0] === previous[0] && next[previous.length - 1] === previous[previous.length - 1];
 }
+
+/** Runs `onSight` whenever `host` comes within the prefetch margin of `scroller`; the result stops watching. */
+export function observeOnSight(
+  host: HTMLElement,
+  scroller: HTMLElement,
+  onSight: () => void,
+): () => void {
+  const observer = new IntersectionObserver(
+    ([sighting]) => {
+      if (sighting?.isIntersecting) onSight();
+    },
+    { root: scroller, rootMargin: prefetchMargin(scroller.clientHeight) },
+  );
+  observer.observe(host);
+  return () => observer.disconnect();
+}

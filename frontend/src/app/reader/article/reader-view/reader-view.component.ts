@@ -44,6 +44,7 @@ import { prefersReducedMotion } from '../reading/reduced-motion';
 import { TocEntry, collectToc } from '../reading/reading-toc';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
 import { LinkCardsComponent } from '../link-cards/link-cards.component';
+import { SocialCountsComponent } from '../social-counts/social-counts.component';
 import { ArticleBody } from './article-body.service';
 import { ArticleGestures } from './article-gestures.service';
 import { relativeTime } from '../../format';
@@ -75,6 +76,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     EntryCommentsComponent,
     ReaderTocComponent,
     LinkCardsComponent,
+    SocialCountsComponent,
   ],
   providers: [ArticleScrollRestore, ArticleGestures, ArticleSource, ReadingScope, ArticleBody],
   templateUrl: './reader-view.component.html',
@@ -102,8 +104,12 @@ export class ReaderViewComponent {
     read: ElementRef<HTMLElement>,
   });
   private readonly linkCards = viewChild(LinkCardsComponent, { read: ElementRef<HTMLElement> });
+  private readonly socialCounts = viewChild(SocialCountsComponent, {
+    read: ElementRef<HTMLElement>,
+  });
   private readonly trailingParts: readonly TrailingPart[] = [
     { query: this.linkCards, joinsFocus: false },
+    { query: this.socialCounts, joinsFocus: false },
     { query: this.commentsSection, joinsFocus: true },
   ];
   /** Focus target for the corner button on activation — see scrollToTop(). */

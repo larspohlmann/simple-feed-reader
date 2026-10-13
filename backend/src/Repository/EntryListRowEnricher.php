@@ -68,7 +68,7 @@ final readonly class EntryListRowEnricher
     /**
      * @param array<int, Entry> $entries
      *
-     * @return array<int, EntryListRowSocial> by entry id, only for posts on a network the user has an account on
+     * @return array<int, EntryListRowSocial> by entry id, for every post
      */
     private function socialStatesOf(array $entries, int $userId): array
     {
@@ -77,15 +77,19 @@ final readonly class EntryListRowEnricher
             return [];
         }
         $accountNetworks = $this->socialAccounts->networksOf($userId);
-        $networks = array_filter(
+        $likeable = array_filter(
             $postNetworks,
             static fn (SocialNetwork $network): bool => \in_array($network, $accountNetworks, true),
         );
-        $likedIds = $this->socialLikes->likedEntryIdsAmong($userId, array_keys($networks));
+        $likedIds = $this->socialLikes->likedEntryIdsAmong($userId, array_keys($likeable));
 
         $states = [];
-        foreach ($networks as $entryId => $network) {
-            $states[$entryId] = new EntryListRowSocial($network, isset($likedIds[$entryId]));
+        foreach ($postNetworks as $entryId => $network) {
+            $states[$entryId] = new EntryListRowSocial(
+                $network,
+                isLiked: isset($likedIds[$entryId]),
+                canLike: isset($likeable[$entryId]),
+            );
         }
 
         return $states;

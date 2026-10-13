@@ -4,6 +4,7 @@ import { Observable, Subscription, finalize, tap } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
+import { likeableSocial } from '../entry-social';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
 import { CompletedEntryDto, withCompleted } from './completed-entry';
 
@@ -187,9 +188,9 @@ export class EntriesStore {
     });
   }
 
-  /** Optimistic like apart from `setState`; dropped for no post, or while its previous like is still on the wire. */
+  /** Optimistic like apart from `setState`; dropped unless the post can be liked and no like is on the wire. */
   setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): void {
-    const social = entry.social;
+    const social = likeableSocial(entry);
     if (!social || this.likeInFlight(entry.id)) return;
     const request$ = isLiked ? this.api.like(entry.id) : this.api.unlike(entry.id);
     this.optimistic(entry, { social: { ...social, isLiked } }, request$).subscribe({

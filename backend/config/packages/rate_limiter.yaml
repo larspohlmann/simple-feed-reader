@@ -118,6 +118,14 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
+        # Per user: opening a social post asks for its counts. The two-minute cache answers most opens; a miss costs
+        # one public read, or two or three on the user's own account when the public one fails.
+        social_counts:
+            policy: 'sliding_window'
+            limit: 120
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
         # Starting a run is what spends money: its snapshot fixes how many provider calls it can make. Ten a quarter
         # hour is far beyond honest use (a run takes minutes and supersedes the last).
         ai_recommendation_starts:

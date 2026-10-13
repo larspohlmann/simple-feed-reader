@@ -171,9 +171,9 @@ final class EntryListRowEnricherTest extends DbTestCase
 
         $rows = $this->enrich([$this->row($liked, [$this->row($unliked)]), $this->row($article)]);
 
-        self::assertEquals(new EntryListRowSocial(SocialNetwork::Mastodon, true), $rows[0]->enrichment->social);
+        self::assertEquals(new EntryListRowSocial(SocialNetwork::Mastodon, true, true), $rows[0]->enrichment->social);
         self::assertEquals(
-            new EntryListRowSocial(SocialNetwork::Mastodon, false),
+            new EntryListRowSocial(SocialNetwork::Mastodon, false, true),
             $rows[0]->duplicates[0]->enrichment->social,
         );
         self::assertNull($rows[1]->enrichment->social);
@@ -189,15 +189,18 @@ final class EntryListRowEnricherTest extends DbTestCase
 
         $social = $this->enrich([$this->row($post)])[0]->enrichment->social;
 
-        self::assertEquals(new EntryListRowSocial(SocialNetwork::Mastodon, false), $social);
+        self::assertEquals(new EntryListRowSocial(SocialNetwork::Mastodon, false, true), $social);
     }
 
-    public function testWithoutAnAccountOnItsNetworkAPostHasNoSocialState(): void
+    public function testWithoutAnAccountOnItsNetworkAPostCannotBeLiked(): void
     {
         SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
         $post = $this->postOn($this->mastodonFeed(), self::POST . '3');
 
-        self::assertNull($this->enrich([$this->row($post)])[0]->enrichment->social);
+        self::assertEquals(
+            new EntryListRowSocial(SocialNetwork::Mastodon, false, false),
+            $this->enrich([$this->row($post)])[0]->enrichment->social,
+        );
     }
 
     public function testTheLikeLookupIsOneQueryHoweverManyPostsThePageHolds(): void
