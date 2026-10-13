@@ -78,13 +78,13 @@ final class PassTickets implements DispatchGateInterface
     private function privateTicketOf(int $feedId): \Generator
     {
         try {
-            $socialFeed = $this->feeds->socialFeedOf($feedId);
+            $this->feeds->socialFeedOf($feedId);
         } catch (PrivateFeedOrphanedException $orphaned) {
             $this->orphaned[$feedId] = new FailedTimelineModel($orphaned);
 
             return;
         }
 
-        yield from $this->round->ticketFor($feedId, $socialFeed);
+        yield from $this->round->ticketFor($feedId);
     }
 }

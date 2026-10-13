@@ -8,6 +8,7 @@ use App\Entity\SocialFeed;
 use App\Service\Fetch\DispatchGate\DispatchGateInterface;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\RequestTicketModel;
+use App\Service\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialSessionStaleException;
@@ -28,22 +29,15 @@ final class TimelineRound implements DispatchGateInterface
     /** @var list<int|string> */
     private array $staleFeedIds = [];
 
-    /** @var array<int, SocialFeed> every feed ticketed so far */
-    private array $socialFeedsByFeedId = [];
+    private readonly TimelineAccounts $accounts;
 
+    /** @param array<int, SocialFeed> $socialFeedsByFeedId each with its account loaded */
     public function __construct(
         private readonly TimelineSources $sources,
-        private readonly TimelineAccounts $accounts,
         private readonly TimelineSlotsModel $slots,
+        private readonly array $socialFeedsByFeedId,
     ) {
-    }
-
-    /** @return \Generator<int|string, RequestTicketModel> none when the feed settles without a request */
-    public function ticketFor(int $feedId, SocialFeed $socialFeed): \Generator
-    {
-        $this->socialFeedsByFeedId[$feedId] = $socialFeed;
-
-        yield from $this->ticketOf($feedId);
+        $this->accounts = new TimelineAccounts();
     }
 
     /**
@@ -60,7 +54,7 @@ final class TimelineRound implements DispatchGateInterface
             $this->sources->of($account)->dropSession($account);
         }
         foreach ($feedIds as $feedId) {
-            yield from $this->ticketOf($feedId);
+            yield from $this->ticketFor($feedId);
         }
     }
 
@@ -99,8 +93,8 @@ final class TimelineRound implements DispatchGateInterface
         yield from $unasked;
     }
 
-    /** @return \Generator<int|string, RequestTicketModel> */
-    private function ticketOf(int|string $feedId): \Generator
+    /** @return \Generator<int|string, RequestTicketModel> none when the feed settles without a request */
+    public function ticketFor(int|string $feedId): \Generator
     {
         $socialFeed = $this->socialFeedOf($feedId);
         $account = $socialFeed->getSocialAccount();
@@ -136,9 +130,9 @@ final class TimelineRound implements DispatchGateInterface
         return $settled;
     }
 
+    /** @throws PrivateFeedOrphanedException when the private feed has lost its social feed */
     private function socialFeedOf(int|string $feedId): SocialFeed
     {
-        return $this->socialFeedsByFeedId[$feedId]
-            ?? throw new \LogicException(sprintf('Feed %s was never ticketed in this round.', $feedId));
+        return $this->socialFeedsByFeedId[$feedId] ?? throw new PrivateFeedOrphanedException();
     }
 }

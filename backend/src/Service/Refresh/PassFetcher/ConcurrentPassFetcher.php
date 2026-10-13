@@ -30,7 +30,7 @@ final readonly class ConcurrentPassFetcher implements PassFetcherInterface
     /** @return \Generator<int|string, FetchOutcomeModel|TimelineOutcomeModelInterface> */
     public function fetchAll(PassFeeds $feeds): \Generator
     {
-        $tickets = new PassTickets($feeds, $this->timelineRounds->start(), $this->hostConcurrency);
+        $tickets = new PassTickets($feeds, $this->timelineRounds->start($feeds->socialFeedsByFeedId), $this->hostConcurrency);
 
         yield from $this->run($tickets, $tickets->tickets());
         yield from $this->run($tickets, $tickets->renewalTickets());

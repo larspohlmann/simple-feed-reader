@@ -16,7 +16,7 @@ final readonly class PassFeeds
     private array $privateFeedIds;
 
     /** @param array<int, SocialFeed> $socialFeedsByFeedId each with its account loaded */
-    public function __construct(private RefreshPass $pass, private array $socialFeedsByFeedId)
+    public function __construct(private RefreshPass $pass, public array $socialFeedsByFeedId)
     {
         $this->privateFeedIds = array_fill_keys(self::privateFeedIdsOf($pass), true);
     }

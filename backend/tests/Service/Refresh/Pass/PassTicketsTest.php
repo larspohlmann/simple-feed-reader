@@ -165,7 +165,7 @@ final class PassTicketsTest extends TestCase
         foreach ($socialFeeds as $socialFeed) {
             $socialFeedsByFeedId[$socialFeed->getFeed()->requireId()] = $socialFeed;
         }
-        $round = SocialApiWiring::timelineRounds(new MockHttpClient(), new ArrayAdapter())->start();
+        $round = SocialApiWiring::timelineRounds(new MockHttpClient(), new ArrayAdapter())->start($socialFeedsByFeedId);
 
         return new PassTickets(new PassFeeds($this->pass, $socialFeedsByFeedId), $round, 2);
     }

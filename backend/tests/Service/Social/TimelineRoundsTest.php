@@ -33,7 +33,7 @@ final class TimelineRoundsTest extends TestCase
             '',
         );
 
-        $tickets = iterator_to_array($rounds->start()->ticketFor(1, $socialFeed));
+        $tickets = iterator_to_array($rounds->start([1 => $socialFeed])->ticketFor(1));
 
         self::assertSame(
             ['slot:social-account:7' => 3, 'slot:social-host:mastodon.example' => 4],
