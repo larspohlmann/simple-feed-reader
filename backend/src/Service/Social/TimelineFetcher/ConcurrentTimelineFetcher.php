@@ -27,11 +27,11 @@ final readonly class ConcurrentTimelineFetcher implements TimelineFetcherInterfa
     }
 
     /** @return \Generator<int, TimelineOutcomeModelInterface> */
-    public function fetchAll(array $socialFeedsByFeedId, iterable $feeds): \Generator
+    public function fetchAll(iterable $socialFeeds): \Generator
     {
-        $round = new TimelineRound($socialFeedsByFeedId, $this->sources, new TimelineAccounts());
+        $round = new TimelineRound($this->sources, new TimelineAccounts());
 
-        yield from $this->wave($round, $round->tickets($feeds));
+        yield from $this->wave($round, $round->tickets($socialFeeds));
         yield from $this->wave($round, $round->startRenewalWave());
     }
 

@@ -16,7 +16,7 @@ final class TimelineRoundTest extends TestCase
     public function testAKeyThatWasNeverTicketedIsALogicError(): void
     {
         $sources = SocialApiWiring::timelineSources(new MockHttpClient(), new ArrayAdapter());
-        $round = new TimelineRound([], $sources, new TimelineAccounts());
+        $round = new TimelineRound($sources, new TimelineAccounts());
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('Feed 999 was never ticketed in this round.');

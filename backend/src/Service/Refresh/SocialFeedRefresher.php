@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Refresh;
 
 use App\Repository\SocialFeedRepository;
+use App\Service\Refresh\Pass\PrivateFeedSupply;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\Pass\TimelineOutcomeStore;
 use App\Service\Social\TimelineFetcher\TimelineFetcherInterface;
@@ -28,8 +29,8 @@ final readonly class SocialFeedRefresher
         }
 
         $outcomes = new TimelineOutcomeStore($this->outcomePersister, $now);
-        $socialFeeds = $this->socialFeeds->findWithAccountByFeedIds($socialFeedIds);
-        foreach ($this->timelines->fetchAll($socialFeeds, $pass->socialFeeds()) as $feedId => $outcome) {
+        $supply = new PrivateFeedSupply($pass, $this->socialFeeds->findWithAccountByFeedIds($socialFeedIds));
+        foreach ($supply->withOrphans($this->timelines->fetchAll($supply->socialFeeds())) as $feedId => $outcome) {
             $feed = $pass->feed($feedId);
             $pass->tally->record($outcomes->store($feed, $outcome), $feed);
             if ($pass->tally->isAborted()) {

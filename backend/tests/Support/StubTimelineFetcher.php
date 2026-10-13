@@ -22,14 +22,14 @@ final class StubTimelineFetcher implements TimelineFetcherInterface
     {
     }
 
-    public function fetchAll(array $socialFeedsByFeedId, iterable $feeds): \Generator
+    public function fetchAll(iterable $socialFeeds): \Generator
     {
-        $this->socialFeedsByFeedId = $socialFeedsByFeedId;
-        foreach ($feeds as $feedId => $feed) {
+        foreach ($socialFeeds as $feedId => $socialFeed) {
             $this->asked[] = $feedId;
+            $this->socialFeedsByFeedId[$feedId] = $socialFeed;
+            $url = $socialFeed->getFeed()->getUrl();
 
-            yield $feedId => $this->outcomes[$feed->getUrl()]
-                ?? Assert::fail('No timeline outcome scripted for ' . $feed->getUrl());
+            yield $feedId => $this->outcomes[$url] ?? Assert::fail('No timeline outcome scripted for ' . $url);
         }
     }
 }

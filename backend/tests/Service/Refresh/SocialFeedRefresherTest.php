@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
+use App\Enum\SourceFormat;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\SocialFeedRefresher;
@@ -142,6 +143,49 @@ final class SocialFeedRefresherTest extends DbTestCase
         self::assertSame(0, $pass->tally->processed());
     }
 
+    public function testAPrivateFeedThatLostItsSocialFeedFailsWithoutAsking(): void
+    {
+        $orphan = $this->orphan();
+
+        $this->assertOrphanFailsWithoutAsking($orphan, [$orphan, $this->home->getFeed()]);
+    }
+
+    public function testAnOrphanAfterEveryAskedFeedIsStoredToo(): void
+    {
+        $orphan = $this->orphan();
+
+        $this->assertOrphanFailsWithoutAsking($orphan, [$this->home->getFeed(), $orphan]);
+    }
+
+    /** @param list<Feed> $feeds */
+    private function assertOrphanFailsWithoutAsking(Feed $orphan, array $feeds): void
+    {
+        $home = $this->home->getFeed();
+        $timelines = new StubTimelineFetcher([$home->getUrl() => new FetchedTimelineModel(self::page())]);
+        $pass = new RefreshPass($feeds, $this->clock, $this->clock->now()->getTimestamp() + 300);
+
+        $this->refresher($timelines)->refreshAll($pass, $this->clock->now());
+
+        self::assertSame([$home->requireId()], $timelines->asked);
+        self::assertSame(1, $pass->tally->failed());
+        self::assertSame(1, $pass->tally->fetched());
+        $this->entityManager->clear();
+        self::assertSame(
+            'This private feed has lost its social account.',
+            $this->entityManager->find(Feed::class, $orphan->requireId())?->getLastErrorMessage(),
+        );
+    }
+
+    private function orphan(): Feed
+    {
+        $orphan = new Feed('social:mastodon:999:home');
+        $orphan->setSourceFormat(SourceFormat::MASTODON_API);
+        $this->entityManager->persist($orphan);
+        $this->entityManager->flush();
+
+        return $orphan;
+    }
+
     private function assertUntouched(?\DateTimeImmutable $nextFetchAt): void
     {
         $this->entityManager->clear();
@@ -178,7 +222,7 @@ final class SocialFeedRefresherTest extends DbTestCase
     private static function untouchedTimelines(): TimelineFetcherInterface
     {
         return new class () implements TimelineFetcherInterface {
-            public function fetchAll(array $socialFeedsByFeedId, iterable $feeds): iterable
+            public function fetchAll(iterable $socialFeeds): iterable
             {
                 Assert::fail('A pass without private feeds started the timeline fetcher.');
             }

@@ -51,11 +51,7 @@ final class TimelineFetcherWiringTest extends KernelTestCase
         $bluesky = $this->socialFeed(SocialNetwork::Bluesky, 2);
 
         $outcomes = [];
-        $read = $fetcher->fetchAll(
-            [1 => $mastodon, 2 => $bluesky],
-            [1 => $mastodon->getFeed(), 2 => $bluesky->getFeed()],
-        );
-        foreach ($read as $feedId => $outcome) {
+        foreach ($fetcher->fetchAll([1 => $mastodon, 2 => $bluesky]) as $feedId => $outcome) {
             $outcomes[$feedId] = $outcome::class;
         }
 

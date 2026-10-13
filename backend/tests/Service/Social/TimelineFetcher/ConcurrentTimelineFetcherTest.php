@@ -9,7 +9,6 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
-use App\Service\Social\Exception\PrivateFeedOrphanedException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskySessionModel;
@@ -355,20 +354,6 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         self::assertSame([], $this->requests);
     }
 
-    public function testAFeedWithoutItsSocialFeedFailsWithoutAsking(): void
-    {
-        $orphan = self::withId(new Feed('social:mastodon:999:home'), 99);
-        $fetcher = $this->fetcher(static fn (): MockResponse => self::statuses());
-        $outcomes = [];
-
-        foreach ($fetcher->fetchAll([], [99 => $orphan]) as $feedId => $outcome) {
-            $outcomes[$feedId] = $outcome;
-        }
-
-        self::assertInstanceOf(PrivateFeedOrphanedException::class, self::failureOf($outcomes[99]));
-        self::assertSame([], $this->requests);
-    }
-
     public function testAFetchedPageRecordsTheFeedsNewestStatus(): void
     {
         $home = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
@@ -409,7 +394,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         }
         $fetcher = $this->fetcher(static fn (): MockResponse => self::statuses(), accountConcurrency: 1);
 
-        $outcomes = $fetcher->fetchAll(self::byFeedId($socialFeeds), self::feedsOf($socialFeeds));
+        $outcomes = $fetcher->fetchAll(self::byFeedId($socialFeeds));
         foreach ($outcomes as $outcome) {
             self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
             break;
@@ -426,7 +411,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
             $socialFeeds[] = $this->feedOf($account, SocialFeedKind::UserList, $listId);
         }
         $outcomes = $this->fetcher(static fn (): MockResponse => self::statuses())
-            ->fetchAll(self::byFeedId($socialFeeds), self::feedsOf($socialFeeds));
+            ->fetchAll(self::byFeedId($socialFeeds));
 
         foreach ($outcomes as $outcome) {
             self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
@@ -507,7 +492,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
     /** @param list<SocialFeed> $socialFeeds */
     private function onTheWireAtFirstAnswer(ConcurrentTimelineFetcher $fetcher, array $socialFeeds): ?int
     {
-        $outcomes = $fetcher->fetchAll(self::byFeedId($socialFeeds), self::feedsOf($socialFeeds));
+        $outcomes = $fetcher->fetchAll(self::byFeedId($socialFeeds));
         foreach ($outcomes as $outcome) {
             self::assertInstanceOf(FetchedTimelineModel::class, $outcome);
 
@@ -570,7 +555,7 @@ final class ConcurrentTimelineFetcherTest extends TestCase
     private static function read(ConcurrentTimelineFetcher $fetcher, array $socialFeeds): array
     {
         $outcomes = [];
-        foreach ($fetcher->fetchAll(self::byFeedId($socialFeeds), self::feedsOf($socialFeeds)) as $feedId => $outcome) {
+        foreach ($fetcher->fetchAll(self::byFeedId($socialFeeds)) as $feedId => $outcome) {
             $outcomes[$feedId] = $outcome;
         }
 
@@ -590,19 +575,6 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         }
 
         return $byFeedId;
-    }
-
-    /**
-     * @param list<SocialFeed> $socialFeeds
-     *
-     * @return array<int, Feed>
-     */
-    private static function feedsOf(array $socialFeeds): array
-    {
-        return array_map(
-            static fn (SocialFeed $socialFeed): Feed => $socialFeed->getFeed(),
-            self::byFeedId($socialFeeds),
-        );
     }
 
     private static function pageOf(TimelineOutcomeModelInterface $outcome): TimelinePageModel
