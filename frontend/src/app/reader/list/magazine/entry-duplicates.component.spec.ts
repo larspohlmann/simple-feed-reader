@@ -127,7 +127,11 @@ it('re-emits favorite for the copy and shows the flag the store then holds', () 
 });
 
 function openLikePopover() {
-  const dup = entry({ id: 2, title: 'Skeet', social: { network: 'bluesky', isLiked: false } });
+  const dup = entry({
+    id: 2,
+    title: 'Skeet',
+    social: { network: 'bluesky', isLiked: false, canLike: true },
+  });
   const fixture = mount(entry({ duplicates: [dup] }));
   (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
   fixture.detectChanges();
@@ -138,7 +142,7 @@ function openLikePopover() {
   const storeHolds = (isLiked: boolean) => {
     fixture.componentRef.setInput(
       'entry',
-      entry({ duplicates: [{ ...dup, social: { network: 'bluesky', isLiked } }] }),
+      entry({ duplicates: [{ ...dup, social: { network: 'bluesky', isLiked, canLike: true } }] }),
     );
     fixture.detectChanges();
   };

@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
 import { RefreshScope, ScopedMarkReadTarget } from './query/query';
-import { EntryLikeDto } from './entry-social';
+import { EntryLikeDto, SocialCountsDto } from './entry-social';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
 import {
   CommentsResponse,
@@ -170,6 +170,10 @@ export class ReaderApi {
 
   comments(entryId: number): Observable<CommentsResponse> {
     return this.http.get<CommentsResponse>(`${this.base}/api/entries/${entryId}/comments`);
+  }
+
+  socialCounts(entryId: number): Observable<SocialCountsDto> {
+    return this.http.get<SocialCountsDto>(`${this.base}/api/entries/${entryId}/social`);
   }
 
   /** Omit the scope (or pass an empty one) to refresh all the caller's due

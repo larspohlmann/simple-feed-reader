@@ -187,10 +187,10 @@ export class EntriesStore {
     });
   }
 
-  /** Optimistic like apart from `setState`; dropped for no post, or while its previous like is still on the wire. */
+  /** Optimistic like apart from `setState`; dropped unless the post can be liked and no like is on the wire. */
   setLiked(entry: EntryDto, isLiked: boolean, onError: (problem: Problem) => void): void {
     const social = entry.social;
-    if (!social || this.likeInFlight(entry.id)) return;
+    if (!social?.canLike || this.likeInFlight(entry.id)) return;
     const request$ = isLiked ? this.api.like(entry.id) : this.api.unlike(entry.id);
     this.optimistic(entry, { social: { ...social, isLiked } }, request$).subscribe({
       error: (error: HttpErrorResponse) => onError(parseProblem(error)),
