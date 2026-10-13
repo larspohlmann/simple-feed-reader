@@ -67,7 +67,10 @@ final class EntryLikeControllerTest extends ApiTestCase
         self::assertSame(['isLiked' => true], $this->payload($client));
         self::assertSame([self::SEARCH, self::FAVOURITE], $this->routesAsked());
         self::assertSame(1, $this->likeRows());
-        self::assertSame(['network' => 'mastodon', 'isLiked' => true], $this->socialOf($client, $entryId));
+        self::assertSame(
+            ['network' => 'mastodon', 'isLiked' => true, 'canLike' => true],
+            $this->socialOf($client, $entryId),
+        );
     }
 
     public function testASecondLikeCallsNoNetwork(): void
@@ -102,7 +105,10 @@ final class EntryLikeControllerTest extends ApiTestCase
         self::assertSame(['isLiked' => false], $this->payload($client));
         self::assertSame([self::SEARCH, self::FAVOURITE, self::UNFAVOURITE], $this->routesAsked());
         self::assertSame(0, $this->likeRows());
-        self::assertSame(['network' => 'mastodon', 'isLiked' => false], $this->socialOf($client, $entryId));
+        self::assertSame(
+            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => true],
+            $this->socialOf($client, $entryId),
+        );
     }
 
     public function testUnlikingAPostNeverLikedCallsNoNetwork(): void
@@ -136,7 +142,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         self::assertNull($this->socialOf($client, $entryId));
     }
 
-    public function testAPostOnANetworkWithoutAnAccountIsRefusedAndShowsNoButton(): void
+    public function testAPostOnANetworkWithoutAnAccountIsRefusedAndCannotBeLiked(): void
     {
         $client = $this->clientRouting([]);
         $user = $this->signIn($client, 'like-no-account@example.test');
@@ -146,7 +152,10 @@ final class EntryLikeControllerTest extends ApiTestCase
 
         $this->assertRejected($client, Response::HTTP_CONFLICT);
         self::assertSame('social_account_missing', $this->payload($client)['type']);
-        self::assertNull($this->socialOf($client, $entryId));
+        self::assertSame(
+            ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false],
+            $this->socialOf($client, $entryId),
+        );
     }
 
     public function testAnotherUsersEntryReadsAsMissing(): void
@@ -322,7 +331,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         return new MockResponse('{"id":"110"}');
     }
 
-    /** @return array{network: string, isLiked: bool}|null */
+    /** @return array{network: string, isLiked: bool, canLike: bool}|null */
     private function socialOf(KernelBrowser $client, int $entryId): ?array
     {
         $client->request('GET', sprintf('/api/entries/%d', $entryId));
@@ -332,7 +341,7 @@ final class EntryLikeControllerTest extends ApiTestCase
         $social = $entry['social'];
         self::assertTrue(null === $social || is_array($social));
 
-        /** @var array{network: string, isLiked: bool}|null $social */
+        /** @var array{network: string, isLiked: bool, canLike: bool}|null $social */
         return $social;
     }
 
