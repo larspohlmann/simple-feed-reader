@@ -11,6 +11,8 @@ import { CatalogStore } from '../../feeds/catalog/catalog.store';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto, ListOrder, SubscriptionDto } from '../../models';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { makeSubscription } from '../../testing/subscription.factory';
 import { MagazineBlock } from '../magazine/magazine-block';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
@@ -2056,6 +2058,20 @@ describe('EntryListComponent', () => {
       expect(
         fixture.componentInstance.content.blocks().some((block) => block.kind === 'group'),
       ).toBe(true);
+    });
+
+    it('never collapses the run of a home timeline, which carries many people', () => {
+      const fixture = mount({
+        entries: run,
+        selection: { kind: 'all', id: null, unread: false },
+        layout: 'magazine',
+      });
+      TestBed.inject(SubscriptionRows).stored.set([
+        makeSubscription({ id: 1, social: { network: 'bluesky', kind: 'home', accountId: 4 } }),
+      ]);
+      expect(
+        fixture.componentInstance.content.blocks().some((block) => block.kind === 'group'),
+      ).toBe(false);
     });
 
     it('never collapses the for-you list', () => {
