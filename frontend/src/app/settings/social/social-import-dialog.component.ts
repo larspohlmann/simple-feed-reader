@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
@@ -13,7 +20,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { inputValue } from '../../shared/input-value';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
-import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { SocialNetworkName } from '../../core/social-network';
@@ -42,6 +49,8 @@ export interface SocialImportDialogData {
   readonly handle: string;
 }
 
+const ROWS_PER_PAGE = 100;
+
 const BADGE_CLASSES: Readonly<Record<ImportCandidateState, string>> = {
   new: 'accent-pill',
   subscribed: 'state',
@@ -57,7 +66,7 @@ const BADGE_CLASSES: Readonly<Record<ImportCandidateState, string>> = {
     IconComponent,
     OverlayPanelComponent,
     SegmentedChoiceComponent,
-    SpinnerComponent,
+    SkeletonComponent,
     TranslocoPipe,
     WarningBoxComponent,
   ],
@@ -94,12 +103,9 @@ export class SocialImportDialogComponent {
     this.activeLang();
     return buildRows(this.importer.candidates(), (key, params) => this.i18n.translate(key, params));
   });
+  private readonly needle = computed(() => this.filter().trim().toLowerCase());
   private readonly tally = computed(() =>
-    tally(this.rows(), {
-      tabs: this.tabs,
-      current: this.tab(),
-      needle: this.filter().trim().toLowerCase(),
-    }),
+    tally(this.rows(), { tabs: this.tabs, current: this.tab(), needle: this.needle() }),
   );
 
   protected readonly tabCounts = computed(() => this.tally().tabCounts);
@@ -117,15 +123,16 @@ export class SocialImportDialogComponent {
     const matched = this.tally().matched;
     return filter === 'all' ? matched : matched.filter((row) => row.state === filter);
   });
-  private readonly visibleNewKeys = computed(() =>
-    this.visibleRows()
-      .filter((row) => row.state === 'new')
-      .map((row) => row.key),
+  private readonly rowLimit = linkedSignal({
+    source: () => [this.tab(), this.activeFilter(), this.needle()],
+    computation: () => ROWS_PER_PAGE,
+  });
+  protected readonly renderedRows = computed(() => this.visibleRows().slice(0, this.rowLimit()));
+  protected readonly nextPageSize = computed(() =>
+    Math.min(ROWS_PER_PAGE, this.visibleRows().length - this.rowLimit()),
   );
-  protected readonly visibleNewCount = computed(() => this.visibleNewKeys().length);
-  protected readonly hasLeftovers = computed(() =>
-    this.visibleRows().some((row) => row.state === 'no_longer_followed'),
-  );
+  protected readonly visibleNewCount = computed(() => this.visibleCount('new'));
+  protected readonly hasLeftovers = computed(() => this.visibleCount('no_longer_followed') > 0);
 
   constructor() {
     this.load();
@@ -141,7 +148,14 @@ export class SocialImportDialogComponent {
   }
 
   protected selectAllNew(): void {
-    this.chosen.update((current) => new Set([...current, ...this.visibleNewKeys()]));
+    const newKeys = this.visibleRows()
+      .filter((row) => row.state === 'new')
+      .map((row) => row.key);
+    this.chosen.update((current) => new Set([...current, ...newKeys]));
+  }
+
+  protected showMore(): void {
+    this.rowLimit.update((limit) => limit + ROWS_PER_PAGE);
   }
 
   protected apply(): void {
@@ -159,6 +173,11 @@ export class SocialImportDialogComponent {
 
   protected cancel(): void {
     this.dialogRef.close(undefined);
+  }
+
+  private visibleCount(state: ImportCandidateState): number {
+    const filter = this.activeFilter();
+    return filter === 'all' || filter === state ? this.stateCounts()[state] : 0;
   }
 
   private finish(result: SocialImportResult): void {
