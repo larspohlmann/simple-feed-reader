@@ -6,15 +6,9 @@ namespace App\Http;
 
 final class SocialLikeJson
 {
-    /** @return array{isLiked: true} */
-    public static function liked(): array
+    /** @return array{isLiked: bool} */
+    public static function of(bool $isLiked): array
     {
-        return ['isLiked' => true];
-    }
-
-    /** @return array{isLiked: false} */
-    public static function unliked(): array
-    {
-        return ['isLiked' => false];
+        return ['isLiked' => $isLiked];
     }
 }
