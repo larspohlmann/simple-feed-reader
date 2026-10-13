@@ -81,6 +81,82 @@ final class SocialAccountRepositoryTest extends DbTestCase
         self::assertSame(3, $this->repository()->countForUser($this->owner));
     }
 
+    public function testNetworksOfNamesEachNetworkOfTheUserOnce(): void
+    {
+        $this->persistAccount($this->owner, SocialNetwork::Bluesky, 'did:plc:one');
+        $this->persistAccount($this->owner, SocialNetwork::Bluesky, 'did:plc:two');
+        $this->persistAccount($this->stranger, SocialNetwork::Mastodon, 'bob@mastodon.example');
+        $this->entityManager->flush();
+
+        self::assertSame([SocialNetwork::Bluesky], $this->repository()->networksOf($this->owner->requireId()));
+        self::assertSame([], $this->repository()->networksOf($this->stranger->requireId() + 1000));
+    }
+
+    public function testNetworksOfListsEveryNetworkInOrder(): void
+    {
+        $this->persistAccount($this->owner, SocialNetwork::Mastodon, 'alice@mastodon.example');
+        $this->persistAccount($this->owner, SocialNetwork::Bluesky, 'did:plc:one');
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [SocialNetwork::Bluesky, SocialNetwork::Mastodon],
+            $this->repository()->networksOf($this->owner->requireId()),
+        );
+    }
+
+    public function testTheDefaultAccountActsBeforeAnOlderOne(): void
+    {
+        $this->accountConnectedAt('did:plc:older', '2026-10-01 10:00:00');
+        $default = $this->accountConnectedAt('did:plc:default', '2026-10-05 10:00:00');
+        $default->becomeDefault();
+        $this->entityManager->flush();
+
+        self::assertSame($default, $this->repository()->findActingOnNetwork($this->owner, SocialNetwork::Bluesky));
+    }
+
+    public function testTheOldestOfSeveralDefaultsActs(): void
+    {
+        $newer = $this->accountConnectedAt('did:plc:newer', '2026-10-05 10:00:00');
+        $oldest = $this->accountConnectedAt('did:plc:oldest', '2026-10-01 10:00:00');
+        $newer->becomeDefault();
+        $oldest->becomeDefault();
+        $this->entityManager->flush();
+
+        self::assertSame($oldest, $this->repository()->findActingOnNetwork($this->owner, SocialNetwork::Bluesky));
+    }
+
+    public function testWithoutADefaultTheOldestAccountActsAndAnotherNetworkNever(): void
+    {
+        $this->accountConnectedAt('did:plc:newer', '2026-10-05 10:00:00');
+        $oldest = $this->accountConnectedAt('did:plc:oldest', '2026-10-01 10:00:00');
+
+        self::assertSame($oldest, $this->repository()->findActingOnNetwork($this->owner, SocialNetwork::Bluesky));
+        self::assertNull($this->repository()->findActingOnNetwork($this->owner, SocialNetwork::Mastodon));
+        self::assertNull($this->repository()->findActingOnNetwork($this->stranger, SocialNetwork::Bluesky));
+    }
+
+    public function testEqualConnectionTimesResolveToTheLowestId(): void
+    {
+        $first = $this->accountConnectedAt('did:plc:first', '2026-10-01 10:00:00');
+        $this->accountConnectedAt('did:plc:second', '2026-10-01 10:00:00');
+
+        self::assertSame($first, $this->repository()->findActingOnNetwork($this->owner, SocialNetwork::Bluesky));
+    }
+
+    private function accountConnectedAt(string $identity, string $connectedAt): SocialAccount
+    {
+        $account = $this->persistAccount($this->owner, SocialNetwork::Bluesky, $identity);
+        $account->replaceCredential(
+            '@' . $identity,
+            new SealedSecret('c', 'n', 's', 1),
+            'mnop',
+            new \DateTimeImmutable($connectedAt),
+        );
+        $this->entityManager->flush();
+
+        return $account;
+    }
+
     private function persistAccount(User $user, SocialNetwork $network, string $identity): SocialAccount
     {
         $account = new SocialAccount(

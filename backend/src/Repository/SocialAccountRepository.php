@@ -48,4 +48,27 @@ final class SocialAccountRepository extends ServiceEntityRepository
         // @phpstan-ignore arrayValues.list (deliberate: findBy() promises a list only in its @phpstan-return)
         return array_values($this->findBy(['user' => $user, 'network' => $network], ['id' => 'ASC']));
     }
+
+    /** @return list<SocialNetwork> each network the user has an account on, once */
+    public function networksOf(int $userId): array
+    {
+        /** @var list<array{network: SocialNetwork}> $rows */
+        $rows = $this->createQueryBuilder('sa')
+            ->select('DISTINCT sa.network AS network')
+            ->andWhere('sa.user = :user')
+            ->setParameter('user', $userId)
+            ->orderBy('sa.network', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $row): SocialNetwork => $row['network'], $rows);
+    }
+
+    public function findActingOnNetwork(User $user, SocialNetwork $network): ?SocialAccount
+    {
+        return $this->findOneBy(
+            ['user' => $user, 'network' => $network],
+            ['isDefault' => 'DESC', 'connectedAt' => 'ASC', 'id' => 'ASC'],
+        );
+    }
 }
