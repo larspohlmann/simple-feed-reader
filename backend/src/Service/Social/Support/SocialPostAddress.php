@@ -29,9 +29,9 @@ final class SocialPostAddress
 
     private static function mastodonPost(Entry $entry): ?SocialPostAddressModel
     {
-        $statusUrl = AbsoluteHttpUrl::orNull($entry->getUrl()) ?? AbsoluteHttpUrl::orNull($entry->getGuid());
+        $statusAddress = AbsoluteHttpUrl::orNull($entry->getGuid()) ?? AbsoluteHttpUrl::orNull($entry->getUrl());
 
-        return null === $statusUrl ? null : new SocialPostAddressModel(SocialNetwork::Mastodon, $statusUrl);
+        return null === $statusAddress ? null : new SocialPostAddressModel(SocialNetwork::Mastodon, $statusAddress);
     }
 
     private function __construct()

@@ -17,6 +17,7 @@ final class SocialPostAddressTest extends TestCase
 {
     private const string POST_URI = 'at://did:plc:bob/app.bsky.feed.post/3abc';
     private const string STATUS_URL = 'https://mastodon.social/@Gargron/110';
+    private const string STATUS_URI = 'https://mastodon.social/users/Gargron/statuses/110';
 
     #[DataProvider('posts')]
     public function testAnEntryIsAddressedAsItsNetworkKnowsIt(
@@ -55,12 +56,20 @@ final class SocialPostAddressTest extends TestCase
             self::entry($profile, 'at://did:plc:bob/app.bsky.feed.repost/3r1', null),
             null,
         ];
-        yield 'mastodon post by its url' => [
+        yield 'mastodon post by its url when its guid is opaque' => [
             self::entry($mastodon, 'tag:mastodon.social,2026:110', self::STATUS_URL),
             new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),
         ];
-        yield 'mastodon private feed post by its url, not its differing status uri guid' => [
-            self::entry($mastodon, 'https://mastodon.social/users/Gargron/statuses/110', self::STATUS_URL),
+        yield 'mastodon private feed post by its activitypub uri, not its differing web page' => [
+            self::entry($mastodon, self::STATUS_URI, self::STATUS_URL),
+            new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URI),
+        ];
+        yield 'mastodon private feed post from another server software by its activitypub uri' => [
+            self::entry($mastodon, 'https://misskey.io/notes/9abc', 'https://misskey.io/@alice/9abc'),
+            new SocialPostAddressModel(SocialNetwork::Mastodon, 'https://misskey.io/notes/9abc'),
+        ];
+        yield 'mastodon profile feed post whose guid is its status url' => [
+            self::entry($mastodon, self::STATUS_URL, self::STATUS_URL),
             new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),
         ];
         yield 'mastodon post by its guid when it has no url' => [
