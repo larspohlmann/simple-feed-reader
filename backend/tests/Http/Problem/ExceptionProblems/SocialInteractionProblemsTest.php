@@ -41,7 +41,7 @@ final class SocialInteractionProblemsTest extends TestCase
         yield 'post gone' => [new SocialPostNotFoundException('x'), 'social_post_not_found', Response::HTTP_NOT_FOUND];
         yield 'post refused' => [new SocialPostRefusedException('x'), 'social_post_refused', Response::HTTP_CONFLICT];
         yield 'token scope missing' => [
-            new SocialTokenScopeMissingException('x'),
+            new SocialTokenScopeMissingException('x', 'read'),
             'social_token_scope_missing',
             Response::HTTP_CONFLICT,
         ];
@@ -55,6 +55,18 @@ final class SocialInteractionProblemsTest extends TestCase
             'social_network_unreachable',
             Response::HTTP_BAD_GATEWAY,
         ];
+    }
+
+    public function testAMissingScopeIsNamedInTheDetail(): void
+    {
+        $missing = new SocialTokenScopeMissingException('x', 'write:favourites');
+
+        $resolved = (new SocialInteractionProblems())->resolve($missing);
+
+        self::assertSame(
+            'Reconnect this account with an access token that has the write:favourites scope.',
+            $resolved?->problem->detail,
+        );
     }
 
     public function testAThrottleNamesItsDelayOnlyWhenTheNetworkGaveOne(): void

@@ -10,11 +10,11 @@ use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
-use App\Service\Social\Support\MastodonInteractionAnswer;
-use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MastodonPostLiker implements PostLikerInterface
 {
+    private const string FAVOURITES_SCOPE = 'write:favourites';
+
     public function __construct(private MastodonAccountApi $mastodon)
     {
     }
@@ -26,22 +26,23 @@ final readonly class MastodonPostLiker implements PostLikerInterface
 
     public function like(SocialPostModel $post): SocialLikeResultModel
     {
-        $answer = $this->mastodon->post($post->account, self::statusAction($post->postId, 'favourite'));
-        if (Response::HTTP_NOT_FOUND === $answer->status) {
-            throw new SocialPostNotFoundException('The post is no longer on Mastodon.');
-        }
-        MastodonInteractionAnswer::accepted($answer);
+        $this->actOnStatus($post->account, self::statusAction($post->postId, 'favourite'));
 
         return new SocialLikeResultModel($post->postId);
     }
 
     public function unlike(SocialAccount $account, string $likeId): void
     {
-        $answer = $this->mastodon->post($account, self::statusAction($likeId, 'unfavourite'));
-        if (Response::HTTP_NOT_FOUND === $answer->status) {
+        try {
+            $this->actOnStatus($account, self::statusAction($likeId, 'unfavourite'));
+        } catch (SocialPostNotFoundException) {
             return;
         }
-        MastodonInteractionAnswer::accepted($answer);
+    }
+
+    private function actOnStatus(SocialAccount $account, string $path): void
+    {
+        $this->mastodon->actOnPost($account, $path, self::FAVOURITES_SCOPE);
     }
 
     private static function statusAction(string $statusId, string $action): string

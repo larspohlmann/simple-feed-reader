@@ -49,7 +49,7 @@ final readonly class SocialInteractionProblems implements ExceptionProblemsInter
                 'social_token_scope_missing',
                 "This account's token is missing a permission",
                 Response::HTTP_CONFLICT,
-                'Reconnect this account with an access token that has the read and write:favourites scopes.',
+                sprintf('Reconnect this account with an access token that has the %s scope.', $exception->missingScope),
             )),
             $exception instanceof SocialNetworkThrottledException => self::throttled($exception),
             $exception instanceof SocialNetworkUnreachableException => new ResolvedProblem(new ApiProblem(

@@ -11,6 +11,8 @@ use App\Service\Social\BlueskySessions;
 use App\Service\Social\Crypto\BlueskySessionCipher;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Model\BlueskySessionModel;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
@@ -136,7 +138,7 @@ final class BlueskySessionsTest extends TestCase
             self::CREATE_RECORD => new MockResponse(self::LIKE_URI),
         ]);
 
-        $answer = SocialApiWiring::blueskySessions($http->client())->postAs(
+        $answer = SocialApiWiring::blueskySessions($http->client())->actAs(
             SocialApiWiring::blueskyAccount(),
             self::CREATE_RECORD_PATH,
             ['repo' => 'did:plc:alice'],
@@ -162,7 +164,7 @@ final class BlueskySessionsTest extends TestCase
             $created,
         ]);
 
-        $answer = SocialApiWiring::blueskySessions($http, $cache)->postAs($account, self::CREATE_RECORD_PATH, []);
+        $answer = SocialApiWiring::blueskySessions($http, $cache)->actAs($account, self::CREATE_RECORD_PATH, []);
 
         self::assertTrue($answer->isSuccessful());
         $headers = $created->getRequestOptions()['headers'] ?? null;
@@ -180,14 +182,16 @@ final class BlueskySessionsTest extends TestCase
             ]),
         ]);
 
-        $answer = SocialApiWiring::blueskySessions($http->client())
-            ->postAs(SocialApiWiring::blueskyAccount(), self::CREATE_RECORD_PATH, []);
-
-        self::assertSame(Response::HTTP_UNAUTHORIZED, $answer->status);
-        self::assertCount(2, $http->requests);
+        try {
+            SocialApiWiring::blueskySessions($http->client())
+                ->actAs(SocialApiWiring::blueskyAccount(), self::CREATE_RECORD_PATH, []);
+            self::fail('A wrong credential must not read as an answer.');
+        } catch (SocialCredentialsRejectedException) {
+            self::assertCount(2, $http->requests);
+        }
     }
 
-    public function testAPostStaleAfterTheRetryIsReturnedWithoutAThirdAttempt(): void
+    public function testAPostStaleAfterTheRetryIsARefusedCredentialWithoutAThirdAttempt(): void
     {
         $stale = static fn (): MockResponse => new MockResponse('{"error":"InvalidToken"}', [
             'http_code' => Response::HTTP_BAD_REQUEST,
@@ -199,11 +203,45 @@ final class BlueskySessionsTest extends TestCase
             $stale(),
         ]);
 
-        $answer = SocialApiWiring::blueskySessions($http)
-            ->postAs(SocialApiWiring::blueskyAccount(), self::CREATE_RECORD_PATH, []);
+        try {
+            SocialApiWiring::blueskySessions($http)
+                ->actAs(SocialApiWiring::blueskyAccount(), self::CREATE_RECORD_PATH, []);
+            self::fail('A session stale after the retry must not read as an answer.');
+        } catch (SocialCredentialsRejectedException) {
+            self::assertSame(4, $http->getRequestsCount());
+        }
+    }
 
-        self::assertTrue(BlueskySessions::isStale($answer));
-        self::assertSame(4, $http->getRequestsCount());
+    /** @param class-string<\Throwable> $expected */
+    #[DataProvider('refusedActions')]
+    public function testAnActionOnAPostMapsItsRefusals(MockResponse $answer, string $expected): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::CREATE_RECORD => $answer,
+        ]);
+
+        $this->expectException($expected);
+
+        SocialApiWiring::blueskySessions($http->client())
+            ->actAs(SocialApiWiring::blueskyAccount(), self::CREATE_RECORD_PATH, []);
+    }
+
+    /** @return iterable<string, array{MockResponse, class-string<\Throwable>}> */
+    public static function refusedActions(): iterable
+    {
+        yield 'gone' => [
+            new MockResponse('{"error":"RecordNotFound"}', ['http_code' => Response::HTTP_NOT_FOUND]),
+            SocialPostNotFoundException::class,
+        ];
+        yield 'bad request' => [
+            new MockResponse('{"error":"InvalidRequest"}', ['http_code' => Response::HTTP_BAD_REQUEST]),
+            SocialPostRefusedException::class,
+        ];
+        yield 'failed' => [
+            new MockResponse('{}', ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR]),
+            SocialNetworkUnreachableException::class,
+        ];
     }
 
     #[DataProvider('refusedSessions')]

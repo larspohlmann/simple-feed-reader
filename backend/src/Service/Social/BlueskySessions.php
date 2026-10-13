@@ -11,6 +11,8 @@ use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Model\BlueskySessionModel;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -57,29 +59,23 @@ final readonly class BlueskySessions
      */
     public function askAs(SocialAccount $account, string $path): ApiResponseModel
     {
-        $url = $account->getServiceUrl() . $path;
-
-        return $this->sendRetryingStale(
-            $account,
-            static fn (array $authorization): ApiRequestModel => ApiRequestModel::get($url, $authorization),
-        );
+        return $this->sendRetryingStale($account, ApiRequestModel::get($account->getServiceUrl() . $path));
     }
 
     /**
      * @param array<string, mixed> $json
      *
+     * @throws SocialPostNotFoundException
+     * @throws SocialPostRefusedException on a 400 that is not a stale session
      * @throws SocialCredentialsRejectedException
      * @throws SocialNetworkThrottledException
-     * @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned
+     * @throws SocialNetworkUnreachableException
      */
-    public function postAs(SocialAccount $account, string $path, array $json): ApiResponseModel
+    public function actAs(SocialAccount $account, string $path, array $json): ApiResponseModel
     {
-        $url = $account->getServiceUrl() . $path;
+        $request = ApiRequestModel::postJson($account->getServiceUrl() . $path, $json);
 
-        return $this->sendRetryingStale(
-            $account,
-            static fn (array $authorization): ApiRequestModel => ApiRequestModel::postJson($url, $json, $authorization),
-        );
+        return self::actionAccepted($this->sendRetryingStale($account, $request));
     }
 
     /**
@@ -96,25 +92,35 @@ final readonly class BlueskySessions
         return BlueskyApiClient::accepted($answer);
     }
 
-    public static function isStale(ApiResponseModel $answer): bool
+    private static function actionAccepted(ApiResponseModel $answer): ApiResponseModel
+    {
+        if (Response::HTTP_NOT_FOUND === $answer->status) {
+            throw new SocialPostNotFoundException('The post is no longer on Bluesky.');
+        }
+        if (Response::HTTP_BAD_REQUEST === $answer->status && !self::isStale($answer)) {
+            throw new SocialPostRefusedException('Bluesky refused this action on the post.');
+        }
+
+        return self::accepted($answer);
+    }
+
+    private static function isStale(ApiResponseModel $answer): bool
     {
         return \in_array($answer->status, self::STALE_SESSION_STATUSES, true)
             && \in_array(JsonNodeModel::of($answer->json())->string('error'), self::STALE_SESSION_ERRORS, true);
     }
 
-    /** @param \Closure(array<string, string>): ApiRequestModel $request */
-    private function sendRetryingStale(SocialAccount $account, \Closure $request): ApiResponseModel
+    private function sendRetryingStale(SocialAccount $account, ApiRequestModel $request): ApiResponseModel
     {
-        $answer = $this->bluesky->answer($request(self::authorization($this->current($account))));
+        $answer = $this->bluesky->answer(self::authorized($request, $this->current($account)));
 
         return self::isStale($answer)
-            ? $this->bluesky->answer($request(self::authorization($this->fresh($account))))
+            ? $this->bluesky->answer(self::authorized($request, $this->fresh($account)))
             : $answer;
     }
 
-    /** @return array<string, string> */
-    private static function authorization(BlueskySessionModel $session): array
+    private static function authorized(ApiRequestModel $request, BlueskySessionModel $session): ApiRequestModel
     {
-        return ['Authorization' => 'Bearer ' . $session->accessJwt];
+        return $request->withHeaders(['Authorization' => 'Bearer ' . $session->accessJwt]);
     }
 }

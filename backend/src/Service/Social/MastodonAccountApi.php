@@ -5,14 +5,24 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
+use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\MastodonSessionModel;
+use Symfony\Component\HttpFoundation\Response;
 
-/** Calls an account's own Mastodon instance with its token; the caller reads the status, as with BlueskySessions. */
+/** Calls an account's own Mastodon instance with its token. */
 final readonly class MastodonAccountApi
 {
+    private const string OUTSIDE_SCOPES = 'outside the authorized scopes';
+    private const string READ_SCOPE = 'read';
+
     public function __construct(
         private MastodonApiClient $mastodon,
         private StoredCredential $storedCredential,
@@ -20,29 +30,73 @@ final readonly class MastodonAccountApi
     }
 
     /**
-     * @throws SocialCredentialsRejectedException when the stored token no longer opens
-     * @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned
+     * @throws SocialCredentialsRejectedException on a 401 or a 403
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
      */
     public function get(SocialAccount $account, string $path): ApiResponseModel
     {
-        $session = $this->sessionOf($account);
+        $request = ApiRequestModel::get($account->getServiceUrl() . $path);
 
-        return $this->mastodon->answer($session->get($session->url($path)));
+        return MastodonApiClient::accepted($this->answer($account, $request));
     }
 
     /**
-     * @throws SocialCredentialsRejectedException when the stored token no longer opens
-     * @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException only on a 401; a 403 concerns the post or the token's scope
+     * @throws SocialTokenScopeMissingException
+     * @throws SocialPostRefusedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
      */
-    public function post(SocialAccount $account, string $path): ApiResponseModel
+    public function askAboutPost(SocialAccount $account, string $path): ApiResponseModel
     {
-        $session = $this->sessionOf($account);
+        $request = ApiRequestModel::get($account->getServiceUrl() . $path);
 
-        return $this->mastodon->answer($session->post($session->url($path)));
+        return self::postAnswerAccepted($this->answer($account, $request), self::READ_SCOPE);
     }
 
-    private function sessionOf(SocialAccount $account): MastodonSessionModel
+    /**
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException only on a 401; a 403 concerns the post or the token's scope
+     * @throws SocialTokenScopeMissingException naming $scope
+     * @throws SocialPostRefusedException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function actOnPost(SocialAccount $account, string $path, string $scope): ApiResponseModel
     {
-        return new MastodonSessionModel($account->getServiceUrl(), $this->storedCredential->open($account));
+        $request = ApiRequestModel::post($account->getServiceUrl() . $path);
+
+        return self::postAnswerAccepted($this->answer($account, $request), $scope);
+    }
+
+    private function answer(SocialAccount $account, ApiRequestModel $request): ApiResponseModel
+    {
+        $session = new MastodonSessionModel($account->getServiceUrl(), $this->storedCredential->open($account));
+
+        return $this->mastodon->answer($session->authorized($request));
+    }
+
+    private static function postAnswerAccepted(ApiResponseModel $answer, string $scope): ApiResponseModel
+    {
+        if (Response::HTTP_NOT_FOUND === $answer->status) {
+            throw new SocialPostNotFoundException('The post is no longer on Mastodon.');
+        }
+        if (Response::HTTP_FORBIDDEN === $answer->status) {
+            throw self::isOutsideScopes($answer)
+                ? new SocialTokenScopeMissingException(
+                    'The Mastodon access token of this account lacks the permission for this action.',
+                    $scope,
+                )
+                : new SocialPostRefusedException('Mastodon refused this action on the post.');
+        }
+
+        return MastodonApiClient::accepted($answer);
+    }
+
+    private static function isOutsideScopes(ApiResponseModel $answer): bool
+    {
+        return str_contains(JsonNodeModel::of($answer->json())->string('error') ?? '', self::OUTSIDE_SCOPES);
     }
 }

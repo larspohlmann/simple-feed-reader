@@ -7,15 +7,13 @@ namespace App\Service\Social\PostLiker;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\SocialLikeResultModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\Support\BlueskyLikeUri;
 use Psr\Clock\ClockInterface;
-use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskyPostLiker implements PostLikerInterface
 {
@@ -39,7 +37,7 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
         if (null !== $post->existingLikeId) {
             return new SocialLikeResultModel($post->existingLikeId);
         }
-        $answer = $this->sessions->postAs($post->account, self::CREATE_RECORD, [
+        $answer = $this->sessions->actAs($post->account, self::CREATE_RECORD, [
             'repo' => $post->account->getIdentity(),
             'collection' => self::LIKE_COLLECTION,
             'record' => [
@@ -49,8 +47,7 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
             ],
         ]);
 
-        self::refuseIfRejected($answer);
-        $createdUri = JsonNodeModel::of(BlueskySessions::accepted($answer)->json())->string('uri');
+        $createdUri = JsonNodeModel::of($answer->json())->string('uri');
         $likeId = BlueskyLikeUri::orNull($createdUri)
             ?? throw new SocialNetworkUnreachableException('Bluesky did not name the like it created.');
 
@@ -59,23 +56,14 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
 
     public function unlike(SocialAccount $account, string $likeId): void
     {
-        $answer = $this->sessions->postAs($account, self::DELETE_RECORD, [
-            'repo' => $account->getIdentity(),
-            'collection' => self::LIKE_COLLECTION,
-            'rkey' => substr((string) strrchr($likeId, '/'), 1),
-        ]);
-        if (Response::HTTP_NOT_FOUND === $answer->status) {
+        try {
+            $this->sessions->actAs($account, self::DELETE_RECORD, [
+                'repo' => $account->getIdentity(),
+                'collection' => self::LIKE_COLLECTION,
+                'rkey' => substr((string) strrchr($likeId, '/'), 1),
+            ]);
+        } catch (SocialPostNotFoundException) {
             return;
-        }
-        self::refuseIfRejected($answer);
-        BlueskySessions::accepted($answer);
-    }
-
-    /** @throws SocialPostRefusedException on a 400 that is not a stale session */
-    private static function refuseIfRejected(ApiResponseModel $answer): void
-    {
-        if (Response::HTTP_BAD_REQUEST === $answer->status && !BlueskySessions::isStale($answer)) {
-            throw new SocialPostRefusedException('Bluesky refused this action on the post.');
         }
     }
 }
