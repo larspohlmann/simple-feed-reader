@@ -24,6 +24,12 @@ final readonly class ApiRequestModel
         return new self('GET', $url, $headers, null);
     }
 
+    /** @param array<string, string> $headers */
+    public static function post(string $url, array $headers = []): self
+    {
+        return new self('POST', $url, $headers, null);
+    }
+
     /**
      * @param array<string, mixed>  $json
      * @param array<string, string> $headers

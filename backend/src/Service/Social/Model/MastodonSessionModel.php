@@ -24,6 +24,11 @@ final readonly class MastodonSessionModel
         return ApiRequestModel::get($url, ['Authorization' => 'Bearer ' . $this->accessToken]);
     }
 
+    public function post(string $url): ApiRequestModel
+    {
+        return ApiRequestModel::post($url, ['Authorization' => 'Bearer ' . $this->accessToken]);
+    }
+
     public function host(): string
     {
         $port = parse_url($this->instanceUrl, \PHP_URL_PORT);

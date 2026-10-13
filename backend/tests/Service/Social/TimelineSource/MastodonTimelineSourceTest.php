@@ -7,17 +7,12 @@ namespace App\Tests\Service\Social\TimelineSource;
 use App\Entity\Feed;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
-use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\UrlGuard;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\MastodonApiClient;
-use App\Service\Social\StoredCredential;
 use App\Service\Social\TimelineSource\MastodonTimelineSource;
-use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
-use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\SocialApiWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -103,12 +98,7 @@ final class MastodonTimelineSourceTest extends TestCase
 
     private function source(RoutedHttpClient $http): MastodonTimelineSource
     {
-        $guard = new UrlGuard(new StaticDnsResolver(['mastodon.example' => ['93.184.216.34']]), new IpValidator());
-
-        return new MastodonTimelineSource(
-            new MastodonApiClient(FetchWiring::guardedApiClient($http->client(), $guard)),
-            new StoredCredential(SocialAccounts::cipher()),
-        );
+        return new MastodonTimelineSource(SocialApiWiring::mastodonAccountApi($http->client()));
     }
 
     private static function socialFeed(SocialFeedKind $kind, string $remoteId): SocialFeed
