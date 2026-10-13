@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\PostLiker;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostLiker\BlueskyPostLiker;
 use App\Tests\Support\RoutedHttpClient;
@@ -187,6 +189,74 @@ final class BlueskyPostLikerTest extends TestCase
         }
     }
 
+    public function testALikeBlueskyRejectsIsARefusalOfThePost(): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::CREATE_RECORD => self::failed(Response::HTTP_BAD_REQUEST, 'InvalidRequest'),
+        ]);
+
+        $this->expectException(SocialPostRefusedException::class);
+
+        $this->liker($http)->like(self::post());
+    }
+
+    public function testALikeWhoseSessionStaysStaleIsARefusedCredentialNotARefusedPost(): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::CREATE_RECORD => self::failed(Response::HTTP_BAD_REQUEST, 'ExpiredToken'),
+        ]);
+
+        $this->expectException(SocialCredentialsRejectedException::class);
+
+        $this->liker($http)->like(self::post());
+    }
+
+    #[DataProvider('likeGoneStatuses')]
+    public function testUnlikingALikeBlueskyNoLongerHasSucceeds(int $status): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::DELETE_RECORD => self::failed($status, 'InvalidRequest'),
+        ]);
+
+        $this->liker($http)->unlike(SocialApiWiring::blueskyAccount(), self::LIKE_URI);
+
+        self::assertCount(2, $http->requests);
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function likeGoneStatuses(): iterable
+    {
+        yield 'bad request' => [Response::HTTP_BAD_REQUEST];
+        yield 'not found' => [Response::HTTP_NOT_FOUND];
+    }
+
+    public function testAnUnlikeWhoseSessionStaysStaleIsARefusedCredential(): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::DELETE_RECORD => self::failed(Response::HTTP_BAD_REQUEST, 'ExpiredToken'),
+        ]);
+
+        $this->expectException(SocialCredentialsRejectedException::class);
+
+        $this->liker($http)->unlike(SocialApiWiring::blueskyAccount(), self::LIKE_URI);
+    }
+
+    public function testAnUnlikeBlueskyFailsIsAnUnreachableNetwork(): void
+    {
+        $http = new RoutedHttpClient([
+            self::SESSION => SocialApiWiring::blueskySessionAnswer('jwt-1'),
+            self::DELETE_RECORD => self::failed(Response::HTTP_INTERNAL_SERVER_ERROR, 'InternalServerError'),
+        ]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->liker($http)->unlike(SocialApiWiring::blueskyAccount(), self::LIKE_URI);
+    }
+
     private function liker(RoutedHttpClient $http): BlueskyPostLiker
     {
         return new BlueskyPostLiker(
@@ -206,6 +276,11 @@ final class BlueskyPostLikerTest extends TestCase
             'http_code' => Response::HTTP_TOO_MANY_REQUESTS,
             'response_headers' => ['Retry-After' => '60'],
         ]);
+    }
+
+    private static function failed(int $status, string $error): MockResponse
+    {
+        return new MockResponse(json_encode(['error' => $error], \JSON_THROW_ON_ERROR), ['http_code' => $status]);
     }
 
     /** @param array<mixed> $body */
