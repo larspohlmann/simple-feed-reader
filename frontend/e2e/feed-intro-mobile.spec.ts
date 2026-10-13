@@ -1,5 +1,8 @@
 import { Page, expect, test } from '@playwright/test';
+import type { SubscriptionDto } from '../src/app/reader/models';
+import { aSubscription } from '../src/testing/subscription-testing';
 import { stubAuthToken } from './support/auth';
+import { subscriptionsJson } from './support/reader';
 
 // #572: on a phone the feed intro block stacked the feed's icon on its own row
 // and pushed the title and blurb underneath it. The block's own rule is "two
@@ -23,37 +26,19 @@ const WIDE_LOGO =
 
 const DESCRIPTION = 'In-depth news, politics, business, technology & culture';
 
-function subscription(overrides: Record<string, unknown>) {
-  return {
-    subscriptions: [
-      {
-        id: 1,
-        feedId: 1,
-        title: 'Salon.com',
-        faviconUrl: null,
-        imageUrl: null,
-        description: DESCRIPTION,
-        customTitle: null,
-        feedUrl: 'https://www.salon.com/feed',
-        siteUrl: 'https://www.salon.com',
-        status: 'active',
-        sourceFormat: 'xml',
-        createdAt: '2026-01-01T00:00:00+00:00',
-        lastFetchedAt: '2026-01-01T00:00:00+00:00',
-        position: 0,
-        tags: [],
-        unreadCount: 0,
-        entryCount: 0,
-        ...overrides,
-      },
-    ],
-    favoritesCount: 0,
-    keptCount: 0,
-    viewedCount: 0,
-  };
+function subscription(overrides: Partial<SubscriptionDto>) {
+  return subscriptionsJson([
+    aSubscription({
+      title: 'Salon.com',
+      description: DESCRIPTION,
+      feedUrl: 'https://www.salon.com/feed',
+      siteUrl: 'https://www.salon.com',
+      ...overrides,
+    }),
+  ]);
 }
 
-async function openFeed(page: Page, overrides: Record<string, unknown>): Promise<void> {
+async function openFeed(page: Page, overrides: Partial<SubscriptionDto>): Promise<void> {
   await stubAuthToken(page);
   const json = (body: unknown) => (route: { fulfill: (r: { json: unknown }) => unknown }) =>
     route.fulfill({ json: body });

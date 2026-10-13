@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { stubAuthToken } from './support/auth';
-import { entryWire } from './support/reader';
+import { aSubscription } from '../src/testing/subscription-testing';
+import { entryWire, subscriptionsJson } from './support/reader';
 
 /**
  * The list heading carries a count pill beside the list's name (#709). The bar
@@ -21,23 +22,14 @@ const SHORT_NAME = 'Heise';
 const LONG_NAME = 'NDR.de - Das Beste am Norden - Radio - Fernsehen - Nachrichten - Sport - Wetter';
 
 function subscription(id: number, title: string, unreadCount: number) {
-  return {
+  return aSubscription({
     id,
     feedId: id * 10,
     title,
-    customTitle: null,
     lastFetchedAt: '2026-08-29T09:00:00Z',
-    feedUrl: `https://fixtures.invalid/${id}`,
-    siteUrl: null,
-    status: 'active',
-    sourceFormat: 'xml',
-    createdAt: '2026-08-01T00:00:00Z',
-    tags: [],
     unreadCount,
     entryCount: unreadCount,
-    includeInAllItems: true,
-    includeInForYou: true,
-  };
+  });
 }
 
 function entry(id: number) {
@@ -60,12 +52,13 @@ async function stubReader(page: Page): Promise<void> {
     const json = (body: unknown) => route.fulfill({ status: 200, json: body });
 
     if (path.endsWith('/api/subscriptions')) {
-      return json({
-        subscriptions: [subscription(1, SHORT_NAME, 123), subscription(2, LONG_NAME, 7)],
-        favoritesCount: 9,
-        keptCount: 4,
-        viewedCount: 42,
-      });
+      return json(
+        subscriptionsJson([subscription(1, SHORT_NAME, 123), subscription(2, LONG_NAME, 7)], {
+          favoritesCount: 9,
+          keptCount: 4,
+          viewedCount: 42,
+        }),
+      );
     }
     // The shell asks who is signed in and reads `roles` off the answer; an
     // empty body throws inside a computed and stops the render mid-pass, which

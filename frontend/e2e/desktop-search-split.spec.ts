@@ -1,6 +1,7 @@
 import { expect, Page, test } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
-import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
+import { aSubscription } from '../src/testing/subscription-testing';
+import { entryDetailJson, entryWire, readerFailedJson, subscriptionsJson } from './support/reader';
 
 const DESKTOP = { width: 1280, height: 800 };
 const SEARCH_TERM = 'desktop fixture';
@@ -24,30 +25,9 @@ function entry(id: number, title: string) {
 const MAGAZINE_ENTRY = entry(6070, 'Magazine fixture entry');
 const SEARCH_ENTRY = entry(6071, 'Desktop search fixture result');
 
-const SUBSCRIPTIONS = {
-  subscriptions: [
-    {
-      id: 607,
-      feedId: 607,
-      title: 'Desktop search fixture',
-      faviconUrl: null,
-      customTitle: null,
-      feedUrl: 'https://fixtures.invalid/feed.xml',
-      siteUrl: null,
-      status: 'active',
-      sourceFormat: 'xml',
-      createdAt: '2026-08-25T12:00:00+00:00',
-      lastFetchedAt: '2026-08-25T12:00:00+00:00',
-      position: 0,
-      tags: [],
-      unreadCount: 0,
-      entryCount: 0,
-    },
-  ],
-  favoritesCount: 0,
-  keptCount: 0,
-  viewedCount: 0,
-};
+const SUBSCRIPTIONS = subscriptionsJson([
+  aSubscription({ id: 607, title: 'Desktop search fixture' }),
+]);
 
 async function stubGet(page: Page, pathname: string, json: unknown): Promise<void> {
   await page.route(

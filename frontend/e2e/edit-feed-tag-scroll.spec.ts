@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { aSubscription } from '../src/testing/subscription-testing';
 import { stubAuthToken } from './support/auth';
+import { subscriptionsJson } from './support/reader';
 
 // #561/#1034: with many tags defined, the last tag pill in the edit-feed dialog
 // must be reachable on a phone.
@@ -25,30 +27,13 @@ const TAGS = Array.from({ length: TAG_COUNT }, (_, index) => ({
   position: index,
 }));
 
-const SUBSCRIPTIONS = {
-  subscriptions: [
-    {
-      id: 1,
-      feedId: 1,
-      title: 'Stub Feed',
-      faviconUrl: null,
-      customTitle: null,
-      feedUrl: 'https://example.com/feed',
-      siteUrl: 'https://example.com',
-      status: 'active',
-      sourceFormat: 'xml',
-      createdAt: '2026-01-01T00:00:00+00:00',
-      lastFetchedAt: '2026-01-01T00:00:00+00:00',
-      position: 0,
-      tags: [],
-      unreadCount: 0,
-      entryCount: 0,
-    },
-  ],
-  favoritesCount: 0,
-  keptCount: 0,
-  viewedCount: 0,
-};
+const SUBSCRIPTIONS = subscriptionsJson([
+  aSubscription({
+    title: 'Stub Feed',
+    feedUrl: 'https://example.com/feed',
+    siteUrl: 'https://example.com',
+  }),
+]);
 
 test.use({ viewport: PHONE });
 

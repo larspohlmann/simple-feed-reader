@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import { aSubscription } from '../src/testing/subscription-testing';
 import { presetLocalStorage, stubAuthToken } from './support/auth';
 import {
   entryDetailJson,
@@ -6,6 +7,7 @@ import {
   readerFailedJson,
   savedSearchesJson,
   savedSearchWire,
+  subscriptionsJson,
 } from './support/reader';
 
 const SAVED_SEARCH = savedSearchWire({
@@ -38,30 +40,11 @@ async function stubReader(page: Page): Promise<void> {
     if (path.endsWith('/me'))
       return json({ email: 'fixture@example.invalid', roles: ['ROLE_USER'] });
     if (path.endsWith('/subscriptions')) {
-      return json({
-        subscriptions: [
-          {
-            id: 1,
-            feedId: 10,
-            title: 'Fixture feed',
-            customTitle: null,
-            lastFetchedAt: '2026-08-01T12:00:00Z',
-            feedUrl: 'https://fixtures.invalid/feed',
-            siteUrl: null,
-            status: 'active',
-            sourceFormat: 'xml',
-            createdAt: '2026-08-01T12:00:00Z',
-            tags: [],
-            unreadCount: 0,
-            entryCount: 0,
-            includeInAllItems: true,
-            includeInForYou: true,
-          },
-        ],
-        favoritesCount: 0,
-        keptCount: 0,
-        viewedCount: 1,
-      });
+      return json(
+        subscriptionsJson([aSubscription({ feedId: 10, title: 'Fixture feed' })], {
+          viewedCount: 1,
+        }),
+      );
     }
     if (path.endsWith('/tags')) return json({ tags: [] });
     if (path.endsWith('/api/saved-searches')) return json(savedSearchesJson(SAVED_SEARCH));
