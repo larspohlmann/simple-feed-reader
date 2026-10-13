@@ -353,12 +353,11 @@ are left out of backups (docs/backup.md §6.2).
   An account that needs reconnecting is refused before any call; a refused credential marks it. Like and unlike share a
   per-user budget (`social_like`, 60 per 5 minutes).
 - The picker follows a Mastodon `Link` next page only on the instance's own origin, and reads at most 5000 follows.
-- A private feed's synthetic `social:` URL never reaches `UrlGuard` or the feed fetcher: only
-  the refresh's `ConcurrentPassFetcher` reads it, through its account, on the same engine run as the RSS feeds (#1608).
-  The URL names the owning account, not the network
-  identity, so two users of one network account get separate rows. Subscribing by URL refuses the scheme. OPML and
-  backups leave private feeds out, and a restore refuses a `social:` feed, entry or entry-state line, which could
-  otherwise attach another user's timeline by URL.
+- A private feed's synthetic `social:` URL never reaches `UrlGuard` or the feed fetcher: only the refresh's
+  `ConcurrentPassFetcher` reads it, through its account, on the same engine run as the RSS feeds (#1608). The URL names
+  the owning account, not the network identity, so two users of one network account get separate rows. Subscribing by
+  URL refuses the scheme. OPML and backups leave private feeds out, and a restore refuses a `social:` feed, entry or
+  entry-state line, which could otherwise attach another user's timeline by URL.
 
 ## AI provider endpoints
 
