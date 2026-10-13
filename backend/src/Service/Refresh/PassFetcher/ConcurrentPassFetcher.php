@@ -30,10 +30,11 @@ final readonly class ConcurrentPassFetcher implements PassFetcherInterface
     /** @return \Generator<int|string, FetchOutcomeModel|TimelineOutcomeModelInterface> */
     public function fetchAll(PassFeeds $feeds): \Generator
     {
-        $tickets = new PassTickets($feeds, $this->timelineRounds->start($feeds->socialFeedsByFeedId), $this->hostConcurrency);
+        $round = $this->timelineRounds->start($feeds->socialFeedsByFeedId);
+        $tickets = new PassTickets($feeds, $round, $this->hostConcurrency);
 
-        yield from $this->run($tickets, $tickets->tickets());
-        yield from $this->run($tickets, $tickets->renewalTickets());
+        yield from $this->run($tickets->tickets(), $tickets);
+        yield from $this->run($round->startRenewalWave(), $tickets);
     }
 
     /**
@@ -41,7 +42,7 @@ final readonly class ConcurrentPassFetcher implements PassFetcherInterface
      *
      * @return \Generator<int|string, FetchOutcomeModel|TimelineOutcomeModelInterface>
      */
-    private function run(PassTickets $tickets, iterable $requests): \Generator
+    private function run(iterable $requests, PassTickets $tickets): \Generator
     {
         foreach ($this->engine->sendAll($requests, $tickets) as $feedId => $outcome) {
             yield from $tickets->drainUnasked();

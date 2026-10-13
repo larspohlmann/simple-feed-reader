@@ -40,12 +40,6 @@ final readonly class PassTickets implements DispatchGateInterface
         }
     }
 
-    /** @return \Generator<int|string, RequestTicketModel> */
-    public function renewalTickets(): \Generator
-    {
-        return $this->round->startRenewalWave();
-    }
-
     public function admits(int|string $key): bool
     {
         return !$this->feeds->isPrivate($key) || $this->round->admits($key);
