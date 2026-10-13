@@ -295,8 +295,8 @@ describe('planMagazine', () => {
       ...many(8, (index) =>
         big(100 + index, {
           subscriptionId: 1,
-          source: 'Home@bsky',
-          poster: { name: `Poster ${index}`, url: null, imageUrl: null },
+          source: '@alice.bsky.social',
+          poster: { name: `Reposted ${index}`, url: null, imageUrl: null },
         }),
       ),
       ...many(30, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
@@ -305,7 +305,40 @@ describe('planMagazine', () => {
       (block) => block.kind === 'group',
     );
 
-    expect(group!.kind === 'group' && group!.source).toBe('Home@bsky');
+    expect(group!.kind === 'group' && group!.source).toBe('@alice.bsky.social');
+  });
+
+  describe('an aggregated feed (home timeline, list, custom feed)', () => {
+    const HOME = 1;
+    const withRunOf = (subscriptionId: number): EntryDto[] => [
+      ...many(30, (index) => big(index, { subscriptionId: (index % 6) + 2 })),
+      ...many(8, (index) => big(100 + index, { subscriptionId })),
+      ...many(30, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
+    ];
+
+    it('never collapses into a group widget', () => {
+      const blocks = planMagazine({
+        entries: withRunOf(HOME),
+        grouping: true,
+        complete: true,
+        aggregatedSources: new Set([HOME]),
+      });
+
+      expect(kinds(blocks)).not.toContain('group');
+      expect(entryCount(blocks)).toBe(68);
+    });
+
+    it('leaves a profile feed run to collapse as before', () => {
+      const PROFILE = 9;
+      const blocks = planMagazine({
+        entries: withRunOf(PROFILE),
+        grouping: true,
+        complete: true,
+        aggregatedSources: new Set([HOME]),
+      });
+
+      expect(kinds(blocks)).toContain('group');
+    });
   });
 
   it('collapses a qualifying run into a featured lead plus a tail-owning widget', () => {

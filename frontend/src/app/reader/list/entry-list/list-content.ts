@@ -13,6 +13,8 @@ import { planMagazine } from '../magazine/magazine-planner';
 import { REVEAL_STEP, isAppendedPage } from '../paging';
 import { EntryDto } from '../../models';
 import { Selection, isSingleStreamView } from '../../query/query';
+import { isPrivateFeed } from '../../state/social-sections';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { blocksWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
 
 export interface ListContentOptions {
@@ -28,6 +30,17 @@ export interface ListContentOptions {
  *  initializer, so its effects are created there. */
 export class ListContent {
   private readonly zone = inject(NgZone);
+  private readonly subscriptions = inject(SubscriptionsStore);
+
+  private readonly aggregatedSources = computed<ReadonlySet<number>>(
+    () =>
+      new Set(
+        this.subscriptions
+          .subscriptions()
+          .filter(isPrivateFeed)
+          .map(({ id }) => id),
+      ),
+  );
 
   /** How many of `entries()` are rendered. Trails the list while an appended
    *  page is revealed a step per frame (#501); equals the length otherwise. */
@@ -59,11 +72,12 @@ export class ListContent {
     // single-stream view (a feed, or the for-you list) must not.
     const grouping = !isSingleStreamView(this.options.selection());
     const complete = !this.options.hasMore() && this.fullyRevealed();
+    const aggregatedSources = this.aggregatedSources();
 
     // Fast path: no dividers (every non-for-you view, and a for-you list showing
     // only the newest run). Plan the whole list at once — identical to before.
     if (!groups.some((group) => this.showRunHeader(group))) {
-      return planMagazine({ entries: this.rendered(), grouping, complete });
+      return planMagazine({ entries: this.rendered(), grouping, complete, aggregatedSources });
     }
 
     const out: ListBlock[] = [];
@@ -74,7 +88,14 @@ export class ListContent {
       // Only the last loaded group may still grow on the next page; every earlier
       // group is provably complete (a different run follows it).
       const groupComplete = index === groups.length - 1 ? complete : true;
-      out.push(...planMagazine({ entries: group.entries, grouping, complete: groupComplete }));
+      out.push(
+        ...planMagazine({
+          entries: group.entries,
+          grouping,
+          complete: groupComplete,
+          aggregatedSources,
+        }),
+      );
     });
     return out;
   });

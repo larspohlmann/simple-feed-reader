@@ -2058,6 +2058,23 @@ describe('EntryListComponent', () => {
       ).toBe(true);
     });
 
+    it('never collapses the run of a home timeline, which carries many people', () => {
+      subscriptionsStore.subscriptions.set([
+        {
+          id: 1,
+          social: { network: 'bluesky', kind: 'home', accountId: 4 },
+        } as SubscriptionDto,
+      ]);
+      const fixture = mount({
+        entries: run,
+        selection: { kind: 'all', id: null, unread: false },
+        layout: 'magazine',
+      });
+      expect(
+        fixture.componentInstance.content.blocks().some((block) => block.kind === 'group'),
+      ).toBe(false);
+    });
+
     it('never collapses the for-you list', () => {
       const fixture = mount({
         entries: run,
