@@ -36,7 +36,6 @@ final readonly class MastodonPostLiker implements PostLikerInterface
         try {
             $this->actOnStatus($account, self::statusAction($likeId, 'unfavourite'));
         } catch (SocialPostNotFoundException) {
-            return;
         }
     }
 

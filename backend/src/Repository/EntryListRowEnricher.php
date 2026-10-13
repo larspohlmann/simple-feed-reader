@@ -115,7 +115,7 @@ final readonly class EntryListRowEnricher
     /**
      * @param array<int, Entry> $entries
      *
-     * @return array<int, SocialNetwork> by feed id, only for the feeds on a network
+     * @return array<int, SocialNetwork|null> by feed id
      */
     private static function feedNetworksOf(array $entries): array
     {
@@ -125,7 +125,7 @@ final readonly class EntryListRowEnricher
             $feeds[$feed->requireId()] = $feed;
         }
 
-        return array_filter(array_map(SocialFeedClassifier::networkOf(...), $feeds));
+        return array_map(SocialFeedClassifier::networkOf(...), $feeds);
     }
 
     /**

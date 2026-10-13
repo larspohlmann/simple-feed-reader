@@ -66,7 +66,6 @@ final readonly class BlueskyPostLiker implements PostLikerInterface
                 'rkey' => $recordKey,
             ]);
         } catch (SocialPostNotFoundException) {
-            return;
         }
     }
 }

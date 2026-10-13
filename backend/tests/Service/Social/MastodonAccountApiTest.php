@@ -177,6 +177,11 @@ final class MastodonAccountApiTest extends TestCase
         try {
             $call();
         } catch (SocialTokenScopeMissingException $exception) {
+            self::assertSame(
+                'The Mastodon access token of this account lacks the permission for this action.',
+                $exception->getMessage(),
+            );
+
             return $exception->missingScope;
         }
         self::fail('The call must name the scope it lacked.');
