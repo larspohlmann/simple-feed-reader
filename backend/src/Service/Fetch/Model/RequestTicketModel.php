@@ -7,19 +7,20 @@ namespace App\Service\Fetch\Model;
 /** One request the concurrent engine sends: what goes on the wire, which exchange reads the answer, what it holds. */
 final readonly class RequestTicketModel
 {
+    public ResponseExchangeKind $exchange;
+
     /** @param non-empty-list<RequestSlotModel> $slots */
     private function __construct(
-        public ResponseExchangeKind $exchange,
         public ApiRequestModel $request,
         public array $slots,
         private ?FetchTicketModel $feedTicket,
     ) {
+        $this->exchange = null === $feedTicket ? ResponseExchangeKind::Api : ResponseExchangeKind::Feed;
     }
 
     public static function feed(FetchTicketModel $ticket, int $hostCapacity): self
     {
         return new self(
-            ResponseExchangeKind::Feed,
             ApiRequestModel::get($ticket->url, self::validatorHeaders($ticket)),
             [RequestSlotModel::perHost($hostCapacity)],
             $ticket,
@@ -39,7 +40,7 @@ final readonly class RequestTicketModel
             throw new \InvalidArgumentException('An API ticket must name at least one slot.');
         }
 
-        return new self(ResponseExchangeKind::Api, $request, $slots, null);
+        return new self($request, $slots, null);
     }
 
     public function feedTicket(): FetchTicketModel
