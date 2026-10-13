@@ -19,11 +19,6 @@ select {
   height: var(--control-h);
 }
 
-input[type='checkbox'],
-input[type='radio'] {
-  accent-color: var(--accent);
-}
-
 textarea {
   padding: var(--space-2) var(--space-3);
   line-height: var(--lh-normal);

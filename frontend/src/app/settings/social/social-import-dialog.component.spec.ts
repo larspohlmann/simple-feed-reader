@@ -45,6 +45,12 @@ const DAVE = follow({
   subscriptionId: 10,
 });
 
+function manyFollows(count: number): FollowCandidate[] {
+  return Array.from({ length: count }, (_, index) =>
+    follow({ identity: `did:plc:${index}`, feedUrl: `https://bsky.app/${index}/rss` }),
+  );
+}
+
 function collection(overrides: Partial<CollectionCandidate> = {}): CollectionCandidate {
   return {
     kind: 'list',
@@ -441,10 +447,7 @@ describe('SocialImportDialogComponent', () => {
   });
 
   it('renders long lists a hundred rows at a time', () => {
-    const many = Array.from({ length: 250 }, (_, index) =>
-      follow({ identity: `did:plc:${index}`, feedUrl: `https://bsky.app/${index}/rss` }),
-    );
-    const fixture = loaded(candidates({ follows: many }));
+    const fixture = loaded(candidates({ follows: manyFollows(250) }));
     const rowCount = () =>
       byTestId(fixture, 'social-import-follows')?.querySelectorAll('li').length ?? 0;
     const showMore = () =>
@@ -463,10 +466,7 @@ describe('SocialImportDialogComponent', () => {
   });
 
   it('selects the new rows that are not rendered yet with Select all new', () => {
-    const many = Array.from({ length: 150 }, (_, index) =>
-      follow({ identity: `did:plc:${index}`, feedUrl: `https://bsky.app/${index}/rss` }),
-    );
-    const fixture = loaded(candidates({ follows: many }));
+    const fixture = loaded(candidates({ follows: manyFollows(150) }));
 
     press(fixture, 'social-import-select-new');
     expect(

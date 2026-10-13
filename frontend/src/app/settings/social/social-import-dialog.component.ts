@@ -49,7 +49,6 @@ export interface SocialImportDialogData {
   readonly handle: string;
 }
 
-/** Rows rendered per step: a 5,000-follow account would otherwise build every row at once (#1626). */
 const ROWS_PER_PAGE = 100;
 
 const BADGE_CLASSES: Readonly<Record<ImportCandidateState, string>> = {
@@ -104,12 +103,9 @@ export class SocialImportDialogComponent {
     this.activeLang();
     return buildRows(this.importer.candidates(), (key, params) => this.i18n.translate(key, params));
   });
+  private readonly needle = computed(() => this.filter().trim().toLowerCase());
   private readonly tally = computed(() =>
-    tally(this.rows(), {
-      tabs: this.tabs,
-      current: this.tab(),
-      needle: this.filter().trim().toLowerCase(),
-    }),
+    tally(this.rows(), { tabs: this.tabs, current: this.tab(), needle: this.needle() }),
   );
 
   protected readonly tabCounts = computed(() => this.tally().tabCounts);
@@ -128,22 +124,15 @@ export class SocialImportDialogComponent {
     return filter === 'all' ? matched : matched.filter((row) => row.state === filter);
   });
   private readonly rowLimit = linkedSignal({
-    source: this.visibleRows,
+    source: () => [this.tab(), this.activeFilter(), this.needle()],
     computation: () => ROWS_PER_PAGE,
   });
   protected readonly renderedRows = computed(() => this.visibleRows().slice(0, this.rowLimit()));
   protected readonly nextPageSize = computed(() =>
     Math.min(ROWS_PER_PAGE, this.visibleRows().length - this.rowLimit()),
   );
-  private readonly visibleNewKeys = computed(() =>
-    this.visibleRows()
-      .filter((row) => row.state === 'new')
-      .map((row) => row.key),
-  );
-  protected readonly visibleNewCount = computed(() => this.visibleNewKeys().length);
-  protected readonly hasLeftovers = computed(() =>
-    this.visibleRows().some((row) => row.state === 'no_longer_followed'),
-  );
+  protected readonly visibleNewCount = computed(() => this.visibleCount('new'));
+  protected readonly hasLeftovers = computed(() => this.visibleCount('no_longer_followed') > 0);
 
   constructor() {
     this.load();
@@ -159,7 +148,10 @@ export class SocialImportDialogComponent {
   }
 
   protected selectAllNew(): void {
-    this.chosen.update((current) => new Set([...current, ...this.visibleNewKeys()]));
+    const newKeys = this.visibleRows()
+      .filter((row) => row.state === 'new')
+      .map((row) => row.key);
+    this.chosen.update((current) => new Set([...current, ...newKeys]));
   }
 
   protected showMore(): void {
@@ -181,6 +173,11 @@ export class SocialImportDialogComponent {
 
   protected cancel(): void {
     this.dialogRef.close(undefined);
+  }
+
+  private visibleCount(state: ImportCandidateState): number {
+    const filter = this.activeFilter();
+    return filter === 'all' || filter === state ? this.stateCounts()[state] : 0;
   }
 
   private finish(result: SocialImportResult): void {

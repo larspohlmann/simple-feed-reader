@@ -1779,9 +1779,9 @@ checkboxes, radios and colour swatches, none of which have a border to tint, wit
 no visible keyboard focus at all. That is a WCAG 2.4.7 failure, not a cosmetic
 one.
 
-**`_controls.scss` tints every checkbox and radio with `accent-color: var(--accent)`
-(#1624).** The user agent still paints them, but in the theme accent rather than
-the browser's blue, so no component sets its own.
+**`accent-color: var(--accent)` is set once on `:root` (#1624).** It is inherited,
+so every native checkbox, radio, range and progress takes the theme accent; no
+component sets its own.
 
 **`entry-list`'s `- 44px` and `reader-header`'s `top: 44px` are positioning
 offsets that coincidentally share the `--tap-target` number.** The first is how

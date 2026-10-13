@@ -77,12 +77,10 @@
               @if (expanded() === c.url) {
                 <div [id]="'preview-' + $index">
                   @if (state?.status === 'loading') {
-                    <div class="preview-rows">
-                      <app-skeleton
-                        [label]="'dialog.addFeed.loadingPreview' | transloco"
-                        [rows]="3"
-                      />
-                    </div>
+                    <app-skeleton
+                      [label]="'dialog.addFeed.loadingPreview' | transloco"
+                      [rows]="3"
+                    />
                   } @else if (state?.status === 'error') {
                     <p class="muted">{{ errorMessage(state) }}</p>
                   } @else if (p) {
