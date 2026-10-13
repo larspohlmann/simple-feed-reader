@@ -7,7 +7,8 @@ namespace App\Tests\Service\Social;
 use App\Entity\Feed;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
-use App\Service\Fetch\Model\RequestTicketModel;
+use App\Service\Social\Model\SocialAccountSlotModel;
+use App\Service\Social\Model\SocialServerSlotModel;
 use App\Service\Social\TimelineRounds;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\SocialAccounts;
@@ -35,9 +36,9 @@ final class TimelineRoundsTest extends TestCase
 
         $tickets = iterator_to_array($rounds->start([1 => $socialFeed])->ticketFor(1));
 
-        self::assertSame(
-            ['slot:social-account:7' => 3, 'slot:social-host:mastodon.example' => 4],
-            self::capacitiesByKey($tickets[1]),
+        self::assertEquals(
+            [new SocialAccountSlotModel(7, 3), new SocialServerSlotModel(self::HOME, 4)],
+            $tickets[1]->slots,
         );
     }
 
@@ -55,16 +56,5 @@ final class TimelineRoundsTest extends TestCase
         $this->expectExceptionMessage('Per-server concurrency must be at least 1, got 0.');
 
         new TimelineRounds(SocialApiWiring::timelineSources(new MockHttpClient(), new ArrayAdapter()), 3, 0);
-    }
-
-    /** @return array<string, int> */
-    private static function capacitiesByKey(RequestTicketModel $ticket): array
-    {
-        $capacities = [];
-        foreach ($ticket->slots as $slot) {
-            $capacities[$slot->keyFor(self::HOME)] = $slot->capacity;
-        }
-
-        return $capacities;
     }
 }

@@ -13,7 +13,6 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\Model\RequestSlotModel;
 use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\ResponseClassifier;
@@ -21,6 +20,7 @@ use App\Service\Fetch\ResponseExchange\FeedResponseExchange;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FeedTickets;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\FixedKeySlot;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
@@ -61,7 +61,7 @@ final class ConcurrentRequestEngineTest extends TestCase
     ): RequestTicketModel {
         return RequestTicketModel::api(
             ApiRequestModel::get($url, ['Authorization' => 'Bearer jwt-1']),
-            [RequestSlotModel::named($slotName, $capacity)],
+            [new FixedKeySlot($slotName, $capacity)],
         );
     }
 
@@ -228,7 +228,7 @@ final class ConcurrentRequestEngineTest extends TestCase
             ['identifier' => 'did:plc:alice'],
             ['Authorization' => 'Bearer jwt-1'],
         );
-        $ticket = RequestTicketModel::api($request, [RequestSlotModel::named('account-1', 3)]);
+        $ticket = RequestTicketModel::api($request, [new FixedKeySlot('account-1', 3)]);
 
         self::assertNull(self::collect($this->engine($http->client())->sendAll([1 => $ticket]))[1]->failure());
 
@@ -256,7 +256,7 @@ final class ConcurrentRequestEngineTest extends TestCase
             'User-Agent' => 'Spoofed/1.0',
             'Accept' => 'text/html',
             'Authorization' => 'Bearer jwt-1',
-        ]), [RequestSlotModel::named('account-1', 3)]);
+        ]), [new FixedKeySlot('account-1', 3)]);
 
         self::assertNull(self::collect($this->engine($http->client())->sendAll([1 => $ticket]))[1]->failure());
 
@@ -311,7 +311,7 @@ final class ConcurrentRequestEngineTest extends TestCase
         });
         $onTheSharedServer = static fn (string $account): RequestTicketModel => RequestTicketModel::api(
             ApiRequestModel::get(self::API),
-            [RequestSlotModel::named($account, 3), RequestSlotModel::named('server', 1)],
+            [new FixedKeySlot($account, 3), new FixedKeySlot('server', 1)],
         );
 
         $outcomes = self::collect($this->engine($client)->sendAll([

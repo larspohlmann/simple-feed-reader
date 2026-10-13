@@ -10,12 +10,14 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\RequestTicketModel;
+use App\Service\Fetch\Model\RequestSlot\HostSlotModel;
 use App\Service\Fetch\Model\ResponseExchangeKind;
 use App\Service\Refresh\Pass\PassFeeds;
 use App\Service\Refresh\Pass\PassTickets;
 use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Social\Exception\PrivateFeedOrphanedException;
+use App\Service\Social\Model\SocialAccountSlotModel;
+use App\Service\Social\Model\SocialServerSlotModel;
 use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
 use App\Tests\Support\AssignsEntityIds;
@@ -47,7 +49,7 @@ final class PassTicketsTest extends TestCase
             ['If-None-Match' => '"v1"', 'If-Modified-Since' => 'Mon, 20 Jul 2026 08:30:00 GMT'],
             $tickets[1]->request->headers,
         );
-        self::assertSame(['host:news.example' => 2], self::capacitiesByKey($tickets[1], $rss->getUrl()));
+        self::assertEquals([new HostSlotModel(2)], $tickets[1]->slots);
     }
 
     public function testAPrivateFeedBecomesItsTimelineTicketOnItsAccountAndServer(): void
@@ -57,9 +59,9 @@ final class PassTicketsTest extends TestCase
         $tickets = iterator_to_array($this->passTickets([$timeline->getFeed()], [$timeline])->tickets());
 
         self::assertSame(ResponseExchangeKind::Api, $tickets[2]->exchange);
-        self::assertSame(
-            ['slot:social-account:7' => 3, 'slot:social-host:mastodon.example' => 4],
-            self::capacitiesByKey($tickets[2], self::HOME),
+        self::assertEquals(
+            [new SocialAccountSlotModel(7, 3), new SocialServerSlotModel(self::HOME, 4)],
+            $tickets[2]->slots,
         );
     }
 
@@ -185,16 +187,5 @@ final class PassTicketsTest extends TestCase
         $feed->setSourceFormat(SourceFormat::MASTODON_API);
 
         return new SocialFeed($account, $feed, $kind, $remoteId);
-    }
-
-    /** @return array<string, int> */
-    private static function capacitiesByKey(RequestTicketModel $ticket, string $url): array
-    {
-        $capacities = [];
-        foreach ($ticket->slots as $slot) {
-            $capacities[$slot->keyFor($url)] = $slot->capacity;
-        }
-
-        return $capacities;
     }
 }
