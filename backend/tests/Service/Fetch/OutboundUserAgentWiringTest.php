@@ -6,6 +6,7 @@ namespace App\Tests\Service\Fetch;
 
 use App\Service\Catalog\CatalogUrlChecker;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
+use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Reader\PageLanding;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -27,7 +28,6 @@ final class OutboundUserAgentWiringTest extends KernelTestCase
      */
     public static function outboundServices(): iterable
     {
-        yield 'feed fetcher' => [ConcurrentFeedFetcher::class, 'userAgent'];
         yield 'reader page landing' => [PageLanding::class, 'userAgent'];
         yield 'catalog rot check' => [CatalogUrlChecker::class, 'userAgent'];
     }
@@ -62,5 +62,19 @@ final class OutboundUserAgentWiringTest extends KernelTestCase
         $injected = (new \ReflectionProperty($serviceClass, $propertyName))->getValue($service);
 
         self::assertSame($container->getParameter('outbound_user_agent'), $injected);
+    }
+
+    public function testTheRequestEngineBehindTheFeedFetcherSendsTheConfiguredAgent(): void
+    {
+        self::bootKernel();
+        $container = self::getContainer();
+        $fetcher = $container->get(ConcurrentFeedFetcher::class);
+        $engine = (new \ReflectionProperty(ConcurrentFeedFetcher::class, 'engine'))->getValue($fetcher);
+        self::assertInstanceOf(ConcurrentRequestEngine::class, $engine);
+
+        self::assertSame(
+            $container->getParameter('outbound_user_agent'),
+            (new \ReflectionProperty(ConcurrentRequestEngine::class, 'userAgent'))->getValue($engine),
+        );
     }
 }

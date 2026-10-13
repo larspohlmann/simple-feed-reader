@@ -27,7 +27,7 @@ use App\Service\Retention\EntryPruner;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
-use App\Service\Social\TimelineReader\TimelineReaderInterface;
+use App\Service\Social\TimelineFetcher\TimelineFetcherInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
@@ -50,7 +50,7 @@ final readonly class RefreshRunners
         private ContentChangeMarkerInterface $changeMarker,
         private SearchIndexWriterInterface $indexWriter,
         private LoggerInterface $logger,
-        private TimelineReaderInterface $timelines,
+        private TimelineFetcherInterface $timelines,
     ) {
     }
 
@@ -68,7 +68,7 @@ final readonly class RefreshRunners
             new RecordingContentChangeMarker(),
             new RecordingSearchIndexWriter(),
             new NullLogger(),
-            new StubTimelineReader(),
+            new StubTimelineFetcher(),
         );
     }
 
@@ -148,7 +148,7 @@ final readonly class RefreshRunners
         );
     }
 
-    public function readingTimelinesFrom(TimelineReaderInterface $timelines): self
+    public function readingTimelinesFrom(TimelineFetcherInterface $timelines): self
     {
         return new self(
             $this->entityManager,

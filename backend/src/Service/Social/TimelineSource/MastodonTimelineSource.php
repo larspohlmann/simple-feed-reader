@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Service\Social\TimelineSource;
 
+use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Fetch\Model\ApiRequestModel;
+use App\Service\Fetch\Model\ApiResponseModel;
+use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\MastodonAccountApi;
+use App\Service\Social\MastodonApiClient;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\MastodonTimelinePage;
 use App\Service\Social\Support\PrivateFeedRules;
@@ -27,10 +32,23 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
         return SocialNetwork::Mastodon->value;
     }
 
-    public function page(SocialFeed $socialFeed): TimelinePageModel
+    public function request(SocialFeed $socialFeed): ApiRequestModel
     {
-        $answer = $this->mastodon->get($socialFeed->getSocialAccount(), self::pathOf($socialFeed));
-        $statuses = JsonNodeModel::listOf(json_decode($answer->body, true))
+        return $this->mastodon->authorizedGet($socialFeed->getSocialAccount(), self::pathOf($socialFeed));
+    }
+
+    public function pageOf(SocialFeed $socialFeed, FetchOutcomeModel $outcome): TimelinePageModel
+    {
+        return self::pageFrom(MastodonApiClient::accepted(MastodonApiClient::answerOf($outcome)));
+    }
+
+    public function dropSession(SocialAccount $account): void
+    {
+    }
+
+    private static function pageFrom(ApiResponseModel $accepted): TimelinePageModel
+    {
+        $statuses = JsonNodeModel::listOf(json_decode($accepted->body, true))
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance answered without a timeline.');
 
         return MastodonTimelinePage::of($statuses);

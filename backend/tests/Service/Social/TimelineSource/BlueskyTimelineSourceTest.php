@@ -9,7 +9,10 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Service\Crypto\InstanceSecretCipher;
+use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Model\ApiResponseModel;
+use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessionCache;
@@ -19,7 +22,9 @@ use App\Service\Social\Crypto\BlueskySessionCipher;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialSessionStaleException;
 use App\Service\Social\Model\BlueskySessionModel;
+use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\StoredCredential;
 use App\Service\Social\TimelineSource\BlueskyTimelineSource;
 use App\Tests\Support\AssignsEntityIds;
@@ -55,26 +60,6 @@ final class BlueskyTimelineSourceTest extends TestCase
         self::assignId($this->account, 3);
     }
 
-    public function testTheHomeTimelineIsReadWithTheSessionsToken(): void
-    {
-        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1'), self::TIMELINE => self::timeline()]);
-
-        $page = $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
-
-        self::assertCount(1, $page->parsed->entries);
-        self::assertContains('Authorization: Bearer jwt-1', $http->requests[1]['headers']);
-    }
-
-    #[DataProvider('collections')]
-    public function testAListOrCustomFeedIsReadByItsUri(SocialFeedKind $kind, string $uri, string $route): void
-    {
-        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1'), $route => self::timeline()]);
-
-        $page = $this->source($http->client())->page($this->socialFeed($kind, $uri));
-
-        self::assertCount(1, $page->parsed->entries);
-    }
-
     /** @return iterable<string, array{SocialFeedKind, string, string}> */
     public static function collections(): iterable
     {
@@ -92,147 +77,143 @@ final class BlueskyTimelineSourceTest extends TestCase
         ];
     }
 
-    public function testASecondPollOpensNoSecondSession(): void
-    {
-        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1'), self::TIMELINE => self::timeline()]);
-        $source = $this->source($http->client());
-
-        $source->page($this->socialFeed(SocialFeedKind::Home, ''));
-        $source->page($this->socialFeed(SocialFeedKind::Home, ''));
-
-        $sessionOpenings = array_filter(
-            $http->requests,
-            static fn (array $request): bool => 'POST' === $request['method'],
-        );
-        self::assertCount(1, $sessionOpenings);
-    }
-
-    public function testAnExpiredCachedSessionIsReplacedOnceAndThePollSucceeds(): void
-    {
-        $this->sessionCache()->remember(
-            $this->account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
-        );
-        $sessionAnswer = self::session('jwt-2');
-        $timelineAnswer = self::timeline();
-        $http = new MockHttpClient([
-            self::json(['error' => 'ExpiredToken', 'message' => 'Token has expired'], Response::HTTP_BAD_REQUEST),
-            $sessionAnswer,
-            $timelineAnswer,
-        ]);
-
-        $page = $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, ''));
-
-        self::assertCount(1, $page->parsed->entries);
-        self::assertSame('POST', $sessionAnswer->getRequestMethod());
-        $headers = $timelineAnswer->getRequestOptions()['headers'] ?? null;
-        self::assertIsArray($headers);
-        self::assertContains('Authorization: Bearer jwt-2', $headers);
-        self::assertSame(3, $http->getRequestsCount());
-    }
-
-    public function testATokenRefusedAgainAfterAFreshSessionIsARefusedCredential(): void
-    {
-        $this->sessionCache()->remember(
-            $this->account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
-        );
-        $http = new MockHttpClient([
-            self::json(['error' => 'InvalidToken'], Response::HTTP_UNAUTHORIZED),
-            self::session('jwt-2'),
-            self::json(['error' => 'InvalidToken'], Response::HTTP_UNAUTHORIZED),
-        ]);
-
-        $this->expectException(SocialCredentialsRejectedException::class);
-
-        $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, ''));
-    }
-
-    public function testACachedSessionRefusedAsUnauthenticatedIsARefusedCredentialWithoutANewSession(): void
-    {
-        $this->sessionCache()->remember(
-            $this->account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
-        );
-        $http = new RoutedHttpClient([
-            self::TIMELINE => self::json(['error' => 'AuthenticationRequired'], Response::HTTP_UNAUTHORIZED),
-        ]);
-
-        try {
-            $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
-            self::fail('A refused token must not read as a page.');
-        } catch (SocialCredentialsRejectedException) {
-            self::assertSame(['GET'], array_column($http->requests, 'method'));
-        }
-    }
-
-    public function testASecondExpiredTokenAfterAFreshSessionIsARefusedCredential(): void
-    {
-        $this->sessionCache()->remember(
-            $this->account,
-            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
-        );
-        $expired = ['error' => 'ExpiredToken'];
-        $http = new MockHttpClient([
-            self::json($expired, Response::HTTP_BAD_REQUEST),
-            self::session('jwt-2'),
-            self::json($expired, Response::HTTP_BAD_REQUEST),
-        ]);
-
-        $this->expectException(SocialCredentialsRejectedException::class);
-
-        $this->source($http)->page($this->socialFeed(SocialFeedKind::Home, ''));
-    }
-
-    public function testACachedSessionsTokenGoesOnlyToTheAccountsOwnService(): void
+    public function testARequestCarriesTheSessionsTokenToTheAccountsOwnServiceOnly(): void
     {
         $this->sessionCache()->remember(
             $this->account,
             new BlueskySessionModel('cached-jwt', 'alice.bsky.social'),
         );
         $this->rewriteCachedEntry(['pdsUrl' => 'https://elsewhere.example.test']);
-        $http = new RoutedHttpClient([self::TIMELINE => self::timeline()]);
+        $http = new RoutedHttpClient([]);
 
-        $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
+        $request = $this->source($http->client())->request($this->socialFeed(SocialFeedKind::Home, ''));
 
-        self::assertSame([self::PDS . '/xrpc/app.bsky.feed.getTimeline?limit=50'], $http->requestedUrls());
+        self::assertSame(self::TIMELINE, $request->method . ' ' . $request->url);
+        self::assertSame('Bearer cached-jwt', $request->headers['Authorization'] ?? null);
+        self::assertSame([], $http->requests);
     }
 
-    public function testTooManyRequestsIsAThrottleCarryingItsDelay(): void
+    #[DataProvider('collections')]
+    public function testAListOrCustomFeedIsRequestedByItsUri(SocialFeedKind $kind, string $uri, string $route): void
     {
-        $http = new RoutedHttpClient([
-            self::SESSION => self::session('jwt-1'),
-            self::TIMELINE => self::json(
-                ['error' => 'RateLimitExceeded'],
-                Response::HTTP_TOO_MANY_REQUESTS,
-                ['Retry-After' => '120'],
-            ),
-        ]);
+        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
+
+        $request = $this->source($http->client())->request($this->socialFeed($kind, $uri));
+
+        self::assertSame($route, $request->method . ' ' . $request->url);
+    }
+
+    public function testRequestsForSeveralFeedsOpenOneSession(): void
+    {
+        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
+        $source = $this->source($http->client());
+
+        $source->request($this->socialFeed(SocialFeedKind::Home, ''));
+        $source->request($this->socialFeed(SocialFeedKind::UserList, self::LIST));
+
+        self::assertSame(['POST'], array_column($http->requests, 'method'));
+    }
+
+    public function testADroppedSessionIsOpenedAfreshByTheNextRequest(): void
+    {
+        $this->sessionCache()->remember(
+            $this->account,
+            new BlueskySessionModel('stale-jwt', 'alice.bsky.social'),
+        );
+        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-2')]);
+        $source = $this->source($http->client());
+
+        $source->dropSession($this->account);
+        $request = $source->request($this->socialFeed(SocialFeedKind::Home, ''));
+
+        self::assertSame('Bearer jwt-2', $request->headers['Authorization'] ?? null);
+        self::assertCount(1, $http->requests);
+    }
+
+    public function testAnAnswerMapsToThePage(): void
+    {
+        self::assertCount(1, $this->pageOf(self::answer(self::timelineBody()))->parsed->entries);
+    }
+
+    /** @return iterable<string, array{int, string}> */
+    public static function staleSessions(): iterable
+    {
+        yield 'expired' => [Response::HTTP_BAD_REQUEST, 'ExpiredToken'];
+        yield 'invalid' => [Response::HTTP_UNAUTHORIZED, 'InvalidToken'];
+    }
+
+    #[DataProvider('staleSessions')]
+    public function testAStaleSessionAsksForAFreshOne(int $status, string $error): void
+    {
+        $this->expectException(SocialSessionStaleException::class);
+        $this->expectExceptionMessage('Bluesky refused the session of this account.');
+
+        $this->pageOf(self::answer(['error' => $error], $status));
+    }
+
+    public function testAnUnauthenticatedAnswerIsARefusedCredential(): void
+    {
+        $this->expectException(SocialCredentialsRejectedException::class);
+
+        $this->pageOf(self::answer(['error' => 'AuthenticationRequired'], Response::HTTP_UNAUTHORIZED));
+    }
+
+    public function testATooManyRequestsAnswerIsAThrottleCarryingItsDelay(): void
+    {
+        $answer = self::answer(['error' => 'RateLimitExceeded'], Response::HTTP_TOO_MANY_REQUESTS, ['120']);
 
         try {
-            $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
+            $this->pageOf($answer);
             self::fail('A 429 must not read as a page.');
         } catch (SocialNetworkThrottledException $exception) {
             self::assertSame(120, $exception->retryAfterSeconds);
         }
     }
 
-    #[DataProvider('unusableAnswers')]
-    public function testAnUnusableAnswerIsAnUnreachableNetwork(MockResponse $answer): void
+    public function testNoAnswerIsAnUnreachableBluesky(): void
     {
-        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1'), self::TIMELINE => $answer]);
-
         $this->expectException(SocialNetworkUnreachableException::class);
+        $this->expectExceptionMessage('Bluesky could not be reached.');
 
-        $this->source($http->client())->page($this->socialFeed(SocialFeedKind::Home, ''));
+        $this->pageOf(FetchOutcomeModel::failed(new FeedUnreachableException(self::PDS . ': timed out')));
     }
 
-    /** @return iterable<string, array{MockResponse}> */
-    public static function unusableAnswers(): iterable
+    /** @return iterable<string, array{int, array<string, mixed>}> */
+    public static function unusableBodies(): iterable
     {
-        yield 'server error' => [self::json([], Response::HTTP_BAD_GATEWAY)];
-        yield 'server error that still names a feed' => [self::json(['feed' => []], Response::HTTP_BAD_GATEWAY)];
-        yield 'no feed' => [self::json(['cursor' => 'x'])];
+        yield 'server error' => [Response::HTTP_BAD_GATEWAY, []];
+        yield 'server error that still names a feed' => [Response::HTTP_BAD_GATEWAY, ['feed' => []]];
+        yield 'no feed' => [Response::HTTP_OK, ['cursor' => 'x']];
+    }
+
+    /** @param array<string, mixed> $body */
+    #[DataProvider('unusableBodies')]
+    public function testAnUnusableAnswerReadsAsAnUnreachableNetwork(int $status, array $body): void
+    {
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->pageOf(self::answer($body, $status));
+    }
+
+    private function pageOf(FetchOutcomeModel $outcome): TimelinePageModel
+    {
+        return $this->source(new MockHttpClient())->pageOf($this->socialFeed(SocialFeedKind::Home, ''), $outcome);
+    }
+
+    /**
+     * @param array<mixed> $body
+     * @param list<string> $retryAfter
+     */
+    private static function answer(
+        array $body,
+        int $status = Response::HTTP_OK,
+        array $retryAfter = [],
+    ): FetchOutcomeModel {
+        $headers = [] === $retryAfter ? [] : ['retry-after' => $retryAfter];
+
+        return FetchOutcomeModel::answered(
+            new ApiResponseModel($status, json_encode($body, \JSON_THROW_ON_ERROR), $headers),
+        );
     }
 
     private function source(HttpClientInterface $http): BlueskyTimelineSource
@@ -275,15 +256,16 @@ final class BlueskyTimelineSourceTest extends TestCase
         return self::json(['did' => 'did:plc:alice', 'handle' => 'alice.bsky.social', 'accessJwt' => $accessJwt]);
     }
 
-    private static function timeline(): MockResponse
+    /** @return array<string, mixed> */
+    private static function timelineBody(): array
     {
-        return self::json(['feed' => [[
+        return ['feed' => [[
             'post' => [
                 'uri' => 'at://did:plc:bob/app.bsky.feed.post/3abc',
                 'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social'],
                 'record' => ['text' => 'Hello', 'createdAt' => '2026-10-12T10:00:00Z'],
             ],
-        ]]]);
+        ]]];
     }
 
     /**

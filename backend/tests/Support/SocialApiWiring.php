@@ -16,7 +16,12 @@ use App\Service\Social\Crypto\BlueskySessionCipher;
 use App\Service\Social\MastodonAccountApi;
 use App\Service\Social\MastodonApiClient;
 use App\Service\Social\StoredCredential;
+use App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher;
+use App\Service\Social\TimelineSource\BlueskyTimelineSource;
+use App\Service\Social\TimelineSource\MastodonTimelineSource;
+use App\Service\Social\TimelineSources;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -26,6 +31,8 @@ final class SocialApiWiring
 
     private const string BLUESKY_HOST = 'pds.example.test';
     private const string MASTODON_HOST = 'mastodon.example';
+    private const string OTHER_MASTODON_HOST = 'other.example';
+    private const string PUBLIC_ADDRESS = '93.184.216.34';
     private const int BLUESKY_ACCOUNT_ID = 3;
 
     private function __construct()
@@ -74,8 +81,37 @@ final class SocialApiWiring
         ));
     }
 
-    private static function guardFor(string $host): UrlGuard
+    /** The timeline fetcher over the real engine; every test host resolves to one public address. */
+    public static function timelineFetcher(
+        HttpClientInterface $http,
+        ArrayAdapter $cache,
+        int $accountConcurrency = 3,
+    ): ConcurrentTimelineFetcher {
+        $guard = self::guardFor(self::BLUESKY_HOST, self::MASTODON_HOST, self::OTHER_MASTODON_HOST);
+
+        return new ConcurrentTimelineFetcher(
+            FetchWiring::requestEngine($http, $guard, FetchWiring::egressProxy(null), 8),
+            self::timelineSources($http, $cache),
+            $accountConcurrency,
+        );
+    }
+
+    public static function timelineSources(HttpClientInterface $http, ArrayAdapter $cache): TimelineSources
     {
-        return new UrlGuard(new StaticDnsResolver([$host => ['93.184.216.34']]), new IpValidator());
+        return new TimelineSources(new ServiceLocator([
+            BlueskyTimelineSource::network() => static fn (): BlueskyTimelineSource => new BlueskyTimelineSource(
+                self::blueskySessions($http, $cache),
+            ),
+            MastodonTimelineSource::network() => static fn (): MastodonTimelineSource => new MastodonTimelineSource(
+                self::mastodonAccountApi($http),
+            ),
+        ]));
+    }
+
+    private static function guardFor(string ...$hosts): UrlGuard
+    {
+        $addresses = array_fill_keys($hosts, [self::PUBLIC_ADDRESS]);
+
+        return new UrlGuard(new StaticDnsResolver($addresses), new IpValidator());
     }
 }

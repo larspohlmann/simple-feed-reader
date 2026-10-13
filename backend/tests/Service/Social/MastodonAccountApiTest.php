@@ -24,15 +24,13 @@ final class MastodonAccountApiTest extends TestCase
     private const string STATUS_PATH = '/api/v1/statuses/110';
     private const string OUTSIDE_SCOPES = '{"error":"This action is outside the authorized scopes"}';
 
-    public function testAGetCarriesTheAccountsTokenToItsOwnInstance(): void
+    public function testAnAuthorizedGetCarriesTheAccountsTokenToItsOwnInstance(): void
     {
-        $http = new RoutedHttpClient(['GET ' . self::STATUS => new MockResponse('{"id":"110"}')]);
+        $request = SocialApiWiring::mastodonAccountApi((new RoutedHttpClient([]))->client())
+            ->authorizedGet(SocialAccounts::mastodon(), self::STATUS_PATH);
 
-        $answer = SocialApiWiring::mastodonAccountApi($http->client())
-            ->get(SocialAccounts::mastodon(), self::STATUS_PATH);
-
-        self::assertSame('{"id":"110"}', $answer->body);
-        self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[0]['headers']);
+        self::assertSame(self::STATUS, $request->url);
+        self::assertSame('Bearer ' . SocialAccounts::ACCESS_TOKEN, $request->headers['Authorization'] ?? null);
     }
 
     public function testAQuestionAboutAPostCarriesTheAccountsToken(): void
@@ -55,23 +53,6 @@ final class MastodonAccountApiTest extends TestCase
 
         self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[0]['headers']);
         self::assertSame('', $http->requests[0]['body']);
-    }
-
-    #[DataProvider('refusals')]
-    public function testATimelineReadRefusesTheTokenOnA401AndA403(int $status): void
-    {
-        $http = new RoutedHttpClient(['GET ' . self::STATUS => new MockResponse('{}', ['http_code' => $status])]);
-
-        $this->expectException(SocialCredentialsRejectedException::class);
-
-        SocialApiWiring::mastodonAccountApi($http->client())->get(SocialAccounts::mastodon(), self::STATUS_PATH);
-    }
-
-    /** @return iterable<string, array{int}> */
-    public static function refusals(): iterable
-    {
-        yield 'unauthorised' => [Response::HTTP_UNAUTHORIZED];
-        yield 'forbidden' => [Response::HTTP_FORBIDDEN];
     }
 
     /**
@@ -153,17 +134,6 @@ final class MastodonAccountApiTest extends TestCase
         self::assertSame('write:favourites', self::missingScope(
             static fn (): mixed => $api->actOnPost(SocialAccounts::mastodon(), self::STATUS_PATH, 'write:favourites'),
         ));
-    }
-
-    public function testNoAnswerAtAllIsAnUnreachableNetwork(): void
-    {
-        $http = new RoutedHttpClient([
-            'GET ' . self::STATUS => new MockResponse('', ['error' => 'Connection refused']),
-        ]);
-
-        $this->expectException(SocialNetworkUnreachableException::class);
-
-        SocialApiWiring::mastodonAccountApi($http->client())->get(SocialAccounts::mastodon(), self::STATUS_PATH);
     }
 
     private static function answer(string $body, int $status): MockResponse

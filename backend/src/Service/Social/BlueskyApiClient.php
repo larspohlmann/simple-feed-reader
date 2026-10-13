@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
-use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
+use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Support\NetworkAnswer;
 
 final readonly class BlueskyApiClient
 {
+    private const string NETWORK = 'Bluesky';
+
     public function __construct(private GuardedApiClient $api)
     {
     }
@@ -43,10 +46,12 @@ final readonly class BlueskyApiClient
     /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
     public function answer(ApiRequestModel $request): ApiResponseModel
     {
-        try {
-            return $this->api->send($request);
-        } catch (FetchException $exception) {
-            throw new SocialNetworkUnreachableException('Bluesky could not be reached.', previous: $exception);
-        }
+        return NetworkAnswer::orUnreachable(fn (): ApiResponseModel => $this->api->send($request), self::NETWORK);
+    }
+
+    /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */
+    public static function answerOf(FetchOutcomeModel $outcome): ApiResponseModel
+    {
+        return NetworkAnswer::orUnreachable($outcome->answerOrThrow(...), self::NETWORK);
     }
 }

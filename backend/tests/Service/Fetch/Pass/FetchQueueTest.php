@@ -6,26 +6,27 @@ namespace App\Tests\Service\Fetch\Pass;
 
 use App\Enum\ProxyType;
 use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Fetch\Model\RequestTicketModel;
 use App\Service\Fetch\Pass\FetchQueue;
-use App\Service\Fetch\Pass\HostSlots;
+use App\Service\Fetch\Pass\RequestSlots;
+use App\Tests\Support\FeedTickets;
 use PHPUnit\Framework\TestCase;
 
 final class FetchQueueTest extends TestCase
 {
     /**
-     * @param array<int|string, FetchTicketModel> $tickets
+     * @param array<int|string, RequestTicketModel> $tickets
      */
     private function queue(
         array $tickets,
         ?ProxyConfigModel $batchProxy = null,
-        ?HostSlots $hostSlots = null,
+        ?RequestSlots $slots = null,
         int $lookAhead = 100,
     ): FetchQueue {
         return new FetchQueue(
             new \ArrayIterator($tickets),
-            $hostSlots ?? new HostSlots(100),
+            $slots ?? new RequestSlots(100),
             $lookAhead,
             $batchProxy,
         );
@@ -33,7 +34,7 @@ final class FetchQueueTest extends TestCase
 
     private function attempt(string $url): FetchAttemptModel
     {
-        return FetchAttemptModel::start(0, new FetchTicketModel($url));
+        return FetchAttemptModel::start(0, FeedTickets::of($url));
     }
 
     private function runnable(FetchQueue $queue): FetchAttemptModel
@@ -47,8 +48,8 @@ final class FetchQueueTest extends TestCase
     public function testDrainsTicketsInOrderAndKeepsTheirKeys(): void
     {
         $queue = $this->queue([
-            11 => new FetchTicketModel('https://one.example.com/feed'),
-            22 => new FetchTicketModel('https://two.example.com/feed'),
+            11 => FeedTickets::of('https://one.example.com/feed'),
+            22 => FeedTickets::of('https://two.example.com/feed'),
         ]);
 
         $first = $this->runnable($queue);
@@ -63,8 +64,8 @@ final class FetchQueueTest extends TestCase
     public function testARequeuedRedirectIsServedBeforeUnstartedTickets(): void
     {
         $queue = $this->queue([
-            11 => new FetchTicketModel('https://one.example.com/feed'),
-            22 => new FetchTicketModel('https://two.example.com/feed'),
+            11 => FeedTickets::of('https://one.example.com/feed'),
+            22 => FeedTickets::of('https://two.example.com/feed'),
         ]);
 
         $first = $this->runnable($queue);
@@ -78,8 +79,8 @@ final class FetchQueueTest extends TestCase
     public function testDrainingContinuesWithUnstartedTicketsAfterAContinuation(): void
     {
         $queue = $this->queue([
-            11 => new FetchTicketModel('https://one.example.com/feed'),
-            22 => new FetchTicketModel('https://two.example.com/feed'),
+            11 => FeedTickets::of('https://one.example.com/feed'),
+            22 => FeedTickets::of('https://two.example.com/feed'),
         ]);
 
         $first = $this->runnable($queue);
@@ -95,9 +96,9 @@ final class FetchQueueTest extends TestCase
     public function testMultipleRequeuedRedirectsAreServedInTheOrderTheyWereRequeued(): void
     {
         $queue = $this->queue([
-            11 => new FetchTicketModel('https://one.example.com/feed'),
-            22 => new FetchTicketModel('https://two.example.com/feed'),
-            33 => new FetchTicketModel('https://three.example.com/feed'),
+            11 => FeedTickets::of('https://one.example.com/feed'),
+            22 => FeedTickets::of('https://two.example.com/feed'),
+            33 => FeedTickets::of('https://three.example.com/feed'),
         ]);
 
         $first = $this->runnable($queue);
@@ -123,12 +124,12 @@ final class FetchQueueTest extends TestCase
         $resumptions = [];
         $tickets = (function () use (&$resumptions): \Generator {
             $resumptions[] = 1;
-            yield 11 => new FetchTicketModel('https://one.example.com/feed');
+            yield 11 => FeedTickets::of('https://one.example.com/feed');
             $resumptions[] = 2;
-            yield 22 => new FetchTicketModel('https://two.example.com/feed');
+            yield 22 => FeedTickets::of('https://two.example.com/feed');
         })();
 
-        $queue = new FetchQueue($tickets, new HostSlots(100), 100);
+        $queue = new FetchQueue($tickets, new RequestSlots(100), 100);
         $queue->takeRunnable();
 
         // Only the first yield has run: pulling one ticket must not resume the
@@ -140,8 +141,8 @@ final class FetchQueueTest extends TestCase
     {
         $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.com', 1080, null, null);
         $queue = $this->queue([
-            11 => new FetchTicketModel('https://one.example.com/feed'),
-            22 => new FetchTicketModel('https://two.example.com/feed'),
+            11 => FeedTickets::of('https://one.example.com/feed'),
+            22 => FeedTickets::of('https://two.example.com/feed'),
         ], batchProxy: $proxy);
 
         self::assertSame($proxy, $this->runnable($queue)->proxy);
@@ -150,20 +151,20 @@ final class FetchQueueTest extends TestCase
 
     public function testStartsDirectAttemptsWhenNoProxyIsResolved(): void
     {
-        $queue = $this->queue([11 => new FetchTicketModel('https://one.example.com/feed')]);
+        $queue = $this->queue([11 => FeedTickets::of('https://one.example.com/feed')]);
 
         self::assertNull($this->runnable($queue)->proxy);
     }
 
     public function testParksATicketWhoseHostIsFullAndServesAFreeHostFirst(): void
     {
-        $hostSlots = new HostSlots(1);
-        $hostSlots->acquire($this->attempt('https://busy.example.com/inflight'));
+        $slots = new RequestSlots(1);
+        $slots->acquire($this->attempt('https://busy.example.com/inflight'));
 
         $queue = $this->queue([
-            11 => new FetchTicketModel('https://busy.example.com/feed'),
-            22 => new FetchTicketModel('https://free.example.com/feed'),
-        ], hostSlots: $hostSlots);
+            11 => FeedTickets::of('https://busy.example.com/feed'),
+            22 => FeedTickets::of('https://free.example.com/feed'),
+        ], slots: $slots);
 
         // The busy host is at capacity, so its ticket is parked and the free
         // host jumps ahead of it.
@@ -174,17 +175,17 @@ final class FetchQueueTest extends TestCase
 
     public function testAParkedTicketIsServedOnceItsHostFrees(): void
     {
-        $hostSlots = new HostSlots(1);
+        $slots = new RequestSlots(1);
         $inFlight = $this->attempt('https://busy.example.com/inflight');
-        $hostSlots->acquire($inFlight);
+        $slots->acquire($inFlight);
 
         $queue = $this->queue([
-            11 => new FetchTicketModel('https://busy.example.com/feed'),
-        ], hostSlots: $hostSlots);
+            11 => FeedTickets::of('https://busy.example.com/feed'),
+        ], slots: $slots);
 
         self::assertNull($queue->takeRunnable(), 'parked while the host is full');
 
-        $hostSlots->release($inFlight);
+        $slots->release($inFlight);
 
         self::assertSame(11, $this->runnable($queue)->key, 'served once the host frees');
         // Served means removed from the park: it is not handed out a second time.
@@ -193,20 +194,20 @@ final class FetchQueueTest extends TestCase
 
     public function testLookAheadPastAFullHostIsBounded(): void
     {
-        $hostSlots = new HostSlots(1);
-        $hostSlots->acquire($this->attempt('https://busy.example.com/inflight'));
+        $slots = new RequestSlots(1);
+        $slots->acquire($this->attempt('https://busy.example.com/inflight'));
 
         $pulled = [];
         $tickets = (function () use (&$pulled): \Generator {
             foreach ([11, 22, 33, 44] as $key) {
                 $pulled[] = $key;
-                yield $key => new FetchTicketModel('https://busy.example.com/feed' . $key);
+                yield $key => FeedTickets::of('https://busy.example.com/feed' . $key);
             }
         })();
 
         // Look-ahead of two: the queue parks at most two full-host tickets before
         // it gives up rather than draining the whole budgeted generator.
-        $queue = new FetchQueue($tickets, $hostSlots, 2);
+        $queue = new FetchQueue($tickets, $slots, 2);
 
         self::assertNull($queue->takeRunnable());
         self::assertSame([11, 22], $pulled);

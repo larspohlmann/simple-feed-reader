@@ -8,15 +8,29 @@ use PHPUnit\Framework\Assert;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-/** A MockHttpClient that answers by "METHOD url" and records what it was asked. */
+/** A MockHttpClient that answers by "METHOD url", or through a closure, and records what it was asked. */
 final class RoutedHttpClient
 {
     /** @var list<array{method: string, url: string, body: string, headers: list<string>}> */
     public array $requests = [];
 
+    /** @var \Closure(string, string, list<string>): MockResponse */
+    private \Closure $answer;
+
     /** @param array<string, MockResponse> $routes */
-    public function __construct(private readonly array $routes)
+    public function __construct(array $routes)
     {
+        $this->answer = static fn (string $method, string $url): MockResponse => $routes[$method . ' ' . $url]
+            ?? Assert::fail(sprintf('Unrouted request: %s %s', $method, $url));
+    }
+
+    /** @param \Closure(string, string, list<string>): MockResponse $answer by method, url and request headers */
+    public static function answering(\Closure $answer): self
+    {
+        $http = new self([]);
+        $http->answer = $answer;
+
+        return $http;
     }
 
     public function client(): MockHttpClient
@@ -33,8 +47,7 @@ final class RoutedHttpClient
                 'headers' => $headers,
             ];
 
-            return $this->routes[$method . ' ' . $url]
-                ?? Assert::fail(sprintf('Unrouted request: %s %s', $method, $url));
+            return ($this->answer)($method, $url, $headers);
         });
     }
 
@@ -42,5 +55,14 @@ final class RoutedHttpClient
     public function requestedUrls(): array
     {
         return array_column($this->requests, 'url');
+    }
+
+    /** @return list<string> "METHOD url" of every request, in the order they went out */
+    public function requestLines(): array
+    {
+        return array_map(
+            static fn (array $request): string => $request['method'] . ' ' . $request['url'],
+            $this->requests,
+        );
     }
 }

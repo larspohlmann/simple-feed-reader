@@ -2,15 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Social\TimelineReader;
+namespace App\Service\Social;
 
-use App\Entity\SocialFeed;
-use App\Service\Social\Model\TimelinePageModel;
+use App\Entity\SocialAccount;
 use App\Service\Social\TimelineSource\TimelineSourceInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-final readonly class NetworkTimelineReader implements TimelineReaderInterface
+final readonly class TimelineSources
 {
     public function __construct(
         #[AutowireLocator('app.social_timeline_source', defaultIndexMethod: 'network')]
@@ -18,11 +17,11 @@ final readonly class NetworkTimelineReader implements TimelineReaderInterface
     ) {
     }
 
-    public function page(SocialFeed $socialFeed): TimelinePageModel
+    public function of(SocialAccount $account): TimelineSourceInterface
     {
-        $source = $this->sources->get($socialFeed->getSocialAccount()->getNetwork()->value);
+        $source = $this->sources->get($account->getNetwork()->value);
         \assert($source instanceof TimelineSourceInterface);
 
-        return $source->page($socialFeed);
+        return $source;
     }
 }

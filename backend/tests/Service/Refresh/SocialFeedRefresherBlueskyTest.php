@@ -14,8 +14,7 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\DnsResolver\NativeDnsResolver;
-use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Refresh\Model\FeedRefreshResultModel;
+use App\Service\Refresh\Pass\RefreshPass;
 use App\Service\Refresh\SocialFeedRefresher;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Service\Social\Model\PrivateFeedModel;
@@ -60,10 +59,10 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
     {
         $home = $this->blueskyHome();
 
-        $result = $this->refreshed($home);
+        $pass = $this->refreshed($home);
 
-        self::assertSame(FeedOutcome::Fetched, $result->outcome);
-        self::assertSame(3, $result->entriesCreated);
+        self::assertSame(1, $pass->tally->fetched());
+        self::assertSame(3, $pass->tally->entriesCreated());
         $repost = $this->entry(self::IMAGE_POST);
         self::assertSame('', $repost->getTitle());
         self::assertTrue($repost->isTitleDerived());
@@ -134,16 +133,13 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
         return $home;
     }
 
-    private function refreshed(SocialFeed $socialFeed): FeedRefreshResultModel
+    private function refreshed(SocialFeed $socialFeed): RefreshPass
     {
-        $refresher = $this->refresher();
-        $feed = $socialFeed->getFeed();
+        $clock = new MockClock('2026-10-12 12:00:00', 'UTC');
+        $pass = new RefreshPass([$socialFeed->getFeed()], $clock, $clock->now()->getTimestamp() + 300);
+        $this->refresher()->refreshAll($pass, $clock->now());
 
-        return $refresher->refresh(
-            $feed,
-            new \DateTimeImmutable('2026-10-12 12:00:00'),
-            $refresher->passOver([$feed->requireId()]),
-        );
+        return $pass;
     }
 
     private function refresher(): SocialFeedRefresher

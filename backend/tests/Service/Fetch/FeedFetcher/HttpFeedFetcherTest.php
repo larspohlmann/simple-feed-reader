@@ -13,12 +13,10 @@ use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FeedFetcher\HttpFeedFetcher;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -49,14 +47,8 @@ final class HttpFeedFetcherTest extends TestCase
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
         return new HttpFeedFetcher(new ConcurrentFeedFetcher(
-            new MockHttpClient($responses),
-            $urlGuard,
-            new ResponseClassifier(new MockClock()),
-            1,
+            FetchWiring::requestEngine(new MockHttpClient($responses), $urlGuard, $this->noEgressProxy(), 1),
             100,
-            'TestAgent/1.0',
-            $this->noEgressProxy(),
-            FetchWiring::retryPolicy($urlGuard),
         ));
     }
 

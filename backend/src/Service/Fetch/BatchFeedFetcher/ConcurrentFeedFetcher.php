@@ -4,59 +4,21 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\BatchFeedFetcher;
 
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\FetchRetryPolicy;
-use App\Service\Fetch\Model\FetchAttemptModel;
+use App\Service\Fetch\ConcurrentRequestEngine;
 use App\Service\Fetch\Model\FetchOutcomeModel;
-use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\FetchTicketModel;
-use App\Service\Fetch\Model\HeaderDecision;
-use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\Pass\FetchQueue;
-use App\Service\Fetch\Pass\HostSlots;
-use App\Service\Fetch\ResponseClassifier;
-use App\Service\Fetch\Support\EgressOptions;
-use App\Service\Fetch\UrlGuard;
-use Symfony\Contracts\HttpClient\ChunkInterface;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
+use App\Service\Fetch\Model\RequestTicketModel;
+use App\Service\Fetch\Support\CapacityGuard;
 
 /**
- * Fetches many feeds at once over Symfony's multiplexing HTTP client; the refresh
- * sweep is network-wait-bound, so requests overlap while the caller still
- * processes results one at a time.
+ * Fetches many feeds at once on the shared request engine; the refresh sweep is network-wait-bound, so requests
+ * overlap while the caller still processes results one at a time.
  */
 final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 {
-    private const float TIMEOUT_SECONDS = 10.0;
-
-    public function __construct(
-        private HttpClientInterface $httpClient,
-        private UrlGuard $urlGuard,
-        private ResponseClassifier $classifier,
-        private int $concurrency,
-        private int $hostConcurrency,
-        private string $userAgent,
-        private EgressProxySourceInterface $egressProxySource,
-        private FetchRetryPolicy $retryPolicy,
-    ) {
-        // A cap below one opens no request, so an empty run would read as a clean one: the sweep's `remaining` never
-        // decrements and the frontend polls forever on `partial`.
-        if ($concurrency < 1) {
-            throw new \InvalidArgumentException(
-                sprintf('Concurrency must be at least 1, got %d.', $concurrency),
-            );
-        }
-        if ($hostConcurrency < 1) {
-            throw new \InvalidArgumentException(
-                sprintf('Per-host concurrency must be at least 1, got %d.', $hostConcurrency),
-            );
-        }
+    public function __construct(private ConcurrentRequestEngine $engine, private int $hostConcurrency)
+    {
+        CapacityGuard::atLeastOne($hostConcurrency, 'Per-host concurrency');
     }
 
     /**
@@ -66,263 +28,20 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      */
     public function fetchAll(iterable $tickets): \Generator
     {
-        try {
-            $batchProxy = $this->egressProxySource->egressProxy();
-        } catch (SecretUnreadableException $exception) {
-            // An unreadable proxy password fails every feed, one outcome each: the sweep's `remaining` only
-            // decrements on a yielded outcome, so letting the exception escape would strand the run.
-            yield from $this->failEvery($tickets, $exception);
-
-            return;
-        }
-
-        // More full-host candidates than there are slots cannot open a request this pass.
-        $lookAhead = $this->concurrency;
-        $hostSlots = new HostSlots($this->hostConcurrency);
-        $queue = new FetchQueue($this->iterator($tickets), $hostSlots, $lookAhead, $batchProxy);
-        /** @var \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight */
-        $inFlight = new \SplObjectStorage();
-
-        try {
-            while (true) {
-                yield from $this->fill($queue, $inFlight);
-
-                if (0 === $inFlight->count()) {
-                    return;
-                }
-
-                yield from $this->awaitNext($queue, $inFlight);
-            }
-        } finally {
-            // Reached on `break` as well as on completion: an aborted run must
-            // not leave sockets open behind the caller's back.
-            foreach ($inFlight as $response) {
-                $response->cancel();
-            }
-        }
+        return $this->engine->sendAll($this->requestTickets($tickets), $this->hostConcurrency);
     }
 
     /**
-     * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
-     *
-     * @return \Generator<int|string, FetchOutcomeModel>
-     */
-    private function fill(FetchQueue $queue, \SplObjectStorage $inFlight): \Generator
-    {
-        while ($inFlight->count() < $this->concurrency) {
-            $attempt = $queue->takeRunnable();
-            if (null === $attempt) {
-                return;
-            }
-
-            try {
-                $response = $this->send($attempt);
-            } catch (FetchException $exception) {
-                $fallback = $this->retryPolicy->directFallbackFor($attempt);
-                if (null !== $fallback) {
-                    $queue->requeue($fallback);
-                    continue;
-                }
-
-                yield $attempt->key => FetchOutcomeModel::failed($exception);
-                continue;
-            }
-
-            $queue->onSent($attempt);
-            $inFlight[$response] = $attempt;
-        }
-    }
-
-    /**
-     * Streams until one response resolves, then returns so the freed slot is refilled. A redirect goes back on the
-     * queue instead of being followed inline, so a feed on its fourth hop shares the loop with one on its first.
-     *
-     * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
-     *
-     * @return \Generator<int|string, FetchOutcomeModel>
-     */
-    private function awaitNext(FetchQueue $queue, \SplObjectStorage $inFlight): \Generator
-    {
-        foreach ($this->httpClient->stream($inFlight, self::TIMEOUT_SECONDS) as $response => $chunk) {
-            $attempt = $inFlight[$response];
-
-            try {
-                $verdict = $this->advance($response, $chunk, $attempt);
-            } catch (FetchException $exception) {
-                $this->retire($queue, $inFlight, $response);
-
-                $requeue = $this->retryPolicy->nextAttemptAfter($attempt, $exception);
-                if (null !== $requeue) {
-                    $queue->requeue($requeue);
-
-                    return;
-                }
-
-                yield $attempt->key => FetchOutcomeModel::failed($exception);
-
-                return;
-            }
-
-            if (null === $verdict) {
-                continue;
-            }
-
-            $this->retire($queue, $inFlight, $response);
-
-            if ($verdict instanceof FetchAttemptModel) {
-                $queue->requeue($verdict);
-
-                return;
-            }
-
-            yield $attempt->key => FetchOutcomeModel::succeeded($verdict);
-
-            return;
-        }
-    }
-
-    /**
-     * One chunk's worth of progress: null while the response is still arriving,
-     * a FetchResponseModel when it is done, or the next FetchAttemptModel on a redirect.
-     *
-     * @throws FetchException
-     */
-    private function advance(
-        ResponseInterface $response,
-        ChunkInterface $chunk,
-        FetchAttemptModel $attempt,
-    ): FetchResponseModel|FetchAttemptModel|null {
-        try {
-            // Order is load-bearing: on a timeout chunk isFirst() throws while isTimeout() returns true, so asking
-            // isFirst() first would report every timeout as a transport failure. On an error chunk isTimeout() throws,
-            // and the catch below keeps the real cause.
-            if ($chunk->isTimeout()) {
-                throw new FeedUnreachableException(sprintf('%s: timed out', $attempt->url));
-            }
-
-            if ($chunk->isFirst()) {
-                return $this->onHeaders($response, $attempt);
-            }
-
-            return $chunk->isLast() ? $this->classifier->fromBody($response, $attempt) : null;
-        } catch (ExceptionInterface $exception) {
-            throw FetchException::from($attempt->url, $exception);
-        }
-    }
-
-    /** @throws FetchException */
-    private function onHeaders(
-        ResponseInterface $response,
-        FetchAttemptModel $attempt,
-    ): FetchResponseModel|FetchAttemptModel|null {
-        $verdict = $this->classifier->fromHeaders($response, $attempt);
-
-        if (HeaderDecision::AwaitBody === $verdict->decision) {
-            return null;
-        }
-
-        if (HeaderDecision::Terminal === $verdict->decision) {
-            \assert(null !== $verdict->response);
-
-            return $verdict->response;
-        }
-
-        if (!$attempt->canFollowRedirect()) {
-            throw new FeedUnreachableException(sprintf(
-                '%s: more than %d redirects',
-                $attempt->ticket->url,
-                FetchAttemptModel::MAX_REDIRECTS,
-            ));
-        }
-
-        \assert(null !== $verdict->redirectUrl);
-
-        return $attempt->followedTo($verdict->redirectUrl, $verdict->permanent);
-    }
-
-    /** @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight */
-    private function retire(FetchQueue $queue, \SplObjectStorage $inFlight, ResponseInterface $response): void
-    {
-        $queue->onRetired($inFlight[$response]);
-        $inFlight->detach($response);
-        $response->cancel();
-    }
-
-    /** @throws FetchException when the URL fails the SSRF guard */
-    private function send(FetchAttemptModel $attempt): ResponseInterface
-    {
-        $proxy = $attempt->proxy;
-
-        // The host guard runs on both paths; only the IP pin is proxy-incompatible.
-        $guarded = $this->urlGuard->assertSafe($attempt->url);
-
-        $egress = null !== $proxy
-            ? EgressOptions::proxied($proxy)
-            : EgressOptions::pinned($guarded, $attempt->pinnedAddressAttempt);
-
-        try {
-            return $this->httpClient->request('GET', $attempt->url, [
-                'headers' => $this->headers($attempt->ticket),
-                'max_redirects' => 0,
-                'timeout' => self::TIMEOUT_SECONDS,
-                'max_duration' => self::TIMEOUT_SECONDS * 2,
-                'on_progress' => static function (int $downloaded): void {
-                    ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Feed, $downloaded);
-                },
-                ...$egress,
-            ]);
-        } catch (ExceptionInterface $exception) {
-            throw FetchException::from($attempt->url, $exception);
-        }
-    }
-
-    /** @return array<string, string> */
-    private function headers(FetchTicketModel $ticket): array
-    {
-        $headers = [
-            'Accept' => 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.1',
-            // Refuse transparent compression so the size limit (counted on the
-            // wire in on_progress) also bounds the buffered body — a compressed
-            // response would otherwise decompress unbounded before the size check.
-            'Accept-Encoding' => 'identity',
-            'User-Agent' => $this->userAgent,
-        ];
-        if (null !== $ticket->etag) {
-            $headers['If-None-Match'] = $ticket->etag;
-        }
-        if (null !== $ticket->lastModified) {
-            $headers['If-Modified-Since'] = $ticket->lastModified;
-        }
-
-        return $headers;
-    }
-
-    /**
-     * Adapts any iterable to the Iterator the queue needs. Being a generator
-     * itself, it never materialises the batch — the queue pulls tickets one at a
-     * time, and buffering them would defeat a lazy source.
+     * One ticket at a time: the source is budget-gated, and mapping ahead would start feeds no slot has opened for.
      *
      * @param iterable<int|string, FetchTicketModel> $tickets
      *
-     * @return \Iterator<int|string, FetchTicketModel>
+     * @return \Generator<int|string, RequestTicketModel>
      */
-    private function iterator(iterable $tickets): \Iterator
-    {
-        yield from $tickets;
-    }
-
-    /**
-     * @param iterable<int|string, FetchTicketModel> $tickets
-     *
-     * @return \Generator<int|string, FetchOutcomeModel>
-     */
-    private function failEvery(iterable $tickets, \Throwable $cause): \Generator
+    private function requestTickets(iterable $tickets): \Generator
     {
         foreach ($tickets as $key => $ticket) {
-            yield $key => FetchOutcomeModel::failed(new FeedUnreachableException(
-                sprintf('%s: the instance egress proxy is unusable: %s', $ticket->url, $cause->getMessage()),
-                previous: $cause,
-            ));
+            yield $key => RequestTicketModel::feed($ticket);
         }
     }
 }

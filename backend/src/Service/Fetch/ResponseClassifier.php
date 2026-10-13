@@ -90,7 +90,7 @@ final readonly class ResponseClassifier
     /** A 304 answering an unconditional request confirms nothing; it becomes an empty fetch instead. */
     private function notModifiedOrEmptyFetch(FetchAttemptModel $attempt): FetchResponseModel
     {
-        $ticket = $attempt->ticket;
+        $ticket = $attempt->ticket->feedTicket();
         if (!$ticket->isConditional()) {
             return FetchResponseModel::fetched($attempt->url, $attempt->permanentRedirect, '', null, null);
         }

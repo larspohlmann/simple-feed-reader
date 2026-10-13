@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Refresh\Exception;
+namespace App\Service\Social\Exception;
 
 final class PrivateFeedOrphanedException extends \RuntimeException
 {

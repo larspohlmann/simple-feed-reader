@@ -12,11 +12,9 @@ use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
-use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -39,14 +37,8 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
         return new ConcurrentFeedFetcher(
-            new MockHttpClient($responses),
-            $urlGuard,
-            new ResponseClassifier(new MockClock()),
-            4,
+            FetchWiring::requestEngine(new MockHttpClient($responses), $urlGuard, $egressProxySource),
             100,
-            'TestAgent/1.0',
-            $egressProxySource,
-            FetchWiring::retryPolicy($urlGuard),
         );
     }
 
@@ -94,16 +86,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             new SecretUnreadableException('The stored secret failed its integrity check.'),
         );
         $urlGuard = new UrlGuard($this->dns(), new IpValidator());
-        $fetcher = new ConcurrentFeedFetcher(
-            $client,
-            $urlGuard,
-            new ResponseClassifier(new MockClock()),
-            4,
-            100,
-            'TestAgent/1.0',
-            $egressProxySource,
-            FetchWiring::retryPolicy($urlGuard),
-        );
+        $fetcher = new ConcurrentFeedFetcher(FetchWiring::requestEngine($client, $urlGuard, $egressProxySource), 100);
 
         $outcomes = $this->collect($fetcher->fetchAll([
             7 => new FetchTicketModel('https://one.example/feed'),

@@ -13,6 +13,9 @@ parameters:
     # into a 429. Two still lets the global cap fill with other hosts.
     fetch_host_concurrency: 2
 
+    # In-flight timeline reads per social account: Bluesky and Mastodon ration requests per account (#1607).
+    social_account_concurrency: 3
+
     # The one User-Agent every request to a publisher sends. It names no host (#255): Akamai Bot Manager resets the
     # stream for any domain-shaped token, real or invented, so the site looks unreachable. A parameter, so the
     # catalog rot check probes with the fetcher's exact string. OutboundUserAgentWiringTest pins both.
@@ -185,12 +188,19 @@ services:
 
     App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface: '@App\Service\Mail\MailSendingSettings\EffectiveMailSettings'
 
-    # Wired on this service, not bound globally: a bind matches by parameter name, and `int $concurrency` would feed
+    # Wired on these services, not bound globally: a bind matches by parameter name, and `int $concurrency` would feed
     # any service that names a parameter that way.
-    App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher:
+    App\Service\Fetch\ConcurrentRequestEngine:
         arguments:
             $concurrency: '%fetch_concurrency%'
+
+    App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher:
+        arguments:
             $hostConcurrency: '%fetch_host_concurrency%'
+
+    App\Service\Social\TimelineFetcher\ConcurrentTimelineFetcher:
+        arguments:
+            $accountConcurrency: '%social_account_concurrency%'
 
     # Account mail leaves on kernel.terminate, after the response (DeferredMailer says why). Bound here, not by
     # decorating `mailer.mailer`, so only AccountMailer takes the detour.
