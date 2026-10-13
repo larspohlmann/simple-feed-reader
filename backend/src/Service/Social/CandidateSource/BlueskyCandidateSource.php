@@ -131,7 +131,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     /** @return list<string> */
     private function savedFeedUris(SocialAccount $account): array
     {
-        $answer = BlueskyApiClient::accepted($this->sessions->askAs($account, self::GET_PREFERENCES));
+        $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_PREFERENCES));
         $preferences = JsonNodeModel::of($answer->json())->nodes('preferences');
 
         $uris = [];
