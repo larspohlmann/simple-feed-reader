@@ -373,6 +373,17 @@ final class ConcurrentTimelineFetcherTest extends TestCase
         self::assertSame('109', $home->getNewestSeenId());
     }
 
+    public function testAFailedReadLeavesTheFeedsNewestStatusUnchanged(): void
+    {
+        $home = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
+        $home->recordNewestSeen('100');
+        $respond = static fn (): MockResponse => new MockResponse('', ['error' => 'Connection reset by peer']);
+
+        self::read($this->fetcher($respond), [$home]);
+
+        self::assertSame('100', $home->getNewestSeenId());
+    }
+
     public function testNoAnswerIsAnUnreachableNetwork(): void
     {
         $home = $this->feedOf(self::mastodonAccount(self::MASTODON, 1));
