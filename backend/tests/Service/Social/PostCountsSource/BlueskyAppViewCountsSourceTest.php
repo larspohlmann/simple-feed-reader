@@ -89,7 +89,12 @@ final class BlueskyAppViewCountsSourceTest extends TestCase
         $this->assertRefused($attempt, SocialNetworkThrottledException::class, 'The first ask must be throttled.');
         $this->appView->recovers();
 
-        $this->assertRefused($attempt, SocialNetworkThrottledException::class, 'The wait must still hold.');
+        try {
+            $attempt();
+            self::fail('The wait must still hold.');
+        } catch (SocialNetworkThrottledException $exception) {
+            self::assertSame(120, $exception->retryAfterSeconds);
+        }
 
         self::assertCount(1, $this->appView->requests);
     }

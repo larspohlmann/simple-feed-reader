@@ -31,8 +31,9 @@ final readonly class BlueskyAppViewCountsSource implements PostCountsSourceInter
 
     public function countsOf(string $address): SocialCountsModel
     {
-        if ($this->appView->isThrottled()) {
-            throw new SocialNetworkThrottledException(self::THROTTLED);
+        $throttledForSeconds = $this->appView->throttledForSeconds();
+        if ($throttledForSeconds > 0) {
+            throw new SocialNetworkThrottledException(self::THROTTLED, $throttledForSeconds);
         }
 
         return PostCounts::ofBlueskyPost($this->postAt($address))

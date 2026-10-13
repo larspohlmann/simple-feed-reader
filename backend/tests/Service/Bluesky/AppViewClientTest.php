@@ -79,6 +79,7 @@ final class AppViewClientTest extends TestCase
         }
 
         self::assertTrue($client->isThrottled());
+        self::assertSame(600, $client->throttledForSeconds());
         self::assertSame(600, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
     }
 
