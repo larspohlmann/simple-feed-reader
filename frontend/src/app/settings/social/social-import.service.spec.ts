@@ -68,7 +68,7 @@ describe('SocialImportService', () => {
 
     service
       .importSelection(4, {
-        subscribe: [{ feedUrl: 'https://bsky.app/profile/did:plc:bob/rss', title: 'Bob' }],
+        subscribe: [{ identity: 'did:plc:bob', title: 'Bob' }],
         unsubscribe: [],
         collections: [],
       })

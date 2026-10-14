@@ -12,7 +12,7 @@ final readonly class SocialImportFeedItem
     public function __construct(
         #[Assert\NotBlank]
         #[Assert\Length(max: 750)]
-        public string $feedUrl = '',
+        public string $identity = '',
         #[Assert\Length(max: 512)]
         public ?string $title = null,
     ) {
@@ -22,6 +22,6 @@ final readonly class SocialImportFeedItem
     {
         $title = trim($this->title ?? '');
 
-        return new SocialImportFeedModel(trim($this->feedUrl), '' === $title ? null : $title);
+        return new SocialImportFeedModel(trim($this->identity), '' === $title ? null : $title);
     }
 }

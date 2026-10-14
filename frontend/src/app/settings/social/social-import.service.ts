@@ -41,7 +41,7 @@ export interface ImportCandidates {
 }
 
 export interface SocialImportFeed {
-  readonly feedUrl: string;
+  readonly identity: string;
   readonly title: string | null;
 }
 

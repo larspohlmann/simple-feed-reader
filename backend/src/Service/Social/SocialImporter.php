@@ -41,18 +41,15 @@ final readonly class SocialImporter
     public function import(SocialAccount $account, SocialImportModel $import): SocialImportResultModel
     {
         $network = $account->getNetwork();
-        $this->assertProfileFeedsOf($network, $import->subscribe);
+        $items = self::items($network, $import->subscribe);
         self::assertCollectionsOf($network, $import->collections);
         $toRemove = $this->ownedSubscriptions->resolve($account->getUser()->requireId(), $import->unsubscribe);
 
         // Removals first, so the slots they free count toward the subscription cap.
         return $this->entityManager->wrapInTransaction(
-            function () use ($account, $import, $toRemove): SocialImportResultModel {
+            function () use ($account, $import, $items, $toRemove): SocialImportResultModel {
                 $removed = $this->subscriptionService->unsubscribeAll(array_values($toRemove));
-                $subscribed = $this->bulkSubscriber->subscribeAll(
-                    $account->getUser(),
-                    self::items($import->subscribe),
-                );
+                $subscribed = $this->bulkSubscriber->subscribeAll($account->getUser(), $items);
 
                 return SocialImportResultModel::from(
                     $subscribed,
@@ -102,31 +99,26 @@ final readonly class SocialImporter
         return $tally;
     }
 
-    /** @param list<SocialImportFeedModel> $feeds */
-    private function assertProfileFeedsOf(SocialNetwork $network, array $feeds): void
-    {
-        foreach ($feeds as $feed) {
-            if (null === ProfileFeedUrl::identityOf($network, $feed->feedUrl)) {
-                throw new InvalidSocialImportFeedException(
-                    sprintf('%s is no %s profile feed.', $feed->feedUrl, $network->displayName()),
-                );
-            }
-        }
-    }
-
     /**
      * @param list<SocialImportFeedModel> $feeds
      *
      * @return list<BulkSubscribeItemModel>
      */
-    private static function items(array $feeds): array
+    private static function items(SocialNetwork $network, array $feeds): array
     {
         return array_map(
             static fn (SocialImportFeedModel $feed): BulkSubscribeItemModel => new BulkSubscribeItemModel(
-                $feed->feedUrl,
+                self::profileFeedOf($network, $feed->identity),
                 feedTitle: $feed->title,
             ),
             $feeds,
+        );
+    }
+
+    private static function profileFeedOf(SocialNetwork $network, string $identity): string
+    {
+        return ProfileFeedUrl::of($network, $identity) ?? throw new InvalidSocialImportFeedException(
+            sprintf('%s is no %s account.', $identity, $network->displayName()),
         );
     }
 }
