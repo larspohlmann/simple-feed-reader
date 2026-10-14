@@ -9,6 +9,12 @@
   @case ('media') {
     <app-entry-media [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
   }
+  @case ('quoting') {
+    <app-entry-quoting
+      [entry]="entryOf(current)"
+      [tags]="tagsFor(entryOf(current).subscriptionId)"
+    />
+  }
   @case ('wide') {
     <app-entry-wide [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
   }

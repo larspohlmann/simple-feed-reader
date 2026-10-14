@@ -8,6 +8,7 @@ import {
   TemplateKind,
 } from './magazine-block';
 import { leadWithImage, prefersTextFamily } from './magazine-family';
+import { blockHeight } from './magazine-block-height';
 import { fits, ImageBar, shareKind, settle } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
@@ -83,6 +84,8 @@ interface PlanPass {
  *  bar its family holds the page to. */
 interface PageLayout {
   readonly pinned: readonly (ShareKind | null)[];
+  /** The pinned share blocks' heights, which a quote share takes from its entry (#1612). */
+  readonly pinnedHeights: readonly (number | null)[];
   readonly imageBar: ImageBar;
 }
 
@@ -252,7 +255,14 @@ function resolveSlot(slot: Slot, page: number, position: number): TemplateKind {
 
 function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]): MagazineBlock[] {
   const { page } = pass;
-  const layout: PageLayout = { pinned: slice.map(shareKind), imageBar: pass.family.imageBar };
+  const pinned = slice.map(shareKind);
+  const layout: PageLayout = {
+    pinned,
+    pinnedHeights: pinned.map((kind, position) =>
+      kind ? blockHeight(kind, slice[position]) : null,
+    ),
+    imageBar: pass.family.imageBar,
+  };
   const wanted = template
     .slice(0, slice.length)
     .map((slot, position) => resolveSlot(slot, page, position));
@@ -301,7 +311,7 @@ function withinBudget(
 ): TemplateKind[] {
   const result = [...kinds];
   let height = result.reduce(
-    (sum, kind, position) => sum + BLOCK_HEIGHT[layout.pinned[position] ?? kind],
+    (sum, kind, position) => sum + (layout.pinnedHeights[position] ?? BLOCK_HEIGHT[kind]),
     0,
   );
 

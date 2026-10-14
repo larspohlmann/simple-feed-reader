@@ -1,8 +1,8 @@
-import { sharesMedia, sharedMedia } from './magazine-slot-fit';
+import { shareKind, sharesMedia, sharedMedia } from './magazine-slot-fit';
 import { EntryDto } from '../../models';
 import { EntryMediumDto } from '../../entry-medium';
 import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
-import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
+import { aLinkCard, aQuotedPost, anEntry } from '../../../../testing/entry-testing';
 
 const card = aLinkCard();
 
@@ -72,5 +72,25 @@ describe('sharesMedia', () => {
   it('takes a Short only by its share, like every other entry', () => {
     expect(sharesMedia(entry({ shortPlayerUrl: SHORT_PLAYER_URL }))).toBe(false);
     expect(sharesMedia(entry({ shortPlayerUrl: SHORT_PLAYER_URL, share: 'media' }))).toBe(true);
+  });
+});
+
+describe('the quote share', () => {
+  it('claims the quoting block when the entry carries its quoted post', () => {
+    expect(shareKind(anEntry({ share: 'quote', quote: aQuotedPost() }))).toBe('quoting');
+  });
+
+  it('claims nothing when the quote is missing', () => {
+    expect(shareKind(anEntry({ share: 'quote', quote: null }))).toBeNull();
+  });
+
+  it('leaves a link share with a stray quote to the link block', () => {
+    expect(
+      shareKind(anEntry({ share: 'link', quote: aQuotedPost(), linkCards: [aLinkCard()] })),
+    ).toBe('link');
+  });
+
+  it('claims nothing for an article that merely carries a quote', () => {
+    expect(shareKind(anEntry({ share: null, quote: aQuotedPost() }))).toBeNull();
   });
 });

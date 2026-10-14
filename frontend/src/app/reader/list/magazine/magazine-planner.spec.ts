@@ -1,10 +1,11 @@
 import { planMagazine, templateFor } from './magazine-planner';
-import { BLOCK_HEIGHT, EntryKind, MagazineBlock, TemplateKind } from './magazine-block';
+import { blockHeight, quotingHeight } from './magazine-block-height';
+import { BLOCK_HEIGHT, MagazineBlock, TemplateKind } from './magazine-block';
 import { IMAGE_KINDS } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES } from './magazine-templates';
 import { EntryDto } from '../../models';
 import { entryImage } from '../preview-image';
-import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
+import { aLinkCard, aQuotedPost, anEntry } from '../../../../testing/entry-testing';
 
 const NOW = '2026-07-29T12:00:00.000Z';
 /** An ISO instant `hoursAgo` before NOW, for exercising the 24h activity window. */
@@ -46,6 +47,9 @@ const linkShare = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   big(id, { titleDerived: true, share: 'link', linkCards: [CARD], ...over });
 const mediaShare = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   big(id, { titleDerived: true, share: 'media', ...over });
+
+const quoteShare = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+  entryAt(id, { titleDerived: true, title: 'Look at this', share: 'quote', ...over });
 
 const imageless = (id: number): EntryDto => entryAt(id, { summary: null });
 const cycle = (index: number, makers: ((id: number) => EntryDto)[]): EntryDto =>
@@ -830,7 +834,10 @@ describe('planMagazine', () => {
     return pages;
   };
   const height = (page: MagazineBlock[]): number =>
-    page.reduce((sum, block) => sum + BLOCK_HEIGHT[block.kind as EntryKind], 0);
+    page.reduce(
+      (sum, block) => sum + (block.kind === 'group' ? 0 : blockHeight(block.kind, block.entry)),
+      0,
+    );
 
   describe('a link share', () => {
     it('is a link block in whatever slot it lands', () => {
@@ -980,6 +987,33 @@ describe('planMagazine', () => {
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 
       expect(planned(blocks.slice(6, 9))).toEqual(['split9', 'compact7', 'compact8']);
+    });
+  });
+
+  describe('a quote share', () => {
+    const shortQuote = quoteShare(2, { quote: aQuotedPost({ text: 'Short.' }) });
+    const tallQuote = quoteShare(2, {
+      quote: aQuotedPost({
+        text: Array.from({ length: 8 }, () => 'line').join('\n'),
+        media: [{ url: 'https://v.example/p.m3u8', kind: 'video', width: 1080, height: 1920 }],
+      }),
+    });
+    const firstPage = (quote: EntryDto): MagazineBlock[] => {
+      const entries = [big(1), quote, ...many(10, (index) => big(index + 2))];
+      return planMagazine({ entries, grouping: false, complete: true }).slice(0, 6);
+    };
+    const restOfPage = BLOCK_HEIGHT.wide + 2 * BLOCK_HEIGHT.thumb + 2 * BLOCK_HEIGHT.split;
+
+    it('is a quoting block in whatever slot it lands', () => {
+      expect(firstPage(shortQuote)[1].kind).toBe('quoting');
+    });
+
+    it('takes its block height from its entry, so a tall one demotes the hero-sized slot above it', () => {
+      expect(quotingHeight(shortQuote) + restOfPage).toBeLessThanOrEqual(1100);
+      expect(quotingHeight(tallQuote) + restOfPage).toBeGreaterThan(1100);
+
+      expect(firstPage(shortQuote)[0].kind).toBe('wide');
+      expect(firstPage(tallQuote)[0].kind).not.toBe('wide');
     });
   });
 });
