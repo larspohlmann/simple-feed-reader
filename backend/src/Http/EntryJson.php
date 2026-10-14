@@ -35,7 +35,7 @@ use App\Service\Url\Support\YouTubeUrl;
  *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
  *   poster: array{name: string, url: string|null, imageUrl: string|null}|null,
  *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, shortPlayerUrl: string|null, titleDerived: bool,
- *   share: 'link'|'media'|null,
+ *   share: 'link'|'media'|'quote'|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
  *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool}|null,
  *   duplicates: list<array<string, mixed>>,
@@ -47,7 +47,7 @@ use App\Service\Url\Support\YouTubeUrl;
  *   imageRenditions: list<array{url: string, width: int}>,
  *   media: list<array<string, string|int>>,
  *   linkCards: list<LinkCardRow>,
- *   share: 'link'|'media'|null,
+ *   share: 'link'|'media'|'quote'|null,
  * }
  */
 final class EntryJson

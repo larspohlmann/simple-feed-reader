@@ -8,4 +8,5 @@ enum ShareKind: string
 {
     case Link = 'link';
     case Media = 'media';
+    case Quote = 'quote';
 }

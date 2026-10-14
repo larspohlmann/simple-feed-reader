@@ -69,6 +69,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private const string DIGEST_BACKUP_NOT_YET_WIRED = 'Email digest configuration, added ahead of '
         . 'the backup format\'s support for it. A later task of the digest plan (#636) carries it.';
 
+    private const string QUOTED_POST_BACKUP_NOT_YET_WIRED = 'The post a quote share quotes (#1612), added ahead of '
+        . 'the backup format\'s support for it. A later task of the quoted-posts plan carries it.';
+
     /** The line discriminator, written on every kind and naming no field. */
     private const array EVERY_LINE = ['kind'];
 
@@ -255,6 +258,15 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'image.verifyAttempts' => 'The queue marker and failure count of this instance\'s '
                 . 'check. A restored image is not put into the queue. The instance shows it as '
                 . 'the old instance did.',
+            'quotedPost.url' => self::QUOTED_POST_BACKUP_NOT_YET_WIRED,
+            'quotedPost.authorName' => self::QUOTED_POST_BACKUP_NOT_YET_WIRED,
+            'quotedPost.authorHandle' => self::QUOTED_POST_BACKUP_NOT_YET_WIRED,
+            'quotedPost.authorAvatarUrl' => self::QUOTED_POST_BACKUP_NOT_YET_WIRED,
+            'quotedPost.postedAt' => self::QUOTED_POST_BACKUP_NOT_YET_WIRED,
+            'quotedPost.text' => self::QUOTED_POST_BACKUP_NOT_YET_WIRED,
+            'quotedPost.media' => self::QUOTED_POST_BACKUP_NOT_YET_WIRED,
+            'quotedPost.nestedUrl' => self::QUOTED_POST_BACKUP_NOT_YET_WIRED,
+            'quotedPost.nestedHandle' => self::QUOTED_POST_BACKUP_NOT_YET_WIRED,
         ],
         EntryState::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,

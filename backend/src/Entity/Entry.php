@@ -57,6 +57,9 @@ final class Entry
     #[ORM\Embedded(class: EntryDiscussion::class, columnPrefix: false)]
     private EntryDiscussion $discussion;
 
+    #[ORM\Embedded(class: EntryQuotedPost::class, columnPrefix: false)]
+    private EntryQuotedPost $quotedPost;
+
     #[ORM\Column(length: 8, nullable: true, enumType: ShareKind::class)]
     private ?ShareKind $shareKind = null;
 
@@ -94,6 +97,7 @@ final class Entry
         $this->mediaSet = new EntryMedia();
         $this->author = new EntryAuthor();
         $this->discussion = new EntryDiscussion();
+        $this->quotedPost = new EntryQuotedPost();
     }
 
     public function getId(): ?int
@@ -265,6 +269,17 @@ final class Entry
     public function setShareKind(?ShareKind $shareKind): void
     {
         $this->shareKind = $shareKind;
+    }
+
+    public function getQuotedPost(): ?QuotedPostContent
+    {
+        return $this->quotedPost->read();
+    }
+
+    public function shareQuotedPost(QuotedPostContent $quote): void
+    {
+        $this->quotedPost->store($quote);
+        $this->shareKind = ShareKind::Quote;
     }
 
     public function bodyStandsInForSummary(): bool
