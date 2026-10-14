@@ -6,16 +6,17 @@ import { sharedMedia } from './magazine-slot-fit';
 
 /** Measured at 390px viewport width, like BLOCK_HEIGHT; a quote share's parts, in the same units. */
 const QUOTING = {
-  chrome: 150,
-  ownLine: 24,
-  ownCharsPerLine: 44,
+  chrome: 82,
+  ownLine: 22.5,
+  ownCharsPerLine: 46,
   ownLinesMax: 6,
-  quoteChrome: 56,
-  quoteLine: 24,
+  quoteChrome: 54,
+  quoteLine: 22.5,
   quoteCharsPerLine: 40,
   quoteLinesMax: 8,
-  ownMediaWidth: 342,
-  quoteMediaWidth: 318,
+  nestedLine: 24.5,
+  ownMediaWidth: 340,
+  quoteMediaWidth: 314,
   mediaMaxHeight: 480,
   gap: 8,
 } as const;
@@ -37,7 +38,8 @@ export function quotingHeight(entry: EntryDto): number {
   const quoted =
     QUOTING.quoteChrome +
     QUOTING.quoteLine * lineCount(quote.text, QUOTING.quoteCharsPerLine, QUOTING.quoteLinesMax) +
-    withGap(mediaHeight(quote.media, QUOTING.quoteMediaWidth));
+    withGap(mediaHeight(quote.media, QUOTING.quoteMediaWidth)) +
+    (quote.nestedQuote ? QUOTING.gap + QUOTING.nestedLine : 0);
   return QUOTING.chrome + own + QUOTING.gap + quoted;
 }
 

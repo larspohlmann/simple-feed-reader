@@ -54,6 +54,13 @@ describe('quotingHeight', () => {
     expect(quotingHeight(post('Hi'))).toBeGreaterThan(quotingHeight(post('Hi', null)));
   });
 
+  // Red if: the nested-quote line is left out of the quoted box.
+  it('adds the nested-quote line to the quoted box', () => {
+    const nested = aQuotedPost({ nestedQuote: { url: 'https://n.example/p', handle: null } });
+
+    expect(quotingHeight(post('Hi', nested))).toBeGreaterThan(quotingHeight(post('Hi')));
+  });
+
   // Red if: the post's own media is left out of the sum.
   it('adds the post’s own media', () => {
     const withMedia = anEntry({ ...post('Hi'), media: [video(1920, 1080)] });
