@@ -209,7 +209,7 @@ export class SocialImportDialogComponent {
   private chosenFollows(): SocialImportFeed[] {
     return (this.importer.candidates()?.follows ?? [])
       .filter((follow) => follow.state === 'new' && this.chosen().has(followKey(follow)))
-      .map((follow) => ({ feedUrl: follow.feedUrl, title: follow.displayName }));
+      .map((follow) => ({ identity: follow.identity, title: follow.displayName }));
   }
 
   private chosenRemovals(): number[] {

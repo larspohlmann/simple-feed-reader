@@ -49,6 +49,11 @@ final class ProfileFeedUrlTest extends TestCase
             'https://bsky.app/profile/Bob.Example.com/rss',
             'bob.example.com',
         ];
+        yield 'bluesky actor carrying an @' => [
+            SocialNetwork::Bluesky,
+            'https://bsky.app/profile/bob@x.example/rss',
+            null,
+        ];
         yield 'bluesky profile page, not its feed' => [
             SocialNetwork::Bluesky,
             'https://bsky.app/profile/did:plc:bob',
@@ -93,5 +98,40 @@ final class ProfileFeedUrlTest extends TestCase
         self::assertSame(SocialNetwork::Bluesky, $bluesky);
         self::assertSame(SocialNetwork::Mastodon, ProfileFeedUrl::networkOf('https://mastodon.example/@bob.rss'));
         self::assertNull(ProfileFeedUrl::networkOf('https://example.com/feed.xml'));
+    }
+
+    /** @return iterable<string, array{SocialNetwork, string, ?string}> */
+    public static function identities(): iterable
+    {
+        yield 'a Bluesky DID' => [SocialNetwork::Bluesky, 'did:plc:bob', 'https://bsky.app/profile/did:plc:bob/rss'];
+        yield 'a Bluesky handle' => [
+            SocialNetwork::Bluesky,
+            'Bob.bsky.social',
+            'https://bsky.app/profile/Bob.bsky.social/rss',
+        ];
+        yield 'a Mastodon account' => [
+            SocialNetwork::Mastodon,
+            'bob@mastodon.example',
+            'https://mastodon.example/@bob.rss',
+        ];
+        yield 'a Mastodon account on Bluesky' => [SocialNetwork::Bluesky, 'bob@mastodon.example', null];
+        yield 'a DID on Mastodon' => [SocialNetwork::Mastodon, 'did:plc:bob', null];
+        yield 'a Bluesky path' => [SocialNetwork::Bluesky, 'did:plc:bob/rss', null];
+        yield 'a Bluesky query' => [SocialNetwork::Bluesky, 'bob?x=1', null];
+        yield 'an empty identity' => [SocialNetwork::Bluesky, '', null];
+        yield 'a Mastodon user without a server' => [SocialNetwork::Mastodon, 'bob', null];
+        yield 'a Mastodon server without a user' => [SocialNetwork::Mastodon, '@mastodon.example', null];
+        yield 'a Mastodon account with two servers' => [SocialNetwork::Mastodon, 'bob@a.example@b.example', null];
+        yield 'a Mastodon server with a path' => [SocialNetwork::Mastodon, 'bob@mastodon.example/x', null];
+        yield 'a Mastodon server with a port' => [SocialNetwork::Mastodon, 'bob@mastodon.example:8080', null];
+    }
+
+    #[DataProvider('identities')]
+    public function testAnIdentityBuildsItsProfileFeedOnlyWhenItNamesAnAccountOfTheNetwork(
+        SocialNetwork $network,
+        string $identity,
+        ?string $feedUrl,
+    ): void {
+        self::assertSame($feedUrl, ProfileFeedUrl::of($network, $identity));
     }
 }

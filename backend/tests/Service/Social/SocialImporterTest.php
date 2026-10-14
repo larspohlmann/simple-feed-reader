@@ -82,8 +82,8 @@ final class SocialImporterTest extends DbTestCase
     public function testChosenFollowsBecomeUntaggedSubscriptionsWithTheirTitle(): void
     {
         $result = $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
-            new SocialImportFeedModel('https://bsky.app/profile/did:plc:bob/rss', 'Bob'),
-            new SocialImportFeedModel('https://bsky.app/profile/did:plc:carol/rss', null),
+            new SocialImportFeedModel('did:plc:bob', 'Bob'),
+            new SocialImportFeedModel('did:plc:carol', null),
         ], []));
 
         self::assertSame(2, $result->imported);
@@ -97,7 +97,7 @@ final class SocialImporterTest extends DbTestCase
         $this->subscriptions->subscribeTagged($this->user, 'https://mastodon.example/@bob.rss', 'Friends');
 
         $result = $this->importer()->import(SocialAccounts::mastodonOf($this->user), new SocialImportModel([
-            new SocialImportFeedModel('https://mastodon.example/@bob.rss', 'Bob'),
+            new SocialImportFeedModel('bob@mastodon.example', 'Bob'),
         ], []));
 
         self::assertSame(0, $result->imported);
@@ -111,8 +111,8 @@ final class SocialImporterTest extends DbTestCase
 
         try {
             $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
-                new SocialImportFeedModel('https://bsky.app/profile/did:plc:bob/rss', 'Bob'),
-                new SocialImportFeedModel('https://mastodon.example/@bob.rss', 'Bob'),
+                new SocialImportFeedModel('did:plc:bob', 'Bob'),
+                new SocialImportFeedModel('bob@mastodon.example', 'Bob'),
             ], [$keptId]));
             self::fail('A foreign feed must refuse the import.');
         } catch (InvalidSocialImportFeedException) {
@@ -158,7 +158,7 @@ final class SocialImporterTest extends DbTestCase
         $goneId = $this->subscribedId($this->user, 'https://bsky.app/profile/did:plc:gone/rss');
 
         $result = $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
-            new SocialImportFeedModel('https://bsky.app/profile/did:plc:bob/rss', 'Bob'),
+            new SocialImportFeedModel('did:plc:bob', 'Bob'),
         ], [$goneId]));
 
         self::assertSame(1, $result->imported);

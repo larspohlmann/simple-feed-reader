@@ -180,7 +180,7 @@ final class SocialImportControllerTest extends ApiTestCase
 
         $this->postImport($client, $this->blueskyAccountOf($user), [
             'subscribe' => [[
-                'feedUrl' => self::BOB_FEED,
+                'identity' => 'did:plc:bob',
                 'title' => 'Bob',
                 'avatarUrl' => 'https://tracker.example/pixel.gif',
                 'imageUrl' => 'https://tracker.example/pixel.gif',
@@ -212,7 +212,7 @@ final class SocialImportControllerTest extends ApiTestCase
         $gone = $this->subscribe($user, 'https://bsky.app/profile/did:plc:gone/rss');
 
         $this->postImport($client, $account, [
-            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob']],
+            'subscribe' => [['identity' => 'did:plc:bob', 'title' => 'Bob']],
             'unsubscribe' => [$gone->requireId()],
         ]);
 
@@ -229,7 +229,7 @@ final class SocialImportControllerTest extends ApiTestCase
         $user = $this->signIn($client, 'import-null-title@example.test');
 
         $this->postImport($client, $this->blueskyAccountOf($user), [
-            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => null]],
+            'subscribe' => [['identity' => 'did:plc:bob', 'title' => null]],
             'unsubscribe' => [],
         ]);
 
@@ -246,8 +246,8 @@ final class SocialImportControllerTest extends ApiTestCase
 
         $this->postImport($client, $this->blueskyAccountOf($user), [
             'subscribe' => [
-                ['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob'],
-                ['feedUrl' => 'https://mastodon.example/@bob.rss', 'title' => 'Bob'],
+                ['identity' => 'did:plc:bob', 'title' => 'Bob'],
+                ['identity' => 'bob@mastodon.example', 'title' => 'Bob'],
             ],
             'unsubscribe' => [$goneId],
         ]);
@@ -297,7 +297,7 @@ final class SocialImportControllerTest extends ApiTestCase
         $this->signIn($client, 'import-post-intruder@example.test');
 
         $this->postImport($client, $account, [
-            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob']],
+            'subscribe' => [['identity' => 'did:plc:bob', 'title' => 'Bob']],
         ]);
 
         $this->assertRejected($client, Response::HTTP_NOT_FOUND);
@@ -331,7 +331,7 @@ final class SocialImportControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
 
         $this->postImport($client, $account, [
-            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob']],
+            'subscribe' => [['identity' => 'did:plc:bob', 'title' => 'Bob']],
         ]);
 
         self::assertResponseIsSuccessful();
@@ -404,7 +404,7 @@ final class SocialImportControllerTest extends ApiTestCase
         $goneId = $this->subscribe($user, 'https://bsky.app/profile/did:plc:gone/rss')->requireId();
 
         $this->postImport($client, $this->blueskyAccountOf($user), [
-            'subscribe' => [['feedUrl' => 'https://bsky.app/profile/did:plc:bob/rss', 'title' => 'Bob']],
+            'subscribe' => [['identity' => 'did:plc:bob', 'title' => 'Bob']],
             'unsubscribe' => [$goneId],
             'collections' => [
                 ['kind' => 'home', 'id' => null, 'name' => 'Home'],

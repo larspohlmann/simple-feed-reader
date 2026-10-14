@@ -134,6 +134,8 @@
 
   @if (importer.failure(); as message) {
     <app-error-banner
+      subheader
+      class="failure"
       data-testid="social-import-failure"
       [message]="message"
       [actionLabel]="importer.candidates() === null ? ('common.retry' | transloco) : null"

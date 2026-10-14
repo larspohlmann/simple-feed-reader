@@ -9,7 +9,7 @@ use App\Service\Bluesky\Support\BlueskyWeb;
 
 final class ProfileFeedUrl
 {
-    private const string BLUESKY_PATH = '#^/profile/([^/]+)/rss/?$#';
+    private const string BLUESKY_PATH = '#^/profile/([^/@]+)/rss/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
     private const string DID_PREFIX = 'did:';
 
@@ -21,6 +21,18 @@ final class ProfileFeedUrl
     public static function mastodon(string $user, string $domain): string
     {
         return 'https://' . $domain . '/@' . $user . '.rss';
+    }
+
+    /** @return string|null the profile feed of $identity on $network; null when $identity names no account there */
+    public static function of(SocialNetwork $network, string $identity): ?string
+    {
+        $url = match ($network) {
+            SocialNetwork::Bluesky => self::bluesky($identity),
+            SocialNetwork::Mastodon => self::mastodonOf($identity),
+        };
+        $builtIdentity = null === $url ? null : self::identityOf($network, $url);
+
+        return null !== $builtIdentity && 0 === strcasecmp($builtIdentity, $identity) ? $url : null;
     }
 
     public static function isDid(string $identity): bool
@@ -69,6 +81,13 @@ final class ProfileFeedUrl
             SocialNetwork::Bluesky => self::blueskyIdentity($host, $path),
             SocialNetwork::Mastodon => self::mastodonIdentity($host, $path),
         };
+    }
+
+    private static function mastodonOf(string $identity): ?string
+    {
+        $parts = explode('@', $identity);
+
+        return 2 === \count($parts) ? self::mastodon($parts[0], $parts[1]) : null;
     }
 
     private static function isWeb(string $scheme): bool

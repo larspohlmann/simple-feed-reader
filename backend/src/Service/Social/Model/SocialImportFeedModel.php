@@ -7,7 +7,7 @@ namespace App\Service\Social\Model;
 final readonly class SocialImportFeedModel
 {
     public function __construct(
-        public string $feedUrl,
+        public string $identity,
         public ?string $title,
     ) {
     }

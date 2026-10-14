@@ -490,7 +490,7 @@ describe('SocialImportDialogComponent', () => {
 
     const post = http.expectOne(IMPORT);
     expect(post.request.body).toEqual({
-      subscribe: [{ feedUrl: 'https://bsky.app/profile/did:plc:bob/rss', title: 'Bob' }],
+      subscribe: [{ identity: 'did:plc:bob', title: 'Bob' }],
       unsubscribe: [],
       collections: [],
     });
@@ -513,8 +513,8 @@ describe('SocialImportDialogComponent', () => {
     const post = http.expectOne(IMPORT);
     expect(post.request.body).toEqual({
       subscribe: [
-        { feedUrl: 'https://bsky.app/profile/did:plc:bob/rss', title: 'Bob' },
-        { feedUrl: 'https://bsky.app/profile/did:plc:fay/rss', title: null },
+        { identity: 'did:plc:bob', title: 'Bob' },
+        { identity: 'did:plc:fay', title: null },
       ],
       unsubscribe: [10],
       collections: [],
