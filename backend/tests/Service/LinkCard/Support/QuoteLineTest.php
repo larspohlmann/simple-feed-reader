@@ -65,4 +65,17 @@ final class QuoteLineTest extends TestCase
     {
         self::assertSame($html, QuoteLine::removedFrom($html, self::QUOTED));
     }
+
+    public function testTheTargetIsTheLinkTheReParagraphQuotes(): void
+    {
+        $html = '<p>See <a href="https://a.example/x">this</a></p>'
+            . '<p class="quote-inline">RE: <a href="https://m.example/@b/9">https://m.example/@b/9</a></p>';
+
+        self::assertSame('https://m.example/@b/9', QuoteLine::targetIn($html));
+    }
+
+    public function testABodyWithoutAReParagraphQuotesNothing(): void
+    {
+        self::assertNull(QuoteLine::targetIn('<p>RE is not here: <a href="https://m.example/@b/9">x</a></p>'));
+    }
 }

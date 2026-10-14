@@ -1,0 +1,27 @@
+@for (medium of media(); track medium.url) {
+  @if (medium.kind === 'video') {
+    <video
+      class="item"
+      controls
+      preload="none"
+      playsinline
+      [attr.aria-label]="videoLabel()"
+      [src]="medium.url"
+      [attr.poster]="medium.previewImageUrl ?? null"
+      (click)="$event.stopPropagation()"
+      (keydown)="$event.stopPropagation()"
+    ></video>
+  } @else {
+    <img
+      class="item"
+      appProxiedImage
+      [src]="medium.url"
+      [attr.width]="medium.width ?? null"
+      [attr.height]="medium.height ?? null"
+      alt=""
+      loading="lazy"
+      decoding="async"
+      referrerpolicy="no-referrer"
+    />
+  }
+}

@@ -151,6 +151,20 @@ final class LineField
     }
 
     /**
+     * Reads a nested single object that an older same-version file may omit or null.
+     *
+     * @param array<string, mixed> $line
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function objectOrNull(array $line, string $key): ?array
+    {
+        $value = $line[$key] ?? null;
+
+        return $value === null ? null : self::asObject($value, $key);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private static function asObject(mixed $value, string $key): array

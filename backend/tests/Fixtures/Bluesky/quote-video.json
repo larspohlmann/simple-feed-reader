@@ -1,0 +1,188 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:6hit5rjdbmlnscmuk4bbtmuc/app.bsky.feed.post/3mxsd5n2ox22g",
+      "cid": "bafyreih33x6egtitpnnxc7qmfrffv4eo67gb3xl56dky6yjcp43o76znsm",
+      "author": {
+        "did": "did:plc:6hit5rjdbmlnscmuk4bbtmuc",
+        "handle": "rincewind.run",
+        "displayName": "Micah",
+        "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:6hit5rjdbmlnscmuk4bbtmuc/bafkreihjwxhayfbw66wvb4n4n4ggkcquoqufule63eglfbs6xr5prhwblq",
+        "associated": {
+          "chat": {
+            "allowIncoming": "following"
+          },
+          "activitySubscription": {
+            "allowSubscriptions": "followers"
+          }
+        },
+        "labels": [],
+        "createdAt": "2023-05-18T08:52:50.995Z"
+      },
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "createdAt": "2026-10-14T00:47:39.653Z",
+        "embed": {
+          "$type": "app.bsky.embed.record",
+          "record": {
+            "cid": "bafyreiesrcky3pruq55ogwu4dm2rrbddk2xxsxeqgq44siueukzm4gjweu",
+            "uri": "at://did:plc:4llrhdclvdlmmynkwsmg5tdc/app.bsky.feed.post/3mxsb6ewtzh2e"
+          }
+        },
+        "langs": [
+          "en"
+        ],
+        "text": "the “don’t show up and let the other person debate an empty chair” strategy is pretty much always a terrible idea but honestly mike collins might want to try it at this point"
+      },
+      "embed": {
+        "record": {
+          "uri": "at://did:plc:4llrhdclvdlmmynkwsmg5tdc/app.bsky.feed.post/3mxsb6ewtzh2e",
+          "cid": "bafyreiesrcky3pruq55ogwu4dm2rrbddk2xxsxeqgq44siueukzm4gjweu",
+          "author": {
+            "did": "did:plc:4llrhdclvdlmmynkwsmg5tdc",
+            "handle": "atrupar.com",
+            "displayName": "Aaron Rupar",
+            "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:4llrhdclvdlmmynkwsmg5tdc/bafkreibmhm3h6ar52pogvolisrzjdhwa2myras5vkxzj67twxn2l6pogwu",
+            "associated": {
+              "chat": {
+                "allowIncoming": "following"
+              },
+              "activitySubscription": {
+                "allowSubscriptions": "followers"
+              }
+            },
+            "labels": [],
+            "createdAt": "2023-04-28T00:47:57.437Z",
+            "verification": {
+              "verifications": [
+                {
+                  "issuer": "did:plc:z72i7hdynmk6r22z27h6tvur",
+                  "issuerDisplayName": "Bluesky",
+                  "issuerHandle": "bsky.app",
+                  "uri": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.verification/3ltpn6t4d3g2e",
+                  "isValid": true,
+                  "createdAt": "2025-07-11T20:02:18.825Z"
+                }
+              ],
+              "verifiedStatus": "valid",
+              "trustedVerifierStatus": "none"
+            },
+            "status": {
+              "uri": "at://did:plc:4llrhdclvdlmmynkwsmg5tdc/app.bsky.actor.status/self",
+              "cid": "bafyreicmiohxdrarahfm62jinkhtouejpcerzeghhobv5ujmqwye5u6dqm",
+              "record": {
+                "$type": "app.bsky.actor.status",
+                "createdAt": "2026-08-07T18:01:21.467Z",
+                "durationMinutes": 60,
+                "embed": {
+                  "$type": "app.bsky.embed.external",
+                  "external": {
+                    "$type": "app.bsky.embed.external#external",
+                    "description": "Starting Aug 7 at 2:00 PM EDT",
+                    "thumb": {
+                      "$type": "blob",
+                      "ref": {
+                        "$link": "bafkreib5fo66a5nlwuzdutlidgt6xmknocgsdzh5ulxbvorayazj77dwfi"
+                      },
+                      "mimeType": "image/jpeg",
+                      "size": 74413
+                    },
+                    "title": "LIVE SOON: Inside Wisconsin's wild gov primary with Dan Shafer",
+                    "uri": "https://open.substack.com/live-stream/310962"
+                  }
+                },
+                "status": "app.bsky.actor.status#live"
+              },
+              "status": "app.bsky.actor.status#live",
+              "embed": {
+                "external": {
+                  "uri": "https://open.substack.com/live-stream/310962",
+                  "title": "LIVE SOON: Inside Wisconsin's wild gov primary with Dan Shafer",
+                  "description": "Starting Aug 7 at 2:00 PM EDT",
+                  "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:4llrhdclvdlmmynkwsmg5tdc/bafkreib5fo66a5nlwuzdutlidgt6xmknocgsdzh5ulxbvorayazj77dwfi"
+                },
+                "$type": "app.bsky.embed.external#view"
+              },
+              "labels": [],
+              "expiresAt": "2026-08-07T19:01:21.467Z",
+              "isActive": false
+            }
+          },
+          "value": {
+            "$type": "app.bsky.feed.post",
+            "createdAt": "2026-10-14T00:12:17.176Z",
+            "embed": {
+              "$type": "app.bsky.embed.video",
+              "alt": "",
+              "aspectRatio": {
+                "height": 720,
+                "width": 1280
+              },
+              "captions": [],
+              "video": {
+                "$type": "blob",
+                "ref": {
+                  "$link": "bafkreibn25gbpkfgzdlqar454cwdgopqh42k5eqknamz6cej6iyjvojgbm"
+                },
+                "mimeType": "video/mp4",
+                "size": 23507125
+              }
+            },
+            "facets": [],
+            "langs": [
+              "en"
+            ],
+            "text": "OSSOFF: Mike Collins called for killing immigrants by throwing them to their deaths out of helicopters. I'd like to hear if Mike Collins stands by that statement. Do you still believe in the extrajudicial killing of immigrants?\n\n\nMIKE COLLINS: *changes topic*\n\n"
+          },
+          "labels": [],
+          "likeCount": 3596,
+          "replyCount": 101,
+          "repostCount": 1012,
+          "quoteCount": 103,
+          "indexedAt": "2026-10-14T00:12:18.958Z",
+          "embeds": [
+            {
+              "cid": "bafkreibn25gbpkfgzdlqar454cwdgopqh42k5eqknamz6cej6iyjvojgbm",
+              "playlist": "https://video.bsky.app/watch/did%3Aplc%3A4llrhdclvdlmmynkwsmg5tdc/bafkreibn25gbpkfgzdlqar454cwdgopqh42k5eqknamz6cej6iyjvojgbm/playlist.m3u8",
+              "thumbnail": "https://video.bsky.app/watch/did%3Aplc%3A4llrhdclvdlmmynkwsmg5tdc/bafkreibn25gbpkfgzdlqar454cwdgopqh42k5eqknamz6cej6iyjvojgbm/thumbnail.jpg",
+              "alt": "",
+              "aspectRatio": {
+                "height": 720,
+                "width": 1280
+              },
+              "$type": "app.bsky.embed.video#view"
+            }
+          ],
+          "$type": "app.bsky.embed.record#viewRecord"
+        },
+        "$type": "app.bsky.embed.record#view"
+      },
+      "bookmarkCount": 14,
+      "replyCount": 12,
+      "repostCount": 100,
+      "likeCount": 907,
+      "quoteCount": 2,
+      "indexedAt": "2026-10-14T00:47:40.163Z",
+      "labels": [],
+      "threadgate": {
+        "uri": "at://did:plc:6hit5rjdbmlnscmuk4bbtmuc/app.bsky.feed.threadgate/3mxsd5n2ox22g",
+        "cid": "bafyreifllrg7cu4ama4dheowatdogsdllznmii6arebl4gacezdoiw3nci",
+        "record": {
+          "$type": "app.bsky.feed.threadgate",
+          "allow": [
+            {
+              "$type": "app.bsky.feed.threadgate#followerRule"
+            },
+            {
+              "$type": "app.bsky.feed.threadgate#followingRule"
+            }
+          ],
+          "createdAt": "2026-10-14T00:47:39.668Z",
+          "hiddenReplies": [],
+          "post": "at://did:plc:6hit5rjdbmlnscmuk4bbtmuc/app.bsky.feed.post/3mxsd5n2ox22g"
+        },
+        "lists": []
+      }
+    }
+  ]
+}

@@ -9,10 +9,12 @@ use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Enum\ShareKind;
 use App\Service\LinkCard\EntryCardWriter;
 use App\Service\LinkCard\Model\EntryCardsModel;
 use App\Service\LinkCard\Model\PageCardModel;
+use App\Service\LinkCard\Model\QuotedTargetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
@@ -99,6 +101,21 @@ final class EntryCardWriterTest extends DbTestCase
 
         self::assertSame($body, $post->getContentHtml());
         self::assertSame('RE: https://q.example/@a/1 Look.', $post->getSummary());
+    }
+
+    public function testAQuotedPostLeavesItsQuoteLineUnderItsAddressAndMakesTheShareAQuote(): void
+    {
+        $address = 'https://m.example/users/b/statuses/9';
+        $quote = new QuotedPostContent('https://m.example/@b/9', 'Bea', 'bea@m.example', null, null, 'Words', [], null);
+        $post = $this->post('<p>Wow</p><p>RE: <a href="' . $address . '">' . $address . '</a></p>');
+
+        $this->writeFlushed($post, EntryCardsModel::quoting(new QuotedTargetModel($address, $quote)));
+
+        self::assertSame('<p>Wow</p>', $post->getContentHtml());
+        self::assertSame('Wow', $post->getSummary());
+        self::assertSame(ShareKind::Quote, $post->getShareKind());
+        self::assertEquals($quote, $post->getQuotedPost());
+        self::assertSame([], $this->cardUrls($post));
     }
 
     public function testATitledShareWhoseTargetIsAPictureBecomesAMediaShare(): void

@@ -7,12 +7,8 @@
     <p class="dek">{{ snippet() }}</p>
   }
   @let items = media();
-  <div
-    class="media"
-    [attr.data-count]="shortPlayer() ? 1 : items.length"
-    [style.--ratio]="ratio(items[0])"
-  >
-    @if (shortPlayer(); as player) {
+  @if (shortPlayer(); as player) {
+    <div class="media" data-count="1" [style.--ratio]="ratio(items[0])">
       <div class="item short-player">
         @if (playingShort()) {
           <div
@@ -41,36 +37,14 @@
           </button>
         }
       </div>
-    } @else {
-      @for (medium of items; track medium.url) {
-        @if (medium.kind === 'video') {
-          <video
-            class="item"
-            controls
-            preload="none"
-            playsinline
-            [attr.aria-label]="headline() || ('reader.mediaVideo' | transloco)"
-            [src]="medium.url"
-            [attr.poster]="medium.previewImageUrl ?? null"
-            (click)="$event.stopPropagation()"
-            (keydown)="$event.stopPropagation()"
-          ></video>
-        } @else {
-          <img
-            class="item"
-            appProxiedImage
-            [src]="medium.url"
-            [attr.width]="medium.width ?? null"
-            [attr.height]="medium.height ?? null"
-            alt=""
-            loading="lazy"
-            decoding="async"
-            referrerpolicy="no-referrer"
-          />
-        }
-      }
-    }
-  </div>
+    </div>
+  } @else {
+    <app-post-media
+      [media]="items"
+      [ratio]="ratio(items[0])"
+      [videoLabel]="headline() || ('reader.mediaVideo' | transloco)"
+    />
+  }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
   <app-entry-duplicates [entry]="entry()" />
 </article>

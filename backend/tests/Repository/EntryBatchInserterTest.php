@@ -6,7 +6,10 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
+use App\Entity\QuotedPostReference;
 use App\Enum\ShareKind;
 use App\Repository\EntryBatchInserter;
 use App\Repository\LinkCardRepository;
@@ -41,6 +44,7 @@ final class EntryBatchInserterTest extends DbTestCase
         bool $titleDerived = false,
         ?string $shareKind = null,
         array $linkCards = [],
+        ?QuotedPostContent $quote = null,
     ): EntryLine {
         return new EntryLine(
             feedUrl: 'https://batch.example/feed.xml',
@@ -60,6 +64,7 @@ final class EntryBatchInserterTest extends DbTestCase
             titleDerived: $titleDerived,
             shareKind: $shareKind,
             linkCards: $linkCards,
+            quote: $quote,
         );
     }
 
@@ -136,6 +141,51 @@ final class EntryBatchInserterTest extends DbTestCase
         self::assertInstanceOf(Entry::class, $plain);
         self::assertSame(ShareKind::Media, $media->getShareKind());
         self::assertNull($plain->getShareKind());
+    }
+
+    public function testARestoredRowKeepsItsQuotedPost(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+        $quote = new QuotedPostContent(
+            'https://bsky.app/profile/q.bsky.social/post/3k',
+            'Quoted Person',
+            'q.bsky.social',
+            'https://cdn.example/q.jpg',
+            new \DateTimeImmutable('2026-10-13 21:07:00', new \DateTimeZone('UTC')),
+            "quoted\ntext",
+            [new EntryMedium('https://cdn.example/1.jpg', 'image', 1200, 675)],
+            new QuotedPostReference('https://bsky.app/profile/n/post/9', 'n.bsky.social'),
+        );
+
+        $this->inserter()->insert($feedId, [
+            $this->entryLine('quote-guid', shareKind: 'quote', quote: $quote),
+            $this->entryLine('plain-guid'),
+        ]);
+
+        $this->entityManager->clear();
+        $repository = $this->entityManager->getRepository(Entry::class);
+        $quoting = $repository->findOneBy(['guid.hash' => hash('sha256', 'quote-guid')]);
+        $plain = $repository->findOneBy(['guid.hash' => hash('sha256', 'plain-guid')]);
+        self::assertInstanceOf(Entry::class, $quoting);
+        self::assertInstanceOf(Entry::class, $plain);
+        self::assertEquals($quote, $quoting->getQuotedPost());
+        self::assertSame(ShareKind::Quote, $quoting->getShareKind());
+        self::assertNull($plain->getQuotedPost());
+    }
+
+    public function testARestoredQuoteWithoutANestedQuoteKeepsNone(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+        $quote = new QuotedPostContent('https://bsky.app/profile/q/post/3k', 'Q', 'q', null, null, 'hi', [], null);
+
+        $this->inserter()->insert($feedId, [$this->entryLine('quote-guid', shareKind: 'quote', quote: $quote)]);
+
+        $this->entityManager->clear();
+        $quoting = $this->entityManager->getRepository(Entry::class)
+            ->findOneBy(['guid.hash' => hash('sha256', 'quote-guid')]);
+        self::assertInstanceOf(Entry::class, $quoting);
+        self::assertEquals($quote, $quoting->getQuotedPost());
+        self::assertNull($quoting->getQuotedPost()?->nestedQuote);
     }
 
     public function testARestoredRowKeepsWhetherItsTitleWasDerived(): void

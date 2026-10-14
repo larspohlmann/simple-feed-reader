@@ -9,6 +9,7 @@ use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
@@ -202,7 +203,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
             'Example',
         );
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -220,7 +221,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://other.example/@them/9', 'Them', 'The quoted post.', null, 'Other');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -241,7 +242,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://example.com/story', 'The story', null, null, 'Example');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -257,7 +258,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $post = $this->post($guid, '<p>So true.</p><p>RE: <a href="' . $posted . '">' . $posted . '</a></p>');
         $card = new LinkCardContent('https://example.com/story', 'The story', 'What happened.', null, 'Example');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
@@ -280,7 +281,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://other.example/b', 'B', null, null, 'Other');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
@@ -300,7 +301,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://example.com/story', 'The story', null, null, 'Example');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
@@ -316,10 +317,49 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         );
         $card = new LinkCardContent('https://other.example/b', 'B', null, null, 'Other');
 
-        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofLinkCards([$guid => $card]));
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares(([$guid => $card]), []));
         $this->entityManager->flush();
 
         self::assertEquals([$card], $this->storedCards($this->reload($post)));
+    }
+
+    public function testANativeMastodonQuoteSettlesAsAQuotedPostWithoutAnyEnrichment(): void
+    {
+        $guid = 'https://mastodon.example/@someone/20';
+        $address = 'https://other.example/users/b/statuses/9';
+        $post = $this->post(
+            $guid,
+            '<p>Wow</p><p class="quote-inline">RE: <a href="' . $address . '">' . $address . '</a></p>',
+        );
+        $quote = self::quotedPost();
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares([], [$guid => $quote]));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->queuedKinds());
+        $stored = $this->reload($post);
+        self::assertSame(ShareKind::Quote, $stored->getShareKind());
+        self::assertSame('<p>Wow</p>', $stored->getContentHtml());
+        self::assertEquals($quote, $stored->getQuotedPost());
+    }
+
+    public function testALongTextPostIgnoresItsKnownQuote(): void
+    {
+        $guid = 'https://mastodon.example/@someone/21';
+        $post = $this->post(
+            $guid,
+            '<p>' . str_repeat('word ', 101) . '</p>'
+            . '<p>RE: <a href="https://other.example/@b/9">https://other.example/@b/9</a></p>',
+        );
+        $quote = self::quotedPost();
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares([], [$guid => $quote]));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->queuedKinds());
+        $stored = $this->reload($post);
+        self::assertNull($stored->getShareKind());
+        self::assertNull($stored->getQuotedPost());
     }
 
     public function testWithoutACardALinkPostWaitsForThePageFetchAsBefore(): void
@@ -332,6 +372,20 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
         self::assertSame(ShareKind::Link, $this->reload($post)->getShareKind());
+    }
+
+    private static function quotedPost(): QuotedPostContent
+    {
+        return new QuotedPostContent(
+            'https://other.example/@b/9',
+            'Bea',
+            'bea@other.example',
+            null,
+            null,
+            'Quoted words',
+            [],
+            null,
+        );
     }
 
     private function post(string $guid, ?string $contentHtml): Entry

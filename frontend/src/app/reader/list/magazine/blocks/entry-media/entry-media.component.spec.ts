@@ -2,7 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntryMediaComponent } from './entry-media.component';
-import { EntryDto, EntryMediumDto } from '../../../../models';
+import { EntryDto } from '../../../../models';
+import { EntryMediumDto } from '../../../../entry-medium';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { EMBED_FRAME_ATTRIBUTES } from '../../../../media/media-embeds';
 import { MEDIA_PAUSE } from './pause-media';
@@ -145,7 +146,7 @@ describe('EntryMediaComponent', () => {
 
   it('keeps a single picture at its own aspect ratio', async () => {
     const element = await mount(entry({ media: [image(1, 1020, 1180)] }));
-    const frame = element.querySelector<HTMLElement>('.media')!;
+    const frame = element.querySelector<HTMLElement>('app-post-media')!;
 
     expect(frame.dataset['count']).toBe('1');
     expect(frame.style.getPropertyValue('--ratio')).toBe(String(1020 / 1180));
@@ -154,7 +155,7 @@ describe('EntryMediaComponent', () => {
 
   it('lays out several pictures as a grid of their count', async () => {
     const element = await mount(entry({ media: [image(1), image(2), image(3)] }));
-    const frame = element.querySelector<HTMLElement>('.media')!;
+    const frame = element.querySelector<HTMLElement>('app-post-media')!;
 
     expect(frame.dataset['count']).toBe('3');
     expect(frame.querySelectorAll('img')).toHaveLength(3);

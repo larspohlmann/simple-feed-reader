@@ -1,0 +1,28 @@
+<article class="quoting" [appOpensEntry]="entry()">
+  <app-entry-kicker-line [entry]="entry()" />
+  @if (headline()) {
+    <p class="title" [class.post]="isPost()">{{ headline() }}</p>
+  }
+  @if (snippet()) {
+    <p class="dek">{{ snippet() }}</p>
+  }
+  @let items = media();
+  @if (items.length) {
+    <app-post-media
+      [media]="items"
+      [ratio]="ratio(items[0])"
+      [videoLabel]="headline() || ('reader.mediaVideo' | transloco)"
+    />
+  }
+  @if (entry().quote; as quote) {
+    <app-quoted-post
+      [quote]="quote"
+      layout="block"
+      (click)="$event.stopPropagation()"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    />
+  }
+  <app-entry-meta [entry]="entry()" [tags]="tags()" />
+  <app-entry-duplicates [entry]="entry()" />
+</article>

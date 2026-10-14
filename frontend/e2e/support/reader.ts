@@ -105,7 +105,14 @@ export function entryDetailJson(entry: EntryDto, contentHtml: string): EntryDeta
   const completed = { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight };
   return {
     entry: { ...entry, contentHtml },
-    completed: { ...completed, imageRenditions, media, linkCards, share },
+    completed: {
+      ...completed,
+      imageRenditions,
+      media,
+      linkCards,
+      share,
+      quote: entry.quote ?? null,
+    },
   };
 }
 

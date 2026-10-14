@@ -473,6 +473,9 @@ final class AccountRestorerTest extends DbTestCase
                 'feed', 'guid.value', 'mediaSet.media', 'mediaSet.attachments', 'location.url', 'image.renditions',
                 'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
                 'headline.title', 'headline.derived', 'author.name', 'author.profileUrl', 'author.avatarUrl',
+                'share.quotedPost.url', 'share.quotedPost.authorName', 'share.quotedPost.authorHandle',
+                'share.quotedPost.authorAvatarUrl', 'share.quotedPost.postedAt', 'share.quotedPost.text',
+                'share.quotedPost.media', 'share.quotedPost.nestedUrl', 'share.quotedPost.nestedHandle',
             ],
         );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
@@ -494,6 +497,8 @@ final class AccountRestorerTest extends DbTestCase
         self::assertTrue($targetRows['entry']->isTitleDerived());
         self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());
         self::assertEquals($sourceRows['entry']->getShareKind(), $targetRows['entry']->getShareKind());
+        self::assertNotNull($sourceRows['entry']->getQuotedPost());
+        self::assertEquals($sourceRows['entry']->getQuotedPost(), $targetRows['entry']->getQuotedPost());
         self::assertNotSame([], $sourceCards);
         self::assertEquals($sourceCards, $this->linkCardsOf($targetRows['entry']));
 

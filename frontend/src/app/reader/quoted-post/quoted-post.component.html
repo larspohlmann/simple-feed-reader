@@ -1,0 +1,61 @@
+@let post = quote();
+<div class="box">
+  <header class="byline">
+    @if (post.authorAvatarUrl && !avatarFailed()) {
+      <img
+        class="avatar"
+        appProxiedImage
+        [src]="post.authorAvatarUrl"
+        alt=""
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        (imageFailed)="avatarFailed.set(true)"
+      />
+    } @else {
+      <span class="avatar initials" [class]="'tone-' + tone()" aria-hidden="true">{{
+        initials()
+      }}</span>
+    }
+    <a
+      class="open"
+      [href]="post.url"
+      target="_blank"
+      rel="noopener noreferrer"
+      (click)="$event.stopPropagation()"
+      (keydown.enter)="$event.stopPropagation()"
+    >
+      <span class="name">{{ post.authorName }}</span>
+      <span class="handle">{{ '@' + post.authorHandle }}</span>
+    </a>
+    @if (postedAt()) {
+      <time class="when" [attr.datetime]="post.postedAt">{{ postedAt() }}</time>
+    }
+  </header>
+  @if (post.text) {
+    <p class="text">{{ post.text }}</p>
+  }
+  @if (post.media.length) {
+    <app-post-media
+      [media]="post.media"
+      [ratio]="ratio()"
+      [videoLabel]="'reader.quotedVideo' | transloco"
+    />
+  }
+  @if (post.nestedQuote; as nested) {
+    <a
+      class="nested"
+      [href]="nested.url"
+      target="_blank"
+      rel="noopener noreferrer"
+      (click)="$event.stopPropagation()"
+      (keydown.enter)="$event.stopPropagation()"
+    >
+      @if (nested.handle) {
+        {{ 'reader.quotingPostBy' | transloco: { handle: '@' + nested.handle } }}
+      } @else {
+        {{ 'reader.quotingPost' | transloco }}
+      }
+    </a>
+  }
+</div>

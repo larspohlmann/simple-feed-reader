@@ -6,6 +6,7 @@ namespace App\Service\Completion;
 
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
@@ -52,6 +53,12 @@ final readonly class ShareEnrichmentQueue
             return;
         }
         $this->classifier->classify($entry);
+        $quote = self::postedQuoteOf($entry, $knownShares);
+        if ($quote !== null) {
+            $this->knownShareSettler->settleQuoted($entry, $quote);
+
+            return;
+        }
         $card = self::postedCardOf($entry, $knownShares);
         if ($card !== null) {
             $this->knownShareSettler->settleCarded($entry, $card, $queuedAt);
@@ -59,6 +66,11 @@ final readonly class ShareEnrichmentQueue
             return;
         }
         $this->queueCreated($entry, $queuedAt);
+    }
+
+    private static function postedQuoteOf(Entry $entry, KnownSharesModel $knownShares): ?QuotedPostContent
+    {
+        return $entry->getShareKind() === ShareKind::Link ? $knownShares->quotedPostFor($entry->getGuid()) : null;
     }
 
     private static function postedCardOf(Entry $entry, KnownSharesModel $knownShares): ?LinkCardContent

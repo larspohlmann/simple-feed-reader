@@ -94,89 +94,34 @@ final class PostEmbedRendererTest extends TestCase
         self::assertEquals([new ParsedMediumModel(self::FULLSIZE, VisualMediaKind::Image, 4000, 3000)], $embed->media);
     }
 
-    public function testAQuoteIsACardOfTheQuotedAuthorAndTextWithNoHtmlAndNoLeadImage(): void
+    public function testAQuoteIsAQuotedPostWithNoHtmlNoCardAndNoLeadImage(): void
     {
         $embed = $this->rendered('record');
 
         self::assertSame('', $embed->html);
-        self::assertEquals([new LinkCardContent(
-            self::MOTHER_JONES . '3mxhvfsp7n32t',
-            'Mother Jones (@motherjones.com)',
-            "Big money has long dominated American politics, with wealthy donors, corporations, and special"
-                . " interests dumping tons of cash into presidential and congressional elections. \n\nBut this year,"
-                . ' the quid pro quo of campaign money for preferential government treatment is more brazen than'
-                . ' ever before.',
-            null,
-            'bsky.app',
-        )], $embed->linkCards);
+        self::assertSame([], $embed->linkCards);
         self::assertNull($embed->leadImage);
-        self::assertSame([], $embed->media);
+        self::assertNotNull($embed->quote);
     }
 
-    public function testAQuoteWithMediaGivesTheQuoteCardThenTheMediasCard(): void
+    public function testAQuoteWithMediaGivesTheQuoteAndOnlyThePostsOwnCard(): void
     {
         $embed = $this->rendered('record-with-media');
 
-        self::assertSame('', $embed->html);
+        self::assertSame('amylittlefield.bsky.social', $embed->quote?->authorHandle);
         self::assertSame(
-            [
-                'https://bsky.app/profile/did:plc:rhgbyqyye2vpydw7c75j4wnr/post/3mxh76vhjfk2k',
-                self::REDDIT_CARD,
-            ],
+            [self::REDDIT_CARD],
             array_map(static fn (LinkCardContent $card): string => $card->url, $embed->linkCards),
         );
-        self::assertSame('Amy Littlefield (@amylittlefield.bsky.social)', $embed->linkCards[0]->title);
         self::assertSame(self::REDDIT_THUMB, $embed->leadImage?->url);
     }
 
-    /** @return iterable<string, array{array<mixed>, ?string}> */
-    public static function quotedEmbeds(): iterable
+    public function testTheQuoteOfAVideoNoLongerBecomesALinkCard(): void
     {
-        yield 'images' => [[
-            '$type' => 'app.bsky.embed.images#view',
-            'images' => [
-                ['thumb' => 'https://cdn.example/first-thumb', 'fullsize' => 'https://cdn.example/first-full'],
-                ['thumb' => 'https://cdn.example/second-thumb'],
-            ],
-        ], 'https://cdn.example/first-thumb'];
-        yield 'video' => [[
-            '$type' => 'app.bsky.embed.video#view',
-            'playlist' => 'https://video.example/p.m3u8',
-            'thumbnail' => 'https://video.example/thumbnail.jpg',
-        ], 'https://video.example/thumbnail.jpg'];
-        yield 'external' => [[
-            '$type' => 'app.bsky.embed.external#view',
-            'external' => ['uri' => 'https://example.com/a', 'title' => 'A', 'thumb' => 'https://cdn.example/a'],
-        ], 'https://cdn.example/a'];
-        yield 'quote with media' => [[
-            '$type' => 'app.bsky.embed.recordWithMedia#view',
-            'media' => ['$type' => 'app.bsky.embed.images#view', 'images' => [['thumb' => 'https://cdn.example/m']]],
-            'record' => ['record' => []],
-        ], 'https://cdn.example/m'];
-        yield 'nested quote alone' => [['$type' => 'app.bsky.embed.record#view', 'record' => []], null];
-        yield 'an http image' => [[
-            '$type' => 'app.bsky.embed.images#view',
-            'images' => [['thumb' => 'http://cdn.example/insecure']],
-        ], null];
-    }
+        $embed = $this->rendered('quote-video');
 
-    /** @param array<mixed> $quotedEmbed */
-    #[DataProvider('quotedEmbeds')]
-    public function testAQuoteCardShowsTheQuotedPostsFirstImage(array $quotedEmbed, ?string $expected): void
-    {
-        $rendered = $this->renderer()->render(self::post([
-            '$type' => 'app.bsky.embed.record#view',
-            'record' => [
-                '$type' => 'app.bsky.embed.record#viewRecord',
-                'uri' => 'at://did:plc:c/app.bsky.feed.post/d',
-                'author' => ['handle' => 'someone.example'],
-                'value' => ['$type' => 'app.bsky.feed.post', 'text' => 'Look.'],
-                'embeds' => [$quotedEmbed],
-            ],
-        ]));
-
-        self::assertSame($expected, self::onlyCard($rendered)->imageUrl);
-        self::assertNull($rendered?->leadImage);
+        self::assertSame([], $embed->linkCards);
+        self::assertSame('video', $embed->quote?->media[0]->kind);
     }
 
     public function testAStarterPackLinksThePostOnBluesky(): void
@@ -325,7 +270,7 @@ final class PostEmbedRendererTest extends TestCase
         self::assertSame('https://example.com/story', $rendered->uncardedLink);
     }
 
-    public function testAQuoteWithAnUntitledLinkGivesTheQuoteCardAndLeavesTheLinkUncarded(): void
+    public function testAQuoteWithAnUntitledLinkGivesTheQuotedPostAndLeavesTheLinkUncarded(): void
     {
         $rendered = $this->renderer()->render(self::post([
             '$type' => 'app.bsky.embed.recordWithMedia#view',
@@ -339,10 +284,8 @@ final class PostEmbedRendererTest extends TestCase
         ]));
 
         self::assertSame('', $rendered?->html);
-        self::assertSame(['@quoted.test'], array_map(
-            static fn (LinkCardContent $card): string => $card->title,
-            $rendered->linkCards,
-        ));
+        self::assertSame('quoted.test', $rendered->quote?->authorHandle);
+        self::assertSame([], $rendered->linkCards);
         self::assertSame('https://example.com/a', $rendered->uncardedLink);
     }
 
@@ -419,45 +362,6 @@ final class PostEmbedRendererTest extends TestCase
         );
         self::assertNull($rendered?->leadImage);
         self::assertNull($rendered?->media[0]->previewImageUrl);
-    }
-
-    public function testAQuotedAuthorsHostileNameAndTextStayPlainTextInTheCard(): void
-    {
-        $rendered = $this->renderer()->render(self::post([
-            '$type' => 'app.bsky.embed.record#view',
-            'record' => [
-                '$type' => 'app.bsky.embed.record#viewRecord',
-                'uri' => 'at://did:plc:c/app.bsky.feed.post/d',
-                'author' => ['handle' => 'evil.example', 'displayName' => '<img src=x onerror=alert(1)>'],
-                'value' => ['$type' => 'app.bsky.feed.post', 'text' => "one <b>\ntwo"],
-            ],
-        ]));
-
-        $card = self::onlyCard($rendered);
-        self::assertSame('', $rendered?->html);
-        self::assertSame('<img src=x onerror=alert(1)> (@evil.example)', $card->title);
-        self::assertSame("one <b>\ntwo", $card->description);
-    }
-
-    public function testAQuotedAuthorWithoutADisplayNameIsTitledByHandleAndBlankTextIsNoDescription(): void
-    {
-        $rendered = $this->renderer()->render(self::post([
-            '$type' => 'app.bsky.embed.record#view',
-            'record' => [
-                '$type' => 'app.bsky.embed.record#viewRecord',
-                'uri' => 'at://did:plc:c/app.bsky.feed.post/d',
-                'author' => ['handle' => 'pantspants.bsky.social', 'displayName' => ' '],
-                'value' => ['$type' => 'app.bsky.feed.post', 'text' => ''],
-            ],
-        ]));
-
-        self::assertEquals([new LinkCardContent(
-            'https://bsky.app/profile/did:plc:c/post/d',
-            '@pantspants.bsky.social',
-            null,
-            null,
-            'bsky.app',
-        )], $rendered?->linkCards);
     }
 
     /** @return iterable<string, array{string, list<string>}> */

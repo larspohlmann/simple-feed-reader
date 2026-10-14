@@ -20,7 +20,7 @@ import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/i
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { PreviewProgress } from '../../link-card/preview-progress';
-import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
+import { aLinkCard, aQuotedPost, anEntry } from '../../../../testing/entry-testing';
 import {
   MockResizeObserver,
   installMockResizeObserver,
@@ -351,6 +351,51 @@ describe('ReaderViewComponent', () => {
         'STRONG',
         'SMALL',
       ]);
+    });
+
+    it('renders the quoted post of a quote share after the body, in the article layout', () => {
+      const element = mount(
+        entryWithBody('<p>Just a post</p>', {
+          titleDerived: true,
+          share: 'quote',
+          quote: aQuotedPost({ text: 'The quoted words' }),
+        }),
+      ).nativeElement as HTMLElement;
+
+      const quoted = element.querySelector('app-quoted-post')!;
+      expect(quoted.classList).toContain('article');
+      expect(quoted.textContent).toContain('The quoted words');
+      expect(element.querySelector('.content')!.nextElementSibling).toBe(quoted);
+      expect(element.querySelector('app-link-cards')).toBeNull();
+    });
+
+    it('renders the quoted post and the link cards of a quote share that carries both', () => {
+      const element = mount(
+        entryWithBody('<p>Just a post</p>', {
+          titleDerived: true,
+          share: 'quote',
+          quote: aQuotedPost(),
+          linkCards: [aLinkCard()],
+        }),
+      ).nativeElement as HTMLElement;
+
+      const quoted = element.querySelector('app-quoted-post')!;
+      const cards = element.querySelector('app-link-cards')!;
+      expect(quoted.nextElementSibling).toBe(cards);
+    });
+
+    it('renders no quoted post for a link share', () => {
+      const element = mount(
+        entryWithBody('<p>Just a post</p>', {
+          titleDerived: true,
+          share: 'link',
+          quote: aQuotedPost(),
+          linkCards: [aLinkCard()],
+        }),
+      ).nativeElement as HTMLElement;
+
+      expect(element.querySelector('app-quoted-post')).toBeNull();
+      expect(element.querySelector('app-link-cards')).not.toBeNull();
     });
 
     it('renders no link card for an entry without shared links', () => {
@@ -711,6 +756,18 @@ describe('ReaderViewComponent', () => {
 
     it('adds it when the link cards carry a short post past the pane', () => {
       const { fixture } = mountCardedPost(2400);
+
+      const host = stubGeometry(fixture, 400, 800);
+
+      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
+    });
+
+    it('adds it when the quoted post carries a short post past the pane', () => {
+      const fixture = mount(entry({ titleDerived: true, share: 'quote', quote: aQuotedPost() }));
+      const quoted = (fixture.nativeElement as HTMLElement).querySelector(
+        'app-quoted-post',
+      ) as HTMLElement;
+      quoted.getBoundingClientRect = () => ({ top: 400, bottom: 2400 }) as DOMRect;
 
       const host = stubGeometry(fixture, 400, 800);
 

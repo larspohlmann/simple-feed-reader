@@ -12,6 +12,7 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
@@ -165,6 +166,27 @@ final class EntryJsonTest extends TestCase
         self::assertNull(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['share']);
     }
 
+    public function testAQuoteEntrySendsItsQuotedPostOnListAndCompletedRows(): void
+    {
+        $quoting = $this->entryTitled('Quoting');
+        $quoting->shareQuotedPost(new QuotedPostContent(
+            'https://bsky.app/profile/q/post/3k',
+            'Quoted Person',
+            'quoted.bsky.social',
+            null,
+            null,
+            'text',
+            [],
+            null,
+        ));
+
+        self::assertSame('quote', EntryJson::completed($this->row($quoting))['share']);
+        $quote = EntryJson::listRow($this->row($quoting))['quote'];
+        self::assertNotNull($quote);
+        self::assertSame('quoted.bsky.social', $quote['authorHandle']);
+        self::assertNull(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['quote']);
+    }
+
     public function testACompletedRowCarriesOnlyWhatACompletionCanChange(): void
     {
         $shared = $this->entryTitled('Shared');
@@ -178,7 +200,7 @@ final class EntryJsonTest extends TestCase
         self::assertSame(
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
-                'imageRenditions', 'media', 'linkCards', 'share',
+                'imageRenditions', 'media', 'linkCards', 'share', 'quote',
             ],
             array_keys($json),
         );
@@ -298,7 +320,7 @@ final class EntryJsonTest extends TestCase
         self::assertSame(
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
-                'imageRenditions', 'media', 'linkCards', 'share', 'title', 'url', 'discussionUrl', 'comments',
+                'imageRenditions', 'media', 'linkCards', 'share', 'quote', 'title', 'url', 'discussionUrl', 'comments',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',

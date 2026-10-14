@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
+use App\Entity\QuotedPostReference;
 use App\Service\Backup\Dto\EntryLine;
 use PHPUnit\Framework\TestCase;
 
@@ -151,5 +154,100 @@ final class EntryLineTest extends TestCase
 
         self::assertNull($line->authorUrl);
         self::assertNull($line->authorAvatarUrl);
+    }
+
+    /** @return array<string, mixed> */
+    private static function quoteFields(): array
+    {
+        return [
+            'url' => 'https://bsky.app/profile/q.bsky.social/post/3k',
+            'authorName' => 'Quoted Person',
+            'authorHandle' => 'q.bsky.social',
+            'authorAvatarUrl' => 'https://cdn.example/q.jpg',
+            'postedAt' => '2026-10-13T21:07:00+00:00',
+            'text' => 'quoted text',
+            'media' => [['url' => 'https://cdn.example/1.jpg', 'kind' => 'image', 'width' => 1200, 'height' => 675]],
+            'nestedQuote' => ['url' => 'https://bsky.app/profile/n/post/9', 'handle' => 'n.bsky.social'],
+        ];
+    }
+
+    public function testReadsTheQuotedPost(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'quote', 'quote' => self::quoteFields()]);
+
+        self::assertEquals(
+            new QuotedPostContent(
+                'https://bsky.app/profile/q.bsky.social/post/3k',
+                'Quoted Person',
+                'q.bsky.social',
+                'https://cdn.example/q.jpg',
+                new \DateTimeImmutable('2026-10-13T21:07:00+00:00'),
+                'quoted text',
+                [new EntryMedium('https://cdn.example/1.jpg', 'image', 1200, 675)],
+                new QuotedPostReference('https://bsky.app/profile/n/post/9', 'n.bsky.social'),
+            ),
+            $line->quote,
+        );
+        self::assertSame('quote', $line->shareKind);
+    }
+
+    public function testAnOlderFileWithoutAQuoteReadsAsNone(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'link']);
+
+        self::assertNull($line->quote);
+        self::assertSame('link', $line->shareKind);
+    }
+
+    public function testAQuoteShareWithoutAQuoteRestoresAsALink(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'quote']);
+
+        self::assertNull($line->quote);
+        self::assertSame('link', $line->shareKind);
+    }
+
+    public function testAQuoteUnderANonQuoteShareKindIsDropped(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'link', 'quote' => self::quoteFields()]);
+
+        self::assertNull($line->quote);
+        self::assertSame('link', $line->shareKind);
+    }
+
+    public function testAHostileQuoteIsDroppedAndTheShareBecomesALink(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + [
+            'shareKind' => 'quote',
+            'quote' => ['url' => 'javascript:alert(1)'] + self::quoteFields(),
+        ]);
+
+        self::assertNull($line->quote);
+        self::assertSame('link', $line->shareKind);
+    }
+
+    public function testAQuotesMediaPassTheGateEveryMadeQuotePasses(): void
+    {
+        $fields = self::quoteFields();
+        $fields['media'] = [
+            ['url' => 'http://cdn.example/plain.jpg', 'kind' => 'image'],
+            ['url' => 'https://cdn.example/clip.mp4', 'kind' => 'video', 'previewImageUrl' => 'javascript:alert(1)'],
+            ['kind' => 'image'],
+        ];
+
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'quote', 'quote' => $fields]);
+
+        self::assertEquals([new EntryMedium('https://cdn.example/clip.mp4', 'video')], $line->quote?->media);
+    }
+
+    public function testAQuoteWithoutATimeOrANestedQuoteReadsAsNone(): void
+    {
+        $fields = ['postedAt' => null, 'nestedQuote' => null, 'media' => []] + self::quoteFields();
+
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'quote', 'quote' => $fields]);
+
+        self::assertNull($line->quote?->postedAt);
+        self::assertNull($line->quote?->nestedQuote);
+        self::assertSame([], $line->quote?->media);
     }
 }

@@ -3,8 +3,8 @@ import { EntryDto } from '../../models';
 /** The kinds a template authors, and the only ones the demotion ladder walks. */
 const TEMPLATE_KINDS = ['hero', 'wide', 'quote', 'split', 'kicker', 'thumb', 'compact'] as const;
 
-/** The blocks a share claims whatever slot it was given (#1502, #1522). */
-export const SHARE_KINDS = ['link', 'media'] as const;
+/** The blocks a share claims whatever slot it was given (#1502, #1522, #1612). */
+export const SHARE_KINDS = ['link', 'media', 'quoting'] as const;
 
 /** Every block kind that can carry a single entry. */
 export const ENTRY_KINDS = [...TEMPLATE_KINDS, ...SHARE_KINDS] as const;
@@ -27,8 +27,9 @@ export type MagazineBlock =
     };
 
 /** Measured at 390px viewport width. The planner's budget is in these units;
- *  they need only be right relative to each other. */
-export const BLOCK_HEIGHT: Record<EntryKind, number> = {
+ *  they need only be right relative to each other. A quote share's height is
+ *  its entry's (`quotingHeight`). */
+export const BLOCK_HEIGHT: Record<Exclude<EntryKind, 'quoting'>, number> = {
   hero: 463,
   link: 463,
   media: 463,

@@ -19,6 +19,7 @@ use App\Service\Url\Support\YouTubeUrl;
  * excerpt; detail() adds contentHtml back for the single body-rendering page;
  * completed() holds only what completing a pending entry can change (#1551).
  *
+ * @phpstan-import-type QuoteRow from QuotedPostJson
  * @phpstan-type LinkCardRow array{
  *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
  * }
@@ -35,7 +36,8 @@ use App\Service\Url\Support\YouTubeUrl;
  *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
  *   poster: array{name: string, url: string|null, imageUrl: string|null}|null,
  *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, shortPlayerUrl: string|null, titleDerived: bool,
- *   share: 'link'|'media'|null,
+ *   share: 'link'|'media'|'quote'|null,
+ *   quote: QuoteRow|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
  *   social: array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool}|null,
  *   duplicates: list<array<string, mixed>>,
@@ -47,7 +49,8 @@ use App\Service\Url\Support\YouTubeUrl;
  *   imageRenditions: list<array{url: string, width: int}>,
  *   media: list<array<string, string|int>>,
  *   linkCards: list<LinkCardRow>,
- *   share: 'link'|'media'|null,
+ *   share: 'link'|'media'|'quote'|null,
+ *   quote: QuoteRow|null,
  * }
  */
 final class EntryJson
@@ -113,6 +116,7 @@ final class EntryJson
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'linkCards' => array_map(self::linkCard(...), $row->enrichment->linkCards),
             'share' => $entry->getShareKind()?->value,
+            'quote' => QuotedPostJson::of($entry->getQuotedPost()),
         ];
     }
 

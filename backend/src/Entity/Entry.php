@@ -57,8 +57,8 @@ final class Entry
     #[ORM\Embedded(class: EntryDiscussion::class, columnPrefix: false)]
     private EntryDiscussion $discussion;
 
-    #[ORM\Column(length: 8, nullable: true, enumType: ShareKind::class)]
-    private ?ShareKind $shareKind = null;
+    #[ORM\Embedded(class: EntryShare::class, columnPrefix: false)]
+    private EntryShare $share;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
@@ -94,6 +94,7 @@ final class Entry
         $this->mediaSet = new EntryMedia();
         $this->author = new EntryAuthor();
         $this->discussion = new EntryDiscussion();
+        $this->share = new EntryShare();
     }
 
     public function getId(): ?int
@@ -259,17 +260,27 @@ final class Entry
 
     public function getShareKind(): ?ShareKind
     {
-        return $this->shareKind;
+        return $this->share->kind();
     }
 
     public function setShareKind(?ShareKind $shareKind): void
     {
-        $this->shareKind = $shareKind;
+        $this->share->classify($shareKind);
+    }
+
+    public function getQuotedPost(): ?QuotedPostContent
+    {
+        return $this->share->quotedPost();
+    }
+
+    public function shareQuotedPost(QuotedPostContent $quote): void
+    {
+        $this->share->quote($quote);
     }
 
     public function bodyStandsInForSummary(): bool
     {
-        return !$this->headline->read()->isUntitledPost() && $this->shareKind === null;
+        return !$this->headline->read()->isUntitledPost() && $this->share->kind() === null;
     }
 
     public function getEffectiveDate(): \DateTimeImmutable

@@ -1,4 +1,5 @@
-import { EntryDto, EntryMediumDto } from '../../models';
+import { EntryDto } from '../../models';
+import { EntryMediumDto } from '../../entry-medium';
 import { entryDek } from '../../entry/entry-text';
 import { entryImage, portraitCoverRatio } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, SHARE_KINDS, ShareKind, TemplateKind } from './magazine-block';
@@ -95,9 +96,14 @@ export function sharesMedia(entry: EntryDto): boolean {
   return entry.share === 'media' && sharedMedia(entry).length > 0;
 }
 
+export function sharesQuotedPost(entry: EntryDto): boolean {
+  return entry.share === 'quote' && entry.quote !== null;
+}
+
 const SHARES: Record<ShareKind, (entry: EntryDto) => boolean> = {
   link: sharesLink,
   media: sharesMedia,
+  quoting: sharesQuotedPost,
 };
 
 export function shareKind(entry: EntryDto): ShareKind | null {

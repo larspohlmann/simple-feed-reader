@@ -1,0 +1,15 @@
+@use '../post-media-grid';
+
+:host {
+  @include post-media-grid.grid;
+}
+
+.item {
+  @include post-media-grid.item;
+}
+
+/* Above a quoted post's stretched link (#1612), so its controls play rather than open the post. */
+video.item {
+  position: relative;
+  z-index: 1;
+}

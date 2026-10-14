@@ -7,7 +7,9 @@ namespace App\Tests\Entity;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Headline;
+use App\Entity\QuotedPostContent;
 use App\Enum\ShareKind;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class EntryShareKindTest extends TestCase
@@ -44,5 +46,40 @@ final class EntryShareKindTest extends TestCase
         self::assertTrue($article->bodyStandsInForSummary());
         self::assertFalse($share->bodyStandsInForSummary());
         self::assertFalse($untitled->bodyStandsInForSummary());
+    }
+
+    /** @return iterable<string, array{?ShareKind}> */
+    public static function kindsOtherThanQuote(): iterable
+    {
+        yield 'link' => [ShareKind::Link];
+        yield 'media' => [ShareKind::Media];
+        yield 'nothing' => [null];
+    }
+
+    #[DataProvider('kindsOtherThanQuote')]
+    public function testReclassifyingAQuoteAsAnythingElseDropsTheQuotedPost(?ShareKind $kind): void
+    {
+        $entry = self::entry();
+        $entry->shareQuotedPost(self::quote());
+
+        $entry->setShareKind($kind);
+
+        self::assertSame($kind, $entry->getShareKind());
+        self::assertNull($entry->getQuotedPost());
+    }
+
+    public function testClassifyingAsQuoteKeepsTheQuotedPost(): void
+    {
+        $entry = self::entry();
+        $entry->shareQuotedPost(self::quote());
+
+        $entry->setShareKind(ShareKind::Quote);
+
+        self::assertNotNull($entry->getQuotedPost());
+    }
+
+    private static function quote(): QuotedPostContent
+    {
+        return new QuotedPostContent('https://a.example/1', 'A', 'a.example', null, null, 'text', [], null);
     }
 }

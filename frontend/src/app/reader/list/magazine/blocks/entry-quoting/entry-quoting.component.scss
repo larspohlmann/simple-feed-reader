@@ -1,0 +1,25 @@
+@use '../../magazine-card';
+
+:host {
+  display: block;
+}
+
+.quoting {
+  @include magazine-card.chrome;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--card-pad);
+  cursor: pointer;
+
+  @include magazine-card.card-states(6);
+}
+
+.title {
+  @include magazine-card.headline;
+}
+
+.dek {
+  @include magazine-card.dek;
+}

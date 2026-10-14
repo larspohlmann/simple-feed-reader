@@ -34,6 +34,20 @@ final class QuoteLine
         return $html;
     }
 
+    /** The link the body's first "RE:" paragraph quotes; null when it quotes nothing. */
+    public static function targetIn(string $html): ?string
+    {
+        $document = HtmlDocumentParser::parseFragment($html);
+        foreach ($document->querySelectorAll('a[href]') as $anchor) {
+            $paragraph = $anchor->closest('p');
+            if ($paragraph !== null && self::markerBefore($anchor, $paragraph) !== null) {
+                return $anchor->getAttribute('href');
+            }
+        }
+
+        return null;
+    }
+
     /** @return list<Text>|null the paragraph's text before the anchor, when it reads "RE:" */
     private static function markerBefore(Element $anchor, Element $paragraph): ?array
     {

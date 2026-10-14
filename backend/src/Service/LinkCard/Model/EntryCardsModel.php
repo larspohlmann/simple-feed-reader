@@ -16,7 +16,22 @@ final readonly class EntryCardsModel
     public function __construct(
         public array $stored,
         public array $pageCards,
+        public ?QuotedTargetModel $quoted = null,
     ) {
+    }
+
+    public static function quoting(QuotedTargetModel $quoted): self
+    {
+        return new self([], [], $quoted);
+    }
+
+    /** @return list<string> the addresses whose "RE:" line the cards and the quoted post replace */
+    public function quoteLineUrls(): array
+    {
+        return [
+            ...array_map(static fn (LinkCardContent $card): string => $card->url, $this->newCards()),
+            ...($this->quoted === null ? [] : [$this->quoted->address]),
+        ];
     }
 
     /** @return list<LinkCardContent> */

@@ -14,6 +14,7 @@ export type CompletedEntryDto = Pick<
   | 'media'
   | 'linkCards'
   | 'share'
+  | 'quote'
 >;
 
 /** `GET /api/entries/{id}`: the entry, and on its own what completing it has filled in (#1551). */

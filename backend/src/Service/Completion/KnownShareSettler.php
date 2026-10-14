@@ -6,6 +6,7 @@ namespace App\Service\Completion;
 
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
@@ -14,6 +15,8 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\LinkCard\EntryCardWriter;
 use App\Service\LinkCard\Model\EntryCardsModel;
 use App\Service\LinkCard\Model\PageCardModel;
+use App\Service\LinkCard\Model\QuotedTargetModel;
+use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\Share\Support\ShareTargets;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -50,6 +53,13 @@ final readonly class KnownShareSettler
         if (ShareTargets::uncardedOf($entry, [$card->url]) !== []) {
             $this->awaitLinkCards($entry, $queuedAt);
         }
+    }
+
+    /** A quoted status the instance already answered: its RE: line leaves the body, and no other link waits for a card. */
+    public function settleQuoted(Entry $entry, QuotedPostContent $quote): void
+    {
+        $address = QuoteLine::targetIn((string) $entry->getContentHtml()) ?? $quote->url;
+        $this->cardWriter->write($entry, EntryCardsModel::quoting(new QuotedTargetModel($address, $quote)));
     }
 
     private function filled(Entry $entry, JsonNodeModel $post): FillOutcome

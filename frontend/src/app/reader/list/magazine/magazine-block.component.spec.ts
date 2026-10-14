@@ -7,7 +7,7 @@ import { ENTRY_KINDS, EntryKind, MagazineBlock } from './magazine-block';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
-import { anEntry } from '../../../../testing/entry-testing';
+import { aQuotedPost, anEntry } from '../../../../testing/entry-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
@@ -59,5 +59,11 @@ describe('MagazineBlockComponent', () => {
 
   it.each(ENTRY_KINDS)('renders no empty headline in a %s block', (kind) => {
     expect(mount(blockOf(kind, entry({ title: '' }))).querySelector('.title')).toBeNull();
+  });
+
+  it('renders a quoting block as app-entry-quoting', () => {
+    const element = mount(blockOf('quoting', entry({ share: 'quote', quote: aQuotedPost() })));
+
+    expect(element.querySelector('app-entry-quoting app-quoted-post')).not.toBeNull();
   });
 });
