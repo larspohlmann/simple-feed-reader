@@ -207,6 +207,14 @@ final class EntryLineTest extends TestCase
         self::assertSame('link', $line->shareKind);
     }
 
+    public function testAQuoteUnderANonQuoteShareKindIsDropped(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'link', 'quote' => self::quoteFields()]);
+
+        self::assertNull($line->quote);
+        self::assertSame('link', $line->shareKind);
+    }
+
     public function testAHostileQuoteIsDroppedAndTheShareBecomesALink(): void
     {
         $line = EntryLine::fromLine($this->baseLine() + [

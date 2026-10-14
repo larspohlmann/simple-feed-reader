@@ -63,7 +63,8 @@ final readonly class EntryLine
      */
     public static function fromLine(array $line): self
     {
-        $quote = self::quoteOf($line);
+        $shareKind = LineField::stringOrNull($line, 'shareKind');
+        $quote = $shareKind === ShareKind::Quote->value ? self::quoteOf($line) : null;
 
         return new self(
             feedUrl: LineField::string($line, 'feedUrl'),
@@ -87,7 +88,7 @@ final readonly class EntryLine
             commentsLoad: LineField::stringOrNull($line, 'commentsLoad'),
             imageRenditions: LineField::objectListOrEmpty($line, 'imageRenditions'),
             titleDerived: LineFieldWithDefault::bool($line, 'titleDerived', false),
-            shareKind: self::shareKindOf($line, $quote),
+            shareKind: self::shareKindOf($shareKind, $quote),
             linkCards: self::linkCardsOf($line),
             authorUrl: self::authorUrlOf($line, 'authorUrl'),
             authorAvatarUrl: self::authorUrlOf($line, 'authorAvatarUrl'),
@@ -95,11 +96,8 @@ final readonly class EntryLine
         );
     }
 
-    /** @param array<string, mixed> $line */
-    private static function shareKindOf(array $line, ?QuotedPostContent $quote): ?string
+    private static function shareKindOf(?string $shareKind, ?QuotedPostContent $quote): ?string
     {
-        $shareKind = LineField::stringOrNull($line, 'shareKind');
-
         return $quote === null && $shareKind === ShareKind::Quote->value ? ShareKind::Link->value : $shareKind;
     }
 

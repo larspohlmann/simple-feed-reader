@@ -8,6 +8,7 @@ use App\Entity\EntryMedium;
 use App\Entity\EntryQuotedPost;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class EntryQuotedPostTest extends TestCase
@@ -51,5 +52,33 @@ final class EntryQuotedPostTest extends TestCase
         ));
 
         self::assertEquals(new QuotedPostReference('https://other.example/@b/2', null), $stored->read()?->nestedQuote);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function requiredFields(): iterable
+    {
+        yield 'url' => ['url'];
+        yield 'author name' => ['authorName'];
+        yield 'author handle' => ['authorHandle'];
+    }
+
+    #[DataProvider('requiredFields')]
+    public function testAStoredQuoteMissingARequiredFieldReadsAsNone(string $missing): void
+    {
+        $stored = new EntryQuotedPost();
+        $stored->store(new QuotedPostContent('https://a.example/1', 'A', 'a.example', null, null, '', [], null));
+        (new \ReflectionProperty($stored, $missing))->setValue($stored, null);
+
+        self::assertNull($stored->read());
+    }
+
+    public function testClearingForgetsTheQuote(): void
+    {
+        $stored = new EntryQuotedPost();
+        $stored->store(new QuotedPostContent('https://a.example/1', 'A', 'a.example', null, null, 'text', [], null));
+
+        $stored->clear();
+
+        self::assertNull($stored->read());
     }
 }

@@ -55,6 +55,19 @@ final class EntryQuotedPost
         $this->nestedHandle = $quote->nestedQuote?->handle;
     }
 
+    public function clear(): void
+    {
+        $this->url = null;
+        $this->authorName = null;
+        $this->authorHandle = null;
+        $this->authorAvatarUrl = null;
+        $this->postedAt = null;
+        $this->text = null;
+        $this->media = null;
+        $this->nestedUrl = null;
+        $this->nestedHandle = null;
+    }
+
     public function read(): ?QuotedPostContent
     {
         if ($this->url === null || $this->authorName === null || $this->authorHandle === null) {
