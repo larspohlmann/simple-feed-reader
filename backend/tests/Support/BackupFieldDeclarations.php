@@ -64,7 +64,7 @@ final class BackupFieldDeclarations
             'feed' => 'feedUrl',
             'guid.value' => 'guid', 'guid.hash' => 'guidHash', 'location.url' => 'url',
             'headline.title' => 'title', 'headline.derived' => 'titleDerived',
-            'shareKind' => 'shareKind',
+            'share.kind' => 'shareKind',
             'author.name' => 'author', 'author.profileUrl' => 'authorUrl', 'author.avatarUrl' => 'authorAvatarUrl',
             'summary' => 'summary',
             'contentHtml' => 'contentHtml',
