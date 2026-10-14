@@ -142,32 +142,7 @@
           />
           <app-entry-actions class="actions" size="md" [entry]="e" [audio]="false" [like]="false" />
           @if (audio.attachment()) {
-            <div class="listen-row">
-              <button class="listen" type="button" (click)="audio.play()">
-                <app-icon name="play_circle" size="lg" />
-                <span class="listen-label">{{ 'reader.audioPlayer.listen' | transloco }}</span>
-                @if (audio.duration(); as duration) {
-                  <span class="listen-duration">{{ duration }}</span>
-                }
-              </button>
-              <button
-                class="listen queue"
-                type="button"
-                [class.queued]="audio.queued()"
-                (click)="audio.toggleQueued()"
-              >
-                <app-icon
-                  [name]="audio.queued() ? 'playlist_add_check' : 'playlist_add'"
-                  size="md"
-                />
-                <span class="listen-label">{{
-                  (audio.queued()
-                    ? 'reader.audioPlayer.inPlaylist'
-                    : 'reader.audioPlayer.addToPlaylist'
-                  ) | transloco
-                }}</span>
-              </button>
-            </div>
+            <app-listen-row [audio]="audio" />
           }
           <app-reader-toc [entries]="toc()" [(open)]="tocOpen" (jump)="scrollToHeading($event)" />
           @if (!source.loading()) {
@@ -229,6 +204,9 @@
               />
             }
             <div #content class="content" [innerHTML]="source.displayHtml()"></div>
+            @if (e.share === 'quote' && e.quote) {
+              <app-quoted-post [quote]="e.quote" layout="article" />
+            }
             @if (e.linkCards.length || e.pending) {
               <app-link-cards [entry]="e" />
             }

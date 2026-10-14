@@ -1,0 +1,19 @@
+<button class="listen" type="button" (click)="audio().play()">
+  <app-icon name="play_circle" size="lg" />
+  <span class="listen-label">{{ 'reader.audioPlayer.listen' | transloco }}</span>
+  @if (audio().duration(); as duration) {
+    <span class="listen-duration">{{ duration }}</span>
+  }
+</button>
+<button
+  class="listen queue"
+  type="button"
+  [class.queued]="audio().queued()"
+  (click)="audio().toggleQueued()"
+>
+  <app-icon [name]="audio().queued() ? 'playlist_add_check' : 'playlist_add'" size="md" />
+  <span class="listen-label">{{
+    (audio().queued() ? 'reader.audioPlayer.inPlaylist' : 'reader.audioPlayer.addToPlaylist')
+      | transloco
+  }}</span>
+</button>

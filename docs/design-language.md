@@ -1672,7 +1672,7 @@ styles too" — it fails the whole run with a `CssSyntaxError` per file. The
 ## 5. Magazine blocks
 
 The reader's magazine list (`frontend/src/app/reader/list/magazine/`) plans entries
-onto nine single-entry block types and a source digest, introduced by #148 to replace a layout that had
+onto ten single-entry block types and a source digest, introduced by #148 to replace a layout that had
 collapsed to two-thirds compact rows. `magazine-block.ts`'s `BLOCK_HEIGHT`
 holds the measured height each contributes to the planner's per-page budget;
 `magazine-slot-fit.ts`'s `fits()` decides whether a given entry may fill a
@@ -1684,6 +1684,7 @@ relative units for the budget, not a layout guarantee.
 | **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
 | **Link** (#1502) | 463px | the shared link's card, under the title and dek; the card states every chrome block shares | a link share (`sharesLink`: `share` is `link`) with its card, or one still being completed — pinned, whatever its slot |
 | **Media** (#1522) | 463px | under the title and dek, with the card states every chrome block shares (a post's text clamps at 6 lines), the shared media uncropped and centred in its card: one item at its own aspect ratio, height-capped by `--media-share-max-h`; 2–4 in a 16:9 grid; a video plays inline through hls.js. A YouTube Short's cover is cropped to the picture's `imageAspectRatio`; its play button loads the allow-listed nocookie player in place, which goes back to the cover when an entry opens, the card scrolls away or the block is destroyed (`media-pause`) | a media share (`sharesMedia`: `share` is `media`) with at least one image or video — pinned like Link, whatever its slot |
+| **Quoting** (#1612) | per entry (`quotingHeight`) | the post's own media through `<app-post-media>`, then the quoted post nested in `<app-quoted-post layout="block">`: avatar, name, @handle, narrow time; the quoted text clamps at 8 lines, the post's own at 6; the quoted media in the media share's grid, a video playable in place. Clicking the video plays it, the rest of the box opens the quoted post, the rest of the card the entry | a quote share (`sharesQuotedPost`: `share` is `quote` and `quote` is set) — pinned like Link |
 | **Wide** | 321px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
 | **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |
 | **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted; a portrait cover keeps its shape (never narrower than 9:16), as tall as the 3:2 side box |
@@ -1744,6 +1745,14 @@ magazine's link block, with the site line first and the image at `link-card.$ima
 (1.91:1). `_link-card-layout.scss` holds the frame both share with the `.link-card` that #1499
 writes into stored bodies. The chrome is `theme/_link-card.scss`'s `surface`, which the
 placeholder of a link share still being completed shares.
+
+**A quoted post is one component** (#1612). `<app-quoted-post>` (`reader/quoted-post/`) renders a `QuotedPostDto` in
+two layouts: `block`, in the magazine's quoting block, clamped; `article`, under the post in the reader, whole, with the
+absolute time. The box opens the quoted post through a stretched link; videos and the "Quoting a post by @handle" line
+sit above it. Its media and the media block's share `<app-post-media>` (`reader/media/post-media/`), whose grid lives in
+`reader/media/_post-media-grid.scss`. A quote share's magazine height is computed per entry
+(`magazine-block-height.ts`), calibrated at 390px like `BLOCK_HEIGHT`. A quote share can also carry link cards; the reader
+view shows the quoted post first, then the cards.
 
 ---
 

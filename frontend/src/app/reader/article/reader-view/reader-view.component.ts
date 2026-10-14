@@ -43,7 +43,9 @@ import { ReadingScope, type TrailingPart } from '../reading/reading-scope.servic
 import { prefersReducedMotion } from '../reading/reduced-motion';
 import { TocEntry, collectToc } from '../reading/reading-toc';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
+import { ListenRowComponent } from '../listen-row/listen-row.component';
 import { LinkCardsComponent } from '../link-cards/link-cards.component';
+import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { SocialCountsComponent } from '../social-counts/social-counts.component';
 import { ArticleBody } from './article-body.service';
 import { ArticleGestures } from './article-gestures.service';
@@ -76,6 +78,8 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     EntryCommentsComponent,
     ReaderTocComponent,
     LinkCardsComponent,
+    ListenRowComponent,
+    QuotedPostComponent,
     SocialCountsComponent,
   ],
   providers: [ArticleScrollRestore, ArticleGestures, ArticleSource, ReadingScope, ArticleBody],
@@ -103,11 +107,15 @@ export class ReaderViewComponent {
   private readonly commentsSection = viewChild(EntryCommentsComponent, {
     read: ElementRef<HTMLElement>,
   });
+  private readonly quotedPost = viewChild(QuotedPostComponent, {
+    read: ElementRef<HTMLElement>,
+  });
   private readonly linkCards = viewChild(LinkCardsComponent, { read: ElementRef<HTMLElement> });
   private readonly socialCounts = viewChild(SocialCountsComponent, {
     read: ElementRef<HTMLElement>,
   });
   private readonly trailingParts: readonly TrailingPart[] = [
+    { query: this.quotedPost, joinsFocus: false },
     { query: this.linkCards, joinsFocus: false },
     { query: this.socialCounts, joinsFocus: false },
     { query: this.commentsSection, joinsFocus: true },
