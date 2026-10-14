@@ -8,11 +8,8 @@ import { sharedMedia } from '../../magazine-slot-fit';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
 import { PostMediaComponent } from '../../../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../../../quoted-post/quoted-post.component';
-import { EntryMediumDto } from '../../../../entry-medium';
+import { mediumRatio } from '../../../../entry-medium';
 
-const UNKNOWN_RATIO = 16 / 9;
-
-/** A post that quotes another (#1612): its own text and media, then the quoted post nested. */
 @Component({
   selector: 'app-entry-quoting',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,7 +28,5 @@ const UNKNOWN_RATIO = 16 / 9;
 export class EntryQuotingComponent extends EntryBlockBase {
   readonly media = computed(() => sharedMedia(this.entry()));
 
-  protected ratio(medium: EntryMediumDto): number {
-    return medium.width && medium.height ? medium.width / medium.height : UNKNOWN_RATIO;
-  }
+  protected readonly ratio = mediumRatio;
 }

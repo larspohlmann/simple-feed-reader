@@ -12,7 +12,6 @@ import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-ima
 import { armHlsStreams, releaseHlsStreams } from '../hls-streams';
 import { pauseMedia } from '../../list/magazine/blocks/entry-media/pause-media';
 
-/** A post's pictures and videos (#1522, #1612): one at its own shape, 2–4 in a grid; a video plays in place. */
 @Component({
   selector: 'app-post-media',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,7 +42,8 @@ export class PostMediaComponent {
   }
 
   private pauseWhenScrolledAway(): void {
-    if (typeof IntersectionObserver === 'undefined') return;
+    const videos = Array.from(this.host.querySelectorAll('video'));
+    if (typeof IntersectionObserver === 'undefined' || videos.length === 0) return;
     this.scrollAway ??= new IntersectionObserver((changes) => {
       for (const change of changes) {
         if (!change.isIntersecting && change.target instanceof HTMLVideoElement) {
@@ -51,8 +51,6 @@ export class PostMediaComponent {
         }
       }
     });
-    for (const video of Array.from(this.host.querySelectorAll('video'))) {
-      this.scrollAway.observe(video);
-    }
+    for (const video of videos) this.scrollAway.observe(video);
   }
 }

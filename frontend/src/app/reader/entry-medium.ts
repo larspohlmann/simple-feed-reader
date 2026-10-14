@@ -6,3 +6,9 @@ export interface EntryMediumDto {
   height?: number;
   previewImageUrl?: string;
 }
+
+const UNKNOWN_RATIO = 16 / 9;
+
+export function mediumRatio(medium: EntryMediumDto): number {
+  return medium.width && medium.height ? medium.width / medium.height : UNKNOWN_RATIO;
+}

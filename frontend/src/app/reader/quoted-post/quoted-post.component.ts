@@ -13,12 +13,11 @@ import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.
 import { avatarToneOf } from '../../shared/avatar-tone';
 import { initialsOf } from '../../shared/initials';
 import { formatLongDateTime, relativeTimeNarrow } from '../format';
+import { mediumRatio } from '../entry-medium';
 import { PostMediaComponent } from '../media/post-media/post-media.component';
 
 /** `block` sits in the magazine's quote share, clamped; `article` under a post in the reader, whole (#1612). */
 export type QuotedPostLayout = 'block' | 'article';
-
-const UNKNOWN_RATIO = 16 / 9;
 
 @Component({
   selector: 'app-quoted-post',
@@ -26,10 +25,7 @@ const UNKNOWN_RATIO = 16 / 9;
   imports: [PostMediaComponent, ProxiedImageDirective, TranslocoPipe],
   templateUrl: './quoted-post.component.html',
   styleUrl: './quoted-post.component.scss',
-  host: {
-    '[class.block]': "layout() === 'block'",
-    '[class.article]': "layout() === 'article'",
-  },
+  host: { '[class]': 'layout()' },
 })
 export class QuotedPostComponent {
   readonly quote = input.required<QuotedPostDto>();
@@ -47,8 +43,5 @@ export class QuotedPostComponent {
       ? formatLongDateTime(iso, lang)
       : relativeTimeNarrow(iso, lang);
   });
-  protected readonly ratio = computed(() => {
-    const first = this.quote().media[0];
-    return first?.width && first.height ? first.width / first.height : UNKNOWN_RATIO;
-  });
+  protected readonly ratio = computed(() => mediumRatio(this.quote().media[0]));
 }

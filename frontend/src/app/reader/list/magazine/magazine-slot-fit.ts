@@ -96,7 +96,6 @@ export function sharesMedia(entry: EntryDto): boolean {
   return entry.share === 'media' && sharedMedia(entry).length > 0;
 }
 
-/** A quote share with its quoted post (#1612). */
 export function sharesQuotedPost(entry: EntryDto): boolean {
   return entry.share === 'quote' && entry.quote !== null;
 }

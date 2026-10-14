@@ -34,7 +34,6 @@ function mount(entry: EntryDto): HTMLElement {
 afterEach(() => TestBed.resetTestingModule());
 
 describe('EntryQuotingComponent', () => {
-  // Red if: the headline stops rendering as a post.
   it('renders the post text as the headline', () => {
     const title = mount(quoting()).querySelector('.title');
 
@@ -42,19 +41,16 @@ describe('EntryQuotingComponent', () => {
     expect(title?.classList).toContain('post');
   });
 
-  // Red if: the quoted post is not rendered, or not in block layout.
   it('nests the quoted post in its block layout', () => {
     const element = mount(quoting());
 
     expect(element.querySelector('app-quoted-post.block')?.textContent).toContain('What they said');
   });
 
-  // Red if: the media guard is dropped.
   it('renders no media for a post without any of its own', () => {
     expect(mount(quoting()).querySelector(':scope > article > app-post-media')).toBeNull();
   });
 
-  // Red if: the post's own media is not passed to app-post-media.
   it('renders the post’s own media above the quoted post', () => {
     const element = mount(
       quoting({
@@ -65,14 +61,12 @@ describe('EntryQuotingComponent', () => {
     expect(element.querySelector(':scope > article > app-post-media')).not.toBeNull();
   });
 
-  // Red if: the card stops opening the entry.
   it('opens the entry from a click on the card', () => {
     mount(quoting()).querySelector<HTMLElement>('.title')!.click();
 
     expect(entryActions.open).toHaveBeenCalledTimes(1);
   });
 
-  // Red if: the quoted box stops swallowing the click.
   it('does not open the entry from a click on the quoted box', () => {
     mount(quoting()).querySelector<HTMLElement>('app-quoted-post .text')!.click();
 

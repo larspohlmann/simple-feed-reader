@@ -82,10 +82,14 @@ interface PlanPass {
 
 /** The share block each entry of a page claims (null where the template decides), and the image
  *  bar its family holds the page to. */
+interface PinnedShare {
+  readonly kind: ShareKind;
+  /** A quote share takes its height from its entry (#1612). */
+  readonly height: number;
+}
+
 interface PageLayout {
-  readonly pinned: readonly (ShareKind | null)[];
-  /** The pinned share blocks' heights, which a quote share takes from its entry (#1612). */
-  readonly pinnedHeights: readonly (number | null)[];
+  readonly pinned: readonly (PinnedShare | null)[];
   readonly imageBar: ImageBar;
 }
 
@@ -255,12 +259,8 @@ function resolveSlot(slot: Slot, page: number, position: number): TemplateKind {
 
 function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]): MagazineBlock[] {
   const { page } = pass;
-  const pinned = slice.map(shareKind);
   const layout: PageLayout = {
-    pinned,
-    pinnedHeights: pinned.map((kind, position) =>
-      kind ? blockHeight(kind, slice[position]) : null,
-    ),
+    pinned: slice.map(pinnedShare),
     imageBar: pass.family.imageBar,
   };
   const wanted = template
@@ -272,7 +272,7 @@ function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]
   );
 
   return assigned.map((kind, position) =>
-    toBlock(layout.pinned[position] ?? kind, slice[position], { page, position }),
+    toBlock(layout.pinned[position]?.kind ?? kind, slice[position], { page, position }),
   );
 }
 
@@ -311,7 +311,7 @@ function withinBudget(
 ): TemplateKind[] {
   const result = [...kinds];
   let height = result.reduce(
-    (sum, kind, position) => sum + (layout.pinnedHeights[position] ?? BLOCK_HEIGHT[kind]),
+    (sum, kind, position) => sum + (layout.pinned[position]?.height ?? BLOCK_HEIGHT[kind]),
     0,
   );
 
@@ -375,6 +375,11 @@ function assign(kinds: TemplateKind[], slice: EntryDto[], layout: PageLayout): T
   return kinds.map((kind, position) =>
     pinned[position] === null ? settle(kind, order[position], imageBar) : kind,
   );
+}
+
+function pinnedShare(entry: EntryDto): PinnedShare | null {
+  const kind = shareKind(entry);
+  return kind ? { kind, height: blockHeight(kind, entry) } : null;
 }
 
 function toBlock(kind: EntryKind, entry: EntryDto, at: SlotAt): MagazineBlock {

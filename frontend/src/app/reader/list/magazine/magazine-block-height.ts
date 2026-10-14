@@ -1,5 +1,5 @@
 import { EntryDto } from '../../models';
-import { EntryMediumDto } from '../../entry-medium';
+import { EntryMediumDto, mediumRatio } from '../../entry-medium';
 import { entryHeadline } from '../../entry/entry-text';
 import { BLOCK_HEIGHT, EntryKind } from './magazine-block';
 import { sharedMedia } from './magazine-slot-fit';
@@ -57,8 +57,7 @@ function mediaHeight(media: EntryMediumDto[], width: number): number {
   if (media.length === 0) return 0;
   if (media.length > 1) return width / GRID_RATIO;
   const [only] = media;
-  const ratio = only.width && only.height ? only.width / only.height : GRID_RATIO;
-  return Math.min(width / ratio, QUOTING.mediaMaxHeight);
+  return Math.min(width / mediumRatio(only), QUOTING.mediaMaxHeight);
 }
 
 function withGap(height: number): number {
