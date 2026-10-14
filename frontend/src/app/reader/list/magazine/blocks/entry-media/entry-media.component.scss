@@ -1,4 +1,5 @@
 @use '../../magazine-card';
+@use '../../../../media/post-media-grid';
 
 :host {
   display: block;
@@ -25,39 +26,11 @@
 }
 
 .media {
-  display: grid;
-  gap: var(--space-1);
-  overflow: hidden;
-  border-radius: var(--radius);
-}
-
-/* One item keeps its shape, centred: a portrait narrows under the height cap rather than being cropped. */
-.media[data-count='1'] {
-  align-self: center;
-  width: min(100%, calc(var(--media-share-max-h) * var(--ratio)));
-  aspect-ratio: var(--ratio);
-}
-
-.media:not([data-count='1']) {
-  aspect-ratio: 16 / 9;
-  grid-template-columns: 1fr 1fr;
-}
-
-.media[data-count='3'],
-.media[data-count='4'] {
-  grid-template-rows: 1fr 1fr;
-}
-
-.media[data-count='3'] > :first-child {
-  grid-row: span 2;
+  @include post-media-grid.grid;
 }
 
 .item {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  object-fit: cover;
+  @include post-media-grid.item;
 }
 
 .short-player {

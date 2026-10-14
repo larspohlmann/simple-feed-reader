@@ -1,5 +1,6 @@
 import { sharesMedia, sharedMedia } from './magazine-slot-fit';
-import { EntryDto, EntryMediumDto } from '../../models';
+import { EntryDto } from '../../models';
+import { EntryMediumDto } from '../../entry-medium';
 import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
 import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
 

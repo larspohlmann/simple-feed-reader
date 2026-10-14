@@ -1,4 +1,5 @@
-import { EntryDto, EntryMediumDto } from '../../models';
+import { EntryDto } from '../../models';
+import { EntryMediumDto } from '../../entry-medium';
 import { entryDek } from '../../entry/entry-text';
 import { entryImage, portraitCoverRatio } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, SHARE_KINDS, ShareKind, TemplateKind } from './magazine-block';

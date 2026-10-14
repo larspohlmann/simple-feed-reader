@@ -1,4 +1,6 @@
+import { EntryMediumDto } from './entry-medium';
 import { LinkCardDto } from './link-card/link-card';
+import { QuotedPostDto } from './quoted-post/quoted-post';
 import { SocialAccountRefDto, SocialFeedRefDto } from './social-feed';
 import { SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
@@ -146,15 +148,6 @@ export interface SubscriptionCountsResponse {
   viewedCount: number;
 }
 
-/** One visual media item the feed declared for an entry (#906). */
-export interface EntryMediumDto {
-  url: string;
-  kind: 'image' | 'video';
-  width?: number;
-  height?: number;
-  previewImageUrl?: string;
-}
-
 /** One playable or downloadable enclosure the feed declared (#906). */
 export interface EntryAttachmentDto {
   url: string;
@@ -170,7 +163,7 @@ export interface ImageRenditionDto {
   width: number;
 }
 
-export type EntryShare = 'link' | 'media';
+export type EntryShare = 'link' | 'media' | 'quote';
 
 export type CommentsLoad = 'auto' | 'manual';
 
@@ -235,10 +228,12 @@ export interface EntryDto {
   shortPlayerUrl: string | null;
   /** The feed gave no title (a Mastodon or Bluesky post); `title` was derived from the text (#1495). */
   titleDerived: boolean;
-  /** What the entry shares, so it takes the link or the media card; null for an article (#1524). */
+  /** What the entry shares, so it takes the link, media or quote card; null for an article (#1524). */
   share: EntryShare | null;
   /** Preview cards for the links a post shares, in the order the post names them (#1502). */
   linkCards: LinkCardDto[];
+  /** The quoted post of a `quote` share; null otherwise (#1612). */
+  quote: QuotedPostDto | null;
   /** The post's cards or embed are still being filled in; `POST /api/entries/complete` finishes it (#1502). */
   pending: boolean;
   /** The entry's post on a network the reader has an account on, and whether they liked it there; null for an

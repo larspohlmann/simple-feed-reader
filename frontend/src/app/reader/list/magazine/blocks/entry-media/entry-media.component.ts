@@ -14,11 +14,10 @@ import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
 import { sharedMedia } from '../../magazine-slot-fit';
-import { EntryMediumDto } from '../../../../models';
+import { EntryMediumDto } from '../../../../entry-medium';
 import { PlayingEmbedDirective } from '../../../../media/playing-embed.directive';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
-import { armHlsStreams, releaseHlsStreams } from '../../../../media/hls-streams';
-import { pauseMedia } from './pause-media';
+import { PostMediaComponent } from '../../../../media/post-media/post-media.component';
 import { autoplayingShortPlayer } from './short-embed';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
 
@@ -33,6 +32,7 @@ const UNKNOWN_RATIO = 16 / 9;
     EntryMetaComponent,
     EntryDuplicatesComponent,
     PlayingEmbedDirective,
+    PostMediaComponent,
     ProxiedImageDirective,
     TranslocoPipe,
   ],
@@ -51,30 +51,23 @@ export class EntryMediaComponent extends EntryBlockBase {
   constructor() {
     super();
     afterRenderEffect(() => {
-      this.media();
       this.playingShort();
-      armHlsStreams(this.host);
       this.pauseWhenScrolledAway();
     });
     inject(DestroyRef).onDestroy(() => {
       this.scrollAway?.disconnect();
-      pauseMedia(this.host);
-      releaseHlsStreams(this.host);
     });
   }
 
   private pauseWhenScrolledAway(): void {
-    if (typeof IntersectionObserver === 'undefined') return;
+    const players = Array.from(this.host.querySelectorAll('.short-player'));
+    if (typeof IntersectionObserver === 'undefined' || players.length === 0) return;
     this.scrollAway ??= new IntersectionObserver((changes) => {
       for (const change of changes) {
-        if (change.isIntersecting) continue;
-        if (change.target instanceof HTMLVideoElement) change.target.pause();
-        else this.stopShort();
+        if (!change.isIntersecting) this.stopShort();
       }
     });
-    for (const target of Array.from(this.host.querySelectorAll('video, .short-player'))) {
-      this.scrollAway.observe(target);
-    }
+    for (const player of players) this.scrollAway.observe(player);
   }
 
   protected playShort(event: Event): void {

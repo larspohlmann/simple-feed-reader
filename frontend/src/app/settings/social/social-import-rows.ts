@@ -6,6 +6,7 @@ import {
   ImportCandidateState,
   ImportCandidates,
 } from './social-import.service';
+import { initialsOf } from '../../shared/initials';
 
 export type ImportTab = 'accounts' | 'lists' | 'customFeeds';
 export type StateFilter = 'all' | ImportCandidateState;
@@ -76,17 +77,6 @@ export function collectionKey(collection: CollectionCandidate): string {
 
 export function followKey(follow: FollowCandidate): string {
   return `follow:${follow.feedUrl}`;
-}
-
-export function initialsOf(text: string): string {
-  return text
-    .replace(/^@/, '')
-    .split(/\s+/)
-    .filter((word) => word !== '')
-    .slice(0, 2)
-    .map((word) => Array.from(word)[0])
-    .join('')
-    .toLocaleUpperCase();
 }
 
 export function buildRows(candidates: ImportCandidates | null, translate: Translate): RowsByTab {
