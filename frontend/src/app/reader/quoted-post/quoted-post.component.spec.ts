@@ -94,6 +94,17 @@ describe('QuotedPostComponent', () => {
     expect(query(fixture, '.avatar.initials')!.textContent).toBe('QP');
   });
 
+  it('colours the initials by author handle, the same each time', () => {
+    const tone = (handle: string) =>
+      query(mount({ authorHandle: handle }), '.avatar.initials')!.className.match(/tone-\d/)![0];
+    const first = tone('a');
+    TestBed.resetTestingModule();
+
+    expect(tone('a')).toBe(first);
+    TestBed.resetTestingModule();
+    expect(tone('b')).not.toBe(first);
+  });
+
   it('names the handle of a nested quote', () => {
     const fixture = mount({ nestedQuote: { url: 'https://n/1', handle: 'n.bsky.social' } });
 

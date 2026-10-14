@@ -13,7 +13,9 @@
         (imageFailed)="avatarFailed.set(true)"
       />
     } @else {
-      <span class="avatar initials" aria-hidden="true">{{ initials() }}</span>
+      <span class="avatar initials" [class]="'avatar initials tone-' + tone()" aria-hidden="true">{{
+        initials()
+      }}</span>
     }
     <a
       class="open"

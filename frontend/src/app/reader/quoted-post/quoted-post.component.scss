@@ -1,3 +1,4 @@
+@use 'sass:list';
 @use '../../theme/glass-rim';
 @use '../list/post-text';
 
@@ -44,10 +45,19 @@
 .initials {
   display: grid;
   place-items: center;
-  background: var(--surface-0);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-size: var(--fs-2xs);
   font-weight: 700;
+}
+
+$tones: accent, danger, success, warning;
+
+@each $tone in $tones {
+  $index: list.index($tones, $tone) - 1;
+
+  .tone-#{$index} {
+    background: color-mix(in oklab, var(--#{$tone}) 28%, var(--surface-0));
+  }
 }
 
 .open {

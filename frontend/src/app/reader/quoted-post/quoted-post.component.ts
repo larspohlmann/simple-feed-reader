@@ -10,6 +10,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { QuotedPostDto } from './quoted-post';
 import { LanguageService } from '../../core/i18n/language.service';
 import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
+import { avatarToneOf } from '../../shared/avatar-tone';
 import { initialsOf } from '../../shared/initials';
 import { formatLongDateTime, relativeTimeNarrow } from '../format';
 import { PostMediaComponent } from '../media/post-media/post-media.component';
@@ -37,6 +38,7 @@ export class QuotedPostComponent {
   private readonly language = inject(LanguageService);
   protected readonly avatarFailed = linkedSignal({ source: this.quote, computation: () => false });
   protected readonly initials = computed(() => initialsOf(this.quote().authorName));
+  protected readonly tone = computed(() => avatarToneOf(this.quote().authorHandle));
   protected readonly postedAt = computed(() => {
     const iso = this.quote().postedAt;
     if (iso === null) return '';
