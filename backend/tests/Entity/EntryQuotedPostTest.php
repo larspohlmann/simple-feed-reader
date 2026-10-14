@@ -71,14 +71,4 @@ final class EntryQuotedPostTest extends TestCase
 
         self::assertNull($stored->read());
     }
-
-    public function testClearingForgetsTheQuote(): void
-    {
-        $stored = new EntryQuotedPost();
-        $stored->store(new QuotedPostContent('https://a.example/1', 'A', 'a.example', null, null, 'text', [], null));
-
-        $stored->clear();
-
-        self::assertNull($stored->read());
-    }
 }

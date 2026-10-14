@@ -44,23 +44,21 @@ final class StorableQuotedPost
      */
     private static function storableMedia(array $media): array
     {
-        $https = array_filter(
-            $media,
-            static fn (EntryMedium $medium): bool => HttpsImageUrl::orNull($medium->url) === $medium->url,
-        );
-
-        $kept = array_map(
-            static fn (EntryMedium $medium): EntryMedium => new EntryMedium(
+        $kept = [];
+        foreach ($media as $medium) {
+            if (HttpsImageUrl::orNull($medium->url) !== $medium->url) {
+                continue;
+            }
+            $kept[] = new EntryMedium(
                 $medium->url,
                 $medium->kind,
                 $medium->width,
                 $medium->height,
                 HttpsImageUrl::orNull($medium->previewImageUrl),
-            ),
-            $https,
-        );
+            );
+        }
 
-        return \array_slice(array_values($kept), 0, QuotedPostContent::MEDIA_MAX);
+        return \array_slice($kept, 0, QuotedPostContent::MEDIA_MAX);
     }
 
     private static function storableReference(?QuotedPostReference $reference): ?QuotedPostReference
@@ -75,12 +73,7 @@ final class StorableQuotedPost
 
     private static function isWebPage(string $url): bool
     {
-        return self::fits($url) && AbsoluteHttpUrl::matches($url);
-    }
-
-    private static function fits(string $url): bool
-    {
-        return mb_strlen($url) <= QuotedPostContent::URL_MAX;
+        return mb_strlen($url) <= QuotedPostContent::URL_MAX && AbsoluteHttpUrl::matches($url);
     }
 
     private function __construct()

@@ -25,6 +25,15 @@ final readonly class EntryCardsModel
         return new self([], [], $quoted);
     }
 
+    /** @return list<string> the addresses whose "RE:" line the cards and the quoted post replace */
+    public function quoteLineUrls(): array
+    {
+        return [
+            ...array_map(static fn (LinkCardContent $card): string => $card->url, $this->newCards()),
+            ...($this->quoted === null ? [] : [$this->quoted->address]),
+        ];
+    }
+
     /** @return list<LinkCardContent> */
     public function newCards(): array
     {

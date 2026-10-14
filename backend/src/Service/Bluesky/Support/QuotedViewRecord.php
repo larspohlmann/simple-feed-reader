@@ -10,7 +10,6 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\LinkCard\Support\StorableQuotedPost;
 use App\Service\Parser\Model\ParsedMediumModel;
-use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Parser\Support\DateParser;
 
 final class QuotedViewRecord
@@ -54,46 +53,11 @@ final class QuotedViewRecord
     private static function mediaOf(JsonNodeModel $embed): array
     {
         return match ($embed->type()) {
-            self::IMAGES => self::images($embed),
-            self::VIDEO => self::video($embed),
+            self::IMAGES => BlueskyEmbedMedia::images($embed),
+            self::VIDEO => array_filter([BlueskyEmbedMedia::video($embed)]),
             self::RECORD_WITH_MEDIA => self::mediaOf($embed->node('media')),
             default => [],
         };
-    }
-
-    /** @return list<ParsedMediumModel> */
-    private static function images(JsonNodeModel $embed): array
-    {
-        $media = [];
-        foreach ($embed->nodes('images') as $image) {
-            $url = $image->string('fullsize');
-            $ratio = $image->node('aspectRatio');
-            if ($url !== null) {
-                $media[] = new ParsedMediumModel(
-                    $url,
-                    VisualMediaKind::Image,
-                    $ratio->int('width'),
-                    $ratio->int('height'),
-                );
-            }
-        }
-
-        return $media;
-    }
-
-    /** @return list<ParsedMediumModel> */
-    private static function video(JsonNodeModel $embed): array
-    {
-        $playlist = $embed->string('playlist');
-        $ratio = $embed->node('aspectRatio');
-
-        return $playlist === null ? [] : [new ParsedMediumModel(
-            $playlist,
-            VisualMediaKind::Video,
-            $ratio->int('width'),
-            $ratio->int('height'),
-            $embed->string('thumbnail'),
-        )];
     }
 
     private static function nestedQuoteOf(JsonNodeModel $embed): ?QuotedPostReference

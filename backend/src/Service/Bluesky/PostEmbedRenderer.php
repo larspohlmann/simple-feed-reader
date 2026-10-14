@@ -10,10 +10,10 @@ use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Bluesky\Support\AtPostUri;
+use App\Service\Bluesky\Support\BlueskyEmbedMedia;
 use App\Service\Bluesky\Support\QuotedViewRecord;
 use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Parser\Model\ParsedMediumModel;
-use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Text\Support\HtmlEscape;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\HttpsImageUrl;
@@ -63,18 +63,17 @@ final readonly class PostEmbedRenderer
         $tags = '';
         $media = [];
         foreach ($embed->nodes('images') as $image) {
-            $url = HttpsImageUrl::orNull($image->string('fullsize'));
-            if ($url === null) {
+            $medium = BlueskyEmbedMedia::image($image);
+            if ($medium === null) {
                 continue;
             }
-            $ratio = $image->node('aspectRatio');
             $tags .= sprintf(
                 '<img src="%s" alt="%s"%s>',
-                HtmlEscape::text($url),
+                HtmlEscape::text($medium->url),
                 HtmlEscape::text($image->string('alt') ?? ''),
-                self::dimensions($ratio),
+                self::dimensions($medium),
             );
-            $media[] = new ParsedMediumModel($url, VisualMediaKind::Image, $ratio->int('width'), $ratio->int('height'));
+            $media[] = $medium;
         }
         if ($media === []) {
             return null;
@@ -86,24 +85,21 @@ final readonly class PostEmbedRenderer
 
     private function video(JsonNodeModel $embed, string $postUrl): ?RenderedEmbedModel
     {
-        $playlist = HttpsImageUrl::orNull($embed->string('playlist'));
-        if ($playlist === null) {
+        $medium = BlueskyEmbedMedia::video($embed);
+        if ($medium === null) {
             return null;
         }
-        $thumbnail = HttpsImageUrl::orNull($embed->string('thumbnail'));
-        $ratio = $embed->node('aspectRatio');
-        $width = $ratio->int('width');
-        $height = $ratio->int('height');
+        $thumbnail = $medium->previewImageUrl;
         $poster = $thumbnail === null ? '' : sprintf(' poster="%s"', HtmlEscape::text($thumbnail));
 
         return new RenderedEmbedModel(
             sprintf(
                 '<figure class="post-video"><video controls preload="none"%s src="%s"></video></figure>',
                 $poster,
-                HtmlEscape::text($playlist),
+                HtmlEscape::text($medium->url),
             ) . self::linkParagraph($postUrl, self::WATCH_LABEL),
-            $thumbnail === null ? null : new DeclaredImageModel($thumbnail, $width, $height),
-            [new ParsedMediumModel($playlist, VisualMediaKind::Video, $width, $height, $thumbnail)],
+            $thumbnail === null ? null : new DeclaredImageModel($thumbnail, $medium->width, $medium->height),
+            [$medium],
         );
     }
 
@@ -139,12 +135,11 @@ final readonly class PostEmbedRenderer
         return new RenderedEmbedModel(self::linkParagraph($postUrl, self::FALLBACK_LABEL));
     }
 
-    private static function dimensions(JsonNodeModel $ratio): string
+    private static function dimensions(ParsedMediumModel $medium): string
     {
-        $width = $ratio->int('width');
-        $height = $ratio->int('height');
-
-        return $width === null || $height === null ? '' : sprintf(' width="%d" height="%d"', $width, $height);
+        return $medium->width === null || $medium->height === null
+            ? ''
+            : sprintf(' width="%d" height="%d"', $medium->width, $medium->height);
     }
 
     private static function linkParagraph(string $url, string $label): string

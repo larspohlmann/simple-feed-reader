@@ -30,7 +30,7 @@ final class EntryShare
     public function classify(?ShareKind $kind): void
     {
         if ($kind !== ShareKind::Quote) {
-            $this->quotedPost->clear();
+            $this->quotedPost = new EntryQuotedPost();
         }
         $this->kind = $kind;
     }

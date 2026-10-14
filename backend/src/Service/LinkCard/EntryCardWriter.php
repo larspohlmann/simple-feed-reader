@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\LinkCard;
 
 use App\Entity\Entry;
-use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
 use App\Service\Ingest\Support\EntrySnippet;
@@ -26,12 +25,8 @@ final readonly class EntryCardWriter
 
     public function write(Entry $entry, EntryCardsModel $cards): void
     {
-        $newCards = $cards->newCards();
-        $this->linkCards->append($entry, $cards->stored, $newCards);
-        $this->dropQuoteLines($entry, [
-            ...array_map(static fn (LinkCardContent $card): string => $card->url, $newCards),
-            ...($cards->quoted === null ? [] : [$cards->quoted->address]),
-        ]);
+        $this->linkCards->append($entry, $cards->stored, $cards->newCards());
+        $this->dropQuoteLines($entry, $cards->quoteLineUrls());
         self::settleMediaTarget($entry, $cards->pageCards);
         if ($cards->quoted !== null) {
             $entry->shareQuotedPost($cards->quoted->post);
