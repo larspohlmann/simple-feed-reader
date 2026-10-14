@@ -14,6 +14,9 @@ final class StubPageCardReader implements PageCardReaderInterface
 {
     private int $reads = 0;
 
+    /** @var list<string> */
+    private array $readUrls = [];
+
     /** @param ?\Closure(): void $whileReading runs inside every read, as a slow page or a rival worker would */
     public function __construct(private readonly ?\Closure $whileReading = null)
     {
@@ -22,6 +25,7 @@ final class StubPageCardReader implements PageCardReaderInterface
     public function read(string $sharedUrl): PageCardModel
     {
         ++$this->reads;
+        $this->readUrls[] = $sharedUrl;
         if ($this->whileReading !== null) {
             ($this->whileReading)();
         }
@@ -33,6 +37,12 @@ final class StubPageCardReader implements PageCardReaderInterface
             new LinkCardContent($sharedUrl, 'Card for ' . $sharedUrl, null, null, 'example.com'),
             null,
         );
+    }
+
+    /** @return list<string> */
+    public function readUrls(): array
+    {
+        return $this->readUrls;
     }
 
     public function reads(): int

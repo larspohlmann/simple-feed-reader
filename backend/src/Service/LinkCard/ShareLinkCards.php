@@ -12,13 +12,9 @@ use App\Repository\ShareEnrichmentRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\LinkCard\Model\EntryCardsModel;
 use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\LinkCard\Model\PageCardModel;
-use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
-use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Search\EntryIndexer;
 use App\Service\Share\Support\ShareTargets;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Log\LoggerInterface;
 
 /**
  * Builds the cards a queued share's targets still lack, oldest share first: one attempt each, the row marked done
@@ -27,14 +23,13 @@ use Psr\Log\LoggerInterface;
 final readonly class ShareLinkCards
 {
     public function __construct(
-        private PageCardReaderInterface $pageCards,
+        private ShareTargetReader $targets,
         private EntryCardWriter $cardWriter,
         private ShareEnrichmentRepository $enrichments,
         private LinkCardRepository $linkCards,
         private EntityManagerInterface $entityManager,
         private EntryIndexer $indexer,
         private NaiveUtcClock $clock,
-        private LoggerInterface $logger,
     ) {
     }
 
@@ -61,9 +56,10 @@ final readonly class ShareLinkCards
                 $this->enrichments->release(\array_slice($claimed, $index), $claimedAt);
                 break;
             }
-            $cardsByRowId[$row->requireId()] = new EntryCardsModel(
+            $cardsByRowId[$row->requireId()] = $this->targets->cardsFor(
+                $row->getEntry(),
                 $storedCards[$row->getEntry()->requireId()] ?? [],
-                $this->pageCardsFor($uncardedUrls),
+                $uncardedUrls,
             );
         }
         return $this->store($claimed, $cardsByRowId, $claimedAt);
@@ -139,27 +135,5 @@ final readonly class ShareLinkCards
         }
 
         return $uncardedUrlsByRowId;
-    }
-
-    /**
-     * @param list<string> $uncardedUrls
-     *
-     * @return list<PageCardModel>
-     */
-    private function pageCardsFor(array $uncardedUrls): array
-    {
-        $pageCards = [];
-        foreach ($uncardedUrls as $uncardedUrl) {
-            try {
-                $pageCards[] = $this->pageCards->read($uncardedUrl);
-            } catch (PageFetchException $exception) {
-                $this->logger->warning(
-                    'No link card for {url}',
-                    ['url' => $uncardedUrl, 'exception' => $exception::class],
-                );
-            }
-        }
-
-        return $pageCards;
     }
 }

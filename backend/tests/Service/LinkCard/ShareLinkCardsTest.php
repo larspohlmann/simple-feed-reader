@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Enum\ShareKind;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
@@ -22,6 +23,7 @@ use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StubPageCardReader;
+use App\Tests\Support\StubQuotedPostSource;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
@@ -83,6 +85,28 @@ final class ShareLinkCardsTest extends DbTestCase
         $indexed = $this->indexWriter->upserted();
         self::assertSame([$post->requireId()], array_column($indexed, 'id'));
         self::assertSame('Reposting for the crew', $indexed[0]->summary);
+    }
+
+    public function testAMastodonQuoteBecomesAQuotedPostWithoutALinkCardForItsStatus(): void
+    {
+        $address = 'https://q.example/@a/1';
+        $quote = new QuotedPostContent($address, 'Ann', 'ann@q.example', null, null, 'Words', [], null);
+        $quoting = ShareLinkCardsWiring::reading(
+            $this->pages,
+            $this->entityManager,
+            $this->clock,
+            quotedPosts: new StubQuotedPostSource([$address => $quote]),
+        );
+        $post = $this->queuedPost(1, '<p>Wow</p><p>RE: <a href="' . $address . '">' . $address . '</a></p>');
+
+        $quoting->complete($this->claimable(), self::fiveFetches());
+
+        self::assertSame(ShareKind::Quote, $post->getShareKind());
+        self::assertSame('<p>Wow</p>', $post->getContentHtml());
+        self::assertEquals($quote, $post->getQuotedPost());
+        self::assertSame([], $this->cardTitles($post));
+        self::assertSame(0, $this->pages->reads());
+        self::assertSame([], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
     }
 
     public function testACallSpendsFiveFetchesOnTheOldestPostsThatFit(): void

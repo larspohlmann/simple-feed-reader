@@ -13,7 +13,9 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\LinkCard\EntryCardWriter;
 use App\Service\LinkCard\PageCardReader\PageCardReader;
 use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
+use App\Service\LinkCard\QuotedPostSource\QuotedPostSourceInterface;
 use App\Service\LinkCard\ShareLinkCards;
+use App\Service\LinkCard\ShareTargetReader;
 use App\Service\Reader\PageHeadFetcher;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
@@ -55,16 +57,16 @@ final class ShareLinkCardsWiring
         ClockInterface $clock,
         LoggerInterface $logger = new NullLogger(),
         SearchIndexWriterInterface $indexWriter = new RecordingSearchIndexWriter(),
+        QuotedPostSourceInterface $quotedPosts = new StubQuotedPostSource(),
     ): ShareLinkCards {
         return new ShareLinkCards(
-            $reader,
+            new ShareTargetReader($reader, $quotedPosts, $logger),
             self::cardWriter($entityManager),
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),
             $entityManager,
             new EntryIndexer($indexWriter, new NullLogger()),
             new NaiveUtcClock($clock),
-            $logger,
         );
     }
 
