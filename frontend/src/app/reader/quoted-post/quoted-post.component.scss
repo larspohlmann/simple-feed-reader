@@ -79,18 +79,28 @@ $tones: accent, danger, success, warning;
   }
 }
 
-.name {
-  flex: none;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
+.name,
 .handle,
 .when {
   overflow: hidden;
-  color: var(--text-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.name {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.handle {
+  flex: 0 100 auto;
+  min-width: 0;
+  color: var(--text-muted);
+}
+
+.when {
+  color: var(--text-muted);
 }
 
 .when {
