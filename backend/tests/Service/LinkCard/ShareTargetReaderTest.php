@@ -53,6 +53,17 @@ final class ShareTargetReaderTest extends TestCase
         self::assertSame([self::QUOTED, self::PAGE], $this->pages->readUrls());
     }
 
+    public function testAQuoteTheSourceCannotReadIsLoggedWithItsAddress(): void
+    {
+        $logger = new RecordingLogger();
+        $reader = new ShareTargetReader($this->pages, new StubQuotedPostSource(), $logger);
+
+        $reader->cardsFor(self::entry(self::bodyQuoting(self::QUOTED)), [], [self::QUOTED]);
+
+        self::assertCount(1, $logger->records);
+        self::assertSame(self::QUOTED, $logger->records[0]['context']['url']);
+    }
+
     public function testAQuoteTargetAlreadyCardedIsNotAskedFor(): void
     {
         $source = new StubQuotedPostSource([self::QUOTED => self::quote()]);

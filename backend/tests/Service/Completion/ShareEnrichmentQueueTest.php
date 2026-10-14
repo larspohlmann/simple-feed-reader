@@ -343,6 +343,27 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         self::assertEquals($quote, $stored->getQuotedPost());
     }
 
+    public function testAKnownQuoteSettlesThePostWithoutAlsoCardingItsLink(): void
+    {
+        $guid = 'https://mastodon.example/@someone/22';
+        $address = 'https://other.example/users/b/statuses/9';
+        $post = $this->post(
+            $guid,
+            '<p>Wow</p><p class="quote-inline">RE: <a href="' . $address . '">' . $address . '</a></p>',
+        );
+        $card = new LinkCardContent($address, 'Them', 'The quoted post.', null, 'Other');
+
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::ofMastodonShares([$guid => $card], [$guid => self::quotedPost()]),
+        );
+        $this->entityManager->flush();
+
+        $stored = $this->reload($post);
+        self::assertSame(ShareKind::Quote, $stored->getShareKind());
+        self::assertSame([], $this->storedCards($stored));
+    }
+
     public function testALongTextPostIgnoresItsKnownQuote(): void
     {
         $guid = 'https://mastodon.example/@someone/21';

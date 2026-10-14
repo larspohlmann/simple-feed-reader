@@ -32,6 +32,8 @@ final class RenderedEmbedModelTest extends TestCase
         self::assertSame($quote, $quoted->followedBy($card)->quote);
         self::assertSame($quote, $card->followedBy($quoted)->quote);
         self::assertNull($card->followedBy($card)->quote);
+        $other = new QuotedPostContent('https://bsky.app/profile/c/post/d', 'C', 'c.test', null, null, 'Yo', [], null);
+        self::assertSame($quote, $quoted->followedBy(RenderedEmbedModel::quoted($other))->quote);
     }
 
     public function testFollowedByKeepsTheUncardedLinkOfEitherSide(): void

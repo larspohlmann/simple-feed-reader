@@ -173,6 +173,21 @@ final class EntryBatchInserterTest extends DbTestCase
         self::assertNull($plain->getQuotedPost());
     }
 
+    public function testARestoredQuoteWithoutANestedQuoteKeepsNone(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+        $quote = new QuotedPostContent('https://bsky.app/profile/q/post/3k', 'Q', 'q', null, null, 'hi', [], null);
+
+        $this->inserter()->insert($feedId, [$this->entryLine('quote-guid', shareKind: 'quote', quote: $quote)]);
+
+        $this->entityManager->clear();
+        $quoting = $this->entityManager->getRepository(Entry::class)
+            ->findOneBy(['guid.hash' => hash('sha256', 'quote-guid')]);
+        self::assertInstanceOf(Entry::class, $quoting);
+        self::assertEquals($quote, $quoting->getQuotedPost());
+        self::assertNull($quoting->getQuotedPost()?->nestedQuote);
+    }
+
     public function testARestoredRowKeepsWhetherItsTitleWasDerived(): void
     {
         $feedId = $this->createFeed('https://batch.example/feed.xml');

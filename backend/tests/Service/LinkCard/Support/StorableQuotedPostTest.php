@@ -147,6 +147,27 @@ final class StorableQuotedPostTest extends TestCase
         self::assertSame(str_repeat('h', 255), $kept?->nestedQuote?->handle);
     }
 
+    public function testNamesAndHandlesAreCutByCharactersNotBytes(): void
+    {
+        $nested = new QuotedPostReference('https://other.example/@b/2', str_repeat('é', 260));
+
+        $kept = StorableQuotedPost::of(
+            self::quote(name: str_repeat('é', 260), handle: str_repeat('é', 260), nested: $nested),
+        );
+
+        $accented = str_repeat('é', 255);
+        self::assertSame($accented, $kept?->authorName);
+        self::assertSame($accented, $kept->authorHandle);
+        self::assertSame($accented, $kept->nestedQuote?->handle);
+    }
+
+    public function testTheUrlLimitCountsCharactersNotBytes(): void
+    {
+        $url = 'https://a.example/' . str_repeat('é', 2048 - 18);
+
+        self::assertSame($url, StorableQuotedPost::of(self::quote(url: $url))?->url);
+    }
+
     public function testABlankNestedHandleIsNone(): void
     {
         $nested = new QuotedPostReference('https://other.example/@b/2', '  ');

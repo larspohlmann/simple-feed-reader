@@ -89,7 +89,7 @@ final class MastodonQuotedStatusTest extends TestCase
             'spoiler_text' => 'spoilers',
         ]))));
 
-        self::assertStringStartsWith("CW: spoilers\nFirst", $quote->text);
+        self::assertSame("CW: spoilers\nFirst paragraph\nline two\nSecond paragraph", $quote->text);
     }
 
     public function testTheQuotedStatusesOwnQuoteIsTheNestedLineAndLeavesItsText(): void
