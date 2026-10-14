@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Support;
 
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Completion\Model\KnownSharesModel;
 use App\Service\Fetch\Support\HostKey;
@@ -20,31 +21,39 @@ use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Text\Support\HtmlEscape;
 use App\Service\Url\Support\AbsoluteHttpUrl;
-use App\Service\Url\Support\HttpsImageUrl;
 
 /** A home or list timeline answer as entries; replies are already filtered by the instance. */
 final class MastodonTimelinePage
 {
-    private const array VIDEO_TYPES = ['video', 'gifv'];
-
     /** @param list<JsonNodeModel> $statuses */
     public static function of(array $statuses): TimelinePageModel
     {
         $entries = [];
-        $cards = [];
+        $postsByGuid = [];
         foreach ($statuses as $status) {
             $entry = self::entryOf($status);
-            if (null === $entry) {
-                continue;
-            }
-            $entries[] = $entry;
-            $card = self::cardOf(self::originalOf($status)->node('card'));
-            if (null !== $card) {
-                $cards[$entry->guid] = $card;
+            if (null !== $entry) {
+                $entries[] = $entry;
+                $postsByGuid[$entry->guid] = self::originalOf($status);
             }
         }
 
-        return TimelinePageModel::of($entries, KnownSharesModel::ofLinkCards($cards), self::newestIdOf($statuses));
+        return TimelinePageModel::of($entries, self::knownSharesOf($postsByGuid), self::newestIdOf($statuses));
+    }
+
+    /** @param array<string, JsonNodeModel> $postsByGuid */
+    private static function knownSharesOf(array $postsByGuid): KnownSharesModel
+    {
+        $cards = array_filter(array_map(
+            static fn (JsonNodeModel $post): ?LinkCardContent => self::cardOf($post->node('card')),
+            $postsByGuid,
+        ));
+        $quotes = array_filter(array_map(
+            static fn (JsonNodeModel $post): ?QuotedPostContent => MastodonQuotedStatus::ofQuote($post->node('quote')),
+            $postsByGuid,
+        ));
+
+        return KnownSharesModel::ofMastodonShares($cards, $quotes);
     }
 
     private static function entryOf(JsonNodeModel $status): ?ParsedEntryModel
@@ -114,43 +123,12 @@ final class MastodonTimelinePage
     /** @param list<JsonNodeModel> $attachments */
     private static function mediaOf(array $attachments): ParsedEntryMediaModel
     {
-        $media = [];
-        foreach ($attachments as $attachment) {
-            $medium = self::mediumOf($attachment);
-            if (null !== $medium) {
-                $media[] = $medium;
-            }
-        }
+        $media = MastodonAttachments::of($attachments);
         if ([] === $media) {
             return new ParsedEntryMediaModel();
         }
 
         return new ParsedEntryMediaModel(self::leadImageOf($media), new ParsedMediaBundleModel($media));
-    }
-
-    private static function mediumOf(JsonNodeModel $attachment): ?ParsedMediumModel
-    {
-        $url = HttpsImageUrl::orNull($attachment->string('url'));
-        $size = $attachment->node('meta')->node('original');
-        $type = $attachment->string('type');
-
-        return match (true) {
-            null === $url => null,
-            'image' === $type => new ParsedMediumModel(
-                $url,
-                VisualMediaKind::Image,
-                $size->int('width'),
-                $size->int('height'),
-            ),
-            \in_array($type, self::VIDEO_TYPES, true) => new ParsedMediumModel(
-                $url,
-                VisualMediaKind::Video,
-                $size->int('width'),
-                $size->int('height'),
-                HttpsImageUrl::orNull($attachment->string('preview_url')),
-            ),
-            default => null,
-        };
     }
 
     /** @param list<ParsedMediumModel> $media */

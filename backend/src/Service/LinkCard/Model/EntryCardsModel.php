@@ -16,7 +16,13 @@ final readonly class EntryCardsModel
     public function __construct(
         public array $stored,
         public array $pageCards,
+        public ?QuotedTargetModel $quoted = null,
     ) {
+    }
+
+    public static function quoting(QuotedTargetModel $quoted): self
+    {
+        return new self([], [], $quoted);
     }
 
     /** @return list<LinkCardContent> */

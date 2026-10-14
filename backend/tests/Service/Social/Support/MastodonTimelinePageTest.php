@@ -247,6 +247,46 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertNull(MastodonTimelinePage::of([])->newestId);
     }
 
+    public function testAnAcceptedNativeQuoteIsKnownByTheStatusGuid(): void
+    {
+        $page = MastodonTimelinePage::of([self::timelineStatus(['quote' => self::acceptedQuote()])]);
+
+        self::assertSame('carol@third.example', $page->knownShares->quotedPostFor(self::URI)?->authorHandle);
+    }
+
+    public function testABoostedStatusesQuoteIsReadOffTheReblog(): void
+    {
+        $boost = self::timelineStatus([
+            'id' => '200',
+            'uri' => 'https://mastodon.example/users/carol/statuses/200/activity',
+            'content' => '',
+            'account' => ['acct' => 'carol', 'display_name' => 'Carol', 'url' => 'https://mastodon.example/@carol'],
+            'reblog' => self::statusFields(['quote' => self::acceptedQuote()]),
+        ]);
+
+        $page = MastodonTimelinePage::of([$boost]);
+
+        self::assertSame(
+            'carol@third.example',
+            $page->knownShares->quotedPostFor(self::URI)?->authorHandle,
+        );
+    }
+
+    public function testAStatusWithoutAQuoteKnowsNone(): void
+    {
+        self::assertNull(MastodonTimelinePage::of([self::timelineStatus()])->knownShares->quotedPostFor(self::URI));
+    }
+
+    /** @return array<string, mixed> */
+    private static function acceptedQuote(): array
+    {
+        return ['state' => 'accepted', 'quoted_status' => self::statusFields([
+            'uri' => 'https://third.example/users/carol/statuses/7',
+            'url' => 'https://third.example/@carol/7',
+            'account' => ['acct' => 'carol@third.example', 'url' => 'https://third.example/@carol'],
+        ])];
+    }
+
     /** @param array<string, mixed> $overrides */
     private static function timelineStatus(array $overrides = []): JsonNodeModel
     {

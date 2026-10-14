@@ -15,7 +15,7 @@ use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Share\Support\TitledShareTarget;
 
-/** Puts freshly read page cards on their entry: a carded quote's RE: line leaves the body. */
+/** Puts freshly read page cards on their entry: a carded or quoted target's RE: line leaves the body. */
 final readonly class EntryCardWriter
 {
     public function __construct(
@@ -28,8 +28,14 @@ final readonly class EntryCardWriter
     {
         $newCards = $cards->newCards();
         $this->linkCards->append($entry, $cards->stored, $newCards);
-        $this->dropCardedQuoteLines($entry, $newCards);
+        $this->dropQuoteLines($entry, [
+            ...array_map(static fn (LinkCardContent $card): string => $card->url, $newCards),
+            ...($cards->quoted === null ? [] : [$cards->quoted->address]),
+        ]);
         self::settleMediaTarget($entry, $cards->pageCards);
+        if ($cards->quoted !== null) {
+            $entry->shareQuotedPost($cards->quoted->post);
+        }
     }
 
     /**
@@ -48,13 +54,13 @@ final readonly class EntryCardWriter
         $entry->putMediumFirst($medium);
     }
 
-    /** @param list<LinkCardContent> $cards */
-    private function dropCardedQuoteLines(Entry $entry, array $cards): void
+    /** @param list<string> $urls */
+    private function dropQuoteLines(Entry $entry, array $urls): void
     {
         $html = (string) $entry->getContentHtml();
         $withoutQuotes = $html;
-        foreach ($cards as $card) {
-            $withoutQuotes = QuoteLine::removedFrom($withoutQuotes, $card->url);
+        foreach ($urls as $url) {
+            $withoutQuotes = QuoteLine::removedFrom($withoutQuotes, $url);
         }
         if ($withoutQuotes === $html) {
             return;
