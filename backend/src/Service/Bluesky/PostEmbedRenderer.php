@@ -10,6 +10,7 @@ use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Bluesky\Support\AtPostUri;
+use App\Service\Bluesky\Support\QuotedViewRecord;
 use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
@@ -24,8 +25,6 @@ final readonly class PostEmbedRenderer
     private const string EXTERNAL = 'app.bsky.embed.external#view';
     private const string RECORD = 'app.bsky.embed.record#view';
     private const string RECORD_WITH_MEDIA = 'app.bsky.embed.recordWithMedia#view';
-    private const string VIEW_RECORD = 'app.bsky.embed.record#viewRecord';
-    private const string POST_RECORD = 'app.bsky.feed.post';
     private const string WATCH_LABEL = 'Watch on Bluesky';
     private const string FALLBACK_LABEL = 'View embedded content on Bluesky';
 
@@ -130,47 +129,14 @@ final readonly class PostEmbedRenderer
 
     private function quote(JsonNodeModel $record): ?RenderedEmbedModel
     {
-        $quotedUrl = AtPostUri::webUrl($record->string('uri') ?? '');
-        $value = $record->node('value');
-        if ($record->type() !== self::VIEW_RECORD || $value->type() !== self::POST_RECORD || $quotedUrl === null) {
-            return null;
-        }
-        $card = StorableLinkCard::of(new LinkCardContent(
-            $quotedUrl,
-            self::authorName($record->node('author')),
-            $value->string('text'),
-            self::quotedImage($record->first('embeds')),
-            HostKey::forUrl($quotedUrl),
-        ));
+        $quote = QuotedViewRecord::of($record);
 
-        return $card === null ? null : RenderedEmbedModel::card($card, null);
-    }
-
-    private static function quotedImage(JsonNodeModel $embed): ?string
-    {
-        return match ($embed->type()) {
-            self::IMAGES => $embed->first('images')->string('thumb'),
-            self::VIDEO => $embed->string('thumbnail'),
-            self::EXTERNAL => $embed->node('external')->string('thumb'),
-            self::RECORD_WITH_MEDIA => self::quotedImage($embed->node('media')),
-            default => null,
-        };
+        return $quote === null ? null : RenderedEmbedModel::quoted($quote);
     }
 
     private function fallback(string $postUrl): RenderedEmbedModel
     {
         return new RenderedEmbedModel(self::linkParagraph($postUrl, self::FALLBACK_LABEL));
-    }
-
-    private static function authorName(JsonNodeModel $author): string
-    {
-        $handle = $author->string('handle');
-        $displayName = $author->string('displayName');
-        if ($handle === null) {
-            return $displayName ?? 'Bluesky';
-        }
-
-        return $displayName === null ? '@' . $handle : sprintf('%s (@%s)', $displayName, $handle);
     }
 
     private static function dimensions(JsonNodeModel $ratio): string

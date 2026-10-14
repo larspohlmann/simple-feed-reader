@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Bluesky\Model;
 
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 
@@ -20,12 +21,18 @@ final readonly class RenderedEmbedModel
         public array $media = [],
         public array $linkCards = [],
         public ?string $uncardedLink = null,
+        public ?QuotedPostContent $quote = null,
     ) {
     }
 
     public static function card(LinkCardContent $card, ?DeclaredImageModel $leadImage): self
     {
         return new self('', $leadImage, linkCards: [$card]);
+    }
+
+    public static function quoted(QuotedPostContent $quote): self
+    {
+        return new self('', quote: $quote);
     }
 
     public static function uncarded(string $url): self
@@ -41,6 +48,7 @@ final readonly class RenderedEmbedModel
             [...$this->media, ...$next->media],
             [...$this->linkCards, ...$next->linkCards],
             $this->uncardedLink ?? $next->uncardedLink,
+            $this->quote ?? $next->quote,
         );
     }
 }

@@ -229,7 +229,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertNull($entry->getSummary());
     }
 
-    public function testAQuoteLeavesNoFigureAndIsStoredAsACardBeforeTheMediasCard(): void
+    public function testAQuoteLeavesTheBodyAloneAndStoresOnlyThePostsOwnCard(): void
     {
         $entry = $this->entry('<p>Look.</p>');
 
@@ -237,25 +237,19 @@ final class EntryEmbedWriterTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame('<p>Look.</p>', $entry->getContentHtml());
-        self::assertSame(
-            ['Amy Littlefield (@amylittlefield.bsky.social)', 'From the IAmA community on Reddit'],
-            $this->storedTitles($entry),
-        );
+        self::assertSame(['From the IAmA community on Reddit'], $this->storedTitles($entry));
     }
 
-    public function testAQuoteAloneIsStoredAsTheOnlyCardAndSetsNoImage(): void
+    public function testAQuotePostBecomesAQuoteShareAndKeepsTheQuotesMediaOffTheEntry(): void
     {
         $entry = $this->entry('<p>Watch this.</p>');
 
-        $this->writer()->fill($entry, Bluesky::post('record'));
-        $this->entityManager->flush();
+        $this->writer()->fill($entry, Bluesky::post('quote-video'));
 
-        self::assertSame('<p>Watch this.</p>', $entry->getContentHtml());
+        self::assertSame(ShareKind::Quote, $entry->getShareKind());
+        self::assertSame('video', $entry->getQuotedPost()?->media[0]->kind);
+        self::assertSame([], $entry->getMedia());
         self::assertNull($entry->getImageUrl());
-        self::assertSame(
-            ['Mother Jones (@motherjones.com)'],
-            $this->storedTitles($entry),
-        );
     }
 
     public function testAPostWithoutALinkCardStoresNone(): void

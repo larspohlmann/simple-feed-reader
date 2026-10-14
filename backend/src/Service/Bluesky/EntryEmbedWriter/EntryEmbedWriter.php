@@ -55,6 +55,11 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $embed->linkCards);
 
         $outcome = $body->uncardedBy($cardedUrls) === [] ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
+        if ($embed->quote !== null) {
+            $entry->shareQuotedPost($embed->quote);
+
+            return $outcome;
+        }
         $entry->setShareKind(self::shareKindOf($embed, $outcome, $assembled->media));
 
         return $outcome;

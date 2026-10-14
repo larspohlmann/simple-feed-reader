@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Bluesky\Model;
 
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Service\Bluesky\Model\RenderedEmbedModel;
 use PHPUnit\Framework\TestCase;
 
@@ -20,6 +21,17 @@ final class RenderedEmbedModelTest extends TestCase
 
         self::assertSame($cards, $first->followedBy($second)->followedBy($third)->linkCards);
         self::assertSame($cards, $first->followedBy($second->followedBy($third))->linkCards);
+    }
+
+    public function testFollowedByKeepsTheQuoteOfEitherSide(): void
+    {
+        $quote = new QuotedPostContent('https://bsky.app/profile/a/post/b', 'A', 'a.test', null, null, 'Hi', [], null);
+        $quoted = RenderedEmbedModel::quoted($quote);
+        $card = RenderedEmbedModel::card(self::cardOf('https://b.test/'), null);
+
+        self::assertSame($quote, $quoted->followedBy($card)->quote);
+        self::assertSame($quote, $card->followedBy($quoted)->quote);
+        self::assertNull($card->followedBy($card)->quote);
     }
 
     public function testFollowedByKeepsTheUncardedLinkOfEitherSide(): void
