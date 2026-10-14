@@ -10,6 +10,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -144,6 +145,7 @@ final readonly class BackupLines
             'title' => $entry->getTitle(),
             'titleDerived' => $entry->isTitleDerived(),
             'shareKind' => $entry->getShareKind()?->value,
+            'quote' => $this->quoteFields($entry->getQuotedPost()),
             'author' => $entry->getAuthor(),
             'authorUrl' => $entry->getAuthorUrl(),
             'authorAvatarUrl' => $entry->getAuthorAvatarUrl(),
@@ -186,6 +188,26 @@ final readonly class BackupLines
             'description' => $card->description,
             'imageUrl' => $card->imageUrl,
             'siteName' => $card->siteName,
+        ];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function quoteFields(?QuotedPostContent $quote): ?array
+    {
+        if ($quote === null) {
+            return null;
+        }
+        $nested = $quote->nestedQuote;
+
+        return [
+            'url' => $quote->url,
+            'authorName' => $quote->authorName,
+            'authorHandle' => $quote->authorHandle,
+            'authorAvatarUrl' => $quote->authorAvatarUrl,
+            'postedAt' => $this->formatDateOrNull($quote->postedAt),
+            'text' => $quote->text,
+            'media' => EntryMedia::toJsonList($quote->media),
+            'nestedQuote' => $nested === null ? null : ['url' => $nested->url, 'handle' => $nested->handle],
         ];
     }
 

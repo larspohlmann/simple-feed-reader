@@ -49,7 +49,18 @@ final class StorableQuotedPost
             static fn (EntryMedium $medium): bool => HttpsImageUrl::orNull($medium->url) === $medium->url,
         );
 
-        return \array_slice(array_values($https), 0, QuotedPostContent::MEDIA_MAX);
+        $kept = array_map(
+            static fn (EntryMedium $medium): EntryMedium => new EntryMedium(
+                $medium->url,
+                $medium->kind,
+                $medium->width,
+                $medium->height,
+                HttpsImageUrl::orNull($medium->previewImageUrl),
+            ),
+            $https,
+        );
+
+        return \array_slice(array_values($kept), 0, QuotedPostContent::MEDIA_MAX);
     }
 
     private static function storableReference(?QuotedPostReference $reference): ?QuotedPostReference

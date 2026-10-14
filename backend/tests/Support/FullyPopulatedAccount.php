@@ -15,6 +15,8 @@ use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\QuotedPostContent;
+use App\Entity\QuotedPostReference;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -22,7 +24,6 @@ use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\MagazineStyle;
 use App\Enum\SourceFormat;
-use App\Enum\ShareKind;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -158,7 +159,16 @@ final readonly class FullyPopulatedAccount
             CommentsLoad::Auto,
         ));
         $entry->setHeadline(Headline::derived('An article with every field set'));
-        $entry->setShareKind(ShareKind::Link);
+        $entry->shareQuotedPost(new QuotedPostContent(
+            'https://populated.example/@quoted/101',
+            'Quoted Person',
+            'quoted@populated.example',
+            'https://populated.example/quoted.jpg',
+            new \DateTimeImmutable('2026-08-01T09:00:00Z'),
+            'The quoted words.',
+            [new EntryMedium('https://populated.example/quoted-1.jpg', 'image', 800, 600)],
+            new QuotedPostReference('https://populated.example/@deeper/100', 'deeper@populated.example'),
+        ));
 
         return $entry;
     }

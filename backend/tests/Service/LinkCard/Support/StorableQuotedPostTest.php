@@ -110,6 +110,27 @@ final class StorableQuotedPostTest extends TestCase
         );
     }
 
+    public function testAPosterThatIsNotHttpsIsDroppedAndTheMediumKept(): void
+    {
+        $media = [
+            new EntryMedium('https://cdn.example/a.mp4', 'video', 640, 360, 'http://cdn.example/poster.jpg'),
+            new EntryMedium('https://cdn.example/b.mp4', 'video', null, null, 'https://cdn.example/poster.jpg'),
+            new EntryMedium('https://cdn.example/c.mp4', 'video', null, null, 'javascript:alert(1)'),
+        ];
+
+        $kept = StorableQuotedPost::of(self::quote(media: $media));
+
+        self::assertNotNull($kept);
+        self::assertEquals(
+            [
+                new EntryMedium('https://cdn.example/a.mp4', 'video', 640, 360),
+                new EntryMedium('https://cdn.example/b.mp4', 'video', null, null, 'https://cdn.example/poster.jpg'),
+                new EntryMedium('https://cdn.example/c.mp4', 'video'),
+            ],
+            $kept->media,
+        );
+    }
+
     public function testANestedQuoteThatIsNoWebPageIsDropped(): void
     {
         $nested = new QuotedPostReference('at://did:plc:n/app.bsky.feed.post/9', 'n.bsky.social');

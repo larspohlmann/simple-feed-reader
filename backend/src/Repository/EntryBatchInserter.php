@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\EntryMedia;
+use App\Entity\QuotedPostContent;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
 use App\Service\Backup\Dto\EntryLine;
@@ -26,6 +28,8 @@ final readonly class EntryBatchInserter
         'published_at', 'created_at', 'effective_date',
         'discussion_url', 'comments_feed_url', 'comments_load',
         'title_derived', 'share_kind', 'author_url', 'author_avatar_url',
+        'quoted_url', 'quoted_author_name', 'quoted_author_handle', 'quoted_author_avatar_url', 'quoted_posted_at',
+        'quoted_text', 'quoted_media', 'quoted_nested_url', 'quoted_nested_handle',
     ];
 
     public function __construct(
@@ -105,6 +109,22 @@ final readonly class EntryBatchInserter
             (int) $line->titleDerived,
             ShareKind::tryFrom((string) $line->shareKind)?->value,
             $line->authorUrl, $line->authorAvatarUrl,
+            ...self::quoteColumns($line->quote),
+        ];
+    }
+
+    /** @return list<int|string|null> */
+    private static function quoteColumns(?QuotedPostContent $quote): array
+    {
+        if ($quote === null) {
+            return array_fill(0, 9, null);
+        }
+
+        return [
+            $quote->url, $quote->authorName, $quote->authorHandle, $quote->authorAvatarUrl,
+            self::storageDate($quote->postedAt), $quote->text,
+            self::encodeList(EntryMedia::toJsonList($quote->media)),
+            $quote->nestedQuote?->url, $quote->nestedQuote?->handle,
         ];
     }
 
