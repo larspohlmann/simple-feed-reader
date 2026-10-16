@@ -152,12 +152,7 @@ describe('readingBlocks', () => {
 describe('a curve with a step', () => {
   // Viewport 1000 => a band from 300 to 500, a step down to 0.6 at its edges, and
   // the remaining 300px above and 500px below fading on to 0.2.
-  const stepped: FocusCurve = {
-    band: { top: 0.3, bottom: 0.5 },
-    falloff: 0.4,
-    curvature: 1,
-    min: 0.2,
-  };
+  const stepped: FocusCurve = { falloff: 0.4, curvature: 1, min: 0.2 };
 
   it('holds full opacity across the band, to its very edges', () => {
     expect(focusOpacityForSpan({ top: 300, bottom: 300 }, 1000, stepped)).toBe(1);
@@ -198,11 +193,5 @@ describe('a curve with a step', () => {
     const harsh = { ...stepped, falloff: 0.9 };
     expect(focusOpacityForSpan({ top: 501, bottom: 501 }, 1000, harsh)).toBe(0.2);
     expect(focusOpacityForSpan({ top: 750, bottom: 750 }, 1000, harsh)).toBe(0.2);
-  });
-
-  it('leaves everything opaque when the band spans the whole viewport', () => {
-    const whole = { ...stepped, band: { top: 0, bottom: 1 } };
-    expect(focusOpacityForSpan({ top: 0, bottom: 0 }, 1000, whole)).toBe(1);
-    expect(focusOpacityForSpan({ top: 1000, bottom: 1000 }, 1000, whole)).toBe(1);
   });
 });

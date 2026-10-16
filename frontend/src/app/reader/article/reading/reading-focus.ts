@@ -3,18 +3,11 @@
 
 import { overflowsViewport } from '../../../shared/progress-rail/scroll-progress';
 
-/** The stretch of the viewport, as fractions of its height from the top, held fully opaque. */
-export interface FocusBand {
-  top: number;
-  bottom: number;
-}
+/** Where the eye rests while reading, as fractions of the viewport height from the top (#1644). */
+export const READING_BAND = { top: 0.3, bottom: 0.5 } as const;
 
-/** Where the eye rests while reading: a little above the middle (#1644). */
-export const READING_BAND: FocusBand = { top: 0.3, bottom: 0.5 };
-
-/** How steeply a surface's reading focus falls away from its band. */
+/** How steeply a surface's reading focus falls away from the band. */
 export interface FocusCurve {
-  band: FocusBand;
   /** Opacity lost at once as a block leaves the band, never below `min`; 0 fades from 1. */
   falloff: number;
   /** Exponent on the fade after the step: 1 is linear, below 1 drops early. */
@@ -24,16 +17,10 @@ export interface FocusCurve {
 }
 
 /** The entry list's curve: a fade off the band, down to a strong dim. */
-export const LIST_FOCUS_CURVE: FocusCurve = {
-  band: READING_BAND,
-  falloff: 0,
-  curvature: 1,
-  min: 0.2,
-};
+export const LIST_FOCUS_CURVE: FocusCurve = { falloff: 0, curvature: 1, min: 0.2 };
 
 /** The article's curve (#1138). Tuned by eye — no spec pins these values. */
 export const ARTICLE_FOCUS_CURVE: FocusCurve = {
-  band: READING_BAND,
   falloff: 0.35,
   curvature: 1,
   min: 0.28,
@@ -129,19 +116,19 @@ export function focusOpacityForSpan(
   curve: FocusCurve = LIST_FOCUS_CURVE,
 ): number {
   if (viewportHeight <= 0) return 1;
-  const ratio = fadeProgress(span, viewportHeight, curve.band);
+  const ratio = fadeProgress(span, viewportHeight);
   if (ratio <= 0) return 1;
   const edge = Math.max(1 - curve.falloff, curve.min);
   return +(edge - ratio ** curve.curvature * (edge - curve.min)).toFixed(3);
 }
 
 /** 0 inside the band, rising to 1 at the viewport edge on the block's side of it. */
-function fadeProgress(span: BlockSpan, viewportHeight: number, band: FocusBand): number {
-  const bandTop = viewportHeight * band.top;
-  const bandBottom = viewportHeight * band.bottom;
-  if (span.bottom < bandTop) return Math.min((bandTop - span.bottom) / bandTop, 1);
-  if (span.top > bandBottom) {
-    return Math.min((span.top - bandBottom) / (viewportHeight - bandBottom), 1);
-  }
+function fadeProgress(span: BlockSpan, viewportHeight: number): number {
+  const bandTop = viewportHeight * READING_BAND.top;
+  const bandBottom = viewportHeight * READING_BAND.bottom;
+  const above = bandTop - span.bottom;
+  const below = span.top - bandBottom;
+  if (above > 0) return Math.min(above / bandTop, 1);
+  if (below > 0) return Math.min(below / (viewportHeight - bandBottom), 1);
   return 0;
 }

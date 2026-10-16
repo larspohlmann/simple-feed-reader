@@ -52,10 +52,9 @@ interface FocusEdge {
   opacity: number;
 }
 
-/** The row on the reading band's lower edge, and the row farthest from it. A
- *  rotation moves that edge further than a row is tall, so the row on it is sure
- *  to change; one merely inside the band could stay in it. Reads each row's
- *  current inline opacity as-is, so a poll can tell settled from stale. */
+/** The row on the band's lower edge — a rotation moves that edge past a row's
+ *  height, where a row merely inside the band could stay in it — and the row
+ *  farthest from it, each with its current inline opacity. */
 async function readingFocusEdges(page: Page): Promise<{ near: FocusEdge; far: FocusEdge }> {
   return page.evaluate((bandBottom) => {
     const scroller = document.querySelector('.rows') as HTMLElement;
