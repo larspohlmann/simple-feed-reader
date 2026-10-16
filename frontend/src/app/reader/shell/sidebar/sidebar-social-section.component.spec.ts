@@ -209,27 +209,70 @@ describe('SidebarSocialSectionComponent', () => {
     expect(element(mount(section)).querySelector('.feed-exclusion-marker')).toBeNull();
   });
 
-  it('lists profile feeds under a People heading after the private feeds', () => {
-    const section: SocialSection = {
-      network: 'bluesky',
-      unreadCount: 0,
-      entryCount: 0,
-      showsHandles: false,
-      accounts: ONE_ACCOUNT.accounts,
-      profiles: socialProfiles([person(7, 'Amy'), person(8, 'Zed')]),
-    };
+  const WITH_PROFILES: SocialSection = {
+    ...ONE_ACCOUNT,
+    profiles: socialProfiles([
+      { ...person(7, 'Amy'), unreadCount: 2 },
+      { ...person(8, 'Zed'), unreadCount: 3 },
+    ]),
+  };
+  const feedsRow = (root: HTMLElement) =>
+    root.querySelector('[data-testid="sidebar-social-feeds"]') as HTMLElement | null;
 
-    const root = element(mount(section));
+  it('shows the profile feeds as a collapsed Feeds row with their summed count', () => {
+    const root = element(mount(WITH_PROFILES));
 
-    expect(root.querySelector('.people-heading')?.textContent).toContain('People');
-    const names = [...root.querySelectorAll('app-sidebar-feed-row .nav > span:not(.count)')].map(
-      (name) => name.textContent,
-    );
-    expect(names).toEqual(['Home@bsky', 'Writers', 'Amy', 'Zed']);
+    expect(feedsRow(root)?.textContent).toContain('Feeds');
+    expect(feedsRow(root)?.querySelector('app-tag-glyph')).not.toBeNull();
+    expect(feedsRow(root)?.querySelector('.count')?.textContent?.trim()).toBe('5');
+    expect(root.querySelectorAll('app-sidebar-feed-row').length).toBe(2);
   });
 
-  it('shows no People heading without profile feeds', () => {
-    expect(element(mount(ONE_ACCOUNT)).querySelector('.people-heading')).toBeNull();
+  it('lists the profiles under the row once its chevron opens it, and remembers that', () => {
+    const fixture = mount(WITH_PROFILES);
+
+    (feedsRow(element(fixture))?.querySelector('.chevzone') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const names = [
+      ...element(fixture).querySelectorAll(
+        '.tagfeeds app-sidebar-feed-row .nav > span:not(.count)',
+      ),
+    ].map((name) => name.textContent);
+    expect(names).toEqual(['Amy', 'Zed']);
+    expect(localStorage.getItem('sfr.bluesky.profiles.collapsed')).toBe('false');
+    expect(
+      element(mount(WITH_PROFILES)).querySelectorAll('.tagfeeds app-sidebar-feed-row').length,
+    ).toBe(2);
+  });
+
+  it("links the row to the network's combined profile list without expanding it", () => {
+    const fixture = mount(WITH_PROFILES);
+    const link = feedsRow(element(fixture))?.querySelector('a.nav') as HTMLAnchorElement;
+
+    expect(link.getAttribute('href')).toContain('network=bluesky');
+    expect(link.getAttribute('href')).toContain('feedKind=profile');
+    link.click();
+    fixture.detectChanges();
+    expect(element(fixture).querySelector('.tagfeeds')).toBeNull();
+  });
+
+  it('marks the row, not the network title, active while the profile list is open', () => {
+    const profiles: Selection = {
+      kind: 'network',
+      id: null,
+      unread: true,
+      network: 'bluesky',
+      feedKind: 'profile',
+    };
+    const root = element(mount(WITH_PROFILES, profiles));
+
+    expect(feedsRow(root)?.querySelector('a.nav.active')).not.toBeNull();
+    expect(root.querySelector('.section-link.active')).toBeNull();
+  });
+
+  it('shows no Feeds row without profile feeds', () => {
+    expect(feedsRow(element(mount(ONE_ACCOUNT)))).toBeNull();
   });
 
   it('shows a network that has only people, without an account heading', () => {
@@ -242,6 +285,7 @@ describe('SidebarSocialSectionComponent', () => {
       profiles: socialProfiles([person(7, 'Amy')]),
     };
 
+    localStorage.setItem('sfr.mastodon.profiles.collapsed', 'false');
     const root = element(mount(section));
 
     expect(root.querySelector('.section-link')?.textContent).toContain('Mastodon');
@@ -259,6 +303,8 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       showsHandles: false,
     };
+
+    localStorage.setItem('sfr.bluesky.profiles.collapsed', 'false');
 
     expect(element(mount(section)).querySelector('.feed-exclusion-marker')).not.toBeNull();
   });
@@ -312,6 +358,7 @@ describe('SidebarSocialSectionComponent', () => {
         entryCount: 0,
         showsHandles: false,
       };
+      localStorage.setItem('sfr.bluesky.profiles.collapsed', 'false');
       const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;
       return row.querySelector('img.avatar')?.getAttribute('src') ?? null;
     };
@@ -348,6 +395,7 @@ describe('SidebarSocialSectionComponent', () => {
         entryCount: 0,
         showsHandles: false,
       };
+      localStorage.setItem('sfr.bluesky.profiles.collapsed', 'false');
       const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;
 
       expect(row.querySelector('img.avatar')).toBeNull();

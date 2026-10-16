@@ -132,7 +132,7 @@ describe('SocialSectionComponent', () => {
     const section = byTestId(fixture, 'social-import-section');
     expect(section?.textContent).toContain('Import follows');
     expect(section?.textContent).toContain('Subscribe to the accounts you follow');
-    expect(section?.textContent).toContain('under the People heading');
+    expect(section?.textContent).toContain('under the Feeds row');
   });
 
   it('hides the import section while no account is connected', () => {

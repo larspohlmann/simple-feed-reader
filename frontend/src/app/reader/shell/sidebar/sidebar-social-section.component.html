@@ -41,14 +41,44 @@
     }
   }
   @if (current.profiles.subscriptions.length) {
-    <p class="people-heading">{{ 'reader.socialPeople' | transloco }}</p>
-    @for (subscription of current.profiles.subscriptions; track subscription.id) {
-      <div class="feedrow">
-        <app-sidebar-feed-row
-          [subscription]="subscription"
-          [selection]="selection()"
-          [organising]="organising()"
-        />
+    <div class="tag" data-testid="sidebar-social-feeds">
+      <a
+        class="nav grow"
+        [class.active]="profilesActive()"
+        [routerLink]="['/']"
+        [queryParams]="selectionQueryParams({ network: current.network, feedKind: 'profile' })"
+        queryParamsHandling="merge"
+      >
+        <span class="lead"><app-tag-glyph name="group" size="sm" /></span>
+        <span>{{ 'reader.socialFeeds' | transloco }}</span>
+        @if (current.profiles.unreadCount > 0) {
+          <span class="count">{{ current.profiles.unreadCount }}</span>
+        }
+      </a>
+      <button
+        class="chevzone"
+        type="button"
+        [attr.aria-expanded]="profilesExpanded()"
+        [attr.aria-label]="
+          'reader.toggleSocialFeeds'
+            | transloco: { network: ('settings.social.' + current.network | transloco) }
+        "
+        (click)="toggleProfiles()"
+      >
+        <app-icon [name]="profilesExpanded() ? 'expand_more' : 'chevron_right'" size="sm" />
+      </button>
+    </div>
+    @if (profilesExpanded()) {
+      <div class="tagfeeds">
+        @for (subscription of current.profiles.subscriptions; track subscription.id) {
+          <div class="feedrow">
+            <app-sidebar-feed-row
+              [subscription]="subscription"
+              [selection]="selection()"
+              [organising]="organising()"
+            />
+          </div>
+        }
       </div>
     }
   }

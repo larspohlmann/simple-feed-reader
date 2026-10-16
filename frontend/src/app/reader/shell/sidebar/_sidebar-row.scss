@@ -105,6 +105,18 @@
   }
 }
 
+/* An expanded tag's feeds sit on a recessed surface, so the group reads as
+   nested under its header (#1114). The negative inline margin with matching
+   padding bleeds the band to the sidebar edges. */
+@mixin tag-feeds {
+  .tagfeeds {
+    background: var(--surface-sunken);
+    margin-inline: calc(var(--space-2) * -1);
+    padding-inline: var(--space-2);
+    border-radius: 0;
+  }
+}
+
 /* The trailing expand/collapse chevron, one button for both pointer types. */
 @mixin chevzone {
   .chevzone {
