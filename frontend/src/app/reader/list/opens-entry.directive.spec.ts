@@ -51,12 +51,4 @@ describe('OpensEntryDirective', () => {
     card.dispatchEvent(space);
     expect(space.defaultPrevented).toBe(true);
   });
-
-  it('marks the card read once its entry is', () => {
-    const { fixture, card } = mount();
-    expect(card.classList).not.toContain('read');
-    fixture.componentInstance.entry.set(anEntry({ isHidden: true }));
-    fixture.detectChanges();
-    expect(card.classList).toContain('read');
-  });
 });

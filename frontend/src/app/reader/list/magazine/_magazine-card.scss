@@ -23,11 +23,6 @@
     }
   }
 
-  &.read .title {
-    color: var(--text-secondary);
-    font-weight: 400;
-  }
-
   @if $with-post {
     .title.post {
       @include post-text.post-text;
