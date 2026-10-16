@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\EntryView;
-use App\Enum\SocialNetwork;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
@@ -62,14 +61,10 @@ final readonly class EntryScopePredicates
         $qb->andWhere(\sprintf('%s.id IN (:ids)', $aliases->entry))->setParameter('ids', $entryIds);
     }
 
-    private function onNetwork(QueryBuilder $qb, EntryAliases $aliases, SocialNetwork $network): void
+    private function onNetwork(QueryBuilder $qb, EntryAliases $aliases, NetworkScope $network): void
     {
-        $qb->innerJoin(
-            \sprintf('%s.feed', $aliases->entry),
-            $aliases->networkFeed,
-            'WITH',
-            \sprintf('%s.network = :network', $aliases->networkFeed),
-        )->setParameter('network', $network);
+        $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed);
+        NetworkScopeDql::restrict($qb, $aliases->networkFeed, $network);
     }
 
     private function applyView(QueryBuilder $qb, EntryAliases $aliases, EntryView $view): void

@@ -6,7 +6,6 @@ namespace App\Repository;
 
 use App\Enum\EntryView;
 use App\Enum\ListOrder;
-use App\Enum\SocialNetwork;
 use App\Pagination\EntryCursor;
 
 final readonly class EntryQuery
@@ -34,7 +33,7 @@ final readonly class EntryQuery
         public ?EntryCursor $cursor = null,
         int $limit = self::DEFAULT_LIMIT,
         public ListOrder $order = ListOrder::NewestFirst,
-        public ?SocialNetwork $network = null,
+        public ?NetworkScope $network = null,
     ) {
         if ($view === EntryView::ForYou) {
             throw new \LogicException('The for-you feed pages through ForYouFeedQuery, never an EntryQuery.');

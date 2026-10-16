@@ -48,6 +48,37 @@ final class EntryNetworkScopeTest extends WebTestCase
         self::assertSame(['profile-post', 'home-post'], $this->guidsOfResponse());
     }
 
+    public function testAProfileFeedKindListsOnlyTheNetworksProfileFeeds(): void
+    {
+        [$headers, $user] = $this->auth('network-profiles@example.com');
+        $this->seedNetworks($user);
+
+        $this->client->request('GET', '/api/entries?network=bluesky&feedKind=profile', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['profile-post'], $this->guidsOfResponse());
+    }
+
+    public function testAnUnknownFeedKindIsAValidationError(): void
+    {
+        [$headers] = $this->auth('network-feedkind-unknown@example.com');
+
+        $this->client->request('GET', '/api/entries?network=bluesky&feedKind=home', server: $headers);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame(['feedKind' => ['Unknown feedKind. Use one of: profile.']], $this->body()['errors']);
+    }
+
+    public function testAFeedKindWithoutANetworkIsAValidationError(): void
+    {
+        [$headers] = $this->auth('network-feedkind-alone@example.com');
+
+        $this->client->request('GET', '/api/entries?feedKind=profile', server: $headers);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame(['feedKind' => ['A feedKind needs a network.']], $this->body()['errors']);
+    }
+
     public function testAnUnknownNetworkIsAValidationError(): void
     {
         [$headers] = $this->auth('network-unknown@example.com');

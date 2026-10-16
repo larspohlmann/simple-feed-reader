@@ -12,7 +12,6 @@ use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\User;
 use App\Enum\EntryView;
 use App\Enum\ListOrder;
-use App\Enum\SocialNetwork;
 use App\Http\EntryJson;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
@@ -23,6 +22,7 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;
+use App\Repository\NetworkScope;
 use App\Service\Reading\EntryStateUpdater;
 use App\Service\Reading\ForYouMarkReadService;
 use App\Service\Reading\MarkEntriesReadService;
@@ -57,6 +57,7 @@ final readonly class EntryController
         #[MapQueryParameter] ?int $subscription = null,
         #[MapQueryParameter] ?int $tag = null,
         #[MapQueryParameter] ?string $network = null,
+        #[MapQueryParameter] ?string $feedKind = null,
         #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
         EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
@@ -64,7 +65,7 @@ final readonly class EntryController
         // `validation_error` as every other invalid field, which the client switches on.
         $entryView = EntryView::fromRequestValue($view);
         $listOrder = ListOrder::fromRequestValue($page->order);
-        $socialNetwork = SocialNetwork::fromRequestValue($network);
+        $networkScope = NetworkScope::fromRequestValues($network, $feedKind);
 
         // Score-ranked, with its own cursor.
         if ($entryView === EntryView::ForYou) {
@@ -81,7 +82,7 @@ final readonly class EntryController
             cursor: EntryCursor::fromRequestValue($page->cursor),
             limit: $page->limit,
             order: $listOrder,
-            network: $socialNetwork,
+            network: $networkScope,
         );
 
         $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());

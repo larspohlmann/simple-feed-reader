@@ -23,6 +23,7 @@ use App\Repository\EntryProjection;
 use App\Repository\EntryQuery;
 use App\Repository\EntryScopePredicates;
 use App\Repository\Exception\RecordNotFoundException;
+use App\Repository\NetworkScope;
 use App\Repository\SearchTermsPredicateBuilder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
@@ -533,7 +534,7 @@ final class EntryListTest extends DbTestCase
         $this->entryIn($mastodon, 'mastodon', '2026-07-07T00:00:00Z');
 
         $rows = $this->repository()->listForUser(
-            new EntryQuery($this->user->requireId(), network: SocialNetwork::Bluesky),
+            new EntryQuery($this->user->requireId(), network: NetworkScope::whole(SocialNetwork::Bluesky)),
         );
 
         self::assertSame(['bluesky'], $this->guids($rows));
@@ -544,7 +545,7 @@ final class EntryListTest extends DbTestCase
         $this->entry('plain', '2026-07-05T00:00:00Z');
 
         $rows = $this->repository()->listForUser(
-            new EntryQuery($this->user->requireId(), network: SocialNetwork::Mastodon),
+            new EntryQuery($this->user->requireId(), network: NetworkScope::whole(SocialNetwork::Mastodon)),
         );
 
         self::assertSame([], $rows);
@@ -556,7 +557,11 @@ final class EntryListTest extends DbTestCase
         $firstEntry = $this->entryIn($profile, 's1', '2026-07-10T00:00:00Z');
         $secondEntry = $this->entryIn($profile, 's2', '2026-07-09T00:00:00Z');
         $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
-        $query = new EntryQuery($this->user->requireId(), limit: 2, network: SocialNetwork::Bluesky);
+        $query = new EntryQuery(
+            $this->user->requireId(),
+            limit: 2,
+            network: NetworkScope::whole(SocialNetwork::Bluesky),
+        );
 
         $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
@@ -577,7 +582,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->flush();
 
         $rows = $this->repository()->listForUser(
-            new EntryQuery($this->user->requireId(), network: SocialNetwork::Bluesky),
+            new EntryQuery($this->user->requireId(), network: NetworkScope::whole(SocialNetwork::Bluesky)),
         );
 
         self::assertSame(['network-copy'], $this->guids($rows));
