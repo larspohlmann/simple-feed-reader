@@ -16,6 +16,7 @@ export class VideoAutoplayPlayer implements AutoplayPlayer {
     element.addEventListener('play', () => coordinator.nowPlaying(this), { signal });
     element.addEventListener('volumechange', () => this.reportSound(), { signal });
     element.addEventListener('click', () => this.revealByTap(), { signal });
+    element.addEventListener('ended', () => this.showControls(), { signal });
     element.addEventListener('keydown', (event) => this.revealByKey(event), { signal });
   }
 

@@ -160,6 +160,29 @@ describe('VideoAutoplayPlayer', () => {
     expect(coordinator.soundChanged).toHaveBeenLastCalledWith(true);
   });
 
+  it('shows its controls once the autoplay ends', () => {
+    const { video, player } = setUp();
+    player.start(false);
+
+    video.dispatchEvent(new Event('ended'));
+
+    expect(video.controls).toBe(true);
+    expect(video.hasAttribute('tabindex')).toBe(false);
+  });
+
+  it('reports the sound a tap turned on even when the coordinator unlocks in the same tap', async () => {
+    const { video, coordinator, player } = setUp();
+    player.start(false);
+    await settle();
+
+    video.click();
+    player.unlockSound();
+    await settle();
+
+    expect(video.muted).toBe(false);
+    expect(coordinator.soundChanged).toHaveBeenLastCalledWith(true);
+  });
+
   it('leaves a tap on its visible controls to the browser', () => {
     const { video, coordinator } = setUp();
     video.muted = true;
@@ -179,6 +202,7 @@ describe('VideoAutoplayPlayer', () => {
 
     expect(space.defaultPrevented).toBe(true);
     expect(video.controls).toBe(true);
+    expect(video.muted).toBe(false);
     expect(coordinator.unmutedByTap).toHaveBeenCalledTimes(1);
   });
 
