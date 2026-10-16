@@ -30,7 +30,7 @@ final class MastodonQuotedStatus
     {
         $url = AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri'));
         $account = $status->node('account');
-        $handle = self::handleOf($account);
+        $handle = MastodonAuthor::handle($account);
         if ($url === null || $handle === null) {
             return null;
         }
@@ -48,18 +48,6 @@ final class MastodonQuotedStatus
             self::mediaOf($status),
             self::nestedOf($status->node('quote'), $quoted),
         ));
-    }
-
-    /** A local account's acct is the bare user name: the profile's host completes it. */
-    private static function handleOf(JsonNodeModel $account): ?string
-    {
-        $acct = $account->string('acct');
-        $host = parse_url((string) $account->string('url'), \PHP_URL_HOST);
-        if ($acct === null || str_contains($acct, '@') || !\is_string($host)) {
-            return $acct;
-        }
-
-        return $acct . '@' . $host;
     }
 
     /** @return list<EntryMedium> */

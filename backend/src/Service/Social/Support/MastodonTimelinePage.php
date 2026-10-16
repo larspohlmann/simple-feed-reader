@@ -8,9 +8,7 @@ use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Completion\Model\KnownSharesModel;
-use App\Service\Fetch\Support\HostKey;
 use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
@@ -45,7 +43,7 @@ final class MastodonTimelinePage
     private static function knownSharesOf(array $postsByGuid): KnownSharesModel
     {
         $cards = array_filter(array_map(
-            static fn (JsonNodeModel $post): ?LinkCardContent => self::cardOf($post->node('card')),
+            static fn (JsonNodeModel $post): ?LinkCardContent => MastodonCard::of($post->node('card')),
             $postsByGuid,
         ));
         $quotes = array_filter(array_map(
@@ -71,12 +69,12 @@ final class MastodonTimelinePage
             guid: $uri,
             url: $url,
             headline: EntryTitle::of(null, $body),
-            author: self::nameOf($account),
+            author: MastodonAuthor::name($account),
             summary: null,
             contentHtml: self::withBoostAttribution($body, $status),
             publishedAt: DateParser::parse($status->string('created_at')),
             media: self::mediaOf($post->nodes('media_attachments')),
-            authorUrl: self::profileOf($account),
+            authorUrl: MastodonAuthor::profile($account),
             authorAvatarUrl: AbsoluteHttpUrl::orNull($account->string('avatar')),
         );
     }
@@ -107,17 +105,11 @@ final class MastodonTimelinePage
         }
         $booster = $status->node('account');
 
-        return ($body ?? '') . ShareAttribution::line('Boosted by', self::nameOf($booster), self::profileOf($booster));
-    }
-
-    private static function nameOf(JsonNodeModel $account): ?string
-    {
-        return $account->string('display_name') ?? $account->string('acct');
-    }
-
-    private static function profileOf(JsonNodeModel $account): ?string
-    {
-        return AbsoluteHttpUrl::orNull($account->string('url'));
+        return ($body ?? '') . ShareAttribution::line(
+            'Boosted by',
+            MastodonAuthor::name($booster),
+            MastodonAuthor::profile($booster),
+        );
     }
 
     /** @param list<JsonNodeModel> $attachments */
@@ -141,23 +133,6 @@ final class MastodonTimelinePage
         }
 
         return null;
-    }
-
-    private static function cardOf(JsonNodeModel $card): ?LinkCardContent
-    {
-        $url = $card->string('url');
-        $title = $card->string('title');
-        if (null === $url || null === $title) {
-            return null;
-        }
-
-        return StorableLinkCard::of(new LinkCardContent(
-            $url,
-            $title,
-            $card->string('description'),
-            $card->string('image'),
-            $card->string('provider_name') ?? HostKey::forUrl($url),
-        ));
     }
 
     /** @param list<JsonNodeModel> $statuses */

@@ -43,4 +43,41 @@ final class MastodonStatusAddressTest extends TestCase
         yield 'pixelfed' => ['https://pixelfed.social/p/alice/123'];
         yield 'misskey' => ['https://misskey.io/notes/9abcdef'];
     }
+
+    #[DataProvider('statusAddresses')]
+    public function testAStatusAddressNamesItsContextEndpoint(string $address): void
+    {
+        self::assertSame(
+            'https://mastodon.social/api/v1/statuses/110/context',
+            MastodonStatusAddress::contextApiUrlOrNull($address),
+        );
+    }
+
+    #[DataProvider('otherAddresses')]
+    public function testAnyOtherAddressNamesNoContextEndpoint(string $address): void
+    {
+        self::assertNull(MastodonStatusAddress::contextApiUrlOrNull($address));
+    }
+
+    #[DataProvider('authorPrefixes')]
+    public function testAStatusAddressNamesItsAuthorsProfilePrefix(string $address, string $prefix): void
+    {
+        self::assertSame($prefix, MastodonStatusAddress::authorPrefixOrNull($address));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function authorPrefixes(): iterable
+    {
+        yield 'profile shape' => ['https://mastodon.social/@Gargron/110', 'https://mastodon.social/@Gargron'];
+        yield 'users shape' => [
+            'https://mastodon.social/users/Gargron/statuses/110',
+            'https://mastodon.social/users/Gargron',
+        ];
+    }
+
+    #[DataProvider('otherAddresses')]
+    public function testAnyOtherAddressNamesNoAuthorPrefix(string $address): void
+    {
+        self::assertNull(MastodonStatusAddress::authorPrefixOrNull($address));
+    }
 }
