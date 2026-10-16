@@ -359,7 +359,7 @@ describe('EntryCommentsComponent', () => {
 
     it("leaves the post's own video playing when a reply GIF loops", () => {
       show('auto');
-      const gif: EntryMediumDto = { ...REPLY_VIDEO, kind: 'animation' };
+      const gif: EntryMediumDto = { ...REPLY_VIDEO, animated: true };
       const element = settleComments([anEntryComment({ media: [gif] })]);
       const replyGif = element.querySelector<HTMLVideoElement>('.comment video')!;
       const pauseOwn = playing(ownVideo);
@@ -388,7 +388,7 @@ describe('EntryCommentsComponent', () => {
       showReplyVideo();
       const suspend = jest.spyOn(ownCoordinator(), 'suspend');
       const postGif = document.createElement('video');
-      postGif.className = 'animation';
+      postGif.toggleAttribute('data-animated', true);
       article.prepend(postGif);
 
       postGif.dispatchEvent(new Event('play'));

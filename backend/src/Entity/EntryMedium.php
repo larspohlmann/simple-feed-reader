@@ -7,8 +7,8 @@ namespace App\Entity;
 use App\Entity\Exception\IncompleteStoredMediaException;
 
 /**
- * One image, video or animation on an entry, with the dimensions, still and alt text the feed declared. `kind` is
- * the API's string (`image`, `video` or `animation`). Unset fields stay out of the JSON.
+ * One image or video on an entry, with the dimensions, still and alt text the feed declared. `kind` is the API's
+ * string (`image` or `video`). Unset fields stay out of the JSON.
  */
 final readonly class EntryMedium implements \JsonSerializable
 {
@@ -40,12 +40,12 @@ final readonly class EntryMedium implements \JsonSerializable
             throw new IncompleteStoredMediaException('A stored medium needs a url and a kind.');
         }
         $url = $stored['url'];
-        $kind = $stored['kind'];
+        $kind = 'animation' === $stored['kind'] ? 'video' : $stored['kind'];
         $width = $stored['width'] ?? null;
         $height = $stored['height'] ?? null;
         $previewImageUrl = $stored['previewImageUrl'] ?? null;
         $alt = $stored['alt'] ?? null;
-        $isAnimated = ($stored['animated'] ?? null) === true;
+        $isAnimated = ($stored['animated'] ?? null) === true || 'animation' === $stored['kind'];
 
         return new self(
             $url,

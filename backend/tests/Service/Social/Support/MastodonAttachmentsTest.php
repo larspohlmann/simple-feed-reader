@@ -36,12 +36,13 @@ final class MastodonAttachmentsTest extends TestCase
         ]]));
 
         self::assertCount(1, $media);
-        self::assertSame('animation', $media[0]->kind);
+        self::assertSame('video', $media[0]->kind);
+        self::assertTrue($media[0]->isAnimated);
         self::assertSame('https://files.example/b.jpg', $media[0]->previewImageUrl);
         self::assertSame('A cat waves', $media[0]->alt);
     }
 
-    public function testAGifIsAnAnimationAndAVideoStaysAVideo(): void
+    public function testAGifIsAnAnimatedVideoAndAVideoStaysAPlainOne(): void
     {
         $media = MastodonAttachments::of([
             JsonNodeModel::of(['type' => 'gifv', 'url' => 'https://files.example/gif.mp4']),
@@ -49,8 +50,11 @@ final class MastodonAttachmentsTest extends TestCase
         ]);
 
         self::assertSame(
-            [VisualMediaKind::Animation, VisualMediaKind::Video],
-            array_map(static fn (ParsedMediumModel $medium): VisualMediaKind => $medium->kind, $media),
+            [[VisualMediaKind::Video, true], [VisualMediaKind::Video, false]],
+            array_map(
+                static fn (ParsedMediumModel $medium): array => [$medium->kind, $medium->isAnimated],
+                $media,
+            ),
         );
     }
 }

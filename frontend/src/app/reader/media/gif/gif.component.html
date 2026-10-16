@@ -1,8 +1,8 @@
 @let gif = medium();
-@if (gif.kind === 'animation') {
+@if (gif.kind === 'video') {
   <video
     #clip
-    class="animation"
+    data-animated
     [src]="gif.url"
     [attr.poster]="gif.previewImageUrl ?? null"
     preload="none"

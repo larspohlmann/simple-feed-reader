@@ -9,6 +9,4 @@ enum VisualMediaKind: string
 {
     case Image = 'image';
     case Video = 'video';
-    /** A silent clip shown like an animated GIF: it loops on its own, with no controls and no sound. */
-    case Animation = 'animation';
 }

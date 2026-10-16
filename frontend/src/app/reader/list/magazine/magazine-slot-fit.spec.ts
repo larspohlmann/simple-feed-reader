@@ -38,7 +38,7 @@ describe('sharedMedia', () => {
   it('drops the image that is only a GIF’s poster', () => {
     const gif: EntryMediumDto = {
       ...video('https://g/clap.mp4', 'https://g/clap.jpg'),
-      kind: 'animation',
+      animated: true,
     };
     const share = entry({
       titleDerived: true,

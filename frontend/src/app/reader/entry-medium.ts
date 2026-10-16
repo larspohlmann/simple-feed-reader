@@ -1,7 +1,7 @@
 /** One visual media item the feed declared for an entry (#906). */
 export interface EntryMediumDto {
   url: string;
-  kind: 'image' | 'video' | 'animation';
+  kind: 'image' | 'video';
   width?: number;
   height?: number;
   previewImageUrl?: string;
@@ -15,7 +15,6 @@ export function mediumRatio(medium: EntryMediumDto): number {
   return medium.width && medium.height ? medium.width / medium.height : UNKNOWN_RATIO;
 }
 
-/** A looping clip, or a picture the API marks as animated. */
 export function isGif(medium: EntryMediumDto): boolean {
-  return medium.kind === 'animation' || medium.animated === true;
+  return medium.animated === true;
 }

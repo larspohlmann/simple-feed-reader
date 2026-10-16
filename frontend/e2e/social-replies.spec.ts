@@ -36,7 +36,8 @@ const REPLIES: CommentsResponse = {
       media: [
         {
           url: 'https://media.invalid/loop.mp4',
-          kind: 'animation',
+          kind: 'video',
+          animated: true,
           width: 400,
           height: 300,
           previewImageUrl: 'https://media.invalid/loop.png',

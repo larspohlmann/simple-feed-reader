@@ -152,8 +152,7 @@ kind it does not know, since new kinds are added.
 |---|---|
 | `kind: "image"` | A picture. |
 | `kind: "video"` | A clip with sound, played on request. |
-| `kind: "animation"` | A silent looping clip (a Mastodon `gifv`), shown like a GIF. |
-| `animated: true` | Present only on an animated picture (a GIF from Bluesky's picker); `kind` stays `image`. |
+| `animated: true` | Present only on a GIF, shown looping and silent: a picture (`kind: "image"`, from Bluesky's picker) or a clip (`kind: "video"`, a Mastodon `gifv`). |
 | `alt` | The alt text the source gave, when it gave one. |
 | `previewImageUrl` | The still shown while the medium does not play: a video's poster or a GIF's first frame. It never by itself makes a medium animated. |
 

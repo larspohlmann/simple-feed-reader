@@ -1,1 +1,1 @@
-export const PLAYER_VIDEOS = 'video:not(.animation)';
+export const PLAYER_VIDEOS = 'video:not([data-animated])';

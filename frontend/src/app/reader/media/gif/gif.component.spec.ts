@@ -20,8 +20,9 @@ const pickerGif: EntryMediumDto = {
 };
 const gifv: EntryMediumDto = {
   url: 'https://files.test/wave.mp4',
-  kind: 'animation',
+  kind: 'video',
   previewImageUrl: 'https://files.test/wave.jpg',
+  animated: true,
 };
 
 @Component({
@@ -136,7 +137,7 @@ describe('GifComponent', () => {
       false,
     ]);
     expect(clip.hasAttribute('autoplay')).toBe(false);
-    expect(clip.classList).toContain('animation');
+    expect(clip.hasAttribute('data-animated')).toBe(true);
     expect(play).toHaveBeenCalledTimes(1);
   });
 

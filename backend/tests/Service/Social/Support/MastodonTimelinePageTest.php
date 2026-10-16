@@ -93,10 +93,11 @@ final class MastodonTimelinePageTest extends TestCase
             [
                 new ParsedMediumModel(
                     'https://files.mastodon.example/b.mp4',
-                    VisualMediaKind::Animation,
+                    VisualMediaKind::Video,
                     640,
                     360,
                     'https://files.mastodon.example/b.jpg',
+                    isAnimated: true,
                 ),
                 new ParsedMediumModel('https://files.mastodon.example/a.jpg', VisualMediaKind::Image, 800, 600),
             ],

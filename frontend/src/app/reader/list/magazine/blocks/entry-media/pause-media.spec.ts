@@ -12,7 +12,7 @@ describe('pauseMedia', () => {
     const root = document.createElement('div');
     const video = document.createElement('video');
     const gif = document.createElement('video');
-    gif.className = 'animation';
+    gif.toggleAttribute('data-animated', true);
     root.append(video, gif);
 
     pauseMedia(root);

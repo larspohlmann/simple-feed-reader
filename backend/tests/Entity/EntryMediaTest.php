@@ -196,6 +196,14 @@ final class EntryMediaTest extends TestCase
         );
     }
 
+    public function testAStoredAnimationKindReadsAsAnAnimatedVideo(): void
+    {
+        $medium = EntryMedium::fromStored(['url' => 'https://v/gif.mp4', 'kind' => 'animation']);
+
+        self::assertSame('video', $medium->kind);
+        self::assertTrue($medium->isAnimated);
+    }
+
     public function testAStoredAltThatIsNoStringIsNone(): void
     {
         self::assertNull(EntryMedium::fromStored(['url' => 'https://i/a.gif', 'kind' => 'image', 'alt' => 7])->alt);

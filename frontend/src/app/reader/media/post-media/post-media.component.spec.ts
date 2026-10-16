@@ -35,10 +35,11 @@ const clip: EntryMediumDto = {
 
 const gif: EntryMediumDto = {
   url: 'https://files.test/clap.mp4',
-  kind: 'animation',
+  kind: 'video',
   width: 498,
   height: 280,
   previewImageUrl: 'https://files.test/clap.jpg',
+  animated: true,
 };
 
 @Component({
