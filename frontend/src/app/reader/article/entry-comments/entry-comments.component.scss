@@ -48,7 +48,7 @@
   border-inline-start: 1px solid var(--border-strong);
 }
 
-@media (width <= bp.$bp-sm) {
+@media (width < bp.$bp-sm) {
   .comment {
     margin-inline-start: calc(min(var(--depth, 0), 2) * var(--space-3));
   }
@@ -68,7 +68,6 @@
   flex: none;
   width: var(--icon-md);
   height: var(--icon-md);
-  margin-right: var(--space-1);
   border-radius: var(--radius-pill);
   object-fit: cover;
 }

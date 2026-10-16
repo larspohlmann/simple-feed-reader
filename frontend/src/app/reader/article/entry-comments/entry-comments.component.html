@@ -78,7 +78,7 @@
                   <span class="op accent-pill">{{ 'reader.comments.op' | transloco }}</span>
                 }
                 @if (c.publishedAt; as publishedAt) {
-                  ·
+                  <span class="separator" aria-hidden="true">·</span>
                   @if (c.url) {
                     <a class="when" [href]="c.url" target="_blank" rel="noopener noreferrer">{{
                       when(publishedAt)

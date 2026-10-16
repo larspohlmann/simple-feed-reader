@@ -1754,6 +1754,10 @@ sit above it. Its media and the media block's share `<app-post-media>` (`reader/
 (`magazine-block-height.ts`), calibrated at 390px like `BLOCK_HEIGHT`. A quote share can also carry link cards; the reader
 view shows the quoted post first, then the cards.
 
+**The comments panel threads replies by indent** (#1616). Each comment sets `--depth` (capped at 5) and indents by
+`--depth × --space-4`, a reply carrying a 1px `--border-strong` thread line; below `bp.$bp-sm` the indent caps at two
+steps of `--space-3`. A reply's avatar and initials share `theme/_avatar-tone.scss`'s `tones` with `<app-quoted-post>`.
+
 ---
 
 ## 6. Deliberate exceptions
