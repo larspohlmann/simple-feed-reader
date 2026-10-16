@@ -33,8 +33,11 @@ iOS client can read the network path. No backend change.
 
 ## Choosing what plays
 
-`ListAutoplayCoordinator` (root service, `reader/media/`) owns one
-`IntersectionObserver` and the session's sound state.
+`ListAutoplayCoordinator` (`reader/media/autoplay/`) owns one
+`IntersectionObserver` and the session's sound state. `EntryListComponent`
+provides it, so only the list autoplays: `PostMediaComponent` also renders
+quoted posts in the article view, and there it finds no coordinator and stays
+click-to-play.
 
 Players register and unregister themselves. A player is the coordinator's
 interface, implemented once for a native video and once for a Short:
@@ -55,9 +58,12 @@ Rules:
   least 0.6. Only the candidate plays; when another player becomes the
   candidate, the current one is stopped first. No candidate stops the current
   one.
-- A video the user starts by hand stops the autoplaying one, so two never play
-  together. Hand-started playback otherwise keeps today's behaviour (pauses on
-  scroll-away).
+- A video the user starts by hand stops whichever list video is playing, so two
+  never play together — with the setting off too. Hand-started playback
+  otherwise keeps today's behaviour (pauses on scroll-away).
+- While an entry is open (the article beside or over the list) autoplay is
+  suspended, as `pauseMedia` already pauses the list's media then; closing the
+  entry resumes it.
 - Re-rendering a list unregisters removed players; a removed playing player is
   stopped.
 
@@ -79,7 +85,8 @@ Rules:
 ## YouTube Short
 
 - `start()` ignores sound and sets the playing state with the player URL carrying
-  `autoplay=1` and `mute=1` (extending `autoplayingShortPlayer`). The frame is
+  `autoplay=1`, `mute=1` and `playsinline=1` (`mutedShortPlayer`). A tap on the
+  play button keeps today's unmuted URL. The frame is
   cross-origin: we can neither see an unmute inside it nor learn that an
   unmuted start was blocked (on iOS that is a frozen frame), so Shorts always
   start muted and neither set nor read the sound state.
