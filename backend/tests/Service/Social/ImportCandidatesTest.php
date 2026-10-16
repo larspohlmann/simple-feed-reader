@@ -85,9 +85,15 @@ final class ImportCandidatesTest extends DbTestCase
         return (new ProfileFeedSubscriptions($this->entityManager))->subscribe($this->user, $feedUrl, $feedTitle);
     }
 
-    private static function follow(string $did, string $handle): FollowedAccountModel
+    private static function follow(string $did, string $handle, ?string $avatarUrl = null): FollowedAccountModel
     {
-        return new FollowedAccountModel($did, $handle, null, 'https://bsky.app/profile/' . $did . '/rss');
+        return new FollowedAccountModel(
+            $did,
+            $handle,
+            null,
+            'https://bsky.app/profile/' . $did . '/rss',
+            $avatarUrl,
+        );
     }
 
     /**
@@ -112,11 +118,13 @@ final class ImportCandidatesTest extends DbTestCase
         $account = $this->account();
         $bob = $this->subscribe('https://bsky.app/profile/did:plc:bob/rss');
         $gone = $this->subscribe('https://bsky.app/profile/did:plc:gone/rss', 'Gone Account');
+        $gone->getFeed()->setImageUrl('https://cdn.test/gone.png');
+        $this->entityManager->flush();
         $this->subscribe('https://example.com/feed.xml');
         $network = new StubSocialCandidates(new NetworkCandidatesModel(
             [
                 self::follow('did:plc:zed', '@Zed.bsky.social'),
-                self::follow('did:plc:bob', '@bob.bsky.social'),
+                self::follow('did:plc:bob', '@bob.bsky.social', 'https://cdn.test/bob.jpg'),
                 self::follow('did:plc:amy', '@amy.bsky.social'),
             ],
             [],
@@ -136,6 +144,8 @@ final class ImportCandidatesTest extends DbTestCase
             self::summary($follows),
         );
         self::assertSame('Gone Account', $follows[3]->account->displayName);
+        self::assertSame('https://cdn.test/gone.png', $follows[3]->account->avatarUrl);
+        self::assertSame('https://cdn.test/bob.jpg', $follows[2]->account->avatarUrl);
     }
 
     public function testACutOffFollowListOffersNothingAsNoLongerFollowed(): void

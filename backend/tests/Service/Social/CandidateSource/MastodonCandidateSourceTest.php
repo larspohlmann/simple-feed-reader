@@ -89,12 +89,35 @@ final class MastodonCandidateSourceTest extends TestCase
 
     private static function followed(string $identity, ?string $displayName, string $feedUrl): FollowedAccountModel
     {
-        return new FollowedAccountModel($identity, '@' . $identity, $displayName, $feedUrl);
+        return new FollowedAccountModel($identity, '@' . $identity, $displayName, $feedUrl, null);
     }
 
     public function testTheNetworkKeyIsMastodon(): void
     {
         self::assertSame('mastodon', MastodonCandidateSource::network());
+    }
+
+    public function testAFollowCarriesItsStillAvatarAndFallsBackToTheAnimatedOne(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::FOLLOWING => self::json([
+                self::account('bob', 'https://mastodon.example/@bob', 'Bob') + [
+                    'avatar' => 'https://files.example/bob.gif',
+                    'avatar_static' => 'https://files.example/bob.png',
+                ],
+                self::account('carol', 'https://mastodon.example/@carol', 'Carol') + [
+                    'avatar' => 'https://files.example/carol.png',
+                ],
+                self::account('dave', 'https://mastodon.example/@dave', 'Dave') + ['avatar' => 'missing.png'],
+            ]),
+        ]));
+
+        $follows = $this->source($http)->candidates(SocialAccounts::mastodon())->follows;
+
+        self::assertSame(
+            ['https://files.example/bob.png', 'https://files.example/carol.png', null],
+            array_map(static fn (FollowedAccountModel $follow): ?string => $follow->avatarUrl, $follows),
+        );
     }
 
     public function testFollowsReadAsUserAtDomainWithTheirProfileFeed(): void

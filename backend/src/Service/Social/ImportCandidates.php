@@ -131,6 +131,7 @@ final readonly class ImportCandidates
                     $subscription['feedTitle'],
                     $subscription['feedUrl'],
                 ),
+                $subscription['feedImageUrl'],
             );
         }
 
