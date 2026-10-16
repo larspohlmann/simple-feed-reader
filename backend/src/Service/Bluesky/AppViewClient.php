@@ -106,7 +106,6 @@ final readonly class AppViewClient
         return $body;
     }
 
-    /** The XRPC method and query asking for a post's replies down to $depth, without the posts it answers. */
     public static function threadQuery(string $uri, int $depth): string
     {
         return sprintf(self::GET_POST_THREAD, rawurlencode($uri), $depth);
