@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh\Model;
 
-use App\Enum\SocialNetwork;
+use App\Repository\NetworkScope;
 
 final readonly class RefreshRequestModel
 {
@@ -18,7 +18,7 @@ final readonly class RefreshRequestModel
         public int $budgetSeconds,
         public bool $prune,
         public int $batchLimit = self::DEFAULT_BATCH_LIMIT,
-        public ?SocialNetwork $network = null,
+        public ?NetworkScope $network = null,
     ) {
     }
 
@@ -37,7 +37,7 @@ final readonly class RefreshRequestModel
         return new self($userId, null, $tagId, true, $budgetSeconds, false);
     }
 
-    public static function forUserNetwork(int $userId, SocialNetwork $network, int $budgetSeconds): self
+    public static function forUserNetwork(int $userId, NetworkScope $network, int $budgetSeconds): self
     {
         return new self($userId, null, null, true, $budgetSeconds, false, network: $network);
     }

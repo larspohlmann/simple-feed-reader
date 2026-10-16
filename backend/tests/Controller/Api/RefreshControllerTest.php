@@ -216,6 +216,19 @@ final class RefreshControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
+    public function testRefreshOfAnUnknownFeedKindIsAValidationError(): void
+    {
+        $client = self::createClient();
+        $headers = $this->auth('unknown-feed-kind-refresh@example.com');
+
+        $client->request('POST', '/api/refresh?network=mastodon&feedKind=other', server: $headers);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame(['feedKind' => ['Unknown feedKind. Use one of: profile.']], $body['errors']);
+    }
+
     /**
      * Both scopes sweep one feed, so both must claim a run of one: asserted as an invariant because either may answer
      * `completed` or `partial`, and a partial slice leaves feeds in `remaining`.

@@ -81,7 +81,7 @@ final readonly class RefreshRunStore
         }
 
         if (null !== $request->network) {
-            return 'set-network-' . $request->network->value;
+            return 'set-network-' . $request->network->toRunKey();
         }
 
         return 'all';

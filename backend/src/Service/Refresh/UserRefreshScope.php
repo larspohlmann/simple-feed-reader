@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh;
 
-use App\Enum\SocialNetwork;
+use App\Repository\NetworkScope;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
@@ -37,7 +37,7 @@ final readonly class UserRefreshScope
         return RefreshRequestModel::forUser($userId, self::BUDGET_SECONDS);
     }
 
-    public function requestForNetwork(int $userId, SocialNetwork $network): RefreshRequestModel
+    public function requestForNetwork(int $userId, NetworkScope $network): RefreshRequestModel
     {
         return RefreshRequestModel::forUserNetwork($userId, $network, self::BUDGET_SECONDS);
     }

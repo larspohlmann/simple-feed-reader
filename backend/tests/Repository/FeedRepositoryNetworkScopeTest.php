@@ -10,6 +10,7 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
+use App\Repository\NetworkScope;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\SeedsUsers;
@@ -35,7 +36,7 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
         $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::MASTODON_PROFILE);
         $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::PLAIN);
 
-        $criteria = $this->criteria($owner, SocialNetwork::Bluesky);
+        $criteria = $this->criteria($owner, NetworkScope::whole(SocialNetwork::Bluesky));
 
         self::assertSame(
             [$home->requireId(), $profile->requireId()],
@@ -49,10 +50,22 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
         $owner = $this->user('network-scope-empty@example.com');
         $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::PLAIN);
 
-        $criteria = $this->criteria($owner, SocialNetwork::Mastodon);
+        $criteria = $this->criteria($owner, NetworkScope::whole(SocialNetwork::Mastodon));
 
         self::assertSame([], $this->feeds()->findDue($criteria, 50));
         self::assertSame(0, $this->feeds()->countDue($criteria));
+    }
+
+    public function testAProfileScopeSelectsOnlyTheNetworksProfileFeeds(): void
+    {
+        $owner = $this->user('network-scope-profiles@example.com');
+        $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
+        $profile = $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::BLUESKY_PROFILE)->getFeed();
+
+        $criteria = $this->criteria($owner, NetworkScope::profiles(SocialNetwork::Bluesky));
+
+        self::assertSame([$profile->requireId()], $this->idsOf($this->feeds()->findDue($criteria, 50)));
+        self::assertSame(1, $this->feeds()->countDue($criteria));
     }
 
     public function testANetworkScopeNeverReachesAFeedTheUserDoesNotSubscribeTo(): void
@@ -61,10 +74,12 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
         $stranger = $this->user('network-scope-stranger@example.com');
         $this->fixtures()->subscribe($stranger, 'https://bsky.app/profile/bob.bsky.social/rss');
 
-        self::assertSame([], $this->feeds()->findDue($this->criteria($owner, SocialNetwork::Bluesky), 50));
+        $criteria = $this->criteria($owner, NetworkScope::whole(SocialNetwork::Bluesky));
+
+        self::assertSame([], $this->feeds()->findDue($criteria, 50));
     }
 
-    private function criteria(User $owner, SocialNetwork $network): DueFeedCriteria
+    private function criteria(User $owner, NetworkScope $network): DueFeedCriteria
     {
         return new DueFeedCriteria(
             new \DateTimeImmutable(self::NOW),

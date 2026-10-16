@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh\Model;
 
 use App\Enum\SocialNetwork;
+use App\Repository\NetworkScope;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use PHPUnit\Framework\TestCase;
 
@@ -93,10 +94,10 @@ final class RefreshRequestModelTest extends TestCase
 
     public function testANetworkRequestRefreshesThatNetworksFeedsOfTheUserIgnoringTheSchedule(): void
     {
-        $request = RefreshRequestModel::forUserNetwork(7, SocialNetwork::Bluesky, 30);
+        $request = RefreshRequestModel::forUserNetwork(7, NetworkScope::whole(SocialNetwork::Bluesky), 30);
 
         self::assertSame(7, $request->userId);
-        self::assertSame(SocialNetwork::Bluesky, $request->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->network);
         self::assertNull($request->feedId);
         self::assertNull($request->tagId);
         self::assertTrue($request->force);
@@ -105,10 +106,10 @@ final class RefreshRequestModelTest extends TestCase
 
     public function testDerivedRequestsKeepTheNetwork(): void
     {
-        $request = RefreshRequestModel::forUserNetwork(7, SocialNetwork::Bluesky, 30);
+        $request = RefreshRequestModel::forUserNetwork(7, NetworkScope::whole(SocialNetwork::Bluesky), 30);
 
-        self::assertSame(SocialNetwork::Bluesky, $request->withoutPruning()->network);
-        self::assertSame(SocialNetwork::Bluesky, $request->ignoringSchedule()->network);
-        self::assertSame(SocialNetwork::Bluesky, $request->limitedTo(5)->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->withoutPruning()->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->ignoringSchedule()->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->limitedTo(5)->network);
     }
 }
