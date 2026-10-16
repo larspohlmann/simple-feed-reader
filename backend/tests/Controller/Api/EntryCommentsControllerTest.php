@@ -11,11 +11,11 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RoutedHttpClient;
@@ -293,6 +293,28 @@ final class EntryCommentsControllerTest extends ApiTestCase
         self::assertSame([self::PUBLIC_CONTEXT, self::PUBLIC_CONTEXT], $http->requestLines());
     }
 
+    public function testASocialPostsRepliesWinOverItsCommentsFeed(): void
+    {
+        [$client, $http] = $this->clientRouting([self::PUBLIC_CONTEXT => self::mastodonContext()]);
+        $fetcher = $this->installFetcher();
+        $this->serveRedditThread($fetcher);
+        [$headers, $user] = $this->auth('comments-mastodon-priority@example.com');
+        $entryId = $this->mastodonPostWith($user, self::redditThread());
+
+        $client->request('GET', '/api/entries/' . $entryId . '/comments', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([self::PUBLIC_CONTEXT], $http->requestLines());
+        self::assertSame([], $fetcher->fetchedUrls);
+    }
+
+    public function testUnauthenticatedIs401(): void
+    {
+        $client = self::createClient();
+        $client->request('GET', '/api/entries/1/comments');
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
     /**
      * @param array<string, MockResponse> $routes
      *
@@ -312,10 +334,18 @@ final class EntryCommentsControllerTest extends ApiTestCase
 
     private function mastodonPostFor(User $user): int
     {
+        return $this->mastodonPostWith($user, Discussion::none());
+    }
+
+    private function mastodonPostWith(User $user, Discussion $discussion): int
+    {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
         $subscription = $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
+        $post = $fixtures->post($subscription, self::POST_URL, '2026-10-16T08:00:00Z');
+        $post->setDiscussion($discussion);
+        $this->entityManager()->flush();
 
-        return $fixtures->post($subscription, self::POST_URL, '2026-10-16T08:00:00Z')->requireId();
+        return $post->requireId();
     }
 
     private static function mastodonContext(): MockResponse
@@ -323,12 +353,5 @@ final class EntryCommentsControllerTest extends ApiTestCase
         return new MockResponse(
             (string) file_get_contents(__DIR__ . '/../../Fixtures/social/mastodon-context.json'),
         );
-    }
-
-    public function testUnauthenticatedIs401(): void
-    {
-        $client = self::createClient();
-        $client->request('GET', '/api/entries/1/comments');
-        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 }

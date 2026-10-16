@@ -30,7 +30,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
-/** A social post's replies as its comments: the acting account's view of the thread, else the public one. */
 #[AsTaggedItem(priority: 10)]
 final readonly class SocialRepliesSource implements CommentsSourceInterface
 {
