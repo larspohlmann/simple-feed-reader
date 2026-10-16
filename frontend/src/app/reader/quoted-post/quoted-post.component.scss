@@ -117,7 +117,7 @@ $tones: accent, danger, success, warning;
 }
 
 :host(.block) .text {
-  @include post-text.post-text(8);
+  @include post-text.post-text;
 }
 
 .nested {

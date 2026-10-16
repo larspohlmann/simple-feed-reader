@@ -14,7 +14,7 @@
   padding: var(--card-pad);
   cursor: pointer;
 
-  @include magazine-card.card-states(6);
+  @include magazine-card.card-states;
 }
 
 .title {

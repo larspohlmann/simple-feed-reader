@@ -1,13 +1,16 @@
-// A post's text in a headline slot: reads as body copy, clamped, never as a display headline,
-// and no hover underline: underlining a whole paragraph reads as a link, not as "opens this".
-@mixin post-text($lines: 4) {
+// A post's text in a headline slot: reads as body copy, never as a display headline, and no
+// hover underline: underlining a whole paragraph reads as a link, not as "opens this".
+// The clamp only stops an outlier (a long instance limit, line-break spam); a normal post shows whole.
+$outlier-lines: 30;
+
+@mixin post-text {
   --card-hover-decoration: none;
 
   font-size: var(--fs-base);
   font-weight: 400;
   line-height: var(--lh-normal);
   display: -webkit-box;
-  -webkit-line-clamp: $lines;
+  -webkit-line-clamp: $outlier-lines;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
