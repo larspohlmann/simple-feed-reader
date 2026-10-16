@@ -47,13 +47,27 @@ function isPlaylist(video: HTMLVideoElement): boolean {
 }
 
 async function play(host: HTMLElement, video: HTMLVideoElement, source: string): Promise<void> {
-  const { default: HlsPlayer } = await import('hls.js');
-  if (!HlsPlayer.isSupported() || !video.isConnected) return;
+  const pause = pauseWatch(video);
+  const { default: HlsPlayer } = await import('hls.js').finally(pause.stop);
+  if (pause.happened() || !HlsPlayer.isSupported() || !video.isConnected) return;
   const hls = new HlsPlayer();
   streamsOf(host).set(video, hls);
   hls.loadSource(source);
   hls.attachMedia(video);
   void video.play();
+}
+
+/** Stopped before the source swap, which pauses the video itself. */
+function pauseWatch(video: HTMLVideoElement): { happened: () => boolean; stop: () => void } {
+  let paused = false;
+  const notePause = (): void => {
+    paused = true;
+  };
+  video.addEventListener('pause', notePause);
+  return {
+    happened: () => paused,
+    stop: () => video.removeEventListener('pause', notePause),
+  };
 }
 
 function streamsOf(host: HTMLElement): Map<HTMLVideoElement, Hls> {

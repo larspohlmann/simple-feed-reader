@@ -43,6 +43,35 @@ describe('armHlsStreams', () => {
     expect(fakeHls.attachMedia).toHaveBeenCalledWith(videoIn(host));
   });
 
+  it('resumes the video once hls.js attached, though the source swap paused it', async () => {
+    const play = jest.fn(() => Promise.resolve());
+    HTMLMediaElement.prototype.play = play;
+    fakeHls.attachMedia.mockImplementationOnce((video: HTMLVideoElement) =>
+      video.dispatchEvent(new Event('pause')),
+    );
+    await playedStream();
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it('neither attaches nor resumes a video paused while hls.js was loading', async () => {
+    const play = jest.fn(() => Promise.resolve());
+    HTMLMediaElement.prototype.play = play;
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    armHlsStreams(host);
+    // Zone drains microtasks after each outermost task, so both events share one timer task.
+    setTimeout(() => {
+      videoIn(host).dispatchEvent(new Event('play'));
+      videoIn(host).dispatchEvent(new Event('pause'));
+    });
+    await flushHls();
+    await flushHls();
+
+    expect(fakeHls.attachMedia).not.toHaveBeenCalled();
+    expect(play).not.toHaveBeenCalled();
+  });
+
   it('takes the stream even when the browser claims native HLS, because Chrome claims and never plays', async () => {
     HTMLMediaElement.prototype.canPlayType = () => 'maybe';
     await playedStream();
