@@ -7,9 +7,14 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { CommentsLoad } from '../../models';
 import { EntrySocialDto } from '../../entry-social';
 import { EntryCommentDto } from '../../entry-comment';
+import { EntryMediumDto } from '../../entry-medium';
 import { prefetchMargin } from '../../list/paging';
 import { aLinkCard, anEntryComment, aQuotedPost } from '../../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { By } from '@angular/platform-browser';
+import { PostMediaComponent } from '../../media/post-media/post-media.component';
+import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
+import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 
 const DISCUSSION = 'https://www.reddit.com/r/x/comments/1/t/';
 
@@ -22,7 +27,7 @@ describe('EntryCommentsComponent', () => {
   let states: Map<number, WritableSignal<CommentsState>>;
   let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock };
   let socialCounts: { reload: jest.Mock };
-  let observers: { init: IntersectionObserverInit | undefined; disconnect: jest.Mock }[];
+  let sightObservers: { init: IntersectionObserverInit | undefined; disconnect: jest.Mock }[];
   let trigger: ((visible: boolean) => void) | undefined;
   let scroller: HTMLElement;
   const realIntersectionObserver = globalThis.IntersectionObserver;
@@ -35,14 +40,15 @@ describe('EntryCommentsComponent', () => {
       reload: jest.fn(),
     };
     socialCounts = { reload: jest.fn() };
-    observers = [];
+    sightObservers = [];
     trigger = undefined;
     scroller = document.createElement('div');
     Object.defineProperty(scroller, 'clientHeight', { value: 900 });
     globalThis.IntersectionObserver = jest.fn(
       (callback: IntersectionObserverCallback, init?: IntersectionObserverInit) => {
-        const observer = { observe: jest.fn(), disconnect: jest.fn() };
-        observers.push({ init, disconnect: observer.disconnect });
+        const observer = { observe: jest.fn(), unobserve: jest.fn(), disconnect: jest.fn() };
+        if (init?.root !== scroller) return observer;
+        sightObservers.push({ init, disconnect: observer.disconnect });
         trigger = (visible) =>
           callback(
             [{ isIntersecting: visible } as IntersectionObserverEntry],
@@ -57,6 +63,7 @@ describe('EntryCommentsComponent', () => {
         { provide: CommentsService, useValue: service },
         { provide: SocialCountsService, useValue: socialCounts },
         { provide: ImageProxyService, useValue: { recover: () => Promise.resolve('failed') } },
+        { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
       ],
     });
     fixture = TestBed.createComponent(EntryCommentsComponent);
@@ -110,14 +117,14 @@ describe('EntryCommentsComponent', () => {
 
   it('looks ahead within the reader scroller', () => {
     show('auto');
-    expect(observers[0].init).toEqual({ root: scroller, rootMargin: prefetchMargin(900) });
+    expect(sightObservers[0].init).toEqual({ root: scroller, rootMargin: prefetchMargin(900) });
   });
 
   it('watches afresh for the next entry, loading it only once it is seen', () => {
     show('auto');
     show('auto', 6);
-    expect(observers.length).toBe(2);
-    expect(observers[0].disconnect).toHaveBeenCalled();
+    expect(sightObservers.length).toBe(2);
+    expect(sightObservers[0].disconnect).toHaveBeenCalled();
     trigger!(true);
     expect(service.load).toHaveBeenCalledTimes(1);
     expect(service.load).toHaveBeenCalledWith(6);
@@ -126,12 +133,12 @@ describe('EntryCommentsComponent', () => {
   it('stops watching once destroyed', () => {
     show('auto');
     fixture.destroy();
-    expect(observers[0].disconnect).toHaveBeenCalled();
+    expect(sightObservers[0].disconnect).toHaveBeenCalled();
   });
 
   it('never watches a manual source; the button loads it', () => {
     show('manual');
-    expect(observers.length).toBe(0);
+    expect(sightObservers.length).toBe(0);
     fixture.nativeElement.querySelector('button.load').click();
     expect(service.load).toHaveBeenCalledWith(5);
   });
@@ -288,6 +295,101 @@ describe('EntryCommentsComponent', () => {
     expect(row.querySelector('app-post-media')).not.toBeNull();
     expect(row.querySelector('app-quoted-post')).not.toBeNull();
     expect(row.querySelector('app-link-card')).not.toBeNull();
+  });
+
+  describe('reply videos', () => {
+    const REPLY_VIDEO: EntryMediumDto = {
+      url: 'https://cdn.test/1.mp4',
+      kind: 'video',
+      width: 1280,
+      height: 720,
+    };
+    let article: HTMLElement;
+    let ownVideo: HTMLVideoElement;
+
+    beforeEach(() => {
+      article = document.createElement('article');
+      ownVideo = document.createElement('video');
+      article.append(ownVideo, fixture.nativeElement);
+      document.body.append(article);
+      jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      fixture.destroy();
+      article.remove();
+      jest.restoreAllMocks();
+    });
+
+    function showReplyVideo(): HTMLVideoElement {
+      show('auto');
+      const element = settleComments([anEntryComment({ media: [REPLY_VIDEO] })]);
+      return element.querySelector<HTMLVideoElement>('.comment video')!;
+    }
+
+    function playing(medium: HTMLMediaElement): jest.Mock {
+      Object.defineProperty(medium, 'paused', { configurable: true, value: false });
+      const pause = jest.fn();
+      medium.pause = pause;
+      return pause;
+    }
+
+    function ownCoordinator(): ListAutoplayCoordinator {
+      return fixture.debugElement.injector.get(ListAutoplayCoordinator);
+    }
+
+    it('provides its own autoplay coordinator to the reply media', () => {
+      showReplyVideo();
+      const media = fixture.debugElement.query(By.directive(PostMediaComponent));
+      const coordinator = media.injector.get(ListAutoplayCoordinator, null);
+      expect(coordinator).not.toBeNull();
+      expect(coordinator).toBe(ownCoordinator());
+    });
+
+    it("pauses the post's own video when a reply video plays", () => {
+      const replyVideo = showReplyVideo();
+      const pauseOwn = playing(ownVideo);
+      const pauseReply = playing(replyVideo);
+
+      replyVideo.dispatchEvent(new Event('play'));
+
+      expect(pauseOwn).toHaveBeenCalledTimes(1);
+      expect(pauseReply).not.toHaveBeenCalled();
+    });
+
+    it("holds reply autoplay while the post's own video plays", () => {
+      showReplyVideo();
+      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
+      const resume = jest.spyOn(ownCoordinator(), 'resume');
+
+      ownVideo.dispatchEvent(new Event('play'));
+      expect(suspend).toHaveBeenCalledTimes(1);
+      expect(resume).not.toHaveBeenCalled();
+
+      ownVideo.dispatchEvent(new Event('pause'));
+      ownVideo.dispatchEvent(new Event('ended'));
+      expect(resume).toHaveBeenCalledTimes(1);
+    });
+
+    it("resumes reply autoplay once the post's own video ends", () => {
+      showReplyVideo();
+      const resume = jest.spyOn(ownCoordinator(), 'resume');
+
+      ownVideo.dispatchEvent(new Event('play'));
+      ownVideo.dispatchEvent(new Event('ended'));
+
+      expect(resume).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops watching the article once destroyed', () => {
+      showReplyVideo();
+      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
+      fixture.destroy();
+
+      ownVideo.dispatchEvent(new Event('play'));
+
+      expect(suspend).not.toHaveBeenCalled();
+    });
   });
 
   it('renders no embeds for a plain comment', () => {

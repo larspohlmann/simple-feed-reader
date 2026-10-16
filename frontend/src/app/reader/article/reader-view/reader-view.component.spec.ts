@@ -13,6 +13,7 @@ import { entryScrollKey } from '../../scroll/list-scroll-memory';
 import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../../models';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
+import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AudioPlayerService } from '../../audio-player.service';
 import { CommentsService, CommentsState } from '../entry-comments/comments.service';
 import { SocialCountsService, SocialCountsState } from '../social-counts/social-counts.service';
@@ -178,6 +179,7 @@ describe('ReaderViewComponent', () => {
         { provide: EntryBodyService, useValue: fakeBody },
         { provide: ImageProxyService, useValue: imageProxy },
         { provide: PreviewProgress, useValue: { isLoading: () => true } },
+        { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
       ],
     });
   });

@@ -18,7 +18,7 @@
     "scrapingSaveFailed": "The setting changed on this device, but could not be saved to your account.",
     "readingFocus": "Reading focus",
     "readingFocusHint": "Dim content away from the reading centre.",
-    "listAutoplay": "Autoplay videos in the list",
+    "listAutoplay": "Autoplay videos in lists and comments",
     "listAutoplayHint": "Starts muted, one at a time. Saved on this device.",
     "magazineStyle": "Magazine style",
     "magazineStyleHint": "How the magazine view draws an entry.",

@@ -1,8 +1,10 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   NgZone,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -32,6 +34,8 @@ import { observeOnSight } from '../../list/paging';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { LinkCardComponent } from '../../link-card/link-card.component';
+import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
+import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl' | 'social'>;
 
@@ -55,6 +59,7 @@ const DEEPEST_INDENT = 5;
   templateUrl: './entry-comments.component.html',
   styleUrl: './entry-comments.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [ListAutoplayCoordinator, UnlockedVideoElements],
 })
 export class EntryCommentsComponent {
   readonly entry = input.required<CommentsEntry>();
@@ -66,6 +71,8 @@ export class EntryCommentsComponent {
   private readonly language = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly zone = inject(NgZone);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly autoplay = inject(ListAutoplayCoordinator);
   private readonly now = signal(Date.now());
   private readonly entryId = computed(() => this.entry().id);
   private readonly loadsOnSight = computed(() => this.entry().comments === 'auto');
@@ -101,6 +108,7 @@ export class EntryCommentsComponent {
       const until = this.throttledUntil();
       if (until !== null) onCleanup(this.countDownTo(until));
     });
+    afterNextRender(() => this.playOneMediumAtATime());
   }
 
   load(): void {
@@ -143,6 +151,48 @@ export class EntryCommentsComponent {
 
   toneOf(comment: EntryCommentDto): number {
     return avatarToneOf(comment.authorHandle ?? comment.author ?? '');
+  }
+
+  private playOneMediumAtATime(): void {
+    const article = this.host.nativeElement.closest('article');
+    if (!article) return;
+    const listening = new AbortController();
+    this.destroyRef.onDestroy(() => listening.abort());
+    this.zone.runOutsideAngular(() =>
+      article.addEventListener('play', ({ target }) => this.played(article, target), {
+        capture: true,
+        signal: listening.signal,
+      }),
+    );
+  }
+
+  private played(article: HTMLElement, medium: EventTarget | null): void {
+    if (!(medium instanceof HTMLMediaElement)) return;
+    if (this.owns(medium)) this.pauseMediaOutside(article);
+    else this.holdAutoplayWhilePlaying(medium);
+  }
+
+  private pauseMediaOutside(article: HTMLElement): void {
+    for (const medium of Array.from(article.querySelectorAll('video, audio'))) {
+      if (medium instanceof HTMLMediaElement && !medium.paused && !this.owns(medium)) {
+        medium.pause();
+      }
+    }
+  }
+
+  private holdAutoplayWhilePlaying(medium: HTMLMediaElement): void {
+    this.autoplay.suspend();
+    const stopped = new AbortController();
+    const resume = () => {
+      stopped.abort();
+      this.autoplay.resume();
+    };
+    medium.addEventListener('pause', resume, { signal: stopped.signal });
+    medium.addEventListener('ended', resume, { signal: stopped.signal });
+  }
+
+  private owns(medium: HTMLMediaElement): boolean {
+    return this.host.nativeElement.contains(medium);
   }
 
   // Outside the zone: an in-zone interval never lets whenStable() settle.

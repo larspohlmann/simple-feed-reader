@@ -15,7 +15,7 @@ import { UnlockedVideoElements } from './unlocked-video-elements';
 const VISIBLE_ENOUGH = 0.6;
 const THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 
-/** Plays the list's most visible video, one at a time. Provided by the entry list, so nothing outside it autoplays. */
+/** Plays the most visible video of the list or comments that provides it, one at a time. */
 @Injectable()
 export class ListAutoplayCoordinator {
   private readonly setting = inject(ListAutoplayService);
