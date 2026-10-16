@@ -42,6 +42,7 @@ import {
   withHiddenDuplicates,
 } from './above-fold';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
+import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 import { pauseMedia } from '../magazine/blocks/entry-media/pause-media';
 import { ListBlock } from './hidden-overlay';
 import { ListContent } from './list-content';
@@ -58,7 +59,7 @@ const RELOAD_SPINNER_DELAY_MS = 150;
 
 @Component({
   selector: 'app-entry-list',
-  providers: [ListAutoplayCoordinator],
+  providers: [ListAutoplayCoordinator, UnlockedVideoElements],
   imports: [
     NgTemplateOutlet,
     TranslocoPipe,
