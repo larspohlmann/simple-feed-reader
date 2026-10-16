@@ -1,4 +1,13 @@
-import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  DestroyRef,
+  ElementRef,
+  Injectable,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AutoplayPlayer } from './autoplay-player';
 import { UnlockedVideoElements } from './unlocked-video-elements';
@@ -28,6 +37,12 @@ export class ListAutoplayCoordinator {
       untracked(() => (active ? this.choose() : this.stopCurrent()));
     });
     inject(DestroyRef).onDestroy(() => this.observer?.disconnect());
+    // Capture phase: rows and the video slot stop propagation.
+    inject(ElementRef<HTMLElement>, { optional: true })?.nativeElement.addEventListener(
+      'click',
+      () => this.tapped(),
+      { capture: true },
+    );
   }
 
   register(player: AutoplayPlayer): void {
