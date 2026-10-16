@@ -1140,6 +1140,7 @@
     "feeds": "Feeds",
     "toggleFeeds": "Feeds ein-/ausklappen",
     "toggleSocialSection": "{{network}} ein-/ausklappen",
+    "socialFeeds": "Feeds",
     "socialHome": "Startseite@{{network}}",
     "socialPeople": "Personen",
     "socialNetworkShort": {

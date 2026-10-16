@@ -77,6 +77,12 @@ export class ListHeading {
     return network ? this.sectionOf(network) : null;
   });
 
+  private readonly selectedNetworkCounts = computed(() => {
+    const section = this.selectedNetworkSection();
+    if (section === null) return { unreadCount: 0, entryCount: 0 };
+    return this.routeState.selection().feedKind ? section.profiles : section;
+  });
+
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
 
   /** A search request in flight, not merely any list loading. */
@@ -106,7 +112,7 @@ export class ListHeading {
       this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
-    network: () => this.i18n.translate(`settings.social.${this.routeState.selection().network}`),
+    network: () => this.networkTitle(this.routeState.selection()),
     search: () => `${this.searchTitlePrefix()} ${this.searchTitleBody()}`,
     subscription: () => {
       const subscription = this.selectedSubscription();
@@ -115,6 +121,13 @@ export class ListHeading {
         : this.i18n.translate('reader.feedFallback');
     },
   };
+
+  private networkTitle(selection: Selection): string {
+    const network = this.i18n.translate(`settings.social.${selection.network}`);
+    return selection.feedKind
+      ? `${network} · ${this.i18n.translate('reader.socialFeeds')}`
+      : network;
+  }
 
   private feedTitle(subscription: SubscriptionDto): string {
     const handle = this.sharedNetworkHandle(subscription);
@@ -144,8 +157,8 @@ export class ListHeading {
       return bySwitch(selection, node?.unreadCount ?? 0, node?.entryCount ?? 0);
     },
     network: (selection) => {
-      const section = this.selectedNetworkSection();
-      return bySwitch(selection, section?.unreadCount ?? 0, section?.entryCount ?? 0);
+      const counts = this.selectedNetworkCounts();
+      return bySwitch(selection, counts.unreadCount, counts.entryCount);
     },
     subscription: (selection) => {
       const subscription = this.selectedSubscription();

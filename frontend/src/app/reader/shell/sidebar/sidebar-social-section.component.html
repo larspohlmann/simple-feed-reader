@@ -40,9 +40,9 @@
       </div>
     }
   }
-  @if (current.people.length) {
+  @if (current.profiles.subscriptions.length) {
     <p class="people-heading">{{ 'reader.socialPeople' | transloco }}</p>
-    @for (subscription of current.people; track subscription.id) {
+    @for (subscription of current.profiles.subscriptions; track subscription.id) {
       <div class="feedrow">
         <app-sidebar-feed-row
           [subscription]="subscription"

@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../../core/api';
 import { TokenStore } from '../../core/auth/token.store';
 import { ReaderApi } from '../reader-api';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
+import { socialProfiles } from './social-sections';
 import { SubscriptionsStore } from './subscriptions.store';
 import { SubscriptionRows } from './subscription-rows';
 import {
@@ -450,7 +451,7 @@ describe('SubscriptionsStore', () => {
               subscriptions: [{ ...untaggedHome, title: 'Home@bsky' }, taggedList],
             },
           ],
-          people: [],
+          profiles: socialProfiles([]),
           unreadCount: 6,
           entryCount: 0,
           showsHandles: false,
@@ -458,7 +459,7 @@ describe('SubscriptionsStore', () => {
         {
           network: 'mastodon',
           accounts: [],
-          people: [untaggedProfile],
+          profiles: socialProfiles([untaggedProfile]),
           unreadCount: 8,
           entryCount: 0,
           showsHandles: false,

@@ -64,10 +64,10 @@ describe('buildSocialSections', () => {
     expect(sections.map((section) => [section.network, section.accounts.length])).toEqual([
       ['mastodon', 0],
     ]);
-    expect(sections[0].people.map((subscription) => subscription.id)).toEqual([1]);
+    expect(sections[0].profiles.subscriptions.map((subscription) => subscription.id)).toEqual([1]);
   });
 
-  it('keeps private feeds per account and lists profile feeds alphabetically as people', () => {
+  it('keeps private feeds per account and lists profile feeds alphabetically', () => {
     const sections = buildSocialSections(
       [
         profile(1, 'bluesky', 'Zed'),
@@ -80,7 +80,40 @@ describe('buildSocialSections', () => {
 
     expect(sections[0].accounts.map((group) => group.accountId)).toEqual([3]);
     expect(sections[0].showsHandles).toBe(false);
-    expect(sections[0].people.map((subscription) => subscription.title)).toEqual(['amy', 'Zed']);
+    expect(sections[0].profiles.subscriptions.map((subscription) => subscription.title)).toEqual([
+      'amy',
+      'Zed',
+    ]);
+  });
+
+  it("sums only the profile feeds' counts into the profiles group", () => {
+    const sections = buildSocialSections(
+      [
+        makeSubscription({
+          id: 1,
+          unreadCount: 5,
+          entryCount: 9,
+          social: { network: 'bluesky', accountId: 3, kind: 'home' },
+        }),
+        makeSubscription({
+          id: 2,
+          unreadCount: 2,
+          entryCount: 4,
+          social: { network: 'bluesky', accountId: null, kind: 'profile' },
+        }),
+        makeSubscription({
+          id: 3,
+          unreadCount: 1,
+          entryCount: 1,
+          social: { network: 'bluesky', accountId: null, kind: 'profile' },
+        }),
+      ],
+      [{ id: 3, network: 'bluesky', handle: '@a' }],
+    );
+
+    expect(sections[0].profiles.unreadCount).toBe(3);
+    expect(sections[0].profiles.entryCount).toBe(5);
+    expect(sections[0].unreadCount).toBe(8);
   });
 
   it('counts a profile feed as social but not as private', () => {

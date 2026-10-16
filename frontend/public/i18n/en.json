@@ -1140,6 +1140,7 @@
     "feeds": "Feeds",
     "toggleFeeds": "Toggle feeds",
     "toggleSocialSection": "Toggle {{network}}",
+    "socialFeeds": "Feeds",
     "socialHome": "Home@{{network}}",
     "socialPeople": "People",
     "socialNetworkShort": {

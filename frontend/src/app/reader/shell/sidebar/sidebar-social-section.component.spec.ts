@@ -9,7 +9,7 @@ import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { LayoutService } from '../../layout.service';
 import { SubscriptionDto } from '../../models';
 import { Selection } from '../../query/query';
-import { SocialSection } from '../../state/social-sections';
+import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
@@ -32,7 +32,7 @@ const feed = (
 
 const ONE_ACCOUNT: SocialSection = {
   network: 'bluesky',
-  people: [],
+  profiles: socialProfiles([]),
   unreadCount: 3,
   entryCount: 0,
   showsHandles: false,
@@ -108,7 +108,7 @@ describe('SidebarSocialSectionComponent', () => {
       unreadCount: 0,
       entryCount: 0,
       showsHandles: false,
-      people: [],
+      profiles: socialProfiles([]),
       accounts: [
         {
           accountId: 3,
@@ -129,7 +129,7 @@ describe('SidebarSocialSectionComponent', () => {
       unreadCount: 0,
       entryCount: 0,
       showsHandles: true,
-      people: [],
+      profiles: socialProfiles([]),
       accounts: [
         {
           accountId: 3,
@@ -181,7 +181,7 @@ describe('SidebarSocialSectionComponent', () => {
       unreadCount: 0,
       entryCount: 0,
       showsHandles: true,
-      people: [],
+      profiles: socialProfiles([]),
       accounts: [
         { accountId: 3, handle: null, subscriptions: [feed(1, 'home')] },
         { accountId: 4, handle: '@work.bsky.social', subscriptions: [feed(2, 'home')] },
@@ -202,7 +202,7 @@ describe('SidebarSocialSectionComponent', () => {
       unreadCount: 0,
       entryCount: 0,
       showsHandles: false,
-      people: [],
+      profiles: socialProfiles([]),
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
 
@@ -216,7 +216,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       showsHandles: false,
       accounts: ONE_ACCOUNT.accounts,
-      people: [person(7, 'Amy'), person(8, 'Zed')],
+      profiles: socialProfiles([person(7, 'Amy'), person(8, 'Zed')]),
     };
 
     const root = element(mount(section));
@@ -239,7 +239,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       showsHandles: false,
       accounts: [],
-      people: [person(7, 'Amy')],
+      profiles: socialProfiles([person(7, 'Amy')]),
     };
 
     const root = element(mount(section));
@@ -254,7 +254,7 @@ describe('SidebarSocialSectionComponent', () => {
     const section: SocialSection = {
       network: 'bluesky',
       accounts: [],
-      people: [excluded],
+      profiles: socialProfiles([excluded]),
       unreadCount: 0,
       entryCount: 0,
       showsHandles: false,
@@ -307,7 +307,7 @@ describe('SidebarSocialSectionComponent', () => {
       const section: SocialSection = {
         network: 'bluesky',
         accounts: [],
-        people: [subscription],
+        profiles: socialProfiles([subscription]),
         unreadCount: 0,
         entryCount: 0,
         showsHandles: false,
@@ -343,7 +343,7 @@ describe('SidebarSocialSectionComponent', () => {
       const section: SocialSection = {
         network: 'bluesky',
         accounts: [],
-        people: [amy],
+        profiles: socialProfiles([amy]),
         unreadCount: 0,
         entryCount: 0,
         showsHandles: false,
