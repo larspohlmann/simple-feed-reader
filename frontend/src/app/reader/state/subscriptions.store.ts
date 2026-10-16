@@ -10,7 +10,7 @@ import { TagsStore } from './tags.store';
 import { SocialAccountRefDto } from '../social-feed';
 import { SubscriptionRows } from './subscription-rows';
 import { buildSocialSections, isSocialFeed } from './social-sections';
-import { SocialNetworkName } from '../../core/social-network';
+import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
 import { SubscriptionCountsResponse, SubscriptionDto, SubscriptionsResponse } from '../models';
 import {
   buildTagTree,
@@ -20,7 +20,10 @@ import {
 } from './subscription-derivations';
 
 export type ZeroTarget =
-  'all' | { tag: number } | { subscription: number } | { network: SocialNetworkName };
+  | 'all'
+  | { tag: number }
+  | { subscription: number }
+  | { network: SocialNetworkName; feedKind?: NetworkFeedKind };
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
@@ -302,7 +305,7 @@ export class SubscriptionsStore {
           ? { ...subscription, unreadCount: 0 }
           : subscription;
       if ('network' in target)
-        return subscription.social?.network === target.network
+        return inNetworkTarget(subscription, target)
           ? { ...subscription, unreadCount: 0 }
           : subscription;
       return subscription.id === target.subscription
@@ -317,4 +320,13 @@ export class SubscriptionsStore {
     ++this.localEdits;
     this.storedSubscriptions.update((subscriptions) => subscriptions.map(patch));
   }
+}
+
+function inNetworkTarget(
+  subscription: SubscriptionDto,
+  target: { network: SocialNetworkName; feedKind?: NetworkFeedKind },
+): boolean {
+  const social = subscription.social;
+  if (social?.network !== target.network) return false;
+  return target.feedKind === undefined || social.kind === target.feedKind;
 }

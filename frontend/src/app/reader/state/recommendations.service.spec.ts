@@ -132,6 +132,7 @@ describe('RecommendationsService', () => {
         view: 'for-you',
         tag: null,
         network: null,
+        feedKind: null,
         subscription: null,
         entry: null,
         q: null,

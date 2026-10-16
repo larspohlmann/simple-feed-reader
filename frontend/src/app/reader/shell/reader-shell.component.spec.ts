@@ -2051,6 +2051,7 @@ describe('ReaderShellComponent', () => {
             view: null,
             tag: null,
             network: null,
+            feedKind: null,
             subscription: 9,
             entry: null,
             q: null,

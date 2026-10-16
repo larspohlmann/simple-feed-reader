@@ -134,6 +134,14 @@ describe('ReaderApi', () => {
     testRequest.flush({ entries: [], nextCursor: null });
   });
 
+  it("GETs a network's profile feeds with the feed kind", () => {
+    api.entries({ view: 'all', network: 'mastodon', feedKind: 'profile' }).subscribe();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+    expect(testRequest.request.params.get('network')).toBe('mastodon');
+    expect(testRequest.request.params.get('feedKind')).toBe('profile');
+    testRequest.flush({ entries: [], nextCursor: null });
+  });
+
   it("GETs a network's combined view by its name", () => {
     api.entries({ view: 'all', network: 'bluesky' }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
@@ -341,6 +349,14 @@ describe('ReaderApi', () => {
     const testRequest = ctrl.expectOne('https://api.test/api/refresh');
     expect(testRequest.request.method).toBe('POST');
     expect(testRequest.request.params.has('feedId')).toBe(false);
+    testRequest.flush(refreshReport());
+  });
+
+  it("scopes refresh to a network's profile feeds when given a feed kind", () => {
+    api.refresh({ network: 'mastodon', feedKind: 'profile' }).subscribe();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+    expect(testRequest.request.params.get('network')).toBe('mastodon');
+    expect(testRequest.request.params.get('feedKind')).toBe('profile');
     testRequest.flush(refreshReport());
   });
 

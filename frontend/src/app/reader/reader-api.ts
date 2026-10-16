@@ -102,6 +102,7 @@ export class ReaderApi {
     if (query.subscription != null) listParams = listParams.set('subscription', query.subscription);
     if (query.tag != null) listParams = listParams.set('tag', query.tag);
     if (query.network != null) listParams = listParams.set('network', query.network);
+    if (query.feedKind != null) listParams = listParams.set('feedKind', query.feedKind);
     return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams, context });
   }
 
@@ -187,7 +188,10 @@ export class ReaderApi {
     let params = new HttpParams();
     if (scope?.feedId != null) params = params.set('feedId', scope.feedId);
     else if (scope?.tagId != null) params = params.set('tag', scope.tagId);
-    else if (scope?.network != null) params = params.set('network', scope.network);
+    else if (scope?.network != null) {
+      params = params.set('network', scope.network);
+      if (scope.feedKind != null) params = params.set('feedKind', scope.feedKind);
+    }
     return this.http.post<RefreshReport>(`${this.base}/api/refresh`, {}, { params });
   }
 

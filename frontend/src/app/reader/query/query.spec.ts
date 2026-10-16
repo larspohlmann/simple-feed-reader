@@ -156,7 +156,7 @@ describe('listSelectionFrom (#579)', () => {
 describe('selectionQueryParams', () => {
   it('pins the selection vocabulary — this must not shrink silently', () => {
     expect(Object.keys(selectionQueryParams({})).sort()).toEqual(
-      ['entry', 'network', 'q', 'subscription', 'tag', 'view'].sort(),
+      ['entry', 'feedKind', 'network', 'q', 'subscription', 'tag', 'view'].sort(),
     );
   });
   it('nulls every selection parameter the caller did not set', () => {
@@ -164,6 +164,7 @@ describe('selectionQueryParams', () => {
       view: null,
       tag: null,
       network: null,
+      feedKind: null,
       subscription: null,
       entry: null,
       q: null,
@@ -174,6 +175,7 @@ describe('selectionQueryParams', () => {
       view: null,
       tag: 3,
       network: null,
+      feedKind: null,
       subscription: null,
       entry: null,
       q: null,
@@ -182,6 +184,7 @@ describe('selectionQueryParams', () => {
       view: null,
       tag: null,
       network: null,
+      feedKind: null,
       subscription: 7,
       entry: null,
       q: null,
@@ -190,6 +193,7 @@ describe('selectionQueryParams', () => {
       view: 'favorites',
       tag: null,
       network: null,
+      feedKind: null,
       subscription: null,
       entry: null,
       q: null,
@@ -200,6 +204,7 @@ describe('selectionQueryParams', () => {
       view: null,
       tag: null,
       network: null,
+      feedKind: null,
       subscription: null,
       entry: null,
       q: null,
@@ -236,6 +241,7 @@ describe('selectionQueryParams', () => {
         view: null,
         tag: 9,
         network: null,
+        feedKind: null,
         subscription: null,
         entry: null,
         q: null,
@@ -248,6 +254,7 @@ describe('selectionQueryParams', () => {
       view: null,
       tag: null,
       network: null,
+      feedKind: null,
       subscription: null,
       entry: null,
       q: 'angular',
@@ -763,5 +770,47 @@ describe('selectionFromRoute', () => {
       convertToParamMap({ entry: '99' }),
     );
     expect(entryId).toBe(99);
+  });
+});
+
+describe("a network's profile feeds", () => {
+  const params = (values: Record<string, string>) => convertToParamMap(values);
+  const profiles: Selection = {
+    kind: 'network',
+    id: null,
+    unread: false,
+    network: 'mastodon',
+    feedKind: 'profile',
+  };
+
+  it('reads the feed kind beside the network', () => {
+    expect(
+      selectionFromParams(params({ network: 'mastodon', feedKind: 'profile' })).selection,
+    ).toEqual(profiles);
+  });
+
+  it('ignores an unknown feed kind', () => {
+    expect(
+      selectionFromParams(params({ network: 'mastodon', feedKind: 'home' })).selection.feedKind,
+    ).toBeUndefined();
+  });
+
+  it('is a different list from the whole network', () => {
+    expect(sameSelection(profiles, { ...profiles, feedKind: undefined })).toBe(false);
+    expect(listOrderKey(profiles)).toBe('network:mastodon:profile');
+  });
+
+  it('queries, marks read and links with the feed kind', () => {
+    expect(queryFromSelection(profiles)).toEqual({
+      view: 'all',
+      network: 'mastodon',
+      feedKind: 'profile',
+    });
+    expect(markReadTarget(profiles)).toEqual({
+      scope: 'network',
+      network: 'mastodon',
+      feedKind: 'profile',
+    });
+    expect(selectionQueryParams({ network: 'mastodon' }).feedKind).toBeNull();
   });
 });
