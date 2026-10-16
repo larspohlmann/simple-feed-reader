@@ -40,7 +40,7 @@ export class SocialCountsComponent {
   protected readonly actions = inject(EntryActionHandler);
   private readonly service = inject(SocialCountsService);
   private readonly language = inject(LanguageService);
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly entryId = computed(() => this.entry().id);
   private readonly compact = computed(
     () => new Intl.NumberFormat(this.language.lang(), { notation: 'compact' }),

@@ -47,7 +47,10 @@ const REPLIES: CommentsResponse = {
   ],
 };
 
-async function stubPostWithReplies(page: Page): Promise<void> {
+async function stubPostWithReplies(
+  page: Page,
+  { replies = REPLIES, body = '<p>The post itself.</p>' } = {},
+): Promise<void> {
   await stubOneFeedReader(page, 'Fixture feed');
   await page.route('**/api/client-errors', (route) => route.fulfill({ status: 204 }));
   await page.route('https://media.invalid/**', (route) => route.fulfill({ status: 404 }));
@@ -59,7 +62,7 @@ async function stubPostWithReplies(page: Page): Promise<void> {
     (url) => url.pathname === '/api/entries/1',
     (route) =>
       route.request().method() === 'GET'
-        ? route.fulfill({ json: entryDetailJson(POST, '<p>The post itself.</p>') })
+        ? route.fulfill({ json: entryDetailJson(POST, body) })
         : route.fallback(),
   );
   await page.route(
@@ -72,7 +75,7 @@ async function stubPostWithReplies(page: Page): Promise<void> {
   );
   await page.route(
     (url) => url.pathname === '/api/entries/1/comments',
-    (route) => route.fulfill({ json: REPLIES }),
+    (route) => route.fulfill({ json: replies }),
   );
 }
 
@@ -110,4 +113,83 @@ test('the replies render indented, with media, a GIF, their age and a refresh', 
   );
   await comments.getByRole('button', { name: 'Reload comments' }).click();
   await Promise.all([commentsRefetch, socialRefetch]);
+});
+
+const REPLY_CLIP = 'https://media.invalid/reply.mp4';
+const POST_CLIP = 'https://media.invalid/post.mp4';
+
+const REPLY_WITH_VIDEO: CommentsResponse = {
+  ...REPLIES,
+  comments: [
+    anEntryComment({
+      author: 'Vi Deo',
+      html: '<p>A reply with a video.</p>',
+      depth: 0,
+      media: [{ url: REPLY_CLIP, kind: 'video', width: 640, height: 360 }],
+    }),
+  ],
+};
+
+type Play = { src: string; muted: boolean };
+
+/** Chromium here has no H.264, so `play()` is recorded instead of decoding a clip. */
+async function recordPlays(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const plays: Play[] = [];
+    (window as unknown as { plays: Play[] }).plays = plays;
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      plays.push({ src: this.currentSrc || this.src, muted: this.muted });
+      return Promise.resolve();
+    };
+  });
+}
+
+const plays = (page: Page) => page.evaluate(() => (window as unknown as { plays: Play[] }).plays);
+
+/** A play or a pause the recorded `play()` never fires on its own. */
+async function report(page: Page, selector: string, playing: boolean): Promise<void> {
+  await page.locator(selector).evaluate((medium, isPlaying) => {
+    Object.defineProperty(medium, 'paused', { configurable: true, value: !isPlaying });
+    medium.dispatchEvent(new Event(isPlaying ? 'play' : 'pause'));
+  }, playing);
+}
+
+async function openPostWithReplyVideo(page: Page): Promise<string[]> {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  page.on('pageerror', (error) => errors.push(error.message));
+  await recordPlays(page);
+  await stubPostWithReplies(page, {
+    replies: REPLY_WITH_VIDEO,
+    body: `<p>The post itself.</p><video controls preload="none" src="${POST_CLIP}"></video>`,
+  });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await presetLocalStorage(page, { 'sfr.layout': 'pane' });
+  await page.goto('/?subscription=1');
+  await page.locator('app-entry-list').getByText(POST.title, { exact: true }).click();
+  return errors;
+}
+
+test('a reply video autoplays muted once it scrolls into view', async ({ page }) => {
+  const errors = await openPostWithReplyVideo(page);
+
+  await page.locator('app-entry-comments video').scrollIntoViewIfNeeded();
+
+  await expect.poll(() => plays(page)).toContainEqual({ src: REPLY_CLIP, muted: true });
+  expect(errors.filter((error) => error.includes('NG0'))).toEqual([]);
+});
+
+test("the post's own video holds reply autoplay until it stops", async ({ page }) => {
+  await openPostWithReplyVideo(page);
+  await expect(page.locator('.content video')).toHaveCount(1);
+  await report(page, '.content video', true);
+
+  await page.locator('app-entry-comments video').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(500);
+  expect((await plays(page)).map((play) => play.src)).not.toContain(REPLY_CLIP);
+
+  await report(page, '.content video', false);
+  await expect.poll(() => plays(page)).toContainEqual({ src: REPLY_CLIP, muted: true });
 });

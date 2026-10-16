@@ -1,4 +1,10 @@
-import { ElementRef, EnvironmentInjector, createEnvironmentInjector, signal } from '@angular/core';
+import {
+  ElementRef,
+  EnvironmentInjector,
+  NgZone,
+  createEnvironmentInjector,
+  signal,
+} from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { articleHost } from '../../../../testing/article-host-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -171,6 +177,17 @@ describe('ArticleBody', () => {
 
       expect(autoplay.nowPlaying).toHaveBeenCalledTimes(1);
       expect((autoplay.nowPlaying.mock.calls[0][0] as PlayingMedium).element).toBe(video);
+    });
+
+    it('hears them outside the Angular zone, so a play runs no change detection', async () => {
+      const inAngularZone: boolean[] = [];
+      autoplay.nowPlaying.mockImplementation(() => inAngularZone.push(NgZone.isInAngularZone()));
+      TestBed.inject(NgZone).run(() => connectBody(VIDEO));
+      await Promise.resolve();
+
+      playBodyVideo();
+
+      expect(inAngularZone).toEqual([false]);
     });
 
     it('lets go of the swapped-out media when the HTML changes', async () => {

@@ -11,6 +11,7 @@ import {
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AutoplayPlayer, PlayingMedium } from './autoplay-player';
 import { UnlockedVideoElements } from './unlocked-video-elements';
+import { AUTOPLAY_REGION } from './autoplay-region';
 
 const VISIBLE_ENOUGH = 0.6;
 const THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8, 1];
@@ -21,6 +22,7 @@ const THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 export class ListAutoplayCoordinator {
   private readonly setting = inject(ListAutoplayService);
   private readonly unlockedVideos = inject(UnlockedVideoElements);
+  private readonly region = inject(AUTOPLAY_REGION, { optional: true });
   private readonly suspended = signal(false);
   private readonly heldByHand = signal(false);
   private readonly active = computed(
@@ -35,7 +37,6 @@ export class ListAutoplayCoordinator {
       : new IntersectionObserver((changes) => this.measure(changes), { threshold: THRESHOLDS });
   private current: { player: AutoplayPlayer; byHand: boolean } | null = null;
   private soundOn = false;
-  private mayAutoplay: (element: Element) => boolean = () => true;
 
   constructor() {
     effect(() => {
@@ -79,10 +80,6 @@ export class ListAutoplayCoordinator {
     if (this.playingByHand.delete(medium)) this.heldByHand.set(this.playingByHand.size > 0);
   }
 
-  autoplayOnlyWithin(region: () => Element | undefined): void {
-    this.mayAutoplay = (element) => region()?.contains(element) ?? false;
-  }
-
   soundChanged(soundOn: boolean): void {
     this.soundOn = soundOn;
   }
@@ -90,7 +87,7 @@ export class ListAutoplayCoordinator {
   /** Must run synchronously inside a tap's event handler. */
   tapped(): void {
     for (const player of this.players.values()) player.unlockSound?.();
-    this.unlockedVideos.refill();
+    if (this.region === null || this.region() !== undefined) this.unlockedVideos.refill();
   }
 
   suspend(): void {
@@ -145,7 +142,8 @@ export class ListAutoplayCoordinator {
   }
 
   private mayStart(element: Element): boolean {
-    return element.isConnected && this.mayAutoplay(element);
+    if (this.region === null) return element.isConnected;
+    return this.region()?.contains(element) ?? false;
   }
 
   private stopCurrent(): void {

@@ -32,6 +32,7 @@ import {
   restoreIntersectionObserver,
 } from '../../../../testing/intersection-observer-testing';
 import { EntryMediumDto } from '../../entry-medium';
+import { EntryCommentDto } from '../../entry-comment';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entryActions = {
@@ -153,6 +154,14 @@ const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
   url: null,
   originalHero: null,
   ...over,
+});
+
+const loadedReplies = (comments: EntryCommentDto[]): CommentsState => ({
+  status: 'ok',
+  comments,
+  omitted: 0,
+  fetchedAt: '2026-09-24T12:00:00Z',
+  loadedAt: 0,
 });
 
 function stubComments(state: Signal<CommentsState>): void {
@@ -882,15 +891,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('reloads with the replies when they are refreshed', () => {
-      stubComments(
-        signal<CommentsState>({
-          status: 'ok',
-          comments: [],
-          omitted: 0,
-          fetchedAt: '',
-          loadedAt: 0,
-        }),
-      );
+      stubComments(signal(loadedReplies([])));
       const element = mount(post({ comments: 'manual' })).nativeElement as HTMLElement;
 
       element.querySelector<HTMLButtonElement>('app-entry-comments button.reload')!.click();
@@ -1614,13 +1615,9 @@ describe('ReaderViewComponent', () => {
       return fixture.nativeElement.querySelector('article app-entry-comments');
     }
 
-    const loadedComments: CommentsState = {
-      status: 'ok',
-      comments: [anEntryComment({ author: 'u/first', html: '<p>First comment</p>' })],
-      omitted: 0,
-      fetchedAt: '2026-09-24T12:00:00Z',
-      loadedAt: 0,
-    };
+    const loadedComments = loadedReplies([
+      anEntryComment({ author: 'u/first', html: '<p>First comment</p>' }),
+    ]);
 
     it('follows the article when the entry has a comments feed', () => {
       expect(commentsSection(mount(entry({ comments: 'auto' })))).not.toBeNull();
@@ -1694,15 +1691,7 @@ describe('ReaderViewComponent', () => {
     });
 
     async function mountPostWithReplies(media: EntryMediumDto[]) {
-      stubComments(
-        signal<CommentsState>({
-          status: 'ok',
-          comments: [anEntryComment({ media })],
-          omitted: 0,
-          fetchedAt: '2026-09-24T12:00:00Z',
-          loadedAt: 0,
-        }),
-      );
+      stubComments(signal(loadedReplies([anEntryComment({ media })])));
       const fixture = mount(
         entryWithBody('<video controls src="https://cdn.test/post.mp4"></video>', {
           comments: 'manual',
@@ -1762,6 +1751,25 @@ describe('ReaderViewComponent', () => {
       post.dispatchEvent(new Event('pause'));
       fixture.detectChanges();
       expect(play.mock.contexts).toContain(reply);
+    });
+
+    it("starts the next article's replies muted, whatever sound the last one had", async () => {
+      autoplayEnabled.set(true);
+      const mutedAtPlay: boolean[] = [];
+      play.mockImplementation(function (this: HTMLMediaElement) {
+        mutedAtPlay.push(this.muted);
+        return Promise.resolve();
+      });
+      const fixture = await mountPostWithReplies([REPLY_VIDEO]);
+      replyVideo(fixture).dispatchEvent(new Event('volumechange'));
+
+      fixture.componentRef.setInput('entry', entry({ id: 2, comments: 'manual' }));
+      fixture.detectChanges();
+      await Promise.resolve();
+      fixture.detectChanges();
+      MockIntersectionObserver.report(replyVideo(fixture), 1);
+
+      expect(mutedAtPlay).toEqual([true]);
     });
 
     it('autoplays no medium outside the replies', async () => {

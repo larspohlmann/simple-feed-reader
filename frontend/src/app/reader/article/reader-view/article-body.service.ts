@@ -3,6 +3,7 @@ import {
   ElementRef,
   Injectable,
   Injector,
+  NgZone,
   Signal,
   effect,
   inject,
@@ -33,6 +34,7 @@ export class ArticleBody {
   private readonly i18n = inject(TranslocoService);
   private readonly injector = inject(Injector);
   private readonly unplayableVideos = inject(UnplayableVideoService);
+  private readonly zone = inject(NgZone);
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
 
@@ -89,7 +91,7 @@ export class ArticleBody {
           const host = parts.content()?.nativeElement;
           if (!host) return;
           decorateArticle(host, this.i18n, parts.enclosureUrl());
-          this.media.follow(host);
+          this.zone.runOutsideAngular(() => this.media.follow(host));
           parts.decorated(host);
         });
       },

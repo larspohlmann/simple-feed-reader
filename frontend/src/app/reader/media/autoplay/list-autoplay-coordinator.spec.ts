@@ -4,6 +4,7 @@ import { ListAutoplayService } from '../../../core/preferences/list-autoplay.ser
 import { AutoplayPlayer, PlayingMedium } from './autoplay-player';
 import { ListAutoplayCoordinator } from './list-autoplay-coordinator';
 import { UnlockedVideoElements } from './unlocked-video-elements';
+import { AUTOPLAY_REGION, AutoplayRegion } from './autoplay-region';
 import {
   MockIntersectionObserver,
   installMockIntersectionObserver,
@@ -40,7 +41,7 @@ const aMediumPlayedByHand = (): FakeMedium => ({
   stop: jest.fn(),
 });
 
-function setUp(enabled = true) {
+function setUp(enabled = true, region?: AutoplayRegion) {
   const setting: WritableSignal<boolean> = signal(enabled);
   const unlockedVideos = { refill: jest.fn(), take: jest.fn() };
   TestBed.configureTestingModule({
@@ -48,6 +49,7 @@ function setUp(enabled = true) {
       ListAutoplayCoordinator,
       { provide: ListAutoplayService, useValue: { enabled: setting } },
       { provide: UnlockedVideoElements, useValue: unlockedVideos },
+      region ? [{ provide: AUTOPLAY_REGION, useValue: region }] : [],
     ],
   });
   const coordinator = TestBed.inject(ListAutoplayCoordinator);
@@ -367,13 +369,12 @@ describe('ListAutoplayCoordinator', () => {
 
   describe('confined to a region', () => {
     it('autoplays only the players inside the region', () => {
-      const { coordinator } = setUp();
       const region = document.createElement('section');
       document.body.append(region);
+      const { coordinator } = setUp(true, () => region);
       const outside = aPlayer();
       const inside = aPlayer();
       region.append(inside.element);
-      coordinator.autoplayOnlyWithin(() => region);
       coordinator.register(outside);
       coordinator.register(inside);
 
@@ -385,14 +386,30 @@ describe('ListAutoplayCoordinator', () => {
     });
 
     it('autoplays nothing while the region is absent', () => {
-      const { coordinator } = setUp();
+      const { coordinator } = setUp(true, () => undefined);
       const player = aPlayer();
-      coordinator.autoplayOnlyWithin(() => undefined);
       coordinator.register(player);
 
       report(player.element, 1);
 
       expect(player.start).not.toHaveBeenCalled();
+    });
+
+    it('fills the unlocked spares on a tap while the region is there', () => {
+      const region = document.createElement('section');
+      const { coordinator, unlockedVideos } = setUp(true, () => region);
+
+      coordinator.tapped();
+
+      expect(unlockedVideos.refill).toHaveBeenCalledTimes(1);
+    });
+
+    it('fills no spares while the region is absent, since nothing would take them', () => {
+      const { coordinator, unlockedVideos } = setUp(true, () => undefined);
+
+      coordinator.tapped();
+
+      expect(unlockedVideos.refill).not.toHaveBeenCalled();
     });
   });
 });
