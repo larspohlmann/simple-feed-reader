@@ -8,7 +8,7 @@ function setUp() {
   video.controls = true;
   const play = jest.spyOn(video, 'play').mockResolvedValue(undefined);
   const pause = jest.spyOn(video, 'pause').mockImplementation(() => undefined);
-  const coordinator = { nowPlaying: jest.fn(), soundChanged: jest.fn(), unmutedByTap: jest.fn() };
+  const coordinator = { nowPlaying: jest.fn(), soundChanged: jest.fn(), tapped: jest.fn() };
   const player = new VideoAutoplayPlayer(video, coordinator);
   return { video, play, pause, coordinator, player };
 }
@@ -155,7 +155,6 @@ describe('VideoAutoplayPlayer', () => {
 
     expect(video.controls).toBe(true);
     expect(video.muted).toBe(false);
-    expect(coordinator.unmutedByTap).toHaveBeenCalledTimes(1);
     await settle();
     expect(coordinator.soundChanged).toHaveBeenLastCalledWith(true);
   });
@@ -170,13 +169,13 @@ describe('VideoAutoplayPlayer', () => {
     expect(video.hasAttribute('tabindex')).toBe(false);
   });
 
-  it('reports the sound a tap turned on even when the coordinator unlocks in the same tap', async () => {
+  it('reports the sound a tap turned on after the list unlocked it in the same tap', async () => {
     const { video, coordinator, player } = setUp();
     player.start(false);
     await settle();
 
-    video.click();
     player.unlockSound();
+    video.click();
     await settle();
 
     expect(video.muted).toBe(false);
@@ -184,13 +183,12 @@ describe('VideoAutoplayPlayer', () => {
   });
 
   it('leaves a tap on its visible controls to the browser', () => {
-    const { video, coordinator } = setUp();
+    const { video } = setUp();
     video.muted = true;
 
     video.click();
 
     expect(video.muted).toBe(true);
-    expect(coordinator.unmutedByTap).not.toHaveBeenCalled();
   });
 
   it('takes Enter or Space on its controlless autoplay as the tap', () => {
@@ -203,7 +201,7 @@ describe('VideoAutoplayPlayer', () => {
     expect(space.defaultPrevented).toBe(true);
     expect(video.controls).toBe(true);
     expect(video.muted).toBe(false);
-    expect(coordinator.unmutedByTap).toHaveBeenCalledTimes(1);
+    expect(coordinator.tapped).toHaveBeenCalledTimes(1);
   });
 
   it('ignores other keys', () => {
@@ -213,7 +211,7 @@ describe('VideoAutoplayPlayer', () => {
     video.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', cancelable: true }));
 
     expect(video.controls).toBe(false);
-    expect(coordinator.unmutedByTap).not.toHaveBeenCalled();
+    expect(coordinator.tapped).not.toHaveBeenCalled();
   });
 
   it('unlocks sound without changing or reporting its muted state', async () => {

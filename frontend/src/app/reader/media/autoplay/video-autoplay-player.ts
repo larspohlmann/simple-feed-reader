@@ -1,7 +1,7 @@
 import { AutoplayPlayer } from './autoplay-player';
 import { ListAutoplayCoordinator } from './list-autoplay-coordinator';
 
-type Coordinator = Pick<ListAutoplayCoordinator, 'nowPlaying' | 'soundChanged' | 'unmutedByTap'>;
+type Coordinator = Pick<ListAutoplayCoordinator, 'nowPlaying' | 'soundChanged' | 'tapped'>;
 
 export class VideoAutoplayPlayer implements AutoplayPlayer {
   private pendingOwnChanges = 0;
@@ -35,7 +35,6 @@ export class VideoAutoplayPlayer implements AutoplayPlayer {
     this.showControls();
   }
 
-  /** Must run synchronously inside a tap's event handler. */
   unlockSound(): void {
     const muted = this.element.muted;
     this.setMuted(!muted);
@@ -50,12 +49,12 @@ export class VideoAutoplayPlayer implements AutoplayPlayer {
     if (this.element.controls) return;
     this.showControls();
     this.element.muted = false;
-    this.coordinator.unmutedByTap();
   }
 
   private revealByKey(event: KeyboardEvent): void {
     if (this.element.controls || (event.key !== 'Enter' && event.key !== ' ')) return;
     event.preventDefault();
+    this.coordinator.tapped();
     this.revealByTap();
   }
 

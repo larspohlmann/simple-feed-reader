@@ -100,7 +100,7 @@ describe('PostMediaComponent in the list', () => {
     unregister: jest.fn(),
     nowPlaying: jest.fn(),
     soundChanged: jest.fn(),
-    unmutedByTap: jest.fn(),
+    tapped: jest.fn(),
   };
 
   beforeEach(() => Object.values(coordinator).forEach((spy) => spy.mockReset()));

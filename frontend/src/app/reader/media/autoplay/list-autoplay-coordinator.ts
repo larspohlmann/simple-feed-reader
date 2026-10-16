@@ -69,13 +69,10 @@ export class ListAutoplayCoordinator {
     this.soundOn = soundOn;
   }
 
-  unmutedByTap(): void {
-    this.soundOn = true;
-    this.unlockSound();
-  }
-
+  /** Must run synchronously inside a tap's event handler. */
   tapped(): void {
-    if (this.soundOn) this.unlockSound();
+    for (const player of this.players.values()) player.unlockSound?.();
+    this.unlockedVideos.refill();
   }
 
   suspend(): void {
@@ -122,10 +119,5 @@ export class ListAutoplayCoordinator {
   private stopCurrent(): void {
     this.current?.player.stop();
     this.current = null;
-  }
-
-  private unlockSound(): void {
-    for (const player of this.players.values()) player.unlockSound?.();
-    this.unlockedVideos.refill();
   }
 }

@@ -235,7 +235,7 @@ describe('ListAutoplayCoordinator', () => {
     expect(attached.start).toHaveBeenCalledTimes(1);
   });
 
-  it('turns sound on and unlocks every player and the spares on an unmuting tap', () => {
+  it('unlocks every player and the spares on any tap', () => {
     const { coordinator, unlockedVideos } = setUp();
     const playing = aPlayer();
     const waiting = aPlayer();
@@ -243,28 +243,10 @@ describe('ListAutoplayCoordinator', () => {
     coordinator.register(waiting);
     report(playing.element, 1);
 
-    coordinator.unmutedByTap();
+    coordinator.tapped();
 
     expect(playing.unlockSound).toHaveBeenCalledTimes(1);
     expect(waiting.unlockSound).toHaveBeenCalledTimes(1);
-    expect(unlockedVideos.refill).toHaveBeenCalledTimes(1);
-    report(playing.element, 0);
-    report(waiting.element, 1);
-    expect(waiting.start).toHaveBeenCalledWith(true);
-  });
-
-  it('unlocks again on a later tap only while sound is on', () => {
-    const { coordinator, unlockedVideos } = setUp();
-    const player = aPlayer();
-    coordinator.register(player);
-
-    coordinator.tapped();
-    expect(player.unlockSound).not.toHaveBeenCalled();
-    expect(unlockedVideos.refill).not.toHaveBeenCalled();
-
-    coordinator.soundChanged(true);
-    coordinator.tapped();
-    expect(player.unlockSound).toHaveBeenCalledTimes(1);
     expect(unlockedVideos.refill).toHaveBeenCalledTimes(1);
   });
 
@@ -278,7 +260,7 @@ describe('ListAutoplayCoordinator', () => {
     document.body.append(short.element);
     coordinator.register(short);
 
-    coordinator.unmutedByTap();
+    coordinator.tapped();
 
     expect(unlockedVideos.refill).toHaveBeenCalledTimes(1);
   });
