@@ -1,4 +1,4 @@
-import { PLAYER_VIDEOS } from '../../../../media/player-videos';
+const PLAYER_VIDEOS = 'video:not([data-animated])';
 
 export const MEDIA_PAUSE = 'media-pause';
 

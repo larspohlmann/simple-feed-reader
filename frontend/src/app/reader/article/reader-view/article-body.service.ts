@@ -14,6 +14,8 @@ import { decorateArticle } from '../decorators/decorate-article';
 import { toggleCinemaByKey } from '../decorators/reader-cinema';
 import { releaseHlsStreams } from '../../media/hls-streams';
 import { UnplayableVideoService } from '../../media/unplayable-video.service';
+import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
+import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
 
 export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
@@ -23,14 +25,15 @@ export interface ArticleBodyParts {
   readonly decorated: (host: HTMLElement) => void;
 }
 
-/** The rendered article body's DOM wiring: its decorations, its media recovery and the
- *  `t` cinema key. `connect` creates its effects, so the host decides where they fall
- *  in its own effect order. */
+/** The rendered article body's DOM wiring: its decorations, its media recovery, its media's
+ *  turn in the article's one-at-a-time playback and the `t` cinema key. `connect` creates its
+ *  effects, so the host decides where they fall in its own effect order. */
 @Injectable()
 export class ArticleBody {
   private readonly i18n = inject(TranslocoService);
   private readonly injector = inject(Injector);
   private readonly unplayableVideos = inject(UnplayableVideoService);
+  private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
 
   constructor() {
@@ -78,11 +81,15 @@ export class ArticleBody {
         // container replacing the placeholder is the only render signal (#101).
         const content = parts.content()?.nativeElement;
         if (!content) return;
-        onCleanup(() => releaseHlsStreams(content));
+        onCleanup(() => {
+          releaseHlsStreams(content);
+          this.media.forgetAll();
+        });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
           if (!host) return;
           decorateArticle(host, this.i18n, parts.enclosureUrl());
+          this.media.follow(host);
           parts.decorated(host);
         });
       },

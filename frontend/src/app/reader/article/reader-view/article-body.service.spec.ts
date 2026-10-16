@@ -6,6 +6,8 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
 import { ArticleBody } from './article-body.service';
+import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
+import { PlayingMedium } from '../../media/autoplay/autoplay-player';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -17,6 +19,7 @@ describe('ArticleBody', () => {
   let injector: EnvironmentInjector;
   let decorated: jest.Mock<void, [HTMLElement]>;
   let content: HTMLElement;
+  let autoplay: { nowPlaying: jest.Mock; stopped: jest.Mock };
   const html = signal('');
 
   function connectBody(body: string): void {
@@ -40,6 +43,13 @@ describe('ArticleBody', () => {
     await firstPlay(content.querySelector('video')!);
   }
 
+  function playBodyVideo(): HTMLVideoElement {
+    const video = content.querySelector('video')!;
+    Object.defineProperty(video, 'paused', { configurable: true, value: false });
+    video.dispatchEvent(new Event('play'));
+    return video;
+  }
+
   const pressT = (): void => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 't', cancelable: true }));
   };
@@ -54,7 +64,11 @@ describe('ArticleBody', () => {
       imports: [provideTranslocoTesting()],
       providers: [{ provide: ImageProxyService, useValue: imageProxy }],
     });
-    injector = createEnvironmentInjector([ArticleBody], TestBed.inject(EnvironmentInjector));
+    autoplay = { nowPlaying: jest.fn(), stopped: jest.fn() };
+    injector = createEnvironmentInjector(
+      [ArticleBody, { provide: ListAutoplayCoordinator, useValue: autoplay }],
+      TestBed.inject(EnvironmentInjector),
+    );
   });
 
   afterEach(() => {
@@ -147,5 +161,43 @@ describe('ArticleBody', () => {
     injector.destroy();
 
     expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
+  });
+  describe('its media', () => {
+    it('tells the autoplay coordinator when the user plays one', async () => {
+      connectBody(VIDEO);
+      await Promise.resolve();
+
+      const video = playBodyVideo();
+
+      expect(autoplay.nowPlaying).toHaveBeenCalledTimes(1);
+      expect((autoplay.nowPlaying.mock.calls[0][0] as PlayingMedium).element).toBe(video);
+    });
+
+    it('lets go of the swapped-out media when the HTML changes', async () => {
+      connectBody(VIDEO);
+      await Promise.resolve();
+      const swappedOut = content.querySelector('video')!;
+
+      content.innerHTML = '<p>Reader.</p>';
+      html.set('<p>Reader.</p>');
+      TestBed.tick();
+      await Promise.resolve();
+      content.append(swappedOut);
+      playBodyVideo();
+
+      expect(autoplay.stopped).toHaveBeenCalledTimes(1);
+      expect(autoplay.nowPlaying).not.toHaveBeenCalled();
+    });
+
+    it('lets go of them once destroyed', async () => {
+      connectBody(VIDEO);
+      await Promise.resolve();
+
+      injector.destroy();
+      playBodyVideo();
+
+      expect(autoplay.stopped).toHaveBeenCalledTimes(1);
+      expect(autoplay.nowPlaying).not.toHaveBeenCalled();
+    });
   });
 });

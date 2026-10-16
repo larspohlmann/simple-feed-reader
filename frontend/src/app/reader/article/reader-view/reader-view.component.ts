@@ -48,6 +48,8 @@ import { LinkCardsComponent } from '../link-cards/link-cards.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { SocialCountsComponent } from '../social-counts/social-counts.component';
 import { ArticleBody } from './article-body.service';
+import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
+import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 import { ArticleGestures } from './article-gestures.service';
 import { relativeTime } from '../../format';
 import { estimateReadingMinutes } from '../decorators/reading-time';
@@ -82,7 +84,15 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     QuotedPostComponent,
     SocialCountsComponent,
   ],
-  providers: [ArticleScrollRestore, ArticleGestures, ArticleSource, ReadingScope, ArticleBody],
+  providers: [
+    ArticleScrollRestore,
+    ArticleGestures,
+    ArticleSource,
+    ReadingScope,
+    ArticleBody,
+    ListAutoplayCoordinator,
+    UnlockedVideoElements,
+  ],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
 })
@@ -114,6 +124,7 @@ export class ReaderViewComponent {
   private readonly socialCounts = viewChild(SocialCountsComponent, {
     read: ElementRef<HTMLElement>,
   });
+  private readonly socialCountsRow = viewChild(SocialCountsComponent);
   private readonly trailingParts: readonly TrailingPart[] = [
     { query: this.quotedPost, joinsFocus: false },
     { query: this.linkCards, joinsFocus: false },
@@ -236,6 +247,7 @@ export class ReaderViewComponent {
 
     this.scope.observeResizes();
     this.reserveToolbarHeight();
+    inject(ListAutoplayCoordinator).autoplayOnlyWithin(() => this.commentsSection()?.nativeElement);
   }
 
   /** The toolbar floats over the scroller, which reserves its height (#1332). */
@@ -304,6 +316,10 @@ export class ReaderViewComponent {
       top: Math.max(0, top - covered),
       behavior: this.reduceMotion ? 'auto' : 'smooth',
     });
+  }
+
+  protected reloadSocialCounts(): void {
+    this.socialCountsRow()?.reload();
   }
 
   /** The inline error's retry action — refetches the open entry's body. */

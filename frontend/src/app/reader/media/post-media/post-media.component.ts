@@ -11,8 +11,6 @@ import { EntryMediumDto, isGif } from '../../entry-medium';
 import { GifComponent } from '../gif/gif.component';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { armHlsStreams, releaseHlsStreams } from '../hls-streams';
-import { PLAYER_VIDEOS } from '../player-videos';
-import { pauseMedia } from '../../list/magazine/blocks/entry-media/pause-media';
 import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
 import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
@@ -42,13 +40,13 @@ export class PostMediaComponent {
     afterRenderEffect(() => {
       this.mountVideos(this.media(), this.videoLabel());
       armHlsStreams(this.host);
-      const videos = Array.from(this.host.querySelectorAll<HTMLVideoElement>(PLAYER_VIDEOS));
+      const videos = this.mountedVideos();
       this.pauseWhenScrolledAway(videos);
       this.registerForAutoplay(videos);
     });
     inject(DestroyRef).onDestroy(() => {
       this.scrollAway?.disconnect();
-      pauseMedia(this.host);
+      for (const video of this.mountedVideos()) video.pause();
       releaseHlsStreams(this.host);
       this.unregisterVideosWhere(() => true);
     });
@@ -60,6 +58,10 @@ export class PostMediaComponent {
       const video = slot.querySelector('video') ?? slot.appendChild(this.newVideo(clips[index]));
       video.setAttribute('aria-label', label);
     });
+  }
+
+  private mountedVideos(): HTMLVideoElement[] {
+    return Array.from(this.host.querySelectorAll<HTMLVideoElement>('.video-slot video'));
   }
 
   private newVideo(clip: EntryMediumDto): HTMLVideoElement {

@@ -26,6 +26,12 @@ import {
   MockResizeObserver,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
+import {
+  MockIntersectionObserver,
+  installMockIntersectionObserver,
+  restoreIntersectionObserver,
+} from '../../../../testing/intersection-observer-testing';
+import { EntryMediumDto } from '../../entry-medium';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entryActions = {
@@ -153,7 +159,6 @@ function stubComments(state: Signal<CommentsState>): void {
   TestBed.overrideProvider(CommentsService, {
     useValue: { state: () => state, load: jest.fn(), reload: jest.fn() },
   });
-  TestBed.overrideProvider(SocialCountsService, { useValue: { reload: jest.fn() } });
 }
 
 describe('ReaderViewComponent', () => {
@@ -832,15 +837,19 @@ describe('ReaderViewComponent', () => {
     const realIntersectionObserver = globalThis.IntersectionObserver;
     const post = (over: Partial<EntryDto> = {}): EntryDto =>
       entry({ social: { network: 'bluesky', isLiked: false, canLike: true }, ...over });
+    let counts: { state: () => Signal<SocialCountsState>; load: jest.Mock; reload: jest.Mock };
 
     beforeEach(() => {
       globalThis.IntersectionObserver = jest.fn(() => ({
         observe: jest.fn(),
         disconnect: jest.fn(),
       })) as unknown as typeof IntersectionObserver;
-      TestBed.overrideProvider(SocialCountsService, {
-        useValue: { state: () => signal<SocialCountsState>({ status: 'idle' }), load: jest.fn() },
-      });
+      counts = {
+        state: () => signal<SocialCountsState>({ status: 'idle' }),
+        load: jest.fn(),
+        reload: jest.fn(),
+      };
+      TestBed.overrideProvider(SocialCountsService, { useValue: counts });
     });
 
     afterEach(() => {
@@ -870,6 +879,23 @@ describe('ReaderViewComponent', () => {
       expect(
         (mount(entry()).nativeElement as HTMLElement).querySelector('app-social-counts'),
       ).toBeNull();
+    });
+
+    it('reloads with the replies when they are refreshed', () => {
+      stubComments(
+        signal<CommentsState>({
+          status: 'ok',
+          comments: [],
+          omitted: 0,
+          fetchedAt: '',
+          loadedAt: 0,
+        }),
+      );
+      const element = mount(post({ comments: 'manual' })).nativeElement as HTMLElement;
+
+      element.querySelector<HTMLButtonElement>('app-entry-comments button.reload')!.click();
+
+      expect(counts.reload).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     });
   });
 
@@ -1635,6 +1661,121 @@ describe('ReaderViewComponent', () => {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
       expect(host.querySelector<HTMLElement>('.list')!.style.opacity).not.toBe('');
+    });
+  });
+
+  describe('one medium at a time across the article (#1616)', () => {
+    const REPLY_VIDEO: EntryMediumDto = {
+      url: 'https://cdn.test/reply.mp4',
+      kind: 'video',
+      width: 1280,
+      height: 720,
+    };
+    const GIF: EntryMediumDto = {
+      ...REPLY_VIDEO,
+      url: 'https://cdn.test/loop.mp4',
+      animated: true,
+    };
+    let autoplayEnabled: WritableSignal<boolean>;
+    let play: jest.SpyInstance;
+
+    beforeEach(() => {
+      installMockIntersectionObserver();
+      jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+      play = jest.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+      autoplayEnabled = signal(false);
+      TestBed.overrideProvider(ListAutoplayService, { useValue: { enabled: autoplayEnabled } });
+    });
+
+    afterEach(() => {
+      TestBed.resetTestingModule();
+      restoreIntersectionObserver();
+      jest.restoreAllMocks();
+    });
+
+    async function mountPostWithReplies(media: EntryMediumDto[]) {
+      stubComments(
+        signal<CommentsState>({
+          status: 'ok',
+          comments: [anEntryComment({ media })],
+          omitted: 0,
+          fetchedAt: '2026-09-24T12:00:00Z',
+          loadedAt: 0,
+        }),
+      );
+      const fixture = mount(
+        entryWithBody('<video controls src="https://cdn.test/post.mp4"></video>', {
+          comments: 'manual',
+        }),
+      );
+      await Promise.resolve();
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    function postVideo(fixture: ComponentFixture<ReaderViewComponent>): HTMLVideoElement {
+      return (fixture.nativeElement as HTMLElement).querySelector('.content video')!;
+    }
+
+    function replyVideo(fixture: ComponentFixture<ReaderViewComponent>): HTMLVideoElement {
+      return (fixture.nativeElement as HTMLElement).querySelector('app-entry-comments video')!;
+    }
+
+    function startByHand(medium: HTMLMediaElement): jest.Mock {
+      Object.defineProperty(medium, 'paused', { configurable: true, value: false });
+      const pause = jest.fn();
+      medium.pause = pause;
+      medium.dispatchEvent(new Event('play'));
+      return pause;
+    }
+
+    it("pauses the post's own video when a reply video starts", async () => {
+      const fixture = await mountPostWithReplies([REPLY_VIDEO]);
+      const pausePost = startByHand(postVideo(fixture));
+
+      const pauseReply = startByHand(replyVideo(fixture));
+
+      expect(pausePost).toHaveBeenCalledTimes(1);
+      expect(pauseReply).not.toHaveBeenCalled();
+    });
+
+    it("leaves the post's own video playing when a reply GIF loops", async () => {
+      const fixture = await mountPostWithReplies([GIF]);
+      const pausePost = startByHand(postVideo(fixture));
+
+      startByHand(replyVideo(fixture));
+
+      expect(pausePost).not.toHaveBeenCalled();
+    });
+
+    it("holds reply autoplay while the post's own video plays, and resumes once it stops", async () => {
+      autoplayEnabled.set(true);
+      const fixture = await mountPostWithReplies([REPLY_VIDEO]);
+      const post = postVideo(fixture);
+      const reply = replyVideo(fixture);
+      startByHand(post);
+      fixture.detectChanges();
+
+      MockIntersectionObserver.report(reply, 1);
+      expect(play.mock.contexts).not.toContain(reply);
+
+      post.dispatchEvent(new Event('pause'));
+      fixture.detectChanges();
+      expect(play.mock.contexts).toContain(reply);
+    });
+
+    it('autoplays no medium outside the replies', async () => {
+      autoplayEnabled.set(true);
+      const quote = aQuotedPost({ media: [REPLY_VIDEO] });
+      const fixture = mount(entry({ share: 'quote', quote }));
+      await Promise.resolve();
+      fixture.detectChanges();
+      const quoted = (fixture.nativeElement as HTMLElement).querySelector('app-quoted-post video')!;
+
+      MockIntersectionObserver.report(quoted, 1);
+
+      expect(quoted).not.toBeNull();
+      expect(play).not.toHaveBeenCalled();
     });
   });
 

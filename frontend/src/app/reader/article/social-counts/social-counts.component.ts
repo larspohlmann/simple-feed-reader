@@ -84,6 +84,10 @@ export class SocialCountsComponent {
     );
   }
 
+  reload(): void {
+    this.service.reload(this.entry());
+  }
+
   protected format(count: number): string {
     return this.compact().format(count);
   }

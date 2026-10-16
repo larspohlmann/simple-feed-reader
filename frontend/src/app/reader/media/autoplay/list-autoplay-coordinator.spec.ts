@@ -1,7 +1,7 @@
 import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
-import { AutoplayPlayer } from './autoplay-player';
+import { AutoplayPlayer, PlayingMedium } from './autoplay-player';
 import { ListAutoplayCoordinator } from './list-autoplay-coordinator';
 import { UnlockedVideoElements } from './unlocked-video-elements';
 import {
@@ -32,6 +32,13 @@ function aPlayer(): FakePlayer {
   document.body.append(player.element);
   return player;
 }
+
+type FakeMedium = PlayingMedium & { stop: jest.Mock };
+
+const aMediumPlayedByHand = (): FakeMedium => ({
+  element: document.createElement('audio'),
+  stop: jest.fn(),
+});
 
 function setUp(enabled = true) {
   const setting: WritableSignal<boolean> = signal(enabled);
@@ -263,5 +270,129 @@ describe('ListAutoplayCoordinator', () => {
     coordinator.tapped();
 
     expect(unlockedVideos.refill).toHaveBeenCalledTimes(1);
+  });
+  describe('media that only the user starts', () => {
+    it('stops the autoplayed player and holds autoplay until the medium stops', () => {
+      const { coordinator } = setUp();
+      const player = aPlayer();
+      const medium = aMediumPlayedByHand();
+      coordinator.register(player);
+      report(player.element, 1);
+
+      coordinator.nowPlaying(medium);
+      TestBed.tick();
+      report(player.element, 1);
+      expect(player.stop).toHaveBeenCalledTimes(1);
+      expect(player.start).toHaveBeenCalledTimes(1);
+
+      coordinator.stopped(medium);
+      TestBed.tick();
+      expect(player.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('stops the medium playing before when another one is played', () => {
+      const { coordinator } = setUp();
+      const first = aMediumPlayedByHand();
+      const second = aMediumPlayedByHand();
+
+      coordinator.nowPlaying(first);
+      coordinator.nowPlaying(second);
+
+      expect(first.stop).toHaveBeenCalledTimes(1);
+      expect(second.stop).not.toHaveBeenCalled();
+    });
+
+    it('holds autoplay until every medium played by hand has stopped', () => {
+      const { coordinator } = setUp();
+      const player = aPlayer();
+      const post = aMediumPlayedByHand();
+      const enclosure = aMediumPlayedByHand();
+      coordinator.register(player);
+
+      coordinator.nowPlaying(post);
+      coordinator.nowPlaying(enclosure);
+      coordinator.stopped(post);
+      TestBed.tick();
+      report(player.element, 1);
+      expect(player.start).not.toHaveBeenCalled();
+
+      coordinator.stopped(enclosure);
+      TestBed.tick();
+      expect(player.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('is stopped by a player played by hand, which keeps playing', () => {
+      const { coordinator } = setUp(false);
+      const player = aPlayer();
+      const medium = aMediumPlayedByHand();
+      coordinator.register(player);
+
+      coordinator.nowPlaying(medium);
+      coordinator.nowPlaying(player);
+
+      expect(medium.stop).toHaveBeenCalledTimes(1);
+      expect(player.stop).not.toHaveBeenCalled();
+    });
+
+    it('no longer holds autoplay once a player played by hand stopped it', () => {
+      const { coordinator } = setUp();
+      const byHand = aPlayer();
+      const next = aPlayer();
+      const medium = aMediumPlayedByHand();
+      coordinator.register(byHand);
+      coordinator.register(next);
+
+      coordinator.nowPlaying(medium);
+      coordinator.nowPlaying(byHand);
+      TestBed.tick();
+      report(next.element, 1);
+      report(byHand.element, 0);
+
+      expect(next.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('is left alone once it stopped on its own', () => {
+      const { coordinator } = setUp(false);
+      const player = aPlayer();
+      const medium = aMediumPlayedByHand();
+      coordinator.register(player);
+
+      coordinator.nowPlaying(medium);
+      coordinator.stopped(medium);
+      coordinator.nowPlaying(player);
+
+      expect(medium.stop).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('confined to a region', () => {
+    it('autoplays only the players inside the region', () => {
+      const { coordinator } = setUp();
+      const region = document.createElement('section');
+      document.body.append(region);
+      const outside = aPlayer();
+      const inside = aPlayer();
+      region.append(inside.element);
+      coordinator.autoplayOnlyWithin(() => region);
+      coordinator.register(outside);
+      coordinator.register(inside);
+
+      report(outside.element, 1);
+      report(inside.element, 0.7);
+
+      expect(outside.start).not.toHaveBeenCalled();
+      expect(inside.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('autoplays nothing while the region is absent', () => {
+      const { coordinator } = setUp();
+      const player = aPlayer();
+      coordinator.autoplayOnlyWithin(() => undefined);
+      coordinator.register(player);
+
+      report(player.element, 1);
+
+      expect(player.start).not.toHaveBeenCalled();
+    });
   });
 });

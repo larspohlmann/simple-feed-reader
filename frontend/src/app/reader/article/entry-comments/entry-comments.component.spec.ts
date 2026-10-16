@@ -2,19 +2,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
 import { CommentsService, CommentsState } from './comments.service';
-import { SocialCountsService } from '../social-counts/social-counts.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { CommentsLoad } from '../../models';
 import { EntrySocialDto } from '../../entry-social';
 import { EntryCommentDto } from '../../entry-comment';
-import { EntryMediumDto } from '../../entry-medium';
 import { prefetchMargin } from '../../list/paging';
 import { aLinkCard, anEntryComment, aQuotedPost } from '../../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { By } from '@angular/platform-browser';
-import { PostMediaComponent } from '../../media/post-media/post-media.component';
-import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
-import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 
 const DISCUSSION = 'https://www.reddit.com/r/x/comments/1/t/';
 
@@ -26,7 +20,6 @@ describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
   let states: Map<number, WritableSignal<CommentsState>>;
   let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock };
-  let socialCounts: { reload: jest.Mock };
   let sightObservers: { init: IntersectionObserverInit | undefined; disconnect: jest.Mock }[];
   let trigger: ((visible: boolean) => void) | undefined;
   let scroller: HTMLElement;
@@ -39,7 +32,6 @@ describe('EntryCommentsComponent', () => {
       load: jest.fn(),
       reload: jest.fn(),
     };
-    socialCounts = { reload: jest.fn() };
     sightObservers = [];
     trigger = undefined;
     scroller = document.createElement('div');
@@ -61,9 +53,7 @@ describe('EntryCommentsComponent', () => {
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
       providers: [
         { provide: CommentsService, useValue: service },
-        { provide: SocialCountsService, useValue: socialCounts },
         { provide: ImageProxyService, useValue: { recover: () => Promise.resolve('failed') } },
-        { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
       ],
     });
     fixture = TestBed.createComponent(EntryCommentsComponent);
@@ -303,190 +293,6 @@ describe('EntryCommentsComponent', () => {
     expect(row.querySelector('app-link-card')).not.toBeNull();
   });
 
-  describe('reply videos', () => {
-    const REPLY_VIDEO: EntryMediumDto = {
-      url: 'https://cdn.test/1.mp4',
-      kind: 'video',
-      width: 1280,
-      height: 720,
-    };
-    let article: HTMLElement;
-    let ownVideo: HTMLVideoElement;
-
-    beforeEach(() => {
-      article = document.createElement('article');
-      ownVideo = document.createElement('video');
-      article.append(ownVideo, fixture.nativeElement);
-      document.body.append(article);
-      jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
-    });
-
-    afterEach(() => {
-      fixture.destroy();
-      article.remove();
-      jest.restoreAllMocks();
-    });
-
-    function showReplyVideo(): HTMLVideoElement {
-      show('auto');
-      const element = settleComments([anEntryComment({ media: [REPLY_VIDEO] })]);
-      return element.querySelector<HTMLVideoElement>('.comment video')!;
-    }
-
-    function playing(medium: HTMLMediaElement): jest.Mock {
-      Object.defineProperty(medium, 'paused', { configurable: true, value: false });
-      const pause = jest.fn();
-      medium.pause = pause;
-      return pause;
-    }
-
-    function ownCoordinator(): ListAutoplayCoordinator {
-      return fixture.debugElement.injector.get(ListAutoplayCoordinator);
-    }
-
-    it('provides its own autoplay coordinator to the reply media', () => {
-      showReplyVideo();
-      const media = fixture.debugElement.query(By.directive(PostMediaComponent));
-      const coordinator = media.injector.get(ListAutoplayCoordinator, null);
-      expect(coordinator).not.toBeNull();
-      expect(coordinator).toBe(ownCoordinator());
-    });
-
-    it("pauses the post's own video when a reply video plays", () => {
-      const replyVideo = showReplyVideo();
-      const pauseOwn = playing(ownVideo);
-      const pauseReply = playing(replyVideo);
-
-      replyVideo.dispatchEvent(new Event('play'));
-
-      expect(pauseOwn).toHaveBeenCalledTimes(1);
-      expect(pauseReply).not.toHaveBeenCalled();
-    });
-
-    it("leaves the post's own video playing when a reply GIF loops", () => {
-      show('auto');
-      const gif: EntryMediumDto = { ...REPLY_VIDEO, animated: true };
-      const element = settleComments([anEntryComment({ media: [gif] })]);
-      const replyGif = element.querySelector<HTMLVideoElement>('.comment video')!;
-      const pauseOwn = playing(ownVideo);
-
-      replyGif.dispatchEvent(new Event('play'));
-
-      expect(pauseOwn).not.toHaveBeenCalled();
-    });
-
-    it("holds reply autoplay while the post's own video plays", () => {
-      showReplyVideo();
-      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
-      const resume = jest.spyOn(ownCoordinator(), 'resume');
-      playing(ownVideo);
-
-      ownVideo.dispatchEvent(new Event('play'));
-      expect(suspend).toHaveBeenCalledTimes(1);
-      expect(resume).not.toHaveBeenCalled();
-
-      ownVideo.dispatchEvent(new Event('pause'));
-      ownVideo.dispatchEvent(new Event('ended'));
-      expect(resume).toHaveBeenCalledTimes(1);
-    });
-
-    it('keeps reply autoplay going while a GIF in the post loops', () => {
-      showReplyVideo();
-      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
-      const postGif = document.createElement('video');
-      postGif.toggleAttribute('data-animated', true);
-      article.prepend(postGif);
-
-      postGif.dispatchEvent(new Event('play'));
-
-      expect(suspend).not.toHaveBeenCalled();
-    });
-
-    it("resumes reply autoplay once the post's own video ends", () => {
-      showReplyVideo();
-      const resume = jest.spyOn(ownCoordinator(), 'resume');
-      playing(ownVideo);
-
-      ownVideo.dispatchEvent(new Event('play'));
-      ownVideo.dispatchEvent(new Event('ended'));
-
-      expect(resume).toHaveBeenCalledTimes(1);
-    });
-
-    it('stops watching the article once destroyed', () => {
-      showReplyVideo();
-      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
-      playing(ownVideo);
-      fixture.destroy();
-
-      ownVideo.dispatchEvent(new Event('play'));
-
-      expect(suspend).not.toHaveBeenCalled();
-    });
-
-    it("drops the post's medium listeners once destroyed", () => {
-      showReplyVideo();
-      const resume = jest.spyOn(ownCoordinator(), 'resume');
-      playing(ownVideo);
-      ownVideo.dispatchEvent(new Event('play'));
-      fixture.destroy();
-
-      ownVideo.dispatchEvent(new Event('pause'));
-
-      expect(resume).not.toHaveBeenCalled();
-    });
-
-    it('holds reply autoplay until every outside medium has stopped', () => {
-      showReplyVideo();
-      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
-      const resume = jest.spyOn(ownCoordinator(), 'resume');
-      const enclosure = document.createElement('audio');
-      article.prepend(enclosure);
-      playing(ownVideo);
-      playing(enclosure);
-
-      ownVideo.dispatchEvent(new Event('play'));
-      enclosure.dispatchEvent(new Event('play'));
-      ownVideo.dispatchEvent(new Event('pause'));
-      expect(suspend).toHaveBeenCalledTimes(1);
-      expect(resume).not.toHaveBeenCalled();
-
-      enclosure.dispatchEvent(new Event('ended'));
-      expect(resume).toHaveBeenCalledTimes(1);
-    });
-
-    it('holds reply autoplay while an outside audio plays', () => {
-      showReplyVideo();
-      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
-      const enclosure = document.createElement('audio');
-      article.prepend(enclosure);
-      playing(enclosure);
-
-      enclosure.dispatchEvent(new Event('play'));
-
-      expect(suspend).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not hold reply autoplay for an outside medium paused before its play arrives', () => {
-      showReplyVideo();
-      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
-
-      ownVideo.dispatchEvent(new Event('play'));
-
-      expect(suspend).not.toHaveBeenCalled();
-    });
-
-    it('leaves an outside medium that is already paused alone when a reply plays', () => {
-      const replyVideo = showReplyVideo();
-      const pauseOwn = jest.fn();
-      ownVideo.pause = pauseOwn;
-
-      replyVideo.dispatchEvent(new Event('play'));
-
-      expect(pauseOwn).not.toHaveBeenCalled();
-    });
-  });
-
   it('renders no embeds for a plain comment', () => {
     show('auto');
     const row = settleComments([anEntryComment()]).querySelector('.comment')!;
@@ -499,21 +305,28 @@ describe('EntryCommentsComponent', () => {
     expect(element.querySelector('.age')?.textContent).toContain('Updated');
   });
 
-  it('refreshes comments and counts together', () => {
-    const entry = { id: 5, comments: 'auto' as const, discussionUrl: DISCUSSION, social: BLUESKY };
-    showEntry(entry);
-    settleComments([]);
-    fixture.nativeElement.querySelector('button.reload').click();
-    expect(service.reload).toHaveBeenCalledWith(5);
-    expect(socialCounts.reload).toHaveBeenCalledWith(entry);
-  });
-
-  it('refreshes only comments for an ordinary article', () => {
+  it('refreshes the comments and says so, for the counts to follow', () => {
+    const refreshed = jest.fn();
+    fixture.componentInstance.refreshed.subscribe(refreshed);
     show('auto');
     settleComments([]);
+
     fixture.nativeElement.querySelector('button.reload').click();
+
     expect(service.reload).toHaveBeenCalledWith(5);
-    expect(socialCounts.reload).not.toHaveBeenCalled();
+    expect(refreshed).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries without asking the counts to follow', () => {
+    const refreshed = jest.fn();
+    fixture.componentInstance.refreshed.subscribe(refreshed);
+    show('auto');
+    settle({ status: 'failed', failedAt: Date.now() });
+
+    fixture.nativeElement.querySelector('button.retry').click();
+
+    expect(service.reload).toHaveBeenCalledWith(5);
+    expect(refreshed).not.toHaveBeenCalled();
   });
 
   it('names the network and the count when replies were cut', () => {
