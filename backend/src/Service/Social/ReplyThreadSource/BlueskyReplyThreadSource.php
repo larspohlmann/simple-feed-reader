@@ -51,7 +51,7 @@ final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterf
 
     public function inPublic(string $address): CommentsAnswerModel
     {
-        $throttledForSeconds = $this->appView->throttledForSeconds();
+        $throttledForSeconds = $this->publicThreadThrottledForSeconds();
         if ($throttledForSeconds > 0) {
             throw new SocialNetworkThrottledException(self::THROTTLED, $throttledForSeconds);
         }
@@ -66,6 +66,11 @@ final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterf
                 previous: $exception,
             );
         }
+    }
+
+    public function publicThreadThrottledForSeconds(): int
+    {
+        return $this->appView->throttledForSeconds();
     }
 
     public function repliesIn(string $address, string $answer): array

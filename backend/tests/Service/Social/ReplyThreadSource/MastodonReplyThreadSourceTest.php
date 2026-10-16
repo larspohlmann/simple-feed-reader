@@ -152,6 +152,11 @@ final class MastodonReplyThreadSourceTest extends TestCase
         );
     }
 
+    public function testNoWaitIsKnownBeforeAskingAnOrigin(): void
+    {
+        self::assertSame(0, $this->source(new RoutedHttpClient([]))->publicThreadThrottledForSeconds());
+    }
+
     public function testTheRepliesAreReadFromTheContext(): void
     {
         $replies = $this->source(new RoutedHttpClient([]))->repliesIn(

@@ -27,6 +27,8 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
     /** @var list<ReplyNode> */
     private array $replies = [];
 
+    private int $publicThrottleSeconds = 0;
+
     public function __construct()
     {
         $this->accountAnswer = CommentsAnswerModel::settled('account thread');
@@ -58,6 +60,11 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
         $this->publicFailure = $failure;
     }
 
+    public function throttlePublicThreadFor(int $seconds): void
+    {
+        $this->publicThrottleSeconds = $seconds;
+    }
+
     /** @param list<ReplyNode> $replies */
     public function readsReplies(array $replies): void
     {
@@ -82,6 +89,11 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
         }
 
         return $this->publicAnswer;
+    }
+
+    public function publicThreadThrottledForSeconds(): int
+    {
+        return $this->publicThrottleSeconds;
     }
 
     public function repliesIn(string $address, string $answer): array

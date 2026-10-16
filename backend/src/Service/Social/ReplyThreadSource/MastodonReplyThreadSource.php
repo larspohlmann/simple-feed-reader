@@ -55,6 +55,11 @@ final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInter
         return CommentsAnswerModel::settled(MastodonContextReplies::answerOf($status->id, $answer->body));
     }
 
+    public function publicThreadThrottledForSeconds(): int
+    {
+        return 0;
+    }
+
     public function repliesIn(string $address, string $answer): array
     {
         return $this->replies->of($address, $answer);

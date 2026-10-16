@@ -63,13 +63,17 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
     public function fetch(User $user, Entry $entry): CommentsAnswerModel
     {
         $post = self::postOf($entry);
-        $this->rateLimitGuard->enforceForUser($this->socialRepliesLimiter, $user);
         $account = $this->accountOrNull($user, $entry, $post->network);
         $thread = $this->threadOn($post->network);
+        if (null === $account) {
+            self::refuseWhilePublicThreadIsThrottled($thread);
+            $this->spendOneFetch($user);
 
-        return null === $account
-            ? self::publicThreadOf($thread, $post->address)
-            : $this->accountOrPublicThreadOf($thread, $account, $post->address);
+            return self::publicThreadOf($thread, $post->address);
+        }
+        $this->spendOneFetch($user);
+
+        return $this->accountOrPublicThreadOf($thread, $account, $post->address);
     }
 
     public function read(Entry $entry, string $answer): CommentsPageModel
@@ -116,8 +120,22 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
                 $exception,
             );
         } catch (SocialPostNotFoundException | SocialNetworkUnreachableException $exception) {
-            throw new CommentsUnavailableException($exception->getMessage(), 0, $exception);
+            throw new CommentsUnavailableException($exception->getMessage(), previous: $exception);
         }
+    }
+
+    /** @throws CommentsThrottledException */
+    private static function refuseWhilePublicThreadIsThrottled(ReplyThreadSourceInterface $thread): void
+    {
+        $wait = $thread->publicThreadThrottledForSeconds();
+        if ($wait > 0) {
+            throw new CommentsThrottledException('The network asked for fewer requests.', $wait);
+        }
+    }
+
+    private function spendOneFetch(User $user): void
+    {
+        $this->rateLimitGuard->enforceForUser($this->socialRepliesLimiter, $user);
     }
 
     private function accountOrNull(User $user, Entry $entry, SocialNetwork $network): ?SocialAccount

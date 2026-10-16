@@ -116,6 +116,36 @@ final class SocialRepliesSourceTest extends DbTestCase
         yield 'throttled' => [new SocialNetworkThrottledException('Fewer requests, please.', 30)];
     }
 
+    public function testAThrottledPublicNetworkIsRefusedBeforeTheBudgetIsSpent(): void
+    {
+        $post = $this->post();
+        $this->threads->throttlePublicThreadFor(30);
+        for ($fetch = 0; $fetch < self::REPLIES_BUDGET; ++$fetch) {
+            try {
+                $this->source()->fetch($this->owner, $post);
+                self::fail('A throttled public network must be refused.');
+            } catch (CommentsThrottledException $caught) {
+                self::assertSame(30, $caught->retryAfterSeconds);
+            }
+        }
+        $this->threads->throttlePublicThreadFor(0);
+
+        $answer = $this->source()->fetch($this->owner, $post);
+
+        self::assertEquals(CommentsAnswerModel::settled('public thread'), $answer);
+        self::assertSame(['inPublic ' . self::STATUS_URL], $this->threads->calls);
+    }
+
+    public function testAThrottledPublicNetworkDoesNotHoldBackTheAccount(): void
+    {
+        $this->mastodonAccount();
+        $this->threads->throttlePublicThreadFor(30);
+
+        $answer = $this->source()->fetch($this->owner, $this->post());
+
+        self::assertEquals(CommentsAnswerModel::settled('account thread'), $answer);
+    }
+
     public function testAThrottledNetworkSaysWhenToRetry(): void
     {
         $this->threads->failInPublicWith(new SocialNetworkThrottledException('Fewer requests, please.', 30));

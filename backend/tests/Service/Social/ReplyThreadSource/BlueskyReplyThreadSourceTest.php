@@ -129,6 +129,7 @@ final class BlueskyReplyThreadSourceTest extends TestCase
             self::assertSame(120, $exception->retryAfterSeconds);
         }
 
+        self::assertSame(120, $source->publicThreadThrottledForSeconds());
         self::assertCount(1, $this->appView->fetchedUrls);
     }
 

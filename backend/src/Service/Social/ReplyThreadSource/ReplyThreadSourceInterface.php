@@ -42,6 +42,9 @@ interface ReplyThreadSourceInterface
      */
     public function inPublic(string $address): CommentsAnswerModel;
 
+    /** How long the network asked us not to ask for a public thread; 0 when it did not. */
+    public function publicThreadThrottledForSeconds(): int;
+
     /**
      * @return list<ReplyNode>
      *
