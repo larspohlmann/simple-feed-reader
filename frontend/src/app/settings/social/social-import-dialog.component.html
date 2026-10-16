@@ -95,6 +95,17 @@
             />
             @if (row.icon; as icon) {
               <span class="tile" aria-hidden="true"><app-icon [name]="icon" size="sm" /></span>
+            } @else if (row.avatarUrl && !failedAvatars().has(row.key)) {
+              <img
+                class="avatar"
+                appProxiedImage
+                [src]="row.avatarUrl"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                referrerpolicy="no-referrer"
+                (imageFailed)="forgetAvatar(row)"
+              />
             } @else {
               <span class="avatar" aria-hidden="true">{{ row.initials }}</span>
             }

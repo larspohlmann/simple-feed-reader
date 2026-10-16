@@ -8,6 +8,7 @@ describe('tally', () => {
     name: key,
     handle: null,
     initials: '',
+    avatarUrl: null,
     icon: null,
     haystack,
     stateLabel: state,
