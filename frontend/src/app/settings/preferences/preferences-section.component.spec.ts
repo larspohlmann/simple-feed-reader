@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { LanguageService } from '../../core/i18n/language.service';
+import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
+import { provideAccountIdentity } from '../../../testing/account-identity-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { PreferencesSectionComponent } from './preferences-section.component';
 import en from '../../../../public/i18n/en.json';
@@ -18,6 +20,7 @@ describe('PreferencesSectionComponent', () => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
+        provideAccountIdentity(),
         { provide: LanguageService, useValue: { lang: signal('en'), set: jest.fn(), saveFailed } },
       ],
     });
@@ -113,5 +116,23 @@ describe('PreferencesSectionComponent', () => {
     fixture.detectChanges();
 
     expect(preferences.scrapeFallbackEnabled()).toBe(true);
+  });
+
+  it('offers list autoplay, switched on by default', () => {
+    const fixture = mount();
+    const toggle = fixture.nativeElement.querySelector('#list-autoplay-toggle') as HTMLInputElement;
+
+    expect(fixture.nativeElement.textContent).toContain(en.settings.listAutoplay);
+    expect(toggle.checked).toBe(true);
+  });
+
+  it('switches list autoplay off through its toggle', () => {
+    const fixture = mount();
+    const toggle = fixture.nativeElement.querySelector('#list-autoplay-toggle') as HTMLInputElement;
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(ListAutoplayService).enabled()).toBe(false);
   });
 });

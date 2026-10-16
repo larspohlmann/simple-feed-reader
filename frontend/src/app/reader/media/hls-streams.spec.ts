@@ -1,5 +1,12 @@
 import { articleHost, attachedArticleHost } from '../../../testing/article-host-testing';
-import { fakeHls, firstPlay, flushHls, resetFakeHls } from '../../../testing/hls-testing';
+import {
+  fakeHls,
+  firstPlay,
+  flushHls,
+  pausePlaying,
+  resetFakeHls,
+  startPlaying,
+} from '../../../testing/hls-testing';
 import { armHlsStreams, releaseHlsStreams, streamsThroughHls } from './hls-streams';
 
 jest.mock('hls.js', () => jest.requireActual('../../../testing/hls-testing').fakeHlsModule);
@@ -41,6 +48,59 @@ describe('armHlsStreams', () => {
 
     expect(fakeHls.loadSource).toHaveBeenCalledWith('https://x.test/master.m3u8');
     expect(fakeHls.attachMedia).toHaveBeenCalledWith(videoIn(host));
+  });
+
+  it('resumes the video once hls.js attached, though the source swap paused it', async () => {
+    const play = jest.fn(() => Promise.resolve());
+    HTMLMediaElement.prototype.play = play;
+    fakeHls.attachMedia.mockImplementationOnce((video: HTMLVideoElement) =>
+      video.dispatchEvent(new Event('pause')),
+    );
+    await playedStream();
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it('neither attaches nor resumes a video paused while hls.js was loading', async () => {
+    const play = jest.fn(() => Promise.resolve());
+    HTMLMediaElement.prototype.play = play;
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    armHlsStreams(host);
+
+    startPlaying(videoIn(host));
+    pausePlaying(videoIn(host));
+    await flushHls();
+
+    expect(fakeHls.attachMedia).not.toHaveBeenCalled();
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it('attaches a video paused and played again while hls.js was loading', async () => {
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    armHlsStreams(host);
+
+    startPlaying(videoIn(host));
+    pausePlaying(videoIn(host));
+    startPlaying(videoIn(host));
+    await flushHls();
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts the stream on the next play once a load was abandoned to a pause', async () => {
+    const play = jest.fn(() => Promise.resolve());
+    HTMLMediaElement.prototype.play = play;
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    armHlsStreams(host);
+    startPlaying(videoIn(host));
+    pausePlaying(videoIn(host));
+    await flushHls();
+
+    await firstPlay(videoIn(host));
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledTimes(1);
   });
 
   it('takes the stream even when the browser claims native HLS, because Chrome claims and never plays', async () => {

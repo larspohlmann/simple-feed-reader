@@ -6,6 +6,8 @@ import { EntryDto } from '../../../../models';
 import { EntryMediumDto } from '../../../../entry-medium';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { EMBED_FRAME_ATTRIBUTES } from '../../../../media/media-embeds';
+import { ListAutoplayCoordinator } from '../../../../media/autoplay/list-autoplay-coordinator';
+import { AutoplayPlayer } from '../../../../media/autoplay/autoplay-player';
 import { MEDIA_PAUSE } from './pause-media';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../../../testing/hls-testing';
@@ -326,5 +328,84 @@ describe('EntryMediaComponent', () => {
     const label = element.querySelector('iframe')!.getAttribute('title');
     expect(label).toBeTruthy();
     expect(label).not.toBe('');
+  });
+});
+
+describe('EntryMediaComponent in an autoplaying list', () => {
+  const coordinator = {
+    register: jest.fn(),
+    unregister: jest.fn(),
+    nowPlaying: jest.fn(),
+    soundChanged: jest.fn(),
+  };
+
+  beforeEach(() => Object.values(coordinator).forEach((spy) => spy.mockReset()));
+
+  async function mountInList(testEntry: EntryDto) {
+    TestBed.configureTestingModule({
+      imports: [EntryMediaComponent, provideTranslocoTesting()],
+      providers: [
+        { provide: EntryActionHandler, useValue: entryActions },
+        { provide: ListAutoplayCoordinator, useValue: coordinator },
+        provideRouter([]),
+      ],
+    });
+    const fixture = TestBed.createComponent(EntryMediaComponent);
+    fixture.componentRef.setInput('entry', testEntry);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return fixture;
+  }
+
+  const registered = () => coordinator.register.mock.calls[0][0] as AutoplayPlayer;
+
+  it('registers its Short, measured on the player box', async () => {
+    const fixture = await mountInList(short());
+
+    expect(coordinator.register).toHaveBeenCalledTimes(1);
+    expect(registered().element).toBe(fixture.nativeElement.querySelector('.short-player'));
+  });
+
+  it('plays the Short muted when the list starts it, and puts it away when stopped', async () => {
+    const fixture = await mountInList(short());
+
+    registered().start(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('iframe').getAttribute('src')).toBe(
+      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1&mute=1&playsinline=1#shorts',
+    );
+
+    registered().stop();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('iframe')).toBeNull();
+  });
+
+  it('tells the list a tapped Short is playing, with sound', async () => {
+    const fixture = await mountInList(short());
+
+    fixture.nativeElement.querySelector('button.play').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(coordinator.nowPlaying).toHaveBeenCalledWith(registered());
+    expect(fixture.nativeElement.querySelector('iframe').getAttribute('src')).toBe(
+      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1#shorts',
+    );
+  });
+
+  it('unregisters its Short when destroyed', async () => {
+    const fixture = await mountInList(short());
+    const player = registered();
+
+    fixture.destroy();
+
+    expect(coordinator.unregister).toHaveBeenCalledWith(player);
+  });
+
+  it('registers nothing for a share without a Short', async () => {
+    await mountInList(entry());
+    expect(coordinator.register).not.toHaveBeenCalled();
   });
 });

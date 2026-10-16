@@ -18,7 +18,9 @@ import { EntryMediumDto, mediumRatio } from '../../../../entry-medium';
 import { PlayingEmbedDirective } from '../../../../media/playing-embed.directive';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 import { PostMediaComponent } from '../../../../media/post-media/post-media.component';
-import { autoplayingShortPlayer } from './short-embed';
+import { autoplayingShortPlayer, mutedShortPlayer } from './short-embed';
+import { AutoplayPlayer } from '../../../../media/autoplay/autoplay-player';
+import { ListAutoplayCoordinator } from '../../../../media/autoplay/list-autoplay-coordinator';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
 
 @Component({
@@ -39,21 +41,25 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
   host: { '(media-pause)': 'stopShort()' },
 })
 export class EntryMediaComponent extends EntryBlockBase {
+  private readonly autoplay = inject(ListAutoplayCoordinator, { optional: true });
+  private shortAutoplay?: AutoplayPlayer;
   private scrollAway?: IntersectionObserver;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   readonly media = computed(() => sharedMedia(this.entry()));
   readonly shortPlayer = computed(() => autoplayingShortPlayer(this.entry().shortPlayerUrl));
-  protected readonly playingShort = signal(false);
+  protected readonly playingShort = signal<string | null>(null);
 
   constructor() {
     super();
     afterRenderEffect(() => {
       this.playingShort();
       this.pauseWhenScrolledAway();
+      this.registerShortForAutoplay();
     });
     inject(DestroyRef).onDestroy(() => {
       this.scrollAway?.disconnect();
+      if (this.shortAutoplay) this.autoplay?.unregister(this.shortAutoplay);
     });
   }
 
@@ -68,13 +74,31 @@ export class EntryMediaComponent extends EntryBlockBase {
     for (const player of players) this.scrollAway.observe(player);
   }
 
+  private registerShortForAutoplay(): void {
+    if (this.autoplay === null || this.shortAutoplay) return;
+    const element = this.host.querySelector('.short-player');
+    if (element === null) return;
+    this.shortAutoplay = {
+      element,
+      start: () => this.startMutedShort(),
+      stop: () => this.stopShort(),
+    };
+    this.autoplay.register(this.shortAutoplay);
+  }
+
   protected playShort(event: Event): void {
     event.stopPropagation();
-    this.playingShort.set(true);
+    this.playingShort.set(this.shortPlayer());
+    if (this.shortAutoplay) this.autoplay?.nowPlaying(this.shortAutoplay);
   }
 
   protected stopShort(): void {
-    this.playingShort.set(false);
+    this.playingShort.set(null);
+  }
+
+  private startMutedShort(): void {
+    const player = this.shortPlayer();
+    if (player !== null) this.playingShort.set(mutedShortPlayer(player));
   }
 
   protected ratio(medium: EntryMediumDto): number {

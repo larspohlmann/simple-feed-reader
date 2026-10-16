@@ -40,7 +40,7 @@ import { LayoutService } from '../../layout.service';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
 import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { ReadingScope, type TrailingPart } from '../reading/reading-scope.service';
-import { prefersReducedMotion } from '../reading/reduced-motion';
+import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { TocEntry, collectToc } from '../reading/reading-toc';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
 import { ListenRowComponent } from '../listen-row/listen-row.component';

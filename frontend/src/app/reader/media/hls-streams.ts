@@ -25,10 +25,7 @@ export function armHlsStreams(host: HTMLElement): void {
   for (const video of Array.from(host.querySelectorAll('video'))) {
     if (!isPlaylist(video) || armed.has(video)) continue;
     armed.add(video);
-    const source = video.getAttribute('src') ?? '';
-    video.addEventListener('play', () => void play(host, video, source).catch(() => undefined), {
-      once: true,
-    });
+    armFirstPlay(host, video, video.getAttribute('src') ?? '');
   }
 }
 
@@ -46,9 +43,20 @@ function isPlaylist(video: HTMLVideoElement): boolean {
   return PLAYLIST.test(video.getAttribute('src') ?? '');
 }
 
+function armFirstPlay(host: HTMLElement, video: HTMLVideoElement, source: string): void {
+  const rearm = (): void => armFirstPlay(host, video, source);
+  video.addEventListener('play', () => void play(host, video, source).catch(rearm), {
+    once: true,
+  });
+}
+
 async function play(host: HTMLElement, video: HTMLVideoElement, source: string): Promise<void> {
   const { default: HlsPlayer } = await import('hls.js');
-  if (!HlsPlayer.isSupported() || !video.isConnected) return;
+  if (!HlsPlayer.isSupported()) return;
+  if (video.paused || !video.isConnected) {
+    armFirstPlay(host, video, source);
+    return;
+  }
   const hls = new HlsPlayer();
   streamsOf(host).set(video, hls);
   hls.loadSource(source);

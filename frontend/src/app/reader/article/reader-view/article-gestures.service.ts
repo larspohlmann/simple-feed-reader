@@ -15,7 +15,7 @@ import {
   rubberBand,
 } from '../../reader-gestures';
 import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
-import { prefersReducedMotion } from '../reading/reduced-motion';
+import { prefersReducedMotion } from '../../../core/reduced-motion';
 
 /** How far the rubber-banded overscroll pull may travel. */
 const MAX_PULL = 160;

@@ -10,10 +10,10 @@
   @if (shortPlayer(); as player) {
     <div class="media" data-count="1" [style.--ratio]="ratio(items[0])">
       <div class="item short-player">
-        @if (playingShort()) {
+        @if (playingShort(); as playing) {
           <div
             class="item frame"
-            [appPlayingEmbed]="player"
+            [appPlayingEmbed]="playing"
             [embedTitle]="headline() || ('reader.playShort' | transloco)"
           ></div>
         } @else {

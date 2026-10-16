@@ -41,6 +41,7 @@ import {
   measureEntries,
   withHiddenDuplicates,
 } from './above-fold';
+import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { pauseMedia } from '../magazine/blocks/entry-media/pause-media';
 import { ListBlock } from './hidden-overlay';
 import { ListContent } from './list-content';
@@ -49,6 +50,7 @@ import { ListScrollState } from './list-scroll-state';
 import { ListReadingFocus } from './list-reading-focus';
 import { EstimatedListBottom } from './estimated-list-bottom';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
+import { prefersReducedMotion } from '../../../core/reduced-motion';
 
 // How long a reload may run before it earns a spinner. A switch that lands
 // sooner would only flash one, which reads as a glitch rather than as progress.
@@ -56,6 +58,7 @@ const RELOAD_SPINNER_DELAY_MS = 150;
 
 @Component({
   selector: 'app-entry-list',
+  providers: [ListAutoplayCoordinator],
   imports: [
     NgTemplateOutlet,
     TranslocoPipe,
@@ -191,10 +194,10 @@ export class EntryListComponent implements OnDestroy {
    *  focus, and the surrounding prose recedes behind it. */
   readonly isSearch = computed(() => this.selection().kind === 'search');
 
-  private readonly reduceMotion =
-    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  private readonly reduceMotion = prefersReducedMotion();
   private readonly screen = inject(LayoutService);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly autoplay = inject(ListAutoplayCoordinator);
   private readonly magazineStyle = inject(MagazineStyleService);
 
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
@@ -283,7 +286,12 @@ export class EntryListComponent implements OnDestroy {
   });
 
   private readonly _pauseMediaOfOpenEntry = effect(() => {
-    if (this.openEntryId() !== null) pauseMedia(this.host.nativeElement);
+    if (this.openEntryId() === null) {
+      this.autoplay.resume();
+      return;
+    }
+    this.autoplay.suspend();
+    pauseMedia(this.host.nativeElement);
   });
 
   private observer?: IntersectionObserver;

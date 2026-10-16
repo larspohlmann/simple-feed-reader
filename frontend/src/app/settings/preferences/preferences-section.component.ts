@@ -5,6 +5,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { MAGAZINE_STYLES } from '../../core/preferences/magazine-style';
 import { MagazineStyleService } from '../../core/preferences/magazine-style.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
+import { ListAutoplayService } from '../../core/preferences/list-autoplay.service';
 import { ReadingFocusService } from '../../core/preferences/reading-focus.service';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
@@ -33,6 +34,7 @@ export class PreferencesSectionComponent {
   readonly magazineStyle = inject(MagazineStyleService);
   readonly preferences = inject(PreferencesService);
   readonly readingFocus = inject(ReadingFocusService);
+  readonly listAutoplay = inject(ListAutoplayService);
   readonly languages = LANGS;
   readonly magazineStyles = MAGAZINE_STYLES;
 }

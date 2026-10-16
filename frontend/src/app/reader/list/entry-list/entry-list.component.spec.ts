@@ -18,6 +18,8 @@ import { ReadingFocusService } from '../../../core/preferences/reading-focus.ser
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-writer';
 import { LayoutService } from '../../layout.service';
+import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import {
   MockResizeObserver,
@@ -65,6 +67,7 @@ function mount(over: Record<string, unknown> = {}, providers: Provider[] = []) {
     imports: [EntryListComponent, provideTranslocoTesting()],
     providers: [
       provideRouter([]),
+      provideAccountIdentity(),
       { provide: ListScrollMemory, useValue: memory },
       { provide: CatalogStore, useValue: catalog },
       { provide: SubscriptionsStore, useValue: subscriptionsStore },
@@ -1017,6 +1020,21 @@ describe('EntryListComponent', () => {
     } finally {
       pause.mockRestore();
     }
+  });
+
+  it('suspends list autoplay while an entry is open and resumes it once closed', () => {
+    const fixture = mount();
+    const coordinator = fixture.debugElement.injector.get(ListAutoplayCoordinator);
+    const suspend = jest.spyOn(coordinator, 'suspend');
+    const resume = jest.spyOn(coordinator, 'resume');
+
+    fixture.componentRef.setInput('openEntryId', 2);
+    fixture.detectChanges();
+    expect(suspend).toHaveBeenCalledTimes(1);
+
+    fixture.componentRef.setInput('openEntryId', null);
+    fixture.detectChanges();
+    expect(resume).toHaveBeenCalledTimes(1);
   });
 
   it('hides mark-all-read when not applicable', () => {
