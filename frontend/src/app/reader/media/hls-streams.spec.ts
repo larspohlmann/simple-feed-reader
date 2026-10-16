@@ -72,6 +72,24 @@ describe('armHlsStreams', () => {
     expect(play).not.toHaveBeenCalled();
   });
 
+  it('starts the stream on the next play once a load was abandoned to a pause', async () => {
+    const play = jest.fn(() => Promise.resolve());
+    HTMLMediaElement.prototype.play = play;
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    armHlsStreams(host);
+    setTimeout(() => {
+      videoIn(host).dispatchEvent(new Event('play'));
+      videoIn(host).dispatchEvent(new Event('pause'));
+    });
+    await flushHls();
+    await flushHls();
+
+    await firstPlay(videoIn(host));
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
   it('takes the stream even when the browser claims native HLS, because Chrome claims and never plays', async () => {
     HTMLMediaElement.prototype.canPlayType = () => 'maybe';
     await playedStream();
