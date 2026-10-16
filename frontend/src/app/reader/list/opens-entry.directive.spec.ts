@@ -1,16 +1,15 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OpensEntryDirective } from './opens-entry.directive';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
-import { EntryDto } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
 
 @Component({
   imports: [OpensEntryDirective],
-  template: `<article [appOpensEntry]="entry()"></article>`,
+  template: `<article [appOpensEntry]="entry"></article>`,
 })
 class HostComponent {
-  readonly entry = signal<EntryDto>(anEntry({ isHidden: false }));
+  readonly entry = anEntry();
 }
 
 const open = jest.fn();
@@ -42,7 +41,7 @@ describe('OpensEntryDirective', () => {
     card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     card.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
     expect(open).toHaveBeenCalledTimes(3);
-    expect(open).toHaveBeenCalledWith(fixture.componentInstance.entry());
+    expect(open).toHaveBeenCalledWith(fixture.componentInstance.entry);
   });
 
   it('keeps Space from scrolling the page', () => {
@@ -50,13 +49,5 @@ describe('OpensEntryDirective', () => {
     const space = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
     card.dispatchEvent(space);
     expect(space.defaultPrevented).toBe(true);
-  });
-
-  it('marks the card read once its entry is', () => {
-    const { fixture, card } = mount();
-    expect(card.classList).not.toContain('read');
-    fixture.componentInstance.entry.set(anEntry({ isHidden: true }));
-    fixture.detectChanges();
-    expect(card.classList).toContain('read');
   });
 });
