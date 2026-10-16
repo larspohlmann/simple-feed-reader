@@ -9,12 +9,12 @@ use App\Service\Search\EntryIndexer;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Three passes: entries fetched over 90 days ago, a feed's entries beyond its cap, then completed runs left empty.
+ * Three passes: entries fetched before their retention window (a social network's feeds have their own), a feed's
+ * entries beyond its cap, then completed runs left empty.
  * Age counts from the fetch (`createdAt`), never `effectiveDate`: a backfilled article was re-added forever (#384).
  */
 final readonly class EntryPruner
 {
-    private const int RETENTION_DAYS = 90;
     private const int DELETE_CHUNK_SIZE = 500;
     private const int DEFAULT_MAX_ENTRIES_PER_FEED = 2000;
 
@@ -23,6 +23,7 @@ final readonly class EntryPruner
 
     public function __construct(
         private RetentionRepository $retention,
+        private RetentionSettings $settings,
         private ClockInterface $clock,
         private EntryIndexer $indexer,
         private int $maxEntriesPerFeed = self::DEFAULT_MAX_ENTRIES_PER_FEED,
@@ -47,10 +48,29 @@ final readonly class EntryPruner
      */
     private function pruneByAge(): int
     {
-        $cutoff = $this->clock->now()->modify(sprintf('-%d days', self::RETENTION_DAYS));
+        $windows = $this->settings->current();
+        $socialCutoff = $this->daysAgo($windows->socialDays);
+        $cutoff = $this->daysAgo($windows->entryDays);
 
+        return $this->pruneFetchedBefore($this->retention->socialFeedIdsFetchedBefore($socialCutoff), $socialCutoff)
+            + $this->pruneFetchedBefore($this->retention->nonSocialFeedIdsFetchedBefore($cutoff), $cutoff);
+    }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    private function daysAgo(int $days): \DateTimeImmutable
+    {
+        return $this->clock->now()->modify(sprintf('-%d days', $days));
+    }
+
+    /**
+     * @param list<int> $feedIds
+     */
+    private function pruneFetchedBefore(array $feedIds, \DateTimeImmutable $cutoff): int
+    {
         $deleted = 0;
-        foreach ($this->retention->feedIdsFetchedBefore($cutoff) as $feedId) {
+        foreach ($feedIds as $feedId) {
             $deleted += $this->deleteByIds(
                 $this->retention->staleIdsPastBoundary((int) $feedId, self::MIN_ENTRIES_PER_FEED, $cutoff),
             );

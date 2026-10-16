@@ -56,7 +56,7 @@ export class ReadingScope {
   private readonly language = inject(LanguageService);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
-  // Reading-focus: the paragraph nearest the reading centre stays fully opaque
+  // Reading-focus: the paragraphs in the reading band stay fully opaque
   // while the rest dims. Skipped entirely when the setting is off or the reader
   // prefers reduced motion.
   private readonly reduceMotion = prefersReducedMotion();

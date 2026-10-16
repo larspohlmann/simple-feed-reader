@@ -11,6 +11,7 @@ export interface FollowCandidate {
   readonly identity: string;
   readonly handle: string;
   readonly displayName: string | null;
+  readonly avatarUrl: string | null;
   readonly feedUrl: string;
   readonly state: ImportCandidateState;
   readonly subscriptionId: number | null;

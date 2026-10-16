@@ -208,7 +208,7 @@ describe('splitting a tall block into sections', () => {
 
     const spans = Array.from(block.querySelectorAll<HTMLElement>(`span.${SENTENCE_CLASS}`));
     expect(spans).toHaveLength(4);
-    spans.forEach((span, index) => stubRect(span, index * 100, 100)); // stacked down the scroller
+    spans.forEach((span, index) => stubRect(span, 200 + index * 100, 100)); // stacked down the scroller
     observer().fire();
     await frames();
 

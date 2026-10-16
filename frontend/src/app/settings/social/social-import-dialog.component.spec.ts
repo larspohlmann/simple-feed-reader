@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../../core/api';
 import { RefreshService } from '../../reader/state/refresh.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
+import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { SocialNetworkName } from '../../core/social-network';
 import { SocialImportDialogComponent } from './social-import-dialog.component';
@@ -15,12 +16,14 @@ import { CollectionCandidate, FollowCandidate, ImportCandidates } from './social
 const BASE = 'https://api.test';
 const CANDIDATES = `${BASE}/api/me/social-accounts/4/import-candidates`;
 const IMPORT = `${BASE}/api/me/social-accounts/4/import`;
+const failingProxy = { recover: () => Promise.resolve('failed' as const) };
 
 function follow(overrides: Partial<FollowCandidate> = {}): FollowCandidate {
   return {
     identity: 'did:plc:bob',
     handle: '@bob.bsky.social',
     displayName: 'Bob',
+    avatarUrl: null,
     feedUrl: 'https://bsky.app/profile/did:plc:bob/rss',
     state: 'new',
     subscriptionId: null,
@@ -93,6 +96,7 @@ describe('SocialImportDialogComponent', () => {
         { provide: TagsStore, useValue: tagsStub },
         { provide: RefreshService, useValue: refreshStub },
         { provide: ToastService, useValue: toastStub },
+        { provide: ImageProxyService, useValue: failingProxy },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -279,12 +283,30 @@ describe('SocialImportDialogComponent', () => {
 
     const bob = byTestId(fixture, 'social-import-follow-did:plc:bob') as HTMLElement;
     expect(textOf(bob, '.avatar')).toBe('B');
+    expect(bob.querySelector('img')).toBeNull();
     expect(textOf(bob, '.name')).toBe('Bob');
     expect(textOf(bob, '.handle')).toBe('@bob.bsky.social');
     const fay = byTestId(fixture, 'social-import-follow-did:plc:fay') as HTMLElement;
     expect(textOf(fay, '.avatar')).toBe('F');
     expect(textOf(fay, '.name')).toBe('@fay.bsky.social');
     expect(fay.querySelector('.handle')).toBeNull();
+  });
+
+  it('shows an account picture and falls back to the initials when it fails to load', async () => {
+    const pictured = follow({ avatarUrl: 'https://cdn.test/bob.jpg' });
+    const fixture = loaded(candidates({ follows: [pictured] }));
+    const bob = () => byTestId(fixture, 'social-import-follow-did:plc:bob') as HTMLElement;
+
+    const image = bob().querySelector<HTMLImageElement>('img.avatar')!;
+    expect(image.getAttribute('src')).toBe('https://cdn.test/bob.jpg');
+    expect(bob().querySelector('span.avatar')).toBeNull();
+
+    image.dispatchEvent(new Event('error'));
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(bob().querySelector('img.avatar')).toBeNull();
+    expect(textOf(bob(), '.avatar')).toBe('B');
   });
 
   it('counts the selection in the footer and on the Import button', () => {

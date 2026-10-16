@@ -6,6 +6,7 @@ namespace App\Service\Social\Support;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Social\Model\FollowedAccountModel;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final class MastodonAccount
 {
@@ -27,7 +28,14 @@ final class MastodonAccount
             '@' . $identity,
             $account->string('display_name'),
             self::profileFeed($account->string('url')) ?? ProfileFeedUrl::mastodon($user, $domain),
+            self::avatar($account),
         );
+    }
+
+    private static function avatar(JsonNodeModel $account): ?string
+    {
+        return AbsoluteHttpUrl::orNull($account->string('avatar_static'))
+            ?? AbsoluteHttpUrl::orNull($account->string('avatar'));
     }
 
     /** @return array{string, string} a local address is "user", a remote one "user@domain" */

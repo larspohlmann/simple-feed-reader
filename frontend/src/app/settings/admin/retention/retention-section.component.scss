@@ -1,0 +1,15 @@
+@use '../../../theme/breakpoints' as bp;
+
+.panel-banner {
+  padding: 0 var(--space-5) var(--space-4);
+}
+
+.days-field {
+  width: 10ch;
+}
+
+@media (width <= bp.$bp-sm) {
+  .days-field {
+    width: 100%;
+  }
+}

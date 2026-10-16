@@ -31,6 +31,7 @@ final readonly class ImportCandidateModel
                 $profileFeed->handle(),
                 $profileFeed->title,
                 $profileFeed->feedUrl,
+                $profileFeed->imageUrl,
             ),
             ImportCandidateState::NoLongerFollowed,
             $profileFeed->subscriptionId,

@@ -6,15 +6,14 @@ import { ListAutoplayCoordinator } from './list-autoplay-coordinator';
 import {
   MockIntersectionObserver,
   installMockIntersectionObserver,
+  restoreIntersectionObserver,
 } from '../../../../testing/intersection-observer-testing';
 
 const report = (element: Element, ratio: number) => MockIntersectionObserver.report(element, ratio);
-let restoreObserver: () => void;
-
-beforeEach(() => (restoreObserver = installMockIntersectionObserver()));
+beforeEach(installMockIntersectionObserver);
 
 afterEach(() => {
-  restoreObserver();
+  restoreIntersectionObserver();
   document.body.innerHTML = '';
 });
 

@@ -556,6 +556,18 @@
         "piaCredentials": "Private Internet Access benötigt einen separat erzeugten Proxy-Benutzernamen und ein Proxy-Passwort — nicht deine Kontoanmeldedaten."
       }
     },
+    "retention": {
+      "title": "Aufbewahrung",
+      "caption": "Wie lange Einträge bleiben, bevor die Aktualisierung sie löscht. Die neuesten 20 Einträge eines Feeds, Favoriten und behaltene Einträge werden nie gelöscht.",
+      "entryDays": "Feed-Einträge",
+      "entryDaysDesc": "Tage, die ein Eintrag eines RSS- oder Atom-Feeds nach dem Abruf bleibt. Standard 90.",
+      "socialDays": "Social-Media-Beiträge",
+      "socialDaysDesc": "Tage, die ein Bluesky- oder Mastodon-Beitrag nach dem Abruf bleibt. Standard 7.",
+      "saved": "Aufbewahrung gespeichert",
+      "save": "Speichern",
+      "reset": "Zurücksetzen",
+      "unsaved": "Ungespeicherte Änderungen"
+    },
     "mail": {
       "title": "Ausgehende E-Mail",
       "caption": "Verifizierungs-, Reset- und Benachrichtigungsmails über einen eigenen SMTP-Server versenden.",

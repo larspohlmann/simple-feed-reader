@@ -146,13 +146,23 @@ final class BlueskyCandidateSourceTest extends TestCase
         $http = new RoutedHttpClient($this->routes([
             self::FOLLOWS => self::json([
                 'follows' => [
-                    ['did' => 'did:plc:bob', 'handle' => 'bob.example.com', 'displayName' => 'Bob'],
+                    [
+                        'did' => 'did:plc:bob',
+                        'handle' => 'bob.example.com',
+                        'displayName' => 'Bob',
+                        'avatar' => 'https://cdn.bsky.app/img/avatar/bob.jpg',
+                    ],
                     ['handle' => 'no-did.example.com'],
                 ],
                 'cursor' => 'page 2',
             ]),
             self::FOLLOWS . '&cursor=page%202' => self::json([
-                'follows' => [['did' => 'did:plc:carol', 'handle' => 'carol.bsky.social', 'displayName' => '']],
+                'follows' => [[
+                    'did' => 'did:plc:carol',
+                    'handle' => 'carol.bsky.social',
+                    'displayName' => '',
+                    'avatar' => 'not a url',
+                ]],
             ]),
         ]));
 
@@ -164,12 +174,14 @@ final class BlueskyCandidateSourceTest extends TestCase
                 '@bob.example.com',
                 'Bob',
                 'https://bsky.app/profile/did:plc:bob/rss',
+                'https://cdn.bsky.app/img/avatar/bob.jpg',
             ),
             new FollowedAccountModel(
                 'did:plc:carol',
                 '@carol.bsky.social',
                 null,
                 'https://bsky.app/profile/did:plc:carol/rss',
+                null,
             ),
         ], $candidates->follows);
         self::assertFalse($candidates->truncated);

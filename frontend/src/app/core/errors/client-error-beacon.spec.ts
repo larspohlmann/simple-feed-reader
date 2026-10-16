@@ -67,6 +67,21 @@ describe('client-error-beacon', () => {
       expect(JSON.parse(init.body)).toEqual({ errors: [item] });
     });
 
+    it('writes slashes in the body as \\/ and sends a body that parses back to the item', () => {
+      const quoting = {
+        ...item,
+        message: 'see https://bsky.app/profile/x',
+        url: 'https://a.test/b',
+      };
+
+      sendClientError(quoting);
+
+      const body: string = fetchMock.mock.calls[0][1].body;
+      expect(body).toContain('https:\\/\\/bsky.app\\/profile\\/x');
+      expect(body).not.toContain('https://');
+      expect(JSON.parse(body)).toEqual({ errors: [quoting] });
+    });
+
     it('posts to an explicit url when one is given, overriding baseURI resolution', () => {
       sendClientError(item, { url: '/reader/api/client-errors' });
 

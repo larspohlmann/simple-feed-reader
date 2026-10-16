@@ -19,6 +19,7 @@ export interface ImportRow {
   readonly name: string;
   readonly handle: string | null;
   readonly initials: string;
+  readonly avatarUrl: string | null;
   readonly icon: string | null;
   readonly haystack: string;
   readonly stateLabel: string;
@@ -111,6 +112,7 @@ function toFollowRow(follow: FollowCandidate, translate: Translate): ImportRow {
     name: follow.displayName ?? follow.handle,
     handle: follow.displayName === null ? null : follow.handle,
     initials: initialsOf(follow.displayName ?? follow.handle),
+    avatarUrl: follow.avatarUrl,
     icon: null,
     haystack: `${follow.handle}\n${follow.displayName ?? ''}`.toLowerCase(),
     stateLabel: translate(FILTER_KEYS[follow.state]),
@@ -128,6 +130,7 @@ function toCollectionRow(collection: CollectionCandidate, translate: Translate):
     name,
     handle: null,
     initials: '',
+    avatarUrl: null,
     icon: COLLECTION_ICONS[collection.kind],
     haystack: name.toLowerCase(),
     stateLabel: translate(FILTER_KEYS[collection.state]),

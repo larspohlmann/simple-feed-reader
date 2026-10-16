@@ -41,6 +41,7 @@ final readonly class SocialImportJson
             'identity' => $candidate->account->identity,
             'handle' => $candidate->account->handle,
             'displayName' => $candidate->account->displayName,
+            'avatarUrl' => $candidate->account->avatarUrl,
             'feedUrl' => $candidate->account->feedUrl,
             'state' => $candidate->state->value,
             'subscriptionId' => $candidate->subscriptionId,

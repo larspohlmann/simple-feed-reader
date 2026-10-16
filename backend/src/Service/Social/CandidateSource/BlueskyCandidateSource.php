@@ -17,6 +17,7 @@ use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 {
@@ -90,6 +91,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
                     '@' . $handle,
                     $node->string('displayName'),
                     ProfileFeedUrl::bluesky($did),
+                    AbsoluteHttpUrl::orNull($node->string('avatar')),
                 );
             }
         }

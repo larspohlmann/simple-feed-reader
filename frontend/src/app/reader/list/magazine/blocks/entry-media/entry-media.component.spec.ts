@@ -10,11 +10,11 @@ import { ListAutoplayCoordinator } from '../../../../media/autoplay/list-autopla
 import { AutoplayPlayer } from '../../../../media/autoplay/autoplay-player';
 import { MEDIA_PAUSE } from './pause-media';
 import { anEntry } from '../../../../../../testing/entry-testing';
-import {
-  MockIntersectionObserver,
-  installMockIntersectionObserver,
-} from '../../../../../../testing/intersection-observer-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../../../testing/hls-testing';
+import {
+  restoreIntersectionObserver,
+  stubIntersectionObserver,
+} from '../../../../../../testing/intersection-observer-testing';
 
 jest.mock(
   'hls.js',
@@ -101,14 +101,7 @@ const short = (over: Partial<EntryDto> = {}): EntryDto =>
 const press = (target: Element, key: string) =>
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 
-let restoreObserver: (() => void) | null = null;
-
-afterEach(() => {
-  restoreObserver?.();
-  restoreObserver = null;
-});
-
-const report = (target: Element, ratio: number) => MockIntersectionObserver.report(target, ratio);
+afterEach(restoreIntersectionObserver);
 
 describe('EntryMediaComponent', () => {
   it('captions a titled share with its title and puts its own text beneath', async () => {
@@ -214,13 +207,13 @@ describe('EntryMediaComponent', () => {
   });
 
   it('pauses a video that scrolls out of view', async () => {
-    restoreObserver = installMockIntersectionObserver();
+    const { report } = stubIntersectionObserver();
     const element = await mount(entry({ media: [clip] }));
     const video = element.querySelector('video')!;
 
-    report(video, 1);
+    report(video, true);
     expect(pause).not.toHaveBeenCalled();
-    report(video, 0);
+    report(video, false);
     expect(pause).toHaveBeenCalledTimes(1);
   });
 
@@ -289,7 +282,7 @@ describe('EntryMediaComponent', () => {
   });
 
   it('puts a Short’s player back to its cover when the card scrolls out of view', async () => {
-    restoreObserver = installMockIntersectionObserver();
+    const { observed, report } = stubIntersectionObserver();
     const fixture = await mountFixture(short());
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('.play')!.click();
@@ -297,14 +290,14 @@ describe('EntryMediaComponent', () => {
     await fixture.whenStable();
     const frame = element.querySelector('.short-player')!;
     const pill = element.querySelector('.pill.short')!;
-    expect(MockIntersectionObserver.observes(frame)).toBe(true);
-    expect(MockIntersectionObserver.observes(pill)).toBe(false);
+    expect(observed).toContain(frame);
+    expect(observed).not.toContain(pill);
 
-    report(frame, 1);
+    report(frame, true);
     fixture.detectChanges();
     expect(element.querySelector('iframe')).not.toBeNull();
 
-    report(frame, 0);
+    report(frame, false);
     fixture.detectChanges();
     expect(element.querySelector('iframe')).toBeNull();
     expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);

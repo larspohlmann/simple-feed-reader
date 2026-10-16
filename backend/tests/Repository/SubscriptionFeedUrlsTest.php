@@ -21,6 +21,7 @@ final class SubscriptionFeedUrlsTest extends DbTestCase
         $later = $this->subscribe($owner, 'https://example.com/later.xml', '2026-07-02T00:00:00Z');
         $titled = $this->subscribe($owner, 'https://example.com/titled.xml', '2026-07-01T00:00:00Z');
         $titled->getFeed()->setTitle('Feed title');
+        $titled->getFeed()->setImageUrl('https://cdn.test/titled.png');
         $titled->setCustomTitle('My title');
         $this->subscribe(
             $this->user('feed-urls-other@example.com'),
@@ -36,12 +37,14 @@ final class SubscriptionFeedUrlsTest extends DbTestCase
                     'customTitle' => 'My title',
                     'feedUrl' => 'https://example.com/titled.xml',
                     'feedTitle' => 'Feed title',
+                    'feedImageUrl' => 'https://cdn.test/titled.png',
                 ],
                 [
                     'id' => $later->requireId(),
                     'customTitle' => null,
                     'feedUrl' => 'https://example.com/later.xml',
                     'feedTitle' => null,
+                    'feedImageUrl' => null,
                 ],
             ],
             $this->feedUrls()->forUser($owner->requireId()),
