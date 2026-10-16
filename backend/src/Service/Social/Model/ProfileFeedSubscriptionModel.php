@@ -13,6 +13,7 @@ final readonly class ProfileFeedSubscriptionModel
         public string $identity,
         public string $feedUrl,
         public string $title,
+        public ?string $imageUrl,
     ) {
     }
 

@@ -130,6 +130,7 @@
 
 .avatar {
   border-radius: 50%;
+  object-fit: cover;
   font-size: var(--fs-xs);
   font-weight: 600;
 }

@@ -55,7 +55,7 @@ final class SocialImportControllerTest extends ApiTestCase
             [
                 self::follow('did:plc:zed', '@zed.bsky.social'),
                 self::follow('did:plc:bob', '@bob.bsky.social'),
-                self::follow('did:plc:amy', '@amy.bsky.social'),
+                self::follow('did:plc:amy', '@amy.bsky.social', 'https://cdn.test/amy.jpg'),
             ],
             [new SocialCollectionModel('at://list/b', 'Writers'), new SocialCollectionModel('at://list/a', 'Artists')],
             [new SocialCollectionModel('at://feed/a', 'Discover')],
@@ -72,7 +72,7 @@ final class SocialImportControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client);
         self::assertSame([
-            self::row('did:plc:amy', '@amy.bsky.social', []),
+            self::row('did:plc:amy', '@amy.bsky.social', ['avatarUrl' => 'https://cdn.test/amy.jpg']),
             self::row('did:plc:zed', '@zed.bsky.social', []),
             self::row('did:plc:bob', '@bob.bsky.social', [
                 'state' => 'subscribed',
@@ -481,6 +481,7 @@ final class SocialImportControllerTest extends ApiTestCase
             'identity' => $identity,
             'handle' => $handle,
             'displayName' => null,
+            'avatarUrl' => null,
             'feedUrl' => 'https://bsky.app/profile/' . $identity . '/rss',
             'state' => 'new',
             'subscriptionId' => null,
@@ -493,9 +494,15 @@ final class SocialImportControllerTest extends ApiTestCase
         return ['kind' => $kind, 'id' => $id, 'name' => $name, 'state' => 'new', 'subscriptionId' => null];
     }
 
-    private static function follow(string $did, string $handle): FollowedAccountModel
+    private static function follow(string $did, string $handle, ?string $avatarUrl = null): FollowedAccountModel
     {
-        return new FollowedAccountModel($did, $handle, null, 'https://bsky.app/profile/' . $did . '/rss');
+        return new FollowedAccountModel(
+            $did,
+            $handle,
+            null,
+            'https://bsky.app/profile/' . $did . '/rss',
+            $avatarUrl,
+        );
     }
 
     private function nothingFollowed(): StubSocialCandidates

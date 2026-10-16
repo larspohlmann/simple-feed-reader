@@ -42,12 +42,13 @@ final class FollowMatcherTest extends TestCase
             '@bob.example.com',
             'Bob',
             'https://bsky.app/profile/did:plc:bob/rss',
+            null,
         );
     }
 
     private static function mastodonFollow(string $identity, string $feedUrl): FollowedAccountModel
     {
-        return new FollowedAccountModel($identity, '@' . $identity, null, $feedUrl);
+        return new FollowedAccountModel($identity, '@' . $identity, null, $feedUrl, null);
     }
 
     private static function blueskyFeed(int $subscriptionId, string $url): ProfileFeedSubscriptionModel
@@ -55,7 +56,7 @@ final class FollowMatcherTest extends TestCase
         $identity = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $url);
         self::assertNotNull($identity);
 
-        return new ProfileFeedSubscriptionModel($subscriptionId, $identity, $url, 'Title ' . $subscriptionId);
+        return new ProfileFeedSubscriptionModel($subscriptionId, $identity, $url, 'Title ' . $subscriptionId, null);
     }
 
     private static function mastodonFeed(int $subscriptionId, string $url): ProfileFeedSubscriptionModel
@@ -63,7 +64,7 @@ final class FollowMatcherTest extends TestCase
         $identity = ProfileFeedUrl::identityOf(SocialNetwork::Mastodon, $url);
         self::assertNotNull($identity);
 
-        return new ProfileFeedSubscriptionModel($subscriptionId, $identity, $url, 'Title ' . $subscriptionId);
+        return new ProfileFeedSubscriptionModel($subscriptionId, $identity, $url, 'Title ' . $subscriptionId, null);
     }
 
     /**
@@ -231,6 +232,7 @@ final class FollowMatcherTest extends TestCase
             '@bob.example.com',
             'Bob again',
             'https://bsky.app/profile/did:plc:bob/rss',
+            null,
         );
 
         $candidates = $this->matcher(new RoutedHttpClient([]))->match(
@@ -269,6 +271,7 @@ final class FollowMatcherTest extends TestCase
                 'did:plc:gone',
                 'Title 3',
                 'https://bsky.app/profile/did:plc:gone/rss',
+                null,
             ),
             $candidates[0]->account,
         );
