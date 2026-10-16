@@ -370,6 +370,26 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertSame(ShareKind::Media, $entry->getShareKind());
     }
 
+    public function testAGifPostSharesTheAnimationAsMediaAndStoresNoCard(): void
+    {
+        $gif = 'https://static.klipy.com/ii/a15b48460c436e1e92c85ffc680932cc/dc/32/MN2h0I1i.gif?hh=237&ww=316';
+        $entry = $this->entry('<p>Bravo.</p>');
+
+        $this->writer()->fill($entry, JsonNodeModel::of([
+            'uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t',
+            'embed' => [
+                '$type' => 'app.bsky.embed.external#view',
+                'external' => ['uri' => $gif, 'title' => 'Bravo', 'description' => 'ALT: Bravo'],
+            ],
+        ]));
+        $this->entityManager->flush();
+
+        self::assertSame(ShareKind::Media, $entry->getShareKind());
+        self::assertSame($gif, $entry->getImageUrl());
+        self::assertEquals([new EntryMedium($gif, 'image', 316, 237)], $entry->getMedia());
+        self::assertSame([], $this->storedCards($entry));
+    }
+
     public function testAPostWithOnlyTextSharesNothing(): void
     {
         $entry = $this->entry('<p>Plain.</p>');

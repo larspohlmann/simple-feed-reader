@@ -185,6 +185,26 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertNull($comment->embeds->linkCard);
     }
 
+    public function testAGifReplyIsAnAnimatedImageNotALinkCard(): void
+    {
+        $reply = self::replyBy('did:plc:shown', [], [
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => [
+                'uri' => 'https://media.tenor.com/abc/clap.gif?hh=280&ww=498',
+                'title' => 'Clapping',
+                'description' => 'ALT: Clapping',
+            ],
+        ]);
+
+        $embeds = $this->replies(self::threadOf([$reply]))[0]->comment->embeds;
+
+        self::assertSame(
+            ['https://media.tenor.com/abc/clap.gif?hh=280&ww=498', VisualMediaKind::Image->value, 498, 280],
+            [$embeds->media[0]->url, $embeds->media[0]->kind, $embeds->media[0]->width, $embeds->media[0]->height],
+        );
+        self::assertNull($embeds->linkCard);
+    }
+
     public function testAReplyWithoutEmbedsHasNone(): void
     {
         $embeds = $this->replies()[0]->replies[0]->comment->embeds;

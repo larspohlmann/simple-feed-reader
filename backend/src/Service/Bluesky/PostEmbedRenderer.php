@@ -51,7 +51,7 @@ final readonly class PostEmbedRenderer
         $rendered = match ($embed->type()) {
             self::IMAGES => $this->images($embed),
             self::VIDEO => $this->video($embed, $postUrl),
-            self::EXTERNAL => $this->linkCard($embed->node('external')),
+            self::EXTERNAL => $this->external($embed->node('external')),
             default => null,
         };
 
@@ -67,20 +67,20 @@ final readonly class PostEmbedRenderer
             if ($medium === null) {
                 continue;
             }
-            $tags .= sprintf(
-                '<img src="%s" alt="%s"%s>',
-                HtmlEscape::text($medium->url),
-                HtmlEscape::text($image->string('alt') ?? ''),
-                self::dimensions($medium),
-            );
+            $tags .= self::imageTag($medium, $image->string('alt') ?? '');
             $media[] = $medium;
         }
-        if ($media === []) {
-            return null;
-        }
-        $lead = new DeclaredImageModel($media[0]->url, $media[0]->width, $media[0]->height);
 
-        return new RenderedEmbedModel('<figure class="post-images">' . $tags . '</figure>', $lead, $media);
+        return $media === [] ? null : self::figure($tags, $media);
+    }
+
+    private function external(JsonNodeModel $external): ?RenderedEmbedModel
+    {
+        $gif = BlueskyEmbedMedia::gif($external);
+
+        return $gif === null
+            ? $this->linkCard($external)
+            : self::figure(self::imageTag($gif, BlueskyEmbedMedia::gifAltText($external)), [$gif]);
     }
 
     private function video(JsonNodeModel $embed, string $postUrl): ?RenderedEmbedModel
@@ -133,6 +133,24 @@ final readonly class PostEmbedRenderer
     private function fallback(string $postUrl): RenderedEmbedModel
     {
         return new RenderedEmbedModel(self::linkParagraph($postUrl, self::FALLBACK_LABEL));
+    }
+
+    /** @param non-empty-list<ParsedMediumModel> $media */
+    private static function figure(string $tags, array $media): RenderedEmbedModel
+    {
+        $lead = new DeclaredImageModel($media[0]->url, $media[0]->width, $media[0]->height);
+
+        return new RenderedEmbedModel('<figure class="post-images">' . $tags . '</figure>', $lead, $media);
+    }
+
+    private static function imageTag(ParsedMediumModel $medium, string $alt): string
+    {
+        return sprintf(
+            '<img src="%s" alt="%s"%s>',
+            HtmlEscape::text($medium->url),
+            HtmlEscape::text($alt),
+            self::dimensions($medium),
+        );
     }
 
     private static function dimensions(ParsedMediumModel $medium): string
