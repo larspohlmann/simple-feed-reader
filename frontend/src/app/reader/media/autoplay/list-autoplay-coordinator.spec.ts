@@ -45,18 +45,76 @@ function setUp(enabled = true) {
 }
 
 describe('ListAutoplayCoordinator', () => {
-  it('starts the most visible player, muted', () => {
+  it('starts the first player that is visible enough, muted', () => {
     const { coordinator } = setUp();
-    const half = aPlayer();
     const most = aPlayer();
-    coordinator.register(half);
+    const half = aPlayer();
     coordinator.register(most);
+    coordinator.register(half);
 
-    report(half.element, 0.7);
     report(most.element, 0.9);
+    report(half.element, 0.7);
 
     expect(most.start).toHaveBeenCalledWith(false);
-    expect(half.stop).toHaveBeenCalledTimes(1);
+    expect(half.start).not.toHaveBeenCalled();
+  });
+
+  it('keeps an autoplayed player when a slightly more visible one appears', () => {
+    const { coordinator } = setUp();
+    const incumbent = aPlayer();
+    const rival = aPlayer();
+    coordinator.register(incumbent);
+    coordinator.register(rival);
+
+    report(incumbent.element, 0.7);
+    report(rival.element, 0.9);
+
+    expect(incumbent.stop).not.toHaveBeenCalled();
+    expect(rival.start).not.toHaveBeenCalled();
+  });
+
+  it('keeps a hand-played player through visibility ticks', () => {
+    const { coordinator } = setUp();
+    const autoplayed = aPlayer();
+    const byHand = aPlayer();
+    coordinator.register(autoplayed);
+    coordinator.register(byHand);
+    report(autoplayed.element, 0.9);
+    coordinator.nowPlaying(byHand);
+    report(byHand.element, 0.5);
+
+    report(autoplayed.element, 0.8);
+
+    expect(byHand.stop).not.toHaveBeenCalled();
+    expect(autoplayed.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets a hand-played player give way once it is fully out of view', () => {
+    const { coordinator } = setUp();
+    const autoplayed = aPlayer();
+    const byHand = aPlayer();
+    coordinator.register(autoplayed);
+    coordinator.register(byHand);
+    report(autoplayed.element, 0.9);
+    coordinator.nowPlaying(byHand);
+    report(byHand.element, 0.5);
+    report(autoplayed.element, 0.8);
+
+    report(byHand.element, 0);
+
+    expect(byHand.stop).toHaveBeenCalledTimes(1);
+    expect(autoplayed.start).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not stop an autoplayed player that reports playing', () => {
+    const { coordinator } = setUp();
+    const player = aPlayer();
+    coordinator.register(player);
+    report(player.element, 1);
+
+    coordinator.nowPlaying(player);
+
+    expect(player.stop).not.toHaveBeenCalled();
   });
 
   it('starts nothing under the visibility threshold', () => {
@@ -150,12 +208,12 @@ describe('ListAutoplayCoordinator', () => {
     const staying = aPlayer();
     coordinator.register(leaving);
     coordinator.register(staying);
-    report(staying.element, 0.7);
     report(leaving.element, 1);
+    report(staying.element, 0.7);
 
     coordinator.unregister(leaving);
 
     expect(leaving.stop).toHaveBeenCalledTimes(1);
-    expect(staying.start).toHaveBeenCalledTimes(2);
+    expect(staying.start).toHaveBeenCalledTimes(1);
   });
 });

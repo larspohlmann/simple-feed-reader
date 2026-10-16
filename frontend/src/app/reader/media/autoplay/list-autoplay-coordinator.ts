@@ -18,6 +18,7 @@ export class ListAutoplayCoordinator {
       ? null
       : new IntersectionObserver((changes) => this.measure(changes), { threshold: THRESHOLDS });
   private current: AutoplayPlayer | null = null;
+  private startedByHand = false;
   private soundOn = false;
 
   constructor() {
@@ -46,6 +47,7 @@ export class ListAutoplayCoordinator {
     if (this.current === player) return;
     this.current?.stop();
     this.current = player;
+    this.startedByHand = true;
   }
 
   soundChanged(soundOn: boolean): void {
@@ -67,11 +69,18 @@ export class ListAutoplayCoordinator {
 
   private choose(): void {
     if (!this.active()) return;
+    if (this.current && this.holdsOn(this.current)) return;
     const candidate = this.mostVisible();
     if (candidate === this.current) return;
     this.stopCurrent();
     this.current = candidate;
+    this.startedByHand = false;
     candidate?.start(this.soundOn);
+  }
+
+  private holdsOn(incumbent: AutoplayPlayer): boolean {
+    const ratio = this.visibility.get(incumbent.element) ?? 0;
+    return this.startedByHand ? ratio > 0 : ratio >= VISIBLE_ENOUGH;
   }
 
   private mostVisible(): AutoplayPlayer | null {
