@@ -1037,6 +1037,19 @@ describe('EntryListComponent', () => {
     expect(resume).toHaveBeenCalledTimes(1);
   });
 
+  it('hands every tap in the list to autoplay, even one a row stops', () => {
+    const fixture = mount();
+    const coordinator = fixture.debugElement.injector.get(ListAutoplayCoordinator);
+    const tapped = jest.spyOn(coordinator, 'tapped');
+    const stopping = document.createElement('button');
+    stopping.addEventListener('click', (event) => event.stopPropagation());
+    (fixture.nativeElement as HTMLElement).append(stopping);
+
+    stopping.click();
+
+    expect(tapped).toHaveBeenCalledTimes(1);
+  });
+
   it('hides mark-all-read when not applicable', () => {
     const element = mount({ canMarkAllRead: false }).nativeElement as HTMLElement;
     expect(element.querySelector('.mark-all')).toBeNull();

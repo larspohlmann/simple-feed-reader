@@ -362,6 +362,11 @@ export class EntryListComponent implements OnDestroy {
       this.content.visibleEntryCount() !== 0,
   );
 
+  constructor() {
+    // Capture phase: rows and the video slot stop propagation.
+    this.host.nativeElement.addEventListener('click', () => this.autoplay.tapped(), true);
+  }
+
   /**
    * Jump the list back to the top. Shared by the corner button and by the tap on
    * the empty middle of the app bar.
