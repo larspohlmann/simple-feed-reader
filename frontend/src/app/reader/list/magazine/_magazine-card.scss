@@ -8,10 +8,10 @@
   border-radius: var(--card-radius);
 }
 
-// Included in a chrome card's own rule; $post-lines null for a block never given a post.
+// Included in a chrome card's own rule; $with-post false for a block never given a post.
 // Hover is pointer-only: a touch tap fires :hover, which must not highlight a card during
 // a drag-scroll (#704).
-@mixin card-states($post-lines: 4) {
+@mixin card-states($with-post: true) {
   @media (hover: hover) {
     &:hover {
       --rim-base: var(--border-strong);
@@ -28,9 +28,9 @@
     font-weight: 400;
   }
 
-  @if $post-lines {
+  @if $with-post {
     .title.post {
-      @include post-text.post-text($post-lines);
+      @include post-text.post-text;
     }
   }
 }
