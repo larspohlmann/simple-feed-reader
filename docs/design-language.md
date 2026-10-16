@@ -340,7 +340,7 @@ cards' whole background, rim included — `transparent` would let the rim fill
 the card. With no card rim left, airy's hero, wide, split and thumb images
 carry the boxed card's rim themselves (`magazine-card.image-rim`).
 Every chrome block but quote takes its states from `magazine-card.card-states`: the
-hover rim, the title's hover underline, the read title (secondary, weight 400) and a
+hover rim, the title's hover underline and a
 post's `.title.post`. Quote keeps its own pull-quote underline, compact its hover
 background. Every block and the list row open their entry through `[appOpensEntry]`
 (`reader/list/opens-entry.directive.ts`).
