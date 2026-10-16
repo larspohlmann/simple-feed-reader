@@ -32,12 +32,13 @@ export class LinkCardPlaceholderComponent {
     let sighting: IntersectionObserver | undefined;
     afterNextRender(() => {
       if (typeof IntersectionObserver === 'undefined') return;
-      sighting = new IntersectionObserver((changes) => {
+      const observer = new IntersectionObserver((changes) => {
         if (!changes.some((change) => change.isIntersecting)) return;
-        sighting?.disconnect();
+        observer.disconnect();
         this.progress.sighted(this.entryId());
       });
-      sighting.observe(this.host);
+      observer.observe(this.host);
+      sighting = observer;
     });
     inject(DestroyRef).onDestroy(() => sighting?.disconnect());
   }

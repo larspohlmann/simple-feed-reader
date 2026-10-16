@@ -3,35 +3,13 @@ import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LinkCardPlaceholderComponent } from './link-card-placeholder.component';
 import { PreviewProgress } from './preview-progress';
+import {
+  restoreIntersectionObserver,
+  stubIntersectionObserver,
+} from '../../../testing/intersection-observer-testing';
 
 let sighted: jest.Mock;
-let restoreObserver: (() => void) | null = null;
-
-afterEach(() => {
-  restoreObserver?.();
-  restoreObserver = null;
-});
-
-function stubIntersectionObserver() {
-  const callbacks: IntersectionObserverCallback[] = [];
-  const observed: Element[] = [];
-  const disconnect = jest.fn();
-  const real = globalThis.IntersectionObserver;
-  restoreObserver = () => (globalThis.IntersectionObserver = real);
-  globalThis.IntersectionObserver = class {
-    constructor(callback: IntersectionObserverCallback) {
-      callbacks.push(callback);
-    }
-    readonly observe = (target: Element) => observed.push(target);
-    readonly disconnect = disconnect;
-  } as unknown as typeof IntersectionObserver;
-  const report = (target: Element, isIntersecting: boolean) =>
-    callbacks[0](
-      [{ target, isIntersecting } as unknown as IntersectionObserverEntry],
-      {} as IntersectionObserver,
-    );
-  return { observed, report, disconnect };
-}
+afterEach(restoreIntersectionObserver);
 
 function mount({ loading = true, lang = 'en' } = {}): HTMLElement {
   sighted = jest.fn();

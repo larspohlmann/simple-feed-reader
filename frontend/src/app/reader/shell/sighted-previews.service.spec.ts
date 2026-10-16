@@ -99,6 +99,19 @@ describe('SightedPreviews', () => {
     expect(sightings().isCompleting(4)).toBe(false);
   });
 
+  it('lets the oldest waiting entry go, so a fling does not queue a whole page', () => {
+    for (const id of [1, 2, 3, 4, 5]) sightings().sighted(id);
+
+    answer(1, [row(1)]);
+    answer(2, [row(2)]);
+    answer(5, [row(5)]);
+    answer(4, [row(4)]);
+    expect(sent()).toEqual([[1], [2], [5], [4]]);
+
+    sightings().sighted(3);
+    expect(sent()).toEqual([[1], [2], [5], [4], [3]]);
+  });
+
   it('frees the slot on a failed call too', () => {
     for (const id of [1, 2, 3]) sightings().sighted(id);
 

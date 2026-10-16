@@ -21,7 +21,7 @@ export class SightedPreviews {
   private readonly inFlight = signal<ReadonlySet<number>>(new Set());
   private readonly asked = new Set<number>();
   private readonly waiting: number[] = [];
-  private readonly requests = new Map<number, Subscription>();
+  private requests = new Subscription();
 
   constructor() {
     onIdentityChange(() => this.reset());
@@ -32,6 +32,7 @@ export class SightedPreviews {
     if (this.asked.has(entryId)) return;
     this.asked.add(entryId);
     this.waiting.push(entryId);
+    if (this.waiting.length > SIGHTED_PREVIEWS_IN_FLIGHT) this.asked.delete(this.waiting.shift()!);
     this.sendNext();
   }
 
@@ -48,17 +49,21 @@ export class SightedPreviews {
 
   private send(entryId: number): void {
     this.inFlight.update((ids) => new Set(ids).add(entryId));
-    const request = this.api.complete([entryId]).subscribe({
-      next: (rows) => this.completed.merge(rows, [entryId]),
-      error: () => this.settle(entryId),
-      complete: () => this.settle(entryId),
-    });
-    if (!request.closed) this.requests.set(entryId, request);
+    this.requests.add(
+      this.api.complete([entryId]).subscribe({
+        next: (rows) => this.completed.merge(rows, [entryId]),
+        error: () => this.settle(entryId),
+        complete: () => this.settle(entryId),
+      }),
+    );
   }
 
   private settle(entryId: number): void {
-    this.requests.delete(entryId);
-    this.inFlight.update((ids) => new Set([...ids].filter((id) => id !== entryId)));
+    this.inFlight.update((ids) => {
+      const remaining = new Set(ids);
+      remaining.delete(entryId);
+      return remaining;
+    });
     this.sendNext();
   }
 
@@ -69,8 +74,8 @@ export class SightedPreviews {
   }
 
   private reset(): void {
-    for (const request of this.requests.values()) request.unsubscribe();
-    this.requests.clear();
+    this.requests.unsubscribe();
+    this.requests = new Subscription();
     this.asked.clear();
     this.waiting.length = 0;
     this.inFlight.set(new Set());
