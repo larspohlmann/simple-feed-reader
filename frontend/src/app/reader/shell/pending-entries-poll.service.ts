@@ -11,11 +11,10 @@ import {
 import { Subscription } from 'rxjs';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { isTabHidden, onTabVisibilityChange } from '../../core/tab-visibility';
-import { EntryBodyService } from '../article/content/entry-body.service';
 import { PreviewProgress } from '../link-card/preview-progress';
 import { ReaderApi } from '../reader-api';
-import { CompletedEntryDto } from '../state/completed-entry';
 import { EntriesStore } from '../state/entries.store';
+import { CompletedEntriesMerge } from './completed-entries-merge';
 import { ReaderRouteState } from './reader-route-state.service';
 
 export const PENDING_POLL_INTERVAL_MS = 3000;
@@ -29,7 +28,7 @@ const PENDING_POLL_BATCH = 25;
 export class PendingEntriesPoll implements PreviewProgress {
   private readonly store = inject(EntriesStore);
   private readonly api = inject(ReaderApi);
-  private readonly bodies = inject(EntryBodyService);
+  private readonly completed = inject(CompletedEntriesMerge);
   private readonly zone = inject(NgZone);
   private readonly routeState = inject(ReaderRouteState);
 
@@ -127,7 +126,7 @@ export class PendingEntriesPoll implements PreviewProgress {
     const ids = this.due();
     this.spendRound(ids);
     const request = this.api.complete(ids).subscribe({
-      next: (rows) => this.zone.run(() => this.merge(rows, ids)),
+      next: (rows) => this.zone.run(() => this.completed.merge(rows, ids)),
       error: () => this.settle(),
       complete: () => this.settle(),
     });
@@ -137,16 +136,6 @@ export class PendingEntriesPoll implements PreviewProgress {
   private settle(): void {
     this.request.set(null);
     this.schedule();
-  }
-
-  private merge(rows: CompletedEntryDto[], sent: number[]): void {
-    this.store.mergeCompleted(rows);
-    const openId = this.routeState.openEntry()?.id;
-    for (const row of rows) {
-      if (row.pending || !sent.includes(row.id)) continue;
-      if (row.id === openId) this.bodies.refresh(row.id);
-      else this.bodies.forget(row.id);
-    }
   }
 
   /** The ids whose rounds are not yet spent: the listed batch, and the open entry put last. */

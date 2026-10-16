@@ -53,6 +53,7 @@ import { ManageActions } from '../feeds/manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { PaneResizeDirective } from './pane-resize.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
+import { CompletedEntriesMerge } from './completed-entries-merge';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { PreviewProgress } from '../link-card/preview-progress';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -84,6 +85,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
   // Per-reader state: provided here so none of it outlives the reader.
   providers: [
     SidebarCountsPoll,
+    CompletedEntriesMerge,
     PendingEntriesPoll,
     { provide: PreviewProgress, useExisting: PendingEntriesPoll },
     ReaderRouteState,

@@ -7,6 +7,7 @@ import { ReaderApi } from '../reader-api';
 import { withCompleted } from '../state/completed-entry';
 import { EntriesStore } from '../state/entries.store';
 import { TokenStore } from '../../core/auth/token.store';
+import { CompletedEntriesMerge } from './completed-entries-merge';
 import { ReaderRouteState } from './reader-route-state.service';
 import {
   PENDING_POLL_INTERVAL_MS,
@@ -79,6 +80,7 @@ describe('PendingEntriesPoll', () => {
     TestBed.configureTestingModule({
       providers: [
         PendingEntriesPoll,
+        CompletedEntriesMerge,
         { provide: EntriesStore, useValue: { entries, loading, loadedAt, mergeCompleted } },
         { provide: ReaderApi, useValue: { complete } },
         { provide: EntryBodyService, useValue: { refresh: refreshBody, forget: forgetBody } },
