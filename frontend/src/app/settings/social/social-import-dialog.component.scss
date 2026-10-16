@@ -116,7 +116,6 @@
   cursor: default;
 }
 
-.avatar,
 .tile {
   display: flex;
   flex: none;
@@ -124,19 +123,9 @@
   justify-content: center;
   width: var(--space-6);
   height: var(--space-6);
+  border-radius: var(--radius);
   background: var(--surface-sunken);
   color: var(--text-secondary);
-}
-
-.avatar {
-  border-radius: 50%;
-  object-fit: cover;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-}
-
-.tile {
-  border-radius: var(--radius);
 }
 
 .who {

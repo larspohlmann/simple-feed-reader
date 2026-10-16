@@ -1,22 +1,11 @@
 @let post = quote();
 <div class="box">
   <header class="byline">
-    @if (post.authorAvatarUrl && !avatarFailed()) {
-      <img
-        class="avatar"
-        appProxiedImage
-        [src]="post.authorAvatarUrl"
-        alt=""
-        loading="lazy"
-        decoding="async"
-        referrerpolicy="no-referrer"
-        (imageFailed)="avatarFailed.set(true)"
-      />
-    } @else {
-      <span class="avatar initials" [class]="'tone-' + tone()" aria-hidden="true">{{
-        initials()
-      }}</span>
-    }
+    <app-avatar
+      [url]="post.authorAvatarUrl"
+      [name]="post.authorName"
+      [toneSeed]="post.authorHandle"
+    />
     <a
       class="open"
       [href]="post.url"

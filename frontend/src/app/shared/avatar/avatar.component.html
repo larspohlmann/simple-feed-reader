@@ -1,0 +1,15 @@
+@let src = url();
+@if (src && !failed()) {
+  <img
+    class="avatar"
+    appProxiedImage
+    [src]="src"
+    alt=""
+    loading="lazy"
+    decoding="async"
+    referrerpolicy="no-referrer"
+    (imageFailed)="failed.set(true)"
+  />
+} @else {
+  <span class="avatar initials" [class]="toneClass()" aria-hidden="true">{{ initials() }}</span>
+}

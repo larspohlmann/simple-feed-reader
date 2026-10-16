@@ -40,25 +40,11 @@
             <li class="comment" [class.reply]="c.depth > 0" [style.--depth]="indentOf(c)">
               <p class="byline">
                 @if (c.authorAvatarUrl; as avatarUrl) {
-                  @if (isAvatarBroken(avatarUrl)) {
-                    <span
-                      class="avatar initials"
-                      [class]="'tone-' + toneOf(c)"
-                      aria-hidden="true"
-                      >{{ initialsOf(c) }}</span
-                    >
-                  } @else {
-                    <img
-                      class="avatar"
-                      appProxiedImage
-                      [src]="avatarUrl"
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      referrerpolicy="no-referrer"
-                      (imageFailed)="markAvatarBroken(avatarUrl)"
-                    />
-                  }
+                  <app-avatar
+                    [url]="avatarUrl"
+                    [name]="c.author ?? c.authorHandle ?? ''"
+                    [toneSeed]="c.authorHandle ?? c.author ?? ''"
+                  />
                 }
                 @if (c.authorUrl) {
                   <a

@@ -1,4 +1,3 @@
-@use '../../theme/avatar-tone';
 @use '../../theme/glass-rim';
 @use '../list/post-text';
 
@@ -30,24 +29,9 @@
   font-size: var(--fs-sm);
 }
 
-.avatar {
-  flex: none;
-  width: var(--icon-md);
-  height: var(--icon-md);
+app-avatar {
   margin-right: var(--space-1);
-  border-radius: var(--radius-pill);
-  object-fit: cover;
 }
-
-.initials {
-  display: grid;
-  place-items: center;
-  color: var(--text-primary);
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-}
-
-@include avatar-tone.tones;
 
 .open {
   display: flex;

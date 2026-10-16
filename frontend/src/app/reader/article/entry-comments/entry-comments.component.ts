@@ -9,7 +9,6 @@ import {
   effect,
   inject,
   input,
-  linkedSignal,
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -19,9 +18,7 @@ import { IconButtonDirective } from '../../../shared/icon-button/icon-button.dir
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
-import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
-import { avatarToneOf } from '../../../shared/avatar-tone';
-import { initialsOf } from '../../../shared/initials';
+import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { CommentsService } from './comments.service';
@@ -53,7 +50,7 @@ const PLAYERS = `${PLAYER_VIDEOS}, audio`;
     ListActionDirective,
     SkeletonComponent,
     WarningBoxComponent,
-    ProxiedImageDirective,
+    AvatarComponent,
     PostMediaComponent,
     QuotedPostComponent,
     LinkCardComponent,
@@ -84,10 +81,6 @@ export class EntryCommentsComponent {
   readonly network = computed(() => {
     const social = this.entry().social;
     return social ? SOCIAL_NETWORK_NAMES[social.network] : null;
-  });
-  private readonly brokenAvatars = linkedSignal<number, ReadonlySet<string>>({
-    source: this.entryId,
-    computation: () => new Set(),
   });
   readonly retryInSeconds = computed(() => {
     const state = this.state();
@@ -139,22 +132,6 @@ export class EntryCommentsComponent {
 
   ratioOf(comment: EntryCommentDto): number {
     return mediumRatio(comment.media[0]);
-  }
-
-  isAvatarBroken(url: string): boolean {
-    return this.brokenAvatars().has(url);
-  }
-
-  markAvatarBroken(url: string): void {
-    this.brokenAvatars.update((broken) => new Set(broken).add(url));
-  }
-
-  initialsOf(comment: EntryCommentDto): string {
-    return initialsOf(comment.author ?? comment.authorHandle ?? '');
-  }
-
-  toneOf(comment: EntryCommentDto): number {
-    return avatarToneOf(comment.authorHandle ?? comment.author ?? '');
   }
 
   private playOneMediumAtATime(): void {

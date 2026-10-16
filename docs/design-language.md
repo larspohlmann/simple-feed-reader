@@ -1199,6 +1199,31 @@ know the shape of what is coming.
 
 ---
 
+### `<app-avatar>`
+
+A social author's picture, round, falling back to their initials when there is no
+picture or it fails to load. The picture goes through the image proxy and is asked
+for without a referrer.
+
+| Input | Type | Default |
+|---|---|---|
+| `name` | `string` (required) | — the initials come from it |
+| `url` | `string \| null` | `null` — initials straight away |
+| `toneSeed` | `string \| null` | `null` — neutral initials on `--surface-sunken` |
+| `size` | `'sm' \| 'md'` | `'sm'` — `--icon-md`; `'md'` is `--space-6` |
+
+```html
+<app-avatar [url]="post.authorAvatarUrl" [name]="post.authorName" [toneSeed]="post.authorHandle" />
+```
+
+The tones are the four in `theme/_avatar-tone.scss`; a seed (the handle, where there
+is one) gives the same author the same tone everywhere. Used by the comments, the
+quoted post and the social import dialog.
+
+**Not for:** the signed-in user. Use `<app-user-avatar>`, which reads Gravatar.
+
+---
+
 ### `<app-search-field>`
 
 The entry-search input. It owns every timing rule the search has, so no caller
