@@ -7,7 +7,9 @@ import { ReaderApi } from '../reader-api';
 import { withCompleted } from '../state/completed-entry';
 import { EntriesStore } from '../state/entries.store';
 import { TokenStore } from '../../core/auth/token.store';
+import { CompletedEntriesMerge } from './completed-entries-merge';
 import { ReaderRouteState } from './reader-route-state.service';
+import { SightedPreviews } from './sighted-previews.service';
 import {
   PENDING_POLL_INTERVAL_MS,
   PENDING_POLL_MAX_ROUNDS,
@@ -31,6 +33,8 @@ describe('PendingEntriesPoll', () => {
   let forgetBody: jest.Mock;
   const openEntry = signal<EntryDto | null>(null);
   let mergeCompleted: jest.Mock;
+  const completingSighted = new Set<number>();
+  let sighted: jest.Mock;
 
   function setVisibility(state: DocumentVisibilityState): void {
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
@@ -68,6 +72,8 @@ describe('PendingEntriesPoll', () => {
     forgetBody = jest.fn();
     openEntry.set(null);
     localStorage.clear();
+    completingSighted.clear();
+    sighted = jest.fn();
     const finishedOr = (rows: EntryDto[], entry: EntryDto) => {
       const finished = rows.find((row) => row.id === entry.id);
       return finished ? withCompleted(entry, finished) : entry;
@@ -79,10 +85,15 @@ describe('PendingEntriesPoll', () => {
     TestBed.configureTestingModule({
       providers: [
         PendingEntriesPoll,
+        CompletedEntriesMerge,
         { provide: EntriesStore, useValue: { entries, loading, loadedAt, mergeCompleted } },
         { provide: ReaderApi, useValue: { complete } },
         { provide: EntryBodyService, useValue: { refresh: refreshBody, forget: forgetBody } },
         { provide: ReaderRouteState, useValue: { openEntry } },
+        {
+          provide: SightedPreviews,
+          useValue: { sighted, isCompleting: (id: number) => completingSighted.has(id) },
+        },
       ],
     });
   });
@@ -237,11 +248,29 @@ describe('PendingEntriesPoll', () => {
       expect(poll.previewsLoading()).toBe(true);
     });
 
+    it('loads again while a sighted call works on an entry whose rounds are spent (#1646)', () => {
+      start([row(1)]);
+      const poll = TestBed.inject(PendingEntriesPoll);
+      rounds(PENDING_POLL_MAX_ROUNDS);
+
+      completingSighted.add(1);
+
+      expect(poll.isLoading(1)).toBe(true);
+    });
+
     it('never loads an entry that is not pending', () => {
       start([row(1, { pending: false })]);
 
       expect(TestBed.inject(PendingEntriesPoll).isLoading(1)).toBe(false);
     });
+  });
+
+  it('hands a sighted entry to the sighting lane (#1646)', () => {
+    start([row(1)]);
+
+    TestBed.inject(PendingEntriesPoll).sighted(1);
+
+    expect(sighted.mock.calls).toEqual([[1]]);
   });
 
   it('gives an entry opened after the list spent its rounds a budget of its own', () => {

@@ -9,6 +9,10 @@ import { EMBED_FRAME_ATTRIBUTES } from '../../../../media/media-embeds';
 import { MEDIA_PAUSE } from './pause-media';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../../../testing/hls-testing';
+import {
+  restoreIntersectionObserver,
+  stubIntersectionObserver,
+} from '../../../../../../testing/intersection-observer-testing';
 
 jest.mock(
   'hls.js',
@@ -92,35 +96,10 @@ const short = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-const sighting = (target: Element, isIntersecting: boolean) =>
-  ({ target, isIntersecting }) as unknown as IntersectionObserverEntry;
-
 const press = (target: Element, key: string) =>
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 
-let restoreObserver: (() => void) | null = null;
-
-afterEach(() => {
-  restoreObserver?.();
-  restoreObserver = null;
-});
-
-function stubIntersectionObserver() {
-  const callbacks: IntersectionObserverCallback[] = [];
-  const observed: Element[] = [];
-  const real = globalThis.IntersectionObserver;
-  restoreObserver = () => (globalThis.IntersectionObserver = real);
-  globalThis.IntersectionObserver = class {
-    constructor(callback: IntersectionObserverCallback) {
-      callbacks.push(callback);
-    }
-    readonly observe = (target: Element) => observed.push(target);
-    readonly disconnect = jest.fn();
-  } as unknown as typeof IntersectionObserver;
-  const report = (target: Element, isIntersecting: boolean) =>
-    callbacks[0]([sighting(target, isIntersecting)], {} as IntersectionObserver);
-  return { observed, report };
-}
+afterEach(restoreIntersectionObserver);
 
 describe('EntryMediaComponent', () => {
   it('captions a titled share with its title and puts its own text beneath', async () => {

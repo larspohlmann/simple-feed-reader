@@ -63,7 +63,7 @@ test.describe('Reading focus block detection', () => {
     await expect(pane.locator('.content p').last()).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
 
-    // Read somewhere in the middle, where a paragraph is on the reading centre.
+    // Read somewhere in the middle, where a paragraph is in the reading band.
     await pane.evaluate((el) => el.scrollTo({ top: el.scrollHeight / 2, behavior: 'instant' }));
     await page.waitForTimeout(400); // focus rAF + the 0.2s opacity transition
 
@@ -76,9 +76,7 @@ test.describe('Reading focus block detection', () => {
     // no paragraph dimmed, one distinct value, no peak.
     expect(opacities.filter((o) => o < 1).length).toBeGreaterThan(4);
     expect(new Set(opacities).size).toBeGreaterThan(3); // a gradient, not two groups
-    // One paragraph is at the reading centre and the far ones are well dimmed.
-    // Not exactly 1: the nearest paragraph's centre only lands on the reading
-    // line when the scroll position happens to put it there.
+    // One paragraph is in the reading band and the far ones are well dimmed.
     expect(Math.max(...opacities)).toBeGreaterThan(0.9);
     expect(Math.min(...opacities)).toBeLessThan(0.75);
   });
