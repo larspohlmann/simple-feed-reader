@@ -3,13 +3,16 @@
   <header class="head">
     <h2 class="title">{{ 'reader.comments.heading' | transloco }}</h2>
     @if (s.status === 'ok') {
+      <span class="age">{{
+        'reader.comments.updated' | transloco: { when: when(s.fetchedAt) }
+      }}</span>
       <button
         appIconButton
         type="button"
         class="reload"
         [attr.aria-label]="'reader.comments.reload' | transloco"
         [title]="'reader.comments.reload' | transloco"
-        (click)="reload()"
+        (click)="refresh()"
       >
         <app-icon name="refresh" size="sm" />
       </button>
@@ -34,8 +37,29 @@
       } @else {
         <ol class="list">
           @for (c of s.comments; track $index) {
-            <li class="comment">
+            <li class="comment" [class.reply]="c.depth > 0" [style.--depth]="indentOf(c)">
               <p class="byline">
+                @if (c.authorAvatarUrl; as avatarUrl) {
+                  @if (isAvatarBroken(avatarUrl)) {
+                    <span
+                      class="avatar initials"
+                      [class]="'tone-' + toneOf(c)"
+                      aria-hidden="true"
+                      >{{ initialsOf(c) }}</span
+                    >
+                  } @else {
+                    <img
+                      class="avatar"
+                      appProxiedImage
+                      [src]="avatarUrl"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      referrerpolicy="no-referrer"
+                      (imageFailed)="markAvatarBroken(avatarUrl)"
+                    />
+                  }
+                }
                 @if (c.authorUrl) {
                   <a
                     class="author"
@@ -46,6 +70,9 @@
                   >
                 } @else {
                   <span class="author">{{ c.author }}</span>
+                }
+                @if (c.authorHandle) {
+                  <span class="handle">{{ c.authorHandle }}</span>
                 }
                 @if (c.byEntryAuthor) {
                   <span class="op accent-pill">{{ 'reader.comments.op' | transloco }}</span>
@@ -62,14 +89,32 @@
                 }
               </p>
               <div class="body" [innerHTML]="c.html"></div>
+              @if (c.media.length) {
+                <app-post-media
+                  [media]="c.media"
+                  [ratio]="ratioOf(c)"
+                  [videoLabel]="'reader.comments.video' | transloco"
+                />
+              }
+              @if (c.quote) {
+                <app-quoted-post [quote]="c.quote" layout="article" />
+              }
+              @if (c.linkCard) {
+                <app-link-card [card]="c.linkCard" layout="article" />
+              }
             </li>
           }
         </ol>
       }
       @if (entry().discussionUrl; as url) {
-        <a class="all" [href]="url" target="_blank" rel="noopener noreferrer"
-          >{{ 'reader.comments.all' | transloco }} <app-icon name="open_in_new" size="text"
-        /></a>
+        <a class="all" [href]="url" target="_blank" rel="noopener noreferrer">
+          @if (s.omitted > 0 && network()) {
+            {{ 'reader.comments.more' | transloco: { count: s.omitted, network: network() } }}
+          } @else {
+            {{ 'reader.comments.all' | transloco }}
+          }
+          <app-icon name="open_in_new" size="text" />
+        </a>
       }
     }
     @case ('throttled') {

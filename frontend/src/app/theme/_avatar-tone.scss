@@ -1,0 +1,14 @@
+@use 'sass:list';
+
+$tones: accent, danger, success, warning;
+
+// One class per `AVATAR_TONE_COUNT` in shared/avatar-tone.ts; keep the two counts equal.
+@mixin tones {
+  @each $tone in $tones {
+    $index: list.index($tones, $tone) - 1;
+
+    .tone-#{$index} {
+      background: color-mix(in oklab, var(--#{$tone}) 28%, var(--surface-0));
+    }
+  }
+}

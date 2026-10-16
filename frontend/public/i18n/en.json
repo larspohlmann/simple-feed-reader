@@ -1241,6 +1241,9 @@
     "comments": {
       "heading": "Comments",
       "reload": "Reload comments",
+      "updated": "Updated {{ when }}",
+      "more": "{{ count }} more on {{ network }}",
+      "video": "Video in a comment",
       "load": "Load comments",
       "loading": "Loading comments",
       "empty": "No comments yet.",

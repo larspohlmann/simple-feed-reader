@@ -152,6 +152,7 @@ function stubComments(state: Signal<CommentsState>): void {
   TestBed.overrideProvider(CommentsService, {
     useValue: { state: () => state, load: jest.fn(), reload: jest.fn() },
   });
+  TestBed.overrideProvider(SocialCountsService, { useValue: { reload: jest.fn() } });
 }
 
 describe('ReaderViewComponent', () => {
