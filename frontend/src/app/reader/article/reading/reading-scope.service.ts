@@ -16,7 +16,7 @@ import { LayoutService } from '../../layout.service';
 import { ARTICLE_FOCUS_CURVE, needsReadingTail, readingBlocks } from './reading-focus';
 import { ReadingFocusApplier } from './reading-focus-applier';
 import { sectionedUnits } from './reading-sections';
-import { prefersReducedMotion } from './reduced-motion';
+import { prefersReducedMotion } from '../../../core/reduced-motion';
 
 type ElementQuery = Signal<ElementRef<HTMLElement> | undefined>;
 
