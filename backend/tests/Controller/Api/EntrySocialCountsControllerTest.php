@@ -8,13 +8,11 @@ use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
-use App\Tests\Support\RoutedHttpClient;
+use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\SocialAccounts;
-use App\Tests\Support\StaticDnsResolver;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -23,15 +21,15 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class EntrySocialCountsControllerTest extends ApiTestCase
 {
-    private const string POST_URL = 'https://mastodon.social/@Gargron/110';
+    use RoutesSocialApis;
+
+    private const array ROUTED_HOSTS = ['mastodon.social', 'mastodon.example'];
     private const string ORIGIN = 'GET https://mastodon.social/api/v1/statuses/110';
     private const string SEARCH = 'GET https://mastodon.example/api/v2/search?q='
         . 'https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110&resolve=true&type=statuses&limit=1';
 
     /** Must match framework.rate_limiter.social_counts.limit in rate_limiter.yaml. */
     private const int COUNTS_BUDGET = 120;
-
-    private RoutedHttpClient $http;
 
     protected function setUp(): void
     {
@@ -55,7 +53,7 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
 
     public function testAPostsCountsComeFromItsOriginWithoutAnAccount(): void
     {
-        $client = $this->clientRouting([self::ORIGIN => self::originStatus()]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::ORIGIN => self::originStatus()]);
         $user = $this->signIn($client, 'counts-origin@example.test');
 
         $client->request('GET', sprintf('/api/entries/%d/social', $this->mastodonPostFor($user)));
@@ -67,7 +65,7 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
 
     public function testASecondOpenIsAnsweredFromTheCache(): void
     {
-        $client = $this->clientRouting([self::ORIGIN => self::originStatus()]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::ORIGIN => self::originStatus()]);
         $path = sprintf('/api/entries/%d/social', $this->mastodonPostFor(
             $this->signIn($client, 'counts-cached@example.test'),
         ));
@@ -82,7 +80,7 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
 
     public function testRefreshAsksTheOriginAgain(): void
     {
-        $client = $this->clientRouting([self::ORIGIN => self::originStatus()]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::ORIGIN => self::originStatus()]);
         $path = sprintf('/api/entries/%d/social', $this->mastodonPostFor(
             $this->signIn($client, 'counts-refresh@example.test'),
         ));
@@ -97,7 +95,7 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
 
     public function testAnOriginClosedToThePublicFallsBackToTheUsersAccount(): void
     {
-        $client = $this->clientRouting([
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::ORIGIN => new MockResponse('{}', ['http_code' => Response::HTTP_UNAUTHORIZED]),
             self::SEARCH => new MockResponse(json_encode(['statuses' => [[
                 'id' => '110',
@@ -118,7 +116,7 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
 
     public function testAFailingOriginWithoutAnAccountIsAnUnreachableNetwork(): void
     {
-        $client = $this->clientRouting([
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::ORIGIN => new MockResponse('{}', ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR]),
         ]);
         $user = $this->signIn($client, 'counts-unreachable@example.test');
@@ -131,7 +129,7 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
 
     public function testAThrottlingOriginWithoutAnAccountSaysWhenToAskAgain(): void
     {
-        $client = $this->clientRouting([self::ORIGIN => new MockResponse('{}', [
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::ORIGIN => new MockResponse('{}', [
             'http_code' => Response::HTTP_TOO_MANY_REQUESTS,
             'response_headers' => ['Retry-After: 30'],
         ])]);
@@ -146,7 +144,7 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
 
     public function testAnOrdinaryArticleHasNoCounts(): void
     {
-        $client = $this->clientRouting([]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'counts-plain@example.test');
 
         $client->request('GET', sprintf('/api/entries/%d/social', $this->plainArticleFor($user)));
@@ -158,7 +156,7 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
 
     public function testAnotherUsersEntryReadsAsMissing(): void
     {
-        $client = $this->clientRouting([]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $entryId = $this->mastodonPostFor($this->factory()->create('counts-stranger@example.test'));
         $this->signIn($client, 'counts-own@example.test');
 
@@ -170,7 +168,7 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
 
     public function testTheCountsHaveTheirOwnBudget(): void
     {
-        $client = $this->clientRouting([]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $path = sprintf('/api/entries/%d/social', $this->plainArticleFor(
             $this->signIn($client, 'counts-budget@example.test'),
         ));
@@ -182,23 +180,6 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
         $client->request('GET', $path);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
-    }
-
-    /** @param array<string, MockResponse> $routes */
-    private function clientRouting(array $routes): KernelBrowser
-    {
-        $client = static::createClient();
-        // KernelBrowser rebuilds the container after every request, which would discard the routed client.
-        $client->disableReboot();
-        $this->http = new RoutedHttpClient($routes);
-        $container = self::getContainer();
-        $container->set('http_client.uri_template', $this->http->client());
-        $container->set(NativeDnsResolver::class, new StaticDnsResolver([
-            'mastodon.social' => ['93.184.216.34'],
-            'mastodon.example' => ['93.184.216.34'],
-        ]));
-
-        return $client;
     }
 
     private function signIn(KernelBrowser $client, string $email): User
@@ -233,28 +214,18 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
         return new MockResponse(json_encode([
             'id' => '110',
             'uri' => 'https://mastodon.social/users/Gargron/statuses/110',
-            'url' => self::POST_URL,
+            'url' => self::MASTODON_POST_URL,
             'favourites_count' => 5,
             'reblogs_count' => 2,
             'replies_count' => 1,
         ], \JSON_THROW_ON_ERROR));
     }
 
-    private function mastodonPostFor(User $user): int
-    {
-        return $this->postFor($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
-    }
-
     private function plainArticleFor(User $user): int
     {
-        return $this->postFor($user, NetworkFeedSubscriptions::PLAIN);
-    }
-
-    private function postFor(User $user, string $feedUrl): int
-    {
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
+        $subscription = $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN);
 
-        return $fixtures->post($fixtures->subscribe($user, $feedUrl), self::POST_URL, '2026-10-12T10:00:00Z')
-            ->requireId();
+        return $fixtures->post($subscription, self::MASTODON_POST_URL, '2026-10-12T10:00:00Z')->requireId();
     }
 }

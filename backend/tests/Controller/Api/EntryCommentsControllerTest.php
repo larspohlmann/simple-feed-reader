@@ -11,27 +11,25 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
-use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\ApiTestCase;
-use App\Tests\Support\NetworkFeedSubscriptions;
-use App\Tests\Support\RoutedHttpClient;
-use App\Tests\Support\StaticDnsResolver;
+use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\StubFeedFetcher;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 final class EntryCommentsControllerTest extends ApiTestCase
 {
+    use RoutesSocialApis;
+
     private const string THREAD = 'https://www.reddit.com/r/PHP/comments/1woq4he/what_is_your_php_stack_2026/';
     private const string FEED = self::THREAD . '.rss';
-    private const string POST_URL = 'https://mastodon.social/@Gargron/110';
+    private const array ROUTED_HOSTS = ['mastodon.social'];
     private const string PUBLIC_CONTEXT = 'GET https://mastodon.social/api/v1/statuses/110/context';
 
     protected function setUp(): void
@@ -255,7 +253,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
 
     public function testAMastodonPostsRepliesComeFromItsOriginWithoutAnAccount(): void
     {
-        [$client, $http] = $this->clientRouting([self::PUBLIC_CONTEXT => self::mastodonContext()]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::PUBLIC_CONTEXT => self::mastodonContext()]);
         [$headers, $user] = $this->auth('comments-mastodon@example.com');
 
         $client->request('GET', '/api/entries/' . $this->mastodonPostFor($user) . '/comments', server: $headers);
@@ -274,12 +272,12 @@ final class EntryCommentsControllerTest extends ApiTestCase
             static fn (mixed $media): int => \is_array($media) ? \count($media) : -1,
             array_column($body['comments'], 'media'),
         ));
-        self::assertSame([self::PUBLIC_CONTEXT], $http->requestLines());
+        self::assertSame([self::PUBLIC_CONTEXT], $this->http->requestLines());
     }
 
     public function testASocialPostsRepliesAreCachedAndRefreshable(): void
     {
-        [$client, $http] = $this->clientRouting([self::PUBLIC_CONTEXT => self::mastodonContext()]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::PUBLIC_CONTEXT => self::mastodonContext()]);
         [$headers, $user] = $this->auth('comments-mastodon-cached@example.com');
         $url = '/api/entries/' . $this->mastodonPostFor($user) . '/comments';
 
@@ -292,12 +290,12 @@ final class EntryCommentsControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         self::assertSame($first, $cached);
         self::assertSame('ok', $this->payload($client)['status']);
-        self::assertSame([self::PUBLIC_CONTEXT, self::PUBLIC_CONTEXT], $http->requestLines());
+        self::assertSame([self::PUBLIC_CONTEXT, self::PUBLIC_CONTEXT], $this->http->requestLines());
     }
 
     public function testASocialPostsRepliesWinOverItsCommentsFeed(): void
     {
-        [$client, $http] = $this->clientRouting([self::PUBLIC_CONTEXT => self::mastodonContext()]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::PUBLIC_CONTEXT => self::mastodonContext()]);
         $fetcher = $this->installFetcher();
         $this->serveRedditThread($fetcher);
         [$headers, $user] = $this->auth('comments-mastodon-priority@example.com');
@@ -306,7 +304,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
         $client->request('GET', '/api/entries/' . $entryId . '/comments', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame([self::PUBLIC_CONTEXT], $http->requestLines());
+        self::assertSame([self::PUBLIC_CONTEXT], $this->http->requestLines());
         self::assertSame([], $fetcher->fetchedUrls);
     }
 
@@ -317,33 +315,9 @@ final class EntryCommentsControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
-    /**
-     * @param array<string, MockResponse> $routes
-     *
-     * @return array{0: KernelBrowser, 1: RoutedHttpClient}
-     */
-    private function clientRouting(array $routes): array
-    {
-        $client = self::createClient();
-        $client->disableReboot();
-        $http = new RoutedHttpClient($routes);
-        $container = self::getContainer();
-        $container->set('http_client.uri_template', $http->client());
-        $container->set(NativeDnsResolver::class, new StaticDnsResolver(['mastodon.social' => ['93.184.216.34']]));
-
-        return [$client, $http];
-    }
-
-    private function mastodonPostFor(User $user): int
-    {
-        return $this->mastodonPostWith($user, Discussion::none());
-    }
-
     private function mastodonPostWith(User $user, Discussion $discussion): int
     {
-        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
-        $subscription = $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
-        $post = $fixtures->post($subscription, self::POST_URL, '2026-10-16T08:00:00Z');
+        $post = $this->mastodonPostOf($user);
         $post->setDiscussion($discussion);
         $this->entityManager()->flush();
 
