@@ -163,6 +163,7 @@ final readonly class RefreshRunners
                 new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
                 new EntryPruner(
                     new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
+                    DefaultRetentionSettings::create($this->entityManager),
                     $this->clock,
                     $indexer,
                 ),

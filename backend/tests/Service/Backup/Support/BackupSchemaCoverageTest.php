@@ -21,6 +21,7 @@ use App\Entity\ShareEnrichment;
 use App\Entity\Preferences;
 use App\Entity\ProfileRun;
 use App\Entity\ProxyServerSettings;
+use App\Entity\RetentionSetting;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -105,6 +106,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         InstanceSetting::class => 'Instance-wide configuration, identical for every account.',
         ProxyServerSettings::class => 'The instance\'s egress configuration (#490); an operator setting.',
         GrafanaSettings::class => 'The instance\'s Grafana/Loki wiring (#983); an operator setting.',
+        RetentionSetting::class => 'The instance\'s retention windows (#1645); an operator setting.',
         MailServerSettings::class => 'The instance\'s outgoing-mail transport and identity (#834); an operator '
             . 'setting.',
         CatalogCategory::class => 'The shared discovery catalog, seeded per instance.',

@@ -35,6 +35,21 @@ final readonly class RetentionRepository
     }
 
     /** @return list<int> */
+    public function socialFeedIdsFetchedBefore(\DateTimeImmutable $cutoff): array
+    {
+        /** @var list<int> $feedIds */
+        $feedIds = $this->entityManager->createQuery(sprintf(
+            'SELECT DISTINCT IDENTITY(e.feed) FROM %s e JOIN e.feed f
+             WHERE f.network IS NOT NULL AND e.createdAt < :cutoff',
+            Entry::class,
+        ))
+            ->setParameter('cutoff', $cutoff)
+            ->getSingleColumnResult();
+
+        return $feedIds;
+    }
+
+    /** @return list<int> */
     public function feedIdsOverCap(int $cap): array
     {
         /** @var list<int> $feedIds */

@@ -15,6 +15,7 @@ use App\Service\Retention\EntryPruner;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\DefaultRetentionSettings;
 use App\Tests\Support\RecordingLogger;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -68,6 +69,7 @@ final class RefreshHousekeepingTest extends DbTestCase
             new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
             new EntryPruner(
                 new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
+                DefaultRetentionSettings::create($this->entityManager),
                 new MockClock('2026-07-21 12:00:00', 'UTC'),
                 new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             ),
