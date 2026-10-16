@@ -4,6 +4,7 @@ import { PostMediaComponent } from './post-media.component';
 import { EntryMediumDto } from '../../entry-medium';
 import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
+import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
@@ -62,13 +63,14 @@ describe('PostMediaComponent', () => {
 
   it('plays a video inline from its poster, named by the given label', async () => {
     const { fixture } = await mount([clip]);
-    const video = fixture.nativeElement.querySelector('video.item') as HTMLVideoElement;
+    const video = fixture.nativeElement.querySelector('.video-slot video') as HTMLVideoElement;
 
     expect(video.hasAttribute('controls')).toBe(true);
     expect(video.hasAttribute('playsinline')).toBe(true);
     expect(video.getAttribute('preload')).toBe('none');
     expect(video.getAttribute('poster')).toBe('https://video.test/thumb.jpg');
     expect(video.getAttribute('aria-label')).toBe('Clip of a donkey');
+    expect(video.getAttribute('src')).toBe(clip.url);
   });
 
   it('keeps a click on the video from reaching the parent', async () => {
@@ -98,14 +100,21 @@ describe('PostMediaComponent in the list', () => {
     unregister: jest.fn(),
     nowPlaying: jest.fn(),
     soundChanged: jest.fn(),
+    tapped: jest.fn(),
   };
 
   beforeEach(() => Object.values(coordinator).forEach((spy) => spy.mockReset()));
 
-  async function mountInList(media: EntryMediumDto[]) {
+  async function mountInList(
+    media: EntryMediumDto[],
+    unlockedVideos = { take: () => document.createElement('video') },
+  ) {
     TestBed.configureTestingModule({
       imports: [HostComponent],
-      providers: [{ provide: ListAutoplayCoordinator, useValue: coordinator }],
+      providers: [
+        { provide: ListAutoplayCoordinator, useValue: coordinator },
+        { provide: UnlockedVideoElements, useValue: unlockedVideos },
+      ],
     });
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.media = media;
@@ -113,6 +122,28 @@ describe('PostMediaComponent in the list', () => {
     await fixture.whenStable();
     return fixture;
   }
+
+  it("mounts each video from the list's unlocked elements", async () => {
+    const unlocked = document.createElement('video');
+    const fixture = await mountInList([clip], { take: () => unlocked });
+
+    expect(fixture.nativeElement.querySelector('.video-slot video')).toBe(unlocked);
+    expect(unlocked.controls).toBe(true);
+    expect(unlocked.getAttribute('src')).toBe(clip.url);
+    expect(unlocked.getAttribute('poster')).toBe(clip.previewImageUrl);
+  });
+
+  it('keeps its mounted video across a re-render', async () => {
+    const take = jest.fn(() => document.createElement('video'));
+    const fixture = await mountInList([clip], { take });
+
+    fixture.componentInstance.media = [clip, image(2)];
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(take).toHaveBeenCalledTimes(1);
+    expect(fixture.nativeElement.querySelectorAll('video')).toHaveLength(1);
+  });
 
   it('registers each video for autoplay', async () => {
     const fixture = await mountInList([clip, image(2)]);

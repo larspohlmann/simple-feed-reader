@@ -5,9 +5,10 @@ const settle = () => new Promise((resolve) => setTimeout(resolve));
 
 function setUp() {
   const video = document.createElement('video');
+  video.controls = true;
   const play = jest.spyOn(video, 'play').mockResolvedValue(undefined);
   const pause = jest.spyOn(video, 'pause').mockImplementation(() => undefined);
-  const coordinator = { nowPlaying: jest.fn(), soundChanged: jest.fn() };
+  const coordinator = { nowPlaying: jest.fn(), soundChanged: jest.fn(), tapped: jest.fn() };
   const player = new VideoAutoplayPlayer(video, coordinator);
   return { video, play, pause, coordinator, player };
 }
@@ -131,5 +132,97 @@ describe('VideoAutoplayPlayer', () => {
     video.muted = true;
     await settle();
     expect(coordinator.soundChanged).toHaveBeenLastCalledWith(false);
+  });
+
+  it('hides its controls while autoplaying and shows them again once stopped', () => {
+    const { video, player } = setUp();
+
+    player.start(false);
+    expect(video.controls).toBe(false);
+    expect(video.getAttribute('tabindex')).toBe('0');
+
+    player.stop();
+    expect(video.controls).toBe(true);
+    expect(video.hasAttribute('tabindex')).toBe(false);
+  });
+
+  it('shows its controls and turns sound on when its autoplay is tapped', async () => {
+    const { video, coordinator, player } = setUp();
+    player.start(false);
+    await settle();
+
+    video.click();
+
+    expect(video.controls).toBe(true);
+    expect(video.muted).toBe(false);
+    await settle();
+    expect(coordinator.soundChanged).toHaveBeenLastCalledWith(true);
+  });
+
+  it('shows its controls once the autoplay ends', () => {
+    const { video, player } = setUp();
+    player.start(false);
+
+    video.dispatchEvent(new Event('ended'));
+
+    expect(video.controls).toBe(true);
+    expect(video.hasAttribute('tabindex')).toBe(false);
+  });
+
+  it('reports the sound a tap turned on after the list unlocked it in the same tap', async () => {
+    const { video, coordinator, player } = setUp();
+    player.start(false);
+    await settle();
+
+    player.unlockSound();
+    video.click();
+    await settle();
+
+    expect(video.muted).toBe(false);
+    expect(coordinator.soundChanged).toHaveBeenLastCalledWith(true);
+  });
+
+  it('leaves a tap on its visible controls to the browser', () => {
+    const { video } = setUp();
+    video.muted = true;
+
+    video.click();
+
+    expect(video.muted).toBe(true);
+  });
+
+  it('takes Enter or Space on its controlless autoplay as the tap', () => {
+    const { video, coordinator, player } = setUp();
+    player.start(false);
+    const space = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
+
+    video.dispatchEvent(space);
+
+    expect(space.defaultPrevented).toBe(true);
+    expect(video.controls).toBe(true);
+    expect(video.muted).toBe(false);
+    expect(coordinator.tapped).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores other keys', () => {
+    const { video, coordinator, player } = setUp();
+    player.start(false);
+
+    video.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', cancelable: true }));
+
+    expect(video.controls).toBe(false);
+    expect(coordinator.tapped).not.toHaveBeenCalled();
+  });
+
+  it('unlocks sound without changing or reporting its muted state', async () => {
+    const { video, coordinator, player } = setUp();
+    player.start(false);
+    await settle();
+
+    player.unlockSound();
+    await settle();
+
+    expect(video.muted).toBe(true);
+    expect(coordinator.soundChanged).not.toHaveBeenCalled();
   });
 });

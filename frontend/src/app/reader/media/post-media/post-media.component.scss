@@ -9,7 +9,12 @@
 }
 
 /* Above a quoted post's stretched link (#1612), so its controls play rather than open the post. */
-video.item {
+.video-slot {
   position: relative;
   z-index: 1;
+}
+
+// Mounted from script (#1654), so the video carries no encapsulation attribute.
+.video-slot ::ng-deep video {
+  @include post-media-grid.item;
 }

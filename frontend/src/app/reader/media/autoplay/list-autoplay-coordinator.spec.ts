@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AutoplayPlayer } from './autoplay-player';
 import { ListAutoplayCoordinator } from './list-autoplay-coordinator';
+import { UnlockedVideoElements } from './unlocked-video-elements';
 import {
   MockIntersectionObserver,
   installMockIntersectionObserver,
@@ -17,12 +18,13 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-type FakePlayer = AutoplayPlayer & { start: jest.Mock; stop: jest.Mock };
+type FakePlayer = AutoplayPlayer & { start: jest.Mock; stop: jest.Mock; unlockSound: jest.Mock };
 
 const aDetachedPlayer = (): FakePlayer => ({
   element: document.createElement('div'),
   start: jest.fn(),
   stop: jest.fn(),
+  unlockSound: jest.fn(),
 });
 
 function aPlayer(): FakePlayer {
@@ -33,15 +35,17 @@ function aPlayer(): FakePlayer {
 
 function setUp(enabled = true) {
   const setting: WritableSignal<boolean> = signal(enabled);
+  const unlockedVideos = { refill: jest.fn(), take: jest.fn() };
   TestBed.configureTestingModule({
     providers: [
       ListAutoplayCoordinator,
       { provide: ListAutoplayService, useValue: { enabled: setting } },
+      { provide: UnlockedVideoElements, useValue: unlockedVideos },
     ],
   });
   const coordinator = TestBed.inject(ListAutoplayCoordinator);
   TestBed.tick();
-  return { coordinator, setting };
+  return { coordinator, setting, unlockedVideos };
 }
 
 describe('ListAutoplayCoordinator', () => {
@@ -229,5 +233,35 @@ describe('ListAutoplayCoordinator', () => {
 
     expect(detached.start).not.toHaveBeenCalled();
     expect(attached.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('unlocks every player and the spares on any tap', () => {
+    const { coordinator, unlockedVideos } = setUp();
+    const playing = aPlayer();
+    const waiting = aPlayer();
+    coordinator.register(playing);
+    coordinator.register(waiting);
+    report(playing.element, 1);
+
+    coordinator.tapped();
+
+    expect(playing.unlockSound).toHaveBeenCalledTimes(1);
+    expect(waiting.unlockSound).toHaveBeenCalledTimes(1);
+    expect(unlockedVideos.refill).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes over a player that cannot unlock sound', () => {
+    const { coordinator, unlockedVideos } = setUp();
+    const short: AutoplayPlayer = {
+      element: document.createElement('div'),
+      start: jest.fn(),
+      stop: jest.fn(),
+    };
+    document.body.append(short.element);
+    coordinator.register(short);
+
+    coordinator.tapped();
+
+    expect(unlockedVideos.refill).toHaveBeenCalledTimes(1);
   });
 });

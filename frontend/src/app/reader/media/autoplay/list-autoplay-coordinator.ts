@@ -1,6 +1,16 @@
-import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  DestroyRef,
+  ElementRef,
+  Injectable,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AutoplayPlayer } from './autoplay-player';
+import { UnlockedVideoElements } from './unlocked-video-elements';
 
 const VISIBLE_ENOUGH = 0.6;
 const THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8, 1];
@@ -9,6 +19,7 @@ const THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 @Injectable()
 export class ListAutoplayCoordinator {
   private readonly setting = inject(ListAutoplayService);
+  private readonly unlockedVideos = inject(UnlockedVideoElements);
   private readonly suspended = signal(false);
   private readonly active = computed(() => this.setting.enabled() && !this.suspended());
   private readonly players = new Map<Element, AutoplayPlayer>();
@@ -26,6 +37,12 @@ export class ListAutoplayCoordinator {
       untracked(() => (active ? this.choose() : this.stopCurrent()));
     });
     inject(DestroyRef).onDestroy(() => this.observer?.disconnect());
+    // Capture phase: rows and the video slot stop propagation.
+    inject(ElementRef<HTMLElement>, { optional: true })?.nativeElement.addEventListener(
+      'click',
+      () => this.tapped(),
+      { capture: true },
+    );
   }
 
   register(player: AutoplayPlayer): void {
@@ -50,6 +67,12 @@ export class ListAutoplayCoordinator {
 
   soundChanged(soundOn: boolean): void {
     this.soundOn = soundOn;
+  }
+
+  /** Must run synchronously inside a tap's event handler. */
+  tapped(): void {
+    for (const player of this.players.values()) player.unlockSound?.();
+    this.unlockedVideos.refill();
   }
 
   suspend(): void {
