@@ -18,16 +18,6 @@ final class MastodonStatusAddress
     {
     }
 
-    public static function statusApiUrlOrNull(string $address): ?string
-    {
-        return self::ofOrNull($address)?->apiUrl();
-    }
-
-    public static function authorPrefixOrNull(string $address): ?string
-    {
-        return self::ofOrNull($address)?->authorPrefix;
-    }
-
     public static function ofOrNull(string $address): ?MastodonStatusModel
     {
         foreach (self::STATUS_SHAPES as $shape) {

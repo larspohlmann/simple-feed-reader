@@ -33,7 +33,7 @@ final readonly class MastodonOriginCountsSource implements PostCountsSourceInter
 
     public function countsOf(string $address): SocialCountsModel
     {
-        $statusUrl = MastodonStatusAddress::statusApiUrlOrNull($address)
+        $statusUrl = MastodonStatusAddress::ofOrNull($address)?->apiUrl()
             ?? throw new PostNotPubliclyCountableException('The address names no status on a Mastodon instance.');
         $answer = self::accepted($this->mastodon->answer(ApiRequestModel::get($statusUrl)));
         $status = JsonNodeModel::of($answer->json());

@@ -50,7 +50,7 @@ final readonly class MastodonContextReplies
             ?? throw new CommentsUnavailableException('The Mastodon instance answered without the replies.');
         $thread = new MastodonReplyThread(
             $postId,
-            MastodonStatusAddress::authorPrefixOrNull($postAddress),
+            MastodonStatusAddress::ofOrNull($postAddress)?->authorPrefix,
             $descendants,
         );
 

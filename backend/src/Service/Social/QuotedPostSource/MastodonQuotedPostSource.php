@@ -24,7 +24,7 @@ final readonly class MastodonQuotedPostSource implements QuotedPostSourceInterfa
 
     public function quotedPostAt(string $address): QuotedPostContent
     {
-        $statusUrl = MastodonStatusAddress::statusApiUrlOrNull($address)
+        $statusUrl = MastodonStatusAddress::ofOrNull($address)?->apiUrl()
             ?? throw new QuotedPostUnavailableException('The address names no status on a Mastodon instance.');
         $status = JsonNodeModel::of($this->answerFor($statusUrl));
         if (!\in_array($address, [$status->string('uri'), $status->string('url')], true)) {
