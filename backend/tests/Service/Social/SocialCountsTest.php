@@ -76,6 +76,19 @@ final class SocialCountsTest extends DbTestCase
         self::assertSame([], $this->mastodon->calls);
     }
 
+    public function testRefreshedAsksTheSourceAgainAndCachesTheNewCounts(): void
+    {
+        $post = $this->post();
+        $this->cache->remember(self::address(), new SocialCountsModel(9, 8, 7, null));
+
+        $refreshed = $this->counts()->refreshed($this->owner, $post);
+        $afterwards = $this->counts()->of($this->owner, $post);
+
+        self::assertEquals(new SocialCountsModel(5, 2, 1, null), $refreshed);
+        self::assertEquals($refreshed, $afterwards);
+        self::assertSame([self::STATUS_URL], $this->publicSource->askedAddresses);
+    }
+
     public function testAnUnreachablePublicSourceFallsBackToTheActingAccount(): void
     {
         $this->publicSource->failWith(new SocialNetworkUnreachableException('The origin is down.'));

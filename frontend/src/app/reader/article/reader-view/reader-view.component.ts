@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  Injector,
   computed,
   effect,
   inject,
@@ -48,6 +49,9 @@ import { LinkCardsComponent } from '../link-cards/link-cards.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { SocialCountsComponent } from '../social-counts/social-counts.component';
 import { ArticleBody } from './article-body.service';
+import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
+import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
+import { AUTOPLAY_REGION, AutoplayRegion } from '../../media/autoplay/autoplay-region';
 import { ArticleGestures } from './article-gestures.service';
 import { relativeTime } from '../../format';
 import { estimateReadingMinutes } from '../decorators/reading-time';
@@ -82,7 +86,16 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     QuotedPostComponent,
     SocialCountsComponent,
   ],
-  providers: [ArticleScrollRestore, ArticleGestures, ArticleSource, ReadingScope, ArticleBody],
+  providers: [
+    ArticleScrollRestore,
+    ArticleGestures,
+    ArticleSource,
+    ReadingScope,
+    ArticleBody,
+    ListAutoplayCoordinator,
+    UnlockedVideoElements,
+    { provide: AUTOPLAY_REGION, useFactory: theArticleComments },
+  ],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
 })
@@ -111,9 +124,8 @@ export class ReaderViewComponent {
     read: ElementRef<HTMLElement>,
   });
   private readonly linkCards = viewChild(LinkCardsComponent, { read: ElementRef<HTMLElement> });
-  private readonly socialCounts = viewChild(SocialCountsComponent, {
-    read: ElementRef<HTMLElement>,
-  });
+  private readonly socialCountsRow = viewChild(SocialCountsComponent);
+  private readonly socialCounts = computed(() => this.socialCountsRow()?.host);
   private readonly trailingParts: readonly TrailingPart[] = [
     { query: this.quotedPost, joinsFocus: false },
     { query: this.linkCards, joinsFocus: false },
@@ -135,6 +147,7 @@ export class ReaderViewComponent {
   protected readonly source = inject(ArticleSource);
   protected readonly scope = inject(ReadingScope);
   private readonly body = inject(ArticleBody);
+  private readonly autoplay = inject(ListAutoplayCoordinator);
   protected readonly progressRail = new ScrollProgressRail({
     isWide: this.screen.isWide,
     contentBottom: () => this.scope.contentBottom(),
@@ -212,6 +225,7 @@ export class ReaderViewComponent {
       this.showToTop.set(false);
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;
+      this.autoplay.soundChanged(false);
       this.source.open(entry);
     });
 
@@ -306,6 +320,14 @@ export class ReaderViewComponent {
     });
   }
 
+  commentsRegion(): Element | undefined {
+    return this.commentsSection()?.nativeElement;
+  }
+
+  protected reloadSocialCounts(): void {
+    this.socialCountsRow()?.reload();
+  }
+
   /** The inline error's retry action — refetches the open entry's body. */
   retryBody(): void {
     const entry = this.entry();
@@ -326,4 +348,10 @@ export class ReaderViewComponent {
   when(entry: EntryDto): string {
     return relativeTime(entry.publishedAt ?? entry.createdAt, this.language.lang());
   }
+}
+
+/** Resolved on first use: the coordinator is built while the view is still constructing. */
+function theArticleComments(): AutoplayRegion {
+  const injector = inject(Injector);
+  return () => injector.get(ReaderViewComponent).commentsRegion();
 }

@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Support\SocialPostAddress;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -98,6 +99,24 @@ final class SocialPostAddressTest extends TestCase
         ];
         yield 'a profile url stored without a network' => [self::entry($unclassified, self::POST_URI, null), null];
         yield 'plain feed' => [self::entry($plain, self::POST_URI, self::STATUS_URL), null];
+    }
+
+    public function testAPostIsAddressedWithoutRefusal(): void
+    {
+        $mastodon = new Feed('https://mastodon.social/@Gargron.rss');
+        $mastodon->classifyAs(SocialNetwork::Mastodon);
+
+        self::assertEquals(
+            new SocialPostAddressModel(SocialNetwork::Mastodon, self::STATUS_URL),
+            SocialPostAddress::ofOrRefuse(self::entry($mastodon, self::STATUS_URL, null)),
+        );
+    }
+
+    public function testAnEntryThatIsNoPostIsRefused(): void
+    {
+        $this->expectExceptionObject(new NotASocialPostException('This entry is not a Bluesky or Mastodon post.'));
+
+        SocialPostAddress::ofOrRefuse(self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null));
     }
 
     private static function entry(Feed $feed, string $guid, ?string $url): Entry

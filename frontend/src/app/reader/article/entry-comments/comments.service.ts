@@ -1,7 +1,7 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { catchError, of } from 'rxjs';
+import { Observable, catchError, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { CommentsResponse, EntryCommentDto } from '../../models';
+import { CommentsResponse, EntryCommentDto } from '../../entry-comment';
 import { ReaderApi } from '../../reader-api';
 
 const CACHE_CAP = 50;
@@ -11,7 +11,13 @@ const FAILED_RETRY_MS = 60 * 1000;
 export type CommentsState =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'ok'; comments: EntryCommentDto[]; loadedAt: number }
+  | {
+      status: 'ok';
+      comments: EntryCommentDto[];
+      omitted: number;
+      fetchedAt: string;
+      loadedAt: number;
+    }
   | { status: 'throttled'; retryAt: number }
   | { status: 'failed'; failedAt: number };
 
@@ -31,13 +37,13 @@ export class CommentsService {
 
   load(id: number): void {
     const state = this.stateFor(id);
-    if (isStale(state())) this.fetch(id, state);
+    if (isStale(state())) this.fetch(state, this.api.comments(id));
   }
 
   reload(id: number): void {
     const state = this.stateFor(id);
     if (state().status === 'loading') return;
-    this.fetch(id, state);
+    this.fetch(state, this.api.comments(id, true));
   }
 
   private stateFor(id: number): WritableSignal<CommentsState> {
@@ -49,15 +55,12 @@ export class CommentsService {
     return state;
   }
 
-  private fetch(id: number, state: WritableSignal<CommentsState>): void {
+  private fetch(state: WritableSignal<CommentsState>, request: Observable<CommentsResponse>): void {
     const generation = this.generation;
     state.set({ status: 'loading' });
-    this.api
-      .comments(id)
-      .pipe(catchError(() => of({ status: 'failed' } as const)))
-      .subscribe((response) => {
-        if (generation === this.generation) state.set(settled(response));
-      });
+    request.pipe(catchError(() => of({ status: 'failed' } as const))).subscribe((response) => {
+      if (generation === this.generation) state.set(settled(response));
+    });
   }
 
   private clear(): void {
@@ -84,7 +87,13 @@ function isStale(state: CommentsState): boolean {
 function settled(response: CommentsResponse): CommentsState {
   switch (response.status) {
     case 'ok':
-      return { status: 'ok', comments: response.comments, loadedAt: Date.now() };
+      return {
+        status: 'ok',
+        comments: response.comments,
+        omitted: response.omitted,
+        fetchedAt: response.fetchedAt,
+        loadedAt: Date.now(),
+      };
     case 'throttled':
       return { status: 'throttled', retryAt: Date.now() + response.retryAfter * 1000 };
     default:

@@ -16,9 +16,11 @@ use App\Entity\ShareEnrichment;
 use App\Entity\SocialAccount;
 use App\Entity\SocialLike;
 use App\Entity\User;
+use App\Enum\CommentsLoad;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
@@ -177,6 +179,20 @@ final class EntryListRowEnricherTest extends DbTestCase
             $rows[0]->duplicates[0]->enrichment->social,
         );
         self::assertNull($rows[1]->enrichment->social);
+    }
+
+    public function testAPostsRepliesAreItsDiscussionAndAnArticleKeepsItsOwn(): void
+    {
+        $post = $this->postOn($this->mastodonFeed(), self::POST . '4');
+        $article = $this->entry('article');
+
+        $rows = $this->enrich([$this->row($post), $this->row($article)]);
+
+        self::assertEquals(
+            new EntryListRowDiscussion(self::POST . '4', CommentsLoad::Auto),
+            $rows[0]->enrichment->discussion,
+        );
+        self::assertNull($rows[1]->enrichment->discussion);
     }
 
     public function testAnotherUsersLikeNeverShowsAsLiked(): void

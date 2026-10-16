@@ -18,7 +18,7 @@ import { ButtonComponent } from '../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { inputValue } from '../../shared/input-value';
-import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
+import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
 import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
@@ -62,11 +62,11 @@ const BADGE_CLASSES: Readonly<Record<ImportCandidateState, string>> = {
   selector: 'app-social-import-dialog',
   imports: [
     A11yModule,
+    AvatarComponent,
     ButtonComponent,
     ErrorBannerComponent,
     IconComponent,
     OverlayPanelComponent,
-    ProxiedImageDirective,
     SegmentedChoiceComponent,
     SkeletonComponent,
     TranslocoPipe,
@@ -100,7 +100,6 @@ export class SocialImportDialogComponent {
   protected readonly stateFilter = signal<StateFilter>('all');
   protected readonly filter = signal('');
   protected readonly chosen = signal<ReadonlySet<string>>(new Set());
-  protected readonly failedAvatars = signal<ReadonlySet<string>>(new Set());
 
   private readonly rows = computed(() => {
     this.activeLang();
@@ -143,10 +142,6 @@ export class SocialImportDialogComponent {
 
   protected load(): void {
     this.importer.load(this.data.accountId);
-  }
-
-  protected forgetAvatar(key: string): void {
-    this.failedAvatars.update((keys) => new Set(keys).add(key));
   }
 
   protected toggle(row: ImportRow): void {

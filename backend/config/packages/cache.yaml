@@ -91,6 +91,10 @@ framework:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 120
 
+            # A comments answer per source and audience (#1616): two hours; a Mastodon thread still gathering replies one minute.
+            comments.cache:
+                adapter: cache.adapter.filesystem
+
             # The Bluesky avatars an import picker was shown, per account, so the import pictures its new profile
             # feeds at once (#1613). A miss only leaves them to ProfileImageSweep.
             social.follow_avatars.cache:

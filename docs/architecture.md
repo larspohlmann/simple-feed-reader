@@ -142,6 +142,20 @@ cheap, or to consciously accept the coupling.
 
 If every box is checked, the endpoint serves a native client unchanged.
 
+### Media kinds
+
+Every `media` list the API serves (an entry, a quoted post, a comment) holds objects with a `url` and a `kind`;
+the other fields are left out when unknown. A native client should decode `kind` leniently and skip a medium whose
+kind it does not know, since new kinds are added.
+
+| Field | Meaning |
+|---|---|
+| `kind: "image"` | A picture. |
+| `kind: "video"` | A clip with sound, played on request. |
+| `animated: true` | Present only on a GIF, shown looping and silent: a picture (`kind: "image"`, from Bluesky's picker) or a clip (`kind: "video"`, a Mastodon `gifv`). |
+| `alt` | The alt text the source gave, when it gave one. |
+| `previewImageUrl` | The still shown while the medium does not play: a video's poster or a GIF's first frame. It never by itself makes a medium animated. |
+
 ## 7. Where database access lives
 
 Every query lives in `backend/src/Repository/`: DQL, the ORM and DBAL query builders, native SQL and DBAL statements

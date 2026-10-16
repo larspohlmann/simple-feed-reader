@@ -116,4 +116,36 @@ final class EntryMediaAssemblerTest extends TestCase
         self::assertCount(1, $assembled->media);
         self::assertSame('https://i/ok.jpg', $assembled->media[0]->url);
     }
+
+    public function testMediaOfGatesMediaWithoutALeadOrAttachments(): void
+    {
+        $media = EntryMediaAssembler::mediaOf([
+            new ParsedMediumModel('http://i/insecure.jpg', VisualMediaKind::Image),
+            new ParsedMediumModel(
+                'https://i/clip.mp4',
+                VisualMediaKind::Video,
+                1080,
+                1920,
+                'https://i/poster.jpg',
+                'A clip',
+            ),
+            new ParsedMediumModel('https://i/clip.mp4', VisualMediaKind::Video),
+        ]);
+
+        self::assertCount(1, $media);
+        self::assertSame('https://i/clip.mp4', $media[0]->url);
+        self::assertSame('video', $media[0]->kind);
+        self::assertSame('https://i/poster.jpg', $media[0]->previewImageUrl);
+        self::assertSame('A clip', $media[0]->alt);
+    }
+
+    public function testAnAnimatedMediumStaysAnimated(): void
+    {
+        $media = EntryMediaAssembler::mediaOf([
+            new ParsedMediumModel('https://i/a.gif', VisualMediaKind::Image, isAnimated: true),
+            new ParsedMediumModel('https://i/b.jpg', VisualMediaKind::Image),
+        ]);
+
+        self::assertSame([true, false], [$media[0]->isAnimated, $media[1]->isAnimated]);
+    }
 }

@@ -24,6 +24,11 @@ final class AtPostUri
         return BlueskyWeb::profileUrl($parts[1]) . '/post/' . $parts[2];
     }
 
+    public static function authorityOf(string $uri): ?string
+    {
+        return preg_match(self::PATTERN, $uri, $parts) === 1 ? $parts[1] : null;
+    }
+
     public static function isWebUrl(string $url): bool
     {
         return preg_match(self::WEB_PATTERN, $url) === 1;

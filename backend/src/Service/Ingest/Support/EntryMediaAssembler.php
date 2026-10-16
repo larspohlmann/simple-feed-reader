@@ -37,6 +37,16 @@ final class EntryMediaAssembler
      *
      * @return list<EntryMedium>
      */
+    public static function mediaOf(array $media): array
+    {
+        return self::visualMedia(null, $media);
+    }
+
+    /**
+     * @param list<ParsedMediumModel> $media
+     *
+     * @return list<EntryMedium>
+     */
     private static function visualMedia(?DeclaredImageModel $lead, array $media): array
     {
         $kept = [];
@@ -60,6 +70,8 @@ final class EntryMediaAssembler
                 $medium->width,
                 $medium->height,
                 HttpsImageUrl::orNull($medium->previewImageUrl),
+                $medium->alt,
+                $medium->isAnimated,
             );
         }
 

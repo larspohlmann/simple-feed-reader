@@ -4,225 +4,234 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Comments;
 
-use App\Entity\Discussion;
 use App\Entity\Entry;
-use App\Entity\EntryAuthor;
 use App\Entity\Feed;
-use App\Enum\CommentsLoad;
+use App\Entity\User;
+use App\Service\Comments\CommentsCache;
 use App\Service\Comments\CommentsLoader;
+use App\Service\Comments\Exception\CommentsThrottledException;
+use App\Service\Comments\Exception\CommentsUnavailableException;
+use App\Service\Comments\Exception\NoCommentsFeedException;
+use App\Service\Comments\Model\CommentsResultModel;
 use App\Service\Comments\Model\CommentsStatus;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\HostThrottle;
-use App\Service\Fetch\Model\FetchResponseModel;
-use App\Tests\Support\StubFeedFetcher;
-use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use App\Tests\Support\FakeCommentsSource;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
-final class CommentsLoaderTest extends KernelTestCase
+final class CommentsLoaderTest extends TestCase
 {
-    private const string THREAD = 'https://www.reddit.com/r/PHP/comments/1woq4he/what_is_your_php_stack_2026/';
-    private const string FEED = self::THREAD . '.rss';
-    private const string THREAD_GUID = 't3_1woq4he';
-    private const string WORDPRESS_POST = 'https://blog.example.org/2026/09/hello-world/';
+    private const int SETTLED_LIFETIME = 7200;
+    private const int GATHERING_LIFETIME = 60;
 
-    private StubFeedFetcher $fetcher;
-    private HostThrottle $throttle;
+    private MockClock $clock;
+    private FakeCommentsSource $source;
+    private User $user;
+    private Entry $entry;
 
     protected function setUp(): void
     {
-        self::bootKernel();
-        $this->fetcher = new StubFeedFetcher();
-        $clock = new MockClock('2026-09-24 12:00:00');
-        $this->throttle = new HostThrottle(new ArrayAdapter(clock: $clock), $clock);
-    }
-
-    /** @return list<EntryCommentModel> */
-    private function loadWordPressComments(): array
-    {
-        $feed = self::WORDPRESS_POST . 'feed/';
-        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/wordpress/post-comments.rss');
-        $this->fetcher->willReturn($feed, FetchResponseModel::fetched($feed, false, $xml, null, null));
-        $entry = self::entry(guid: 'https://blog.example.org/?p=7');
-        $entry->setDiscussion(
-            Discussion::withCommentsFeed(self::WORDPRESS_POST . '#comments', $feed, CommentsLoad::Manual),
-        );
-
-        return $this->loader()->load($entry)->comments;
-    }
-
-    private function loader(): CommentsLoader
-    {
-        $container = self::getContainer();
-        $container->set(FeedFetcherInterface::class, $this->fetcher);
-        $container->set(HostThrottle::class, $this->throttle);
-        $loader = $container->get(CommentsLoader::class);
-        self::assertInstanceOf(CommentsLoader::class, $loader);
-
-        return $loader;
-    }
-
-    private function serveRedditThread(): void
-    {
-        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
-        $this->fetcher->willReturn(self::FEED, FetchResponseModel::fetched(self::FEED, false, $xml, null, null));
-    }
-
-    private static function entry(?string $author = '/u/Background_Lie11', string $guid = self::THREAD_GUID): Entry
-    {
-        $entry = new Entry(
-            new Feed('https://www.reddit.com/r/PHP/.rss'),
-            $guid,
+        $this->clock = new MockClock('2026-10-16 12:00:00');
+        $this->source = new FakeCommentsSource('answer');
+        $this->user = new User('reader@example.com', $this->clock->now());
+        $this->entry = new Entry(
+            new Feed('https://blog.example.org/feed/'),
+            'https://blog.example.org/?p=7',
             null,
-            'Stack',
-            new \DateTimeImmutable(),
-            new \DateTimeImmutable(),
+            'Hello',
+            $this->clock->now(),
+            $this->clock->now(),
         );
-        $entry->setAuthor(new EntryAuthor($author));
-        $entry->setDiscussion(Discussion::withCommentsFeed(self::THREAD, self::FEED, CommentsLoad::Auto));
-
-        return $entry;
     }
 
-    public function testParsesCommentsAndDropsThePostItself(): void
+    /** @param list<FakeCommentsSource> $sources */
+    private function loader(array $sources = []): CommentsLoader
     {
-        $this->serveRedditThread();
+        $cache = new CommentsCache(
+            new ArrayAdapter(clock: $this->clock),
+            self::SETTLED_LIFETIME,
+            self::GATHERING_LIFETIME,
+        );
 
-        $result = $this->loader()->load(self::entry());
+        return new CommentsLoader([] === $sources ? [$this->source] : $sources, $cache, $this->clock);
+    }
+
+    private static function firstHtml(CommentsResultModel $result): string
+    {
+        self::assertNotSame([], $result->comments);
+
+        return $result->comments[0]->html;
+    }
+
+    public function testAFreshFetchIsReadAndStamped(): void
+    {
+        $result = $this->loader()->load($this->user, $this->entry);
 
         self::assertSame(CommentsStatus::Ok, $result->status);
-        self::assertNotSame([], $result->comments);
-        self::assertNotContains(
-            self::THREAD,
-            array_map(static fn (EntryCommentModel $comment) => $comment->url, $result->comments),
-        );
+        self::assertSame('answer-1', self::firstHtml($result));
+        self::assertEquals($this->clock->now(), $result->fetchedAt);
+        self::assertCount(1, $this->source->fetches);
     }
 
-    public function testKeepsEveryWordPressComment(): void
+    public function testASecondLoadIsAnsweredFromTheCacheWithTheFirstFetchTime(): void
     {
-        $comments = $this->loadWordPressComments();
+        $loader = $this->loader();
+        $firstFetch = $this->clock->now();
 
-        self::assertSame(
-            [self::WORDPRESS_POST . '#comment-12', self::WORDPRESS_POST . '#comment-13'],
-            array_map(static fn (EntryCommentModel $comment) => $comment->url, $comments),
-        );
+        $loader->load($this->user, $this->entry);
+        $this->clock->sleep(600);
+        $result = $loader->load($this->user, $this->entry);
+
+        self::assertCount(1, $this->source->fetches);
+        self::assertSame('answer-1', self::firstHtml($result));
+        self::assertEquals($firstFetch, $result->fetchedAt);
     }
 
-    public function testStripsScriptsFromCommentBodies(): void
+    public function testRefreshedAsksTheSourceAgain(): void
     {
-        $bodies = array_map(static fn (EntryCommentModel $comment) => $comment->html, $this->loadWordPressComments());
-
-        self::assertStringContainsString('Agreed.', $bodies[1]);
-        self::assertStringNotContainsString('<script', $bodies[1]);
-    }
-
-    public function testMarksTheEntryAuthorsComments(): void
-    {
-        $this->serveRedditThread();
-
-        $result = $this->loader()->load(self::entry('/u/Background_Lie11'));
-
-        $byAuthor = array_filter($result->comments, static fn ($comment): bool => $comment->byEntryAuthor);
-        self::assertNotSame([], $byAuthor);
-    }
-
-    public function testLeavesOtherCommentersUnmarked(): void
-    {
-        $this->serveRedditThread();
-
-        $result = $this->loader()->load(self::entry('/u/Background_Lie11'));
-
-        $byOtherCommenter = array_filter(
-            $result->comments,
-            static fn ($comment): bool => $comment->author === '/u/WesamMikhail',
-        );
-        self::assertNotSame([], $byOtherCommenter);
-        foreach ($byOtherCommenter as $comment) {
-            self::assertFalse($comment->byEntryAuthor);
-        }
-    }
-
-    public function testAnEntryWithNoAuthorMarksNoComment(): void
-    {
-        $this->serveRedditThread();
-
-        $result = $this->loader()->load(self::entry(null));
-
-        $byAuthor = array_filter($result->comments, static fn ($comment): bool => $comment->byEntryAuthor);
-        self::assertSame([], $byAuthor);
-    }
-
-    public function testAnotherEntrysThreadKeepsEveryParsedItem(): void
-    {
-        $this->serveRedditThread();
-
-        $result = $this->loader()->load(self::entry(guid: 't3_another'));
-
-        self::assertContains(self::THREAD, array_map(static fn ($comment) => $comment->url, $result->comments));
-    }
-
-    public function testA429IsThrottledAndRemembered(): void
-    {
-        $this->fetcher->willThrow(self::FEED, new FeedThrottledException('429', null));
         $loader = $this->loader();
 
-        $first = $loader->load(self::entry());
-        $second = $loader->load(self::entry());
+        $loader->load($this->user, $this->entry);
+        $this->clock->sleep(600);
+        $result = $loader->refreshed($this->user, $this->entry);
 
-        self::assertSame(CommentsStatus::Throttled, $first->status);
-        self::assertSame(60, $first->retryAfter);
-        self::assertSame(CommentsStatus::Throttled, $second->status);
-        self::assertCount(1, $this->fetcher->fetchedUrls);
+        self::assertCount(2, $this->source->fetches);
+        self::assertSame('answer-2', self::firstHtml($result));
+        self::assertEquals($this->clock->now(), $result->fetchedAt);
     }
 
-    public function testAZeroRetryAfterIsClampedToTheFloor(): void
+    public function testARefreshedAnswerIsWhatTheNextLoadReads(): void
     {
-        $this->fetcher->willThrow(self::FEED, new FeedThrottledException('429', 0));
+        $loader = $this->loader();
 
-        $result = $this->loader()->load(self::entry());
+        $loader->load($this->user, $this->entry);
+        $loader->refreshed($this->user, $this->entry);
+        $result = $loader->load($this->user, $this->entry);
+
+        self::assertCount(2, $this->source->fetches);
+        self::assertSame('answer-2', self::firstHtml($result));
+    }
+
+    public function testAnAnswerStillGatheringExpiresAfterAMinute(): void
+    {
+        $loader = $this->loader();
+        $this->source->stillGathering();
+
+        $loader->load($this->user, $this->entry);
+        $this->clock->sleep(self::GATHERING_LIFETIME - 1);
+        $loader->load($this->user, $this->entry);
+        self::assertCount(1, $this->source->fetches);
+
+        $this->clock->sleep(2);
+        $loader->load($this->user, $this->entry);
+        self::assertCount(2, $this->source->fetches);
+    }
+
+    public function testASettledAnswerLastsTwoHours(): void
+    {
+        $loader = $this->loader();
+
+        $loader->load($this->user, $this->entry);
+        $this->clock->sleep(self::SETTLED_LIFETIME - 1);
+        $loader->load($this->user, $this->entry);
+        self::assertCount(1, $this->source->fetches);
+
+        $this->clock->sleep(2);
+        $loader->load($this->user, $this->entry);
+        self::assertCount(2, $this->source->fetches);
+    }
+
+    public function testAThrottledSourceReportsWhenToRetry(): void
+    {
+        $this->source->failWith(new CommentsThrottledException('slow', 30));
+
+        $result = $this->loader()->load($this->user, $this->entry);
 
         self::assertSame(CommentsStatus::Throttled, $result->status);
-        self::assertSame(60, $result->retryAfter);
+        self::assertSame(30, $result->retryAfter);
     }
 
-    public function testAHugeRetryAfterIsClampedToTheCeiling(): void
+    public function testAnUnavailableSourceReportsFailedAndCachesNothing(): void
     {
-        $this->fetcher->willThrow(self::FEED, new FeedThrottledException('429', 99_999_999));
+        $loader = $this->loader();
+        $this->source->failWith(new CommentsUnavailableException('down'));
 
-        $result = $this->loader()->load(self::entry());
+        $failed = $loader->load($this->user, $this->entry);
+        $this->source->recover();
+        $recovered = $loader->load($this->user, $this->entry);
 
-        self::assertSame(CommentsStatus::Throttled, $result->status);
-        self::assertSame(86_400, $result->retryAfter);
+        self::assertSame(CommentsStatus::Failed, $failed->status);
+        self::assertSame(CommentsStatus::Ok, $recovered->status);
+        self::assertCount(2, $this->source->fetches);
     }
 
-    public function testAKnownThrottleSkipsTheRequest(): void
+    public function testAnAnswerThatCannotBeReadIsFailedAndCachesNothing(): void
     {
-        $this->throttle->record('https://www.reddit.com/r/PHP/.rss', 90);
+        $loader = $this->loader();
+        $this->source->cannotRead('answer-1');
 
-        $result = $this->loader()->load(self::entry());
+        $failed = $loader->load($this->user, $this->entry);
+        $recovered = $loader->load($this->user, $this->entry);
 
-        self::assertSame(CommentsStatus::Throttled, $result->status);
-        self::assertSame(90, $result->retryAfter);
-        self::assertSame([], $this->fetcher->fetchedUrls);
+        self::assertSame(CommentsStatus::Failed, $failed->status);
+        self::assertSame(CommentsStatus::Ok, $recovered->status);
+        self::assertSame('answer-2', self::firstHtml($recovered));
+        self::assertCount(2, $this->source->fetches);
     }
 
-    public function testAFetchFailureIsFailed(): void
+    public function testACachedAnswerThatNoLongerReadsIsFetchedAfresh(): void
     {
-        $this->fetcher->willThrow(self::FEED, new FeedUnreachableException('HTTP 500', statusCode: 500));
+        $loader = $this->loader();
+        $loader->load($this->user, $this->entry);
+        $this->source->cannotRead('answer-1');
 
-        self::assertSame(CommentsStatus::Failed, $this->loader()->load(self::entry())->status);
+        $refetched = $loader->load($this->user, $this->entry);
+        $cached = $loader->load($this->user, $this->entry);
+
+        self::assertSame('answer-2', self::firstHtml($refetched));
+        self::assertEquals($this->clock->now(), $refetched->fetchedAt);
+        self::assertSame('answer-2', self::firstHtml($cached));
+        self::assertCount(2, $this->source->fetches);
     }
 
-    public function testUnparseableBodyIsFailed(): void
+    public function testACachedAnswerThatNoLongerReadsIsFetchedAfreshOnlyOnce(): void
     {
-        $this->fetcher->willReturn(
-            self::FEED,
-            FetchResponseModel::fetched(self::FEED, false, /** @lang TEXT */ '<html>nope', null, null),
-        );
+        $loader = $this->loader();
+        $loader->load($this->user, $this->entry);
+        $this->source->cannotRead('answer-1', 'answer-2');
 
-        self::assertSame(CommentsStatus::Failed, $this->loader()->load(self::entry())->status);
+        $result = $loader->load($this->user, $this->entry);
+
+        self::assertSame(CommentsStatus::Failed, $result->status);
+        self::assertCount(2, $this->source->fetches);
+    }
+
+    public function testALoadAsksTheAudienceOnce(): void
+    {
+        $this->loader()->load($this->user, $this->entry);
+
+        self::assertSame(1, $this->source->audienceAsks);
+    }
+
+    public function testAnEntryNoSourceServesIsRefused(): void
+    {
+        $this->source->servesEntries = false;
+
+        $this->expectException(NoCommentsFeedException::class);
+
+        $this->loader()->load($this->user, $this->entry);
+    }
+
+    public function testTheFirstSourceThatServesTheEntryAnswers(): void
+    {
+        $declining = new FakeCommentsSource('declined');
+        $declining->servesEntries = false;
+        $serving = new FakeCommentsSource('served');
+
+        $result = $this->loader([$declining, $serving])->load($this->user, $this->entry);
+
+        self::assertSame([], $declining->fetches);
+        self::assertCount(1, $serving->fetches);
+        self::assertSame('served-1', self::firstHtml($result));
     }
 }

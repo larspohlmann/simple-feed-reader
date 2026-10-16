@@ -21,6 +21,8 @@ final readonly class ActingAccountGuard
      *
      * @param \Closure(): T $call
      *
+     * @param-immediately-invoked-callable $call
+     *
      * @return T
      *
      * @throws SocialAccountNeedsReconnectException

@@ -7,8 +7,8 @@ namespace App\Entity;
 use App\Entity\Exception\IncompleteStoredMediaException;
 
 /**
- * One image or video on an entry, with the dimensions and poster the feed declared. `kind` is the API's string
- * (`image` or `video`); unset fields stay out of the JSON.
+ * One image or video on an entry, with the dimensions, still and alt text the feed declared. `kind` is the API's
+ * string (`image` or `video`). Unset fields stay out of the JSON.
  */
 final readonly class EntryMedium implements \JsonSerializable
 {
@@ -18,6 +18,8 @@ final readonly class EntryMedium implements \JsonSerializable
         public ?int $width = null,
         public ?int $height = null,
         public ?string $previewImageUrl = null,
+        public ?string $alt = null,
+        public bool $isAnimated = false,
     ) {
     }
 
@@ -38,10 +40,12 @@ final readonly class EntryMedium implements \JsonSerializable
             throw new IncompleteStoredMediaException('A stored medium needs a url and a kind.');
         }
         $url = $stored['url'];
-        $kind = $stored['kind'];
+        $kind = 'animation' === $stored['kind'] ? 'video' : $stored['kind'];
         $width = $stored['width'] ?? null;
         $height = $stored['height'] ?? null;
         $previewImageUrl = $stored['previewImageUrl'] ?? null;
+        $alt = $stored['alt'] ?? null;
+        $isAnimated = ($stored['animated'] ?? null) === true || 'animation' === $stored['kind'];
 
         return new self(
             $url,
@@ -49,10 +53,12 @@ final readonly class EntryMedium implements \JsonSerializable
             \is_int($width) ? $width : null,
             \is_int($height) ? $height : null,
             \is_string($previewImageUrl) ? $previewImageUrl : null,
+            \is_string($alt) ? $alt : null,
+            $isAnimated,
         );
     }
 
-    /** @return array<string, string|int> */
+    /** @return array<string, string|int|true> */
     public function jsonSerialize(): array
     {
         return array_filter([
@@ -61,6 +67,8 @@ final readonly class EntryMedium implements \JsonSerializable
             'width' => $this->width,
             'height' => $this->height,
             'previewImageUrl' => $this->previewImageUrl,
-        ], static fn (string|int|null $value): bool => $value !== null);
+            'alt' => $this->alt,
+            'animated' => $this->isAnimated ?: null,
+        ], static fn (string|int|true|null $value): bool => $value !== null);
     }
 }

@@ -1199,6 +1199,31 @@ know the shape of what is coming.
 
 ---
 
+### `<app-avatar>`
+
+A social author's picture, round, falling back to their initials when there is no
+picture or it fails to load. The picture goes through the image proxy and is asked
+for without a referrer.
+
+| Input | Type | Default |
+|---|---|---|
+| `name` | `string` (required) | — the initials come from it |
+| `url` | `string \| null` | `null` — initials straight away |
+| `toneSeed` | `string \| null` | `null` — neutral initials on `--surface-sunken` |
+| `size` | `'sm' \| 'md'` | `'sm'` — `--icon-md`; `'md'` is `--space-6` |
+
+```html
+<app-avatar [url]="post.authorAvatarUrl" [name]="post.authorName" [toneSeed]="post.authorHandle" />
+```
+
+The tones are the four in `theme/_avatar-tone.scss`; a seed (the handle, where there
+is one) gives the same author the same tone everywhere. Used by the comments, the
+quoted post and the social import dialog.
+
+**Not for:** the signed-in user. Use `<app-user-avatar>`, which reads Gravatar.
+
+---
+
 ### `<app-search-field>`
 
 The entry-search input. It owns every timing rule the search has, so no caller
@@ -1753,6 +1778,10 @@ sit above it. Its media and the media block's share `<app-post-media>` (`reader/
 `reader/media/_post-media-grid.scss`. A quote share's magazine height is computed per entry
 (`magazine-block-height.ts`), calibrated at 390px like `BLOCK_HEIGHT`. A quote share can also carry link cards; the reader
 view shows the quoted post first, then the cards.
+
+**The comments panel threads replies by indent** (#1616). Each comment sets `--depth` (capped at 5) and indents by
+`--depth × --space-4`, a reply carrying a 1px `--border-strong` thread line; below `bp.$bp-sm` the indent caps at two
+steps of `--space-3`. A reply's avatar and initials share `theme/_avatar-tone.scss`'s `tones` with `<app-quoted-post>`.
 
 ---
 

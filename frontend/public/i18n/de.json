@@ -18,7 +18,7 @@
     "scrapingSaveFailed": "Die Einstellung wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
     "readingFocus": "Lesefokus",
     "readingFocusHint": "Inhalte außerhalb der Lesemitte abdunkeln.",
-    "listAutoplay": "Videos in der Liste automatisch abspielen",
+    "listAutoplay": "Videos in Listen und Kommentaren automatisch abspielen",
     "listAutoplayHint": "Startet stumm, eins nach dem anderen. Gilt für dieses Gerät.",
     "magazineStyle": "Magazin-Stil",
     "magazineStyleHint": "Wie die Magazinansicht einen Eintrag darstellt.",
@@ -1043,6 +1043,9 @@
     "hideSidebar": "Seitenleiste ausblenden",
     "showSidebar": "Seitenleiste einblenden",
     "mediaVideo": "Video",
+    "media": {
+      "gif": "GIF"
+    },
     "quotedVideo": "Video im zitierten Beitrag",
     "quotingPostBy": "Zitiert einen Beitrag von {{handle}}",
     "quotingPost": "Zitiert einen Beitrag",
@@ -1241,6 +1244,9 @@
     "comments": {
       "heading": "Kommentare",
       "reload": "Kommentare neu laden",
+      "updated": "Aktualisiert {{ when }}",
+      "more": "{{ count }} weitere auf {{ network }}",
+      "video": "Video in einem Kommentar",
       "load": "Kommentare laden",
       "loading": "Kommentare werden geladen",
       "empty": "Noch keine Kommentare.",

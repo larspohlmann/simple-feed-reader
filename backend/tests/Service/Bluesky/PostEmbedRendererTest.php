@@ -30,6 +30,8 @@ final class PostEmbedRendererTest extends TestCase
         . 'after_the_fall_of_roe_v_wade_the_antiabortion/';
     private const string REDDIT_THUMB = self::THUMBNAILS
         . 'bafkreihbcj6mbqkkoffjnzm4qlwje6vezlsydmbv4hljgllcqrkjs2kg7q';
+    private const string KLIPY_GIF = 'https://static.klipy.com/ii/d6b0ce929193df3c242ac34b5654d2ce/35/22/'
+        . 'scTbQIaa.gif?hh=280&ww=498&mp4=08W9PvUtuFHM97&webm=QTjWv8sXYpc9WKG9eRu';
     private const string FALLBACK = '<p><a href="https://bsky.app/profile/did:plc:a/post/b">'
         . 'View embedded content on Bluesky</a></p>';
 
@@ -349,6 +351,148 @@ final class PostEmbedRendererTest extends TestCase
         );
     }
 
+    public function testAGifPickerEmbedIsAnAnimatedImage(): void
+    {
+        $rendered = $this->renderedPost(self::gifPicker(self::KLIPY_GIF));
+
+        self::assertEquals(
+            [new ParsedMediumModel(
+                self::KLIPY_GIF,
+                VisualMediaKind::Image,
+                498,
+                280,
+                self::CARD_THUMB,
+                'Audience Clapping and Applauding',
+                isAnimated: true,
+            )],
+            $rendered->media,
+        );
+        self::assertSame(
+            [self::CARD_THUMB, 498, 280],
+            [$rendered->leadImage?->url, $rendered->leadImage?->width, $rendered->leadImage?->height],
+        );
+        self::assertSame(
+            '<figure class="post-images"><img src="' . htmlspecialchars(self::KLIPY_GIF, \ENT_QUOTES | \ENT_HTML5)
+                . '" alt="Audience Clapping and Applauding" width="498" height="280"></figure>',
+            $rendered->html,
+        );
+        self::assertSame([], $rendered->linkCards);
+        self::assertNull($rendered->uncardedLink);
+    }
+
+    /** @return iterable<string, array{array<string, string>, ?string}> */
+    public static function gifAltTexts(): iterable
+    {
+        yield 'no description' => [['title' => 'Clapping'], 'Clapping'];
+        yield 'a bare ALT: prefix' => [['title' => 'Clapping', 'description' => 'ALT: '], 'Clapping'];
+        yield 'ALT: without a space' => [['title' => 'Clapping', 'description' => 'ALT:Applause'], 'Applause'];
+        yield 'a description without the prefix' => [['title' => 'Clapping', 'description' => 'Applause'], 'Applause'];
+        yield 'neither' => [[], null];
+        yield 'a blank title' => [['title' => '  '], null];
+    }
+
+    /** @param array<string, string> $text */
+    #[DataProvider('gifAltTexts')]
+    public function testAGifsAltTextIsItsDescriptionWithoutThePickersPrefixElseItsTitle(array $text, ?string $alt): void
+    {
+        $rendered = $this->renderedPost([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://media.tenor.com/abc/Clap.GIF?hh=10&ww=20', ...$text],
+        ]);
+
+        self::assertCount(1, $rendered->media);
+        self::assertSame($alt, $rendered->media[0]->alt);
+        self::assertStringContainsString('alt="' . ($alt ?? '') . '"', $rendered->html);
+    }
+
+    public function testAGifWithoutAThumbHasNoStillAndNoLeadImage(): void
+    {
+        $rendered = $this->renderedPost([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://media.tenor.com/abc/clap.gif?hh=10&ww=20', 'title' => 'Clapping'],
+        ]);
+
+        self::assertCount(1, $rendered->media);
+        self::assertNull($rendered->media[0]->previewImageUrl);
+        self::assertNull($rendered->leadImage);
+    }
+
+    public function testAGifPickerEmbedInsideAQuoteIsAnAnimatedImageToo(): void
+    {
+        $rendered = $this->renderedPost([
+            '$type' => 'app.bsky.embed.recordWithMedia#view',
+            'record' => ['record' => [
+                '$type' => 'app.bsky.embed.record#viewRecord',
+                'uri' => 'at://did:plc:q/app.bsky.feed.post/r',
+                'author' => ['handle' => 'quoted.test'],
+                'value' => ['$type' => 'app.bsky.feed.post', 'text' => 'Quoted.'],
+            ]],
+            'media' => self::gifPicker(self::KLIPY_GIF),
+        ]);
+
+        self::assertSame('quoted.test', $rendered->quote?->authorHandle);
+        self::assertSame([self::KLIPY_GIF], array_map(
+            static fn (ParsedMediumModel $medium): string => $medium->url,
+            $rendered->media,
+        ));
+        self::assertSame([], $rendered->linkCards);
+    }
+
+    public function testAOnePixelGifIsStillAGif(): void
+    {
+        $rendered = $this->renderedPost(self::gifPicker('https://media.tenor.com/a/dot.gif?hh=1&ww=1'));
+
+        self::assertCount(1, $rendered->media);
+        self::assertSame([1, 1], [$rendered->media[0]->width, $rendered->media[0]->height]);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function gifsThatStayLinkCards(): iterable
+    {
+        yield 'no size' => ['https://static.klipy.com/ii/a/b.gif'];
+        yield 'only a width' => ['https://static.klipy.com/ii/a/b.gif?ww=498'];
+        yield 'a zero height' => ['https://static.klipy.com/ii/a/b.gif?hh=0&ww=498'];
+        yield 'a size that is no integer' => ['https://static.klipy.com/ii/a/b.gif?hh=2.5&ww=498'];
+        yield 'a size given as a list' => ['https://static.klipy.com/ii/a/b.gif?hh[]=2&ww=498'];
+        yield 'on http' => ['http://static.klipy.com/ii/a/b.gif?hh=280&ww=498'];
+        yield 'a path that only contains .gif' => ['https://example.com/b.gif/page?hh=280&ww=498'];
+    }
+
+    #[DataProvider('gifsThatStayLinkCards')]
+    public function testAGifWithoutItsSizeStaysALinkCard(string $url): void
+    {
+        $rendered = $this->renderedPost(self::gifPicker($url));
+
+        self::assertSame([$url], array_map(
+            static fn (LinkCardContent $card): string => $card->url,
+            $rendered->linkCards,
+        ));
+        self::assertSame([], $rendered->media);
+    }
+
+    public function testAnOrdinaryExternalEmbedIsStillALinkCard(): void
+    {
+        $rendered = $this->renderedPost([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => [
+                'uri' => 'https://example.com/story?hh=280&ww=498',
+                'title' => 'Story',
+                'description' => 'ALT: not a gif',
+                'thumb' => 'https://example.com/t.jpg',
+            ],
+        ]);
+
+        self::assertEquals([new LinkCardContent(
+            'https://example.com/story?hh=280&ww=498',
+            'Story',
+            'ALT: not a gif',
+            'https://example.com/t.jpg',
+            'example.com',
+        )], $rendered->linkCards);
+        self::assertSame([], $rendered->media);
+        self::assertSame('', $rendered->html);
+    }
+
     public function testAVideoWithoutAThumbnailHasNoPosterAndNoLeadImage(): void
     {
         $rendered = $this->renderer()->render(self::post([
@@ -404,6 +548,29 @@ final class PostEmbedRendererTest extends TestCase
     private function rendered(string $fixture): RenderedEmbedModel
     {
         $rendered = $this->renderer()->render(Bluesky::post($fixture));
+        self::assertNotNull($rendered);
+
+        return $rendered;
+    }
+
+    /** @return array<string, mixed> */
+    private static function gifPicker(string $url): array
+    {
+        return [
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => [
+                'uri' => $url,
+                'title' => 'Audience Clapping and Applauding',
+                'description' => 'ALT: Audience Clapping and Applauding',
+                'thumb' => self::CARD_THUMB,
+            ],
+        ];
+    }
+
+    /** @param array<mixed> $embed */
+    private function renderedPost(array $embed): RenderedEmbedModel
+    {
+        $rendered = $this->renderer()->render(self::post($embed));
         self::assertNotNull($rendered);
 
         return $rendered;

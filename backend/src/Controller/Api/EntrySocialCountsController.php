@@ -10,6 +10,7 @@ use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\SocialCounts;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -26,11 +27,15 @@ final readonly class EntrySocialCountsController
     }
 
     #[Route('/{id}/social', name: 'api_entries_social_counts', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function counts(int $id, #[CurrentUser] User $user): JsonResponse
+    public function counts(int $id, Request $request, #[CurrentUser] User $user): JsonResponse
     {
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
         $this->rateLimitGuard->enforceForUser($this->socialCountsLimiter, $user);
 
-        return new JsonResponse(SocialCountsJson::of($this->socialCounts->of($user, $entry)));
+        $counts = $request->query->getBoolean('refresh')
+            ? $this->socialCounts->refreshed($user, $entry)
+            : $this->socialCounts->of($user, $entry);
+
+        return new JsonResponse(SocialCountsJson::of($counts));
     }
 }

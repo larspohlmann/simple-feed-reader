@@ -1,0 +1,41 @@
+@use '../../theme/avatar-tone';
+
+:host {
+  display: block;
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+:host(.md) {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+
+.avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+}
+
+.initials {
+  display: grid;
+  place-items: center;
+  color: var(--text-primary);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+}
+
+:host(.md) .initials {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+:host(.neutral) .avatar {
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+
+@include avatar-tone.tones;

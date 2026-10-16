@@ -167,20 +167,6 @@ export type EntryShare = 'link' | 'media' | 'quote';
 
 export type CommentsLoad = 'auto' | 'manual';
 
-export interface EntryCommentDto {
-  author: string | null;
-  authorUrl: string | null;
-  url: string | null;
-  publishedAt: string | null;
-  html: string;
-  byEntryAuthor: boolean;
-}
-
-export type CommentsResponse =
-  | { status: 'ok'; comments: EntryCommentDto[] }
-  | { status: 'throttled'; retryAfter: number }
-  | { status: 'failed' };
-
 export interface EntryDto {
   id: number;
   title: string;

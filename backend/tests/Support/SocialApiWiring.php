@@ -35,6 +35,7 @@ final class SocialApiWiring
     private const string BLUESKY_HOST = 'pds.example.test';
     private const string MASTODON_HOST = 'mastodon.example';
     private const string OTHER_MASTODON_HOST = 'other.example';
+    private const string ORIGIN_MASTODON_HOST = 'mastodon.social';
     private const string PUBLIC_ADDRESS = '93.184.216.34';
     private const int BLUESKY_ACCOUNT_ID = 3;
 
@@ -60,7 +61,9 @@ final class SocialApiWiring
 
     public static function mastodonApiClient(HttpClientInterface $http): MastodonApiClient
     {
-        return new MastodonApiClient(FetchWiring::guardedApiClient($http, self::guardFor(self::MASTODON_HOST)));
+        $guard = self::guardFor(self::MASTODON_HOST, self::ORIGIN_MASTODON_HOST);
+
+        return new MastodonApiClient(FetchWiring::guardedApiClient($http, $guard));
     }
 
     public static function mastodonAccountApi(HttpClientInterface $http): MastodonAccountApi

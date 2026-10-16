@@ -19,6 +19,8 @@ final readonly class EntryListRowEnrichment
         public bool $pending = false,
         /** null for an article, or for a post on a network the reader has no account on */
         public ?EntryListRowSocial $social = null,
+        /** a post's replies stand in for its stored discussion; null keeps the stored one */
+        public ?EntryListRowDiscussion $discussion = null,
     ) {
     }
 }

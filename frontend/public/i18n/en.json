@@ -18,7 +18,7 @@
     "scrapingSaveFailed": "The setting changed on this device, but could not be saved to your account.",
     "readingFocus": "Reading focus",
     "readingFocusHint": "Dim content away from the reading centre.",
-    "listAutoplay": "Autoplay videos in the list",
+    "listAutoplay": "Autoplay videos in lists and comments",
     "listAutoplayHint": "Starts muted, one at a time. Saved on this device.",
     "magazineStyle": "Magazine style",
     "magazineStyleHint": "How the magazine view draws an entry.",
@@ -1043,6 +1043,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "mediaVideo": "Video",
+    "media": {
+      "gif": "GIF"
+    },
     "quotedVideo": "Video in the quoted post",
     "quotingPostBy": "Quoting a post by {{handle}}",
     "quotingPost": "Quoting a post",
@@ -1241,6 +1244,9 @@
     "comments": {
       "heading": "Comments",
       "reload": "Reload comments",
+      "updated": "Updated {{ when }}",
+      "more": "{{ count }} more on {{ network }}",
+      "video": "Video in a comment",
       "load": "Load comments",
       "loading": "Loading comments",
       "empty": "No comments yet.",

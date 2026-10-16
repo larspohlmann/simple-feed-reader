@@ -78,7 +78,7 @@ final class EntryMedia
      *
      * @param list<EntryMedium>|list<EntryAttachment> $items
      *
-     * @return list<array<string, string|int>>
+     * @return list<array<string, string|int|true>>
      */
     public static function toJsonList(array $items): array
     {

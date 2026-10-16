@@ -18,6 +18,7 @@ final class QuotedViewRecord
     private const string POST_RECORD = 'app.bsky.feed.post';
     private const string IMAGES = 'app.bsky.embed.images#view';
     private const string VIDEO = 'app.bsky.embed.video#view';
+    private const string EXTERNAL = 'app.bsky.embed.external#view';
     private const string RECORD = 'app.bsky.embed.record#view';
     private const string RECORD_WITH_MEDIA = 'app.bsky.embed.recordWithMedia#view';
 
@@ -39,7 +40,7 @@ final class QuotedViewRecord
             $author->string('avatar'),
             DateParser::parse($value->string('createdAt') ?? $record->string('indexedAt')),
             $value->text('text') ?? '',
-            EntryMediaAssembler::assemble(null, self::mediaOf($embed), [])->media,
+            EntryMediaAssembler::mediaOf(self::mediaOf($embed)),
             self::nestedQuoteOf($embed),
         ));
     }
@@ -55,6 +56,7 @@ final class QuotedViewRecord
         return match ($embed->type()) {
             self::IMAGES => BlueskyEmbedMedia::images($embed),
             self::VIDEO => array_filter([BlueskyEmbedMedia::video($embed)]),
+            self::EXTERNAL => array_filter([BlueskyEmbedMedia::gif($embed->node('external'))]),
             self::RECORD_WITH_MEDIA => self::mediaOf($embed->node('media')),
             default => [],
         };

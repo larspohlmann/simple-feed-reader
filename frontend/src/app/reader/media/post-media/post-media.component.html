@@ -1,5 +1,7 @@
 @for (medium of media(); track medium.url) {
-  @if (medium.kind === 'video') {
+  @if (isGif(medium)) {
+    <app-gif class="item" [medium]="medium" />
+  } @else if (medium.kind === 'video') {
     <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
     <div
       class="item video-slot"

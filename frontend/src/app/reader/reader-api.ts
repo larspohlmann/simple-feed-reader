@@ -7,8 +7,8 @@ import { PAGE_SIZE } from './list/paging';
 import { RefreshScope, ScopedMarkReadTarget } from './query/query';
 import { EntryLikeDto, SocialCountsDto } from './entry-social';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
+import { CommentsResponse } from './entry-comment';
 import {
-  CommentsResponse,
   EntriesPage,
   EntryQuery,
   EntryStatePatch,
@@ -168,12 +168,16 @@ export class ReaderApi {
     return this.http.get<ReaderContent>(`${this.base}/api/entries/${entryId}/reader`);
   }
 
-  comments(entryId: number): Observable<CommentsResponse> {
-    return this.http.get<CommentsResponse>(`${this.base}/api/entries/${entryId}/comments`);
+  comments(entryId: number, refresh = false): Observable<CommentsResponse> {
+    return this.http.get<CommentsResponse>(`${this.base}/api/entries/${entryId}/comments`, {
+      params: refreshParams(refresh),
+    });
   }
 
-  socialCounts(entryId: number): Observable<SocialCountsDto> {
-    return this.http.get<SocialCountsDto>(`${this.base}/api/entries/${entryId}/social`);
+  socialCounts(entryId: number, refresh = false): Observable<SocialCountsDto> {
+    return this.http.get<SocialCountsDto>(`${this.base}/api/entries/${entryId}/social`, {
+      params: refreshParams(refresh),
+    });
   }
 
   /** Omit the scope (or pass an empty one) to refresh all the caller's due
@@ -335,4 +339,8 @@ export class ReaderApi {
   purgeRecommendations(): Observable<RecommendationRunReport> {
     return this.http.delete<RecommendationRunReport>(`${this.base}/api/recommendations/runs`);
   }
+}
+
+function refreshParams(refresh: boolean): Record<string, string> {
+  return refresh ? { refresh: '1' } : {};
 }

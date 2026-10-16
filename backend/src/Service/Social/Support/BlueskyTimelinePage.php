@@ -7,13 +7,11 @@ namespace App\Service\Social\Support;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Bluesky\Support\BlueskyRichText;
-use App\Service\Bluesky\Support\BlueskyWeb;
 use App\Service\Completion\Model\KnownSharesModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /** A getTimeline / getListFeed / getFeed answer as entries; each post view rides along for its embed. */
 final class BlueskyTimelinePage
@@ -65,12 +63,12 @@ final class BlueskyTimelinePage
             guid: $uri,
             url: $url,
             headline: EntryTitle::of(null, $text),
-            author: self::nameOf($author),
+            author: BlueskyAuthor::name($author),
             summary: null,
             contentHtml: self::withRepostAttribution($text, $item->node('reason')),
             publishedAt: DateParser::parse(self::postedAt($item)),
-            authorUrl: self::profileOf($author),
-            authorAvatarUrl: AbsoluteHttpUrl::orNull($author->string('avatar')),
+            authorUrl: BlueskyAuthor::profile($author),
+            authorAvatarUrl: BlueskyAuthor::avatar($author),
         );
     }
 
@@ -93,21 +91,13 @@ final class BlueskyTimelinePage
         }
         $reposter = $reason->node('by');
 
-        $attribution = ShareAttribution::line('Reposted by', self::nameOf($reposter), self::profileOf($reposter));
+        $attribution = ShareAttribution::line(
+            'Reposted by',
+            BlueskyAuthor::name($reposter),
+            BlueskyAuthor::profile($reposter),
+        );
 
         return ($html ?? '') . $attribution;
-    }
-
-    private static function nameOf(JsonNodeModel $actor): ?string
-    {
-        return $actor->string('displayName') ?? $actor->string('handle');
-    }
-
-    private static function profileOf(JsonNodeModel $actor): ?string
-    {
-        $handleOrDid = $actor->string('handle') ?? $actor->string('did');
-
-        return null === $handleOrDid ? null : BlueskyWeb::profileUrl($handleOrDid);
     }
 
     private function __construct()

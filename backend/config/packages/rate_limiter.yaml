@@ -57,11 +57,17 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
-        # Per-user cap on comments-feed fetches. Each call is at most one
-        # outbound request, and the client caches for an hour.
+        # Per-user cap on comments-feed fetches; a cached answer spends nothing.
         comments:
             policy: 'sliding_window'
             limit: 30
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
+        # Per-user cap on social reply fetches (#1616); a cached thread spends nothing.
+        social_replies:
+            policy: 'sliding_window'
+            limit: 120
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 

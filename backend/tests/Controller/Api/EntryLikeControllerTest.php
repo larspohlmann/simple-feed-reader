@@ -10,13 +10,11 @@ use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
-use App\Tests\Support\RoutedHttpClient;
+use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\SocialAccounts;
-use App\Tests\Support\StaticDnsResolver;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -25,7 +23,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class EntryLikeControllerTest extends ApiTestCase
 {
-    private const string POST_URL = 'https://mastodon.social/@Gargron/110';
+    use RoutesSocialApis;
+
+    private const array ROUTED_HOSTS = ['mastodon.example'];
     private const string SEARCH = 'GET https://mastodon.example/api/v2/search?q='
         . 'https%3A%2F%2Fmastodon.social%2F%40Gargron%2F110&resolve=true&type=statuses&limit=1';
     private const string FAVOURITE = 'POST https://mastodon.example/api/v1/statuses/110/favourite';
@@ -33,8 +33,6 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     /** Must match framework.rate_limiter.social_like.limit in rate_limiter.yaml. */
     private const int LIKE_BUDGET = 60;
-
-    private RoutedHttpClient $http;
 
     protected function setUp(): void
     {
@@ -56,7 +54,10 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testALikeReachesTheOriginAndTheEntryReadsAsLiked(): void
     {
-        $client = $this->clientRouting([self::SEARCH => self::found(), self::FAVOURITE => self::accepted()]);
+        $client = $this->clientRouting(
+            self::ROUTED_HOSTS,
+            [self::SEARCH => self::found(), self::FAVOURITE => self::accepted()],
+        );
         $user = $this->signIn($client, 'like-put@example.test');
         $this->mastodonAccountOf($user);
         $entryId = $this->mastodonPostFor($user);
@@ -75,7 +76,10 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testASecondLikeCallsNoNetwork(): void
     {
-        $client = $this->clientRouting([self::SEARCH => self::found(), self::FAVOURITE => self::accepted()]);
+        $client = $this->clientRouting(
+            self::ROUTED_HOSTS,
+            [self::SEARCH => self::found(), self::FAVOURITE => self::accepted()],
+        );
         $user = $this->signIn($client, 'like-twice@example.test');
         $this->mastodonAccountOf($user);
         $entryId = $this->mastodonPostFor($user);
@@ -89,7 +93,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testAnUnlikeTakesTheLikeBack(): void
     {
-        $client = $this->clientRouting([
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => self::found(),
             self::FAVOURITE => self::accepted(),
             self::UNFAVOURITE => self::accepted(),
@@ -113,7 +117,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testUnlikingAPostNeverLikedCallsNoNetwork(): void
     {
-        $client = $this->clientRouting([]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'like-delete-none@example.test');
         $this->mastodonAccountOf($user);
 
@@ -125,13 +129,13 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testAnOrdinaryArticleIsNoPostToLike(): void
     {
-        $client = $this->clientRouting([]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'like-plain@example.test');
         $this->mastodonAccountOf($user);
         $fixtures = new NetworkFeedSubscriptions($this->entityManager());
         $entryId = $fixtures->post(
             $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN),
-            self::POST_URL,
+            self::MASTODON_POST_URL,
             '2026-10-12T10:00:00Z',
         )->requireId();
 
@@ -144,7 +148,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testAPostOnANetworkWithoutAnAccountIsRefusedAndCannotBeLiked(): void
     {
-        $client = $this->clientRouting([]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'like-no-account@example.test');
         $entryId = $this->mastodonPostFor($user);
 
@@ -160,7 +164,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testAnotherUsersEntryReadsAsMissing(): void
     {
-        $client = $this->clientRouting([]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $stranger = $this->factory()->create('like-stranger@example.test');
         $entryId = $this->mastodonPostFor($stranger);
         $user = $this->signIn($client, 'like-own@example.test');
@@ -174,7 +178,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testARefusedTokenMarksTheAccountAsNeedingAReconnect(): void
     {
-        $client = $this->clientRouting([
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => new MockResponse('{}', ['http_code' => Response::HTTP_UNAUTHORIZED]),
         ]);
         $user = $this->signIn($client, 'like-refused@example.test');
@@ -194,7 +198,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testAForbiddenLikeRefusesThePostAndKeepsTheAccountConnected(): void
     {
-        $client = $this->clientRouting([
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => self::found(),
             self::FAVOURITE => new MockResponse('{}', ['http_code' => Response::HTTP_FORBIDDEN]),
         ]);
@@ -215,7 +219,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testAForbiddenSearchKeepsTheAccountConnected(): void
     {
-        $client = $this->clientRouting([
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
             self::SEARCH => new MockResponse(
                 '{"error":"This action is outside the authorized scopes"}',
                 ['http_code' => Response::HTTP_FORBIDDEN],
@@ -238,7 +242,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testAPostTheInstanceCannotFindIsNoLongerAvailable(): void
     {
-        $client = $this->clientRouting([self::SEARCH => new MockResponse('{"statuses":[]}')]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::SEARCH => new MockResponse('{"statuses":[]}')]);
         $user = $this->signIn($client, 'like-gone@example.test');
         $this->mastodonAccountOf($user);
 
@@ -252,7 +256,7 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testALikeAndAnUnlikeDrawOnOneBudget(): void
     {
-        $client = $this->clientRouting([]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $user = $this->signIn($client, 'like-budget@example.test');
         $this->mastodonAccountOf($user);
         $path = sprintf('/api/entries/%d/like', $this->mastodonPostFor($user));
@@ -269,26 +273,12 @@ final class EntryLikeControllerTest extends ApiTestCase
 
     public function testAnUnknownEntryReadsAsMissing(): void
     {
-        $client = $this->clientRouting([]);
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
         $this->signIn($client, 'like-unknown@example.test');
 
         $client->request('PUT', '/api/entries/999999/like');
 
         $this->assertRejected($client, Response::HTTP_NOT_FOUND);
-    }
-
-    /** @param array<string, MockResponse> $routes */
-    private function clientRouting(array $routes): KernelBrowser
-    {
-        $client = static::createClient();
-        // KernelBrowser rebuilds the container after every request, which would discard the routed client.
-        $client->disableReboot();
-        $this->http = new RoutedHttpClient($routes);
-        $container = self::getContainer();
-        $container->set('http_client.uri_template', $this->http->client());
-        $container->set(NativeDnsResolver::class, new StaticDnsResolver(['mastodon.example' => ['93.184.216.34']]));
-
-        return $client;
     }
 
     private function signIn(KernelBrowser $client, string $email): User
@@ -350,17 +340,6 @@ final class EntryLikeControllerTest extends ApiTestCase
         $this->entityManager()->clear();
 
         return $this->entityManager()->getRepository(SocialLike::class)->count([]);
-    }
-
-    private function mastodonPostFor(User $user): int
-    {
-        $fixtures = new NetworkFeedSubscriptions($this->entityManager());
-
-        return $fixtures->post(
-            $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE),
-            self::POST_URL,
-            '2026-10-12T10:00:00Z',
-        )->requireId();
     }
 
     /** @return list<string> */

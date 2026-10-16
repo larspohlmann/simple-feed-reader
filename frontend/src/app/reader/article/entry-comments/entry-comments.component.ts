@@ -7,6 +7,7 @@ import {
   effect,
   inject,
   input,
+  output,
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -16,13 +17,22 @@ import { IconButtonDirective } from '../../../shared/icon-button/icon-button.dir
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
+import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 import { LanguageService } from '../../../core/i18n/language.service';
+import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
+import { EntryCommentDto } from '../../entry-comment';
+import { mediumRatio } from '../../entry-medium';
 import { observeOnSight } from '../../list/paging';
+import { PostMediaComponent } from '../../media/post-media/post-media.component';
+import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
+import { LinkCardComponent } from '../../link-card/link-card.component';
 
-type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl'>;
+type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl' | 'social'>;
+
+const DEEPEST_INDENT = 5;
 
 @Component({
   selector: 'app-entry-comments',
@@ -34,6 +44,10 @@ type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl'>;
     ListActionDirective,
     SkeletonComponent,
     WarningBoxComponent,
+    AvatarComponent,
+    PostMediaComponent,
+    QuotedPostComponent,
+    LinkCardComponent,
   ],
   templateUrl: './entry-comments.component.html',
   styleUrl: './entry-comments.component.scss',
@@ -43,6 +57,7 @@ export class EntryCommentsComponent {
   readonly entry = input.required<CommentsEntry>();
   /** The pane whose viewport the section loads on sight of. */
   readonly scroller = input.required<HTMLElement>();
+  readonly refreshed = output<void>();
 
   private readonly service = inject(CommentsService);
   private readonly language = inject(LanguageService);
@@ -53,6 +68,10 @@ export class EntryCommentsComponent {
   private readonly loadsOnSight = computed(() => this.entry().comments === 'auto');
 
   readonly state = computed(() => this.service.state(this.entryId())());
+  readonly network = computed(() => {
+    const social = this.entry().social;
+    return social ? SOCIAL_NETWORK_NAMES[social.network] : null;
+  });
   readonly retryInSeconds = computed(() => {
     const state = this.state();
     if (state.status !== 'throttled') return 0;
@@ -67,9 +86,11 @@ export class EntryCommentsComponent {
     effect((onCleanup) => {
       if (!this.loadsOnSight()) return;
       const id = this.entryId();
-      onCleanup(
-        observeOnSight(this.host.nativeElement, this.scroller(), () => this.service.load(id)),
-      );
+      const stopWatching = observeOnSight(this.host.nativeElement, this.scroller(), () => {
+        stopWatching();
+        this.service.load(id);
+      });
+      onCleanup(stopWatching);
     });
     effect((onCleanup) => {
       const until = this.throttledUntil();
@@ -85,8 +106,21 @@ export class EntryCommentsComponent {
     this.service.reload(this.entryId());
   }
 
+  refresh(): void {
+    this.service.reload(this.entryId());
+    this.refreshed.emit();
+  }
+
   when(iso: string): string {
     return relativeTime(iso, this.language.lang());
+  }
+
+  indentOf(comment: EntryCommentDto): number {
+    return Math.min(comment.depth, DEEPEST_INDENT);
+  }
+
+  ratioOf(comment: EntryCommentDto): number {
+    return mediumRatio(comment.media[0]);
   }
 
   // Outside the zone: an in-zone interval never lets whenStable() settle.

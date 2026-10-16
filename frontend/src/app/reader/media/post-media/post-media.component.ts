@@ -7,10 +7,10 @@ import {
   inject,
   input,
 } from '@angular/core';
-import { EntryMediumDto } from '../../entry-medium';
+import { EntryMediumDto, isGif } from '../../entry-medium';
+import { GifComponent } from '../gif/gif.component';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { armHlsStreams, releaseHlsStreams } from '../hls-streams';
-import { pauseMedia } from '../../list/magazine/blocks/entry-media/pause-media';
 import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
 import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
@@ -18,7 +18,7 @@ import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
 @Component({
   selector: 'app-post-media',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ProxiedImageDirective],
+  imports: [GifComponent, ProxiedImageDirective],
   templateUrl: './post-media.component.html',
   styleUrl: './post-media.component.scss',
   host: { '[attr.data-count]': 'media().length', '[style.--ratio]': 'ratio()' },
@@ -27,6 +27,7 @@ export class PostMediaComponent {
   readonly media = input.required<EntryMediumDto[]>();
   readonly ratio = input.required<number>();
   readonly videoLabel = input.required<string>();
+  protected readonly isGif = isGif;
 
   private scrollAway?: IntersectionObserver;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -39,13 +40,13 @@ export class PostMediaComponent {
     afterRenderEffect(() => {
       this.mountVideos(this.media(), this.videoLabel());
       armHlsStreams(this.host);
-      const videos = Array.from(this.host.querySelectorAll('video'));
+      const videos = this.mountedVideos();
       this.pauseWhenScrolledAway(videos);
       this.registerForAutoplay(videos);
     });
     inject(DestroyRef).onDestroy(() => {
       this.scrollAway?.disconnect();
-      pauseMedia(this.host);
+      for (const video of this.mountedVideos()) video.pause();
       releaseHlsStreams(this.host);
       this.unregisterVideosWhere(() => true);
     });
@@ -57,6 +58,10 @@ export class PostMediaComponent {
       const video = slot.querySelector('video') ?? slot.appendChild(this.newVideo(clips[index]));
       video.setAttribute('aria-label', label);
     });
+  }
+
+  private mountedVideos(): HTMLVideoElement[] {
+    return Array.from(this.host.querySelectorAll<HTMLVideoElement>('.video-slot video'));
   }
 
   private newVideo(clip: EntryMediumDto): HTMLVideoElement {

@@ -6,6 +6,7 @@ import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
 import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -32,6 +33,15 @@ const clip: EntryMediumDto = {
   previewImageUrl: 'https://video.test/thumb.jpg',
 };
 
+const gif: EntryMediumDto = {
+  url: 'https://files.test/clap.mp4',
+  kind: 'video',
+  width: 498,
+  height: 280,
+  previewImageUrl: 'https://files.test/clap.jpg',
+  animated: true,
+};
+
 @Component({
   imports: [PostMediaComponent],
   template: `<app-post-media [media]="media" [ratio]="1.5" videoLabel="Clip of a donkey" />`,
@@ -41,7 +51,7 @@ class HostComponent {
 }
 
 async function mount(media: EntryMediumDto[]) {
-  TestBed.configureTestingModule({ imports: [HostComponent] });
+  TestBed.configureTestingModule({ imports: [HostComponent, provideTranslocoTesting()] });
   const fixture = TestBed.createComponent(HostComponent);
   fixture.componentInstance.media = media;
   const parentClicks = jest.fn();
@@ -83,6 +93,25 @@ describe('PostMediaComponent', () => {
     expect(parentClicks).toHaveBeenCalledTimes(1);
   });
 
+  it('shows a looping clip and an animated picture as GIFs, and a picture with a still as a picture', async () => {
+    const pickerGif: EntryMediumDto = {
+      ...image(1),
+      previewImageUrl: 'https://cdn.test/1-still.jpg',
+      animated: true,
+    };
+    const stillPicture: EntryMediumDto = {
+      ...image(2),
+      previewImageUrl: 'https://cdn.test/2-still.jpg',
+    };
+    const { fixture } = await mount([gif, pickerGif, stillPicture]);
+    const items = Array.from(
+      fixture.nativeElement.querySelectorAll('app-post-media > .item') as NodeListOf<HTMLElement>,
+    );
+
+    expect(items.map((item) => item.tagName.toLowerCase())).toEqual(['app-gif', 'app-gif', 'img']);
+    expect(fixture.nativeElement.querySelector('.video-slot')).toBeNull();
+  });
+
   it('pauses its video and releases its stream when destroyed', async () => {
     const { fixture } = await mount([clip]);
     await firstPlay(fixture.nativeElement.querySelector('video'));
@@ -110,7 +139,7 @@ describe('PostMediaComponent in the list', () => {
     unlockedVideos = { take: () => document.createElement('video') },
   ) {
     TestBed.configureTestingModule({
-      imports: [HostComponent],
+      imports: [HostComponent, provideTranslocoTesting()],
       providers: [
         { provide: ListAutoplayCoordinator, useValue: coordinator },
         { provide: UnlockedVideoElements, useValue: unlockedVideos },
@@ -153,6 +182,16 @@ describe('PostMediaComponent in the list', () => {
     const player = coordinator.register.mock.calls[0][0] as VideoAutoplayPlayer;
     expect(player).toBeInstanceOf(VideoAutoplayPlayer);
     expect(player.element).toBe(video);
+  });
+
+  it('leaves a GIF out of the one-at-a-time autoplay', async () => {
+    const take = jest.fn(() => document.createElement('video'));
+    const fixture = await mountInList([gif, clip], { take });
+
+    expect(take).toHaveBeenCalledTimes(1);
+    expect(coordinator.register).toHaveBeenCalledTimes(1);
+    const player = coordinator.register.mock.calls[0][0] as VideoAutoplayPlayer;
+    expect(player.element).toBe(fixture.nativeElement.querySelector('.video-slot video'));
   });
 
   it('unregisters its videos when destroyed', async () => {

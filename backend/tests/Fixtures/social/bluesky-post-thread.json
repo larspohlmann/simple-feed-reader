@@ -1,0 +1,175 @@
+{
+  "thread": {
+    "$type": "app.bsky.feed.defs#threadViewPost",
+    "post": {
+      "uri": "at://did:plc:op/app.bsky.feed.post/root",
+      "cid": "bafyroot",
+      "author": {"did": "did:plc:op", "handle": "op.test", "displayName": "Original Poster", "viewer": {"muted": false, "blockedBy": false}},
+      "record": {"$type": "app.bsky.feed.post", "text": "The post everyone answers", "createdAt": "2026-10-16T08:00:00.000Z"},
+      "replyCount": 7,
+      "indexedAt": "2026-10-16T08:00:01.000Z"
+    },
+    "replies": [
+      {
+        "$type": "app.bsky.feed.defs#threadViewPost",
+        "post": {
+          "uri": "at://did:plc:ann/app.bsky.feed.post/r1",
+          "cid": "bafyr1",
+          "author": {
+            "did": "did:plc:ann",
+            "handle": "ann.test",
+            "displayName": "Ann",
+            "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:ann/bafyavatar@jpeg",
+            "viewer": {"muted": false, "blockedBy": false}
+          },
+          "record": {
+            "$type": "app.bsky.feed.post",
+            "text": "Read https://example.com/a now",
+            "facets": [
+              {
+                "index": {"byteStart": 5, "byteEnd": 26},
+                "features": [{"$type": "app.bsky.richtext.facet#link", "uri": "https://example.com/a"}]
+              }
+            ],
+            "reply": {
+              "root": {"uri": "at://did:plc:op/app.bsky.feed.post/root", "cid": "bafyroot"},
+              "parent": {"uri": "at://did:plc:op/app.bsky.feed.post/root", "cid": "bafyroot"}
+            },
+            "createdAt": "2026-10-16T09:00:00.000Z"
+          },
+          "embed": {
+            "$type": "app.bsky.embed.images#view",
+            "images": [
+              {
+                "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:ann/bafyimage@jpeg",
+                "fullsize": "https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:ann/bafyimage@jpeg",
+                "alt": "A pile of apples",
+                "aspectRatio": {"height": 600, "width": 800}
+              }
+            ]
+          },
+          "indexedAt": "2026-10-16T09:00:01.000Z"
+        },
+        "replies": [
+          {
+            "$type": "app.bsky.feed.defs#threadViewPost",
+            "post": {
+              "uri": "at://did:plc:op/app.bsky.feed.post/r1a",
+              "cid": "bafyr1a",
+              "author": {"did": "did:plc:op", "handle": "op.test", "displayName": "Original Poster", "viewer": {"muted": false, "blockedBy": false}},
+              "record": {"$type": "app.bsky.feed.post", "text": "Thanks, Ann", "createdAt": "2026-10-16T09:30:00.000Z"},
+              "indexedAt": "2026-10-16T09:30:01.000Z"
+            },
+            "replies": [
+              {
+                "$type": "app.bsky.feed.defs#threadViewPost",
+                "post": {
+                  "uri": "at://did:plc:bo/app.bsky.feed.post/r1a1",
+                  "cid": "bafyr1a1",
+                  "author": {"did": "did:plc:bo", "handle": "bo.test", "viewer": {"muted": false, "blockedBy": false}},
+                  "record": {"$type": "app.bsky.feed.post", "text": "Agreed", "createdAt": "2026-10-16T10:00:00.000Z"},
+                  "indexedAt": "2026-10-16T10:00:01.000Z"
+                },
+                "replies": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "$type": "app.bsky.feed.defs#threadViewPost",
+        "post": {
+          "uri": "at://did:plc:muted/app.bsky.feed.post/r2",
+          "cid": "bafyr2",
+          "author": {"did": "did:plc:muted", "handle": "muted.test", "viewer": {"muted": true, "blockedBy": false}},
+          "record": {"$type": "app.bsky.feed.post", "text": "Something you muted", "createdAt": "2026-10-16T09:10:00.000Z"},
+          "indexedAt": "2026-10-16T09:10:01.000Z"
+        },
+        "replies": [
+          {
+            "$type": "app.bsky.feed.defs#threadViewPost",
+            "post": {
+              "uri": "at://did:plc:bo/app.bsky.feed.post/r2a",
+              "cid": "bafyr2a",
+              "author": {"did": "did:plc:bo", "handle": "bo.test", "viewer": {"muted": false, "blockedBy": false}},
+              "record": {"$type": "app.bsky.feed.post", "text": "An answer to the muted reply", "createdAt": "2026-10-16T09:20:00.000Z"},
+              "indexedAt": "2026-10-16T09:20:01.000Z"
+            },
+            "replies": []
+          }
+        ]
+      },
+      {
+        "$type": "app.bsky.feed.defs#blockedPost",
+        "uri": "at://did:plc:blocked/app.bsky.feed.post/blocked",
+        "blocked": true,
+        "author": {"did": "did:plc:blocked", "viewer": {"blocking": "at://did:plc:viewer/app.bsky.graph.block/b1"}}
+      },
+      {
+        "$type": "app.bsky.feed.defs#notFoundPost",
+        "uri": "at://did:plc:gone/app.bsky.feed.post/gone",
+        "notFound": true
+      },
+      {
+        "$type": "app.bsky.feed.defs#threadViewPost",
+        "post": {
+          "uri": "at://did:plc:cy/app.bsky.feed.post/r3",
+          "cid": "bafyr3",
+          "author": {"did": "did:plc:cy", "handle": "cy.test", "displayName": "Cy", "viewer": {"muted": false, "blockedBy": false}},
+          "record": {"$type": "app.bsky.feed.post", "text": "This one says it better", "createdAt": "2026-10-16T09:40:00.000Z"},
+          "embed": {
+            "$type": "app.bsky.embed.record#view",
+            "record": {
+              "$type": "app.bsky.embed.record#viewRecord",
+              "uri": "at://did:plc:quoted/app.bsky.feed.post/quoted1",
+              "cid": "bafyquoted",
+              "author": {"did": "did:plc:quoted", "handle": "quoted.test", "displayName": "Quoted"},
+              "value": {"$type": "app.bsky.feed.post", "text": "The quoted words", "createdAt": "2026-10-15T12:00:00.000Z"},
+              "indexedAt": "2026-10-15T12:00:01.000Z"
+            }
+          },
+          "indexedAt": "2026-10-16T09:40:01.000Z"
+        },
+        "replies": []
+      },
+      {
+        "$type": "app.bsky.feed.defs#threadViewPost",
+        "post": {
+          "uri": "at://did:plc:di/app.bsky.feed.post/r4",
+          "cid": "bafyr4",
+          "author": {"did": "did:plc:di", "handle": "di.test", "displayName": "Di", "viewer": {"muted": false, "blockedBy": false}},
+          "record": {"$type": "app.bsky.feed.post", "text": "Background reading", "createdAt": "2026-10-16T09:50:00.000Z"},
+          "embed": {
+            "$type": "app.bsky.embed.external#view",
+            "external": {
+              "uri": "https://example.org/background",
+              "title": "The background story",
+              "description": "Everything that led here.",
+              "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:di/bafythumb@jpeg"
+            }
+          },
+          "indexedAt": "2026-10-16T09:50:01.000Z"
+        },
+        "replies": []
+      },
+      {
+        "$type": "app.bsky.feed.defs#threadViewPost",
+        "post": {
+          "uri": "at://did:plc:ed/app.bsky.feed.post/r5",
+          "cid": "bafyr5",
+          "author": {"did": "did:plc:ed", "handle": "ed.test", "displayName": "Ed", "viewer": {"muted": false, "blockedBy": false}},
+          "record": {"$type": "app.bsky.feed.post", "text": "Filmed it", "createdAt": "2026-10-16T09:55:00.000Z"},
+          "embed": {
+            "$type": "app.bsky.embed.video#view",
+            "cid": "bafyvideo",
+            "playlist": "https://video.bsky.app/watch/did%3Aplc%3Aed/bafyvideo/playlist.m3u8",
+            "thumbnail": "https://video.bsky.app/watch/did%3Aplc%3Aed/bafyvideo/thumbnail.jpg",
+            "aspectRatio": {"height": 1920, "width": 1080}
+          },
+          "indexedAt": "2026-10-16T09:55:01.000Z"
+        },
+        "replies": []
+      }
+    ]
+  }
+}

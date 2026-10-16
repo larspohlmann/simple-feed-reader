@@ -7,6 +7,7 @@ namespace App\Service\Social\Support;
 use App\Entity\Entry;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Support\AtPostUri;
+use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
@@ -20,6 +21,12 @@ final class SocialPostAddress
             SocialNetwork::Mastodon => self::mastodonPost($entry),
             null => null,
         };
+    }
+
+    /** @throws NotASocialPostException */
+    public static function ofOrRefuse(Entry $entry): SocialPostAddressModel
+    {
+        return self::of($entry) ?? throw new NotASocialPostException('This entry is not a Bluesky or Mastodon post.');
     }
 
     private static function blueskyPost(string $guid): ?SocialPostAddressModel

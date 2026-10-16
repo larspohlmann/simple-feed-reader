@@ -10,26 +10,11 @@ use PHPUnit\Framework\TestCase;
 
 final class MastodonStatusAddressTest extends TestCase
 {
-    #[DataProvider('statusAddresses')]
-    public function testAStatusAddressNamesItsOriginsPublicStatus(string $address): void
-    {
-        self::assertSame(
-            'https://mastodon.social/api/v1/statuses/110',
-            MastodonStatusAddress::statusApiUrlOrNull($address),
-        );
-    }
-
     /** @return iterable<string, array{string}> */
     public static function statusAddresses(): iterable
     {
         yield 'profile shape' => ['https://mastodon.social/@Gargron/110'];
         yield 'users shape' => ['https://mastodon.social/users/Gargron/statuses/110'];
-    }
-
-    #[DataProvider('otherAddresses')]
-    public function testAnyOtherAddressNamesNoStatus(string $address): void
-    {
-        self::assertNull(MastodonStatusAddress::statusApiUrlOrNull($address));
     }
 
     /** @return iterable<string, array{string}> */
@@ -42,5 +27,38 @@ final class MastodonStatusAddressTest extends TestCase
         yield 'credentials before the host' => ['https://user@evil.example/@Gargron/110'];
         yield 'pixelfed' => ['https://pixelfed.social/p/alice/123'];
         yield 'misskey' => ['https://misskey.io/notes/9abcdef'];
+    }
+
+    #[DataProvider('statusAddresses')]
+    public function testAStatusAddressNamesItsStatusAndContextEndpoint(string $address): void
+    {
+        $status = MastodonStatusAddress::ofOrNull($address);
+
+        self::assertNotNull($status);
+        self::assertSame('110', $status->id);
+        self::assertSame('https://mastodon.social/api/v1/statuses/110', $status->apiUrl());
+        self::assertSame('https://mastodon.social/api/v1/statuses/110/context', $status->contextApiUrl());
+    }
+
+    #[DataProvider('otherAddresses')]
+    public function testAnyOtherAddressIsNoStatus(string $address): void
+    {
+        self::assertNull(MastodonStatusAddress::ofOrNull($address));
+    }
+
+    #[DataProvider('authorPrefixes')]
+    public function testAStatusAddressNamesItsAuthorsProfilePrefix(string $address, string $prefix): void
+    {
+        self::assertSame($prefix, MastodonStatusAddress::ofOrNull($address)?->authorPrefix);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function authorPrefixes(): iterable
+    {
+        yield 'profile shape' => ['https://mastodon.social/@Gargron/110', 'https://mastodon.social/@Gargron'];
+        yield 'users shape' => [
+            'https://mastodon.social/users/Gargron/statuses/110',
+            'https://mastodon.social/users/Gargron',
+        ];
     }
 }

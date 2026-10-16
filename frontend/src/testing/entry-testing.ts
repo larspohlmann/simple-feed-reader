@@ -1,3 +1,4 @@
+import { EntryCommentDto } from '../app/reader/entry-comment';
 import { EntryDto } from '../app/reader/models';
 import { QuotedPostDto } from '../app/reader/quoted-post/quoted-post';
 import { LinkCardDto } from '../app/reader/link-card/link-card';
@@ -64,6 +65,24 @@ export function aLinkCard(overrides: Partial<LinkCardDto> = {}): LinkCardDto {
     description: null,
     imageUrl: null,
     siteName: 'news.test',
+    ...overrides,
+  };
+}
+
+export function anEntryComment(overrides: Partial<EntryCommentDto> = {}): EntryCommentDto {
+  return {
+    author: null,
+    authorHandle: null,
+    authorUrl: null,
+    authorAvatarUrl: null,
+    url: null,
+    publishedAt: null,
+    html: '<p>x</p>',
+    byEntryAuthor: false,
+    depth: 0,
+    media: [],
+    linkCard: null,
+    quote: null,
     ...overrides,
   };
 }

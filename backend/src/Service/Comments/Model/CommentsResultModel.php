@@ -11,13 +11,14 @@ final readonly class CommentsResultModel
         public CommentsStatus $status,
         public array $comments = [],
         public ?int $retryAfter = null,
+        public int $omitted = 0,
+        public ?\DateTimeImmutable $fetchedAt = null,
     ) {
     }
 
-    /** @param list<EntryCommentModel> $comments */
-    public static function ok(array $comments): self
+    public static function ok(CommentsPageModel $page, \DateTimeImmutable $fetchedAt): self
     {
-        return new self(CommentsStatus::Ok, $comments);
+        return new self(CommentsStatus::Ok, $page->comments, null, $page->omitted, $fetchedAt);
     }
 
     public static function throttled(int $retryAfter): self

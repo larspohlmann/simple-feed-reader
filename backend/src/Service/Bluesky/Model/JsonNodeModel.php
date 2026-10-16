@@ -46,6 +46,11 @@ final readonly class JsonNodeModel
         return null !== ($this->fields[$key] ?? null);
     }
 
+    public function isTrue(string $key): bool
+    {
+        return true === ($this->fields[$key] ?? null);
+    }
+
     public function int(string $key): ?int
     {
         $value = $this->fields[$key] ?? null;

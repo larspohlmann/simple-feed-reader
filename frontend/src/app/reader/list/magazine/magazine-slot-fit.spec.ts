@@ -35,6 +35,20 @@ describe('sharedMedia', () => {
     expect(sharedMedia(share)).toEqual([clip]);
   });
 
+  it('drops the image that is only a GIF’s poster', () => {
+    const gif: EntryMediumDto = {
+      ...video('https://g/clap.mp4', 'https://g/clap.jpg'),
+      animated: true,
+    };
+    const share = entry({
+      titleDerived: true,
+      share: 'media',
+      media: [image('https://g/clap.jpg'), gif],
+    });
+
+    expect(sharedMedia(share)).toEqual([gif]);
+  });
+
   it('keeps at most four, in feed order', () => {
     const media = [1, 2, 3, 4, 5].map((index) => image(`https://i/${index}.jpg`));
 

@@ -42,4 +42,19 @@ final class AtPostUriTest extends TestCase
     {
         self::assertNull(AtPostUri::webUrl('at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.starterpack/3lgml'));
     }
+
+    #[DataProvider('authorities')]
+    public function testTheAuthorityIsWhoseRepositoryHoldsThePost(string $uri, ?string $authority): void
+    {
+        self::assertSame($authority, AtPostUri::authorityOf($uri));
+    }
+
+    /** @return iterable<string, array{string, string|null}> */
+    public static function authorities(): iterable
+    {
+        yield 'a did' => [self::POST, 'did:plc:z72i7hdynmk6r22z27h6tvur'];
+        yield 'a handle' => ['at://ann.test/app.bsky.feed.post/3k', 'ann.test'];
+        yield 'a web url' => ['https://bsky.app/profile/ann.test/post/3k', null];
+        yield 'another record kind' => ['at://ann.test/app.bsky.feed.repost/3k', null];
+    }
 }

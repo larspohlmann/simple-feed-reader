@@ -2,17 +2,25 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
 import { CommentsService, CommentsState } from './comments.service';
+import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { CommentsLoad } from '../../models';
+import { EntrySocialDto } from '../../entry-social';
+import { EntryCommentDto } from '../../entry-comment';
 import { prefetchMargin } from '../../list/paging';
+import { aLinkCard, anEntryComment, aQuotedPost } from '../../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
 const DISCUSSION = 'https://www.reddit.com/r/x/comments/1/t/';
+
+const FETCHED_AT = '2026-09-24T12:00:00Z';
+
+const BLUESKY: EntrySocialDto = { network: 'bluesky', isLiked: false, canLike: true };
 
 describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
   let states: Map<number, WritableSignal<CommentsState>>;
   let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock };
-  let observers: { init: IntersectionObserverInit | undefined; disconnect: jest.Mock }[];
+  let sightObservers: { init: IntersectionObserverInit | undefined; disconnect: jest.Mock }[];
   let trigger: ((visible: boolean) => void) | undefined;
   let scroller: HTMLElement;
   const realIntersectionObserver = globalThis.IntersectionObserver;
@@ -24,14 +32,15 @@ describe('EntryCommentsComponent', () => {
       load: jest.fn(),
       reload: jest.fn(),
     };
-    observers = [];
+    sightObservers = [];
     trigger = undefined;
     scroller = document.createElement('div');
     Object.defineProperty(scroller, 'clientHeight', { value: 900 });
     globalThis.IntersectionObserver = jest.fn(
       (callback: IntersectionObserverCallback, init?: IntersectionObserverInit) => {
-        const observer = { observe: jest.fn(), disconnect: jest.fn() };
-        observers.push({ init, disconnect: observer.disconnect });
+        const observer = { observe: jest.fn(), unobserve: jest.fn(), disconnect: jest.fn() };
+        if (init?.root !== scroller) return observer;
+        sightObservers.push({ init, disconnect: observer.disconnect });
         trigger = (visible) =>
           callback(
             [{ isIntersecting: visible } as IntersectionObserverEntry],
@@ -42,7 +51,10 @@ describe('EntryCommentsComponent', () => {
     ) as unknown as typeof IntersectionObserver;
     TestBed.configureTestingModule({
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
-      providers: [{ provide: CommentsService, useValue: service }],
+      providers: [
+        { provide: CommentsService, useValue: service },
+        { provide: ImageProxyService, useValue: { recover: () => Promise.resolve('failed') } },
+      ],
     });
     fixture = TestBed.createComponent(EntryCommentsComponent);
   });
@@ -60,9 +72,22 @@ describe('EntryCommentsComponent', () => {
   }
 
   function show(comments: CommentsLoad, id = 5, discussionUrl: string | null = DISCUSSION): void {
+    showEntry({ id, comments, discussionUrl, social: null });
+  }
+
+  function showEntry(entry: {
+    id: number;
+    comments: CommentsLoad;
+    discussionUrl: string | null;
+    social: EntrySocialDto | null;
+  }): void {
     fixture.componentRef.setInput('scroller', scroller);
-    fixture.componentRef.setInput('entry', { id, comments, discussionUrl });
+    fixture.componentRef.setInput('entry', entry);
     fixture.detectChanges();
+  }
+
+  function settleComments(comments: EntryCommentDto[], omitted = 0): HTMLElement {
+    return settle({ status: 'ok', comments, omitted, fetchedAt: FETCHED_AT, loadedAt: Date.now() });
   }
 
   function settle(state: CommentsState): HTMLElement {
@@ -80,16 +105,22 @@ describe('EntryCommentsComponent', () => {
     expect(service.load).toHaveBeenCalledWith(5);
   });
 
+  it('stops watching once the section was seen', () => {
+    show('auto');
+    trigger!(true);
+    expect(sightObservers[0].disconnect).toHaveBeenCalled();
+  });
+
   it('looks ahead within the reader scroller', () => {
     show('auto');
-    expect(observers[0].init).toEqual({ root: scroller, rootMargin: prefetchMargin(900) });
+    expect(sightObservers[0].init).toEqual({ root: scroller, rootMargin: prefetchMargin(900) });
   });
 
   it('watches afresh for the next entry, loading it only once it is seen', () => {
     show('auto');
     show('auto', 6);
-    expect(observers.length).toBe(2);
-    expect(observers[0].disconnect).toHaveBeenCalled();
+    expect(sightObservers.length).toBe(2);
+    expect(sightObservers[0].disconnect).toHaveBeenCalled();
     trigger!(true);
     expect(service.load).toHaveBeenCalledTimes(1);
     expect(service.load).toHaveBeenCalledWith(6);
@@ -98,12 +129,12 @@ describe('EntryCommentsComponent', () => {
   it('stops watching once destroyed', () => {
     show('auto');
     fixture.destroy();
-    expect(observers[0].disconnect).toHaveBeenCalled();
+    expect(sightObservers[0].disconnect).toHaveBeenCalled();
   });
 
   it('never watches a manual source; the button loads it', () => {
     show('manual');
-    expect(observers.length).toBe(0);
+    expect(sightObservers.length).toBe(0);
     fixture.nativeElement.querySelector('button.load').click();
     expect(service.load).toHaveBeenCalledWith(5);
   });
@@ -124,24 +155,19 @@ describe('EntryCommentsComponent', () => {
     show('auto');
     const element = settle({
       status: 'ok',
+      omitted: 0,
+      fetchedAt: FETCHED_AT,
       loadedAt: Date.now(),
       comments: [
-        {
+        anEntryComment({
           author: '/u/op',
           authorUrl: 'https://www.reddit.com/user/op',
           url: 'https://c/1',
           publishedAt: new Date(Date.now() - 3 * 3_600_000).toISOString(),
           html: '<p>Hi</p>',
           byEntryAuthor: true,
-        },
-        {
-          author: '/u/b',
-          authorUrl: null,
-          url: null,
-          publishedAt: null,
-          html: '<p>Yo</p>',
-          byEntryAuthor: false,
-        },
+        }),
+        anEntryComment({ author: '/u/b', html: '<p>Yo</p>' }),
       ],
     });
     const rows = element.querySelectorAll('.comment');
@@ -161,23 +187,171 @@ describe('EntryCommentsComponent', () => {
 
   it('shows the empty line for zero comments', () => {
     show('auto');
-    const element = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
+    const element = settle({
+      status: 'ok',
+      comments: [],
+      omitted: 0,
+      fetchedAt: FETCHED_AT,
+      loadedAt: Date.now(),
+    });
     expect(element.querySelector('.empty')?.textContent?.trim()).toBe('No comments yet.');
   });
 
   it('drops the closing link without a discussion URL', () => {
     show('manual', 5, null);
-    const element = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
+    const element = settle({
+      status: 'ok',
+      comments: [],
+      omitted: 0,
+      fetchedAt: FETCHED_AT,
+      loadedAt: Date.now(),
+    });
     expect(element.querySelector('a.all')).toBeNull();
   });
 
   it('reload calls the service', () => {
     show('auto');
-    const element = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
+    const element = settle({
+      status: 'ok',
+      comments: [],
+      omitted: 0,
+      fetchedAt: FETCHED_AT,
+      loadedAt: Date.now(),
+    });
     const reload = element.querySelector<HTMLButtonElement>('button.reload')!;
     expect(reload.getAttribute('aria-label')).toBe('Reload comments');
     reload.click();
     expect(service.reload).toHaveBeenCalledWith(5);
+  });
+
+  it('indents a reply by its depth', () => {
+    show('auto');
+    const element = settleComments([anEntryComment(), anEntryComment({ depth: 2 })]);
+    const rows = element.querySelectorAll<HTMLElement>('.comment');
+    expect(rows[0].style.getPropertyValue('--depth')).toBe('0');
+    expect(rows[1].style.getPropertyValue('--depth')).toBe('2');
+  });
+
+  it('caps the indent of a deep reply', () => {
+    show('auto');
+    const element = settleComments([anEntryComment({ depth: 9 })]);
+    expect(element.querySelector<HTMLElement>('.comment')!.style.getPropertyValue('--depth')).toBe(
+      '5',
+    );
+  });
+
+  it('shows the author avatar and handle', () => {
+    show('auto');
+    const element = settleComments([
+      anEntryComment({
+        author: 'Ann Poster',
+        authorHandle: '@ann.bsky.social',
+        authorAvatarUrl: 'https://cdn.test/ann.jpg',
+      }),
+    ]);
+    const avatar = element.querySelector('img.avatar')!;
+    expect(avatar.getAttribute('src')).toBe('https://cdn.test/ann.jpg');
+    expect(avatar.getAttribute('referrerpolicy')).toBe('no-referrer');
+    expect(element.querySelector('.handle')?.textContent?.trim()).toBe('@ann.bsky.social');
+  });
+
+  it('falls back to the initials when the avatar fails', async () => {
+    show('auto');
+    const element = settleComments([
+      anEntryComment({
+        author: 'Ann Poster',
+        authorHandle: '@ann.bsky.social',
+        authorAvatarUrl: 'https://cdn.test/ann.jpg',
+      }),
+    ]);
+    element.querySelector('img.avatar')!.dispatchEvent(new Event('error'));
+    await Promise.resolve();
+    fixture.detectChanges();
+    expect(element.querySelector('img.avatar')).toBeNull();
+    expect(element.querySelector('.avatar.initials')?.textContent?.trim()).toBe('AP');
+  });
+
+  it('shows no avatar for a comment without one', () => {
+    show('auto');
+    const element = settleComments([anEntryComment({ author: '/u/b' })]);
+    expect(element.querySelector('.avatar')).toBeNull();
+    expect(element.querySelector('.handle')).toBeNull();
+  });
+
+  it("renders a reply's media, quote and link card", () => {
+    show('auto');
+    const element = settleComments([
+      anEntryComment({
+        media: [{ url: 'https://cdn.test/1.jpg', kind: 'image', width: 800, height: 600 }],
+        quote: aQuotedPost(),
+        linkCard: aLinkCard(),
+      }),
+    ]);
+    const row = element.querySelector('.comment')!;
+    expect(row.querySelector('app-post-media')).not.toBeNull();
+    expect(row.querySelector('app-quoted-post')).not.toBeNull();
+    expect(row.querySelector('app-link-card')).not.toBeNull();
+  });
+
+  it('renders no embeds for a plain comment', () => {
+    show('auto');
+    const row = settleComments([anEntryComment()]).querySelector('.comment')!;
+    expect(row.querySelector('app-post-media, app-quoted-post, app-link-card')).toBeNull();
+  });
+
+  it('says how old the comments are', () => {
+    show('auto');
+    const element = settleComments([]);
+    expect(element.querySelector('.age')?.textContent).toContain('Updated');
+  });
+
+  it('refreshes the comments and says so, for the counts to follow', () => {
+    const refreshed = jest.fn();
+    fixture.componentInstance.refreshed.subscribe(refreshed);
+    show('auto');
+    settleComments([]);
+
+    fixture.nativeElement.querySelector('button.reload').click();
+
+    expect(service.reload).toHaveBeenCalledWith(5);
+    expect(refreshed).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries without asking the counts to follow', () => {
+    const refreshed = jest.fn();
+    fixture.componentInstance.refreshed.subscribe(refreshed);
+    show('auto');
+    settle({ status: 'failed', failedAt: Date.now() });
+
+    fixture.nativeElement.querySelector('button.retry').click();
+
+    expect(service.reload).toHaveBeenCalledWith(5);
+    expect(refreshed).not.toHaveBeenCalled();
+  });
+
+  it('names the network and the count when replies were cut', () => {
+    showEntry({ id: 5, comments: 'auto', discussionUrl: DISCUSSION, social: BLUESKY });
+    const element = settleComments([anEntryComment()], 3);
+    const all = element.querySelector('a.all')!;
+    expect(all.textContent).toContain('3 more on Bluesky');
+    expect(all.getAttribute('href')).toBe(DISCUSSION);
+  });
+
+  it('names Mastodon for a toot whose replies were cut', () => {
+    showEntry({
+      id: 5,
+      comments: 'auto',
+      discussionUrl: DISCUSSION,
+      social: { network: 'mastodon', isLiked: false, canLike: false },
+    });
+    const element = settleComments([anEntryComment()], 1);
+    expect(element.querySelector('a.all')?.textContent).toContain('1 more on Mastodon');
+  });
+
+  it('keeps the plain link when nothing was cut', () => {
+    showEntry({ id: 5, comments: 'auto', discussionUrl: DISCUSSION, social: BLUESKY });
+    const element = settleComments([anEntryComment()]);
+    expect(element.querySelector('a.all')?.textContent).toContain('All comments');
   });
 
   describe('throttled', () => {

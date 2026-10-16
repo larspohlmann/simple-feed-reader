@@ -1,4 +1,3 @@
-@use 'sass:list';
 @use '../../theme/glass-rim';
 @use '../list/post-text';
 
@@ -30,31 +29,8 @@
   font-size: var(--fs-sm);
 }
 
-.avatar {
-  flex: none;
-  width: var(--icon-md);
-  height: var(--icon-md);
+app-avatar {
   margin-right: var(--space-1);
-  border-radius: var(--radius-pill);
-  object-fit: cover;
-}
-
-.initials {
-  display: grid;
-  place-items: center;
-  color: var(--text-primary);
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-}
-
-$tones: accent, danger, success, warning;
-
-@each $tone in $tones {
-  $index: list.index($tones, $tone) - 1;
-
-  .tone-#{$index} {
-    background: color-mix(in oklab, var(--#{$tone}) 28%, var(--surface-0));
-  }
 }
 
 .open {

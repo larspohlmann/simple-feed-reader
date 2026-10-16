@@ -6,9 +6,9 @@ namespace App\Http;
 
 use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
-use App\Entity\LinkCardContent;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowDiscussion;
 use App\Service\Text\Support\EntryExcerpt;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\FeedWebsite;
@@ -20,16 +20,14 @@ use App\Service\Url\Support\YouTubeUrl;
  * completed() holds only what completing a pending entry can change (#1551).
  *
  * @phpstan-import-type QuoteRow from QuotedPostJson
- * @phpstan-type LinkCardRow array{
- *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
- * }
+ * @phpstan-import-type LinkCardRow from LinkCardJson
  * @phpstan-type EntryRow array{
  *   id: int|null, title: string, url: string|null, author: string|null,
  *   summary: string|null, excerpt: string, contentHtml?: string|null,
  *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
  *   imageRenditions: list<array{url: string, width: int}>,
- *   media: list<array<string, string|int>>,
- *   attachments: list<array<string, string|int>>,
+ *   media: list<array<string, string|int|true>>,
+ *   attachments: list<array<string, string|int|true>>,
  *   categories: list<string>,
  *   linkCards: list<LinkCardRow>,
  *   publishedAt: string|null,
@@ -47,7 +45,7 @@ use App\Service\Url\Support\YouTubeUrl;
  *   id: int|null, pending: bool, summary: string|null, excerpt: string,
  *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
  *   imageRenditions: list<array{url: string, width: int}>,
- *   media: list<array<string, string|int>>,
+ *   media: list<array<string, string|int|true>>,
  *   linkCards: list<LinkCardRow>,
  *   share: 'link'|'media'|'quote'|null,
  *   quote: QuoteRow|null,
@@ -63,14 +61,12 @@ final class EntryJson
     public static function listRow(EntryListRow $row): array
     {
         $entry = $row->entry;
-        $discussion = $entry->getDiscussion();
         $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
 
         return self::completed($row) + [
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
-            'discussionUrl' => $discussion->url,
-            'comments' => $discussion->commentsLoad?->value,
+        ] + self::discussionOf($row) + [
             'author' => $entry->getAuthor(),
             'imageAspectRatio' => $shortPlayerUrl === null ? null : self::SHORT_COVER_ASPECT_RATIO,
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
@@ -114,9 +110,9 @@ final class EntryJson
             'imageHeight' => $entry->getImageHeight(),
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
-            'linkCards' => array_map(self::linkCard(...), $row->enrichment->linkCards),
+            'linkCards' => array_map(LinkCardJson::of(...), $row->enrichment->linkCards),
             'share' => $entry->getShareKind()?->value,
-            'quote' => QuotedPostJson::of($entry->getQuotedPost()),
+            'quote' => QuotedPostJson::ofOrNull($entry->getQuotedPost()),
         ];
     }
 
@@ -126,6 +122,14 @@ final class EntryJson
     public static function detail(EntryListRow $row): array
     {
         return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
+    }
+
+    /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null} */
+    private static function discussionOf(EntryListRow $row): array
+    {
+        $discussion = $row->enrichment->discussion ?? EntryListRowDiscussion::storedOf($row->entry->getDiscussion());
+
+        return ['discussionUrl' => $discussion->url, 'comments' => $discussion->commentsLoad?->value];
     }
 
     /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool}|null */
@@ -165,19 +169,5 @@ final class EntryJson
         }
 
         return null;
-    }
-
-    /**
-     * @return LinkCardRow
-     */
-    private static function linkCard(LinkCardContent $card): array
-    {
-        return [
-            'url' => $card->url,
-            'title' => $card->title,
-            'description' => $card->description,
-            'imageUrl' => $card->imageUrl,
-            'siteName' => $card->siteName,
-        ];
     }
 }

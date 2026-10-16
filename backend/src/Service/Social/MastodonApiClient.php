@@ -11,6 +11,7 @@ use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Support\NetworkAnswer;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -49,6 +50,25 @@ final readonly class MastodonApiClient
         }
 
         return $answer;
+    }
+
+    /**
+     * @param \Closure(string): \RuntimeException $closedToThePublic builds what a 401 or 403 throws
+     *
+     * @throws SocialPostNotFoundException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     */
+    public static function acceptedPublicStatus(ApiResponseModel $answer, \Closure $closedToThePublic): ApiResponseModel
+    {
+        if (Response::HTTP_NOT_FOUND === $answer->status) {
+            throw new SocialPostNotFoundException('The post is no longer on its Mastodon instance.');
+        }
+        if (\in_array($answer->status, self::REFUSALS, true)) {
+            throw $closedToThePublic('The Mastodon instance shows its statuses to accounts only.');
+        }
+
+        return self::accepted($answer);
     }
 
     /** @throws SocialNetworkUnreachableException only when no answer arrived; any status is returned */

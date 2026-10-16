@@ -6,7 +6,6 @@ import {
   ImportCandidateState,
   ImportCandidates,
 } from './social-import.service';
-import { initialsOf } from '../../shared/initials';
 
 export type ImportTab = 'accounts' | 'lists' | 'customFeeds';
 export type StateFilter = 'all' | ImportCandidateState;
@@ -18,7 +17,6 @@ export interface ImportRow {
   readonly state: ImportCandidateState;
   readonly name: string;
   readonly handle: string | null;
-  readonly initials: string;
   readonly avatarUrl: string | null;
   readonly icon: string | null;
   readonly haystack: string;
@@ -111,7 +109,6 @@ function toFollowRow(follow: FollowCandidate, translate: Translate): ImportRow {
     state: follow.state,
     name: follow.displayName ?? follow.handle,
     handle: follow.displayName === null ? null : follow.handle,
-    initials: initialsOf(follow.displayName ?? follow.handle),
     avatarUrl: follow.avatarUrl,
     icon: null,
     haystack: `${follow.handle}\n${follow.displayName ?? ''}`.toLowerCase(),
@@ -129,7 +126,6 @@ function toCollectionRow(collection: CollectionCandidate, translate: Translate):
     state: collection.state,
     name,
     handle: null,
-    initials: '',
     avatarUrl: null,
     icon: COLLECTION_ICONS[collection.kind],
     haystack: name.toLowerCase(),

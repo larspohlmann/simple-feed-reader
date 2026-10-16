@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Support;
 
-use App\Entity\EntryMedium;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\LinkCard\Support\StorableQuotedPost;
 use App\Service\Parser\Support\DateParser;
@@ -30,7 +28,7 @@ final class MastodonQuotedStatus
     {
         $url = AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri'));
         $account = $status->node('account');
-        $handle = self::handleOf($account);
+        $handle = MastodonAuthor::handle($account);
         if ($url === null || $handle === null) {
             return null;
         }
@@ -42,32 +40,12 @@ final class MastodonQuotedStatus
             $url,
             $account->string('display_name') ?? '',
             $handle,
-            $account->string('avatar'),
+            MastodonAuthor::avatar($account),
             DateParser::parse($status->string('created_at')),
             self::textOf($body, $status->string('spoiler_text')),
-            self::mediaOf($status),
+            MastodonAttachments::entryMediaOf($status),
             self::nestedOf($status->node('quote'), $quoted),
         ));
-    }
-
-    /** A local account's acct is the bare user name: the profile's host completes it. */
-    private static function handleOf(JsonNodeModel $account): ?string
-    {
-        $acct = $account->string('acct');
-        $host = parse_url((string) $account->string('url'), \PHP_URL_HOST);
-        if ($acct === null || str_contains($acct, '@') || !\is_string($host)) {
-            return $acct;
-        }
-
-        return $acct . '@' . $host;
-    }
-
-    /** @return list<EntryMedium> */
-    private static function mediaOf(JsonNodeModel $status): array
-    {
-        $attachments = MastodonAttachments::of($status->nodes('media_attachments'));
-
-        return EntryMediaAssembler::assemble(null, $attachments, [])->media;
     }
 
     private static function textOf(string $html, ?string $warning): string
