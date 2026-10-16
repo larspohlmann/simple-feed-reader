@@ -32,7 +32,11 @@
     }
     @for (subscription of group.subscriptions; track subscription.id) {
       <div class="feedrow">
-        <app-sidebar-feed-row [subscription]="subscription" [selection]="selection()" />
+        <app-sidebar-feed-row
+          [subscription]="subscription"
+          [selection]="selection()"
+          [organising]="organising()"
+        />
       </div>
     }
   }
@@ -40,7 +44,11 @@
     <p class="people-heading">{{ 'reader.socialPeople' | transloco }}</p>
     @for (subscription of current.people; track subscription.id) {
       <div class="feedrow">
-        <app-sidebar-feed-row [subscription]="subscription" [selection]="selection()" />
+        <app-sidebar-feed-row
+          [subscription]="subscription"
+          [selection]="selection()"
+          [organising]="organising()"
+        />
       </div>
     }
   }

@@ -1,6 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CdkDragHandle } from '@angular/cdk/drag-drop';
+import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
@@ -32,6 +32,7 @@ export class SidebarFeedRowComponent {
   protected readonly manage = inject(ManageActions);
   protected readonly screen = inject(LayoutService);
   protected readonly rows = inject(SidebarRowActions);
+  protected readonly draggable = inject(CDK_DRAG_PARENT, { optional: true }) !== null;
 
   readonly subscription = input.required<SubscriptionDto>();
   readonly selection = input.required<Selection>();
