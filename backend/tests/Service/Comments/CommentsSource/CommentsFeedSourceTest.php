@@ -13,7 +13,9 @@ use App\Enum\CommentsLoad;
 use App\Service\Comments\CommentsSource\CommentsFeedSource;
 use App\Service\Comments\Exception\CommentsThrottledException;
 use App\Service\Comments\Exception\CommentsUnavailableException;
+use App\Service\Comments\Model\CommentsAnswerModel;
 use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Comments\Pass\CommentsRequest;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
@@ -60,10 +62,15 @@ final class CommentsFeedSourceTest extends KernelTestCase
         $this->source = $source;
     }
 
+    private function fetch(Entry $entry): CommentsAnswerModel
+    {
+        return $this->source->fetch(new CommentsRequest($this->source, $this->user, $entry));
+    }
+
     /** @return list<EntryCommentModel> */
     private function comments(Entry $entry): array
     {
-        return $this->source->read($entry, $this->source->fetch($this->user, $entry)->body)->comments;
+        return $this->source->read($entry, $this->fetch($entry)->body)->comments;
     }
 
     /** @return list<EntryCommentModel> */
@@ -89,7 +96,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
     private function throttledFetch(): CommentsThrottledException
     {
         try {
-            $this->source->fetch($this->user, self::entry());
+            $this->fetch(self::entry());
         } catch (CommentsThrottledException $exception) {
             return $exception;
         }
@@ -130,8 +137,8 @@ final class CommentsFeedSourceTest extends KernelTestCase
     {
         $other = new User('other@example.com', $this->clock->now());
 
-        self::assertSame(self::FEED, $this->source->audienceOf($this->user, self::entry()));
-        self::assertSame(self::FEED, $this->source->audienceOf($other, self::entry()));
+        self::assertSame(self::FEED, $this->source->audienceOf($this->user, self::entry())->scope);
+        self::assertSame(self::FEED, $this->source->audienceOf($other, self::entry())->scope);
     }
 
     public function testParsesCommentsAndDropsThePostItself(): void
@@ -221,7 +228,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
     {
         $this->serveRedditThread();
 
-        self::assertFalse($this->source->fetch($this->user, self::entry())->isStillGathering);
+        self::assertFalse($this->fetch(self::entry())->isStillGathering);
     }
 
     public function testAFeedAskingForFewerRequestsIsRecordedAndReported(): void
@@ -267,7 +274,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
         $this->clock->sleep(91);
         $this->serveRedditThread();
 
-        $answer = $this->source->fetch($this->user, self::entry());
+        $answer = $this->fetch(self::entry());
 
         self::assertNotSame('', $answer->body);
     }
@@ -278,7 +285,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
 
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source->fetch($this->user, self::entry());
+        $this->fetch(self::entry());
     }
 
     public function testAnEntryWithoutAFeedIsUnavailableToFetch(): void
@@ -288,7 +295,7 @@ final class CommentsFeedSourceTest extends KernelTestCase
 
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source->fetch($this->user, $entry);
+        $this->fetch($entry);
     }
 
     public function testAnUnparsableAnswerIsUnavailableWhenRead(): void
@@ -302,13 +309,13 @@ final class CommentsFeedSourceTest extends KernelTestCase
     {
         $this->serveRedditThread();
         for ($fetch = 0; $fetch < self::COMMENTS_BUDGET; ++$fetch) {
-            $this->source->fetch($this->user, self::entry());
+            $this->fetch(self::entry());
         }
 
         $this->expectException(RateLimitedException::class);
 
         try {
-            $this->source->fetch($this->user, self::entry());
+            $this->fetch(self::entry());
         } finally {
             self::assertCount(self::COMMENTS_BUDGET, $this->fetcher->fetchedUrls);
         }

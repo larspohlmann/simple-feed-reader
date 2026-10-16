@@ -10,8 +10,10 @@ use App\Service\Comments\CommentsSource\CommentsSourceInterface;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentsAnswerModel;
+use App\Service\Comments\Model\CommentsAudienceModel;
 use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Comments\Pass\CommentsRequest;
 
 final class FakeCommentsSource implements CommentsSourceInterface
 {
@@ -58,16 +60,16 @@ final class FakeCommentsSource implements CommentsSourceInterface
         return $this->servesEntries;
     }
 
-    public function audienceOf(User $user, Entry $entry): string
+    public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
     {
         ++$this->audienceAsks;
 
-        return 'fake:' . $entry->getGuid();
+        return new CommentsAudienceModel('fake:' . $entry->getGuid());
     }
 
-    public function fetch(User $user, Entry $entry): CommentsAnswerModel
+    public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
-        $this->fetches[] = $entry->getGuid();
+        $this->fetches[] = $request->entry->getGuid();
         if (null !== $this->failure) {
             throw $this->failure;
         }

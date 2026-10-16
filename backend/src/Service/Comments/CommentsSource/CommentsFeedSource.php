@@ -10,8 +10,10 @@ use App\Service\Comments\Exception\CommentsThrottledException;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentsAnswerModel;
+use App\Service\Comments\Model\CommentsAudienceModel;
 use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Comments\Pass\CommentsRequest;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
@@ -40,19 +42,19 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
         return null !== $entry->getDiscussion()->commentsFeedUrl;
     }
 
-    public function audienceOf(User $user, Entry $entry): string
+    public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
     {
-        return $entry->getDiscussion()->commentsFeedUrl ?? '';
+        return new CommentsAudienceModel($entry->getDiscussion()->commentsFeedUrl ?? '');
     }
 
-    public function fetch(User $user, Entry $entry): CommentsAnswerModel
+    public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
-        $feedUrl = self::feedUrlOf($entry);
+        $feedUrl = self::feedUrlOf($request->entry);
         $wait = $this->hostThrottle->remainingSeconds($feedUrl);
         if ($wait > 0) {
             throw new CommentsThrottledException('The comments feed host asked us to wait.', $wait);
         }
-        $this->rateLimitGuard->enforceForUser($this->commentsLimiter, $user);
+        $this->rateLimitGuard->enforceForUser($this->commentsLimiter, $request->user);
 
         try {
             return CommentsAnswerModel::settled($this->fetcher->fetch($feedUrl)->modifiedBody());

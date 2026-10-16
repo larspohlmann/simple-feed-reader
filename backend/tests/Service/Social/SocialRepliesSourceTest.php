@@ -14,6 +14,7 @@ use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentsAnswerModel;
 use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Comments\Pass\CommentsRequest;
 use App\Service\RateLimit\Exception\RateLimitedException;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\ActingAccountChooser;
@@ -72,7 +73,7 @@ final class SocialRepliesSourceTest extends DbTestCase
     {
         $this->threads->answersInPublic(CommentsAnswerModel::stillGathering('the public thread'));
 
-        $answer = $this->source()->fetch($this->owner, $this->post());
+        $answer = $this->fetch($this->post());
 
         self::assertEquals(CommentsAnswerModel::stillGathering('the public thread'), $answer);
         self::assertSame(['inPublic ' . self::STATUS_URL], $this->threads->calls);
@@ -83,10 +84,22 @@ final class SocialRepliesSourceTest extends DbTestCase
         $account = $this->mastodonAccount();
         $this->threads->answersAsAccount(CommentsAnswerModel::settled('the account thread'));
 
-        $answer = $this->source()->fetch($this->owner, $this->post());
+        $answer = $this->fetch($this->post());
 
         self::assertEquals(CommentsAnswerModel::settled('the account thread'), $answer);
         self::assertSame(['asAccount ' . $account->getHandle() . ' ' . self::STATUS_URL], $this->threads->calls);
+    }
+
+    public function testTheFetchActsAsTheAccountTheAudienceNamed(): void
+    {
+        $source = $this->source();
+        $request = new CommentsRequest($source, $this->owner, $this->post());
+        $this->mastodonAccount();
+
+        $answer = $source->fetch($request);
+
+        self::assertEquals(CommentsAnswerModel::settled('public thread'), $answer);
+        self::assertSame(['inPublic ' . self::STATUS_URL], $this->threads->calls);
     }
 
     #[DataProvider('accountFailures')]
@@ -95,7 +108,7 @@ final class SocialRepliesSourceTest extends DbTestCase
         $account = $this->mastodonAccount();
         $this->threads->failAsAccountWith($failure);
 
-        $answer = $this->source()->fetch($this->owner, $this->post());
+        $answer = $this->fetch($this->post());
 
         self::assertEquals(CommentsAnswerModel::settled('public thread'), $answer);
         self::assertSame(
@@ -122,7 +135,7 @@ final class SocialRepliesSourceTest extends DbTestCase
         $this->threads->throttlePublicThreadFor(30);
         for ($fetch = 0; $fetch < self::REPLIES_BUDGET; ++$fetch) {
             try {
-                $this->source()->fetch($this->owner, $post);
+                $this->fetch($post);
                 self::fail('A throttled public network must be refused.');
             } catch (CommentsThrottledException $caught) {
                 self::assertSame(30, $caught->retryAfterSeconds);
@@ -130,7 +143,7 @@ final class SocialRepliesSourceTest extends DbTestCase
         }
         $this->threads->throttlePublicThreadFor(0);
 
-        $answer = $this->source()->fetch($this->owner, $post);
+        $answer = $this->fetch($post);
 
         self::assertEquals(CommentsAnswerModel::settled('public thread'), $answer);
         self::assertSame(['inPublic ' . self::STATUS_URL], $this->threads->calls);
@@ -141,7 +154,7 @@ final class SocialRepliesSourceTest extends DbTestCase
         $this->mastodonAccount();
         $this->threads->throttlePublicThreadFor(30);
 
-        $answer = $this->source()->fetch($this->owner, $this->post());
+        $answer = $this->fetch($this->post());
 
         self::assertEquals(CommentsAnswerModel::settled('account thread'), $answer);
     }
@@ -151,7 +164,7 @@ final class SocialRepliesSourceTest extends DbTestCase
         $this->threads->failInPublicWith(new SocialNetworkThrottledException('Fewer requests, please.', 30));
 
         try {
-            $this->source()->fetch($this->owner, $this->post());
+            $this->fetch($this->post());
             self::fail('A throttled network must say when to retry.');
         } catch (CommentsThrottledException $caught) {
             self::assertSame(30, $caught->retryAfterSeconds);
@@ -163,7 +176,7 @@ final class SocialRepliesSourceTest extends DbTestCase
         $this->threads->failInPublicWith(new SocialNetworkThrottledException('Fewer requests, please.'));
 
         try {
-            $this->source()->fetch($this->owner, $this->post());
+            $this->fetch($this->post());
             self::fail('A throttled network must say when to retry.');
         } catch (CommentsThrottledException $caught) {
             self::assertSame(60, $caught->retryAfterSeconds);
@@ -178,7 +191,7 @@ final class SocialRepliesSourceTest extends DbTestCase
 
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source()->fetch($this->owner, $this->post());
+        $this->fetch($this->post());
     }
 
     public function testAnUnreachablePublicThreadIsUnavailable(): void
@@ -187,14 +200,14 @@ final class SocialRepliesSourceTest extends DbTestCase
 
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source()->fetch($this->owner, $this->post());
+        $this->fetch($this->post());
     }
 
     public function testAnEntryThatIsNoSocialPostHasNoThreadToFetch(): void
     {
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source()->fetch($this->owner, $this->entryOn('https://example.com/feed.xml'));
+        $this->fetch($this->entryOn('https://example.com/feed.xml'));
     }
 
     public function testAnEntryThatIsNoSocialPostHasNoThreadToRead(): void
@@ -207,10 +220,10 @@ final class SocialRepliesSourceTest extends DbTestCase
     public function testTheAudienceSeparatesAccountsFromThePublic(): void
     {
         $post = $this->post();
-        $publicAudience = $this->source()->audienceOf($this->owner, $post);
+        $publicAudience = $this->source()->audienceOf($this->owner, $post)->scope;
         $account = $this->mastodonAccount();
 
-        $accountAudience = $this->source()->audienceOf($this->owner, $post);
+        $accountAudience = $this->source()->audienceOf($this->owner, $post)->scope;
 
         self::assertSame('mastodon ' . self::STATUS_URL . ' public', $publicAudience);
         self::assertSame('mastodon ' . self::STATUS_URL . ' account:' . $account->requireId(), $accountAudience);
@@ -220,13 +233,13 @@ final class SocialRepliesSourceTest extends DbTestCase
     {
         $post = $this->post();
         for ($fetch = 0; $fetch < self::REPLIES_BUDGET; ++$fetch) {
-            $this->source()->fetch($this->owner, $post);
+            $this->fetch($post);
         }
 
         $this->expectException(RateLimitedException::class);
 
         try {
-            $this->source()->fetch($this->owner, $post);
+            $this->fetch($post);
         } finally {
             self::assertCount(self::REPLIES_BUDGET, $this->threads->calls);
         }
@@ -237,13 +250,13 @@ final class SocialRepliesSourceTest extends DbTestCase
         $this->mastodonAccount();
         $post = $this->post();
         for ($fetch = 0; $fetch < self::REPLIES_BUDGET; ++$fetch) {
-            $this->source()->fetch($this->owner, $post);
+            $this->fetch($post);
         }
 
         $this->expectException(RateLimitedException::class);
 
         try {
-            $this->source()->fetch($this->owner, $post);
+            $this->fetch($post);
         } finally {
             self::assertCount(self::REPLIES_BUDGET, $this->threads->calls);
         }
@@ -301,6 +314,13 @@ final class SocialRepliesSourceTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function fetch(Entry $entry): CommentsAnswerModel
+    {
+        $source = $this->source();
+
+        return $source->fetch(new CommentsRequest($source, $this->owner, $entry));
     }
 
     private function source(): SocialRepliesSource

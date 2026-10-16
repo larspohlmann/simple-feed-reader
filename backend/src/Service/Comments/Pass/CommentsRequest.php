@@ -7,10 +7,13 @@ namespace App\Service\Comments\Pass;
 use App\Entity\Entry;
 use App\Entity\User;
 use App\Service\Comments\CommentsSource\CommentsSourceInterface;
+use App\Service\Comments\Model\CommentsAudienceModel;
 
 final readonly class CommentsRequest
 {
-    private string $cacheKey;
+    public CommentsAudienceModel $audience;
+
+    public string $cacheKey;
 
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
@@ -18,11 +21,7 @@ final readonly class CommentsRequest
         public User $user,
         public Entry $entry,
     ) {
-        $this->cacheKey = $source::class . ' ' . $source->audienceOf($user, $entry);
-    }
-
-    public function cacheKey(): string
-    {
-        return $this->cacheKey;
+        $this->audience = $source->audienceOf($user, $entry);
+        $this->cacheKey = $source::class . ' ' . $this->audience->scope;
     }
 }

@@ -12,7 +12,9 @@ use App\Service\Comments\CommentsSource\CommentsSourceInterface;
 use App\Service\Comments\Exception\CommentsThrottledException;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentsAnswerModel;
+use App\Service\Comments\Model\CommentsAudienceModel;
 use App\Service\Comments\Model\CommentsPageModel;
+use App\Service\Comments\Pass\CommentsRequest;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\Exception\NoSocialAccountForNetworkException;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
@@ -51,27 +53,27 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         return null !== SocialPostAddress::of($entry);
     }
 
-    public function audienceOf(User $user, Entry $entry): string
+    public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
     {
         $post = self::postOf($entry);
         $account = $this->accountOrNull($user, $entry, $post->network);
         $viewer = null === $account ? 'public' : 'account:' . $account->requireId();
 
-        return $post->network->value . ' ' . $post->address . ' ' . $viewer;
+        return new CommentsAudienceModel($post->network->value . ' ' . $post->address . ' ' . $viewer, $account);
     }
 
-    public function fetch(User $user, Entry $entry): CommentsAnswerModel
+    public function fetch(CommentsRequest $request): CommentsAnswerModel
     {
-        $post = self::postOf($entry);
-        $account = $this->accountOrNull($user, $entry, $post->network);
+        $post = self::postOf($request->entry);
+        $account = $request->audience->actingAccount;
         $thread = $this->threadOn($post->network);
         if (null === $account) {
             self::refuseWhilePublicThreadIsThrottled($thread);
-            $this->spendOneFetch($user);
+            $this->spendOneFetch($request->user);
 
             return self::publicThreadOf($thread, $post->address);
         }
-        $this->spendOneFetch($user);
+        $this->spendOneFetch($request->user);
 
         return $this->accountOrPublicThreadOf($thread, $account, $post->address);
     }

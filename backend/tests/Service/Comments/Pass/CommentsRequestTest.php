@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Entity\User;
 use App\Service\Comments\CommentsSource\CommentsSourceInterface;
 use App\Service\Comments\Model\CommentsAnswerModel;
+use App\Service\Comments\Model\CommentsAudienceModel;
 use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Pass\CommentsRequest;
 use App\Tests\Support\FakeCommentsSource;
@@ -27,12 +28,12 @@ final class CommentsRequestTest extends TestCase
                 return true;
             }
 
-            public function audienceOf(User $user, Entry $entry): string
+            public function audienceOf(User $user, Entry $entry): CommentsAudienceModel
             {
-                return 'fake:' . $entry->getGuid();
+                return new CommentsAudienceModel('fake:' . $entry->getGuid());
             }
 
-            public function fetch(User $user, Entry $entry): CommentsAnswerModel
+            public function fetch(CommentsRequest $request): CommentsAnswerModel
             {
                 return CommentsAnswerModel::settled('');
             }
@@ -43,8 +44,8 @@ final class CommentsRequestTest extends TestCase
             }
         };
 
-        $fakeKey = (new CommentsRequest(new FakeCommentsSource('answer'), $user, $entry))->cacheKey();
-        $otherKey = (new CommentsRequest($sameAudience, $user, $entry))->cacheKey();
+        $fakeKey = (new CommentsRequest(new FakeCommentsSource('answer'), $user, $entry))->cacheKey;
+        $otherKey = (new CommentsRequest($sameAudience, $user, $entry))->cacheKey;
 
         self::assertNotSame($fakeKey, $otherKey);
         self::assertStringEndsWith(' fake:post-7', $fakeKey);
