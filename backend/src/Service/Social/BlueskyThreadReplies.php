@@ -9,7 +9,6 @@ use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Bluesky\Support\BlueskyRichText;
-use App\Service\Bluesky\Support\BlueskyWeb;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentEmbedsModel;
@@ -18,8 +17,8 @@ use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Social\Pass\ReplyNode;
+use App\Service\Social\Support\BlueskyAuthor;
 use App\Service\Text\Support\HtmlAnchor;
-use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class BlueskyThreadReplies
 {
@@ -103,13 +102,12 @@ final readonly class BlueskyThreadReplies
     private static function authorOf(JsonNodeModel $author): CommentAuthorModel
     {
         $handle = $author->string('handle');
-        $actor = $handle ?? $author->string('did');
 
         return new CommentAuthorModel(
-            $author->string('displayName') ?? $handle,
+            BlueskyAuthor::name($author),
             $handle === null ? null : '@' . $handle,
-            $actor === null ? null : BlueskyWeb::profileUrl($actor),
-            AbsoluteHttpUrl::orNull($author->string('avatar')),
+            BlueskyAuthor::profile($author),
+            BlueskyAuthor::avatar($author),
         );
     }
 
