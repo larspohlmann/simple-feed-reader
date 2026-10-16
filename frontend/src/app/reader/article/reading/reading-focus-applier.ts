@@ -13,8 +13,8 @@ export interface ReadingFocusConfig {
 }
 
 /**
- * Keeps each block's inline opacity in step with its distance from the scroll
- * centre. It observes the geometry it reads — the scroller and every block —
+ * Keeps each block's inline opacity in step with its distance from the reading
+ * band. It observes the geometry it reads — the scroller and every block —
  * so it never enumerates the causes of a layout change.
  */
 export class ReadingFocusApplier {
