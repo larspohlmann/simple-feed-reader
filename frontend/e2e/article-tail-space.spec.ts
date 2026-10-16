@@ -65,10 +65,10 @@ function expectWithinAPixel(actual: number, expected: number): void {
 test.describe('Article tail space', () => {
   test.use({ viewport: PHONE });
 
-  // #107: the reading focus fully highlights only the block at the viewport
-  // centre, and the article used to stop scrolling with its last paragraph
+  // #107: the reading focus fully highlights only the blocks in the reading
+  // band, and the article used to stop scrolling with its last paragraph
   // pinned to the bottom edge — permanently dimmed.
-  test('the last paragraph can be scrolled to the centre and fully highlighted', async ({
+  test('the last paragraph can be scrolled into the band and fully highlighted', async ({
     page,
   }) => {
     const pane = await openStubbedArticle(page, LONG_BODY);
@@ -83,7 +83,7 @@ test.describe('Article tail space', () => {
     // Lifted clear of the bottom edge — it now sits in the upper two thirds.
     expect(box.y + box.height).toBeLessThan(PHONE.height * 0.75);
 
-    // Park its centre on the reading centre, the way a reader would.
+    // Park its centre on the band's lower edge, the way a reader would.
     await scroller.evaluate((el) => {
       const p = el.querySelectorAll('.content p');
       const rect = p[p.length - 1].getBoundingClientRect();

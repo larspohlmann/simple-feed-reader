@@ -65,7 +65,7 @@ test.describe('Reading focus splits a long paragraph', () => {
     await page.evaluate(() => document.fonts.ready);
 
     // Read from the middle of the paragraph, so sections lie on both sides of
-    // the reading centre.
+    // the reading band.
     await pane.evaluate((el) => el.scrollTo({ top: el.scrollHeight / 2, behavior: 'instant' }));
     await page.waitForTimeout(400); // focus rAF + the 0.2s opacity transition
 
