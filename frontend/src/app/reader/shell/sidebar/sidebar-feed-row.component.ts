@@ -1,6 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CdkDragHandle } from '@angular/cdk/drag-drop';
+import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
@@ -12,8 +12,8 @@ import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 
-/** The inside of one feed row, tagged or untagged. The `cdkDrag` row itself
- *  stays in the sidebar; the handle here registers with it through DI. */
+/** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
+ *  in the sidebar, and the handle here registers with it through DI; a social row has none, so no handle. */
 @Component({
   selector: 'app-sidebar-feed-row',
   imports: [
@@ -32,6 +32,7 @@ export class SidebarFeedRowComponent {
   protected readonly manage = inject(ManageActions);
   protected readonly screen = inject(LayoutService);
   protected readonly rows = inject(SidebarRowActions);
+  protected readonly draggable = inject(CDK_DRAG_PARENT, { optional: true }) !== null;
 
   readonly subscription = input.required<SubscriptionDto>();
   readonly selection = input.required<Selection>();

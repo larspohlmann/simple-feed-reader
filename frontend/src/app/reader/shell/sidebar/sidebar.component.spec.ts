@@ -1941,11 +1941,23 @@ describe('organise mode', () => {
       expect(feeds.compareDocumentPosition(social) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it('step aside while organising', () => {
-      const element = mount({ organising: true, coarse: true, socialSections: [section] })
-        .nativeElement as HTMLElement;
+    it('stay while organising, their rows managed through the sheet but never dragged', () => {
+      const fixture = mount({
+        organising: true,
+        coarse: true,
+        socialSections: [section],
+        sheetChoice: 'edit',
+      });
+      const social = (fixture.nativeElement as HTMLElement).querySelector(
+        'app-sidebar-social-section',
+      ) as HTMLElement;
+      const edited = jest.fn();
+      manageActions.editSubscription.mockImplementation(edited);
 
-      expect(element.querySelector('app-sidebar-social-section')).toBeNull();
+      social.querySelector<HTMLButtonElement>('.feedrow .dots')!.click();
+
+      expect(social.querySelector('.handle')).toBeNull();
+      expect(edited).toHaveBeenCalledWith(section.accounts[0].subscriptions[0]);
     });
   });
 });
