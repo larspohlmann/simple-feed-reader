@@ -23,13 +23,24 @@ beforeEach(() => {
   } as unknown as typeof IntersectionObserver;
 });
 
-afterEach(() => (globalThis.IntersectionObserver = realObserver));
+afterEach(() => {
+  globalThis.IntersectionObserver = realObserver;
+  document.body.innerHTML = '';
+});
 
-const aPlayer = (): AutoplayPlayer & { start: jest.Mock; stop: jest.Mock } => ({
+type FakePlayer = AutoplayPlayer & { start: jest.Mock; stop: jest.Mock };
+
+const aDetachedPlayer = (): FakePlayer => ({
   element: document.createElement('div'),
   start: jest.fn(),
   stop: jest.fn(),
 });
+
+function aPlayer(): FakePlayer {
+  const player = aDetachedPlayer();
+  document.body.append(player.element);
+  return player;
+}
 
 function setUp(enabled = true) {
   const setting: WritableSignal<boolean> = signal(enabled);
@@ -215,5 +226,33 @@ describe('ListAutoplayCoordinator', () => {
 
     expect(leaving.stop).toHaveBeenCalledTimes(1);
     expect(staying.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a late play report from a player it already let go', () => {
+    const { coordinator } = setUp();
+    const gone = aPlayer();
+    const playing = aPlayer();
+    coordinator.register(gone);
+    coordinator.register(playing);
+    report(playing.element, 1);
+    coordinator.unregister(gone);
+
+    coordinator.nowPlaying(gone);
+
+    expect(playing.stop).not.toHaveBeenCalled();
+  });
+
+  it('never chooses a player whose row has left the page', () => {
+    const { coordinator } = setUp();
+    const detached = aDetachedPlayer();
+    const attached = aPlayer();
+    coordinator.register(detached);
+    coordinator.register(attached);
+
+    report(detached.element, 1);
+    report(attached.element, 0.7);
+
+    expect(detached.start).not.toHaveBeenCalled();
+    expect(attached.start).toHaveBeenCalledTimes(1);
   });
 });

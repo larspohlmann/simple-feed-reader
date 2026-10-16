@@ -44,7 +44,7 @@ export class ListAutoplayCoordinator {
   }
 
   nowPlaying(player: AutoplayPlayer): void {
-    if (this.current === player) return;
+    if (this.current === player || this.players.get(player.element) !== player) return;
     this.current?.stop();
     this.current = player;
     this.startedByHand = true;
@@ -88,7 +88,7 @@ export class ListAutoplayCoordinator {
     let bestRatio = 0;
     for (const [element, ratio] of this.visibility) {
       const player = this.players.get(element);
-      if (!player || ratio < VISIBLE_ENOUGH || ratio <= bestRatio) continue;
+      if (!player || !element.isConnected || ratio < VISIBLE_ENOUGH || ratio <= bestRatio) continue;
       best = player;
       bestRatio = ratio;
     }
