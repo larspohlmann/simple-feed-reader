@@ -357,6 +357,18 @@ describe('EntryCommentsComponent', () => {
       expect(pauseReply).not.toHaveBeenCalled();
     });
 
+    it("leaves the post's own video playing when a reply GIF loops", () => {
+      show('auto');
+      const gif: EntryMediumDto = { ...REPLY_VIDEO, kind: 'animation' };
+      const element = settleComments([anEntryComment({ media: [gif] })]);
+      const replyGif = element.querySelector<HTMLVideoElement>('.comment video')!;
+      const pauseOwn = playing(ownVideo);
+
+      replyGif.dispatchEvent(new Event('play'));
+
+      expect(pauseOwn).not.toHaveBeenCalled();
+    });
+
     it("holds reply autoplay while the post's own video plays", () => {
       showReplyVideo();
       const suspend = jest.spyOn(ownCoordinator(), 'suspend');
@@ -369,6 +381,18 @@ describe('EntryCommentsComponent', () => {
       ownVideo.dispatchEvent(new Event('pause'));
       ownVideo.dispatchEvent(new Event('ended'));
       expect(resume).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps reply autoplay going while a GIF in the post loops', () => {
+      showReplyVideo();
+      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
+      const postGif = document.createElement('video');
+      postGif.className = 'animation';
+      article.prepend(postGif);
+
+      postGif.dispatchEvent(new Event('play'));
+
+      expect(suspend).not.toHaveBeenCalled();
     });
 
     it("resumes reply autoplay once the post's own video ends", () => {

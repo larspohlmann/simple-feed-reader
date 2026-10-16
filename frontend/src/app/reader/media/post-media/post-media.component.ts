@@ -10,6 +10,7 @@ import {
 import { EntryMediumDto } from '../../entry-medium';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { armHlsStreams, releaseHlsStreams } from '../hls-streams';
+import { PLAYER_VIDEOS } from '../player-videos';
 import { pauseMedia } from '../../list/magazine/blocks/entry-media/pause-media';
 import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
@@ -39,7 +40,7 @@ export class PostMediaComponent {
     afterRenderEffect(() => {
       this.mountVideos(this.media(), this.videoLabel());
       armHlsStreams(this.host);
-      const videos = Array.from(this.host.querySelectorAll('video'));
+      const videos = Array.from(this.host.querySelectorAll<HTMLVideoElement>(PLAYER_VIDEOS));
       this.pauseWhenScrolledAway(videos);
       this.registerForAutoplay(videos);
     });

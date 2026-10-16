@@ -74,7 +74,7 @@ export function sharedMedia(entry: EntryDto): EntryMediumDto[] {
 
 function collectSharedMedia(entry: EntryDto): EntryMediumDto[] {
   const posters = new Set(entry.media.map((medium) => medium.previewImageUrl));
-  const shown = entry.media.filter((medium) => medium.kind === 'video' || !posters.has(medium.url));
+  const shown = entry.media.filter((medium) => medium.kind !== 'image' || !posters.has(medium.url));
   return (shown.length > 0 ? shown : leadImage(entry)).slice(0, MAX_SHARED_MEDIA);
 }
 

@@ -6,6 +6,20 @@
       (click)="$event.stopPropagation()"
       (keydown)="$event.stopPropagation()"
     ></div>
+  } @else if (medium.kind === 'animation') {
+    <video
+      class="item animation"
+      [src]="medium.url"
+      [attr.poster]="medium.previewImageUrl ?? null"
+      [attr.width]="medium.width ?? null"
+      [attr.height]="medium.height ?? null"
+      [muted]="true"
+      autoplay
+      loop
+      playsinline
+      disablepictureinpicture
+      aria-hidden="true"
+    ></video>
   } @else {
     <img
       class="item"

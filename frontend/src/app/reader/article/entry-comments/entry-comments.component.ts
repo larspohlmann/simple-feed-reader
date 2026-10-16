@@ -36,10 +36,12 @@ import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { LinkCardComponent } from '../../link-card/link-card.component';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
+import { PLAYER_VIDEOS } from '../../media/player-videos';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl' | 'social'>;
 
 const DEEPEST_INDENT = 5;
+const PLAYERS = `${PLAYER_VIDEOS}, audio`;
 
 @Component({
   selector: 'app-entry-comments',
@@ -167,13 +169,13 @@ export class EntryCommentsComponent {
   }
 
   private played(article: HTMLElement, medium: EventTarget | null): void {
-    if (!(medium instanceof HTMLMediaElement)) return;
+    if (!(medium instanceof HTMLMediaElement) || !medium.matches(PLAYERS)) return;
     if (this.owns(medium)) this.pauseMediaOutside(article);
     else this.holdAutoplayWhilePlaying(medium);
   }
 
   private pauseMediaOutside(article: HTMLElement): void {
-    for (const medium of Array.from(article.querySelectorAll('video, audio'))) {
+    for (const medium of Array.from(article.querySelectorAll(PLAYERS))) {
       if (medium instanceof HTMLMediaElement && !medium.paused && !this.owns(medium)) {
         medium.pause();
       }

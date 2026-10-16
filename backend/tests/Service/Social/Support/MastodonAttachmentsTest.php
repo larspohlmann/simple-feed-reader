@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social\Support;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Parser\Model\ParsedMediumModel;
+use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Social\Support\MastodonAttachments;
 use PHPUnit\Framework\TestCase;
 
@@ -29,7 +31,20 @@ final class MastodonAttachmentsTest extends TestCase
         ]]));
 
         self::assertCount(1, $media);
-        self::assertSame('video', $media[0]->kind);
+        self::assertSame('animation', $media[0]->kind);
         self::assertSame('https://files.example/b.jpg', $media[0]->previewImageUrl);
+    }
+
+    public function testAGifIsAnAnimationAndAVideoStaysAVideo(): void
+    {
+        $media = MastodonAttachments::of([
+            JsonNodeModel::of(['type' => 'gifv', 'url' => 'https://files.example/gif.mp4']),
+            JsonNodeModel::of(['type' => 'video', 'url' => 'https://files.example/clip.mp4']),
+        ]);
+
+        self::assertSame(
+            [VisualMediaKind::Animation, VisualMediaKind::Video],
+            array_map(static fn (ParsedMediumModel $medium): VisualMediaKind => $medium->kind, $media),
+        );
     }
 }

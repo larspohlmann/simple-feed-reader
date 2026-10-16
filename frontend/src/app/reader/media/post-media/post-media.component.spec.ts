@@ -32,6 +32,14 @@ const clip: EntryMediumDto = {
   previewImageUrl: 'https://video.test/thumb.jpg',
 };
 
+const gif: EntryMediumDto = {
+  url: 'https://files.test/clap.mp4',
+  kind: 'animation',
+  width: 498,
+  height: 280,
+  previewImageUrl: 'https://files.test/clap.jpg',
+};
+
 @Component({
   imports: [PostMediaComponent],
   template: `<app-post-media [media]="media" [ratio]="1.5" videoLabel="Clip of a donkey" />`,
@@ -80,6 +88,25 @@ describe('PostMediaComponent', () => {
     expect(parentClicks).not.toHaveBeenCalled();
 
     fixture.nativeElement.querySelector('img').click();
+    expect(parentClicks).toHaveBeenCalledTimes(1);
+  });
+
+  it('loops a GIF silently on its own, with no controls', async () => {
+    const { fixture, parentClicks } = await mount([gif]);
+    const animation = fixture.nativeElement.querySelector('video.item') as HTMLVideoElement;
+
+    expect(fixture.nativeElement.querySelector('.video-slot')).toBeNull();
+    expect(animation.getAttribute('src')).toBe(gif.url);
+    expect(animation.getAttribute('poster')).toBe(gif.previewImageUrl);
+    expect([animation.muted, animation.loop, animation.autoplay, animation.controls]).toEqual([
+      true,
+      true,
+      true,
+      false,
+    ]);
+    expect(animation.hasAttribute('playsinline')).toBe(true);
+
+    animation.click();
     expect(parentClicks).toHaveBeenCalledTimes(1);
   });
 
@@ -153,6 +180,16 @@ describe('PostMediaComponent in the list', () => {
     const player = coordinator.register.mock.calls[0][0] as VideoAutoplayPlayer;
     expect(player).toBeInstanceOf(VideoAutoplayPlayer);
     expect(player.element).toBe(video);
+  });
+
+  it('leaves a GIF out of the one-at-a-time autoplay', async () => {
+    const take = jest.fn(() => document.createElement('video'));
+    const fixture = await mountInList([gif, clip], { take });
+
+    expect(take).toHaveBeenCalledTimes(1);
+    expect(coordinator.register).toHaveBeenCalledTimes(1);
+    const player = coordinator.register.mock.calls[0][0] as VideoAutoplayPlayer;
+    expect(player.element).toBe(fixture.nativeElement.querySelector('.video-slot video'));
   });
 
   it('unregisters its videos when destroyed', async () => {

@@ -68,7 +68,7 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertSame('200', $page->newestId);
     }
 
-    public function testImagesAndVideosBecomeMediaAndTheFirstImageLeads(): void
+    public function testImagesAndGifsBecomeMediaAndTheFirstImageLeads(): void
     {
         $entry = MastodonTimelinePage::of([self::timelineStatus(['media_attachments' => [
             [
@@ -93,7 +93,7 @@ final class MastodonTimelinePageTest extends TestCase
             [
                 new ParsedMediumModel(
                     'https://files.mastodon.example/b.mp4',
-                    VisualMediaKind::Video,
+                    VisualMediaKind::Animation,
                     640,
                     360,
                     'https://files.mastodon.example/b.jpg',

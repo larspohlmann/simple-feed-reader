@@ -14,7 +14,7 @@ use App\Service\Url\Support\HttpsImageUrl;
 /** A status's `media_attachments` as pictures and videos; audio and unknown files are left out. */
 final class MastodonAttachments
 {
-    private const array VIDEO_TYPES = ['video', 'gifv'];
+    private const array PLAYED_KINDS = ['video' => VisualMediaKind::Video, 'gifv' => VisualMediaKind::Animation];
 
     /**
      * @param list<JsonNodeModel> $attachments
@@ -36,7 +36,7 @@ final class MastodonAttachments
     {
         $url = HttpsImageUrl::orNull($attachment->string('url'));
         $size = $attachment->node('meta')->node('original');
-        $type = $attachment->string('type');
+        $type = $attachment->string('type') ?? '';
 
         return match (true) {
             null === $url => null,
@@ -46,9 +46,9 @@ final class MastodonAttachments
                 $size->int('width'),
                 $size->int('height'),
             ),
-            \in_array($type, self::VIDEO_TYPES, true) => new ParsedMediumModel(
+            isset(self::PLAYED_KINDS[$type]) => new ParsedMediumModel(
                 $url,
-                VisualMediaKind::Video,
+                self::PLAYED_KINDS[$type],
                 $size->int('width'),
                 $size->int('height'),
                 HttpsImageUrl::orNull($attachment->string('preview_url')),
