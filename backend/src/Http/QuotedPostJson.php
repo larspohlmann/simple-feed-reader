@@ -17,7 +17,7 @@ use App\Entity\QuotedPostContent;
 final class QuotedPostJson
 {
     /** @return QuoteRow|null */
-    public static function of(?QuotedPostContent $quote): ?array
+    public static function ofOrNull(?QuotedPostContent $quote): ?array
     {
         if ($quote === null) {
             return null;

@@ -39,8 +39,8 @@ final class CommentsJson
             'byEntryAuthor' => $comment->byEntryAuthor,
             'depth' => $comment->depth,
             'media' => EntryMedia::toJsonList($comment->embeds->media),
-            'linkCard' => $comment->embeds->linkCard === null ? null : LinkCardJson::of($comment->embeds->linkCard),
-            'quote' => QuotedPostJson::of($comment->embeds->quote),
+            'linkCard' => LinkCardJson::ofOrNull($comment->embeds->linkCard),
+            'quote' => QuotedPostJson::ofOrNull($comment->embeds->quote),
         ];
     }
 }

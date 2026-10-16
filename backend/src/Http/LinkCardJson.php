@@ -24,4 +24,10 @@ final class LinkCardJson
             'siteName' => $card->siteName,
         ];
     }
+
+    /** @return LinkCardRow|null */
+    public static function ofOrNull(?LinkCardContent $card): ?array
+    {
+        return $card === null ? null : self::of($card);
+    }
 }

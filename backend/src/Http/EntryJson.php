@@ -112,7 +112,7 @@ final class EntryJson
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'linkCards' => array_map(LinkCardJson::of(...), $row->enrichment->linkCards),
             'share' => $entry->getShareKind()?->value,
-            'quote' => QuotedPostJson::of($entry->getQuotedPost()),
+            'quote' => QuotedPostJson::ofOrNull($entry->getQuotedPost()),
         ];
     }
 

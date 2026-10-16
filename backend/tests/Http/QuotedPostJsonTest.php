@@ -14,7 +14,7 @@ final class QuotedPostJsonTest extends TestCase
 {
     public function testAQuoteIsPlainFieldsWithAnIsoUtcTime(): void
     {
-        $json = QuotedPostJson::of(new QuotedPostContent(
+        $json = QuotedPostJson::ofOrNull(new QuotedPostContent(
             'https://bsky.app/profile/q/post/3k',
             'Quoted Person',
             'quoted.bsky.social',
@@ -39,12 +39,13 @@ final class QuotedPostJsonTest extends TestCase
 
     public function testNoQuoteIsNull(): void
     {
-        self::assertNull(QuotedPostJson::of(null));
+        self::assertNull(QuotedPostJson::ofOrNull(null));
     }
 
     public function testAQuoteWithoutTimeOrNestedQuoteSaysSo(): void
     {
-        $json = QuotedPostJson::of(new QuotedPostContent('https://x.example/p/1', 'N', 'h', null, null, 't', [], null));
+        $quote = new QuotedPostContent('https://x.example/p/1', 'N', 'h', null, null, 't', [], null);
+        $json = QuotedPostJson::ofOrNull($quote);
 
         self::assertNotNull($json);
         self::assertNull($json['postedAt']);

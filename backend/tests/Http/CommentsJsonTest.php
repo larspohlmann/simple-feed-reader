@@ -69,7 +69,7 @@ final class CommentsJsonTest extends TestCase
                 'imageUrl' => null,
                 'siteName' => 'site.test',
             ],
-            'quote' => QuotedPostJson::of($quote),
+            'quote' => QuotedPostJson::ofOrNull($quote),
         ], self::firstComment($json));
     }
 
