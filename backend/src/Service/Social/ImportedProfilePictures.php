@@ -26,9 +26,6 @@ final readonly class ImportedProfilePictures
     public function picture(SocialAccount $account, array $feedUrls): void
     {
         $avatars = $this->followAvatars->find($account);
-        if ($avatars->isEmpty()) {
-            return;
-        }
         $now = $this->clock->now();
         foreach ($this->feeds->findByUrlsIndexedByUrl($feedUrls) as $feed) {
             $avatarUrl = self::avatarFor($feed, $avatars);

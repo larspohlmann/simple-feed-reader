@@ -16,11 +16,14 @@ final class FollowAvatarCacheTest extends TestCase
 {
     use AssignsEntityIds;
 
+    private ArrayAdapter $pool;
+
     private FollowAvatarCache $cache;
 
     protected function setUp(): void
     {
-        $this->cache = new FollowAvatarCache(new ArrayAdapter());
+        $this->pool = new ArrayAdapter();
+        $this->cache = new FollowAvatarCache($this->pool);
     }
 
     public function testABlueskyAccountsAvatarsAreFoundAgain(): void
@@ -62,6 +65,36 @@ final class FollowAvatarCacheTest extends TestCase
 
         self::assertNull($this->cache->find($account)->avatarOf('did:plc:bob'));
         self::assertSame('https://cdn.test/did:plc:carol.jpg', $this->cache->find($account)->avatarOf('did:plc:carol'));
+    }
+
+    public function testARememberedAccountIsKeptUnderItsId(): void
+    {
+        $this->cache->remember(self::blueskyAccount(3), [self::follow('did:plc:bob')]);
+
+        self::assertTrue($this->pool->hasItem('follow_avatars.3'));
+    }
+
+    public function testAMastodonAccountLeavesNothingInThePool(): void
+    {
+        $this->cache->remember(self::withId(SocialAccounts::mastodon(), 5), [self::follow('bob@mastodon.example')]);
+
+        self::assertFalse($this->pool->hasItem('follow_avatars.5'));
+    }
+
+    public function testAMastodonAccountFindsNoneEvenWhereAnEntryIsStored(): void
+    {
+        $this->cache->remember(self::blueskyAccount(5), [self::follow('did:plc:bob')]);
+
+        self::assertTrue($this->cache->find(self::withId(SocialAccounts::mastodon(), 5))->isEmpty());
+    }
+
+    public function testADamagedEntryFindsNone(): void
+    {
+        $item = $this->pool->getItem('follow_avatars.3');
+        $item->set('damaged');
+        $this->pool->save($item);
+
+        self::assertTrue($this->cache->find(self::blueskyAccount(3))->isEmpty());
     }
 
     private static function blueskyAccount(int $id): SocialAccount
