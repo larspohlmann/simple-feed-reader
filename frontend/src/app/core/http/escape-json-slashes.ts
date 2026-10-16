@@ -1,8 +1,5 @@
 import { HttpInterceptorFn } from '@angular/common/http';
-
-export function escapeJsonSlashes(json: string): string {
-  return json.replaceAll('/', '\\/');
-}
+import { escapeJsonSlashes } from './json-slashes';
 
 /** The web host's content filter drops a body holding a raw social-network URL but misses `\/` (#1638). */
 export const escapeJsonSlashesInterceptor: HttpInterceptorFn = (request, next) => {

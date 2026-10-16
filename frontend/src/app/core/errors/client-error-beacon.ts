@@ -8,7 +8,7 @@
 // `<base href="/reader/">` on the Strato build both turn a relative
 // `api/client-errors` into the correct same-origin path.
 import { buildVersion } from '../../../environments/version';
-import { escapeJsonSlashes } from '../http/escape-json-slashes';
+import { escapeJsonSlashes } from '../http/json-slashes';
 
 export interface ClientErrorItem {
   message: string;
