@@ -74,3 +74,20 @@ test('nothing starts once autoplay is switched off', async ({ page }) => {
     await expect(toggle).toBeChecked();
   }
 });
+
+test('an autoplaying list video hides its controls until tapped, and the tap turns sound on', async ({
+  page,
+}) => {
+  await recordPlays(page);
+  await stubEntries(page);
+  test.skip(!(await signInAsAdmin(page)), 'no admin account on this stack');
+
+  const video = page.locator('app-entry-media video');
+  await expect.poll(() => plays(page)).toEqual([{ src: CLIP, muted: true }]);
+  await expect(video).not.toHaveAttribute('controls');
+
+  await video.click();
+
+  await expect(video).toHaveAttribute('controls');
+  expect(await video.evaluate((element: HTMLVideoElement) => element.muted)).toBe(false);
+});
