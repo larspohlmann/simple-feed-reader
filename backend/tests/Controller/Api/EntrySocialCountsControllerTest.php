@@ -80,6 +80,21 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
         self::assertSame([self::ORIGIN], $this->http->requestLines());
     }
 
+    public function testRefreshAsksTheOriginAgain(): void
+    {
+        $client = $this->clientRouting([self::ORIGIN => self::originStatus()]);
+        $path = sprintf('/api/entries/%d/social', $this->mastodonPostFor(
+            $this->signIn($client, 'counts-refresh@example.test'),
+        ));
+
+        $client->request('GET', $path);
+        $client->request('GET', $path . '?refresh=1');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(5, $this->payload($client)['likes']);
+        self::assertSame([self::ORIGIN, self::ORIGIN], $this->http->requestLines());
+    }
+
     public function testAnOriginClosedToThePublicFallsBackToTheUsersAccount(): void
     {
         $client = $this->clientRouting([

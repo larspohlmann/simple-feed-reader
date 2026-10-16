@@ -58,6 +58,23 @@ final readonly class SocialCounts
         return $counts;
     }
 
+    /**
+     * @throws NotASocialPostException
+     * @throws SocialPostNotFoundException
+     * @throws SocialNetworkThrottledException
+     * @throws SocialNetworkUnreachableException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialCredentialsRejectedException
+     */
+    public function refreshed(User $user, Entry $entry): SocialCountsModel
+    {
+        $post = SocialPostAddress::of($entry)
+            ?? throw new NotASocialPostException('This entry is not a Bluesky or Mastodon post.');
+        $this->cache->forget($post);
+
+        return $this->of($user, $entry);
+    }
+
     private function actingAccountCountsOf(
         User $user,
         Entry $entry,
