@@ -2,7 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError, Subject } from 'rxjs';
 import { CommentsService } from './comments.service';
 import { ReaderApi } from '../../reader-api';
-import { CommentsResponse } from '../../models';
+import { CommentsResponse } from '../../entry-comment';
+import { anEntryComment } from '../../../../testing/entry-testing';
 
 describe('CommentsService', () => {
   let api: { comments: jest.Mock };
@@ -10,16 +11,9 @@ describe('CommentsService', () => {
 
   const ok: CommentsResponse = {
     status: 'ok',
-    comments: [
-      {
-        author: '/u/a',
-        authorUrl: null,
-        url: null,
-        publishedAt: null,
-        html: '<p>x</p>',
-        byEntryAuthor: false,
-      },
-    ],
+    comments: [anEntryComment({ author: '/u/a' })],
+    omitted: 3,
+    fetchedAt: '2026-09-24T11:59:00Z',
   };
 
   beforeEach(() => {
@@ -44,6 +38,8 @@ describe('CommentsService', () => {
     expect(service.state(1)()).toEqual({
       status: 'ok',
       comments: ok.comments,
+      omitted: 3,
+      fetchedAt: '2026-09-24T11:59:00Z',
       loadedAt: Date.parse('2026-09-24T12:00:00Z'),
     });
   });
@@ -59,6 +55,22 @@ describe('CommentsService', () => {
     service.load(1);
     service.reload(1);
     expect(api.comments).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks the server to refresh on reload only', () => {
+    service.load(1);
+    service.reload(1);
+    expect(api.comments).toHaveBeenNthCalledWith(1, 1);
+    expect(api.comments).toHaveBeenNthCalledWith(2, 1, true);
+  });
+
+  it('keeps the fetch time and the omitted count of an ok answer', () => {
+    service.load(1);
+    expect(service.state(1)()).toMatchObject({
+      status: 'ok',
+      omitted: 3,
+      fetchedAt: '2026-09-24T11:59:00Z',
+    });
   });
 
   it('maps throttled to a retry instant', () => {

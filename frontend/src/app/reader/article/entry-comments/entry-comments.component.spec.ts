@@ -4,9 +4,12 @@ import { EntryCommentsComponent } from './entry-comments.component';
 import { CommentsService, CommentsState } from './comments.service';
 import { CommentsLoad } from '../../models';
 import { prefetchMargin } from '../../list/paging';
+import { anEntryComment } from '../../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
 const DISCUSSION = 'https://www.reddit.com/r/x/comments/1/t/';
+
+const FETCHED_AT = '2026-09-24T12:00:00Z';
 
 describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
@@ -124,24 +127,19 @@ describe('EntryCommentsComponent', () => {
     show('auto');
     const element = settle({
       status: 'ok',
+      omitted: 0,
+      fetchedAt: FETCHED_AT,
       loadedAt: Date.now(),
       comments: [
-        {
+        anEntryComment({
           author: '/u/op',
           authorUrl: 'https://www.reddit.com/user/op',
           url: 'https://c/1',
           publishedAt: new Date(Date.now() - 3 * 3_600_000).toISOString(),
           html: '<p>Hi</p>',
           byEntryAuthor: true,
-        },
-        {
-          author: '/u/b',
-          authorUrl: null,
-          url: null,
-          publishedAt: null,
-          html: '<p>Yo</p>',
-          byEntryAuthor: false,
-        },
+        }),
+        anEntryComment({ author: '/u/b', html: '<p>Yo</p>' }),
       ],
     });
     const rows = element.querySelectorAll('.comment');
@@ -161,19 +159,37 @@ describe('EntryCommentsComponent', () => {
 
   it('shows the empty line for zero comments', () => {
     show('auto');
-    const element = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
+    const element = settle({
+      status: 'ok',
+      comments: [],
+      omitted: 0,
+      fetchedAt: FETCHED_AT,
+      loadedAt: Date.now(),
+    });
     expect(element.querySelector('.empty')?.textContent?.trim()).toBe('No comments yet.');
   });
 
   it('drops the closing link without a discussion URL', () => {
     show('manual', 5, null);
-    const element = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
+    const element = settle({
+      status: 'ok',
+      comments: [],
+      omitted: 0,
+      fetchedAt: FETCHED_AT,
+      loadedAt: Date.now(),
+    });
     expect(element.querySelector('a.all')).toBeNull();
   });
 
   it('reload calls the service', () => {
     show('auto');
-    const element = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
+    const element = settle({
+      status: 'ok',
+      comments: [],
+      omitted: 0,
+      fetchedAt: FETCHED_AT,
+      loadedAt: Date.now(),
+    });
     const reload = element.querySelector<HTMLButtonElement>('button.reload')!;
     expect(reload.getAttribute('aria-label')).toBe('Reload comments');
     reload.click();

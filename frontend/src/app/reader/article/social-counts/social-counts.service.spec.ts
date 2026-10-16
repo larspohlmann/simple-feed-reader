@@ -46,6 +46,22 @@ describe('SocialCountsService', () => {
     });
   });
 
+  it('reloads the counts with a refresh', () => {
+    service.load(post());
+    service.reload(post());
+
+    expect(api.socialCounts).toHaveBeenNthCalledWith(1, 1);
+    expect(api.socialCounts).toHaveBeenNthCalledWith(2, 1, true);
+  });
+
+  it('ignores a reload while counts are loading', () => {
+    api.socialCounts.mockReturnValue(new Subject<SocialCountsDto>());
+    service.load(post());
+    service.reload(post());
+
+    expect(api.socialCounts).toHaveBeenCalledTimes(1);
+  });
+
   it('asks again once two minutes have passed', () => {
     service.load(post());
     jest.setSystemTime(new Date('2026-10-13T12:02:00Z'));

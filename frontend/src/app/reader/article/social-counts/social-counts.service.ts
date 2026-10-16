@@ -1,4 +1,5 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { SocialCountsDto } from '../../entry-social';
 import { EntryDto } from '../../models';
@@ -33,7 +34,13 @@ export class SocialCountsService {
 
   load(entry: CountedEntry): void {
     const state = this.stateFor(entry.id);
-    if (isStale(state())) this.fetch(entry, state);
+    if (isStale(state())) this.fetch(entry, state, this.api.socialCounts(entry.id));
+  }
+
+  reload(entry: CountedEntry): void {
+    const state = this.stateFor(entry.id);
+    if (state().status === 'loading') return;
+    this.fetch(entry, state, this.api.socialCounts(entry.id, true));
   }
 
   private stateFor(id: number): WritableSignal<SocialCountsState> {
@@ -45,11 +52,15 @@ export class SocialCountsService {
     return state;
   }
 
-  private fetch(entry: CountedEntry, state: WritableSignal<SocialCountsState>): void {
+  private fetch(
+    entry: CountedEntry,
+    state: WritableSignal<SocialCountsState>,
+    request: Observable<SocialCountsDto>,
+  ): void {
     const generation = this.generation;
     const likedAtLoad = entry.social?.isLiked ?? false;
     state.set({ status: 'loading' });
-    this.api.socialCounts(entry.id).subscribe({
+    request.subscribe({
       next: (counts) => {
         if (generation === this.generation) {
           state.set({ status: 'ok', counts, likedAtLoad, loadedAt: Date.now() });

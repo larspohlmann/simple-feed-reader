@@ -20,7 +20,7 @@ import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/i
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { PreviewProgress } from '../../link-card/preview-progress';
-import { aLinkCard, aQuotedPost, anEntry } from '../../../../testing/entry-testing';
+import { aLinkCard, aQuotedPost, anEntry, anEntryComment } from '../../../../testing/entry-testing';
 import {
   MockResizeObserver,
   installMockResizeObserver,
@@ -1587,16 +1587,9 @@ describe('ReaderViewComponent', () => {
 
     const loadedComments: CommentsState = {
       status: 'ok',
-      comments: [
-        {
-          author: 'u/first',
-          authorUrl: null,
-          url: null,
-          publishedAt: null,
-          byEntryAuthor: false,
-          html: '<p>First comment</p>',
-        },
-      ],
+      comments: [anEntryComment({ author: 'u/first', html: '<p>First comment</p>' })],
+      omitted: 0,
+      fetchedAt: '2026-09-24T12:00:00Z',
       loadedAt: 0,
     };
 

@@ -451,6 +451,20 @@ describe('ReaderApi', () => {
     expect(received).toEqual({ status: 'failed' });
   });
 
+  it('GETs refreshed comments with ?refresh=1', () => {
+    api.comments(7, true).subscribe();
+
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/7/comments?refresh=1');
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush({ status: 'failed' });
+  });
+
+  it('GETs refreshed counts with ?refresh=1', () => {
+    api.socialCounts(7, true).subscribe();
+
+    ctrl.expectOne('https://api.test/api/entries/7/social?refresh=1').flush({});
+  });
+
   it('GETs the live counts of a post (#1615)', () => {
     let received: unknown;
     api.socialCounts(7).subscribe((counts) => (received = counts));
