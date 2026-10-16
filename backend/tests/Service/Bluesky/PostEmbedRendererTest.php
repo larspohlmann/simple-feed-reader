@@ -380,19 +380,20 @@ final class PostEmbedRendererTest extends TestCase
         self::assertNull($rendered->uncardedLink);
     }
 
-    /** @return iterable<string, array{array<string, string>, string}> */
+    /** @return iterable<string, array{array<string, string>, ?string}> */
     public static function gifAltTexts(): iterable
     {
         yield 'no description' => [['title' => 'Clapping'], 'Clapping'];
         yield 'a bare ALT: prefix' => [['title' => 'Clapping', 'description' => 'ALT: '], 'Clapping'];
         yield 'ALT: without a space' => [['title' => 'Clapping', 'description' => 'ALT:Applause'], 'Applause'];
         yield 'a description without the prefix' => [['title' => 'Clapping', 'description' => 'Applause'], 'Applause'];
-        yield 'neither' => [[], ''];
+        yield 'neither' => [[], null];
+        yield 'a blank title' => [['title' => '  '], null];
     }
 
     /** @param array<string, string> $text */
     #[DataProvider('gifAltTexts')]
-    public function testAGifsAltTextIsItsDescriptionWithoutThePickersPrefixElseItsTitle(array $text, string $alt): void
+    public function testAGifsAltTextIsItsDescriptionWithoutThePickersPrefixElseItsTitle(array $text, ?string $alt): void
     {
         $rendered = $this->renderedPost([
             '$type' => 'app.bsky.embed.external#view',
@@ -401,7 +402,7 @@ final class PostEmbedRendererTest extends TestCase
 
         self::assertCount(1, $rendered->media);
         self::assertSame($alt, $rendered->media[0]->alt);
-        self::assertStringContainsString('alt="' . $alt . '"', $rendered->html);
+        self::assertStringContainsString('alt="' . ($alt ?? '') . '"', $rendered->html);
     }
 
     public function testAGifWithoutAThumbHasNoStillAndNoLeadImage(): void

@@ -79,14 +79,14 @@ final class BlueskyEmbedMedia
         );
     }
 
-    private static function gifAltText(JsonNodeModel $external): string
+    private static function gifAltText(JsonNodeModel $external): ?string
     {
         $description = $external->string('description') ?? '';
         $alt = str_starts_with($description, self::ALT_PREFIX)
             ? trim(substr($description, \strlen(self::ALT_PREFIX)))
             : $description;
 
-        return $alt === '' ? $external->string('title') ?? '' : $alt;
+        return $alt === '' ? $external->string('title') : $alt;
     }
 
     private static function isGifPath(string $url): bool
