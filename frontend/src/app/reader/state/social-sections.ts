@@ -38,9 +38,13 @@ export function isSocialFeed(subscription: SubscriptionDto): boolean {
   return Boolean(subscription.social);
 }
 
+export function isProfileFeed(subscription: SubscriptionDto): boolean {
+  return subscription.social?.kind === 'profile';
+}
+
 /** A timeline, list or custom feed read through a connected account; a profile feed is ordinary RSS. */
 export function isPrivateFeed(subscription: SubscriptionDto): subscription is PrivateSubscription {
-  return isSocialFeed(subscription) && subscription.social?.kind !== 'profile';
+  return isSocialFeed(subscription) && !isProfileFeed(subscription);
 }
 
 /** A social feed other than Home is shown by its picture when it has one; today only profile feeds get one. */

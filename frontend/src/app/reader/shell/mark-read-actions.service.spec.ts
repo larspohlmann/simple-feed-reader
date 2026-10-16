@@ -14,6 +14,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
+import { makeSubscription } from '../testing/subscription.factory';
 import { MarkReadActions } from './mark-read-actions.service';
 import { ReaderRouteState } from './reader-route-state.service';
 
@@ -21,33 +22,7 @@ const subscription = (
   id: number,
   unreadCount: number,
   social: SubscriptionDto['social'],
-): SubscriptionDto => ({
-  id,
-  feedId: id * 10,
-  title: `s${id}`,
-  faviconUrl: null,
-  customTitle: null,
-  feedUrl: `https://f/${id}`,
-  siteUrl: null,
-  description: null,
-  imageUrl: null,
-  status: 'active',
-  sourceFormat: 'xml',
-  createdAt: 'x',
-  lastFetchedAt: null,
-  lastSuccessfulFetchAt: null,
-  lastNewContentAt: null,
-  nextFetchAt: null,
-  consecutiveFailures: 0,
-  lastErrorMessage: null,
-  position: 0,
-  tags: [],
-  unreadCount,
-  entryCount: 0,
-  includeInAllItems: true,
-  includeInForYou: true,
-  social,
-});
+): SubscriptionDto => makeSubscription({ id, unreadCount, social });
 
 describe('MarkReadActions marking a network read', () => {
   const profileFeed = subscription(1, 4, { network: 'bluesky', accountId: null, kind: 'profile' });

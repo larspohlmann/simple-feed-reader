@@ -48,6 +48,9 @@ const ONE_ACCOUNT: SocialSection = {
   ],
 };
 
+const expandProfiles = (network: SocialSection['network']): void =>
+  localStorage.setItem(`sfr.${network}.profiles.collapsed`, 'false');
+
 const ALL: Selection = { kind: 'all', id: null, unread: true };
 
 function mount(
@@ -285,7 +288,7 @@ describe('SidebarSocialSectionComponent', () => {
       profiles: socialProfiles([person(7, 'Amy')]),
     };
 
-    localStorage.setItem('sfr.mastodon.profiles.collapsed', 'false');
+    expandProfiles('mastodon');
     const root = element(mount(section));
 
     expect(root.querySelector('.section-link')?.textContent).toContain('Mastodon');
@@ -304,7 +307,7 @@ describe('SidebarSocialSectionComponent', () => {
       showsHandles: false,
     };
 
-    localStorage.setItem('sfr.bluesky.profiles.collapsed', 'false');
+    expandProfiles('bluesky');
 
     expect(element(mount(section)).querySelector('.feed-exclusion-marker')).not.toBeNull();
   });
@@ -358,7 +361,7 @@ describe('SidebarSocialSectionComponent', () => {
         entryCount: 0,
         showsHandles: false,
       };
-      localStorage.setItem('sfr.bluesky.profiles.collapsed', 'false');
+      expandProfiles('bluesky');
       const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;
       return row.querySelector('img.avatar')?.getAttribute('src') ?? null;
     };
@@ -395,7 +398,7 @@ describe('SidebarSocialSectionComponent', () => {
         entryCount: 0,
         showsHandles: false,
       };
-      localStorage.setItem('sfr.bluesky.profiles.collapsed', 'false');
+      expandProfiles('bluesky');
       const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;
 
       expect(row.querySelector('img.avatar')).toBeNull();

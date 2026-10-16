@@ -9,7 +9,7 @@ import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
 import { SocialAccountRefDto } from '../social-feed';
 import { SubscriptionRows } from './subscription-rows';
-import { buildSocialSections, isSocialFeed } from './social-sections';
+import { buildSocialSections, isProfileFeed, isSocialFeed } from './social-sections';
 import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
 import { SubscriptionCountsResponse, SubscriptionDto, SubscriptionsResponse } from '../models';
 import {
@@ -326,7 +326,6 @@ function inNetworkTarget(
   subscription: SubscriptionDto,
   target: { network: SocialNetworkName; feedKind?: NetworkFeedKind },
 ): boolean {
-  const social = subscription.social;
-  if (social?.network !== target.network) return false;
-  return target.feedKind === undefined || social.kind === target.feedKind;
+  if (subscription.social?.network !== target.network) return false;
+  return target.feedKind === undefined || isProfileFeed(subscription);
 }

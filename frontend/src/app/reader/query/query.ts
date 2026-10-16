@@ -192,9 +192,7 @@ export function withListOrder(selection: Selection, order: ListOrder): Selection
 export function listOrderKey(selection: Selection): string | null {
   if (!hasListOrder(selection)) return null;
   if (selection.kind === 'search') return 'search';
-  if (selection.network) {
-    return [`network:${selection.network}`, selection.feedKind].filter(Boolean).join(':');
-  }
+  if (selection.network) return `network:${networkKey(selection)}`;
   return selection.id === null ? selection.kind : `${selection.kind}:${selection.id}`;
 }
 
@@ -321,9 +319,10 @@ function networkSelection(network: SocialNetworkName, feedKind: string | null): 
   return isNetworkFeedKind(feedKind) ? { ...selection, feedKind } : selection;
 }
 
-/** The feed kind a network selection narrows to, spread into whatever the selection is mapped onto. */
-export function feedKindOf(selection: Selection): { feedKind?: NetworkFeedKind } {
-  return selection.feedKind ? { feedKind: selection.feedKind } : {};
+/** A network list's part of a list key: its network, narrowed by its feed kind; empty for any other list. */
+export function networkKey(selection: Selection): string {
+  if (!selection.network) return '';
+  return selection.feedKind ? `${selection.network}:${selection.feedKind}` : selection.network;
 }
 
 /** The list a URL names with any search set aside: the list a search is layered
@@ -356,7 +355,7 @@ const VIEW_QUERY: Record<SelectionKind, (selection: Selection) => EntryQuery> = 
   network: (selection) => ({
     view: listView(selection),
     network: selection.network,
-    ...feedKindOf(selection),
+    feedKind: selection.feedKind,
   }),
   subscription: (selection) => ({
     view: listView(selection),
@@ -409,7 +408,7 @@ const MARK_READ_TARGET: Partial<
   tag: idScoped('tag'),
   network: (selection) =>
     selection.network
-      ? { scope: 'network', network: selection.network, ...feedKindOf(selection) }
+      ? { scope: 'network', network: selection.network, feedKind: selection.feedKind }
       : null,
   subscription: idScoped('feed'),
   search: (selection) => (selection.term ? { scope: 'search', term: selection.term } : null),

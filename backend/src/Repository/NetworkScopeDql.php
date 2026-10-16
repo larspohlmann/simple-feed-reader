@@ -15,8 +15,8 @@ final class NetworkScopeDql
     {
         $qb->andWhere(\sprintf('%s.network = :network', $feedAlias))->setParameter('network', $scope->network);
         if ($scope->feedKind === NetworkFeedKind::Profile) {
-            $qb->andWhere(\sprintf('%s.sourceFormat NOT IN (:privateFeedFormats)', $feedAlias))
-                ->setParameter('privateFeedFormats', SourceFormat::SOCIAL);
+            $qb->andWhere(\sprintf('%s.sourceFormat NOT IN (:socialFormats)', $feedAlias))
+                ->setParameter('socialFormats', SourceFormat::SOCIAL);
         }
     }
 

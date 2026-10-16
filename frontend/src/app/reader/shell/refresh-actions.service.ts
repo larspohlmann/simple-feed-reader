@@ -10,7 +10,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { RefreshScope, feedKindOf, queryFromSelection, selectionQueryParams } from '../query/query';
+import { RefreshScope, queryFromSelection, selectionQueryParams } from '../query/query';
 import { SubscriptionDto } from '../models';
 import { AddFeedDialogComponent } from '../feeds/add-feed/add-feed-dialog.component';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -57,7 +57,9 @@ export class RefreshActions {
       case 'tag':
         return selection.id != null ? { tagId: selection.id } : null;
       case 'network':
-        return selection.network ? { network: selection.network, ...feedKindOf(selection) } : null;
+        return selection.network
+          ? { network: selection.network, feedKind: selection.feedKind }
+          : null;
       case 'subscription': {
         const feedId = this.heading.selectedSubscription()?.feedId;
         return feedId != null ? { feedId } : null;

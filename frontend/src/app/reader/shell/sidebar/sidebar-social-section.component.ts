@@ -13,7 +13,7 @@ const collapsedKey = (network: SocialNetworkName): string => `sfr.${network}.col
 const profilesCollapsedKey = (network: SocialNetworkName): string =>
   `sfr.${network}.profiles.collapsed`;
 
-/** One network's social feeds, collapsible and remembered like Tags; a handle heads each of several accounts, and the profile feeds sit under a tag-style Feeds row. */
+/** One network's social feeds, collapsible and remembered like Tags; a handle heads each of several accounts. */
 @Component({
   selector: 'app-sidebar-social-section',
   imports: [RouterLink, TranslocoPipe, IconComponent, TagGlyphComponent, SidebarFeedRowComponent],

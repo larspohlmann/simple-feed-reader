@@ -8,7 +8,7 @@ export interface PersistedToggle {
 
 export type ToggleStart = 'expanded' | 'collapsed';
 
-/** Starts as `start` until toggled, then follows what is stored; follows a key that changes, and keeps working in memory without storage. */
+/** `start` until stored otherwise; follows a key that changes, and keeps working in memory without storage. */
 export function persistedToggle(
   key: () => string,
   start: ToggleStart = 'expanded',
