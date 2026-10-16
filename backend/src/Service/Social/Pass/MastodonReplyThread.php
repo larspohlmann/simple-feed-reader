@@ -20,9 +20,15 @@ final readonly class MastodonReplyThread
     public function __construct(private string $postId, private ?string $postAuthor, array $descendants)
     {
         $answersById = [];
-        foreach (self::shownOnceEach($descendants) as $status) {
+        $seen = [];
+        foreach ($descendants as $status) {
+            $id = $status->string('id');
+            if ($id === null || isset($seen[$id]) || !self::isShown($status)) {
+                continue;
+            }
+            $seen[$id] = true;
             $parent = $status->string('in_reply_to_id');
-            if ($parent !== null && $status->string('id') !== $postId) {
+            if ($parent !== null && $id !== $postId) {
                 $answersById[$parent][] = $status;
             }
         }
@@ -51,27 +57,6 @@ final readonly class MastodonReplyThread
     {
         return $this->postAuthor !== null
             && \in_array($this->postAuthor, [$account->string('url'), $account->string('uri')], true);
-    }
-
-    /**
-     * A repeated id is read once: the first copy wins.
-     *
-     * @param list<JsonNodeModel> $descendants
-     *
-     * @return list<JsonNodeModel>
-     */
-    private static function shownOnceEach(array $descendants): array
-    {
-        $kept = [];
-        foreach ($descendants as $status) {
-            $id = $status->string('id');
-            if ($id === null || isset($kept[$id]) || !self::isShown($status)) {
-                continue;
-            }
-            $kept[$id] = $status;
-        }
-
-        return array_values($kept);
     }
 
     private static function isShown(JsonNodeModel $status): bool
