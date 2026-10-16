@@ -61,6 +61,17 @@ final class MastodonContextRepliesTest extends TestCase
         self::assertSame('<p>Related</p>', $this->replies()[1]->comment->html);
     }
 
+    public function testAReplysMarkupIsSanitized(): void
+    {
+        $answer = self::contextOf([self::statusOf('300', '110', [
+            'content' => '<p onclick="steal()">Hi</p><script>alert(1)</script>',
+        ])]);
+
+        $html = $this->replies($answer)[0]->comment->html;
+
+        self::assertSame('<p>Hi</p>', $html);
+    }
+
     public function testTheOriginalPostersReplyIsMarked(): void
     {
         $replies = $this->replies();

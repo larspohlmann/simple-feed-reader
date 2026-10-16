@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Support;
 
+use App\Entity\EntryMedium;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Url\Support\HttpsImageUrl;
@@ -22,6 +24,12 @@ final class MastodonAttachments
     public static function of(array $attachments): array
     {
         return array_values(array_filter(array_map(self::mediumOf(...), $attachments)));
+    }
+
+    /** @return list<EntryMedium> */
+    public static function entryMediaOf(JsonNodeModel $status): array
+    {
+        return EntryMediaAssembler::mediaOf(self::of($status->nodes('media_attachments')));
     }
 
     private static function mediumOf(JsonNodeModel $attachment): ?ParsedMediumModel

@@ -111,6 +111,32 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertStringContainsString('Read ', $html);
     }
 
+    public function testAReplysMarkupIsSanitized(): void
+    {
+        $reply = self::replyBy('did:plc:shown', []);
+        $reply['post'] = [
+            'uri' => 'at://did:plc:shown/app.bsky.feed.post/reply',
+            'author' => ['did' => 'did:plc:shown', 'handle' => 'shown.test'],
+            'record' => [
+                '$type' => 'app.bsky.feed.post',
+                'text' => '<script>alert(1)</script> <b onclick="steal()">see</b> https://example.com/a',
+                'facets' => [[
+                    'index' => ['byteStart' => 55, 'byteEnd' => 76],
+                    'features' => [['$type' => 'app.bsky.richtext.facet#link', 'uri' => 'https://example.com/a']],
+                ]],
+            ],
+        ];
+
+        $html = $this->replies(self::threadOf([$reply]))[0]->comment->html;
+
+        self::assertStringNotContainsString('<script', $html);
+        self::assertStringNotContainsString('<b onclick', $html);
+        self::assertStringContainsString(
+            '<a href="https://example.com/a" rel="noopener noreferrer" target="_blank">',
+            $html,
+        );
+    }
+
     public function testImagesBecomeMedia(): void
     {
         $comment = $this->replies()[0]->comment;

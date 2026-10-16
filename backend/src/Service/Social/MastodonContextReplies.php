@@ -9,10 +9,10 @@ use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentEmbedsModel;
 use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Social\Model\ReplyNodeModel;
+use App\Service\Social\Pass\MastodonReplyThread;
 use App\Service\Social\Support\MastodonAttachments;
 use App\Service\Social\Support\MastodonAuthor;
 use App\Service\Social\Support\MastodonCard;
@@ -23,9 +23,6 @@ use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class MastodonContextReplies
 {
-    private const array SHOWN_VISIBILITIES = ['public', 'unlisted'];
-    private const string THE_POST = '';
-
     public function __construct(private EntrySanitizer $sanitizer)
     {
     }
@@ -39,62 +36,28 @@ final readonly class MastodonContextReplies
     {
         $descendants = JsonNodeModel::of(json_decode($answer, true))->listAt('descendants')
             ?? throw new CommentsUnavailableException('The Mastodon instance answered without the replies.');
-        $entryAuthor = MastodonStatusAddress::authorPrefixOrNull($postAddress);
+        $thread = new MastodonReplyThread(MastodonStatusAddress::authorPrefixOrNull($postAddress), $descendants);
 
-        return self::nodesOf($this->repliesByParent($descendants, $entryAuthor), self::THE_POST);
+        return $this->nodesOf($thread->topLevel(), $thread);
     }
 
     /**
-     * A reply answering a status outside the list answers the post itself, by whatever id the post has there.
-     *
-     * @param list<JsonNodeModel> $descendants
-     *
-     * @return array<array-key, list<array{string, EntryCommentModel}>>
-     */
-    private function repliesByParent(array $descendants, ?string $entryAuthor): array
-    {
-        $listed = array_flip(array_filter(array_map(
-            static fn (JsonNodeModel $status): ?string => $status->string('id'),
-            $descendants,
-        )));
-        $byParent = [];
-        $read = [];
-        foreach ($descendants as $status) {
-            $id = $status->string('id');
-            if ($id === null || isset($read[$id]) || !self::isShown($status)) {
-                continue;
-            }
-            $read[$id] = true;
-            $parent = $status->string('in_reply_to_id');
-            $byParent[$parent !== null && isset($listed[$parent]) ? $parent : self::THE_POST][]
-                = [$id, $this->commentOf($status, $entryAuthor)];
-        }
-
-        return $byParent;
-    }
-
-    /**
-     * @param array<array-key, list<array{string, EntryCommentModel}>> $repliesByParent
+     * @param list<JsonNodeModel> $statuses
      *
      * @return list<ReplyNodeModel>
      */
-    private static function nodesOf(array $repliesByParent, string $parent): array
+    private function nodesOf(array $statuses, MastodonReplyThread $thread): array
     {
         return array_map(
-            static fn (array $reply): ReplyNodeModel => new ReplyNodeModel(
-                $reply[1],
-                self::nodesOf($repliesByParent, $reply[0]),
+            fn (JsonNodeModel $status): ReplyNodeModel => new ReplyNodeModel(
+                $this->commentOf($status, $thread),
+                $this->nodesOf($thread->answersTo($status), $thread),
             ),
-            $repliesByParent[$parent] ?? [],
+            $statuses,
         );
     }
 
-    private static function isShown(JsonNodeModel $status): bool
-    {
-        return \in_array($status->string('visibility'), self::SHOWN_VISIBILITIES, true);
-    }
-
-    private function commentOf(JsonNodeModel $status, ?string $entryAuthor): EntryCommentModel
+    private function commentOf(JsonNodeModel $status, MastodonReplyThread $thread): EntryCommentModel
     {
         $account = $status->node('account');
 
@@ -103,8 +66,7 @@ final readonly class MastodonContextReplies
             AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri')),
             DateParser::parse($status->string('created_at')),
             $this->htmlOf($status),
-            $entryAuthor !== null
-                && \in_array($entryAuthor, [$account->string('url'), $account->string('uri')], true),
+            $thread->isByPostAuthor($account),
             self::embedsOf($status),
         );
     }
@@ -134,10 +96,8 @@ final readonly class MastodonContextReplies
 
     private static function embedsOf(JsonNodeModel $status): CommentEmbedsModel
     {
-        $attachments = MastodonAttachments::of($status->nodes('media_attachments'));
-
         return new CommentEmbedsModel(
-            EntryMediaAssembler::assemble(null, $attachments, [])->media,
+            MastodonAttachments::entryMediaOf($status),
             MastodonCard::of($status->node('card')),
             MastodonQuotedStatus::ofQuote($status->node('quote')),
         );

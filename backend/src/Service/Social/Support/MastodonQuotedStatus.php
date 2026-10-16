@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Support;
 
-use App\Entity\EntryMedium;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\LinkCard\Support\StorableQuotedPost;
 use App\Service\Parser\Support\DateParser;
@@ -45,17 +43,9 @@ final class MastodonQuotedStatus
             $account->string('avatar'),
             DateParser::parse($status->string('created_at')),
             self::textOf($body, $status->string('spoiler_text')),
-            self::mediaOf($status),
+            MastodonAttachments::entryMediaOf($status),
             self::nestedOf($status->node('quote'), $quoted),
         ));
-    }
-
-    /** @return list<EntryMedium> */
-    private static function mediaOf(JsonNodeModel $status): array
-    {
-        $attachments = MastodonAttachments::of($status->nodes('media_attachments'));
-
-        return EntryMediaAssembler::assemble(null, $attachments, [])->media;
     }
 
     private static function textOf(string $html, ?string $warning): string

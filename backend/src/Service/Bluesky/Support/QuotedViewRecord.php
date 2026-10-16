@@ -39,7 +39,7 @@ final class QuotedViewRecord
             $author->string('avatar'),
             DateParser::parse($value->string('createdAt') ?? $record->string('indexedAt')),
             $value->text('text') ?? '',
-            EntryMediaAssembler::assemble(null, self::mediaOf($embed), [])->media,
+            EntryMediaAssembler::mediaOf(self::mediaOf($embed)),
             self::nestedQuoteOf($embed),
         ));
     }
