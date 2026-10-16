@@ -21,6 +21,7 @@ final readonly class AppViewClient
 
     private const string GET_POSTS = self::BASE_URL . 'app.bsky.feed.getPosts';
     private const string GET_PROFILES = self::BASE_URL . 'app.bsky.actor.getProfiles';
+    private const string GET_POST_THREAD = 'app.bsky.feed.getPostThread?uri=%s&depth=%d&parentHeight=0';
     private const int UNREACHABLE_BACKOFF_SECONDS = 300;
     private const int FIRST_CLIENT_ERROR = 400;
     private const int LAST_CLIENT_ERROR = 499;
@@ -89,6 +90,29 @@ final readonly class AppViewClient
     }
 
     /**
+     * @return string the answer as the AppView gave it
+     *
+     * @throws FetchException
+     * @throws AppViewAnswerException when the answer holds no thread object
+     */
+    public function thread(string $uri, int $depth): string
+    {
+        $body = $this->body(self::BASE_URL . self::threadQuery($uri, $depth));
+        $answer = json_decode($body, true);
+        if (!\is_array($answer) || !\is_array($answer['thread'] ?? null)) {
+            throw new AppViewAnswerException('The AppView answered without a thread.');
+        }
+
+        return $body;
+    }
+
+    /** The XRPC method and query asking for a post's replies down to $depth, without the posts it answers. */
+    public static function threadQuery(string $uri, int $depth): string
+    {
+        return sprintf(self::GET_POST_THREAD, rawurlencode($uri), $depth);
+    }
+
+    /**
      * @return list<JsonNodeModel>
      *
      * @throws FetchException
@@ -96,8 +120,14 @@ final readonly class AppViewClient
      */
     private function views(string $url, string $field): array
     {
+        return self::listIn($this->body($url), $field);
+    }
+
+    /** @throws FetchException */
+    private function body(string $url): string
+    {
         try {
-            $body = $this->fetcher->fetch($url)->modifiedBody();
+            return $this->fetcher->fetch($url)->modifiedBody();
         } catch (FeedThrottledException $exception) {
             $this->hostThrottle->record($url, $exception->retryAfterSeconds);
 
@@ -109,8 +139,6 @@ final readonly class AppViewClient
 
             throw $exception;
         }
-
-        return self::listIn($body, $field);
     }
 
     /** Whether the AppView refused the request itself, which asking again would not change. */

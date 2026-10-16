@@ -32,6 +32,8 @@ final class AppViewClientTest extends TestCase
         . '%2F3mxgone';
 
     private const string GET_PROFILES = 'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles';
+    private const string TISCH_THREAD = 'https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?uri='
+        . 'at%3A%2F%2Fdid%3Aplc%3Aqobvnkudcv3zlaklxxjduqoi%2Fapp.bsky.feed.post%2F3mxjuesq6v62t&depth=6&parentHeight=0';
 
     private StubFeedFetcher $fetcher;
     private HostThrottle $throttle;
@@ -191,6 +193,49 @@ final class AppViewClientTest extends TestCase
         $this->expectException(AppViewAnswerException::class);
 
         $this->client()->profiles(['did:plc:alice']);
+    }
+
+    public function testAThreadIsAskedWithItsDepthAndNoParents(): void
+    {
+        $body = '{"thread":{"$type":"app.bsky.feed.defs#threadViewPost","replies":[]}}';
+        $this->fetcher->willReturnBody(self::TISCH_THREAD, $body);
+
+        $thread = $this->client()->thread(self::TISCH, 6);
+
+        self::assertSame([self::TISCH_THREAD], $this->fetcher->fetchedUrls);
+        self::assertSame($body, $thread);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function answersWithoutAThread(): iterable
+    {
+        yield 'not JSON' => [/** @lang TEXT */ '<html>Bad gateway</html>'];
+        yield 'an error object' => ['{"error":"NotFound","message":"Post not found"}'];
+        yield 'a thread that is no object' => ['{"thread":"at://x"}'];
+    }
+
+    #[DataProvider('answersWithoutAThread')]
+    public function testAnAnswerWithoutAThreadIsAnAnswerError(string $body): void
+    {
+        $this->fetcher->willReturnBody(self::TISCH_THREAD, $body);
+
+        $this->expectException(AppViewAnswerException::class);
+
+        $this->client()->thread(self::TISCH, 6);
+    }
+
+    public function testAThrottledThreadRecordsTheHostThrottle(): void
+    {
+        $this->fetcher->willThrow(self::TISCH_THREAD, new FeedThrottledException('HTTP 429', 90));
+        $client = $this->client();
+
+        try {
+            $client->thread(self::TISCH, 6);
+            self::fail('A throttled answer must be rethrown.');
+        } catch (FeedThrottledException) {
+        }
+
+        self::assertSame(90, $client->throttledForSeconds());
     }
 
     private function client(): AppViewClient
