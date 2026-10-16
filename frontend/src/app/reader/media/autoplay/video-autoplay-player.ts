@@ -4,8 +4,7 @@ import { ListAutoplayCoordinator } from './list-autoplay-coordinator';
 type Coordinator = Pick<ListAutoplayCoordinator, 'nowPlaying' | 'soundChanged'>;
 
 export class VideoAutoplayPlayer implements AutoplayPlayer {
-  /** The muted state this player just set itself, whose `volumechange` is not the user's. */
-  private ownMuted: boolean | null = null;
+  private pendingOwnChanges = 0;
 
   constructor(
     readonly element: HTMLVideoElement,
@@ -28,14 +27,16 @@ export class VideoAutoplayPlayer implements AutoplayPlayer {
 
   private setMuted(muted: boolean): void {
     if (this.element.muted === muted) return;
-    this.ownMuted = muted;
+    this.pendingOwnChanges++;
     this.element.muted = muted;
   }
 
   private reportSound(): void {
-    const own = this.ownMuted === this.element.muted;
-    this.ownMuted = null;
-    if (!own) this.coordinator.soundChanged(!this.element.muted);
+    if (this.pendingOwnChanges > 0) {
+      this.pendingOwnChanges--;
+      return;
+    }
+    this.coordinator.soundChanged(!this.element.muted);
   }
 }
 

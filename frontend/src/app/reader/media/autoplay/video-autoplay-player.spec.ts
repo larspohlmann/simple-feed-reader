@@ -56,6 +56,32 @@ describe('VideoAutoplayPlayer', () => {
     expect(play).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the user sound choice clear of its own queued changes', async () => {
+    const { video, play, coordinator, player } = setUp();
+    video.muted = true;
+    await settle();
+    coordinator.soundChanged.mockClear();
+    play.mockRejectedValueOnce(refusal());
+
+    player.start(true);
+    await settle();
+
+    expect(coordinator.soundChanged).not.toHaveBeenCalled();
+    expect(video.muted).toBe(true);
+    expect(play).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not loop when a muted video is refused with and without sound', async () => {
+    const { video, play, player } = setUp();
+    video.muted = true;
+    play.mockRejectedValue(refusal());
+
+    player.start(true);
+    await settle();
+
+    expect(play).toHaveBeenCalledTimes(2);
+  });
+
   it('pauses when stopped', () => {
     const { pause, player } = setUp();
     player.stop();
