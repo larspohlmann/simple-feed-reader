@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Service\Comments\Model\CommentsPageModel;
-use App\Service\Social\Model\ReplyNodeModel;
+use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\Pass\ThreadWalk;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -17,7 +17,7 @@ final readonly class ReplyThreadOrder
     ) {
     }
 
-    /** @param list<ReplyNodeModel> $replies the post's direct replies */
+    /** @param list<ReplyNode> $replies the post's direct replies */
     public function pageOf(array $replies): CommentsPageModel
     {
         $walk = new ThreadWalk($this->maxDepth, $this->maxCount);

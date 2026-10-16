@@ -11,8 +11,8 @@ use App\Service\Comments\Model\CommentEmbedsModel;
 use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Social\Model\ReplyNodeModel;
 use App\Service\Social\Pass\MastodonReplyThread;
+use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\Support\MastodonAttachments;
 use App\Service\Social\Support\MastodonAuthor;
 use App\Service\Social\Support\MastodonCard;
@@ -33,7 +33,7 @@ final readonly class MastodonContextReplies
     }
 
     /**
-     * @return list<ReplyNodeModel>
+     * @return list<ReplyNode>
      *
      * @throws CommentsUnavailableException when the answer holds no post id or no descendants list
      */
@@ -56,13 +56,14 @@ final readonly class MastodonContextReplies
     /**
      * @param list<JsonNodeModel> $statuses
      *
-     * @return list<ReplyNodeModel>
+     * @return list<ReplyNode>
      */
     private function nodesOf(array $statuses, MastodonReplyThread $thread): array
     {
         return array_map(
-            fn (JsonNodeModel $status): ReplyNodeModel => new ReplyNodeModel(
-                $this->commentOf($status, $thread),
+            fn (JsonNodeModel $status): ReplyNode => new ReplyNode(
+                self::publishedAtOf($status),
+                fn (): EntryCommentModel => $this->commentOf($status, $thread),
                 $this->nodesOf($thread->answersTo($status), $thread),
             ),
             $statuses,
@@ -76,11 +77,16 @@ final readonly class MastodonContextReplies
         return new EntryCommentModel(
             self::authorOf($account),
             AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri')),
-            DateParser::parse($status->string('created_at')),
+            self::publishedAtOf($status),
             $this->htmlOf($status),
             $thread->isByPostAuthor($account),
             self::embedsOf($status),
         );
+    }
+
+    private static function publishedAtOf(JsonNodeModel $status): ?\DateTimeImmutable
+    {
+        return DateParser::parse($status->string('created_at'));
     }
 
     private static function authorOf(JsonNodeModel $account): CommentAuthorModel

@@ -17,7 +17,7 @@ use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Social\Model\ReplyNodeModel;
+use App\Service\Social\Pass\ReplyNode;
 use App\Service\Text\Support\HtmlAnchor;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
@@ -30,7 +30,7 @@ final readonly class BlueskyThreadReplies
     }
 
     /**
-     * @return list<ReplyNodeModel>
+     * @return list<ReplyNode>
      *
      * @throws CommentsUnavailableException when the answer holds no thread
      */
@@ -47,15 +47,17 @@ final readonly class BlueskyThreadReplies
     /**
      * @param list<JsonNodeModel> $replies
      *
-     * @return list<ReplyNodeModel>
+     * @return list<ReplyNode>
      */
     private function nodesOf(array $replies, ?string $entryAuthor): array
     {
         $nodes = [];
         foreach ($replies as $reply) {
             if (self::isShown($reply)) {
-                $nodes[] = new ReplyNodeModel(
-                    $this->commentOf($reply->node('post'), $entryAuthor),
+                $post = $reply->node('post');
+                $nodes[] = new ReplyNode(
+                    self::publishedAtOf($post),
+                    fn (): EntryCommentModel => $this->commentOf($post, $entryAuthor),
                     $this->nodesOf($reply->nodes('replies'), $entryAuthor),
                 );
             }
@@ -82,11 +84,16 @@ final readonly class BlueskyThreadReplies
         return new EntryCommentModel(
             self::authorOf($author),
             AtPostUri::webUrl($post->string('uri') ?? ''),
-            DateParser::parse($post->node('record')->string('createdAt') ?? $post->string('indexedAt')),
+            self::publishedAtOf($post),
             $this->htmlOf($post->node('record'), $rendered?->uncardedLink),
             $entryAuthor !== null && \in_array($entryAuthor, [$author->string('did'), $author->string('handle')], true),
             self::embedsOf($rendered),
         );
+    }
+
+    private static function publishedAtOf(JsonNodeModel $post): ?\DateTimeImmutable
+    {
+        return DateParser::parse($post->node('record')->string('createdAt') ?? $post->string('indexedAt'));
     }
 
     private static function authorOf(JsonNodeModel $author): CommentAuthorModel

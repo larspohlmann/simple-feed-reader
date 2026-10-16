@@ -7,7 +7,7 @@ namespace App\Tests\Support;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Social\Model\ReplyNodeModel;
+use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
 
 /** A Mastodon reply thread source that answers or fails as told, per direction; it records each ask. */
@@ -24,7 +24,7 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
 
     private ?\Throwable $publicFailure = null;
 
-    /** @var list<ReplyNodeModel> */
+    /** @var list<ReplyNode> */
     private array $replies = [];
 
     public function __construct()
@@ -58,7 +58,7 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
         $this->publicFailure = $failure;
     }
 
-    /** @param list<ReplyNodeModel> $replies */
+    /** @param list<ReplyNode> $replies */
     public function readsReplies(array $replies): void
     {
         $this->replies = $replies;

@@ -13,7 +13,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
-use App\Service\Social\Model\ReplyNodeModel;
+use App\Service\Social\Pass\ReplyNode;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 #[AutoconfigureTag('app.social_reply_thread_source')]
@@ -43,7 +43,7 @@ interface ReplyThreadSourceInterface
     public function inPublic(string $address): CommentsAnswerModel;
 
     /**
-     * @return list<ReplyNodeModel>
+     * @return list<ReplyNode>
      *
      * @throws CommentsUnavailableException
      */

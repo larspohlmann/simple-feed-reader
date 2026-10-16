@@ -10,7 +10,7 @@ use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Service\Social\MastodonContextReplies;
-use App\Service\Social\Model\ReplyNodeModel;
+use App\Service\Social\Pass\ReplyNode;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
 
@@ -63,7 +63,7 @@ final class MastodonContextRepliesTest extends TestCase
     {
         self::assertStringStartsWith(
             '<details><summary>CW: spoilers</summary><p>The ending surprised me</p>',
-            $this->replies()[0]->comment->html,
+            $this->replies()[0]->comment()->html,
         );
     }
 
@@ -73,13 +73,13 @@ final class MastodonContextRepliesTest extends TestCase
 
         self::assertStringStartsWith(
             '<details><summary>CW: &lt;b&gt;x&lt;/b&gt; &amp; y</summary>',
-            $this->replies($answer)[0]->comment->html,
+            $this->replies($answer)[0]->comment()->html,
         );
     }
 
     public function testAReplyWithoutAWarningShowsItsText(): void
     {
-        self::assertSame('<p>Related</p>', $this->replies()[1]->comment->html);
+        self::assertSame('<p>Related</p>', $this->replies()[1]->comment()->html);
     }
 
     public function testAReplysMarkupIsSanitized(): void
@@ -88,7 +88,7 @@ final class MastodonContextRepliesTest extends TestCase
             'content' => '<p onclick="steal()">Hi</p><script>alert(1)</script>',
         ])]);
 
-        $html = $this->replies($answer)[0]->comment->html;
+        $html = $this->replies($answer)[0]->comment()->html;
 
         self::assertSame('<p>Hi</p>', $html);
     }
@@ -97,8 +97,8 @@ final class MastodonContextRepliesTest extends TestCase
     {
         $replies = $this->replies();
 
-        self::assertTrue($replies[0]->replies[0]->comment->byEntryAuthor);
-        self::assertFalse($replies[0]->comment->byEntryAuthor);
+        self::assertTrue($replies[0]->replies[0]->comment()->byEntryAuthor);
+        self::assertFalse($replies[0]->comment()->byEntryAuthor);
     }
 
     public function testTheOriginalPosterIsKnownByTheirAccountUriToo(): void
@@ -112,13 +112,13 @@ final class MastodonContextRepliesTest extends TestCase
         ])]);
 
         self::assertTrue(
-            $this->replies($answer, 'https://mastodon.social/users/Gargron/statuses/110')[0]->comment->byEntryAuthor,
+            $this->replies($answer, 'https://mastodon.social/users/Gargron/statuses/110')[0]->comment()->byEntryAuthor,
         );
     }
 
     public function testALocalAuthorsHandleNamesTheirInstance(): void
     {
-        self::assertSame('@Gargron@mastodon.social', $this->replies()[0]->replies[0]->comment->author->handle);
+        self::assertSame('@Gargron@mastodon.social', $this->replies()[0]->replies[0]->comment()->author->handle);
     }
 
     public function testAReplyNamesItsAuthor(): void
@@ -130,7 +130,7 @@ final class MastodonContextRepliesTest extends TestCase
                 'https://hachyderm.io/@ann',
                 'https://files.mastodon.social/accounts/avatars/ann-static.png',
             ),
-            $this->replies()[0]->comment->author,
+            $this->replies()[0]->comment()->author,
         );
     }
 
@@ -138,7 +138,7 @@ final class MastodonContextRepliesTest extends TestCase
     {
         self::assertEquals(
             new \DateTimeImmutable('2026-10-16T09:00:00Z'),
-            $this->replies()[0]->comment->publishedAt,
+            $this->replies()[0]->comment()->publishedAt,
         );
     }
 
@@ -148,18 +148,18 @@ final class MastodonContextRepliesTest extends TestCase
 
         self::assertSame(
             'https://example.social/users/someone/statuses/300',
-            $this->replies($answer)[0]->comment->url,
+            $this->replies($answer)[0]->comment()->url,
         );
     }
 
     public function testAttachmentsCardAndQuoteBecomeEmbeds(): void
     {
         $replies = $this->replies();
-        $embeds = $replies[0]->comment->embeds;
+        $embeds = $replies[0]->comment()->embeds;
 
         self::assertSame(VisualMediaKind::Image->value, $embeds->media[0]->kind);
         self::assertSame('A review of the ending', $embeds->linkCard?->title);
-        self::assertSame('https://fosstodon.org/@dee/77', $replies[1]->comment->embeds->quote?->url);
+        self::assertSame('https://fosstodon.org/@dee/77', $replies[1]->comment()->embeds->quote?->url);
         self::assertNull($embeds->quote);
     }
 
@@ -192,7 +192,7 @@ final class MastodonContextRepliesTest extends TestCase
         $reader->of(self::POST, self::fixture());
     }
 
-    /** @return list<ReplyNodeModel> */
+    /** @return list<ReplyNode> */
     private function replies(?string $answer = null, string $post = self::POST): array
     {
         $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
@@ -235,17 +235,17 @@ final class MastodonContextRepliesTest extends TestCase
     }
 
     /**
-     * @param list<ReplyNodeModel> $replies
+     * @param list<ReplyNode> $replies
      *
      * @return list<?string>
      */
     private static function urlsOf(array $replies): array
     {
-        return array_map(static fn (ReplyNodeModel $reply): ?string => $reply->comment->url, $replies);
+        return array_map(static fn (ReplyNode $reply): ?string => $reply->comment()->url, $replies);
     }
 
     /**
-     * @param list<ReplyNodeModel> $replies
+     * @param list<ReplyNode> $replies
      *
      * @return list<?string>
      */
@@ -253,7 +253,7 @@ final class MastodonContextRepliesTest extends TestCase
     {
         $urls = [];
         foreach ($replies as $reply) {
-            $urls = [...$urls, $reply->comment->url, ...self::allUrlsOf($reply->replies)];
+            $urls = [...$urls, $reply->comment()->url, ...self::allUrlsOf($reply->replies)];
         }
 
         return $urls;

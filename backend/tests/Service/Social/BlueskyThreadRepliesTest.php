@@ -12,7 +12,7 @@ use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Service\Social\BlueskyThreadReplies;
-use App\Service\Social\Model\ReplyNodeModel;
+use App\Service\Social\Pass\ReplyNode;
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\TestCase;
 
@@ -59,7 +59,7 @@ final class BlueskyThreadRepliesTest extends TestCase
 
     public function testAReplyNamesItsAuthor(): void
     {
-        $author = $this->replies()[0]->comment->author;
+        $author = $this->replies()[0]->comment()->author;
 
         self::assertEquals(
             new CommentAuthorModel(
@@ -74,7 +74,7 @@ final class BlueskyThreadRepliesTest extends TestCase
 
     public function testAnAuthorWithoutADisplayNameGoesByTheirHandle(): void
     {
-        $author = $this->replies()[0]->replies[0]->replies[0]->comment->author;
+        $author = $this->replies()[0]->replies[0]->replies[0]->comment()->author;
 
         self::assertSame('bo.test', $author->name);
         self::assertNull($author->avatarUrl);
@@ -84,7 +84,7 @@ final class BlueskyThreadRepliesTest extends TestCase
     {
         self::assertEquals(
             new \DateTimeImmutable('2026-10-16T09:00:00Z'),
-            $this->replies()[0]->comment->publishedAt,
+            $this->replies()[0]->comment()->publishedAt,
         );
     }
 
@@ -92,20 +92,20 @@ final class BlueskyThreadRepliesTest extends TestCase
     {
         $replies = $this->replies();
 
-        self::assertTrue($replies[0]->replies[0]->comment->byEntryAuthor);
-        self::assertFalse($replies[0]->comment->byEntryAuthor);
+        self::assertTrue($replies[0]->replies[0]->comment()->byEntryAuthor);
+        self::assertFalse($replies[0]->comment()->byEntryAuthor);
     }
 
     public function testAPostNamingItsAuthorByHandleStillMarksTheirReply(): void
     {
         $replies = $this->replies(post: 'at://op.test/app.bsky.feed.post/root');
 
-        self::assertTrue($replies[0]->replies[0]->comment->byEntryAuthor);
+        self::assertTrue($replies[0]->replies[0]->comment()->byEntryAuthor);
     }
 
     public function testTextKeepsItsLinks(): void
     {
-        $html = $this->replies()[0]->comment->html;
+        $html = $this->replies()[0]->comment()->html;
 
         self::assertStringContainsString('<a href="https://example.com/a"', $html);
         self::assertStringContainsString('Read ', $html);
@@ -127,7 +127,7 @@ final class BlueskyThreadRepliesTest extends TestCase
             ],
         ];
 
-        $html = $this->replies(self::threadOf([$reply]))[0]->comment->html;
+        $html = $this->replies(self::threadOf([$reply]))[0]->comment()->html;
 
         self::assertStringNotContainsString('<script', $html);
         self::assertStringNotContainsString('<b onclick', $html);
@@ -139,7 +139,7 @@ final class BlueskyThreadRepliesTest extends TestCase
 
     public function testImagesBecomeMedia(): void
     {
-        $comment = $this->replies()[0]->comment;
+        $comment = $this->replies()[0]->comment();
 
         self::assertSame(VisualMediaKind::Image->value, $comment->embeds->media[0]->kind);
         self::assertStringNotContainsString('<img', $comment->html);
@@ -179,7 +179,7 @@ final class BlueskyThreadRepliesTest extends TestCase
             'external' => ['uri' => 'https://example.org/a?b&c'],
         ]);
 
-        $comment = $this->replies(self::threadOf([$reply]))[0]->comment;
+        $comment = $this->replies(self::threadOf([$reply]))[0]->comment();
 
         self::assertStringContainsString('<p><a href="https://example.org/a?b&amp;c"', $comment->html);
         self::assertNull($comment->embeds->linkCard);
@@ -197,7 +197,7 @@ final class BlueskyThreadRepliesTest extends TestCase
             ],
         ]);
 
-        $embeds = $this->replies(self::threadOf([$reply]))[0]->comment->embeds;
+        $embeds = $this->replies(self::threadOf([$reply]))[0]->comment()->embeds;
 
         self::assertSame(
             ['https://media.tenor.com/abc/clap.gif?hh=280&ww=498', VisualMediaKind::Image->value, 498, 280],
@@ -212,7 +212,7 @@ final class BlueskyThreadRepliesTest extends TestCase
 
     public function testAReplyWithoutEmbedsHasNone(): void
     {
-        $embeds = $this->replies()[0]->replies[0]->comment->embeds;
+        $embeds = $this->replies()[0]->replies[0]->comment()->embeds;
 
         self::assertSame([], $embeds->media);
         self::assertNull($embeds->linkCard);
@@ -226,7 +226,7 @@ final class BlueskyThreadRepliesTest extends TestCase
         $this->replies('{"error":"x"}');
     }
 
-    /** @return list<ReplyNodeModel> */
+    /** @return list<ReplyNode> */
     private function replies(?string $answer = null, string $post = self::POST): array
     {
         $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
@@ -270,24 +270,24 @@ final class BlueskyThreadRepliesTest extends TestCase
         );
     }
 
-    /** @param list<ReplyNodeModel> $replies */
+    /** @param list<ReplyNode> $replies */
     private static function commentAt(array $replies, int $index): EntryCommentModel
     {
-        return $replies[$index]->comment;
+        return $replies[$index]->comment();
     }
 
     /**
-     * @param list<ReplyNodeModel> $replies
+     * @param list<ReplyNode> $replies
      *
      * @return list<?string>
      */
     private static function urlsOf(array $replies): array
     {
-        return array_map(static fn (ReplyNodeModel $reply): ?string => $reply->comment->url, $replies);
+        return array_map(static fn (ReplyNode $reply): ?string => $reply->comment()->url, $replies);
     }
 
     /**
-     * @param list<ReplyNodeModel> $replies
+     * @param list<ReplyNode> $replies
      *
      * @return list<?string>
      */
@@ -295,7 +295,7 @@ final class BlueskyThreadRepliesTest extends TestCase
     {
         $urls = [];
         foreach ($replies as $reply) {
-            $urls = [...$urls, $reply->comment->url, ...self::allUrlsOf($reply->replies)];
+            $urls = [...$urls, $reply->comment()->url, ...self::allUrlsOf($reply->replies)];
         }
 
         return $urls;

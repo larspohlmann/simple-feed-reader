@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Social\Pass;
 
 use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Social\Model\ReplyNodeModel;
 
 final class ThreadWalk
 {
@@ -18,7 +17,7 @@ final class ThreadWalk
     {
     }
 
-    /** @param list<ReplyNodeModel> $replies */
+    /** @param list<ReplyNode> $replies */
     public function walkNewestFirst(array $replies): void
     {
         usort($replies, self::newestFirst(...));
@@ -36,7 +35,7 @@ final class ThreadWalk
         return $this->omitted;
     }
 
-    /** @param list<ReplyNodeModel> $nodes */
+    /** @param list<ReplyNode> $nodes */
     private function walkAll(array $nodes, int $depth): void
     {
         foreach ($nodes as $node) {
@@ -44,36 +43,36 @@ final class ThreadWalk
         }
     }
 
-    private function walk(ReplyNodeModel $node, int $depth): void
+    private function walk(ReplyNode $node, int $depth): void
     {
         if ($depth >= $this->maxDepth || count($this->comments) >= $this->maxCount) {
             $this->omitted += self::sizeOf($node);
 
             return;
         }
-        $this->comments[] = $node->comment->atDepth($depth);
+        $this->comments[] = $node->comment()->atDepth($depth);
         $replies = $node->replies;
         usort($replies, self::oldestFirst(...));
         $this->walkAll($replies, $depth + 1);
     }
 
-    private static function newestFirst(ReplyNodeModel $left, ReplyNodeModel $right): int
+    private static function newestFirst(ReplyNode $left, ReplyNode $right): int
     {
         return self::timeOf($right) <=> self::timeOf($left);
     }
 
-    private static function oldestFirst(ReplyNodeModel $left, ReplyNodeModel $right): int
+    private static function oldestFirst(ReplyNode $left, ReplyNode $right): int
     {
         return self::timeOf($left) <=> self::timeOf($right);
     }
 
-    private static function sizeOf(ReplyNodeModel $node): int
+    private static function sizeOf(ReplyNode $node): int
     {
         return 1 + array_sum(array_map(self::sizeOf(...), $node->replies));
     }
 
-    private static function timeOf(ReplyNodeModel $node): int
+    private static function timeOf(ReplyNode $node): int
     {
-        return $node->comment->publishedAt?->getTimestamp() ?? PHP_INT_MIN;
+        return $node->publishedAt?->getTimestamp() ?? PHP_INT_MIN;
     }
 }

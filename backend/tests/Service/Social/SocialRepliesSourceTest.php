@@ -21,7 +21,7 @@ use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
-use App\Service\Social\Model\ReplyNodeModel;
+use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\ReplyThreadOrder;
 use App\Service\Social\SocialRepliesSource;
 use App\Tests\DbTestCase;
@@ -196,15 +196,20 @@ final class SocialRepliesSourceTest extends DbTestCase
         self::assertSame(['repliesIn ' . self::STATUS_URL . ' the thread'], $this->threads->calls);
     }
 
-    private static function reply(string $text, string $publishedAt): ReplyNodeModel
+    private static function reply(string $text, string $publishedAt): ReplyNode
     {
-        return new ReplyNodeModel(new EntryCommentModel(
-            new CommentAuthorModel('Ann'),
-            null,
-            new \DateTimeImmutable($publishedAt),
-            $text,
-            false,
-        ));
+        $at = new \DateTimeImmutable($publishedAt);
+
+        return new ReplyNode(
+            $at,
+            static fn (): EntryCommentModel => new EntryCommentModel(
+                new CommentAuthorModel('Ann'),
+                null,
+                $at,
+                $text,
+                false,
+            ),
+        );
     }
 
     private function mastodonAccount(): SocialAccount

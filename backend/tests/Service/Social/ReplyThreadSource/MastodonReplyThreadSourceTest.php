@@ -160,7 +160,7 @@ final class MastodonReplyThreadSourceTest extends TestCase
         );
 
         self::assertCount(1, $replies);
-        self::assertSame('https://hachyderm.io/@ann/200', $replies[0]->comment->url);
+        self::assertSame('https://hachyderm.io/@ann/200', $replies[0]->comment()->url);
     }
 
     public function testAnAnswerWithoutDescendantsHasNoReplies(): void

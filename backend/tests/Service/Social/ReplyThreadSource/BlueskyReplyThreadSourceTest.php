@@ -160,7 +160,7 @@ final class BlueskyReplyThreadSourceTest extends TestCase
         $replies = $this->source(new RoutedHttpClient([]))->repliesIn(self::POST_URI, self::THREAD);
 
         self::assertCount(1, $replies);
-        self::assertSame('https://bsky.app/profile/did:plc:ann/post/r1', $replies[0]->comment->url);
+        self::assertSame('https://bsky.app/profile/did:plc:ann/post/r1', $replies[0]->comment()->url);
     }
 
     public function testAnAnswerWithoutAThreadHasNoReplies(): void

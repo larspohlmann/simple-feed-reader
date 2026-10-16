@@ -6,12 +6,15 @@ namespace App\Tests\Service\Social;
 
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Social\Model\ReplyNodeModel;
+use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\ReplyThreadOrder;
 use PHPUnit\Framework\TestCase;
 
 final class ReplyThreadOrderTest extends TestCase
 {
+    /** @var list<string> */
+    private array $built = [];
+
     public function testTopLevelRepliesAreNewestFirst(): void
     {
         $page = (new ReplyThreadOrder(3, 5))->pageOf([
@@ -77,6 +80,27 @@ final class ReplyThreadOrderTest extends TestCase
         self::assertSame(2, $page->omitted);
     }
 
+    public function testBothCapsTogetherKeepTheShallowRepliesAndCountEveryOtherOne(): void
+    {
+        $page = (new ReplyThreadOrder(2, 3))->pageOf([
+            $this->node('a', '2026-03-01', $this->node('a1', '2026-03-02', $this->node('a1x', '2026-03-03'))),
+            $this->node('b', '2026-02-01', $this->node('b1', '2026-02-02'), $this->node('b2', '2026-02-03')),
+        ]);
+
+        self::assertSame(['a', 'a1', 'b'], $this->urls($page->comments));
+        self::assertSame(3, $page->omitted);
+    }
+
+    public function testOnlyTheKeptRepliesAreBuilt(): void
+    {
+        (new ReplyThreadOrder(2, 3))->pageOf([
+            $this->node('a', '2026-03-01', $this->node('a1', '2026-03-02', $this->node('a1x', '2026-03-03'))),
+            $this->node('b', '2026-02-01', $this->node('b1', '2026-02-02')),
+        ]);
+
+        self::assertSame(['a', 'a1', 'b'], $this->built);
+    }
+
     public function testAnUndatedReplySortsAsTheOldest(): void
     {
         $page = (new ReplyThreadOrder(3, 5))->pageOf([
@@ -99,17 +123,16 @@ final class ReplyThreadOrderTest extends TestCase
         self::assertSame(0, $page->omitted);
     }
 
-    private function node(string $url, ?string $at, ReplyNodeModel ...$replies): ReplyNodeModel
+    private function node(string $url, ?string $at, ReplyNode ...$replies): ReplyNode
     {
-        $comment = new EntryCommentModel(
-            new CommentAuthorModel('Ann'),
-            $url,
-            $at === null ? null : new \DateTimeImmutable($at),
-            '<p>Hi</p>',
-            false,
-        );
+        $publishedAt = $at === null ? null : new \DateTimeImmutable($at);
+        $comment = function () use ($url, $publishedAt): EntryCommentModel {
+            $this->built[] = $url;
 
-        return new ReplyNodeModel($comment, array_values($replies));
+            return new EntryCommentModel(new CommentAuthorModel('Ann'), $url, $publishedAt, '<p>Hi</p>', false);
+        };
+
+        return new ReplyNode($publishedAt, $comment, array_values($replies));
     }
 
     /**
