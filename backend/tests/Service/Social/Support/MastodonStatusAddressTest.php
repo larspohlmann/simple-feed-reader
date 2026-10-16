@@ -27,7 +27,7 @@ final class MastodonStatusAddressTest extends TestCase
     }
 
     #[DataProvider('otherAddresses')]
-    public function testAnyOtherAddressNamesNoStatus(string $address): void
+    public function testAnyOtherAddressNamesNoPublicStatus(string $address): void
     {
         self::assertNull(MastodonStatusAddress::statusApiUrlOrNull($address));
     }
@@ -45,18 +45,19 @@ final class MastodonStatusAddressTest extends TestCase
     }
 
     #[DataProvider('statusAddresses')]
-    public function testAStatusAddressNamesItsContextEndpoint(string $address): void
+    public function testAStatusAddressNamesItsStatusAndContextEndpoint(string $address): void
     {
-        self::assertSame(
-            'https://mastodon.social/api/v1/statuses/110/context',
-            MastodonStatusAddress::contextApiUrlOrNull($address),
-        );
+        $status = MastodonStatusAddress::ofOrNull($address);
+
+        self::assertNotNull($status);
+        self::assertSame('110', $status->id);
+        self::assertSame('https://mastodon.social/api/v1/statuses/110/context', $status->contextApiUrl());
     }
 
     #[DataProvider('otherAddresses')]
-    public function testAnyOtherAddressNamesNoContextEndpoint(string $address): void
+    public function testAnyOtherAddressIsNoStatus(string $address): void
     {
-        self::assertNull(MastodonStatusAddress::contextApiUrlOrNull($address));
+        self::assertNull(MastodonStatusAddress::ofOrNull($address));
     }
 
     #[DataProvider('authorPrefixes')]

@@ -38,6 +38,27 @@ final class MastodonContextRepliesTest extends TestCase
         self::assertNotContains('https://mastodon.social/@bo/203', $urls);
     }
 
+    public function testAReplyToAStatusTheInstanceLeftOutIsNotPromoted(): void
+    {
+        $answer = self::contextOf([
+            self::statusOf('300', '110', []),
+            self::statusOf('301', '299', []),
+            self::statusOf('302', '301', []),
+        ]);
+
+        self::assertSame(['https://example.social/@someone/300'], self::allUrlsOf($this->replies($answer)));
+    }
+
+    public function testTheAccountsInstanceFilesRepliesUnderItsOwnIdForThePost(): void
+    {
+        $context = self::contextOf([self::statusOf('300', '9', []), self::statusOf('301', '110', [])]);
+        $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
+
+        $replies = $reader->of(self::POST, MastodonContextReplies::answerOf('9', $context));
+
+        self::assertSame(['https://example.social/@someone/300'], self::urlsOf($replies));
+    }
+
     public function testAContentWarningFoldsTheText(): void
     {
         self::assertStringStartsWith(
@@ -162,12 +183,21 @@ final class MastodonContextRepliesTest extends TestCase
         $this->replies('{"error":"Record not found"}');
     }
 
+    public function testAnAnswerNamingNoPostIsUnavailable(): void
+    {
+        $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
+
+        $this->expectException(CommentsUnavailableException::class);
+
+        $reader->of(self::POST, self::fixture());
+    }
+
     /** @return list<ReplyNodeModel> */
     private function replies(?string $answer = null, string $post = self::POST): array
     {
         $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
 
-        return $reader->of($post, $answer ?? self::fixture());
+        return $reader->of($post, MastodonContextReplies::answerOf('110', $answer ?? self::fixture()));
     }
 
     private static function fixture(): string

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Support;
 
+use App\Service\Social\Model\MastodonStatusModel;
+
 /** Where a Mastodon status address's own instance serves the status to anyone: its two address shapes only. */
 final class MastodonStatusAddress
 {
@@ -18,35 +20,19 @@ final class MastodonStatusAddress
 
     public static function statusApiUrlOrNull(string $address): ?string
     {
-        $parts = self::partsOrNull($address);
-
-        return null === $parts ? null : self::apiUrl($parts);
-    }
-
-    public static function contextApiUrlOrNull(string $address): ?string
-    {
-        $parts = self::partsOrNull($address);
-
-        return null === $parts ? null : self::apiUrl($parts) . '/context';
+        return self::ofOrNull($address)?->apiUrl();
     }
 
     public static function authorPrefixOrNull(string $address): ?string
     {
-        return self::partsOrNull($address)['prefix'] ?? null;
+        return self::ofOrNull($address)?->authorPrefix;
     }
 
-    /** @param array{host: string, id: string, prefix: string} $parts */
-    private static function apiUrl(array $parts): string
-    {
-        return sprintf('https://%s/api/v1/statuses/%s', $parts['host'], $parts['id']);
-    }
-
-    /** @return array{host: string, id: string, prefix: string}|null */
-    private static function partsOrNull(string $address): ?array
+    public static function ofOrNull(string $address): ?MastodonStatusModel
     {
         foreach (self::STATUS_SHAPES as $shape) {
             if (1 === preg_match($shape, $address, $match)) {
-                return ['host' => $match[2], 'id' => $match[3], 'prefix' => $match[1]];
+                return new MastodonStatusModel($match[2], $match[3], $match[1]);
             }
         }
 

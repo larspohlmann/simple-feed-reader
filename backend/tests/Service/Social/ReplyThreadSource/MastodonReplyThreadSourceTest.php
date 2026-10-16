@@ -42,7 +42,7 @@ final class MastodonReplyThreadSourceTest extends TestCase
 
         $answer = $this->source($http)->asAccount(SocialAccounts::mastodon(), self::STATUS_URL);
 
-        self::assertEquals(CommentsAnswerModel::settled(self::CONTEXT), $answer);
+        self::assertEquals(CommentsAnswerModel::settled(MastodonContextReplies::answerOf('9', self::CONTEXT)), $answer);
         self::assertSame([self::SEARCH, self::ACCOUNT_CONTEXT], $http->requestLines());
         self::assertContains('Authorization: Bearer ' . SocialAccounts::ACCESS_TOKEN, $http->requests[1]['headers']);
     }
@@ -55,7 +55,10 @@ final class MastodonReplyThreadSourceTest extends TestCase
 
         $answer = $this->source($http)->asAccount(SocialAccounts::mastodon(), self::STATUS_URL);
 
-        self::assertEquals(CommentsAnswerModel::stillGathering(self::CONTEXT), $answer);
+        self::assertEquals(
+            CommentsAnswerModel::stillGathering(MastodonContextReplies::answerOf('9', self::CONTEXT)),
+            $answer,
+        );
     }
 
     public function testAContextGoneFromTheAccountsInstanceIsNotFound(): void
@@ -73,7 +76,10 @@ final class MastodonReplyThreadSourceTest extends TestCase
 
         $answer = $this->source($http)->inPublic(self::STATUS_URL);
 
-        self::assertEquals(CommentsAnswerModel::settled(self::CONTEXT), $answer);
+        self::assertEquals(
+            CommentsAnswerModel::settled(MastodonContextReplies::answerOf('110', self::CONTEXT)),
+            $answer,
+        );
         self::assertSame([self::PUBLIC_CONTEXT], $http->requestLines());
         self::assertSame([], preg_grep('/^Authorization:/i', $http->requests[0]['headers']));
     }
@@ -148,7 +154,10 @@ final class MastodonReplyThreadSourceTest extends TestCase
 
     public function testTheRepliesAreReadFromTheContext(): void
     {
-        $replies = $this->source(new RoutedHttpClient([]))->repliesIn(self::STATUS_URL, self::CONTEXT);
+        $replies = $this->source(new RoutedHttpClient([]))->repliesIn(
+            self::STATUS_URL,
+            MastodonContextReplies::answerOf('110', self::CONTEXT),
+        );
 
         self::assertCount(1, $replies);
         self::assertSame('https://hachyderm.io/@ann/200', $replies[0]->comment->url);

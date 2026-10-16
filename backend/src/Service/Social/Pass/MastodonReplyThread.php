@@ -10,38 +10,33 @@ final readonly class MastodonReplyThread
 {
     private const array SHOWN_VISIBILITIES = ['public', 'unlisted'];
 
-    /** @var list<JsonNodeModel> */
-    private array $topLevel;
-
     /** @var array<array-key, list<JsonNodeModel>> */
     private array $answersById;
 
-    /** @param list<JsonNodeModel> $descendants */
-    public function __construct(private ?string $postAuthor, array $descendants)
+    /**
+     * @param string              $postId      the post's id on the instance that answered
+     * @param list<JsonNodeModel> $descendants
+     */
+    public function __construct(private string $postId, private ?string $postAuthor, array $descendants)
     {
-        $listed = self::idsOf($descendants);
-        $topLevel = [];
         $answersById = [];
         foreach (self::shownOnceEach($descendants) as $status) {
             $parent = $status->string('in_reply_to_id');
-            if ($parent !== null && isset($listed[$parent])) {
+            if ($parent !== null && $status->string('id') !== $postId) {
                 $answersById[$parent][] = $status;
-                continue;
             }
-            $topLevel[] = $status;
         }
-        $this->topLevel = $topLevel;
         $this->answersById = $answersById;
     }
 
     /**
-     * The replies answering the post itself, by whatever id the post has on the answering instance.
+     * A status whose parent the instance left out, muted, blocked or deleted, is dropped with its answers.
      *
      * @return list<JsonNodeModel>
      */
     public function topLevel(): array
     {
-        return $this->topLevel;
+        return $this->answersById[$this->postId] ?? [];
     }
 
     /** @return list<JsonNodeModel> */
@@ -56,24 +51,6 @@ final readonly class MastodonReplyThread
     {
         return $this->postAuthor !== null
             && \in_array($this->postAuthor, [$account->string('url'), $account->string('uri')], true);
-    }
-
-    /**
-     * @param list<JsonNodeModel> $descendants
-     *
-     * @return array<array-key, true>
-     */
-    private static function idsOf(array $descendants): array
-    {
-        $ids = [];
-        foreach ($descendants as $status) {
-            $id = $status->string('id');
-            if ($id !== null) {
-                $ids[$id] = true;
-            }
-        }
-
-        return $ids;
     }
 
     /**

@@ -27,16 +27,28 @@ final readonly class MastodonContextReplies
     {
     }
 
+    public static function answerOf(string $postId, string $context): string
+    {
+        return json_encode(['postId' => $postId, 'context' => json_decode($context, true)], \JSON_THROW_ON_ERROR);
+    }
+
     /**
      * @return list<ReplyNodeModel>
      *
-     * @throws CommentsUnavailableException when the answer holds no descendants list
+     * @throws CommentsUnavailableException when the answer holds no post id or no descendants list
      */
     public function of(string $postAddress, string $answer): array
     {
-        $descendants = JsonNodeModel::of(json_decode($answer, true))->listAt('descendants')
+        $envelope = JsonNodeModel::of(json_decode($answer, true));
+        $postId = $envelope->string('postId')
+            ?? throw new CommentsUnavailableException('The Mastodon answer names no post.');
+        $descendants = $envelope->node('context')->listAt('descendants')
             ?? throw new CommentsUnavailableException('The Mastodon instance answered without the replies.');
-        $thread = new MastodonReplyThread(MastodonStatusAddress::authorPrefixOrNull($postAddress), $descendants);
+        $thread = new MastodonReplyThread(
+            $postId,
+            MastodonStatusAddress::authorPrefixOrNull($postAddress),
+            $descendants,
+        );
 
         return $this->nodesOf($thread->topLevel(), $thread);
     }

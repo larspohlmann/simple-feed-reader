@@ -39,19 +39,20 @@ final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInter
     {
         $post = $this->resolver->resolve($account, $address);
         $answer = $this->mastodon->askAboutPost($account, '/api/v1/statuses/' . $post->postId . '/context');
+        $body = MastodonContextReplies::answerOf($post->postId, $answer->body);
 
         return null === $answer->header('Mastodon-Async-Refresh')
-            ? CommentsAnswerModel::settled($answer->body)
-            : CommentsAnswerModel::stillGathering($answer->body);
+            ? CommentsAnswerModel::settled($body)
+            : CommentsAnswerModel::stillGathering($body);
     }
 
     public function inPublic(string $address): CommentsAnswerModel
     {
-        $contextUrl = MastodonStatusAddress::contextApiUrlOrNull($address)
+        $status = MastodonStatusAddress::ofOrNull($address)
             ?? throw new SocialNetworkUnreachableException('The address names no status on a Mastodon instance.');
-        $answer = self::accepted($this->publicMastodon->answer(ApiRequestModel::get($contextUrl)));
+        $answer = self::accepted($this->publicMastodon->answer(ApiRequestModel::get($status->contextApiUrl())));
 
-        return CommentsAnswerModel::settled($answer->body);
+        return CommentsAnswerModel::settled(MastodonContextReplies::answerOf($status->id, $answer->body));
     }
 
     public function repliesIn(string $address, string $answer): array
