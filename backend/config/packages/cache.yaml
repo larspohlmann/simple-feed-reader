@@ -90,3 +90,9 @@ framework:
             social.counts.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 120
+
+            # The Bluesky avatars an import picker was shown, per account, so the import pictures its new profile
+            # feeds at once (#1613). A miss only leaves them to ProfileImageSweep.
+            social.follow_avatars.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 3600

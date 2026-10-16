@@ -15,6 +15,8 @@ use App\Enum\SourceFormat;
 use App\Exception\InvalidSelectionException;
 use App\Repository\SubscriptionRepository;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
+use App\Service\Social\FollowAvatarCache;
+use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Model\SocialImportModel;
@@ -24,6 +26,7 @@ use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialImporterTest extends DbTestCase
@@ -34,14 +37,28 @@ final class SocialImporterTest extends DbTestCase
 
     private ProfileFeedSubscriptions $subscriptions;
 
+    private UserFactory $userFactory;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->entityManager, $hasher))->create('social-importer@example.test');
+        $this->userFactory = new UserFactory($this->entityManager, $hasher);
+        $this->user = $this->userFactory->create('social-importer@example.test');
         $this->subscriptions = new ProfileFeedSubscriptions($this->entityManager);
+        $followAvatars = self::getContainer()->get('social.follow_avatars.cache');
+        self::assertInstanceOf(CacheItemPoolInterface::class, $followAvatars);
+        $followAvatars->clear();
+    }
+
+    private function followAvatars(): FollowAvatarCache
+    {
+        $cache = self::getContainer()->get(FollowAvatarCache::class);
+        self::assertInstanceOf(FollowAvatarCache::class, $cache);
+
+        return $cache;
     }
 
     private function importer(): SocialImporter
@@ -81,7 +98,8 @@ final class SocialImporterTest extends DbTestCase
 
     public function testChosenFollowsBecomeUntaggedSubscriptionsWithTheirTitle(): void
     {
-        $result = $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $result = $this->importer()->import($account, new SocialImportModel([
             new SocialImportFeedModel('did:plc:bob', 'Bob'),
             new SocialImportFeedModel('did:plc:carol', null),
         ], []));
@@ -92,11 +110,77 @@ final class SocialImporterTest extends DbTestCase
         self::assertSame('Bob', $this->feedAt('https://bsky.app/profile/did:plc:bob/rss')?->getTitle());
     }
 
+    public function testAnImportedProfileFeedTakesTheAvatarThePickerShowed(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->followAvatars()->remember($account, [self::follow('did:plc:bob', 'https://cdn.test/bob.jpg')]);
+
+        $this->importer()->import($account, new SocialImportModel(
+            [new SocialImportFeedModel('did:plc:bob', 'Bob'), new SocialImportFeedModel('did:plc:carol', 'Carol')],
+            [],
+            [],
+        ));
+
+        $bob = $this->feedAt(self::profileFeed('did:plc:bob'));
+        self::assertSame('https://cdn.test/bob.jpg', $bob?->getImageUrl());
+        self::assertNotNull($bob->getImageCheckedAt());
+        $carol = $this->feedAt(self::profileFeed('did:plc:carol'));
+        self::assertNotNull($carol);
+        self::assertNull($carol->getImageUrl());
+        self::assertNull($carol->getImageCheckedAt());
+    }
+
+    public function testAnAvatarLongerThanAFeedImageCanHoldIsLeftToTheSweep(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->followAvatars()->remember(
+            $account,
+            [self::follow('did:plc:bob', 'https://cdn.test/' . str_repeat('a', Feed::IMAGE_URL_MAX))],
+        );
+
+        $this->importer()->import(
+            $account,
+            new SocialImportModel([new SocialImportFeedModel('did:plc:bob', 'Bob')], [], []),
+        );
+
+        $bob = $this->feedAt(self::profileFeed('did:plc:bob'));
+        self::assertNotNull($bob);
+        self::assertNull($bob->getImageUrl());
+        self::assertNull($bob->getImageCheckedAt());
+    }
+
+    public function testAFeedTheSweepAlreadyCheckedKeepsItsPictureWhileTheNextTakesItsAvatar(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $other = $this->userFactory->create('social-importer-other@example.test');
+        $this->subscriptions->subscribe($other, self::profileFeed('did:plc:bob'));
+        $checked = new \DateTimeImmutable('2026-10-01 00:00:00');
+        $this->feedAt(self::profileFeed('did:plc:bob'))?->recordImageCheck('https://cdn.test/old.jpg', $checked);
+        $this->entityManager->flush();
+        $this->followAvatars()->remember($account, [
+            self::follow('did:plc:bob', 'https://cdn.test/bob.jpg'),
+            self::follow('did:plc:carol', 'https://cdn.test/carol.jpg'),
+        ]);
+
+        $this->importer()->import($account, new SocialImportModel(
+            [new SocialImportFeedModel('did:plc:bob', 'Bob'), new SocialImportFeedModel('did:plc:carol', 'Carol')],
+            [],
+            [],
+        ));
+
+        $feed = $this->feedAt(self::profileFeed('did:plc:bob'));
+        self::assertSame('https://cdn.test/old.jpg', $feed?->getImageUrl());
+        self::assertEquals($checked, $feed->getImageCheckedAt());
+        $carol = $this->feedAt(self::profileFeed('did:plc:carol'));
+        self::assertSame('https://cdn.test/carol.jpg', $carol?->getImageUrl());
+    }
+
     public function testAnExistingSubscriptionIsNotRetagged(): void
     {
         $this->subscriptions->subscribeTagged($this->user, 'https://mastodon.example/@bob.rss', 'Friends');
 
-        $result = $this->importer()->import(SocialAccounts::mastodonOf($this->user), new SocialImportModel([
+        $account = $this->storedAccount(SocialAccounts::mastodonOf($this->user));
+        $result = $this->importer()->import($account, new SocialImportModel([
             new SocialImportFeedModel('bob@mastodon.example', 'Bob'),
         ], []));
 
@@ -110,7 +194,8 @@ final class SocialImporterTest extends DbTestCase
         $keptId = $this->subscribedId($this->user, 'https://bsky.app/profile/did:plc:gone/rss');
 
         try {
-            $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
+            $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+            $this->importer()->import($account, new SocialImportModel([
                 new SocialImportFeedModel('did:plc:bob', 'Bob'),
                 new SocialImportFeedModel('bob@mastodon.example', 'Bob'),
             ], [$keptId]));
@@ -126,7 +211,7 @@ final class SocialImporterTest extends DbTestCase
     {
         $goneId = $this->subscribedId($this->user, 'https://bsky.app/profile/did:plc:gone/rss');
 
-        $account = SocialAccounts::blueskyOf($this->user);
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
 
         $result = $this->importer()->import($account, new SocialImportModel([], [$goneId]));
 
@@ -137,13 +222,11 @@ final class SocialImporterTest extends DbTestCase
 
     public function testAnotherUsersSubscriptionCannotBeRemoved(): void
     {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $stranger = (new UserFactory($this->entityManager, $hasher))->create('social-importer-stranger@example.test');
+        $stranger = $this->userFactory->create('social-importer-stranger@example.test');
         $theirsId = $this->subscribedId($stranger, 'https://bsky.app/profile/did:plc:theirs/rss');
 
         try {
-            $account = SocialAccounts::blueskyOf($this->user);
+            $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
             $this->importer()->import($account, new SocialImportModel([], [$theirsId]));
             self::fail('Another user\'s subscription must not be removable.');
         } catch (InvalidSelectionException) {
@@ -157,7 +240,8 @@ final class SocialImporterTest extends DbTestCase
         $this->user->setMaxSubscriptions(1);
         $goneId = $this->subscribedId($this->user, 'https://bsky.app/profile/did:plc:gone/rss');
 
-        $result = $this->importer()->import(SocialAccounts::blueskyOf($this->user), new SocialImportModel([
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $result = $this->importer()->import($account, new SocialImportModel([
             new SocialImportFeedModel('did:plc:bob', 'Bob'),
         ], [$goneId]));
 
@@ -256,6 +340,16 @@ final class SocialImporterTest extends DbTestCase
             PrivateFeedModel::customFeed(self::NEWS, 'News'),
             self::NEWS . ' is no Mastodon custom feed.',
         ];
+    }
+
+    private static function follow(string $did, string $avatarUrl): FollowedAccountModel
+    {
+        return new FollowedAccountModel($did, '@' . $did, null, self::profileFeed($did), $avatarUrl);
+    }
+
+    private static function profileFeed(string $did): string
+    {
+        return 'https://bsky.app/profile/' . $did . '/rss';
     }
 
     private function storedAccount(SocialAccount $account): SocialAccount

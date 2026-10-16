@@ -37,6 +37,9 @@ final class SocialImportControllerTest extends ApiTestCase
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
         self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
         $rateLimiterCache->clear();
+        $followAvatars = self::getContainer()->get('social.follow_avatars.cache');
+        self::assertInstanceOf(CacheItemPoolInterface::class, $followAvatars);
+        $followAvatars->clear();
         self::ensureKernelShutdown();
     }
 
@@ -94,6 +97,26 @@ final class SocialImportControllerTest extends ApiTestCase
         );
         self::assertSame([self::collection('custom_feed', 'at://feed/a', 'Discover')], $payload['customFeeds']);
         self::assertFalse($payload['truncated']);
+    }
+
+    public function testAnImportRightAfterTheCandidatesPicturesTheNewProfileFeeds(): void
+    {
+        $client = $this->clientWith(new StubSocialCandidates(new NetworkCandidatesModel(
+            [self::follow('did:plc:bob', '@bob.bsky.social', 'https://cdn.test/bob.jpg')],
+            [],
+            [],
+            false,
+        )));
+        $user = $this->signIn($client, 'import-avatars@example.test');
+        $account = $this->blueskyAccountOf($user);
+        $this->requestCandidates($client, $account);
+
+        $this->postImport($client, $account, ['subscribe' => [['identity' => 'did:plc:bob', 'title' => 'Bob']]]);
+
+        self::assertResponseIsSuccessful();
+        $this->entityManager()->clear();
+        $feed = $this->entityManager()->getRepository(Feed::class)->findOneBy(['url' => self::BOB_FEED]);
+        self::assertSame('https://cdn.test/bob.jpg', $feed?->getImageUrl());
     }
 
     public function testAnotherUsersAccountAnswers404BeforeTheBudget(): void

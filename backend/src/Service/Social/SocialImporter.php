@@ -31,6 +31,7 @@ final readonly class SocialImporter
         private OwnedSubscriptions $ownedSubscriptions,
         private SubscriptionService $subscriptionService,
         private PrivateFeeds $privateFeeds,
+        private ImportedProfilePictures $importedPictures,
     ) {
     }
 
@@ -50,6 +51,10 @@ final readonly class SocialImporter
             function () use ($account, $import, $items, $toRemove): SocialImportResultModel {
                 $removed = $this->subscriptionService->unsubscribeAll(array_values($toRemove));
                 $subscribed = $this->bulkSubscriber->subscribeAll($account->getUser(), $items);
+                $this->importedPictures->picture(
+                    $account,
+                    array_map(static fn (BulkSubscribeItemModel $item): string => $item->feedUrl, $items),
+                );
 
                 return SocialImportResultModel::from(
                     $subscribed,

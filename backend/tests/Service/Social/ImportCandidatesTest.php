@@ -16,6 +16,7 @@ use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\FollowAvatarCache;
 use App\Service\Social\FollowMatcher;
 use App\Service\Social\ImportCandidates;
 use App\Service\Social\Model\CollectionCandidateModel;
@@ -36,20 +37,39 @@ use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\StubSocialCandidates;
 use App\Tests\Support\UserFactory;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class ImportCandidatesTest extends DbTestCase
 {
     private User $user;
+    private FollowAvatarCache $followAvatars;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->followAvatars = new FollowAvatarCache(new ArrayAdapter());
+
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $this->user = (new UserFactory($this->entityManager, $hasher))->create('import-candidates@example.test');
+    }
+
+    public function testTheCandidatesAvatarsAreRememberedForTheImport(): void
+    {
+        $account = $this->account();
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [self::follow('did:plc:bob', '@bob.bsky.social', 'https://cdn.test/bob.jpg')],
+            [],
+            [],
+            false,
+        ));
+
+        $this->importCandidates($network)->forAccount($account);
+
+        self::assertSame('https://cdn.test/bob.jpg', $this->followAvatars->find($account)->avatarOf('did:plc:bob'));
     }
 
     private function importCandidates(SocialCandidatesInterface $network): ImportCandidates
@@ -67,9 +87,9 @@ final class ImportCandidatesTest extends DbTestCase
             new FollowMatcher($resolver),
             SocialFeeds::repository($this->entityManager),
             new ActingAccountGuard($this->entityManager),
+            $this->followAvatars,
         );
     }
-
 
     private function account(): SocialAccount
     {
