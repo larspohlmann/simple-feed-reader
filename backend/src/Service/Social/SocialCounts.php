@@ -41,8 +41,7 @@ final readonly class SocialCounts
      */
     public function of(User $user, Entry $entry): SocialCountsModel
     {
-        $post = SocialPostAddress::of($entry)
-            ?? throw new NotASocialPostException('This entry is not a Bluesky or Mastodon post.');
+        $post = SocialPostAddress::ofOrRefuse($entry);
         $cached = $this->cache->find($post);
         if (null !== $cached) {
             return $cached;
@@ -68,8 +67,7 @@ final readonly class SocialCounts
      */
     public function refreshed(User $user, Entry $entry): SocialCountsModel
     {
-        $post = SocialPostAddress::of($entry)
-            ?? throw new NotASocialPostException('This entry is not a Bluesky or Mastodon post.');
+        $post = SocialPostAddress::ofOrRefuse($entry);
         $this->cache->forget($post);
 
         return $this->of($user, $entry);

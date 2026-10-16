@@ -40,8 +40,7 @@ final readonly class SocialPostFinder
      */
     public function find(User $user, Entry $entry): SocialPostModel
     {
-        $address = SocialPostAddress::of($entry)
-            ?? throw new NotASocialPostException('This entry is not a Bluesky or Mastodon post.');
+        $address = SocialPostAddress::ofOrRefuse($entry);
         $account = $this->accounts->accountFor($user, $entry, $address->network);
         $resolver = $this->resolverOn($address->network);
 
