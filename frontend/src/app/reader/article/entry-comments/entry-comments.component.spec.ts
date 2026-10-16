@@ -115,6 +115,12 @@ describe('EntryCommentsComponent', () => {
     expect(service.load).toHaveBeenCalledWith(5);
   });
 
+  it('stops watching once the section was seen', () => {
+    show('auto');
+    trigger!(true);
+    expect(sightObservers[0].disconnect).toHaveBeenCalled();
+  });
+
   it('looks ahead within the reader scroller', () => {
     show('auto');
     expect(sightObservers[0].init).toEqual({ root: scroller, rootMargin: prefetchMargin(900) });

@@ -96,9 +96,11 @@ export class EntryCommentsComponent {
     effect((onCleanup) => {
       if (!this.loadsOnSight()) return;
       const id = this.entryId();
-      onCleanup(
-        observeOnSight(this.host.nativeElement, this.scroller(), () => this.service.load(id)),
-      );
+      const stopWatching = observeOnSight(this.host.nativeElement, this.scroller(), () => {
+        stopWatching();
+        this.service.load(id);
+      });
+      onCleanup(stopWatching);
     });
     effect((onCleanup) => {
       const until = this.throttledUntil();
