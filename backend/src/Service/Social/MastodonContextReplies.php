@@ -29,7 +29,11 @@ final readonly class MastodonContextReplies
 
     public static function answerOf(string $postId, string $context): string
     {
-        return json_encode(['postId' => $postId, 'context' => json_decode($context, true)], \JSON_THROW_ON_ERROR);
+        return sprintf(
+            '{"postId":%s,"context":%s}',
+            json_encode($postId, \JSON_THROW_ON_ERROR),
+            json_validate($context) ? $context : 'null',
+        );
     }
 
     /**

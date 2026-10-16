@@ -192,6 +192,13 @@ final class MastodonContextRepliesTest extends TestCase
         $reader->of(self::POST, json_encode(['context' => json_decode(self::fixture())], \JSON_THROW_ON_ERROR));
     }
 
+    public function testAContextThatIsNoJsonCannotRenameThePost(): void
+    {
+        $this->expectException(CommentsUnavailableException::class);
+
+        $this->replies('{"descendants":[]},"postId":"999"');
+    }
+
     /** @return list<ReplyNode> */
     private function replies(?string $answer = null, string $post = self::POST): array
     {
