@@ -12,8 +12,8 @@ import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 
-/** The inside of one feed row, tagged or untagged. The `cdkDrag` row itself
- *  stays in the sidebar; the handle here registers with it through DI. */
+/** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
+ *  in the sidebar, and the handle here registers with it through DI; a social row has none, so no handle. */
 @Component({
   selector: 'app-sidebar-feed-row',
   imports: [
