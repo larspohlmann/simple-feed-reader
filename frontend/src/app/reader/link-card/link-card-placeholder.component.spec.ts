@@ -3,12 +3,23 @@ import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LinkCardPlaceholderComponent } from './link-card-placeholder.component';
 import { PreviewProgress } from './preview-progress';
+import {
+  restoreIntersectionObserver,
+  stubIntersectionObserver,
+} from '../../../testing/intersection-observer-testing';
+
+let sighted: jest.Mock;
+afterEach(restoreIntersectionObserver);
 
 function mount({ loading = true, lang = 'en' } = {}): HTMLElement {
+  sighted = jest.fn();
   TestBed.configureTestingModule({
     imports: [LinkCardPlaceholderComponent, provideTranslocoTesting()],
     providers: [
-      { provide: PreviewProgress, useValue: { isLoading: (id: number) => loading && id === 7 } },
+      {
+        provide: PreviewProgress,
+        useValue: { isLoading: (id: number) => loading && id === 7, sighted },
+      },
     ],
   });
   TestBed.inject(TranslocoService).setActiveLang(lang);
@@ -42,5 +53,29 @@ describe('LinkCardPlaceholderComponent', () => {
     [false, 'Noch keine Vorschau'],
   ])('says it in German (loading: %s)', (loading, text) => {
     expect(mount({ loading, lang: 'de' }).textContent).toContain(text);
+  });
+
+  describe('once it comes into view (#1646)', () => {
+    it('asks for its preview at once, and only the first time', () => {
+      const { observed, report, disconnect } = stubIntersectionObserver();
+      const element = mount();
+      expect(observed).toEqual([element]);
+
+      report(element, false);
+      expect(sighted).not.toHaveBeenCalled();
+      report(element, true);
+
+      expect(sighted.mock.calls).toEqual([[7]]);
+      expect(disconnect).toHaveBeenCalled();
+    });
+
+    it('asks for one whose preview no longer loads too', () => {
+      const { report } = stubIntersectionObserver();
+      const element = mount({ loading: false });
+
+      report(element, true);
+
+      expect(sighted.mock.calls).toEqual([[7]]);
+    });
   });
 });
