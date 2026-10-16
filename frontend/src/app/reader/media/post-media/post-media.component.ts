@@ -13,6 +13,7 @@ import { armHlsStreams, releaseHlsStreams } from '../hls-streams';
 import { pauseMedia } from '../../list/magazine/blocks/entry-media/pause-media';
 import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
+import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
 
 @Component({
   selector: 'app-post-media',
@@ -31,11 +32,12 @@ export class PostMediaComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   private readonly autoplay = inject(ListAutoplayCoordinator, { optional: true });
+  private readonly unlockedVideos = inject(UnlockedVideoElements, { optional: true });
   private readonly players = new Map<HTMLVideoElement, VideoAutoplayPlayer>();
 
   constructor() {
     afterRenderEffect(() => {
-      this.media();
+      this.mountVideos(this.media(), this.videoLabel());
       armHlsStreams(this.host);
       const videos = Array.from(this.host.querySelectorAll('video'));
       this.pauseWhenScrolledAway(videos);
@@ -47,6 +49,24 @@ export class PostMediaComponent {
       releaseHlsStreams(this.host);
       this.unregisterVideosWhere(() => true);
     });
+  }
+
+  private mountVideos(media: EntryMediumDto[], label: string): void {
+    const clips = media.filter((medium) => medium.kind === 'video');
+    this.host.querySelectorAll('.video-slot').forEach((slot, index) => {
+      const video = slot.querySelector('video') ?? slot.appendChild(this.newVideo(clips[index]));
+      video.setAttribute('aria-label', label);
+    });
+  }
+
+  private newVideo(clip: EntryMediumDto): HTMLVideoElement {
+    const video = this.unlockedVideos?.take() ?? document.createElement('video');
+    video.controls = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('preload', 'none');
+    video.setAttribute('src', clip.url);
+    if (clip.previewImageUrl) video.setAttribute('poster', clip.previewImageUrl);
+    return video;
   }
 
   private pauseWhenScrolledAway(videos: HTMLVideoElement[]): void {
