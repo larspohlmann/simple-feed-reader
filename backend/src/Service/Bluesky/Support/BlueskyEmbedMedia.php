@@ -7,6 +7,7 @@ namespace App\Service\Bluesky\Support;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
+use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Url\Support\HttpsImageUrl;
 
 final class BlueskyEmbedMedia
@@ -62,8 +63,8 @@ final class BlueskyEmbedMedia
             return null;
         }
         parse_str((string) parse_url($url, \PHP_URL_QUERY), $query);
-        $width = self::positiveInt($query['ww'] ?? null);
-        $height = self::positiveInt($query['hh'] ?? null);
+        $width = self::dimensionOf($query['ww'] ?? null);
+        $height = self::dimensionOf($query['hh'] ?? null);
         if ($width === null || $height === null) {
             return null;
         }
@@ -96,11 +97,9 @@ final class BlueskyEmbedMedia
         return \is_string($path) && str_ends_with(strtolower($path), '.gif');
     }
 
-    private static function positiveInt(mixed $value): ?int
+    private static function dimensionOf(mixed $value): ?int
     {
-        $number = filter_var($value, \FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-
-        return $number === false ? null : $number;
+        return \is_string($value) ? DeclaredImages::positiveDimension($value) : null;
     }
 
     private function __construct()
