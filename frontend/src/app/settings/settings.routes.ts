@@ -116,6 +116,15 @@ export const SETTINGS_ROUTES: Routes = [
           ),
       },
       {
+        path: 'admin/retention',
+        title: sectionLabelKey('admin/retention'),
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./admin/retention/retention-section.component').then(
+            (module) => module.RetentionSectionComponent,
+          ),
+      },
+      {
         path: 'admin/proxy',
         title: sectionLabelKey('admin/proxy'),
         canActivate: [adminGuard],

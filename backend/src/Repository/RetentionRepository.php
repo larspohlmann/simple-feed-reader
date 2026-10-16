@@ -21,17 +21,15 @@ final readonly class RetentionRepository
     }
 
     /** @return list<int> */
-    public function feedIdsFetchedBefore(\DateTimeImmutable $cutoff): array
+    public function nonSocialFeedIdsFetchedBefore(\DateTimeImmutable $cutoff): array
     {
-        /** @var list<int> $feedIds */
-        $feedIds = $this->entityManager->createQuery(sprintf(
-            'SELECT DISTINCT IDENTITY(e.feed) FROM %s e WHERE e.createdAt < :cutoff',
-            Entry::class,
-        ))
-            ->setParameter('cutoff', $cutoff)
-            ->getSingleColumnResult();
+        return $this->feedIdsFetchedBefore($cutoff, 'f.network IS NULL');
+    }
 
-        return $feedIds;
+    /** @return list<int> */
+    public function socialFeedIdsFetchedBefore(\DateTimeImmutable $cutoff): array
+    {
+        return $this->feedIdsFetchedBefore($cutoff, 'f.network IS NOT NULL');
     }
 
     /** @return list<int> */
@@ -79,6 +77,21 @@ final readonly class RetentionRepository
         ))
             ->setParameter('completed', RunStatus::Completed)
             ->execute();
+    }
+
+    /** @return list<int> */
+    private function feedIdsFetchedBefore(\DateTimeImmutable $cutoff, string $networkPredicate): array
+    {
+        /** @var list<int> $feedIds */
+        $feedIds = $this->entityManager->createQuery(sprintf(
+            'SELECT DISTINCT IDENTITY(e.feed) FROM %s e JOIN e.feed f WHERE %s AND e.createdAt < :cutoff',
+            Entry::class,
+            $networkPredicate,
+        ))
+            ->setParameter('cutoff', $cutoff)
+            ->getSingleColumnResult();
+
+        return $feedIds;
     }
 
     /** Null when the feed holds no more than `keep` entries. */

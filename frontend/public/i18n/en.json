@@ -554,6 +554,18 @@
         "piaCredentials": "Private Internet Access needs a separately generated proxy username and password — not your account login."
       }
     },
+    "retention": {
+      "title": "Retention",
+      "caption": "How long entries stay before refresh deletes them. A feed's newest 20 entries, favourites and kept entries are never deleted.",
+      "entryDays": "Feed entries",
+      "entryDaysDesc": "Days an entry of an RSS or Atom feed is kept after it was fetched. Default 90.",
+      "socialDays": "Social media posts",
+      "socialDaysDesc": "Days a Bluesky or Mastodon post is kept after it was fetched. Default 7.",
+      "saved": "Retention saved",
+      "save": "Save",
+      "reset": "Reset",
+      "unsaved": "Unsaved changes"
+    },
     "mail": {
       "title": "Outgoing mail",
       "caption": "Send verification, reset, and notification email through your own SMTP server.",

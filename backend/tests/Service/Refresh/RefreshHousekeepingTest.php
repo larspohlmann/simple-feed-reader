@@ -12,6 +12,7 @@ use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshHousekeeping;
 use App\Service\Retention\EntryPruner;
+use App\Service\Retention\RetentionSettings;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -68,6 +69,7 @@ final class RefreshHousekeepingTest extends DbTestCase
             new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
             new EntryPruner(
                 new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
+                self::getContainer()->get(RetentionSettings::class),
                 new MockClock('2026-07-21 12:00:00', 'UTC'),
                 new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             ),

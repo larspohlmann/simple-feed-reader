@@ -201,6 +201,7 @@ writes none of them.
 | `ProxyServerSettings` | The network egress configuration of the instance. An operator sets it. |
 | `MailServerSettings` | The instance's outgoing-mail transport and identity. An operator sets it. |
 | `GrafanaSettings` | The instance's Grafana/Loki wiring. An operator sets it. |
+| `RetentionSetting` | How many days refresh keeps feed entries and social posts. An operator sets it. |
 | `CatalogCategory` | The shared discovery catalog. Each instance holds its own copy. |
 | `CatalogFeed` | The shared discovery catalog. Each instance holds its own copy. |
 | `Category` | A category a feed declared on an article. The same category is the same row for every account that sees it. |

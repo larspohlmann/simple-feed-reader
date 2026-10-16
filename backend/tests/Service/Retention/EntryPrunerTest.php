@@ -9,11 +9,13 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\RetentionWindows;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Service\Retention\EntryPruner;
+use App\Service\Retention\RetentionSettings;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Tests\DbTestCase;
@@ -38,12 +40,22 @@ final class EntryPrunerTest extends DbTestCase
         parent::setUp();
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
         $this->indexWriter = new RecordingSearchIndexWriter();
-        $this->pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer());
+        $this->pruner = new EntryPruner($this->retention(), $this->settings(), $this->clock, $this->indexer());
     }
 
     private function indexer(): EntryIndexer
     {
         return new EntryIndexer($this->indexWriter, new NullLogger());
+    }
+
+    private function prunerWithCap(int $cap): EntryPruner
+    {
+        return new EntryPruner($this->retention(), $this->settings(), $this->clock, $this->indexer(), $cap);
+    }
+
+    private function settings(): RetentionSettings
+    {
+        return self::getContainer()->get(RetentionSettings::class);
     }
 
     private function retention(): RetentionRepository
@@ -63,7 +75,20 @@ final class EntryPrunerTest extends DbTestCase
      */
     private function feedWithEntries(int $count, ?\DateTimeImmutable $createdAt = null): Feed
     {
-        $feed = new Feed('https://example.com/feed-' . uniqid('', true));
+        return $this->withEntries(new Feed('https://example.com/feed-' . uniqid('', true)), $count, $createdAt);
+    }
+
+    /** A Mastodon profile feed: FeedNetworkListener classifies it by its URL on flush. */
+    private function socialFeedWithEntries(int $count, \DateTimeImmutable $createdAt): Feed
+    {
+        $feed = $this->withEntries(new Feed('https://mastodon.social/@user' . uniqid() . '.rss'), $count, $createdAt);
+        self::assertNotNull($feed->getNetwork());
+
+        return $feed;
+    }
+
+    private function withEntries(Feed $feed, int $count, ?\DateTimeImmutable $createdAt): Feed
+    {
         $this->entityManager->persist($feed);
         $this->entityManager->flush();
 
@@ -161,6 +186,67 @@ final class EntryPrunerTest extends DbTestCase
         self::assertCount(self::FLOOR + 1, $this->findAllEntries($feed));
     }
 
+    public function testDeletesASocialPostFetchedBeforeTheSocialWindow(): void
+    {
+        $feed = $this->socialFeedWithEntries(self::FLOOR, $this->daysAgo(1));
+        $this->seedEntry($feed, 'stale', $this->daysAgo(8));
+        $this->seedEntry($feed, 'recent', $this->daysAgo(6));
+
+        self::assertSame(1, $this->pruner->prune());
+        self::assertNull($this->findByGuid($feed, 'stale'));
+        self::assertNotNull($this->findByGuid($feed, 'recent'));
+    }
+
+    public function testTheStoredWindowsSetBothCutoffs(): void
+    {
+        $this->settings()->update(new RetentionWindows(entryDays: 30, socialDays: 2));
+        $rss = $this->feedWithEntries(self::FLOOR, $this->daysAgo(1));
+        $this->seedEntry($rss, 'stale', $this->daysAgo(31));
+        $this->seedEntry($rss, 'recent', $this->daysAgo(29));
+        $social = $this->socialFeedWithEntries(self::FLOOR, $this->daysAgo(1));
+        $this->seedEntry($social, 'stale', $this->daysAgo(3));
+
+        self::assertSame(2, $this->pruner->prune());
+        self::assertNull($this->findByGuid($rss, 'stale'));
+        self::assertNotNull($this->findByGuid($rss, 'recent'));
+        self::assertNull($this->findByGuid($social, 'stale'));
+    }
+
+    public function testASocialWindowLongerThanTheEntryWindowStillHolds(): void
+    {
+        $this->settings()->update(new RetentionWindows(entryDays: 14, socialDays: 30));
+        $social = $this->socialFeedWithEntries(self::FLOOR, $this->daysAgo(1));
+        $this->seedEntry($social, 'three-weeks-old', $this->daysAgo(21));
+
+        self::assertSame(0, $this->pruner->prune());
+        self::assertNotNull($this->findByGuid($social, 'three-weeks-old'));
+    }
+
+    public function testKeepsAnRssEntryPastTheSocialWindow(): void
+    {
+        $feed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(1));
+        $this->seedEntry($feed, 'week-old', $this->daysAgo(8));
+
+        self::assertSame(0, $this->pruner->prune());
+        self::assertNotNull($this->findByGuid($feed, 'week-old'));
+    }
+
+    public function testASocialFeedKeepsItsFloorAndProtectedPosts(): void
+    {
+        $feed = $this->socialFeedWithEntries(self::FLOOR + 1, $this->daysAgo(30));
+        $favorite = $this->seedEntry($feed, 'favorite', $this->daysAgo(31));
+        $user = new User('reader@example.com', $this->clock->now());
+        $this->entityManager->persist($user);
+        $state = new EntryState($user, $favorite);
+        $state->markFavorite();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        self::assertSame(1, $this->pruner->prune());
+        self::assertNotNull($this->findByGuid($feed, 'favorite'));
+        self::assertCount(self::FLOOR + 1, $this->findAllEntries($feed));
+    }
+
     /** A bulk DELETE fires no ORM event, so the pruner forgets the ids itself: exactly the ids the DELETE removed. */
     public function testPruningTellsTheIndexToForgetExactlyTheDeletedIds(): void
     {
@@ -186,7 +272,12 @@ final class EntryPrunerTest extends DbTestCase
     {
         $feed = $this->feedWithEntries(self::FLOOR + 10, $this->daysAgo(100));
         $failingWriter = new RecordingSearchIndexWriter(new SearchEngineUnavailableException('down'));
-        $pruner = new EntryPruner($this->retention(), $this->clock, new EntryIndexer($failingWriter, new NullLogger()));
+        $pruner = new EntryPruner(
+            $this->retention(),
+            $this->settings(),
+            $this->clock,
+            new EntryIndexer($failingWriter, new NullLogger()),
+        );
 
         self::assertSame(10, $pruner->prune());
         self::assertEqualsCanonicalizing(self::entryGuids(10, self::FLOOR + 9), $this->remainingGuids($feed));
@@ -226,7 +317,7 @@ final class EntryPrunerTest extends DbTestCase
     public function testCapPassSumsDeletionsAcrossFeeds(): void
     {
         $cap = self::CAP_ABOVE_THE_FLOOR;
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = $this->prunerWithCap($cap);
 
         $this->feedWithEntries($cap + 1, $this->daysAgo(1));
         $this->feedWithEntries($cap + 1, $this->daysAgo(1));
@@ -242,7 +333,7 @@ final class EntryPrunerTest extends DbTestCase
     public function testCapPassBreaksATieById(): void
     {
         $cap = self::CAP_ABOVE_THE_FLOOR;
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = $this->prunerWithCap($cap);
 
         $feed = $this->feedWithEntries($cap + 2, $this->daysAgo(1));
 
@@ -358,7 +449,7 @@ final class EntryPrunerTest extends DbTestCase
     public function testCapsEntriesPerFeedKeepingNewestAndProtected(): void
     {
         $cap = self::CAP_ABOVE_THE_FLOOR;
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = $this->prunerWithCap($cap);
 
         $user = new User('reader@example.com', $this->clock->now());
         $this->entityManager->persist($user);
@@ -389,7 +480,7 @@ final class EntryPrunerTest extends DbTestCase
     public function testCapPassDeletesEntryWithOnlyAReadState(): void
     {
         $cap = self::CAP_ABOVE_THE_FLOOR;
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = $this->prunerWithCap($cap);
 
         $user = new User('reader@example.com', $this->clock->now());
         $this->entityManager->persist($user);
@@ -415,7 +506,7 @@ final class EntryPrunerTest extends DbTestCase
     public function testProtectedNewestEntryStillOccupiesARankingSlot(): void
     {
         $cap = self::CAP_ABOVE_THE_FLOOR;
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = $this->prunerWithCap($cap);
 
         $user = new User('reader@example.com', $this->clock->now());
         $this->entityManager->persist($user);
@@ -437,7 +528,7 @@ final class EntryPrunerTest extends DbTestCase
     public function testFeedAtOrUnderCapIsUntouched(): void
     {
         $cap = self::CAP_ABOVE_THE_FLOOR;
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = $this->prunerWithCap($cap);
 
         $atTheCap = $this->feedWithEntries($cap, $this->daysAgo(1));
         $underTheCap = $this->feedWithEntries($cap - 1, $this->daysAgo(1));
@@ -519,7 +610,7 @@ final class EntryPrunerTest extends DbTestCase
      */
     public function testCapBelowTheFloorIsClampedToTheFloor(): void
     {
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: 0);
+        $pruner = $this->prunerWithCap(0);
 
         $feed = $this->feedWithEntries(self::FLOOR + 5, $this->daysAgo(1));
 
@@ -531,7 +622,7 @@ final class EntryPrunerTest extends DbTestCase
     public function testCapIsPerFeedNotGlobal(): void
     {
         $cap = self::CAP_ABOVE_THE_FLOOR;
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = $this->prunerWithCap($cap);
 
         $newerFeedAtTheCap = $this->feedWithEntries($cap, $this->daysAgo(1));
         $overTheCap = $this->feedWithEntries($cap + 1, $this->daysAgo(2));
