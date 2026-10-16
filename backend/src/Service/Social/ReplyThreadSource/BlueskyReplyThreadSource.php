@@ -7,23 +7,18 @@ namespace App\Service\Social\ReplyThreadSource;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Comments\Model\CommentsAnswerModel;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\BlueskyThreadReplies;
-use App\Service\Social\Exception\SocialNetworkThrottledException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Support\AppViewAnswer;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterface
 {
-    private const string THROTTLED = "Bluesky's AppView asked for fewer requests.";
     private const string GONE = 'The post is no longer on Bluesky.';
 
     public function __construct(
@@ -51,21 +46,11 @@ final readonly class BlueskyReplyThreadSource implements ReplyThreadSourceInterf
 
     public function inPublic(string $address): CommentsAnswerModel
     {
-        $throttledForSeconds = $this->publicThreadThrottledForSeconds();
-        if ($throttledForSeconds > 0) {
-            throw new SocialNetworkThrottledException(self::THROTTLED, $throttledForSeconds);
-        }
-
-        try {
-            return CommentsAnswerModel::settled($this->appView->thread($address, $this->maxDepth));
-        } catch (FeedThrottledException $exception) {
-            throw new SocialNetworkThrottledException(self::THROTTLED, $exception->retryAfterSeconds, $exception);
-        } catch (FetchException | AppViewAnswerException $exception) {
-            throw new SocialNetworkUnreachableException(
-                "Bluesky's AppView could not be reached.",
-                previous: $exception,
-            );
-        }
+        return AppViewAnswer::orSocialFailure(
+            $this->publicThreadThrottledForSeconds(),
+            fn (): CommentsAnswerModel
+                => CommentsAnswerModel::settled($this->appView->thread($address, $this->maxDepth)),
+        );
     }
 
     public function publicThreadThrottledForSeconds(): int
