@@ -51,6 +51,13 @@ final class FollowAvatarsModelTest extends TestCase
     #[DataProvider('damagedEntries')]
     public function testADamagedCacheEntryReadsAsNothing(mixed $stored): void
     {
-        self::assertNull(FollowAvatarsModel::fromCacheEntryOrNull($stored));
+        self::assertSame([], FollowAvatarsModel::fromCacheEntry($stored)->toCacheEntry());
+    }
+
+    public function testAStoredEntryReadsBack(): void
+    {
+        $avatars = FollowAvatarsModel::fromCacheEntry(['did:plc:bob' => 'https://cdn.test/bob.jpg']);
+
+        self::assertSame('https://cdn.test/bob.jpg', $avatars->avatarOf('did:plc:bob'));
     }
 }

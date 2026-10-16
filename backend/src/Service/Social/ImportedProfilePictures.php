@@ -31,16 +31,16 @@ final readonly class ImportedProfilePictures
             if (null !== $feed->getImageCheckedAt()) {
                 continue;
             }
-            $avatarUrl = self::avatarFor($feed, $avatars);
+            $avatarUrl = self::avatarFor($feed, $account->getNetwork(), $avatars);
             if (null !== $avatarUrl) {
                 $feed->recordImageCheck($avatarUrl, $now);
             }
         }
     }
 
-    private static function avatarFor(Feed $feed, FollowAvatarsModel $avatars): ?string
+    private static function avatarFor(Feed $feed, SocialNetwork $network, FollowAvatarsModel $avatars): ?string
     {
-        $identity = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $feed->getUrl());
+        $identity = ProfileFeedUrl::identityOf($network, $feed->getUrl());
         if (null === $identity) {
             return null;
         }

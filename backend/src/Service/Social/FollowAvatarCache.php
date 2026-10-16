@@ -19,10 +19,14 @@ final readonly class FollowAvatarCache
     ) {
     }
 
-    /** @param list<FollowedAccountModel> $follows */
+    /**
+     * Bluesky's follows come from the public AppView; a Mastodon instance is the user's pick and may name any picture.
+     *
+     * @param list<FollowedAccountModel> $follows
+     */
     public function remember(SocialAccount $account, array $follows): void
     {
-        if (!self::isTrusted($account)) {
+        if (SocialNetwork::Bluesky !== $account->getNetwork()) {
             return;
         }
         $item = $this->cache->getItem(self::keyOf($account));
@@ -32,19 +36,7 @@ final readonly class FollowAvatarCache
 
     public function find(SocialAccount $account): FollowAvatarsModel
     {
-        if (!self::isTrusted($account)) {
-            return FollowAvatarsModel::none();
-        }
-        $item = $this->cache->getItem(self::keyOf($account));
-        $avatars = $item->isHit() ? FollowAvatarsModel::fromCacheEntryOrNull($item->get()) : null;
-
-        return $avatars ?? FollowAvatarsModel::none();
-    }
-
-    /** Bluesky's follows come from the public AppView; a Mastodon instance is the user's own pick and could name any picture. */
-    private static function isTrusted(SocialAccount $account): bool
-    {
-        return SocialNetwork::Bluesky === $account->getNetwork();
+        return FollowAvatarsModel::fromCacheEntry($this->cache->getItem(self::keyOf($account))->get());
     }
 
     private static function keyOf(SocialAccount $account): string

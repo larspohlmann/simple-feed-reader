@@ -29,15 +29,15 @@ final readonly class FollowAvatarsModel
         return new self([]);
     }
 
-    public static function fromCacheEntryOrNull(mixed $stored): ?self
+    public static function fromCacheEntry(mixed $stored): self
     {
         if (!\is_array($stored)) {
-            return null;
+            return self::none();
         }
         $byIdentity = [];
         foreach ($stored as $identity => $avatarUrl) {
             if (!\is_string($identity) || !\is_string($avatarUrl)) {
-                return null;
+                return self::none();
             }
             $byIdentity[$identity] = $avatarUrl;
         }
