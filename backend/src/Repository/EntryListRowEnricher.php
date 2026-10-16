@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Service\Social\Support\SocialPostAddress;
 
 /**
- * Gives a page of rows their categories, saved searches, link cards, pending flag and social state: one query per
- * lookup.
+ * Gives a page of rows their categories, saved searches, link cards, pending flag, social state and discussion: one
+ * query per lookup.
  */
 final readonly class EntryListRowEnricher
 {
@@ -59,6 +60,7 @@ final readonly class EntryListRowEnricher
                 $linkCards[$entryId] ?? [],
                 isset($pendingIds[$entryId]),
                 $socialStates[$entryId] ?? null,
+                isset($socialStates[$entryId]) ? self::repliesDiscussionOf($entries[$entryId]) : null,
             );
         }
 
@@ -111,6 +113,11 @@ final readonly class EntryListRowEnricher
         }
 
         return $networks;
+    }
+
+    private static function repliesDiscussionOf(Entry $post): EntryListRowDiscussion
+    {
+        return new EntryListRowDiscussion($post->getUrl(), CommentsLoad::Auto);
     }
 
     /**

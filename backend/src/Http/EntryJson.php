@@ -6,9 +6,9 @@ namespace App\Http;
 
 use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
-use App\Enum\CommentsLoad;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowDiscussion;
 use App\Service\Text\Support\EntryExcerpt;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\FeedWebsite;
@@ -127,11 +127,7 @@ final class EntryJson
     /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null} */
     private static function discussionOf(EntryListRow $row): array
     {
-        $entry = $row->entry;
-        if (null !== $row->enrichment->social) {
-            return ['discussionUrl' => $entry->getUrl(), 'comments' => CommentsLoad::Auto->value];
-        }
-        $discussion = $entry->getDiscussion();
+        $discussion = $row->enrichment->discussion ?? EntryListRowDiscussion::storedOf($row->entry->getDiscussion());
 
         return ['discussionUrl' => $discussion->url, 'comments' => $discussion->commentsLoad?->value];
     }

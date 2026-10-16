@@ -20,6 +20,7 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnrichment;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
@@ -302,7 +303,7 @@ final class EntryJsonTest extends TestCase
         );
     }
 
-    public function testASocialPostsRepliesAreItsCommentsAndThePostIsTheirDiscussion(): void
+    public function testTheEnrichedDiscussionStandsInForTheStoredOne(): void
     {
         $entry = $this->entryTitled('Post');
         $entry->setDiscussion(Discussion::withCommentsFeed(
@@ -312,7 +313,9 @@ final class EntryJsonTest extends TestCase
         ));
         $row = $this->row(
             $entry,
-            new EntryListRowEnrichment(social: new EntryListRowSocial(SocialNetwork::Mastodon, false, true)),
+            new EntryListRowEnrichment(
+                discussion: new EntryListRowDiscussion('https://example.com/a', CommentsLoad::Auto),
+            ),
         );
 
         $json = EntryJson::listRow($row);
