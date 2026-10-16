@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Dto\Entry;
 
-use App\Enum\SocialNetwork;
 use App\Exception\ValidationException;
+use App\Repository\NetworkScope;
 use App\Service\Reading\Model\ReadScopeKind;
 use App\Service\Reading\Model\ReadScopeModel;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -24,6 +24,7 @@ final readonly class MarkReadRequest
         #[Assert\Positive]
         public ?int $id = null,
         public ?string $network = null,
+        public ?string $feedKind = null,
     ) {
     }
 
@@ -40,9 +41,9 @@ final readonly class MarkReadRequest
         };
     }
 
-    private function requiredNetworkFor(ReadScopeKind $kind): SocialNetwork
+    private function requiredNetworkFor(ReadScopeKind $kind): NetworkScope
     {
-        return SocialNetwork::fromRequestValue($this->network) ?? throw new ValidationException([
+        return NetworkScope::fromRequestValues($this->network, $this->feedKind) ?? throw new ValidationException([
             'network' => [sprintf('A network is required when scope is "%s".', $kind->value)],
         ]);
     }

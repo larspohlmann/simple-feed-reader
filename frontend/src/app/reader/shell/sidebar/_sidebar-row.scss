@@ -71,10 +71,15 @@
     align-items: center;
   }
 
+  @include tag-parts('.tag');
+}
+
+/* The link and glyph slot of a tag-style row, under $scope (the `.tag` row, or a group-row component's host). */
+@mixin tag-parts($scope) {
   /* `min-width: 0` is what lets the name truncate — without it the flex item's
      automatic min-content width refuses to shrink, pushing the unread count
      and `⋯` menu out of the 260px column (#131). */
-  .tag .grow {
+  #{$scope} .grow {
     flex: 1;
     min-width: 0;
   }
@@ -82,7 +87,7 @@
   /* Tag names share one left edge whether the tag shows a colour dot or a
      glyph, because app-tag-glyph is a fixed square either way. The slot only
      has to keep the flex row from squeezing it. */
-  .tag .lead {
+  #{$scope} .lead {
     flex: none;
     display: inline-flex;
     align-items: center;
@@ -102,6 +107,18 @@
     align-self: stretch;
     color: var(--text-muted);
     cursor: grab;
+  }
+}
+
+/* An expanded tag's feeds sit on a recessed surface, so the group reads as
+   nested under its header (#1114). The negative inline margin with matching
+   padding bleeds the band to the sidebar edges. */
+@mixin tag-feeds {
+  .tagfeeds {
+    background: var(--surface-sunken);
+    margin-inline: calc(var(--space-2) * -1);
+    padding-inline: var(--space-2);
+    border-radius: 0;
   }
 }
 

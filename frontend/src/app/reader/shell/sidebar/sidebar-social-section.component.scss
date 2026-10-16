@@ -1,5 +1,7 @@
 @use 'sidebar-row' as row;
 @include row.section-head;
+@include row.tag-head;
+@include row.tag-feeds;
 @include row.nav-states('.section-link', '.section-count');
 
 :host {
@@ -34,8 +36,7 @@
   align-items: center;
 }
 
-.account-handle,
-.people-heading {
+.account-handle {
   /* The sidebar is a scrolling flex column, and `overflow: hidden` drops the auto min-height: without this the
      line shrinks to nothing once the sidebar overflows. */
   flex: none;

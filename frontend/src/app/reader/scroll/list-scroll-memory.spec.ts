@@ -35,6 +35,15 @@ describe('scrollKey', () => {
     const tag = sel({ kind: 'tag', id: 3 });
     expect(scrollKey(tag)).not.toBe(scrollKey({ ...tag, order: 'oldest' }));
   });
+
+  it('is distinct per network and per network feed kind', () => {
+    const keys = new Set([
+      scrollKey(sel({ kind: 'network', network: 'bluesky' })),
+      scrollKey(sel({ kind: 'network', network: 'bluesky', feedKind: 'profile' })),
+      scrollKey(sel({ kind: 'network', network: 'mastodon' })),
+    ]);
+    expect(keys.size).toBe(3);
+  });
 });
 
 describe('ListScrollMemory', () => {

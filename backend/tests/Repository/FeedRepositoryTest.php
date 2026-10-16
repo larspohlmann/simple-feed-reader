@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
+use App\Repository\NetworkScope;
 use App\Tests\DbTestCase;
 
 final class FeedRepositoryTest extends DbTestCase
@@ -105,7 +106,7 @@ final class FeedRepositoryTest extends DbTestCase
             tagId: 9,
             force: true,
             cooldownCutoff: $this->now->modify('-5 minutes'),
-            network: SocialNetwork::Mastodon,
+            networkScope: NetworkScope::whole(SocialNetwork::Mastodon),
         );
 
         $narrowed = $original->excluding([42]);
@@ -117,7 +118,7 @@ final class FeedRepositoryTest extends DbTestCase
         self::assertSame(9, $narrowed->tagId);
         self::assertTrue($narrowed->force);
         self::assertEquals($original->cooldownCutoff, $narrowed->cooldownCutoff);
-        self::assertSame(SocialNetwork::Mastodon, $narrowed->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Mastodon), $narrowed->networkScope);
         self::assertSame([], $original->excludedFeedIds);
     }
 

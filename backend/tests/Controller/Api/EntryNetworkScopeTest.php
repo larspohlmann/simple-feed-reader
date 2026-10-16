@@ -48,6 +48,37 @@ final class EntryNetworkScopeTest extends WebTestCase
         self::assertSame(['profile-post', 'home-post'], $this->guidsOfResponse());
     }
 
+    public function testAProfileFeedKindListsOnlyTheNetworksProfileFeeds(): void
+    {
+        [$headers, $user] = $this->auth('network-profiles@example.com');
+        $this->seedNetworks($user);
+
+        $this->client->request('GET', '/api/entries?network=bluesky&feedKind=profile', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['profile-post'], $this->guidsOfResponse());
+    }
+
+    public function testAnUnknownFeedKindIsAValidationError(): void
+    {
+        [$headers] = $this->auth('network-feedkind-unknown@example.com');
+
+        $this->client->request('GET', '/api/entries?network=bluesky&feedKind=home', server: $headers);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame(['feedKind' => ['Unknown feedKind. Use one of: profile.']], $this->body()['errors']);
+    }
+
+    public function testAFeedKindWithoutANetworkIsAValidationError(): void
+    {
+        [$headers] = $this->auth('network-feedkind-alone@example.com');
+
+        $this->client->request('GET', '/api/entries?feedKind=profile', server: $headers);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame(['feedKind' => ['A feedKind needs a network.']], $this->body()['errors']);
+    }
+
     public function testAnUnknownNetworkIsAValidationError(): void
     {
         [$headers] = $this->auth('network-unknown@example.com');
@@ -80,6 +111,31 @@ final class EntryNetworkScopeTest extends WebTestCase
         self::assertSame([], $this->guidsOfResponse());
         $this->client->request('GET', '/api/entries?network=mastodon&view=unread', server: $headers);
         self::assertSame(['mastodon-post'], $this->guidsOfResponse());
+    }
+
+    public function testMarkingANetworksProfilesReadLeavesItsPrivateFeedsUnread(): void
+    {
+        [$headers, $user] = $this->auth('network-mark-profiles@example.com');
+        $this->seedNetworks($user);
+
+        $this->client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                [
+                    'scope' => 'network',
+                    'network' => 'bluesky',
+                    'feedKind' => 'profile',
+                    'until' => '2026-10-12T00:00:00Z',
+                ],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+
+        $this->client->request('GET', '/api/entries?network=bluesky&view=unread', server: $headers);
+        self::assertSame(['home-post'], $this->guidsOfResponse());
     }
 
     public function testMarkingANetworkReadWithoutANetworkIsAValidationError(): void

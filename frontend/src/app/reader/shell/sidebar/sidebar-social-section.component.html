@@ -40,15 +40,33 @@
       </div>
     }
   }
-  @if (current.people.length) {
-    <p class="people-heading">{{ 'reader.socialPeople' | transloco }}</p>
-    @for (subscription of current.people; track subscription.id) {
-      <div class="feedrow">
-        <app-sidebar-feed-row
-          [subscription]="subscription"
-          [selection]="selection()"
-          [organising]="organising()"
-        />
+  @if (current.profiles.subscriptions.length) {
+    <div class="tag" data-testid="sidebar-social-feeds">
+      <app-sidebar-group-row
+        [link]="selectionQueryParams({ network: current.network, feedKind: 'profile' })"
+        [label]="'reader.socialFeeds' | transloco"
+        glyph="group"
+        [count]="current.profiles.unreadCount"
+        [active]="profilesActive()"
+        [expanded]="profilesExpanded()"
+        [toggleLabel]="
+          'reader.toggleSocialFeeds'
+            | transloco: { network: ('settings.social.' + current.network | transloco) }
+        "
+        (toggled)="toggleProfiles()"
+      />
+    </div>
+    @if (profilesExpanded()) {
+      <div class="tagfeeds">
+        @for (subscription of current.profiles.subscriptions; track subscription.id) {
+          <div class="feedrow">
+            <app-sidebar-feed-row
+              [subscription]="subscription"
+              [selection]="selection()"
+              [organising]="organising()"
+            />
+          </div>
+        }
       </div>
     }
   }

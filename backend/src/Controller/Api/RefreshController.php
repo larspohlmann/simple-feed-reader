@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Enum\SocialNetwork;
 use App\Http\RefreshJson;
+use App\Repository\NetworkScope;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Refresh\TrackedRefreshRunner;
 use App\Service\Refresh\UserRefreshScope;
@@ -17,8 +17,9 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * One budgeted refresh slice over the caller's feeds, narrowed by `?feedId=`, `?tag=` or `?network=`. The client
- * loops on `status` (busy: wait and retry; partial: call again; completed: done; aborted: stop) until `remaining` is 0.
+ * One budgeted refresh slice over the caller's feeds, narrowed by `?feedId=`, `?tag=` or `?network=` with an
+ * optional `?feedKind=`. The client loops on `status` (busy: wait and retry; partial: call again; completed: done;
+ * aborted: stop) until `remaining` is 0.
  */
 final readonly class RefreshController
 {
@@ -36,13 +37,14 @@ final readonly class RefreshController
         #[MapQueryParameter] ?int $feedId = null,
         #[MapQueryParameter] ?int $tag = null,
         #[MapQueryParameter] ?string $network = null,
+        #[MapQueryParameter] ?string $feedKind = null,
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->refreshLimiter, $user);
 
-        $socialNetwork = SocialNetwork::fromRequestValue($network);
-        $request = null === $socialNetwork
+        $networkScope = NetworkScope::fromRequestValues($network, $feedKind);
+        $request = null === $networkScope
             ? $this->scope->requestFor($user->requireId(), $feedId, $tag)
-            : $this->scope->requestForNetwork($user->requireId(), $socialNetwork);
+            : $this->scope->requestForNetwork($user->requireId(), $networkScope);
 
         return new JsonResponse(RefreshJson::slice($this->trackedRefreshRunner->run($request)));
     }

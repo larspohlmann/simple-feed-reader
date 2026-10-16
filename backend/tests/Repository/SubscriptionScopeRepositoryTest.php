@@ -6,8 +6,10 @@ namespace App\Tests\Repository;
 
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Repository\NetworkScope;
 use App\Repository\SubscriptionScopeRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
@@ -33,7 +35,20 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$home->requireId(), $profile->requireId()],
-            $this->idsOf($this->subscriptions()->findForUserOnNetwork($user->requireId(), SocialNetwork::Bluesky)),
+            $this->idsOnNetwork($user, NetworkScope::whole(SocialNetwork::Bluesky)),
+        );
+    }
+
+    public function testAProfileScopeHoldsOnlyTheNetworksProfileFeeds(): void
+    {
+        $user = $this->user('network-profiles-owner@example.com');
+        $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
+        $profile = $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::BLUESKY_PROFILE);
+        $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
+
+        self::assertSame(
+            [$profile->requireId()],
+            $this->idsOnNetwork($user, NetworkScope::profiles(SocialNetwork::Bluesky)),
         );
     }
 
@@ -46,7 +61,7 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$own->requireId()],
-            $this->idsOf($this->subscriptions()->findForUserOnNetwork($user->requireId(), SocialNetwork::Mastodon)),
+            $this->idsOnNetwork($user, NetworkScope::whole(SocialNetwork::Mastodon)),
         );
     }
 
@@ -55,7 +70,7 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
         $user = $this->user('network-empty@example.com');
         $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::PLAIN);
 
-        self::assertSame([], $this->subscriptions()->findForUserOnNetwork($user->requireId(), SocialNetwork::Bluesky));
+        self::assertSame([], $this->idsOnNetwork($user, NetworkScope::whole(SocialNetwork::Bluesky)));
     }
 
     /** TagEditor::delete() detaches through it: a missed subscription would keep wearing the deleted tag. */
@@ -97,5 +112,11 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
         self::assertInstanceOf(SubscriptionScopeRepository::class, $repository);
 
         return $repository;
+    }
+
+    /** @return list<int> */
+    private function idsOnNetwork(User $user, NetworkScope $networkScope): array
+    {
+        return $this->idsOf($this->subscriptions()->findForUserOnNetwork($user->requireId(), $networkScope));
     }
 }

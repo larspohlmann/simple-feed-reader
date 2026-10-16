@@ -12,7 +12,7 @@ import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { TagNode } from '../../state/subscription-derivations';
-import { SocialSection } from '../../state/social-sections';
+import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -1902,7 +1902,7 @@ describe('organise mode', () => {
   describe('social sections', () => {
     const section: SocialSection = {
       network: 'bluesky',
-      people: [],
+      profiles: socialProfiles([]),
       unreadCount: 2,
       entryCount: 0,
       showsHandles: false,

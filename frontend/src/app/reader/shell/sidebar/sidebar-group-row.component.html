@@ -1,0 +1,27 @@
+<a
+  class="nav grow"
+  [class.active]="active()"
+  [routerLink]="['/']"
+  [queryParams]="link()"
+  queryParamsHandling="merge"
+>
+  <span class="lead">
+    <app-tag-glyph [name]="glyph()" [color]="glyphColor()" size="sm" />
+  </span>
+  <span>{{ label() }}</span>
+  @if (count() > 0) {
+    <span class="count">{{ count() }}</span>
+  }
+</a>
+<ng-content />
+<!-- One chevron for both pointer types: the coarse tap target and the border
+     geometry are handled entirely in SCSS. -->
+<button
+  class="chevzone"
+  type="button"
+  [attr.aria-expanded]="expanded()"
+  [attr.aria-label]="toggleLabel()"
+  (click)="toggled.emit()"
+>
+  <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="sm" />
+</button>

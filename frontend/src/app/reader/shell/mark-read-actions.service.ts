@@ -110,7 +110,7 @@ function watermarkOf(target: MarkReadTarget): ZeroTarget | null {
     case 'feed':
       return { subscription: target.id };
     case 'network':
-      return { network: target.network };
+      return { network: target.network, feedKind: target.feedKind };
     default:
       return null;
   }

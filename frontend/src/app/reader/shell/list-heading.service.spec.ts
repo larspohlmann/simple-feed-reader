@@ -8,7 +8,7 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { SocialSection, buildSocialSections } from '../state/social-sections';
+import { SocialSection, buildSocialSections, socialProfiles } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
 import { makeSubscription } from '../testing/subscription.factory';
@@ -54,7 +54,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
 
 const accountsOf = (...handles: string[]): SocialSection => ({
   network: 'bluesky',
-  people: [],
+  profiles: socialProfiles([]),
   unreadCount: 0,
   entryCount: 0,
   showsHandles: handles.length > 1,
@@ -115,10 +115,22 @@ describe("ListHeading for a network's combined view", () => {
       social: { network: 'mastodon', accountId: null, kind: 'profile' },
     }),
     makeSubscription({ id: 4, unreadCount: 20, entryCount: 200 }),
+    makeSubscription({
+      id: 5,
+      unreadCount: 5,
+      entryCount: 50,
+      social: { network: 'mastodon', accountId: 7, kind: 'home' },
+    }),
   ];
 
-  function networkHeading(unread: boolean): ListHeading {
-    const selection: Selection = { kind: 'network', id: null, unread, network: 'bluesky' };
+  function networkHeading(unread: boolean, selected: Partial<Selection> = {}): ListHeading {
+    const selection: Selection = {
+      kind: 'network',
+      id: null,
+      unread,
+      network: 'bluesky',
+      ...selected,
+    };
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -151,5 +163,17 @@ describe("ListHeading for a network's combined view", () => {
 
   it("counts every post of the network's feeds under All posts", () => {
     expect(networkHeading(false).titleCount()).toEqual({ value: 70, counts: 'items' });
+  });
+
+  it("titles a network's profile feeds as Feeds", () => {
+    const heading = networkHeading(true, { network: 'mastodon', feedKind: 'profile' });
+
+    expect(heading.title()).toBe('Mastodon · Feeds');
+  });
+
+  it("counts only the network's profile feeds when narrowed to them", () => {
+    const selected = { network: 'mastodon', feedKind: 'profile' } as const;
+
+    expect(networkHeading(true, selected).titleCount()).toEqual({ value: 9, counts: 'unread' });
   });
 });

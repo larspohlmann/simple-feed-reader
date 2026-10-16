@@ -10,6 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Repository\Exception\RecordNotFoundException;
+use App\Repository\NetworkScope;
 use App\Service\Refresh\UserRefreshScope;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -99,10 +100,13 @@ final class UserRefreshScopeTest extends DbTestCase
 
     public function testANetworkRefreshIsAForcedRunOverThatNetworksFeeds(): void
     {
-        $request = $this->scope()->requestForNetwork($this->user->requireId(), SocialNetwork::Bluesky);
+        $request = $this->scope()->requestForNetwork(
+            $this->user->requireId(),
+            NetworkScope::whole(SocialNetwork::Bluesky),
+        );
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertSame(SocialNetwork::Bluesky, $request->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->networkScope);
         self::assertNull($request->feedId);
         self::assertNull($request->tagId);
         self::assertTrue($request->force);

@@ -7,6 +7,7 @@ namespace App\Tests\Dto\Entry;
 use App\Dto\Entry\MarkReadRequest;
 use App\Enum\SocialNetwork;
 use App\Exception\ValidationException;
+use App\Repository\NetworkScope;
 use App\Service\Reading\Model\ReadScopeKind;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -43,7 +44,15 @@ final class MarkReadRequestTest extends TestCase
         $scope = $this->networkRequest('bluesky')->toScope();
 
         self::assertSame(ReadScopeKind::Network, $scope->kind);
-        self::assertSame(SocialNetwork::Bluesky, $scope->targetNetwork());
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $scope->targetNetworkScope());
+    }
+
+    public function testANetworkScopeCarriesItsFeedKind(): void
+    {
+        self::assertEquals(
+            NetworkScope::profiles(SocialNetwork::Bluesky),
+            $this->networkRequest('bluesky', 'profile')->toScope()->targetNetworkScope(),
+        );
     }
 
     public function testANetworkScopeWithoutANetworkIsAValidationError(): void
@@ -85,9 +94,14 @@ final class MarkReadRequestTest extends TestCase
         return new MarkReadRequest($scope, new \DateTimeImmutable('2026-07-10T00:00:00Z'), $id);
     }
 
-    private function networkRequest(?string $network): MarkReadRequest
+    private function networkRequest(?string $network, ?string $feedKind = null): MarkReadRequest
     {
-        return new MarkReadRequest('network', new \DateTimeImmutable('2026-07-10T00:00:00Z'), network: $network);
+        return new MarkReadRequest(
+            'network',
+            new \DateTimeImmutable('2026-07-10T00:00:00Z'),
+            network: $network,
+            feedKind: $feedKind,
+        );
     }
 
     /** @param array<string, list<string>> $errors */

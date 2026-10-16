@@ -39,7 +39,10 @@ final readonly class MarkReadService
                 $userId,
                 $this->tags->getOneForUser($userId, $scope->targetId())->requireId(),
             ),
-            ReadScopeKind::Network => $this->subscriptionScope->findForUserOnNetwork($userId, $scope->targetNetwork()),
+            ReadScopeKind::Network => $this->subscriptionScope->findForUserOnNetwork(
+                $userId,
+                $scope->targetNetworkScope(),
+            ),
         };
     }
 }

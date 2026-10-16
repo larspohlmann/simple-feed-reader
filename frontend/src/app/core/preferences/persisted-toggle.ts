@@ -6,11 +6,16 @@ export interface PersistedToggle {
   toggle(): void;
 }
 
-/** Expanded unless stored as collapsed; follows a key that changes, and keeps working in memory without storage. */
-export function persistedToggle(key: () => string): PersistedToggle {
+export type ToggleStart = 'expanded' | 'collapsed';
+
+/** `start` until stored otherwise; follows a key that changes, and keeps working in memory without storage. */
+export function persistedToggle(
+  key: () => string,
+  start: ToggleStart = 'expanded',
+): PersistedToggle {
   const expanded = linkedSignal({
     source: key,
-    computation: (current) => storedValue(current) !== 'true',
+    computation: (current) => isExpanded(storedValue(current), start),
   });
   return {
     expanded: expanded.asReadonly(),
@@ -20,6 +25,10 @@ export function persistedToggle(key: () => string): PersistedToggle {
       store(key(), String(!open));
     },
   };
+}
+
+function isExpanded(stored: string | null, start: ToggleStart): boolean {
+  return stored === null ? start === 'expanded' : stored !== 'true';
 }
 
 function storedValue(key: string): string | null {

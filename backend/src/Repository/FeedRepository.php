@@ -279,11 +279,11 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
     private function restrictToNetwork(QueryBuilder $qb, DueFeedCriteria $criteria): void
     {
-        if ($criteria->network === null) {
+        if ($criteria->networkScope === null) {
             return;
         }
 
-        $qb->andWhere('f.network = :network')->setParameter('network', $criteria->network);
+        NetworkScopeDql::restrict($qb, 'f', $criteria->networkScope);
     }
 
     private function restrictToUnhandled(QueryBuilder $qb, DueFeedCriteria $criteria): void

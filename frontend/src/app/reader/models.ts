@@ -2,7 +2,7 @@ import { EntryMediumDto } from './entry-medium';
 import { LinkCardDto } from './link-card/link-card';
 import { QuotedPostDto } from './quoted-post/quoted-post';
 import { SocialAccountRefDto, SocialFeedRefDto } from './social-feed';
-import { SocialNetworkName } from '../core/social-network';
+import { NetworkFeedKind, SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
 
 /** One saved search an entry belongs to, as embedded on the entry itself
@@ -354,6 +354,7 @@ export interface EntryQuery {
   tag?: number;
   /** A network's combined view: every feed of that network, private and profile alike. */
   network?: SocialNetworkName;
+  feedKind?: NetworkFeedKind;
   /** Views that cannot express "only unread" through `view=unread` carry the
    *  refinement as a flag beside their own view or search term. */
   unread?: boolean;

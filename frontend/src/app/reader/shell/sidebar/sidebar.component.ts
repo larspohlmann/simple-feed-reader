@@ -27,6 +27,7 @@ import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
+import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -73,6 +74,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     SearchFieldComponent,
     SidebarFootComponent,
     SidebarFeedRowComponent,
+    SidebarGroupRowComponent,
     SidebarSavedSearchesComponent,
     SidebarSocialSectionComponent,
     TranslocoPipe,

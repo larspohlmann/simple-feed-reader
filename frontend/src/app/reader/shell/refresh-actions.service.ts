@@ -57,7 +57,9 @@ export class RefreshActions {
       case 'tag':
         return selection.id != null ? { tagId: selection.id } : null;
       case 'network':
-        return selection.network ? { network: selection.network } : null;
+        return selection.network
+          ? { network: selection.network, feedKind: selection.feedKind }
+          : null;
       case 'subscription': {
         const feedId = this.heading.selectedSubscription()?.feedId;
         return feedId != null ? { feedId } : null;

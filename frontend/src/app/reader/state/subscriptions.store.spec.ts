@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../../core/api';
 import { TokenStore } from '../../core/auth/token.store';
 import { ReaderApi } from '../reader-api';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
+import { socialProfiles } from './social-sections';
 import { SubscriptionsStore } from './subscriptions.store';
 import { SubscriptionRows } from './subscription-rows';
 import {
@@ -439,7 +440,7 @@ describe('SubscriptionsStore', () => {
       expect(store.totalUnread()).toBe(1 + 16 + 8);
     });
 
-    it('groups social feeds by network, private ones per account and profiles as people, each Home titled', () => {
+    it('groups social feeds by network, private ones per account and profile feeds as the Feeds group, each Home titled', () => {
       expect(store.socialSections()).toEqual([
         {
           network: 'bluesky',
@@ -450,7 +451,7 @@ describe('SubscriptionsStore', () => {
               subscriptions: [{ ...untaggedHome, title: 'Home@bsky' }, taggedList],
             },
           ],
-          people: [],
+          profiles: socialProfiles([]),
           unreadCount: 6,
           entryCount: 0,
           showsHandles: false,
@@ -458,7 +459,7 @@ describe('SubscriptionsStore', () => {
         {
           network: 'mastodon',
           accounts: [],
-          people: [untaggedProfile],
+          profiles: socialProfiles([untaggedProfile]),
           unreadCount: 8,
           entryCount: 0,
           showsHandles: false,
@@ -472,6 +473,15 @@ describe('SubscriptionsStore', () => {
       const unread = (id: number) =>
         store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
       expect([unread(1), unread(2), unread(5), unread(6), unread(7)]).toEqual([1, 16, 0, 0, 8]);
+    });
+
+    it("zeroes only a network's profile feeds when the Feeds row is marked read", () => {
+      store.zeroUnread({ network: 'mastodon', feedKind: 'profile' });
+      store.zeroUnread({ network: 'bluesky', feedKind: 'profile' });
+
+      const unread = (id: number) =>
+        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
+      expect([unread(1), unread(2), unread(5), unread(6), unread(7)]).toEqual([1, 16, 2, 4, 0]);
     });
 
     it('marks All items read only in the feeds All items holds, as the backend does', () => {

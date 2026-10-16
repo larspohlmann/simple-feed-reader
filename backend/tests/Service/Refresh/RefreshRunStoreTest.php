@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Enum\SocialNetwork;
+use App\Repository\NetworkScope;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\Model\RefreshRunProgressModel;
 use App\Service\Refresh\RefreshRunStore;
@@ -95,7 +96,7 @@ final class RefreshRunStoreTest extends TestCase
 
     private function networkRequest(SocialNetwork $network): RefreshRequestModel
     {
-        return RefreshRequestModel::forUserNetwork(1, $network, self::BUDGET);
+        return RefreshRequestModel::forUserNetwork(1, NetworkScope::whole($network), self::BUDGET);
     }
 
     public function testAForgottenRunStartsOverNextTime(): void
@@ -186,7 +187,13 @@ final class RefreshRunStoreTest extends TestCase
         self::assertSame(
             ['refresh_run_3.set-network-bluesky'],
             $this->rawKeyFor(
-                RefreshRequestModel::forUserNetwork(3, SocialNetwork::Bluesky, self::BUDGET),
+                RefreshRequestModel::forUserNetwork(3, NetworkScope::whole(SocialNetwork::Bluesky), self::BUDGET),
+            ),
+        );
+        self::assertSame(
+            ['refresh_run_3.set-network-bluesky-profile'],
+            $this->rawKeyFor(
+                RefreshRequestModel::forUserNetwork(3, NetworkScope::profiles(SocialNetwork::Bluesky), self::BUDGET),
             ),
         );
     }

@@ -188,69 +188,51 @@
                   <app-icon name="more_horiz" size="sm" />
                 </button>
               } @else {
-                <a
-                  class="nav grow"
-                  [class.active]="selection().kind === 'tag' && selection().id === node.tag.id"
-                  [routerLink]="['/']"
-                  [queryParams]="selectionQueryParams({ tag: node.tag.id })"
-                  queryParamsHandling="merge"
+                <app-sidebar-group-row
+                  [link]="selectionQueryParams({ tag: node.tag.id })"
+                  [label]="node.tag.name"
+                  [glyph]="node.tag.icon"
+                  [glyphColor]="node.tag.color"
+                  [count]="node.unreadCount"
+                  [active]="selection().kind === 'tag' && selection().id === node.tag.id"
+                  [expanded]="expanded().has(node.tag.id)"
+                  [toggleLabel]="'reader.toggleTag' | transloco: { name: node.tag.name }"
+                  (toggled)="toggle(node.tag.id)"
                 >
-                  <span class="lead">
-                    <app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="sm" />
-                  </span>
-                  <span>{{ node.tag.name }}</span>
-                  @if (node.unreadCount > 0) {
-                    <span class="count">{{ node.unreadCount }}</span>
-                  }
-                </a>
-                @if (!screen.isCoarse()) {
-                  @let tagMenuKey = 'tag-' + node.tag.id;
-                  <div
-                    class="rowmenu"
-                    [appDismissOnOutside]="rows.menuFor() === tagMenuKey"
-                    (dismiss)="rows.closeMenu()"
-                  >
-                    <button
-                      class="dots"
-                      type="button"
-                      [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
-                      (click)="rows.toggleMenu(tagMenuKey, $event)"
+                  @if (!screen.isCoarse()) {
+                    @let tagMenuKey = 'tag-' + node.tag.id;
+                    <div
+                      class="rowmenu"
+                      [appDismissOnOutside]="rows.menuFor() === tagMenuKey"
+                      (dismiss)="rows.closeMenu()"
                     >
-                      <app-icon name="more_horiz" size="sm" />
-                    </button>
-                    @if (rows.menuFor() === tagMenuKey) {
-                      <div class="pop" role="menu">
-                        <button
-                          role="menuitem"
-                          (click)="manage.editTag(node.tag); rows.closeMenu()"
-                        >
-                          {{ 'reader.editTag' | transloco }}
-                        </button>
-                        <button
-                          role="menuitem"
-                          (click)="manage.deleteTag(node.tag); rows.closeMenu()"
-                        >
-                          {{ 'reader.deleteTag' | transloco }}
-                        </button>
-                      </div>
-                    }
-                  </div>
-                }
-                <!-- One chevron for both pointer types: the coarse tap target and
-                   the border geometry are handled entirely in SCSS. Only the
-                   edit/delete menu above is desktop-only. -->
-                <button
-                  class="chevzone"
-                  type="button"
-                  [attr.aria-expanded]="expanded().has(node.tag.id)"
-                  [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
-                  (click)="toggle(node.tag.id)"
-                >
-                  <app-icon
-                    [name]="expanded().has(node.tag.id) ? 'expand_more' : 'chevron_right'"
-                    size="sm"
-                  />
-                </button>
+                      <button
+                        class="dots"
+                        type="button"
+                        [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
+                        (click)="rows.toggleMenu(tagMenuKey, $event)"
+                      >
+                        <app-icon name="more_horiz" size="sm" />
+                      </button>
+                      @if (rows.menuFor() === tagMenuKey) {
+                        <div class="pop" role="menu">
+                          <button
+                            role="menuitem"
+                            (click)="manage.editTag(node.tag); rows.closeMenu()"
+                          >
+                            {{ 'reader.editTag' | transloco }}
+                          </button>
+                          <button
+                            role="menuitem"
+                            (click)="manage.deleteTag(node.tag); rows.closeMenu()"
+                          >
+                            {{ 'reader.deleteTag' | transloco }}
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  }
+                </app-sidebar-group-row>
               }
             </div>
           </div>

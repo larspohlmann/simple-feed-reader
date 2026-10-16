@@ -8,11 +8,17 @@ export interface SocialAccountGroup {
   readonly subscriptions: readonly SubscriptionDto[];
 }
 
+export interface SocialProfiles {
+  /** Alphabetically: the people followed rather than an account's own feeds. */
+  readonly subscriptions: readonly SubscriptionDto[];
+  readonly unreadCount: number;
+  readonly entryCount: number;
+}
+
 export interface SocialSection {
   readonly network: SocialNetworkName;
   readonly accounts: readonly SocialAccountGroup[];
-  /** Profile feeds of the network, alphabetically: the people followed rather than an account's own feeds. */
-  readonly people: readonly SubscriptionDto[];
+  readonly profiles: SocialProfiles;
   /** Every feed of the network, one excluded from All items too, as a tag counts. */
   readonly unreadCount: number;
   readonly entryCount: number;
@@ -32,9 +38,13 @@ export function isSocialFeed(subscription: SubscriptionDto): boolean {
   return Boolean(subscription.social);
 }
 
+export function isProfileFeed(subscription: SubscriptionDto): boolean {
+  return subscription.social?.kind === 'profile';
+}
+
 /** A timeline, list or custom feed read through a connected account; a profile feed is ordinary RSS. */
 export function isPrivateFeed(subscription: SubscriptionDto): subscription is PrivateSubscription {
-  return isSocialFeed(subscription) && subscription.social?.kind !== 'profile';
+  return isSocialFeed(subscription) && !isProfileFeed(subscription);
 }
 
 /** A social feed other than Home is shown by its picture when it has one; today only profile feeds get one. */
@@ -49,7 +59,7 @@ export function feedAvatarUrl(subscription: SubscriptionDto | null): string | nu
   return subscription.imageUrl;
 }
 
-/** One section per network holding a social feed: private feeds per account by id, each Home first, then the people. */
+/** One section per network holding a social feed: private feeds per account by id, each Home first, then the profiles. */
 export function buildSocialSections(
   subscriptions: readonly SubscriptionDto[],
   accounts: readonly SocialAccountRefDto[],
@@ -63,14 +73,21 @@ export function buildSocialSections(
     return {
       network,
       accounts,
-      people: ofNetwork
-        .filter((subscription) => !isPrivateFeed(subscription))
-        .sort((left, right) => left.title.localeCompare(right.title)),
+      profiles: socialProfiles(ofNetwork.filter((subscription) => !isPrivateFeed(subscription))),
       unreadCount: sum(ofNetwork, (subscription) => subscription.unreadCount),
       entryCount: sum(ofNetwork, (subscription) => subscription.entryCount),
       showsHandles: accounts.length > 1,
     };
-  }).filter((section) => section.accounts.length > 0 || section.people.length > 0);
+  }).filter((section) => section.accounts.length > 0 || section.profiles.subscriptions.length > 0);
+}
+
+export function socialProfiles(subscriptions: readonly SubscriptionDto[]): SocialProfiles {
+  const sorted = [...subscriptions].sort((left, right) => left.title.localeCompare(right.title));
+  return {
+    subscriptions: sorted,
+    unreadCount: sum(sorted, (subscription) => subscription.unreadCount),
+    entryCount: sum(sorted, (subscription) => subscription.entryCount),
+  };
 }
 
 function sum(
