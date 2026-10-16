@@ -8,6 +8,7 @@
 // `<base href="/reader/">` on the Strato build both turn a relative
 // `api/client-errors` into the correct same-origin path.
 import { buildVersion } from '../../../environments/version';
+import { escapeJsonSlashes } from '../http/escape-json-slashes';
 
 export interface ClientErrorItem {
   message: string;
@@ -64,7 +65,7 @@ function deliver(url: string, body: string, bearerToken?: string | null): void {
 export function sendClientError(item: ClientErrorItem, options: SendClientErrorOptions = {}): void {
   try {
     const url = options.url ?? resolveClientErrorsUrl();
-    deliver(url, JSON.stringify({ errors: [item] }), options.bearerToken);
+    deliver(url, escapeJsonSlashes(JSON.stringify({ errors: [item] })), options.bearerToken);
   } catch {
     // Reporting an error must never raise one of its own.
   }

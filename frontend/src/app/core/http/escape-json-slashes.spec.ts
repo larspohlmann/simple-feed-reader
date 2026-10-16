@@ -56,6 +56,7 @@ describe('escapeJsonSlashesInterceptor', () => {
     ['an XML string', '<outline xmlUrl="https://bsky.app/x/rss"/>'],
     ['a Blob', new Blob(['{"url":"https://bsky.app/x"}'])],
     ['FormData', new FormData()],
+    ['URLSearchParams', new URLSearchParams({ url: 'https://bsky.app/x' })],
   ])('leaves %s untouched', (_kind, body) => {
     http.post('/api/opml/import', body).subscribe();
 
