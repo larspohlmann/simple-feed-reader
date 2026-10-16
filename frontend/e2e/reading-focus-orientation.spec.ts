@@ -1,10 +1,11 @@
 import { test, expect, Page } from '@playwright/test';
 import { presetLocalStorage, signInAsAdmin } from './support/auth';
 import { entryWire } from './support/reader';
+import { READING_BAND } from '../src/app/reader/article/reading/reading-focus';
 
 /** A phone portrait and the same phone rotated — both under `WIDE_QUERY`
  *  (900px), the dim's only gate, so it stays active; only the viewport
- *  height, and so the reading centre, changes. */
+ *  height, and so the reading band, changes. */
 const PORTRAIT = { width: 375, height: 667 };
 const LANDSCAPE = { width: 667, height: 375 };
 
@@ -19,7 +20,7 @@ function entry(id: number) {
   });
 }
 
-// Identical rows, so the row nearest the reading centre is decided by
+// Identical rows, so the row nearest the reading band is decided by
 // position alone — not by one entry happening to be taller than its
 // neighbours.
 const ENTRIES = Array.from({ length: ENTRY_COUNT }, (_, i) => entry(i + 1));
@@ -51,20 +52,21 @@ interface FocusEdge {
   opacity: number;
 }
 
-/** The row nearest the scroller's mid-line, and the row farthest from it —
- *  the same distance metric `focusOpacityForSpan` uses. Reads each row's
+/** The row on the reading band's lower edge, and the row farthest from it. A
+ *  rotation moves that edge further than a row is tall, so the row on it is sure
+ *  to change; one merely inside the band could stay in it. Reads each row's
  *  current inline opacity as-is, so a poll can tell settled from stale. */
 async function readingFocusEdges(page: Page): Promise<{ near: FocusEdge; far: FocusEdge }> {
-  return page.evaluate(() => {
+  return page.evaluate((bandBottom) => {
     const scroller = document.querySelector('.rows') as HTMLElement;
     const scrollerTop = scroller.getBoundingClientRect().top;
-    const center = scroller.clientHeight / 2;
+    const edge = scroller.clientHeight * bandBottom;
     const rows = Array.from(scroller.querySelectorAll(':scope > *:not(.foot)')) as HTMLElement[];
     const measured = rows.map((row, index) => {
       const rect = row.getBoundingClientRect();
       const top = rect.top - scrollerTop;
       const bottom = top + rect.height;
-      const distance = Math.max(top - center, center - bottom, 0);
+      const distance = Math.max(top - edge, edge - bottom, 0);
       const opacity = row.style.opacity === '' ? 1 : Number(row.style.opacity);
       return { index, distance, opacity };
     });
@@ -74,10 +76,10 @@ async function readingFocusEdges(page: Page): Promise<{ near: FocusEdge; far: Fo
       near: { index: near.index, opacity: near.opacity },
       far: { index: far.index, opacity: far.opacity },
     };
-  });
+  }, READING_BAND.bottom);
 }
 
-/** True once the dim has settled: the row nearest the centre is focused, the
+/** True once the dim has settled: the row nearest the band is focused, the
  *  row farthest from it is dimmed toward the curve's floor. */
 async function isSettled(page: Page): Promise<boolean> {
   const { near, far } = await readingFocusEdges(page);
@@ -97,7 +99,7 @@ async function opacityOfRow(page: Page, index: number): Promise<number> {
 test.describe('Reading focus dim survives a rotation', () => {
   test.use({ viewport: PORTRAIT });
 
-  test('the dim re-applies against the new viewport centre after rotating', async ({ page }) => {
+  test('the dim re-applies against the new reading band after rotating', async ({ page }) => {
     const signedIn = await signInWithFocusedList(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
 
@@ -106,7 +108,7 @@ test.describe('Reading focus dim survives a rotation', () => {
     // count the entry rows themselves to confirm the fixture rendered in full.
     await expect(page.locator('.rows > .row-slot')).toHaveCount(ENTRY_COUNT);
 
-    // Scroll so a mid-list row sits near the centre, with rows on both
+    // Scroll so a mid-list row sits in the band, with rows on both
     // sides — not the first/last row, which would shift for reasons of its
     // own and not isolate what the rotation does to the geometry.
     await page.locator('.rows').evaluate((el) => {
@@ -123,15 +125,15 @@ test.describe('Reading focus dim survives a rotation', () => {
     await page.setViewportSize(LANDSCAPE);
 
     // Layout reflects the new viewport at once, but `ReadingFocusApplier`'s
-    // opacity write lags a frame — reading now both proves the centre moved
+    // opacity write lags a frame — reading now both proves the band moved
     // to a new row (so the poll below can't hang) and captures its stale value.
     const { near: rotatedNear } = await readingFocusEdges(page);
     expect(
       rotatedNear.index,
-      'the rotation should move the reading centre onto a different row',
+      'the rotation should move the reading band onto a different row',
     ).not.toBe(portraitNear.index);
 
-    // The dim re-applies against the new centre: some row settles near-focused
+    // The dim re-applies against the new band: some row settles near-focused
     // and some row settles clearly dimmed (the general shape of the curve)…
     await expect
       .poll(() => isSettled(page), {
@@ -139,20 +141,20 @@ test.describe('Reading focus dim survives a rotation', () => {
       })
       .toBe(true);
 
-    // …and, concretely, it is the row the rotation actually moved onto the
-    // centre line that picks up the focused opacity, not merely some row.
+    // …and, concretely, it is the row the rotation actually moved into the
+    // band that picks up the focused opacity, not merely some row.
     await expect
       .poll(() => opacityOfRow(page, rotatedNear.index), {
-        message: 'the row now on the reading centre never regained focus',
+        message: 'the row now in the reading band never regained focus',
       })
       .toBeGreaterThanOrEqual(0.9);
 
-    // The row that used to sit on the centre is off it now, so it must have
+    // The row that used to sit in the band is out of it now, so it must have
     // lost the focused opacity it carried in portrait — otherwise nothing
     // would actually have been recomputed for the new geometry.
     await expect
       .poll(() => opacityOfRow(page, portraitNear.index), {
-        message: 'the old centre row kept its portrait opacity instead of re-fading',
+        message: 'the old band row kept its portrait opacity instead of re-fading',
       })
       .toBeLessThan(0.8);
   });
