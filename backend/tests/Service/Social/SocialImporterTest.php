@@ -165,16 +165,26 @@ final class SocialImporterTest extends DbTestCase
         $this->entityManager->flush();
         $this->followAvatars()->remember($account, [
             self::bobWithAvatar(),
+            new FollowedAccountModel(
+                'did:plc:carol',
+                '@carol.test',
+                'Carol',
+                'https://bsky.app/profile/did:plc:carol/rss',
+                'https://cdn.test/carol.jpg',
+            ),
         ]);
 
-        $this->importer()->import(
-            $account,
-            new SocialImportModel([new SocialImportFeedModel('did:plc:bob', 'Bob')], [], []),
-        );
+        $this->importer()->import($account, new SocialImportModel(
+            [new SocialImportFeedModel('did:plc:bob', 'Bob'), new SocialImportFeedModel('did:plc:carol', 'Carol')],
+            [],
+            [],
+        ));
 
-        $feed = $this->feedAt('https://bsky.app/profile/did:plc:bob/rss');
+        $feed = $this->feedAt(self::BOB_FEED);
         self::assertSame('https://cdn.test/old.jpg', $feed?->getImageUrl());
         self::assertEquals($checked, $feed->getImageCheckedAt());
+        $carol = $this->feedAt('https://bsky.app/profile/did:plc:carol/rss');
+        self::assertSame('https://cdn.test/carol.jpg', $carol?->getImageUrl());
     }
 
     public function testAnExistingSubscriptionIsNotRetagged(): void
