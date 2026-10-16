@@ -8,9 +8,8 @@ use App\Entity\User;
 use App\Http\CommentsJson;
 use App\Repository\EntryListRepository;
 use App\Service\Comments\CommentsLoader;
-use App\Service\RateLimit\RateLimitGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -20,18 +19,17 @@ final readonly class EntryCommentsController
     public function __construct(
         private EntryListRepository $entryList,
         private CommentsLoader $comments,
-        private RateLimitGuard $rateLimitGuard,
-        private RateLimiterFactoryInterface $commentsLimiter,
     ) {
     }
 
     #[Route('/{id}/comments', name: 'api_entries_comments', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function comments(int $id, #[CurrentUser] User $user): JsonResponse
+    public function comments(int $id, Request $request, #[CurrentUser] User $user): JsonResponse
     {
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
+        $result = $request->query->getBoolean('refresh')
+            ? $this->comments->refreshed($user, $entry)
+            : $this->comments->load($user, $entry);
 
-        $this->rateLimitGuard->enforceForUser($this->commentsLimiter, $user);
-
-        return new JsonResponse(CommentsJson::one($this->comments->load($entry)));
+        return new JsonResponse(CommentsJson::one($result));
     }
 }

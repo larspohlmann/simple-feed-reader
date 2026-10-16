@@ -19,6 +19,7 @@ use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubFeedFetcher;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 final class EntryCommentsControllerTest extends ApiTestCase
 {
@@ -31,9 +32,11 @@ final class EntryCommentsControllerTest extends ApiTestCase
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
         self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
         $rateLimiterCache->clear();
-        $hostThrottleCache = self::getContainer()->get('host_throttle.cache');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $hostThrottleCache);
-        $hostThrottleCache->clear();
+        foreach (['host_throttle.cache', 'comments.cache'] as $poolId) {
+            $pool = self::getContainer()->get($poolId);
+            self::assertInstanceOf(CacheItemPoolInterface::class, $pool);
+            $pool->clear();
+        }
         self::ensureKernelShutdown();
     }
 
@@ -83,13 +86,17 @@ final class EntryCommentsControllerTest extends ApiTestCase
         return $fetcher;
     }
 
+    private function serveRedditThread(StubFeedFetcher $fetcher): void
+    {
+        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
+        $fetcher->willReturn(self::FEED, FetchResponseModel::fetched(self::FEED, false, $xml, null, null));
+    }
+
     public function testOkReturnsComments(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('comments-ok@example.com');
-        $fetcher = $this->installFetcher();
-        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
-        $fetcher->willReturn(self::FEED, FetchResponseModel::fetched(self::FEED, false, $xml, null, null));
+        $this->serveRedditThread($this->installFetcher());
         $entry = $this->seedEntry($user, self::redditThread());
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
@@ -156,8 +163,60 @@ final class EntryCommentsControllerTest extends ApiTestCase
         }
         $client->request('GET', $url, server: $headers);
 
-        self::assertResponseStatusCodeSame(429);
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
         self::assertCount(30, $fetcher->fetchedUrls);
+    }
+
+    public function testASecondOpenIsAnsweredFromTheCache(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->auth('comments-cached@example.com');
+        $fetcher = $this->installFetcher();
+        $this->serveRedditThread($fetcher);
+        $url = '/api/entries/' . $this->seedEntry($user, self::redditThread())->getId() . '/comments';
+
+        $client->request('GET', $url, server: $headers);
+        $first = $this->payload($client);
+        $client->request('GET', $url, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame($first, $this->payload($client));
+        self::assertCount(1, $fetcher->fetchedUrls);
+    }
+
+    public function testRefreshFetchesAgain(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->auth('comments-refresh@example.com');
+        $fetcher = $this->installFetcher();
+        $this->serveRedditThread($fetcher);
+        $url = '/api/entries/' . $this->seedEntry($user, self::redditThread())->getId() . '/comments';
+
+        $client->request('GET', $url, server: $headers);
+        $client->request('GET', $url . '?refresh=1', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('ok', $this->payload($client)['status']);
+        self::assertCount(2, $fetcher->fetchedUrls);
+    }
+
+    public function testCachedOpensSpendNoBudget(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->auth('comments-budget@example.com');
+        $fetcher = $this->installFetcher();
+        $this->serveRedditThread($fetcher);
+        $url = '/api/entries/' . $this->seedEntry($user, self::redditThread())->getId() . '/comments';
+
+        for ($request = 0; $request < 40; ++$request) {
+            $client->request('GET', $url, server: $headers);
+            self::assertResponseIsSuccessful();
+        }
+
+        self::assertCount(1, $fetcher->fetchedUrls);
     }
 
     public function testEntryWithoutCommentsFeedIs404(): void
@@ -169,7 +228,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
 
-        $this->assertRejected($client, 404);
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
     }
 
     public function testSomeoneElsesEntryIs404(): void
@@ -182,13 +241,13 @@ final class EntryCommentsControllerTest extends ApiTestCase
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
 
-        $this->assertRejected($client, 404);
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
     }
 
     public function testUnauthenticatedIs401(): void
     {
         $client = self::createClient();
         $client->request('GET', '/api/entries/1/comments');
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 }

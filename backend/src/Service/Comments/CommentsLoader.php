@@ -5,78 +5,78 @@ declare(strict_types=1);
 namespace App\Service\Comments;
 
 use App\Entity\Entry;
+use App\Entity\User;
+use App\Service\Comments\CommentsSource\CommentsSourceInterface;
+use App\Service\Comments\Exception\CommentsThrottledException;
+use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Exception\NoCommentsFeedException;
-use App\Service\Comments\Model\CommentAuthorModel;
-use App\Service\Comments\Model\CommentsPageModel;
+use App\Service\Comments\Model\CachedCommentsModel;
 use App\Service\Comments\Model\CommentsResultModel;
-use App\Service\Comments\Model\EntryCommentModel;
-use App\Service\Fetch\Exception\FeedThrottledException;
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\HostThrottle;
-use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\FeedParser;
-use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Comments\Pass\CommentsRequest;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 final readonly class CommentsLoader
 {
+    /** @param iterable<CommentsSourceInterface> $sources */
     public function __construct(
-        private FeedFetcherInterface $fetcher,
-        private FeedParser $parser,
-        private EntrySanitizer $sanitizer,
-        private HostThrottle $hostThrottle,
+        #[AutowireIterator('app.comments_source')]
+        private iterable $sources,
+        private CommentsCache $cache,
         private ClockInterface $clock,
     ) {
     }
 
-    public function load(Entry $entry): CommentsResultModel
+    /** @throws NoCommentsFeedException when no source serves the entry */
+    public function load(User $user, Entry $entry): CommentsResultModel
     {
-        $feedUrl = $entry->getDiscussion()->commentsFeedUrl
-            ?? throw new NoCommentsFeedException('The entry has no comments feed.');
-
-        $wait = $this->hostThrottle->remainingSeconds($feedUrl);
-        if ($wait > 0) {
-            return CommentsResultModel::throttled($wait);
+        $request = new CommentsRequest($this->sourceFor($entry), $user, $entry);
+        $cached = $this->cache->find($request->cacheKey());
+        if (null !== $cached) {
+            return self::read($request, $cached);
         }
 
+        return $this->fetched($request);
+    }
+
+    /** As load(), but asks the source again whatever is cached. */
+    public function refreshed(User $user, Entry $entry): CommentsResultModel
+    {
+        return $this->fetched(new CommentsRequest($this->sourceFor($entry), $user, $entry));
+    }
+
+    private function fetched(CommentsRequest $request): CommentsResultModel
+    {
         try {
-            $body = $this->fetcher->fetch($feedUrl)->modifiedBody();
+            $answer = $request->source->fetch($request->user, $request->entry);
+        } catch (CommentsThrottledException $exception) {
+            return CommentsResultModel::throttled($exception->retryAfterSeconds);
+        } catch (CommentsUnavailableException) {
+            return CommentsResultModel::failed();
+        }
+        $fetchedAt = $this->clock->now();
+        $this->cache->remember($request->cacheKey(), $answer, $fetchedAt);
 
-            $comments = $this->comments($entry, $this->parser->parse($body)->entries);
+        return self::read($request, new CachedCommentsModel($answer->body, $fetchedAt));
+    }
 
-            return CommentsResultModel::ok(new CommentsPageModel($comments), $this->clock->now());
-        } catch (FeedThrottledException $exception) {
-            $wait = $this->hostThrottle->record($feedUrl, $exception->retryAfterSeconds);
-
-            return CommentsResultModel::throttled($wait);
-        } catch (FetchException | FeedParseException) {
+    private static function read(CommentsRequest $request, CachedCommentsModel $cached): CommentsResultModel
+    {
+        try {
+            return CommentsResultModel::ok($request->source->read($request->entry, $cached->body), $cached->fetchedAt);
+        } catch (CommentsUnavailableException) {
             return CommentsResultModel::failed();
         }
     }
 
-    /**
-     * @param list<ParsedEntryModel> $parsed
-     *
-     * @return list<EntryCommentModel>
-     */
-    private function comments(Entry $entry, array $parsed): array
+    private function sourceFor(Entry $entry): CommentsSourceInterface
     {
-        $comments = [];
-        foreach ($parsed as $item) {
-            if ($item->guid === $entry->getGuid()) {
-                continue;
+        foreach ($this->sources as $source) {
+            if ($source->serves($entry)) {
+                return $source;
             }
-            $comments[] = new EntryCommentModel(
-                new CommentAuthorModel($item->author, null, $item->authorUrl, $item->authorAvatarUrl),
-                $item->url,
-                $item->publishedAt,
-                (string) $this->sanitizer->sanitize($item->contentHtml),
-                $item->author !== null && $item->author === $entry->getAuthor(),
-            );
         }
 
-        return $comments;
+        throw new NoCommentsFeedException('No comments source serves the entry.');
     }
 }
