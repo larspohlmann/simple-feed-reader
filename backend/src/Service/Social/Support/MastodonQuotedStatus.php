@@ -40,7 +40,7 @@ final class MastodonQuotedStatus
             $url,
             $account->string('display_name') ?? '',
             $handle,
-            $account->string('avatar'),
+            MastodonAuthor::avatar($account),
             DateParser::parse($status->string('created_at')),
             self::textOf($body, $status->string('spoiler_text')),
             MastodonAttachments::entryMediaOf($status),

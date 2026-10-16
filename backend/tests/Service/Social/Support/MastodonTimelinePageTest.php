@@ -216,6 +216,20 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertCount(1, $page->parsed->entries);
     }
 
+    public function testTheStillAvatarIsPreferred(): void
+    {
+        $status = self::timelineStatus(['account' => [
+            'display_name' => 'Bob',
+            'avatar' => 'https://files.mastodon.example/avatars/bob.gif',
+            'avatar_static' => 'https://files.mastodon.example/avatars/bob.png',
+        ]]);
+
+        self::assertSame(
+            'https://files.mastodon.example/avatars/bob.png',
+            MastodonTimelinePage::of([$status])->parsed->entries[0]->authorAvatarUrl,
+        );
+    }
+
     public function testAnAvatarThatIsNoWebImageIsDropped(): void
     {
         $status = self::timelineStatus(['account' => ['display_name' => 'Bob', 'avatar' => 'javascript:alert(1)']]);

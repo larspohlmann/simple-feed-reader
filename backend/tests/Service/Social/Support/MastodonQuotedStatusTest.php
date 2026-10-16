@@ -14,6 +14,19 @@ use PHPUnit\Framework\TestCase;
 
 final class MastodonQuotedStatusTest extends TestCase
 {
+    public function testTheQuotedAuthorsStillAvatarIsPreferredAndAScriptAvatarDropped(): void
+    {
+        $still = self::quotedBy([
+            'acct' => 'alice',
+            'avatar' => 'https://mastodon.example/avatars/a.gif',
+            'avatar_static' => 'https://mastodon.example/avatars/a.png',
+        ]);
+        $script = self::quotedBy(['acct' => 'alice', 'avatar' => 'javascript:alert(1)']);
+
+        self::assertSame('https://mastodon.example/avatars/a.png', $still->authorAvatarUrl);
+        self::assertNull($script->authorAvatarUrl);
+    }
+
     public function testAnAcceptedQuoteIsTheQuotedStatusWithItsLineBreaksAndMedia(): void
     {
         $quote = self::quoted(MastodonQuotedStatus::ofQuote(
@@ -119,6 +132,15 @@ final class MastodonQuotedStatusTest extends TestCase
             new QuotedPostReference('https://third.example/@carol/7', 'carol@third.example'),
             $quote->nestedQuote,
         );
+    }
+
+    /** @param array<string, string> $account */
+    private static function quotedBy(array $account): QuotedPostContent
+    {
+        return self::quoted(MastodonQuotedStatus::ofQuote(JsonNodeModel::of([
+            'state' => 'accepted',
+            'quoted_status' => self::statusFields(['account' => $account]),
+        ])));
     }
 
     private static function quoted(?QuotedPostContent $quote): QuotedPostContent
