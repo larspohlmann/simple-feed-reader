@@ -77,7 +77,7 @@ final readonly class MastodonReplyThread
     }
 
     /**
-     * A repeated id is read once: a second status under it would answer itself and never end.
+     * A repeated id is read once: the first copy wins.
      *
      * @param list<JsonNodeModel> $descendants
      *

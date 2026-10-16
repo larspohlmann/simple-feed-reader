@@ -111,7 +111,7 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertStringContainsString('Read ', $html);
     }
 
-    public function testAReplysMarkupIsSanitized(): void
+    public function testAReplysMarkupStaysTextAndItsLinksAreHardened(): void
     {
         $reply = self::replyBy('did:plc:shown', []);
         $reply['post'] = [
