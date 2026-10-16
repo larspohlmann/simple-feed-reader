@@ -34,7 +34,10 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$home->requireId(), $profile->requireId()],
-            $this->idsOf($this->subscriptions()->findForUserOnNetwork($user->requireId(), NetworkScope::whole(SocialNetwork::Bluesky))),
+            $this->idsOf($this->subscriptions()->findForUserOnNetwork(
+                $user->requireId(),
+                NetworkScope::whole(SocialNetwork::Bluesky),
+            )),
         );
     }
 
@@ -63,7 +66,10 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$own->requireId()],
-            $this->idsOf($this->subscriptions()->findForUserOnNetwork($user->requireId(), NetworkScope::whole(SocialNetwork::Mastodon))),
+            $this->idsOf($this->subscriptions()->findForUserOnNetwork(
+                $user->requireId(),
+                NetworkScope::whole(SocialNetwork::Mastodon),
+            )),
         );
     }
 
@@ -72,7 +78,10 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
         $user = $this->user('network-empty@example.com');
         $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::PLAIN);
 
-        self::assertSame([], $this->subscriptions()->findForUserOnNetwork($user->requireId(), NetworkScope::whole(SocialNetwork::Bluesky)));
+        self::assertSame([], $this->subscriptions()->findForUserOnNetwork(
+            $user->requireId(),
+            NetworkScope::whole(SocialNetwork::Bluesky),
+        ));
     }
 
     /** TagEditor::delete() detaches through it: a missed subscription would keep wearing the deleted tag. */

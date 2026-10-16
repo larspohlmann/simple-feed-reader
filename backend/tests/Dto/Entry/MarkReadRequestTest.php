@@ -96,7 +96,12 @@ final class MarkReadRequestTest extends TestCase
 
     private function networkRequest(?string $network, ?string $feedKind = null): MarkReadRequest
     {
-        return new MarkReadRequest('network', new \DateTimeImmutable('2026-07-10T00:00:00Z'), network: $network, feedKind: $feedKind);
+        return new MarkReadRequest(
+            'network',
+            new \DateTimeImmutable('2026-07-10T00:00:00Z'),
+            network: $network,
+            feedKind: $feedKind,
+        );
     }
 
     /** @param array<string, list<string>> $errors */
