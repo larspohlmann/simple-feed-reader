@@ -9,7 +9,7 @@ use App\Service\Comments\Model\EntryCommentModel;
 final readonly class ReplyNode
 {
     /**
-     * @param \Closure(): EntryCommentModel $commentOf builds the comment only when the page keeps it
+     * @param \Closure(?\DateTimeImmutable): EntryCommentModel $commentOf builds the comment only when the page keeps it
      * @param list<ReplyNode>          $replies
      */
     public function __construct(
@@ -21,6 +21,6 @@ final readonly class ReplyNode
 
     public function comment(): EntryCommentModel
     {
-        return ($this->commentOf)();
+        return ($this->commentOf)($this->publishedAt);
     }
 }

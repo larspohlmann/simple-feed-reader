@@ -63,21 +63,25 @@ final readonly class MastodonContextReplies
         return array_map(
             fn (JsonNodeModel $status): ReplyNode => new ReplyNode(
                 self::publishedAtOf($status),
-                fn (): EntryCommentModel => $this->commentOf($status, $thread),
+                fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
+                    => $this->commentOf($status, $publishedAt, $thread),
                 $this->nodesOf($thread->answersTo($status), $thread),
             ),
             $statuses,
         );
     }
 
-    private function commentOf(JsonNodeModel $status, MastodonReplyThread $thread): EntryCommentModel
-    {
+    private function commentOf(
+        JsonNodeModel $status,
+        ?\DateTimeImmutable $publishedAt,
+        MastodonReplyThread $thread,
+    ): EntryCommentModel {
         $account = $status->node('account');
 
         return new EntryCommentModel(
             self::authorOf($account),
             AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri')),
-            self::publishedAtOf($status),
+            $publishedAt,
             $this->htmlOf($status),
             $thread->isByPostAuthor($account),
             self::embedsOf($status),

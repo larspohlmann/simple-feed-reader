@@ -57,7 +57,8 @@ final readonly class BlueskyThreadReplies
                 $post = $reply->node('post');
                 $nodes[] = new ReplyNode(
                     self::publishedAtOf($post),
-                    fn (): EntryCommentModel => $this->commentOf($post, $entryAuthor),
+                    fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
+                        => $this->commentOf($post, $publishedAt, $entryAuthor),
                     $this->nodesOf($reply->nodes('replies'), $entryAuthor),
                 );
             }
@@ -76,15 +77,18 @@ final readonly class BlueskyThreadReplies
             && !$viewer->has('blocking');
     }
 
-    private function commentOf(JsonNodeModel $post, ?string $entryAuthor): EntryCommentModel
-    {
+    private function commentOf(
+        JsonNodeModel $post,
+        ?\DateTimeImmutable $publishedAt,
+        ?string $entryAuthor,
+    ): EntryCommentModel {
         $author = $post->node('author');
         $rendered = $this->embeds->render($post);
 
         return new EntryCommentModel(
             self::authorOf($author),
             AtPostUri::webUrl($post->string('uri') ?? ''),
-            self::publishedAtOf($post),
+            $publishedAt,
             $this->htmlOf($post->node('record'), $rendered?->uncardedLink),
             $entryAuthor !== null && \in_array($entryAuthor, [$author->string('did'), $author->string('handle')], true),
             self::embedsOf($rendered),

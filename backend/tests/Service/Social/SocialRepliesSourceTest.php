@@ -271,10 +271,10 @@ final class SocialRepliesSourceTest extends DbTestCase
 
         return new ReplyNode(
             $at,
-            static fn (): EntryCommentModel => new EntryCommentModel(
+            static fn (?\DateTimeImmutable $publishedAt): EntryCommentModel => new EntryCommentModel(
                 new CommentAuthorModel('Ann'),
                 null,
-                $at,
+                $publishedAt,
                 $text,
                 false,
             ),

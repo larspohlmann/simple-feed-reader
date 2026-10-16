@@ -20,7 +20,7 @@ final class ThreadWalk
     /** @param list<ReplyNode> $replies */
     public function walkNewestFirst(array $replies): void
     {
-        usort($replies, self::newestFirst(...));
+        usort($replies, static fn (ReplyNode $left, ReplyNode $right): int => self::oldestFirst($right, $left));
         $this->walkAll($replies, 0);
     }
 
@@ -54,11 +54,6 @@ final class ThreadWalk
         $replies = $node->replies;
         usort($replies, self::oldestFirst(...));
         $this->walkAll($replies, $depth + 1);
-    }
-
-    private static function newestFirst(ReplyNode $left, ReplyNode $right): int
-    {
-        return self::timeOf($right) <=> self::timeOf($left);
     }
 
     private static function oldestFirst(ReplyNode $left, ReplyNode $right): int

@@ -126,7 +126,7 @@ final class ReplyThreadOrderTest extends TestCase
     private function node(string $url, ?string $at, ReplyNode ...$replies): ReplyNode
     {
         $publishedAt = $at === null ? null : new \DateTimeImmutable($at);
-        $comment = function () use ($url, $publishedAt): EntryCommentModel {
+        $comment = function (?\DateTimeImmutable $publishedAt) use ($url): EntryCommentModel {
             $this->built[] = $url;
 
             return new EntryCommentModel(new CommentAuthorModel('Ann'), $url, $publishedAt, '<p>Hi</p>', false);
