@@ -2,12 +2,12 @@ import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SocialNetworkName } from '../../../core/social-network';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SocialSection } from '../../state/social-sections';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
+import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 
 const collapsedKey = (network: SocialNetworkName): string => `sfr.${network}.collapsed`;
 const profilesCollapsedKey = (network: SocialNetworkName): string =>
@@ -16,7 +16,13 @@ const profilesCollapsedKey = (network: SocialNetworkName): string =>
 /** One network's social feeds, collapsible and remembered like Tags; a handle heads each of several accounts. */
 @Component({
   selector: 'app-sidebar-social-section',
-  imports: [RouterLink, TranslocoPipe, IconComponent, TagGlyphComponent, SidebarFeedRowComponent],
+  imports: [
+    RouterLink,
+    TranslocoPipe,
+    IconComponent,
+    SidebarFeedRowComponent,
+    SidebarGroupRowComponent,
+  ],
   templateUrl: './sidebar-social-section.component.html',
   styleUrl: './sidebar-social-section.component.scss',
 })
