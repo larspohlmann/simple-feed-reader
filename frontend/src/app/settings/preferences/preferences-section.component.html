@@ -44,6 +44,19 @@
     </app-settings-row>
 
     <app-settings-row
+      [title]="'settings.listAutoplay' | transloco"
+      [description]="'settings.listAutoplayHint' | transloco"
+      labelFor="list-autoplay-toggle"
+    >
+      <app-toggle
+        inputId="list-autoplay-toggle"
+        [checked]="listAutoplay.enabled()"
+        [label]="'settings.listAutoplay' | transloco"
+        (toggled)="listAutoplay.setEnabled($event)"
+      />
+    </app-settings-row>
+
+    <app-settings-row
       [title]="'settings.magazineStyle' | transloco"
       [description]="'settings.magazineStyleHint' | transloco"
       [stackable]="true"
