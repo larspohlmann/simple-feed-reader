@@ -20,6 +20,7 @@ const collapsedKey = (network: SocialNetworkName): string => `sfr.${network}.col
 export class SidebarSocialSectionComponent {
   readonly section = input.required<SocialSection>();
   readonly selection = input.required<Selection>();
+  readonly organising = input(false);
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
   protected readonly expanded = this.collapsible.expanded;
