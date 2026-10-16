@@ -32,6 +32,7 @@ final readonly class ImportCandidates
         private FollowMatcher $followMatcher,
         private SocialFeedRepository $socialFeeds,
         private ActingAccountGuard $guard,
+        private FollowAvatarCache $followAvatars,
     ) {
     }
 
@@ -42,6 +43,7 @@ final readonly class ImportCandidates
     public function forAccount(SocialAccount $account): ImportCandidatesModel
     {
         $network = $this->networkCandidatesOf($account);
+        $this->followAvatars->remember($account, $network->follows);
         $follows = $this->followMatcher->match(
             new FollowMatching($account->getNetwork(), $network->follows),
             $this->profileFeedsOf($account),
