@@ -37,7 +37,8 @@ export class GifComponent {
   readonly medium = input.required<EntryMediumDto>();
 
   protected readonly wanted = signal(true);
-  private readonly nearViewport = signal(typeof IntersectionObserver === 'undefined');
+  private readonly watchesViewport = typeof IntersectionObserver !== 'undefined';
+  private readonly nearViewport = signal(!this.watchesViewport);
   protected readonly playing = computed(() => this.wanted() && this.nearViewport());
   private readonly fallbackLabel = translateSignal('reader.media.gif');
   protected readonly label = computed(() => this.medium().alt || this.fallbackLabel());
@@ -60,7 +61,7 @@ export class GifComponent {
   }
 
   private watchViewport(host: HTMLElement): void {
-    if (typeof IntersectionObserver === 'undefined') return;
+    if (!this.watchesViewport) return;
     const observer = new IntersectionObserver(
       (changes) => {
         for (const change of changes) this.nearViewport.set(change.isIntersecting);
