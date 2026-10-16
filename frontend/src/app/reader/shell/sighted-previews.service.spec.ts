@@ -110,7 +110,9 @@ describe('SightedPreviews', () => {
 
   it('skips a waiting entry that finished meanwhile', () => {
     for (const id of [1, 2, 3, 4]) sightings().sighted(id);
-    entries.update((listed) => listed.map((entry) => (entry.id === 4 ? row(4, { pending: false }) : entry)));
+    entries.update((listed) =>
+      listed.map((entry) => (entry.id === 4 ? row(4, { pending: false }) : entry)),
+    );
 
     answer(1, [row(1)]);
 
