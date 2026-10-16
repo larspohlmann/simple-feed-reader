@@ -534,7 +534,7 @@ final class EntryListTest extends DbTestCase
         $this->entryIn($mastodon, 'mastodon', '2026-07-07T00:00:00Z');
 
         $rows = $this->repository()->listForUser(
-            new EntryQuery($this->user->requireId(), network: NetworkScope::whole(SocialNetwork::Bluesky)),
+            new EntryQuery($this->user->requireId(), networkScope: NetworkScope::whole(SocialNetwork::Bluesky)),
         );
 
         self::assertSame(['bluesky'], $this->guids($rows));
@@ -545,7 +545,7 @@ final class EntryListTest extends DbTestCase
         $this->entry('plain', '2026-07-05T00:00:00Z');
 
         $rows = $this->repository()->listForUser(
-            new EntryQuery($this->user->requireId(), network: NetworkScope::whole(SocialNetwork::Mastodon)),
+            new EntryQuery($this->user->requireId(), networkScope: NetworkScope::whole(SocialNetwork::Mastodon)),
         );
 
         self::assertSame([], $rows);
@@ -560,7 +560,7 @@ final class EntryListTest extends DbTestCase
         $query = new EntryQuery(
             $this->user->requireId(),
             limit: 2,
-            network: NetworkScope::whole(SocialNetwork::Bluesky),
+            networkScope: NetworkScope::whole(SocialNetwork::Bluesky),
         );
 
         $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
@@ -582,7 +582,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->flush();
 
         $rows = $this->repository()->listForUser(
-            new EntryQuery($this->user->requireId(), network: NetworkScope::whole(SocialNetwork::Bluesky)),
+            new EntryQuery($this->user->requireId(), networkScope: NetworkScope::whole(SocialNetwork::Bluesky)),
         );
 
         self::assertSame(['network-copy'], $this->guids($rows));

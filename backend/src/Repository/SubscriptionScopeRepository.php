@@ -34,13 +34,13 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
     }
 
     /** @return list<Subscription> */
-    public function findForUserOnNetwork(int $userId, NetworkScope $network): array
+    public function findForUserOnNetwork(int $userId, NetworkScope $networkScope): array
     {
         $qb = $this->createQueryBuilder('s')
             ->join('s.feed', 'f')->addSelect('f')
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->orderBy('s.id', 'ASC');
-        NetworkScopeDql::restrict($qb, 'f', $network);
+        NetworkScopeDql::restrict($qb, 'f', $networkScope);
 
         /** @var list<Subscription> $rows */
         $rows = $qb->getQuery()->getResult();

@@ -11,7 +11,7 @@ final readonly class ReadScopeModel
     private function __construct(
         public ReadScopeKind $kind,
         private ?int $id,
-        private ?NetworkScope $network = null,
+        private ?NetworkScope $networkScope = null,
     ) {
     }
 
@@ -30,9 +30,9 @@ final readonly class ReadScopeModel
         return new self(ReadScopeKind::Tag, $tagId);
     }
 
-    public static function network(NetworkScope $network): self
+    public static function network(NetworkScope $networkScope): self
     {
-        return new self(ReadScopeKind::Network, null, $network);
+        return new self(ReadScopeKind::Network, null, $networkScope);
     }
 
     public function targetId(): int
@@ -41,9 +41,9 @@ final readonly class ReadScopeModel
             ?? throw new \LogicException(sprintf('A "%s" scope names no subscription or tag.', $this->kind->value));
     }
 
-    public function targetNetwork(): NetworkScope
+    public function targetNetworkScope(): NetworkScope
     {
-        return $this->network
+        return $this->networkScope
             ?? throw new \LogicException(sprintf('A "%s" scope names no network.', $this->kind->value));
     }
 }

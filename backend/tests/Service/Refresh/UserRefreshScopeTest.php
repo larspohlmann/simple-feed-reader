@@ -106,7 +106,7 @@ final class UserRefreshScopeTest extends DbTestCase
         );
 
         self::assertSame($this->user->requireId(), $request->userId);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->networkScope);
         self::assertNull($request->feedId);
         self::assertNull($request->tagId);
         self::assertTrue($request->force);

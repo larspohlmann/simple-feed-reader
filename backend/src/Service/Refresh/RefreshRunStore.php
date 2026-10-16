@@ -80,8 +80,8 @@ final readonly class RefreshRunStore
             return 'tag-' . $request->tagId;
         }
 
-        if (null !== $request->network) {
-            return 'set-network-' . $request->network->toRunKey();
+        if (null !== $request->networkScope) {
+            return 'set-network-' . $request->networkScope->toRunKey();
         }
 
         return 'all';

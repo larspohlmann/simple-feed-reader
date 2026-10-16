@@ -106,7 +106,7 @@ final class FeedRepositoryTest extends DbTestCase
             tagId: 9,
             force: true,
             cooldownCutoff: $this->now->modify('-5 minutes'),
-            network: NetworkScope::whole(SocialNetwork::Mastodon),
+            networkScope: NetworkScope::whole(SocialNetwork::Mastodon),
         );
 
         $narrowed = $original->excluding([42]);
@@ -118,7 +118,7 @@ final class FeedRepositoryTest extends DbTestCase
         self::assertSame(9, $narrowed->tagId);
         self::assertTrue($narrowed->force);
         self::assertEquals($original->cooldownCutoff, $narrowed->cooldownCutoff);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Mastodon), $narrowed->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Mastodon), $narrowed->networkScope);
         self::assertSame([], $original->excludedFeedIds);
     }
 

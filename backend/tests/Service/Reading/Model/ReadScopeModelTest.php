@@ -40,7 +40,7 @@ final class ReadScopeModelTest extends TestCase
         $scope = ReadScopeModel::network(NetworkScope::whole(SocialNetwork::Mastodon));
 
         self::assertSame(ReadScopeKind::Network, $scope->kind);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Mastodon), $scope->targetNetwork());
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Mastodon), $scope->targetNetworkScope());
     }
 
     public function testANetworkScopeHasNoTargetId(): void
@@ -54,7 +54,7 @@ final class ReadScopeModelTest extends TestCase
     {
         $this->expectException(\LogicException::class);
 
-        ReadScopeModel::tag(9)->targetNetwork();
+        ReadScopeModel::tag(9)->targetNetworkScope();
     }
 
     public function testAnAllScopeHasNoTargetId(): void

@@ -79,13 +79,13 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
         self::assertSame([], $this->feeds()->findDue($criteria, 50));
     }
 
-    private function criteria(User $owner, NetworkScope $network): DueFeedCriteria
+    private function criteria(User $owner, NetworkScope $networkScope): DueFeedCriteria
     {
         return new DueFeedCriteria(
             new \DateTimeImmutable(self::NOW),
             $owner->requireId(),
             force: true,
-            network: $network,
+            networkScope: $networkScope,
         );
     }
 

@@ -34,8 +34,8 @@ final class EntryQueryTest extends TestCase
 
     public function testANetworkScopedViewNeverHides(): void
     {
-        $bluesky = new EntryQuery(1, EntryView::All, network: NetworkScope::whole(SocialNetwork::Bluesky));
-        $mastodon = new EntryQuery(1, EntryView::Unread, network: NetworkScope::whole(SocialNetwork::Mastodon));
+        $bluesky = new EntryQuery(1, EntryView::All, networkScope: NetworkScope::whole(SocialNetwork::Bluesky));
+        $mastodon = new EntryQuery(1, EntryView::Unread, networkScope: NetworkScope::whole(SocialNetwork::Mastodon));
 
         self::assertFalse($bluesky->hidesExcludedFeeds());
         self::assertFalse($mastodon->hidesExcludedFeeds());
@@ -63,7 +63,7 @@ final class EntryQueryTest extends TestCase
     public function testATagOrANetworkNarrowsTheFanIn(): void
     {
         self::assertTrue((new EntryQuery(1, EntryView::All, tagId: 3))->isNarrowedFanIn());
-        $query = new EntryQuery(1, EntryView::Unread, network: NetworkScope::whole(SocialNetwork::Bluesky));
+        $query = new EntryQuery(1, EntryView::Unread, networkScope: NetworkScope::whole(SocialNetwork::Bluesky));
 
         self::assertTrue($query->isDateOrderedFanIn());
         self::assertTrue($query->isNarrowedFanIn());

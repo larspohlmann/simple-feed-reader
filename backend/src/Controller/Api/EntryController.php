@@ -82,7 +82,7 @@ final readonly class EntryController
             cursor: EntryCursor::fromRequestValue($page->cursor),
             limit: $page->limit,
             order: $listOrder,
-            network: $networkScope,
+            networkScope: $networkScope,
         );
 
         $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());

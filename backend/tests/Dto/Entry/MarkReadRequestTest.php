@@ -44,14 +44,14 @@ final class MarkReadRequestTest extends TestCase
         $scope = $this->networkRequest('bluesky')->toScope();
 
         self::assertSame(ReadScopeKind::Network, $scope->kind);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $scope->targetNetwork());
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $scope->targetNetworkScope());
     }
 
     public function testANetworkScopeCarriesItsFeedKind(): void
     {
         self::assertEquals(
             NetworkScope::profiles(SocialNetwork::Bluesky),
-            $this->networkRequest('bluesky', 'profile')->toScope()->targetNetwork(),
+            $this->networkRequest('bluesky', 'profile')->toScope()->targetNetworkScope(),
         );
     }
 

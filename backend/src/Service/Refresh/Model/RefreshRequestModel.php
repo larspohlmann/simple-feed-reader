@@ -18,7 +18,7 @@ final readonly class RefreshRequestModel
         public int $budgetSeconds,
         public bool $prune,
         public int $batchLimit = self::DEFAULT_BATCH_LIMIT,
-        public ?NetworkScope $network = null,
+        public ?NetworkScope $networkScope = null,
     ) {
     }
 
@@ -37,9 +37,9 @@ final readonly class RefreshRequestModel
         return new self($userId, null, $tagId, true, $budgetSeconds, false);
     }
 
-    public static function forUserNetwork(int $userId, NetworkScope $network, int $budgetSeconds): self
+    public static function forUserNetwork(int $userId, NetworkScope $networkScope, int $budgetSeconds): self
     {
-        return new self($userId, null, null, true, $budgetSeconds, false, network: $network);
+        return new self($userId, null, null, true, $budgetSeconds, false, networkScope: $networkScope);
     }
 
     public static function forFeed(int $feedId, int $budgetSeconds): self
@@ -62,7 +62,7 @@ final readonly class RefreshRequestModel
             $this->budgetSeconds,
             false,
             $this->batchLimit,
-            $this->network,
+            $this->networkScope,
         );
     }
 
@@ -76,7 +76,7 @@ final readonly class RefreshRequestModel
             $this->budgetSeconds,
             $this->prune,
             $this->batchLimit,
-            $this->network,
+            $this->networkScope,
         );
     }
 
@@ -90,7 +90,7 @@ final readonly class RefreshRequestModel
             $this->budgetSeconds,
             $this->prune,
             $batchLimit,
-            $this->network,
+            $this->networkScope,
         );
     }
 }

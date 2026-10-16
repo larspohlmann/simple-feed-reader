@@ -8,7 +8,7 @@ use App\Enum\NetworkFeedKind;
 use App\Enum\SourceFormat;
 use Doctrine\ORM\QueryBuilder;
 
-/** A profile feed is a networked feed not read through an account, as SubscriptionJson::social() classifies it. */
+/** A profile feed is a networked feed whose source format is not a private (account-read) one. */
 final class NetworkScopeDql
 {
     public static function restrict(QueryBuilder $qb, string $feedAlias, NetworkScope $scope): void

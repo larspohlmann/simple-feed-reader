@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Repository\NetworkScope;
 use App\Http\RefreshJson;
+use App\Repository\NetworkScope;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Refresh\TrackedRefreshRunner;
 use App\Service\Refresh\UserRefreshScope;

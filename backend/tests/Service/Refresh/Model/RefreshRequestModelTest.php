@@ -97,7 +97,7 @@ final class RefreshRequestModelTest extends TestCase
         $request = RefreshRequestModel::forUserNetwork(7, NetworkScope::whole(SocialNetwork::Bluesky), 30);
 
         self::assertSame(7, $request->userId);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->networkScope);
         self::assertNull($request->feedId);
         self::assertNull($request->tagId);
         self::assertTrue($request->force);
@@ -108,8 +108,8 @@ final class RefreshRequestModelTest extends TestCase
     {
         $request = RefreshRequestModel::forUserNetwork(7, NetworkScope::whole(SocialNetwork::Bluesky), 30);
 
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->withoutPruning()->network);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->ignoringSchedule()->network);
-        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->limitedTo(5)->network);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->withoutPruning()->networkScope);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->ignoringSchedule()->networkScope);
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->limitedTo(5)->networkScope);
     }
 }

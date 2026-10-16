@@ -8,7 +8,6 @@ use App\Enum\NetworkFeedKind;
 use App\Enum\SocialNetwork;
 use App\Exception\ValidationException;
 
-/** A network's feeds, or only its profile feeds: the scope a list, a mark-read and a refresh share (#1659). */
 final readonly class NetworkScope
 {
     private function __construct(public SocialNetwork $network, public ?NetworkFeedKind $feedKind)
@@ -36,7 +35,11 @@ final readonly class NetworkScope
             throw new ValidationException(['feedKind' => ['A feedKind needs a network.']]);
         }
 
-        return $socialNetwork === null ? null : new self($socialNetwork, $kind);
+        if ($socialNetwork === null) {
+            return null;
+        }
+
+        return $kind === null ? self::whole($socialNetwork) : self::profiles($socialNetwork);
     }
 
     public function toRunKey(): string

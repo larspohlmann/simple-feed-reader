@@ -22,7 +22,7 @@ final readonly class DueFeedCriteria
         public bool $force = false,
         public ?\DateTimeImmutable $cooldownCutoff = null,
         public array $excludedFeedIds = [],
-        public ?NetworkScope $network = null,
+        public ?NetworkScope $networkScope = null,
     ) {
     }
 
@@ -39,7 +39,7 @@ final readonly class DueFeedCriteria
             $this->force,
             $this->cooldownCutoff,
             $feedIds,
-            $this->network,
+            $this->networkScope,
         );
     }
 }

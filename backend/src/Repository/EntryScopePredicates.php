@@ -36,8 +36,8 @@ final readonly class EntryScopePredicates
                 \sprintf('IDENTITY(%s.tag) = :tagId', $aliases->tag),
             )->setParameter('tagId', $query->tagId);
         }
-        if ($query->network !== null) {
-            $this->onNetwork($qb, $aliases, $query->network);
+        if ($query->networkScope !== null) {
+            $this->onNetwork($qb, $aliases, $query->networkScope);
         }
         if ($query->hidesExcludedFeeds()) {
             $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
@@ -61,10 +61,10 @@ final readonly class EntryScopePredicates
         $qb->andWhere(\sprintf('%s.id IN (:ids)', $aliases->entry))->setParameter('ids', $entryIds);
     }
 
-    private function onNetwork(QueryBuilder $qb, EntryAliases $aliases, NetworkScope $network): void
+    private function onNetwork(QueryBuilder $qb, EntryAliases $aliases, NetworkScope $networkScope): void
     {
         $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed);
-        NetworkScopeDql::restrict($qb, $aliases->networkFeed, $network);
+        NetworkScopeDql::restrict($qb, $aliases->networkFeed, $networkScope);
     }
 
     private function applyView(QueryBuilder $qb, EntryAliases $aliases, EntryView $view): void

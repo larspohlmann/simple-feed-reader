@@ -33,7 +33,7 @@ final readonly class EntryQuery
         public ?EntryCursor $cursor = null,
         int $limit = self::DEFAULT_LIMIT,
         public ListOrder $order = ListOrder::NewestFirst,
-        public ?NetworkScope $network = null,
+        public ?NetworkScope $networkScope = null,
     ) {
         if ($view === EntryView::ForYou) {
             throw new \LogicException('The for-you feed pages through ForYouFeedQuery, never an EntryQuery.');
@@ -80,6 +80,6 @@ final readonly class EntryQuery
 
     private function isNarrowed(): bool
     {
-        return $this->tagId !== null || $this->network !== null;
+        return $this->tagId !== null || $this->networkScope !== null;
     }
 }
