@@ -3,10 +3,10 @@ import { Selection, listOrderOf } from '../query/query';
 
 /**
  * Storage key for a selection's scroll offset. Distinguishes feed / tag / view,
- * unread-vs-all and the list order so every list remembers its own place independently.
+ * unread-vs-all, a network and its feed kind, and the list order so every list remembers its own place independently.
  */
 export function scrollKey(selection: Selection): string {
-  return `feed-reader:list-scroll:${selection.kind}:${selection.id ?? ''}:${selection.unread ? 'u' : 'a'}:${selection.term ?? ''}:${listOrderOf(selection)}`;
+  return `feed-reader:list-scroll:${selection.kind}:${selection.id ?? ''}:${selection.unread ? 'u' : 'a'}:${selection.term ?? ''}:${selection.network ?? ''}:${selection.feedKind ?? ''}:${listOrderOf(selection)}`;
 }
 
 /** Storage key for an open article's own scroll offset, keyed by entry id. */
