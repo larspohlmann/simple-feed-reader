@@ -1043,6 +1043,9 @@
     "hideSidebar": "Seitenleiste ausblenden",
     "showSidebar": "Seitenleiste einblenden",
     "mediaVideo": "Video",
+    "media": {
+      "gif": "GIF"
+    },
     "quotedVideo": "Video im zitierten Beitrag",
     "quotingPostBy": "Zitiert einen Beitrag von {{handle}}",
     "quotingPost": "Zitiert einen Beitrag",

@@ -1,11 +1,13 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
 import { GifComponent } from './gif.component';
 import { EntryMediumDto } from '../../entry-medium';
 import {
   restoreIntersectionObserver,
   stubIntersectionObserver,
 } from '../../../../testing/intersection-observer-testing';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
 const pickerGif: EntryMediumDto = {
   url: 'https://static.test/clap.gif?hh=280&ww=498',
@@ -46,7 +48,7 @@ afterEach(() => {
 });
 
 async function mount(medium: EntryMediumDto) {
-  TestBed.configureTestingModule({ imports: [HostComponent] });
+  TestBed.configureTestingModule({ imports: [HostComponent, provideTranslocoTesting()] });
   const fixture = TestBed.createComponent(HostComponent);
   fixture.componentInstance.medium = medium;
   const parentClicks = jest.fn();
@@ -110,6 +112,16 @@ describe('GifComponent', () => {
     expect(gif.getAttribute('aria-label')).toBe('GIF');
   });
 
+  it('is named GIF in German too when it has no alt text', async () => {
+    const { gif, fixture } = await mount(gifv);
+
+    TestBed.inject(TranslocoService).setActiveLang('de');
+    fixture.detectChanges();
+
+    expect(gif.getAttribute('aria-label')).toBe('GIF');
+    expect(TestBed.inject(TranslocoService).translate('reader.media.gif')).toBe('GIF');
+  });
+
   it('plays a looping clip muted and without controls', async () => {
     const { gif } = await mount(gifv);
     const clip = gif.querySelector('video')!;
@@ -140,7 +152,7 @@ describe('GifComponent', () => {
   });
 
   it('downloads nothing before it is near the viewport', async () => {
-    TestBed.configureTestingModule({ imports: [HostComponent] });
+    TestBed.configureTestingModule({ imports: [HostComponent, provideTranslocoTesting()] });
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.medium = gifv;
     fixture.detectChanges();
@@ -156,6 +168,7 @@ describe('GifComponent', () => {
 
     await scrolledTo(false);
     expect(imageOf(gif).getAttribute('src')).toBe(pickerGif.previewImageUrl);
+    expect(gif.getAttribute('aria-pressed')).toBe('true');
 
     await scrolledTo(true);
     expect(imageOf(gif).getAttribute('src')).toBe(pickerGif.url);

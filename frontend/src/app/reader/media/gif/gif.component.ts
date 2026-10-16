@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { translateSignal } from '@jsverse/transloco';
 import { EntryMediumDto } from '../../entry-medium';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 
@@ -26,7 +27,7 @@ const NEAR_VIEWPORT = '200px';
     role: 'button',
     tabindex: '0',
     '[attr.aria-label]': 'label()',
-    '[attr.aria-pressed]': 'playing()',
+    '[attr.aria-pressed]': 'wanted()',
     '(click)': 'toggle($event)',
     '(keydown.enter)': 'toggle($event)',
     '(keydown.space)': 'toggle($event)',
@@ -35,10 +36,11 @@ const NEAR_VIEWPORT = '200px';
 export class GifComponent {
   readonly medium = input.required<EntryMediumDto>();
 
-  private readonly wanted = signal(true);
+  protected readonly wanted = signal(true);
   private readonly nearViewport = signal(typeof IntersectionObserver === 'undefined');
   protected readonly playing = computed(() => this.wanted() && this.nearViewport());
-  protected readonly label = computed(() => this.medium().alt || 'GIF');
+  private readonly fallbackLabel = translateSignal('reader.media.gif');
+  protected readonly label = computed(() => this.medium().alt || this.fallbackLabel());
   private readonly clip = viewChild<ElementRef<HTMLVideoElement>>('clip');
 
   constructor() {

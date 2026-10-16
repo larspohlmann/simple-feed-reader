@@ -1043,6 +1043,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "mediaVideo": "Video",
+    "media": {
+      "gif": "GIF"
+    },
     "quotedVideo": "Video in the quoted post",
     "quotingPostBy": "Quoting a post by {{handle}}",
     "quotingPost": "Quoting a post",
