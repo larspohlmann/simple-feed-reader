@@ -373,6 +373,7 @@ describe('EntryCommentsComponent', () => {
       showReplyVideo();
       const suspend = jest.spyOn(ownCoordinator(), 'suspend');
       const resume = jest.spyOn(ownCoordinator(), 'resume');
+      playing(ownVideo);
 
       ownVideo.dispatchEvent(new Event('play'));
       expect(suspend).toHaveBeenCalledTimes(1);
@@ -398,6 +399,7 @@ describe('EntryCommentsComponent', () => {
     it("resumes reply autoplay once the post's own video ends", () => {
       showReplyVideo();
       const resume = jest.spyOn(ownCoordinator(), 'resume');
+      playing(ownVideo);
 
       ownVideo.dispatchEvent(new Event('play'));
       ownVideo.dispatchEvent(new Event('ended'));
@@ -408,11 +410,74 @@ describe('EntryCommentsComponent', () => {
     it('stops watching the article once destroyed', () => {
       showReplyVideo();
       const suspend = jest.spyOn(ownCoordinator(), 'suspend');
+      playing(ownVideo);
       fixture.destroy();
 
       ownVideo.dispatchEvent(new Event('play'));
 
       expect(suspend).not.toHaveBeenCalled();
+    });
+
+    it("drops the post's medium listeners once destroyed", () => {
+      showReplyVideo();
+      const resume = jest.spyOn(ownCoordinator(), 'resume');
+      playing(ownVideo);
+      ownVideo.dispatchEvent(new Event('play'));
+      fixture.destroy();
+
+      ownVideo.dispatchEvent(new Event('pause'));
+
+      expect(resume).not.toHaveBeenCalled();
+    });
+
+    it('holds reply autoplay until every outside medium has stopped', () => {
+      showReplyVideo();
+      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
+      const resume = jest.spyOn(ownCoordinator(), 'resume');
+      const enclosure = document.createElement('audio');
+      article.prepend(enclosure);
+      playing(ownVideo);
+      playing(enclosure);
+
+      ownVideo.dispatchEvent(new Event('play'));
+      enclosure.dispatchEvent(new Event('play'));
+      ownVideo.dispatchEvent(new Event('pause'));
+      expect(suspend).toHaveBeenCalledTimes(1);
+      expect(resume).not.toHaveBeenCalled();
+
+      enclosure.dispatchEvent(new Event('ended'));
+      expect(resume).toHaveBeenCalledTimes(1);
+    });
+
+    it('holds reply autoplay while an outside audio plays', () => {
+      showReplyVideo();
+      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
+      const enclosure = document.createElement('audio');
+      article.prepend(enclosure);
+      playing(enclosure);
+
+      enclosure.dispatchEvent(new Event('play'));
+
+      expect(suspend).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not hold reply autoplay for an outside medium paused before its play arrives', () => {
+      showReplyVideo();
+      const suspend = jest.spyOn(ownCoordinator(), 'suspend');
+
+      ownVideo.dispatchEvent(new Event('play'));
+
+      expect(suspend).not.toHaveBeenCalled();
+    });
+
+    it('leaves an outside medium that is already paused alone when a reply plays', () => {
+      const replyVideo = showReplyVideo();
+      const pauseOwn = jest.fn();
+      ownVideo.pause = pauseOwn;
+
+      replyVideo.dispatchEvent(new Event('play'));
+
+      expect(pauseOwn).not.toHaveBeenCalled();
     });
   });
 

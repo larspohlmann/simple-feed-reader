@@ -73,8 +73,9 @@ export class EntryCommentsComponent {
   private readonly language = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly zone = inject(NgZone);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly autoplay = inject(ListAutoplayCoordinator);
+  private readonly listening = new AbortController();
+  private readonly playingOutside = new Set<HTMLMediaElement>();
   private readonly now = signal(Date.now());
   private readonly entryId = computed(() => this.entry().id);
   private readonly loadsOnSight = computed(() => this.entry().comments === 'auto');
@@ -110,6 +111,7 @@ export class EntryCommentsComponent {
       const until = this.throttledUntil();
       if (until !== null) onCleanup(this.countDownTo(until));
     });
+    inject(DestroyRef).onDestroy(() => this.listening.abort());
     afterNextRender(() => this.playOneMediumAtATime());
   }
 
@@ -158,12 +160,10 @@ export class EntryCommentsComponent {
   private playOneMediumAtATime(): void {
     const article = this.host.nativeElement.closest('article');
     if (!article) return;
-    const listening = new AbortController();
-    this.destroyRef.onDestroy(() => listening.abort());
     this.zone.runOutsideAngular(() =>
       article.addEventListener('play', ({ target }) => this.played(article, target), {
         capture: true,
-        signal: listening.signal,
+        signal: this.listening.signal,
       }),
     );
   }
@@ -183,14 +183,24 @@ export class EntryCommentsComponent {
   }
 
   private holdAutoplayWhilePlaying(medium: HTMLMediaElement): void {
-    this.autoplay.suspend();
+    if (medium.paused || this.playingOutside.has(medium)) return;
+    this.playingOutside.add(medium);
+    if (this.playingOutside.size === 1) this.autoplay.suspend();
     const stopped = new AbortController();
-    const resume = () => {
+    const release = () => {
       stopped.abort();
-      this.autoplay.resume();
+      this.releaseAutoplayFrom(medium);
     };
-    medium.addEventListener('pause', resume, { signal: stopped.signal });
-    medium.addEventListener('ended', resume, { signal: stopped.signal });
+    this.listening.signal.addEventListener('abort', () => stopped.abort(), {
+      signal: stopped.signal,
+    });
+    medium.addEventListener('pause', release, { signal: stopped.signal });
+    medium.addEventListener('ended', release, { signal: stopped.signal });
+  }
+
+  private releaseAutoplayFrom(medium: HTMLMediaElement): void {
+    this.playingOutside.delete(medium);
+    if (this.playingOutside.size === 0) this.autoplay.resume();
   }
 
   private owns(medium: HTMLMediaElement): boolean {
