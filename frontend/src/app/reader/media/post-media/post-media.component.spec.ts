@@ -91,23 +91,18 @@ describe('PostMediaComponent', () => {
     expect(parentClicks).toHaveBeenCalledTimes(1);
   });
 
-  it('loops a GIF silently on its own, with no controls', async () => {
-    const { fixture, parentClicks } = await mount([gif]);
-    const animation = fixture.nativeElement.querySelector('video.item') as HTMLVideoElement;
+  it('shows a looping clip and an animated picture with a still as GIFs', async () => {
+    const pickerGif: EntryMediumDto = {
+      ...image(1),
+      previewImageUrl: 'https://cdn.test/1-still.jpg',
+    };
+    const { fixture } = await mount([gif, pickerGif, image(2)]);
+    const items = Array.from(
+      fixture.nativeElement.querySelectorAll('app-post-media > .item') as NodeListOf<HTMLElement>,
+    );
 
+    expect(items.map((item) => item.tagName.toLowerCase())).toEqual(['app-gif', 'app-gif', 'img']);
     expect(fixture.nativeElement.querySelector('.video-slot')).toBeNull();
-    expect(animation.getAttribute('src')).toBe(gif.url);
-    expect(animation.getAttribute('poster')).toBe(gif.previewImageUrl);
-    expect([animation.muted, animation.loop, animation.autoplay, animation.controls]).toEqual([
-      true,
-      true,
-      true,
-      false,
-    ]);
-    expect(animation.hasAttribute('playsinline')).toBe(true);
-
-    animation.click();
-    expect(parentClicks).toHaveBeenCalledTimes(1);
   });
 
   it('pauses its video and releases its stream when destroyed', async () => {

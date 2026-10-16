@@ -55,6 +55,7 @@ final class StorableQuotedPost
                 $medium->width,
                 $medium->height,
                 HttpsImageUrl::orNull($medium->previewImageUrl),
+                $medium->alt,
             );
         }
 

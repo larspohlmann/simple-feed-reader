@@ -379,14 +379,25 @@ final class EntryEmbedWriterTest extends DbTestCase
             'uri' => 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t',
             'embed' => [
                 '$type' => 'app.bsky.embed.external#view',
-                'external' => ['uri' => $gif, 'title' => 'Bravo', 'description' => 'ALT: Bravo'],
+                'external' => [
+                    'uri' => $gif,
+                    'title' => 'Bravo',
+                    'description' => 'ALT: Bravo',
+                    'thumb' => self::CARD_THUMB,
+                ],
             ],
         ]));
         $this->entityManager->flush();
 
         self::assertSame(ShareKind::Media, $entry->getShareKind());
-        self::assertSame($gif, $entry->getImageUrl());
-        self::assertEquals([new EntryMedium($gif, 'image', 316, 237)], $entry->getMedia());
+        self::assertSame(self::CARD_THUMB, $entry->getImageUrl());
+        self::assertEquals(
+            [
+                new EntryMedium(self::CARD_THUMB, 'image', 316, 237),
+                new EntryMedium($gif, 'image', 316, 237, self::CARD_THUMB, 'Bravo'),
+            ],
+            $entry->getMedia(),
+        );
         self::assertSame([], $this->storedCards($entry));
     }
 

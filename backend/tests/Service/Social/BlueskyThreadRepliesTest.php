@@ -193,6 +193,7 @@ final class BlueskyThreadRepliesTest extends TestCase
                 'uri' => 'https://media.tenor.com/abc/clap.gif?hh=280&ww=498',
                 'title' => 'Clapping',
                 'description' => 'ALT: Clapping',
+                'thumb' => 'https://cdn.bsky.app/clap.jpg',
             ],
         ]);
 
@@ -201,6 +202,10 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertSame(
             ['https://media.tenor.com/abc/clap.gif?hh=280&ww=498', VisualMediaKind::Image->value, 498, 280],
             [$embeds->media[0]->url, $embeds->media[0]->kind, $embeds->media[0]->width, $embeds->media[0]->height],
+        );
+        self::assertSame(
+            ['https://cdn.bsky.app/clap.jpg', 'Clapping'],
+            [$embeds->media[0]->previewImageUrl, $embeds->media[0]->alt],
         );
         self::assertNull($embeds->linkCard);
     }

@@ -7,7 +7,8 @@ import {
   inject,
   input,
 } from '@angular/core';
-import { EntryMediumDto } from '../../entry-medium';
+import { EntryMediumDto, isGif } from '../../entry-medium';
+import { GifComponent } from '../gif/gif.component';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { armHlsStreams, releaseHlsStreams } from '../hls-streams';
 import { PLAYER_VIDEOS } from '../player-videos';
@@ -19,7 +20,7 @@ import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
 @Component({
   selector: 'app-post-media',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ProxiedImageDirective],
+  imports: [GifComponent, ProxiedImageDirective],
   templateUrl: './post-media.component.html',
   styleUrl: './post-media.component.scss',
   host: { '[attr.data-count]': 'media().length', '[style.--ratio]': 'ratio()' },
@@ -28,6 +29,7 @@ export class PostMediaComponent {
   readonly media = input.required<EntryMediumDto[]>();
   readonly ratio = input.required<number>();
   readonly videoLabel = input.required<string>();
+  protected readonly isGif = isGif;
 
   private scrollAway?: IntersectionObserver;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;

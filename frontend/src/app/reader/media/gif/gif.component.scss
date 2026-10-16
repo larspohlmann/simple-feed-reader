@@ -1,0 +1,26 @@
+@use '../post-media-grid';
+
+// Above a quoted post's stretched link (#1612), so a tap plays or pauses the GIF rather than opening the post.
+:host {
+  position: relative;
+  z-index: 1;
+  cursor: pointer;
+}
+
+img,
+video {
+  @include post-media-grid.item;
+}
+
+.badge {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-start: var(--space-2);
+  padding: var(--space-0) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--media-scrim);
+  color: var(--on-media-scrim);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  pointer-events: none;
+}

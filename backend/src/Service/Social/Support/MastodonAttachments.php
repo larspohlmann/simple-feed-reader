@@ -52,6 +52,7 @@ final class MastodonAttachments
                 $size->int('width'),
                 $size->int('height'),
                 HttpsImageUrl::orNull($attachment->string('preview_url')),
+                $attachment->string('description'),
             ),
             default => null,
         };

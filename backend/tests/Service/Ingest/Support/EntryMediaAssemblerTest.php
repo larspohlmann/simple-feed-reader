@@ -121,7 +121,14 @@ final class EntryMediaAssemblerTest extends TestCase
     {
         $media = EntryMediaAssembler::mediaOf([
             new ParsedMediumModel('http://i/insecure.jpg', VisualMediaKind::Image),
-            new ParsedMediumModel('https://i/clip.mp4', VisualMediaKind::Video, 1080, 1920, 'https://i/poster.jpg'),
+            new ParsedMediumModel(
+                'https://i/clip.mp4',
+                VisualMediaKind::Video,
+                1080,
+                1920,
+                'https://i/poster.jpg',
+                'A clip',
+            ),
             new ParsedMediumModel('https://i/clip.mp4', VisualMediaKind::Video),
         ]);
 
@@ -129,5 +136,6 @@ final class EntryMediaAssemblerTest extends TestCase
         self::assertSame('https://i/clip.mp4', $media[0]->url);
         self::assertSame('video', $media[0]->kind);
         self::assertSame('https://i/poster.jpg', $media[0]->previewImageUrl);
+        self::assertSame('A clip', $media[0]->alt);
     }
 }

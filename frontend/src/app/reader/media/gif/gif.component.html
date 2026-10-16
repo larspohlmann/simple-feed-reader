@@ -1,0 +1,27 @@
+@let gif = medium();
+@if (gif.kind === 'animation') {
+  <video
+    #clip
+    class="animation"
+    [src]="gif.url"
+    [attr.poster]="gif.previewImageUrl ?? null"
+    preload="none"
+    muted
+    [muted]="true"
+    loop
+    playsinline
+    disablepictureinpicture
+  ></video>
+} @else {
+  <img
+    appProxiedImage
+    [src]="playing() ? gif.url : (gif.previewImageUrl ?? gif.url)"
+    alt=""
+    loading="lazy"
+    decoding="async"
+    referrerpolicy="no-referrer"
+  />
+}
+@if (!playing()) {
+  <span class="badge" aria-hidden="true">GIF</span>
+}

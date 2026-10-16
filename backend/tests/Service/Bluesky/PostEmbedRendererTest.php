@@ -356,8 +356,19 @@ final class PostEmbedRendererTest extends TestCase
         $rendered = $this->renderedPost(self::gifPicker(self::KLIPY_GIF));
 
         self::assertEquals(
-            [new ParsedMediumModel(self::KLIPY_GIF, VisualMediaKind::Image, 498, 280)],
+            [new ParsedMediumModel(
+                self::KLIPY_GIF,
+                VisualMediaKind::Image,
+                498,
+                280,
+                self::CARD_THUMB,
+                'Audience Clapping and Applauding',
+            )],
             $rendered->media,
+        );
+        self::assertSame(
+            [self::CARD_THUMB, 498, 280],
+            [$rendered->leadImage?->url, $rendered->leadImage?->width, $rendered->leadImage?->height],
         );
         self::assertSame(
             '<figure class="post-images"><img src="' . htmlspecialchars(self::KLIPY_GIF, \ENT_QUOTES | \ENT_HTML5)
@@ -368,14 +379,40 @@ final class PostEmbedRendererTest extends TestCase
         self::assertNull($rendered->uncardedLink);
     }
 
-    public function testAGifPickerEmbedWithoutADescriptionTakesItsTitleAsAltText(): void
+    /** @return iterable<string, array{array<string, string>, string}> */
+    public static function gifAltTexts(): iterable
+    {
+        yield 'no description' => [['title' => 'Clapping'], 'Clapping'];
+        yield 'a bare ALT: prefix' => [['title' => 'Clapping', 'description' => 'ALT: '], 'Clapping'];
+        yield 'ALT: without a space' => [['title' => 'Clapping', 'description' => 'ALT:Applause'], 'Applause'];
+        yield 'a description without the prefix' => [['title' => 'Clapping', 'description' => 'Applause'], 'Applause'];
+        yield 'neither' => [[], ''];
+    }
+
+    /** @param array<string, string> $text */
+    #[DataProvider('gifAltTexts')]
+    public function testAGifsAltTextIsItsDescriptionWithoutThePickersPrefixElseItsTitle(array $text, string $alt): void
     {
         $rendered = $this->renderedPost([
             '$type' => 'app.bsky.embed.external#view',
-            'external' => ['uri' => 'https://media.tenor.com/abc/Clap.GIF?hh=10&ww=20', 'title' => 'Clapping'],
+            'external' => ['uri' => 'https://media.tenor.com/abc/Clap.GIF?hh=10&ww=20', ...$text],
         ]);
 
-        self::assertStringContainsString('alt="Clapping"', $rendered->html);
+        self::assertCount(1, $rendered->media);
+        self::assertSame($alt, $rendered->media[0]->alt);
+        self::assertStringContainsString('alt="' . $alt . '"', $rendered->html);
+    }
+
+    public function testAGifWithoutAThumbHasNoStillAndNoLeadImage(): void
+    {
+        $rendered = $this->renderedPost([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://media.tenor.com/abc/clap.gif?hh=10&ww=20', 'title' => 'Clapping'],
+        ]);
+
+        self::assertCount(1, $rendered->media);
+        self::assertNull($rendered->media[0]->previewImageUrl);
+        self::assertNull($rendered->leadImage);
     }
 
     public function testAGifPickerEmbedInsideAQuoteIsAnAnimatedImageToo(): void
@@ -397,6 +434,14 @@ final class PostEmbedRendererTest extends TestCase
             $rendered->media,
         ));
         self::assertSame([], $rendered->linkCards);
+    }
+
+    public function testAOnePixelGifIsStillAGif(): void
+    {
+        $rendered = $this->renderedPost(self::gifPicker('https://media.tenor.com/a/dot.gif?hh=1&ww=1'));
+
+        self::assertCount(1, $rendered->media);
+        self::assertSame([1, 1], [$rendered->media[0]->width, $rendered->media[0]->height]);
     }
 
     /** @return iterable<string, array{string}> */

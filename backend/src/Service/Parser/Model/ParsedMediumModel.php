@@ -6,8 +6,9 @@ namespace App\Service\Parser\Model;
 
 /**
  * One visual media item a feed declared: an image or a video, the dimensions the
- * feed stated for it, and — for a video — the poster the feed pointed at. All
- * but the URL and kind are independently nullable; null means unknown.
+ * feed stated for it, the still it shows instead of playing (a video's poster, a GIF's
+ * first frame) and its alt text. All but the URL and kind are independently nullable;
+ * null means unknown.
  */
 final readonly class ParsedMediumModel
 {
@@ -17,6 +18,7 @@ final readonly class ParsedMediumModel
         public ?int $width = null,
         public ?int $height = null,
         public ?string $previewImageUrl = null,
+        public ?string $alt = null,
     ) {
     }
 }

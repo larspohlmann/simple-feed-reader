@@ -27,12 +27,18 @@ final class MastodonAttachmentsTest extends TestCase
     {
         $media = MastodonAttachments::entryMediaOf(JsonNodeModel::of(['media_attachments' => [
             ['type' => 'audio', 'url' => 'https://files.example/a.mp3'],
-            ['type' => 'gifv', 'url' => 'https://files.example/b.mp4', 'preview_url' => 'https://files.example/b.jpg'],
+            [
+                'type' => 'gifv',
+                'url' => 'https://files.example/b.mp4',
+                'preview_url' => 'https://files.example/b.jpg',
+                'description' => 'A cat waves',
+            ],
         ]]));
 
         self::assertCount(1, $media);
         self::assertSame('animation', $media[0]->kind);
         self::assertSame('https://files.example/b.jpg', $media[0]->previewImageUrl);
+        self::assertSame('A cat waves', $media[0]->alt);
     }
 
     public function testAGifIsAnAnimationAndAVideoStaysAVideo(): void

@@ -7,8 +7,9 @@ namespace App\Entity;
 use App\Entity\Exception\IncompleteStoredMediaException;
 
 /**
- * One image or video on an entry, with the dimensions and poster the feed declared. `kind` is the API's string
- * (`image` or `video`); unset fields stay out of the JSON.
+ * One image, video or animation on an entry, with the dimensions, still and alt text the feed declared. `kind` is
+ * the API's string (`image`, `video` or `animation`); an image with a still is an animated GIF. Unset fields stay
+ * out of the JSON.
  */
 final readonly class EntryMedium implements \JsonSerializable
 {
@@ -18,6 +19,7 @@ final readonly class EntryMedium implements \JsonSerializable
         public ?int $width = null,
         public ?int $height = null,
         public ?string $previewImageUrl = null,
+        public ?string $alt = null,
     ) {
     }
 
@@ -42,6 +44,7 @@ final readonly class EntryMedium implements \JsonSerializable
         $width = $stored['width'] ?? null;
         $height = $stored['height'] ?? null;
         $previewImageUrl = $stored['previewImageUrl'] ?? null;
+        $alt = $stored['alt'] ?? null;
 
         return new self(
             $url,
@@ -49,6 +52,7 @@ final readonly class EntryMedium implements \JsonSerializable
             \is_int($width) ? $width : null,
             \is_int($height) ? $height : null,
             \is_string($previewImageUrl) ? $previewImageUrl : null,
+            \is_string($alt) ? $alt : null,
         );
     }
 
@@ -61,6 +65,7 @@ final readonly class EntryMedium implements \JsonSerializable
             'width' => $this->width,
             'height' => $this->height,
             'previewImageUrl' => $this->previewImageUrl,
+            'alt' => $this->alt,
         ], static fn (string|int|null $value): bool => $value !== null);
     }
 }

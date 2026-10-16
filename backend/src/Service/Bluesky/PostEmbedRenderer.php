@@ -71,16 +71,27 @@ final readonly class PostEmbedRenderer
             $media[] = $medium;
         }
 
-        return $media === [] ? null : self::figure($tags, $media);
+        if ($media === []) {
+            return null;
+        }
+        $lead = new DeclaredImageModel($media[0]->url, $media[0]->width, $media[0]->height);
+
+        return new RenderedEmbedModel(self::figure($tags), $lead, $media);
     }
 
     private function external(JsonNodeModel $external): ?RenderedEmbedModel
     {
         $gif = BlueskyEmbedMedia::gif($external);
+        if ($gif === null) {
+            return $this->linkCard($external);
+        }
+        $still = $gif->previewImageUrl;
 
-        return $gif === null
-            ? $this->linkCard($external)
-            : self::figure(self::imageTag($gif, BlueskyEmbedMedia::gifAltText($external)), [$gif]);
+        return new RenderedEmbedModel(
+            self::figure(self::imageTag($gif, $gif->alt ?? '')),
+            $still === null ? null : new DeclaredImageModel($still, $gif->width, $gif->height),
+            [$gif],
+        );
     }
 
     private function video(JsonNodeModel $embed, string $postUrl): ?RenderedEmbedModel
@@ -135,12 +146,9 @@ final readonly class PostEmbedRenderer
         return new RenderedEmbedModel(self::linkParagraph($postUrl, self::FALLBACK_LABEL));
     }
 
-    /** @param non-empty-list<ParsedMediumModel> $media */
-    private static function figure(string $tags, array $media): RenderedEmbedModel
+    private static function figure(string $tags): string
     {
-        $lead = new DeclaredImageModel($media[0]->url, $media[0]->width, $media[0]->height);
-
-        return new RenderedEmbedModel('<figure class="post-images">' . $tags . '</figure>', $lead, $media);
+        return '<figure class="post-images">' . $tags . '</figure>';
     }
 
     private static function imageTag(ParsedMediumModel $medium, string $alt): string

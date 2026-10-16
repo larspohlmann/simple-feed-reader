@@ -86,6 +86,13 @@ final class StorableQuotedPostTest extends TestCase
         self::assertSame('2026-10-13 21:07:00 UTC', $kept?->postedAt?->format('Y-m-d H:i:s e'));
     }
 
+    public function testAKeptMediumKeepsItsStillAndAltText(): void
+    {
+        $gif = new EntryMedium('https://cdn.example/a.gif', 'image', 316, 237, 'https://cdn.example/a.jpg', 'Clap');
+
+        self::assertEquals([$gif], StorableQuotedPost::of(self::quote(media: [$gif]))?->media);
+    }
+
     public function testMediaPastFourAndNonHttpsMediaAreDropped(): void
     {
         $media = [

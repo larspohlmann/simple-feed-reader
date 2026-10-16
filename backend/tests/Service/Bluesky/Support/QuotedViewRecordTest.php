@@ -120,11 +120,22 @@ final class QuotedViewRecordTest extends TestCase
     {
         $quote = QuotedViewRecord::of(self::viewRecord(embed: [
             '$type' => 'app.bsky.embed.external#view',
-            'external' => ['uri' => 'https://media.tenor.com/a/clap.gif?hh=237&ww=316', 'title' => 'Clap'],
+            'external' => [
+                'uri' => 'https://media.tenor.com/a/clap.gif?hh=237&ww=316',
+                'title' => 'Clap',
+                'thumb' => 'https://cdn.bsky.app/t.jpg',
+            ],
         ]));
 
         self::assertEquals(
-            [new EntryMedium('https://media.tenor.com/a/clap.gif?hh=237&ww=316', 'image', 316, 237)],
+            [new EntryMedium(
+                'https://media.tenor.com/a/clap.gif?hh=237&ww=316',
+                'image',
+                316,
+                237,
+                'https://cdn.bsky.app/t.jpg',
+                'Clap',
+            )],
             $quote?->media,
         );
     }

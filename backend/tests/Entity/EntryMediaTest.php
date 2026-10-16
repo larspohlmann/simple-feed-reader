@@ -161,6 +161,7 @@ final class EntryMediaTest extends TestCase
             'width' => 1280,
             'height' => '720',
             'previewImageUrl' => 'https://v/p.jpg',
+            'alt' => 'A donkey nods',
         ]);
 
         self::assertSame('https://v/clip.mp4', $medium->url);
@@ -168,6 +169,13 @@ final class EntryMediaTest extends TestCase
         self::assertSame(1280, $medium->width);
         self::assertNull($medium->height);
         self::assertSame('https://v/p.jpg', $medium->previewImageUrl);
+        self::assertSame('A donkey nods', $medium->alt);
+        self::assertSame('A donkey nods', $medium->jsonSerialize()['alt']);
+    }
+
+    public function testAStoredAltThatIsNoStringIsNone(): void
+    {
+        self::assertNull(EntryMedium::fromStored(['url' => 'https://i/a.gif', 'kind' => 'image', 'alt' => 7])->alt);
     }
 
     public function testACompleteStoredAttachmentRoundTripsItsDeclaredFields(): void
