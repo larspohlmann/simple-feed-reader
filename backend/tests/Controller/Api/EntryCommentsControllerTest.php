@@ -113,6 +113,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
         $body = $this->payload($client);
         self::assertSame(['status', 'comments', 'omitted', 'fetchedAt'], array_keys($body));
         self::assertSame('ok', $body['status']);
+        self::assertSame(0, $body['omitted']);
         self::assertIsArray($body['comments']);
         self::assertNotSame([], $body['comments']);
         $firstComment = $body['comments'][0];
@@ -262,6 +263,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $body = $this->payload($client);
         self::assertSame('ok', $body['status']);
+        self::assertSame(0, $body['omitted']);
         self::assertIsArray($body['comments']);
         self::assertSame([0, 0, 1], array_column($body['comments'], 'depth'));
         self::assertSame(

@@ -181,7 +181,11 @@ final class BlueskyThreadRepliesTest extends TestCase
 
         $comment = $this->replies(self::threadOf([$reply]))[0]->comment();
 
-        self::assertStringContainsString('<p><a href="https://example.org/a?b&amp;c"', $comment->html);
+        self::assertSame(
+            '<p>A reply</p><p><a href="https://example.org/a?b&amp;c" rel="noopener noreferrer" target="_blank">'
+                . 'https://example.org/a?b&amp;c</a></p>',
+            $comment->html,
+        );
         self::assertNull($comment->embeds->linkCard);
     }
 

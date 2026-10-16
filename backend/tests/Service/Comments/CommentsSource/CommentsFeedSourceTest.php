@@ -281,6 +281,16 @@ final class CommentsFeedSourceTest extends KernelTestCase
         $this->source->fetch($this->user, self::entry());
     }
 
+    public function testAnEntryWithoutAFeedIsUnavailableToFetch(): void
+    {
+        $entry = self::entry();
+        $entry->setDiscussion(Discussion::of(self::THREAD, null, CommentsLoad::Auto));
+
+        $this->expectException(CommentsUnavailableException::class);
+
+        $this->source->fetch($this->user, $entry);
+    }
+
     public function testAnUnparsableAnswerIsUnavailableWhenRead(): void
     {
         $this->expectException(CommentsUnavailableException::class);

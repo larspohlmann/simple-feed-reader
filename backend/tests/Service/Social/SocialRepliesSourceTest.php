@@ -190,6 +190,20 @@ final class SocialRepliesSourceTest extends DbTestCase
         $this->source()->fetch($this->owner, $this->post());
     }
 
+    public function testAnEntryThatIsNoSocialPostHasNoThreadToFetch(): void
+    {
+        $this->expectException(CommentsUnavailableException::class);
+
+        $this->source()->fetch($this->owner, $this->entryOn('https://example.com/feed.xml'));
+    }
+
+    public function testAnEntryThatIsNoSocialPostHasNoThreadToRead(): void
+    {
+        $this->expectException(CommentsUnavailableException::class);
+
+        $this->source()->read($this->entryOn('https://example.com/feed.xml'), 'the thread');
+    }
+
     public function testTheAudienceSeparatesAccountsFromThePublic(): void
     {
         $post = $this->post();
