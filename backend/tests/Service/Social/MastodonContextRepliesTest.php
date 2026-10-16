@@ -189,7 +189,7 @@ final class MastodonContextRepliesTest extends TestCase
 
         $this->expectException(CommentsUnavailableException::class);
 
-        $reader->of(self::POST, self::fixture());
+        $reader->of(self::POST, json_encode(['context' => json_decode(self::fixture())], \JSON_THROW_ON_ERROR));
     }
 
     /** @return list<ReplyNode> */

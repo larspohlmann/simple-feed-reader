@@ -112,7 +112,7 @@ final readonly class BlueskyThreadReplies
     private function htmlOf(JsonNodeModel $record, ?string $uncardedLink): string
     {
         $text = BlueskyRichText::asHtml($record->text('text') ?? '', $record->nodes('facets')) ?? '';
-        $link = $uncardedLink === null ? '' : '<p>' . HtmlAnchor::to($uncardedLink, $uncardedLink) . '</p>';
+        $link = $uncardedLink === null ? '' : sprintf('<p>%s</p>', HtmlAnchor::to($uncardedLink, $uncardedLink));
 
         return $this->sanitizer->sanitize($text . $link) ?? '';
     }

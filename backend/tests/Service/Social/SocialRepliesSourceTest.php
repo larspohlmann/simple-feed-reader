@@ -232,6 +232,23 @@ final class SocialRepliesSourceTest extends DbTestCase
         }
     }
 
+    public function testEachFetchAsTheAccountSpendsTheSocialRepliesBudgetToo(): void
+    {
+        $this->mastodonAccount();
+        $post = $this->post();
+        for ($fetch = 0; $fetch < self::REPLIES_BUDGET; ++$fetch) {
+            $this->source()->fetch($this->owner, $post);
+        }
+
+        $this->expectException(RateLimitedException::class);
+
+        try {
+            $this->source()->fetch($this->owner, $post);
+        } finally {
+            self::assertCount(self::REPLIES_BUDGET, $this->threads->calls);
+        }
+    }
+
     public function testReadingOrdersTheTree(): void
     {
         $this->threads->readsReplies([

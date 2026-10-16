@@ -26,7 +26,8 @@ final class CachedCommentsModelTest extends TestCase
     /** @return iterable<string, array{mixed}> */
     public static function halfCorruptEntries(): iterable
     {
-        yield 'no array' => ['the thread'];
+        yield 'a string' => ['the thread'];
+        yield 'an object' => [new \stdClass()];
         yield 'a time that is no timestamp' => [['body' => 'the thread', 'fetchedAt' => 'soon']];
         yield 'a body that is no string' => [['body' => 1, 'fetchedAt' => 1]];
     }
