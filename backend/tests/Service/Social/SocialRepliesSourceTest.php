@@ -18,9 +18,13 @@ use App\Service\RateLimit\Exception\RateLimitedException;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
+use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
+use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Exception\SocialPostRefusedException;
+use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\ReplyThreadOrder;
 use App\Service\Social\SocialRepliesSource;
@@ -29,6 +33,7 @@ use App\Tests\Support\FakeReplyThreadSource;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -84,10 +89,11 @@ final class SocialRepliesSourceTest extends DbTestCase
         self::assertSame(['asAccount ' . $account->getHandle() . ' ' . self::STATUS_URL], $this->threads->calls);
     }
 
-    public function testAFailingAccountFallsBackToThePublicThread(): void
+    #[DataProvider('accountFailures')]
+    public function testAFailingAccountFallsBackToThePublicThread(\Throwable $failure): void
     {
         $account = $this->mastodonAccount();
-        $this->threads->failAsAccountWith(new SocialNetworkUnreachableException('The instance is down.'));
+        $this->threads->failAsAccountWith($failure);
 
         $answer = $this->source()->fetch($this->owner, $this->post());
 
@@ -98,14 +104,16 @@ final class SocialRepliesSourceTest extends DbTestCase
         );
     }
 
-    public function testAThrottledAccountFallsBackToThePublicThread(): void
+    /** @return iterable<string, array{\Throwable}> */
+    public static function accountFailures(): iterable
     {
-        $this->mastodonAccount();
-        $this->threads->failAsAccountWith(new SocialNetworkThrottledException('Fewer requests, please.', 30));
-
-        $answer = $this->source()->fetch($this->owner, $this->post());
-
-        self::assertEquals(CommentsAnswerModel::settled('public thread'), $answer);
+        yield 'needs reconnect' => [new SocialAccountNeedsReconnectException('Sign in again.')];
+        yield 'credentials rejected' => [new SocialCredentialsRejectedException('The token was revoked.')];
+        yield 'token scope missing' => [new SocialTokenScopeMissingException('The token cannot read.', 'read')];
+        yield 'post refused' => [new SocialPostRefusedException('The instance will not show the post.')];
+        yield 'post not found' => [new SocialPostNotFoundException('Gone from the instance.')];
+        yield 'unreachable' => [new SocialNetworkUnreachableException('The instance is down.')];
+        yield 'throttled' => [new SocialNetworkThrottledException('Fewer requests, please.', 30)];
     }
 
     public function testAThrottledNetworkSaysWhenToRetry(): void
