@@ -131,6 +131,28 @@ final class SocialImporterTest extends DbTestCase
         self::assertNull($carol->getImageCheckedAt());
     }
 
+    public function testAnAvatarLongerThanAFeedImageCanHoldIsLeftToTheSweep(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->followAvatars()->remember($account, [new FollowedAccountModel(
+            'did:plc:bob',
+            '@bob.test',
+            'Bob',
+            self::BOB_FEED,
+            'https://cdn.test/' . str_repeat('a', Feed::IMAGE_URL_MAX),
+        )]);
+
+        $this->importer()->import(
+            $account,
+            new SocialImportModel([new SocialImportFeedModel('did:plc:bob', 'Bob')], [], []),
+        );
+
+        $bob = $this->feedAt(self::BOB_FEED);
+        self::assertNotNull($bob);
+        self::assertNull($bob->getImageUrl());
+        self::assertNull($bob->getImageCheckedAt());
+    }
+
     public function testAProfileFeedTheSweepAlreadyCheckedKeepsItsPicture(): void
     {
         $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));

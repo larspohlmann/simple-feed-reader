@@ -28,8 +28,11 @@ final readonly class ImportedProfilePictures
         $avatars = $this->followAvatars->find($account);
         $now = $this->clock->now();
         foreach ($this->feeds->findByUrlsIndexedByUrl($feedUrls) as $feed) {
+            if (null !== $feed->getImageCheckedAt()) {
+                continue;
+            }
             $avatarUrl = self::avatarFor($feed, $avatars);
-            if (null !== $avatarUrl && null === $feed->getImageCheckedAt()) {
+            if (null !== $avatarUrl) {
                 $feed->recordImageCheck($avatarUrl, $now);
             }
         }
@@ -38,9 +41,10 @@ final readonly class ImportedProfilePictures
     private static function avatarFor(Feed $feed, FollowAvatarsModel $avatars): ?string
     {
         $identity = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $feed->getUrl());
+        if (null === $identity) {
+            return null;
+        }
 
-        $avatarUrl = null === $identity ? null : $avatars->avatarOf($identity);
-
-        return AbsoluteHttpUrl::orNullWithin($avatarUrl, Feed::IMAGE_URL_MAX);
+        return AbsoluteHttpUrl::orNullWithin($avatars->avatarOf($identity), Feed::IMAGE_URL_MAX);
     }
 }

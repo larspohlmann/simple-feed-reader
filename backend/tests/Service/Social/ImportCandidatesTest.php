@@ -57,6 +57,21 @@ final class ImportCandidatesTest extends DbTestCase
         $this->user = (new UserFactory($this->entityManager, $hasher))->create('import-candidates@example.test');
     }
 
+    public function testTheCandidatesAvatarsAreRememberedForTheImport(): void
+    {
+        $account = $this->account();
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [self::follow('did:plc:bob', '@bob.bsky.social', 'https://cdn.test/bob.jpg')],
+            [],
+            [],
+            false,
+        ));
+
+        $this->importCandidates($network)->forAccount($account);
+
+        self::assertSame('https://cdn.test/bob.jpg', $this->followAvatars->find($account)->avatarOf('did:plc:bob'));
+    }
+
     private function importCandidates(SocialCandidatesInterface $network): ImportCandidates
     {
         $subscriptionFeedUrls = self::getContainer()->get(SubscriptionFeedUrls::class);
@@ -75,22 +90,6 @@ final class ImportCandidatesTest extends DbTestCase
             $this->followAvatars,
         );
     }
-
-    public function testTheCandidatesAvatarsAreRememberedForTheImport(): void
-    {
-        $account = $this->account();
-        $network = new StubSocialCandidates(new NetworkCandidatesModel(
-            [self::follow('did:plc:bob', '@bob.bsky.social', 'https://cdn.test/bob.jpg')],
-            [],
-            [],
-            false,
-        ));
-
-        $this->importCandidates($network)->forAccount($account);
-
-        self::assertSame('https://cdn.test/bob.jpg', $this->followAvatars->find($account)->avatarOf('did:plc:bob'));
-    }
-
 
     private function account(): SocialAccount
     {

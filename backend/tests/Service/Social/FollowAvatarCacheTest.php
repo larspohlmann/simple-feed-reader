@@ -37,14 +37,14 @@ final class FollowAvatarCacheTest extends TestCase
 
     public function testAnUnaskedAccountHasNone(): void
     {
-        self::assertTrue($this->cache->find(self::blueskyAccount(3))->isEmpty());
+        self::assertSame([], $this->cache->find(self::blueskyAccount(3))->toCacheEntry());
     }
 
     public function testEachAccountKeepsItsOwnAvatars(): void
     {
         $this->cache->remember(self::blueskyAccount(3), [self::follow('did:plc:bob')]);
 
-        self::assertTrue($this->cache->find(self::blueskyAccount(4))->isEmpty());
+        self::assertSame([], $this->cache->find(self::blueskyAccount(4))->toCacheEntry());
     }
 
     public function testAMastodonAccountRemembersNothing(): void
@@ -53,7 +53,7 @@ final class FollowAvatarCacheTest extends TestCase
 
         $this->cache->remember($account, [self::follow('bob@mastodon.example')]);
 
-        self::assertTrue($this->cache->find($account)->isEmpty());
+        self::assertSame([], $this->cache->find($account)->toCacheEntry());
     }
 
     public function testALaterLoadReplacesTheEarlierOne(): void
@@ -85,7 +85,7 @@ final class FollowAvatarCacheTest extends TestCase
     {
         $this->cache->remember(self::blueskyAccount(5), [self::follow('did:plc:bob')]);
 
-        self::assertTrue($this->cache->find(self::withId(SocialAccounts::mastodon(), 5))->isEmpty());
+        self::assertSame([], $this->cache->find(self::withId(SocialAccounts::mastodon(), 5))->toCacheEntry());
     }
 
     public function testADamagedEntryFindsNone(): void
@@ -94,7 +94,7 @@ final class FollowAvatarCacheTest extends TestCase
         $item->set('damaged');
         $this->pool->save($item);
 
-        self::assertTrue($this->cache->find(self::blueskyAccount(3))->isEmpty());
+        self::assertSame([], $this->cache->find(self::blueskyAccount(3))->toCacheEntry());
     }
 
     private static function blueskyAccount(int $id): SocialAccount

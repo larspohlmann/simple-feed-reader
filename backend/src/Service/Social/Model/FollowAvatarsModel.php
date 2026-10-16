@@ -29,22 +29,6 @@ final readonly class FollowAvatarsModel
         return new self([]);
     }
 
-    public function avatarOf(string $identity): ?string
-    {
-        return $this->byIdentity[$identity] ?? null;
-    }
-
-    public function isEmpty(): bool
-    {
-        return [] === $this->byIdentity;
-    }
-
-    /** @return array<string, string> */
-    public function toCacheEntry(): array
-    {
-        return $this->byIdentity;
-    }
-
     public static function fromCacheEntryOrNull(mixed $stored): ?self
     {
         if (!\is_array($stored)) {
@@ -59,5 +43,16 @@ final readonly class FollowAvatarsModel
         }
 
         return new self($byIdentity);
+    }
+
+    public function avatarOf(string $identity): ?string
+    {
+        return $this->byIdentity[$identity] ?? null;
+    }
+
+    /** @return array<string, string> */
+    public function toCacheEntry(): array
+    {
+        return $this->byIdentity;
     }
 }

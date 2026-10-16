@@ -37,10 +37,7 @@ final class FollowAvatarsModelTest extends TestCase
 
     public function testNoneIsEmpty(): void
     {
-        self::assertTrue(FollowAvatarsModel::none()->isEmpty());
-        $stored = FollowAvatarsModel::fromCacheEntryOrNull(['did:plc:bob' => 'https://cdn.test/bob.jpg']);
-
-        self::assertFalse($stored?->isEmpty());
+        self::assertSame([], FollowAvatarsModel::none()->toCacheEntry());
     }
 
     /** @return iterable<string, array{mixed}> */
