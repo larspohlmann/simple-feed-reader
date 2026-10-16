@@ -26,7 +26,7 @@ final readonly class MastodonReplyThread
             if ($id === null || isset($seen[$id]) || !self::isShown($status)) {
                 continue;
             }
-            $seen[$id] = true;
+            $seen[$id] = $status;
             $parent = $status->string('in_reply_to_id');
             if ($parent !== null && $id !== $postId) {
                 $answersById[$parent][] = $status;

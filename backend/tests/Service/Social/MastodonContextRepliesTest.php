@@ -116,6 +116,13 @@ final class MastodonContextRepliesTest extends TestCase
         );
     }
 
+    public function testAPostAtAnotherAddressShapeMarksNoReplyAsTheOriginalPosters(): void
+    {
+        $replies = $this->replies(post: 'https://mastodon.social/notes/110');
+
+        self::assertFalse($replies[0]->replies[0]->comment()->byEntryAuthor);
+    }
+
     public function testALocalAuthorsHandleNamesTheirInstance(): void
     {
         self::assertSame('@Gargron@mastodon.social', $this->replies()[0]->replies[0]->comment()->author->handle);
