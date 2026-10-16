@@ -18,7 +18,6 @@ export interface SocialProfiles {
 export interface SocialSection {
   readonly network: SocialNetworkName;
   readonly accounts: readonly SocialAccountGroup[];
-  /** The network's profile feeds, shown as the Feeds row (#1659). */
   readonly profiles: SocialProfiles;
   /** Every feed of the network, one excluded from All items too, as a tag counts. */
   readonly unreadCount: number;

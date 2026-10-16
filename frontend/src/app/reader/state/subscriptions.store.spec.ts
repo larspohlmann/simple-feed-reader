@@ -440,7 +440,7 @@ describe('SubscriptionsStore', () => {
       expect(store.totalUnread()).toBe(1 + 16 + 8);
     });
 
-    it('groups social feeds by network, private ones per account and profiles as people, each Home titled', () => {
+    it('groups social feeds by network, private ones per account and profile feeds as the Feeds group, each Home titled', () => {
       expect(store.socialSections()).toEqual([
         {
           network: 'bluesky',
