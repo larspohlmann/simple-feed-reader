@@ -14,6 +14,7 @@ const pickerGif: EntryMediumDto = {
   height: 280,
   previewImageUrl: 'https://cdn.test/clap.jpg',
   alt: 'Audience clapping',
+  animated: true,
 };
 const gifv: EntryMediumDto = {
   url: 'https://files.test/wave.mp4',

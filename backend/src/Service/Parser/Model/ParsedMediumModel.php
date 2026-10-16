@@ -19,6 +19,7 @@ final readonly class ParsedMediumModel
         public ?int $height = null,
         public ?string $previewImageUrl = null,
         public ?string $alt = null,
+        public bool $isAnimated = false,
     ) {
     }
 }

@@ -138,4 +138,14 @@ final class EntryMediaAssemblerTest extends TestCase
         self::assertSame('https://i/poster.jpg', $media[0]->previewImageUrl);
         self::assertSame('A clip', $media[0]->alt);
     }
+
+    public function testAnAnimatedMediumStaysAnimated(): void
+    {
+        $media = EntryMediaAssembler::mediaOf([
+            new ParsedMediumModel('https://i/a.gif', VisualMediaKind::Image, isAnimated: true),
+            new ParsedMediumModel('https://i/b.jpg', VisualMediaKind::Image),
+        ]);
+
+        self::assertSame([true, false], [$media[0]->isAnimated, $media[1]->isAnimated]);
+    }
 }

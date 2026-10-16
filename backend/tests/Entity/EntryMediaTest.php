@@ -173,6 +173,29 @@ final class EntryMediaTest extends TestCase
         self::assertSame('A donkey nods', $medium->jsonSerialize()['alt']);
     }
 
+    public function testAnAnimatedMediumSaysSoInItsJsonAndRoundTrips(): void
+    {
+        $animated = new EntryMedium('https://i/a.gif', 'image', previewImageUrl: 'https://i/a.jpg', isAnimated: true);
+
+        self::assertTrue($animated->jsonSerialize()['animated']);
+        self::assertTrue(EntryMedium::fromStored($animated->jsonSerialize())->isAnimated);
+    }
+
+    public function testAStillMediumLeavesAnimatedOutOfItsJson(): void
+    {
+        $still = new EntryMedium('https://v/clip.mp4', 'video', previewImageUrl: 'https://v/p.jpg');
+
+        self::assertArrayNotHasKey('animated', $still->jsonSerialize());
+        self::assertFalse(EntryMedium::fromStored($still->jsonSerialize())->isAnimated);
+    }
+
+    public function testAStoredAnimatedThatIsNotTrueIsAStillMedium(): void
+    {
+        self::assertFalse(
+            EntryMedium::fromStored(['url' => 'https://i/a.gif', 'kind' => 'image', 'animated' => 'yes'])->isAnimated,
+        );
+    }
+
     public function testAStoredAltThatIsNoStringIsNone(): void
     {
         self::assertNull(EntryMedium::fromStored(['url' => 'https://i/a.gif', 'kind' => 'image', 'alt' => 7])->alt);

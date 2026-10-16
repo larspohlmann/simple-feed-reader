@@ -363,6 +363,7 @@ final class PostEmbedRendererTest extends TestCase
                 280,
                 self::CARD_THUMB,
                 'Audience Clapping and Applauding',
+                isAnimated: true,
             )],
             $rendered->media,
         );

@@ -75,6 +75,7 @@ final class BlueskyEmbedMedia
             $height,
             HttpsImageUrl::orNull($external->string('thumb')),
             self::gifAltText($external),
+            isAnimated: true,
         );
     }
 

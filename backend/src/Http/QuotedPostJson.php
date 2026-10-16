@@ -10,7 +10,8 @@ use App\Entity\QuotedPostContent;
 /**
  * @phpstan-type QuoteRow array{
  *   url: string, authorName: string, authorHandle: string, authorAvatarUrl: string|null, postedAt: string|null,
- *   text: string, media: list<array<string, string|int>>, nestedQuote: array{url: string, handle: string|null}|null
+ *   text: string, media: list<array<string, string|int|true>>,
+ *   nestedQuote: array{url: string, handle: string|null}|null
  * }
  */
 final class QuotedPostJson

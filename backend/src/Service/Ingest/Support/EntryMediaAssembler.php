@@ -71,6 +71,7 @@ final class EntryMediaAssembler
                 $medium->height,
                 HttpsImageUrl::orNull($medium->previewImageUrl),
                 $medium->alt,
+                $medium->isAnimated,
             );
         }
 

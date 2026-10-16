@@ -135,6 +135,7 @@ final class QuotedViewRecordTest extends TestCase
                 237,
                 'https://cdn.bsky.app/t.jpg',
                 'Clap',
+                isAnimated: true,
             )],
             $quote?->media,
         );

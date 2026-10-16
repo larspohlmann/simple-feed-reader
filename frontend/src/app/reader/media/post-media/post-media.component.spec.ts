@@ -91,12 +91,17 @@ describe('PostMediaComponent', () => {
     expect(parentClicks).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a looping clip and an animated picture with a still as GIFs', async () => {
+  it('shows a looping clip and an animated picture as GIFs, and a picture with a still as a picture', async () => {
     const pickerGif: EntryMediumDto = {
       ...image(1),
       previewImageUrl: 'https://cdn.test/1-still.jpg',
+      animated: true,
     };
-    const { fixture } = await mount([gif, pickerGif, image(2)]);
+    const stillPicture: EntryMediumDto = {
+      ...image(2),
+      previewImageUrl: 'https://cdn.test/2-still.jpg',
+    };
+    const { fixture } = await mount([gif, pickerGif, stillPicture]);
     const items = Array.from(
       fixture.nativeElement.querySelectorAll('app-post-media > .item') as NodeListOf<HTMLElement>,
     );

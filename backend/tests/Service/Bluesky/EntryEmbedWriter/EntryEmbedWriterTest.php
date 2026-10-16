@@ -394,7 +394,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertEquals(
             [
                 new EntryMedium(self::CARD_THUMB, 'image', 316, 237),
-                new EntryMedium($gif, 'image', 316, 237, self::CARD_THUMB, 'Bravo'),
+                new EntryMedium($gif, 'image', 316, 237, self::CARD_THUMB, 'Bravo', isAnimated: true),
             ],
             $entry->getMedia(),
         );
