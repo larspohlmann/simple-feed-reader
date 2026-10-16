@@ -145,8 +145,8 @@ export class SocialImportDialogComponent {
     this.importer.load(this.data.accountId);
   }
 
-  protected forgetAvatar(row: ImportRow): void {
-    this.failedAvatars.update((keys) => new Set(keys).add(row.key));
+  protected forgetAvatar(key: string): void {
+    this.failedAvatars.update((keys) => new Set(keys).add(key));
   }
 
   protected toggle(row: ImportRow): void {

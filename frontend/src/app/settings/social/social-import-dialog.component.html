@@ -104,7 +104,7 @@
                 loading="lazy"
                 decoding="async"
                 referrerpolicy="no-referrer"
-                (imageFailed)="forgetAvatar(row)"
+                (imageFailed)="forgetAvatar(row.key)"
               />
             } @else {
               <span class="avatar" aria-hidden="true">{{ row.initials }}</span>
