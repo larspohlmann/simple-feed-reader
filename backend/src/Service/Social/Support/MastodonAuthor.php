@@ -7,7 +7,6 @@ namespace App\Service\Social\Support;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
-/** The account a Mastodon status names as its author, read the one way every reader shows it. */
 final class MastodonAuthor
 {
     public static function name(JsonNodeModel $account): ?string

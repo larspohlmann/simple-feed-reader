@@ -9,7 +9,6 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\LinkCard\Support\StorableLinkCard;
 
-/** A Mastodon status's preview card as a link card. */
 final class MastodonCard
 {
     public static function of(JsonNodeModel $card): ?LinkCardContent
