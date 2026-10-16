@@ -50,6 +50,7 @@ import { ListScrollState } from './list-scroll-state';
 import { ListReadingFocus } from './list-reading-focus';
 import { EstimatedListBottom } from './estimated-list-bottom';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
+import { prefersReducedMotion } from '../../../core/reduced-motion';
 
 // How long a reload may run before it earns a spinner. A switch that lands
 // sooner would only flash one, which reads as a glitch rather than as progress.
@@ -193,8 +194,7 @@ export class EntryListComponent implements OnDestroy {
    *  focus, and the surrounding prose recedes behind it. */
   readonly isSearch = computed(() => this.selection().kind === 'search');
 
-  private readonly reduceMotion =
-    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  private readonly reduceMotion = prefersReducedMotion();
   private readonly screen = inject(LayoutService);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly autoplay = inject(ListAutoplayCoordinator);

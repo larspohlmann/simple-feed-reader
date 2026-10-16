@@ -28,7 +28,18 @@ export function resetFakeHls(): void {
 /** Waits for hls.js's lazy import to settle. */
 export const flushHls = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
-export function firstPlay(video: HTMLVideoElement): Promise<void> {
+/** jsdom keeps `paused` at true whatever happens, so these set it the way a browser would. */
+export function startPlaying(video: HTMLVideoElement): void {
+  Object.defineProperty(video, 'paused', { value: false, configurable: true });
   video.dispatchEvent(new Event('play'));
+}
+
+export function pausePlaying(video: HTMLVideoElement): void {
+  Object.defineProperty(video, 'paused', { value: true, configurable: true });
+  video.dispatchEvent(new Event('pause'));
+}
+
+export function firstPlay(video: HTMLVideoElement): Promise<void> {
+  startPlaying(video);
   return flushHls();
 }

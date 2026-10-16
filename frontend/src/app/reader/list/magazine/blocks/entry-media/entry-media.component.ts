@@ -75,11 +75,12 @@ export class EntryMediaComponent extends EntryBlockBase {
   }
 
   private registerShortForAutoplay(): void {
+    if (this.autoplay === null || this.shortAutoplay) return;
     const element = this.host.querySelector('.short-player');
-    if (this.autoplay === null || element === null || this.shortAutoplay) return;
+    if (element === null) return;
     this.shortAutoplay = {
       element,
-      start: () => this.startShort(mutedShortPlayer),
+      start: () => this.startMutedShort(),
       stop: () => this.stopShort(),
     };
     this.autoplay.register(this.shortAutoplay);
@@ -87,7 +88,7 @@ export class EntryMediaComponent extends EntryBlockBase {
 
   protected playShort(event: Event): void {
     event.stopPropagation();
-    this.startShort((player) => player);
+    this.playingShort.set(this.shortPlayer());
     if (this.shortAutoplay) this.autoplay?.nowPlaying(this.shortAutoplay);
   }
 
@@ -95,9 +96,9 @@ export class EntryMediaComponent extends EntryBlockBase {
     this.playingShort.set(null);
   }
 
-  private startShort(variant: (player: string) => string): void {
+  private startMutedShort(): void {
     const player = this.shortPlayer();
-    if (player !== null) this.playingShort.set(variant(player));
+    if (player !== null) this.playingShort.set(mutedShortPlayer(player));
   }
 
   protected ratio(medium: EntryMediumDto): number {

@@ -3,28 +3,18 @@ import { TestBed } from '@angular/core/testing';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AutoplayPlayer } from './autoplay-player';
 import { ListAutoplayCoordinator } from './list-autoplay-coordinator';
+import {
+  MockIntersectionObserver,
+  installMockIntersectionObserver,
+} from '../../../../testing/intersection-observer-testing';
 
-let report: (element: Element, ratio: number) => void;
-let realObserver: typeof IntersectionObserver;
+const report = (element: Element, ratio: number) => MockIntersectionObserver.report(element, ratio);
+let restoreObserver: () => void;
 
-beforeEach(() => {
-  realObserver = globalThis.IntersectionObserver;
-  globalThis.IntersectionObserver = class {
-    constructor(callback: IntersectionObserverCallback) {
-      report = (target, intersectionRatio) =>
-        callback(
-          [{ target, intersectionRatio } as unknown as IntersectionObserverEntry],
-          {} as IntersectionObserver,
-        );
-    }
-    readonly observe = jest.fn();
-    readonly unobserve = jest.fn();
-    readonly disconnect = jest.fn();
-  } as unknown as typeof IntersectionObserver;
-});
+beforeEach(() => (restoreObserver = installMockIntersectionObserver()));
 
 afterEach(() => {
-  globalThis.IntersectionObserver = realObserver;
+  restoreObserver();
   document.body.innerHTML = '';
 });
 
@@ -226,20 +216,6 @@ describe('ListAutoplayCoordinator', () => {
 
     expect(leaving.stop).toHaveBeenCalledTimes(1);
     expect(staying.start).toHaveBeenCalledTimes(1);
-  });
-
-  it('ignores a late play report from a player it already let go', () => {
-    const { coordinator } = setUp();
-    const gone = aPlayer();
-    const playing = aPlayer();
-    coordinator.register(gone);
-    coordinator.register(playing);
-    report(playing.element, 1);
-    coordinator.unregister(gone);
-
-    coordinator.nowPlaying(gone);
-
-    expect(playing.stop).not.toHaveBeenCalled();
   });
 
   it('never chooses a player whose row has left the page', () => {

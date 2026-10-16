@@ -82,6 +82,29 @@ describe('VideoAutoplayPlayer', () => {
     expect(play).toHaveBeenCalledTimes(2);
   });
 
+  it('does not retry muted once stopped while the refused start was pending', async () => {
+    const { play, player } = setUp();
+    play.mockRejectedValueOnce(refusal());
+
+    player.start(true);
+    player.stop();
+    await settle();
+
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports nothing to the coordinator once disposed', async () => {
+    const { video, coordinator, player } = setUp();
+
+    player.dispose();
+    video.dispatchEvent(new Event('play'));
+    video.muted = !video.muted;
+    await settle();
+
+    expect(coordinator.nowPlaying).not.toHaveBeenCalled();
+    expect(coordinator.soundChanged).not.toHaveBeenCalled();
+  });
+
   it('pauses when stopped', () => {
     const { pause, player } = setUp();
     player.stop();

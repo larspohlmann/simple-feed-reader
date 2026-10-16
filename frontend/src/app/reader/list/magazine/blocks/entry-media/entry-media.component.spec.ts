@@ -10,6 +10,10 @@ import { ListAutoplayCoordinator } from '../../../../media/autoplay/list-autopla
 import { AutoplayPlayer } from '../../../../media/autoplay/autoplay-player';
 import { MEDIA_PAUSE } from './pause-media';
 import { anEntry } from '../../../../../../testing/entry-testing';
+import {
+  MockIntersectionObserver,
+  installMockIntersectionObserver,
+} from '../../../../../../testing/intersection-observer-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../../../testing/hls-testing';
 
 jest.mock(
@@ -94,9 +98,6 @@ const short = (over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-const sighting = (target: Element, isIntersecting: boolean) =>
-  ({ target, isIntersecting }) as unknown as IntersectionObserverEntry;
-
 const press = (target: Element, key: string) =>
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 
@@ -107,22 +108,7 @@ afterEach(() => {
   restoreObserver = null;
 });
 
-function stubIntersectionObserver() {
-  const callbacks: IntersectionObserverCallback[] = [];
-  const observed: Element[] = [];
-  const real = globalThis.IntersectionObserver;
-  restoreObserver = () => (globalThis.IntersectionObserver = real);
-  globalThis.IntersectionObserver = class {
-    constructor(callback: IntersectionObserverCallback) {
-      callbacks.push(callback);
-    }
-    readonly observe = (target: Element) => observed.push(target);
-    readonly disconnect = jest.fn();
-  } as unknown as typeof IntersectionObserver;
-  const report = (target: Element, isIntersecting: boolean) =>
-    callbacks[0]([sighting(target, isIntersecting)], {} as IntersectionObserver);
-  return { observed, report };
-}
+const report = (target: Element, ratio: number) => MockIntersectionObserver.report(target, ratio);
 
 describe('EntryMediaComponent', () => {
   it('captions a titled share with its title and puts its own text beneath', async () => {
@@ -228,13 +214,13 @@ describe('EntryMediaComponent', () => {
   });
 
   it('pauses a video that scrolls out of view', async () => {
-    const { report } = stubIntersectionObserver();
+    restoreObserver = installMockIntersectionObserver();
     const element = await mount(entry({ media: [clip] }));
     const video = element.querySelector('video')!;
 
-    report(video, true);
+    report(video, 1);
     expect(pause).not.toHaveBeenCalled();
-    report(video, false);
+    report(video, 0);
     expect(pause).toHaveBeenCalledTimes(1);
   });
 
@@ -303,7 +289,7 @@ describe('EntryMediaComponent', () => {
   });
 
   it('puts a Short’s player back to its cover when the card scrolls out of view', async () => {
-    const { observed, report } = stubIntersectionObserver();
+    restoreObserver = installMockIntersectionObserver();
     const fixture = await mountFixture(short());
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('.play')!.click();
@@ -311,14 +297,14 @@ describe('EntryMediaComponent', () => {
     await fixture.whenStable();
     const frame = element.querySelector('.short-player')!;
     const pill = element.querySelector('.pill.short')!;
-    expect(observed).toContain(frame);
-    expect(observed).not.toContain(pill);
+    expect(MockIntersectionObserver.observes(frame)).toBe(true);
+    expect(MockIntersectionObserver.observes(pill)).toBe(false);
 
-    report(frame, true);
+    report(frame, 1);
     fixture.detectChanges();
     expect(element.querySelector('iframe')).not.toBeNull();
 
-    report(frame, false);
+    report(frame, 0);
     fixture.detectChanges();
     expect(element.querySelector('iframe')).toBeNull();
     expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);

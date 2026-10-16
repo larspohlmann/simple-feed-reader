@@ -44,17 +44,16 @@ function isPlaylist(video: HTMLVideoElement): boolean {
 }
 
 function armFirstPlay(host: HTMLElement, video: HTMLVideoElement, source: string): void {
-  const retry = (): void => armFirstPlay(host, video, source);
-  video.addEventListener('play', () => void play(host, video, source).catch(retry), {
+  const rearm = (): void => armFirstPlay(host, video, source);
+  video.addEventListener('play', () => void play(host, video, source).catch(rearm), {
     once: true,
   });
 }
 
 async function play(host: HTMLElement, video: HTMLVideoElement, source: string): Promise<void> {
-  const pause = pauseWatch(video);
-  const { default: HlsPlayer } = await import('hls.js').finally(pause.stop);
+  const { default: HlsPlayer } = await import('hls.js');
   if (!HlsPlayer.isSupported()) return;
-  if (pause.happened() || !video.isConnected) {
+  if (video.paused || !video.isConnected) {
     armFirstPlay(host, video, source);
     return;
   }
@@ -63,19 +62,6 @@ async function play(host: HTMLElement, video: HTMLVideoElement, source: string):
   hls.loadSource(source);
   hls.attachMedia(video);
   void video.play();
-}
-
-/** Stopped before the source swap, which pauses the video itself. */
-function pauseWatch(video: HTMLVideoElement): { happened: () => boolean; stop: () => void } {
-  let paused = false;
-  const notePause = (): void => {
-    paused = true;
-  };
-  video.addEventListener('pause', notePause);
-  return {
-    happened: () => paused,
-    stop: () => video.removeEventListener('pause', notePause),
-  };
 }
 
 function streamsOf(host: HTMLElement): Map<HTMLVideoElement, Hls> {

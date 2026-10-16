@@ -37,8 +37,9 @@ export class PostMediaComponent {
     afterRenderEffect(() => {
       this.media();
       armHlsStreams(this.host);
-      this.pauseWhenScrolledAway();
-      this.registerForAutoplay();
+      const videos = Array.from(this.host.querySelectorAll('video'));
+      this.pauseWhenScrolledAway(videos);
+      this.registerForAutoplay(videos);
     });
     inject(DestroyRef).onDestroy(() => {
       this.scrollAway?.disconnect();
@@ -48,8 +49,7 @@ export class PostMediaComponent {
     });
   }
 
-  private pauseWhenScrolledAway(): void {
-    const videos = Array.from(this.host.querySelectorAll('video'));
+  private pauseWhenScrolledAway(videos: HTMLVideoElement[]): void {
     if (typeof IntersectionObserver === 'undefined' || videos.length === 0) return;
     this.scrollAway ??= new IntersectionObserver((changes) => {
       for (const change of changes) {
@@ -61,11 +61,11 @@ export class PostMediaComponent {
     for (const video of videos) this.scrollAway.observe(video);
   }
 
-  private registerForAutoplay(): void {
+  private registerForAutoplay(videos: HTMLVideoElement[]): void {
     const autoplay = this.autoplay;
     if (autoplay === null) return;
-    const videos = new Set(Array.from(this.host.querySelectorAll('video')));
-    this.unregisterVideosWhere((video) => !videos.has(video));
+    const rendered = new Set(videos);
+    this.unregisterVideosWhere((video) => !rendered.has(video));
     for (const video of videos) {
       if (this.players.has(video)) continue;
       const player = new VideoAutoplayPlayer(video, autoplay);
@@ -78,6 +78,7 @@ export class PostMediaComponent {
     for (const [video, player] of this.players) {
       if (!shouldUnregister(video)) continue;
       this.autoplay?.unregister(player);
+      player.dispose();
       this.players.delete(video);
     }
   }

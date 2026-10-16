@@ -1,5 +1,12 @@
 import { articleHost, attachedArticleHost } from '../../../testing/article-host-testing';
-import { fakeHls, firstPlay, flushHls, resetFakeHls } from '../../../testing/hls-testing';
+import {
+  fakeHls,
+  firstPlay,
+  flushHls,
+  pausePlaying,
+  resetFakeHls,
+  startPlaying,
+} from '../../../testing/hls-testing';
 import { armHlsStreams, releaseHlsStreams, streamsThroughHls } from './hls-streams';
 
 jest.mock('hls.js', () => jest.requireActual('../../../testing/hls-testing').fakeHlsModule);
@@ -60,16 +67,25 @@ describe('armHlsStreams', () => {
     HTMLMediaElement.prototype.play = play;
     const host = attachedArticleHost(PLAYLIST_VIDEO);
     armHlsStreams(host);
-    // Zone drains microtasks after each outermost task, so both events share one timer task.
-    setTimeout(() => {
-      videoIn(host).dispatchEvent(new Event('play'));
-      videoIn(host).dispatchEvent(new Event('pause'));
-    });
-    await flushHls();
+
+    startPlaying(videoIn(host));
+    pausePlaying(videoIn(host));
     await flushHls();
 
     expect(fakeHls.attachMedia).not.toHaveBeenCalled();
     expect(play).not.toHaveBeenCalled();
+  });
+
+  it('attaches a video paused and played again while hls.js was loading', async () => {
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    armHlsStreams(host);
+
+    startPlaying(videoIn(host));
+    pausePlaying(videoIn(host));
+    startPlaying(videoIn(host));
+    await flushHls();
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
   });
 
   it('starts the stream on the next play once a load was abandoned to a pause', async () => {
@@ -77,11 +93,8 @@ describe('armHlsStreams', () => {
     HTMLMediaElement.prototype.play = play;
     const host = attachedArticleHost(PLAYLIST_VIDEO);
     armHlsStreams(host);
-    setTimeout(() => {
-      videoIn(host).dispatchEvent(new Event('play'));
-      videoIn(host).dispatchEvent(new Event('pause'));
-    });
-    await flushHls();
+    startPlaying(videoIn(host));
+    pausePlaying(videoIn(host));
     await flushHls();
 
     await firstPlay(videoIn(host));

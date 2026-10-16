@@ -5,24 +5,33 @@ type Coordinator = Pick<ListAutoplayCoordinator, 'nowPlaying' | 'soundChanged'>;
 
 export class VideoAutoplayPlayer implements AutoplayPlayer {
   private pendingOwnChanges = 0;
+  private wanted = false;
+  private readonly listeners = new AbortController();
 
   constructor(
     readonly element: HTMLVideoElement,
     private readonly coordinator: Coordinator,
   ) {
-    element.addEventListener('play', () => coordinator.nowPlaying(this));
-    element.addEventListener('volumechange', () => this.reportSound());
+    const { signal } = this.listeners;
+    element.addEventListener('play', () => coordinator.nowPlaying(this), { signal });
+    element.addEventListener('volumechange', () => this.reportSound(), { signal });
   }
 
   start(withSound: boolean): void {
+    this.wanted = true;
     this.setMuted(!withSound);
     this.element.play().catch((error: unknown) => {
-      if (withSound && isRefusal(error)) this.start(false);
+      if (withSound && this.wanted && isRefusal(error)) this.start(false);
     });
   }
 
   stop(): void {
+    this.wanted = false;
     this.element.pause();
+  }
+
+  dispose(): void {
+    this.listeners.abort();
   }
 
   private setMuted(muted: boolean): void {

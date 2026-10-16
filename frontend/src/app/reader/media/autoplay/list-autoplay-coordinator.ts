@@ -17,8 +17,7 @@ export class ListAutoplayCoordinator {
     typeof IntersectionObserver === 'undefined'
       ? null
       : new IntersectionObserver((changes) => this.measure(changes), { threshold: THRESHOLDS });
-  private current: AutoplayPlayer | null = null;
-  private startedByHand = false;
+  private current: { player: AutoplayPlayer; byHand: boolean } | null = null;
   private soundOn = false;
 
   constructor() {
@@ -38,16 +37,15 @@ export class ListAutoplayCoordinator {
     this.players.delete(player.element);
     this.visibility.delete(player.element);
     this.observer?.unobserve(player.element);
-    if (this.current !== player) return;
+    if (this.current?.player !== player) return;
     this.stopCurrent();
     this.choose();
   }
 
   nowPlaying(player: AutoplayPlayer): void {
-    if (this.current === player || this.players.get(player.element) !== player) return;
-    this.current?.stop();
-    this.current = player;
-    this.startedByHand = true;
+    if (this.current?.player === player) return;
+    this.current?.player.stop();
+    this.current = { player, byHand: true };
   }
 
   soundChanged(soundOn: boolean): void {
@@ -71,16 +69,16 @@ export class ListAutoplayCoordinator {
     if (!this.active()) return;
     if (this.current && this.holdsOn(this.current)) return;
     const candidate = this.mostVisible();
-    if (candidate === this.current) return;
+    if (candidate === (this.current?.player ?? null)) return;
     this.stopCurrent();
-    this.current = candidate;
-    this.startedByHand = false;
-    candidate?.start(this.soundOn);
+    if (candidate === null) return;
+    this.current = { player: candidate, byHand: false };
+    candidate.start(this.soundOn);
   }
 
-  private holdsOn(incumbent: AutoplayPlayer): boolean {
-    const ratio = this.visibility.get(incumbent.element) ?? 0;
-    return this.startedByHand ? ratio > 0 : ratio >= VISIBLE_ENOUGH;
+  private holdsOn({ player, byHand }: { player: AutoplayPlayer; byHand: boolean }): boolean {
+    const ratio = this.visibility.get(player.element) ?? 0;
+    return byHand ? ratio > 0 : ratio >= VISIBLE_ENOUGH;
   }
 
   private mostVisible(): AutoplayPlayer | null {
@@ -96,7 +94,7 @@ export class ListAutoplayCoordinator {
   }
 
   private stopCurrent(): void {
-    this.current?.stop();
+    this.current?.player.stop();
     this.current = null;
   }
 }
