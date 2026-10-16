@@ -104,9 +104,9 @@ describe('parseProblem', () => {
     });
   });
 
-  // Strato's bot protection answers with its Apache 503 page under HTTP 200, so
-  // Angular fails JSON.parse and hands the body over as { error, text } (#1112).
-  it('names the web server page title when a 2xx body is an HTML page', () => {
+  // Strato's firewall answers with its Apache 503 page under HTTP 200, so Angular
+  // fails JSON.parse and hands the body over as { error, text } (#1112, #1638).
+  it('says the web host blocked the request when a 2xx body is an HTML page', () => {
     const error = new HttpErrorResponse({
       status: 200,
       error: {
@@ -118,7 +118,7 @@ describe('parseProblem', () => {
     expect(parseProblem(error)).toEqual({
       type: 'about:blank',
       title:
-        'The web server answered "503 Service Unavailable" instead of the app. Try again in a minute.',
+        'The web host blocked this request before it reached the app (it answered "503 Service Unavailable").',
       status: 200,
     });
   });

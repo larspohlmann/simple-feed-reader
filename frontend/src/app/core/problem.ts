@@ -122,8 +122,16 @@ function unexpectedReplyTitle(error: HttpErrorResponse, text: string): string {
   if (pageTitle === null) {
     return `The server answered with an unexpected reply (HTTP ${error.status}).`;
   }
+  if (isSuccessStatus(error.status)) {
+    return `The web host blocked this request before it reached the app (it answered "${pageTitle}").`;
+  }
 
   return `The web server answered "${pageTitle}" instead of the app. Try again in a minute.`;
+}
+
+/** The app never answers a 2xx with HTML, so such a page comes from a host-level filter. */
+function isSuccessStatus(status: number): boolean {
+  return status >= 200 && status < 300;
 }
 
 function htmlPageTitle(text: string): string | null {
