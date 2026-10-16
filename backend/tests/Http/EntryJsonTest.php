@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryAttachment;
@@ -13,6 +14,7 @@ use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
+use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
@@ -298,6 +300,48 @@ final class EntryJsonTest extends TestCase
             ['network' => 'mastodon', 'isLiked' => false, 'canLike' => false],
             EntryJson::listRow($row)['social'],
         );
+    }
+
+    public function testASocialPostsRepliesAreItsCommentsAndThePostIsTheirDiscussion(): void
+    {
+        $entry = $this->entryTitled('Post');
+        $entry->setDiscussion(Discussion::withCommentsFeed(
+            'https://example.com/a#comments',
+            'https://example.com/a/feed',
+            CommentsLoad::Manual,
+        ));
+        $row = $this->row(
+            $entry,
+            new EntryListRowEnrichment(social: new EntryListRowSocial(SocialNetwork::Mastodon, false, true)),
+        );
+
+        $json = EntryJson::listRow($row);
+
+        self::assertSame('auto', $json['comments']);
+        self::assertSame('https://example.com/a', $json['discussionUrl']);
+    }
+
+    public function testAnArticleKeepsItsOwnDiscussion(): void
+    {
+        $entry = $this->entryTitled('Article');
+        $entry->setDiscussion(Discussion::withCommentsFeed(
+            'https://example.com/a#comments',
+            'https://example.com/a/feed',
+            CommentsLoad::Manual,
+        ));
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('manual', $json['comments']);
+        self::assertSame('https://example.com/a#comments', $json['discussionUrl']);
+    }
+
+    public function testAnArticleWithoutADiscussionHasNone(): void
+    {
+        $json = EntryJson::listRow($this->row($this->entryTitled('Article')));
+
+        self::assertNull($json['comments']);
+        self::assertNull($json['discussionUrl']);
     }
 
     public function testListRowKeepsItsShapeAndCarriesTheEnrichment(): void

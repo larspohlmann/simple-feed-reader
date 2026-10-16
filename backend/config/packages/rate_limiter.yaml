@@ -64,6 +64,13 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
+        # Per-user cap on social reply fetches (#1616); a cached thread spends nothing.
+        social_replies:
+            policy: 'sliding_window'
+            limit: 120
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
         # Per user: each preview triggers at most one outbound feed fetch, as reader's does.
         feed_preview:
             policy: 'sliding_window'

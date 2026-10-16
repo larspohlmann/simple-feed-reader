@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
+use App\Enum\CommentsLoad;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Service\Text\Support\EntryExcerpt;
@@ -60,14 +61,12 @@ final class EntryJson
     public static function listRow(EntryListRow $row): array
     {
         $entry = $row->entry;
-        $discussion = $entry->getDiscussion();
         $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
 
         return self::completed($row) + [
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
-            'discussionUrl' => $discussion->url,
-            'comments' => $discussion->commentsLoad?->value,
+        ] + self::discussionOf($row) + [
             'author' => $entry->getAuthor(),
             'imageAspectRatio' => $shortPlayerUrl === null ? null : self::SHORT_COVER_ASPECT_RATIO,
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
@@ -123,6 +122,18 @@ final class EntryJson
     public static function detail(EntryListRow $row): array
     {
         return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
+    }
+
+    /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null} */
+    private static function discussionOf(EntryListRow $row): array
+    {
+        $entry = $row->entry;
+        if (null !== $row->enrichment->social) {
+            return ['discussionUrl' => $entry->getUrl(), 'comments' => CommentsLoad::Auto->value];
+        }
+        $discussion = $entry->getDiscussion();
+
+        return ['discussionUrl' => $discussion->url, 'comments' => $discussion->commentsLoad?->value];
     }
 
     /** @return array{network: 'bluesky'|'mastodon', isLiked: bool, canLike: bool}|null */
