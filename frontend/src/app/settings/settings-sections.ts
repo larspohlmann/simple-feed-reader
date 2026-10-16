@@ -43,6 +43,12 @@ export const SETTINGS_SECTIONS = [
     labelKey: 'settings.instance.title',
     group: 'admin',
   },
+  {
+    path: 'admin/retention',
+    icon: 'auto_delete',
+    labelKey: 'settings.retention.title',
+    group: 'admin',
+  },
   { path: 'admin/proxy', icon: 'vpn_lock', labelKey: 'settings.proxy.title', group: 'admin' },
   { path: 'admin/mail', icon: 'outgoing_mail', labelKey: 'settings.mail.title', group: 'admin' },
   { path: 'admin/grafana', icon: 'monitoring', labelKey: 'settings.grafana.title', group: 'admin' },

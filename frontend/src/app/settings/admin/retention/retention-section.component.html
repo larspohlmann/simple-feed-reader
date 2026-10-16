@@ -1,0 +1,63 @@
+<app-settings-stack>
+  @if (svc.state()) {
+    <app-settings-group
+      icon="auto_delete"
+      [title]="'settings.retention.title' | transloco"
+      [caption]="'settings.retention.caption' | transloco"
+    >
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.retention.entryDays' | transloco"
+        [description]="'settings.retention.entryDaysDesc' | transloco"
+        labelFor="retention-entry-days"
+      >
+        <input
+          id="retention-entry-days"
+          type="number"
+          class="days-field"
+          min="1"
+          max="3650"
+          data-testid="retention-entry-days"
+          [value]="entryRetentionDays()"
+          [attr.aria-label]="'settings.retention.entryDays' | transloco"
+          (input)="onDays('entryRetentionDays', $event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.retention.socialDays' | transloco"
+        [description]="'settings.retention.socialDaysDesc' | transloco"
+        labelFor="retention-social-days"
+      >
+        <input
+          id="retention-social-days"
+          type="number"
+          class="days-field"
+          min="1"
+          max="3650"
+          data-testid="retention-social-days"
+          [value]="socialRetentionDays()"
+          [attr.aria-label]="'settings.retention.socialDays' | transloco"
+          (input)="onDays('socialRetentionDays', $event)"
+        />
+      </app-settings-row>
+
+      @if (failureMessage(); as message) {
+        <div class="panel-banner">
+          <app-error-banner [message]="message" />
+        </div>
+      }
+
+      <app-settings-save-bar
+        [dirty]="svc.dirty()"
+        [saving]="svc.busy()"
+        [saveLabel]="'settings.retention.save' | transloco"
+        [resetLabel]="'settings.retention.reset' | transloco"
+        [unsavedLabel]="'settings.retention.unsaved' | transloco"
+        (save)="onSave()"
+        (reset)="onReset()"
+      />
+    </app-settings-group>
+  }
+</app-settings-stack>
