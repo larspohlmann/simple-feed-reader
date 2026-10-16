@@ -6,6 +6,7 @@ import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
 import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -49,7 +50,7 @@ class HostComponent {
 }
 
 async function mount(media: EntryMediumDto[]) {
-  TestBed.configureTestingModule({ imports: [HostComponent] });
+  TestBed.configureTestingModule({ imports: [HostComponent, provideTranslocoTesting()] });
   const fixture = TestBed.createComponent(HostComponent);
   fixture.componentInstance.media = media;
   const parentClicks = jest.fn();
@@ -137,7 +138,7 @@ describe('PostMediaComponent in the list', () => {
     unlockedVideos = { take: () => document.createElement('video') },
   ) {
     TestBed.configureTestingModule({
-      imports: [HostComponent],
+      imports: [HostComponent, provideTranslocoTesting()],
       providers: [
         { provide: ListAutoplayCoordinator, useValue: coordinator },
         { provide: UnlockedVideoElements, useValue: unlockedVideos },
