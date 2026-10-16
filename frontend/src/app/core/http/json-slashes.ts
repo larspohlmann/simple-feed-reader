@@ -1,4 +1,4 @@
-/** Writes every `/` of serialised JSON as `\/`; the parsed value is unchanged. */
-export function escapeJsonSlashes(json: string): string {
-  return json.replaceAll('/', '\\/');
+/** `JSON.stringify` with every `/` written as `\/`; the parsed value is unchanged. */
+export function stringifyWithEscapedSlashes(value: unknown): string {
+  return JSON.stringify(value).replaceAll('/', '\\/');
 }

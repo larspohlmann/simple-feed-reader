@@ -37,15 +37,8 @@ describe('escapeJsonSlashesInterceptor', () => {
   });
 
   it('keeps a Content-Type the caller named', () => {
-    http
-      .patch(
-        '/api/me',
-        { avatar: 'https://bsky.social/a.png' },
-        {
-          headers: { 'Content-Type': 'application/merge-patch+json' },
-        },
-      )
-      .subscribe();
+    const headers = { 'Content-Type': 'application/merge-patch+json' };
+    http.patch('/api/me', { avatar: 'https://bsky.social/a.png' }, { headers }).subscribe();
 
     const sent = backend.expectOne('/api/me').request;
     expect(sent.headers.get('Content-Type')).toBe('application/merge-patch+json');
