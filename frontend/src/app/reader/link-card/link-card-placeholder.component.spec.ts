@@ -4,11 +4,44 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LinkCardPlaceholderComponent } from './link-card-placeholder.component';
 import { PreviewProgress } from './preview-progress';
 
+let sighted: jest.Mock;
+let restoreObserver: (() => void) | null = null;
+
+afterEach(() => {
+  restoreObserver?.();
+  restoreObserver = null;
+});
+
+function stubIntersectionObserver() {
+  const callbacks: IntersectionObserverCallback[] = [];
+  const observed: Element[] = [];
+  const disconnect = jest.fn();
+  const real = globalThis.IntersectionObserver;
+  restoreObserver = () => (globalThis.IntersectionObserver = real);
+  globalThis.IntersectionObserver = class {
+    constructor(callback: IntersectionObserverCallback) {
+      callbacks.push(callback);
+    }
+    readonly observe = (target: Element) => observed.push(target);
+    readonly disconnect = disconnect;
+  } as unknown as typeof IntersectionObserver;
+  const report = (target: Element, isIntersecting: boolean) =>
+    callbacks[0](
+      [{ target, isIntersecting } as unknown as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+  return { observed, report, disconnect };
+}
+
 function mount({ loading = true, lang = 'en' } = {}): HTMLElement {
+  sighted = jest.fn();
   TestBed.configureTestingModule({
     imports: [LinkCardPlaceholderComponent, provideTranslocoTesting()],
     providers: [
-      { provide: PreviewProgress, useValue: { isLoading: (id: number) => loading && id === 7 } },
+      {
+        provide: PreviewProgress,
+        useValue: { isLoading: (id: number) => loading && id === 7, sighted },
+      },
     ],
   });
   TestBed.inject(TranslocoService).setActiveLang(lang);
@@ -42,5 +75,29 @@ describe('LinkCardPlaceholderComponent', () => {
     [false, 'Noch keine Vorschau'],
   ])('says it in German (loading: %s)', (loading, text) => {
     expect(mount({ loading, lang: 'de' }).textContent).toContain(text);
+  });
+
+  describe('once it comes into view (#1646)', () => {
+    it('asks for its preview at once, and only the first time', () => {
+      const { observed, report, disconnect } = stubIntersectionObserver();
+      const element = mount();
+      expect(observed).toEqual([element]);
+
+      report(element, false);
+      expect(sighted).not.toHaveBeenCalled();
+      report(element, true);
+
+      expect(sighted.mock.calls).toEqual([[7]]);
+      expect(disconnect).toHaveBeenCalled();
+    });
+
+    it('asks for one whose preview no longer loads too', () => {
+      const { report } = stubIntersectionObserver();
+      const element = mount({ loading: false });
+
+      report(element, true);
+
+      expect(sighted.mock.calls).toEqual([[7]]);
+    });
   });
 });

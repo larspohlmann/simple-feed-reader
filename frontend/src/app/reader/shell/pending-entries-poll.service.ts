@@ -16,6 +16,7 @@ import { ReaderApi } from '../reader-api';
 import { EntriesStore } from '../state/entries.store';
 import { CompletedEntriesMerge } from './completed-entries-merge';
 import { ReaderRouteState } from './reader-route-state.service';
+import { SightedPreviews } from './sighted-previews.service';
 
 export const PENDING_POLL_INTERVAL_MS = 3000;
 export const PENDING_POLL_MAX_ROUNDS = 20;
@@ -31,6 +32,7 @@ export class PendingEntriesPoll implements PreviewProgress {
   private readonly completed = inject(CompletedEntriesMerge);
   private readonly zone = inject(NgZone);
   private readonly routeState = inject(ReaderRouteState);
+  private readonly sightings = inject(SightedPreviews);
 
   private readonly listedPending = computed(() =>
     this.store
@@ -106,7 +108,11 @@ export class PendingEntriesPoll implements PreviewProgress {
   }
 
   isLoading(entryId: number): boolean {
-    return this.loadingIds().has(entryId);
+    return this.loadingIds().has(entryId) || this.sightings.isCompleting(entryId);
+  }
+
+  sighted(entryId: number): void {
+    this.sightings.sighted(entryId);
   }
 
   private schedule(): void {
