@@ -13,6 +13,7 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
+use App\Repository\NetworkScope;
 use App\Service\Reading\MarkReadService;
 use App\Service\Reading\Model\ReadScopeModel;
 use App\Tests\DbTestCase;
@@ -330,7 +331,7 @@ final class MarkReadServiceTest extends DbTestCase
 
         $this->service()->mark(
             $user,
-            ReadScopeModel::network(SocialNetwork::Bluesky),
+            ReadScopeModel::network(NetworkScope::whole(SocialNetwork::Bluesky)),
             new \DateTimeImmutable('2026-07-25T00:00:00Z'),
         );
         $this->entityManager->clear();

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Subscription;
-use App\Enum\SocialNetwork;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -35,16 +34,16 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
     }
 
     /** @return list<Subscription> */
-    public function findForUserOnNetwork(int $userId, SocialNetwork $network): array
+    public function findForUserOnNetwork(int $userId, NetworkScope $network): array
     {
-        /** @var list<Subscription> $rows */
-        $rows = $this->createQueryBuilder('s')
+        $qb = $this->createQueryBuilder('s')
             ->join('s.feed', 'f')->addSelect('f')
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->andWhere('f.network = :network')->setParameter('network', $network)
-            ->orderBy('s.id', 'ASC')
-            ->getQuery()
-            ->getResult();
+            ->orderBy('s.id', 'ASC');
+        NetworkScopeDql::restrict($qb, 'f', $network);
+
+        /** @var list<Subscription> $rows */
+        $rows = $qb->getQuery()->getResult();
 
         return $rows;
     }

@@ -113,6 +113,31 @@ final class EntryNetworkScopeTest extends WebTestCase
         self::assertSame(['mastodon-post'], $this->guidsOfResponse());
     }
 
+    public function testMarkingANetworksProfilesReadLeavesItsPrivateFeedsUnread(): void
+    {
+        [$headers, $user] = $this->auth('network-mark-profiles@example.com');
+        $this->seedNetworks($user);
+
+        $this->client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                [
+                    'scope' => 'network',
+                    'network' => 'bluesky',
+                    'feedKind' => 'profile',
+                    'until' => '2026-10-12T00:00:00Z',
+                ],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+
+        $this->client->request('GET', '/api/entries?network=bluesky&view=unread', server: $headers);
+        self::assertSame(['home-post'], $this->guidsOfResponse());
+    }
+
     public function testMarkingANetworkReadWithoutANetworkIsAValidationError(): void
     {
         [$headers] = $this->auth('network-mark-missing@example.com');

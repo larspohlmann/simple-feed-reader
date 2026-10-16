@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Reading\Model;
 
-use App\Enum\SocialNetwork;
+use App\Repository\NetworkScope;
 
 final readonly class ReadScopeModel
 {
     private function __construct(
         public ReadScopeKind $kind,
         private ?int $id,
-        private ?SocialNetwork $network = null,
+        private ?NetworkScope $network = null,
     ) {
     }
 
@@ -30,7 +30,7 @@ final readonly class ReadScopeModel
         return new self(ReadScopeKind::Tag, $tagId);
     }
 
-    public static function network(SocialNetwork $network): self
+    public static function network(NetworkScope $network): self
     {
         return new self(ReadScopeKind::Network, null, $network);
     }
@@ -41,7 +41,7 @@ final readonly class ReadScopeModel
             ?? throw new \LogicException(sprintf('A "%s" scope names no subscription or tag.', $this->kind->value));
     }
 
-    public function targetNetwork(): SocialNetwork
+    public function targetNetwork(): NetworkScope
     {
         return $this->network
             ?? throw new \LogicException(sprintf('A "%s" scope names no network.', $this->kind->value));

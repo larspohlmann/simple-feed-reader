@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reading\Model;
 
 use App\Enum\SocialNetwork;
+use App\Repository\NetworkScope;
 use App\Service\Reading\Model\ReadScopeKind;
 use App\Service\Reading\Model\ReadScopeModel;
 use PHPUnit\Framework\TestCase;
@@ -36,17 +37,17 @@ final class ReadScopeModelTest extends TestCase
 
     public function testNetworkCarriesItsNetwork(): void
     {
-        $scope = ReadScopeModel::network(SocialNetwork::Mastodon);
+        $scope = ReadScopeModel::network(NetworkScope::whole(SocialNetwork::Mastodon));
 
         self::assertSame(ReadScopeKind::Network, $scope->kind);
-        self::assertSame(SocialNetwork::Mastodon, $scope->targetNetwork());
+        self::assertEquals(NetworkScope::whole(SocialNetwork::Mastodon), $scope->targetNetwork());
     }
 
     public function testANetworkScopeHasNoTargetId(): void
     {
         $this->expectException(\LogicException::class);
 
-        ReadScopeModel::network(SocialNetwork::Bluesky)->targetId();
+        ReadScopeModel::network(NetworkScope::whole(SocialNetwork::Bluesky))->targetId();
     }
 
     public function testATagScopeNamesNoNetwork(): void
