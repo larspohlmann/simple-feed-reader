@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\Feed;
+use App\Entity\RetentionSetting;
 use App\Repository\FeedRepository;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
@@ -24,6 +25,7 @@ use App\Service\Refresh\RefreshHousekeeping;
 use App\Service\Refresh\RefreshPassRecorder;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Retention\EntryPruner;
+use App\Service\Retention\RetentionSettings;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
@@ -163,7 +165,10 @@ final readonly class RefreshRunners
                 new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
                 new EntryPruner(
                     new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
-                    DefaultRetentionSettings::create($this->entityManager),
+                    new RetentionSettings(
+                        $this->entityManager->getRepository(RetentionSetting::class),
+                        $this->entityManager,
+                    ),
                     $this->clock,
                     $indexer,
                 ),

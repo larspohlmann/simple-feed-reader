@@ -23,11 +23,6 @@ final class RetentionSetting
     #[ORM\Column(options: ['default' => RetentionWindows::DEFAULT_SOCIAL_DAYS])]
     private int $socialRetentionDays = RetentionWindows::DEFAULT_SOCIAL_DAYS;
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
     public function getWindows(): RetentionWindows
     {
         return new RetentionWindows($this->entryRetentionDays, $this->socialRetentionDays);

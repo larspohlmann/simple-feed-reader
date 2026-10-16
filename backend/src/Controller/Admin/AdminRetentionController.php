@@ -29,8 +29,9 @@ final readonly class AdminRetentionController
     public function update(
         #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] RetentionSettingsRequest $request,
     ): JsonResponse {
-        $this->settings->update($request->toWindows());
+        $windows = $request->toWindows();
+        $this->settings->update($windows);
 
-        return new JsonResponse(RetentionSettingsJson::from($this->settings->current()));
+        return new JsonResponse(RetentionSettingsJson::from($windows));
     }
 }

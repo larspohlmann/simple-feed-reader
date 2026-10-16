@@ -9,8 +9,8 @@ use App\Service\Search\EntryIndexer;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Three passes: entries fetched before the admin's retention window (a shorter one for a social network's feeds),
- * a feed's entries beyond its cap, then completed runs left empty.
+ * Three passes: entries fetched before their retention window (a social network's feeds have their own), a feed's
+ * entries beyond its cap, then completed runs left empty.
  * Age counts from the fetch (`createdAt`), never `effectiveDate`: a backfilled article was re-added forever (#384).
  */
 final readonly class EntryPruner
@@ -53,7 +53,7 @@ final readonly class EntryPruner
         $cutoff = $this->daysAgo($windows->entryDays);
 
         return $this->pruneFetchedBefore($this->retention->socialFeedIdsFetchedBefore($socialCutoff), $socialCutoff)
-            + $this->pruneFetchedBefore($this->retention->feedIdsFetchedBefore($cutoff), $cutoff);
+            + $this->pruneFetchedBefore($this->retention->nonSocialFeedIdsFetchedBefore($cutoff), $cutoff);
     }
 
     /**

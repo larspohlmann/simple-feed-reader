@@ -13,7 +13,6 @@ use App\Entity\RetentionWindows;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RetentionRepository;
-use App\Repository\RetentionSettingRepository;
 use App\Repository\RowIds;
 use App\Service\Retention\EntryPruner;
 use App\Service\Retention\RetentionSettings;
@@ -56,10 +55,7 @@ final class EntryPrunerTest extends DbTestCase
 
     private function settings(): RetentionSettings
     {
-        return new RetentionSettings(
-            self::getContainer()->get(RetentionSettingRepository::class),
-            $this->entityManager,
-        );
+        return self::getContainer()->get(RetentionSettings::class);
     }
 
     private function retention(): RetentionRepository
@@ -214,6 +210,16 @@ final class EntryPrunerTest extends DbTestCase
         self::assertNull($this->findByGuid($rss, 'stale'));
         self::assertNotNull($this->findByGuid($rss, 'recent'));
         self::assertNull($this->findByGuid($social, 'stale'));
+    }
+
+    public function testASocialWindowLongerThanTheEntryWindowStillHolds(): void
+    {
+        $this->settings()->update(new RetentionWindows(entryDays: 14, socialDays: 30));
+        $social = $this->socialFeedWithEntries(self::FLOOR, $this->daysAgo(1));
+        $this->seedEntry($social, 'three-weeks-old', $this->daysAgo(21));
+
+        self::assertSame(0, $this->pruner->prune());
+        self::assertNotNull($this->findByGuid($social, 'three-weeks-old'));
     }
 
     public function testKeepsAnRssEntryPastTheSocialWindow(): void
