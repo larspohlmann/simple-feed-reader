@@ -1,4 +1,4 @@
-import { autoplayingShortPlayer } from './short-embed';
+import { autoplayingShortPlayer, mutedShortPlayer } from './short-embed';
 
 describe('autoplayingShortPlayer', () => {
   it('starts the allow-listed player of a Short on load', () => {
@@ -16,5 +16,15 @@ describe('autoplayingShortPlayer', () => {
 
   it('is null for an entry that is no Short', () => {
     expect(autoplayingShortPlayer(null)).toBeNull();
+  });
+});
+
+describe('mutedShortPlayer', () => {
+  it('mutes a Short player and keeps it inline, for starting without a tap', () => {
+    expect(
+      mutedShortPlayer('https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1#shorts'),
+    ).toBe(
+      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1&mute=1&playsinline=1#shorts',
+    );
   });
 });
