@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PostMediaComponent } from './post-media.component';
 import { EntryMediumDto } from '../../entry-medium';
+import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
+import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
@@ -87,5 +89,58 @@ describe('PostMediaComponent', () => {
 
     expect(pause).toHaveBeenCalledTimes(1);
     expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('PostMediaComponent in the list', () => {
+  const coordinator = {
+    register: jest.fn(),
+    unregister: jest.fn(),
+    nowPlaying: jest.fn(),
+    soundChanged: jest.fn(),
+  };
+
+  beforeEach(() => Object.values(coordinator).forEach((spy) => spy.mockReset()));
+
+  async function mountInList(media: EntryMediumDto[]) {
+    TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [{ provide: ListAutoplayCoordinator, useValue: coordinator }],
+    });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.media = media;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return fixture;
+  }
+
+  it('registers each video for autoplay', async () => {
+    const fixture = await mountInList([clip, image(2)]);
+    const video = fixture.nativeElement.querySelector('video');
+
+    expect(coordinator.register).toHaveBeenCalledTimes(1);
+    const player = coordinator.register.mock.calls[0][0] as VideoAutoplayPlayer;
+    expect(player).toBeInstanceOf(VideoAutoplayPlayer);
+    expect(player.element).toBe(video);
+  });
+
+  it('unregisters its videos when destroyed', async () => {
+    const fixture = await mountInList([clip]);
+    const player = coordinator.register.mock.calls[0][0];
+
+    fixture.destroy();
+
+    expect(coordinator.unregister).toHaveBeenCalledWith(player);
+  });
+
+  it('unregisters a video a re-render removed', async () => {
+    const fixture = await mountInList([clip]);
+    const player = coordinator.register.mock.calls[0][0];
+
+    fixture.componentInstance.media = [image(1)];
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(coordinator.unregister).toHaveBeenCalledWith(player);
   });
 });
