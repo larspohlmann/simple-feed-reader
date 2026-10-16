@@ -61,7 +61,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
 
             throw new CommentsThrottledException('The comments feed host asked us to wait.', $wait, $exception);
         } catch (FetchException $exception) {
-            throw new CommentsUnavailableException('The comments feed could not be fetched.', 0, $exception);
+            throw new CommentsUnavailableException('The comments feed could not be fetched.', previous: $exception);
         }
     }
 
@@ -70,7 +70,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
         try {
             $parsed = $this->parser->parse($answer)->entries;
         } catch (FeedParseException $exception) {
-            throw new CommentsUnavailableException('The comments feed could not be parsed.', 0, $exception);
+            throw new CommentsUnavailableException('The comments feed could not be parsed.', previous: $exception);
         }
 
         return new CommentsPageModel($this->comments($entry, $parsed));

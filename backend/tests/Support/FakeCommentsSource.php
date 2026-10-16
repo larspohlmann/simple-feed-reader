@@ -20,11 +20,14 @@ final class FakeCommentsSource implements CommentsSourceInterface
 
     public bool $servesEntries = true;
 
+    public int $audienceAsks = 0;
+
     private ?\Throwable $failure = null;
 
     private bool $nextIsStillGathering = false;
 
-    private ?string $unreadableAnswer = null;
+    /** @var list<string> */
+    private array $unreadableAnswers = [];
 
     public function __construct(private readonly string $answer)
     {
@@ -40,9 +43,9 @@ final class FakeCommentsSource implements CommentsSourceInterface
         $this->failure = null;
     }
 
-    public function cannotRead(string $answer): void
+    public function cannotRead(string ...$answers): void
     {
-        $this->unreadableAnswer = $answer;
+        $this->unreadableAnswers = array_values($answers);
     }
 
     public function stillGathering(): void
@@ -57,6 +60,8 @@ final class FakeCommentsSource implements CommentsSourceInterface
 
     public function audienceOf(User $user, Entry $entry): string
     {
+        ++$this->audienceAsks;
+
         return 'fake:' . $entry->getGuid();
     }
 
@@ -78,7 +83,7 @@ final class FakeCommentsSource implements CommentsSourceInterface
 
     public function read(Entry $entry, string $answer): CommentsPageModel
     {
-        if ($answer === $this->unreadableAnswer) {
+        if (\in_array($answer, $this->unreadableAnswers, true)) {
             throw new CommentsUnavailableException('unreadable');
         }
 

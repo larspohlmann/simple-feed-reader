@@ -179,6 +179,40 @@ final class CommentsLoaderTest extends TestCase
         self::assertCount(2, $this->source->fetches);
     }
 
+    public function testACachedAnswerThatNoLongerReadsIsFetchedAfresh(): void
+    {
+        $loader = $this->loader();
+        $loader->load($this->user, $this->entry);
+        $this->source->cannotRead('answer-1');
+
+        $refetched = $loader->load($this->user, $this->entry);
+        $cached = $loader->load($this->user, $this->entry);
+
+        self::assertSame('answer-2', self::firstHtml($refetched));
+        self::assertEquals($this->clock->now(), $refetched->fetchedAt);
+        self::assertSame('answer-2', self::firstHtml($cached));
+        self::assertCount(2, $this->source->fetches);
+    }
+
+    public function testACachedAnswerThatNoLongerReadsIsFetchedAfreshOnlyOnce(): void
+    {
+        $loader = $this->loader();
+        $loader->load($this->user, $this->entry);
+        $this->source->cannotRead('answer-1', 'answer-2');
+
+        $result = $loader->load($this->user, $this->entry);
+
+        self::assertSame(CommentsStatus::Failed, $result->status);
+        self::assertCount(2, $this->source->fetches);
+    }
+
+    public function testALoadAsksTheAudienceOnce(): void
+    {
+        $this->loader()->load($this->user, $this->entry);
+
+        self::assertSame(1, $this->source->audienceAsks);
+    }
+
     public function testAnEntryNoSourceServesIsRefused(): void
     {
         $this->source->servesEntries = false;

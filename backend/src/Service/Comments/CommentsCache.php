@@ -32,13 +32,8 @@ final readonly class CommentsCache
     {
         $item = $this->cache->getItem(self::keyOf($key));
         $item->set((new CachedCommentsModel($answer->body, $fetchedAt))->toCacheEntry());
-        $item->expiresAt($fetchedAt->modify('+' . $this->lifetimeOf($answer) . ' seconds'));
+        $item->expiresAt($fetchedAt->setTimestamp($fetchedAt->getTimestamp() + $this->lifetimeOf($answer)));
         $this->cache->save($item);
-    }
-
-    public function forget(string $key): void
-    {
-        $this->cache->deleteItem(self::keyOf($key));
     }
 
     private function lifetimeOf(CommentsAnswerModel $answer): int
@@ -48,6 +43,6 @@ final readonly class CommentsCache
 
     private static function keyOf(string $key): string
     {
-        return 'comments.' . hash('xxh128', $key);
+        return hash('xxh128', $key);
     }
 }

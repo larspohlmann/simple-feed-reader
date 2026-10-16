@@ -10,16 +10,19 @@ use App\Service\Comments\CommentsSource\CommentsSourceInterface;
 
 final readonly class CommentsRequest
 {
+    private string $cacheKey;
+
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         public CommentsSourceInterface $source,
         public User $user,
         public Entry $entry,
     ) {
+        $this->cacheKey = $source::class . ' ' . $source->audienceOf($user, $entry);
     }
 
     public function cacheKey(): string
     {
-        return $this->source::class . ' ' . $this->source->audienceOf($this->user, $this->entry);
+        return $this->cacheKey;
     }
 }

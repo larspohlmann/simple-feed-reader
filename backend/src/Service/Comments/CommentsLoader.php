@@ -32,11 +32,8 @@ final readonly class CommentsLoader
     {
         $request = new CommentsRequest($this->sourceFor($entry), $user, $entry);
         $cached = $this->cache->find($request->cacheKey());
-        if (null !== $cached) {
-            return self::cached($request, $cached);
-        }
 
-        return $this->fetched($request);
+        return null === $cached ? $this->fetched($request) : $this->cachedOrFetched($request, $cached);
     }
 
     /** As load(), but asks the source again whatever is cached. */
@@ -61,12 +58,12 @@ final readonly class CommentsLoader
         return CommentsResultModel::ok($page, $fetchedAt);
     }
 
-    private static function cached(CommentsRequest $request, CachedCommentsModel $cached): CommentsResultModel
+    private function cachedOrFetched(CommentsRequest $request, CachedCommentsModel $cached): CommentsResultModel
     {
         try {
             return CommentsResultModel::ok($request->source->read($request->entry, $cached->body), $cached->fetchedAt);
         } catch (CommentsUnavailableException) {
-            return CommentsResultModel::failed();
+            return $this->fetched($request);
         }
     }
 
