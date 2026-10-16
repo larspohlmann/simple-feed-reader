@@ -100,4 +100,15 @@ final class JsonNodeModelTest extends TestCase
         self::assertFalse($node->has('reblog'));
         self::assertFalse($node->has('reason'));
     }
+
+    public function testIsTrueReadsOnlyTheBooleanTrue(): void
+    {
+        $node = JsonNodeModel::of(['muted' => true, 'blockedBy' => false, 'flag' => 'true', 'count' => 1]);
+
+        self::assertTrue($node->isTrue('muted'));
+        self::assertFalse($node->isTrue('blockedBy'));
+        self::assertFalse($node->isTrue('flag'));
+        self::assertFalse($node->isTrue('count'));
+        self::assertFalse($node->isTrue('absent'));
+    }
 }
