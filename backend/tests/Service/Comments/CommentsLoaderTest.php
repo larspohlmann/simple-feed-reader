@@ -165,6 +165,20 @@ final class CommentsLoaderTest extends TestCase
         self::assertCount(2, $this->source->fetches);
     }
 
+    public function testAnAnswerThatCannotBeReadIsFailedAndCachesNothing(): void
+    {
+        $loader = $this->loader();
+        $this->source->cannotRead('answer-1');
+
+        $failed = $loader->load($this->user, $this->entry);
+        $recovered = $loader->load($this->user, $this->entry);
+
+        self::assertSame(CommentsStatus::Failed, $failed->status);
+        self::assertSame(CommentsStatus::Ok, $recovered->status);
+        self::assertSame('answer-2', self::firstHtml($recovered));
+        self::assertCount(2, $this->source->fetches);
+    }
+
     public function testAnEntryNoSourceServesIsRefused(): void
     {
         $this->source->servesEntries = false;

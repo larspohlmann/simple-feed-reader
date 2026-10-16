@@ -42,7 +42,7 @@ final readonly class CommentsFeedSource implements CommentsSourceInterface
 
     public function audienceOf(User $user, Entry $entry): string
     {
-        return self::feedUrlOf($entry);
+        return $entry->getDiscussion()->commentsFeedUrl ?? '';
     }
 
     public function fetch(User $user, Entry $entry): CommentsAnswerModel

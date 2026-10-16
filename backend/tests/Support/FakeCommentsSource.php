@@ -7,6 +7,7 @@ namespace App\Tests\Support;
 use App\Entity\Entry;
 use App\Entity\User;
 use App\Service\Comments\CommentsSource\CommentsSourceInterface;
+use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentsAnswerModel;
 use App\Service\Comments\Model\CommentsPageModel;
@@ -23,6 +24,8 @@ final class FakeCommentsSource implements CommentsSourceInterface
 
     private bool $nextIsStillGathering = false;
 
+    private ?string $unreadableAnswer = null;
+
     public function __construct(private readonly string $answer)
     {
     }
@@ -35,6 +38,11 @@ final class FakeCommentsSource implements CommentsSourceInterface
     public function recover(): void
     {
         $this->failure = null;
+    }
+
+    public function cannotRead(string $answer): void
+    {
+        $this->unreadableAnswer = $answer;
     }
 
     public function stillGathering(): void
@@ -70,6 +78,10 @@ final class FakeCommentsSource implements CommentsSourceInterface
 
     public function read(Entry $entry, string $answer): CommentsPageModel
     {
+        if ($answer === $this->unreadableAnswer) {
+            throw new CommentsUnavailableException('unreadable');
+        }
+
         return new CommentsPageModel([
             new EntryCommentModel(new CommentAuthorModel('Reader'), null, null, $answer, false),
         ]);

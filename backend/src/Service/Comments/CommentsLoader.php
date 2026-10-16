@@ -33,7 +33,7 @@ final readonly class CommentsLoader
         $request = new CommentsRequest($this->sourceFor($entry), $user, $entry);
         $cached = $this->cache->find($request->cacheKey());
         if (null !== $cached) {
-            return self::read($request, $cached);
+            return self::cached($request, $cached);
         }
 
         return $this->fetched($request);
@@ -49,6 +49,7 @@ final readonly class CommentsLoader
     {
         try {
             $answer = $request->source->fetch($request->user, $request->entry);
+            $page = $request->source->read($request->entry, $answer->body);
         } catch (CommentsThrottledException $exception) {
             return CommentsResultModel::throttled($exception->retryAfterSeconds);
         } catch (CommentsUnavailableException) {
@@ -57,10 +58,10 @@ final readonly class CommentsLoader
         $fetchedAt = $this->clock->now();
         $this->cache->remember($request->cacheKey(), $answer, $fetchedAt);
 
-        return self::read($request, new CachedCommentsModel($answer->body, $fetchedAt));
+        return CommentsResultModel::ok($page, $fetchedAt);
     }
 
-    private static function read(CommentsRequest $request, CachedCommentsModel $cached): CommentsResultModel
+    private static function cached(CommentsRequest $request, CachedCommentsModel $cached): CommentsResultModel
     {
         try {
             return CommentsResultModel::ok($request->source->read($request->entry, $cached->body), $cached->fetchedAt);
