@@ -137,7 +137,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
         $byOtherCommenter = array_filter(
             $result->comments,
-            static fn ($comment): bool => $comment->author === '/u/WesamMikhail',
+            static fn ($comment): bool => $comment->author->name === '/u/WesamMikhail',
         );
         self::assertNotSame([], $byOtherCommenter);
         foreach ($byOtherCommenter as $comment) {
@@ -162,6 +162,20 @@ final class CommentsLoaderTest extends KernelTestCase
         $result = $this->loader()->load(self::entry(guid: 't3_another'));
 
         self::assertContains(self::THREAD, array_map(static fn ($comment) => $comment->url, $result->comments));
+    }
+
+    public function testAFeedCommentCarriesItsAuthorsNameAndProfileAndTheFetchTime(): void
+    {
+        $this->serveRedditThread();
+
+        $result = $this->loader()->load(self::entry());
+
+        $first = $result->comments[0];
+        self::assertNotNull($first->author->name);
+        self::assertNotNull($first->author->profileUrl);
+        self::assertSame(0, $first->depth);
+        self::assertSame(0, $result->omitted);
+        self::assertInstanceOf(\DateTimeImmutable::class, $result->fetchedAt);
     }
 
     public function testA429IsThrottledAndRemembered(): void

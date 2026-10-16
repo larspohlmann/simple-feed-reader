@@ -6,6 +6,8 @@ namespace App\Service\Comments;
 
 use App\Entity\Entry;
 use App\Service\Comments\Exception\NoCommentsFeedException;
+use App\Service\Comments\Model\CommentAuthorModel;
+use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\CommentsResultModel;
 use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -16,6 +18,7 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Sanitize\EntrySanitizer;
+use Psr\Clock\ClockInterface;
 
 final readonly class CommentsLoader
 {
@@ -24,6 +27,7 @@ final readonly class CommentsLoader
         private FeedParser $parser,
         private EntrySanitizer $sanitizer,
         private HostThrottle $hostThrottle,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -40,7 +44,9 @@ final readonly class CommentsLoader
         try {
             $body = $this->fetcher->fetch($feedUrl)->modifiedBody();
 
-            return CommentsResultModel::ok($this->comments($entry, $this->parser->parse($body)->entries));
+            $comments = $this->comments($entry, $this->parser->parse($body)->entries);
+
+            return CommentsResultModel::ok(new CommentsPageModel($comments), $this->clock->now());
         } catch (FeedThrottledException $exception) {
             $wait = $this->hostThrottle->record($feedUrl, $exception->retryAfterSeconds);
 
@@ -63,8 +69,7 @@ final readonly class CommentsLoader
                 continue;
             }
             $comments[] = new EntryCommentModel(
-                $item->author,
-                $item->authorUrl,
+                new CommentAuthorModel($item->author, null, $item->authorUrl, $item->authorAvatarUrl),
                 $item->url,
                 $item->publishedAt,
                 (string) $this->sanitizer->sanitize($item->contentHtml),

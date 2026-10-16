@@ -96,14 +96,17 @@ final class EntryCommentsControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $body = $this->payload($client);
-        self::assertSame(['status', 'comments'], array_keys($body));
+        self::assertSame(['status', 'comments', 'omitted', 'fetchedAt'], array_keys($body));
         self::assertSame('ok', $body['status']);
         self::assertIsArray($body['comments']);
         self::assertNotSame([], $body['comments']);
         $firstComment = $body['comments'][0];
         self::assertIsArray($firstComment);
         self::assertSame(
-            ['author', 'authorUrl', 'url', 'publishedAt', 'html', 'byEntryAuthor'],
+            [
+                'author', 'authorHandle', 'authorUrl', 'authorAvatarUrl', 'url', 'publishedAt', 'html',
+                'byEntryAuthor', 'depth', 'media', 'linkCard', 'quote',
+            ],
             array_keys($firstComment),
         );
         self::assertIsString($firstComment['publishedAt']);

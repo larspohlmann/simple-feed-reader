@@ -6,7 +6,6 @@ namespace App\Http;
 
 use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
-use App\Entity\LinkCardContent;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Service\Text\Support\EntryExcerpt;
@@ -20,9 +19,7 @@ use App\Service\Url\Support\YouTubeUrl;
  * completed() holds only what completing a pending entry can change (#1551).
  *
  * @phpstan-import-type QuoteRow from QuotedPostJson
- * @phpstan-type LinkCardRow array{
- *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
- * }
+ * @phpstan-import-type LinkCardRow from LinkCardJson
  * @phpstan-type EntryRow array{
  *   id: int|null, title: string, url: string|null, author: string|null,
  *   summary: string|null, excerpt: string, contentHtml?: string|null,
@@ -114,7 +111,7 @@ final class EntryJson
             'imageHeight' => $entry->getImageHeight(),
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
-            'linkCards' => array_map(self::linkCard(...), $row->enrichment->linkCards),
+            'linkCards' => array_map(LinkCardJson::of(...), $row->enrichment->linkCards),
             'share' => $entry->getShareKind()?->value,
             'quote' => QuotedPostJson::of($entry->getQuotedPost()),
         ];
@@ -165,19 +162,5 @@ final class EntryJson
         }
 
         return null;
-    }
-
-    /**
-     * @return LinkCardRow
-     */
-    private static function linkCard(LinkCardContent $card): array
-    {
-        return [
-            'url' => $card->url,
-            'title' => $card->title,
-            'description' => $card->description,
-            'imageUrl' => $card->imageUrl,
-            'siteName' => $card->siteName,
-        ];
     }
 }
