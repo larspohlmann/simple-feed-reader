@@ -15,6 +15,7 @@ import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import { readerOutputVersionInterceptor } from './core/http/reader-output-version';
 import { transientGatewayRetryInterceptor } from './core/http/retry-transient-gateway-errors';
+import { escapeJsonSlashesInterceptor } from './core/http/escape-json-slashes';
 import { preloadInitialLanguage } from './core/i18n/boot-language';
 import { ReportingErrorHandler } from './core/errors/global-error-handler';
 import { NavigationFailureReporter } from './core/errors/navigation-failure';
@@ -57,6 +58,7 @@ export const appConfig: ApplicationConfig = {
         authInterceptor,
         readerOutputVersionInterceptor,
         transientGatewayRetryInterceptor,
+        escapeJsonSlashesInterceptor,
       ]),
     ),
     { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
