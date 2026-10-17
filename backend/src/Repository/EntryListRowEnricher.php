@@ -11,7 +11,7 @@ use App\Service\Social\Support\SocialPostAddress;
 
 /**
  * Gives a page of rows their categories, saved searches, link cards, thread posts, pending flag, social state and
- * discussion: one query per lookup.
+ * discussion: one query per lookup, two for the thread posts and their cards.
  */
 final readonly class EntryListRowEnricher
 {

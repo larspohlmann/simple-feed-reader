@@ -132,7 +132,7 @@ final class ReplyThreadOrderTest extends TestCase
             return new EntryCommentModel(new CommentAuthorModel('Ann'), $url, $publishedAt, '<p>Hi</p>', false);
         };
 
-        return new ReplyNode($publishedAt, $comment, array_values($replies));
+        return new ReplyNode($publishedAt, $comment, array_values($replies), $url, false);
     }
 
     /**

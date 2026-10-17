@@ -35,7 +35,7 @@ final readonly class SelfReplyChain
     /** @param list<ReplyNode> $nodes */
     private static function oldestByAuthor(array $nodes): ?ReplyNode
     {
-        $own = array_values(array_filter($nodes, static fn (ReplyNode $node): bool => $node->byEntryAuthor));
+        $own = array_filter($nodes, static fn (ReplyNode $node): bool => $node->byEntryAuthor);
         usort(
             $own,
             static fn (ReplyNode $left, ReplyNode $right): int => self::sortKey($left) <=> self::sortKey($right),

@@ -320,6 +320,7 @@ final class SocialRepliesSourceTest extends DbTestCase
             ),
             [],
             $url,
+            false,
         );
     }
 

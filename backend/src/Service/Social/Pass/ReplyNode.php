@@ -15,9 +15,9 @@ final readonly class ReplyNode
     public function __construct(
         public ?\DateTimeImmutable $publishedAt,
         private \Closure $commentOf,
-        public array $replies = [],
-        public ?string $url = null,
-        public bool $byEntryAuthor = false,
+        public array $replies,
+        public ?string $url,
+        public bool $byEntryAuthor,
     ) {
     }
 

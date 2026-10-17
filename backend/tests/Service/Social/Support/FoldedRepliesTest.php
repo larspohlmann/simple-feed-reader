@@ -72,6 +72,7 @@ final class FoldedRepliesTest extends TestCase
             static fn (): EntryCommentModel => throw new \LogicException('Not rendered in this test.'),
             $replies,
             $url,
+            false,
         );
     }
 }
