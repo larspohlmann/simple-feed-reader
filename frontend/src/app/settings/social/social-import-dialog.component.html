@@ -83,13 +83,13 @@
           <label
             class="row"
             [class.is-chosen]="picked"
-            [class.is-done]="row.state === 'subscribed'"
+            [class.is-done]="row.state === 'subscribed' && !picked"
             [attr.data-testid]="row.testId"
           >
             <input
               type="checkbox"
-              [checked]="picked || row.state === 'subscribed'"
-              [disabled]="row.state === 'subscribed'"
+              [checked]="row.removable ? !picked : picked || row.state === 'subscribed'"
+              [disabled]="row.state === 'subscribed' && !row.removable"
               [attr.aria-label]="row.checkboxLabel"
               (change)="toggle(row)"
             />

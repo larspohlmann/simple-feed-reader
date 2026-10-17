@@ -14,7 +14,9 @@ import { toggled } from '../../core/toggled-set';
 import { RefreshService } from '../../reader/state/refresh.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
+import { savedFeedLabel } from '../../reader/feeds/display-title';
 import { ButtonComponent } from '../../shared/button/button.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { inputValue } from '../../shared/input-value';
@@ -37,6 +39,7 @@ import {
   tally,
 } from './social-import-rows';
 import {
+  CollectionCandidate,
   ImportCandidateState,
   SocialImportCollection,
   SocialImportFeed,
@@ -85,6 +88,7 @@ export class SocialImportDialogComponent {
   private readonly tags = inject(TagsStore);
   private readonly refresh = inject(RefreshService);
   private readonly toast = inject(ToastService);
+  private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
   private readonly activeLang = toSignal(this.i18n.langChanges$, {
     initialValue: this.i18n.getActiveLang(),
@@ -145,7 +149,7 @@ export class SocialImportDialogComponent {
   }
 
   protected toggle(row: ImportRow): void {
-    if (row.state === 'subscribed') return;
+    if (row.state === 'subscribed' && !row.removable) return;
     this.chosen.update((current) => toggled(current, row.key));
   }
 
@@ -161,6 +165,23 @@ export class SocialImportDialogComponent {
   }
 
   protected apply(): void {
+    const unticked = this.untickedCollections();
+    if (unticked.length === 0) {
+      this.send();
+      return;
+    }
+    this.confirm.confirmThen(
+      {
+        title: this.i18n.translate('settings.social.importRemoveTitle'),
+        message: this.removalMessage(unticked),
+        confirmLabel: this.i18n.translate('settings.social.importRemoveConfirm'),
+        danger: true,
+      },
+      () => this.send(),
+    );
+  }
+
+  private send(): void {
     const selection = {
       subscribe: this.chosenFollows(),
       unsubscribe: this.chosenRemovals(),
@@ -215,10 +236,29 @@ export class SocialImportDialogComponent {
   }
 
   private chosenRemovals(): number[] {
-    return (this.importer.candidates()?.follows ?? [])
+    const leftovers = (this.importer.candidates()?.follows ?? [])
       .filter((follow) => follow.state === 'no_longer_followed')
       .filter((follow) => this.chosen().has(followKey(follow)))
-      .flatMap((follow) => (follow.subscriptionId === null ? [] : [follow.subscriptionId]));
+      .map((follow) => follow.subscriptionId);
+    const unticked = this.untickedCollections().map((collection) => collection.subscriptionId);
+    return [...leftovers, ...unticked].flatMap((id) => (id === null ? [] : [id]));
+  }
+
+  private untickedCollections(): CollectionCandidate[] {
+    const candidates = this.importer.candidates();
+    return [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
+      .filter((collection) => collection.state === 'subscribed' && collection.kind !== 'home')
+      .filter((collection) => this.chosen().has(collectionKey(collection)));
+  }
+
+  private removalMessage(unticked: readonly CollectionCandidate[]): string {
+    const removal = this.i18n.translate('settings.social.importRemoveMessage', {
+      names: unticked.map((collection) => collection.name).join(', '),
+    });
+    const moves = this.i18n.translate('manage.savedPostsMove', {
+      saved: savedFeedLabel(this.i18n, this.data.network),
+    });
+    return `${removal} ${moves}`;
   }
 
   private chosenCollections(): SocialImportCollection[] {

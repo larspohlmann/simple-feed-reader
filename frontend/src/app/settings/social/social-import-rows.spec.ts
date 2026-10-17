@@ -12,6 +12,7 @@ describe('tally', () => {
     haystack,
     stateLabel: state,
     checkboxLabel: key,
+    removable: false,
   });
   const rows: RowsByTab = {
     accounts: [row('a', 'new', 'ada'), row('b', 'subscribed', 'bea'), row('c', 'new', 'cara')],

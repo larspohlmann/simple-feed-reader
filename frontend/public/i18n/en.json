@@ -385,7 +385,7 @@
       "connectedSince": "Connected since {{date}}",
       "connectAnother": "Connect another account",
       "importSectionTitle": "Import follows",
-      "importSectionCaption": "Subscribe to the accounts you follow on Bluesky and Mastodon, so their posts arrive here as feeds under the Feeds row of the Bluesky or Mastodon section. You choose which feeds, and can run it again any time to add new follows or remove ones you no longer follow.",
+      "importSectionCaption": "Subscribe to the accounts you follow on Bluesky and Mastodon, so their posts arrive here as feeds under the Feeds row of the Bluesky or Mastodon section. You choose which feeds, and can run it again any time to add new follows or remove ones you no longer follow. Lists and feeds you save or create on the network are added within the hour, and ones you remove there go too; anything you remove here is not added back.",
       "importChoose": "Select feeds…",
       "importTitle": "Import follows from {{handle}}",
       "importLoading": "Loading the accounts you follow…",
@@ -408,6 +408,24 @@
       "importUnsubscribeHint": "Tick a “No longer followed” account to unsubscribe.",
       "importHome": "Home timeline",
       "importAddCollection": "Add {{name}}",
+      "importRemoveCollection": "Remove {{name}}",
+      "importRemoveTitle": "Remove from your feeds",
+      "importRemoveMessage": "Remove {{names}} and its entries from your feeds?",
+      "importRemoveConfirm": "Remove",
+      "syncNever": "Not checked yet",
+      "syncChecked": "Lists and feeds last checked {{when}}",
+      "syncSkipped": {
+        "unreachable": "Skipped {{when}}: {{network}} did not answer",
+        "incomplete": "Skipped {{when}}: {{network}} sent an incomplete answer",
+        "needs_reconnect": "Skipped {{when}}: the account needs reconnecting",
+        "failed": "Skipped {{when}}: the check failed and is tried again within the hour"
+      },
+      "syncChange": {
+        "saved": "Added {{name}} (newly saved)",
+        "created": "Added {{name}} (new list)",
+        "unsaved": "Removed {{name}} (no longer saved)",
+        "deleted": "Removed {{name}} (deleted on the network)"
+      },
       "importCollectionAdded": "Already added: {{name}}",
       "importEmpty": "Nothing to show.",
       "importShowMore": "Show {{count}} more",

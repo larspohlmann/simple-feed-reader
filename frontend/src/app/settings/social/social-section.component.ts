@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Dialog } from '@angular/cdk/dialog';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { formatLongDate } from '../../reader/format';
+import { formatLongDate, relativeTime } from '../../reader/format';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -15,7 +15,7 @@ import { SettingsRowComponent } from '../../shared/settings/settings-row/setting
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { SocialNetworkName } from '../../core/social-network';
-import { SocialAccount, SocialAccountsService } from './social-accounts.service';
+import { SocialAccount, SocialAccountsService, SyncChange } from './social-accounts.service';
 import {
   SocialImportDialogComponent,
   SocialImportDialogData,
@@ -74,6 +74,21 @@ export class SocialSectionComponent {
     const network = this.i18n.translate(`settings.social.${account.network}`);
     if (account.status === 'connected') return network;
     return `${network} · ${this.i18n.translate('settings.social.needsReconnect')}`;
+  }
+
+  protected describeSync(account: SocialAccount): string {
+    const { checkedAt, skipped } = account.sync;
+    if (checkedAt === null) return this.i18n.translate('settings.social.syncNever');
+    const when = relativeTime(checkedAt, this.language.lang());
+    if (skipped === null) return this.i18n.translate('settings.social.syncChecked', { when });
+    const network = this.i18n.translate(`settings.social.${account.network}`);
+    return this.i18n.translate(`settings.social.syncSkipped.${skipped}`, { when, network });
+  }
+
+  protected describeChange(change: SyncChange): string {
+    return this.i18n.translate(`settings.social.syncChange.${change.reason}`, {
+      name: change.name,
+    });
   }
 
   protected setReconnectSecret(id: number, secret: string): void {

@@ -233,7 +233,7 @@
           <app-settings-row
             [stackable]="true"
             [title]="account.handle"
-            [description]="describeImportSource(account)"
+            [description]="describeImportSource(account) + ' · ' + describeSync(account)"
           >
             <app-button
               size="sm"
@@ -244,6 +244,13 @@
               {{ 'settings.social.importChoose' | transloco }}
             </app-button>
           </app-settings-row>
+          @if (account.sync.changes.length) {
+            <ul class="sync-changes" [attr.data-testid]="'social-sync-changes-' + account.id">
+              @for (change of account.sync.changes; track change.at + change.name) {
+                <li>{{ describeChange(change) }}</li>
+              }
+            </ul>
+          }
         }
       </app-settings-group>
     }

@@ -26,6 +26,7 @@ function account(over: Partial<SocialAccount> = {}): SocialAccount {
     isDefault: true,
     credentialHint: 'abcd',
     connectedAt: '2026-10-12T08:00:00+00:00',
+    sync: { checkedAt: null, skipped: null, changes: [] },
     ...over,
   };
 }
@@ -124,6 +125,56 @@ describe('SocialSectionComponent', () => {
 
     const accountRow = byTestId(fixture, 'social-connected-1')?.closest('app-settings-row');
     expect(accountRow?.querySelector('[data-testid="social-import-1"]')).toBeNull();
+  });
+
+  describe('last check and changes', () => {
+    const fiveMinutesAgo = (): string => new Date(Date.now() - 5 * 60_000).toISOString();
+    const description = (fixture: ComponentFixture<SocialSectionComponent>): string =>
+      byTestId(fixture, 'social-import-1')?.closest('.row-desc')?.textContent ??
+      byTestId(fixture, 'social-import-1')?.closest('app-settings-row')?.querySelector('.row-desc')
+        ?.textContent ??
+      '';
+
+    it('says when the lists and feeds were last checked and lists the changes', () => {
+      const at = fiveMinutesAgo();
+      const fixture = mount([
+        account({
+          sync: {
+            checkedAt: at,
+            skipped: null,
+            changes: [{ kind: 'list', name: 'News', reason: 'saved', added: true, at }],
+          },
+        }),
+      ]);
+
+      expect(description(fixture)).toContain('Lists and feeds last checked');
+      expect(byTestId(fixture, 'social-sync-changes-1')?.textContent).toContain(
+        'Added News (newly saved)',
+      );
+    });
+
+    it('names the skip reason', () => {
+      const fixture = mount([
+        account({ sync: { checkedAt: fiveMinutesAgo(), skipped: 'unreachable', changes: [] } }),
+      ]);
+
+      expect(description(fixture)).toContain('Bluesky did not answer');
+      expect(byTestId(fixture, 'social-sync-changes-1')).toBeNull();
+    });
+
+    it('says a failed check is tried again', () => {
+      const fixture = mount([
+        account({ sync: { checkedAt: fiveMinutesAgo(), skipped: 'failed', changes: [] } }),
+      ]);
+
+      expect(description(fixture)).toContain('the check failed');
+    });
+
+    it('says an account never checked has not been', () => {
+      const fixture = mount([account()]);
+
+      expect(description(fixture)).toContain('Not checked yet');
+    });
   });
 
   it('explains the import in plain words, naming where the feeds appear', () => {

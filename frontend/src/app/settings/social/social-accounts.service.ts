@@ -8,6 +8,23 @@ import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 
 export type SocialAccountStatus = 'connected' | 'needs_reconnect';
 
+export type SyncSkip = 'unreachable' | 'incomplete' | 'needs_reconnect' | 'failed';
+export type SyncReason = 'saved' | 'created' | 'unsaved' | 'deleted';
+
+export interface SyncChange {
+  readonly kind: 'list' | 'custom_feed';
+  readonly name: string;
+  readonly reason: SyncReason;
+  readonly added: boolean;
+  readonly at: string;
+}
+
+export interface SocialAccountSync {
+  readonly checkedAt: string | null;
+  readonly skipped: SyncSkip | null;
+  readonly changes: readonly SyncChange[];
+}
+
 export interface SocialAccount {
   readonly id: number;
   readonly network: SocialNetworkName;
@@ -17,6 +34,7 @@ export interface SocialAccount {
   readonly isDefault: boolean;
   readonly credentialHint: string;
   readonly connectedAt: string;
+  readonly sync: SocialAccountSync;
 }
 
 interface SocialAccountList {

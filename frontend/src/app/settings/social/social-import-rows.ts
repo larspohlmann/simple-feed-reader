@@ -22,6 +22,7 @@ export interface ImportRow {
   readonly haystack: string;
   readonly stateLabel: string;
   readonly checkboxLabel: string;
+  readonly removable: boolean;
 }
 
 export type RowsByTab = Readonly<Record<ImportTab, readonly ImportRow[]>>;
@@ -114,12 +115,14 @@ function toFollowRow(follow: FollowCandidate, translate: Translate): ImportRow {
     haystack: `${follow.handle}\n${follow.displayName ?? ''}`.toLowerCase(),
     stateLabel: translate(FILTER_KEYS[follow.state]),
     checkboxLabel: translate(CHECKBOX_KEYS[follow.state], { handle: follow.handle }),
+    removable: false,
   };
 }
 
 function toCollectionRow(collection: CollectionCandidate, translate: Translate): ImportRow {
   const name =
     collection.kind === 'home' ? translate('settings.social.importHome') : collection.name;
+  const removable = collection.state === 'subscribed' && collection.kind !== 'home';
   return {
     key: collectionKey(collection),
     testId: `social-import-collection-${collectionKey(collection)}`,
@@ -130,6 +133,13 @@ function toCollectionRow(collection: CollectionCandidate, translate: Translate):
     icon: COLLECTION_ICONS[collection.kind],
     haystack: name.toLowerCase(),
     stateLabel: translate(FILTER_KEYS[collection.state]),
-    checkboxLabel: translate(COLLECTION_CHECKBOX_KEYS[collection.state], { name }),
+    checkboxLabel: translate(collectionCheckboxKey(collection, removable), { name }),
+    removable,
   };
+}
+
+function collectionCheckboxKey(collection: CollectionCandidate, removable: boolean): string {
+  return removable
+    ? 'settings.social.importRemoveCollection'
+    : COLLECTION_CHECKBOX_KEYS[collection.state];
 }

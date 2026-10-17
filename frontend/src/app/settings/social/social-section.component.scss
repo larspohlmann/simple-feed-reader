@@ -65,3 +65,11 @@
   color: var(--accent);
   font-weight: 600;
 }
+
+.sync-changes {
+  margin: 0;
+  padding: var(--space-2) var(--panel-inset-x) var(--space-3);
+  padding-inline-start: calc(var(--panel-inset-x) + var(--space-4));
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
