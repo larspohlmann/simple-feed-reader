@@ -6,6 +6,8 @@ namespace App\Tests\Service\Social;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\EntryMedium;
+use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
@@ -69,6 +71,66 @@ final class SelfThreadFolderTest extends DbTestCase
 
         $posts = $this->threadPosts()->byEntryIds([$entry->requireId()])[$entry->requireId()];
         self::assertSame('2026-10-17 08:15:31', $posts[0]->publishedAt?->format('Y-m-d H:i:s'));
+    }
+
+    public function testReplyCardsNumberAfterTheRootCardsAndBelongToTheirReply(): void
+    {
+        $entry = $this->entry();
+        $this->entityManager->persist(new LinkCard($entry, 0, self::card('https://root.example/')));
+        $this->entityManager->flush();
+
+        $this->folder()->fold($entry, [
+            self::reply('<p>one</p>', self::card('https://one.example/')),
+            self::reply('<p>two</p>', self::card('https://two.example/')),
+        ]);
+        $this->entityManager->flush();
+
+        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+            'SELECT c.position, c.url, p.position AS reply_position FROM link_card c '
+            . 'LEFT JOIN thread_post p ON p.id = c.thread_post_id WHERE c.entry_id = ? ORDER BY c.position',
+            [$entry->requireId()],
+        );
+        self::assertEquals(
+            [[0, 'https://root.example/', null], [1, 'https://one.example/', 1], [2, 'https://two.example/', 2]],
+            array_map(
+                static fn (array $row): array => [$row['position'], $row['url'], $row['reply_position']],
+                $rows,
+            ),
+        );
+    }
+
+    public function testAReplysMediaIsStored(): void
+    {
+        $entry = $this->entry();
+        $medium = new EntryMedium('https://cdn.example/a.jpg', 'image', 640, 480, null, 'A photo');
+
+        $this->folder()->fold($entry, [
+            new EntryCommentModel(
+                new CommentAuthorModel('A', null, null, null),
+                'https://bsky.app/profile/a/post/media',
+                null,
+                '<p>look</p>',
+                true,
+                new CommentEmbedsModel([$medium]),
+            ),
+        ]);
+        $this->entityManager->flush();
+
+        $stored = $this->entityManager->getConnection()->fetchOne(
+            'SELECT media FROM thread_post WHERE entry_id = ?',
+            [$entry->requireId()],
+        );
+        self::assertIsString($stored);
+        self::assertSame(
+            [['url' => 'https://cdn.example/a.jpg', 'kind' => 'image', 'width' => 640, 'height' => 480,
+                'alt' => 'A photo']],
+            json_decode($stored, true),
+        );
+    }
+
+    private static function card(string $url): LinkCardContent
+    {
+        return new LinkCardContent($url, 'Title', null, null, 'site.example');
     }
 
     private static function reply(
