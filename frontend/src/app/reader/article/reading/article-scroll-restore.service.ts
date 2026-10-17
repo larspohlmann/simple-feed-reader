@@ -19,12 +19,14 @@ export class ArticleScrollRestore {
   private restoreRaf = 0;
 
   constructor() {
-    // A real wheel gesture hands scrolling back to the user, cancelling any
-    // in-flight restore so it never fights them.
+    // A real wheel or touch gesture hands scrolling back to the user, cancelling
+    // any in-flight restore so it never fights them.
     const abortRestore = (): void => this.abort();
     this.layer.addEventListener('wheel', abortRestore, { passive: true });
+    this.layer.addEventListener('touchstart', abortRestore, { passive: true });
     inject(DestroyRef).onDestroy(() => {
       this.layer.removeEventListener('wheel', abortRestore);
+      this.layer.removeEventListener('touchstart', abortRestore);
       this.cancelRestore();
     });
   }

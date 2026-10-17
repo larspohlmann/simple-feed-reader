@@ -26,7 +26,6 @@ import { AUTOPLAY_REGION } from '../../media/autoplay/autoplay-region';
 import { ArticleLayerComponent } from '../article-layer/article-layer.component';
 import { ArticleContentComponent } from '../article-content/article-content.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
-import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { ReadingScope } from '../reading/reading-scope.service';
 import { LinkArticleSource } from './link-article-source.service';
 
@@ -48,7 +47,6 @@ export type LinkReaderReturn = 'article' | 'list';
     ArticleContentComponent,
   ],
   providers: [
-    ArticleScrollRestore,
     ReadingScope,
     LinkArticleSource,
     ListAutoplayCoordinator,

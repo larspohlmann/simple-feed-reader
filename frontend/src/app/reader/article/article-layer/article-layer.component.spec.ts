@@ -4,12 +4,10 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { BACK_TO_TOP_AFTER_PX } from '../../../shared/to-top-button/to-top-button.component';
-import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { ArticleLayerComponent } from './article-layer.component';
 
 @Component({
   imports: [ArticleLayerComponent],
-  providers: [ArticleScrollRestore],
   template: `
     <app-article-layer
       [fullscreen]="fullscreen()"

@@ -14,7 +14,6 @@ import {
   overscrollTriggersBack,
   rubberBand,
 } from '../../reader-gestures';
-import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 
 /** How far the rubber-banded overscroll pull may travel. */
@@ -42,7 +41,6 @@ export interface ArticleGestureHost {
 @Injectable()
 export class ArticleGestures {
   private readonly layer = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  private readonly restore = inject(ArticleScrollRestore);
   private readonly reduceMotion = prefersReducedMotion();
   private host: ArticleGestureHost = {
     fullscreen: signal(false),
@@ -103,7 +101,6 @@ export class ArticleGestures {
   }
 
   onTouchStart(touchEvent: TouchEvent): void {
-    this.restore.abort(); // the user is taking over; stop restoring
     if (!this.tracking(touchEvent)) return;
     this.gestureSuppressed = startsOnMediaControl(touchEvent.target);
     if (this.gestureSuppressed) return;
