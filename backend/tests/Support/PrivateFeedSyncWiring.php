@@ -6,15 +6,18 @@ namespace App\Tests\Support;
 
 use App\Entity\KnownSocialCollection;
 use App\Entity\PrivateFeedSyncChange;
+use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\PrivateFeedSyncChangeRepository;
+use App\Repository\SocialAccountRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\PrivateFeedSync;
 use App\Service\Social\PrivateFeedSyncApplier;
 use App\Service\Social\PrivateFeedSyncSkips;
+use App\Service\Social\PrivateFeedSyncSweep;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -34,6 +37,7 @@ final class PrivateFeedSyncWiring
         ClockInterface $clock,
         SocialCandidatesInterface $network,
         LoggerInterface $logger = new NullLogger(),
+        ?ManagerRegistry $registry = null,
     ): PrivateFeedSync {
         $naiveClock = new NaiveUtcClock($clock);
 
@@ -41,7 +45,29 @@ final class PrivateFeedSyncWiring
             $network,
             new ActingAccountGuard($entityManager),
             self::applier($container, $entityManager, $clock),
-            new PrivateFeedSyncSkips($naiveClock, $entityManager, self::registry($container), $logger),
+            new PrivateFeedSyncSkips($naiveClock, $entityManager, $registry ?? self::registry($container), $logger),
+        );
+    }
+
+    public static function sweep(
+        ContainerInterface $container,
+        EntityManagerInterface $entityManager,
+        ClockInterface $clock,
+        SocialCandidatesInterface $network,
+        LoggerInterface $logger = new NullLogger(),
+        ?ManagerRegistry $registry = null,
+    ): PrivateFeedSyncSweep {
+        $registry ??= self::registry($container);
+        /** @var SocialAccountRepository $socialAccounts */
+        $socialAccounts = $entityManager->getRepository(SocialAccount::class);
+
+        return new PrivateFeedSyncSweep(
+            $socialAccounts,
+            self::sync($container, $entityManager, $clock, $network, $logger, $registry),
+            $entityManager,
+            $registry,
+            new NaiveUtcClock($clock),
+            $logger,
         );
     }
 

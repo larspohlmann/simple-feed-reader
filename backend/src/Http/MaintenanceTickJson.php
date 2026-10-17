@@ -11,6 +11,7 @@ use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
 use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 
 /** The /maintenance/tick response: every half under a stable key; a skipped sweep says why. */
@@ -36,6 +37,7 @@ final class MaintenanceTickJson
             ),
             'linkCards' => self::markedIfSkipped($sweeps, self::linkCards($sweeps->linkCards)),
             'profileImages' => self::markedIfSkipped($sweeps, self::profileImages($sweeps->profileImages)),
+            'privateFeedSync' => self::markedIfSkipped($sweeps, self::privateFeedSync($sweeps->privateFeedSync)),
             'savedSearchMemberships' => self::markedIfSkipped(
                 $sweeps,
                 self::memberships($sweeps->savedSearchMemberships),
@@ -74,6 +76,17 @@ final class MaintenanceTickJson
     private static function profileImages(ProfileImageSweepReportModel $report): array
     {
         return ['checked' => $report->checked, 'changed' => $report->changed];
+    }
+
+    /** @return array{accountsChecked: int, accountsSkipped: int, added: int, removed: int} */
+    private static function privateFeedSync(PrivateFeedSyncReportModel $report): array
+    {
+        return [
+            'accountsChecked' => $report->checked,
+            'accountsSkipped' => $report->skipped,
+            'added' => $report->added,
+            'removed' => $report->removed,
+        ];
     }
 
     /** @return array{measured: int, kept: int, dropped: int, retried: int} */
