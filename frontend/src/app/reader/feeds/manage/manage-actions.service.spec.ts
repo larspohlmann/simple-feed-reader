@@ -75,6 +75,30 @@ describe('ManageActions', () => {
     expect(JSON.stringify(open.mock.calls[0])).toContain('Home@bsky');
   });
 
+  it('unsubscribe: says where favourites and kept posts go', () => {
+    closed = undefined;
+    service.unsubscribe(
+      makeSubscription({
+        id: 7,
+        title: 'Bob',
+        social: { network: 'bluesky', accountId: null, kind: 'profile' },
+      }),
+    );
+
+    expect(JSON.stringify(open.mock.calls[0])).toContain(
+      'Favourites and kept posts move to Saved from Bluesky.',
+    );
+  });
+
+  it('unsubscribe: warns that a saved feed’s posts are deleted for good', () => {
+    closed = undefined;
+    service.unsubscribe(
+      makeSubscription({ id: 8, title: 'Saved from feeds', sourceFormat: 'saved' }),
+    );
+
+    expect(JSON.stringify(open.mock.calls[0])).toContain('Its saved posts are deleted for good.');
+  });
+
   it('unsubscribe: on cancel, does nothing', () => {
     closed = undefined;
     service.unsubscribe(sub);
@@ -333,6 +357,41 @@ describe('ManageActions', () => {
       actions.bulkUnsubscribe(subscriptions(5)).subscribe();
 
       expect(dialogOpen.mock.calls[0][1].data.requireText).toBe('5');
+    });
+
+    describe('where saved posts go', () => {
+      const bluesky = makeSubscription({
+        id: 21,
+        title: 'Bob',
+        social: { network: 'bluesky', accountId: null, kind: 'profile' },
+      });
+      const confirmMessage = (leaving: SubscriptionDto[]): string => {
+        const { actions, dialogOpen } = setup();
+        actions.bulkUnsubscribe(leaving).subscribe();
+        return dialogOpen.mock.calls[0][1].data.message;
+      };
+
+      it('names the one Saved feed that all leaving feeds share', () => {
+        expect(confirmMessage(subscriptions(2))).toContain('move to Saved from feeds');
+      });
+
+      it('says "their Saved feeds" when the destinations differ', () => {
+        expect(confirmMessage([subscriptions(1)[0], bluesky])).toContain(
+          'move to their Saved feeds',
+        );
+      });
+
+      it('warns about a saved feed leaving with the others', () => {
+        const savedFeed = makeSubscription({
+          id: 22,
+          title: 'Saved from feeds',
+          sourceFormat: 'saved',
+        });
+
+        expect(confirmMessage([bluesky, savedFeed])).toContain(
+          'The saved posts in Saved from feeds are deleted for good.',
+        );
+      });
     });
 
     it('does not ask for typed text at four feeds', () => {

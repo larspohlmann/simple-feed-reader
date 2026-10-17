@@ -376,7 +376,7 @@
       "reconnect": "Reconnect",
       "disconnect": "Disconnect",
       "disconnectTitle": "Disconnect {{handle}}?",
-      "disconnectMessage": "The stored credential is deleted. Feeds you imported stay.",
+      "disconnectMessage": "The stored credential is deleted and the account's timeline, lists and feeds are removed. Favourites and kept posts move to Saved from {{network}}. Feeds you imported stay.",
       "empty": "No account connected.",
       "openAppPasswords": "Open app passwords",
       "openOnInstance": "Open on {{host}}",
@@ -837,6 +837,8 @@
   "manage": {
     "unsubscribeTitle": "Unsubscribe",
     "unsubscribeMessage": "Remove “{{title}}” and its entries from your feeds?",
+    "savedPostsMove": "Favourites and kept posts move to {{saved}}.",
+    "unsubscribeSavedMessage": "Remove “{{title}}”? Its saved posts are deleted for good.",
     "unsubscribeConfirm": "Unsubscribe",
     "deleteTagTitle": "Delete tag",
     "deleteTagMessage": "Delete “{{name}}”? It will be removed from every feed that uses it.",
@@ -852,6 +854,8 @@
       "unsubscribeTitleOther": "Unsubscribe from {{count}} feeds?",
       "unsubscribeMessage": "{{named}}. This also removes their articles. It cannot be undone.",
       "unsubscribeMessageMore": "{{named}} and {{rest}} more. This also removes their articles. It cannot be undone.",
+      "savedPostsMoveMany": "Favourites and kept posts move to their Saved feeds.",
+      "savedPostsDeleted": "The saved posts in {{named}} are deleted for good.",
       "unsubscribedOne": "Unsubscribed from {{count}} feed",
       "unsubscribedOther": "Unsubscribed from {{count}} feeds"
     }
@@ -1142,6 +1146,11 @@
     "toggleSocialSection": "Toggle {{network}}",
     "socialFeeds": "Feeds",
     "socialHome": "Home@{{network}}",
+    "savedFrom": {
+      "bluesky": "Saved from Bluesky",
+      "mastodon": "Saved from Mastodon",
+      "feeds": "Saved from feeds"
+    },
     "toggleSocialFeeds": "Toggle {{network}} feeds",
     "socialNetworkShort": {
       "bluesky": "bsky",

@@ -1,7 +1,12 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
-import { homeLabel, isUnrenamedHome } from '../feeds/display-title';
+import {
+  homeLabel,
+  isUnrenamedHome,
+  isUnrenamedSavedFeed,
+  savedFeedLabel,
+} from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
 
 /**
@@ -18,7 +23,7 @@ export class SubscriptionRows {
   /** As the server sent them: the rows an optimistic edit patches. */
   readonly stored = signal<SubscriptionDto[]>([]);
 
-  /** The rows every surface shows: an unrenamed Home is titled "Home@<network>" in the active language. */
+  /** The rows every surface shows: an unrenamed Home or saved feed is titled in the active language. */
   readonly all = computed(() => {
     // translate() is one-shot: reading the language re-resolves the titles on a switch.
     this.activeLang();
@@ -35,6 +40,9 @@ export class SubscriptionRows {
 
   private withDisplayTitle(subscription: SubscriptionDto): SubscriptionDto {
     const social = subscription.social;
+    if (isUnrenamedSavedFeed(subscription)) {
+      return { ...subscription, title: savedFeedLabel(this.i18n, social?.network ?? null) };
+    }
     return social && isUnrenamedHome(subscription)
       ? { ...subscription, title: homeLabel(this.i18n, social.network) }
       : subscription;

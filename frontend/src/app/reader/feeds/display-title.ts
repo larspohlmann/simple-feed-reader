@@ -11,3 +11,11 @@ export function homeLabel(i18n: TranslocoService, network: SocialNetworkName): s
     network: i18n.translate(`reader.socialNetworkShort.${network}`),
   });
 }
+
+export function isUnrenamedSavedFeed(subscription: SubscriptionDto): boolean {
+  return subscription.sourceFormat === 'saved' && subscription.customTitle === null;
+}
+
+export function savedFeedLabel(i18n: TranslocoService, network: SocialNetworkName | null): string {
+  return i18n.translate(`reader.savedFrom.${network ?? 'feeds'}`);
+}

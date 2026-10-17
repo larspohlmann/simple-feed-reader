@@ -154,7 +154,9 @@ export class SocialSectionComponent {
     this.confirm.confirmThen(
       {
         title: this.i18n.translate('settings.social.disconnectTitle', { handle: account.handle }),
-        message: this.i18n.translate('settings.social.disconnectMessage'),
+        message: this.i18n.translate('settings.social.disconnectMessage', {
+          network: this.i18n.translate(`settings.social.${account.network}`),
+        }),
         confirmLabel: this.i18n.translate('settings.social.disconnect'),
         danger: true,
       },

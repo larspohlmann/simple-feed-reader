@@ -502,6 +502,7 @@ describe('SocialSectionComponent', () => {
     const data = confirmStub.confirmThen.mock.calls[0][0];
     expect(data.danger).toBe(true);
     expect(data.title).toBe('Disconnect alice.bsky.social?');
+    expect(data.message).toContain('Favourites and kept posts move to Saved from Bluesky.');
     const del = http.expectOne(`${ENDPOINT}/1`);
     expect(del.request.method).toBe('DELETE');
     del.flush({ accounts: [] });

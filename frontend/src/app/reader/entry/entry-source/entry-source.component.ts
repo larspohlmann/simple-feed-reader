@@ -32,6 +32,12 @@ export class EntrySourceComponent {
     return entry.poster?.name ?? this.rows.find(entry.subscriptionId)?.title ?? entry.source;
   });
 
+  /** A saved post names the feed it now lives in after its poster or origin. */
+  protected readonly savedIn = computed(() => {
+    const row = this.rows.find(this.entry().subscriptionId);
+    return row?.sourceFormat === 'saved' && this.entry().poster ? row.title : null;
+  });
+
   /** In a list the line sits inside a card that opens the entry; the source's own link must not open it too. */
   protected keepFromCard(event: Event): void {
     if (this.layout() !== 'article') event.stopPropagation();

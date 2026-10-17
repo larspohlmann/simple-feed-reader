@@ -25,3 +25,6 @@
 } @else {
   {{ name() }}
 }
+@if (savedIn(); as savedTitle) {
+  <span class="saved-in"> · {{ savedTitle }}</span>
+}

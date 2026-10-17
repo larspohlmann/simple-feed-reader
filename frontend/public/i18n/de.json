@@ -376,7 +376,7 @@
       "reconnect": "Neu verbinden",
       "disconnect": "Trennen",
       "disconnectTitle": "{{handle}} trennen?",
-      "disconnectMessage": "Die gespeicherten Zugangsdaten werden gelöscht. Importierte Feeds bleiben.",
+      "disconnectMessage": "Die gespeicherten Zugangsdaten werden gelöscht, und Timeline, Listen und Feeds des Kontos werden entfernt. Favoriten und behaltene Beiträge wandern nach „Gespeichert aus {{network}}“. Importierte Feeds bleiben.",
       "empty": "Kein Konto verbunden.",
       "openAppPasswords": "App-Passwörter öffnen",
       "openOnInstance": "Auf {{host}} öffnen",
@@ -837,6 +837,8 @@
   "manage": {
     "unsubscribeTitle": "Abbestellen",
     "unsubscribeMessage": "„{{title}}“ und seine Einträge aus deinen Feeds entfernen?",
+    "savedPostsMove": "Favoriten und behaltene Beiträge wandern nach „{{saved}}“.",
+    "unsubscribeSavedMessage": "„{{title}}“ entfernen? Seine gespeicherten Beiträge werden endgültig gelöscht.",
     "unsubscribeConfirm": "Abbestellen",
     "deleteTagTitle": "Tag löschen",
     "deleteTagMessage": "„{{name}}“ löschen? Er wird von jedem Feed entfernt, der ihn verwendet.",
@@ -852,6 +854,8 @@
       "unsubscribeTitleOther": "{{count}} Feeds abbestellen?",
       "unsubscribeMessage": "{{named}}. Dies entfernt auch ihre Artikel. Das lässt sich nicht rückgängig machen.",
       "unsubscribeMessageMore": "{{named}} und {{rest}} weitere. Dies entfernt auch ihre Artikel. Das lässt sich nicht rückgängig machen.",
+      "savedPostsMoveMany": "Favoriten und behaltene Beiträge wandern in die passenden Gespeichert-Feeds.",
+      "savedPostsDeleted": "Die gespeicherten Beiträge in {{named}} werden endgültig gelöscht.",
       "unsubscribedOne": "{{count}} Feed abbestellt",
       "unsubscribedOther": "{{count}} Feeds abbestellt"
     }
@@ -1142,6 +1146,11 @@
     "toggleSocialSection": "{{network}} ein-/ausklappen",
     "socialFeeds": "Feeds",
     "socialHome": "Startseite@{{network}}",
+    "savedFrom": {
+      "bluesky": "Gespeichert aus Bluesky",
+      "mastodon": "Gespeichert aus Mastodon",
+      "feeds": "Gespeichert aus Feeds"
+    },
     "toggleSocialFeeds": "{{network}}-Feeds ein-/ausklappen",
     "socialNetworkShort": {
       "bluesky": "bsky",

@@ -9,7 +9,7 @@ import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
 import { SocialAccountRefDto } from '../social-feed';
 import { SubscriptionRows } from './subscription-rows';
-import { buildSocialSections, isProfileFeed, isSocialFeed } from './social-sections';
+import { buildSocialSections, isProfileFeed, isSavedFeed, isSocialFeed } from './social-sections';
 import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
 import { SubscriptionCountsResponse, SubscriptionDto, SubscriptionsResponse } from '../models';
 import {
@@ -47,10 +47,14 @@ export class SubscriptionsStore {
   readonly resolved = signal(false);
 
   readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
-  /** Social feeds live in their network's section, so the Feeds list leaves them out. */
+  /** Social feeds live in their network's section, and an empty saved feed shows nowhere. */
   readonly untagged = computed(() =>
     untaggedSubscriptions(
-      this.subscriptions().filter((subscription) => !isSocialFeed(subscription)),
+      this.subscriptions().filter(
+        (subscription) =>
+          !isSocialFeed(subscription) &&
+          !(isSavedFeed(subscription) && subscription.entryCount === 0),
+      ),
     ),
   );
   readonly socialSections = computed(() =>

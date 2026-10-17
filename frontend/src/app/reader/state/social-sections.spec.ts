@@ -147,3 +147,30 @@ describe('buildSocialSections', () => {
     expect([mastodon.unreadCount, mastodon.entryCount]).toEqual([7, 70]);
   });
 });
+
+const saved = (id: number, network: 'bluesky' | 'mastodon', entryCount: number): SubscriptionDto =>
+  makeSubscription({
+    id,
+    title: `Saved from ${network}`,
+    sourceFormat: 'saved',
+    entryCount,
+    social: { network, accountId: null, kind: 'saved' },
+  });
+
+describe('saved feeds in the social sections', () => {
+  it('shows a network’s saved feed apart from its profiles while it holds posts', () => {
+    const [section] = buildSocialSections(
+      [profile(1, 'bluesky', 'Bob'), saved(2, 'bluesky', 3)],
+      [],
+    );
+
+    expect(section.saved?.id).toBe(2);
+    expect(section.profiles.subscriptions.map(({ id }) => id)).toEqual([1]);
+    expect(isPrivateFeed(saved(2, 'bluesky', 3))).toBe(false);
+  });
+
+  it('hides an empty saved feed and keeps a section that holds only saved posts', () => {
+    expect(buildSocialSections([saved(2, 'bluesky', 0)], [])).toEqual([]);
+    expect(buildSocialSections([saved(3, 'mastodon', 1)], [])[0].network).toBe('mastodon');
+  });
+});
