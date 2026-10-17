@@ -1,10 +1,12 @@
 /* `clip`, not `hidden`: the return swipe's overflow is cut without the host
-   becoming a scroller the chrome would sit in (#1332). */
+   becoming a scroller the chrome would sit in (#1332). Isolated so the back-to-top
+   button's z-index stays under a layer stacked over this one (#1664). */
 :host {
   display: block;
   position: relative;
   height: 100%;
   overflow: clip;
+  isolation: isolate;
 }
 
 /* The article layer the return swipe moves. The back-to-top button stays
