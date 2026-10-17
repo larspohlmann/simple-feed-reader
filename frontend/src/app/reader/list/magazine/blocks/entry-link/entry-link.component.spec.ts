@@ -6,6 +6,7 @@ import { EntryLinkComponent } from './entry-link.component';
 import { EntryDto } from '../../../../models';
 import { LinkCardDto } from '../../../../link-card/link-card';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
+import { LinkReaderNavigation } from '../../../../shell/link-reader-navigation.service';
 import { PreviewProgress } from '../../../../link-card/preview-progress';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 import { aLinkCard, anEntry } from '../../../../../../testing/entry-testing';
@@ -17,8 +18,11 @@ const entryActions = {
   open: jest.fn(),
 };
 
+const navigation = { layer: jest.fn(), openAlone: jest.fn() };
+
 beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
+  Object.values(navigation).forEach((spy) => spy.mockReset());
 });
 
 const card = (over: Partial<LinkCardDto> = {}): LinkCardDto =>
@@ -43,6 +47,7 @@ function mount(testEntry: EntryDto) {
     imports: [EntryLinkComponent, provideTranslocoTesting()],
     providers: [
       { provide: EntryActionHandler, useValue: entryActions },
+      { provide: LinkReaderNavigation, useValue: navigation },
       { provide: PreviewProgress, useValue: { isLoading: () => true } },
       provideRouter([]),
     ],
@@ -104,7 +109,7 @@ describe('EntryLinkComponent', () => {
       .nativeElement as HTMLElement;
 
     expect(element.querySelector('.link-card img')).toBeNull();
-    expect(element.querySelector('.link-card span')).toBeNull();
+    expect(element.querySelector('.link-card a span')).toBeNull();
   });
 
   it('drops a picture that fails for good, and shows the next card its own', () => {
@@ -164,5 +169,15 @@ describe('EntryLinkComponent', () => {
 
     expect(element.querySelector('.link-card a')).not.toBeNull();
     expect(element.querySelector('app-link-card-placeholder')).toBeNull();
+  });
+
+  it('opens the first card alone in the reader without opening the entry', () => {
+    const testEntry = entry();
+    const element = mount(testEntry).nativeElement as HTMLElement;
+
+    element.querySelector<HTMLButtonElement>('button.open-in-reader')!.click();
+
+    expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: testEntry.id, position: 0 });
+    expect(entryActions.open).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,10 @@
-@for (card of entry().linkCards; track card.url) {
-  <app-link-card [card]="card" layout="article" />
+@for (card of entry().linkCards; track card.url; let position = $index) {
+  <app-link-card
+    [card]="card"
+    layout="article"
+    [openableInReader]="true"
+    (openInReader)="openInReader(position)"
+  />
 } @empty {
   @if (entry().pending) {
     <app-link-card-placeholder [entryId]="entry().id" />

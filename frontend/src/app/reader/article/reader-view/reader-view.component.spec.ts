@@ -1,4 +1,5 @@
 import { Signal, WritableSignal, signal } from '@angular/core';
+import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
@@ -190,6 +191,7 @@ describe('ReaderViewComponent', () => {
       providers: [
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
+        { provide: LinkReaderNavigation, useValue: { layer: jest.fn() } },
         { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },
         { provide: EntryBodyService, useValue: fakeBody },
         { provide: ImageProxyService, useValue: imageProxy },
