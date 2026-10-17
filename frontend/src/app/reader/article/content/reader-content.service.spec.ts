@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { firstValueFrom, of } from 'rxjs';
+import { NEVER, TimeoutError, firstValueFrom, of } from 'rxjs';
 import { ReaderContentService } from './reader-content.service';
 import { ReaderCacheService } from './reader-cache.service';
 import { ReaderApi } from '../../reader-api';
@@ -60,9 +60,20 @@ describe('ReaderContentService', () => {
     apiGet.mockReturnValue(of(ARTICLE));
     const service = TestBed.inject(ReaderContentService);
     const loaded = firstValueFrom(service.load(1));
-    // Well under the 30 s the view allows before it gives up on the article.
+    // Well under the 30 s load timeout.
     await jest.advanceTimersByTimeAsync(5_000);
     await expect(loaded).resolves.toEqual(ARTICLE);
+    jest.useRealTimers();
+  });
+
+  it('gives up on a fetch that never answers', async () => {
+    jest.useFakeTimers();
+    cacheGet.mockResolvedValue(null);
+    apiGet.mockReturnValue(NEVER);
+    const loaded = firstValueFrom(TestBed.inject(ReaderContentService).load(1));
+    const rejection = expect(loaded).rejects.toBeInstanceOf(TimeoutError);
+    await jest.advanceTimersByTimeAsync(30_000);
+    await rejection;
     jest.useRealTimers();
   });
 

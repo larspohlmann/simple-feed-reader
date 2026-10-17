@@ -1,10 +1,9 @@
 import { DestroyRef, Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { Observable, Subscription, timeout } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../../models';
 import { EntryBodyService } from './entry-body.service';
 import { ReaderContentService } from './reader-content.service';
 import { describeLoadError } from './reader-load-error';
-import { READER_LOAD_TIMEOUT_MS } from './reader-load-timeout';
 import { ReaderModeService } from './reader-mode.service';
 import { isPost } from '../../entry/entry-text';
 
@@ -160,7 +159,7 @@ export class ArticleSource {
   private runLoad(source: Observable<ReaderContent>): void {
     this.loadSub?.unsubscribe();
     this.state.set({ status: 'loading' });
-    this.loadSub = source.pipe(timeout({ first: READER_LOAD_TIMEOUT_MS })).subscribe({
+    this.loadSub = source.subscribe({
       next: (content) => {
         if (content.status === 'ok') {
           this.state.set({ status: 'ok', article: content });

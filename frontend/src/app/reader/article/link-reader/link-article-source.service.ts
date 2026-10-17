@@ -1,10 +1,9 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, Subscription, timeout } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { ReaderArticle, ReaderContent, ReaderFailure } from '../../models';
 import { LinkCardRef } from '../../query/link-param';
 import { ReaderContentService } from '../content/reader-content.service';
 import { describeLoadError } from '../content/reader-load-error';
-import { READER_LOAD_TIMEOUT_MS } from '../content/reader-load-timeout';
 
 type LinkSourceState =
   | { status: 'loading' }
@@ -55,7 +54,7 @@ export class LinkArticleSource {
     this.loadSub?.unsubscribe();
     this.state.set({ status: 'loading' });
     this.leadFailed.set(false);
-    this.loadSub = source.pipe(timeout({ first: READER_LOAD_TIMEOUT_MS })).subscribe({
+    this.loadSub = source.subscribe({
       next: (content) =>
         this.state.set(
           content.status === 'ok'

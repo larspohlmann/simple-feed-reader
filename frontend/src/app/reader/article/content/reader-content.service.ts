@@ -14,6 +14,8 @@ import { ReaderContent } from '../../models';
 export class ReaderContentService {
   /** A cache stuck behind a blocked schema upgrade must not hold the article back (#814). */
   private static readonly CACHE_WAIT_MS = 2_000;
+  /** The client-side backstop for a stalled connection; the backend caps a fetch at ~20 s. */
+  private static readonly LOAD_TIMEOUT_MS = 30_000;
 
   private readonly api = inject(ReaderApi);
   private readonly cache = inject(ReaderCacheService);
@@ -59,6 +61,7 @@ export class ReaderContentService {
     request: () => Observable<ReaderContent>,
   ): Observable<ReaderContent> {
     return request().pipe(
+      timeout({ first: ReaderContentService.LOAD_TIMEOUT_MS }),
       tap((content) => {
         if (content.status === 'ok') void this.cache.put(key, content);
       }),
