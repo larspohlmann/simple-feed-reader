@@ -191,7 +191,7 @@
         [card]="openLinkCard()"
         [fullscreen]="fullscreen"
         [returnsTo]="linkReturnsTo()"
-        (close)="onCloseLink()"
+        (close)="linkNavigation.close()"
       />
     }
   </ng-template>

@@ -155,7 +155,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return ref === null ? null : (this.entries.entry(ref.entryId)?.linkCards[ref.position] ?? null);
   });
   readonly linkReturnsTo = computed(() => (this.entryId() === null ? 'list' : 'article'));
-  private readonly linkNavigation = inject(LinkReaderNavigation);
+  protected readonly linkNavigation = inject(LinkReaderNavigation);
   readonly heading = inject(ListHeading);
   readonly entryActions = inject(EntryStateActions);
   readonly markRead = inject(MarkReadActions);
@@ -337,10 +337,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   withOpen(action: (entry: EntryDto) => void): void {
     const entry = this.openEntry();
     if (entry) action(entry);
-  }
-
-  onCloseLink(): void {
-    this.linkNavigation.close();
   }
 
   onCloseReader(): void {
