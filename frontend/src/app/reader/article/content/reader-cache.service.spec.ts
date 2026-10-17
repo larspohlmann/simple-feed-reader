@@ -83,6 +83,12 @@ describe('ReaderCacheService', () => {
     expect((await cache.get(1))?.url).toBe('https://x/1');
   });
 
+  it('keeps a link card apart from the entry with the same numbers', async () => {
+    await cache.put('card:7.1', article('https://x/card'));
+    expect((await cache.get('card:7.1'))?.url).toBe('https://x/card');
+    expect(await cache.get(7)).toBeNull();
+  });
+
   it('misses an article cached under another reader-output version', async () => {
     await cache.put(1, article('https://x/1'));
     readerVersion.current.set('v2');

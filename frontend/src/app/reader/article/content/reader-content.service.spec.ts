@@ -20,19 +20,24 @@ const ARTICLE: ReaderArticle = {
 
 describe('ReaderContentService', () => {
   let apiGet: jest.Mock;
+  let cardApiGet: jest.Mock;
   let cacheGet: jest.Mock;
   let cachePut: jest.Mock;
   let cacheDelete: jest.Mock;
 
   beforeEach(() => {
     apiGet = jest.fn();
+    cardApiGet = jest.fn();
     cacheGet = jest.fn();
     cachePut = jest.fn().mockResolvedValue(undefined);
     cacheDelete = jest.fn().mockResolvedValue(undefined);
     TestBed.configureTestingModule({
       providers: [
         ReaderContentService,
-        { provide: ReaderApi, useValue: { readerContent: apiGet } },
+        {
+          provide: ReaderApi,
+          useValue: { readerContent: apiGet, linkCardReaderContent: cardApiGet },
+        },
         {
           provide: ReaderCacheService,
           useValue: { get: cacheGet, put: cachePut, delete: cacheDelete },
@@ -108,5 +113,51 @@ describe('ReaderContentService', () => {
     await firstValueFrom(service.reload(1));
     expect(cacheDelete).toHaveBeenCalledWith(1);
     expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  describe('link cards', () => {
+    const CARD = { entryId: 7, position: 1 };
+
+    it('serves a cached card without calling the API', async () => {
+      cacheGet.mockResolvedValue(ARTICLE);
+      const result = await firstValueFrom(TestBed.inject(ReaderContentService).loadLinkCard(CARD));
+      expect(result).toEqual(ARTICLE);
+      expect(cacheGet).toHaveBeenCalledWith('card:7.1');
+      expect(cardApiGet).not.toHaveBeenCalled();
+    });
+
+    it('fetches a missing card and caches it under its card key', async () => {
+      cacheGet.mockResolvedValue(null);
+      cardApiGet.mockReturnValue(of(ARTICLE));
+      const result = await firstValueFrom(TestBed.inject(ReaderContentService).loadLinkCard(CARD));
+      expect(result).toEqual(ARTICLE);
+      expect(cardApiGet).toHaveBeenCalledWith(CARD);
+      expect(cachePut).toHaveBeenCalledWith('card:7.1', ARTICLE);
+    });
+
+    it('does not cache a failed card', async () => {
+      cacheGet.mockResolvedValue(null);
+      cardApiGet.mockReturnValue(
+        of<ReaderContent>({
+          status: 'failed',
+          url: null,
+          reason: 'fetch',
+          detail: null,
+          originalHero: null,
+        }),
+      );
+      await firstValueFrom(TestBed.inject(ReaderContentService).loadLinkCard(CARD));
+      expect(cachePut).not.toHaveBeenCalled();
+    });
+
+    it('reload deletes the card key, then fetches and re-caches', async () => {
+      cardApiGet.mockReturnValue(of(ARTICLE));
+      const result = await firstValueFrom(
+        TestBed.inject(ReaderContentService).reloadLinkCard(CARD),
+      );
+      expect(cacheDelete).toHaveBeenCalledWith('card:7.1');
+      expect(result).toEqual(ARTICLE);
+      expect(cachePut).toHaveBeenCalledWith('card:7.1', ARTICLE);
+    });
   });
 });

@@ -1,3 +1,4 @@
+import { LinkCardRef } from './query/link-param';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
@@ -167,6 +168,12 @@ export class ReaderApi {
 
   readerContent(entryId: number): Observable<ReaderContent> {
     return this.http.get<ReaderContent>(`${this.base}/api/entries/${entryId}/reader`);
+  }
+
+  linkCardReaderContent(ref: LinkCardRef): Observable<ReaderContent> {
+    return this.http.get<ReaderContent>(
+      `${this.base}/api/entries/${ref.entryId}/link-cards/${ref.position}/reader`,
+    );
   }
 
   comments(entryId: number, refresh = false): Observable<CommentsResponse> {
