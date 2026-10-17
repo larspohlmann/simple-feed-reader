@@ -9,22 +9,31 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use Doctrine\ORM\QueryBuilder;
 
-/** A feed of none of the excluded formats, or an author feed, which follows one person a public RSS feed names too. */
+/** A feed of none of the excluded formats, or a private feed following one person a public RSS feed names too. */
 final class PublicOrAuthorFeedDql
 {
     /** @param list<string> $excludedFormats */
     public static function restrict(QueryBuilder $qb, string $feedAlias, array $excludedFormats): void
     {
         $qb->andWhere(\sprintf(
-            '(%1$s.sourceFormat NOT IN (:excludedFormats) OR (%1$s.sourceFormat = :authorFormat'
-            . ' AND EXISTS (SELECT %1$sAuthor.id FROM %2$s %1$sAuthor'
-            . ' WHERE %1$sAuthor.feed = %1$s AND %1$sAuthor.kind = :authorKind)))',
+            '(%1$s.sourceFormat NOT IN (:excludedFormats) OR (%1$s.sourceFormat IN (:personFeedFormats)'
+            . ' AND EXISTS (SELECT %1$sPerson.id FROM %2$s %1$sPerson'
+            . ' WHERE %1$sPerson.feed = %1$s AND %1$sPerson.kind IN (:personKinds))))',
             $feedAlias,
             SocialFeed::class,
         ))
             ->setParameter('excludedFormats', $excludedFormats)
-            ->setParameter('authorFormat', SourceFormat::BLUESKY_API)
-            ->setParameter('authorKind', SocialFeedKind::Author);
+            ->setParameter('personFeedFormats', SourceFormat::SOCIAL)
+            ->setParameter('personKinds', self::personKinds());
+    }
+
+    /** @return list<SocialFeedKind> */
+    private static function personKinds(): array
+    {
+        return array_values(array_filter(
+            SocialFeedKind::cases(),
+            static fn (SocialFeedKind $kind): bool => $kind->followsOnePerson(),
+        ));
     }
 
     private function __construct()
