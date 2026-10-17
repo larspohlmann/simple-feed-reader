@@ -21,12 +21,14 @@ use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
+use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\QueryRecorder;
@@ -145,7 +147,7 @@ final class EntryListRowEnricherTest extends DbTestCase
 
     public function testASavedArticleGainsItsOriginAndAnyOtherEntryGainsNone(): void
     {
-        $saved = $this->entry('saved');
+        $saved = $this->savedEntry('saved');
         $plain = $this->entry('plain-origin');
         $this->entityManager->persist(new SavedEntryOrigin($saved, new EntryOrigin('Heise', 'https://h.test/f.ico')));
         $this->entityManager->flush();
@@ -159,7 +161,7 @@ final class EntryListRowEnricherTest extends DbTestCase
     public function testAPageCostsOneQueryPerLookup(): void
     {
         $first = $this->queued('first', ShareEnrichmentKind::LinkCards);
-        $second = $this->entry('second');
+        $second = $this->savedEntry('second');
         $duplicate = $this->entry('second-duplicate');
         $this->category($first, 0, 'Tech');
         $this->category($duplicate, 0, 'Science');
@@ -175,6 +177,15 @@ final class EntryListRowEnricherTest extends DbTestCase
         foreach ($tables as $table) {
             self::assertCount(1, $recorder->queriesMatching($table), $table . ":\n" . $queries);
         }
+    }
+
+    public function testAPageWithoutASavedArticleLooksUpNoOrigins(): void
+    {
+        $recorder = $this->recorder();
+
+        $this->enrich([$this->row($this->entry('unsaved'))]);
+
+        self::assertSame([], $recorder->queriesMatching('saved_entry_origin'));
     }
 
     public function testAPostOnANetworkTheUserHasAnAccountOnCarriesItsSocialStateAndLike(): void
@@ -250,7 +261,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $recorder = $this->recorder();
         $this->enrich($many);
 
-        self::assertSame(7, $singleCount);
+        self::assertSame(6, $singleCount);
         self::assertCount($singleCount, $recorder->queries(), implode("\n", $recorder->queries()));
         self::assertCount(1, $recorder->queriesMatching('social_like'));
     }
@@ -320,6 +331,15 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function savedEntry(string $guid): Entry
+    {
+        $feed = new Feed(SavedFeedUrl::of($this->user->requireId(), null));
+        $feed->setSourceFormat(SourceFormat::SAVED);
+        $this->entityManager->persist($feed);
+
+        return $this->postOn($feed, 'https://x.test/' . $guid);
     }
 
     private function mastodonFeed(): Feed

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Service\Social\Support\SocialPostAddress;
 
 /**
@@ -52,7 +53,7 @@ final readonly class EntryListRowEnricher
         $linkCards = $this->linkCards->contentsByEntryIds($entryIds);
         $pendingIds = array_flip($this->shareEnrichments->pendingEntryIdsAmong(self::topLevelEntryIdsOf($rows)));
         $socialStates = $this->socialStatesOf($entries, $userId);
-        $origins = $this->savedOrigins->originsByEntryIds($entryIds);
+        $origins = $this->savedOrigins->originsByEntryIds(self::savedEntryIdsOf($entries));
 
         $enrichments = [];
         foreach ($entryIds as $entryId) {
@@ -116,6 +117,19 @@ final readonly class EntryListRowEnricher
         }
 
         return $networks;
+    }
+
+    /**
+     * @param array<int, Entry> $entries
+     *
+     * @return list<int>
+     */
+    private static function savedEntryIdsOf(array $entries): array
+    {
+        return array_keys(array_filter(
+            $entries,
+            static fn (Entry $entry): bool => SourceFormat::isSaved($entry->getFeed()->getSourceFormat()),
+        ));
     }
 
     private static function repliesDiscussionOf(Entry $post): EntryListRowDiscussion
