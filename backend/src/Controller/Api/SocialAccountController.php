@@ -10,6 +10,7 @@ use App\Dto\Social\ReplaceCredentialRequest;
 use App\Entity\User;
 use App\Http\SocialAccountJson;
 use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Social\PrivateFeedSyncLog;
 use App\Service\Social\SocialAccountConnector;
 use App\Service\Social\SocialAccountEditor;
 use App\Service\Social\SocialAccountForUser;
@@ -30,13 +31,16 @@ final readonly class SocialAccountController
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialAccountLimiter,
         private SocialAccountJson $accountJson,
+        private PrivateFeedSyncLog $syncLog,
     ) {
     }
 
     #[Route('', name: 'api_me_social_accounts_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse($this->accountJson->list($this->editor->accountsOf($user)));
+        $accounts = $this->editor->accountsOf($user);
+
+        return new JsonResponse($this->accountJson->list($accounts, $this->syncLog->recentOf($accounts)));
     }
 
     #[Route('/bluesky', name: 'api_me_social_accounts_connect_bluesky', methods: ['POST'])]
@@ -48,7 +52,7 @@ final readonly class SocialAccountController
         $this->rateLimitGuard->enforceForUser($this->socialAccountLimiter, $user);
         $account = $this->connector->connect($user, $credentials);
 
-        return new JsonResponse($this->accountJson->account($account), Response::HTTP_CREATED);
+        return new JsonResponse($this->accountJson->account($account, []), Response::HTTP_CREATED);
     }
 
     #[Route('/mastodon', name: 'api_me_social_accounts_connect_mastodon', methods: ['POST'])]
@@ -60,7 +64,7 @@ final readonly class SocialAccountController
         $this->rateLimitGuard->enforceForUser($this->socialAccountLimiter, $user);
         $account = $this->connector->connect($user, $credentials);
 
-        return new JsonResponse($this->accountJson->account($account), Response::HTTP_CREATED);
+        return new JsonResponse($this->accountJson->account($account, []), Response::HTTP_CREATED);
     }
 
     #[Route(
@@ -78,7 +82,9 @@ final readonly class SocialAccountController
         $credentials = $request->toCredentials($account);
         $this->rateLimitGuard->enforceForUser($this->socialAccountLimiter, $user);
 
-        return new JsonResponse($this->accountJson->account($this->connector->reconnect($account, $credentials)));
+        $account = $this->connector->reconnect($account, $credentials);
+
+        return new JsonResponse($this->accountJson->account($account, $this->syncLog->recentOfOne($account)));
     }
 
     #[Route('/{id}/default', name: 'api_me_social_accounts_default', requirements: ['id' => '\d+'], methods: ['PUT'])]
