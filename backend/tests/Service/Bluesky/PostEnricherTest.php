@@ -377,6 +377,18 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame([self::TEST_POST . 'other'], $this->pendingGuids());
     }
 
+    public function testAFeedWithOnlyGivenUpRowsDropsThem(): void
+    {
+        $this->queuedPost($this->feed, self::TEST_POST . 'stale', '-4 days');
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([], $this->appView->requests);
+        $remaining = $this->entityManager->getConnection()->fetchFirstColumn('SELECT id FROM share_enrichment');
+        self::assertSame([], $remaining);
+    }
+
     public function testAThrottledHostIsNotAsked(): void
     {
         $this->throttle->record(Bluesky::GET_POSTS, 120);

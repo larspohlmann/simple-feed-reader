@@ -357,6 +357,18 @@ final class SelfThreadEnricherTest extends DbTestCase
         self::assertSame([null], $this->claimsOfRemainingRows());
     }
 
+    public function testEveryRowAThrottleLeftUnreadIsReleased(): void
+    {
+        $this->queuedEntry('-2 minutes', self::POST . '-1');
+        $this->queuedEntry('-1 minute', self::POST . '-2');
+        $this->thread->failInPublicWith(new SocialNetworkThrottledException('slow down', 30));
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertCount(2, $this->publicAsks());
+        self::assertSame([null, null], $this->claimsOfRemainingRows());
+    }
+
     public function testARowWhoseLeaseAnotherWorkerTookOverIsNotFolded(): void
     {
         $this->queuedEntry();
