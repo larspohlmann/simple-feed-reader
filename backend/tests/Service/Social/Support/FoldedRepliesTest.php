@@ -48,11 +48,27 @@ final class FoldedRepliesTest extends TestCase
         self::assertSame($tree, FoldedReplies::without($tree, [self::OTHER_URL]));
     }
 
+    public function testAFoldedReplyDeeperInTheTreeLiftsItsRepliesIntoItsParent(): void
+    {
+        $child = self::node('https://mastodon.social/@Gargron/113');
+        $sibling = self::node('https://mastodon.social/@Gargron/114');
+        $publishedAt = new \DateTimeImmutable('2026-10-16 08:00:00');
+        $parent = self::node(self::OTHER_URL, [self::node(self::FIRST_URL, [$child]), $sibling], $publishedAt);
+
+        $result = FoldedReplies::without([$parent], [self::FIRST_URL]);
+
+        self::assertCount(1, $result);
+        self::assertNotSame($parent, $result[0]);
+        self::assertSame([$child, $sibling], $result[0]->replies);
+        self::assertSame(self::OTHER_URL, $result[0]->url);
+        self::assertSame($publishedAt, $result[0]->publishedAt);
+    }
+
     /** @param list<ReplyNode> $replies */
-    private static function node(?string $url, array $replies = []): ReplyNode
+    private static function node(?string $url, array $replies = [], ?\DateTimeImmutable $publishedAt = null): ReplyNode
     {
         return new ReplyNode(
-            null,
+            $publishedAt,
             static fn (): EntryCommentModel => throw new \LogicException('Not rendered in this test.'),
             $replies,
             $url,
