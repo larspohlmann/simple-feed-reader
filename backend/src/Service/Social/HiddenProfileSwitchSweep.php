@@ -9,11 +9,12 @@ use App\Enum\SocialNetwork;
 use App\Repository\RefusedProfileSubscriptionRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
+use App\Service\Social\HiddenProfiles\CachedHiddenProfiles;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileMoveOutcome;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\ProfileCallBudgetModel;
+use App\Service\Social\Model\ProfileVisibilityModel;
 use App\Service\Social\Model\RefusedFeedPositionModel;
 use App\Service\Social\Model\RefusedProfileSubscriptionModel;
 use App\Service\Social\Pass\RefusedSubscriptionSelection;
@@ -35,7 +36,7 @@ final readonly class HiddenProfileSwitchSweep
 
     public function __construct(
         private RefusedProfileSubscriptionRepository $refusedSubscriptions,
-        private HiddenProfilesInterface $hiddenProfiles,
+        private CachedHiddenProfiles $hiddenProfiles,
         private ProfileVisibilityCache $profileVisibility,
         private HiddenProfileSwitchCursor $cursor,
         private HiddenProfileMove $move,
@@ -81,8 +82,10 @@ final readonly class HiddenProfileSwitchSweep
      */
     private function selectAmong(array $page, RefusedSubscriptionSelection $selection): bool
     {
-        foreach ($page as $subscription) {
-            $candidate = $this->candidateOf($subscription);
+        $actors = self::actorsOf($page);
+        $visibilities = $this->profileVisibility->visibilitiesOf(array_values(array_unique($actors)));
+        foreach ($page as $index => $subscription) {
+            $candidate = self::candidateOf($subscription, $actors[$index] ?? null, $visibilities);
             if (null === $candidate) {
                 $selection->passed($subscription);
                 continue;
@@ -96,25 +99,46 @@ final readonly class HiddenProfileSwitchSweep
         return true;
     }
 
-    /** @return RefusedProfileSubscriptionModel|null null when the feed names no actor, or one known public */
-    private function candidateOf(Subscription $subscription): ?RefusedProfileSubscriptionModel
-    {
-        $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $subscription->getFeed()->getUrl());
-        if (null === $actor || !BlueskyActor::isValid($actor)) {
+    /**
+     * @param array<string, ProfileVisibilityModel> $visibilities
+     *
+     * @return RefusedProfileSubscriptionModel|null null when the feed names no actor, or one known public
+     */
+    private static function candidateOf(
+        Subscription $subscription,
+        ?string $actor,
+        array $visibilities,
+    ): ?RefusedProfileSubscriptionModel {
+        if (null === $actor || $visibilities[$actor]->isPublic()) {
             return null;
         }
-        $visibility = $this->profileVisibility->visibilityOf($actor);
 
-        return $visibility->isPublic()
-            ? null
-            : new RefusedProfileSubscriptionModel($subscription, $actor, $visibility->hidden);
+        return new RefusedProfileSubscriptionModel($subscription, $actor, $visibilities[$actor]->hidden);
+    }
+
+    /**
+     * @param list<Subscription> $page
+     *
+     * @return array<int, string> the actor each refused feed follows, by its position in $page
+     */
+    private static function actorsOf(array $page): array
+    {
+        $actors = [];
+        foreach ($page as $index => $subscription) {
+            $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $subscription->getFeed()->getUrl());
+            if (null !== $actor && BlueskyActor::isValid($actor)) {
+                $actors[$index] = $actor;
+            }
+        }
+
+        return $actors;
     }
 
     /** @return array<string, HiddenProfileModel> none when Bluesky cannot say, and the run then resumes where it began */
     private function askedHidden(RefusedSubscriptionSelection $selection): array
     {
         try {
-            $hidden = $this->hiddenAmong($selection->unknownActors());
+            $hidden = $this->hiddenProfiles->askUnknown($selection->unknownActors());
         } catch (SocialNetworkUnreachableException $exception) {
             $this->logger->warning('Hidden-profile switch stopped: Bluesky did not answer.', [
                 'exception' => $exception,
@@ -125,16 +149,6 @@ final readonly class HiddenProfileSwitchSweep
         $this->keepPosition($selection->position());
 
         return $hidden;
-    }
-
-    /**
-     * @param list<string> $actors
-     *
-     * @return array<string, HiddenProfileModel>
-     */
-    private function hiddenAmong(array $actors): array
-    {
-        return [] === $actors ? [] : $this->hiddenProfiles->hiddenAmong($actors);
     }
 
     private function keepPosition(?RefusedFeedPositionModel $position): void

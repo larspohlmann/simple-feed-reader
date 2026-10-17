@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\HiddenProfiles;
 
+use App\Service\Bluesky\AppViewClient;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfiles\CachedHiddenProfiles;
 use App\Service\Social\Model\HiddenProfileModel;
@@ -56,6 +57,43 @@ final class CachedHiddenProfilesTest extends TestCase
         } catch (SocialNetworkUnreachableException) {
         }
 
-        self::assertTrue($this->profileVisibility->visibilityOf(BlueskyProfiles::RUSTY)->isUnknown());
+        self::assertTrue($this->profileVisibility->visibilitiesOf([BlueskyProfiles::RUSTY])[BlueskyProfiles::RUSTY]
+            ->isUnknown());
+    }
+
+    public function testActorsKnownUnknownAreAskedWithoutReadingTheirVerdictAgain(): void
+    {
+        $this->profileVisibility->remember([BlueskyProfiles::RUSTY], []);
+
+        $hidden = $this->hiddenProfiles->askUnknown([BlueskyProfiles::RUSTY]);
+
+        self::assertEquals([BlueskyProfiles::RUSTY => self::rusty()], $hidden);
+        self::assertSame([[BlueskyProfiles::RUSTY]], $this->appView->asked);
+    }
+
+    public function testTheCallsAnsweredBeforeAFailureAreRemembered(): void
+    {
+        $answered = array_map(
+            static fn (int $index): string => 'did:plc:public' . $index,
+            range(1, AppViewClient::URIS_PER_CALL),
+        );
+        $this->appView->failure = new SocialNetworkUnreachableException('down');
+        $this->appView->answeredBeforeFailure = 1;
+
+        try {
+            $this->hiddenProfiles->askUnknown([...$answered, BlueskyProfiles::RUSTY]);
+            self::fail('The failure should have surfaced.');
+        } catch (SocialNetworkUnreachableException) {
+        }
+
+        $visibilities = $this->profileVisibility->visibilitiesOf([...$answered, BlueskyProfiles::RUSTY]);
+        self::assertTrue($visibilities['did:plc:public1']->isPublic());
+        self::assertTrue($visibilities[BlueskyProfiles::RUSTY]->isUnknown());
+        self::assertCount(2, $this->appView->asked);
+    }
+
+    private static function rusty(): HiddenProfileModel
+    {
+        return new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty');
     }
 }

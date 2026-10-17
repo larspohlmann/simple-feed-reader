@@ -21,8 +21,13 @@ final class ProfileVisibilityCacheTest extends TestCase
 
         $cache->remember([BlueskyProfiles::RUSTY, 'did:plc:bob'], [BlueskyProfiles::RUSTY => $rusty]);
 
-        self::assertEquals(ProfileVisibilityModel::hiddenProfile($rusty), $cache->visibilityOf(BlueskyProfiles::RUSTY));
-        self::assertEquals(ProfileVisibilityModel::publicProfile(), $cache->visibilityOf('did:plc:bob'));
+        self::assertEquals(
+            [
+                BlueskyProfiles::RUSTY => ProfileVisibilityModel::hiddenProfile($rusty),
+                'did:plc:bob' => ProfileVisibilityModel::publicProfile(),
+            ],
+            $cache->visibilitiesOf([BlueskyProfiles::RUSTY, 'did:plc:bob']),
+        );
     }
 
     public function testTheAnswersReachTheStoreAnotherProcessReads(): void
@@ -33,7 +38,10 @@ final class ProfileVisibilityCacheTest extends TestCase
 
         $reader = new ProfileVisibilityCache(new FilesystemAdapter('', 0, $directory));
 
-        self::assertEquals(ProfileVisibilityModel::publicProfile(), $reader->visibilityOf('did:plc:bob'));
+        self::assertEquals(
+            ['did:plc:bob' => ProfileVisibilityModel::publicProfile()],
+            $reader->visibilitiesOf(['did:plc:bob']),
+        );
         $writer->clear();
     }
 
@@ -42,7 +50,9 @@ final class ProfileVisibilityCacheTest extends TestCase
         $cache = new ProfileVisibilityCache(new ArrayAdapter());
         $cache->remember(['did:plc:bob'], ['did:plc:carol' => new HiddenProfileModel('did:plc:carol', 'Carol')]);
 
-        self::assertEquals(ProfileVisibilityModel::unknown(), $cache->visibilityOf('did:plc:carol'));
-        self::assertEquals(ProfileVisibilityModel::unknown(), $cache->visibilityOf('did:plc:dave'));
+        self::assertEquals(
+            ['did:plc:carol' => ProfileVisibilityModel::unknown(), 'did:plc:dave' => ProfileVisibilityModel::unknown()],
+            $cache->visibilitiesOf(['did:plc:carol', 'did:plc:dave']),
+        );
     }
 }

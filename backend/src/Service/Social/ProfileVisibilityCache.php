@@ -6,6 +6,7 @@ namespace App\Service\Social;
 
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\ProfileVisibilityModel;
+use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -17,11 +18,23 @@ final readonly class ProfileVisibilityCache
     ) {
     }
 
-    public function visibilityOf(string $actor): ProfileVisibilityModel
+    /**
+     * @param list<string> $actors
+     *
+     * @return array<string, ProfileVisibilityModel> by actor
+     */
+    public function visibilitiesOf(array $actors): array
     {
-        $verdict = $this->cache->getItem(self::keyOf($actor))->get();
+        $items = $this->itemsOf($actors);
+        $visibilities = [];
+        foreach ($actors as $actor) {
+            $verdict = $items[self::keyOf($actor)]->get();
+            $visibilities[$actor] = $verdict instanceof ProfileVisibilityModel
+                ? $verdict
+                : ProfileVisibilityModel::unknown();
+        }
 
-        return $verdict instanceof ProfileVisibilityModel ? $verdict : ProfileVisibilityModel::unknown();
+        return $visibilities;
     }
 
     /**
@@ -30,14 +43,32 @@ final readonly class ProfileVisibilityCache
      */
     public function remember(array $asked, array $hidden): void
     {
+        $items = $this->itemsOf($asked);
         foreach ($asked as $actor) {
             $profile = $hidden[$actor] ?? null;
             $verdict = null === $profile
                 ? ProfileVisibilityModel::publicProfile()
                 : ProfileVisibilityModel::hiddenProfile($profile);
-            $this->cache->saveDeferred($this->cache->getItem(self::keyOf($actor))->set($verdict));
+            $this->cache->saveDeferred($items[self::keyOf($actor)]->set($verdict));
         }
         $this->cache->commit();
+    }
+
+    /**
+     * @param list<string> $actors
+     *
+     * @return array<string, CacheItemInterface> by key
+     */
+    private function itemsOf(array $actors): array
+    {
+        /** @var iterable<string, CacheItemInterface> $found PSR-6 keys each item by its key */
+        $found = $this->cache->getItems(array_map(self::keyOf(...), $actors));
+        $items = [];
+        foreach ($found as $key => $item) {
+            $items[$key] = $item;
+        }
+
+        return $items;
     }
 
     /** A DID holds colons, which PSR-6 reserves in keys. */

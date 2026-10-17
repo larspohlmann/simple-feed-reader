@@ -13,6 +13,9 @@ final class StubHiddenProfiles implements HiddenProfilesInterface
 {
     public ?SocialNetworkUnreachableException $failure = null;
 
+    /** How many asks are answered before $failure is thrown. */
+    public int $answeredBeforeFailure = 0;
+
     /** @var list<list<string>> */
     public array $asked = [];
 
@@ -30,7 +33,7 @@ final class StubHiddenProfiles implements HiddenProfilesInterface
     public function hiddenAmong(array $actors): array
     {
         $this->asked[] = $actors;
-        if (null !== $this->failure) {
+        if (null !== $this->failure && \count($this->asked) > $this->answeredBeforeFailure) {
             throw $this->failure;
         }
 
