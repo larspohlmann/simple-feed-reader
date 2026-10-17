@@ -18,7 +18,6 @@ use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
 use App\Repository\EntryStateRepository;
 use App\Repository\KnownSocialCollectionRepository;
-use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\AccountRestorer;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -31,6 +30,7 @@ use App\Service\Social\PrivateFeeds;
 use App\Service\Social\PrivateFeedSync;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ExportedFoundation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\PrivateFeedSyncWiring;
@@ -399,19 +399,9 @@ final class PrivateFeedSyncTest extends DbTestCase
 
     private function restoreABackupOfTheUser(): void
     {
-        $exporter = self::getContainer()->get(AccountBackupExporter::class);
-        self::assertInstanceOf(AccountBackupExporter::class, $exporter);
         $restorer = self::getContainer()->get(AccountRestorer::class);
         self::assertInstanceOf(AccountRestorer::class, $restorer);
-        foreach ($exporter->parts($this->user, 'https://source.example') as $part) {
-            if ('000-foundation.ndjson.gz' === $part->memberName) {
-                $restorer->start($this->user, $part->gzipBytes, 'REPLACE');
-
-                return;
-            }
-        }
-
-        self::fail('The exporter produced no foundation part.');
+        $restorer->start($this->user, ExportedFoundation::of(self::getContainer(), $this->user), 'REPLACE');
     }
 
     private function stampAnHourAgo(): void
