@@ -32,16 +32,12 @@ final readonly class HiddenProfileSwitchSweep
         private HiddenProfilesInterface $hiddenProfiles,
         private PublicProfileCache $publicProfiles,
         private HiddenProfileMove $move,
-        private AppViewClient $appView,
         private LoggerInterface $logger,
     ) {
     }
 
     public function sweep(ProfileCallBudgetModel $budget): HiddenProfileSwitchReportModel
     {
-        if ($this->appView->isThrottled()) {
-            return HiddenProfileSwitchReportModel::none();
-        }
         $candidates = $this->unsettledCandidates();
         $asked = self::askedActorsOf($candidates, $budget);
         if ([] === $asked) {

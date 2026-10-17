@@ -21,10 +21,13 @@ final class AppViewHiddenProfilesTest extends TestCase
     private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
 
     private StubFeedFetcher $fetcher;
+    private HostThrottle $throttle;
 
     protected function setUp(): void
     {
         $this->fetcher = new StubFeedFetcher();
+        $clock = new MockClock('2026-10-17 12:00:00', 'UTC');
+        $this->throttle = new HostThrottle(new ArrayAdapter(clock: $clock), $clock);
     }
 
     public function testAHiddenProfileIsFoundByItsDidAndItsHandle(): void
@@ -87,6 +90,18 @@ final class AppViewHiddenProfilesTest extends TestCase
         $this->hiddenProfiles()->hiddenAmong([self::RUSTY]);
     }
 
+    public function testAThrottledAppViewIsAnUnreachableNetworkAndIsNotAsked(): void
+    {
+        $this->throttle->record(self::GET_PROFILES, 60);
+
+        try {
+            $this->hiddenProfiles()->hiddenAmong([self::RUSTY]);
+            self::fail('A throttled AppView must not be asked.');
+        } catch (SocialNetworkUnreachableException) {
+            self::assertSame([], $this->fetcher->fetchedUrls);
+        }
+    }
+
     /**
      * @param array<string, string> $overrides
      *
@@ -127,10 +142,6 @@ final class AppViewHiddenProfilesTest extends TestCase
 
     private function hiddenProfiles(): AppViewHiddenProfiles
     {
-        $clock = new MockClock('2026-10-17 12:00:00', 'UTC');
-
-        return new AppViewHiddenProfiles(
-            new AppViewClient($this->fetcher, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
-        );
+        return new AppViewHiddenProfiles(new AppViewClient($this->fetcher, $this->throttle));
     }
 }

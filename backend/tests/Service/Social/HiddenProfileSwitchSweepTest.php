@@ -18,8 +18,6 @@ use App\Repository\SocialAccountRepository;
 use App\Repository\SocialFeedRepository;
 use App\Repository\SocialLikeRepository;
 use App\Repository\SubscriptionRepository;
-use App\Service\Bluesky\AppViewClient;
-use App\Service\Fetch\HostThrottle;
 use App\Service\SavedPosts\SavedStateMover;
 use App\Service\Social\AuthorFeeds;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -35,11 +33,9 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
-use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class HiddenProfileSwitchSweepTest extends DbTestCase
@@ -47,12 +43,10 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
     private const string NOW = '2026-10-17 12:00:00';
     private const string POST = 'at://did:plc:hczfd45prvqtdrw77256syag/app.bsky.feed.post/3abc';
-    private const string GET_PROFILES = 'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles';
 
     private StubHiddenProfiles $hiddenProfiles;
     private PublicProfileCache $publicProfiles;
     private RecordingLogger $logger;
-    private HostThrottle $throttle;
 
     protected function setUp(): void
     {
@@ -61,8 +55,6 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->hiddenProfiles->hide(new HiddenProfileModel(self::RUSTY, 'Rusty'));
         $this->publicProfiles = new PublicProfileCache(new ArrayAdapter());
         $this->logger = new RecordingLogger();
-        $clock = new MockClock(self::NOW, 'UTC');
-        $this->throttle = new HostThrottle(new ArrayAdapter(clock: $clock), $clock);
     }
 
     public function testTheFirstSweepGivesTheSubscriberAnAuthorFeedWithTheSameSettings(): void
@@ -182,17 +174,6 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertSame([], $this->hiddenProfiles->asked);
     }
 
-    public function testAThrottledAppViewIsNotAsked(): void
-    {
-        $user = $this->user('switch-throttled@example.test');
-        $this->accountOf($user);
-        $this->rssSubscription($user);
-        $this->throttle->record(self::GET_PROFILES, 60);
-
-        self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
-        self::assertSame([], $this->hiddenProfiles->asked);
-    }
-
     public function testAFullAccountKeepsItsRssFeedAndTheSkipIsLogged(): void
     {
         $user = $this->user('switch-full@example.test');
@@ -222,7 +203,6 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
             $this->hiddenProfiles,
             $this->publicProfiles,
             $this->move(),
-            new AppViewClient(new StubFeedFetcher(), $this->throttle),
             $this->logger,
         ))->sweep(ProfileCallBudgetModel::calls($calls));
     }
