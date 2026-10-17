@@ -36,11 +36,6 @@ final class ProfileFeedUrl
         return null !== $builtIdentity && 0 === strcasecmp($builtIdentity, $identity) ? $url : null;
     }
 
-    public static function isDid(string $identity): bool
-    {
-        return BlueskyActorKey::isDid($identity);
-    }
-
     /** @return string|null the DID, handle or user@host the URL follows; null when it is no profile feed of $network */
     public static function identityOf(SocialNetwork $network, string $url): ?string
     {

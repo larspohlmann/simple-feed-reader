@@ -22,7 +22,9 @@ final class BlueskyActorKeyTest extends TestCase
     public function testOnlyAnActorStartingWithTheDidSchemeIsADid(): void
     {
         self::assertTrue(BlueskyActorKey::isDid('did:web:example.com'));
+        self::assertTrue(BlueskyActorKey::isDid('did:plc:bob'));
         self::assertFalse(BlueskyActorKey::isDid('did.bsky.social'));
+        self::assertFalse(BlueskyActorKey::isDid('DID:plc:bob'));
         self::assertFalse(BlueskyActorKey::isDid('x-did:plc:abc'));
     }
 }

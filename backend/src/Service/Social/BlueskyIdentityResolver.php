@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Service\Bluesky\AppViewClient;
+use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskyIdentityModel;
-use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\UrlOrigin;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -30,7 +30,7 @@ final readonly class BlueskyIdentityResolver
      */
     public function resolve(string $handleOrDid): BlueskyIdentityModel
     {
-        $did = ProfileFeedUrl::isDid($handleOrDid) ? $handleOrDid : $this->didOf($handleOrDid);
+        $did = BlueskyActorKey::isDid($handleOrDid) ? $handleOrDid : $this->didOf($handleOrDid);
 
         return new BlueskyIdentityModel($did, $this->pdsOf($did));
     }

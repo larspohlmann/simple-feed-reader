@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model;
 
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Bluesky\Support\BlueskyActorKey;
 
 final readonly class ProfileFeedSubscriptionModel
 {
@@ -19,6 +19,6 @@ final readonly class ProfileFeedSubscriptionModel
 
     public function handle(): string
     {
-        return ProfileFeedUrl::isDid($this->identity) ? $this->identity : '@' . $this->identity;
+        return BlueskyActorKey::isDid($this->identity) ? $this->identity : '@' . $this->identity;
     }
 }

@@ -21,15 +21,6 @@ final class ProfileFeedUrlTest extends TestCase
         self::assertSame('https://example.social/@bob.rss', ProfileFeedUrl::mastodon('bob', 'example.social'));
     }
 
-    public function testOnlyAnIdentityStartingWithDidIsADid(): void
-    {
-        self::assertTrue(ProfileFeedUrl::isDid('did:plc:bob'));
-        self::assertTrue(ProfileFeedUrl::isDid('did:web:example.com'));
-        self::assertFalse(ProfileFeedUrl::isDid('bob.bsky.social'));
-        self::assertFalse(ProfileFeedUrl::isDid('xdid:plc:bob'));
-        self::assertFalse(ProfileFeedUrl::isDid('DID:plc:bob'));
-    }
-
     /** @return iterable<string, array{SocialNetwork, string, ?string}> */
     public static function urls(): iterable
     {
