@@ -70,4 +70,9 @@ final class ShareEnrichment
     {
         $this->kind = ShareEnrichmentKind::LinkCards;
     }
+
+    public function awaitSelfThread(): void
+    {
+        $this->kind = ShareEnrichmentKind::SelfThread;
+    }
 }

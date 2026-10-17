@@ -64,17 +64,18 @@ final readonly class PostEnricher
 
     private function enrichQueued(Feed $feed): void
     {
-        if (!$this->enrichments->hasAppViewPendingForFeed($feed)) {
+        if (!$this->enrichments->hasPendingForFeed($feed, ShareEnrichmentKind::AppView)) {
             return;
         }
         $now = $this->clock->now();
-        $this->enrichments->deleteAppViewQueuedBefore(
+        $this->enrichments->deleteQueuedBefore(
             $feed,
+            ShareEnrichmentKind::AppView,
             $now->sub(new \DateInterval(ShareEnrichment::APPVIEW_GIVE_UP_AFTER)),
         );
 
         $this->claimAndSettle(
-            $this->enrichments->findClaimableAppViewForFeed($feed, $now, self::POSTS_PER_PASS),
+            $this->enrichments->findClaimableForFeed($feed, ShareEnrichmentKind::AppView, $now, self::POSTS_PER_PASS),
             $now,
         );
     }

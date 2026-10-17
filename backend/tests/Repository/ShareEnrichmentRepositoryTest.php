@@ -26,7 +26,7 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         $this->queued($other, 'at://did:plc:b/app.bsky.feed.post/elsewhere', '2026-10-10 08:00:00');
         $this->entityManager->flush();
 
-        $rows = $this->repository()->findClaimableAppViewForFeed($feed, $this->now(), 2);
+        $rows = $this->repository()->findClaimableForFeed($feed, ShareEnrichmentKind::AppView, $this->now(), 2);
 
         self::assertSame(
             ['at://did:plc:a/app.bsky.feed.post/old', 'at://did:plc:a/app.bsky.feed.post/mid'],
@@ -61,13 +61,20 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         $this->queued($other, 'at://did:plc:b/app.bsky.feed.post/elsewhere', '2026-10-10 08:00:00');
         $this->entityManager->flush();
 
-        $this->repository()->deleteAppViewQueuedBefore($feed, new \DateTimeImmutable('2026-10-10 10:00:00'));
+        $this->repository()->deleteQueuedBefore(
+            $feed,
+            ShareEnrichmentKind::AppView,
+            new \DateTimeImmutable('2026-10-10 10:00:00'),
+        );
 
         self::assertSame(
             ['https://mastodon.test/@a/1', 'at://did:plc:a/app.bsky.feed.post/at-cutoff'],
             self::guidsOf($this->repository()->findClaimableFor($this->entriesOf($feed), $this->now())),
         );
-        self::assertCount(1, $this->repository()->findClaimableAppViewForFeed($other, $this->now(), 10));
+        self::assertCount(
+            1,
+            $this->repository()->findClaimableForFeed($other, ShareEnrichmentKind::AppView, $this->now(), 10),
+        );
     }
 
     public function testTellsWhetherAFeedHasAnAppViewRow(): void
@@ -80,9 +87,44 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         $this->queued($linkPosts, 'https://mastodon.test/@a/1', '2026-10-10 09:00:00', ShareEnrichmentKind::LinkCards);
         $this->entityManager->flush();
 
-        self::assertTrue($this->repository()->hasAppViewPendingForFeed($feed));
-        self::assertFalse($this->repository()->hasAppViewPendingForFeed($linkPosts));
-        self::assertFalse($this->repository()->hasAppViewPendingForFeed($empty));
+        self::assertTrue($this->repository()->hasPendingForFeed($feed, ShareEnrichmentKind::AppView));
+        self::assertFalse($this->repository()->hasPendingForFeed($linkPosts, ShareEnrichmentKind::AppView));
+        self::assertFalse($this->repository()->hasPendingForFeed($empty, ShareEnrichmentKind::AppView));
+    }
+
+    public function testKeepsEachKindOfFeedQueueApart(): void
+    {
+        $feed = $this->feed('https://bsky.app/profile/a/rss');
+        $appView = $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/one', '2026-10-10 09:00:00');
+        $this->queued(
+            $feed,
+            'at://did:plc:a/app.bsky.feed.post/thread',
+            '2026-10-10 09:00:00',
+            ShareEnrichmentKind::SelfThread,
+        );
+        $this->entityManager->flush();
+
+        self::assertTrue($this->repository()->hasPendingForFeed($feed, ShareEnrichmentKind::SelfThread));
+        self::assertSame(
+            ['at://did:plc:a/app.bsky.feed.post/thread'],
+            self::guidsOf($this->repository()->findClaimableForFeed(
+                $feed,
+                ShareEnrichmentKind::SelfThread,
+                $this->now(),
+                10,
+            )),
+        );
+
+        $this->repository()->deleteQueuedBefore(
+            $feed,
+            ShareEnrichmentKind::SelfThread,
+            new \DateTimeImmutable('2026-10-10 10:00:00'),
+        );
+
+        self::assertSame(
+            [$appView],
+            $this->repository()->findClaimableForFeed($feed, ShareEnrichmentKind::AppView, $this->now(), 10),
+        );
     }
 
     public function testARowGoesWithItsEntry(): void

@@ -21,7 +21,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
         parent::__construct($registry, ShareEnrichment::class);
     }
 
-    public function deleteAppViewQueuedBefore(Feed $feed, \DateTimeImmutable $cutoff): void
+    public function deleteQueuedBefore(Feed $feed, ShareEnrichmentKind $kind, \DateTimeImmutable $cutoff): void
     {
         $this->getEntityManager()->createQuery(sprintf(
             'DELETE FROM %s pending WHERE pending.kind = :kind AND pending.queuedAt < :cutoff'
@@ -30,13 +30,13 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
             ShareEnrichment::class,
             Entry::class,
         ))
-            ->setParameter('kind', ShareEnrichmentKind::AppView)
+            ->setParameter('kind', $kind)
             ->setParameter('cutoff', $cutoff, Types::DATETIME_IMMUTABLE)
             ->setParameter('feed', $feed)
             ->execute();
     }
 
-    public function hasAppViewPendingForFeed(Feed $feed): bool
+    public function hasPendingForFeed(Feed $feed, ShareEnrichmentKind $kind): bool
     {
         return $this->createQueryBuilder('pending')
             ->select('pending.id')
@@ -44,21 +44,25 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
             ->andWhere('queuedEntry.feed = :feed')
             ->andWhere('pending.kind = :kind')
             ->setParameter('feed', $feed)
-            ->setParameter('kind', ShareEnrichmentKind::AppView)
+            ->setParameter('kind', $kind)
             ->setMaxResults(1)
             ->getQuery()
             ->getScalarResult() !== [];
     }
 
-    /** @return list<ShareEnrichment> the feed's AppView rows no worker holds, oldest first */
-    public function findClaimableAppViewForFeed(Feed $feed, \DateTimeImmutable $now, int $limit): array
-    {
+    /** @return list<ShareEnrichment> the feed's rows of that kind no worker holds, oldest first */
+    public function findClaimableForFeed(
+        Feed $feed,
+        ShareEnrichmentKind $kind,
+        \DateTimeImmutable $now,
+        int $limit,
+    ): array {
         /** @var list<ShareEnrichment> $rows */
         $rows = $this->claimable($now)
             ->andWhere('queuedEntry.feed = :feed')
             ->andWhere('pending.kind = :kind')
             ->setParameter('feed', $feed)
-            ->setParameter('kind', ShareEnrichmentKind::AppView)
+            ->setParameter('kind', $kind)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
