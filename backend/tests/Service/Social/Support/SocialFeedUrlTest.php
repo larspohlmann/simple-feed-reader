@@ -119,6 +119,8 @@ final class SocialFeedUrlTest extends TestCase
         ];
         yield 'another kind naming a did' => [SocialNetwork::Bluesky, 'social:bluesky:12:home:did:plc:rusty', null];
         yield 'no did' => [SocialNetwork::Bluesky, 'social:bluesky:12:author:rusty.bsky.social', null];
+        yield 'a malformed did' => [SocialNetwork::Bluesky, 'social:bluesky:12:author:did:x&limit=999', null];
+        yield 'a did with a space' => [SocialNetwork::Bluesky, 'social:bluesky:12:author:did:a:b c', null];
         yield 'an rss feed' => [SocialNetwork::Bluesky, 'https://bsky.app/profile/did:plc:rusty/rss', null];
     }
 }

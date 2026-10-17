@@ -125,6 +125,16 @@ final class PrivateFeedRulesTest extends TestCase
             PrivateFeedModel::author('rusty.bsky.social', 'Rusty'),
             false,
         ];
+        yield 'bluesky author named by a malformed DID' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::author('did:x&limit=999', 'Rusty'),
+            false,
+        ];
+        yield 'bluesky author named by a DID with a space' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::author('did:a:b c', 'Rusty'),
+            false,
+        ];
         yield 'mastodon has no author feeds' => [
             SocialNetwork::Mastodon,
             PrivateFeedModel::author('did:plc:rusty', 'Rusty'),

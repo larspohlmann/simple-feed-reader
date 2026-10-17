@@ -7,7 +7,6 @@ namespace App\Service\Social\Support;
 use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SocialFeedAddressModel;
 
@@ -58,7 +57,7 @@ final class SocialFeedUrl
             return null;
         }
 
-        return BlueskyActorKey::isDid($address->remoteId) ? $address->remoteId : null;
+        return BlueskyActor::isDid($address->remoteId) ? $address->remoteId : null;
     }
 
     private static function segmentOf(SocialFeedKind $kind): string

@@ -6,7 +6,6 @@ namespace App\Service\Social\Support;
 
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
-use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Model\PrivateFeedModel;
 
 final class PrivateFeedRules
@@ -23,7 +22,7 @@ final class PrivateFeedRules
             SocialFeedKind::CustomFeed => SocialNetwork::Bluesky === $network
                 && BlueskyRecordUri::isFeedGenerator($privateFeed->remoteId),
             SocialFeedKind::Author => SocialNetwork::Bluesky === $network
-                && BlueskyActorKey::isDid($privateFeed->remoteId),
+                && BlueskyActor::isDid($privateFeed->remoteId),
         };
     }
 
