@@ -14,6 +14,7 @@ use App\Service\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Model\ResolvedCollectionsModel;
 use App\Service\Social\Model\SavedItemsModel;
 use App\Service\Social\Model\SocialCollectionModel;
+use App\Service\Social\Support\CuratedBlueskyList;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskySavedCollections
@@ -24,8 +25,8 @@ final readonly class BlueskySavedCollections
     private const string GET_LIST = AppViewClient::BASE_URL . 'app.bsky.graph.getList';
     private const string GET_PREFERENCES = '/xrpc/app.bsky.actor.getPreferences';
     private const string SAVED_FEEDS = 'app.bsky.actor.defs#savedFeedsPrefV2';
-    private const string CURATED_LIST = 'app.bsky.graph.defs#curatelist';
     private const string MISSING_RECORD = 'InvalidRequest';
+    private const string DID_URI_PREFIX = 'at://did:';
     private const int GENERATORS_PER_CALL = 25;
 
     public function __construct(
@@ -79,9 +80,8 @@ final readonly class BlueskySavedCollections
             $lists->found,
             $feeds->found,
             [...$feeds->gone, ...$lists->gone],
-            false,
-            \count($othersLists) > self::MAX_SAVED_LISTS,
-            $saved->hasSavedFeedsPref,
+            savedListsCapped: \count($othersLists) > self::MAX_SAVED_LISTS,
+            savedFeedsKnown: $saved->hasSavedFeedsPref,
         );
     }
 
@@ -100,7 +100,7 @@ final readonly class BlueskySavedCollections
         foreach ($uris as $uri) {
             if (\array_key_exists($uri, $names)) {
                 $found[] = new SocialCollectionModel($uri, $names[$uri] ?? $uri);
-            } else {
+            } elseif (str_starts_with($uri, self::DID_URI_PREFIX)) {
                 $gone[] = $uri;
             }
         }
@@ -141,7 +141,7 @@ final readonly class BlueskySavedCollections
             throw new SocialNetworkUnreachableException('Bluesky answered without the saved list.');
         }
 
-        return self::CURATED_LIST === $purpose ? new SocialCollectionModel($uri, $name) : null;
+        return CuratedBlueskyList::isPurpose($purpose) ? new SocialCollectionModel($uri, $name) : null;
     }
 
     /** @return array<string, string|null> display name by uri; null when the generator has none */
@@ -152,12 +152,23 @@ final readonly class BlueskySavedCollections
         $names = [];
         foreach ($generators as $generator) {
             $uri = $generator->string('uri');
-            if (null !== $uri) {
-                $names[$uri] = $generator->string('displayName') ?? ($names[$uri] ?? null);
+            if (null === $uri) {
+                continue;
+            }
+            $name = $generator->string('displayName');
+            foreach ([$uri, self::handleFormOf($uri, $generator->node('creator')->string('handle'))] as $key) {
+                $names[$key] = $name ?? ($names[$key] ?? null);
             }
         }
 
         return $names;
+    }
+
+    private static function handleFormOf(string $uri, ?string $creatorHandle): string
+    {
+        return null === $creatorHandle
+            ? $uri
+            : 'at://' . $creatorHandle . '/' . preg_replace('#^at://[^/]+/#', '', $uri);
     }
 
     private static function isMissing(ApiResponseModel $answer): bool

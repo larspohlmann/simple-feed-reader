@@ -43,6 +43,6 @@ final class StubSocialCandidates implements SocialCandidatesInterface
 
         return $answer instanceof NetworkCollectionsModel
             ? $answer
-            : new NetworkCollectionsModel($answer->lists, $answer->customFeeds, [], $answer->truncated);
+            : new NetworkCollectionsModel($answer->lists, $answer->customFeeds, truncated: $answer->truncated);
     }
 }

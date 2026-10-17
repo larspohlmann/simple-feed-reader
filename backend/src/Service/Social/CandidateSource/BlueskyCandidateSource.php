@@ -17,12 +17,12 @@ use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Model\SocialCollectionModel;
+use App\Service\Social\Support\CuratedBlueskyList;
 use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 {
-    private const string CURATED_LIST = 'app.bsky.graph.defs#curatelist';
     private const int PAGE_SIZE = 100;
 
     public function __construct(
@@ -60,9 +60,9 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
             [...$ownedLists, ...$others->lists],
             $others->customFeeds,
             $others->goneIds,
-            $owned->truncated,
-            $others->savedListsCapped,
-            $others->savedFeedsKnown,
+            truncated: $owned->truncated,
+            savedListsCapped: $others->savedListsCapped,
+            savedFeedsKnown: $others->savedFeedsKnown,
         );
     }
 
@@ -133,7 +133,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
         foreach ($nodes as $node) {
             $uri = $node->string('uri');
             $name = $node->string('name');
-            if (self::CURATED_LIST === $node->string('purpose') && null !== $uri && null !== $name) {
+            if (CuratedBlueskyList::isPurpose($node->string('purpose')) && null !== $uri && null !== $name) {
                 $lists[] = new SocialCollectionModel($uri, $name);
             }
         }

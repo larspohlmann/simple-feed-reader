@@ -642,11 +642,11 @@ final class BlueskyCandidateSourceTest extends TestCase
     }
 
     /** @return array<string, MockResponse> */
-    private static function manySavedListRoutes(): array
+    private static function manySavedListRoutes(int $count = BlueskySavedCollections::MAX_SAVED_LISTS + 1): array
     {
         $uris = array_map(
             static fn (int $index): string => 'at://did:plc:bob/app.bsky.graph.list/' . $index,
-            range(1, BlueskySavedCollections::MAX_SAVED_LISTS + 1),
+            range(1, $count),
         );
         $routes = [
             self::PREFERENCES => self::savedItems(array_map(static fn (string $uri): array => ['list', $uri], $uris)),
@@ -701,5 +701,47 @@ final class BlueskyCandidateSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
         $this->source($http)->collections($this->account);
+    }
+
+    public function testAHandleFormSavedFeedIsFoundByItsCreatorAndNeverGone(): void
+    {
+        $handleForm = 'at://whats-hot.example/app.bsky.feed.generator/discover';
+        $unmatched = 'at://other.example/app.bsky.feed.generator/lost';
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedItems([['feed', $handleForm], ['feed', $unmatched]]),
+            self::GENERATORS . self::feedsQuery([$handleForm, $unmatched]) => self::json(['feeds' => [[
+                'uri' => self::DISCOVER,
+                'displayName' => 'Discover',
+                'creator' => ['handle' => 'whats-hot.example'],
+            ]]]),
+        ]));
+
+        $collections = $this->source($http)->collections($this->account);
+
+        self::assertEquals([new SocialCollectionModel($handleForm, 'Discover')], $collections->customFeeds);
+        self::assertSame([], $collections->goneIds);
+    }
+
+    public function testAnEmptyGeneratorAnswerMakesEveryAskedFeedGone(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedItems([['feed', self::DISCOVER], ['feed', self::GONE]]),
+            self::GENERATORS . self::feedsQuery([self::DISCOVER, self::GONE]) => self::json(['feeds' => []]),
+        ]));
+
+        $collections = $this->source($http)->collections($this->account);
+
+        self::assertSame([], $collections->customFeeds);
+        self::assertSame([self::DISCOVER, self::GONE], $collections->goneIds);
+    }
+
+    public function testExactlyTheCapOfSavedListsIsNotCappedAndOneMoreIs(): void
+    {
+        $cap = BlueskySavedCollections::MAX_SAVED_LISTS;
+        $atCap = new RoutedHttpClient($this->routes(self::manySavedListRoutes($cap)));
+        $overCap = new RoutedHttpClient($this->routes(self::manySavedListRoutes($cap + 1)));
+
+        self::assertFalse($this->source($atCap)->collections($this->account)->savedListsCapped);
+        self::assertTrue($this->source($overCap)->collections($this->account)->savedListsCapped);
     }
 }
