@@ -23,6 +23,7 @@ import { formatDuration, relativeTime } from '../../../format';
 import { LayoutService } from '../../../layout.service';
 import { prefersReducedMotion } from '../../../../core/reduced-motion';
 import { entryParam } from '../../../query/slug';
+import { entryChangeParams } from '../../../query/link-param';
 import { AudioArtworkComponent } from '../audio-artwork/audio-artwork.component';
 import { AudioPlaylistComponent } from '../audio-playlist/audio-playlist.component';
 
@@ -116,10 +117,10 @@ export class BigPlayerComponent {
   }
 
   protected openArticle(entry: AudioTrackEntry): void {
-    const url = this.router.parseUrl(this.router.url);
-    url.queryParams = { ...url.queryParams, entry: entryParam(entry.id, entry.title) };
-    delete url.queryParams['link'];
-    void this.router.navigateByUrl(url);
+    void this.router.navigate([], {
+      queryParams: entryChangeParams(entryParam(entry.id, entry.title)),
+      queryParamsHandling: 'merge',
+    });
     this.ref.close();
   }
 

@@ -21,3 +21,8 @@ export function linkCardFromParam(value: string | null): LinkCardRef | null {
 export function sameLinkCard(left: LinkCardRef | null, right: LinkCardRef | null): boolean {
   return left?.entryId === right?.entryId && left?.position === right?.position;
 }
+
+/** Opening or closing an entry drops the link layer above it. */
+export function entryChangeParams(entry: string | null): { entry: string | null; link: null } {
+  return { entry, link: null };
+}

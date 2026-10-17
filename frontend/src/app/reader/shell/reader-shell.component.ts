@@ -40,6 +40,7 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
 import { isDirectSearch } from '../query/query';
+import { entryChangeParams } from '../query/link-param';
 import { UnreadFilterService } from '../list/unread-filter.service';
 import { ListOrderService } from '../list/list-order.service';
 import { ListPreferences } from '../list/list-preferences.service';
@@ -342,7 +343,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   onCloseReader(): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { entry: null, link: null },
+      queryParams: entryChangeParams(null),
       queryParamsHandling: 'merge',
     });
   }
@@ -354,7 +355,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   // Preserve the underlying list so clearing a direct search returns to it.
   onSearch(term: string): void {
     void this.router.navigate(['/'], {
-      queryParams: { q: term || null, entry: null, link: null },
+      queryParams: { q: term || null, ...entryChangeParams(null) },
       queryParamsHandling: 'merge',
     });
   }

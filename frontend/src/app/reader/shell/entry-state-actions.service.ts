@@ -6,6 +6,7 @@ import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { Selection } from '../query/query';
 import { entryParam } from '../query/slug';
+import { entryChangeParams } from '../query/link-param';
 import { EntryDto, EntryStatePatch } from '../models';
 import { ToastService } from '../../shared/toast/toast.service';
 import { problemMessage } from '../../core/problem';
@@ -82,7 +83,7 @@ export class EntryStateActions implements EntryActionHandler {
   open(entry: EntryDto): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { entry: entryParam(entry.id, entry.title), link: null },
+      queryParams: entryChangeParams(entryParam(entry.id, entry.title)),
       queryParamsHandling: 'merge',
     });
   }
