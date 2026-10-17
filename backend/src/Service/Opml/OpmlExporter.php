@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Opml;
 
-use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
+use App\Service\Social\Model\ExportedSubscriptionModel;
+use App\Service\Social\Support\ExportedFeed;
 
 /**
  * Serialises a user's subscriptions to OPML 2.0, grouped by tag. A feed with
@@ -25,7 +26,9 @@ final readonly class OpmlExporter
      */
     public function export(User $user): string
     {
-        $subscriptions = $this->subscriptions->findExportableForUserWithTags($user->requireId());
+        $subscriptions = ExportedFeed::withoutRepeats(
+            $this->subscriptions->findExportableForUserWithTags($user->requireId()),
+        );
 
         $document = new \DOMDocument('1.0', 'UTF-8');
         $document->formatOutput = true;
@@ -47,36 +50,36 @@ final readonly class OpmlExporter
             $outline = $document->createElement('outline');
             $outline->setAttribute('text', $tagName);
             $outline->setAttribute('title', $tagName);
-            foreach ($group as $subscription) {
-                $outline->appendChild($this->feedOutline($document, $subscription));
+            foreach ($group as $exported) {
+                $outline->appendChild($this->feedOutline($document, $exported));
             }
             $body->appendChild($outline);
         }
 
-        foreach ($untagged as $subscription) {
-            $body->appendChild($this->feedOutline($document, $subscription));
+        foreach ($untagged as $exported) {
+            $body->appendChild($this->feedOutline($document, $exported));
         }
 
         return (string) $document->saveXML();
     }
 
     /**
-     * @param list<Subscription> $subscriptions
+     * @param list<ExportedSubscriptionModel> $subscriptions
      *
-     * @return array{0: array<string, list<Subscription>>, 1: list<Subscription>}
+     * @return array{0: array<string, list<ExportedSubscriptionModel>>, 1: list<ExportedSubscriptionModel>}
      */
     private function group(array $subscriptions): array
     {
         $byTag = [];
         $untagged = [];
-        foreach ($subscriptions as $subscription) {
-            $tags = $subscription->getTags();
+        foreach ($subscriptions as $exported) {
+            $tags = $exported->subscription->getTags();
             if ($tags->isEmpty()) {
-                $untagged[] = $subscription;
+                $untagged[] = $exported;
                 continue;
             }
             foreach ($tags as $tag) {
-                $byTag[$tag->getName()][] = $subscription;
+                $byTag[$tag->getName()][] = $exported;
             }
         }
 
@@ -86,16 +89,16 @@ final readonly class OpmlExporter
     /**
      * @throws \DOMException
      */
-    private function feedOutline(\DOMDocument $document, Subscription $subscription): \DOMElement
+    private function feedOutline(\DOMDocument $document, ExportedSubscriptionModel $exported): \DOMElement
     {
-        $feed = $subscription->getFeed();
-        $title = $subscription->getCustomTitle() ?? $feed->getTitle() ?? $feed->getUrl();
+        $feed = $exported->subscription->getFeed();
+        $title = $exported->subscription->getCustomTitle() ?? $feed->getTitle() ?? $exported->feedUrl;
 
         $outline = $document->createElement('outline');
         $outline->setAttribute('type', 'rss');
         $outline->setAttribute('text', $title);
         $outline->setAttribute('title', $title);
-        $outline->setAttribute('xmlUrl', $feed->getUrl());
+        $outline->setAttribute('xmlUrl', $exported->feedUrl);
         if ($feed->getSiteUrl() !== null) {
             $outline->setAttribute('htmlUrl', $feed->getSiteUrl());
         }

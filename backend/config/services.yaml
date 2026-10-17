@@ -71,6 +71,8 @@ services:
             tags: ['app.share_link_feed']
         App\Service\Discovery\FeedOffer\FeedOfferInterface:
             tags: ['app.feed_offer']
+        App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface:
+            tags: ['app.subscribe_route']
         # Symfony's mailer auto-tags only the transport factories it ships; without this `dynamic://` has no factory
         # and MAILER_DSN=dynamic://default throws UnsupportedSchemeException.
         Symfony\Component\Mailer\Transport\TransportFactoryInterface:
@@ -96,6 +98,7 @@ services:
     App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery\FeedDiscovery'
     App\Service\Reader\ArticleExtractor\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor\ArticleExtractor'
     App\Service\Settings\ServingHost\ServingHostInterface: '@App\Http\RequestServingHost'
+    App\Service\Social\HiddenProfiles\HiddenProfilesInterface: '@App\Service\Social\HiddenProfiles\AppViewHiddenProfiles'
     App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface: '@App\Http\SymfonyStatusReasonPhrases'
     App\Service\Ingest\FeedTitle\FeedTitleInterface: '@App\Service\Social\ProfileFeedTitle'
 

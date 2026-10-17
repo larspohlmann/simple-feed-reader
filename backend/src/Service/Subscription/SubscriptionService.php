@@ -13,7 +13,10 @@ use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\SavedPosts\SavedPostRescue;
 use App\Service\Subscription\Model\SubscribeOutcomeModel;
+use App\Service\Subscription\Model\SubscribeRequestModel;
+use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 final readonly class SubscriptionService
 {
@@ -25,6 +28,7 @@ final readonly class SubscriptionService
      */
     public const int MAX_BULK_REQUEST_IDS = 5000;
 
+    /** @param iterable<SubscribeRouteInterface> $subscribeRoutes */
     public function __construct(
         private FeedDiscoveryInterface $discovery,
         private SubscriptionCreator $creator,
@@ -33,6 +37,8 @@ final readonly class SubscriptionService
         private OrphanedFeedReclaimer $orphanedFeeds,
         private SavedPostRescue $savedPostRescue,
         private EntityManagerInterface $entityManager,
+        #[AutowireIterator('app.subscribe_route')]
+        private iterable $subscribeRoutes,
     ) {
     }
 
@@ -87,6 +93,11 @@ final readonly class SubscriptionService
             return $this->subscribeVerbatim($user, $url, SourceFormat::WP_JSON, $tags, $initialTitle);
         }
 
+        $routed = $this->routed(new SubscribeRequestModel($user, $url, $tags));
+        if (null !== $routed) {
+            return $routed;
+        }
+
         $result = $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
 
         $discovered = $result->feed;
@@ -98,6 +109,18 @@ final readonly class SubscriptionService
         $unread = $this->firstFetch->record($subscription->getFeed(), $discovered);
 
         return SubscribeOutcomeModel::subscribed($subscription, $unread);
+    }
+
+    private function routed(SubscribeRequestModel $request): ?SubscribeOutcomeModel
+    {
+        foreach ($this->subscribeRoutes as $route) {
+            $outcome = $route->subscribe($request);
+            if (null !== $outcome) {
+                return $outcome;
+            }
+        }
+
+        return null;
     }
 
     /**

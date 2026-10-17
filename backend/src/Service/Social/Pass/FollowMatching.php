@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Pass;
 
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\ImportCandidateModel;
 use App\Service\Social\Model\ProfileFeedSubscriptionModel;
@@ -51,7 +52,7 @@ final class FollowMatching
         return array_values(array_filter(
             $this->unmatched,
             static fn (ProfileFeedSubscriptionModel $profileFeed): bool
-                => !ProfileFeedUrl::isDid($profileFeed->identity),
+                => !BlueskyActorKey::isDid($profileFeed->identity),
         ));
     }
 

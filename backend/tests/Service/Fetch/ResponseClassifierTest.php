@@ -205,6 +205,7 @@ final class ResponseClassifierTest extends TestCase
     public function testAFiveHundredIsUnreachable(): void
     {
         $this->expectException(FeedUnreachableException::class);
+        $this->expectExceptionMessageMatches('#^https://example\.com/feed: HTTP 500$#');
 
         $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', ['http_code' => 500])),

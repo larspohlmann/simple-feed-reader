@@ -15,7 +15,12 @@ final class BlueskyActor
     public static function isValid(string $actor): bool
     {
         return \strlen($actor) <= self::MAX_LENGTH
-            && (1 === preg_match(self::HANDLE, $actor) || 1 === preg_match(self::DID, $actor));
+            && (1 === preg_match(self::HANDLE, $actor) || self::isDid($actor));
+    }
+
+    public static function isDid(string $actor): bool
+    {
+        return 1 === preg_match(self::DID, $actor);
     }
 
     private function __construct()

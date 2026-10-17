@@ -9,6 +9,7 @@ use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 
@@ -21,6 +22,7 @@ final readonly class MaintenanceSweepsModel
         public ImageVerificationReportModel $imageVerification,
         public LinkCardSweepReportModel $linkCards,
         public ProfileImageSweepReportModel $profileImages,
+        public HiddenProfileSwitchReportModel $hiddenProfiles,
         public PrivateFeedSyncReportModel $privateFeedSync,
         public SavedSearchMembershipSweepReportModel $savedSearchMemberships,
         public bool $skipped = false,
@@ -35,6 +37,7 @@ final readonly class MaintenanceSweepsModel
             new ImageVerificationReportModel(0, 0, 0, 0),
             LinkCardSweepReportModel::none(),
             ProfileImageSweepReportModel::none(),
+            HiddenProfileSwitchReportModel::none(),
             PrivateFeedSyncReportModel::none(),
             new SavedSearchMembershipSweepReportModel(0, 0, 0, false),
             skipped: true,

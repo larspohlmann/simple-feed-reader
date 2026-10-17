@@ -565,4 +565,28 @@ describe('AddFeedDialogComponent', () => {
     expect(fixture.componentInstance.error()).toContain('valid URL');
     expect(close).not.toHaveBeenCalled();
   });
+
+  it('tells the user how to subscribe a Bluesky profile hidden from logged-out readers', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({
+      url: 'https://bsky.app/profile/rusty-17.bsky.social',
+    });
+    fixture.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(
+      {
+        type: 'bluesky_profile_hidden',
+        title: 'Profile hidden from logged-out readers',
+        status: 422,
+        detail:
+          'This profile is only visible to logged-in Bluesky users. Connect a Bluesky account in Settings → Social Media to subscribe.',
+      },
+      { status: 422, statusText: 'Unprocessable' },
+    );
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('app-field .error')?.textContent,
+    ).toContain('Connect a Bluesky account in Settings → Social Media');
+    expect(close).not.toHaveBeenCalled();
+  });
 });

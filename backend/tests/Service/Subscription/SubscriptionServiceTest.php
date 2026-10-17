@@ -28,6 +28,9 @@ use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\FirstFetchRecorder;
+use App\Service\Subscription\Model\SubscribeOutcomeModel;
+use App\Service\Subscription\Model\SubscribeRequestModel;
+use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
 use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionLimitResolver;
 use App\Service\Subscription\SubscriptionService;
@@ -36,6 +39,7 @@ use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\RecordingSubscribeRoute;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -84,7 +88,8 @@ final class SubscriptionServiceTest extends DbTestCase
         ));
     }
 
-    private function service(FeedDiscoveryInterface $discovery): SubscriptionService
+    /** @param list<SubscribeRouteInterface> $routes */
+    private function service(FeedDiscoveryInterface $discovery, array $routes = []): SubscriptionService
     {
         $clock = new MockClock('2026-06-01T00:00:00Z');
 
@@ -111,6 +116,7 @@ final class SubscriptionServiceTest extends DbTestCase
             new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
             $this->savedPostRescue(),
             $this->entityManager,
+            $routes,
         );
     }
 
@@ -467,5 +473,56 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $this->expectException(SubscriptionLimitReachedException::class);
         $service->subscribe($user, 'https://example.com/b.xml');
+    }
+
+    private function discoveryNeverAsked(): FeedDiscoveryInterface
+    {
+        return new class () implements FeedDiscoveryInterface {
+            public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResultModel
+            {
+                throw new \LogicException('Discovery must not run for a URL a route took.');
+            }
+        };
+    }
+
+    public function testARouteThatTakesTheUrlAnswersInsteadOfDiscovery(): void
+    {
+        $user = $this->factory()->create('routed@example.com');
+        $tag = new Tag($user, 'People');
+        $taken = SubscribeOutcomeModel::candidates([]);
+        $route = new RecordingSubscribeRoute($taken);
+
+        $outcome = $this->service($this->discoveryNeverAsked(), [$route])
+            ->subscribe($user, 'https://bsky.app/profile/rusty-17.bsky.social', null, [$tag]);
+
+        self::assertSame($taken, $outcome);
+        self::assertEquals(
+            [new SubscribeRequestModel($user, 'https://bsky.app/profile/rusty-17.bsky.social', [$tag])],
+            $route->requests,
+        );
+    }
+
+    public function testADecliningRouteLeavesTheUrlToDiscovery(): void
+    {
+        $user = $this->factory()->create('declined@example.com');
+
+        $outcome = $this->service(
+            $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
+            [new RecordingSubscribeRoute(null)],
+        )->subscribe($user, 'https://example.com/feed');
+
+        self::assertSame('https://example.com/feed.xml', $outcome->subscription?->getFeed()->getUrl());
+    }
+
+    public function testAVerbatimFormatNeverAsksTheRoutes(): void
+    {
+        $user = $this->factory()->create('verbatim-route@example.com');
+        $route = new RecordingSubscribeRoute(SubscribeOutcomeModel::candidates([]));
+
+        $outcome = $this->service($this->discoveryNeverAsked(), [$route])
+            ->subscribe($user, 'https://example.com/wp-json/wp/v2/posts', SourceFormat::WP_JSON);
+
+        self::assertNotNull($outcome->subscription);
+        self::assertSame([], $route->requests);
     }
 }

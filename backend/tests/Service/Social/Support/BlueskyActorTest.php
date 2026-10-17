@@ -26,6 +26,22 @@ final class BlueskyActorTest extends TestCase
         yield 'a handle too long' => [str_repeat(str_repeat('a', 60) . '.', 5) . 'com', false];
     }
 
+    /** @return iterable<string, array{string, bool}> */
+    public static function dids(): iterable
+    {
+        yield 'a plc DID' => ['did:plc:qobvnkudcv3zlaklxxjduqoi', true];
+        yield 'a web DID' => ['did:web:example.com', true];
+        yield 'a handle' => ['alice.bsky.social', false];
+        yield 'a DID carrying a query' => ['did:x&limit=999', false];
+        yield 'a DID with a space' => ['did:a:b c', false];
+    }
+
+    #[DataProvider('dids')]
+    public function testADidIsCheckedAgainstTheFullSyntax(string $actor, bool $isDid): void
+    {
+        self::assertSame($isDid, BlueskyActor::isDid($actor));
+    }
+
     #[DataProvider('actors')]
     public function testOnlyAHandleOrADidIsAnActor(string $actor, bool $valid): void
     {

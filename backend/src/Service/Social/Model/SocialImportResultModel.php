@@ -19,14 +19,14 @@ final readonly class SocialImportResultModel
 
     public static function from(
         BulkSubscribeResultModel $subscribed,
-        CollectionImportModel $collections,
+        PrivateFeedImportModel $privateFeeds,
         int $removed,
     ): self {
         return new self(
-            $subscribed->imported + $collections->added,
-            $subscribed->alreadySubscribed + $collections->alreadySubscribed,
+            $subscribed->imported + $privateFeeds->added,
+            $subscribed->alreadySubscribed + $privateFeeds->alreadySubscribed,
             $subscribed->invalid,
-            $subscribed->skippedOverLimit + $collections->overLimit,
+            $subscribed->skippedOverLimit + $privateFeeds->overLimit,
             $removed,
         );
     }

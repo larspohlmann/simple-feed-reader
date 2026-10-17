@@ -6,6 +6,7 @@ namespace App\Service\Bluesky;
 
 use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -82,7 +83,7 @@ final readonly class AppViewClient
             $profiles[$did] = $profile;
             $handle = $profile->string('handle');
             if ($handle !== null) {
-                $profiles[strtolower($handle)] = $profile;
+                $profiles[BlueskyActorKey::of($handle)] = $profile;
             }
         }
 

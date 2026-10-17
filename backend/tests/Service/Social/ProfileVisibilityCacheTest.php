@@ -1,0 +1,58 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Social;
+
+use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Model\ProfileVisibilityModel;
+use App\Service\Social\ProfileVisibilityCache;
+use App\Tests\Support\BlueskyProfiles;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+
+final class ProfileVisibilityCacheTest extends TestCase
+{
+    public function testAnAskedProfileIsRememberedAsHiddenOrPublic(): void
+    {
+        $cache = new ProfileVisibilityCache(new ArrayAdapter());
+        $rusty = new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty');
+
+        $cache->remember([BlueskyProfiles::RUSTY, 'did:plc:bob'], [BlueskyProfiles::RUSTY => $rusty]);
+
+        self::assertEquals(
+            [
+                BlueskyProfiles::RUSTY => ProfileVisibilityModel::hiddenProfile($rusty),
+                'did:plc:bob' => ProfileVisibilityModel::publicProfile(),
+            ],
+            $cache->visibilitiesOf([BlueskyProfiles::RUSTY, 'did:plc:bob']),
+        );
+    }
+
+    public function testTheAnswersReachTheStoreAnotherProcessReads(): void
+    {
+        $directory = sys_get_temp_dir() . '/profile-visibility-' . bin2hex(random_bytes(8));
+        $writer = new FilesystemAdapter('', 0, $directory);
+        (new ProfileVisibilityCache($writer))->remember(['did:plc:bob'], []);
+
+        $reader = new ProfileVisibilityCache(new FilesystemAdapter('', 0, $directory));
+
+        self::assertEquals(
+            ['did:plc:bob' => ProfileVisibilityModel::publicProfile()],
+            $reader->visibilitiesOf(['did:plc:bob']),
+        );
+        $writer->clear();
+    }
+
+    public function testAProfileNeverAskedIsUnknown(): void
+    {
+        $cache = new ProfileVisibilityCache(new ArrayAdapter());
+        $cache->remember(['did:plc:bob'], ['did:plc:carol' => new HiddenProfileModel('did:plc:carol', 'Carol')]);
+
+        self::assertEquals(
+            ['did:plc:carol' => ProfileVisibilityModel::unknown(), 'did:plc:dave' => ProfileVisibilityModel::unknown()],
+            $cache->visibilitiesOf(['did:plc:carol', 'did:plc:dave']),
+        );
+    }
+}

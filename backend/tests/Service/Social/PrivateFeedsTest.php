@@ -9,6 +9,7 @@ use App\Entity\KnownSocialCollection;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
@@ -18,6 +19,7 @@ use App\Service\Social\Model\PrivateFeedOutcome;
 use App\Service\Social\PrivateFeeds;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\FlushFailingEntityManager;
@@ -236,6 +238,112 @@ final class PrivateFeedsTest extends DbTestCase
         );
     }
 
+    public function testAHiddenProfileBecomesATaggedAuthorFeedInAllItemsAndForYou(): void
+    {
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        $tag = $this->tag('People');
+        $nesting = $this->entityManager->getConnection()->getTransactionNestingLevel();
+
+        $subscription = $this->privateFeeds()->subscribe($account, self::rusty(), [$tag]);
+
+        self::assertSame($nesting, $this->entityManager->getConnection()->getTransactionNestingLevel());
+        $feed = $subscription->getFeed();
+        self::assertSame(
+            sprintf('social:bluesky:%d:author:%s', $account->requireId(), BlueskyProfiles::RUSTY),
+            $feed->getUrl(),
+        );
+        self::assertSame(SourceFormat::BLUESKY_API, $feed->getSourceFormat());
+        self::assertSame('Rusty', $feed->getTitle());
+        self::assertSame('https://bsky.app/profile/' . BlueskyProfiles::RUSTY, $feed->getSiteUrl());
+        self::assertTrue($subscription->isIncludeInAllItems());
+        self::assertTrue($subscription->isIncludeInForYou());
+        $tagNames = array_map(static fn (Tag $each): string => $each->getName(), $subscription->getTags()->toArray());
+        self::assertSame(['People'], $tagNames);
+        $socialFeed = SocialFeeds::repository($this->entityManager)
+            ->findOneFor($account, SocialFeedKind::Author, BlueskyProfiles::RUSTY);
+        self::assertSame($feed, $socialFeed?->getFeed());
+        self::assertSame(0, $this->entityManager->getRepository(KnownSocialCollection::class)->count([]));
+    }
+
+    public function testAProfileAlreadyReadThroughAnotherAccountOfTheUserIsAlreadySubscribed(): void
+    {
+        $this->privateFeeds()->create($this->stored(SocialAccounts::secondBlueskyOf($this->user)), self::rusty());
+
+        $outcome = $this->privateFeeds()->create($this->stored(SocialAccounts::blueskyOf($this->user)), self::rusty());
+
+        self::assertSame(PrivateFeedOutcome::AlreadySubscribed, $outcome);
+        self::assertSame(1, $this->entityManager->getRepository(Subscription::class)->count([]));
+    }
+
+    public function testTheUsersSubscriptionToAProfileIsFoundWhicheverAccountReadsIt(): void
+    {
+        $second = $this->stored(SocialAccounts::secondBlueskyOf($this->user));
+        $subscription = $this->privateFeeds()->subscribe($second, self::rusty(), []);
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+
+        self::assertSame($subscription, $this->privateFeeds()->subscriptionOf($account, self::rusty()));
+        self::assertNull(
+            $this->privateFeeds()->subscriptionOf($account, PrivateFeedModel::author('did:plc:someone-else', 'X')),
+        );
+    }
+
+    public function testACollectionIsTheUsersOnlyThroughTheAccountThatReadsIt(): void
+    {
+        $second = $this->stored(SocialAccounts::secondBlueskyOf($this->user));
+        $subscription = $this->privateFeeds()->subscribe($second, PrivateFeedModel::home(), []);
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+
+        self::assertNull($this->privateFeeds()->subscriptionOf($account, PrivateFeedModel::home()));
+        self::assertSame($subscription, $this->privateFeeds()->subscriptionOf($second, PrivateFeedModel::home()));
+    }
+
+    public function testAFullAccountGetsNoAuthorFeedAndTheEntityManagerStaysOpen(): void
+    {
+        $this->user->setMaxSubscriptions(0);
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        $nesting = $this->entityManager->getConnection()->getTransactionNestingLevel();
+
+        try {
+            $this->privateFeeds()->subscribe($account, self::rusty(), []);
+            self::fail('The subscription cap must hold for author feeds too.');
+        } catch (SubscriptionLimitReachedException) {
+            self::assertSame($nesting, $this->entityManager->getConnection()->getTransactionNestingLevel());
+            self::assertTrue($this->entityManager->isOpen());
+            self::assertSame(0, $this->entityManager->getRepository(Feed::class)->count([]));
+            self::assertSame(0, $this->entityManager->getRepository(SocialFeed::class)->count([]));
+        }
+    }
+
+    public function testDisconnectingTheAccountRemovesItsAuthorFeeds(): void
+    {
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        $this->privateFeeds()->subscribe($account, self::rusty(), []);
+
+        self::assertSame(1, $this->privateFeeds()->removeAllOf($account));
+        $this->entityManager->clear();
+        self::assertSame(0, $this->entityManager->getRepository(Subscription::class)->count([]));
+        self::assertSame(0, $this->entityManager->getRepository(SocialFeed::class)->count([]));
+    }
+
+    public function testAnAuthorFeedInPlaceOfAnotherSubscriptionKeepsItsSettings(): void
+    {
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        $previous = (new ProfileFeedSubscriptions($this->entityManager))
+            ->subscribe($this->user, 'https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss');
+        $previous->addTag($this->tag('People'), 0);
+        $previous->setIncludeInForYou(false);
+        $this->entityManager->flush();
+
+        $subscription = $this->privateFeeds()->subscribeInPlaceOf($account, self::rusty(), $previous);
+
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->find(Subscription::class, $subscription->requireId());
+        self::assertNotNull($reloaded);
+        self::assertFalse($reloaded->isIncludeInForYou());
+        $tagNames = array_map(static fn (Tag $each): string => $each->getName(), $reloaded->getTags()->toArray());
+        self::assertSame(['People'], $tagNames);
+    }
+
     private function privateFeeds(): PrivateFeeds
     {
         return PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock);
@@ -244,6 +352,21 @@ final class PrivateFeedsTest extends DbTestCase
     private function stored(SocialAccount $account): SocialAccount
     {
         return SocialFeeds::persistedAccount($this->entityManager, $account);
+    }
+
+    private function tag(string $name): Tag
+    {
+        $tag = new Tag($this->user, $name);
+        $tag->setPosition(0);
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
+
+        return $tag;
+    }
+
+    private static function rusty(): PrivateFeedModel
+    {
+        return PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty');
     }
 
     private function onlySubscription(): Subscription

@@ -103,6 +103,38 @@ final class BlueskyTimelineSourceTest extends TestCase
         self::assertSame($route, $request->method . ' ' . $request->url);
     }
 
+    public function testAnAuthorFeedAsksForTheProfilesPostsAndSelfThreads(): void
+    {
+        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
+
+        $request = $this->source($http->client())->request($this->socialFeed(SocialFeedKind::Author, 'did:plc:bob'));
+
+        self::assertSame(
+            'GET https://pds.example.test/xrpc/app.bsky.feed.getAuthorFeed?actor=did%3Aplc%3Abob'
+                . '&filter=posts_and_author_threads&limit=50',
+            $request->method . ' ' . $request->url,
+        );
+    }
+
+    public function testAnAuthorFeedKeepsASelfThreadReplyTheHomeRuleWouldHide(): void
+    {
+        $body = ['feed' => [[
+            'post' => [
+                'uri' => 'at://did:plc:bob/app.bsky.feed.post/3abd',
+                'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social'],
+                'record' => ['text' => 'And another thing', 'createdAt' => '2026-10-12T10:05:00Z'],
+            ],
+            'reply' => ['parent' => ['author' => ['did' => 'did:plc:bob', 'viewer' => []]]],
+        ]]];
+
+        $page = $this->source(new MockHttpClient())->pageOf(
+            $this->socialFeed(SocialFeedKind::Author, 'did:plc:bob'),
+            self::answer($body),
+        );
+
+        self::assertCount(1, $page->parsed->entries);
+    }
+
     public function testRequestsForSeveralFeedsOpenOneSession(): void
     {
         $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);

@@ -91,6 +91,22 @@ final class ImportCandidatesTest extends DbTestCase
         );
     }
 
+    public function testAFollowReadThroughAnAuthorFeedReadsAsSubscribed(): void
+    {
+        $account = $this->account();
+        $author = $this->subscribe(sprintf('social:bluesky:%d:author:did:plc:rusty', $account->requireId()));
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [self::follow('did:plc:rusty', '@rusty-17.bsky.social')],
+            [],
+            [],
+            false,
+        ));
+
+        $follows = $this->importCandidates($network)->forAccount($account)->follows;
+
+        self::assertSame([['@rusty-17.bsky.social', 'subscribed', $author->requireId()]], self::summary($follows));
+    }
+
     private function account(): SocialAccount
     {
         $account = SocialAccounts::blueskyOf($this->user);

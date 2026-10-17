@@ -5,24 +5,23 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\Feed;
-use App\Enum\SocialNetwork;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FetchException;
-use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
-use App\Service\Social\Support\BlueskyActor;
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Support\BlueskyProfileLabels;
+use App\Service\Social\Support\ProfileIdentity;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Fills and refreshes the pictures of Bluesky profile feeds, whose RSS carries none, from the public AppView. A shared
- * feed row, so the picture is the person's public avatar; asked again about weekly.
+ * Fills and refreshes the pictures of Bluesky profile and author feeds, whose RSS or timeline carries none, from the
+ * public AppView. A shared feed row, so the picture is the person's public avatar; asked again about weekly.
  */
 final readonly class ProfileImageSweep
 {
@@ -34,10 +33,11 @@ final readonly class ProfileImageSweep
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
+        private ProfileVisibilityCache $profileVisibility,
     ) {
     }
 
-    public function sweep(ProfileImageBudgetModel $budget): ProfileImageSweepReportModel
+    public function sweep(ProfileCallBudgetModel $budget): ProfileImageSweepReportModel
     {
         if ($budget->isEmpty() || $this->appView->isThrottled()) {
             return ProfileImageSweepReportModel::none();
@@ -95,7 +95,9 @@ final readonly class ProfileImageSweep
     private function check(array $batch, \DateTimeImmutable $now): ProfileImageSweepReportModel
     {
         $actors = self::actorsOf($batch);
-        $profiles = [] === $actors ? [] : $this->appView->profiles(array_values(array_unique($actors)));
+        $asked = array_values(array_unique($actors));
+        $profiles = [] === $asked ? [] : $this->appView->profiles($asked);
+        $this->profileVisibility->remember($asked, BlueskyProfileLabels::hiddenAmong($profiles));
         $changed = 0;
         foreach ($batch as $index => $feed) {
             $profile = $profiles[$actors[$index] ?? ''] ?? null;
@@ -129,8 +131,8 @@ final readonly class ProfileImageSweep
     {
         $actors = [];
         foreach ($batch as $index => $feed) {
-            $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $feed->getUrl());
-            if (null !== $actor && BlueskyActor::isValid($actor)) {
+            $actor = ProfileIdentity::validBlueskyActorOf($feed->getUrl());
+            if (null !== $actor) {
                 $actors[$index] = $actor;
             }
         }

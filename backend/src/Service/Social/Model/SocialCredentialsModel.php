@@ -6,9 +6,9 @@ namespace App\Service\Social\Model;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Exception\NotAnAppPasswordException;
-use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\UrlOrigin;
 
 final readonly class SocialCredentialsModel
@@ -26,10 +26,7 @@ final readonly class SocialCredentialsModel
     /** @throws NotAnAppPasswordException */
     public static function bluesky(string $handle, string $appPassword): self
     {
-        $address = trim($handle);
-        if (!ProfileFeedUrl::isDid($address)) {
-            $address = strtolower(ltrim($address, '@'));
-        }
+        $address = BlueskyActorKey::of(ltrim(trim($handle), '@'));
 
         return new self(SocialNetwork::Bluesky, $address, self::appPassword($appPassword));
     }

@@ -21,15 +21,6 @@ final class ProfileFeedUrlTest extends TestCase
         self::assertSame('https://example.social/@bob.rss', ProfileFeedUrl::mastodon('bob', 'example.social'));
     }
 
-    public function testOnlyAnIdentityStartingWithDidIsADid(): void
-    {
-        self::assertTrue(ProfileFeedUrl::isDid('did:plc:bob'));
-        self::assertTrue(ProfileFeedUrl::isDid('did:web:example.com'));
-        self::assertFalse(ProfileFeedUrl::isDid('bob.bsky.social'));
-        self::assertFalse(ProfileFeedUrl::isDid('xdid:plc:bob'));
-        self::assertFalse(ProfileFeedUrl::isDid('DID:plc:bob'));
-    }
-
     /** @return iterable<string, array{SocialNetwork, string, ?string}> */
     public static function urls(): iterable
     {
@@ -133,5 +124,26 @@ final class ProfileFeedUrlTest extends TestCase
         ?string $feedUrl,
     ): void {
         self::assertSame($feedUrl, ProfileFeedUrl::of($network, $identity));
+    }
+
+    #[DataProvider('profilePages')]
+    public function testABlueskyProfilePageOrItsFeedNamesItsActor(string $url, ?string $actor): void
+    {
+        self::assertSame($actor, ProfileFeedUrl::blueskyProfileActorOf($url));
+    }
+
+    /** @return iterable<string, array{string, ?string}> */
+    public static function profilePages(): iterable
+    {
+        yield 'a page by handle' => ['https://bsky.app/profile/Rusty-17.bsky.social', 'rusty-17.bsky.social'];
+        yield 'its feed' => ['https://bsky.app/profile/rusty-17.bsky.social/rss', 'rusty-17.bsky.social'];
+        yield 'a trailing slash' => ['https://bsky.app/profile/rusty-17.bsky.social/', 'rusty-17.bsky.social'];
+        yield 'a page by did' => [
+            'http://bsky.app/profile/did:plc:hczfd45prvqtdrw77256syag',
+            'did:plc:hczfd45prvqtdrw77256syag',
+        ];
+        yield 'a post' => ['https://bsky.app/profile/rusty-17.bsky.social/post/3abc', null];
+        yield 'another host' => ['https://example.com/profile/rusty-17.bsky.social', null];
+        yield 'no actor syntax' => ['https://bsky.app/profile/some%20name', null];
     }
 }

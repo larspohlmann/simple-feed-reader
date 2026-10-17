@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
+use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\ProfileImageSweep;
@@ -32,8 +33,11 @@ final class SocialMaintenanceTest extends DbTestCase
         );
         $profileImages = self::getContainer()->get(ProfileImageSweep::class);
         self::assertInstanceOf(ProfileImageSweep::class, $profileImages);
+        $switches = self::getContainer()->get(HiddenProfileSwitchSweep::class);
+        self::assertInstanceOf(HiddenProfileSwitchSweep::class, $switches);
         $this->maintenance = new SocialMaintenance(
             $profileImages,
+            $switches,
             PrivateFeedSyncWiring::sweep(self::getContainer(), $this->entityManager, $this->clock, $this->network),
             $this->clock,
         );

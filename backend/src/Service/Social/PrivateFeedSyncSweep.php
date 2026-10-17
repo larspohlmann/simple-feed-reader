@@ -6,7 +6,7 @@ namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\PrivateFeedSyncSkip;
-use App\Repository\SocialAccountRepository;
+use App\Repository\SocialAccountSyncRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
 use App\Service\Social\Model\PrivateFeedSyncOutcomeModel;
@@ -20,7 +20,7 @@ final readonly class PrivateFeedSyncSweep
     private const string DUE_AFTER = '-1 hour';
 
     public function __construct(
-        private SocialAccountRepository $socialAccounts,
+        private SocialAccountSyncRepository $socialAccounts,
         private PrivateFeedSync $privateFeedSync,
         private EntityManagerInterface $entityManager,
         private ManagerRegistry $registry,

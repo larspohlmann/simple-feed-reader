@@ -177,25 +177,24 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
     }
 
     /**
-     * Subscribed Bluesky profile feeds whose picture was never asked for or not since $checkedBefore, never-asked
-     * first.
+     * Subscribed Bluesky profile and author feeds whose picture was never asked for or not since $checkedBefore,
+     * never-asked first.
      *
      * @return list<Feed>
      */
     public function findBlueskyProfileFeedsWithImageDue(\DateTimeImmutable $checkedBefore, int $limit): array
     {
-        /** @var list<Feed> $feeds */
-        $feeds = $this->createQueryBuilder('f')
-            ->andWhere('f.network = :bluesky')->setParameter('bluesky', SocialNetwork::Bluesky)
-            ->andWhere('f.sourceFormat NOT IN (:notProfiles)')->setParameter('notProfiles', SourceFormat::NOT_PROFILES)
+        $qb = $this->createQueryBuilder('f')
             ->andWhere(sprintf('EXISTS (SELECT s.id FROM %s s WHERE s.feed = f)', Subscription::class))
             ->andWhere('f.imageCheckedAt IS NULL OR f.imageCheckedAt < :checkedBefore')
             ->setParameter('checkedBefore', $checkedBefore)
             ->orderBy('f.imageCheckedAt', 'ASC')
             ->addOrderBy('f.id', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($limit);
+        NetworkScopeDql::restrict($qb, 'f', NetworkScope::profiles(SocialNetwork::Bluesky));
+
+        /** @var list<Feed> $feeds */
+        $feeds = $qb->getQuery()->getResult();
 
         return $feeds;
     }

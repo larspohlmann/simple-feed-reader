@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Social\Support;
 
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Bluesky\Support\BlueskyWeb;
 
 final class ProfileFeedUrl
 {
-    private const string BLUESKY_PATH = '#^/profile/([^/@]+)/rss/?$#';
+    private const string BLUESKY_PROFILE_PAGE = '#^/profile/(?<actor>[^/@]+)(?<rss>/rss)?/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
-    private const string DID_PREFIX = 'did:';
 
     public static function bluesky(string $did): string
     {
@@ -33,11 +33,6 @@ final class ProfileFeedUrl
         $builtIdentity = null === $url ? null : self::identityOf($network, $url);
 
         return null !== $builtIdentity && 0 === strcasecmp($builtIdentity, $identity) ? $url : null;
-    }
-
-    public static function isDid(string $identity): bool
-    {
-        return str_starts_with($identity, self::DID_PREFIX);
     }
 
     /** @return string|null the DID, handle or user@host the URL follows; null when it is no profile feed of $network */
@@ -62,6 +57,22 @@ final class ProfileFeedUrl
         }
 
         return null;
+    }
+
+    /** @return string|null the DID or lower-cased handle a bsky.app profile page or its feed names; null otherwise */
+    public static function blueskyProfileActorOf(string $url): ?string
+    {
+        $parts = self::webPartsOf($url);
+        if (
+            null === $parts
+            || BlueskyWeb::HOST !== $parts['host']
+            || 1 !== preg_match(self::BLUESKY_PROFILE_PAGE, $parts['path'], $match)
+        ) {
+            return null;
+        }
+        $actor = self::actorIn($match['actor']);
+
+        return BlueskyActor::isValid($actor) ? $actor : null;
     }
 
     /** @return array{host: string, path: string}|null */
@@ -97,12 +108,20 @@ final class ProfileFeedUrl
 
     private static function blueskyIdentity(string $host, string $path): ?string
     {
-        if (BlueskyWeb::HOST !== $host || 1 !== preg_match(self::BLUESKY_PATH, $path, $match)) {
+        if (
+            BlueskyWeb::HOST !== $host
+            || 1 !== preg_match(self::BLUESKY_PROFILE_PAGE, $path, $match)
+            || '' === ($match['rss'] ?? '')
+        ) {
             return null;
         }
-        $actor = rawurldecode($match[1]);
 
-        return self::isDid($actor) ? $actor : strtolower($actor);
+        return self::actorIn($match['actor']);
+    }
+
+    private static function actorIn(string $segment): string
+    {
+        return BlueskyActorKey::of(rawurldecode($segment));
     }
 
     private static function mastodonIdentity(string $host, string $path): ?string

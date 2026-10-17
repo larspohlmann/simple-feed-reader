@@ -48,8 +48,8 @@ final class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
-     * What an OPML export carries: a private feed is read through an account the file does not hold, and a saved feed
-     * is this reader's own.
+     * What an OPML export carries: a private feed is read through an account the file does not hold, except an author
+     * feed, which follows one person a public RSS feed names too; a saved feed is this reader's own.
      *
      * @return list<Subscription>
      */
@@ -59,7 +59,8 @@ final class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
-     * What a backup carries: everything but the private feeds; saved feeds are restored as saved feeds (#1666).
+     * What a backup carries: everything but the private feeds, author feeds aside; saved feeds are restored as saved
+     * feeds (#1666).
      *
      * @return list<Subscription>
      */
@@ -88,12 +89,10 @@ final class SubscriptionRepository extends ServiceEntityRepository
      */
     private function withTagsExcluding(int $userId, array $excludedFormats): array
     {
+        $qb = $this->withTagsForUser($userId);
+        PublicOrAuthorFeedDql::restrict($qb, 'f', $excludedFormats);
         /** @var list<Subscription> $rows */
-        $rows = $this->withTagsForUser($userId)
-            ->andWhere('f.sourceFormat NOT IN (:excludedFormats)')
-            ->setParameter('excludedFormats', $excludedFormats)
-            ->getQuery()
-            ->getResult();
+        $rows = $qb->getQuery()->getResult();
 
         return $rows;
     }

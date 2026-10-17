@@ -10,6 +10,8 @@ namespace App\Service\Fetch\Exception;
  */
 final class FeedUnreachableException extends FetchException
 {
+    public const string STATUS_MARKER = ': HTTP ';
+
     public function __construct(string $message, public readonly ?int $statusCode = null, ?\Throwable $previous = null)
     {
         \assert($statusCode === null || ($statusCode >= 100 && $statusCode <= 599));

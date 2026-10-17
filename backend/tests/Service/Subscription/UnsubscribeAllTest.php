@@ -180,6 +180,7 @@ final class UnsubscribeAllTest extends KernelTestCase
             $orphanedFeeds,
             $savedPostRescue,
             $entityManager,
+            [],
         );
 
         self::assertSame(0, $service->unsubscribeAll([]));

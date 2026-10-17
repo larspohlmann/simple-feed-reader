@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Feed;
+use App\Entity\SocialFeed;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
@@ -14,6 +16,8 @@ use App\Repository\NetworkScope;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 
 final class FeedRepositoryNetworkScopeTest extends DbTestCase
 {
@@ -66,6 +70,41 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
 
         self::assertSame([$profile->requireId()], $this->idsOf($this->feeds()->findDue($criteria, 50)));
         self::assertSame(1, $this->feeds()->countDue($criteria));
+    }
+
+    public function testAProfileScopeTakesAnAuthorFeedForAPersonButNoOtherPrivateFeed(): void
+    {
+        $owner = $this->user('network-scope-authors@example.com');
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($owner));
+        $author = $this->fixtures()->subscribe(
+            $owner,
+            sprintf('social:bluesky:%d:author:did:plc:rusty', $account->requireId()),
+            SourceFormat::BLUESKY_API,
+        )->getFeed();
+        $home = $this->fixtures()->subscribe(
+            $owner,
+            NetworkFeedSubscriptions::blueskyHome($account->requireId()),
+            SourceFormat::BLUESKY_API,
+        )->getFeed();
+        SocialFeeds::persisted(
+            $this->entityManager,
+            new SocialFeed($account, $author, SocialFeedKind::Author, 'did:plc:rusty'),
+        );
+        SocialFeeds::persisted($this->entityManager, new SocialFeed($account, $home, SocialFeedKind::Home, ''));
+        $writers = 'at://did:plc:alice/app.bsky.graph.list/writers';
+        $list = $this->fixtures()->subscribe(
+            $owner,
+            sprintf('social:bluesky:%d:list:%s', $account->requireId(), $writers),
+            SourceFormat::BLUESKY_API,
+        )->getFeed();
+        SocialFeeds::persisted(
+            $this->entityManager,
+            new SocialFeed($account, $list, SocialFeedKind::UserList, $writers),
+        );
+
+        $criteria = $this->criteria($owner, NetworkScope::profiles(SocialNetwork::Bluesky));
+
+        self::assertSame([$author->requireId()], $this->idsOf($this->feeds()->findDue($criteria, 50)));
     }
 
     public function testANetworkScopeNeverReachesAFeedTheUserDoesNotSubscribeTo(): void

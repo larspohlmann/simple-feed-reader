@@ -22,7 +22,7 @@ use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\Pass\FollowMatching;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Social\Support\CandidateOrder;
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Support\ProfileIdentity;
 
 final readonly class ImportCandidates
 {
@@ -120,7 +120,7 @@ final readonly class ImportCandidates
     {
         $profileFeeds = [];
         foreach ($this->subscriptionFeedUrls->forUser($account->getUser()->requireId()) as $subscription) {
-            $identity = ProfileFeedUrl::identityOf($account->getNetwork(), $subscription['feedUrl']);
+            $identity = ProfileIdentity::of($account->getNetwork(), $subscription['feedUrl']);
             if (null === $identity) {
                 continue;
             }

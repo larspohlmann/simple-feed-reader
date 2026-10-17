@@ -111,7 +111,7 @@ final class SubscriptionJson
 
     /**
      * A private feed's synthetic URL also names its account and kind; a saved feed is `saved`; any other networked
-     * feed is a profile feed.
+     * feed is a profile feed, and so is an author feed, which follows one person.
      *
      * @return array{network: string, accountId: int|null, kind: string}|null
      */
@@ -125,12 +125,11 @@ final class SubscriptionJson
             return ['network' => $network->value, 'accountId' => null, 'kind' => self::SAVED_KIND];
         }
         $address = SocialFeedClassifier::privateAddressOf($feed);
+        if (null === $address || $address->kind->followsOnePerson()) {
+            return ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND];
+        }
 
-        return [
-            'network' => $network->value,
-            'accountId' => $address?->accountId,
-            'kind' => null === $address ? self::PROFILE_KIND : $address->kind->value,
-        ];
+        return ['network' => $network->value, 'accountId' => $address->accountId, 'kind' => $address->kind->value];
     }
 
     /** @return array{id: int, network: string, handle: string} */

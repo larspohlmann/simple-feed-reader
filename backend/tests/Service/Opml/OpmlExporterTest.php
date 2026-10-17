@@ -10,7 +10,11 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Service\Opml\OpmlExporter;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BlueskyProfiles;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 
 final class OpmlExporterTest extends DbTestCase
 {
@@ -109,5 +113,42 @@ final class OpmlExporterTest extends DbTestCase
 
         self::assertStringContainsString('xmlUrl="https://blog.example.com/feed.xml"', $xml);
         self::assertStringNotContainsString('social:', $xml);
+    }
+
+    public function testAnAuthorFeedIsExportedAsItsProfilesPublicRssWithItsTagAndTitle(): void
+    {
+        $user = new User('opml-author@example.com', new \DateTimeImmutable('2026-10-12T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $tag = new Tag($user, 'People');
+        $tag->setPosition(0);
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
+        $privateFeeds->subscribe($account, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), [$tag]);
+
+        $xml = $this->exporter()->export($user);
+
+        self::assertMatchesRegularExpression(
+            '#<outline text="People" title="People">\s*<outline type="rss" text="Rusty" title="Rusty" xmlUrl="'
+            . preg_quote('https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss', '#') . '"#',
+            $xml,
+        );
+        self::assertStringNotContainsString('social:', $xml);
+    }
+
+    public function testAnAuthorFeedAndTheRefusedRssFeedItReplacesExportAsOneOutline(): void
+    {
+        $user = new User('opml-author-twice@example.com', new \DateTimeImmutable('2026-10-12T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $rss = new Feed('https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss');
+        $this->entityManager->persist($rss);
+        $this->entityManager->persist(new Subscription($user, $rss, new \DateTimeImmutable('2026-10-12T00:00:00Z')));
+        $this->entityManager->flush();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
+        $privateFeeds->subscribe($account, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), []);
+
+        self::assertSame(1, substr_count($this->exporter()->export($user), 'type="rss"'));
     }
 }

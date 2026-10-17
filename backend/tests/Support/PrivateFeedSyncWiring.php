@@ -6,11 +6,10 @@ namespace App\Tests\Support;
 
 use App\Entity\KnownSocialCollection;
 use App\Entity\PrivateFeedSyncChange;
-use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\PrivateFeedSyncChangeRepository;
-use App\Repository\SocialAccountRepository;
+use App\Repository\SocialAccountSyncRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\ActingAccountGuard;
@@ -58,8 +57,8 @@ final class PrivateFeedSyncWiring
         ?ManagerRegistry $registry = null,
     ): PrivateFeedSyncSweep {
         $registry ??= self::registry($container);
-        /** @var SocialAccountRepository $socialAccounts */
-        $socialAccounts = $entityManager->getRepository(SocialAccount::class);
+        $socialAccounts = $container->get(SocialAccountSyncRepository::class);
+        Assert::assertInstanceOf(SocialAccountSyncRepository::class, $socialAccounts);
 
         return new PrivateFeedSyncSweep(
             $socialAccounts,

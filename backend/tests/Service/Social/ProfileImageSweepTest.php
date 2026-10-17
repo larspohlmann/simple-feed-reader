@@ -5,19 +5,28 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\Feed;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
+use App\Enum\SourceFormat;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
-use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Social\Model\ProfileVisibilityModel;
 use App\Service\Social\ProfileImageSweep;
+use App\Service\Social\ProfileVisibilityCache;
 use App\Tests\DbTestCase;
-use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StubFeedFetcher;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -32,12 +41,14 @@ final class ProfileImageSweepTest extends DbTestCase
     private MockClock $clock;
     private ?HostThrottle $throttle = null;
     private ?User $subscriber = null;
+    private ProfileVisibilityCache $profileVisibility;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->fetcher = new StubFeedFetcher();
         $this->clock = new MockClock(self::NOW, 'UTC');
+        $this->profileVisibility = new ProfileVisibilityCache(new ArrayAdapter());
     }
 
     public function testItStoresEachProfilesAvatarAndStampsTheCheck(): void
@@ -212,6 +223,25 @@ final class ProfileImageSweepTest extends DbTestCase
         self::assertSame('https://cdn.example/a.jpg', $second->getImageUrl());
     }
 
+    public function testAnAuthorFeedIsPicturedByTheDidItReads(): void
+    {
+        $author = new Feed('social:bluesky:1:author:did:plc:rusty');
+        $author->setSourceFormat(SourceFormat::BLUESKY_API);
+        $subscriber = $this->persistSubscribed($author)->getUser();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($subscriber));
+        SocialFeeds::persisted(
+            $this->entityManager,
+            new SocialFeed($account, $author, SocialFeedKind::Author, 'did:plc:rusty'),
+        );
+        $this->answer(['did:plc:rusty'], [
+            ['did' => 'did:plc:rusty', 'handle' => 'rusty.bsky.social', 'avatar' => 'https://cdn.example/rusty.jpg'],
+        ]);
+
+        $this->sweep(1);
+
+        self::assertSame('https://cdn.example/rusty.jpg', $author->getImageUrl());
+    }
+
     public function testAnUnchangedOrUnknownPictureCountsAsCheckedButNotChanged(): void
     {
         $this->profileFeed('same.bsky.social', null, 'https://cdn.example/same.jpg');
@@ -273,13 +303,40 @@ final class ProfileImageSweepTest extends DbTestCase
 
     /**
      * @param list<string>                     $actors
-     * @param list<array<string, string>>      $profiles
+     * @param list<array<string, mixed>>       $profiles
      */
     private function answer(array $actors, array $profiles): void
     {
         $this->fetcher->willReturnBody(
             self::profilesUrl($actors),
             json_encode(['profiles' => $profiles], \JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function testTheVerdictsOfTheProfilesAskedAreRemembered(): void
+    {
+        $this->profileFeed('rusty.bsky.social');
+        $this->profileFeed('did:plc:bob');
+        $this->answer(['rusty.bsky.social', 'did:plc:bob'], [
+            [
+                'did' => BlueskyProfiles::RUSTY,
+                'handle' => 'rusty.bsky.social',
+                'displayName' => 'Rusty',
+                'labels' => [['src' => BlueskyProfiles::RUSTY, 'val' => '!no-unauthenticated']],
+            ],
+            ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social'],
+        ]);
+
+        $this->sweep(1);
+
+        self::assertEquals(
+            [
+                'rusty.bsky.social' => ProfileVisibilityModel::hiddenProfile(
+                    new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'),
+                ),
+                'did:plc:bob' => ProfileVisibilityModel::publicProfile(),
+            ],
+            $this->profileVisibility->visibilitiesOf(['rusty.bsky.social', 'did:plc:bob']),
         );
     }
 
@@ -294,9 +351,10 @@ final class ProfileImageSweepTest extends DbTestCase
             $this->entityManager,
             new NaiveUtcClock($this->clock),
             $logger,
+            $this->profileVisibility,
         );
 
-        return $sweep->sweep(ProfileImageBudgetModel::calls($calls));
+        return $sweep->sweep(ProfileCallBudgetModel::calls($calls));
     }
 
     /** @param list<string> $actors */
@@ -318,13 +376,16 @@ final class ProfileImageSweepTest extends DbTestCase
         self::assertSame([], $this->fetcher->fetchedUrls);
     }
 
-    private function persistSubscribed(Feed $feed): void
+    private function persistSubscribed(Feed $feed): Subscription
     {
         $this->subscriber ??= new User('profile-image-sweep@example.com', $this->clock->now());
         $this->entityManager->persist($this->subscriber);
         $this->entityManager->persist($feed);
-        $this->entityManager->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
+        $subscription = new Subscription($this->subscriber, $feed, $this->clock->now());
+        $this->entityManager->persist($subscription);
         $this->entityManager->flush();
+
+        return $subscription;
     }
 
     private function throttle(): HostThrottle

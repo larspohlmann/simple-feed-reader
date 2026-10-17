@@ -13,6 +13,7 @@ final readonly class SocialFeedAddressModel
         public SocialNetwork $network,
         public int $accountId,
         public SocialFeedKind $kind,
+        public string $remoteId,
     ) {
     }
 }

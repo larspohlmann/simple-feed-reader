@@ -13,6 +13,7 @@ use PHPUnit\Framework\TestCase;
 final class BlueskyTimelinePageTest extends TestCase
 {
     private const string ALICE = 'did:plc:alice';
+    private const string BOB = 'did:plc:bob';
     private const string POST_URI = 'at://did:plc:bob/app.bsky.feed.post/3abc';
 
     public function testAPostBecomesAnEntryWithItsWebUrlAuthorAndUtcDate(): void
@@ -125,6 +126,35 @@ final class BlueskyTimelinePageTest extends TestCase
         $hidden = self::item(['reply' => ['parent' => ['author' => ['did' => 'did:plc:eve', 'viewer' => []]]]]);
 
         self::assertCount(1, BlueskyTimelinePage::of([$hidden, self::item()], self::ALICE)->parsed->entries);
+    }
+
+    /** @param array<string, mixed> $overrides */
+    #[DataProvider('authorFeedItems')]
+    public function testAnAuthorFeedListsOnlyTheProfilesOwnPostsAndSelfThreads(array $overrides, int $shown): void
+    {
+        self::assertCount($shown, BlueskyTimelinePage::ofAuthor([self::item($overrides)], self::BOB)->parsed->entries);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>, int}> */
+    public static function authorFeedItems(): iterable
+    {
+        yield 'an own post' => [[], 1];
+        yield 'a repost' => [
+            ['reason' => ['$type' => 'app.bsky.feed.defs#reasonRepost', 'by' => ['did' => self::BOB]]],
+            0,
+        ];
+        yield 'a self-thread reply' => [
+            ['reply' => ['parent' => ['author' => ['did' => self::BOB, 'viewer' => []]]]],
+            1,
+        ];
+        yield 'a reply to someone else' => [
+            ['reply' => ['parent' => ['author' => [
+                'did' => 'did:plc:eve',
+                'viewer' => ['following' => 'at://x/y/1'],
+            ]]]],
+            0,
+        ];
+        yield 'a reply to a deleted post' => [['reply' => ['parent' => ['notFound' => true]]], 0];
     }
 
     /** @param array<string, mixed> $overrides */

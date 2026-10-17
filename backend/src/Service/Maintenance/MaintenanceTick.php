@@ -71,6 +71,7 @@ final readonly class MaintenanceTick
             LinkCardBudgetModel::fittingBefore($deadline, $this->clock->now(), self::LINK_CARD_MAX_FETCHES),
         );
         $profileImages = $this->socialMaintenance->refreshProfileImages($deadline);
+        $hiddenProfiles = $this->socialMaintenance->switchHiddenProfiles($deadline);
         $budget = SweepBudgetModel::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
         $memberships = $this->membershipSweep->sweep($budget);
 
@@ -80,6 +81,7 @@ final readonly class MaintenanceTick
             $imageVerification,
             $linkCards,
             $profileImages,
+            $hiddenProfiles,
             $this->socialMaintenance->syncPrivateFeeds($deadline),
             $memberships,
         );

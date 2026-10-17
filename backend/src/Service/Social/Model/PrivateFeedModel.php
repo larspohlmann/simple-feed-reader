@@ -33,12 +33,18 @@ final readonly class PrivateFeedModel
         return new self(SocialFeedKind::CustomFeed, $feedUri, $name);
     }
 
+    public static function author(string $did, string $name): self
+    {
+        return new self(SocialFeedKind::Author, $did, $name);
+    }
+
     public static function of(SocialFeedKind $kind, string $remoteId, string $name): self
     {
         return match ($kind) {
             SocialFeedKind::Home => self::home(),
             SocialFeedKind::UserList => self::userList($remoteId, $name),
             SocialFeedKind::CustomFeed => self::customFeed($remoteId, $name),
+            SocialFeedKind::Author => self::author($remoteId, $name),
         };
     }
 

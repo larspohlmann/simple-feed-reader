@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
-use App\Entity\Feed;
-use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
@@ -16,6 +14,8 @@ use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\FoundationSnapshotModel;
 use App\Service\Backup\Pass\BackupPartWalk;
+use App\Service\Social\Model\ExportedSubscriptionModel;
+use App\Service\Social\Support\ExportedFeed;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -61,8 +61,8 @@ final readonly class AccountBackupExporter
 
     private function foundationSnapshot(int $userId): FoundationSnapshotModel
     {
-        $subscriptions = $this->subscriptions->findBackedUpForUserWithTags($userId);
-        $feedsById = $this->feedsById($subscriptions);
+        $subscriptions = ExportedFeed::withoutRepeats($this->subscriptions->findBackedUpForUserWithTags($userId));
+        $feedsById = self::feedsById($subscriptions);
 
         return new FoundationSnapshotModel(
             $this->lines->accountLine($this->users->getById($userId)),
@@ -70,7 +70,7 @@ final readonly class AccountBackupExporter
             array_map($this->lines->savedSearchLine(...), $this->savedSearches->findForUser($userId)),
             array_map($this->lines->feedLine(...), array_values($feedsById)),
             array_map($this->lines->subscriptionLine(...), $subscriptions),
-            array_map(static fn (Feed $feed): string => $feed->getUrl(), $feedsById),
+            array_map(static fn (ExportedSubscriptionModel $exported): string => $exported->feedUrl, $feedsById),
         );
     }
 
@@ -85,18 +85,17 @@ final readonly class AccountBackupExporter
     }
 
     /**
-     * @param list<Subscription> $subscriptions
+     * @param list<ExportedSubscriptionModel> $subscriptions
      *
-     * @return array<int, Feed>
+     * @return array<int, ExportedSubscriptionModel> one subscription per exported feed, by the feed's id
      */
-    private function feedsById(array $subscriptions): array
+    private static function feedsById(array $subscriptions): array
     {
         $feeds = [];
-        foreach ($subscriptions as $subscription) {
-            $feed = $subscription->getFeed();
-            $feedId = $feed->getId();
+        foreach ($subscriptions as $exported) {
+            $feedId = $exported->subscription->getFeed()->getId();
             if (null !== $feedId) {
-                $feeds[$feedId] = $feed;
+                $feeds[$feedId] = $exported;
             }
         }
 

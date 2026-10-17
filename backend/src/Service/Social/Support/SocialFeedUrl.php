@@ -18,7 +18,7 @@ final class SocialFeedUrl
 {
     private const string SCHEME = 'social:';
     private const string ACCOUNT_ID = '/^[1-9]\d*$/';
-    private const array SEGMENTS = ['home' => 'home', 'list' => 'list', 'custom_feed' => 'feed'];
+    private const array SEGMENTS = ['home' => 'home', 'list' => 'list', 'custom_feed' => 'feed', 'author' => 'author'];
 
     public static function of(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
@@ -46,7 +46,18 @@ final class SocialFeedUrl
             return null;
         }
 
-        return new SocialFeedAddressModel($network, (int) $accountId, $kind);
+        return new SocialFeedAddressModel($network, (int) $accountId, $kind, $parts[4] ?? '');
+    }
+
+    /** @return string|null the DID an author feed of $network follows; null for any other URL */
+    public static function authorOf(SocialNetwork $network, string $url): ?string
+    {
+        $address = self::addressOf($url);
+        if (null === $address || $network !== $address->network || !$address->kind->followsOnePerson()) {
+            return null;
+        }
+
+        return BlueskyActor::isDid($address->remoteId) ? $address->remoteId : null;
     }
 
     private static function segmentOf(SocialFeedKind $kind): string
