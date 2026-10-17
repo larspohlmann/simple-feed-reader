@@ -12,12 +12,14 @@ use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Repository\EntryStateRepository;
 use App\Repository\EntryTwinRepository;
 use App\Repository\RefusedProfileSubscriptionRepository;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
 use App\Service\SavedPosts\SavedStateMover;
+use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Social\AuthorFeeds;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfileMove;
@@ -46,6 +48,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     private const string CAROL = 'did:plc:carol';
     private const string NOW = '2026-10-17 12:00:00';
     private const string POST = 'at://did:plc:hczfd45prvqtdrw77256syag/app.bsky.feed.post/3abc';
+    private const string RUSTY_OLDER_POST = 'at://did:plc:hczfd45prvqtdrw77256syag/app.bsky.feed.post/2zzz';
 
     private StubHiddenProfiles $hiddenProfiles;
     private ProfileVisibilityCache $profileVisibility;
@@ -122,6 +125,42 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $moved = $states->findOneForUserEntry($user->requireId(), $twin->requireId());
         self::assertTrue($moved?->isFavorite());
         self::assertTrue($moved->isHidden());
+    }
+
+    public function testAFavouriteWithoutATwinInTheAuthorFeedEndsUpInTheSavedFeed(): void
+    {
+        $user = $this->user('switch-unmatched@example.test');
+        $account = $this->accountOf($user);
+        $rss = $this->rssSubscription($user);
+        $at = new \DateTimeImmutable(self::NOW);
+        $older = new Entry($rss->getFeed(), self::RUSTY_OLDER_POST, null, 'Older than the first page', $at, $at);
+        $this->entityManager->persist($older);
+        $favourite = new EntryState($user, $older);
+        $favourite->markFavorite();
+        $this->entityManager->persist($favourite);
+        $this->entityManager->flush();
+        $this->sweep(1);
+        $authorFeed = $this->authorSubscriptionOf($account)?->getFeed();
+        self::assertNotNull($authorFeed);
+        $this->entry($authorFeed);
+        $authorFeed->recordSuccessfulFetch(new \DateTimeImmutable(self::NOW), 15);
+        $this->entityManager->flush();
+
+        self::assertEquals(new HiddenProfileSwitchReportModel(0, 1), $this->sweep(1));
+
+        $this->entityManager->clear();
+        $savedFeed = $this->entityManager->getRepository(Feed::class)->findOneBy([
+            'url' => SavedFeedUrl::of($user->requireId(), SocialNetwork::Bluesky),
+        ]);
+        self::assertNotNull($savedFeed);
+        $saved = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $savedFeed]);
+        self::assertSame(
+            ['Older than the first page'],
+            array_map(static fn (Entry $entry): string => $entry->getTitle(), $saved),
+        );
+        $states = $this->entityManager->getRepository(EntryState::class);
+        self::assertInstanceOf(EntryStateRepository::class, $states);
+        self::assertTrue($states->findOneForUserEntry($user->requireId(), $saved[0]->requireId())?->isFavorite());
     }
 
     public function testAStartLooksForTheSubscribersAuthorFeedOnce(): void
