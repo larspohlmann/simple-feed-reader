@@ -5,7 +5,6 @@ import {
   effect,
   forwardRef,
   inject,
-  Injector,
   input,
   signal,
 } from '@angular/core';
@@ -65,6 +64,7 @@ export class EntryRowComponent {
    *  one — the template renders plain interpolation instead of two
    *  `<app-marked-text>` instances per row, so the ordinary list pays nothing
    *  for a feature it never uses. */
+  protected readonly total = computed(() => this.entry().thread.length + 1);
   readonly marking = computed(() => this.terms().length > 0);
 
   readonly imgError = signal(false);
@@ -79,13 +79,13 @@ export class EntryRowComponent {
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
   private readonly language = inject(LanguageService);
-  private readonly injector = inject(Injector);
+  protected readonly navigation = inject(LinkReaderNavigation, { optional: true });
   readonly when = computed(() =>
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),
   );
 
   protected openInReaderAlone(position: number): void {
-    this.injector.get(LinkReaderNavigation).openAlone({ entryId: this.entry().id, position });
+    this.navigation?.openAlone({ entryId: this.entry().id, position });
   }
 
   // Reset the failed-image flag whenever the row is reused for a different entry.

@@ -30,16 +30,17 @@
             @if (reply.text) {
               <p class="reply">
                 {{ reply.text }}
-                <app-thread-count [position]="index + 2" [total]="entry().thread.length + 1" />
+                <app-thread-count [position]="index + 2" [total]="total()" />
               </p>
             } @else {
-              <app-thread-count [position]="index + 2" [total]="entry().thread.length + 1" />
+              <app-thread-count [position]="index + 2" [total]="total()" />
             }
             @if (reply.linkCard; as card) {
               <app-link-card
                 [card]="card"
                 layout="block"
-                [openableInReader]="true"
+                class="reply-card"
+                [openableInReader]="navigation !== null"
                 (openInReader)="openInReaderAlone(card.position)"
                 (click)="$event.stopPropagation()"
                 (keydown.enter)="$event.stopPropagation()"
