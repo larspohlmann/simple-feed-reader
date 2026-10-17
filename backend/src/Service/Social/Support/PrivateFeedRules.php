@@ -21,6 +21,8 @@ final class PrivateFeedRules
                 : self::matches(self::MASTODON_LIST, $privateFeed->remoteId),
             SocialFeedKind::CustomFeed => SocialNetwork::Bluesky === $network
                 && BlueskyRecordUri::isFeedGenerator($privateFeed->remoteId),
+            SocialFeedKind::Author => SocialNetwork::Bluesky === $network
+                && ProfileFeedUrl::isDid($privateFeed->remoteId),
         };
     }
 

@@ -119,6 +119,17 @@ final class PrivateFeedRulesTest extends TestCase
             PrivateFeedModel::userList(self::LIST_REPOSITORY . str_repeat('a', 513), 'Writers'),
             false,
         ];
+        yield 'bluesky author' => [SocialNetwork::Bluesky, PrivateFeedModel::author('did:plc:rusty', 'Rusty'), true];
+        yield 'bluesky author named by a handle' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::author('rusty.bsky.social', 'Rusty'),
+            false,
+        ];
+        yield 'mastodon has no author feeds' => [
+            SocialNetwork::Mastodon,
+            PrivateFeedModel::author('did:plc:rusty', 'Rusty'),
+            false,
+        ];
         yield 'a list without an id' => [
             SocialNetwork::Bluesky,
             PrivateFeedModel::of(SocialFeedKind::UserList, '', 'X'),

@@ -23,6 +23,10 @@ final class PrivateFeedSite
 
     private static function bluesky(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
+        if (SocialFeedKind::Author === $privateFeed->kind) {
+            return BlueskyWeb::profileUrl($privateFeed->remoteId);
+        }
+
         return BlueskyRecordUri::webUrl($privateFeed->remoteId)
             ?? BlueskyWeb::profileUrl($account->getIdentity());
     }

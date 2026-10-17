@@ -9,4 +9,5 @@ enum SocialFeedKind: string
     case Home = 'home';
     case UserList = 'list';
     case CustomFeed = 'custom_feed';
+    case Author = 'author';
 }

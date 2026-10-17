@@ -86,6 +86,7 @@ final readonly class SocialImporter
             SocialFeedKind::Home => 'home timeline',
             SocialFeedKind::UserList => 'list',
             SocialFeedKind::CustomFeed => 'custom feed',
+            SocialFeedKind::Author => 'profile',
         };
     }
 

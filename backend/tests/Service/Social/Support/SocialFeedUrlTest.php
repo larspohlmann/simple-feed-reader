@@ -35,6 +35,10 @@ final class SocialFeedUrlTest extends TestCase
         yield 'home' => [PrivateFeedModel::home(), 'social:bluesky:12:home'];
         yield 'list' => [PrivateFeedModel::userList(self::LIST, 'Writers'), 'social:bluesky:12:list:' . self::LIST];
         yield 'feed' => [PrivateFeedModel::customFeed(self::FEED, 'News'), 'social:bluesky:12:feed:' . self::FEED];
+        yield 'author' => [
+            PrivateFeedModel::author('did:plc:rusty', 'Rusty'),
+            'social:bluesky:12:author:did:plc:rusty',
+        ];
     }
 
     public function testAMastodonListIsAddressedByItsId(): void
@@ -66,6 +70,10 @@ final class SocialFeedUrlTest extends TestCase
             'social:bluesky:12:feed:' . self::FEED,
             new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::CustomFeed),
         ];
+        yield 'author' => [
+            'social:bluesky:12:author:did:plc:rusty',
+            new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::Author),
+        ];
         yield 'mastodon list' => [
             'social:mastodon:4:list:42',
             new SocialFeedAddressModel(SocialNetwork::Mastodon, 4, SocialFeedKind::UserList),
@@ -91,5 +99,26 @@ final class SocialFeedUrlTest extends TestCase
     {
         self::assertTrue(SocialFeedUrl::isPrivate('social:bluesky:12:home'));
         self::assertFalse(SocialFeedUrl::isPrivate('https://example.com/social:bluesky'));
+    }
+
+    #[DataProvider('authors')]
+    public function testAnAuthorFeedNamesTheDidItFollows(SocialNetwork $network, string $url, ?string $did): void
+    {
+        self::assertSame($did, SocialFeedUrl::authorOf($network, $url));
+    }
+
+    /** @return iterable<string, array{SocialNetwork, string, ?string}> */
+    public static function authors(): iterable
+    {
+        yield 'an author feed' => [SocialNetwork::Bluesky, 'social:bluesky:12:author:did:plc:rusty', 'did:plc:rusty'];
+        yield 'on another network' => [SocialNetwork::Mastodon, 'social:bluesky:12:author:did:plc:rusty', null];
+        yield 'another kind' => [
+            SocialNetwork::Bluesky,
+            'social:bluesky:12:list:at://did:plc:bob/app.bsky.graph.list/1',
+            null,
+        ];
+        yield 'another kind naming a did' => [SocialNetwork::Bluesky, 'social:bluesky:12:home:did:plc:rusty', null];
+        yield 'no did' => [SocialNetwork::Bluesky, 'social:bluesky:12:author:rusty.bsky.social', null];
+        yield 'an rss feed' => [SocialNetwork::Bluesky, 'https://bsky.app/profile/did:plc:rusty/rss', null];
     }
 }

@@ -30,6 +30,10 @@ final class PrivateFeedSiteTest extends TestCase
             PrivateFeedModel::customFeed('at://did:plc:bob/app.bsky.feed.generator/news', 'News'),
             'https://bsky.app/profile/did:plc:bob/feed/news',
         ];
+        yield 'author' => [
+            PrivateFeedModel::author('did:plc:rusty', 'Rusty'),
+            'https://bsky.app/profile/did:plc:rusty',
+        ];
         yield 'an unreadable uri' => [
             PrivateFeedModel::userList('not-a-uri', 'Odd'),
             'https://bsky.app/profile/did:plc:alice',
