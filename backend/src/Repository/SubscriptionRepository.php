@@ -112,13 +112,13 @@ final class SubscriptionRepository extends ServiceEntityRepository
     /** The count the cap holds against: a saved feed is never a subscription the user chose (#1666). */
     public function countForUser(int $userId): int
     {
-        return (int) $this->createQueryBuilder('s')
+        $qb = $this->createQueryBuilder('s')
             ->select('COUNT(s.id)')
             ->join('s.feed', 'f')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->andWhere('f.sourceFormat <> :savedFormat')->setParameter('savedFormat', SourceFormat::SAVED)
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId);
+        SavedFeedDql::exclude($qb, 'f');
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**

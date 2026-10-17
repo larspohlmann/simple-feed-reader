@@ -157,7 +157,7 @@ final class EntryJson
         $entry = $row->entry;
         $feed = $entry->getFeed();
         $sourceFormat = $feed->getSourceFormat();
-        if (SourceFormat::SAVED === $sourceFormat) {
+        if (SourceFormat::isSaved($sourceFormat)) {
             return null === $feed->getNetwork() ? self::originPosterOf($row) : self::authorPosterOf($entry);
         }
         if (SourceFormat::isSocial($sourceFormat)) {

@@ -225,7 +225,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
 
     private function restrictToFetchable(QueryBuilder $qb): void
     {
-        $qb->andWhere('f.sourceFormat <> :savedFormat')->setParameter('savedFormat', SourceFormat::SAVED);
+        SavedFeedDql::exclude($qb, 'f');
     }
 
     private function restrictToSchedule(QueryBuilder $qb, DueFeedCriteria $criteria): void

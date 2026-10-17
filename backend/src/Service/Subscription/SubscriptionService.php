@@ -53,13 +53,9 @@ final readonly class SubscriptionService
             return 0;
         }
 
-        $savedFeeds = array_values(array_filter($subscriptions, self::isSavedFeed(...)));
-        $others = array_values(array_filter(
-            $subscriptions,
-            static fn (Subscription $subscription): bool => !self::isSavedFeed($subscription),
-        ));
-        $this->removeAfter($savedFeeds, static fn (): array => []);
-        $copyIds = $this->removeAfter($others, $this->savedPostRescue->rescueFrom(...));
+        [$savedFeeds, $others] = self::savedFeedsAndOthers($subscriptions);
+        $this->removeRescuing($savedFeeds, []);
+        $copyIds = $this->removeRescuing($others, $others);
         $this->savedPostRescue->indexCopies($copyIds);
 
         return \count($subscriptions);
@@ -105,12 +101,12 @@ final readonly class SubscriptionService
     }
 
     /**
-     * @param list<Subscription>                      $subscriptions
-     * @param \Closure(list<Subscription>): list<int> $beforeRemoval
+     * @param list<Subscription> $subscriptions
+     * @param list<Subscription> $rescued       the ones whose favourites and kept posts are saved before they go
      *
-     * @return list<int> what $beforeRemoval returned
+     * @return list<int> the saved copies the rescue created
      */
-    private function removeAfter(array $subscriptions, \Closure $beforeRemoval): array
+    private function removeRescuing(array $subscriptions, array $rescued): array
     {
         if ([] === $subscriptions) {
             return [];
@@ -118,7 +114,7 @@ final readonly class SubscriptionService
         $feedIds = self::feedIdsOf($subscriptions);
         $this->entityManager->beginTransaction();
         try {
-            $result = $beforeRemoval($subscriptions);
+            $result = $this->savedPostRescue->rescueFrom($rescued);
             foreach ($subscriptions as $subscription) {
                 $this->entityManager->remove($subscription);
             }
@@ -151,9 +147,24 @@ final readonly class SubscriptionService
         return array_keys($feedIds);
     }
 
-    private static function isSavedFeed(Subscription $subscription): bool
+    /**
+     * @param list<Subscription> $subscriptions
+     *
+     * @return array{list<Subscription>, list<Subscription>} the saved feeds, then the others
+     */
+    private static function savedFeedsAndOthers(array $subscriptions): array
     {
-        return SourceFormat::SAVED === $subscription->getFeed()->getSourceFormat();
+        $savedFeeds = [];
+        $others = [];
+        foreach ($subscriptions as $subscription) {
+            if (SourceFormat::isSaved($subscription->getFeed()->getSourceFormat())) {
+                $savedFeeds[] = $subscription;
+                continue;
+            }
+            $others[] = $subscription;
+        }
+
+        return [$savedFeeds, $others];
     }
 
     /**

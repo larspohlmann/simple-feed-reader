@@ -20,7 +20,7 @@ final class SocialFeedClassifier
 
     public static function networkFor(string $url, string $sourceFormat): ?SocialNetwork
     {
-        if (SourceFormat::SAVED === $sourceFormat) {
+        if (SourceFormat::isSaved($sourceFormat)) {
             return SavedFeedUrl::networkOf($url);
         }
 

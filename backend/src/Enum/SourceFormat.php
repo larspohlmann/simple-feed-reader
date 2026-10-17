@@ -38,4 +38,9 @@ final class SourceFormat
     {
         return \in_array($sourceFormat, self::SOCIAL, true);
     }
+
+    public static function isSaved(string $sourceFormat): bool
+    {
+        return self::SAVED === $sourceFormat;
+    }
 }

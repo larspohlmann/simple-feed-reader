@@ -20,7 +20,7 @@ final class SavedFeedRefusal
      */
     public static function ofFeed(string $feedUrl, string $sourceFormat): void
     {
-        if (SavedFeedUrl::isSaved($feedUrl) === (SourceFormat::SAVED === $sourceFormat)) {
+        if (SavedFeedUrl::isSaved($feedUrl) === SourceFormat::isSaved($sourceFormat)) {
             return;
         }
 
