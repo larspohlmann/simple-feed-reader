@@ -12,7 +12,10 @@ describe('LinkCardsComponent', () => {
       providers: [{ provide: LinkReaderNavigation, useValue: navigation }],
     });
     const entry = anEntry({
-      linkCards: [aLinkCard(), aLinkCard({ url: 'https://other.test/', title: 'Second' })],
+      linkCards: [
+        aLinkCard({ position: 2 }),
+        aLinkCard({ url: 'https://other.test/', title: 'Second', position: 5 }),
+      ],
     });
     const fixture = TestBed.createComponent(LinkCardsComponent);
     fixture.componentRef.setInput('entry', entry);
@@ -24,6 +27,6 @@ describe('LinkCardsComponent', () => {
     expect(buttons).toHaveLength(2);
     buttons[1].click();
 
-    expect(navigation.layer).toHaveBeenCalledWith({ entryId: entry.id, position: 1 });
+    expect(navigation.layer).toHaveBeenCalledWith({ entryId: entry.id, position: 5 });
   });
 });

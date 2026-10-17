@@ -11,7 +11,7 @@
       [card]="shared"
       layout="block"
       [openableInReader]="true"
-      (openInReader)="openInReaderAlone()"
+      (openInReader)="openInReaderAlone(shared.position)"
       (click)="$event.stopPropagation()"
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"

@@ -28,6 +28,7 @@ import { ReaderTabTitle } from './reader-tab-title.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
+import { linkCardAt } from '../link-card/link-card-at';
 import { TagsStore } from '../state/tags.store';
 import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
@@ -153,7 +154,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly linkCard = this.routeState.linkCard;
   readonly openLinkCard = computed(() => {
     const ref = this.linkCard();
-    return ref === null ? null : (this.entries.entry(ref.entryId)?.linkCards[ref.position] ?? null);
+    if (ref === null) return null;
+    const entry = this.entries.entry(ref.entryId);
+    return entry === null ? null : linkCardAt(entry, ref.position);
   });
   readonly linkReturnsTo = computed(() => (this.entryId() === null ? 'list' : 'article'));
   protected readonly linkNavigation = inject(LinkReaderNavigation);
