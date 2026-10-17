@@ -25,4 +25,10 @@ final readonly class ReplyNode
     {
         return ($this->commentOf)($this->publishedAt);
     }
+
+    /** @param list<ReplyNode> $replies */
+    public function withReplies(array $replies): self
+    {
+        return new self($this->publishedAt, $this->commentOf, $replies, $this->url, $this->byEntryAuthor);
+    }
 }

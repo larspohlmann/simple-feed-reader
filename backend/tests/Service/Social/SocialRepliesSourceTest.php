@@ -7,8 +7,11 @@ namespace App\Tests\Service\Social;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
+use App\Entity\ThreadPost;
+use App\Entity\ThreadPostContent;
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
+use App\Repository\ThreadPostRepository;
 use App\Service\Comments\Exception\CommentsThrottledException;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
@@ -46,6 +49,7 @@ final class SocialRepliesSourceTest extends DbTestCase
 
     private const string STATUS_URL = 'https://mastodon.social/@Gargron/110';
     private const string FEED_URL = 'https://mastodon.social/@Gargron.rss';
+    private const string FOLDED_REPLY_URL = 'https://mastodon.social/@Gargron/111';
 
     /** Must match framework.rate_limiter.social_replies.limit in rate_limiter.yaml. */
     private const int REPLIES_BUDGET = 120;
@@ -278,7 +282,30 @@ final class SocialRepliesSourceTest extends DbTestCase
         self::assertSame(['repliesIn ' . self::STATUS_URL . ' the thread'], $this->threads->calls);
     }
 
-    private static function reply(string $text, string $publishedAt): ReplyNode
+    public function testAFoldedReplyIsLeftOutButItsChildrenStay(): void
+    {
+        $entry = $this->post();
+        $this->entityManager->persist(new ThreadPost(
+            $entry,
+            1,
+            new ThreadPostContent(self::FOLDED_REPLY_URL, null, '<p>folded</p>', []),
+        ));
+        $this->entityManager->flush();
+        $this->threads->readsReplies([
+            self::reply('folded', '2026-10-16 08:00:00', self::FOLDED_REPLY_URL)
+                ->withReplies([self::reply('child', '2026-10-16 09:00:00')]),
+            self::reply('other', '2026-10-16 07:00:00'),
+        ]);
+
+        $page = $this->source()->read($entry, 'the thread');
+
+        self::assertSame(['child', 'other'], array_map(
+            static fn (EntryCommentModel $comment): string => $comment->html,
+            $page->comments,
+        ));
+    }
+
+    private static function reply(string $text, string $publishedAt, ?string $url = null): ReplyNode
     {
         $at = new \DateTimeImmutable($publishedAt);
 
@@ -291,6 +318,8 @@ final class SocialRepliesSourceTest extends DbTestCase
                 $text,
                 false,
             ),
+            [],
+            $url,
         );
     }
 
@@ -332,6 +361,8 @@ final class SocialRepliesSourceTest extends DbTestCase
         self::assertInstanceOf(ReplyThreadOrder::class, $order);
         $limiter = self::getContainer()->get('limiter.social_replies');
         self::assertInstanceOf(RateLimiterFactoryInterface::class, $limiter);
+        /** @var ThreadPostRepository $threadPosts */
+        $threadPosts = $this->entityManager->getRepository(ThreadPost::class);
 
         return new SocialRepliesSource(
             new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts),
@@ -340,6 +371,7 @@ final class SocialRepliesSourceTest extends DbTestCase
             $order,
             new RateLimitGuard(new MockClock('2026-10-16 10:00:00')),
             $limiter,
+            $threadPosts,
         );
     }
 }
