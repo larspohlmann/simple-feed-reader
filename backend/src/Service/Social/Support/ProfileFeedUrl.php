@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Support;
 
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Bluesky\Support\BlueskyWeb;
 
 final class ProfileFeedUrl
@@ -12,7 +13,6 @@ final class ProfileFeedUrl
     private const string BLUESKY_PATH = '#^/profile/([^/@]+)/rss/?$#';
     private const string BLUESKY_PROFILE_PAGE = '#^/profile/([^/@]+)(?:/rss)?/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
-    private const string DID_PREFIX = 'did:';
 
     public static function bluesky(string $did): string
     {
@@ -38,7 +38,7 @@ final class ProfileFeedUrl
 
     public static function isDid(string $identity): bool
     {
-        return str_starts_with($identity, self::DID_PREFIX);
+        return BlueskyActorKey::isDid($identity);
     }
 
     /** @return string|null the DID, handle or user@host the URL follows; null when it is no profile feed of $network */
@@ -123,9 +123,7 @@ final class ProfileFeedUrl
 
     private static function actorIn(string $segment): string
     {
-        $actor = rawurldecode($segment);
-
-        return self::isDid($actor) ? $actor : strtolower($actor);
+        return BlueskyActorKey::of(rawurldecode($segment));
     }
 
     private static function mastodonIdentity(string $host, string $path): ?string

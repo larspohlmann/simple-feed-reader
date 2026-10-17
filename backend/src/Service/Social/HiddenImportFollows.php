@@ -6,12 +6,12 @@ namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Support\BlueskyActor;
-use App\Service\Social\Support\ProfileFeedUrl;
 use Psr\Log\LoggerInterface;
 
 final readonly class HiddenImportFollows
@@ -58,9 +58,7 @@ final readonly class HiddenImportFollows
         $actorByIdentity = [];
         foreach ($feeds as $feed) {
             if (BlueskyActor::isValid($feed->identity)) {
-                $actorByIdentity[$feed->identity] = ProfileFeedUrl::isDid($feed->identity)
-                    ? $feed->identity
-                    : strtolower($feed->identity);
+                $actorByIdentity[$feed->identity] = BlueskyActorKey::of($feed->identity);
             }
         }
 
