@@ -8,6 +8,7 @@ use App\Entity\EntryGuid;
 use App\Entity\Subscription;
 use App\Repository\EntryRepository;
 use App\Repository\SavedPostRepository;
+use App\Service\SavedPosts\Model\SavedCopiesModel;
 use App\Service\SavedPosts\Model\SavedCopyModel;
 use App\Service\SavedPosts\Pass\SavedCopyPlan;
 use App\Service\SavedPosts\Support\SavedOrigin;
@@ -63,25 +64,18 @@ final readonly class SavedPostRescue
             return [];
         }
         $twins = $this->savedPosts->keptTwinsOf($userId, $flagged, $leavingFeedIds);
-        $toCopy = array_keys(array_diff_key($flagged, $twins));
-        if ([] === $toCopy) {
-            $this->stateMover->move($userId, $twins);
+        $copies = $this->copied($subscription, array_keys(array_diff_key($flagged, $twins)));
+        $this->stateMover->move($userId, $twins + $copies->held + $copies->created);
 
-            return [];
-        }
-        [$held, $created] = $this->copied($subscription, $toCopy);
-        $this->stateMover->move($userId, $twins + $held + $created);
-
-        return array_values($created);
+        return array_values($copies->created);
     }
 
-    /**
-     * @param list<int> $entryIds
-     *
-     * @return array{array<int, int>, array<int, int>} the copies the saved feed held, and the ones made now
-     */
-    private function copied(Subscription $subscription, array $entryIds): array
+    /** @param list<int> $entryIds */
+    private function copied(Subscription $subscription, array $entryIds): SavedCopiesModel
     {
+        if ([] === $entryIds) {
+            return new SavedCopiesModel([], []);
+        }
         $savedFeed = $this->savedFeeds->of($subscription->getUser(), $subscription->getFeed()->getNetwork());
         $copy = new SavedCopyModel($savedFeed->getFeed()->requireId(), SavedOrigin::posterOf($subscription));
         $origin = SavedOrigin::originOf($subscription);
@@ -96,7 +90,7 @@ final readonly class SavedPostRescue
             $entryIds = $plan->deferred();
         }
 
-        return [$held, $created];
+        return new SavedCopiesModel($held, $created);
     }
 
     /** @param list<int> $entryIds */

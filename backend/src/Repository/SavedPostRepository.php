@@ -190,9 +190,10 @@ final readonly class SavedPostRepository
             return [];
         }
         $held = $this->copiesIn($copy->savedFeedId, $entryIds);
+        [$posterOverrides, $posterParameters] = $this->posterColumns($copy->poster);
         $this->entityManager->getConnection()->executeStatement(
-            $this->copySql($this->posterOverrides($copy->poster)),
-            ['savedFeedId' => $copy->savedFeedId, 'entryIds' => $entryIds] + self::posterParameters($copy->poster),
+            $this->copySql($posterOverrides),
+            ['savedFeedId' => $copy->savedFeedId, 'entryIds' => $entryIds] + $posterParameters,
             ['entryIds' => ArrayParameterType::INTEGER],
         );
 
@@ -202,7 +203,8 @@ final readonly class SavedPostRepository
     public function copyRenamed(SavedCopyModel $copy, int $entryId, EntryGuid $guid): int
     {
         $metadata = $this->entityManager->getClassMetadata(Entry::class);
-        $overrides = $this->posterOverrides($copy->poster) + [
+        [$posterOverrides, $posterParameters] = $this->posterColumns($copy->poster);
+        $overrides = $posterOverrides + [
             $metadata->getColumnName('guid.value') => ':guid',
             $metadata->getColumnName('guid.hash') => ':guidHash',
         ];
@@ -213,7 +215,7 @@ final readonly class SavedPostRepository
                 'entryIds' => [$entryId],
                 'guid' => $guid->getValue(),
                 'guidHash' => $guid->getHash(),
-            ] + self::posterParameters($copy->poster),
+            ] + $posterParameters,
             ['entryIds' => ArrayParameterType::INTEGER],
         );
 
@@ -224,20 +226,6 @@ final readonly class SavedPostRepository
             ->andWhere('held.guid.hash = :guidHash')->setParameter('guidHash', $guid->getHash())
             ->getQuery()
             ->getSingleScalarResult();
-    }
-
-    /** @return array<string, ?string> */
-    private static function posterParameters(?EntryAuthor $poster): array
-    {
-        if (null === $poster) {
-            return [];
-        }
-
-        return [
-            'posterName' => $poster->getName(),
-            'posterUrl' => $poster->getProfileUrl(),
-            'posterAvatarUrl' => $poster->getAvatarUrl(),
-        ];
     }
 
     /** @param array<int, int> $copyByEntryId */
@@ -272,11 +260,14 @@ final readonly class SavedPostRepository
         );
     }
 
-    /** @return array<string, string> column => SQL expression; empty when each entry keeps its own author */
-    private function posterOverrides(?EntryAuthor $poster): array
+    /**
+     * @return array{array<string, string>, array<string, ?string>} column => SQL expression, and its parameters;
+     *                                                              empty when each entry keeps its own author
+     */
+    private function posterColumns(?EntryAuthor $poster): array
     {
         if (null === $poster) {
-            return [];
+            return [[], []];
         }
         [$name, $url, $avatar] = array_map(
             $this->entityManager->getClassMetadata(Entry::class)->getColumnName(...),
@@ -284,9 +275,16 @@ final readonly class SavedPostRepository
         );
 
         return [
-            $name => ':posterName',
-            $url => ':posterUrl',
-            $avatar => sprintf('COALESCE(e.%s, :posterAvatarUrl)', $avatar),
+            [
+                $name => ':posterName',
+                $url => ':posterUrl',
+                $avatar => sprintf('COALESCE(e.%s, :posterAvatarUrl)', $avatar),
+            ],
+            [
+                'posterName' => $poster->getName(),
+                'posterUrl' => $poster->getProfileUrl(),
+                'posterAvatarUrl' => $poster->getAvatarUrl(),
+            ],
         ];
     }
 
