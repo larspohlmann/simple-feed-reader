@@ -9,8 +9,8 @@ use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Exception\InvalidSelectionException;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
-use App\Service\Social\Model\CollectionImportModel;
 use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Model\PrivateFeedImportModel;
 use App\Service\Social\Model\PrivateFeedOutcome;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SocialImportFeedModel;
@@ -62,11 +62,11 @@ final readonly class SocialImporter
                     array_map(static fn (BulkSubscribeItemModel $item): string => $item->feedUrl, $items),
                 );
 
-                $collections = $this->addCollections($account, $import->collections);
+                $privateFeedTally = $this->addCollections($account, $import->collections);
 
                 return SocialImportResultModel::from(
                     $subscribed,
-                    $this->addAuthors($account, $hidden, $collections),
+                    $this->addAuthors($account, $hidden, $privateFeedTally),
                     $removed,
                 );
             },
@@ -99,9 +99,9 @@ final readonly class SocialImporter
     }
 
     /** @param list<PrivateFeedModel> $collections */
-    private function addCollections(SocialAccount $account, array $collections): CollectionImportModel
+    private function addCollections(SocialAccount $account, array $collections): PrivateFeedImportModel
     {
-        $tally = new CollectionImportModel();
+        $tally = new PrivateFeedImportModel();
         foreach ($collections as $collection) {
             try {
                 $tally = $tally->counting($this->privateFeeds->create($account, $collection));
@@ -131,8 +131,8 @@ final readonly class SocialImporter
     private function addAuthors(
         SocialAccount $account,
         array $hidden,
-        CollectionImportModel $tally,
-    ): CollectionImportModel {
+        PrivateFeedImportModel $tally,
+    ): PrivateFeedImportModel {
         foreach ($hidden as $profile) {
             try {
                 $this->authorFeeds->create($account, $profile, []);
