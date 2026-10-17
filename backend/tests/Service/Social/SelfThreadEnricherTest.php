@@ -132,6 +132,21 @@ final class SelfThreadEnricherTest extends DbTestCase
         self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
     }
 
+    public function testEachFoldIsStoredBeforeTheNextThreadIsAsked(): void
+    {
+        $this->queuedEntry('-2 minutes', self::POST . '-1');
+        $this->queuedEntry('-1 minute', self::POST . '-2');
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+        $storedFolds = [];
+        $this->thread->duringEachPublicAsk(function () use (&$storedFolds): void {
+            $storedFolds[] = \count($this->foldedEntryIds());
+        });
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([0, 1], $storedFolds);
+    }
+
     public function testALinkRootWhoseLinkIsAlreadyCardedIsDequeued(): void
     {
         $entry = $this->queuedEntry();

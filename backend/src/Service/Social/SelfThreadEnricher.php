@@ -126,7 +126,8 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     }
 
     /**
-     * A row handed to the link-card pass is released only once its new kind is flushed, or this pass would refill it.
+     * Each row is flushed once settled, while the lease its fold was checked against still runs. A row handed to the
+     * link-card pass is released only after that flush, or this pass would refill it.
      *
      * @param list<ShareEnrichment> $queued
      */
@@ -145,9 +146,10 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
             }
             if (!$this->settle($row, $claimedAt)) {
                 $unsettled[] = $row;
+                continue;
             }
+            $this->entityManager->flush();
         }
-        $this->entityManager->flush();
         $this->enrichments->release([...$unsettled, ...self::awaitingLinkCards($claimed)], $claimedAt);
     }
 
