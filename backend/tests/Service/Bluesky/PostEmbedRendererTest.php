@@ -81,7 +81,15 @@ final class PostEmbedRendererTest extends TestCase
             [self::FULLSIZE, 4000, 3000],
             [$embed->leadImage?->url, $embed->leadImage?->width, $embed->leadImage?->height],
         );
-        self::assertEquals([new ParsedMediumModel(self::FULLSIZE, VisualMediaKind::Image, 4000, 3000)], $embed->media);
+        self::assertEquals([new ParsedMediumModel(
+            self::FULLSIZE,
+            VisualMediaKind::Image,
+            4000,
+            3000,
+            alt: 'An enormous pile of red apples and green apples—sweet, tart, delicious, and coming soon to an Apple'
+                . ' Store near you! Keep your eye on this thread (and maybe put on a sturdy hat) to learn more about'
+                . ' today\'s big drops.',
+        )], $embed->media);
     }
 
     public function testAQuoteIsAQuotedPostWithNoHtmlNoCardAndNoLeadImage(): void
@@ -323,6 +331,10 @@ final class PostEmbedRendererTest extends TestCase
             ['https://example.com/b.jpg', 'https://example.com/c.jpg'],
             array_map(static fn (ParsedMediumModel $medium): string => $medium->url, $rendered->media),
         );
+        self::assertSame(['<b>', null], array_map(
+            static fn (ParsedMediumModel $medium): ?string => $medium->alt,
+            $rendered->media,
+        ));
     }
 
     public function testAnImageWithHalfAnAspectRatioKeepsOnlyTheDimensionItHas(): void

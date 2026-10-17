@@ -509,15 +509,17 @@ final class EntryJsonTest extends TestCase
         );
     }
 
-    public function testAnUntitledPostHasNoExcerpt(): void
+    public function testAMediaOnlyUntitledPostHasMediaAndNoExcerpt(): void
     {
         $entry = $this->entryTitled('');
         $entry->setHeadline(Headline::untitledPost());
-        $entry->setContentHtml(
-            '<p><a href="https://bsky.app/profile/a/post/1">View embedded content on Bluesky</a></p>',
-        );
+        $entry->setContentHtml('');
+        $entry->setMedia([new EntryMedium('https://v.test/p.m3u8', 'video', 1080, 1920)], []);
 
-        self::assertSame('', EntryJson::listRow($this->row($entry))['excerpt']);
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('', $json['excerpt']);
+        self::assertSame('https://v.test/p.m3u8', $json['media'][0]['url']);
     }
 
     public function testAnUntitledPostKeepsTheTextOfItsSummary(): void

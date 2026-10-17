@@ -29,6 +29,9 @@ final class EntryEmbedWriterTest extends DbTestCase
         . 'bafkreibs4hca2whguuqvtnk4y5dahy5hvsxoygftczl4rgpxlwooqlycde/';
     private const string FULLSIZE = 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:z72i7hdynmk6r22z27h6tvur/'
         . 'bafkreih3mb3cwnbc5kv5b2qyy24q6banms25i5ut3cbty4ej2x7vjvd6y4';
+    private const string APPLES_ALT = 'An enormous pile of red apples and green apples—sweet, tart, delicious, and'
+        . ' coming soon to an Apple Store near you! Keep your eye on this thread (and maybe put on a sturdy hat) to'
+        . ' learn more about today\'s big drops.';
     private const string STORY_LINK = '<a href="https://example.com/story" rel="noopener noreferrer" target="_blank">'
         . 'https://example.com/story</a>';
 
@@ -291,13 +294,13 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertEquals(
             [
                 new EntryMedium('https://example.com/own.jpg', 'image', 800, 600),
-                new EntryMedium(self::FULLSIZE, 'image', 4000, 3000),
+                new EntryMedium(self::FULLSIZE, 'image', 4000, 3000, null, self::APPLES_ALT),
             ],
             $entry->getMedia(),
         );
     }
 
-    public function testAnEmptyBodyGetsTheEmbedAndNoSummary(): void
+    public function testAnEmptyBodyStaysEmptyAndTheImageGoesToMediaWithNoSummary(): void
     {
         $entry = $this->entry(null);
 
