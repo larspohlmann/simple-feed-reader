@@ -72,7 +72,7 @@ final readonly class PostEmbedRenderer
         }
         $lead = new DeclaredImageModel($media[0]->url, $media[0]->width, $media[0]->height);
 
-        return new RenderedEmbedModel('', $lead, $media);
+        return RenderedEmbedModel::media($lead, $media);
     }
 
     private function external(JsonNodeModel $external): ?RenderedEmbedModel
@@ -83,8 +83,7 @@ final readonly class PostEmbedRenderer
         }
         $still = $gif->previewImageUrl;
 
-        return new RenderedEmbedModel(
-            '',
+        return RenderedEmbedModel::media(
             $still === null ? null : new DeclaredImageModel($still, $gif->width, $gif->height),
             [$gif],
         );
@@ -98,8 +97,7 @@ final readonly class PostEmbedRenderer
         }
         $thumbnail = $medium->previewImageUrl;
 
-        return new RenderedEmbedModel(
-            '',
+        return RenderedEmbedModel::media(
             $thumbnail === null ? null : new DeclaredImageModel($thumbnail, $medium->width, $medium->height),
             [$medium],
         );

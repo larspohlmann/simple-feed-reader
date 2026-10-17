@@ -1,5 +1,5 @@
 import { EntryDto } from '../../models';
-import { EntryMediumDto } from '../../entry-medium';
+import { EntryMediumDto, MAX_SHARED_MEDIA, withoutPosters } from '../../entry-medium';
 import { entryDek } from '../../entry/entry-text';
 import { entryImage, portraitCoverRatio } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, SHARE_KINDS, ShareKind, TemplateKind } from './magazine-block';
@@ -58,8 +58,6 @@ function sharesLink(entry: EntryDto): boolean {
   return entry.share === 'link' && (entry.linkCards.length > 0 || entry.pending);
 }
 
-export const MAX_SHARED_MEDIA = 4;
-
 const sharedMediaOf = new WeakMap<EntryDto, EntryMediumDto[]>();
 
 /** The pictures and videos a media share shows, at most four; a video's poster is not shown twice. */
@@ -73,8 +71,7 @@ export function sharedMedia(entry: EntryDto): EntryMediumDto[] {
 }
 
 function collectSharedMedia(entry: EntryDto): EntryMediumDto[] {
-  const posters = new Set(entry.media.map((medium) => medium.previewImageUrl));
-  const shown = entry.media.filter((medium) => medium.kind === 'video' || !posters.has(medium.url));
+  const shown = withoutPosters(entry.media);
   return (shown.length > 0 ? shown : leadImage(entry)).slice(0, MAX_SHARED_MEDIA);
 }
 

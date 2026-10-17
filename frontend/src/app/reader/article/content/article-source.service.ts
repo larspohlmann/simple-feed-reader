@@ -76,6 +76,11 @@ export class ArticleSource {
     return this.feedBody()?.status === 'error';
   });
 
+  private readonly feedBodyHtml = computed(() => {
+    const body = this.feedBody();
+    return body?.status === 'ok' ? body.html : null;
+  });
+
   readonly displayHtml = computed(() => {
     const entry = this.entry();
     if (!entry) return '';
@@ -83,16 +88,15 @@ export class ArticleSource {
     if (this.readerMode.mode() === 'reader' && article) return article.contentHtml;
     // The summary renders at once; the body (once the store fetches it)
     // replaces it in place, and a failed fetch leaves the summary standing.
-    const body = this.feedBody();
-    return body?.status === 'ok' && body.html !== null ? body.html : (entry.summary ?? '');
+    return this.feedBodyHtml() ?? entry.summary ?? '';
   });
 
   /** The post's own media still to show under its body, once the body settled (#1656). */
   readonly postMedia = computed(() => {
     const entry = this.entry();
-    const body = this.feedBody();
-    if (!entry || !body || body.status === 'loading') return [];
-    return articlePostMedia(entry, body.status === 'ok' ? (body.html ?? '') : '');
+    const status = this.feedBody()?.status;
+    if (!entry || status === undefined || status === 'loading') return [];
+    return articlePostMedia(entry, this.feedBodyHtml() ?? '');
   });
 
   connect(entry: Signal<EntryDto | null>): void {
