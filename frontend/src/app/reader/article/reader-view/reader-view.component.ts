@@ -51,7 +51,7 @@ import { SocialCountsComponent } from '../social-counts/social-counts.component'
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { CommentsService } from '../entry-comments/comments.service';
 import { CommentsForecast } from '../entry-comments/comments-forecast';
-import { ArticleBody } from './article-body.service';
+import { ArticleContentComponent } from '../article-content/article-content.component';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 import { AUTOPLAY_REGION, AutoplayRegion } from '../../media/autoplay/autoplay-region';
@@ -88,19 +88,19 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     ListenRowComponent,
     QuotedPostComponent,
     SocialCountsComponent,
+    ArticleContentComponent,
   ],
   providers: [
     ArticleScrollRestore,
     ArticleGestures,
     ArticleSource,
     ReadingScope,
-    ArticleBody,
     ListAutoplayCoordinator,
     UnlockedVideoElements,
     { provide: AUTOPLAY_REGION, useFactory: theArticleComments },
   ],
   templateUrl: './reader-view.component.html',
-  styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
+  styleUrl: './reader-view.component.scss',
 })
 export class ReaderViewComponent {
   protected readonly entryDisplayTitle = entryDisplayTitle;
@@ -119,7 +119,8 @@ export class ReaderViewComponent {
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly close = output<void>();
 
-  private readonly content = viewChild<ElementRef<HTMLElement>>('content');
+  private readonly articleContent = viewChild(ArticleContentComponent);
+  private readonly content = computed(() => this.articleContent()?.element());
   private readonly commentsSection = viewChild(EntryCommentsComponent, {
     read: ElementRef<HTMLElement>,
   });
@@ -158,7 +159,6 @@ export class ReaderViewComponent {
   protected readonly gestures = inject(ArticleGestures);
   protected readonly source = inject(ArticleSource);
   protected readonly scope = inject(ReadingScope);
-  private readonly body = inject(ArticleBody);
   private readonly autoplay = inject(ListAutoplayCoordinator);
   protected readonly progressRail = new ScrollProgressRail({
     isWide: this.screen.isWide,
@@ -247,21 +247,15 @@ export class ReaderViewComponent {
       trailing: this.trailingParts,
     });
 
-    this.body.connect({
-      content: this.content,
-      html: this.source.displayHtml,
-      pageUrl: () => this.entry()?.url ?? null,
-      enclosureUrl: () => this.audio.attachment()?.url ?? null,
-      decorated: (host) => {
-        this.toc.set(collectToc(host));
-        this.scope.refresh();
-        // Runs on the original render and again when the reader content swaps in.
-        this.restore.reseat(() => this.entry()?.id);
-      },
-    });
-
     this.scope.observeResizes();
     this.reserveToolbarHeight();
+  }
+
+  protected onDecorated(host: HTMLElement): void {
+    this.toc.set(collectToc(host));
+    this.scope.refresh();
+    // Runs on the original render and again when the reader content swaps in.
+    this.restore.reseat(() => this.entry()?.id);
   }
 
   /** The toolbar floats over the scroller, which reserves its height (#1332). */

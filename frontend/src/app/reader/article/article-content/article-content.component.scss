@@ -3,19 +3,20 @@
 @use '../../link-card/link-card-layout';
 
 /* Article typography. The body is [innerHTML]-injected, so descendant rules
-   need ::ng-deep (scoped under .content). The sanitizer strips default
+   need ::ng-deep (scoped under the host). The sanitizer strips default
    margins, so h2/p/li/blockquote need an explicit vertical rhythm here. */
-.content {
+:host {
+  display: block;
   color: var(--text-primary);
   font-size: var(--fs-read);
   line-height: 1.75;
 }
 
-.content ::ng-deep p {
+:host ::ng-deep p {
   margin: 0 0 var(--space-4);
 }
 
-.content ::ng-deep :is(h1, h2, h3, h4, h5, h6) {
+:host ::ng-deep :is(h1, h2, h3, h4, h5, h6) {
   margin: var(--space-6) 0 var(--space-3);
   line-height: 1.3;
   font-weight: 650;
@@ -24,11 +25,11 @@
 
 /* An h2 opens a new section, so it carries a divider: extra air plus a short
    hairline rule above. h3+ are subordinate and keep the plain heading margin. */
-.content ::ng-deep h2 {
+:host ::ng-deep h2 {
   margin-top: var(--space-7);
 }
 
-.content ::ng-deep h2::before {
+:host ::ng-deep h2::before {
   content: '';
   display: block;
   border-top: 1px solid var(--border);
@@ -38,56 +39,56 @@
 /* When the article already carries a real rule between its sections (Substack
    emits an <hr> before each heading), the synthetic divider would double it, so
    the <hr> owns the separation and the heading drops its own. */
-.content ::ng-deep hr + h2 {
+:host ::ng-deep hr + h2 {
   margin-top: 0;
 }
 
-.content ::ng-deep hr + h2::before {
+:host ::ng-deep hr + h2::before {
   content: none;
 }
 
 /* The article's lead paragraph gets a slightly larger size. The class is set
    by the component's post-render pass — pure CSS :first-of-type can't reach
    it through the wrapper elements feeds and readability emit. */
-.content ::ng-deep p.lead {
+:host ::ng-deep p.lead {
   font-size: 1.0625em;
 }
 
-/* Headings sized in `em` against `.content`'s type, not the UI type scale:
+/* Headings sized in `em` against the host's type, not the UI type scale:
    that scale has five steps, and h2/h3 would land on the same one, flattening
    the hierarchy. Ratios are the long-standing sizes at 16px: 22, 20, 17px. */
-.content ::ng-deep h1 {
+:host ::ng-deep h1 {
   font-size: 1.375em;
 }
 
-.content ::ng-deep h2 {
+:host ::ng-deep h2 {
   font-size: 1.25em;
 }
 
-.content ::ng-deep h3 {
+:host ::ng-deep h3 {
   font-size: 1.0625em;
 }
 
-.content ::ng-deep :is(h4, h5, h6) {
+:host ::ng-deep :is(h4, h5, h6) {
   font-size: 1em;
 }
 
-.content ::ng-deep :is(ul, ol) {
+:host ::ng-deep :is(ul, ol) {
   margin: 0 0 var(--space-4);
   padding-left: 1.5em;
 }
 
-.content ::ng-deep li {
+:host ::ng-deep li {
   margin: var(--space-1) 0;
 }
 
-.content ::ng-deep li::marker {
+:host ::ng-deep li::marker {
   color: var(--text-muted);
 }
 
 /* A quiet card rather than a bare indent: the surface fill and radius set the
    quote apart from the body without shouting. */
-.content ::ng-deep blockquote {
+:host ::ng-deep blockquote {
   margin: var(--space-5) 0;
   padding: var(--space-3) var(--space-4);
   border-left: 3px solid var(--border-strong);
@@ -96,14 +97,14 @@
   color: var(--text-secondary);
 }
 
-.content ::ng-deep blockquote p:last-child {
+:host ::ng-deep blockquote p:last-child {
   margin-bottom: 0;
 }
 
 /* Publisher inserts (series teaser, support appeal, side note) boxed off from
    the running text. Detected in the post-render pass (reader-cards.ts) and
    given the same quiet-card surface as a blockquote, reading as an aside. */
-.content ::ng-deep .reader-card {
+:host ::ng-deep .reader-card {
   @include glass-rim.filled(var(--surface-1));
 
   margin: var(--space-5) 0;
@@ -113,17 +114,17 @@
 
 /* The card supplies the outer rhythm; its first and last blocks must not add
    their own, or the padding looks lopsided. */
-.content ::ng-deep .reader-card > :first-child {
+:host ::ng-deep .reader-card > :first-child {
   margin-top: 0;
 }
 
-.content ::ng-deep .reader-card > :last-child {
+:host ::ng-deep .reader-card > :last-child {
   margin-bottom: 0;
 }
 
 /* Tables arrive unstyled from the sanitizer; give them the article's rhythm
    and let a wide one scroll inside the column instead of stretching it. */
-.content ::ng-deep table {
+:host ::ng-deep table {
   display: block;
   max-width: 100%;
   overflow-x: auto;
@@ -133,19 +134,19 @@
   line-height: 1.5;
 }
 
-.content ::ng-deep :is(th, td) {
+:host ::ng-deep :is(th, td) {
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
 }
 
-.content ::ng-deep th {
+:host ::ng-deep th {
   border-bottom-color: var(--border-strong);
   color: var(--text-primary);
 }
 
-.content ::ng-deep mark {
+:host ::ng-deep mark {
   padding: 0 0.15em;
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 22%, transparent);
@@ -153,41 +154,41 @@
 }
 
 /* Keep super- and subscripts from opening up the line they sit in. */
-.content ::ng-deep :is(sub, sup) {
+:host ::ng-deep :is(sub, sup) {
   line-height: 0;
 }
 
-.content ::ng-deep dl {
+:host ::ng-deep dl {
   margin: 0 0 var(--space-4);
 }
 
-.content ::ng-deep dt {
+:host ::ng-deep dt {
   font-weight: 650;
   color: var(--text-primary);
 }
 
-.content ::ng-deep dd {
+:host ::ng-deep dd {
   margin: 0 0 var(--space-2) var(--space-4);
 }
 
-.content ::ng-deep figure {
+:host ::ng-deep figure {
   margin: var(--space-5) 0;
 }
 
-.content ::ng-deep figcaption {
+:host ::ng-deep figcaption {
   margin-top: var(--space-2);
   font-size: var(--fs-sm);
   color: var(--text-muted);
   text-align: center;
 }
 
-.content ::ng-deep :is(img, video, iframe) {
+:host ::ng-deep :is(img, video, iframe) {
   max-width: 100%;
   height: auto;
   border-radius: var(--radius);
 }
 
-.content ::ng-deep img {
+:host ::ng-deep img {
   width: auto;
 }
 
@@ -195,19 +196,19 @@
    feed that serves a small teaser rendition still reads full-bleed; genuinely
    small images (icons, logos) keep their natural size (#923). The class is set
    at render time from each image's own intrinsic width, never its URL. */
-.content ::ng-deep img.reader-fill {
+:host ::ng-deep img.reader-fill {
   width: 100%;
 }
 
 /* Substack video placeholders (#627) carry no class — the sanitizer strips
    class/style/data-*, so alt text is the only stable hook. A play badge
    marks the poster as video, not a still image. */
-.content ::ng-deep a:has(> img[alt='Video — open the original article to watch']) {
+:host ::ng-deep a:has(> img[alt='Video — open the original article to watch']) {
   position: relative;
   display: inline-block;
 }
 
-.content ::ng-deep a:has(> img[alt='Video — open the original article to watch'])::after {
+:host ::ng-deep a:has(> img[alt='Video — open the original article to watch'])::after {
   content: '▶';
   position: absolute;
   top: 50%;
@@ -226,14 +227,14 @@
   pointer-events: none;
 }
 
-.content ::ng-deep :not(pre) > code {
+:host ::ng-deep :not(pre) > code {
   padding: 0.1em 0.35em;
   background: var(--surface-1);
   border-radius: var(--radius);
   font-size: 0.9em;
 }
 
-.content ::ng-deep pre {
+:host ::ng-deep pre {
   @include glass-rim.filled(var(--surface-1));
 
   margin: 0 0 var(--space-4);
@@ -243,7 +244,7 @@
   line-height: 1.5;
 }
 
-.content ::ng-deep pre code {
+:host ::ng-deep pre code {
   padding: 0;
   background: none;
 }
@@ -251,11 +252,11 @@
 /* Syntax highlighting (#473). highlight.js emits `.hljs-*` token spans; map them
    onto the mode-aware --code-* tokens so both themes stay lint-clean (no hex). The
    highlighted container is a `<code>` or, for code-less `<pre>`, the `<pre>`. */
-.content ::ng-deep .hljs {
+:host ::ng-deep .hljs {
   color: var(--code-fg);
 }
 
-.content ::ng-deep {
+:host ::ng-deep {
   .hljs-comment,
   .hljs-quote {
     color: var(--code-comment);
@@ -312,7 +313,7 @@
   }
 }
 
-.content ::ng-deep hr {
+:host ::ng-deep hr {
   margin: var(--space-5) 0;
   border: 0;
   border-top: 1px solid var(--border);
@@ -321,20 +322,20 @@
 /* Only real links (with an href) get the accent colour. Some feeds wrap
    headings/TOC entries in <a> tags whose href the sanitiser strips; unscoped,
    this painted every heading teal ("all titles turn green", #21). */
-.content ::ng-deep a[href] {
+:host ::ng-deep a[href] {
   color: var(--accent);
 }
 
 /* Recovered media (#748). The embed box keeps a 16:9 frame at any width; the
    players stretch to the column so controls stay reachable on a phone. */
-.content ::ng-deep .reader-embed {
+:host ::ng-deep .reader-embed {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   margin: var(--space-5) 0;
 }
 
-.content ::ng-deep .reader-embed iframe {
+:host ::ng-deep .reader-embed iframe {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -343,20 +344,20 @@
 }
 
 /* A tall player (a scrollable track list) gets a fixed-height box in place of the 16:9 frame (#1053). */
-.content ::ng-deep .reader-embed--tall {
+:host ::ng-deep .reader-embed--tall {
   aspect-ratio: auto;
   height: 31.25rem;
 }
 
 /* A portrait player gets a 9:16 box, centred and capped so it fits a desktop screen. */
-.content ::ng-deep .reader-embed--portrait {
+:host ::ng-deep .reader-embed--portrait {
   aspect-ratio: 9 / 16;
   width: min(100%, 22.5rem);
   margin-inline: auto;
 }
 
-.content ::ng-deep audio,
-.content ::ng-deep video {
+:host ::ng-deep audio,
+:host ::ng-deep video {
   display: block;
   width: 100%;
   margin: var(--space-5) 0;
@@ -367,25 +368,25 @@
    ships a badly shaped poster (ZDF served a 1140×120 strip for a 16:9 clip, #952)
    then collapses the player to a sliver. Pin the 16:9 box every .reader-embed
    iframe already gets, and letterbox whatever the poster or the frames are. */
-.content ::ng-deep video {
+:host ::ng-deep video {
   aspect-ratio: 16 / 9;
   object-fit: contain;
   background: var(--surface-1);
 }
 
-.content ::ng-deep .reader-cinema {
+:host ::ng-deep .reader-cinema {
   margin: var(--space-5) 0;
 }
 
-.content ::ng-deep .reader-cinema > :is(.reader-embed, video) {
+:host ::ng-deep .reader-cinema > :is(.reader-embed, video) {
   margin: 0;
 }
 
-.content ::ng-deep .reader-cinema__bar {
+:host ::ng-deep .reader-cinema__bar {
   display: none;
 }
 
-.content ::ng-deep .reader-cinema__toggle {
+:host ::ng-deep .reader-cinema__toggle {
   display: inline-flex;
   gap: var(--space-1);
   align-items: center;
@@ -406,17 +407,17 @@
   }
 }
 
-.content ::ng-deep .reader-cinema__toggle .material-symbols-outlined {
+:host ::ng-deep .reader-cinema__toggle .material-symbols-outlined {
   font-size: var(--icon-xs);
 }
 
-.content ::ng-deep .reader-cinema__toggle kbd {
+:host ::ng-deep .reader-cinema__toggle kbd {
   font-family: inherit;
   color: var(--text-muted);
 }
 
 @container reader-pane (width > #{bp.$container-reader-cinema}) {
-  .content ::ng-deep .reader-cinema__bar {
+  :host ::ng-deep .reader-cinema__bar {
     display: flex;
     justify-content: flex-end;
     margin-top: var(--space-1);
@@ -424,7 +425,7 @@
 
   /* Cinema mode (#1479): the widened box fills the pane but stays short enough for
      the whole 16:9 frame and its toggle to fit the visible pane; never narrower than the column. */
-  .content ::ng-deep .reader-cinema--on {
+  :host ::ng-deep .reader-cinema--on {
     --cinema-width: max(
       100%,
       min(
@@ -441,31 +442,31 @@
 // Machine-generated narration (#903): one muted, collapsed line, no card, so it
 // never reads as editorial audio. A plain <details> stands in for <app-disclosure>,
 // which cannot render inside [innerHTML] (recorded exception in design-language.md).
-.content ::ng-deep .reader-narration-box {
+:host ::ng-deep .reader-narration-box {
   margin: var(--space-3) 0;
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
-.content ::ng-deep .reader-narration-box summary {
+:host ::ng-deep .reader-narration-box summary {
   cursor: pointer;
 }
 
-.content ::ng-deep .reader-narration-box[open] audio {
+:host ::ng-deep .reader-narration-box[open] audio {
   margin: var(--space-2) 0 0;
 }
 
 /* Publisher FAQ disclosures (#1071): the reader-faq pass opens each <details>
    and tags it, replacing the near-invisible default marker with a bordered card,
    an accent question and a clear accent chevron (inheriting the summary colour). */
-.content ::ng-deep details.reader-faq {
+:host ::ng-deep details.reader-faq {
   @include glass-rim.filled(var(--surface-1));
 
   margin: var(--space-3) 0;
   border-radius: var(--radius);
 }
 
-.content ::ng-deep details.reader-faq summary {
+:host ::ng-deep details.reader-faq summary {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -476,11 +477,11 @@
   cursor: pointer;
 }
 
-.content ::ng-deep details.reader-faq summary::-webkit-details-marker {
+:host ::ng-deep details.reader-faq summary::-webkit-details-marker {
   display: none;
 }
 
-.content ::ng-deep details.reader-faq summary::after {
+:host ::ng-deep details.reader-faq summary::after {
   content: '';
   flex: none;
   margin-left: auto;
@@ -491,22 +492,22 @@
   transform: rotate(45deg);
 }
 
-.content ::ng-deep details.reader-faq[open] summary {
+:host ::ng-deep details.reader-faq[open] summary {
   box-shadow: inset 0 -1px var(--border);
 }
 
-.content ::ng-deep details.reader-faq[open] summary::after {
+:host ::ng-deep details.reader-faq[open] summary::after {
   transform: rotate(-135deg);
 }
 
-.content ::ng-deep details.reader-faq > :not(summary) {
+:host ::ng-deep details.reader-faq > :not(summary) {
   margin: var(--space-3) var(--space-4);
   color: var(--text-secondary);
 }
 
 /* Swipeable image carousel (#926): the same figure rhythm as a plain figure
    above, plus its own controls row for the prev/counter/next trio. */
-.content ::ng-deep .reader-slideshow {
+:host ::ng-deep .reader-slideshow {
   position: relative;
   margin: var(--space-5) 0;
 
@@ -544,7 +545,7 @@
 /* Hydrated only: the figure clips a horizontal row of full-width slides, and the
    track translates between them. The bare .reader-slideshow above stays a
    vertical stack — the graceful no-JavaScript fallback. */
-.content ::ng-deep .reader-slideshow--ready {
+:host ::ng-deep .reader-slideshow--ready {
   overflow: hidden;
 
   ol {
@@ -559,12 +560,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .content ::ng-deep .reader-slideshow--ready ol {
+  :host ::ng-deep .reader-slideshow--ready ol {
     transition: none;
   }
 }
 
-.content ::ng-deep .reader-slideshow__controls {
+:host ::ng-deep .reader-slideshow__controls {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -572,13 +573,13 @@
   margin-top: var(--space-2);
 }
 
-.content ::ng-deep .reader-slideshow__counter {
+:host ::ng-deep .reader-slideshow__counter {
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
 
-.content ::ng-deep .reader-slideshow__prev,
-.content ::ng-deep .reader-slideshow__next {
+:host ::ng-deep .reader-slideshow__prev,
+:host ::ng-deep .reader-slideshow__next {
   @include glass-rim.filled(var(--surface-2), var(--border), control);
 
   display: inline-flex;
@@ -596,7 +597,7 @@
 /* Recipe fact block (#932): the publisher's servings/calories/time row loses
    its layout at the sanitizer, so the reader supplies its own — a wrapping row
    of cells, each stacking a muted label over its value. */
-.content ::ng-deep .reader-recipe-facts {
+:host ::ng-deep .reader-recipe-facts {
   margin: var(--space-5) 0;
 
   dl {
@@ -633,7 +634,7 @@
 /* The "about the author" furniture the backend wraps in a marked figure
    (#1000): a trailing bio, its profile link, an affiliate disclosure. A rule
    and muted, smaller type set it apart from the article prose it followed. */
-.content ::ng-deep .reader-author-bio {
+:host ::ng-deep .reader-author-bio {
   margin: var(--space-6) 0 0;
   padding-top: var(--space-5);
   border-top: 1px solid var(--border);
@@ -649,25 +650,25 @@
   }
 }
 
-.content ::ng-deep .link-card {
+:host ::ng-deep .link-card {
   @include link-card-layout.frame;
   @include link-card-layout.article-type;
 
   margin: var(--space-5) 0;
 }
 
-.content ::ng-deep .post-images {
+:host ::ng-deep .post-images {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   gap: var(--space-2);
 }
 
-.content ::ng-deep .post-images img {
+:host ::ng-deep .post-images img {
   width: 100%;
 }
 
 /* The generic rule pins a video to 16:9; a Bluesky clip keeps its poster's shape, short of the viewport. */
-.content ::ng-deep .post-video video {
+:host ::ng-deep .post-video video {
   aspect-ratio: auto;
   max-height: 80dvh;
 }

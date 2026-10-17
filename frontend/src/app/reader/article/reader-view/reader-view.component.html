@@ -203,7 +203,12 @@
                 referrerpolicy="no-referrer"
               />
             }
-            <div #content class="content" [innerHTML]="source.displayHtml()"></div>
+            <app-article-content
+              [html]="source.displayHtml()"
+              [pageUrl]="e.url"
+              [enclosureUrl]="audio.attachment()?.url ?? null"
+              (decorated)="onDecorated($event)"
+            />
             @if (e.share === 'quote' && e.quote) {
               <app-quoted-post [quote]="e.quote" layout="article" />
             }
