@@ -36,12 +36,9 @@ final readonly class ProfileVisibilityCache
      */
     public function remember(array $asked, array $hidden): void
     {
-        $actorByKey = [];
         foreach ($asked as $actor) {
-            $actorByKey[self::keyOf($actor)] = $actor;
-        }
-        foreach ($this->cache->getItems(array_keys($actorByKey)) as $key => $item) {
-            $this->cache->saveDeferred($item->set($hidden[$actorByKey[$key]] ?? self::PUBLIC));
+            $verdict = $hidden[$actor] ?? self::PUBLIC;
+            $this->cache->saveDeferred($this->cache->getItem(self::keyOf($actor))->set($verdict));
         }
         $this->cache->commit();
     }
