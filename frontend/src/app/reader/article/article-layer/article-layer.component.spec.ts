@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
@@ -11,6 +12,7 @@ import { ArticleLayerComponent } from './article-layer.component';
   template: `
     <app-article-layer
       [fullscreen]="fullscreen()"
+      [resetKey]="page()"
       [progressRail]="progressRail"
       [withTail]="false"
       backLabel="Back"
@@ -25,6 +27,7 @@ import { ArticleLayerComponent } from './article-layer.component';
 })
 class LayerHostComponent {
   readonly fullscreen = signal(false);
+  readonly page = signal(1);
   readonly progressRail = new ScrollProgressRail({
     isWide: signal(false),
     contentBottom: () => null,
@@ -107,5 +110,34 @@ describe('ArticleLayerComponent', () => {
     scrollTo(500);
 
     expect(element.querySelector('.bar')!.classList).not.toContain('hidden');
+  });
+
+  it('starts a new page at the top with its toolbar presented', () => {
+    goFullscreen();
+    scrollTo(400);
+
+    fixture.componentInstance.page.set(2);
+    fixture.detectChanges();
+
+    expect((element.querySelector('.scroller') as HTMLElement).scrollTop).toBe(0);
+    expect(element.querySelector('.bar')!.classList).not.toContain('hidden');
+    expect(element.querySelector('app-to-top-button')).toBeNull();
+  });
+
+  it('jumps to the top and lands focus on the heading it is given', () => {
+    const scroller = element.querySelector('.scroller') as HTMLElement;
+    const scrollToSpy = jest.fn();
+    scroller.scrollTo = scrollToSpy as unknown as typeof scroller.scrollTo;
+    const heading = document.createElement('h1');
+    heading.tabIndex = -1;
+    document.body.appendChild(heading);
+    const layer = fixture.debugElement.query(By.directive(ArticleLayerComponent))
+      .componentInstance as ArticleLayerComponent;
+
+    layer.scrollToTop(heading);
+
+    expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
+    expect(document.activeElement).toBe(heading);
+    heading.remove();
   });
 });

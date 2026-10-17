@@ -1,6 +1,7 @@
 @if (entry(); as e) {
   <app-article-layer
     [fullscreen]="fullscreen()"
+    [resetKey]="e.id"
     [progressRail]="progressRail"
     [withTail]="scope.hasTail()"
     [backLabel]="'reader.backToList' | transloco"

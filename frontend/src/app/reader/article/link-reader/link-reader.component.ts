@@ -1,6 +1,5 @@
 import {
   Component,
-  ElementRef,
   computed,
   effect,
   inject,
@@ -16,7 +15,6 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
-import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { LayoutService } from '../../layout.service';
 import { LinkCardDto } from '../../link-card/link-card';
 import { LinkCardRef } from '../../query/link-param';
@@ -70,10 +68,8 @@ export class LinkReaderComponent {
 
   protected readonly source = inject(LinkArticleSource);
   protected readonly scope = inject(ReadingScope);
-  private readonly reduceMotion = prefersReducedMotion();
   private readonly layer = viewChild(ArticleLayerComponent);
   private readonly articleContent = viewChild(ArticleContentComponent);
-  private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
 
   protected readonly progressRail = new ScrollProgressRail({
     isWide: inject(LayoutService).isWide,
@@ -98,10 +94,7 @@ export class LinkReaderComponent {
   constructor() {
     effect(() => {
       const ref = this.ref();
-      untracked(() => {
-        this.layer()?.resetChrome();
-        this.source.open(ref);
-      });
+      untracked(() => this.source.open(ref));
     });
 
     this.scope.connect({
@@ -115,11 +108,5 @@ export class LinkReaderComponent {
 
   protected reload(): void {
     this.source.reload(this.ref());
-  }
-
-  protected scrollToTop(): void {
-    this.layer()?.scrollToTop(this.reduceMotion ? 'auto' : 'smooth');
-    // The heading is still off-screen; a plain focus() would cancel the scroll.
-    this.titleHeading()?.nativeElement.focus({ preventScroll: true });
   }
 }

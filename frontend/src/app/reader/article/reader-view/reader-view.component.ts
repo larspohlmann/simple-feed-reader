@@ -130,7 +130,6 @@ export class ReaderViewComponent {
       expectedHeight: this.commentsForecast.expectedHeight,
     },
   ];
-  /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly layer = viewChild(ArticleLayerComponent);
   protected readonly scroller = computed(() => this.layer()?.scroller());
@@ -197,12 +196,9 @@ export class ReaderViewComponent {
       // Before the source opens: a synchronous load calls enableToggle().
       this.readerMode.reset();
       this.restore.arm(id);
-      // A new article starts at the top, with a fresh, collapsed TOC and its
-      // toolbar presented — this instance is reused, and a retracted toolbar
-      // must not carry over to the next article.
+      // This instance is reused: a new article starts with a fresh, collapsed TOC.
       this.toc.set([]);
       this.tocOpen.set(false);
-      this.layer()?.resetChrome();
       this.autoplay.soundChanged(false);
       this.source.open(entry);
     });
@@ -227,14 +223,9 @@ export class ReaderViewComponent {
     if (!this.layer()?.leaving()) this.restore.remember(this.entry()?.id, scrollTop);
   }
 
-  /** Jump the reading pane back to the top of the article. */
   scrollToTop(): void {
     this.restore.abort(); // don't let a restore fight the jump
-    this.layer()?.scrollToTop(this.reduceMotion ? 'auto' : 'smooth');
-    // Land focus on the title, not wherever the button was — an unmounted button
-    // drops focus to <body>. preventScroll is needed since the heading is still
-    // off-screen (why the button showed); a plain focus() would cancel the scroll.
-    this.titleHeading()?.nativeElement.focus({ preventScroll: true });
+    this.layer()?.scrollToTop(this.titleHeading()?.nativeElement);
   }
 
   /** Scroll the reading pane to a heading, clearing the chrome that covers the scroller. */

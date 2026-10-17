@@ -1,10 +1,12 @@
 <app-article-layer
+  #articleLayer
   [fullscreen]="fullscreen()"
+  [resetKey]="ref()"
   [progressRail]="progressRail"
   [withTail]="scope.hasTail()"
   [backLabel]="backLabelKey() | transloco"
   (close)="close.emit()"
-  (toTop)="scrollToTop()"
+  (toTop)="articleLayer.scrollToTop(titleHeading)"
   (barResized)="scope.refresh()"
 >
   <span articleMini class="mini-title">{{ title() }}</span>
