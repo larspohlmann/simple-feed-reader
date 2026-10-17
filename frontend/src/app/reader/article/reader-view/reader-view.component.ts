@@ -150,8 +150,8 @@ export class ReaderViewComponent {
   private readonly autoplay = inject(ListAutoplayCoordinator);
   protected readonly progressRail = new ScrollProgressRail({
     isWide: this.screen.isWide,
-    contentBottom: () => this.scope.contentBottom(),
-    layout: this.scope.contentBottom,
+    contentBottom: () => this.scope.readingEnd(),
+    layout: this.scope.readingEnd,
   });
 
   /** The entry's first playable audio enclosure, surfaced as a listen control

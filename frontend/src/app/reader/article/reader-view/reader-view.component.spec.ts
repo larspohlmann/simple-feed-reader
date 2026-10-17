@@ -748,9 +748,30 @@ describe('ReaderViewComponent', () => {
       comments.getBoundingClientRect = () => ({ top: 400, bottom: 2400 }) as DOMRect;
 
       const host = stubGeometry(fixture, 400, 800);
+      TestBed.tick();
+      fixture.detectChanges();
 
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
-      expect(host.querySelector('app-progress-rail:not(.idle)')).toBeNull();
+      expect(host.querySelector('app-progress-rail:not(.idle)')).not.toBeNull();
+    });
+
+    it('runs the rail on through the comments below the body (#1662)', () => {
+      stubComments(signal<CommentsState>({ status: 'idle' }));
+      const fixture = mount(entry({ comments: 'manual' }));
+      const comments = (fixture.nativeElement as HTMLElement).querySelector(
+        'app-entry-comments',
+      ) as HTMLElement;
+      const { scroller, scrollTo, fill } = scrollingArticle(fixture);
+      comments.getBoundingClientRect = () =>
+        ({
+          top: 2400 - scroller.scrollTop,
+          bottom: 4000 - scroller.scrollTop,
+          height: 1600,
+        }) as DOMRect;
+
+      scrollTo(1600);
+
+      expect(fill()).toBe('50');
     });
 
     /** A short post whose one link card reaches `cardsBottom`. */
