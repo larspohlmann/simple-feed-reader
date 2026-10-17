@@ -1,10 +1,10 @@
-import { LinkCardRef } from './query/link-param';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
+import { LinkCardRef } from './query/link-param';
 import { RefreshScope, ScopedMarkReadTarget } from './query/query';
 import { EntryLikeDto, SocialCountsDto } from './entry-social';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';

@@ -344,7 +344,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   // Preserve the underlying list so clearing a direct search returns to it.
   onSearch(term: string): void {
     void this.router.navigate(['/'], {
-      queryParams: { q: term || null, entry: null },
+      queryParams: { q: term || null, entry: null, link: null },
       queryParamsHandling: 'merge',
     });
   }

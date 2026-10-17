@@ -2073,7 +2073,7 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         ['/'],
         expect.objectContaining({
-          queryParams: { q: 'angular', entry: null },
+          queryParams: { q: 'angular', entry: null, link: null },
           queryParamsHandling: 'merge',
         }),
       );
@@ -2088,7 +2088,7 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         ['/'],
         expect.objectContaining({
-          queryParams: { q: null, entry: null },
+          queryParams: { q: null, entry: null, link: null },
           queryParamsHandling: 'merge',
         }),
       );
