@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\Feed;
-use App\Enum\SocialNetwork;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
@@ -14,7 +13,6 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
-use App\Service\Social\Support\BlueskyActor;
 use App\Service\Social\Support\BlueskyProfileLabels;
 use App\Service\Social\Support\ProfileIdentity;
 use App\Service\Url\Support\AbsoluteHttpUrl;
@@ -133,8 +131,8 @@ final readonly class ProfileImageSweep
     {
         $actors = [];
         foreach ($batch as $index => $feed) {
-            $actor = ProfileIdentity::of(SocialNetwork::Bluesky, $feed->getUrl());
-            if (null !== $actor && BlueskyActor::isValid($actor)) {
+            $actor = ProfileIdentity::validBlueskyActorOf($feed->getUrl());
+            if (null !== $actor) {
                 $actors[$index] = $actor;
             }
         }

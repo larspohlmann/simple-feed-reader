@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\Subscription;
-use App\Enum\SocialNetwork;
 use App\Repository\RefusedProfileSubscriptionRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -17,8 +16,7 @@ use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileVisibilityModel;
 use App\Service\Social\Model\RefusedProfileSubscriptionModel;
 use App\Service\Social\Pass\RefusedSubscriptionSelection;
-use App\Service\Social\Support\BlueskyActor;
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Support\ProfileIdentity;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use Psr\Log\LoggerInterface;
@@ -133,8 +131,8 @@ final readonly class HiddenProfileSwitchSweep
     {
         $actors = [];
         foreach ($page as $index => $subscription) {
-            $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $subscription->getFeed()->getUrl());
-            if (null !== $actor && BlueskyActor::isValid($actor)) {
+            $actor = ProfileIdentity::validBlueskyActorOfRssFeed($subscription->getFeed()->getUrl());
+            if (null !== $actor) {
                 $actors[$index] = $actor;
             }
         }
