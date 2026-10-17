@@ -82,7 +82,7 @@ final class EntryPrunerTest extends DbTestCase
     /** A Mastodon profile feed: FeedNetworkListener classifies it by its URL on flush. */
     private function socialFeedWithEntries(int $count, \DateTimeImmutable $createdAt): Feed
     {
-        $feed = $this->withEntries(new Feed('https://mastodon.social/@user' . uniqid() . '.rss'), $count, $createdAt);
+        $feed = $this->withEntries(new Feed('https://mastodon.social/@user' . uniqid('', true) . '.rss'), $count, $createdAt);
         self::assertNotNull($feed->getNetwork());
 
         return $feed;
