@@ -13,7 +13,6 @@ use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\Bluesky\Support\BlueskyEmbedMedia;
 use App\Service\Bluesky\Support\QuotedViewRecord;
 use App\Service\LinkCard\Support\StorableLinkCard;
-use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Text\Support\HtmlEscape;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\HttpsImageUrl;
@@ -25,7 +24,6 @@ final readonly class PostEmbedRenderer
     private const string EXTERNAL = 'app.bsky.embed.external#view';
     private const string RECORD = 'app.bsky.embed.record#view';
     private const string RECORD_WITH_MEDIA = 'app.bsky.embed.recordWithMedia#view';
-    private const string WATCH_LABEL = 'Watch on Bluesky';
     private const string FALLBACK_LABEL = 'View embedded content on Bluesky';
 
     /** Null when the post embeds nothing, or its URI is no post's. */
@@ -50,7 +48,7 @@ final readonly class PostEmbedRenderer
     {
         $rendered = match ($embed->type()) {
             self::IMAGES => $this->images($embed),
-            self::VIDEO => $this->video($embed, $postUrl),
+            self::VIDEO => $this->video($embed),
             self::EXTERNAL => $this->external($embed->node('external')),
             default => null,
         };
@@ -60,14 +58,12 @@ final readonly class PostEmbedRenderer
 
     private function images(JsonNodeModel $embed): ?RenderedEmbedModel
     {
-        $tags = '';
         $media = [];
         foreach ($embed->nodes('images') as $image) {
             $medium = BlueskyEmbedMedia::image($image);
             if ($medium === null) {
                 continue;
             }
-            $tags .= self::imageTag($medium, $image->string('alt') ?? '');
             $media[] = $medium;
         }
 
@@ -76,7 +72,7 @@ final readonly class PostEmbedRenderer
         }
         $lead = new DeclaredImageModel($media[0]->url, $media[0]->width, $media[0]->height);
 
-        return new RenderedEmbedModel(self::figure($tags), $lead, $media);
+        return RenderedEmbedModel::media($lead, $media);
     }
 
     private function external(JsonNodeModel $external): ?RenderedEmbedModel
@@ -87,28 +83,21 @@ final readonly class PostEmbedRenderer
         }
         $still = $gif->previewImageUrl;
 
-        return new RenderedEmbedModel(
-            self::figure(self::imageTag($gif, $gif->alt ?? '')),
+        return RenderedEmbedModel::media(
             $still === null ? null : new DeclaredImageModel($still, $gif->width, $gif->height),
             [$gif],
         );
     }
 
-    private function video(JsonNodeModel $embed, string $postUrl): ?RenderedEmbedModel
+    private function video(JsonNodeModel $embed): ?RenderedEmbedModel
     {
         $medium = BlueskyEmbedMedia::video($embed);
         if ($medium === null) {
             return null;
         }
         $thumbnail = $medium->previewImageUrl;
-        $poster = $thumbnail === null ? '' : sprintf(' poster="%s"', HtmlEscape::text($thumbnail));
 
-        return new RenderedEmbedModel(
-            sprintf(
-                '<figure class="post-video"><video controls preload="none"%s src="%s"></video></figure>',
-                $poster,
-                HtmlEscape::text($medium->url),
-            ) . self::linkParagraph($postUrl, self::WATCH_LABEL),
+        return RenderedEmbedModel::media(
             $thumbnail === null ? null : new DeclaredImageModel($thumbnail, $medium->width, $medium->height),
             [$medium],
         );
@@ -144,28 +133,6 @@ final readonly class PostEmbedRenderer
     private function fallback(string $postUrl): RenderedEmbedModel
     {
         return new RenderedEmbedModel(self::linkParagraph($postUrl, self::FALLBACK_LABEL));
-    }
-
-    private static function figure(string $tags): string
-    {
-        return '<figure class="post-images">' . $tags . '</figure>';
-    }
-
-    private static function imageTag(ParsedMediumModel $medium, string $alt): string
-    {
-        return sprintf(
-            '<img src="%s" alt="%s"%s>',
-            HtmlEscape::text($medium->url),
-            HtmlEscape::text($alt),
-            self::dimensions($medium),
-        );
-    }
-
-    private static function dimensions(ParsedMediumModel $medium): string
-    {
-        return $medium->width === null || $medium->height === null
-            ? ''
-            : sprintf(' width="%d" height="%d"', $medium->width, $medium->height);
     }
 
     private static function linkParagraph(string $url, string $label): string

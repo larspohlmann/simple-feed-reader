@@ -36,6 +36,7 @@ import {
   restoreIntersectionObserver,
 } from '../../../../testing/intersection-observer-testing';
 import { EntryMediumDto } from '../../entry-medium';
+import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { EntryCommentDto } from '../../entry-comment';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
@@ -358,6 +359,59 @@ describe('ReaderViewComponent', () => {
         'STRONG',
         'SMALL',
       ]);
+    });
+
+    describe("the post's own media (#1656)", () => {
+      const PHOTO = 'https://cdn.test/photo.jpg';
+      const photo = (): EntryMediumDto => ({ url: PHOTO, kind: 'image', width: 800, height: 600 });
+      const postWith = (html: string, over: Partial<EntryDto> = {}) =>
+        entryWithBody(html, { titleDerived: true, media: [photo()], ...over });
+
+      it('renders the media after the body', () => {
+        const fixture = mount(postWith('<p>Hi</p>'));
+        const element = fixture.nativeElement as HTMLElement;
+
+        const media = element.querySelector('app-post-media')!;
+        const content = element.querySelector('app-article-content')!;
+        expect(media.querySelector('img')).not.toBeNull();
+        expect(
+          content.compareDocumentPosition(media) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        const shown = fixture.debugElement.query(By.directive(PostMediaComponent));
+        expect((shown.componentInstance as PostMediaComponent).media()).toEqual([photo()]);
+      });
+
+      it('renders nothing while the body is still loading', () => {
+        const built = postWith('<p>Hi</p>');
+        fakeBody.setLoading(built.id);
+
+        const element = mount(built).nativeElement as HTMLElement;
+
+        expect(element.querySelector('app-post-media')).toBeNull();
+      });
+
+      it('still renders the media when the body failed to load', () => {
+        const built = postWith('<p>Hi</p>');
+        fakeBody.setError(built.id);
+
+        const element = mount(built).nativeElement as HTMLElement;
+
+        expect(element.querySelector('app-post-media img')).not.toBeNull();
+      });
+
+      it('renders nothing when the body already shows the picture', () => {
+        const element = mount(postWith(`<p>Hi</p><img src="${PHOTO}">`))
+          .nativeElement as HTMLElement;
+
+        expect(element.querySelector('app-post-media')).toBeNull();
+      });
+
+      it('renders nothing for an article', () => {
+        const element = mount(postWith('<p>Hi</p>', { titleDerived: false }))
+          .nativeElement as HTMLElement;
+
+        expect(element.querySelector('app-post-media')).toBeNull();
+      });
     });
 
     it('renders the quoted post of a quote share after the body, in the article layout', () => {

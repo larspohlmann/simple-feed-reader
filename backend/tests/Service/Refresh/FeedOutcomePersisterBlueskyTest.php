@@ -74,7 +74,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
         self::assertSame(self::TISCH_TEXT, $tisch->getSummary());
         $video = $this->entry(self::VIDEO_POST);
         self::assertStringNotContainsString('[contains quote post', (string) $video->getContentHtml());
-        self::assertStringContainsString('<figure class="post-video"><video', (string) $video->getContentHtml());
+        self::assertStringNotContainsString('<video', (string) $video->getContentHtml());
         self::assertSame('video', $video->getMedia()[1]->kind ?? null);
         self::assertSame(0, $this->pendingCount());
         self::assertCount(2, $this->indexWriter->upserts);

@@ -25,6 +25,12 @@ final readonly class RenderedEmbedModel
     ) {
     }
 
+    /** @param list<ParsedMediumModel> $media */
+    public static function media(?DeclaredImageModel $leadImage, array $media): self
+    {
+        return new self('', $leadImage, $media);
+    }
+
     public static function card(LinkCardContent $card, ?DeclaredImageModel $leadImage): self
     {
         return new self('', $leadImage, linkCards: [$card]);

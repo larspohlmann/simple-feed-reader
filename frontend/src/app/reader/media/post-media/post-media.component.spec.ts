@@ -71,6 +71,16 @@ describe('PostMediaComponent', () => {
     expect(host.querySelectorAll('img.item')).toHaveLength(2);
   });
 
+  it('describes a picture by its alt text, and leaves one without decorative', async () => {
+    const { fixture } = await mount([{ ...image(1), alt: 'A donkey' }, image(2)]);
+    const [described, plain] = Array.from(
+      fixture.nativeElement.querySelectorAll('img.item') as NodeListOf<HTMLImageElement>,
+    );
+
+    expect(described.getAttribute('alt')).toBe('A donkey');
+    expect(plain.getAttribute('alt')).toBe('');
+  });
+
   it('plays a video inline from its poster, named by the given label', async () => {
     const { fixture } = await mount([clip]);
     const video = fixture.nativeElement.querySelector('.video-slot video') as HTMLVideoElement;

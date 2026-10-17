@@ -36,7 +36,13 @@ final class BlueskyEmbedMedia
         }
         $ratio = $image->node('aspectRatio');
 
-        return new ParsedMediumModel($url, VisualMediaKind::Image, $ratio->int('width'), $ratio->int('height'));
+        return new ParsedMediumModel(
+            $url,
+            VisualMediaKind::Image,
+            $ratio->int('width'),
+            $ratio->int('height'),
+            alt: $image->string('alt'),
+        );
     }
 
     public static function video(JsonNodeModel $embed): ?ParsedMediumModel

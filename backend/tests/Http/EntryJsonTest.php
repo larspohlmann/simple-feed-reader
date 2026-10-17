@@ -509,16 +509,20 @@ final class EntryJsonTest extends TestCase
         );
     }
 
-    public function testAnUntitledPostHasNoExcerpt(): void
+    public function testAnUntitledBlueskyPostStoredBeforeItsMediaLeftTheBodyHasMediaAndNoExcerpt(): void
     {
         $entry = $this->entryTitled('');
         $entry->setHeadline(Headline::untitledPost());
         $entry->setContentHtml(
-            '<figure class="post-video"><video src="https://v.test/p.m3u8"></video></figure>'
-            . '<p><a href="https://bsky.app/profile/a/post/1">Watch on Bluesky</a></p>',
+            '<figure class="post-images"><img src="https://v.test/p.jpg" alt=""></figure>'
+            . '<p><a href="https://bsky.app/profile/a/post/1">View embedded content on Bluesky</a></p>',
         );
+        $entry->setMedia([new EntryMedium('https://v.test/p.m3u8', 'video', 1080, 1920)], []);
 
-        self::assertSame('', EntryJson::listRow($this->row($entry))['excerpt']);
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('', $json['excerpt']);
+        self::assertSame('https://v.test/p.m3u8', $json['media'][0]['url']);
     }
 
     public function testAnUntitledPostKeepsTheTextOfItsSummary(): void
@@ -526,7 +530,9 @@ final class EntryJsonTest extends TestCase
         $entry = $this->entryTitled('');
         $entry->setHeadline(Headline::untitledPost());
         $entry->setSummary('Words that live only in the summary.');
-        $entry->setContentHtml('<p><a href="https://bsky.app/profile/a/post/1">Watch on Bluesky</a></p>');
+        $entry->setContentHtml(
+            '<p><a href="https://bsky.app/profile/a/post/1">View embedded content on Bluesky</a></p>',
+        );
 
         self::assertSame(
             'Words that live only in the summary.',
