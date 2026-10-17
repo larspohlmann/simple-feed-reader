@@ -16,7 +16,6 @@ use App\Service\Subscription\Model\SubscribeRequestModel;
 use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
 use Psr\Log\LoggerInterface;
 
-/** A bsky.app profile hidden from logged-out readers: its RSS answers 403, so it is read through the user's account. */
 final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterface
 {
     private const string CONNECT_AN_ACCOUNT = 'This profile is only visible to logged-in Bluesky users. Connect a'

@@ -14,7 +14,6 @@ use App\Service\Social\Support\BlueskyActor;
 use App\Service\Social\Support\ProfileFeedUrl;
 use Psr\Log\LoggerInterface;
 
-/** The chosen Bluesky follows that hide their posts from logged-out readers, so their RSS would answer 403. */
 final readonly class HiddenImportFollows
 {
     public function __construct(

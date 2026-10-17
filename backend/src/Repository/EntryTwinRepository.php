@@ -11,11 +11,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * Pairs a feed's entries with the same posts in another feed, limited to the posts a user holds a state or a like on.
- *
- * @extends ServiceEntityRepository<Entry>
- */
+/** @extends ServiceEntityRepository<Entry> */
 final class EntryTwinRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)

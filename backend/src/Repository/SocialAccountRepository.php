@@ -72,7 +72,6 @@ final class SocialAccountRepository extends ServiceEntityRepository
         return $this->findOneBy(['user' => $user, 'network' => $network], self::ACTING_ORDER);
     }
 
-    /** The account that acts on $network among those still connected: one that needs a reconnect cannot read. */
     public function findReadyActingOnNetwork(User $user, SocialNetwork $network): ?SocialAccount
     {
         return $this->findOneBy(

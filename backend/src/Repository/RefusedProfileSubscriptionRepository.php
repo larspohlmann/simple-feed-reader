@@ -22,12 +22,7 @@ final class RefusedProfileSubscriptionRepository extends ServiceEntityRepository
         parent::__construct($registry, Subscription::class);
     }
 
-    /**
-     * Subscriptions to Bluesky profile RSS feeds whose last fetch was refused with a 403, held by a user with a
-     * connected Bluesky account: the ones a hidden profile's author feed may replace. Feed by feed.
-     *
-     * @return list<Subscription>
-     */
+    /** @return list<Subscription> */
     public function findOnRefusedBlueskyProfileFeeds(int $limit): array
     {
         /** @var list<Subscription> $subscriptions */
