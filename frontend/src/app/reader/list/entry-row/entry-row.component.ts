@@ -27,6 +27,7 @@ import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service
 import { ThreadLineComponent } from '../../../shared/thread-line/thread-line.component';
 import { ThreadLinePostComponent } from '../../../shared/thread-line/thread-line-post.component';
 import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.component';
+import { threadTotal } from '../../thread-post';
 
 @Component({
   selector: 'app-entry-row',
@@ -65,7 +66,7 @@ export class EntryRowComponent {
    *  `<app-marked-text>` instances per row, so the ordinary list pays nothing
    *  for a feature it never uses. */
   readonly marking = computed(() => this.terms().length > 0);
-  protected readonly total = computed(() => this.entry().thread.length + 1);
+  protected readonly total = computed(() => threadTotal(this.entry()));
 
   readonly imgError = signal(false);
   // The entry's image, from the same shared helper the magazine uses: the
