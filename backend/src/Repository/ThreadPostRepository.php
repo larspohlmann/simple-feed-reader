@@ -133,13 +133,7 @@ final class ThreadPostRepository extends ServiceEntityRepository
         foreach ($rows as $row) {
             $placed[(int) $row['postId']] = new PlacedLinkCardModel(
                 (int) $row['position'],
-                new LinkCardContent(
-                    $row['url'],
-                    $row['title'],
-                    $row['description'],
-                    $row['imageUrl'],
-                    $row['siteName'],
-                ),
+                LinkCardContent::fromRow($row),
             );
         }
 

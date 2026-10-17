@@ -46,7 +46,7 @@ final class LinkCardRepository extends ServiceEntityRepository
     {
         $grouped = [];
         foreach ($this->rootCardRows($entryIds) as $row) {
-            $grouped[(int) $row['entryId']][] = self::contentOf($row);
+            $grouped[(int) $row['entryId']][] = LinkCardContent::fromRow($row);
         }
 
         return $grouped;
@@ -61,7 +61,10 @@ final class LinkCardRepository extends ServiceEntityRepository
     {
         $grouped = [];
         foreach ($this->rootCardRows($entryIds) as $row) {
-            $grouped[(int) $row['entryId']][] = new PlacedLinkCardModel((int) $row['position'], self::contentOf($row));
+            $grouped[(int) $row['entryId']][] = new PlacedLinkCardModel(
+                (int) $row['position'],
+                LinkCardContent::fromRow($row),
+            );
         }
 
         return $grouped;
@@ -89,7 +92,7 @@ final class LinkCardRepository extends ServiceEntityRepository
 
         return $row === null
             ? throw new RecordNotFoundException('No such entry.')
-            : self::contentOf($row);
+            : LinkCardContent::fromRow($row);
     }
 
     /** An entry's root and reply cards share one numbering, cards still waiting for the flush included. */
@@ -152,11 +155,5 @@ final class LinkCardRepository extends ServiceEntityRepository
             ->getArrayResult();
 
         return $rows;
-    }
-
-    /** @param array{url: string, title: string, description: ?string, imageUrl: ?string, siteName: string} $row */
-    private static function contentOf(array $row): LinkCardContent
-    {
-        return new LinkCardContent($row['url'], $row['title'], $row['description'], $row['imageUrl'], $row['siteName']);
     }
 }
