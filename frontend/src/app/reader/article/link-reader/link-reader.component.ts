@@ -89,7 +89,7 @@ export class LinkReaderComponent {
   );
   protected readonly originalUrl = computed(
     () =>
-      this.card()?.url ?? this.source.article()?.url ?? this.source.failure()?.failure?.url ?? null,
+      this.card()?.url ?? this.source.article()?.url ?? this.source.failure()?.url ?? null,
   );
   protected readonly backLabelKey = computed(() =>
     this.returnsTo() === 'article' ? 'reader.backToArticle' : 'reader.backToList',

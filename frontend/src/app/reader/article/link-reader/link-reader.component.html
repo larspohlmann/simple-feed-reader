@@ -15,7 +15,7 @@
     </span>
   }
   <div articleBar class="nav">
-    @if (source.article() || source.failure()) {
+    @if (source.article() || source.failed()) {
       <button
         appListAction
         class="mobile-icon-only"
@@ -55,7 +55,7 @@
           (decorated)="scope.refresh()"
         />
       }
-      @if (source.failure()) {
+      @if (source.failed()) {
         <app-warning-box class="reader-fallback">
           <span class="warning-glyph" aria-hidden="true">⚠</span>
           <div class="warning-text">
