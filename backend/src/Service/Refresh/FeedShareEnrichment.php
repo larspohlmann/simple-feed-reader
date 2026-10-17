@@ -8,7 +8,6 @@ use App\Entity\Feed;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Social\SelfThreadEnricher;
 
-/** What a refresh settles for a feed once its entries are stored: Bluesky embeds first, then self-reply threads. */
 final readonly class FeedShareEnrichment
 {
     public function __construct(private PostEnricher $postEnricher, private SelfThreadEnricher $selfThreads)

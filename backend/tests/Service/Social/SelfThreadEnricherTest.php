@@ -14,6 +14,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentEmbedsModel;
 use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\SelfThreadEnricher;
@@ -106,6 +107,21 @@ final class SelfThreadEnricherTest extends DbTestCase
         self::assertSame([], $posts);
         self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
         self::assertSame(['warning'], array_column($this->logger->records, 'level'));
+    }
+
+    public function testAThrottleDuringTheCallLeavesTheRowQueued(): void
+    {
+        $entry = $this->queuedEntry();
+        $this->thread->failInPublicWith(new SocialNetworkThrottledException('slow down', 30));
+
+        $this->enricher()->enrich($this->feed);
+
+        $row = $this->onlyRow();
+        self::assertSame(ShareEnrichmentKind::SelfThread, $row->getKind());
+        self::assertNull($this->claimedAtOf($row));
+        $posts = SelfThreadEnrichers::threadPosts($this->entityManager)->byEntryIds([$entry->requireId()]);
+        self::assertSame([], $posts);
+        self::assertSame([], $this->logger->records);
     }
 
     public function testRowsPastTheGiveUpWindowAreDropped(): void

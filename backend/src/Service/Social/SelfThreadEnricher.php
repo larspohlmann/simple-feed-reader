@@ -92,8 +92,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     }
 
     /**
-     * A chunk settles only the rows the claim still holds: a slow pass may have outlived the lease on later ones. A row
-     * handed to the link-card pass is released only once its new kind is flushed, or this pass would refill it.
+     * A row handed to the link-card pass is released only once its new kind is flushed, or this pass would refill it.
      *
      * @param list<ShareEnrichment> $queued
      */
@@ -161,6 +160,8 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
             $answer = $thread->inPublic($address->address);
 
             return $this->chain->of($thread->repliesIn($address->address, $answer->body));
+        } catch (SocialNetworkThrottledException $exception) {
+            throw $exception;
         } catch (
             SocialPostNotFoundException
             | SocialNetworkUnreachableException
