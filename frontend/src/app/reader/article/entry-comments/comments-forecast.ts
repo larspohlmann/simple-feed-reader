@@ -34,7 +34,13 @@ export class CommentsForecast {
     const entry = this.entry();
     if (!entry?.social || entry.comments !== 'auto' || !this.awaitsComments(entry.id)) return null;
     const replies = this.replies(entry.id);
-    if (replies === null || Number.isNaN(readingFontSize) || section.clientWidth === 0) return null;
+    if (
+      replies === null ||
+      !Number.isFinite(readingFontSize) ||
+      readingFontSize <= 0 ||
+      section.clientWidth === 0
+    )
+      return null;
     return (
       expectedThreadSize(replies) * expectedCommentHeight(readingFontSize, section.clientWidth)
     );

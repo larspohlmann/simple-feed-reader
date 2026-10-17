@@ -107,5 +107,6 @@ describe('CommentsForecast', () => {
 
     expect(forecast.expectedHeight(sectionOfWidth(0), READING_FONT)).toBeNull();
     expect(forecast.expectedHeight(sectionOfWidth(PHONE_WIDTH), Number.NaN)).toBeNull();
+    expect(forecast.expectedHeight(sectionOfWidth(PHONE_WIDTH), 0)).toBeNull();
   });
 });

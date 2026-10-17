@@ -24,7 +24,7 @@ type ElementQuery = Signal<ElementRef<HTMLElement> | undefined>;
 export interface TrailingPart {
   readonly query: ElementQuery;
   readonly joinsFocus: boolean;
-  /** The height the part will reach once its content arrives, or null when it shows its final content. */
+  /** The part's height once its content arrives, or null when it already shows it. */
   readonly expectedHeight?: (part: HTMLElement, readingFontSize: number) => number | null;
 }
 
@@ -169,8 +169,8 @@ export class ReadingScope {
   }
 
   /**
-   * Measure how far the body and the whole scope reach inside the pane. Takes
-   * the article's own content box — never the panel's, which already includes
+   * Measure where the scope ends on screen (for the tail) and where it will end once
+   * still-loading parts grow (for the rail). Takes the article's own content box — never the panel's, which already includes
    * the tail and would feed the measurement back into itself.
    */
   private measureScrollRange(): void {
@@ -190,12 +190,13 @@ export class ReadingScope {
   }
 
   private expectedGrowth(content: HTMLElement): number {
-    const readingFontSize = parseFloat(getComputedStyle(content).fontSize);
+    let readingFontSize: number | undefined;
     return this.trailing.reduce((growth, part) => {
       const element = untracked(part.query)?.nativeElement;
-      const expected =
-        element && part.expectedHeight ? part.expectedHeight(element, readingFontSize) : null;
-      if (!element || expected === null) return growth;
+      if (!element || !part.expectedHeight) return growth;
+      readingFontSize ??= parseFloat(getComputedStyle(content).fontSize);
+      const expected = part.expectedHeight(element, readingFontSize);
+      if (expected === null) return growth;
       return growth + Math.max(0, expected - element.getBoundingClientRect().height);
     }, 0);
   }
