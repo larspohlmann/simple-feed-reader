@@ -3,6 +3,7 @@ import { EntryDto } from '../../models';
 import { EntryMediumDto } from '../../entry-medium';
 import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
 import { aLinkCard, aQuotedPost, anEntry } from '../../../../testing/entry-testing';
+import { aThreadPost } from '../../../../testing/thread-testing';
 
 const card = aLinkCard();
 
@@ -106,5 +107,19 @@ describe('the quote share', () => {
 
   it('claims nothing for an article that merely carries a quote', () => {
     expect(shareKind(anEntry({ share: null, quote: aQuotedPost() }))).toBeNull();
+  });
+});
+
+describe('the thread share', () => {
+  it('claims the thread block ahead of the link block when the entry folds replies', () => {
+    expect(
+      shareKind(anEntry({ share: 'link', linkCards: [aLinkCard()], thread: [aThreadPost()] })),
+    ).toBe('thread');
+  });
+
+  it('leaves a link share without folded replies to the link block', () => {
+    expect(shareKind(anEntry({ share: 'link', linkCards: [aLinkCard()], thread: [] }))).toBe(
+      'link',
+    );
   });
 });

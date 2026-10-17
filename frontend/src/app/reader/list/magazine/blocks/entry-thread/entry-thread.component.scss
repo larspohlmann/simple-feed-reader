@@ -1,0 +1,39 @@
+@use '../../magazine-card';
+@use '../../../post-text';
+
+:host {
+  display: block;
+}
+
+.thread {
+  @include magazine-card.chrome;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--card-pad);
+  cursor: pointer;
+
+  @include magazine-card.card-states;
+}
+
+.title {
+  @include magazine-card.headline;
+}
+
+.dek {
+  @include magazine-card.dek;
+}
+
+.reply {
+  @include magazine-card.headline;
+  @include post-text.post-text;
+}
+
+p > app-thread-count {
+  margin-inline-start: var(--space-1);
+}
+
+:is(.dek, app-link-card):not(:first-child) {
+  margin-top: var(--space-2);
+}

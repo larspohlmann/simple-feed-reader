@@ -1,6 +1,7 @@
 import { BLOCK_HEIGHT } from './magazine-block';
-import { blockHeight, quotingHeight } from './magazine-block-height';
+import { blockHeight, quotingHeight, threadHeight } from './magazine-block-height';
 import { aLinkCard, aQuotedPost, anEntry } from '../../../../testing/entry-testing';
+import { aThreadPost } from '../../../../testing/thread-testing';
 import { EntryMediumDto } from '../../entry-medium';
 import { QuotedPostDto } from '../../quoted-post/quoted-post';
 
@@ -25,6 +26,12 @@ describe('blockHeight', () => {
     const entry = post('Hi', aQuotedPost({ text: lines(5) }));
 
     expect(blockHeight('quoting', entry)).toBe(quotingHeight(entry));
+  });
+
+  it('reads the entry for a thread block', () => {
+    const entry = anEntry({ thread: [aThreadPost()] });
+
+    expect(blockHeight('thread', entry)).toBe(threadHeight(entry));
   });
 });
 
@@ -89,5 +96,39 @@ describe('quotingHeight', () => {
     const withCards = anEntry({ ...post('Hi'), linkCards: [aLinkCard(), aLinkCard()] });
 
     expect(quotingHeight(withCards)).toBe(quotingHeight(post('Hi')));
+  });
+});
+
+describe('threadHeight', () => {
+  const threadOf = (...replies: ReturnType<typeof aThreadPost>[]) =>
+    anEntry({ titleDerived: true, title: 'Hi', linkCards: [], thread: replies });
+
+  it('is shorter with a text reply than with a carded one, both above the bare chrome', () => {
+    const textOnly = threadHeight(threadOf(aThreadPost({ text: 'A reply' })));
+    const carded = threadHeight(
+      threadOf(aThreadPost({ text: 'A reply', linkCard: aLinkCard({ imageUrl: null }) })),
+    );
+
+    const chrome = 82;
+
+    expect(textOnly).toBeLessThan(carded);
+    expect(textOnly).toBeGreaterThan(chrome);
+  });
+
+  it('gives a card with a picture more height than a bare one', () => {
+    const bare = threadHeight(threadOf(aThreadPost({ linkCard: aLinkCard({ imageUrl: null }) })));
+    const pictured = threadHeight(
+      threadOf(aThreadPost({ linkCard: aLinkCard({ imageUrl: 'https://i.test/a.jpg' }) })),
+    );
+
+    expect(pictured).toBeGreaterThan(bare);
+  });
+
+  it('grows with a reply’s text up to three lines, then stops', () => {
+    const one = threadHeight(threadOf(aThreadPost({ text: 'x'.repeat(40) })));
+    const three = threadHeight(threadOf(aThreadPost({ text: 'x'.repeat(3 * 44) })));
+
+    expect(three).toBeGreaterThan(one);
+    expect(threadHeight(threadOf(aThreadPost({ text: 'x'.repeat(30 * 44) })))).toBe(three);
   });
 });

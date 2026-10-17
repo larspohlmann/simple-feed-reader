@@ -100,7 +100,13 @@ export function sharesQuotedPost(entry: EntryDto): boolean {
   return entry.share === 'quote' && entry.quote !== null;
 }
 
+/** An entry with its author's self-replies folded in (#1668). */
+export function sharesThread(entry: EntryDto): boolean {
+  return entry.thread.length > 0;
+}
+
 const SHARES: Record<ShareKind, (entry: EntryDto) => boolean> = {
+  thread: sharesThread,
   link: sharesLink,
   media: sharesMedia,
   quoting: sharesQuotedPost,

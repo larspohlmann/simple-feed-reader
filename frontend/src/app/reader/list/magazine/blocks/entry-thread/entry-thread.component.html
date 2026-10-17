@@ -1,0 +1,50 @@
+<article class="thread" [appOpensEntry]="entry()">
+  <app-entry-kicker-line [entry]="entry()" />
+  <app-thread-line>
+    <app-thread-line-post>
+      @if (headline()) {
+        <p class="title" [class.post]="isPost()">
+          {{ headline() }} <app-thread-count [position]="1" [total]="total()" />
+        </p>
+      }
+      @if (snippet()) {
+        <p class="dek">{{ snippet() }}</p>
+      }
+      @if (entry().linkCards[0]; as card) {
+        <app-link-card
+          [card]="card"
+          layout="block"
+          [openableInReader]="true"
+          (openInReader)="openInReaderAlone(card.position)"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$event.stopPropagation()"
+          (keydown.space)="$event.stopPropagation()"
+        />
+      }
+    </app-thread-line-post>
+    @for (reply of entry().thread; track $index; let index = $index) {
+      <app-thread-line-post>
+        @if (reply.text) {
+          <p class="reply">
+            {{ reply.text }} <app-thread-count [position]="index + 2" [total]="total()" />
+          </p>
+        } @else {
+          <app-thread-count [position]="index + 2" [total]="total()" />
+        }
+        @if (reply.linkCard; as card) {
+          <app-link-card
+            [card]="card"
+            layout="block"
+            [openableInReader]="true"
+            (openInReader)="openInReaderAlone(card.position)"
+            (click)="$event.stopPropagation()"
+            (keydown.enter)="$event.stopPropagation()"
+            (keydown.space)="$event.stopPropagation()"
+          />
+        }
+      </app-thread-line-post>
+    }
+  </app-thread-line>
+  <app-entry-meta [entry]="entry()" [tags]="tags()" />
+  <app-entry-duplicates [entry]="entry()" />
+</article>

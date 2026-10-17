@@ -9,6 +9,7 @@ import { EntryThumbComponent } from './blocks/entry-thumb/entry-thumb.component'
 import { EntryQuoteComponent } from './blocks/entry-quote/entry-quote.component';
 import { EntryKickerComponent } from './blocks/entry-kicker/entry-kicker.component';
 import { EntryLinkComponent } from './blocks/entry-link/entry-link.component';
+import { EntryThreadComponent } from './blocks/entry-thread/entry-thread.component';
 import { EntryMediaComponent } from './blocks/entry-media/entry-media.component';
 import { EntryQuotingComponent } from './blocks/entry-quoting/entry-quoting.component';
 import { SourceGroupComponent } from './source-group.component';
@@ -29,6 +30,7 @@ export const NO_TAGS: SubscriptionTagDto[] = [];
     EntryQuoteComponent,
     EntryKickerComponent,
     EntryLinkComponent,
+    EntryThreadComponent,
     EntryMediaComponent,
     EntryQuotingComponent,
     SourceGroupComponent,
