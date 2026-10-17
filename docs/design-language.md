@@ -1400,7 +1400,7 @@ thread line. `<app-thread-line>` is the list (`role="list"`); each
 `--text-muted`, the first post's `--text-secondary`, and, on every post but the
 last, a 2px `--border-strong` line down to the next dot. `<app-thread-count>` is
 the `n/N` pill: `--fs-xs`, `--text-secondary` on a `--border` fill,
-`--radius-sm`.
+`--radius-sm`, `aria-hidden`, since the list roles already announce the position.
 
 | Component | Input | Type |
 |---|---|---|
@@ -1747,7 +1747,7 @@ relative units for the budget, not a layout guarantee.
 | **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
 | **Link** (#1502) | 463px | the shared link's card, under the title and dek; the card states every chrome block shares | a link share (`sharesLink`: `share` is `link`) with its card, or one still being completed — pinned, whatever its slot |
 | **Media** (#1522) | 463px | under the title and dek, with the card states every chrome block shares (a post's text clamps at 6 lines), the shared media uncropped and centred in its card: one item at its own aspect ratio, height-capped by `--media-share-max-h`; 2–4 in a 16:9 grid; a video plays inline through hls.js. A YouTube Short's cover is cropped to the picture's `imageAspectRatio`; its play button loads the allow-listed nocookie player in place, which goes back to the cover when an entry opens, the card scrolls away or the block is destroyed (`media-pause`) | a media share (`sharesMedia`: `share` is `media`) with at least one image or video — pinned like Link, whatever its slot |
-| **Thread** (#1668) | per entry (`threadHeight`) | each reply's card under that reply, as `<app-link-card layout="block">`; the root and its replies on `<app-thread-line>`, counted `n/N` | an entry with its author's self-replies folded in (`sharesThread`: `thread` is not empty) — pinned ahead of Link |
+| **Thread** (#1668) | per entry (`threadHeight`) | the root and its replies on `<app-thread-line>`, counted `n/N`; the root keeps what its own share shows (a media or quote share's media through `<app-post-media>`, a quote's `<app-quoted-post layout="block">`, a link share's card or its placeholder), and each reply's media and card sit under that reply | an entry with its author's self-replies folded in (`sharesThread`: `thread` is not empty) — pinned ahead of Link |
 | **Quoting** (#1612) | per entry (`quotingHeight`) | the post's own media through `<app-post-media>`, then the quoted post nested in `<app-quoted-post layout="block">`: avatar, name, @handle, narrow time; the quoted text clamps at 8 lines, the post's own at 6; the quoted media in the media share's grid, a video playable in place. Clicking the video plays it, the rest of the box opens the quoted post, the rest of the card the entry | a quote share (`sharesQuotedPost`: `share` is `quote` and `quote` is set) — pinned like Link |
 | **Wide** | 321px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
 | **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |

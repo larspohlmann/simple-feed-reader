@@ -40,7 +40,10 @@ describe('the thread line', () => {
     expect(post.querySelector('.content')!.textContent).toContain('First');
   });
 
-  it('counts a post as n/N', () => {
-    expect(mount().querySelector('app-thread-count')!.textContent!.trim()).toBe('2/3');
+  it('counts a post as n/N, hidden from assistive technology the list roles already serve', () => {
+    const count = mount().querySelector('app-thread-count')!;
+
+    expect(count.textContent!.trim()).toBe('2/3');
+    expect(count.getAttribute('aria-hidden')).toBe('true');
   });
 });

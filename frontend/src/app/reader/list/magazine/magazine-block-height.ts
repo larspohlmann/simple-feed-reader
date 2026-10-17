@@ -1,8 +1,9 @@
 import { EntryDto } from '../../models';
 import { EntryMediumDto, mediumRatio } from '../../entry-medium';
-import { entryHeadline } from '../../entry/entry-text';
+import { entryDek, entryHeadline } from '../../entry/entry-text';
+import { QuotedPostDto } from '../../quoted-post/quoted-post';
 import { BLOCK_HEIGHT, EntryKind } from './magazine-block';
-import { sharedMedia } from './magazine-slot-fit';
+import { sharedMedia, sharesQuotedPost, threadRootMedia } from './magazine-slot-fit';
 import { LinkCardDto } from '../../link-card/link-card';
 
 /** Measured at 390px viewport width, like BLOCK_HEIGHT; a quote share's parts, in the same units. */
@@ -27,7 +28,12 @@ const THREAD = {
   chrome: 82,
   line: 22.5,
   charsPerLine: 44,
-  linesMax: 3,
+  // In step with `$outlier-lines` in `_post-text.scss`, the clamp a post's text renders under.
+  linesMax: 30,
+  dekLine: 18.2,
+  dekCharsPerLine: 50,
+  dekLinesMax: 3,
+  mediaWidth: 320,
   cardWithImage: 330,
   cardBare: 110,
   gap: 12,
@@ -41,18 +47,30 @@ export function blockHeight(kind: EntryKind, entry: EntryDto): number {
   return BLOCK_HEIGHT[kind];
 }
 
-/** Chrome, then each post on the thread line: its text, its card and the gap below it. */
+/** Chrome, then each post on the thread line: its text, media, quote, card and the gap below it. */
 export function threadHeight(entry: EntryDto): number {
-  const root = threadPostHeight(entryHeadline(entry), entry.linkCards[0] ?? null);
   return entry.thread.reduce(
-    (sum, reply) => sum + threadPostHeight(reply.text, reply.linkCard),
-    THREAD.chrome + root,
+    (sum, reply) => sum + threadPostHeight(reply.text, reply.media, reply.linkCard),
+    THREAD.chrome + threadRootHeight(entry),
   );
 }
 
-function threadPostHeight(text: string, card: LinkCardDto | null): number {
+function threadRootHeight(entry: EntryDto): number {
+  const quote = sharesQuotedPost(entry) ? entry.quote : null;
+  const pendingCard = entry.linkCards.length === 0 && entry.pending ? THREAD.cardBare : 0;
+  return (
+    threadPostHeight(entryHeadline(entry), threadRootMedia(entry), entry.linkCards[0] ?? null) +
+    THREAD.dekLine * lineCount(entryDek(entry), THREAD.dekCharsPerLine, THREAD.dekLinesMax) +
+    (quote ? quotedBoxHeight(quote) + QUOTING.gap : 0) +
+    pendingCard
+  );
+}
+
+function threadPostHeight(text: string, media: EntryMediumDto[], card: LinkCardDto | null): number {
   const lines = THREAD.line * lineCount(text, THREAD.charsPerLine, THREAD.linesMax);
-  return lines + threadCardHeight(card) + THREAD.gap;
+  return (
+    lines + withGap(mediaHeight(media, THREAD.mediaWidth)) + threadCardHeight(card) + THREAD.gap
+  );
 }
 
 function threadCardHeight(card: LinkCardDto | null): number {
@@ -68,12 +86,17 @@ export function quotingHeight(entry: EntryDto): number {
     withGap(mediaHeight(sharedMedia(entry), QUOTING.ownMediaWidth));
   const quote = entry.quote;
   if (!quote) return QUOTING.chrome + own;
-  const quoted =
+  return QUOTING.chrome + own + QUOTING.gap + quotedBoxHeight(quote);
+}
+
+/** The quoted box: its header, text, media and nested-quote line. */
+function quotedBoxHeight(quote: QuotedPostDto): number {
+  return (
     QUOTING.quoteChrome +
     QUOTING.quoteLine * lineCount(quote.text, QUOTING.quoteCharsPerLine, QUOTING.quoteLinesMax) +
     withGap(mediaHeight(quote.media, QUOTING.quoteMediaWidth)) +
-    (quote.nestedQuote ? QUOTING.gap + QUOTING.nestedLine : 0);
-  return QUOTING.chrome + own + QUOTING.gap + quoted;
+    (quote.nestedQuote ? QUOTING.gap + QUOTING.nestedLine : 0)
+  );
 }
 
 /** Lines the text wraps to at the measure, each line break starting a new one, at most `max`. */

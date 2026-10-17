@@ -5,7 +5,10 @@ import { EntryThreadComponent } from './entry-thread.component';
 import { EntryDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { LinkReaderNavigation } from '../../../../shell/link-reader-navigation.service';
-import { aLinkCard, anEntry } from '../../../../../../testing/entry-testing';
+import { PreviewProgress } from '../../../../link-card/preview-progress';
+import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
+import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
+import { aLinkCard, aQuotedPost, anEntry } from '../../../../../../testing/entry-testing';
 import { aThreadPost } from '../../../../../../testing/thread-testing';
 
 const entryActions = {
@@ -30,7 +33,7 @@ const thread = (over: Partial<EntryDto> = {}): EntryDto =>
     linkCards: [aLinkCard({ position: 0 })],
     thread: [
       aThreadPost({ text: 'The first reply.' }),
-      aThreadPost({ text: '', linkCard: aLinkCard({ url: 'https://reply.test/', position: 0 }) }),
+      aThreadPost({ text: '', linkCard: aLinkCard({ url: 'https://reply.test/', position: 1 }) }),
     ],
     ...over,
   });
@@ -41,6 +44,8 @@ function mount(testEntry: EntryDto): HTMLElement {
     providers: [
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: LinkReaderNavigation, useValue: navigation },
+      { provide: PreviewProgress, useValue: { isLoading: () => true } },
+      { provide: ImageProxyService, useValue: neverRecoveringImageProxy() },
       provideRouter([]),
     ],
   });
@@ -81,8 +86,73 @@ describe('EntryThreadComponent', () => {
 
     reply.querySelector<HTMLButtonElement>('button.open-in-reader')!.click();
 
-    expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: 41, position: 0 });
+    expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: 41, position: 1 });
     expect(entryActions.open).not.toHaveBeenCalled();
+  });
+
+  it('opens the root’s card alone in the reader by its own position', () => {
+    const root = mount(thread()).querySelector('app-thread-line-post')!;
+
+    root.querySelector<HTMLButtonElement>('button.open-in-reader')!.click();
+
+    expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: 41, position: 0 });
+  });
+
+  it('counts a root that carries only its card', () => {
+    const root = mount(thread({ excerpt: '', title: '' })).querySelector('app-thread-line-post')!;
+
+    expect(root.querySelector('.title')).toBeNull();
+    expect(root.querySelector('app-thread-count')!.textContent!.trim()).toBe('1/3');
+  });
+
+  it('holds the root card’s place while the post is still being completed', () => {
+    const root = mount(thread({ linkCards: [], pending: true })).querySelector(
+      'app-thread-line-post',
+    )!;
+
+    expect(root.querySelector('app-link-card-placeholder')).not.toBeNull();
+  });
+
+  it('shows a media root’s own media in the root post', () => {
+    const root = mount(
+      thread({
+        share: 'media',
+        linkCards: [],
+        media: [{ url: 'https://i.test/a.jpg', kind: 'image', width: 800, height: 600 }],
+      }),
+    ).querySelector('app-thread-line-post')!;
+
+    expect(root.querySelector('app-post-media img')).not.toBeNull();
+  });
+
+  it('shows no lead image in a link root, whose card already carries the picture', () => {
+    const root = mount(thread({ imageUrl: 'https://i.test/lead.jpg' })).querySelector(
+      'app-thread-line-post',
+    )!;
+
+    expect(root.querySelector('app-post-media')).toBeNull();
+  });
+
+  it('shows a quote root’s quoted post in the root post', () => {
+    const root = mount(
+      thread({ share: 'quote', linkCards: [], quote: aQuotedPost() }),
+    ).querySelector('app-thread-line-post')!;
+
+    expect(root.querySelector('app-quoted-post')).not.toBeNull();
+  });
+
+  it('shows a reply’s media under that reply', () => {
+    const reply = mount(
+      thread({
+        thread: [
+          aThreadPost({
+            media: [{ url: 'https://i.test/r.jpg', kind: 'image', width: 800, height: 600 }],
+          }),
+        ],
+      }),
+    ).querySelectorAll('app-thread-line-post')[1];
+
+    expect(reply.querySelector('app-post-media img')).not.toBeNull();
   });
 
   it('leaves the root card out when the root has none', () => {

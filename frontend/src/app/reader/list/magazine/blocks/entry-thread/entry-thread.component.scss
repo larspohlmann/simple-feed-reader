@@ -34,6 +34,10 @@ p > app-thread-count {
   margin-inline-start: var(--space-1);
 }
 
-:is(.dek, app-link-card):not(:first-child) {
+:is(.dek, app-post-media, app-quoted-post):not(:first-child) {
   margin-top: var(--space-2);
+}
+
+:is(app-link-card, app-link-card-placeholder):not(:first-child) {
+  margin-top: var(--space-1);
 }

@@ -6,9 +6,28 @@
         <p class="title" [class.post]="isPost()">
           {{ headline() }} <app-thread-count [position]="1" [total]="total()" />
         </p>
+      } @else {
+        <app-thread-count [position]="1" [total]="total()" />
       }
       @if (snippet()) {
         <p class="dek">{{ snippet() }}</p>
+      }
+      @let items = rootMedia();
+      @if (items.length) {
+        <app-post-media
+          [media]="items"
+          [ratio]="ratio(items[0])"
+          [videoLabel]="headline() || ('reader.mediaVideo' | transloco)"
+        />
+      }
+      @if (rootQuote(); as quote) {
+        <app-quoted-post
+          [quote]="quote"
+          layout="block"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$event.stopPropagation()"
+          (keydown.space)="$event.stopPropagation()"
+        />
       }
       @if (entry().linkCards[0]; as card) {
         <app-link-card
@@ -20,6 +39,8 @@
           (keydown.enter)="$event.stopPropagation()"
           (keydown.space)="$event.stopPropagation()"
         />
+      } @else if (entry().pending) {
+        <app-link-card-placeholder [entryId]="entry().id" />
       }
     </app-thread-line-post>
     @for (reply of entry().thread; track $index; let index = $index) {
@@ -30,6 +51,13 @@
           </p>
         } @else {
           <app-thread-count [position]="index + 2" [total]="total()" />
+        }
+        @if (reply.media.length) {
+          <app-post-media
+            [media]="reply.media"
+            [ratio]="ratio(reply.media[0])"
+            [videoLabel]="reply.text || ('reader.mediaVideo' | transloco)"
+          />
         }
         @if (reply.linkCard; as card) {
           <app-link-card

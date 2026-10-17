@@ -110,7 +110,6 @@ describe('threadHeight', () => {
     );
 
     const chrome = 82;
-
     expect(textOnly).toBeLessThan(carded);
     expect(textOnly).toBeGreaterThan(chrome);
   });
@@ -124,11 +123,47 @@ describe('threadHeight', () => {
     expect(pictured).toBeGreaterThan(bare);
   });
 
-  it('grows with a reply’s text up to three lines, then stops', () => {
-    const one = threadHeight(threadOf(aThreadPost({ text: 'x'.repeat(40) })));
+  it('grows with a reply’s text up to the post-text outlier clamp, then stops', () => {
     const three = threadHeight(threadOf(aThreadPost({ text: 'x'.repeat(3 * 44) })));
+    const clamp = threadHeight(threadOf(aThreadPost({ text: 'x'.repeat(30 * 44) })));
 
-    expect(three).toBeGreaterThan(one);
-    expect(threadHeight(threadOf(aThreadPost({ text: 'x'.repeat(30 * 44) })))).toBe(three);
+    expect(clamp).toBeGreaterThan(three);
+    expect(threadHeight(threadOf(aThreadPost({ text: 'x'.repeat(60 * 44) })))).toBe(clamp);
+  });
+
+  it('adds a titled root’s dek', () => {
+    const titled = (excerpt: string) =>
+      anEntry({ titleDerived: false, title: 'A title', excerpt, linkCards: [] });
+
+    expect(threadHeight(titled('What the story is about.'))).toBeGreaterThan(
+      threadHeight(titled('')),
+    );
+  });
+
+  it('adds a media root’s own media', () => {
+    const root = (media: EntryMediumDto[]) =>
+      anEntry({ share: 'media', titleDerived: true, title: 'Hi', imageUrl: null, media });
+
+    expect(threadHeight(root([video(1920, 1080)]))).toBeGreaterThan(threadHeight(root([])));
+  });
+
+  it('adds a quote root’s quoted box', () => {
+    const root = (quote: QuotedPostDto | null) =>
+      anEntry({ share: 'quote', titleDerived: true, title: 'Hi', imageUrl: null, quote });
+
+    expect(threadHeight(root(aQuotedPost()))).toBeGreaterThan(threadHeight(root(null)));
+  });
+
+  it('adds a reply’s media under that reply', () => {
+    expect(threadHeight(threadOf(aThreadPost({ media: [video(1920, 1080)] })))).toBeGreaterThan(
+      threadHeight(threadOf(aThreadPost())),
+    );
+  });
+
+  it('holds a pending root’s card place', () => {
+    const root = (pending: boolean) =>
+      anEntry({ share: 'link', titleDerived: true, title: 'Hi', linkCards: [], pending });
+
+    expect(threadHeight(root(true))).toBeGreaterThan(threadHeight(root(false)));
   });
 });

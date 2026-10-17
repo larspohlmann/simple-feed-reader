@@ -91,6 +91,11 @@ function leadImage(entry: EntryDto): EntryMediumDto[] {
   ];
 }
 
+/** The media a thread's root shows: a media or quote share's own; a link share's picture is its card's. */
+export function threadRootMedia(entry: EntryDto): EntryMediumDto[] {
+  return entry.share === 'media' || entry.share === 'quote' ? sharedMedia(entry) : [];
+}
+
 /** A share whose point is its picture or video (#1522, #1524). */
 export function sharesMedia(entry: EntryDto): boolean {
   return entry.share === 'media' && sharedMedia(entry).length > 0;
