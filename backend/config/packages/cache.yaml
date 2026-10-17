@@ -100,3 +100,9 @@ framework:
             social.follow_avatars.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 3600
+
+            # Bluesky profiles the hidden-profile switch found public, so a profile feed refused for another reason is
+            # asked about once a day (#1667). A miss costs one more AppView call.
+            social.public_profiles.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 86400

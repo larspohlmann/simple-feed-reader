@@ -37,6 +37,19 @@ final class SubscriptionRepositoryTest extends DbTestCase
         $this->repository()->getOneForUser($stranger->requireId(), $subscription->requireId());
     }
 
+    public function testASubscriptionIsFoundByItsUserAndFeed(): void
+    {
+        $owner = $this->userFactory()->create('subscription-lookup@example.com');
+        $stranger = $this->userFactory()->create('subscription-lookup-stranger@example.com');
+        $feedId = $this->subscription($owner)->getFeed()->requireId();
+
+        self::assertSame(
+            $owner,
+            $this->repository()->findOneForUserAndFeed($owner->requireId(), $feedId)?->getUser(),
+        );
+        self::assertNull($this->repository()->findOneForUserAndFeed($stranger->requireId(), $feedId));
+    }
+
     public function testFindIncludedInAllItemsForUserSkipsHiddenFeedsAndOtherUsers(): void
     {
         $owner = $this->userFactory()->create('all-items-owner@example.com');

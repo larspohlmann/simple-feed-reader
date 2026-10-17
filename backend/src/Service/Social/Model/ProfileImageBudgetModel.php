@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model;
 
-/** How many AppView profile calls one pass may spend on profile pictures, each asking for up to a page of actors. */
+/** How many AppView profile calls one pass may spend, each asking for up to a page of actors. */
 final readonly class ProfileImageBudgetModel
 {
     /** The guarded fetcher's max_duration, the longest one call can take. */

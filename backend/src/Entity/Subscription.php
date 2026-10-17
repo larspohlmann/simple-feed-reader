@@ -178,6 +178,18 @@ final class Subscription implements PositionedInterface
         $this->subscriptionTags->add(new SubscriptionTag($this, $tag, $position));
     }
 
+    public function takeSettingsFrom(self $previous): void
+    {
+        $this->customTitle = $previous->customTitle;
+        $this->position = $previous->position;
+        $this->includeInAllItems = $previous->includeInAllItems;
+        $this->includeInForYou = $previous->includeInForYou;
+        $this->markedReadUntil = $previous->markedReadUntil;
+        foreach ($previous->getSubscriptionTags() as $subscriptionTag) {
+            $this->addTag($subscriptionTag->getTag(), $subscriptionTag->getPosition());
+        }
+    }
+
     public function removeTag(Tag $tag): void
     {
         $join = $this->findJoin($tag);

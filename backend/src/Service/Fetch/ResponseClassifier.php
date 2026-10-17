@@ -65,7 +65,7 @@ final readonly class ResponseClassifier
 
         if ($status < Response::HTTP_OK || $status >= Response::HTTP_MULTIPLE_CHOICES) {
             throw new FeedUnreachableException(
-                sprintf('%s: HTTP %d', $attempt->url, $status),
+                $attempt->url . FeedUnreachableException::STATUS_MARKER . $status,
                 statusCode: $status,
             );
         }

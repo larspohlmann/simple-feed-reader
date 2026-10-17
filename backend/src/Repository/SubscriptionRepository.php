@@ -33,6 +33,11 @@ final class SubscriptionRepository extends ServiceEntityRepository
         return $count > 0;
     }
 
+    public function findOneForUserAndFeed(int $userId, int $feedId): ?Subscription
+    {
+        return $this->findOneBy(['user' => $userId, 'feed' => $feedId]);
+    }
+
     /**
      * A user's subscriptions with their feed and tags eager-loaded (no N+1),
      * ordered by creation time then id for a stable list.
