@@ -93,7 +93,12 @@ final readonly class EntryPruner
 
     private function pruneUnsaved(): int
     {
-        return $this->deleteByIds($this->retention->unsavedIdsInSavedFeeds());
+        $deleted = 0;
+        foreach ($this->retention->savedFeedIds() as $feedId) {
+            $deleted += $this->deleteByIds($this->retention->unsavedIdsInSavedFeed((int) $feedId));
+        }
+
+        return $deleted;
     }
 
     /** An override below the floor would defeat it, and zero would make the boundary's offset negative. */

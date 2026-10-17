@@ -455,20 +455,25 @@ final class EntryPrunerTest extends DbTestCase
         $saved = new Feed('saved:9001');
         $saved->setSourceFormat(SourceFormat::SAVED);
         $this->entityManager->persist($saved);
+        $otherSaved = new Feed('saved:9002');
+        $otherSaved->setSourceFormat(SourceFormat::SAVED);
+        $this->entityManager->persist($otherSaved);
         $this->entityManager->flush();
         $kept = $this->persistEntry($saved, 'kept', $this->clock->now());
         $unfavourited = $this->persistEntry($saved, 'unfavourited', $this->clock->now());
+        $this->persistEntry($otherSaved, 'unkept', $this->clock->now());
         $state = new EntryState($user, $kept);
         $state->markKept();
         $this->entityManager->persist($state);
         $this->entityManager->persist(new EntryState($user, $unfavourited));
         $this->entityManager->flush();
 
-        self::assertSame(1, $this->pruner->prune());
+        self::assertSame(2, $this->pruner->prune());
         $this->entityManager->clear();
 
         self::assertNotNull($this->findByGuid($saved, 'kept'));
         self::assertNull($this->findByGuid($saved, 'unfavourited'));
+        self::assertNull($this->findByGuid($otherSaved, 'unkept'));
     }
 
     public function testCapsEntriesPerFeedKeepingNewestAndProtected(): void
