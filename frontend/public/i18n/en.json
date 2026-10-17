@@ -1241,6 +1241,9 @@
     "backToTop": "Back to top",
     "contents": "Contents",
     "openOriginal": "Open original",
+    "openInReader": "Open in reader",
+    "backToArticle": "Back to article",
+    "linkFailed": "This page could not be read here.",
     "discussion": "Discussion",
     "comments": {
       "heading": "Comments",

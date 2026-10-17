@@ -1,0 +1,24 @@
+@use '../reader-view/article-page';
+@use '../reader-view/article-toolbar';
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+@include article-page.article-page;
+@include article-toolbar.article-toolbar;
+
+/* The page's one way on when it cannot be read here: <app-button variant="primary">'s
+   weight, on a link because it leaves the app. */
+.open-original {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  height: var(--control-h);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  text-decoration: none;
+}

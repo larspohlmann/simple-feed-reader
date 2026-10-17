@@ -4,12 +4,9 @@ import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../../mod
 import { EntryBodyService } from './entry-body.service';
 import { ReaderContentService } from './reader-content.service';
 import { describeLoadError } from './reader-load-error';
+import { READER_LOAD_TIMEOUT_MS } from './reader-load-timeout';
 import { ReaderModeService } from './reader-mode.service';
 import { isPost } from '../../entry/entry-text';
-
-/** Give up on a hung extraction and fall back to feed content (backend caps a
- *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
-const READER_LOAD_TIMEOUT_MS = 30_000;
 
 /** Failures that say the page holds no article, which Retry cannot change. */
 const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([

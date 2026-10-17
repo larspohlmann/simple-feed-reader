@@ -1,0 +1,94 @@
+<app-article-layer
+  [fullscreen]="fullscreen()"
+  [progressRail]="progressRail"
+  [withTail]="scope.hasTail()"
+  [backLabel]="backLabelKey() | transloco"
+  (close)="close.emit()"
+  (toTop)="scrollToTop()"
+  (barResized)="scope.refresh()"
+>
+  <span articleMini class="mini-title">{{ title() }}</span>
+  @if (!fullscreen()) {
+    <!-- aria-hidden: the h1 carries the page's title already. -->
+    <span articleBar class="bar-name" aria-hidden="true">
+      <span class="bar-title">{{ siteName() }}</span>
+    </span>
+  }
+  <div articleBar class="nav">
+    @if (source.article()) {
+      <button
+        appListAction
+        class="mobile-icon-only"
+        type="button"
+        [attr.aria-label]="'reader.refreshArticle' | transloco"
+        (click)="reload()"
+      >
+        <app-icon name="refresh" size="sm" />
+        <span class="txt">{{ 'reader.refreshArticle' | transloco }}</span>
+      </button>
+    }
+  </div>
+  <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
+    <div class="title-row">
+      <h1 class="title" #titleHeading tabindex="-1">{{ title() }}</h1>
+    </div>
+    <p class="meta">
+      {{ siteName() }}
+      @if (originalUrl(); as url) {
+        @if (siteName()) {
+          ·
+        }
+        <a [href]="url" target="_blank" rel="noopener noreferrer"
+          >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
+        /></a>
+      }
+    </p>
+    @if (!source.loading()) {
+      @if (source.article(); as article) {
+        @if (article.paywalled) {
+          <app-paywall-notice class="paywall-note" [url]="article.url" />
+        }
+        <app-article-content
+          [html]="article.contentHtml"
+          [pageUrl]="article.url"
+          [enclosureUrl]="null"
+          (decorated)="scope.refresh()"
+        />
+      }
+      @if (source.failure()) {
+        <app-warning-box class="reader-fallback">
+          <span class="warning-glyph" aria-hidden="true">⚠</span>
+          <div class="warning-text">
+            <p class="reader-note">{{ 'reader.linkFailed' | transloco }}</p>
+            @if (source.errorDetail(); as detail) {
+              <details class="reader-error">
+                <summary>{{ 'reader.showError' | transloco }}</summary>
+                <pre>{{ detail }}</pre>
+              </details>
+            }
+          </div>
+        </app-warning-box>
+        @if (source.lead(); as image) {
+          <img
+            appProxiedImage
+            class="lead-image"
+            [src]="image.url"
+            [attr.width]="image.width"
+            [attr.height]="image.height"
+            (imageFailed)="source.leadFailed.set(true)"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerpolicy="no-referrer"
+          />
+        }
+        @if (originalUrl(); as url) {
+          <a class="open-original" [href]="url" target="_blank" rel="noopener noreferrer"
+            >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="sm"
+          /></a>
+        }
+      }
+    }
+  </article>
+  <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
+</app-article-layer>
