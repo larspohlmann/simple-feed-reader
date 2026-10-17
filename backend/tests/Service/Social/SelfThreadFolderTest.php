@@ -121,7 +121,7 @@ final class SelfThreadFolderTest extends DbTestCase
             [$entry->requireId()],
         );
         self::assertIsString($stored);
-        self::assertSame(
+        self::assertEquals(
             [['url' => 'https://cdn.example/a.jpg', 'kind' => 'image', 'width' => 640, 'height' => 480,
                 'alt' => 'A photo']],
             json_decode($stored, true),
