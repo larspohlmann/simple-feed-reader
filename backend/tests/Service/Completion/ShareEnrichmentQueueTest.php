@@ -12,6 +12,8 @@ use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
+use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Enum\ShareKind;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Completion\Model\KnownSharesModel;
@@ -37,7 +39,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         parent::setUp();
         $this->clock = new MockClock('2026-10-11 12:00:00', 'Europe/Berlin');
         $this->queue = PostEnrichers::queue($this->entityManager, $this->clock);
-        $this->feed = new Feed('https://mastodon.example/@someone.rss');
+        $this->feed = new Feed('https://blog.example/feed.xml');
         $this->feed->setSiteUrl('https://mastodon.example/@someone');
         $this->entityManager->persist($this->feed);
         $this->entityManager->flush();
@@ -372,6 +374,56 @@ final class ShareEnrichmentQueueTest extends DbTestCase
 
         self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
         self::assertSame(ShareKind::Link, $this->reload($post)->getShareKind());
+    }
+
+    public function testAMastodonRssLinkPostIsQueuedForItsThreadBeforeItsCards(): void
+    {
+        $feed = $this->socialFeed('https://mastodon.example/@thread.rss', SourceFormat::XML);
+        $post = $this->postIn($feed, 'https://mastodon.example/@thread/1');
+
+        $this->queue->queue([$post]);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            ['https://mastodon.example/@thread/1' => ShareEnrichmentKind::SelfThread],
+            $this->queuedKinds(),
+        );
+    }
+
+    public function testAMastodonTimelineLinkPostIsQueuedForItsCardsAsBefore(): void
+    {
+        $feed = $this->socialFeed('social:mastodon:3:home', SourceFormat::MASTODON_API);
+        $post = $this->postIn($feed, 'https://mastodon.example/@thread/2');
+
+        $this->queue->queue([$post]);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            ['https://mastodon.example/@thread/2' => ShareEnrichmentKind::LinkCards],
+            $this->queuedKinds(),
+        );
+    }
+
+    private function socialFeed(string $url, string $sourceFormat): Feed
+    {
+        $feed = new Feed($url);
+        $feed->classifyAs(SocialNetwork::Mastodon);
+        $feed->setSourceFormat($sourceFormat);
+        $this->entityManager->persist($feed);
+
+        return $feed;
+    }
+
+    private function postIn(Feed $feed, string $guid): Entry
+    {
+        $now = new \DateTimeImmutable('2026-10-11 09:00:00');
+        $entry = new Entry($feed, $guid, null, 'Post', $now, $now);
+        $entry->setHeadline(Headline::derived('Post'));
+        $entry->setContentHtml('<p>See https://example.com/a</p>');
+        $entry->getImage()->storePending(null, null, null);
+        $this->entityManager->persist($entry);
+
+        return $entry;
     }
 
     private static function quotedPost(): QuotedPostContent

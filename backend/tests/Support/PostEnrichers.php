@@ -10,6 +10,7 @@ use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\BlueskyPendingEmbed;
+use App\Service\Social\MastodonPendingThread;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
@@ -71,6 +72,7 @@ final class PostEnrichers
             new NaiveUtcClock($clock),
             new EntryShareClassifier(new BlueskyPendingEmbed(), new EntrySanitizer(new TrailingBlankRemover())),
             new BlueskyPendingEmbed(),
+            new MastodonPendingThread(),
             new KnownShareSettler(
                 $entityManager,
                 self::embedWriter($entityManager),
