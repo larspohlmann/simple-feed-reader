@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -61,15 +62,32 @@ final class LinkCardRepository extends ServiceEntityRepository
 
         $grouped = [];
         foreach ($rows as $row) {
-            $grouped[(int) $row['entryId']][] = new LinkCardContent(
-                $row['url'],
-                $row['title'],
-                $row['description'],
-                $row['imageUrl'],
-                $row['siteName'],
-            );
+            $grouped[(int) $row['entryId']][] = self::contentOf($row);
         }
 
         return $grouped;
+    }
+
+    public function contentAt(int $entryId, int $position): LinkCardContent
+    {
+        /** @var array{url: string, title: string, description: ?string, imageUrl: ?string, siteName: string}|null $row */
+        $row = $this->createQueryBuilder('card')
+            ->select('card.url', 'card.title', 'card.description', 'card.imageUrl', 'card.siteName')
+            ->andWhere('card.entry = :entryId')
+            ->andWhere('card.position = :position')
+            ->setParameter('entryId', $entryId)
+            ->setParameter('position', $position)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $row === null
+            ? throw new RecordNotFoundException('No such link card.')
+            : self::contentOf($row);
+    }
+
+    /** @param array{url: string, title: string, description: ?string, imageUrl: ?string, siteName: string} $row */
+    private static function contentOf(array $row): LinkCardContent
+    {
+        return new LinkCardContent($row['url'], $row['title'], $row['description'], $row['imageUrl'], $row['siteName']);
     }
 }

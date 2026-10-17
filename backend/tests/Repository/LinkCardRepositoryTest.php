@@ -7,11 +7,46 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
+use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\LinkCardRepository;
 use App\Tests\DbTestCase;
 
 final class LinkCardRepositoryTest extends DbTestCase
 {
+    public function testFindsTheCardAtAPosition(): void
+    {
+        $entry = $this->entry('one');
+        $cards = $this->repository();
+        $cards->append($entry, [], [$this->content('a'), $this->content('b')]);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        self::assertSame('b', $cards->contentAt($entry->requireId(), 1)->title);
+    }
+
+    public function testAPositionPastTheLastCardIsNotFound(): void
+    {
+        $entry = $this->entry('one');
+        $cards = $this->repository();
+        $cards->append($entry, [], [$this->content('a')]);
+        $this->entityManager->flush();
+
+        $this->expectException(RecordNotFoundException::class);
+        $cards->contentAt($entry->requireId(), 1);
+    }
+
+    public function testAnotherEntrysCardIsNotFound(): void
+    {
+        $holder = $this->entry('holder');
+        $other = $this->entry('other');
+        $cards = $this->repository();
+        $cards->append($holder, [], [$this->content('a')]);
+        $this->entityManager->flush();
+
+        $this->expectException(RecordNotFoundException::class);
+        $cards->contentAt($other->requireId(), 0);
+    }
+
     public function testAppendingKeepsTheGivenOrder(): void
     {
         $entry = $this->entry('one');
