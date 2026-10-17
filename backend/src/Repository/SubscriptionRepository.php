@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\SocialFeed;
 use App\Entity\Subscription;
-use App\Enum\SocialFeedKind;
-use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -57,14 +54,10 @@ final class SubscriptionRepository extends ServiceEntityRepository
      */
     public function findExportableForUserWithTags(int $userId): array
     {
+        $qb = $this->withTagsForUser($userId);
+        PublicOrAuthorFeedDql::restrict($qb, 'f');
         /** @var list<Subscription> $rows */
-        $rows = $this->withTagsForUser($userId)
-            ->leftJoin(SocialFeed::class, 'sf', 'WITH', 'sf.feed = f')
-            ->andWhere('f.sourceFormat NOT IN (:socialFormats) OR sf.kind = :author')
-            ->setParameter('socialFormats', SourceFormat::SOCIAL)
-            ->setParameter('author', SocialFeedKind::Author)
-            ->getQuery()
-            ->getResult();
+        $rows = $qb->getQuery()->getResult();
 
         return $rows;
     }
