@@ -59,7 +59,7 @@ final readonly class HiddenProfileMove
 
     private function start(SocialAccount $account, HiddenProfileModel $profile, Subscription $rssSubscription): void
     {
-        $this->authorFeeds->create($account, $profile, [])->takeSettingsFrom($rssSubscription);
+        $this->authorFeeds->createMissing($account, $profile, [])->takeSettingsFrom($rssSubscription);
         $this->entityManager->flush();
     }
 

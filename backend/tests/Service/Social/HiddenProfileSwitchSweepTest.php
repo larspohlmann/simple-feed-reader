@@ -124,6 +124,20 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertTrue($moved->isHidden());
     }
 
+    public function testAStartLooksForTheSubscribersAuthorFeedOnce(): void
+    {
+        $user = $this->user('switch-start-lookup@example.test');
+        $this->accountOf($user);
+        $this->rssSubscription($user);
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->sweep(1);
+
+        self::assertCount(1, $recorder->queriesMatching('INNER JOIN social_account'));
+    }
+
     public function testAnAuthorFeedNotFetchedYetIsWaitedFor(): void
     {
         $user = $this->user('switch-wait@example.test');

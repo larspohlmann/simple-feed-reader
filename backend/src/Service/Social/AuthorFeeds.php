@@ -42,6 +42,20 @@ final readonly class AuthorFeeds
         if (null !== $this->subscriptionOf($account->getUser(), $profile->did)) {
             throw new AlreadySubscribedException();
         }
+
+        return $this->createMissing($account, $profile, $tags);
+    }
+
+    /**
+     * For a caller that has just found no subscriptionOf() the profile for the account's user.
+     *
+     * @param list<Tag> $tags
+     *
+     * @throws SubscriptionLimitReachedException with nothing written and the entity manager still open
+     * @throws AlreadySubscribedException
+     */
+    public function createMissing(SocialAccount $account, HiddenProfileModel $profile, array $tags): Subscription
+    {
         $author = PrivateFeedModel::author($profile->did, $profile->name);
         $this->entityManager->beginTransaction();
         try {
