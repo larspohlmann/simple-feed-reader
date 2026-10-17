@@ -24,7 +24,6 @@ use App\Service\SavedPosts\SavedPostRescue;
 use App\Service\SavedPosts\SavedStateMover;
 use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Search\EntryIndexer;
-use App\Service\Search\Index\Model\IndexedEntryModel;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -356,12 +355,11 @@ final class SavedPostRescueTest extends DbTestCase
         $copyIds = $rescue->rescueFrom([$subscription]);
 
         self::assertCount(2, $copyIds);
-        self::assertSame([], $writer->upserts);
+        self::assertSame([], self::upsertedIds($writer));
 
         $rescue->indexCopies($copyIds);
 
-        self::assertCount(1, $writer->upserts);
-        $indexedIds = array_map(static fn (IndexedEntryModel $document): int => $document->id, $writer->upserts[0]);
+        $indexedIds = self::upsertedIds($writer);
         sort($indexedIds);
         $expected = $copyIds;
         sort($expected);
@@ -489,6 +487,19 @@ final class SavedPostRescueTest extends DbTestCase
         $origins = $this->entityManager->getRepository(SavedEntryOrigin::class);
 
         return $origins->originsByEntryIds([$copy->requireId()])[$copy->requireId()] ?? null;
+    }
+
+    /** @return list<int> */
+    private static function upsertedIds(RecordingSearchIndexWriter $writer): array
+    {
+        $ids = [];
+        foreach ($writer->upserts as $documents) {
+            foreach ($documents as $document) {
+                $ids[] = $document->id;
+            }
+        }
+
+        return $ids;
     }
 
     private function rescueIndexingInto(RecordingSearchIndexWriter $writer): SavedPostRescue
