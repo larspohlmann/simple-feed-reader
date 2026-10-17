@@ -104,6 +104,19 @@ final class SelfThreadEnricherTest extends DbTestCase
         self::assertCount(1, $posts[$entry->requireId()]);
     }
 
+    public function testARootThatSharesNothingIsDroppedThoughItsTextLinksAPage(): void
+    {
+        $entry = $this->queuedEntry();
+        $entry->setContentHtml(self::LINKED_TEXT);
+        $this->entityManager->flush();
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([$entry->requireId()], $this->foldedEntryIds());
+        self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
+    }
+
     public function testALinkRootWhoseLinkIsAlreadyCardedIsDequeued(): void
     {
         $entry = $this->queuedEntry();
@@ -123,6 +136,7 @@ final class SelfThreadEnricherTest extends DbTestCase
     public function testARowPastTheGiveUpWindowWhoseRootLinksAPageMovesOnToLinkCardsUnasked(): void
     {
         $entry = $this->queuedEntry('-4 days');
+        $entry->setShareKind(ShareKind::Link);
         $entry->setContentHtml(self::LINKED_TEXT);
         $this->entityManager->flush();
 
@@ -147,6 +161,7 @@ final class SelfThreadEnricherTest extends DbTestCase
     public function testAnEntryWithoutASocialAddressWhoseRootLinksAPageMovesOnToLinkCards(): void
     {
         $entry = $this->queuedEntry(guid: 'https://example.com/not-a-post');
+        $entry->setShareKind(ShareKind::Link);
         $entry->setContentHtml(self::LINKED_TEXT);
         $this->entityManager->flush();
 

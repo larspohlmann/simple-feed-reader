@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
+use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
+use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Repository\ThreadPostRepository;
@@ -167,18 +169,23 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         return true;
     }
 
-    /** The link-card pass takes a row whose root still links a page without a card; the fold stored the replies' own. */
+    /** A shared root still linking an uncarded page goes to the link-card pass; the fold stored the replies' cards. */
     private function handOnOrDrop(ShareEnrichment $row): void
     {
         $entry = $row->getEntry();
         $rootCards = $this->linkCards->contentsByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [];
         $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $rootCards);
-        if (ShareTargets::uncardedOf($entry, $cardedUrls) !== []) {
+        if (self::isShared($entry) && ShareTargets::uncardedOf($entry, $cardedUrls) !== []) {
             $row->awaitLinkCards();
 
             return;
         }
         $this->entityManager->remove($row);
+    }
+
+    private static function isShared(Entry $entry): bool
+    {
+        return \in_array($entry->getShareKind(), [ShareKind::Link, ShareKind::Quote], true);
     }
 
     private function secondsSince(\DateTimeImmutable $claimedAt): float
