@@ -10,8 +10,7 @@ use App\Service\Bluesky\Support\BlueskyWeb;
 
 final class ProfileFeedUrl
 {
-    private const string BLUESKY_PATH = '#^/profile/([^/@]+)/rss/?$#';
-    private const string BLUESKY_PROFILE_PAGE = '#^/profile/([^/@]+)(?:/rss)?/?$#';
+    private const string BLUESKY_PROFILE_PAGE = '#^/profile/(?<actor>[^/@]+)(?<rss>/rss)?/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
 
     public static function bluesky(string $did): string
@@ -71,7 +70,7 @@ final class ProfileFeedUrl
         ) {
             return null;
         }
-        $actor = self::actorIn($match[1]);
+        $actor = self::actorIn($match['actor']);
 
         return BlueskyActor::isValid($actor) ? $actor : null;
     }
@@ -109,11 +108,15 @@ final class ProfileFeedUrl
 
     private static function blueskyIdentity(string $host, string $path): ?string
     {
-        if (BlueskyWeb::HOST !== $host || 1 !== preg_match(self::BLUESKY_PATH, $path, $match)) {
+        if (
+            BlueskyWeb::HOST !== $host
+            || 1 !== preg_match(self::BLUESKY_PROFILE_PAGE, $path, $match)
+            || '' === ($match['rss'] ?? '')
+        ) {
             return null;
         }
 
-        return self::actorIn($match[1]);
+        return self::actorIn($match['actor']);
     }
 
     private static function actorIn(string $segment): string
