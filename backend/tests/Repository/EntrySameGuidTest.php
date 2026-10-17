@@ -11,13 +11,13 @@ use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Repository\EntryTwinRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class EntrySameGuidTest extends DbTestCase
 {
-    private UserFactory $users;
+    use SeedsUsers;
+
     private User $user;
     private Feed $source;
     private Feed $target;
@@ -25,10 +25,7 @@ final class EntrySameGuidTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->users = new UserFactory($this->entityManager, $hasher);
-        $this->user = $this->users->create('entry-same-guid@example.test');
+        $this->user = $this->user('entry-same-guid@example.test');
         $this->source = $this->feed('https://bsky.app/profile/did:plc:rusty/rss');
         $this->target = $this->feed('social:bluesky:1:author:did:plc:rusty');
     }
@@ -46,7 +43,7 @@ final class EntrySameGuidTest extends DbTestCase
         $this->entry($this->target, 'post-of-a-stranger');
         $this->entityManager->persist(new EntryState($this->user, $read));
         $this->entityManager->persist(new EntryState($this->user, $onlyInRss));
-        $stranger = $this->users->create('entry-same-guid-other@example.test');
+        $stranger = $this->user('entry-same-guid-other@example.test');
         $this->entityManager->persist(new EntryState($stranger, $strangersPost));
         $account = SocialAccounts::blueskyOf($this->user);
         $this->entityManager->persist($account);

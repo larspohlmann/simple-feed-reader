@@ -12,21 +12,22 @@ use App\Enum\SocialNetwork;
 use App\Enum\UserStatus;
 use App\Repository\SocialAccountSyncRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialAccountSyncRepositoryTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private User $owner;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->owner = (new UserFactory($this->entityManager, $hasher))->create('social-sync-owner@example.test');
+        $this->owner = $this->user('social-sync-owner@example.test');
     }
 
     public function testDueAccountsAreTheNeverCheckedThenTheLongestUnchecked(): void

@@ -36,18 +36,21 @@ use App\Service\Social\ProfileVisibilityCache;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
+use App\Tests\Support\ConnectsBlueskyAccounts;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubHiddenProfiles;
-use App\Tests\Support\UserFactory;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class HiddenProfileSwitchSweepTest extends DbTestCase
 {
+    use ConnectsBlueskyAccounts;
+    use SeedsUsers;
+
     private const string CAROL = 'did:plc:carol';
     private const string NOW = '2026-10-17 12:00:00';
     private const string POST = 'at://did:plc:hczfd45prvqtdrw77256syag/app.bsky.feed.post/3abc';
@@ -73,7 +76,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testTheFirstSweepGivesTheSubscriberAnAuthorFeedWithTheSameSettings(): void
     {
         $user = $this->user('switch-start@example.test');
-        $account = $this->accountOf($user);
+        $account = $this->blueskyAccountOf($user);
         $rss = $this->rssSubscription($user);
         $rss->setCustomTitle('Rusty, old');
         $rss->setPosition(7);
@@ -103,7 +106,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testOnceTheAuthorFeedFetchedTheSavedStateMovesAndTheRssSubscriptionGoes(): void
     {
         $user = $this->user('switch-finish@example.test');
-        $account = $this->accountOf($user);
+        $account = $this->blueskyAccountOf($user);
         $rss = $this->rssSubscription($user);
         $rssId = $rss->requireId();
         $rssFeedId = $rss->getFeed()->requireId();
@@ -135,7 +138,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAFavouriteWithoutATwinInTheAuthorFeedEndsUpInTheSavedFeed(): void
     {
         $user = $this->user('switch-unmatched@example.test');
-        $account = $this->accountOf($user);
+        $account = $this->blueskyAccountOf($user);
         $rss = $this->rssSubscription($user);
         $at = new \DateTimeImmutable(self::NOW);
         $older = new Entry($rss->getFeed(), self::RUSTY_OLDER_POST, null, 'Older than the first page', $at, $at);
@@ -171,7 +174,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAStartLooksForTheSubscribersAuthorFeedOnce(): void
     {
         $user = $this->user('switch-start-lookup@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $this->rssSubscription($user);
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);
@@ -185,7 +188,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAnAuthorFeedNotFetchedYetIsWaitedFor(): void
     {
         $user = $this->user('switch-wait@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $rss = $this->rssSubscription($user);
         $this->sweep(1);
 
@@ -199,7 +202,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->hiddenProfiles->hide(new HiddenProfileModel(self::CAROL, 'Carol'));
         $user = $this->user('switch-behind-public@example.test');
         $user->setMaxSubscriptions(300);
-        $account = $this->accountOf($user);
+        $account = $this->blueskyAccountOf($user);
         $this->persistRssSubscription($user, self::CAROL);
         $publicActors = array_map(static fn (int $index): string => 'did:plc:public' . $index, range(1, 201));
         foreach ($publicActors as $actor) {
@@ -216,7 +219,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAFeedNamingNoActorIsNeverAsked(): void
     {
         $user = $this->user('switch-no-actor@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $this->rssSubscription($user, 'not_an_actor!');
         $this->rssSubscription($user);
 
@@ -228,7 +231,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAnAuthorFeedReadThroughAnotherAccountIsTheOneTheSwitchFinishesOnto(): void
     {
         $user = $this->user('switch-other-account@example.test');
-        $default = $this->accountOf($user);
+        $default = $this->blueskyAccountOf($user);
         $default->becomeDefault();
         $imported = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::secondBlueskyOf($user));
         $authorFeed = self::service(PrivateFeeds::class)
@@ -255,7 +258,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAProfileFoundPublicIsNotAskedAgain(): void
     {
         $user = $this->user('switch-public@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $this->rssSubscription($user, 'did:plc:public');
 
         $this->sweep(1);
@@ -267,7 +270,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAnUnansweredCheckMovesNothingAndIsAskedAgain(): void
     {
         $user = $this->user('switch-unanswered@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $this->rssSubscription($user);
         $failure = new SocialNetworkUnreachableException('down');
         $this->hiddenProfiles->failure = $failure;
@@ -285,7 +288,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAnUnansweredCheckHoldsTheSwitchForFiveMinutes(): void
     {
         $user = $this->user('switch-unanswered-pause@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $this->rssSubscription($user);
         $this->hiddenProfiles->failure = new SocialNetworkUnreachableException('down');
         $this->sweep(1);
@@ -299,7 +302,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAPassThatFindsNothingToDoHoldsTheNextRunForAnHour(): void
     {
         $user = $this->user('switch-idle@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $this->rssSubscription($user, 'did:plc:public');
         $this->profileVisibility->remember(['did:plc:public'], []);
         $this->sweep(1);
@@ -317,7 +320,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testTheIdlePauseExpires(): void
     {
         $user = $this->user('switch-idle-expires@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $this->sweep(1);
         $this->rssSubscription($user);
         $this->clock->modify('+1 hour 1 second');
@@ -328,7 +331,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAPassThatAskedIsNotIdle(): void
     {
         $user = $this->user('switch-asked-not-idle@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $this->rssSubscription($user, 'did:plc:public');
         $this->sweep(1);
         $this->rssSubscription($user);
@@ -339,7 +342,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAnEmptyBudgetAsksAndMovesNothing(): void
     {
         $user = $this->user('switch-budget@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $this->rssSubscription($user);
         $rusty = new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty');
         $this->profileVisibility->remember([BlueskyProfiles::RUSTY], [BlueskyProfiles::RUSTY => $rusty]);
@@ -352,7 +355,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     {
         $user = $this->user('switch-full@example.test');
         $user->setMaxSubscriptions(1);
-        $account = $this->accountOf($user);
+        $account = $this->blueskyAccountOf($user);
         $this->rssSubscription($user);
 
         self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
@@ -364,7 +367,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     {
         $user = $this->user('switch-enough-unknown@example.test');
         $user->setMaxSubscriptions(300);
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $unknownActors = array_map(
             static fn (int $index): string => sprintf('did:plc:unknown%03d', $index),
             range(1, 25),
@@ -391,7 +394,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testOneCallAsksForAPageOfActorsAtMost(): void
     {
         $user = $this->user('switch-one-call@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $actors = array_map(static fn (int $index): string => sprintf('did:plc:actor%02d', $index), range(1, 26));
         foreach ($actors as $actor) {
             $this->persistRssSubscription($user, $actor);
@@ -406,13 +409,13 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testASubscriberAlreadyOnTheAuthorUrlIsSkippedAndTheNextOneStillMoves(): void
     {
         $stuck = $this->user('switch-stuck@example.test');
-        $stuckAccount = $this->accountOf($stuck);
+        $stuckAccount = $this->blueskyAccountOf($stuck);
         $orphan = new Feed(sprintf('social:bluesky:%d:author:%s', $stuckAccount->requireId(), BlueskyProfiles::RUSTY));
         $this->entityManager->persist($orphan);
         $this->entityManager->persist(new Subscription($stuck, $orphan, new \DateTimeImmutable(self::NOW)));
         $rss = $this->rssSubscription($stuck);
         $next = $this->user('switch-next@example.test');
-        $nextAccount = $this->accountOf($next);
+        $nextAccount = $this->blueskyAccountOf($next);
         $this->entityManager->persist(new Subscription($next, $rss->getFeed(), new \DateTimeImmutable(self::NOW)));
         $this->entityManager->flush();
 
@@ -427,7 +430,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     {
         $user = $this->user('switch-page-cap@example.test');
         $user->setMaxSubscriptions(700);
-        $account = $this->accountOf($user);
+        $account = $this->blueskyAccountOf($user);
         $publicActors = array_map(static fn (int $index): string => 'did:plc:public' . $index, range(1, 600));
         foreach ($publicActors as $actor) {
             $this->persistRssSubscription($user, $actor);
@@ -443,7 +446,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testARunThatReadsTheLastRefusedFeedSendsTheNextRunBackToTheFirst(): void
     {
         $user = $this->user('switch-wrap@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $actors = array_map(static fn (int $index): string => sprintf('did:plc:actor%02d', $index), range(1, 26));
         foreach ($actors as $actor) {
             $this->persistRssSubscription($user, $actor);
@@ -464,7 +467,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     public function testAnUnansweredRunLeavesTheNextRunWhereItBegan(): void
     {
         $user = $this->user('switch-unanswered-cursor@example.test');
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $actors = array_map(static fn (int $index): string => sprintf('did:plc:actor%02d', $index), range(1, 26));
         foreach ($actors as $actor) {
             $this->persistRssSubscription($user, $actor);
@@ -484,7 +487,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     {
         $user = $this->user('switch-move-cap@example.test');
         $user->setMaxSubscriptions(100);
-        $this->accountOf($user);
+        $this->blueskyAccountOf($user);
         $hidden = [];
         foreach (range(1, 21) as $index) {
             $did = sprintf('did:plc:hidden%02d', $index);
@@ -595,18 +598,5 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         return null === $feed
             ? null
             : $this->entityManager->getRepository(Subscription::class)->findOneBy(['feed' => $feed]);
-    }
-
-    private function accountOf(User $user): SocialAccount
-    {
-        return SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
-    }
-
-    private function user(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->entityManager, $hasher))->create($email);
     }
 }

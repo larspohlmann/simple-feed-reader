@@ -11,12 +11,13 @@ use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Repository\SocialLikeRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SocialLikeCopyTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private const string LIKE = 'at://did:plc:alice/app.bsky.feed.like/3l1';
 
     private User $user;
@@ -25,9 +26,7 @@ final class SocialLikeCopyTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->entityManager, $hasher))->create('social-like-copy@example.test');
+        $this->user = $this->user('social-like-copy@example.test');
         $this->account = SocialAccounts::blueskyOf($this->user);
         $this->entityManager->persist($this->account);
     }
@@ -74,9 +73,7 @@ final class SocialLikeCopyTest extends DbTestCase
 
     public function testOnlyTheUsersOwnLikeIsCopied(): void
     {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $other = (new UserFactory($this->entityManager, $hasher))->create('social-like-copy-other@example.test');
+        $other = $this->user('social-like-copy-other@example.test');
         $otherAccount = SocialAccounts::blueskyOf($other);
         $this->entityManager->persist($otherAccount);
         $source = $this->entry('https://bsky.app/profile/did:plc:rusty/rss');

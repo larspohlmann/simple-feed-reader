@@ -14,15 +14,17 @@ use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Subscription\Model\SubscribeRequestModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
+use App\Tests\Support\ConnectsBlueskyAccounts;
 use App\Tests\Support\RecordingLogger;
-use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubHiddenProfiles;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class HiddenProfileSubscribeRouteTest extends DbTestCase
 {
+    use ConnectsBlueskyAccounts;
+    use SeedsUsers;
+
     private const string PAGE = 'https://bsky.app/profile/rusty-17.bsky.social';
 
     private User $user;
@@ -32,9 +34,7 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->entityManager, $hasher))->create('hidden-route@example.test');
+        $this->user = $this->user('hidden-route@example.test');
         $this->hiddenProfiles = new StubHiddenProfiles();
         $this->hiddenProfiles->hide(new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), 'rusty-17.bsky.social');
         $this->logger = new RecordingLogger();
@@ -42,7 +42,7 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
 
     public function testAHiddenProfileIsSubscribedAsAnAuthorFeedOfTheDefaultAccount(): void
     {
-        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
+        $account = $this->blueskyAccountOf($this->user);
 
         $outcome = $this->route()->subscribe(new SubscribeRequestModel($this->user, self::PAGE . '/rss', []));
 
@@ -55,7 +55,7 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
 
     public function testAFeedUrlNamingTheProfilesDidIsAskedAboutByThatDid(): void
     {
-        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
+        $account = $this->blueskyAccountOf($this->user);
         $url = 'https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss';
 
         $outcome = $this->route()->subscribe(new SubscribeRequestModel($this->user, $url, []));
@@ -77,7 +77,7 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
 
     public function testAnAccountThatNeedsAReconnectCannotReadTheProfile(): void
     {
-        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
+        $account = $this->blueskyAccountOf($this->user);
         $account->markNeedsReconnect();
         $this->entityManager->flush();
 
