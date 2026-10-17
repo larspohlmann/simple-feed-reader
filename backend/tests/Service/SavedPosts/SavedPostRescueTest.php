@@ -15,15 +15,24 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
+use App\Repository\SavedPostRepository;
 use App\Repository\SavedEntryOriginRepository;
+use App\Service\SavedPosts\SavedFeeds;
+use App\Service\SavedPosts\SavedPostRescue;
+use App\Service\SavedPosts\SavedStateMover;
 use App\Service\SavedPosts\Support\SavedFeedUrl;
+use App\Service\Search\EntryIndexer;
+use App\Service\Search\Index\Model\IndexedEntryModel;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\UserFactory;
+use Psr\Log\NullLogger;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SavedPostRescueTest extends DbTestCase
@@ -333,6 +342,32 @@ final class SavedPostRescueTest extends DbTestCase
         self::assertTrue($this->stateOf($copies[0])->isFavorite());
     }
 
+    public function testTheCopiesAreIndexedOnlyWhenTheCallerAsksAfterItsCommit(): void
+    {
+        $feed = $this->feed('https://indexed.example/feed.xml', 'Indexed');
+        $subscription = $this->subscribe($this->user, $feed);
+        $this->state($this->user, $this->entry($feed, 'one', 'https://indexed.example/1'))->markFavorite();
+        $this->state($this->user, $this->entry($feed, 'two', 'https://indexed.example/2'))->markKept();
+        $this->entry($feed, 'plain', 'https://indexed.example/3');
+        $this->entityManager->flush();
+        $writer = new RecordingSearchIndexWriter();
+        $rescue = $this->rescueIndexingInto($writer);
+
+        $copyIds = $rescue->rescueFrom([$subscription]);
+
+        self::assertCount(2, $copyIds);
+        self::assertSame([], $writer->upserts);
+
+        $rescue->indexCopies($copyIds);
+
+        self::assertCount(1, $writer->upserts);
+        $indexedIds = array_map(static fn (IndexedEntryModel $document): int => $document->id, $writer->upserts[0]);
+        sort($indexedIds);
+        $expected = $copyIds;
+        sort($expected);
+        self::assertSame($expected, $indexedIds);
+    }
+
     public function testNothingFlaggedCreatesNoSavedFeed(): void
     {
         $feed = $this->feed('https://unflagged.example/feed.xml', 'Unflagged');
@@ -454,6 +489,27 @@ final class SavedPostRescueTest extends DbTestCase
         $origins = $this->entityManager->getRepository(SavedEntryOrigin::class);
 
         return $origins->originsByEntryIds([$copy->requireId()])[$copy->requireId()] ?? null;
+    }
+
+    private function rescueIndexingInto(RecordingSearchIndexWriter $writer): SavedPostRescue
+    {
+        $container = self::getContainer();
+        /** @var SavedPostRepository $savedPosts */
+        $savedPosts = $container->get(SavedPostRepository::class);
+        /** @var SavedFeeds $savedFeeds */
+        $savedFeeds = $container->get(SavedFeeds::class);
+        /** @var SavedStateMover $stateMover */
+        $stateMover = $container->get(SavedStateMover::class);
+        /** @var EntryRepository $entries */
+        $entries = $container->get(EntryRepository::class);
+
+        return new SavedPostRescue(
+            $savedPosts,
+            $savedFeeds,
+            $stateMover,
+            $entries,
+            new EntryIndexer($writer, new NullLogger()),
+        );
     }
 
     private function service(): SubscriptionService

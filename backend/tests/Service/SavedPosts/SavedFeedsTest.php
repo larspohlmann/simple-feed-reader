@@ -71,6 +71,20 @@ final class SavedFeedsTest extends DbTestCase
         self::assertSame($orphan->requireId(), $subscription->getFeed()->requireId());
     }
 
+    public function testTheSavedFeedSitsAfterTheFeedsTheUserAlreadyHas(): void
+    {
+        $feed = new Feed('https://ordered.example/feed.xml');
+        $this->entityManager->persist($feed);
+        $existing = new Subscription($this->user, $feed, new \DateTimeImmutable('2026-10-17 12:00:00'));
+        $existing->setPosition(4);
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
+
+        $subscription = $this->savedFeeds()->of($this->user, null);
+
+        self::assertSame(5, $subscription->getPosition());
+    }
+
     public function testAFullAccountStillGetsItsSavedFeed(): void
     {
         $this->user->setMaxSubscriptions(0);

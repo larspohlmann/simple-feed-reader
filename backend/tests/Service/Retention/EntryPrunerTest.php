@@ -464,7 +464,7 @@ final class EntryPrunerTest extends DbTestCase
         $this->entityManager->persist(new EntryState($user, $unfavourited));
         $this->entityManager->flush();
 
-        $this->pruner->prune();
+        self::assertSame(1, $this->pruner->prune());
         $this->entityManager->clear();
 
         self::assertNotNull($this->findByGuid($saved, 'kept'));
