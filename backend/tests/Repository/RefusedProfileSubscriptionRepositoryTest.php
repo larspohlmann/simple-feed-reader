@@ -27,7 +27,7 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
         $this->connect($user);
         $subscription = $this->subscribe($user, self::PROFILE, 'HTTP 403');
 
-        self::assertSame([$subscription], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(10));
+        self::assertSame([$subscription], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(null, 10));
     }
 
     #[DataProvider('otherFeeds')]
@@ -37,7 +37,7 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
         $this->connect($user);
         $this->subscribe($user, $feedUrl, $failure, $sourceFormat);
 
-        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(10));
+        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(null, 10));
     }
 
     /** @return iterable<string, array{string, ?string, string}> */
@@ -53,7 +53,7 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
     {
         $this->subscribe($this->user('refused-no-account@example.test'), self::PROFILE, 'HTTP 403');
 
-        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(10));
+        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(null, 10));
     }
 
     public function testASubscriberWhoseAccountNeedsAReconnectIsNoCandidate(): void
@@ -63,7 +63,7 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
         $this->entityManager->flush();
         $this->subscribe($user, self::PROFILE, 'HTTP 403');
 
-        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(10));
+        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(null, 10));
     }
 
     public function testTheLimitHolds(): void
@@ -73,7 +73,24 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
         $this->subscribe($user, 'https://bsky.app/profile/did:plc:one/rss', 'HTTP 403');
         $this->subscribe($user, 'https://bsky.app/profile/did:plc:two/rss', 'HTTP 403');
 
-        self::assertCount(1, $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(1));
+        self::assertCount(1, $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(null, 1));
+    }
+
+    public function testAPageStartsAfterTheCursorInFeedThenSubscriptionOrder(): void
+    {
+        $first = $this->user('refused-cursor-first@example.test');
+        $second = $this->user('refused-cursor-second@example.test');
+        $this->connect($first);
+        $this->connect($second);
+        $one = $this->subscribe($first, 'https://bsky.app/profile/did:plc:one/rss', 'HTTP 403');
+        $two = $this->subscribe($first, 'https://bsky.app/profile/did:plc:two/rss', 'HTTP 403');
+        $oneAgain = new Subscription($second, $one->getFeed(), new \DateTimeImmutable(self::NOW));
+        $this->entityManager->persist($oneAgain);
+        $this->entityManager->flush();
+
+        self::assertSame([$oneAgain, $two], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds($one, 10));
+        self::assertSame([$two], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds($oneAgain, 10));
+        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds($two, 10));
     }
 
     private function subscribe(

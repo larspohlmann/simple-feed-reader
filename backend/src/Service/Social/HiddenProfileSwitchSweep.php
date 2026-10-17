@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
+use App\Entity\Subscription;
 use App\Enum\SocialNetwork;
 use App\Repository\RefusedProfileSubscriptionRepository;
 use App\Service\Bluesky\AppViewClient;
@@ -26,12 +27,12 @@ use Psr\Log\LoggerInterface;
  */
 final readonly class HiddenProfileSwitchSweep
 {
-    private const int CANDIDATES_PER_SWEEP = 200;
+    private const int PAGE_SIZE = 200;
 
     public function __construct(
         private RefusedProfileSubscriptionRepository $refusedSubscriptions,
         private HiddenProfilesInterface $hiddenProfiles,
-        private PublicProfileCache $publicProfiles,
+        private ProfileVisibilityCache $profileVisibility,
         private HiddenProfileMove $move,
         private LoggerInterface $logger,
     ) {
@@ -39,34 +40,53 @@ final readonly class HiddenProfileSwitchSweep
 
     public function sweep(ProfileCallBudgetModel $budget): HiddenProfileSwitchReportModel
     {
-        $candidates = $this->unsettledCandidates();
-        $asked = self::askedActorsOf($candidates, $budget);
-        if ([] === $asked) {
+        if ($budget->isEmpty()) {
             return HiddenProfileSwitchReportModel::none();
         }
-        try {
-            $hidden = $this->hiddenProfiles->hiddenAmong($asked);
-        } catch (SocialNetworkUnreachableException $exception) {
-            $this->logger->warning('Hidden-profile switch stopped: Bluesky did not answer.', [
-                'exception' => $exception,
-            ]);
+        $askLimit = $budget->calls * AppViewClient::URIS_PER_CALL;
+        $candidates = $this->unsettledCandidates($askLimit);
 
-            return HiddenProfileSwitchReportModel::none();
-        }
-        $this->publicProfiles->rememberPublic(array_values(array_diff($asked, array_keys($hidden))));
-
-        return $this->moveHidden($candidates, $hidden);
+        return $this->moveHidden(
+            $candidates,
+            $this->askedHidden(\array_slice(self::unknownActorsOf($candidates), 0, $askLimit)),
+        );
     }
 
-    /** @return list<RefusedProfileSubscriptionModel> the refused subscriptions whose actor is not known public */
-    private function unsettledCandidates(): array
+    /**
+     * Pages through the refused subscriptions until they name $askLimit actors of unknown visibility, so rows already
+     * settled can never crowd out the ones behind them.
+     *
+     * @return list<RefusedProfileSubscriptionModel>
+     */
+    private function unsettledCandidates(int $askLimit): array
     {
         $candidates = [];
-        $refused = $this->refusedSubscriptions->findOnRefusedBlueskyProfileFeeds(self::CANDIDATES_PER_SWEEP);
-        foreach ($refused as $subscription) {
+        $after = null;
+        do {
+            $page = $this->refusedSubscriptions->findOnRefusedBlueskyProfileFeeds($after, self::PAGE_SIZE);
+            $candidates = [...$candidates, ...$this->unsettledAmong($page)];
+            $after = $page[\count($page) - 1] ?? null;
+        } while (self::PAGE_SIZE === \count($page) && \count(self::unknownActorsOf($candidates)) < $askLimit);
+
+        return $candidates;
+    }
+
+    /**
+     * @param list<Subscription> $page
+     *
+     * @return list<RefusedProfileSubscriptionModel> the subscriptions whose actor is not known public
+     */
+    private function unsettledAmong(array $page): array
+    {
+        $candidates = [];
+        foreach ($page as $subscription) {
             $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $subscription->getFeed()->getUrl());
-            if (null !== $actor && BlueskyActor::isValid($actor) && !$this->publicProfiles->isPublic($actor)) {
-                $candidates[] = new RefusedProfileSubscriptionModel($subscription, $actor);
+            if (null !== $actor && BlueskyActor::isValid($actor) && !$this->profileVisibility->isPublic($actor)) {
+                $candidates[] = new RefusedProfileSubscriptionModel(
+                    $subscription,
+                    $actor,
+                    $this->profileVisibility->hiddenOf($actor),
+                );
             }
         }
 
@@ -78,14 +98,41 @@ final readonly class HiddenProfileSwitchSweep
      *
      * @return list<string>
      */
-    private static function askedActorsOf(array $candidates, ProfileCallBudgetModel $budget): array
+    private static function unknownActorsOf(array $candidates): array
     {
-        $actors = array_map(
-            static fn (RefusedProfileSubscriptionModel $candidate): string => $candidate->actor,
+        $unknown = array_filter(
             $candidates,
+            static fn (RefusedProfileSubscriptionModel $candidate): bool => null === $candidate->knownHidden,
         );
 
-        return \array_slice(array_values(array_unique($actors)), 0, $budget->calls * AppViewClient::URIS_PER_CALL);
+        return array_values(array_unique(array_map(
+            static fn (RefusedProfileSubscriptionModel $candidate): string => $candidate->actor,
+            $unknown,
+        )));
+    }
+
+    /**
+     * @param list<string> $asked
+     *
+     * @return array<string, HiddenProfileModel> the hidden ones among $asked; none when Bluesky cannot say
+     */
+    private function askedHidden(array $asked): array
+    {
+        if ([] === $asked) {
+            return [];
+        }
+        try {
+            $hidden = $this->hiddenProfiles->hiddenAmong($asked);
+        } catch (SocialNetworkUnreachableException $exception) {
+            $this->logger->warning('Hidden-profile switch stopped: Bluesky did not answer.', [
+                'exception' => $exception,
+            ]);
+
+            return [];
+        }
+        $this->profileVisibility->remember($asked, $hidden);
+
+        return $hidden;
     }
 
     /**
@@ -96,7 +143,7 @@ final readonly class HiddenProfileSwitchSweep
     {
         $report = HiddenProfileSwitchReportModel::none();
         foreach ($candidates as $candidate) {
-            $profile = $hidden[$candidate->actor] ?? null;
+            $profile = $candidate->knownHidden ?? $hidden[$candidate->actor] ?? null;
             if (null !== $profile) {
                 $report = $report->counting($this->moveOne($candidate, $profile));
             }

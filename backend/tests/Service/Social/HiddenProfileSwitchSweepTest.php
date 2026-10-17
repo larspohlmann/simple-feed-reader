@@ -26,9 +26,10 @@ use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileMoveOutcome;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\ProfileCallBudgetModel;
-use App\Service\Social\PublicProfileCache;
+use App\Service\Social\ProfileVisibilityCache;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -44,7 +45,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     private const string POST = 'at://did:plc:hczfd45prvqtdrw77256syag/app.bsky.feed.post/3abc';
 
     private StubHiddenProfiles $hiddenProfiles;
-    private PublicProfileCache $publicProfiles;
+    private ProfileVisibilityCache $profileVisibility;
     private RecordingLogger $logger;
 
     protected function setUp(): void
@@ -52,7 +53,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         parent::setUp();
         $this->hiddenProfiles = new StubHiddenProfiles();
         $this->hiddenProfiles->hide(new HiddenProfileModel(self::RUSTY, 'Rusty'));
-        $this->publicProfiles = new PublicProfileCache(new ArrayAdapter());
+        $this->profileVisibility = new ProfileVisibilityCache(new ArrayAdapter());
         $this->logger = new RecordingLogger();
     }
 
@@ -126,6 +127,24 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
 
         self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
         self::assertNotNull($this->entityManager->find(Subscription::class, $rss->requireId()));
+        self::assertSame([[self::RUSTY]], $this->hiddenProfiles->asked);
+    }
+
+    public function testAHiddenProfileBehindAFullPageOfPublicOnesStillSwitches(): void
+    {
+        $user = $this->user('switch-behind-public@example.test');
+        $user->setMaxSubscriptions(300);
+        $account = $this->accountOf($user);
+        $publicActors = array_map(static fn (int $index): string => 'did:plc:public' . $index, range(1, 201));
+        foreach ($publicActors as $actor) {
+            $this->persistRssSubscription($user, $actor);
+        }
+        $this->rssSubscription($user);
+        $this->profileVisibility->remember($publicActors, []);
+
+        self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
+        self::assertNotNull($this->authorSubscriptionOf($account));
+        self::assertSame([[self::RUSTY]], $this->hiddenProfiles->asked);
     }
 
     public function testAnAuthorFeedReadThroughAnotherAccountIsTheOneTheSwitchFinishesOnto(): void
@@ -182,11 +201,13 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
     }
 
-    public function testAnEmptyBudgetAsksNothing(): void
+    public function testAnEmptyBudgetAsksAndMovesNothing(): void
     {
         $user = $this->user('switch-budget@example.test');
         $this->accountOf($user);
         $this->rssSubscription($user);
+        $rusty = new HiddenProfileModel(self::RUSTY, 'Rusty');
+        $this->profileVisibility->remember([self::RUSTY], [self::RUSTY => $rusty]);
 
         self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(0));
         self::assertSame([], $this->hiddenProfiles->asked);
@@ -202,6 +223,29 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
         self::assertNull($this->authorSubscriptionOf($account));
         self::assertSame('info', $this->logger->records[0]['level'] ?? null);
+    }
+
+    public function testAPageNamingACallsWorthOfUnknownProfilesIsTheLastOneRead(): void
+    {
+        $user = $this->user('switch-enough-unknown@example.test');
+        $user->setMaxSubscriptions(300);
+        $this->accountOf($user);
+        $unknownActors = array_map(
+            static fn (int $index): string => sprintf('did:plc:unknown%03d', $index),
+            range(1, 201),
+        );
+        foreach ($unknownActors as $actor) {
+            $this->persistRssSubscription($user, $actor);
+        }
+        $this->entityManager->flush();
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->sweep(1);
+
+        self::assertCount(1, $recorder->queriesMatching(' LIKE '));
+        self::assertSame([\array_slice($unknownActors, 0, 25)], $this->hiddenProfiles->asked);
     }
 
     public function testASubscriberAlreadyOnTheAuthorUrlIsSkippedAndTheNextOneStillMoves(): void
@@ -238,7 +282,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         return (new HiddenProfileSwitchSweep(
             self::service(RefusedProfileSubscriptionRepository::class),
             $this->hiddenProfiles,
-            $this->publicProfiles,
+            $this->profileVisibility,
             $this->move(),
             $this->logger,
         ))->sweep(ProfileCallBudgetModel::calls($calls));
@@ -277,6 +321,14 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
 
     private function rssSubscription(User $user, string $did = self::RUSTY): Subscription
     {
+        $subscription = $this->persistRssSubscription($user, $did);
+        $this->entityManager->flush();
+
+        return $subscription;
+    }
+
+    private function persistRssSubscription(User $user, string $did): Subscription
+    {
         $now = new \DateTimeImmutable(self::NOW);
         $url = 'https://bsky.app/profile/' . $did . '/rss';
         $feed = new Feed($url);
@@ -284,7 +336,6 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, $now);
         $this->entityManager->persist($subscription);
-        $this->entityManager->flush();
 
         return $subscription;
     }

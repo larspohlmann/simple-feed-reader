@@ -11,6 +11,7 @@ final readonly class RefusedProfileSubscriptionModel
     public function __construct(
         public Subscription $subscription,
         public string $actor,
+        public ?HiddenProfileModel $knownHidden,
     ) {
     }
 }

@@ -22,11 +22,10 @@ final class RefusedProfileSubscriptionRepository extends ServiceEntityRepository
         parent::__construct($registry, Subscription::class);
     }
 
-    /** @return list<Subscription> */
-    public function findOnRefusedBlueskyProfileFeeds(int $limit): array
+    /** @return list<Subscription> in feed, then subscription order, starting after $after */
+    public function findOnRefusedBlueskyProfileFeeds(?Subscription $after, int $limit): array
     {
-        /** @var list<Subscription> $subscriptions */
-        $subscriptions = $this->createQueryBuilder('s')
+        $queryBuilder = $this->createQueryBuilder('s')
             ->addSelect('f')
             ->join('s.feed', 'f')
             ->andWhere('f.network = :bluesky')
@@ -43,9 +42,15 @@ final class RefusedProfileSubscriptionRepository extends ServiceEntityRepository
             ->setParameter('connected', SocialAccountStatus::Connected)
             ->orderBy('f.id', 'ASC')
             ->addOrderBy('s.id', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($limit);
+        if (null !== $after) {
+            $queryBuilder
+                ->andWhere('f.id > :afterFeed OR (f.id = :afterFeed AND s.id > :afterSubscription)')
+                ->setParameter('afterFeed', $after->getFeed()->requireId())
+                ->setParameter('afterSubscription', $after->requireId());
+        }
+        /** @var list<Subscription> $subscriptions */
+        $subscriptions = $queryBuilder->getQuery()->getResult();
 
         return $subscriptions;
     }
