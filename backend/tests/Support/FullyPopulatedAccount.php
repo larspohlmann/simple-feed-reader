@@ -6,11 +6,11 @@ namespace App\Tests\Support;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
-use App\Entity\EntryAuthor;
 use App\Entity\EntryAttachment;
+use App\Entity\EntryAuthor;
 use App\Entity\EntryMedium;
-use App\Entity\EntryState;
 use App\Entity\EntryOrigin;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;

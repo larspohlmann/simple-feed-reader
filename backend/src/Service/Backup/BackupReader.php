@@ -177,8 +177,7 @@ final readonly class BackupReader
     }
 
     /**
-     * A feed line's own address is `url`; every other kind names its feed as `feedUrl`. An entry line's `url` is the
-     * article's and is never rebound.
+     * An entry line's `url` is the article's and is never rebound.
      *
      * @param array<string, mixed> $decoded
      *

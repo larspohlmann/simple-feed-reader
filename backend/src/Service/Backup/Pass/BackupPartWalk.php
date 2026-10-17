@@ -12,8 +12,8 @@ use App\Repository\SavedEntryOriginRepository;
 use App\Service\Backup\BackupLines;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\BackupPartModel;
-use App\Service\Backup\Model\EntryCompanionsModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
+use App\Service\Backup\Model\EntryCompanionsModel;
 use App\Service\Backup\Support\BackupSchema;
 use Doctrine\ORM\EntityManagerInterface;
 
