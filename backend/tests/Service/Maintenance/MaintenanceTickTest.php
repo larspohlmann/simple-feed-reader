@@ -45,7 +45,12 @@ use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
+use App\Service\Social\HiddenProfileSwitchSweep;
+use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\ProfileImageSweep;
+use App\Service\Social\ProfileSweeps;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\StubHiddenProfiles;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -199,6 +204,54 @@ final class MaintenanceTickTest extends DbTestCase
         return $report->sweeps->profileImages->checked;
     }
 
+    public function testMovesHiddenProfilesInTheSpareWindowOfATickWhoseRefreshTakesNoTime(): void
+    {
+        self::assertSame(1, $this->hiddenProfilesStartedByATickWhoseRefreshTakes(0));
+    }
+
+    public function testLeavesHiddenProfilesForLaterWhenTheRefreshSpentTheWindow(): void
+    {
+        self::assertSame(0, $this->hiddenProfilesStartedByATickWhoseRefreshTakes(18));
+    }
+
+    private function hiddenProfilesStartedByATickWhoseRefreshTakes(int $refreshSeconds): int
+    {
+        $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
+        $now = $clock->now();
+        $subscriber = new User('tick-hidden-profiles@example.com', $now);
+        $this->entityManager->persist($subscriber);
+        $this->entityManager->flush();
+        $this->entityManager->persist(SocialAccounts::blueskyOf($subscriber));
+        $feed = new Feed('https://one.example.com/feed');
+        $feed->scheduleNextFetchAt($now->modify('-1 hour'));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($subscriber, $feed, $now));
+        $refused = new Feed('https://bsky.app/profile/did:plc:rusty/rss');
+        $refused->recordFailedFetch($now, 'https://bsky.app/profile/did:plc:rusty/rss: HTTP 403', 60);
+        $refused->scheduleNextFetchAt($now->modify('+1 hour'));
+        $this->entityManager->persist($refused);
+        $this->entityManager->persist(new Subscription($subscriber, $refused, $now));
+        $this->entityManager->flush();
+        $hiddenProfiles = self::getContainer()->get(StubHiddenProfiles::class);
+        self::assertInstanceOf(StubHiddenProfiles::class, $hiddenProfiles);
+        $hiddenProfiles->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'));
+        $passes = new StubPassFetcher($clock);
+        $passes->secondsPerFetch = $refreshSeconds;
+        $passes->willReturnBody(
+            'https://one.example.com/feed',
+            /** @lang TEXT */ '<?xml version="1.0"?><rss version="2.0"><channel><title>F</title></channel></rss>',
+        );
+        $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
+            ->build($passes, new StubFeedFetcher());
+        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
+        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
+        $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, new MockHttpClient(), $clock);
+
+        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
+
+        return $report->sweeps->hiddenProfiles->started;
+    }
+
     private function assertLinkCardSweepOfATickWhoseRefreshTakes(
         int $refreshSeconds,
         LinkCardSweepReportModel $expectedSweep,
@@ -266,7 +319,7 @@ final class MaintenanceTickTest extends DbTestCase
                 $this->entityManager,
             ),
             $linkCardSweep,
-            $this->profileImageSweep($appViewFetcher ?? self::unreachableAppView(), $clock),
+            $this->profileSweeps($appViewFetcher ?? self::unreachableAppView(), $clock),
             MembershipSweepFactory::fromContainer(
                 self::getContainer(),
                 $this->entityManager,
@@ -279,6 +332,14 @@ final class MaintenanceTickTest extends DbTestCase
             ),
             $clock,
         );
+    }
+
+    private function profileSweeps(StubFeedFetcher $fetcher, MockClock $clock): ProfileSweeps
+    {
+        $switches = self::getContainer()->get(HiddenProfileSwitchSweep::class);
+        self::assertInstanceOf(HiddenProfileSwitchSweep::class, $switches);
+
+        return new ProfileSweeps($this->profileImageSweep($fetcher, $clock), $switches);
     }
 
     private function profileImageSweep(StubFeedFetcher $fetcher, MockClock $clock): ProfileImageSweep
