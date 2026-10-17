@@ -7,7 +7,9 @@ namespace App\Tests\Service\Account;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\KnownSocialCollection;
 use App\Entity\Preferences;
+use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationPoolLimits;
@@ -16,20 +18,26 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\SavedSearch;
+use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CallPhase;
+use App\Enum\PrivateFeedSyncReason;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\SocialFeedKind;
 use App\Service\Account\AccountReset;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\SocialAccounts;
 
 final class AccountResetTest extends DbTestCase
 {
     use SeedsUsers;
+
+    private const string LAST_SYNCED_AT = '2026-10-17 11:00:00';
 
     private function reset(): AccountReset
     {
@@ -95,6 +103,47 @@ final class AccountResetTest extends DbTestCase
         $this->entityManager->flush();
 
         return [$user, $feed, $entry, $run, $profileRun];
+    }
+
+    private function seedSyncedAccount(string $email): SocialAccount
+    {
+        $account = SocialAccounts::blueskyOf($this->user($email));
+        $this->entityManager->persist($account);
+        $account->recordSync(new \DateTimeImmutable(self::LAST_SYNCED_AT));
+        $listId = 'at://did:plc:alice/app.bsky.graph.list/news';
+        $this->entityManager->persist(new KnownSocialCollection($account, SocialFeedKind::UserList, $listId));
+        $this->entityManager->persist(new PrivateFeedSyncChange(
+            $account,
+            SocialFeedKind::UserList,
+            $listId,
+            'News',
+            PrivateFeedSyncReason::Saved,
+            new \DateTimeImmutable(self::LAST_SYNCED_AT),
+        ));
+        $this->entityManager->flush();
+
+        return $account;
+    }
+
+    public function testForgetsWhatThePrivateFeedSyncRememberedButKeepsWhenItLastCompleted(): void
+    {
+        $account = $this->seedSyncedAccount('reset-sync-memory@example.com');
+        $bystander = $this->seedSyncedAccount('reset-sync-bystander@example.com');
+        $accountId = $account->requireId();
+        $bystanderId = $bystander->requireId();
+
+        $this->reset()->reset($account->getUser());
+
+        $this->entityManager->clear();
+        $known = $this->entityManager->getRepository(KnownSocialCollection::class);
+        $changes = $this->entityManager->getRepository(PrivateFeedSyncChange::class);
+        self::assertSame([], $known->findBy(['socialAccount' => $accountId]));
+        self::assertSame([], $changes->findBy(['socialAccount' => $accountId]));
+        self::assertCount(1, $known->findBy(['socialAccount' => $bystanderId]));
+        self::assertCount(1, $changes->findBy(['socialAccount' => $bystanderId]));
+        $kept = $this->entityManager->find(SocialAccount::class, $accountId);
+        self::assertInstanceOf(SocialAccount::class, $kept);
+        self::assertSame(self::LAST_SYNCED_AT, $kept->getLastSyncedAt()?->format('Y-m-d H:i:s'));
     }
 
     public function testWipesEverythingTheUserOwns(): void

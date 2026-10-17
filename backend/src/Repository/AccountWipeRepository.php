@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\EntryState;
+use App\Entity\KnownSocialCollection;
+use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
+use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -45,6 +48,18 @@ final readonly class AccountWipeRepository
         $this->deleteByUser(Subscription::class, $user);
         $this->deleteByUser(Tag::class, $user);
         $this->deleteByUser(SavedSearch::class, $user);
+    }
+
+    /** Leaves each account's syncedAt: a null one makes the next check a baseline, which adds nothing back. */
+    public function deletePrivateFeedSyncMemory(User $user): void
+    {
+        foreach ([KnownSocialCollection::class, PrivateFeedSyncChange::class] as $memoryClass) {
+            $this->entityManager->createQuery(sprintf(
+                'DELETE FROM %s m WHERE IDENTITY(m.socialAccount) IN (SELECT a.id FROM %s a WHERE a.user = :user)',
+                $memoryClass,
+                SocialAccount::class,
+            ))->setParameter('user', $user)->execute();
+        }
     }
 
     /** @param class-string $entityClass */

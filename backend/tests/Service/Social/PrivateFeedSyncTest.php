@@ -18,6 +18,7 @@ use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
 use App\Repository\EntryStateRepository;
 use App\Repository\KnownSocialCollectionRepository;
+use App\Service\Backup\AccountRestorer;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\NetworkCandidatesModel;
@@ -29,6 +30,7 @@ use App\Service\Social\PrivateFeeds;
 use App\Service\Social\PrivateFeedSync;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ExportedFoundation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\PrivateFeedSyncWiring;
@@ -139,6 +141,26 @@ final class PrivateFeedSyncTest extends DbTestCase
 
         self::assertEquals(new PrivateFeedSyncOutcomeModel(added: 1), $outcome);
         self::assertCount(1, $this->subscribedUrls());
+    }
+
+    public function testAfterARestoreTheNextCheckAddsBackEveryListAndFeedOnTheNetwork(): void
+    {
+        $network = self::network([self::news()], [self::art()]);
+        $this->privateFeeds()->create($this->account, self::newsModel());
+        $this->stampAnHourAgo();
+        $this->syncAgainst($network);
+
+        $this->restoreABackupOfTheUser();
+        $this->account = $this->reloadedAccount();
+        $outcome = $this->syncAgainst($network);
+
+        self::assertEquals(new PrivateFeedSyncOutcomeModel(added: 2), $outcome);
+        self::assertSame([$this->artUrl(), $this->newsUrl()], $this->subscribedUrls());
+        self::assertSame(['custom_feed:' . self::ART, 'list:' . self::NEWS], $this->knownKeys());
+        self::assertSame([
+            ['list', self::NEWS, 'News', PrivateFeedSyncReason::Created],
+            ['custom_feed', self::ART, 'Art', PrivateFeedSyncReason::Saved],
+        ], $this->changes());
     }
 
     public function testHomeAndAnyKindOffTheAllowListAreNeverTouched(): void
@@ -375,6 +397,13 @@ final class PrivateFeedSyncTest extends DbTestCase
         return $subscriptionService;
     }
 
+    private function restoreABackupOfTheUser(): void
+    {
+        $restorer = self::getContainer()->get(AccountRestorer::class);
+        self::assertInstanceOf(AccountRestorer::class, $restorer);
+        $restorer->start($this->user, ExportedFoundation::of(self::getContainer(), $this->user), 'REPLACE');
+    }
+
     private function stampAnHourAgo(): void
     {
         $this->account->recordSync(new \DateTimeImmutable(self::AN_HOUR_AGO));
@@ -480,6 +509,11 @@ final class PrivateFeedSyncTest extends DbTestCase
     private function artUrl(): string
     {
         return sprintf('social:bluesky:%d:feed:%s', $this->account->requireId(), self::ART);
+    }
+
+    private function newsUrl(): string
+    {
+        return sprintf('social:bluesky:%d:list:%s', $this->account->requireId(), self::NEWS);
     }
 
     private static function news(): SocialCollectionModel

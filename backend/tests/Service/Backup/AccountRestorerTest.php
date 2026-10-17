@@ -27,6 +27,7 @@ use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Search\SavedSearchSlug;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BackupFieldDeclarations;
+use App\Tests\Support\ExportedFoundation;
 use App\Tests\Support\FullyPopulatedAccount;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
@@ -55,18 +56,9 @@ final class AccountRestorerTest extends DbTestCase
         $this->userFactory = new UserFactory($this->entityManager, $hasher);
     }
 
-    /** The foundation part of a real export, the only part `start()` reads. */
     private function backupOf(User $user): string
     {
-        $exporter = self::getContainer()->get(AccountBackupExporter::class);
-        self::assertInstanceOf(AccountBackupExporter::class, $exporter);
-        foreach ($exporter->parts($user, 'https://source.example') as $part) {
-            if ('000-foundation.ndjson.gz' === $part->memberName) {
-                return $part->gzipBytes;
-            }
-        }
-
-        throw new \LogicException('The exporter produced no foundation part.');
+        return ExportedFoundation::of(self::getContainer(), $user);
     }
 
     /**

@@ -24,6 +24,7 @@ final readonly class AccountReset
     {
         $this->wipe->deleteRecommendationData($user);
         $this->wipe->deleteOwnedRows($user);
+        $this->wipe->deletePrivateFeedSyncMemory($user);
         $user->getPreferences()->setScrapeFallbackEnabled(false);
         $this->entityManager->flush();
         $this->entityManager->clear();

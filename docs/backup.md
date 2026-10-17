@@ -220,8 +220,8 @@ These rows belong to your account. A backup drops each of them completely.
 | `SocialAccount` | Your connected Bluesky and Mastodon accounts and their credentials. A backup is a file that leaves the server, and a credential is bound to this instance's key. A restore does not touch your connected accounts; reconnect them there. |
 | `SocialFeed` | Which of your feeds are the private timeline, lists and custom feeds of a connected Bluesky or Mastodon account. They belong to that account, which the file leaves out, so the export also leaves out their feeds, subscriptions and posts. Your Saved from … feeds are not among them: they are yours and travel in the file. After a restore, reconnect the account and add them again in the import picker. |
 | `SocialLike` | Your likes of Bluesky and Mastodon posts, given through a connected account. They belong to that account, which the file leaves out. The likes themselves stay on the networks. |
-| `KnownSocialCollection` | The lists and custom feeds the hourly sync has seen for a connected account, which it uses to tell a feed you dropped from a new one. They belong to that account, which the file leaves out. |
-| `PrivateFeedSyncChange` | The recent automatic changes the hourly sync made to a connected account's lists and feeds. They are that account's own log, and the file leaves the account out. |
+| `KnownSocialCollection` | The lists and custom feeds the hourly sync has seen for a connected account, which it uses to tell a feed you dropped from a new one. They belong to that account, which the file leaves out. A restore clears them, so that the sync adds the account's lists and feeds back (see below). |
+| `PrivateFeedSyncChange` | The recent automatic changes the hourly sync made to a connected account's lists and feeds. They are that account's own log, and the file leaves the account out. A restore clears the log. |
 | `UserIdentity` | Your links to Google and Apple sign-in. A restore writes what the file says, and the file comes from you. See section 7. |
 | `ActionToken` | Short-lived tokens for address verification and password reset. Each token lives for minutes and works once. |
 | `RecommendationSettings` | Your "For you" settings: the guidance prompt, the learned profile, the caps and limits, and the batch size. They are quick to set again after a restore, and not worth carrying in a file you handle and send. |
@@ -236,9 +236,13 @@ Your "For you" **settings** and **results** are both dropped. A restore leaves
 the settings at their defaults; set them again once, and run the engine.
 
 A restore also removes the subscriptions to a connected account's private lists
-and custom feeds, but it keeps what the hourly sync remembers about that account.
-Every list and custom feed is then known and not subscribed, which the sync reads
-as dropped by you, so it does not add them back. Add them again in the import
+and custom feeds. It also clears what the hourly sync remembers about that account
+and its log of recent changes, but it keeps the time of the account's last complete
+check. The next complete check therefore adds back every list and custom feed the
+account has on the network, and logs each one. A list or feed you had dropped before
+the backup comes back too, because the file does not record that you dropped it.
+Untick it again. An account whose sync has never completed a check gets its first
+check as usual: that check adds nothing, so add those lists and feeds in the import
 picker.
 
 ### 6.3 Fields the file drops
