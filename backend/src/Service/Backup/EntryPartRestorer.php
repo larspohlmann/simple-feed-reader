@@ -26,7 +26,7 @@ final readonly class EntryPartRestorer
     public function load(User $user, string $gzipBytes): RestoreResultModel
     {
         $loader = $this->loaderFactory->create($user, $this->inspector->inspect($user, $gzipBytes));
-        foreach ($this->reader->read($gzipBytes) as $line) {
+        foreach ($this->reader->read($gzipBytes, $user->requireId()) as $line) {
             match (true) {
                 $line instanceof EntryLine => $loader->bufferEntry($line),
                 $line instanceof EntryStateLine => $loader->loadState($line),

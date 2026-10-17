@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
+use App\Enum\SourceFormat;
 use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\Support\PlainText;
@@ -22,6 +23,8 @@ final class SubscriptionJson
     private const int DESCRIPTION_MAX = 1000;
 
     private const string PROFILE_KIND = 'profile';
+
+    private const string SAVED_KIND = 'saved';
 
     /**
      * @param list<Subscription>  $subscriptions
@@ -107,8 +110,8 @@ final class SubscriptionJson
     }
 
     /**
-     * A private feed's synthetic URL also names its account and kind. Any other networked feed is a profile feed, and
-     * so is an author feed, which follows one person.
+     * A private feed's synthetic URL also names its account and kind; a saved feed is `saved`; any other networked
+     * feed is a profile feed, and so is an author feed, which follows one person.
      *
      * @return array{network: string, accountId: int|null, kind: string}|null
      */
@@ -117,6 +120,9 @@ final class SubscriptionJson
         $network = $feed->getNetwork();
         if (null === $network) {
             return null;
+        }
+        if (SourceFormat::isSaved($feed->getSourceFormat())) {
+            return ['network' => $network->value, 'accountId' => null, 'kind' => self::SAVED_KIND];
         }
         $address = SocialFeedClassifier::privateAddressOf($feed);
         if (null === $address || $address->kind->followsOnePerson()) {

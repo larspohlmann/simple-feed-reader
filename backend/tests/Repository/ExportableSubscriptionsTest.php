@@ -46,6 +46,44 @@ final class ExportableSubscriptionsTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame([$author], $this->subscriptions()->findExportableForUserWithTags($user->requireId()));
+        self::assertSame([$author], $this->subscriptions()->findBackedUpForUserWithTags($user->requireId()));
+    }
+
+    public function testAnOpmlLeavesTheSavedFeedsOutAndABackupKeepsThem(): void
+    {
+        $user = new User('exportable-saved@example.com', new \DateTimeImmutable('2026-10-17T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $rss = $this->subscribed($user, 'https://example.com/saved-test.xml', SourceFormat::XML);
+        $this->subscribed($user, 'social:mastodon:2:home', SourceFormat::MASTODON_API);
+        $saved = $this->subscribed($user, sprintf('saved:%d:bluesky', $user->requireId()), SourceFormat::SAVED);
+        $this->entityManager->flush();
+
+        self::assertSame([$rss], $this->subscriptions()->findExportableForUserWithTags($user->requireId()));
+        self::assertSame([$rss, $saved], $this->subscriptions()->findBackedUpForUserWithTags($user->requireId()));
+    }
+
+    public function testTheCapCountsNoSavedFeed(): void
+    {
+        $user = new User('count-saved@example.com', new \DateTimeImmutable('2026-10-17T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $rss = $this->subscribed($user, 'https://example.com/counted.xml', SourceFormat::XML);
+        $saved = $this->subscribed($user, sprintf('saved:%d', $user->requireId()), SourceFormat::SAVED);
+        $other = new User('count-saved-other@example.com', new \DateTimeImmutable('2026-10-17T00:00:00Z'));
+        $this->entityManager->persist($other);
+        $this->entityManager->flush();
+        $otherSaved = new Subscription($other, $saved->getFeed(), new \DateTimeImmutable('2026-10-17T00:00:00Z'));
+        $this->entityManager->persist($otherSaved);
+        $this->entityManager->flush();
+
+        self::assertSame(1, $this->subscriptions()->countForUser($user->requireId()));
+        $savedUrl = sprintf('saved:%d', $user->requireId());
+        self::assertSame($saved, $this->subscriptions()->findOneForUserAndFeedUrl($user->requireId(), $savedUrl));
+        self::assertSame($otherSaved, $this->subscriptions()->findOneForUserAndFeedUrl($other->requireId(), $savedUrl));
+        self::assertNull(
+            $this->subscriptions()->findOneForUserAndFeedUrl($other->requireId(), $rss->getFeed()->getUrl()),
+        );
     }
 
     private function subscribed(User $user, string $url, string $sourceFormat): Subscription

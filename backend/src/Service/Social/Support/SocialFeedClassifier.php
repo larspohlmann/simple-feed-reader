@@ -7,6 +7,7 @@ namespace App\Service\Social\Support;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Social\Model\SocialFeedAddressModel;
 
 /** Which network a feed belongs to: by its private format and address, else by its URL as a profile feed. */
@@ -19,6 +20,10 @@ final class SocialFeedClassifier
 
     public static function networkFor(string $url, string $sourceFormat): ?SocialNetwork
     {
+        if (SourceFormat::isSaved($sourceFormat)) {
+            return SavedFeedUrl::networkOf($url);
+        }
+
         return self::privateAddressFor($url, $sourceFormat)->network ?? ProfileFeedUrl::networkOf($url);
     }
 

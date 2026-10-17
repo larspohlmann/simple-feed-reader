@@ -7,6 +7,8 @@ import { API_BASE_URL } from '../../core/api';
 import { RefreshService } from '../../reader/state/refresh.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
+import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { SocialNetworkName } from '../../core/social-network';
@@ -79,6 +81,9 @@ describe('SocialImportDialogComponent', () => {
   const tagsStub = { load: jest.fn() };
   const refreshStub = { run: jest.fn() };
   const toastStub = { show: jest.fn() };
+  const confirmStub = {
+    confirmThen: jest.fn((_data: ConfirmData, action: () => void) => action()),
+  };
 
   function mount(
     network: SocialNetworkName = 'bluesky',
@@ -96,6 +101,7 @@ describe('SocialImportDialogComponent', () => {
         { provide: TagsStore, useValue: tagsStub },
         { provide: RefreshService, useValue: refreshStub },
         { provide: ToastService, useValue: toastStub },
+        { provide: ConfirmService, useValue: confirmStub },
         { provide: ImageProxyService, useValue: failingProxy },
       ],
     });
@@ -184,6 +190,7 @@ describe('SocialImportDialogComponent', () => {
     tagsStub.load.mockReset();
     refreshStub.run.mockReset();
     toastStub.show.mockReset();
+    confirmStub.confirmThen.mockClear();
   });
 
   afterEach(() => http.verify());
@@ -336,23 +343,30 @@ describe('SocialImportDialogComponent', () => {
     expect(text).toContain('No longer followed');
   });
 
-  it('offers lists and custom feeds as checkboxes, the added ones checked and fixed', () => {
+  it('offers lists and custom feeds as checkboxes; an added list stays ticked and can be unticked, Home stays fixed', () => {
     const fixture = loaded(
       candidates({
-        lists: [HOME, collection({ state: 'subscribed', subscriptionId: 12 })],
+        lists: [
+          collection({
+            kind: 'home',
+            id: null,
+            name: 'Home',
+            state: 'subscribed',
+            subscriptionId: 11,
+          }),
+          collection({ state: 'subscribed', subscriptionId: 12 }),
+        ],
         customFeeds: [DISCOVER],
       }),
     );
     showTab(fixture, 'Lists');
 
-    const lists = byTestId(fixture, 'social-import-lists') as HTMLElement;
-    expect(lists.textContent).toContain('Home timeline');
-    expect(lists.textContent).not.toContain('arrives with private timeline feeds');
-    expect(collectionBox(fixture, 'home:').checked).toBe(false);
+    expect(collectionBox(fixture, 'home:').checked).toBe(true);
+    expect(collectionBox(fixture, 'home:').disabled).toBe(true);
     expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(true);
-    expect(collectionBox(fixture, 'list:at://list/a').disabled).toBe(true);
+    expect(collectionBox(fixture, 'list:at://list/a').disabled).toBe(false);
     expect(collectionBox(fixture, 'list:at://list/a').getAttribute('aria-label')).toBe(
-      'Already added: News',
+      'Remove News',
     );
     showTab(fixture, 'Feeds');
     expect(collectionBox(fixture, 'custom_feed:at://feed/a').getAttribute('aria-label')).toBe(
@@ -377,15 +391,73 @@ describe('SocialImportDialogComponent', () => {
     expect(selectNew(fixture).disabled).toBe(true);
   });
 
-  it('does not toggle an already added collection', () => {
-    const added = collection({ state: 'subscribed', subscriptionId: 12 });
-    const fixture = loaded(candidates({ lists: [added] }));
+  it('unticking an added list removes it through the import’s unsubscribe ids', () => {
+    const fixture = loaded(
+      candidates({ lists: [collection({ state: 'subscribed', subscriptionId: 12 })] }),
+    );
     showTab(fixture, 'Lists');
 
-    collectionBox(fixture, 'list:at://list/a').dispatchEvent(new Event('change'));
+    collectionBox(fixture, 'list:at://list/a').click();
+    fixture.detectChanges();
+    expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(false);
+
+    press(fixture, 'social-import-apply');
+    const post = http.expectOne(IMPORT);
+    expect(post.request.body).toEqual({ subscribe: [], unsubscribe: [12], collections: [] });
+    post.flush({ imported: 0, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 1 });
+  });
+
+  it('asks first, naming the lists and where favourites and kept posts go', () => {
+    const fixture = loaded(
+      candidates({ lists: [collection({ state: 'subscribed', subscriptionId: 12 })] }),
+    );
+    showTab(fixture, 'Lists');
+    collectionBox(fixture, 'list:at://list/a').click();
     fixture.detectChanges();
 
-    expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(true);
+    press(fixture, 'social-import-apply');
+
+    const [data] = confirmStub.confirmThen.mock.calls[0];
+    expect(data.message).toContain('News');
+    expect(data.message).toContain('Favourites and kept posts move to Saved from Bluesky.');
+    http.expectOne(IMPORT).flush({
+      imported: 0,
+      alreadySubscribed: 0,
+      invalid: 0,
+      skippedOverLimit: 0,
+      removed: 1,
+    });
+  });
+
+  it('sends nothing when the removal is not confirmed', () => {
+    confirmStub.confirmThen.mockImplementationOnce(() => undefined);
+    const fixture = loaded(
+      candidates({ lists: [collection({ state: 'subscribed', subscriptionId: 12 })] }),
+    );
+    showTab(fixture, 'Lists');
+    collectionBox(fixture, 'list:at://list/a').click();
+    fixture.detectChanges();
+
+    press(fixture, 'social-import-apply');
+
+    http.expectNone(IMPORT);
+  });
+
+  it('never unticks a subscribed Home', () => {
+    const home = collection({
+      kind: 'home',
+      id: null,
+      name: 'Home',
+      state: 'subscribed',
+      subscriptionId: 11,
+    });
+    const fixture = loaded(candidates({ lists: [home] }));
+    showTab(fixture, 'Lists');
+
+    collectionBox(fixture, 'home:').dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(collectionBox(fixture, 'home:').checked).toBe(true);
     expect(applyButton(fixture).disabled).toBe(true);
   });
 

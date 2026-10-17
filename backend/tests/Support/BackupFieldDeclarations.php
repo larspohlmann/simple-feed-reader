@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\Preferences;
+use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -93,6 +94,9 @@ final class BackupFieldDeclarations
             'url' => 'linkCards.url', 'title' => 'linkCards.title', 'description' => 'linkCards.description',
             'imageUrl' => 'linkCards.imageUrl', 'siteName' => 'linkCards.siteName',
         ],
+        SavedEntryOrigin::class => [
+            'entry' => 'origin', 'title' => 'origin.title', 'faviconUrl' => 'origin.faviconUrl',
+        ],
         EntryState::class => [
             // Both halves: guidHash picks the entry within its feed, feedUrl the feed. Declaring only one would let
             // entryStateLine() drop the other unnoticed.
@@ -113,6 +117,7 @@ final class BackupFieldDeclarations
         SubscriptionTag::class => BackupSchema::KIND_SUBSCRIPTION,
         Entry::class => BackupSchema::KIND_ENTRY,
         LinkCard::class => BackupSchema::KIND_ENTRY,
+        SavedEntryOrigin::class => BackupSchema::KIND_ENTRY,
         EntryState::class => BackupSchema::KIND_ENTRY_STATE,
     ];
 

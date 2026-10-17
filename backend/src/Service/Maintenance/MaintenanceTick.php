@@ -16,8 +16,7 @@ use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Social\Model\ProfileCallBudgetModel;
-use App\Service\Social\ProfileSweeps;
+use App\Service\Social\SocialMaintenance;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -38,8 +37,6 @@ final readonly class MaintenanceTick
     private const int MEMBERSHIP_BUDGET_SECONDS = 10;
 
     private const int LINK_CARD_MAX_FETCHES = 2;
-    private const int PROFILE_IMAGE_MAX_CALLS = 1;
-    private const int HIDDEN_PROFILE_MAX_CALLS = 1;
 
     public function __construct(
         private RefreshRunner $refreshRunner,
@@ -47,7 +44,7 @@ final readonly class MaintenanceTick
         private SendDueDigests $sendDueDigests,
         private ImageVerificationSweep $imageVerificationSweep,
         private LinkCardSweep $linkCardSweep,
-        private ProfileSweeps $profileSweeps,
+        private SocialMaintenance $socialMaintenance,
         private SavedSearchMembershipSweep $membershipSweep,
         private LokiSpoolShipper $logSpoolShipper,
         private ClockInterface $clock,
@@ -73,13 +70,10 @@ final readonly class MaintenanceTick
         $linkCards = $this->linkCardSweep->sweep(
             LinkCardBudgetModel::fittingBefore($deadline, $this->clock->now(), self::LINK_CARD_MAX_FETCHES),
         );
-        $profileImages = $this->profileSweeps->pictures(
-            ProfileCallBudgetModel::fittingBefore($deadline, $this->clock->now(), self::PROFILE_IMAGE_MAX_CALLS),
-        );
-        $hiddenProfiles = $this->profileSweeps->switches(
-            ProfileCallBudgetModel::fittingBefore($deadline, $this->clock->now(), self::HIDDEN_PROFILE_MAX_CALLS),
-        );
+        $profileImages = $this->socialMaintenance->refreshProfileImages($deadline);
+        $hiddenProfiles = $this->socialMaintenance->switchHiddenProfiles($deadline);
         $budget = SweepBudgetModel::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
+        $memberships = $this->membershipSweep->sweep($budget);
 
         return new MaintenanceSweepsModel(
             $recommendations,
@@ -88,7 +82,8 @@ final readonly class MaintenanceTick
             $linkCards,
             $profileImages,
             $hiddenProfiles,
-            $this->membershipSweep->sweep($budget),
+            $this->socialMaintenance->syncPrivateFeeds($deadline),
+            $memberships,
         );
     }
 }

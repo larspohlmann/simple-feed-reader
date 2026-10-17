@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
+use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Enum\RunStatus;
@@ -59,6 +60,29 @@ final readonly class RetentionRepository
             ?->andWhere('e.createdAt < :cutoff')?->setParameter('cutoff', $cutoff);
 
         return self::idsOf($query);
+    }
+
+    /** @return list<int> */
+    public function savedFeedIds(): array
+    {
+        $qb = $this->entityManager->createQueryBuilder()->select('f.id')->from(Feed::class, 'f');
+        SavedFeedDql::only($qb, 'f');
+
+        return self::idsOf($qb);
+    }
+
+    /** @return list<int> the saved feed's entries that nobody favourites or keeps any more (#1666) */
+    public function unsavedIdsInSavedFeed(int $feedId): array
+    {
+        return self::idsOf(
+            $this->entityManager->createQueryBuilder()
+                ->select('e.id')
+                ->from(Entry::class, 'e')
+                ->where('e.feed = :feed')
+                ->andWhere($this->notProtectedDql())
+                ->setParameter('feed', $feedId)
+                ->setParameter('true', true, Types::BOOLEAN),
+        );
     }
 
     /** @param list<int> $ids */

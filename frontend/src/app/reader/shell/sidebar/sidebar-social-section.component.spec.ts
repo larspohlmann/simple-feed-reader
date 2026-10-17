@@ -35,6 +35,7 @@ const ONE_ACCOUNT: SocialSection = {
   profiles: socialProfiles([]),
   unreadCount: 3,
   entryCount: 0,
+  saved: null,
   showsHandles: false,
   accounts: [
     {
@@ -110,6 +111,7 @@ describe('SidebarSocialSectionComponent', () => {
       network: 'bluesky',
       unreadCount: 0,
       entryCount: 0,
+      saved: null,
       showsHandles: false,
       profiles: socialProfiles([]),
       accounts: [
@@ -131,6 +133,7 @@ describe('SidebarSocialSectionComponent', () => {
       network: 'bluesky',
       unreadCount: 0,
       entryCount: 0,
+      saved: null,
       showsHandles: true,
       profiles: socialProfiles([]),
       accounts: [
@@ -183,6 +186,7 @@ describe('SidebarSocialSectionComponent', () => {
       network: 'bluesky',
       unreadCount: 0,
       entryCount: 0,
+      saved: null,
       showsHandles: true,
       profiles: socialProfiles([]),
       accounts: [
@@ -204,12 +208,30 @@ describe('SidebarSocialSectionComponent', () => {
       network: 'bluesky',
       unreadCount: 0,
       entryCount: 0,
+      saved: null,
       showsHandles: false,
       profiles: socialProfiles([]),
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
 
     expect(element(mount(section)).querySelector('.feed-exclusion-marker')).toBeNull();
+  });
+
+  it('lists the saved feed as a row of its own after the accounts', () => {
+    const savedFeed = makeSubscription({
+      id: 9,
+      title: 'Saved from Bluesky',
+      sourceFormat: 'saved',
+      entryCount: 2,
+      social: { network: 'bluesky', accountId: null, kind: 'saved' },
+    });
+    const root = element(mount({ ...ONE_ACCOUNT, saved: savedFeed }));
+
+    const row = root.querySelector('[data-testid="sidebar-social-saved"]');
+    expect(row?.textContent).toContain('Saved from Bluesky');
+    expect(
+      element(mount(ONE_ACCOUNT)).querySelector('[data-testid="sidebar-social-saved"]'),
+    ).toBeNull();
   });
 
   const WITH_PROFILES: SocialSection = {
@@ -283,6 +305,7 @@ describe('SidebarSocialSectionComponent', () => {
       network: 'mastodon',
       unreadCount: 0,
       entryCount: 0,
+      saved: null,
       showsHandles: false,
       accounts: [],
       profiles: socialProfiles([person(7, 'Amy')]),
@@ -304,6 +327,7 @@ describe('SidebarSocialSectionComponent', () => {
       profiles: socialProfiles([excluded]),
       unreadCount: 0,
       entryCount: 0,
+      saved: null,
       showsHandles: false,
     };
 
@@ -359,6 +383,7 @@ describe('SidebarSocialSectionComponent', () => {
         profiles: socialProfiles([subscription]),
         unreadCount: 0,
         entryCount: 0,
+        saved: null,
         showsHandles: false,
       };
       expandProfiles('bluesky');
@@ -396,6 +421,7 @@ describe('SidebarSocialSectionComponent', () => {
         profiles: socialProfiles([amy]),
         unreadCount: 0,
         entryCount: 0,
+        saved: null,
         showsHandles: false,
       };
       expandProfiles('bluesky');

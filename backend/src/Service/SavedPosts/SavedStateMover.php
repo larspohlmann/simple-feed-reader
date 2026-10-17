@@ -19,49 +19,54 @@ final readonly class SavedStateMover
     ) {
     }
 
-    /** @param array<int, int> $targetByEntryId the same post's target entry id, by its source entry id */
+    /** @param array<int, int> $targetByEntryId */
     public function move(int $userId, array $targetByEntryId): void
     {
         if ([] === $targetByEntryId) {
             return;
         }
         $sources = $this->entryStates->forUserByEntryIds($userId, array_keys($targetByEntryId));
-        foreach ($sources as $entryId => $source) {
-            $this->entryStates->ensureRow(
-                $userId,
-                $targetByEntryId[$entryId],
-                $source->isHidden() ? $source->getHiddenAt() : null,
-            );
+        foreach ($targetByEntryId as $entryId => $targetId) {
+            $this->entryStates->ensureRow($userId, $targetId, self::hiddenSinceOf($sources[$entryId] ?? null));
         }
-        $targets = $this->entryStates->forUserByEntryIds(
-            $userId,
-            array_values(array_intersect_key($targetByEntryId, $sources)),
-        );
-        foreach ($sources as $entryId => $source) {
-            $target = $targets[$targetByEntryId[$entryId]] ?? null;
-            if (null !== $target) {
-                self::carry($source, $target);
-            }
-        }
-        foreach ($targetByEntryId as $sourceEntryId => $targetEntryId) {
-            $this->socialLikes->copyLike($userId, $sourceEntryId, $targetEntryId);
+        $targets = $this->entryStates->forUserByEntryIds($userId, array_values($targetByEntryId));
+        foreach ($targetByEntryId as $entryId => $targetId) {
+            self::merge($sources[$entryId] ?? null, $targets[$targetId] ?? null);
+            $this->socialLikes->copyLike($userId, $entryId, $targetId);
         }
         $this->entityManager->flush();
     }
 
-    /** A legacy read mark has no instant, which ensureRow() cannot write; restoreReadMark() can. */
-    private static function carry(EntryState $source, EntryState $target): void
+    private static function hiddenSinceOf(?EntryState $source): ?\DateTimeImmutable
     {
-        if ($source->isHidden() && !$target->isHidden()) {
-            $target->restoreReadMark(new BackedUpReadMark(true, $source->getHiddenAt()));
+        return true === $source?->isHidden() ? $source->getHiddenAt() : null;
+    }
+
+    private static function merge(?EntryState $source, ?EntryState $target): void
+    {
+        if (null === $source || null === $target) {
+            return;
         }
+        self::moveFlags($source, $target);
+        self::copyReading($source, $target);
+    }
+
+    private static function moveFlags(EntryState $source, EntryState $target): void
+    {
         if ($source->isFavorite()) {
             $target->markFavorite();
-            $source->clearFavorite();
         }
         if ($source->isKept()) {
             $target->markKept();
-            $source->clearKept();
+        }
+        $source->clearFavorite();
+        $source->clearKept();
+    }
+
+    private static function copyReading(EntryState $source, EntryState $target): void
+    {
+        if ($source->isHidden() && !$target->isHidden()) {
+            $target->restoreReadMark(new BackedUpReadMark(true, $source->getHiddenAt()));
         }
         $viewedAt = $source->getViewedAt();
         if (null !== $viewedAt) {

@@ -15,6 +15,7 @@ use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Refresh\Model\RefreshReportModel;
 use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use PHPUnit\Framework\TestCase;
 
@@ -30,7 +31,8 @@ final class MaintenanceTickJsonTest extends TestCase
                 new ImageVerificationReportModel(7, 8, 9, 10),
                 new LinkCardSweepReportModel(16, 17),
                 new ProfileImageSweepReportModel(18, 19),
-                new HiddenProfileSwitchReportModel(20, 21),
+                new HiddenProfileSwitchReportModel(24, 25),
+                new PrivateFeedSyncReportModel(20, 21, 22, 23),
                 new SavedSearchMembershipSweepReportModel(11, 12, 13, true),
             ),
             new LokiSpoolReportModel(14, 15),
@@ -61,7 +63,8 @@ final class MaintenanceTickJsonTest extends TestCase
                 'imageVerification' => ['measured' => 7, 'kept' => 8, 'dropped' => 9, 'retried' => 10],
                 'linkCards' => ['considered' => 16, 'completed' => 17],
                 'profileImages' => ['checked' => 18, 'changed' => 19],
-                'hiddenProfiles' => ['started' => 20, 'finished' => 21],
+                'hiddenProfiles' => ['started' => 24, 'finished' => 25],
+                'privateFeedSync' => ['accountsChecked' => 20, 'accountsSkipped' => 21, 'added' => 22, 'removed' => 23],
                 'savedSearchMemberships' => [
                     'searchesSwept' => 11,
                     'entriesScanned' => 12,
@@ -116,6 +119,13 @@ final class MaintenanceTickJsonTest extends TestCase
                 'linkCards' => ['considered' => 0, 'completed' => 0, 'skipped' => $reason],
                 'profileImages' => ['checked' => 0, 'changed' => 0, 'skipped' => $reason],
                 'hiddenProfiles' => ['started' => 0, 'finished' => 0, 'skipped' => $reason],
+                'privateFeedSync' => [
+                    'accountsChecked' => 0,
+                    'accountsSkipped' => 0,
+                    'added' => 0,
+                    'removed' => 0,
+                    'skipped' => $reason,
+                ],
                 'savedSearchMemberships' => [
                     'searchesSwept' => 0,
                     'entriesScanned' => 0,

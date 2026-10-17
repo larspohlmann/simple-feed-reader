@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\EntryRepository;
+use App\Repository\SubscribedEntryCountRepository;
 use App\Tests\DbTestCase;
 
 /**
@@ -16,7 +16,7 @@ use App\Tests\DbTestCase;
  * through its subscriptions, not the whole table — an entry in a feed nobody
  * here reads any more, or a feed a stranger owns, must not count.
  */
-final class CountInFeedsSubscribedByTest extends DbTestCase
+final class SubscribedEntryCountRepositoryTest extends DbTestCase
 {
     public function testCountsOnlyEntriesInFeedsTheUserSubscribesTo(): void
     {
@@ -34,7 +34,7 @@ final class CountInFeedsSubscribedByTest extends DbTestCase
         $this->entry($unsubscribed, 'c');
         $this->entityManager->flush();
 
-        self::assertSame(2, $this->repository()->countInFeedsSubscribedBy($user->requireId()));
+        self::assertSame(2, $this->repository()->countFor($user->requireId()));
     }
 
     public function testAUserWithNoSubscriptionsCountsZero(): void
@@ -43,7 +43,7 @@ final class CountInFeedsSubscribedByTest extends DbTestCase
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
-        self::assertSame(0, $this->repository()->countInFeedsSubscribedBy($user->requireId()));
+        self::assertSame(0, $this->repository()->countFor($user->requireId()));
     }
 
     private function feed(string $url): Feed
@@ -69,11 +69,8 @@ final class CountInFeedsSubscribedByTest extends DbTestCase
         return $entry;
     }
 
-    private function repository(): EntryRepository
+    private function repository(): SubscribedEntryCountRepository
     {
-        $repository = $this->entityManager->getRepository(Entry::class);
-        self::assertInstanceOf(EntryRepository::class, $repository);
-
-        return $repository;
+        return new SubscribedEntryCountRepository($this->entityManager);
     }
 }

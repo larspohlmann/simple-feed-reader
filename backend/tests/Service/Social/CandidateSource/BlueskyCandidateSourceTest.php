@@ -9,6 +9,7 @@ use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Social\BlueskyApiClient;
+use App\Service\Social\BlueskySavedCollections;
 use App\Service\Social\BlueskySessionCache;
 use App\Service\Social\BlueskySessionOpener;
 use App\Service\Social\BlueskySessions;
@@ -47,6 +48,10 @@ final class BlueskyCandidateSourceTest extends TestCase
     private const string GENERATORS = 'GET https://public.api.bsky.app/xrpc/app.bsky.feed.getFeedGenerators?';
     private const string DISCOVER = 'at://did:plc:whats-hot/app.bsky.feed.generator/discover';
     private const string GONE = 'at://did:plc:retired/app.bsky.feed.generator/gone';
+    private const string GET_LIST = 'GET https://public.api.bsky.app/xrpc/app.bsky.graph.getList?list=';
+    private const string OWN_LIST = 'at://did:plc:alice/app.bsky.graph.list/news';
+    private const string THEIR_LIST = 'at://did:plc:bob/app.bsky.graph.list/writers';
+    private const string DELETED_LIST = 'at://did:plc:bob/app.bsky.graph.list/deleted';
 
     private ArrayAdapter $cache;
     private SocialAccount $account;
@@ -74,10 +79,13 @@ final class BlueskyCandidateSourceTest extends TestCase
 
         return new BlueskyCandidateSource(
             $api,
-            new BlueskySessions(
+            new BlueskySavedCollections(
                 $api,
-                new BlueskySessionOpener($api, new StoredCredential(SocialAccounts::cipher())),
-                $this->sessionCache(),
+                new BlueskySessions(
+                    $api,
+                    new BlueskySessionOpener($api, new StoredCredential(SocialAccounts::cipher())),
+                    $this->sessionCache(),
+                ),
             ),
         );
     }
@@ -119,6 +127,23 @@ final class BlueskyCandidateSourceTest extends TestCase
         $items = array_map(static fn (string $uri): array => ['type' => 'feed', 'value' => $uri], $uris);
 
         return self::json(['preferences' => [['$type' => 'app.bsky.actor.defs#savedFeedsPrefV2', 'items' => $items]]]);
+    }
+
+    /** @param list<array{string, string}> $items type, value */
+    private static function savedItems(array $items): MockResponse
+    {
+        return self::json(['preferences' => [[
+            '$type' => 'app.bsky.actor.defs#savedFeedsPrefV2',
+            'items' => array_map(
+                static fn (array $item): array => [
+                    'type' => $item[0],
+                    'value' => $item[1],
+                    'pinned' => false,
+                    'id' => $item[1],
+                ],
+                $items,
+            ),
+        ]]]);
     }
 
     /** @param list<string> $uris */
@@ -248,7 +273,7 @@ final class BlueskyCandidateSourceTest extends TestCase
         ], $customFeeds);
     }
 
-    public function testSavedFeedsAreNamedByTheirGeneratorAndAnUnknownOneKeepsItsUri(): void
+    public function testSavedFeedsAreNamedByTheirGeneratorAndAnUnknownOneIsLeftOut(): void
     {
         $http = new RoutedHttpClient($this->routes([
             self::PREFERENCES => self::json(['preferences' => [
@@ -267,13 +292,19 @@ final class BlueskyCandidateSourceTest extends TestCase
             ]]),
             self::GENERATORS . 'feeds=' . rawurlencode(self::DISCOVER) . '&feeds=' . rawurlencode(self::GONE)
                 => self::json(['feeds' => [['uri' => self::DISCOVER, 'displayName' => 'Discover']]]),
+            self::GET_LIST . rawurlencode('at://did:plc:alice/app.bsky.graph.list/news') . '&limit=1' => self::json([
+                'list' => [
+                    'uri' => 'at://did:plc:alice/app.bsky.graph.list/news',
+                    'name' => 'News',
+                    'purpose' => 'app.bsky.graph.defs#curatelist',
+                ],
+            ]),
         ]));
 
         $customFeeds = $this->source($http)->candidates($this->account)->customFeeds;
 
         self::assertEquals([
             new SocialCollectionModel(self::DISCOVER, 'Discover'),
-            new SocialCollectionModel(self::GONE, self::GONE),
         ], $customFeeds);
         self::assertContains('Authorization: Bearer jwt-1', $http->requests[1]['headers']);
     }
@@ -300,8 +331,8 @@ final class BlueskyCandidateSourceTest extends TestCase
             new MockResponse('{"error":"ExpiredToken"}', ['http_code' => Response::HTTP_BAD_REQUEST]),
             new MockResponse('{"did":"did:plc:alice","handle":"alice.bsky.social","accessJwt":"jwt-2"}'),
             $retry,
-            self::json(['follows' => []]),
             self::json(['lists' => []]),
+            self::json(['follows' => []]),
         ]);
 
         $this->sourceOver($http)->candidates($this->account);
@@ -320,8 +351,15 @@ final class BlueskyCandidateSourceTest extends TestCase
         );
         $http = new RoutedHttpClient($this->routes([
             self::PREFERENCES => self::savedFeeds($uris),
-            self::GENERATORS . self::feedsQuery(\array_slice($uris, 0, 25)) => self::json(['feeds' => []]),
-            self::GENERATORS . self::feedsQuery(\array_slice($uris, 25)) => self::json(['feeds' => []]),
+            self::GENERATORS . self::feedsQuery(\array_slice($uris, 0, 25)) => self::json([
+                'feeds' => array_map(
+                    static fn (string $uri): array => ['uri' => $uri, 'displayName' => 'F'],
+                    \array_slice($uris, 0, 25),
+                ),
+            ]),
+            self::GENERATORS . self::feedsQuery(\array_slice($uris, 25)) => self::json([
+                'feeds' => [['uri' => $uris[25], 'displayName' => 'F']],
+            ]),
         ]));
 
         $customFeeds = $this->source($http)->candidates($this->account)->customFeeds;
@@ -450,6 +488,16 @@ final class BlueskyCandidateSourceTest extends TestCase
             [self::LISTS => self::json(['error' => 'InternalServerError'])],
             'Bluesky answered without lists.',
         ];
+        yield 'preferences without the field' => [
+            [self::PREFERENCES => self::json([])],
+            'Bluesky answered without preferences.',
+        ];
+        yield 'saved feeds without items' => [
+            [self::PREFERENCES => self::json([
+                'preferences' => [['$type' => 'app.bsky.actor.defs#savedFeedsPrefV2']],
+            ])],
+            'Bluesky answered saved feeds without items.',
+        ];
         yield 'generators without the field' => [
             [
                 self::PREFERENCES => self::savedFeeds([self::DISCOVER]),
@@ -480,5 +528,220 @@ final class BlueskyCandidateSourceTest extends TestCase
         $this->expectException(SocialNetworkUnreachableException::class);
 
         $this->source($http)->candidates($this->account);
+    }
+
+    public function testCollectionsHoldOwnedAndSavedListsOnceAndNameSavedOnesByTheirList(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedItems([['list', self::OWN_LIST], ['list', self::THEIR_LIST]]),
+            self::LISTS => self::json(['lists' => [
+                ['uri' => self::OWN_LIST, 'name' => 'News', 'purpose' => 'app.bsky.graph.defs#curatelist'],
+            ]]),
+            self::GET_LIST . rawurlencode(self::THEIR_LIST) . '&limit=1' => self::json(['list' => [
+                'uri' => self::THEIR_LIST, 'name' => 'Writers', 'purpose' => 'app.bsky.graph.defs#curatelist',
+            ], 'items' => []]),
+        ]));
+
+        $collections = $this->source($http)->collections($this->account);
+
+        self::assertEquals([
+            new SocialCollectionModel(self::OWN_LIST, 'News'),
+            new SocialCollectionModel(self::THEIR_LIST, 'Writers'),
+        ], $collections->lists);
+        self::assertSame([], $collections->goneIds);
+        self::assertFalse($collections->truncated);
+        self::assertNotContains(
+            'https://public.api.bsky.app/xrpc/app.bsky.graph.getList?list=' . rawurlencode(self::OWN_LIST) . '&limit=1',
+            $http->requestedUrls(),
+        );
+    }
+
+    public function testASavedListTheNetworkNoLongerHasAndAMissingGeneratorAreGone(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedItems([
+                ['list', self::DELETED_LIST],
+                ['feed', self::DISCOVER],
+                ['feed', self::GONE],
+            ]),
+            self::GET_LIST . rawurlencode(self::DELETED_LIST) . '&limit=1' => new MockResponse(
+                '{"error":"InvalidRequest","message":"List not found"}',
+                ['http_code' => Response::HTTP_BAD_REQUEST],
+            ),
+            self::GENERATORS . self::feedsQuery([self::DISCOVER, self::GONE]) => self::json(['feeds' => [
+                ['uri' => self::DISCOVER, 'displayName' => 'Discover'],
+            ]]),
+        ]));
+
+        $collections = $this->source($http)->collections($this->account);
+
+        self::assertSame([], $collections->lists);
+        self::assertEquals([new SocialCollectionModel(self::DISCOVER, 'Discover')], $collections->customFeeds);
+        self::assertSame([self::GONE, self::DELETED_LIST], $collections->goneIds);
+    }
+
+    public function testASavedListThatIsNoCuratedListIsNeitherOfferedNorGone(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedItems([['list', self::THEIR_LIST]]),
+            self::GET_LIST . rawurlencode(self::THEIR_LIST) . '&limit=1' => self::json(['list' => [
+                'uri' => self::THEIR_LIST, 'name' => 'Blocks', 'purpose' => 'app.bsky.graph.defs#modlist',
+            ]]),
+        ]));
+
+        $collections = $this->source($http)->collections($this->account);
+
+        self::assertSame([], $collections->lists);
+        self::assertSame([], $collections->goneIds);
+    }
+
+    public function testAnyOtherFailedListAnswerIsUnreachable(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedItems([['list', self::THEIR_LIST]]),
+            self::GET_LIST . rawurlencode(self::THEIR_LIST) . '&limit=1' => new MockResponse(
+                '',
+                ['http_code' => Response::HTTP_BAD_GATEWAY],
+            ),
+        ]));
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->source($http)->collections($this->account);
+    }
+
+    public function testCollectionsNeverAskForTheFollows(): void
+    {
+        $http = new RoutedHttpClient($this->routes());
+
+        $this->source($http)->collections($this->account);
+
+        self::assertSame(
+            [],
+            array_filter($http->requestedUrls(), static fn (string $url): bool => str_contains($url, 'getFollows')),
+        );
+    }
+
+    public function testOwnedListsCutAtTheCapMarkTheCollectionsTruncated(): void
+    {
+        $lists = array_map(
+            static fn (int $index): array => [
+                'uri' => 'at://did:plc:alice/app.bsky.graph.list/' . $index,
+                'name' => 'L' . $index,
+                'purpose' => 'app.bsky.graph.defs#curatelist',
+            ],
+            range(1, CollectedItemsModel::MAX_ITEMS + 1),
+        );
+        $http = new RoutedHttpClient($this->routes([
+            self::LISTS => self::json(['lists' => $lists, 'cursor' => 'more']),
+        ]));
+
+        $collections = $this->source($http)->collections($this->account);
+
+        self::assertTrue($collections->truncated);
+        self::assertFalse($collections->savedListsCapped);
+    }
+
+    /** @return array<string, MockResponse> */
+    private static function manySavedListRoutes(int $count = BlueskySavedCollections::MAX_SAVED_LISTS + 1): array
+    {
+        $uris = array_map(
+            static fn (int $index): string => 'at://did:plc:bob/app.bsky.graph.list/' . $index,
+            range(1, $count),
+        );
+        $routes = [
+            self::PREFERENCES => self::savedItems(array_map(static fn (string $uri): array => ['list', $uri], $uris)),
+        ];
+        foreach (\array_slice($uris, 0, BlueskySavedCollections::MAX_SAVED_LISTS) as $uri) {
+            $routes[self::GET_LIST . rawurlencode($uri) . '&limit=1'] = self::json(['list' => [
+                'uri' => $uri, 'name' => 'L', 'purpose' => 'app.bsky.graph.defs#curatelist',
+            ]]);
+        }
+
+        return $routes;
+    }
+
+    public function testMoreSavedListsThanTheCapAreCutAndMarkOnlyTheSavedListsCapped(): void
+    {
+        $http = new RoutedHttpClient($this->routes(self::manySavedListRoutes()));
+
+        $collections = $this->source($http)->collections($this->account);
+
+        self::assertTrue($collections->savedListsCapped);
+        self::assertFalse($collections->truncated);
+        self::assertCount(BlueskySavedCollections::MAX_SAVED_LISTS, $collections->lists);
+    }
+
+    public function testTheSavedListsCapNeverMakesThePickerTruncated(): void
+    {
+        $http = new RoutedHttpClient($this->routes(self::manySavedListRoutes()));
+
+        $candidates = $this->source($http)->candidates($this->account);
+
+        self::assertFalse($candidates->truncated);
+        self::assertCount(BlueskySavedCollections::MAX_SAVED_LISTS, $candidates->lists);
+    }
+
+    public function testAnAccountWithoutTheSavedFeedsPreferenceHasUnknownSavedFeeds(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::json([
+                'preferences' => [['$type' => 'app.bsky.actor.defs#savedFeedsPref', 'saved' => [self::DISCOVER]]],
+            ]),
+        ]));
+
+        self::assertFalse($this->source($http)->collections($this->account)->savedFeedsKnown);
+    }
+
+    public function testASavedListAnsweredWithoutItsListIsUnreachable(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedItems([['list', self::THEIR_LIST]]),
+            self::GET_LIST . rawurlencode(self::THEIR_LIST) . '&limit=1' => self::json(['items' => []]),
+        ]));
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+        $this->source($http)->collections($this->account);
+    }
+
+    public function testAHandleFormSavedFeedIsFoundByItsCreatorAndNeverGone(): void
+    {
+        $handleForm = 'at://whats-hot.example/app.bsky.feed.generator/discover';
+        $unmatched = 'at://other.example/app.bsky.feed.generator/lost';
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedItems([['feed', $handleForm], ['feed', $unmatched]]),
+            self::GENERATORS . self::feedsQuery([$handleForm, $unmatched]) => self::json(['feeds' => [[
+                'uri' => self::DISCOVER,
+                'displayName' => 'Discover',
+                'creator' => ['handle' => 'whats-hot.example'],
+            ]]]),
+        ]));
+
+        $collections = $this->source($http)->collections($this->account);
+
+        self::assertEquals([new SocialCollectionModel($handleForm, 'Discover')], $collections->customFeeds);
+        self::assertSame([], $collections->goneIds);
+    }
+
+    public function testAnEmptyGeneratorAnswerMakesEveryAskedFeedGone(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::PREFERENCES => self::savedItems([['feed', self::DISCOVER], ['feed', self::GONE]]),
+            self::GENERATORS . self::feedsQuery([self::DISCOVER, self::GONE]) => self::json(['feeds' => []]),
+        ]));
+
+        $collections = $this->source($http)->collections($this->account);
+
+        self::assertSame([], $collections->customFeeds);
+        self::assertSame([self::DISCOVER, self::GONE], $collections->goneIds);
+    }
+
+    public function testExactlyTheCapOfSavedListsIsNotCappedAndOneMoreIs(): void
+    {
+        $cap = BlueskySavedCollections::MAX_SAVED_LISTS;
+        $atCap = new RoutedHttpClient($this->routes(self::manySavedListRoutes($cap)));
+        $overCap = new RoutedHttpClient($this->routes(self::manySavedListRoutes($cap + 1)));
+
+        self::assertFalse($this->source($atCap)->collections($this->account)->savedListsCapped);
+        self::assertTrue($this->source($overCap)->collections($this->account)->savedListsCapped);
     }
 }

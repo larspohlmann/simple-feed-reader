@@ -45,12 +45,15 @@ use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
+use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\ProfileImageSweep;
-use App\Service\Social\ProfileSweeps;
+use App\Service\Social\SocialMaintenance;
+use App\Tests\Support\PrivateFeedSyncWiring;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
+use App\Tests\Support\StubSocialCandidates;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -319,7 +322,17 @@ final class MaintenanceTickTest extends DbTestCase
                 $this->entityManager,
             ),
             $linkCardSweep,
-            $this->profileSweeps($appViewFetcher ?? self::unreachableAppView(), $clock),
+            new SocialMaintenance(
+                $this->profileImageSweep($appViewFetcher ?? self::unreachableAppView(), $clock),
+                $this->hiddenProfileSwitchSweep(),
+                PrivateFeedSyncWiring::sweep(
+                    self::getContainer(),
+                    $this->entityManager,
+                    $clock,
+                    new StubSocialCandidates(new SocialNetworkUnreachableException('no network in this test')),
+                ),
+                $clock,
+            ),
             MembershipSweepFactory::fromContainer(
                 self::getContainer(),
                 $this->entityManager,
@@ -334,12 +347,12 @@ final class MaintenanceTickTest extends DbTestCase
         );
     }
 
-    private function profileSweeps(StubFeedFetcher $fetcher, MockClock $clock): ProfileSweeps
+    private function hiddenProfileSwitchSweep(): HiddenProfileSwitchSweep
     {
         $switches = self::getContainer()->get(HiddenProfileSwitchSweep::class);
         self::assertInstanceOf(HiddenProfileSwitchSweep::class, $switches);
 
-        return new ProfileSweeps($this->profileImageSweep($fetcher, $clock), $switches);
+        return $switches;
     }
 
     private function profileImageSweep(StubFeedFetcher $fetcher, MockClock $clock): ProfileImageSweep

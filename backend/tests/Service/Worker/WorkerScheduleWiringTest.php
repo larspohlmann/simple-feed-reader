@@ -14,6 +14,7 @@ use App\Service\Worker\Message\StartDueProfileRuns;
 use App\Service\Worker\Message\StartDueRecommendationRuns;
 use App\Service\Worker\Message\SweepSavedSearchMemberships;
 use App\Service\Worker\Message\SwitchHiddenProfileFeeds;
+use App\Service\Worker\Message\SyncPrivateFeeds;
 use App\Service\Worker\Message\VerifyPendingImages;
 use App\Service\Worker\WorkerSchedule;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -34,7 +35,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
 
         $recurringMessages = $provider->getSchedule()->getRecurringMessages();
 
-        self::assertCount(11, $recurringMessages);
+        self::assertCount(12, $recurringMessages);
         $classes = array_map(
             static fn ($recurring) => self::firstMessageClass($recurring),
             $recurringMessages,
@@ -51,6 +52,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 StartDueProfileRuns::class,
                 CompleteQueuedLinkCards::class,
                 RefreshProfileImages::class,
+                SyncPrivateFeeds::class,
                 SwitchHiddenProfileFeeds::class,
             ],
             $classes,
@@ -72,6 +74,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 'every 1 minute',
                 'every 5 minutes',
                 'every 1 minute',
+                'every 10 minutes',
                 'every 10 minutes',
                 'every 10 minutes',
             ],

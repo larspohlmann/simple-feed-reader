@@ -9,6 +9,7 @@ use App\Entity\QuotedPostContent;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\DBAL\Connection;
 
@@ -63,12 +64,40 @@ final readonly class EntryBatchInserter
                 ];
             }
         }
+        $this->insertRows('link_card (entry_id, position, url, title, description, image_url, site_name)', $rows);
+    }
+
+    /**
+     * The origins of saved copies just inserted; any other feed keeps none.
+     *
+     * @param array<string, int> $entryIdsByGuidHash
+     * @param list<EntryLine>    $lines
+     */
+    public function insertOrigins(array $entryIdsByGuidHash, array $lines, string $feedUrl): void
+    {
+        if (!SavedFeedUrl::isSaved($feedUrl)) {
+            return;
+        }
+
+        $rows = [];
+        foreach ($lines as $line) {
+            if (null !== $line->origin) {
+                $rows[] = [$entryIdsByGuidHash[$line->guidHash], $line->origin->title, $line->origin->faviconUrl];
+            }
+        }
+        $this->insertRows('saved_entry_origin (entry_id, title, favicon_url)', $rows);
+    }
+
+    /** @param list<non-empty-list<int|string|null>> $rows one value per column */
+    private function insertRows(string $tableAndColumns, array $rows): void
+    {
         foreach (array_chunk($rows, self::CARDS_PER_STATEMENT) as $chunk) {
+            $rowPlaceholders = '(' . implode(', ', array_fill(0, \count($chunk[0]), '?')) . ')';
             $this->connection->executeStatement(
                 sprintf(
-                    'INSERT INTO link_card (entry_id, position, url, title, description, image_url, site_name)'
-                    . ' VALUES %s',
-                    implode(', ', array_fill(0, \count($chunk), '(?, ?, ?, ?, ?, ?, ?)')),
+                    'INSERT INTO %s VALUES %s',
+                    $tableAndColumns,
+                    implode(', ', array_fill(0, \count($chunk), $rowPlaceholders)),
                 ),
                 array_merge(...$chunk),
             );

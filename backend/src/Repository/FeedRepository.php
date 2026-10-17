@@ -203,6 +203,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
     {
         $qb = $this->createQueryBuilder('f');
 
+        $this->restrictToFetchable($qb);
         $this->restrictToSchedule($qb, $criteria);
         $this->restrictToOwnership($qb, $criteria);
         $this->restrictToNetwork($qb, $criteria);
@@ -210,6 +211,11 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         $this->restrictToConnectedAccounts($qb);
 
         return $qb;
+    }
+
+    private function restrictToFetchable(QueryBuilder $qb): void
+    {
+        SavedFeedDql::exclude($qb, 'f');
     }
 
     private function restrictToSchedule(QueryBuilder $qb, DueFeedCriteria $criteria): void

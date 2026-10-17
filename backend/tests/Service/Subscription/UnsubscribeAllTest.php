@@ -12,6 +12,7 @@ use App\Repository\SubscriptionRepository;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Feed\OrphanedFeedReclaimer;
+use App\Service\SavedPosts\SavedPostRescue;
 use App\Service\Subscription\FirstFetchRecorder;
 use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionService;
@@ -164,6 +165,8 @@ final class UnsubscribeAllTest extends KernelTestCase
         self::assertInstanceOf(FirstFetchRecorder::class, $firstFetch);
         $orphanedFeeds = $container->get(OrphanedFeedReclaimer::class);
         self::assertInstanceOf(OrphanedFeedReclaimer::class, $orphanedFeeds);
+        $savedPostRescue = $container->get(SavedPostRescue::class);
+        self::assertInstanceOf(SavedPostRescue::class, $savedPostRescue);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->never())->method('flush');
@@ -175,6 +178,7 @@ final class UnsubscribeAllTest extends KernelTestCase
             $scrapeFallbackPolicy,
             $firstFetch,
             $orphanedFeeds,
+            $savedPostRescue,
             $entityManager,
             [],
         );

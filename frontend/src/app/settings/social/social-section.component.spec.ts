@@ -26,6 +26,7 @@ function account(over: Partial<SocialAccount> = {}): SocialAccount {
     isDefault: true,
     credentialHint: 'abcd',
     connectedAt: '2026-10-12T08:00:00+00:00',
+    sync: { checkedAt: null, skipped: null, changes: [] },
     ...over,
   };
 }
@@ -124,6 +125,110 @@ describe('SocialSectionComponent', () => {
 
     const accountRow = byTestId(fixture, 'social-connected-1')?.closest('app-settings-row');
     expect(accountRow?.querySelector('[data-testid="social-import-1"]')).toBeNull();
+  });
+
+  describe('last check and changes', () => {
+    const fiveMinutesAgo = (): string => new Date(Date.now() - 5 * 60_000).toISOString();
+    const description = (fixture: ComponentFixture<SocialSectionComponent>): string =>
+      byTestId(fixture, 'social-import-1')?.closest('.row-desc')?.textContent ??
+      byTestId(fixture, 'social-import-1')?.closest('app-settings-row')?.querySelector('.row-desc')
+        ?.textContent ??
+      '';
+
+    it('says when the lists and feeds were last checked and lists the changes', () => {
+      const at = fiveMinutesAgo();
+      const fixture = mount([
+        account({
+          sync: {
+            checkedAt: at,
+            skipped: null,
+            changes: [{ kind: 'list', name: 'News', reason: 'saved', at }],
+          },
+        }),
+      ]);
+
+      expect(description(fixture)).toContain('Lists and feeds last checked');
+      expect(byTestId(fixture, 'social-sync-changes-1')?.textContent).toContain(
+        'Added News (newly saved)',
+      );
+    });
+
+    it('names the skip reason', () => {
+      const fixture = mount([
+        account({ sync: { checkedAt: fiveMinutesAgo(), skipped: 'unreachable', changes: [] } }),
+      ]);
+
+      expect(description(fixture)).toContain('Bluesky did not answer');
+      expect(byTestId(fixture, 'social-sync-changes-1')).toBeNull();
+    });
+
+    it('says nothing was changed when the answer was incomplete', () => {
+      const fixture = mount([
+        account({ sync: { checkedAt: fiveMinutesAgo(), skipped: 'incomplete', changes: [] } }),
+      ]);
+
+      expect(description(fixture)).toContain('so nothing was changed');
+    });
+
+    it('says the account needs reconnecting when the check was skipped for it', () => {
+      const fixture = mount([
+        account({ sync: { checkedAt: fiveMinutesAgo(), skipped: 'needs_reconnect', changes: [] } }),
+      ]);
+
+      expect(description(fixture)).toContain('the account needs reconnecting');
+    });
+
+    it.each([
+      ['saved', 'Added News (newly saved)'],
+      ['created', 'Added News (new list)'],
+      ['unsaved', 'Removed News (no longer saved)'],
+      ['deleted', 'Removed News (deleted on the network)'],
+    ] as const)('words the %s change', (reason, expected) => {
+      const at = fiveMinutesAgo();
+      const fixture = mount([
+        account({
+          sync: {
+            checkedAt: at,
+            skipped: null,
+            changes: [{ kind: 'list', name: 'News', reason, at }],
+          },
+        }),
+      ]);
+
+      expect(byTestId(fixture, 'social-sync-changes-1')?.textContent).toContain(expected);
+    });
+
+    it('lists two changes with the same name and second', () => {
+      const at = fiveMinutesAgo();
+      const fixture = mount([
+        account({
+          sync: {
+            checkedAt: at,
+            skipped: null,
+            changes: [
+              { kind: 'list', name: 'Tech', reason: 'deleted', at },
+              { kind: 'list', name: 'Tech', reason: 'created', at },
+            ],
+          },
+        }),
+      ]);
+
+      expect(byTestId(fixture, 'social-sync-changes-1')?.querySelectorAll('li')).toHaveLength(2);
+    });
+
+    it('says a failed check is tried again', () => {
+      const fixture = mount([
+        account({ sync: { checkedAt: fiveMinutesAgo(), skipped: 'failed', changes: [] } }),
+      ]);
+
+      expect(description(fixture)).toContain('the check failed');
+    });
+
+    it('says an account never checked has not been', () => {
+      const fixture = mount([account()]);
+
+      expect(description(fixture)).toContain('Not checked yet');
+    });
   });
 
   it('explains the import in plain words, naming where the feeds appear', () => {
@@ -502,6 +607,7 @@ describe('SocialSectionComponent', () => {
     const data = confirmStub.confirmThen.mock.calls[0][0];
     expect(data.danger).toBe(true);
     expect(data.title).toBe('Disconnect alice.bsky.social?');
+    expect(data.message).toContain('Favourites and kept posts move to Saved from Bluesky.');
     const del = http.expectOne(`${ENDPOINT}/1`);
     expect(del.request.method).toBe('DELETE');
     del.flush({ accounts: [] });

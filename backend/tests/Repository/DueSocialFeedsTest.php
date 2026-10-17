@@ -48,6 +48,23 @@ final class DueSocialFeedsTest extends DbTestCase
         self::assertSame([], $this->feeds()->findDue(new DueFeedCriteria($now, feedId: $paused->requireId()), 10));
     }
 
+    public function testASavedFeedIsNeverDueNotEvenWhenAskedForByItsId(): void
+    {
+        $saved = new Feed('saved:1:bluesky');
+        $saved->setSourceFormat(SourceFormat::SAVED);
+        $this->entityManager->persist($saved);
+        $this->entityManager->flush();
+        $now = new \DateTimeImmutable(self::NOW);
+
+        $dueIds = array_map(
+            static fn (Feed $feed): int => $feed->requireId(),
+            $this->feeds()->findDue(new DueFeedCriteria($now, force: true), 50),
+        );
+
+        self::assertNotContains($saved->requireId(), $dueIds);
+        self::assertSame([], $this->feeds()->findDue(new DueFeedCriteria($now, feedId: $saved->requireId()), 10));
+    }
+
     private function privateFeed(SocialAccount $account, string $url, string $sourceFormat): Feed
     {
         $feed = new Feed($url);

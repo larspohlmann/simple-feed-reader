@@ -158,6 +158,24 @@ final class SocialFeedRepositoryTest extends DbTestCase
         );
     }
 
+    public function testSubscribedCollectionsAreNarrowedToTheAskedKinds(): void
+    {
+        $this->subscribe($this->socialFeed($this->account, SocialFeedKind::Home, ''));
+        $writers = $this->subscribe($this->socialFeed($this->account, SocialFeedKind::UserList, self::WRITERS));
+
+        self::assertSame(
+            [
+                [
+                    'kind' => SocialFeedKind::UserList,
+                    'remoteId' => self::WRITERS,
+                    'subscriptionId' => $writers->requireId(),
+                ],
+            ],
+            SocialFeeds::repository($this->entityManager)
+                ->subscribedCollectionsOfKinds($this->account, [SocialFeedKind::UserList, SocialFeedKind::CustomFeed]),
+        );
+    }
+
     public function testAnotherUsersSubscriptionToTheAccountsFeedIsNotTheAccountsOwn(): void
     {
         $home = $this->socialFeed($this->account, SocialFeedKind::Home, '');

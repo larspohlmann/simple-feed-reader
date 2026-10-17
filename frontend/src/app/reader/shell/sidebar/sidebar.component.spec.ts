@@ -1905,6 +1905,7 @@ describe('organise mode', () => {
       profiles: socialProfiles([]),
       unreadCount: 2,
       entryCount: 0,
+      saved: null,
       showsHandles: false,
       accounts: [
         {

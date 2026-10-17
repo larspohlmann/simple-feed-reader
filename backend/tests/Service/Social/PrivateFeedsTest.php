@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\Feed;
+use App\Entity\KnownSocialCollection;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
+use App\Repository\KnownSocialCollectionRepository;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\PrivateFeedOutcome;
 use App\Service\Social\PrivateFeeds;
@@ -74,6 +76,17 @@ final class PrivateFeedsTest extends DbTestCase
         self::assertSame(PrivateFeedOutcome::AlreadySubscribed, $outcome);
         self::assertSame(1, $this->entityManager->getRepository(Subscription::class)->count([]));
         self::assertSame(1, $this->entityManager->getRepository(SocialFeed::class)->count([]));
+    }
+
+    public function testCreatingTheSameListTwiceRemembersItOnce(): void
+    {
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        $this->privateFeeds()->create($account, PrivateFeedModel::userList('at://list/news', 'News'));
+
+        $outcome = $this->privateFeeds()->create($account, PrivateFeedModel::userList('at://list/news', 'News'));
+
+        self::assertSame(PrivateFeedOutcome::AlreadySubscribed, $outcome);
+        self::assertSame(1, $this->entityManager->getRepository(KnownSocialCollection::class)->count([]));
     }
 
     public function testAMastodonListLinksToTheListOnItsInstance(): void
@@ -196,6 +209,31 @@ final class PrivateFeedsTest extends DbTestCase
 
         $reloaded = $this->entityManager->find(Feed::class, $feed->requireId());
         self::assertSame('2026-10-12 12:00:00', $reloaded?->getNextFetchAt()?->format('Y-m-d H:i:s'));
+    }
+
+    public function testAListOrCustomFeedIsRememberedAndHomeIsNot(): void
+    {
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+
+        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $this->privateFeeds()->create(
+            $account,
+            PrivateFeedModel::userList('at://did:plc:alice/app.bsky.graph.list/1', 'One'),
+        );
+        $this->privateFeeds()->create(
+            $account,
+            PrivateFeedModel::customFeed('at://did:plc:bob/app.bsky.feed.generator/f', 'F'),
+        );
+
+        /** @var KnownSocialCollectionRepository $known */
+        $known = $this->entityManager->getRepository(KnownSocialCollection::class);
+        self::assertEqualsCanonicalizing(
+            [
+                'list:at://did:plc:alice/app.bsky.graph.list/1' => true,
+                'custom_feed:at://did:plc:bob/app.bsky.feed.generator/f' => true,
+            ],
+            $known->keysOf($account),
+        );
     }
 
     private function privateFeeds(): PrivateFeeds

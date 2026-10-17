@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\PrivateFeedSyncSkip;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
@@ -62,6 +63,9 @@ final class SocialAccount
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $connectedAt;
 
+    #[ORM\Embedded(class: SyncStamp::class, columnPrefix: false)]
+    private SyncStamp $syncStamp;
+
     public function __construct(
         User $user,
         SocialNetwork $network,
@@ -76,6 +80,7 @@ final class SocialAccount
         $this->network = $network;
         $this->identity = $identity;
         $this->serviceUrl = $serviceUrl;
+        $this->syncStamp = new SyncStamp();
         $this->replaceCredential($handle, $credential, $credentialHint, $connectedAt);
     }
 
@@ -173,5 +178,30 @@ final class SocialAccount
     public function stopBeingDefault(): void
     {
         $this->isDefault = false;
+    }
+
+    public function getLastCheckedAt(): ?\DateTimeImmutable
+    {
+        return $this->syncStamp->checkedAt();
+    }
+
+    public function getLastSyncedAt(): ?\DateTimeImmutable
+    {
+        return $this->syncStamp->syncedAt();
+    }
+
+    public function getLastSyncSkip(): ?PrivateFeedSyncSkip
+    {
+        return $this->syncStamp->skip();
+    }
+
+    public function recordSync(\DateTimeImmutable $checkedAt): void
+    {
+        $this->syncStamp = SyncStamp::completed($checkedAt);
+    }
+
+    public function recordSkippedSync(\DateTimeImmutable $checkedAt, PrivateFeedSyncSkip $skip): void
+    {
+        $this->syncStamp = $this->syncStamp->skipped($checkedAt, $skip);
     }
 }

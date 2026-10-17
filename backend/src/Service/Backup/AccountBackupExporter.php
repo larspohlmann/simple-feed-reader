@@ -61,7 +61,7 @@ final readonly class AccountBackupExporter
 
     private function foundationSnapshot(int $userId): FoundationSnapshotModel
     {
-        $subscriptions = ExportedFeed::withoutRepeats($this->subscriptions->findExportableForUserWithTags($userId));
+        $subscriptions = ExportedFeed::withoutRepeats($this->subscriptions->findBackedUpForUserWithTags($userId));
         $feedsById = self::feedsById($subscriptions);
 
         return new FoundationSnapshotModel(

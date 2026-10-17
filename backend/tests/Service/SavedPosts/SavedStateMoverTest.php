@@ -10,10 +10,10 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\SocialLike;
 use App\Entity\User;
-use App\Repository\EntryStateRepository;
 use App\Repository\SocialLikeRepository;
 use App\Service\SavedPosts\SavedStateMover;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -24,7 +24,9 @@ final class SavedStateMoverTest extends DbTestCase
     private const string VIEWED_AT = '2026-10-16 08:05:00';
 
     private User $user;
+
     private Entry $source;
+
     private Entry $target;
 
     protected function setUp(): void
@@ -32,132 +34,159 @@ final class SavedStateMoverTest extends DbTestCase
         parent::setUp();
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->entityManager, $hasher))->create('saved-state-mover@example.test');
-        $this->source = $this->entry('https://bsky.app/profile/did:plc:rusty/rss');
-        $this->target = $this->entry('social:bluesky:1:author:did:plc:rusty');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('mover@example.test');
+        $feed = new Feed('https://mover.example/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->source = SavedPostFixtures::entry($this->entityManager, $feed, 'source', 'https://mover.example/1');
+        $this->target = SavedPostFixtures::entry($this->entityManager, $feed, 'target', 'https://mover.example/2');
     }
 
-    public function testFavouriteAndKeptMoveToTheTarget(): void
+    public function testTheTargetTakesTheFlagsAndTheSourceLosesThemWithoutTheCallerFlushing(): void
     {
-        $state = $this->stateOf($this->source);
+        $state = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
         $state->markFavorite();
         $state->markKept();
         $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
 
-        $this->move();
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
 
-        $target = $this->storedState($this->target);
-        self::assertTrue($target?->isFavorite());
+        $target = $this->stateOf($targetId);
+        self::assertTrue($target->isFavorite());
         self::assertTrue($target->isKept());
-        self::assertFalse($target->isHidden());
-        $source = $this->storedState($this->source);
-        self::assertFalse($source?->isFavorite());
+        $source = $this->stateOf($sourceId);
+        self::assertFalse($source->isFavorite());
         self::assertFalse($source->isKept());
+    }
+
+    public function testAHiddenSourceHidesTheNewTargetFromTheSameInstant(): void
+    {
+        $hiddenAt = new \DateTimeImmutable('2026-10-16 08:30:00');
+        $state = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
+        $state->markFavorite();
+        $state->hide($hiddenAt);
+        $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        $target = $this->stateOf($targetId);
+        self::assertTrue($target->isHidden());
+        self::assertEquals($hiddenAt, $target->getHiddenAt());
+    }
+
+    public function testAnUnhiddenSourceLeavesTheNewTargetUnhidden(): void
+    {
+        $state = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
+        $state->markKept();
+        $this->entityManager->flush();
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        $target = $this->stateOf($targetId);
+        self::assertFalse($target->isHidden());
+        self::assertNull($target->getHiddenAt());
+    }
+
+    public function testASourceWithoutAnyStateStillGetsATargetRowAndNothingMoves(): void
+    {
+        $sourceId = $this->source->requireId();
+        $targetId = $this->target->requireId();
+
+        $this->mover()->move($this->user->requireId(), [$sourceId => $targetId]);
+        $this->entityManager->clear();
+
+        $target = $this->stateOf($targetId);
+        self::assertFalse($target->isFavorite());
+        self::assertFalse($target->isKept());
+        self::assertFalse($target->isHidden());
     }
 
     public function testTheReadMarkAndTheOpeningCarryOver(): void
     {
-        $state = $this->stateOf($this->source);
+        $state = SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
         $state->hide(new \DateTimeImmutable(self::READ_AT));
         $state->markViewed(new \DateTimeImmutable(self::VIEWED_AT));
         $this->entityManager->flush();
 
-        $this->move();
+        $this->moveSourceToTarget();
 
-        $target = $this->storedState($this->target);
-        self::assertTrue($target?->isHidden());
+        $target = $this->stateOf($this->target->requireId());
+        self::assertTrue($target->isHidden());
         self::assertSame(self::READ_AT, $target->getHiddenAt()?->format('Y-m-d H:i:s'));
         self::assertSame(self::VIEWED_AT, $target->getViewedAt()?->format('Y-m-d H:i:s'));
     }
 
     public function testAReadMarkWithoutAnInstantStaysRead(): void
     {
-        $this->stateOf($this->source)->restoreReadMark(new BackedUpReadMark(true, null));
+        SavedPostFixtures::state($this->entityManager, $this->user, $this->source)
+            ->restoreReadMark(new BackedUpReadMark(true, null));
         $this->entityManager->flush();
 
-        $this->move();
+        $this->moveSourceToTarget();
 
-        self::assertTrue($this->storedState($this->target)?->isHidden());
+        self::assertTrue($this->stateOf($this->target->requireId())->isHidden());
     }
 
     public function testATargetAlreadySavedStaysSaved(): void
     {
-        $this->stateOf($this->source);
-        $this->stateOf($this->target)->markFavorite();
+        SavedPostFixtures::state($this->entityManager, $this->user, $this->source);
+        SavedPostFixtures::state($this->entityManager, $this->user, $this->target)->markFavorite();
         $this->entityManager->flush();
 
-        $this->move();
+        $this->moveSourceToTarget();
 
-        self::assertTrue($this->storedState($this->target)?->isFavorite());
+        self::assertTrue($this->stateOf($this->target->requireId())->isFavorite());
     }
 
     public function testTheLikeIsCopied(): void
     {
-        $this->stateOf($this->source);
         $account = SocialAccounts::blueskyOf($this->user);
         $this->entityManager->persist($account);
         $this->entityManager->persist(
             new SocialLike($this->user, $this->source, $account, 'at://like', new \DateTimeImmutable(self::READ_AT)),
         );
         $this->entityManager->flush();
+        $targetId = $this->target->requireId();
 
-        $this->move();
+        $this->moveSourceToTarget();
 
-        self::assertSame('at://like', $this->likes()->findOneFor($this->user, $this->target)?->getRemoteId());
+        $likes = $this->entityManager->getRepository(SocialLike::class);
+        self::assertInstanceOf(SocialLikeRepository::class, $likes);
+        $target = $this->entityManager->find(Entry::class, $targetId);
+        self::assertInstanceOf(Entry::class, $target);
+        self::assertSame('at://like', $likes->findOneFor($this->user, $target)?->getRemoteId());
     }
 
-    public function testAPostWithoutStateLeavesTheTargetWithoutARow(): void
+    private function moveSourceToTarget(): void
     {
-        $this->move();
-
-        self::assertNull($this->storedState($this->target));
-    }
-
-    private function move(): void
-    {
-        (new SavedStateMover($this->states(), $this->likes(), $this->entityManager))
-            ->move($this->user->requireId(), [$this->source->requireId() => $this->target->requireId()]);
+        $this->mover()->move($this->user->requireId(), [$this->source->requireId() => $this->target->requireId()]);
         $this->entityManager->clear();
     }
 
-    private function stateOf(Entry $entry): EntryState
+    private function stateOf(int $entryId): EntryState
     {
-        $state = new EntryState($this->user, $entry);
-        $this->entityManager->persist($state);
+        $state = $this->entityManager->getRepository(EntryState::class)->findOneBy([
+            'user' => $this->user->requireId(),
+            'entry' => $entryId,
+        ]);
+        self::assertInstanceOf(EntryState::class, $state);
 
         return $state;
     }
 
-    private function storedState(Entry $entry): ?EntryState
+    private function mover(): SavedStateMover
     {
-        return $this->states()->findOneForUserEntry($this->user->requireId(), $entry->requireId());
-    }
+        /** @var SavedStateMover $mover */
+        $mover = self::getContainer()->get(SavedStateMover::class);
 
-    private function states(): EntryStateRepository
-    {
-        $states = $this->entityManager->getRepository(EntryState::class);
-        self::assertInstanceOf(EntryStateRepository::class, $states);
-
-        return $states;
-    }
-
-    private function likes(): SocialLikeRepository
-    {
-        $likes = $this->entityManager->getRepository(SocialLike::class);
-        self::assertInstanceOf(SocialLikeRepository::class, $likes);
-
-        return $likes;
-    }
-
-    private function entry(string $feedUrl): Entry
-    {
-        $feed = new Feed($feedUrl);
-        $this->entityManager->persist($feed);
-        $at = new \DateTimeImmutable('2026-10-16 07:00:00');
-        $entry = new Entry($feed, 'at://did:plc:rusty/app.bsky.feed.post/3abc', null, 'Post', $at, $at);
-        $this->entityManager->persist($entry);
-        $this->entityManager->flush();
-
-        return $entry;
+        return $mover;
     }
 }

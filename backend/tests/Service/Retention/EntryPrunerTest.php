@@ -12,6 +12,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RetentionWindows;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\SourceFormat;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Service\Retention\EntryPruner;
@@ -81,7 +82,8 @@ final class EntryPrunerTest extends DbTestCase
     /** A Mastodon profile feed: FeedNetworkListener classifies it by its URL on flush. */
     private function socialFeedWithEntries(int $count, \DateTimeImmutable $createdAt): Feed
     {
-        $feed = $this->withEntries(new Feed('https://mastodon.social/@user' . uniqid() . '.rss'), $count, $createdAt);
+        $handle = 'user' . uniqid('', true);
+        $feed = $this->withEntries(new Feed('https://mastodon.social/@' . $handle . '.rss'), $count, $createdAt);
         self::assertNotNull($feed->getNetwork());
 
         return $feed;
@@ -444,6 +446,34 @@ final class EntryPrunerTest extends DbTestCase
     public function testNothingToPruneReturnsZero(): void
     {
         self::assertSame(0, $this->pruner->prune());
+    }
+
+    public function testASavedFeedKeepsOnlyWhatSomeoneStillFlagsHoweverNew(): void
+    {
+        $user = new User('prune-saved@example.com', $this->clock->now());
+        $this->entityManager->persist($user);
+        $saved = new Feed('saved:9001');
+        $saved->setSourceFormat(SourceFormat::SAVED);
+        $this->entityManager->persist($saved);
+        $otherSaved = new Feed('saved:9002');
+        $otherSaved->setSourceFormat(SourceFormat::SAVED);
+        $this->entityManager->persist($otherSaved);
+        $this->entityManager->flush();
+        $kept = $this->persistEntry($saved, 'kept', $this->clock->now());
+        $unfavourited = $this->persistEntry($saved, 'unfavourited', $this->clock->now());
+        $this->persistEntry($otherSaved, 'unkept', $this->clock->now());
+        $state = new EntryState($user, $kept);
+        $state->markKept();
+        $this->entityManager->persist($state);
+        $this->entityManager->persist(new EntryState($user, $unfavourited));
+        $this->entityManager->flush();
+
+        self::assertSame(2, $this->pruner->prune());
+        $this->entityManager->clear();
+
+        self::assertNotNull($this->findByGuid($saved, 'kept'));
+        self::assertNull($this->findByGuid($saved, 'unfavourited'));
+        self::assertNull($this->findByGuid($otherSaved, 'unkept'));
     }
 
     public function testCapsEntriesPerFeedKeepingNewestAndProtected(): void

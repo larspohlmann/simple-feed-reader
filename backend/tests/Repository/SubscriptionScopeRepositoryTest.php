@@ -65,6 +65,22 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
         );
     }
 
+    public function testASavedFeedIsInTheWholeNetworkAndNotAmongItsProfiles(): void
+    {
+        $user = $this->user('network-saved-owner@example.com');
+        $saved = $this->fixtures()->subscribe(
+            $user,
+            sprintf('saved:%d:bluesky', $user->requireId()),
+            SourceFormat::SAVED,
+        );
+
+        self::assertSame(
+            [$saved->requireId()],
+            $this->idsOnNetwork($user, NetworkScope::whole(SocialNetwork::Bluesky)),
+        );
+        self::assertSame([], $this->idsOnNetwork($user, NetworkScope::profiles(SocialNetwork::Bluesky)));
+    }
+
     public function testANetworkWithoutFeedsHoldsNone(): void
     {
         $user = $this->user('network-empty@example.com');

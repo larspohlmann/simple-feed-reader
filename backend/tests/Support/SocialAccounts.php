@@ -38,21 +38,26 @@ final class SocialAccounts
 
     public static function blueskyOf(User $owner): SocialAccount
     {
-        return self::blueskyAs($owner, 'did:plc:alice', '@alice.bsky.social');
+        return self::blueskyAs($owner, 'did:plc:alice');
     }
 
     /** A further Bluesky account of $owner, under another identity. */
     public static function secondBlueskyOf(User $owner): SocialAccount
     {
-        return self::blueskyAs($owner, 'did:plc:alice2', '@alice2.bsky.social');
+        return self::blueskyWithHandle($owner, 'did:plc:alice2', '@alice2.bsky.social');
     }
 
-    private static function blueskyAs(User $owner, string $identity, string $handle): SocialAccount
+    public static function blueskyAs(User $owner, string $did): SocialAccount
+    {
+        return self::blueskyWithHandle($owner, $did, '@alice.bsky.social');
+    }
+
+    private static function blueskyWithHandle(User $owner, string $did, string $handle): SocialAccount
     {
         return new SocialAccount(
             $owner,
             SocialNetwork::Bluesky,
-            $identity,
+            $did,
             $handle,
             'https://pds.example.test',
             self::cipher()->seal($owner->requireId(), self::APP_PASSWORD),
@@ -68,21 +73,26 @@ final class SocialAccounts
 
     public static function mastodonOf(User $owner): SocialAccount
     {
-        return self::mastodonAt($owner, 'https://mastodon.example');
+        return self::mastodonAs($owner, 'alice@mastodon.example');
+    }
+
+    public static function mastodonAs(User $owner, string $identity): SocialAccount
+    {
+        return self::mastodonAt($owner, $identity, 'https://mastodon.example');
     }
 
     public static function mastodonOn(string $instanceUrl): SocialAccount
     {
-        return self::mastodonAt(self::owner(), $instanceUrl);
+        return self::mastodonAt(self::owner(), 'alice@mastodon.example', $instanceUrl);
     }
 
-    private static function mastodonAt(User $owner, string $instanceUrl): SocialAccount
+    private static function mastodonAt(User $owner, string $identity, string $instanceUrl): SocialAccount
     {
         return new SocialAccount(
             $owner,
             SocialNetwork::Mastodon,
-            'alice@mastodon.example',
-            '@alice@mastodon.example',
+            $identity,
+            '@' . $identity,
             $instanceUrl,
             self::cipher()->seal($owner->requireId(), self::ACCESS_TOKEN),
             '7890',

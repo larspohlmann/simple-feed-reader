@@ -23,6 +23,7 @@ use App\Service\Feed\Factory\FeedFactory;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\SavedPosts\SavedPostRescue;
 use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
@@ -113,9 +114,18 @@ final class SubscriptionServiceTest extends DbTestCase
                 PostEnrichers::queue($this->entityManager, $clock),
             ),
             new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
+            $this->savedPostRescue(),
             $this->entityManager,
             $routes,
         );
+    }
+
+    private function savedPostRescue(): SavedPostRescue
+    {
+        $rescue = self::getContainer()->get(SavedPostRescue::class);
+        self::assertInstanceOf(SavedPostRescue::class, $rescue);
+
+        return $rescue;
     }
 
     public function testDirectFeedCreatesFeedAndSubscription(): void

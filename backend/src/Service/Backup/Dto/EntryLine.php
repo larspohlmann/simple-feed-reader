@@ -6,9 +6,11 @@ namespace App\Service\Backup\Dto;
 
 use App\Entity\EntryAuthor;
 use App\Entity\EntryMedium;
+use App\Entity\EntryOrigin;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
+use App\Entity\SavedEntryOrigin;
 use App\Enum\ShareKind;
 use App\Service\Backup\Support\LineField;
 use App\Service\Backup\Support\LineFieldWithDefault;
@@ -55,6 +57,7 @@ final readonly class EntryLine
         public ?string $authorUrl = null,
         public ?string $authorAvatarUrl = null,
         public ?QuotedPostContent $quote = null,
+        public ?EntryOrigin $origin = null,
     ) {
     }
 
@@ -93,6 +96,7 @@ final readonly class EntryLine
             authorUrl: self::authorUrlOf($line, 'authorUrl'),
             authorAvatarUrl: self::authorUrlOf($line, 'authorAvatarUrl'),
             quote: $quote,
+            origin: self::originOf($line),
         );
     }
 
@@ -145,6 +149,21 @@ final readonly class EntryLine
     private static function authorUrlOf(array $line, string $key): ?string
     {
         return AbsoluteHttpUrl::orNullWithin(LineField::stringOrNull($line, $key), EntryAuthor::URL_MAX_LENGTH);
+    }
+
+    /** @param array<string, mixed> $line */
+    private static function originOf(array $line): ?EntryOrigin
+    {
+        $fields = LineField::objectOrNull($line, 'origin');
+        if (null === $fields) {
+            return null;
+        }
+        $title = LineField::stringOrNull($fields, 'title');
+
+        return new EntryOrigin(
+            null === $title ? null : mb_substr($title, 0, SavedEntryOrigin::TITLE_MAX),
+            self::authorUrlOf($fields, 'faviconUrl'),
+        );
     }
 
     /**
