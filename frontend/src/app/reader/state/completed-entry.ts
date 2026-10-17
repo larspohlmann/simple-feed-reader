@@ -13,6 +13,7 @@ export type CompletedEntryDto = Pick<
   | 'imageRenditions'
   | 'media'
   | 'linkCards'
+  | 'thread'
   | 'share'
   | 'quote'
 >;
