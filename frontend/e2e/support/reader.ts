@@ -101,7 +101,7 @@ export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): 
  *  filled in (#1551). */
 export function entryDetailJson(entry: EntryDto, contentHtml: string): EntryDetailResponse {
   const { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight } = entry;
-  const { imageRenditions, media, linkCards, share } = entry;
+  const { imageRenditions, media, linkCards, thread, share } = entry;
   const completed = { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight };
   return {
     entry: { ...entry, contentHtml },
@@ -110,6 +110,7 @@ export function entryDetailJson(entry: EntryDto, contentHtml: string): EntryDeta
       imageRenditions,
       media,
       linkCards,
+      thread,
       share,
       quote: entry.quote ?? null,
     },

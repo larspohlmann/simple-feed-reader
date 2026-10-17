@@ -24,6 +24,7 @@ import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/i
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { PreviewProgress } from '../../link-card/preview-progress';
+import { aThreadPost } from '../../../../testing/thread-testing';
 import { aLinkCard, aQuotedPost, anEntry, anEntryComment } from '../../../../testing/entry-testing';
 import {
   MockResizeObserver,
@@ -830,6 +831,18 @@ describe('ReaderViewComponent', () => {
         'app-quoted-post',
       ) as HTMLElement;
       quoted.getBoundingClientRect = () => ({ top: 400, bottom: 2400 }) as DOMRect;
+
+      const host = stubGeometry(fixture, 400, 800);
+
+      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
+    });
+
+    it('adds it when the thread replies carry a short post past the pane', () => {
+      const fixture = mount(entry({ titleDerived: true, thread: [aThreadPost()] }));
+      const replies = (fixture.nativeElement as HTMLElement).querySelector(
+        'app-thread-replies',
+      ) as HTMLElement;
+      replies.getBoundingClientRect = () => ({ top: 400, bottom: 2400 }) as DOMRect;
 
       const host = stubGeometry(fixture, 400, 800);
 

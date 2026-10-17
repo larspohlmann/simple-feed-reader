@@ -18,4 +18,10 @@ final readonly class LinkCardContent
         public string $siteName,
     ) {
     }
+
+    /** @param array{url: string, title: string, description: ?string, imageUrl: ?string, siteName: string} $row */
+    public static function fromRow(array $row): self
+    {
+        return new self($row['url'], $row['title'], $row['description'], $row['imageUrl'], $row['siteName']);
+    }
 }

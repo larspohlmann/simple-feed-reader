@@ -1,0 +1,23 @@
+@use '../../post-body';
+
+:host {
+  display: block;
+  margin: var(--space-5) 0;
+}
+
+.body {
+  font-size: var(--fs-read);
+  line-height: var(--lh-normal);
+  color: var(--text-primary);
+}
+
+@include post-body.sanitized-html;
+
+:is(app-post-media, app-link-card) {
+  margin-top: var(--space-2);
+}
+
+app-thread-count {
+  display: inline-block;
+  margin-top: var(--space-1);
+}

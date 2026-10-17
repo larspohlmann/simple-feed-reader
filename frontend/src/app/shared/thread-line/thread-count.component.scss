@@ -1,0 +1,12 @@
+:host {
+  display: inline-block;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--border);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+  line-height: var(--lh-normal);
+  vertical-align: 0.1em;
+  white-space: nowrap;
+}

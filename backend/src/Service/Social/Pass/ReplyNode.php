@@ -15,12 +15,20 @@ final readonly class ReplyNode
     public function __construct(
         public ?\DateTimeImmutable $publishedAt,
         private \Closure $commentOf,
-        public array $replies = [],
+        public array $replies,
+        public ?string $url,
+        public bool $byEntryAuthor,
     ) {
     }
 
     public function comment(): EntryCommentModel
     {
         return ($this->commentOf)($this->publishedAt);
+    }
+
+    /** @param list<ReplyNode> $replies */
+    public function withReplies(array $replies): self
+    {
+        return new self($this->publishedAt, $this->commentOf, $replies, $this->url, $this->byEntryAuthor);
     }
 }

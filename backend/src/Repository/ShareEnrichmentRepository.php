@@ -21,22 +21,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
         parent::__construct($registry, ShareEnrichment::class);
     }
 
-    public function deleteAppViewQueuedBefore(Feed $feed, \DateTimeImmutable $cutoff): void
-    {
-        $this->getEntityManager()->createQuery(sprintf(
-            'DELETE FROM %s pending WHERE pending.kind = :kind AND pending.queuedAt < :cutoff'
-            . ' AND IDENTITY(pending.entry) IN'
-            . ' (SELECT queuedEntry.id FROM %s queuedEntry WHERE queuedEntry.feed = :feed)',
-            ShareEnrichment::class,
-            Entry::class,
-        ))
-            ->setParameter('kind', ShareEnrichmentKind::AppView)
-            ->setParameter('cutoff', $cutoff, Types::DATETIME_IMMUTABLE)
-            ->setParameter('feed', $feed)
-            ->execute();
-    }
-
-    public function hasAppViewPendingForFeed(Feed $feed): bool
+    public function hasPendingForFeed(Feed $feed, ShareEnrichmentKind $kind): bool
     {
         return $this->createQueryBuilder('pending')
             ->select('pending.id')
@@ -44,26 +29,36 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
             ->andWhere('queuedEntry.feed = :feed')
             ->andWhere('pending.kind = :kind')
             ->setParameter('feed', $feed)
-            ->setParameter('kind', ShareEnrichmentKind::AppView)
+            ->setParameter('kind', $kind)
             ->setMaxResults(1)
             ->getQuery()
             ->getScalarResult() !== [];
     }
 
-    /** @return list<ShareEnrichment> the feed's AppView rows no worker holds, oldest first */
-    public function findClaimableAppViewForFeed(Feed $feed, \DateTimeImmutable $now, int $limit): array
-    {
-        /** @var list<ShareEnrichment> $rows */
-        $rows = $this->claimable($now)
-            ->andWhere('queuedEntry.feed = :feed')
-            ->andWhere('pending.kind = :kind')
-            ->setParameter('feed', $feed)
-            ->setParameter('kind', ShareEnrichmentKind::AppView)
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+    /** @return list<ShareEnrichment> those of the feed's claimable rows queued before the give-up window, oldest first */
+    public function findClaimableGivenUpForFeed(
+        Feed $feed,
+        ShareEnrichmentKind $kind,
+        \DateTimeImmutable $now,
+        int $limit,
+    ): array {
+        return self::rowsOf($this->claimableForFeed($feed, $kind, $now)
+            ->andWhere('pending.queuedAt < :giveUpCutoff')
+            ->setParameter('giveUpCutoff', ShareEnrichment::giveUpCutoff($now), Types::DATETIME_IMMUTABLE)
+            ->setMaxResults($limit));
+    }
 
-        return $rows;
+    /** @return list<ShareEnrichment> those of the feed's claimable rows queued within the give-up window, oldest first */
+    public function findClaimableLiveForFeed(
+        Feed $feed,
+        ShareEnrichmentKind $kind,
+        \DateTimeImmutable $now,
+        int $limit,
+    ): array {
+        return self::rowsOf($this->claimableForFeed($feed, $kind, $now)
+            ->andWhere('pending.queuedAt >= :giveUpCutoff')
+            ->setParameter('giveUpCutoff', ShareEnrichment::giveUpCutoff($now), Types::DATETIME_IMMUTABLE)
+            ->setMaxResults($limit));
     }
 
     /** @return list<ShareEnrichment> the oldest link-card rows no worker holds, of every feed */
@@ -198,6 +193,24 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
             ->getSingleColumnResult();
 
         return array_map(intval(...), $pending);
+    }
+
+    private function claimableForFeed(Feed $feed, ShareEnrichmentKind $kind, \DateTimeImmutable $now): QueryBuilder
+    {
+        return $this->claimable($now)
+            ->andWhere('queuedEntry.feed = :feed')
+            ->andWhere('pending.kind = :kind')
+            ->setParameter('feed', $feed)
+            ->setParameter('kind', $kind);
+    }
+
+    /** @return list<ShareEnrichment> */
+    private static function rowsOf(QueryBuilder $query): array
+    {
+        /** @var list<ShareEnrichment> $rows */
+        $rows = $query->getQuery()->getResult();
+
+        return $rows;
     }
 
     private function claimable(\DateTimeImmutable $now): QueryBuilder

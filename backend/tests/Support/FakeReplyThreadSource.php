@@ -29,10 +29,17 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
 
     private int $publicThrottleSeconds = 0;
 
+    private ?\Throwable $repliesFailure = null;
+
+    /** @var \Closure(): void */
+    private \Closure $duringPublicAsk;
+
     public function __construct()
     {
         $this->accountAnswer = CommentsAnswerModel::settled('account thread');
         $this->publicAnswer = CommentsAnswerModel::settled('public thread');
+        $this->duringPublicAsk = static function (): void {
+        };
     }
 
     public static function network(): string
@@ -65,6 +72,17 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
         $this->publicThrottleSeconds = $seconds;
     }
 
+    public function failRepliesWith(\Throwable $failure): void
+    {
+        $this->repliesFailure = $failure;
+    }
+
+    /** @param \Closure(): void $sideEffect what else happens while a public thread is asked for, say time passing */
+    public function duringEachPublicAsk(\Closure $sideEffect): void
+    {
+        $this->duringPublicAsk = $sideEffect;
+    }
+
     /** @param list<ReplyNode> $replies */
     public function readsReplies(array $replies): void
     {
@@ -84,6 +102,7 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
     public function inPublic(string $address): CommentsAnswerModel
     {
         $this->calls[] = 'inPublic ' . $address;
+        ($this->duringPublicAsk)();
         if (null !== $this->publicFailure) {
             throw $this->publicFailure;
         }
@@ -99,6 +118,9 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
     public function repliesIn(string $address, string $answer): array
     {
         $this->calls[] = 'repliesIn ' . $address . ' ' . $answer;
+        if (null !== $this->repliesFailure) {
+            throw $this->repliesFailure;
+        }
 
         return $this->replies;
     }

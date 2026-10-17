@@ -235,9 +235,19 @@ final readonly class SavedPostRepository
         foreach ($copyByEntryId as $entryId => $copyId) {
             $pair = ['copy' => $copyId, 'original' => $entryId];
             $connection->executeStatement(
-                'INSERT INTO link_card (entry_id, position, url, title, description, image_url, site_name)'
-                . ' SELECT :copy, position, url, title, description, image_url, site_name FROM link_card'
+                'INSERT INTO thread_post (entry_id, position, url, published_at, content_html, media)'
+                . ' SELECT :copy, position, url, published_at, content_html, media FROM thread_post'
                 . ' WHERE entry_id = :original',
+                $pair,
+            );
+            $connection->executeStatement(
+                'INSERT INTO link_card'
+                . ' (entry_id, thread_post_id, position, url, title, description, image_url, site_name)'
+                . ' SELECT :copy, copied.id, card.position, card.url, card.title, card.description,'
+                . ' card.image_url, card.site_name FROM link_card card'
+                . ' LEFT JOIN thread_post reply ON reply.id = card.thread_post_id'
+                . ' LEFT JOIN thread_post copied ON copied.entry_id = :copy AND copied.position = reply.position'
+                . ' WHERE card.entry_id = :original',
                 $pair,
             );
             $connection->executeStatement(

@@ -15,7 +15,13 @@ use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareEnrichmentKind;
 use App\Service\Bluesky\AppViewClient;
+use App\Enum\ShareKind;
+use App\Repository\ThreadPostRepository;
 use App\Service\Bluesky\PostEnricher;
+use App\Service\Comments\Model\CommentAuthorModel;
+use App\Service\Comments\Model\EntryCommentModel;
+use App\Service\Social\Pass\ReplyNode;
+use App\Service\Social\SelfThreadEnricher;
 use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Fetch\HostThrottle;
 use App\Service\LinkCard\ShareLinkCards;
@@ -23,6 +29,8 @@ use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FakeAppView;
+use App\Tests\Support\FakeReplyThreadSource;
+use App\Tests\Support\SelfThreadEnrichers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -45,6 +53,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
     private HostThrottle $throttle;
     private MockHttpClient $pages;
     private MockClock $clock;
+    private FakeReplyThreadSource $replyThread;
     private RecordingSearchIndexWriter $indexWriter;
 
     protected function setUp(): void
@@ -57,6 +66,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $this->throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
         $this->pages = new MockHttpClient(self::page(...));
         $this->indexWriter = new RecordingSearchIndexWriter();
+        $this->replyThread = new FakeReplyThreadSource();
         $this->installFakes();
     }
 
@@ -104,6 +114,43 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $indexed = $this->indexWriter->upserted();
         self::assertSame([$post->requireId()], array_column($indexed, 'id'));
         self::assertSame('Read this.', $indexed[0]->content);
+    }
+
+    public function testAFoldedThreadHandsItsLinkRootOnToItsCardInTheSameCompletion(): void
+    {
+        [$headers, $user] = $this->auth('complete-self-thread@example.com');
+        $feed = $this->subscribedFeed($user, 'https://bsky.app/profile/a.example/rss');
+        $root = $this->post($feed, self::TISCH, '<p>See https://example.com/story</p>');
+        $root->setShareKind(ShareKind::Link);
+        $this->entityManager()->persist(
+            new ShareEnrichment($root, ShareEnrichmentKind::SelfThread, new \DateTimeImmutable('2026-10-10 11:00')),
+        );
+        $this->entityManager()->flush();
+        $this->replyThread->readsReplies([new ReplyNode(
+            new \DateTimeImmutable('2026-10-10 11:30'),
+            static fn (?\DateTimeImmutable $at): EntryCommentModel => new EntryCommentModel(
+                new CommentAuthorModel('A', null, null, null),
+                'https://bsky.app/profile/a/post/reply',
+                $at,
+                '<p>more</p>',
+                true,
+            ),
+            [],
+            null,
+            true,
+        )]);
+
+        $this->complete($headers, [$root->requireId()]);
+        self::assertResponseIsSuccessful();
+        $entries = $this->payload($this->client)['entries'];
+        self::assertSame(
+            ['Card for https://example.com/story'],
+            array_column($this->cardsOf($entries, $root), 'title'),
+        );
+        $threadPosts = self::getContainer()->get(ThreadPostRepository::class);
+        self::assertInstanceOf(ThreadPostRepository::class, $threadPosts);
+        self::assertTrue($threadPosts->hasAnyFor($root));
+        self::assertSame(1, $this->pages->getRequestsCount());
     }
 
     public function testATitledShareOffTheFeedsSiteComesBackWithItsLinkCard(): void
@@ -330,6 +377,10 @@ final class EntryCompletionControllerTest extends ApiTestCase
             ),
         );
         $container->set(
+            SelfThreadEnricher::class,
+            SelfThreadEnrichers::build($this->entityManager(), $this->clock, $this->replyThread, new NullLogger()),
+        );
+        $container->set(
             ShareLinkCards::class,
             ShareLinkCardsWiring::build($this->entityManager(), $this->pages, $this->clock),
         );
@@ -362,9 +413,9 @@ final class EntryCompletionControllerTest extends ApiTestCase
         return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 
-    private function subscribedFeed(User $user): Feed
+    private function subscribedFeed(User $user, ?string $url = null): Feed
     {
-        $feed = new Feed('https://f.test/' . uniqid('', true));
+        $feed = new Feed($url ?? 'https://f.test/' . uniqid('', true));
         $this->entityManager()->persist($feed);
         $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01')));
         $this->entityManager()->flush();

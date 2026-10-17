@@ -209,6 +209,7 @@ writes none of them.
 | `WorkerHeartbeat` | The liveness record of the processes that drive "For you" runs: the worker, a drainer and the cron sweep. It is a machine record, not your data. |
 | `MailSendFailure` | The record of automated e-mails the instance failed to send. It is a machine record, not your data. |
 | `ShareEnrichment` | The queue of entries whose embed or link cards are still to come. It is a machine record, not your data. |
+| `ThreadPost` | The replies in which a post's author continued it, read from the network when the post arrives. A restored article shows its root post alone. |
 
 ### 6.2 Account data that the file drops in full
 
@@ -305,6 +306,12 @@ article mark all hold one pointer to their owner.
 | `location.urlHash` | A value the application calculates from the article address, which the file already carries. The restore calculates it again for each article. Therefore it is never old, and the format never has to drop it later. |
 | `image.checkedAt` | The time at which this instance judged the image. A restored image was not judged here, so the field stays empty. An empty field does not put the image into the check queue. |
 | `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
+
+**On a link card.**
+
+| Field | Why the file leaves it out |
+|---|---|
+| `threadPost` | The pointer from a link card to the reply that owns it. A reply's card stays out of the file with its reply. |
 
 ## 7. Fields a restore must never write
 

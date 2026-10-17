@@ -11,8 +11,8 @@ use App\Enum\SourceFormat;
 use App\Service\Social\Support\SocialPostAddress;
 
 /**
- * Gives a page of rows their categories, saved searches, link cards, pending flag, social state, discussion and
- * saved origin: one query per lookup.
+ * Gives a page of rows their categories, saved searches, link cards, thread posts, pending flag, social state,
+ * discussion and saved origin: one query per lookup, two for the thread posts and their cards.
  */
 final readonly class EntryListRowEnricher
 {
@@ -23,6 +23,7 @@ final readonly class EntryListRowEnricher
         private ShareEnrichmentRepository $shareEnrichments,
         private SocialAccountRepository $socialAccounts,
         private SocialLikeRepository $socialLikes,
+        private ThreadPostRepository $threadPosts,
         private SavedEntryOriginRepository $savedOrigins,
     ) {
     }
@@ -50,7 +51,8 @@ final readonly class EntryListRowEnricher
         $entryIds = array_keys($entries);
         $categories = $this->categories->labelsByEntryIds($entryIds);
         $savedSearches = $this->memberships->savedSearchesByEntry($userId, $entryIds);
-        $linkCards = $this->linkCards->contentsByEntryIds($entryIds);
+        $linkCards = $this->linkCards->placedByEntryIds($entryIds);
+        $threads = $this->threadPosts->byEntryIds($entryIds);
         $pendingIds = array_flip($this->shareEnrichments->pendingEntryIdsAmong(self::topLevelEntryIdsOf($rows)));
         $socialStates = $this->socialStatesOf($entries, $userId);
         $origins = $this->savedOrigins->originsByEntryIds(self::savedEntryIdsOf($entries));
@@ -65,6 +67,7 @@ final readonly class EntryListRowEnricher
                 $socialStates[$entryId] ?? null,
                 isset($socialStates[$entryId]) ? self::repliesDiscussionOf($entries[$entryId]) : null,
                 $origins[$entryId] ?? null,
+                $threads[$entryId] ?? [],
             );
         }
 

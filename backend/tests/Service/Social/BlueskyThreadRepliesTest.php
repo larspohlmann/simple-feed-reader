@@ -96,6 +96,15 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertFalse($replies[0]->comment()->byEntryAuthor);
     }
 
+    public function testANodeKnowsItsAuthorshipAndUrlWithoutBuildingTheComment(): void
+    {
+        $replies = $this->replies();
+
+        self::assertTrue($replies[0]->replies[0]->byEntryAuthor);
+        self::assertSame(self::WEB . 'did:plc:op/post/r1a', $replies[0]->replies[0]->url);
+        self::assertFalse($replies[0]->byEntryAuthor);
+    }
+
     public function testAPostNamingItsAuthorByHandleStillMarksTheirReply(): void
     {
         $replies = $this->replies(post: 'at://op.test/app.bsky.feed.post/root');

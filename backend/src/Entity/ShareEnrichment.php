@@ -66,8 +66,23 @@ final class ShareEnrichment
         return $this->kind;
     }
 
+    public function isQueuedBefore(\DateTimeImmutable $cutoff): bool
+    {
+        return $this->queuedAt < $cutoff;
+    }
+
+    public static function giveUpCutoff(\DateTimeImmutable $now): \DateTimeImmutable
+    {
+        return $now->sub(new \DateInterval(self::APPVIEW_GIVE_UP_AFTER));
+    }
+
     public function awaitLinkCards(): void
     {
         $this->kind = ShareEnrichmentKind::LinkCards;
+    }
+
+    public function awaitSelfThread(): void
+    {
+        $this->kind = ShareEnrichmentKind::SelfThread;
     }
 }

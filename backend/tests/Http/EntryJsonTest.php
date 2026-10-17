@@ -26,6 +26,8 @@ use App\Repository\EntryListRowEnrichment;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
+use App\Service\LinkCard\Model\PlacedLinkCardModel;
+use App\Service\Social\Model\ThreadPostModel;
 use PHPUnit\Framework\TestCase;
 
 final class EntryJsonTest extends TestCase
@@ -191,20 +193,61 @@ final class EntryJsonTest extends TestCase
         self::assertNull(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['quote']);
     }
 
+    public function testACardCarriesItsStoredPosition(): void
+    {
+        $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
+        $row = $this->row(
+            $this->entryTitled('Carded'),
+            new EntryListRowEnrichment(linkCards: [new PlacedLinkCardModel(2, $card)]),
+        );
+
+        self::assertSame(2, EntryJson::listRow($row)['linkCards'][0]['position']);
+    }
+
+    public function testARowCarriesItsThreadWithEachRepliesCardPosition(): void
+    {
+        $card = new LinkCardContent('https://m.example/a', 'A', null, null, 'm.example');
+        $post = new ThreadPostModel(
+            'https://x/2',
+            new \DateTimeImmutable('2026-10-17T08:15:31Z'),
+            '<p>Second &amp; last</p>',
+            [],
+            new PlacedLinkCardModel(3, $card),
+        );
+        $row = $this->row($this->entryTitled('Root'), new EntryListRowEnrichment(threadPosts: [$post]));
+
+        $thread = EntryJson::listRow($row)['thread'];
+
+        self::assertSame(
+            ['url', 'publishedAt', 'html', 'text', 'media', 'linkCard'],
+            array_keys($thread[0]),
+        );
+        self::assertSame('https://x/2', $thread[0]['url']);
+        self::assertSame('2026-10-17T08:15:31+00:00', $thread[0]['publishedAt']);
+        self::assertSame('Second & last', $thread[0]['text']);
+        self::assertSame(3, $thread[0]['linkCard']['position'] ?? null);
+        self::assertSame($thread, EntryJson::completed($row)['thread']);
+    }
+
+    public function testARowWithoutAThreadHasAnEmptyOne(): void
+    {
+        self::assertSame([], EntryJson::listRow($this->row($this->entryTitled('Plain')))['thread']);
+    }
+
     public function testACompletedRowCarriesOnlyWhatACompletionCanChange(): void
     {
         $shared = $this->entryTitled('Shared');
         $shared->setShareKind(ShareKind::Media);
 
         $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
-        $row = $this->row($shared, new EntryListRowEnrichment(linkCards: [$card]));
+        $row = $this->row($shared, new EntryListRowEnrichment(linkCards: [new PlacedLinkCardModel(0, $card)]));
 
         $json = EntryJson::completed($row);
 
         self::assertSame(
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
-                'imageRenditions', 'media', 'linkCards', 'share', 'quote',
+                'imageRenditions', 'media', 'linkCards', 'thread', 'share', 'quote',
             ],
             array_keys($json),
         );
@@ -216,6 +259,7 @@ final class EntryJsonTest extends TestCase
                 'description' => null,
                 'imageUrl' => null,
                 'siteName' => 'i.example',
+                'position' => 0,
             ]],
             $json['linkCards'],
         );
@@ -360,7 +404,12 @@ final class EntryJsonTest extends TestCase
             false,
             new EntryListRowViewState(false, null),
             null,
-            enrichment: new EntryListRowEnrichment(['Politics'], [$savedSearch], [$card], true),
+            enrichment: new EntryListRowEnrichment(
+                ['Politics'],
+                [$savedSearch],
+                [new PlacedLinkCardModel(0, $card)],
+                true,
+            ),
         );
 
         $json = EntryJson::listRow($row);
@@ -368,7 +417,8 @@ final class EntryJsonTest extends TestCase
         self::assertSame(
             [
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
-                'imageRenditions', 'media', 'linkCards', 'share', 'quote', 'title', 'url', 'discussionUrl', 'comments',
+                'imageRenditions', 'media', 'linkCards', 'thread', 'share', 'quote', 'title', 'url', 'discussionUrl',
+                'comments',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
                 'subscriptionId', 'source', 'poster',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',

@@ -1,0 +1,86 @@
+<article class="thread" [appOpensEntry]="entry()">
+  <app-entry-kicker-line [entry]="entry()" />
+  <app-thread-line>
+    <app-thread-line-post>
+      @if (headline()) {
+        <p class="title" [class.post]="isPost()">
+          {{ headline() }} <app-thread-count [position]="1" [total]="total()" />
+        </p>
+      } @else {
+        <app-thread-count [position]="1" [total]="total()" />
+      }
+      @if (snippet()) {
+        <p class="dek">{{ snippet() }}</p>
+      }
+      @let items = rootMedia();
+      @if (items.length) {
+        <ng-container
+          [ngTemplateOutlet]="postMedia"
+          [ngTemplateOutletContext]="{ $implicit: items, label: headline() }"
+        />
+      }
+      @if (rootQuote(); as quote) {
+        <app-quoted-post
+          [quote]="quote"
+          layout="block"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$event.stopPropagation()"
+          (keydown.space)="$event.stopPropagation()"
+        />
+      }
+      @if (entry().linkCards[0]; as card) {
+        <ng-container
+          [ngTemplateOutlet]="blockCard"
+          [ngTemplateOutletContext]="{ $implicit: card }"
+        />
+      } @else if (entry().pending) {
+        <app-link-card-placeholder [entryId]="entry().id" />
+      }
+    </app-thread-line-post>
+    @for (reply of entry().thread; track $index; let index = $index) {
+      <app-thread-line-post>
+        @if (reply.text) {
+          <p class="reply">
+            {{ reply.text }} <app-thread-count [position]="index + 2" [total]="total()" />
+          </p>
+        } @else {
+          <app-thread-count [position]="index + 2" [total]="total()" />
+        }
+        @if (reply.media.length) {
+          <ng-container
+            [ngTemplateOutlet]="postMedia"
+            [ngTemplateOutletContext]="{ $implicit: reply.media, label: reply.text }"
+          />
+        }
+        @if (reply.linkCard; as card) {
+          <ng-container
+            [ngTemplateOutlet]="blockCard"
+            [ngTemplateOutletContext]="{ $implicit: card }"
+          />
+        }
+      </app-thread-line-post>
+    }
+  </app-thread-line>
+  <app-entry-meta [entry]="entry()" [tags]="tags()" />
+  <app-entry-duplicates [entry]="entry()" />
+</article>
+
+<ng-template #postMedia let-media let-label="label">
+  <app-post-media
+    [media]="media"
+    [ratio]="ratio(media[0])"
+    [videoLabel]="label || ('reader.mediaVideo' | transloco)"
+  />
+</ng-template>
+
+<ng-template #blockCard let-card>
+  <app-link-card
+    [card]="card"
+    layout="block"
+    [openableInReader]="true"
+    (openInReader)="openInReaderAlone(card.position)"
+    (click)="$event.stopPropagation()"
+    (keydown.enter)="$event.stopPropagation()"
+    (keydown.space)="$event.stopPropagation()"
+  />
+</ng-template>

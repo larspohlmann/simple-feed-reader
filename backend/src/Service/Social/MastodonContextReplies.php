@@ -70,6 +70,8 @@ final readonly class MastodonContextReplies
                 fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
                     => $this->commentOf($status, $publishedAt, $thread),
                 $this->nodesOf($thread->answersTo($status), $thread),
+                url: self::urlOf($status),
+                byEntryAuthor: $thread->isByPostAuthor($status->node('account')),
             ),
             $statuses,
         );
@@ -84,12 +86,17 @@ final readonly class MastodonContextReplies
 
         return new EntryCommentModel(
             self::authorOf($account),
-            AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri')),
+            self::urlOf($status),
             $publishedAt,
             $this->htmlOf($status),
             $thread->isByPostAuthor($account),
             self::embedsOf($status),
         );
+    }
+
+    private static function urlOf(JsonNodeModel $status): ?string
+    {
+        return AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri'));
     }
 
     private static function publishedAtOf(JsonNodeModel $status): ?\DateTimeImmutable

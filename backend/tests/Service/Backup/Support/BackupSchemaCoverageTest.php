@@ -16,6 +16,7 @@ use App\Entity\Feed;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\KnownSocialCollection;
+use App\Entity\LinkCard;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
 use App\Entity\Preferences;
@@ -36,6 +37,7 @@ use App\Entity\SocialLike;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
+use App\Entity\ThreadPost;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Entity\UserPasskey;
@@ -123,6 +125,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'cleared on the next successful send.',
         ShareEnrichment::class => 'The instance\'s queue of entries whose embed or link cards are still to come '
             . '(#1499, #1502, #1524); instance data, not the reader\'s.',
+        ThreadPost::class => 'A post\'s self-reply continuation, read from the network at ingest (#1668); a '
+            . 'restored entry shows its root post alone.',
     ];
 
     /**
@@ -263,6 +267,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'image.verifyAttempts' => 'The queue marker and failure count of this instance\'s '
                 . 'check. A restored image is not put into the queue. The instance shows it as '
                 . 'the old instance did.',
+        ],
+        LinkCard::class => [
+            'threadPost' => 'A reply\'s card stays out of the file with its reply (#1668).',
         ],
         EntryState::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,

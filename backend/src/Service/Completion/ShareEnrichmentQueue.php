@@ -15,6 +15,7 @@ use App\Service\Completion\Model\KnownSharesModel;
 use App\Service\Completion\Support\PostedLinkCard;
 use App\Service\Share\EntryShareClassifier;
 use App\Service\Share\PendingEmbed\PendingEmbedInterface;
+use App\Service\Share\PendingThread\PendingThreadInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Classifies each new entry and queues the ones whose embed or link cards are still to come. */
@@ -25,6 +26,7 @@ final readonly class ShareEnrichmentQueue
         private NaiveUtcClock $clock,
         private EntryShareClassifier $classifier,
         private PendingEmbedInterface $pendingEmbed,
+        private PendingThreadInterface $pendingThread,
         private KnownShareSettler $knownShareSettler,
     ) {
     }
@@ -87,6 +89,11 @@ final readonly class ShareEnrichmentQueue
     {
         if ($this->pendingEmbed->awaitsEmbed($entry)) {
             $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::AppView, $queuedAt));
+
+            return;
+        }
+        if ($this->pendingThread->awaitsThread($entry)) {
+            $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::SelfThread, $queuedAt));
 
             return;
         }

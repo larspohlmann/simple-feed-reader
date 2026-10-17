@@ -3,6 +3,12 @@
   @case ('hero') {
     <app-entry-hero [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
   }
+  @case ('thread') {
+    <app-entry-thread
+      [entry]="entryOf(current)"
+      [tags]="tagsFor(entryOf(current).subscriptionId)"
+    />
+  }
   @case ('link') {
     <app-entry-link [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
   }

@@ -6,7 +6,6 @@ namespace App\Service\Refresh;
 
 use App\Entity\Feed;
 use App\Repository\FeedRepository;
-use App\Service\Bluesky\PostEnricher;
 use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Feed\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
@@ -40,7 +39,7 @@ final readonly class FeedOutcomePersister
         private FeedScheduler $scheduler,
         private EntryIndexer $indexer,
         private ShareEnrichmentQueue $enrichmentQueue,
-        private PostEnricher $postEnricher,
+        private FeedShareEnrichment $shareEnrichment,
         private LoggerInterface $logger,
     ) {
     }
@@ -128,7 +127,7 @@ final readonly class FeedOutcomePersister
         $this->applyPermanentRedirect($feed, $response);
         $this->scheduler->recordNotModified($feed);
         $this->entityManager->flush();
-        $this->postEnricher->enrich($feed);
+        $this->shareEnrichment->enrich($feed);
 
         return FeedRefreshResultModel::of(FeedOutcome::NotModified);
     }
@@ -147,7 +146,7 @@ final readonly class FeedOutcomePersister
         $this->entityManager->flush();
         // Only the flush assigns ids, so indexing has to follow it.
         $this->indexer->index($createdEntries);
-        $this->postEnricher->enrich($feed);
+        $this->shareEnrichment->enrich($feed);
 
         return FeedRefreshResultModel::fetched(\count($createdEntries));
     }

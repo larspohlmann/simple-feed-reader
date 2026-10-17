@@ -25,7 +25,7 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
 export class EntryLinkComponent extends EntryBlockBase {
   private readonly navigation = inject(LinkReaderNavigation);
 
-  protected openInReaderAlone(): void {
-    this.navigation.openAlone({ entryId: this.entry().id, position: 0 });
+  protected openInReaderAlone(position: number): void {
+    this.navigation.openAlone({ entryId: this.entry().id, position });
   }
 }

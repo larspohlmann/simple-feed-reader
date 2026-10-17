@@ -25,7 +25,7 @@ final readonly class EntryCardWriter
 
     public function write(Entry $entry, EntryCardsModel $cards): void
     {
-        $this->linkCards->append($entry, $cards->stored, $cards->newCards());
+        $this->linkCards->append($entry, $cards->newCards());
         $this->dropQuoteLines($entry, $cards->quoteLineUrls());
         self::settleMediaTarget($entry, $cards->pageCards);
         if ($cards->quoted !== null) {

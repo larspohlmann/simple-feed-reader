@@ -18,6 +18,8 @@ final class FakeAppView implements FeedFetcherInterface
 
     private ?string $body = null;
 
+    private ?string $threadBody = null;
+
     /** @var list<list<string>> the URIs each request asked for, in order */
     public array $requests = [];
 
@@ -33,6 +35,11 @@ final class FakeAppView implements FeedFetcherInterface
             Assert::assertIsString($uri);
             $this->postViews[$uri] = $view;
         }
+    }
+
+    public function knowsThreadFixture(string $name): void
+    {
+        $this->threadBody = Bluesky::fixture($name);
     }
 
     /** @param array<mixed> $view a post view as the AppView answers it, with its uri */
@@ -61,6 +68,9 @@ final class FakeAppView implements FeedFetcherInterface
 
     public function fetch(string $url): FetchResponseModel
     {
+        if ($this->threadBody !== null && str_starts_with($url, Bluesky::GET_POST_THREAD . '?')) {
+            return FetchResponseModel::fetched($url, false, $this->threadBody, null, null);
+        }
         Assert::assertStringStartsWith(Bluesky::GET_POSTS . '?', $url);
         $uris = self::requestedUris($url);
         $this->requests[] = $uris;

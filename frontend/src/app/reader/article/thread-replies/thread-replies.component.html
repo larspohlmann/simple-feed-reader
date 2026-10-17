@@ -1,0 +1,23 @@
+<app-thread-line>
+  @for (reply of entry().thread; track $index; let index = $index) {
+    <app-thread-line-post>
+      <div class="body" [innerHTML]="reply.html"></div>
+      @if (reply.media.length) {
+        <app-post-media
+          [media]="reply.media"
+          [ratio]="ratioOf(reply.media)"
+          [videoLabel]="'reader.comments.video' | transloco"
+        />
+      }
+      @if (reply.linkCard; as card) {
+        <app-link-card
+          [card]="card"
+          layout="article"
+          [openableInReader]="true"
+          (openInReader)="navigation.layer({ entryId: entry().id, position: card.position })"
+        />
+      }
+      <app-thread-count [position]="index + 2" [total]="total()" />
+    </app-thread-line-post>
+  }
+</app-thread-line>

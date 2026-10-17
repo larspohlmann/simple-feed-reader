@@ -22,6 +22,10 @@ final class LinkCard
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Entry $entry;
 
+    #[ORM\ManyToOne(targetEntity: ThreadPost::class)]
+    #[ORM\JoinColumn(name: 'thread_post_id', nullable: true, onDelete: 'CASCADE')]
+    private ?ThreadPost $threadPost;
+
     #[ORM\Column(type: Types::SMALLINT)]
     private int $position;
 
@@ -40,7 +44,7 @@ final class LinkCard
     #[ORM\Column(name: 'site_name', length: 255)]
     private string $siteName;
 
-    public function __construct(Entry $entry, int $position, LinkCardContent $content)
+    public function __construct(Entry $entry, int $position, LinkCardContent $content, ?ThreadPost $threadPost = null)
     {
         $this->entry = $entry;
         $this->position = $position;
@@ -49,5 +53,16 @@ final class LinkCard
         $this->description = $content->description;
         $this->imageUrl = $content->imageUrl;
         $this->siteName = $content->siteName;
+        $this->threadPost = $threadPost;
+    }
+
+    public function getEntry(): Entry
+    {
+        return $this->entry;
+    }
+
+    public function getPosition(): int
+    {
+        return $this->position;
     }
 }

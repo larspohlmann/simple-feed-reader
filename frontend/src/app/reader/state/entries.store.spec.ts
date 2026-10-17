@@ -13,6 +13,7 @@ import { EntryDto } from '../models';
 import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
 import { aLinkCard, anEntry } from '../../../testing/entry-testing';
+import { aThreadPost } from '../../../testing/thread-testing';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
@@ -31,6 +32,7 @@ const completed = (id: number, over: Partial<CompletedEntryDto> = {}): Completed
   imageRenditions: [],
   media: [],
   linkCards: [],
+  thread: [],
   share: null,
   quote: null,
   ...over,
@@ -442,6 +444,14 @@ describe('EntriesStore', () => {
           ],
           nextCursor: null,
         });
+    });
+
+    it('takes the self-reply thread a completion folded into the row', () => {
+      const reply = aThreadPost({ text: 'Part two' });
+
+      store.mergeCompleted([completed(1, { thread: [reply] })]);
+
+      expect(store.entries()[0].thread).toEqual([reply]);
     });
 
     it('takes everything completion filled in, keeping what only the list knows', () => {

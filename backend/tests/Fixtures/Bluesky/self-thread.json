@@ -1,0 +1,33 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:t3o4nfbk4lq62necw2n35m4f/app.bsky.feed.post/3my2nlat6px2v",
+      "cid": "bafyreifngans7c4d4mdxkrzgphpwquk4yjhxt5kk3aqpztozpqohrxoi7m",
+      "author": {
+        "did": "did:plc:t3o4nfbk4lq62necw2n35m4f",
+        "handle": "techpresso.bsky.social",
+        "displayName": "Techpresso",
+        "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:t3o4nfbk4lq62necw2n35m4f/bafkreihq3iijpro7zhxcwqbcdv7tdgzluw576rwln33h3ax3p6su7zd6tu",
+        "associated": {
+          "activitySubscription": {
+            "allowSubscriptions": "followers"
+          }
+        },
+        "labels": [],
+        "createdAt": "2024-11-18T14:46:01.645Z"
+      },
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "createdAt": "2026-10-17T08:15:31.584760Z",
+        "text": "Apple has updated its App Store guidelines to ban apps that produce AI-generated nonconsensual intimate imagery, including so-called 'nudify' apps."
+      },
+      "bookmarkCount": 0,
+      "replyCount": 1,
+      "repostCount": 0,
+      "likeCount": 0,
+      "quoteCount": 0,
+      "indexedAt": "2026-10-17T08:15:32.157Z",
+      "labels": []
+    }
+  ]
+}

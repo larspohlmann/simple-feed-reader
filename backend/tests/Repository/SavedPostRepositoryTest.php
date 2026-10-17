@@ -16,6 +16,8 @@ use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SocialLike;
+use App\Entity\ThreadPost;
+use App\Entity\ThreadPostContent;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SourceFormat;
@@ -24,6 +26,7 @@ use App\Repository\LinkCardRepository;
 use App\Repository\SavedEntryOriginRepository;
 use App\Repository\SavedPostRepository;
 use App\Repository\SocialLikeRepository;
+use App\Repository\ThreadPostRepository;
 use App\Service\SavedPosts\Model\SavedCopyModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SavedPostFixtures;
@@ -233,6 +236,43 @@ final class SavedPostRepositoryTest extends DbTestCase
         );
     }
 
+    public function testACopyCarriesItsSelfReplyThreadWithEachReplysCard(): void
+    {
+        $source = $this->subscribedFeed('https://thread.example/feed.xml');
+        $saved = $this->savedFeed();
+        $entry = $this->entry($source, 'with-thread', 'https://thread.example/1');
+        $this->entityManager->persist(new LinkCard($entry, 0, self::card('https://root.example/')));
+        $reply = new ThreadPost(
+            $entry,
+            1,
+            new ThreadPostContent('https://thread.example/1/reply', null, '<p>more</p>', []),
+        );
+        $this->entityManager->persist($reply);
+        $this->entityManager->persist(new LinkCard($entry, 1, self::card('https://reply.example/'), $reply));
+        $this->entityManager->flush();
+        $copies = $this->repository()->copyInto(new SavedCopyModel($saved->requireId(), null), [$entry->requireId()]);
+
+        $this->repository()->copyCompanions($copies, null);
+
+        $copyId = $copies[$entry->requireId()];
+        /** @var LinkCardRepository $cards */
+        $cards = $this->entityManager->getRepository(LinkCard::class);
+        $rootCards = $cards->contentsByEntryIds([$copyId])[$copyId] ?? [];
+        self::assertSame(
+            ['https://root.example/'],
+            array_map(static fn (LinkCardContent $card): string => $card->url, $rootCards),
+        );
+        /** @var ThreadPostRepository $threadPosts */
+        $threadPosts = $this->entityManager->getRepository(ThreadPost::class);
+        $thread = $threadPosts->byEntryIds([$copyId])[$copyId] ?? [];
+        self::assertCount(1, $thread);
+        self::assertSame('<p>more</p>', $thread[0]->html);
+        $replyCard = $thread[0]->linkCard;
+        self::assertNotNull($replyCard);
+        self::assertSame(1, $replyCard->position);
+        self::assertSame('https://reply.example/', $replyCard->content->url);
+    }
+
     public function testALikeIsCopiedOnceAndNeverOverAnExistingOne(): void
     {
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
@@ -382,6 +422,11 @@ final class SavedPostRepositoryTest extends DbTestCase
     }
 
     /** Nothing injects it yet, so the test container has removed it. */
+    private static function card(string $url): LinkCardContent
+    {
+        return new LinkCardContent($url, 'Shared', null, null, 'shared.example');
+    }
+
     private function repository(): SavedPostRepository
     {
         return new SavedPostRepository($this->entityManager);

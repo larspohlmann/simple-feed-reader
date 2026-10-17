@@ -91,6 +91,11 @@ function leadImage(entry: EntryDto): EntryMediumDto[] {
   ];
 }
 
+/** The media a thread's root shows: a media or quote share's own; a link share's picture is its card's. */
+export function threadRootMedia(entry: EntryDto): EntryMediumDto[] {
+  return entry.share === 'media' || entry.share === 'quote' ? sharedMedia(entry) : [];
+}
+
 /** A share whose point is its picture or video (#1522, #1524). */
 export function sharesMedia(entry: EntryDto): boolean {
   return entry.share === 'media' && sharedMedia(entry).length > 0;
@@ -100,7 +105,13 @@ export function sharesQuotedPost(entry: EntryDto): boolean {
   return entry.share === 'quote' && entry.quote !== null;
 }
 
+/** An entry with its author's self-replies folded in (#1668). */
+export function sharesThread(entry: EntryDto): boolean {
+  return entry.thread.length > 0;
+}
+
 const SHARES: Record<ShareKind, (entry: EntryDto) => boolean> = {
+  thread: sharesThread,
   link: sharesLink,
   media: sharesMedia,
   quoting: sharesQuotedPost,

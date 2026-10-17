@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntryLinkComponent } from './entry-link.component';
 import { EntryDto } from '../../../../models';
-import { LinkCardDto } from '../../../../link-card/link-card';
+import { PlacedLinkCardDto } from '../../../../link-card/link-card';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { LinkReaderNavigation } from '../../../../shell/link-reader-navigation.service';
 import { PreviewProgress } from '../../../../link-card/preview-progress';
@@ -25,7 +25,7 @@ beforeEach(() => {
   Object.values(navigation).forEach((spy) => spy.mockReset());
 });
 
-const card = (over: Partial<LinkCardDto> = {}): LinkCardDto =>
+const card = (over: Partial<PlacedLinkCardDto> = {}): PlacedLinkCardDto =>
   aLinkCard({
     description: 'What the story is about.',
     imageUrl: 'https://news.test/story.jpg',
@@ -38,7 +38,10 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     excerpt: 'Worth a read, this one.',
     titleDerived: true,
     share: 'link',
-    linkCards: [card(), card({ url: 'https://other.test/', title: 'A second story' })],
+    linkCards: [
+      card({ position: 4 }),
+      card({ url: 'https://other.test/', title: 'A second story', position: 5 }),
+    ],
     ...over,
   });
 
@@ -171,13 +174,13 @@ describe('EntryLinkComponent', () => {
     expect(element.querySelector('app-link-card-placeholder')).toBeNull();
   });
 
-  it('opens the first card alone in the reader without opening the entry', () => {
+  it('opens the first card alone in the reader by its stored position, without opening the entry', () => {
     const testEntry = entry();
     const element = mount(testEntry).nativeElement as HTMLElement;
 
     element.querySelector<HTMLButtonElement>('button.open-in-reader')!.click();
 
-    expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: testEntry.id, position: 0 });
+    expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: testEntry.id, position: 4 });
     expect(entryActions.open).not.toHaveBeenCalled();
   });
 });

@@ -14,7 +14,7 @@ import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
 import { sharedMedia } from '../../magazine-slot-fit';
-import { EntryMediumDto, mediumRatio } from '../../../../entry-medium';
+import { EntryMediumDto, entryMediumRatio } from '../../../../entry-medium';
 import { PlayingEmbedDirective } from '../../../../media/playing-embed.directive';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 import { PostMediaComponent } from '../../../../media/post-media/post-media.component';
@@ -102,8 +102,6 @@ export class EntryMediaComponent extends EntryBlockBase {
   }
 
   protected ratio(medium: EntryMediumDto): number {
-    const entry = this.entry();
-    if (medium.url === entry.imageUrl && entry.imageAspectRatio) return entry.imageAspectRatio;
-    return mediumRatio(medium);
+    return entryMediumRatio(this.entry(), medium);
   }
 }

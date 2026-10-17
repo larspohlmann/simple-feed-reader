@@ -17,6 +17,8 @@ use App\Entity\SavedSearchEntry;
 use App\Entity\ShareEnrichment;
 use App\Entity\SocialAccount;
 use App\Entity\SocialLike;
+use App\Entity\ThreadPost;
+use App\Entity\ThreadPostContent;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareEnrichmentKind;
@@ -28,6 +30,8 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
+use App\Repository\LinkCardRepository;
+use App\Service\LinkCard\Model\PlacedLinkCardModel;
 use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
@@ -71,7 +75,45 @@ final class EntryListRowEnricherTest extends DbTestCase
             ['id' => $newer->requireId(), 'slug' => $newer->getSlug(), 'term' => 'rocket'],
             $enrichment->savedSearches[0],
         );
-        self::assertSame(['https://a.test/', 'https://b.test/'], array_column($enrichment->linkCards, 'url'));
+        self::assertSame(['https://a.test/', 'https://b.test/'], $this->urlsOf($enrichment->linkCards));
+    }
+
+    public function testARowGainsItsThreadPostsWithTheirCardsAndKeepsRootCardsApart(): void
+    {
+        $entry = $this->entry('threaded');
+        $this->card($entry, 0, 'https://root.test/');
+        $reply = new ThreadPost($entry, 1, new ThreadPostContent('https://x/1', null, '<p>one</p>', []));
+        $this->entityManager->persist($reply);
+        $this->linkCards()->appendToThreadPost(
+            $reply,
+            new LinkCardContent('https://reply.test/', 'R', null, null, 'S'),
+        );
+        $this->entityManager->flush();
+
+        $enrichment = $this->enrich([$this->row($entry)])[0]->enrichment;
+
+        self::assertSame(['https://root.test/'], $this->urlsOf($enrichment->linkCards));
+        self::assertCount(1, $enrichment->threadPosts);
+        self::assertSame('https://reply.test/', $enrichment->threadPosts[0]->linkCard?->content->url);
+        self::assertSame(1, $enrichment->threadPosts[0]->linkCard->position);
+    }
+
+    private function linkCards(): LinkCardRepository
+    {
+        $repository = self::getContainer()->get(LinkCardRepository::class);
+        self::assertInstanceOf(LinkCardRepository::class, $repository);
+
+        return $repository;
+    }
+
+    /**
+     * @param list<PlacedLinkCardModel> $cards
+     *
+     * @return list<string>
+     */
+    private function urlsOf(array $cards): array
+    {
+        return array_map(static fn (PlacedLinkCardModel $card): string => $card->content->url, $cards);
     }
 
     public function testEachRowAndEachDuplicateGainsOnlyItsOwnEnrichment(): void
@@ -92,7 +134,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $duplicateEnrichment = $rows[0]->duplicates[0]->enrichment;
         self::assertSame(['Tech'], $duplicateEnrichment->categories);
         self::assertSame([$search->requireId()], array_column($duplicateEnrichment->savedSearches, 'id'));
-        self::assertSame(['https://dup.test/'], array_column($duplicateEnrichment->linkCards, 'url'));
+        self::assertSame(['https://dup.test/'], $this->urlsOf($duplicateEnrichment->linkCards));
         self::assertEquals([[], [], []], [
             $rows[1]->enrichment->categories,
             $rows[1]->enrichment->savedSearches,
@@ -172,8 +214,15 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->enrich([$this->row($first), $this->row($second, [$this->row($duplicate)])]);
 
         $queries = implode("\n", $recorder->queries());
-        self::assertCount(5, $recorder->queries(), $queries);
-        $tables = ['entry_category', 'saved_search_entry', 'link_card', 'share_enrichment', 'saved_entry_origin'];
+        self::assertCount(6, $recorder->queries(), $queries);
+        $tables = [
+            'entry_category',
+            'saved_search_entry',
+            'link_card',
+            'FROM thread_post',
+            'share_enrichment',
+            'saved_entry_origin',
+        ];
         foreach ($tables as $table) {
             self::assertCount(1, $recorder->queriesMatching($table), $table . ":\n" . $queries);
         }
@@ -261,7 +310,7 @@ final class EntryListRowEnricherTest extends DbTestCase
         $recorder = $this->recorder();
         $this->enrich($many);
 
-        self::assertSame(6, $singleCount);
+        self::assertSame(7, $singleCount);
         self::assertCount($singleCount, $recorder->queries(), implode("\n", $recorder->queries()));
         self::assertCount(1, $recorder->queriesMatching('social_like'));
     }
