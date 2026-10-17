@@ -222,6 +222,68 @@ final class SelfThreadEnricherTest extends DbTestCase
         self::assertSame([], $this->logger->records);
     }
 
+    public function testAPassStartsNoThreadThatCouldOutlastTheLeaseAndReleasesTheRest(): void
+    {
+        $first = $this->queuedEntry('-3 minutes', self::POST . '-1');
+        $this->queuedEntry('-2 minutes', self::POST . '-2');
+        $this->queuedEntry('-1 minute', self::POST . '-3');
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+        $this->thread->duringEachPublicAsk(fn () => $this->clock->sleep(31));
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame(['inPublic ' . self::POST . '-1'], $this->publicAsks());
+        self::assertSame([$first->requireId()], $this->foldedEntryIds());
+        self::assertSame([null, null], $this->claimsOfRemainingRows());
+    }
+
+    public function testAPassKeepsStartingThreadsWhileTheyFitTheLease(): void
+    {
+        $this->queuedEntry('-2 minutes', self::POST . '-1');
+        $this->queuedEntry('-1 minute', self::POST . '-2');
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+        $this->thread->duringEachPublicAsk(fn () => $this->clock->sleep(30));
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertCount(2, $this->publicAsks());
+        self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
+    }
+
+    public function testCompletingFoldsAtMostTwoThreads(): void
+    {
+        $first = $this->queuedEntry('-3 minutes', self::POST . '-1');
+        $second = $this->queuedEntry('-2 minutes', self::POST . '-2');
+        $this->queuedEntry('-1 minute', self::POST . '-3');
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+
+        $queued = PostEnrichers::enrichments($this->entityManager)->findBy([], ['queuedAt' => 'ASC']);
+
+        $this->enricher()->complete($queued);
+
+        self::assertCount(2, $this->publicAsks());
+        self::assertEqualsCanonicalizing([$first->requireId(), $second->requireId()], $this->foldedEntryIds());
+        self::assertSame([null], $this->claimsOfRemainingRows());
+    }
+
+    public function testARowWhoseLeaseAnotherWorkerTookOverIsNotFolded(): void
+    {
+        $this->queuedEntry();
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+        $this->thread->duringEachPublicAsk(function (): void {
+            $this->entityManager->getConnection()->executeStatement(
+                "UPDATE share_enrichment SET claimed_at = '2026-10-17 12:01:30'",
+            );
+        });
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([], $this->foldedEntryIds());
+        $row = $this->onlyRow();
+        self::assertSame(ShareEnrichmentKind::SelfThread, $row->getKind());
+        self::assertSame('2026-10-17 12:01:30', $this->claimedAtOf($row));
+    }
+
     private function enricher(): SelfThreadEnricher
     {
         return SelfThreadEnrichers::build($this->entityManager, $this->clock, $this->thread, $this->logger);
@@ -240,6 +302,38 @@ final class SelfThreadEnricherTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    /** @return list<string> */
+    private function publicAsks(): array
+    {
+        return array_values(array_filter(
+            $this->thread->calls,
+            static fn (string $call): bool => str_starts_with($call, 'inPublic '),
+        ));
+    }
+
+    /** @return list<int> */
+    private function foldedEntryIds(): array
+    {
+        return array_map(
+            static fn (mixed $entryId): int => \is_numeric($entryId) ? (int) $entryId : 0,
+            $this->entityManager->getConnection()->fetchFirstColumn(
+                'SELECT DISTINCT entry_id FROM thread_post ORDER BY entry_id',
+            ),
+        );
+    }
+
+    /** @return list<mixed> the claim of each row still queued, oldest first */
+    private function claimsOfRemainingRows(): array
+    {
+        return array_map(
+            static fn (mixed $claimedAt): mixed => $claimedAt ?: null,
+            $this->entityManager->getConnection()->fetchFirstColumn(
+                'SELECT claimed_at FROM share_enrichment WHERE kind = ? ORDER BY queued_at',
+                [ShareEnrichmentKind::SelfThread->value],
+            ),
+        );
     }
 
     private function onlyRow(): ShareEnrichment

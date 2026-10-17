@@ -16,6 +16,8 @@ final readonly class GuardedApiClient
 {
     private const float TIMEOUT_SECONDS = 10.0;
 
+    public const float MAX_DURATION_SECONDS = self::TIMEOUT_SECONDS * 2;
+
     public function __construct(
         private FailoverRequestSender $requestSender,
         private UrlGuard $urlGuard,
@@ -38,7 +40,7 @@ final readonly class GuardedApiClient
                 ],
                 'max_redirects' => 0,
                 'timeout' => self::TIMEOUT_SECONDS,
-                'max_duration' => self::TIMEOUT_SECONDS * 2,
+                'max_duration' => self::MAX_DURATION_SECONDS,
                 'on_progress' => static function (int $downloaded): void {
                     ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Api, $downloaded);
                 },

@@ -18,6 +18,7 @@ use App\Service\Completion\SelfThreadPass\SelfThreadPassInterface;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\SelfThreadBudgetModel;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Share\Support\ShareTargets;
 use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
@@ -30,6 +31,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 final readonly class SelfThreadEnricher implements SelfThreadPassInterface
 {
     private const int THREADS_PER_PASS = 25;
+
+    private const int THREADS_PER_COMPLETION = 2;
 
     public function __construct(
         private EntityManagerInterface $entityManager,
@@ -53,7 +56,11 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     /** @param list<ShareEnrichment> $queued self-thread rows, oldest first */
     public function complete(array $queued): void
     {
-        $this->guarded(fn () => $this->claimAndSettle($queued, $this->clock->now()));
+        $this->guarded(fn () => $this->claimAndSettle(
+            $queued,
+            SelfThreadBudgetModel::threads(self::THREADS_PER_COMPLETION),
+            $this->clock->now(),
+        ));
     }
 
     /**
@@ -78,14 +85,15 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         if (!$this->enrichments->hasPendingForFeed($feed, ShareEnrichmentKind::SelfThread)) {
             return;
         }
+        $budget = SelfThreadBudgetModel::threads(self::THREADS_PER_PASS);
         $now = $this->clock->now();
         $queued = $this->enrichments->findClaimableForFeed(
             $feed,
             ShareEnrichmentKind::SelfThread,
             $now,
-            self::THREADS_PER_PASS,
+            $budget->threads,
         );
-        $this->claimAndSettle($queued, $now);
+        $this->claimAndSettle($queued, $budget, $now);
     }
 
     /**
@@ -93,15 +101,19 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
      *
      * @param list<ShareEnrichment> $queued
      */
-    private function claimAndSettle(array $queued, \DateTimeImmutable $claimedAt): void
+    private function claimAndSettle(array $queued, SelfThreadBudgetModel $budget, \DateTimeImmutable $claimedAt): void
     {
-        $claimed = $this->enrichments->claim($queued, $claimedAt);
+        $claimed = $this->enrichments->claim(\array_slice($queued, 0, $budget->threads), $claimedAt);
         if ($claimed === []) {
             return;
         }
 
         $unsettled = [];
-        foreach ($this->enrichments->stillHeld($claimed, $claimedAt) as $row) {
+        foreach ($claimed as $index => $row) {
+            if (!$budget->fitsAfter($this->secondsSince($claimedAt))) {
+                array_push($unsettled, ...\array_slice($claimed, $index));
+                break;
+            }
             if (!$this->settle($row, $claimedAt)) {
                 $unsettled[] = $row;
             }
@@ -110,16 +122,29 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         $this->enrichments->release([...$unsettled, ...self::awaitingLinkCards($claimed)], $claimedAt);
     }
 
-    /** @return bool whether the row is settled; false leaves it queued for a later pass */
+    /** @return bool false when the row goes back to the queue for a later pass */
     private function settle(ShareEnrichment $row, \DateTimeImmutable $claimedAt): bool
     {
-        $entry = $row->getEntry();
-        $address = SocialPostAddress::of($entry);
+        $address = SocialPostAddress::of($row->getEntry());
         if ($address === null || $row->isQueuedBefore(self::giveUpCutoff($claimedAt))) {
             $this->handOnOrDrop($row);
 
             return true;
         }
+
+        return $this->foldThreadOf($row, $address, $claimedAt);
+    }
+
+    /**
+     * A row whose lease another worker took over while its thread was read is left to that worker.
+     *
+     * @return bool false when the row goes back to the queue for a later pass
+     */
+    private function foldThreadOf(
+        ShareEnrichment $row,
+        SocialPostAddressModel $address,
+        \DateTimeImmutable $claimedAt,
+    ): bool {
         $thread = $this->threadOn($address);
         if ($thread->publicThreadThrottledForSeconds() > 0) {
             return false;
@@ -129,7 +154,11 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         } catch (SocialNetworkThrottledException) {
             return false;
         }
+        if ($this->enrichments->stillHeld([$row], $claimedAt) === []) {
+            return true;
+        }
 
+        $entry = $row->getEntry();
         if (!$this->threadPosts->hasAnyFor($entry)) {
             $this->folder->fold($entry, $chain);
         }
@@ -150,6 +179,11 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
             return;
         }
         $this->entityManager->remove($row);
+    }
+
+    private function secondsSince(\DateTimeImmutable $claimedAt): float
+    {
+        return (float) $this->clock->now()->format('U.u') - (float) $claimedAt->format('U.u');
     }
 
     private static function giveUpCutoff(\DateTimeImmutable $claimedAt): \DateTimeImmutable
