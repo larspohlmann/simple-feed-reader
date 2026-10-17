@@ -49,6 +49,7 @@ import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ReaderViewComponent } from '../article/reader-view/reader-view.component';
+import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { AudioPlayerBarComponent } from './audio-player-bar/audio-player-bar.component';
 import { ManageActions } from '../feeds/manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
@@ -72,6 +73,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     SidebarComponent,
     EntryListComponent,
     ReaderViewComponent,
+    LinkReaderComponent,
     AudioPlayerBarComponent,
     DrawerSwipeDirective,
     PaneResizeDirective,
@@ -147,6 +149,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly selection = this.routeState.selection;
   readonly entryId = this.routeState.entryId;
   readonly openEntry = this.routeState.openEntry;
+  readonly linkCard = this.routeState.linkCard;
+  readonly openLinkCard = computed(() => {
+    const ref = this.linkCard();
+    return ref === null ? null : (this.entries.entry(ref.entryId)?.linkCards[ref.position] ?? null);
+  });
+  readonly linkReturnsTo = computed(() => (this.openEntry() === null ? 'list' : 'article'));
+  private readonly linkNavigation = inject(LinkReaderNavigation);
   readonly heading = inject(ListHeading);
   readonly entryActions = inject(EntryStateActions);
   readonly markRead = inject(MarkReadActions);
@@ -170,7 +179,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
   /** An article filling the whole main area (not the split pane) — the top bar
    *  takes over its back button, reader switch and prev/next. */
-  readonly articleFullscreen = computed(() => this.openEntry() !== null && !this.splitView());
+  readonly articleFullscreen = computed(
+    () => (this.openEntry() !== null || this.linkCard() !== null) && !this.splitView(),
+  );
 
   /** The user's tags for the mobile swipe row (the sidebar covers wider screens). */
   readonly headerTags = computed<TagDto[]>(() => this.subs.tagTree().map((node) => node.tag));
@@ -327,6 +338,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   withOpen(action: (entry: EntryDto) => void): void {
     const entry = this.openEntry();
     if (entry) action(entry);
+  }
+
+  onCloseLink(): void {
+    this.linkNavigation.close();
   }
 
   onCloseReader(): void {
