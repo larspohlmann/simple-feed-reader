@@ -22,6 +22,7 @@ use App\Service\Social\AuthorFeeds;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfileMove;
 use App\Service\Social\HiddenProfiles\CachedHiddenProfiles;
+use App\Service\Social\HiddenProfileSwitchCursor;
 use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileMoveOutcome;
@@ -48,6 +49,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
 
     private StubHiddenProfiles $hiddenProfiles;
     private ProfileVisibilityCache $profileVisibility;
+    private HiddenProfileSwitchCursor $cursor;
     private RecordingLogger $logger;
 
     protected function setUp(): void
@@ -56,6 +58,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->hiddenProfiles = new StubHiddenProfiles();
         $this->hiddenProfiles->hide(new HiddenProfileModel(self::RUSTY, 'Rusty'));
         $this->profileVisibility = new ProfileVisibilityCache(new ArrayAdapter());
+        $this->cursor = new HiddenProfileSwitchCursor(new ArrayAdapter());
         $this->logger = new RecordingLogger();
     }
 
@@ -307,6 +310,81 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertSame($rss->requireId(), $this->logger->records[0]['context']['subscriptionId'] ?? null);
     }
 
+    public function testAHiddenProfileBehindThePagesOneRunReadsIsReachedByTheNextRun(): void
+    {
+        $user = $this->user('switch-page-cap@example.test');
+        $user->setMaxSubscriptions(700);
+        $account = $this->accountOf($user);
+        $publicActors = array_map(static fn (int $index): string => 'did:plc:public' . $index, range(1, 600));
+        foreach ($publicActors as $actor) {
+            $this->persistRssSubscription($user, $actor);
+        }
+        $this->rssSubscription($user);
+        $this->profileVisibility->remember($publicActors, []);
+
+        self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
+        self::assertNull($this->authorSubscriptionOf($account));
+        self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
+    }
+
+    public function testARunThatReadsTheLastRefusedFeedSendsTheNextRunBackToTheFirst(): void
+    {
+        $user = $this->user('switch-wrap@example.test');
+        $this->accountOf($user);
+        $actors = array_map(static fn (int $index): string => sprintf('did:plc:actor%02d', $index), range(1, 26));
+        foreach ($actors as $actor) {
+            $this->persistRssSubscription($user, $actor);
+        }
+        $this->entityManager->flush();
+        $this->sweep(1);
+        $this->sweep(1);
+        $this->profileVisibility = new ProfileVisibilityCache(new ArrayAdapter());
+
+        $this->sweep(1);
+
+        self::assertSame(
+            [\array_slice($actors, 0, 25), [$actors[25]], \array_slice($actors, 0, 25)],
+            $this->hiddenProfiles->asked,
+        );
+    }
+
+    public function testAnUnansweredRunLeavesTheNextRunWhereItBegan(): void
+    {
+        $user = $this->user('switch-unanswered-cursor@example.test');
+        $this->accountOf($user);
+        $actors = array_map(static fn (int $index): string => sprintf('did:plc:actor%02d', $index), range(1, 26));
+        foreach ($actors as $actor) {
+            $this->persistRssSubscription($user, $actor);
+        }
+        $this->entityManager->flush();
+        $this->hiddenProfiles->failure = new SocialNetworkUnreachableException('down');
+        $this->sweep(1);
+        $this->hiddenProfiles->failure = null;
+
+        $this->sweep(1);
+
+        self::assertSame([\array_slice($actors, 0, 25), \array_slice($actors, 0, 25)], $this->hiddenProfiles->asked);
+    }
+
+    public function testOneRunMovesAFewProfilesKnownHiddenAndTheNextRunTheRest(): void
+    {
+        $user = $this->user('switch-move-cap@example.test');
+        $user->setMaxSubscriptions(100);
+        $this->accountOf($user);
+        $hidden = [];
+        foreach (range(1, 21) as $index) {
+            $did = sprintf('did:plc:hidden%02d', $index);
+            $hidden[$did] = new HiddenProfileModel($did, 'Hidden ' . $index);
+            $this->persistRssSubscription($user, $did);
+        }
+        $this->entityManager->flush();
+        $this->profileVisibility->remember(array_keys($hidden), $hidden);
+
+        self::assertEquals(new HiddenProfileSwitchReportModel(20, 0), $this->sweep(1));
+        self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
+        self::assertSame([], $this->hiddenProfiles->asked);
+    }
+
     public function testAMoveForASubscriberWhoseAccountWentIsSkipped(): void
     {
         $rss = $this->rssSubscription($this->user('switch-account-gone@example.test'));
@@ -323,6 +401,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
             self::service(RefusedProfileSubscriptionRepository::class),
             new CachedHiddenProfiles($this->hiddenProfiles, $this->profileVisibility),
             $this->profileVisibility,
+            $this->cursor,
             $this->move(),
             $this->logger,
         ))->sweep(ProfileCallBudgetModel::calls($calls));

@@ -102,7 +102,8 @@ framework:
                 default_lifetime: 3600
 
             # Whether the hidden-profile switch found a Bluesky profile public or hidden, so a refused profile feed
-            # costs one AppView ask a day (#1667). A miss costs one more AppView call.
+            # costs one AppView ask a day (#1667), and where the switch's next run resumes. A miss costs one more AppView
+            # call, or a run that starts over.
             social.profile_visibility.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 86400
@@ -111,6 +112,6 @@ when@test:
     framework:
         cache:
             pools:
-                # Each test starts with no remembered verdict, however the suite is ordered.
+                # Each test starts with no remembered verdict and no switch cursor, however the suite is ordered.
                 social.profile_visibility.cache:
                     adapter: cache.adapter.array

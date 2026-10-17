@@ -10,6 +10,7 @@ use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Social\Model\RefusedFeedPositionModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +24,7 @@ final class RefusedProfileSubscriptionRepository extends ServiceEntityRepository
     }
 
     /** @return list<Subscription> in feed, then subscription order, starting after $after */
-    public function findOnRefusedBlueskyProfileFeeds(?Subscription $after, int $limit): array
+    public function findOnRefusedBlueskyProfileFeeds(?RefusedFeedPositionModel $after, int $limit): array
     {
         $queryBuilder = $this->createQueryBuilder('s')
             ->addSelect('f')
@@ -46,8 +47,8 @@ final class RefusedProfileSubscriptionRepository extends ServiceEntityRepository
         if (null !== $after) {
             $queryBuilder
                 ->andWhere('f.id > :afterFeed OR (f.id = :afterFeed AND s.id > :afterSubscription)')
-                ->setParameter('afterFeed', $after->getFeed()->requireId())
-                ->setParameter('afterSubscription', $after->requireId());
+                ->setParameter('afterFeed', $after->feedId)
+                ->setParameter('afterSubscription', $after->subscriptionId);
         }
         /** @var list<Subscription> $subscriptions */
         $subscriptions = $queryBuilder->getQuery()->getResult();

@@ -10,6 +10,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Repository\RefusedProfileSubscriptionRepository;
+use App\Service\Social\Model\RefusedFeedPositionModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
@@ -89,9 +90,17 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
         $this->entityManager->persist($oneAgain);
         $this->entityManager->flush();
 
-        self::assertSame([$oneAgain, $two], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds($one, 10));
-        self::assertSame([$two], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds($oneAgain, 10));
-        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds($two, 10));
+        self::assertSame([$oneAgain, $two], $this->subscriptionsAfter($one));
+        self::assertSame([$two], $this->subscriptionsAfter($oneAgain));
+        self::assertSame([], $this->subscriptionsAfter($two));
+    }
+
+    /** @return list<Subscription> */
+    private function subscriptionsAfter(Subscription $subscription): array
+    {
+        $position = RefusedFeedPositionModel::of($subscription);
+
+        return $this->subscriptions()->findOnRefusedBlueskyProfileFeeds($position, 10);
     }
 
     private function subscribe(
