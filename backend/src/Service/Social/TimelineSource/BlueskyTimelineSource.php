@@ -46,7 +46,11 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
             throw new SocialSessionStaleException(BlueskySessions::SESSION_REFUSED);
         }
 
-        return BlueskyTimelinePage::of(self::itemsOf($answer), $socialFeed->getSocialAccount()->getIdentity());
+        $items = self::itemsOf($answer);
+
+        return SocialFeedKind::Author === $socialFeed->getKind()
+            ? BlueskyTimelinePage::ofAuthor($items, $socialFeed->getRemoteId())
+            : BlueskyTimelinePage::of($items, $socialFeed->getSocialAccount()->getIdentity());
     }
 
     public function dropSession(SocialAccount $account): void
@@ -62,6 +66,8 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
             SocialFeedKind::Home => '/xrpc/app.bsky.feed.getTimeline?',
             SocialFeedKind::UserList => '/xrpc/app.bsky.feed.getListFeed?list=' . $remoteId . '&',
             SocialFeedKind::CustomFeed => '/xrpc/app.bsky.feed.getFeed?feed=' . $remoteId . '&',
+            SocialFeedKind::Author => '/xrpc/app.bsky.feed.getAuthorFeed?actor=' . $remoteId
+                . '&filter=posts_and_author_threads&',
         } . 'limit=' . self::PAGE_SIZE;
     }
 
