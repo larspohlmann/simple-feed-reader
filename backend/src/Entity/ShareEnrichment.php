@@ -71,6 +71,11 @@ final class ShareEnrichment
         return $this->queuedAt < $cutoff;
     }
 
+    public static function giveUpCutoff(\DateTimeImmutable $now): \DateTimeImmutable
+    {
+        return $now->sub(new \DateInterval(self::APPVIEW_GIVE_UP_AFTER));
+    }
+
     public function awaitLinkCards(): void
     {
         $this->kind = ShareEnrichmentKind::LinkCards;

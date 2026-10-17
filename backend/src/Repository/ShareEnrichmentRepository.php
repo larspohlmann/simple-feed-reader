@@ -44,7 +44,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
     ): array {
         return self::rowsOf($this->claimableForFeed($feed, $kind, $now)
             ->andWhere('pending.queuedAt < :giveUpCutoff')
-            ->setParameter('giveUpCutoff', self::giveUpCutoff($now), Types::DATETIME_IMMUTABLE)
+            ->setParameter('giveUpCutoff', ShareEnrichment::giveUpCutoff($now), Types::DATETIME_IMMUTABLE)
             ->setMaxResults($limit));
     }
 
@@ -57,7 +57,7 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
     ): array {
         return self::rowsOf($this->claimableForFeed($feed, $kind, $now)
             ->andWhere('pending.queuedAt >= :giveUpCutoff')
-            ->setParameter('giveUpCutoff', self::giveUpCutoff($now), Types::DATETIME_IMMUTABLE)
+            ->setParameter('giveUpCutoff', ShareEnrichment::giveUpCutoff($now), Types::DATETIME_IMMUTABLE)
             ->setMaxResults($limit));
     }
 
@@ -211,11 +211,6 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
         $rows = $query->getQuery()->getResult();
 
         return $rows;
-    }
-
-    private static function giveUpCutoff(\DateTimeImmutable $now): \DateTimeImmutable
-    {
-        return $now->sub(new \DateInterval(ShareEnrichment::APPVIEW_GIVE_UP_AFTER));
     }
 
     private function claimable(\DateTimeImmutable $now): QueryBuilder

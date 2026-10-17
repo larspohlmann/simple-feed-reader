@@ -53,7 +53,11 @@ final readonly class EntryCompletion
      */
     private function completeQueued(array $entries): void
     {
-        $this->postEnricher->complete($this->queuedOfKind($entries, ShareEnrichmentKind::AppView));
+        $queued = $this->enrichments->findClaimableFor($entries, $this->clock->now());
+        if ($queued === []) {
+            return;
+        }
+        $this->postEnricher->complete(self::ofKind($queued, ShareEnrichmentKind::AppView));
         $this->selfThreads->complete($this->queuedOfKind($entries, ShareEnrichmentKind::SelfThread));
         $this->shareLinkCards->complete(
             $this->queuedOfKind($entries, ShareEnrichmentKind::LinkCards),

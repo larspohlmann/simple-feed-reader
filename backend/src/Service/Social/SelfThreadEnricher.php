@@ -9,7 +9,6 @@ use App\Entity\Feed;
 use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
-use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Repository\ThreadPostRepository;
@@ -60,9 +59,10 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     /** @param list<ShareEnrichment> $queued self-thread rows, oldest first */
     public function complete(array $queued): void
     {
+        $budget = SelfThreadBudgetModel::threads(self::THREADS_PER_COMPLETION);
         $this->guarded(fn () => $this->claimAndSettle(
-            $queued,
-            SelfThreadBudgetModel::threads(self::THREADS_PER_COMPLETION),
+            \array_slice($queued, 0, $budget->threads),
+            $budget,
             $this->clock->now(),
         ));
     }
@@ -133,7 +133,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
      */
     private function claimAndSettle(array $queued, SelfThreadBudgetModel $budget, \DateTimeImmutable $claimedAt): void
     {
-        $claimed = $this->enrichments->claim(\array_slice($queued, 0, $budget->threads), $claimedAt);
+        $claimed = $this->enrichments->claim($queued, $claimedAt);
         if ($claimed === []) {
             return;
         }
@@ -157,7 +157,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     private function settle(ShareEnrichment $row, \DateTimeImmutable $claimedAt): bool
     {
         $address = SocialPostAddress::of($row->getEntry());
-        if ($address === null || $row->isQueuedBefore(self::giveUpCutoff($claimedAt))) {
+        if ($address === null || $row->isQueuedBefore(ShareEnrichment::giveUpCutoff($claimedAt))) {
             $this->handOnOrDrop($row);
 
             return true;
@@ -202,9 +202,10 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     private function handOnOrDrop(ShareEnrichment $row): void
     {
         $entry = $row->getEntry();
-        $rootCards = $this->linkCards->contentsByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [];
-        $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $rootCards);
-        if (self::isShared($entry) && ShareTargets::uncardedOf($entry, $cardedUrls) !== []) {
+        if (
+            ShareTargets::isCardableShare($entry)
+            && ShareTargets::uncardedOf($entry, $this->rootCardUrlsOf($entry)) !== []
+        ) {
             $row->awaitLinkCards();
 
             return;
@@ -212,19 +213,17 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         $this->entityManager->remove($row);
     }
 
-    private static function isShared(Entry $entry): bool
+    /** @return list<string> */
+    private function rootCardUrlsOf(Entry $entry): array
     {
-        return \in_array($entry->getShareKind(), [ShareKind::Link, ShareKind::Quote], true);
+        $rootCards = $this->linkCards->contentsByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [];
+
+        return array_map(static fn (LinkCardContent $card): string => $card->url, $rootCards);
     }
 
     private function secondsSince(\DateTimeImmutable $claimedAt): float
     {
         return (float) $this->clock->now()->format('U.u') - (float) $claimedAt->format('U.u');
-    }
-
-    private static function giveUpCutoff(\DateTimeImmutable $claimedAt): \DateTimeImmutable
-    {
-        return $claimedAt->sub(new \DateInterval(ShareEnrichment::APPVIEW_GIVE_UP_AFTER));
     }
 
     /**
