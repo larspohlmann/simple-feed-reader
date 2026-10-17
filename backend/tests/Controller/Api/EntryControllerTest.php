@@ -232,6 +232,7 @@ final class EntryControllerTest extends WebTestCase
                 'description' => 'About it',
                 'imageUrl' => 'https://a.test/i.jpg',
                 'siteName' => 'A',
+                'position' => 0,
             ],
             [
                 'url' => 'https://b.test/2',
@@ -239,6 +240,7 @@ final class EntryControllerTest extends WebTestCase
                 'description' => null,
                 'imageUrl' => null,
                 'siteName' => 'B',
+                'position' => 1,
             ],
         ];
     }

@@ -8,6 +8,8 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
 use App\Entity\Subscription;
+use App\Entity\ThreadPost;
+use App\Entity\ThreadPostContent;
 use App\Entity\User;
 use App\Repository\LinkCardRepository;
 use App\Service\Reader\Model\ExtractionFailure;
@@ -93,6 +95,38 @@ final class LinkCardReaderControllerTest extends ApiTestCase
         self::assertSame('ok', $body['status']);
         self::assertSame('<p>Body</p>', $body['contentHtml']);
         self::assertSame(['https://example.com/article'], $fake->calls);
+    }
+
+    public function testExtractsAReplyCardsPageByItsStoredPosition(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('card-reader-reply@example.com');
+        $fake = $this->installFake();
+        $fake->willReturn(ExtractionResultModel::ok(
+            url: 'https://example.com/reply-article',
+            title: 'Extracted',
+            byline: null,
+            siteName: 'Example',
+            contentHtml: '<p>Reply body</p>',
+            excerpt: null,
+        ));
+        $entry = $this->seedEntryWithCard($user);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $reply = new ThreadPost($entry, 1, new ThreadPostContent('https://social.example/2', null, '<p>2</p>', []));
+        $entityManager->persist($reply);
+        $linkCards = self::getContainer()->get(LinkCardRepository::class);
+        self::assertInstanceOf(LinkCardRepository::class, $linkCards);
+        $linkCards->appendToThreadPost(
+            $reply,
+            new LinkCardContent('https://example.com/reply-article', 'Reply card', null, null, 'Example'),
+        );
+        $entityManager->flush();
+
+        $client->request('GET', '/api/entries/' . $entry->requireId() . '/link-cards/1/reader', server: $headers);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        self::assertSame(['https://example.com/reply-article'], $fake->calls);
     }
 
     public function testAFailedExtractionLeadsWithTheCardImage(): void
