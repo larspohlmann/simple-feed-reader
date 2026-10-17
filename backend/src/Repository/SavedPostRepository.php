@@ -64,19 +64,19 @@ final readonly class SavedPostRepository
         if ([] === $hashes) {
             return [];
         }
-        /** @var list<array{id: int, urlHash: string}> $rows */
-        $rows = $this->entityManager->createQueryBuilder()
+        $qb = $this->entityManager->createQueryBuilder()
             ->select('e.id AS id', 'e.location.urlHash AS urlHash')
             ->from(Entry::class, 'e')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere('e.location.urlHash IN (:hashes)')
-            ->andWhere('e.feed NOT IN (:leaving)')
             ->setParameter('user', $userId)
             ->setParameter('hashes', $hashes)
-            ->setParameter('leaving', $leavingFeedIds)
-            ->orderBy('e.id', 'ASC')
-            ->getQuery()
-            ->getArrayResult();
+            ->orderBy('e.id', 'ASC');
+        if ([] !== $leavingFeedIds) {
+            $qb->andWhere('e.feed NOT IN (:leaving)')->setParameter('leaving', $leavingFeedIds);
+        }
+        /** @var list<array{id: int, urlHash: string}> $rows */
+        $rows = $qb->getQuery()->getArrayResult();
 
         $twinByHash = [];
         foreach ($rows as $row) {

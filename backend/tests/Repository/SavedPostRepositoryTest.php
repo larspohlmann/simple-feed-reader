@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
+use App\Entity\EntryCategory;
 use App\Entity\EntryGuid;
 use App\Entity\EntryOrigin;
 use App\Entity\EntryState;
@@ -263,6 +265,90 @@ final class SavedPostRepositoryTest extends DbTestCase
         $foundIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $found);
         self::assertSame([$first->requireId(), $third->requireId()], $foundIds);
         self::assertSame([], $entries->findAllByIds([]));
+    }
+
+    public function testACopyCarriesTheCategoriesOfItsSource(): void
+    {
+        $source = $this->subscribedFeed('https://categories.example/feed.xml');
+        $saved = $this->savedFeed();
+        $entry = $this->entry($source, 'categorised', 'https://categories.example/1');
+        $category = new Category('politics', '');
+        $this->entityManager->persist($category);
+        $this->entityManager->persist(new EntryCategory($entry, $category, 3, 'Politics'));
+        $this->entityManager->flush();
+        $copies = $this->repository()->copyInto(new SavedCopyModel($saved->requireId(), null), [$entry->requireId()]);
+
+        $this->repository()->copyCompanions($copies, null);
+        $this->entityManager->clear();
+
+        $copyCategories = $this->entityManager->getRepository(EntryCategory::class)
+            ->findBy(['entry' => $copies[$entry->requireId()]]);
+        self::assertCount(1, $copyCategories);
+        self::assertSame('Politics', $copyCategories[0]->getLabel());
+        self::assertSame(3, $copyCategories[0]->getPosition());
+        self::assertSame($category->getId(), $copyCategories[0]->getCategory()->getId());
+    }
+
+    public function testFlaggedIgnoresWhatAnotherUserFlaggedInTheSameFeed(): void
+    {
+        $feed = $this->subscribedFeed('https://shared-feed.example/feed.xml');
+        $mine = $this->entry($feed, 'mine', 'https://shared-feed.example/1');
+        $theirs = $this->entry($feed, 'theirs', 'https://shared-feed.example/2');
+        $this->state($mine)->markFavorite();
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $other = (new UserFactory($this->entityManager, $hasher))->create('saved-posts-other@example.test');
+        $otherState = new EntryState($other, $theirs);
+        $otherState->markKept();
+        $this->entityManager->persist($otherState);
+        $this->entityManager->flush();
+
+        $flagged = $this->repository()->flaggedIn($this->user->requireId(), $feed->requireId());
+
+        self::assertSame([$mine->requireId()], array_keys($flagged));
+    }
+
+    public function testARenamedCopyTakesThePosterAndFillsOnlyAMissingAvatar(): void
+    {
+        $profile = $this->subscribedFeed('https://bsky.app/profile/did:plc:eve/rss');
+        $saved = $this->savedFeed();
+        $plain = $this->entry($profile, 'plain', 'https://bsky.app/profile/did:plc:eve/post/1');
+        $reposted = $this->entry($profile, 'reposted', 'https://bsky.app/profile/did:plc:eve/post/2');
+        $reposted->setAuthor(new EntryAuthor(null, null, 'https://cdn.example/own.jpg'));
+        $this->entityManager->flush();
+        $copy = new SavedCopyModel(
+            $saved->requireId(),
+            new EntryAuthor('Eve', 'https://bsky.app/profile/did:plc:eve', 'https://cdn.example/eve.jpg'),
+        );
+
+        $plainCopyId = $this->repository()->copyRenamed($copy, $plain->requireId(), new EntryGuid('plain#1'));
+        $repostedCopyId = $this->repository()->copyRenamed($copy, $reposted->requireId(), new EntryGuid('reposted#1'));
+        $this->entityManager->clear();
+
+        $plainCopy = $this->entityManager->find(Entry::class, $plainCopyId);
+        $repostedCopy = $this->entityManager->find(Entry::class, $repostedCopyId);
+        self::assertNotNull($plainCopy);
+        self::assertNotNull($repostedCopy);
+        self::assertSame('Eve', $plainCopy->getAuthor());
+        self::assertSame('https://bsky.app/profile/did:plc:eve', $plainCopy->getAuthorUrl());
+        self::assertSame('https://cdn.example/eve.jpg', $plainCopy->getAuthorAvatarUrl());
+        self::assertSame('Eve', $repostedCopy->getAuthor());
+        self::assertSame('https://cdn.example/own.jpg', $repostedCopy->getAuthorAvatarUrl());
+    }
+
+    public function testWithNoLeavingFeedNothingIsExcludedFromTwins(): void
+    {
+        $kept = $this->subscribedFeed('https://no-leaving.example/feed.xml');
+        $original = $this->entry($kept, 'post', 'https://news.example/no-leaving');
+        $this->entityManager->flush();
+
+        $twins = $this->repository()->keptTwinsOf(
+            $this->user->requireId(),
+            [999999 => $original->getUrlHash()],
+            [],
+        );
+
+        self::assertSame([999999 => $original->requireId()], $twins);
     }
 
     private function subscribedFeed(string $url): Feed
