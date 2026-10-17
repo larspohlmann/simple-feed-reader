@@ -121,6 +121,8 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
             new \DateTimeImmutable('2026-10-10 10:00:00'),
         );
 
+        self::assertFalse($this->repository()->hasPendingForFeed($feed, ShareEnrichmentKind::SelfThread));
+        self::assertTrue($this->repository()->hasPendingForFeed($feed, ShareEnrichmentKind::AppView));
         self::assertSame(
             [$appView],
             $this->repository()->findClaimableForFeed($feed, ShareEnrichmentKind::AppView, $this->now(), 10),
