@@ -21,22 +21,32 @@ final class SavedFeedUrl
 
     public static function isSaved(string $url): bool
     {
-        return 1 === preg_match(self::PATTERN, $url);
+        return null !== self::partsOf($url);
     }
 
     public static function networkOf(string $url): ?SocialNetwork
     {
-        if (1 !== preg_match(self::PATTERN, $url, $parts)) {
-            return null;
-        }
-
-        return SocialNetwork::tryFrom($parts[1] ?? '');
+        return self::networkIn(self::partsOf($url) ?? []);
     }
 
     /** A restore names the restoring user's own saved feed, never the one the file came from. */
     public static function rebound(string $url, int $userId): string
     {
-        return self::isSaved($url) ? self::of($userId, self::networkOf($url)) : $url;
+        $parts = self::partsOf($url);
+
+        return null === $parts ? $url : self::of($userId, self::networkIn($parts));
+    }
+
+    /** @return array<int, string>|null */
+    private static function partsOf(string $url): ?array
+    {
+        return 1 === preg_match(self::PATTERN, $url, $parts) ? $parts : null;
+    }
+
+    /** @param array<int, string> $parts */
+    private static function networkIn(array $parts): ?SocialNetwork
+    {
+        return SocialNetwork::tryFrom($parts[1] ?? '');
     }
 
     private function __construct()
