@@ -6,6 +6,7 @@ namespace App\Service\Backup;
 
 use App\Entity\User;
 use App\Repository\EntryRepository;
+use App\Repository\SubscribedEntryCountRepository;
 use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\EntryLine;
@@ -24,6 +25,7 @@ final readonly class EntryPartInspector
         private BackupReader $reader,
         private FeedRepository $feeds,
         private EntryRepository $entries,
+        private SubscribedEntryCountRepository $subscribedEntryCounts,
         private int $accountEntryCeiling = BackupFitCheck::MAX_ENTRIES,
     ) {
     }
@@ -114,7 +116,7 @@ final readonly class EntryPartInspector
 
     private function assertFits(User $user, int $newEntryCount): void
     {
-        $current = $this->entries->countInFeedsSubscribedBy($user->requireId());
+        $current = $this->subscribedEntryCounts->countFor($user->requireId());
         if ($current + $newEntryCount > $this->accountEntryCeiling) {
             throw new BackupDoesNotFitException(sprintf(
                 'The account holds %d entries; this part would add %d, past the %d ceiling.',

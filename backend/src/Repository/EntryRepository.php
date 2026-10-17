@@ -6,7 +6,6 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\Subscription;
 use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -235,13 +234,23 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
         return $idsByHash;
     }
 
-    public function countInFeedsSubscribedBy(int $userId): int
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return list<Entry>
+     */
+    public function findAllByIds(array $entryIds): array
     {
-        return (int) $this->createQueryBuilder('e')
-            ->select('COUNT(e.id)')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+        if ([] === $entryIds) {
+            return [];
+        }
+        /** @var list<Entry> $entries */
+        $entries = $this->createQueryBuilder('e')
+            ->andWhere('e.id IN (:ids)')->setParameter('ids', $entryIds)
+            ->orderBy('e.id', 'ASC')
             ->getQuery()
-            ->getSingleScalarResult();
+            ->getResult();
+
+        return $entries;
     }
 }
