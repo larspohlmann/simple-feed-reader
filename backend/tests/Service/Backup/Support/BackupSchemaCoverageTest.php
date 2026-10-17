@@ -18,7 +18,9 @@ use App\Entity\InstanceSetting;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
 use App\Entity\ShareEnrichment;
+use App\Entity\KnownSocialCollection;
 use App\Entity\Preferences;
+use App\Entity\PrivateFeedSyncChange;
 use App\Entity\ProfileRun;
 use App\Entity\ProxyServerSettings;
 use App\Entity\RetentionSetting;
@@ -136,6 +138,10 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'They belong to an account a backup drops; the export leaves their feeds and posts out too.',
         SocialLike::class => 'Likes given through a connected account (#1600). They belong to an account a backup '
             . 'drops, and a restore cannot give them back without it.',
+        KnownSocialCollection::class => 'What the hourly sync remembers of a connected account (#1666). It belongs '
+            . 'to an account a backup drops.',
+        PrivateFeedSyncChange::class => 'The recent automatic changes to a connected account\'s lists and feeds '
+            . '(#1666); account telemetry a backup drops.',
         UserIdentity::class => 'OAuth identity links — see NEVER_BACKED_UP\'s reasoning.',
         ActionToken::class => 'Short-lived, single-use verification and reset tokens.',
         RecommendationSettings::class => 'The "For you" settings — guidance prompt, learned profile, '
