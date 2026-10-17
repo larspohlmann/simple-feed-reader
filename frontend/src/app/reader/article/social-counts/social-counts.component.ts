@@ -6,13 +6,13 @@ import {
   effect,
   inject,
   input,
+  untracked,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { observeOnSight } from '../../list/paging';
 import { likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { SocialCountsService } from './social-counts.service';
@@ -34,8 +34,6 @@ interface ShownCount {
 })
 export class SocialCountsComponent {
   readonly entry = input.required<EntryDto>();
-  /** The pane whose viewport the counts load on sight of. */
-  readonly scroller = input.required<HTMLElement>();
 
   protected readonly actions = inject(EntryActionHandler);
   private readonly service = inject(SocialCountsService);
@@ -75,13 +73,10 @@ export class SocialCountsComponent {
   protected readonly shown = computed(() => this.likeable() !== null || this.loaded() !== null);
 
   constructor() {
-    effect((onCleanup) =>
-      onCleanup(
-        observeOnSight(this.host.nativeElement, this.scroller(), () =>
-          this.service.load({ id: this.entryId(), social: this.entry().social }),
-        ),
-      ),
-    );
+    effect(() => {
+      const id = this.entryId();
+      untracked(() => this.service.load({ id, social: this.entry().social }));
+    });
   }
 
   reload(): void {
