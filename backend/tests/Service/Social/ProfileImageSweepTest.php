@@ -15,10 +15,14 @@ use App\Service\Bluesky\AppViewClient;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
+use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Social\Model\ProfileVisibilityModel;
 use App\Service\Social\ProfileImageSweep;
+use App\Service\Social\ProfileVisibilityCache;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -37,12 +41,14 @@ final class ProfileImageSweepTest extends DbTestCase
     private MockClock $clock;
     private ?HostThrottle $throttle = null;
     private ?User $subscriber = null;
+    private ProfileVisibilityCache $profileVisibility;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->fetcher = new StubFeedFetcher();
         $this->clock = new MockClock(self::NOW, 'UTC');
+        $this->profileVisibility = new ProfileVisibilityCache(new ArrayAdapter());
     }
 
     public function testItStoresEachProfilesAvatarAndStampsTheCheck(): void
@@ -297,13 +303,40 @@ final class ProfileImageSweepTest extends DbTestCase
 
     /**
      * @param list<string>                     $actors
-     * @param list<array<string, string>>      $profiles
+     * @param list<array<string, mixed>>       $profiles
      */
     private function answer(array $actors, array $profiles): void
     {
         $this->fetcher->willReturnBody(
             self::profilesUrl($actors),
             json_encode(['profiles' => $profiles], \JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function testTheVerdictsOfTheProfilesAskedAreRemembered(): void
+    {
+        $this->profileFeed('rusty.bsky.social');
+        $this->profileFeed('did:plc:bob');
+        $this->answer(['rusty.bsky.social', 'did:plc:bob'], [
+            [
+                'did' => BlueskyProfiles::RUSTY,
+                'handle' => 'rusty.bsky.social',
+                'displayName' => 'Rusty',
+                'labels' => [['src' => BlueskyProfiles::RUSTY, 'val' => '!no-unauthenticated']],
+            ],
+            ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social'],
+        ]);
+
+        $this->sweep(1);
+
+        self::assertEquals(
+            [
+                'rusty.bsky.social' => ProfileVisibilityModel::hiddenProfile(
+                    new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'),
+                ),
+                'did:plc:bob' => ProfileVisibilityModel::publicProfile(),
+            ],
+            $this->profileVisibility->visibilitiesOf(['rusty.bsky.social', 'did:plc:bob']),
         );
     }
 
@@ -318,6 +351,7 @@ final class ProfileImageSweepTest extends DbTestCase
             $this->entityManager,
             new NaiveUtcClock($this->clock),
             $logger,
+            $this->profileVisibility,
         );
 
         return $sweep->sweep(ProfileCallBudgetModel::calls($calls));

@@ -49,6 +49,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\ProfileImageSweep;
+use App\Service\Social\ProfileVisibilityCache;
 use App\Service\Social\SocialMaintenance;
 use App\Tests\Support\PrivateFeedSyncWiring;
 use App\Tests\Support\SocialAccounts;
@@ -366,6 +367,7 @@ final class MaintenanceTickTest extends DbTestCase
             $this->entityManager,
             new NaiveUtcClock($clock),
             new NullLogger(),
+            new ProfileVisibilityCache(new ArrayAdapter()),
         );
     }
 

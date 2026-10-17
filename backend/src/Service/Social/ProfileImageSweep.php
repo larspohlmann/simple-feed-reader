@@ -15,6 +15,7 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\Support\BlueskyActor;
+use App\Service\Social\Support\BlueskyProfileLabels;
 use App\Service\Social\Support\ProfileIdentity;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use Doctrine\ORM\EntityManagerInterface;
@@ -34,6 +35,7 @@ final readonly class ProfileImageSweep
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
+        private ProfileVisibilityCache $profileVisibility,
     ) {
     }
 
@@ -95,7 +97,9 @@ final readonly class ProfileImageSweep
     private function check(array $batch, \DateTimeImmutable $now): ProfileImageSweepReportModel
     {
         $actors = self::actorsOf($batch);
-        $profiles = [] === $actors ? [] : $this->appView->profiles(array_values(array_unique($actors)));
+        $asked = array_values(array_unique($actors));
+        $profiles = [] === $asked ? [] : $this->appView->profiles($asked);
+        $this->profileVisibility->remember($asked, BlueskyProfileLabels::hiddenAmong($profiles));
         $changed = 0;
         foreach ($batch as $index => $feed) {
             $profile = $profiles[$actors[$index] ?? ''] ?? null;

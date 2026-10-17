@@ -9,8 +9,6 @@ use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\HiddenProfileModel;
-use App\Service\Social\Support\BlueskyAuthor;
 use App\Service\Social\Support\BlueskyProfileLabels;
 
 final readonly class AppViewHiddenProfiles implements HiddenProfilesInterface
@@ -26,11 +24,7 @@ final readonly class AppViewHiddenProfiles implements HiddenProfilesInterface
         }
         $hidden = [];
         foreach (array_chunk(array_unique($actors), AppViewClient::URIS_PER_CALL) as $batch) {
-            foreach ($this->profilesOf($batch) as $key => $profile) {
-                if (BlueskyProfileLabels::hidesFromLoggedOut($profile)) {
-                    $hidden[$key] = self::modelOf($profile);
-                }
-            }
+            $hidden += BlueskyProfileLabels::hiddenAmong($this->profilesOf($batch));
         }
 
         return $hidden;
@@ -51,12 +45,5 @@ final readonly class AppViewHiddenProfiles implements HiddenProfilesInterface
                 previous: $exception,
             );
         }
-    }
-
-    private static function modelOf(JsonNodeModel $profile): HiddenProfileModel
-    {
-        $did = (string) $profile->string('did');
-
-        return new HiddenProfileModel($did, BlueskyAuthor::name($profile) ?? $did);
     }
 }
