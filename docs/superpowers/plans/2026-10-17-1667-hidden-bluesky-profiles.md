@@ -16,7 +16,7 @@
 
 - Work only in the worktree `.claude/worktrees/1667-hidden-bluesky-profiles`, branch `feature/1667-hidden-bluesky-profiles` off `develop`. Commits `type(#1667): …`; no Claude attribution anywhere (no `Co-Authored-By`, no "Generated with").
 - `social_feed.kind` is `VARCHAR(16)`: `author` fits, **no migration**.
-- **Merge order (Lars, 2026-10-17): #1667 merges only after #1666.** The switch's unsubscribe relies on #1666 Part 1 to save favourites and kept posts with no counterpart in the new author feed (older than its first 50 posts) to "Saved from Bluesky". Before Task 12, merge `origin/develop`. If #1666 has landed, add a test that a switched subscription's unmatched favourite ends up in the saved feed. If it has not landed yet, do not open the PR for merge; report back instead.
+- **Merge order (Lars, 2026-10-17): #1667 merges only after #1666.** The switch's unsubscribe relies on #1666 Part 1 to save favourites and kept posts with no counterpart in the new author feed (older than its first 50 posts) to "Saved from Bluesky". Task 12 Step 1 merges `origin/develop`; Step 2 adds the test that a switched subscription's unmatched favourite ends up in #1666's saved feed (`saved:<userId>:bluesky`), or stops and reports when #1666 has not landed.
 - Only hidden profiles use the session; every other profile stays on the shared public RSS `https://bsky.app/profile/<did>/rss`. We never read the anonymous `public.api.bsky.app` `getAuthorFeed` for content: the session honours the author's choice and applies the user's blocks and mutes. The AppView is asked only for `getProfiles` (the label).
 - Hidden = the profile view carries a label with `val` `!no-unauthenticated` whose `src` is the profile's own DID and that is not negated (`neg`).
 - An author feed is a normal subscription: tags from the request, `includeInAllItems` and `includeInForYou` stay `true`. It is presented as a person: `SubscriptionJson` reports `kind: 'profile'` with `accountId: null` (the existing contract for profile feeds, so the frontend types do not change).
@@ -24,6 +24,8 @@
 - Hidden + no connected Bluesky account on subscribe: **422** `bluesky_profile_hidden`, detail "This profile is only visible to logged-in Bluesky users. Connect a Bluesky account in Settings → Social Media to subscribe."
 - If the AppView cannot be asked (unreachable, malformed), subscribe and import fall back to today's behaviour (discovery / RSS); the automatic switch then catches the 403 later. Never fail a subscribe because the label check failed.
 - **Design deviation from the brief, deliberately:** the brief asked for a worker message dispatched on the transition into failure. Messenger here has no async transport ("Web requests dispatch nothing", `messenger.yaml`); a dispatch from `FeedOutcomePersister` would run synchronously inside the refresh, and on Strato the refresh itself runs inside the `/maintenance/tick` request. So the switch is a property-less scheduled message (`SwitchHiddenProfileFeeds`, house pattern) plus a maintenance-tick sweep, and its queue is the database state itself (a Bluesky profile RSS subscription whose feed last failed with `HTTP 403` and whose user has a connected Bluesky account). A daily cache memo of profiles found public stops a 403 for another reason from being re-asked every sweep.
+- **Declared deviation:** the import decides the label server-side with `getProfiles` (Task 8), not from the `getFollows` labels the spec names: those would round-trip through the client, which the server must not trust; the cost is one AppView call per import batch.
+- **Declared deviation:** the avatar sweep reads an author feed's DID from its `social:` URL (`ProfileIdentity::of`, Task 5), not from its `SocialFeed` row: the URL carries the row's `remoteId`, so both name the same DID and the sweep reads it without loading the row.
 - The switch is two-phase because Social may not depend on Refresh (Refresh → Social exists): phase 1 creates the author feed with the RSS subscription's settings (due at once); phase 2, on a later sweep after that feed's first successful fetch, moves the saved state by guid and unsubscribes the RSS subscription. The two feeds sit side by side for at most one refresh cycle.
 - #1666 runs in parallel. Its private-feed sync acts on `PrivateFeedSync::SYNCED_KINDS = [UserList, CustomFeed]`, so `Author` needs nothing there. Changes to `PrivateFeeds`, `SocialImporter` and `ImportCandidates` stay small and additive; `PrivateFeeds` is not touched at all.
 - Clean Code rules from `CLAUDE.md` apply to every file touched: role folders (§10), no boolean flag parameters, `Response::HTTP_*` never literals, queries only in `src/Repository`, no comment unless a future reader would get the code wrong, PHPMD-clean, phptramp (tags travel inside `SubscribeRequestModel`, not down a 6-method chain).
@@ -36,7 +38,7 @@
 
 **Backend — kind and addressing**
 - Modify `backend/src/Enum/SocialFeedKind.php` (case `Author = 'author'`).
-- Modify `backend/src/Service/Social/Support/SocialFeedUrl.php` (segment `author`, `AUTHOR_FEEDS`, `authorOf()`).
+- Modify `backend/src/Service/Social/Support/SocialFeedUrl.php` (segment `author`, `authorOf()`).
 - Modify `backend/src/Service/Social/Model/PrivateFeedModel.php` (`author()`, `of()` arm).
 - Modify `backend/src/Service/Social/Support/PrivateFeedRules.php`, `PrivateFeedSite.php`, `backend/src/Service/Social/SocialImporter.php` (`kindLabel`).
 - Create `backend/src/Service/Social/Support/ProfileIdentity.php`.
@@ -59,8 +61,8 @@
 
 **Backend — automatic switch**
 - Create `backend/src/Service/SavedPosts/SavedStateMover.php` (new module); modify `backend/src/Repository/SocialLikeRepository.php` (`copyLike`), `backend/src/Repository/EntryRepository.php` (`sameGuidEntryIds`).
-- Modify `backend/src/Entity/Subscription.php` (`takeSettingsFrom`), `backend/src/Repository/SubscriptionRepository.php`.
-- Create `backend/src/Service/Social/PublicProfileCache.php`, `HiddenProfileMove.php`, `HiddenProfileSwitchSweep.php`, `ProfileSweeps.php`, `Model/HiddenProfileMoveOutcome.php`, `Model/HiddenProfileSwitchReportModel.php`; modify `backend/config/packages/cache.yaml`, `backend/src/Service/Social/Model/ProfileImageBudgetModel.php` (docblock).
+- Modify `backend/src/Entity/Subscription.php` (`takeSettingsFrom`), `backend/src/Repository/SubscriptionRepository.php`, `backend/src/Service/Fetch/Exception/FeedUnreachableException.php` (`STATUS_MARKER`), `backend/src/Service/Fetch/ResponseClassifier.php`.
+- Create `backend/src/Service/Social/PublicProfileCache.php`, `HiddenProfileMove.php`, `HiddenProfileSwitchSweep.php`, `ProfileSweeps.php`, `Model/HiddenProfileMoveOutcome.php`, `Model/HiddenProfileSwitchReportModel.php`, `Model/RefusedProfileSubscriptionModel.php`; modify `backend/config/packages/cache.yaml`, `backend/src/Service/Social/Model/ProfileImageBudgetModel.php` (docblock).
 - Create `backend/src/Service/Worker/Message/SwitchHiddenProfileFeeds.php`, `backend/src/Service/Worker/Handler/SwitchHiddenProfileFeedsHandler.php`; modify `WorkerSchedule.php`, `backend/src/Service/Maintenance/MaintenanceTick.php`, `Model/MaintenanceSweepsModel.php`, `backend/src/Http/MaintenanceTickJson.php`.
 
 **Frontend**
@@ -76,7 +78,7 @@
 - Test: `backend/tests/Service/Social/Support/SocialFeedUrlTest.php`, `PrivateFeedRulesTest.php`, `PrivateFeedSiteTest.php`, create `ProfileIdentityTest.php`
 
 **Interfaces:**
-- Produces: `SocialFeedKind::Author`; `PrivateFeedModel::author(string $did, string $name): self`; `SocialFeedUrl::AUTHOR_FEEDS` (`'social:%:author:%'`, a DQL `LIKE` pattern); `SocialFeedUrl::authorOf(SocialNetwork $network, string $url): ?string` (the DID of an author feed URL on that network); `ProfileIdentity::of(SocialNetwork $network, string $feedUrl): ?string` (a profile RSS feed's identity, else an author feed's DID).
+- Produces: `SocialFeedKind::Author`; `PrivateFeedModel::author(string $did, string $name): self`; `SocialFeedUrl::authorOf(SocialNetwork $network, string $url): ?string` (the DID of an author feed URL on that network); `ProfileIdentity::of(SocialNetwork $network, string $feedUrl): ?string` (a profile RSS feed's identity, else an author feed's DID).
 
 - [ ] **Step 1: Write the failing tests.**
 
@@ -212,18 +214,11 @@ and the `of()` arm:
             SocialFeedKind::Author => self::author($remoteId, $name),
 ```
 
-`SocialFeedUrl` — the segments, the pattern and the DID reader:
+`SocialFeedUrl` — the segment and the DID reader (no URL pattern: the network scope finds author feeds by `social_feed.kind`, Task 5):
 
 ```php
-    /** Every author feed's URL, as a DQL LIKE pattern: the one private feed that follows a person. */
-    public const string AUTHOR_FEEDS = self::SCHEME . '%:author:%';
-
-    private const string SCHEME = 'social:';
-    private const string ACCOUNT_ID = '/^[1-9]\d*$/';
     private const array SEGMENTS = ['home' => 'home', 'list' => 'list', 'custom_feed' => 'feed', 'author' => 'author'];
 ```
-
-(`AUTHOR_FEEDS` must sit after `SCHEME` if your PHP version complains about the forward reference; order the constants `SCHEME`, `AUTHOR_FEEDS`, `ACCOUNT_ID`, `SEGMENTS`.)
 
 ```php
     /** @return string|null the DID an author feed of $network follows; null for any other URL */
@@ -280,7 +275,6 @@ namespace App\Service\Social\Support;
 
 use App\Enum\SocialNetwork;
 
-/** The person a subscribed feed follows: a profile RSS feed by its URL, an author feed by the DID it reads. */
 final class ProfileIdentity
 {
     /** @return string|null the DID, handle or user@host; null when the feed follows no person on $network */
@@ -689,7 +683,7 @@ In `ProfileFeedUrlTest`, append:
 
 Deletion checks:
 - `profiles()`, one row per condition of `hidesFromLoggedOut`: drop the `src === did` comparison → "set by a labeller" true; drop the `val` comparison → "another value" true; drop the `neg` check → "negated" true; drop the `null !== $did` guard → "neither did nor src" compares `null === null` → true → red; "among other labels" guards that the loop does not stop at the first label; "no labels" guards the `false` fall-through.
-- `AppViewHiddenProfiles`: drop the label check → the public profile appears; drop the handle key → the handle lookup is null; drop `array_chunk` → one call with 26 actors (1 fetch); drop the `[] === $actors` early return → a call is made (the stub throws `LogicException` for the unstubbed URL); drop either `catch` type → the exception escapes un-wrapped.
+- `AppViewHiddenProfiles`: drop the `if (BlueskyProfileLabels::hidesFromLoggedOut($profile))` check → the public profile appears; key `$hidden` by `$profile->string('did')` instead of the `$key` `AppViewClient::profiles()` hands out → the handle lookup in `testAHiddenProfileIsFoundByItsDidAndItsHandle` is null; replace `array_chunk(…, AppViewClient::URIS_PER_CALL)` with `[$actors]` → one call with 26 actors (1 fetch, and its URL is unstubbed); drop either `catch` type (`FetchException`, `AppViewAnswerException`) → the exception escapes un-wrapped; drop `?? $did` in `modelOf` → PHPStan rejects the `?string` argument (no runtime row: `BlueskyAuthor::name()` already falls back to the handle, which `testAHiddenProfileWithoutADisplayNameIsNamedByItsHandle` pins). `testNoActorsAskNothing` guards no branch of its own: `array_chunk([], 25)` yields no batch, so no call is made without any guard; it pins that an empty list never reaches the AppView.
 - `profilePages`: drop `(?:/rss)?` → "its feed" null; drop `/?` → "a trailing slash" null; drop the host check → "another host" yields an actor; drop the `$` anchor → "a post" yields an actor; drop `BlueskyActor::isValid` → "no actor syntax" yields `some name`; drop the lower-casing → "a page by handle" keeps capitals.
 
 - [ ] **Step 2: Run the tests and see them fail.** `cd backend && php bin/phpunit tests/Service/Social/Support/BlueskyProfileLabelsTest.php tests/Service/Social/HiddenProfiles tests/Service/Social/Support/ProfileFeedUrlTest.php`. Expected: classes and method not found.
@@ -744,7 +738,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Model;
 
-/** A Bluesky profile that hides its posts from logged-out readers, as the author feed that reads it is named. */
 final readonly class HiddenProfileModel
 {
     public function __construct(
@@ -965,39 +958,27 @@ git commit -m "feat(#1667): tell a Bluesky profile hidden from logged-out reader
 
 - [ ] **Step 1: Write the failing tests.**
 
-Append to `SocialAccountRepositoryTest` (read its helpers first; if it has none for users, use `UserFactory` as `PrivateFeedsTest::setUp()` does):
+Append to `SocialAccountRepositoryTest`:
 
 ```php
     public function testTheReadyActingAccountIsTheDefaultAmongTheConnectedOnes(): void
     {
-        $user = $this->userNamed('ready-acting@example.test');
-        $older = SocialAccounts::blueskyOf($user);
-        $default = new SocialAccount(
-            $user,
-            SocialNetwork::Bluesky,
-            'did:plc:second',
-            '@second.bsky.social',
-            'https://pds.example.test',
-            SocialAccounts::cipher()->seal($user->requireId(), SocialAccounts::APP_PASSWORD),
-            'mnop',
-            new \DateTimeImmutable('2026-10-13 10:00:00'),
-        );
+        $older = $this->accountConnectedAt('did:plc:older', '2026-10-01 10:00:00');
+        $default = $this->accountConnectedAt('did:plc:default', '2026-10-05 10:00:00');
         $default->becomeDefault();
-        $this->entityManager->persist($older);
-        $this->entityManager->persist($default);
         $this->entityManager->flush();
 
-        self::assertSame($default, $this->repository()->findReadyActingOnNetwork($user, SocialNetwork::Bluesky));
+        self::assertSame($default, $this->repository()->findReadyActingOnNetwork($this->owner, SocialNetwork::Bluesky));
 
         $default->markNeedsReconnect();
         $this->entityManager->flush();
 
-        self::assertSame($older, $this->repository()->findReadyActingOnNetwork($user, SocialNetwork::Bluesky));
-        self::assertNull($this->repository()->findReadyActingOnNetwork($user, SocialNetwork::Mastodon));
+        self::assertSame($older, $this->repository()->findReadyActingOnNetwork($this->owner, SocialNetwork::Bluesky));
+        self::assertNull($this->repository()->findReadyActingOnNetwork($this->owner, SocialNetwork::Mastodon));
     }
 ```
 
-(`userNamed()` and `repository()` stand for the test's own helpers; name them as the file does.)
+(`$this->owner`, `accountConnectedAt()` and `repository()` are the file's own; `accountConnectedAt()` leaves the account `Connected` through `replaceCredential()`. No new `use` is needed.)
 
 Create `backend/tests/Service/Social/AuthorFeedsTest.php`:
 
@@ -1188,7 +1169,6 @@ use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\SubscriptionCreator;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** A hidden profile read through a Bluesky account, subscribed like any feed: tagged, in All items and For You. */
 final readonly class AuthorFeeds
 {
     public function __construct(
@@ -1259,7 +1239,7 @@ git commit -m "feat(#1667): create an author feed as a tagged subscription read 
 
 **Interfaces:**
 - `SubscriptionJson` reports an author feed as `{network: 'bluesky', accountId: null, kind: 'profile'}`. `accountId` stays `null` for every profile: that is the frontend's `SocialFeedRefDto` contract (`{kind:'profile'; accountId:null}`), and every consumer (`isProfileFeed`, `isPrivateFeed`, `feedAvatarUrl`, `list-heading.service.ts`'s `sharedNetworkHandle`, `inNetworkTarget`) then treats it as a person with no TypeScript change.
-- `NetworkScopeDql`'s profile scope (the network "People" view, its entries, counts and the avatar sweep's query) includes author feeds, by `SocialFeedUrl::AUTHOR_FEEDS`.
+- `NetworkScopeDql`'s profile scope (the network "People" view, its entries, counts and the avatar sweep's query) includes author feeds: a feed with a `social_feed` row of kind `author` (an `EXISTS` subquery on `SocialFeed`), never a URL pattern, since a custom feed's record key may itself contain `:author:`.
 - The avatar sweep and the import picker read an author feed's DID via `ProfileIdentity::of()`.
 - Nothing to change (verified): `FeedNetworkListener`/`SocialFeedClassifier` set network `bluesky` from the private address; `ActingAccountChooser` acts with the feed's own account; `EntryJson::posterOf` shows the post's author for a private format; `BlueskyPendingEmbed` skips `bluesky-api` (the post view rides along); OPML and backups exclude `SOCIAL` formats (`SubscriptionRepository::findExportableForUserWithTags`, `PrivateFeedRefusal`).
 
@@ -1284,19 +1264,43 @@ git commit -m "feat(#1667): create an author feed as a tagged subscription read 
 `FeedRepositoryNetworkScopeTest` — append:
 
 ```php
-    public function testAProfileScopeTakesAnAuthorFeedForAPerson(): void
+    public function testAProfileScopeTakesAnAuthorFeedForAPersonButNoOtherPrivateFeed(): void
     {
         $owner = $this->user('network-scope-authors@example.com');
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($owner));
         $author = $this->fixtures()->subscribe(
             $owner,
-            'social:bluesky:1:author:did:plc:rusty',
+            sprintf('social:bluesky:%d:author:did:plc:rusty', $account->requireId()),
             SourceFormat::BLUESKY_API,
         )->getFeed();
-        $this->fixtures()->subscribe($owner, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
+        $home = $this->fixtures()->subscribe(
+            $owner,
+            NetworkFeedSubscriptions::blueskyHome($account->requireId()),
+            SourceFormat::BLUESKY_API,
+        )->getFeed();
+        SocialFeeds::persisted(
+            $this->entityManager,
+            new SocialFeed($account, $author, SocialFeedKind::Author, 'did:plc:rusty'),
+        );
+        SocialFeeds::persisted($this->entityManager, new SocialFeed($account, $home, SocialFeedKind::Home, ''));
 
         $criteria = $this->criteria($owner, NetworkScope::profiles(SocialNetwork::Bluesky));
 
         self::assertSame([$author->requireId()], $this->idsOf($this->feeds()->findDue($criteria, 50)));
+    }
+```
+
+(add `use App\Entity\SocialFeed;`, `use App\Enum\SocialFeedKind;`, `use App\Tests\Support\SocialAccounts;`, `use App\Tests\Support\SocialFeeds;`).
+
+`tests/Support/SocialFeeds.php` — add next to `persistedAccount()` (three tests of this task record a `social_feed` row):
+
+```php
+    public static function persisted(EntityManagerInterface $entityManager, SocialFeed $socialFeed): SocialFeed
+    {
+        $entityManager->persist($socialFeed);
+        $entityManager->flush();
+
+        return $socialFeed;
     }
 ```
 
@@ -1312,12 +1316,19 @@ git commit -m "feat(#1667): create an author feed as a tagged subscription read 
             new Subscription($this->subscriber(), $author, new \DateTimeImmutable(self::CHECKED_BEFORE)),
         );
         $this->entityManager->flush();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->subscriber()));
+        SocialFeeds::persisted(
+            $this->entityManager,
+            new SocialFeed($account, $author, SocialFeedKind::Author, 'did:plc:rusty'),
+        );
 
         $due = $this->feeds()->findBlueskyProfileFeedsWithImageDue(new \DateTimeImmutable(self::CHECKED_BEFORE), 10);
 
         self::assertSame([$author->requireId()], array_map(static fn (Feed $feed): int => $feed->requireId(), $due));
     }
 ```
+
+(add `use App\Entity\SocialFeed;`, `use App\Enum\SocialFeedKind;`, `use App\Tests\Support\SocialAccounts;`, `use App\Tests\Support\SocialFeeds;`; the account's id never has to match the URL's `1`, since the scope reads the `social_feed` row, not the address).
 
 `ProfileImageSweepTest` — append:
 
@@ -1326,7 +1337,12 @@ git commit -m "feat(#1667): create an author feed as a tagged subscription read 
     {
         $author = new Feed('social:bluesky:1:author:did:plc:rusty');
         $author->setSourceFormat(SourceFormat::BLUESKY_API);
-        $this->persistSubscribed($author);
+        $subscriber = $this->persistSubscribed($author)->getUser();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($subscriber));
+        SocialFeeds::persisted(
+            $this->entityManager,
+            new SocialFeed($account, $author, SocialFeedKind::Author, 'did:plc:rusty'),
+        );
         $this->answer(['did:plc:rusty'], [
             ['did' => 'did:plc:rusty', 'handle' => 'rusty.bsky.social', 'avatar' => 'https://cdn.example/rusty.jpg'],
         ]);
@@ -1337,7 +1353,23 @@ git commit -m "feat(#1667): create an author feed as a tagged subscription read 
     }
 ```
 
-(add `use App\Enum\SourceFormat;`).
+(add `use App\Entity\SocialFeed;`, `use App\Enum\SocialFeedKind;`, `use App\Enum\SourceFormat;`, `use App\Tests\Support\SocialAccounts;`, `use App\Tests\Support\SocialFeeds;`), and let the file's `persistSubscribed()` return what it persists, for the subscriber:
+
+```php
+    private function persistSubscribed(Feed $feed): Subscription
+    {
+        $this->subscriber ??= new User('profile-image-sweep@example.com', $this->clock->now());
+        $this->entityManager->persist($this->subscriber);
+        $this->entityManager->persist($feed);
+        $subscription = new Subscription($this->subscriber, $feed, $this->clock->now());
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
+
+        return $subscription;
+    }
+```
+
+The sweep reads the DID from the author feed's `social:` URL, not from its `social_feed` row (Global Constraints, declared deviation); the row is there only because the sweep's query (`findBlueskyProfileFeedsWithImageDue`, through `NetworkScopeDql`) selects an author feed by it.
 
 `ImportCandidatesTest` — append:
 
@@ -1361,7 +1393,7 @@ git commit -m "feat(#1667): create an author feed as a tagged subscription read 
 
 Deletion checks:
 - `SubscriptionJson`: drop the `Author` comparison → `accountId: 12, kind: 'author'` → red.
-- Network scope: drop the `OR … LIKE :authorFeeds` → the author feed is excluded → `[]` → red; the Home row guards that the `NOT IN` half stays (Home must remain excluded).
+- Network scope: drop the `OR EXISTS (…)` half → the author feed is excluded → `[]` → red; drop `%1$sAuthor.kind = :authorKind` → the Home feed, which has its own `social_feed` row of kind `home`, is selected too → red; drop the `NOT IN (:socialFormats)` half → the existing `testAProfileScopeSelectsOnlyTheNetworksProfileFeeds` loses its RSS profile → red.
 - Image due: revert `findBlueskyProfileFeedsWithImageDue` to its own `NOT IN` → `[]` → red.
 - Sweep: revert `actorsOf` to `ProfileFeedUrl::identityOf` → the author feed has no actor → the stub sees no request (`LogicException` is not raised, but the image stays null) → red.
 - Import candidates: revert `profileFeedsOf` to `ProfileFeedUrl::identityOf` → the follow reads `new` → red.
@@ -1405,9 +1437,10 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\SocialFeed;
 use App\Enum\NetworkFeedKind;
+use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
-use App\Service\Social\Support\SocialFeedUrl;
 use Doctrine\ORM\QueryBuilder;
 
 /** A profile feed is a networked feed read without an account, or an author feed, which follows one person. */
@@ -1417,9 +1450,14 @@ final class NetworkScopeDql
     {
         $qb->andWhere(\sprintf('%s.network = :network', $feedAlias))->setParameter('network', $scope->network);
         if ($scope->feedKind === NetworkFeedKind::Profile) {
-            $qb->andWhere(\sprintf('(%1$s.sourceFormat NOT IN (:socialFormats) OR %1$s.url LIKE :authorFeeds)', $feedAlias))
+            $qb->andWhere(\sprintf(
+                '(%1$s.sourceFormat NOT IN (:socialFormats) OR EXISTS (SELECT %1$sAuthor.id FROM %2$s %1$sAuthor'
+                . ' WHERE %1$sAuthor.feed = %1$s AND %1$sAuthor.kind = :authorKind))',
+                $feedAlias,
+                SocialFeed::class,
+            ))
                 ->setParameter('socialFormats', SourceFormat::SOCIAL)
-                ->setParameter('authorFeeds', SocialFeedUrl::AUTHOR_FEEDS);
+                ->setParameter('authorKind', SocialFeedKind::Author);
         }
     }
 
@@ -1484,7 +1522,7 @@ git commit -m "feat(#1667): present an author feed as the person it follows"
 **Files:**
 - Create: `backend/src/Service/Subscription/SubscribeRoute/SubscribeRouteInterface.php`, `backend/src/Service/Subscription/Model/SubscribeRequestModel.php`, `backend/src/Service/Social/HiddenProfileSubscribeRoute.php`, `backend/src/Service/Social/Exception/BlueskyProfileHiddenException.php`
 - Modify: `backend/src/Service/Subscription/SubscriptionService.php`, `backend/config/services.yaml`, `backend/src/Http/Problem/ExceptionProblems/SocialProblems.php`
-- Test: `backend/tests/Service/Subscription/SubscriptionServiceTest.php`, `backend/tests/Service/Subscription/UnsubscribeAllTest.php`; create `backend/tests/Service/Social/HiddenProfileSubscribeRouteTest.php`, `backend/tests/Http/Problem/ExceptionProblems/SocialProblemsTest.php`, `backend/tests/Controller/Api/SubscriptionHiddenProfileTest.php`
+- Test: `backend/tests/Service/Subscription/SubscriptionServiceTest.php`, `backend/tests/Service/Subscription/UnsubscribeAllTest.php`; create `backend/tests/Support/RecordingSubscribeRoute.php`, `backend/tests/Service/Social/HiddenProfileSubscribeRouteTest.php`, `backend/tests/Http/Problem/ExceptionProblems/SocialProblemsTest.php`, `backend/tests/Controller/Api/SubscriptionHiddenProfileTest.php`
 
 **Interfaces:**
 - Produces: `SubscribeRouteInterface::subscribe(SubscribeRequestModel $request): ?SubscribeOutcomeModel` — `null` when the URL is not the route's to take; tagged `app.subscribe_route`, collected by `SubscriptionService` with `#[AutowireIterator]` as its **last** constructor parameter (`iterable $subscribeRoutes`). Subscription owns the interface; Social implements it, so the module dependency stays Social → Subscription.
@@ -1514,31 +1552,12 @@ and pass `$routes` as the new last constructor argument after `$this->entityMana
         };
     }
 
-    private function route(?SubscribeOutcomeModel $outcome): SubscribeRouteInterface
-    {
-        return new class ($outcome) implements SubscribeRouteInterface {
-            /** @var list<SubscribeRequestModel> */
-            public array $requests = [];
-
-            public function __construct(private readonly ?SubscribeOutcomeModel $outcome)
-            {
-            }
-
-            public function subscribe(SubscribeRequestModel $request): ?SubscribeOutcomeModel
-            {
-                $this->requests[] = $request;
-
-                return $this->outcome;
-            }
-        };
-    }
-
     public function testARouteThatTakesTheUrlAnswersInsteadOfDiscovery(): void
     {
         $user = $this->factory()->create('routed@example.com');
         $tag = new Tag($user, 'People');
         $taken = SubscribeOutcomeModel::candidates([]);
-        $route = $this->route($taken);
+        $route = new RecordingSubscribeRoute($taken);
 
         $outcome = $this->service($this->discoveryNeverAsked(), [$route])
             ->subscribe($user, 'https://bsky.app/profile/rusty-17.bsky.social', null, [$tag]);
@@ -1553,7 +1572,7 @@ and pass `$routes` as the new last constructor argument after `$this->entityMana
 
         $outcome = $this->service(
             $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
-            [$this->route(null)],
+            [new RecordingSubscribeRoute(null)],
         )->subscribe($user, 'https://example.com/feed');
 
         self::assertSame('https://example.com/feed.xml', $outcome->subscription?->getFeed()->getUrl());
@@ -1562,7 +1581,7 @@ and pass `$routes` as the new last constructor argument after `$this->entityMana
     public function testAVerbatimFormatNeverAsksTheRoutes(): void
     {
         $user = $this->factory()->create('verbatim-route@example.com');
-        $route = $this->route(SubscribeOutcomeModel::candidates([]));
+        $route = new RecordingSubscribeRoute(SubscribeOutcomeModel::candidates([]));
 
         $outcome = $this->service($this->discoveryNeverAsked(), [$route])
             ->subscribe($user, 'https://example.com/wp-json/wp/v2/posts', SourceFormat::WP_JSON);
@@ -1572,7 +1591,38 @@ and pass `$routes` as the new last constructor argument after `$this->entityMana
     }
 ```
 
-(add `use App\Service\Subscription\Model\SubscribeOutcomeModel;`, `use App\Service\Subscription\Model\SubscribeRequestModel;`, `use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;`).
+(add `use App\Service\Subscription\Model\SubscribeOutcomeModel;`, `use App\Service\Subscription\Model\SubscribeRequestModel;`, `use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;`, `use App\Tests\Support\RecordingSubscribeRoute;`).
+
+Create `backend/tests/Support/RecordingSubscribeRoute.php` — a named class, so PHPStan at level max knows `$requests` (an anonymous class returned as `SubscribeRouteInterface` hides it):
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Support;
+
+use App\Service\Subscription\Model\SubscribeOutcomeModel;
+use App\Service\Subscription\Model\SubscribeRequestModel;
+use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
+
+final class RecordingSubscribeRoute implements SubscribeRouteInterface
+{
+    /** @var list<SubscribeRequestModel> */
+    public array $requests = [];
+
+    public function __construct(private readonly ?SubscribeOutcomeModel $outcome)
+    {
+    }
+
+    public function subscribe(SubscribeRequestModel $request): ?SubscribeOutcomeModel
+    {
+        $this->requests[] = $request;
+
+        return $this->outcome;
+    }
+}
+```
 
 `UnsubscribeAllTest` — add `[],` as the last argument of `new SubscriptionService(…)`.
 
@@ -1730,17 +1780,14 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Social\Model\HiddenProfileModel;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class SubscriptionHiddenProfileTest extends WebTestCase
+final class SubscriptionHiddenProfileTest extends ApiTestCase
 {
     private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
 
@@ -1753,9 +1800,7 @@ final class SubscriptionHiddenProfileTest extends WebTestCase
         $hiddenProfiles = self::getContainer()->get(StubHiddenProfiles::class);
         self::assertInstanceOf(StubHiddenProfiles::class, $hiddenProfiles);
         $hiddenProfiles->hide(new HiddenProfileModel(self::RUSTY, 'Rusty'), 'rusty-17.bsky.social');
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $this->user = (new UserFactory($this->entityManager(), $hasher))->create('hidden-profile-api@example.test');
+        $this->user = $this->factory()->create('hidden-profile-api@example.test');
     }
 
     public function testAHiddenProfileIsSubscribedThroughTheConnectedAccountWithItsTags(): void
@@ -1770,7 +1815,7 @@ final class SubscriptionHiddenProfileTest extends WebTestCase
         $this->post(['url' => 'https://bsky.app/profile/rusty-17.bsky.social', 'tagIds' => [$tag->requireId()]]);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
-        $subscription = $this->json()['subscription'] ?? null;
+        $subscription = $this->payload($this->client)['subscription'] ?? null;
         self::assertIsArray($subscription);
         self::assertSame(sprintf('social:bluesky:%d:author:%s', $account->requireId(), self::RUSTY), $subscription['feedUrl']);
         self::assertSame('Rusty', $subscription['title']);
@@ -1785,8 +1830,8 @@ final class SubscriptionHiddenProfileTest extends WebTestCase
     {
         $this->post(['url' => 'https://bsky.app/profile/rusty-17.bsky.social/rss']);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        $problem = $this->json();
+        $this->assertRejected($this->client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $problem = $this->payload($this->client);
         self::assertSame('bluesky_profile_hidden', $problem['type'] ?? null);
         self::assertSame(
             'This profile is only visible to logged-in Bluesky users. Connect a Bluesky account in Settings → Social'
@@ -1807,31 +1852,16 @@ final class SubscriptionHiddenProfileTest extends WebTestCase
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }
-
-    /** @return array<string, mixed> */
-    private function json(): array
-    {
-        $decoded = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($decoded);
-
-        return $decoded;
-    }
-
-    private function entityManager(): EntityManagerInterface
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        return $entityManager;
-    }
 }
 ```
+
+(`factory()`, `entityManager()`, `payload()` and `assertRejected()` come from `ApiTestCase`; the token stays in this class, as `ApiTestCase`'s docblock asks.)
 
 Deletion checks:
 - `SubscriptionService`: drop the route loop → `testARouteThatTakes…` runs discovery → `LogicException` → red; return the route's answer even when `null` → `testADecliningRoute…` gets candidates and no subscription → red; move the loop above the verbatim branches → `testAVerbatimFormat…` records a request → red.
 - Route: drop the `findReadyActingOnNetwork` status filter (use `findActingOnNetwork`) → the reconnect test subscribes → red; drop the `null === $actor` guard → `hiddenAmong` is asked for `example.com` → `asked` not empty → red; drop the `catch` → the failure escapes → red; a hard-coded `true` for "hidden" → the public-profile row subscribes (no account → exception) → red.
 - Problems: drop the arm → `resolve()` returns null → red.
-- API: the 201 test guards the `_instanceof` tag (without it the iterator is empty, discovery runs on bsky.app through the real fetcher and the test fails on the response); the 422 test guards the message.
+- API: the 201 test guards the `_instanceof` tag (without it the iterator is empty, discovery runs on bsky.app through the real fetcher and the test fails on the response); the 422 test guards the message, and `assertRejected` that it answers `application/problem+json`.
 
 - [ ] **Step 2: Run the tests and see them fail.** `cd backend && php bin/phpunit tests/Service/Subscription/SubscriptionServiceTest.php tests/Service/Subscription/UnsubscribeAllTest.php tests/Service/Social/HiddenProfileSubscribeRouteTest.php tests/Http/Problem/ExceptionProblems/SocialProblemsTest.php tests/Controller/Api/SubscriptionHiddenProfileTest.php`. Expected: classes not found.
 
@@ -2135,6 +2165,18 @@ final class HiddenImportFollowsTest extends TestCase
         self::assertEquals(['did:plc:rusty' => new HiddenProfileModel('did:plc:rusty', 'Rusty')], $hidden);
     }
 
+    public function testAHandleIsAskedLowerCasedAndAnsweredByTheIdentityChosen(): void
+    {
+        $this->hiddenProfiles->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'), 'rusty-17.bsky.social');
+
+        $hidden = $this->follows()->among(SocialAccounts::bluesky(), [
+            new SocialImportFeedModel('Rusty-17.bsky.social', 'Rusty'),
+        ]);
+
+        self::assertEquals(['Rusty-17.bsky.social' => new HiddenProfileModel('did:plc:rusty', 'Rusty')], $hidden);
+        self::assertSame([['rusty-17.bsky.social']], $this->hiddenProfiles->asked);
+    }
+
     public function testAnIdentityThatIsNoActorIsNeverAsked(): void
     {
         $this->follows()->among(SocialAccounts::bluesky(), [
@@ -2217,7 +2259,7 @@ final class HiddenImportFollowsTest extends TestCase
 (add `use App\Service\Social\Model\HiddenProfileModel;` and `use App\Tests\Support\StubHiddenProfiles;`; `storedAccount()` is the file's existing helper.)
 
 Deletion checks:
-- `HiddenImportFollows`: drop the network guard → the Mastodon row asks → red; drop the `BlueskyActor::isValid` filter → `asked` holds both identities → red; drop the `[] === $actors` return → `asked` is `[[]]` → red; drop the `catch` → the exception escapes → red; return all asked actors instead of the hidden ones → the first test gets bob too → red.
+- `HiddenImportFollows`: drop the network guard → the Mastodon row asks → red; drop the `BlueskyActor::isValid` check in `actorsOf` → `asked` holds both identities → red; drop the `[] === $actorByIdentity` return → `asked` is `[[]]` → red; drop the `catch` → the exception escapes → red; drop the `strtolower` in `actorsOf` → the handle is asked as `Rusty-17.bsky.social`, the hidden map (keyed lower-case) has no such key → `[]` → red; key `byIdentity`'s result by `$actor` instead of `$identity` → the handle test gets `rusty-17.bsky.social` as its key → red, and `SocialImporter::withoutHidden` (which looks up `$feed->identity` verbatim) would import that follow by RSS as well; drop the `isset($hidden[$actor])` guard → `testTheHiddenFollowsAreFoundByTheirIdentity` gets bob as a `null` entry (PHP warns of the undefined key) → red.
 - `SocialImporter`: drop `withoutHidden` → the RSS feed for rusty exists → red; drop `addAuthors` → no author feed and `imported` 1 → red; drop the `AlreadySubscribedException` catch → the second import throws → red.
 
 - [ ] **Step 2: Run the tests and see them fail.** `cd backend && php bin/phpunit tests/Service/Social/HiddenImportFollowsTest.php tests/Service/Social/SocialImporterTest.php`. Expected: class `HiddenImportFollows` not found; the importer tests fail.
@@ -2240,6 +2282,7 @@ use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Support\BlueskyActor;
+use App\Service\Social\Support\ProfileFeedUrl;
 use Psr\Log\LoggerInterface;
 
 /** The chosen Bluesky follows that hide their posts from logged-out readers, so their RSS would answer 403. */
@@ -2259,12 +2302,12 @@ final readonly class HiddenImportFollows
      */
     public function among(SocialAccount $account, array $feeds): array
     {
-        $actors = SocialNetwork::Bluesky === $account->getNetwork() ? self::actorsOf($feeds) : [];
-        if ([] === $actors) {
+        $actorByIdentity = SocialNetwork::Bluesky === $account->getNetwork() ? self::actorsOf($feeds) : [];
+        if ([] === $actorByIdentity) {
             return [];
         }
         try {
-            $hidden = $this->hiddenProfiles->hiddenAmong($actors);
+            $hidden = $this->hiddenProfiles->hiddenAmong(array_values(array_unique($actorByIdentity)));
         } catch (SocialNetworkUnreachableException $exception) {
             $this->logger->warning('Import could not tell which Bluesky follows are hidden; all come in by RSS.', [
                 'exception' => $exception,
@@ -2273,19 +2316,45 @@ final readonly class HiddenImportFollows
             return [];
         }
 
-        return array_intersect_key($hidden, array_flip($actors));
+        return self::byIdentity($actorByIdentity, $hidden);
     }
 
     /**
      * @param list<SocialImportFeedModel> $feeds
      *
-     * @return list<string>
+     * @return array<string, string> each valid identity's actor as the hidden map keys it: a DID as is, a handle
+     *                               lower-cased
      */
     private static function actorsOf(array $feeds): array
     {
-        $identities = array_map(static fn (SocialImportFeedModel $feed): string => $feed->identity, $feeds);
+        $actorByIdentity = [];
+        foreach ($feeds as $feed) {
+            if (BlueskyActor::isValid($feed->identity)) {
+                $actorByIdentity[$feed->identity] = ProfileFeedUrl::isDid($feed->identity)
+                    ? $feed->identity
+                    : strtolower($feed->identity);
+            }
+        }
 
-        return array_values(array_filter($identities, BlueskyActor::isValid(...)));
+        return $actorByIdentity;
+    }
+
+    /**
+     * @param array<string, string>             $actorByIdentity
+     * @param array<string, HiddenProfileModel> $hidden
+     *
+     * @return array<string, HiddenProfileModel>
+     */
+    private static function byIdentity(array $actorByIdentity, array $hidden): array
+    {
+        $hiddenByIdentity = [];
+        foreach ($actorByIdentity as $identity => $actor) {
+            if (isset($hidden[$actor])) {
+                $hiddenByIdentity[$identity] = $hidden[$actor];
+            }
+        }
+
+        return $hiddenByIdentity;
     }
 }
 ```
@@ -2369,7 +2438,7 @@ and the two private methods:
     }
 ```
 
-(add `use App\Service\Social\Model\HiddenProfileModel;`, `use App\Service\Social\Model\PrivateFeedOutcome;`, `use App\Service\Subscription\Exception\AlreadySubscribedException;`). The new follows' avatars come from `ProfileImageSweep` (Task 5), so `ImportedProfilePictures` stays as it is.
+(add `use App\Service\Social\Model\HiddenProfileModel;`, `use App\Service\Social\Model\PrivateFeedOutcome;`, `use App\Service\Subscription\Exception\AlreadySubscribedException;`). `withoutHidden` looks up `$feed->identity` verbatim, which is right because `HiddenImportFollows::among()` keys its answer by the identity as chosen and does the lower-casing of a handle itself. The new follows' avatars come from `ProfileImageSweep` (Task 5), so `ImportedProfilePictures` stays as it is.
 
 - [ ] **Step 4: Run the tests and see them pass.** Same command, plus `php bin/phpunit tests/Controller/Api/SocialImportControllerTest.php`. Expected: PASS. Run `composer md` on `src/Service/Social/SocialImporter.php`; if PHPMD flags the class, report it rather than tuning.
 
@@ -2463,6 +2532,18 @@ final class SocialLikeCopyTest extends DbTestCase
 
         self::assertSame('at://own', $this->likes()->findOneFor($this->user, $target)?->getRemoteId());
         self::assertSame(2, $this->likes()->count([]));
+    }
+
+    public function testAnUnlikedSourceGivesTheTargetNoLikeOfAnotherPost(): void
+    {
+        $source = $this->entry('https://bsky.app/profile/did:plc:rusty/rss');
+        $target = $this->entry('social:bluesky:1:author:did:plc:rusty');
+        $unrelated = $this->entry('https://bsky.app/profile/did:plc:other/rss');
+        $this->like($unrelated, self::LIKE, '2026-10-16 08:00:00');
+
+        $this->likes()->copyLike($this->user->requireId(), $source->requireId(), $target->requireId());
+
+        self::assertNull($this->likes()->findOneFor($this->user, $target));
     }
 
     private function like(Entry $entry, string $remoteId, string $likedAt): void
@@ -2761,7 +2842,7 @@ final class SavedStateMoverTest extends DbTestCase
 ```
 
 Deletion checks:
-- `copyLike`: drop the `INSERT … SELECT` → no like on the target → red; drop `IGNORE`/`OR IGNORE` → the second test's insert hits `uniq_social_like_user_entry` → exception → red; drop `entry_id = ?` from the `WHERE` → the unliked call copies nothing new but the first call would copy the target's own like too (still blocked by the unique key) — the count assertion (2) then guards an accidental extra row only on MySQL/SQLite both, so keep it.
+- `copyLike`: drop the `INSERT … SELECT` → no like on the target → red; drop `IGNORE`/`OR IGNORE` → the second test's insert hits `uniq_social_like_user_entry` → exception → red; drop `AND entry_id = ?` from the `WHERE` (and `$sourceEntryId` from the parameters) → `testAnUnlikedSourceGivesTheTargetNoLikeOfAnotherPost` copies the like of `$unrelated` onto the target → red (the second test cannot see it: its target already has a like, so every insert is ignored).
 - `sameGuidEntryIds`, one fixture per condition: drop the guid join condition → cross pairs; drop the state `EXISTS` → "post-read" missing; drop the like `EXISTS` → "post-liked" missing; drop `userState.user = :user` → the stranger's post pairs; drop the target-feed condition → "post-only-in-rss" pairs with itself; "post-untouched" guards that a post without state or like is not paired.
 - Mover: drop the favourite/kept copy → target not favourite; drop the clearing → source still favourite; pass `null` to `ensureRow` and drop `restoreReadMark` → the read state is lost; drop only the `restoreReadMark` branch → `testAReadMarkWithoutAnInstant…` red (`ensureRow` with a null instant writes an unread row); drop `markViewed` → `viewedAt` null; turn OR into assignment (clear the target when the source is not favourite) → `testATargetAlreadySaved…` red; drop `copyLike` → no like; ensure a row for every key instead of each stated source → `testAPostWithoutState…` finds a row.
 
@@ -2772,7 +2853,6 @@ Deletion checks:
 `SocialLikeRepository` (add `use Doctrine\DBAL\Types\Types;`):
 
 ```php
-    /** Gives the user's like of $sourceEntryId to the same post's $targetEntryId, unless that one carries a like. */
     public function copyLike(int $userId, int $sourceEntryId, int $targetEntryId): void
     {
         $connection = $this->getEntityManager()->getConnection();
@@ -2925,18 +3005,19 @@ git commit -m "feat(#1667): move a user's saved state to the same posts in anoth
 ### Task 10: Switch a refused RSS subscription to an author feed
 
 **Files:**
-- Modify: `backend/src/Entity/Subscription.php` (`takeSettingsFrom`), `backend/src/Repository/SubscriptionRepository.php`, `backend/config/packages/cache.yaml`, `backend/src/Service/Social/Model/ProfileImageBudgetModel.php` (docblock only)
-- Create: `backend/src/Service/Social/PublicProfileCache.php`, `backend/src/Service/Social/HiddenProfileMove.php`, `backend/src/Service/Social/HiddenProfileSwitchSweep.php`, `backend/src/Service/Social/Model/HiddenProfileMoveOutcome.php`, `backend/src/Service/Social/Model/HiddenProfileSwitchReportModel.php`
+- Modify: `backend/src/Entity/Subscription.php` (`takeSettingsFrom`), `backend/src/Repository/SubscriptionRepository.php`, `backend/src/Service/Fetch/Exception/FeedUnreachableException.php` (`STATUS_MARKER`), `backend/src/Service/Fetch/ResponseClassifier.php`, `backend/config/packages/cache.yaml`, `backend/src/Service/Social/Model/ProfileImageBudgetModel.php` (docblock only)
+- Create: `backend/src/Service/Social/PublicProfileCache.php`, `backend/src/Service/Social/HiddenProfileMove.php`, `backend/src/Service/Social/HiddenProfileSwitchSweep.php`, `backend/src/Service/Social/Model/HiddenProfileMoveOutcome.php`, `backend/src/Service/Social/Model/HiddenProfileSwitchReportModel.php`, `backend/src/Service/Social/Model/RefusedProfileSubscriptionModel.php`
 - Test: create `backend/tests/Entity/SubscriptionSettingsTest.php`, `backend/tests/Repository/ForbiddenBlueskyProfileSubscriptionsTest.php`, `backend/tests/Service/Social/HiddenProfileSwitchSweepTest.php`
 
 **Interfaces:**
 - `Subscription::takeSettingsFrom(Subscription $previous): void` — custom title, position, both inclusion flags, `markedReadUntil`, and every tag at its position in that tag. On the entity: copying a subscription's own settings is its behaviour, and five setters from a service would be §10's "build and save" smell.
-- `SubscriptionRepository::findOnForbiddenBlueskyProfileFeeds(int $limit): list<Subscription>` — Bluesky profile **RSS** feeds (`xml`) with `consecutiveFailures > 0` and a last error ending `: HTTP 403` (`ResponseClassifier`'s wording), whose subscriber has a `Connected` Bluesky account; feed by feed. This is the switch's queue: no marker column, no migration.
+- `SubscriptionRepository::findOnForbiddenBlueskyProfileFeeds(int $limit): list<Subscription>` — Bluesky profile **RSS** feeds (`xml`) with `consecutiveFailures > 0` and a last error ending `FeedUnreachableException::STATUS_MARKER . 403` (`': HTTP 403'`; `ResponseClassifier` writes the message with the same constant, so the wording has one home), whose subscriber has a `Connected` Bluesky account; feed by feed. This is the switch's queue: no marker column, no migration.
 - `SubscriptionRepository::findOneForUserAndFeed(int $userId, int $feedId): ?Subscription`.
 - `PublicProfileCache::isPublic(string $actor): bool`, `rememberPublic(list<string> $actors): void` — pool `social.public_profiles.cache`, a day. A miss costs one more AppView call, never a wrong move.
 - `HiddenProfileMove::move(Subscription $rssSubscription, HiddenProfileModel $profile): HiddenProfileMoveOutcome` — `Skipped` (no connected account), `Started` (author feed created and given the RSS subscription's settings), `Waiting` (author feed not fetched yet), `Finished` (saved state moved by guid with `SavedStateMover`, RSS subscription removed via `SubscriptionService::unsubscribe`, whose orphan reclaim drops the RSS feed once nobody reads it). Throws `SubscriptionLimitReachedException`.
-- `HiddenProfileSwitchSweep::sweep(ProfileImageBudgetModel $budget): HiddenProfileSwitchReportModel` — at most `$budget->calls` AppView calls of 25 actors; skips actors known public; remembers the asked-and-public ones; logs and stops when the AppView cannot answer (nothing remembered, asked again next sweep); a full account is logged and skipped. The label is re-checked every sweep for a hidden profile until its move finishes (one or two sweeps).
+- `HiddenProfileSwitchSweep::sweep(ProfileImageBudgetModel $budget): HiddenProfileSwitchReportModel` — asks nothing while `AppViewClient::isThrottled()` (a 429's backoff holds, as in `ProfileImageSweep`); at most `$budget->calls` AppView calls of 25 actors (an empty budget slices to no actor, so it needs no guard of its own); skips actors known public; remembers the asked-and-public ones; logs and stops when the AppView cannot answer (nothing remembered, asked again next sweep); a full account is logged and skipped. The label is re-checked every sweep for a hidden profile until its move finishes (one or two sweeps).
 - `HiddenProfileSwitchReportModel(int $started, int $finished)`, `none()`, `counting(HiddenProfileMoveOutcome)`, `toLogContext()`.
+- `RefusedProfileSubscriptionModel(Subscription $subscription, string $actor)` — one refused subscription with the actor its feed follows, so the sweep never pairs two arrays by position.
 - `ProfileImageBudgetModel` becomes the budget of AppView profile calls for both sweeps; its docblock loses "on profile pictures".
 - Why two phases, in one line: the author feed has no entries until its first fetch, and Social may not call Refresh (Refresh → Social exists), so the move waits one refresh for the guids to exist.
 
@@ -3157,14 +3238,18 @@ use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Bluesky\AppViewClient;
+use App\Service\Fetch\HostThrottle;
 use App\Service\Social\PublicProfileCache;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class HiddenProfileSwitchSweepTest extends DbTestCase
@@ -3172,10 +3257,12 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
     private const string NOW = '2026-10-17 12:00:00';
     private const string POST = 'at://did:plc:hczfd45prvqtdrw77256syag/app.bsky.feed.post/3abc';
+    private const string GET_PROFILES = 'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles';
 
     private StubHiddenProfiles $hiddenProfiles;
     private PublicProfileCache $publicProfiles;
     private RecordingLogger $logger;
+    private HostThrottle $throttle;
 
     protected function setUp(): void
     {
@@ -3184,6 +3271,8 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->hiddenProfiles->hide(new HiddenProfileModel(self::RUSTY, 'Rusty'));
         $this->publicProfiles = new PublicProfileCache(new ArrayAdapter());
         $this->logger = new RecordingLogger();
+        $clock = new MockClock(self::NOW, 'UTC');
+        $this->throttle = new HostThrottle(new ArrayAdapter(clock: $clock), $clock);
     }
 
     public function testTheFirstSweepGivesTheSubscriberAnAuthorFeedWithTheSameSettings(): void
@@ -3299,6 +3388,17 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertSame([], $this->hiddenProfiles->asked);
     }
 
+    public function testAThrottledAppViewIsNotAsked(): void
+    {
+        $user = $this->user('switch-throttled@example.test');
+        $this->accountOf($user);
+        $this->rssSubscription($user);
+        $this->throttle->record(self::GET_PROFILES, 60);
+
+        self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
+        self::assertSame([], $this->hiddenProfiles->asked);
+    }
+
     public function testAFullAccountKeepsItsRssFeedAndTheSkipIsLogged(): void
     {
         $user = $this->user('switch-full@example.test');
@@ -3323,6 +3423,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
             $this->hiddenProfiles,
             $this->publicProfiles,
             $move,
+            new AppViewClient(new StubFeedFetcher(), $this->throttle),
             $this->logger,
         ))->sweep(ProfileImageBudgetModel::calls($calls));
     }
@@ -3381,8 +3482,8 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
 
 Deletion checks:
 - `takeSettingsFrom`: one assertion per copied field; dropping any line turns its assertion red; copying tags without their position gives `['People', 0]`.
-- Repository, one fixture per condition: drop the `LIKE` → "another failure" is a candidate; drop `consecutiveFailures > 0` → "a healthy feed" still fails on the `LIKE` (null message) — the guard is redundant for correctness; if Infection reports it surviving, delete the condition rather than invent a test; drop the account `EXISTS` → the no-account test; drop `sa.status` → the reconnect test; drop `sourceFormat = :xml` → "a private feed"; drop `f.network = :bluesky` → "a mastodon profile"; drop `setMaxResults` → `testTheLimitHolds`; `findOneForUserAndFeed` without the user criterion → the stranger finds it.
-- Sweep and move: drop `start()` → no author feed (first test); drop `takeSettingsFrom()` → title, position and tag differ; drop the `getLastSuccessfulFetchAt()` wait → `…WaitedFor`'s second sweep finishes and unsubscribes → red; drop `unsubscribe` in `finish()` → the RSS subscription survives; drop the `SavedStateMover` call → the twin has no state; drop `rememberPublic` → asked twice; remember on failure → the retry asks nothing new and starts nothing → `…AskedAgain` red; drop the budget check → asked with an empty budget; drop the limit `catch` → the exception escapes; the account-less subscriber is excluded by the query, so `move()`'s `Skipped` branch is a race guard (account disconnected between query and move) — Infection may list it; accept it as equivalent or kill it with a unit test that calls `HiddenProfileMove::move()` for a user without an account and expects `Skipped`.
+- Repository, one fixture per condition: drop the `LIKE` → "another failure" is a candidate; `FeedUnreachableException::STATUS_MARKER` is the wording's one home, not a behaviour: changing its value changes writer and query together, and the fixtures' literal `'HTTP 403'` then turns red, which is the alarm wanted; drop `consecutiveFailures > 0` → "a healthy feed" still fails on the `LIKE` (null message) — the guard is redundant for correctness; if Infection reports it surviving, delete the condition rather than invent a test; drop the account `EXISTS` → the no-account test; drop `sa.status` → the reconnect test; drop `sourceFormat = :xml` → "a private feed"; drop `f.network = :bluesky` → "a mastodon profile"; drop `setMaxResults` → `testTheLimitHolds`; `findOneForUserAndFeed` without the user criterion → the stranger finds it.
+- Sweep and move: drop `start()` → no author feed (first test); drop `takeSettingsFrom()` → title, position and tag differ; drop the `getLastSuccessfulFetchAt()` wait → `…WaitedFor`'s second sweep finishes and unsubscribes → red; drop `unsubscribe` in `finish()` → the RSS subscription survives; drop the `SavedStateMover` call → the twin has no state; drop `rememberPublic` → asked twice; remember on failure → the retry asks nothing new and starts nothing → `…AskedAgain` red; drop the `array_slice` in `askedActorsOf` → `testAnEmptyBudgetAsksNothing` asks for rusty → red; drop the `isThrottled()` check → `testAThrottledAppViewIsNotAsked` asks for rusty → red; drop the limit `catch` → the exception escapes; the account-less subscriber is excluded by the query, so `move()`'s `Skipped` branch is a race guard (account disconnected between query and move) — Infection may list it; accept it as equivalent or kill it with a unit test that calls `HiddenProfileMove::move()` for a user without an account and expects `Skipped`.
 
 - [ ] **Step 2: Run the tests and see them fail.** `cd backend && php bin/phpunit tests/Entity/SubscriptionSettingsTest.php tests/Repository/ForbiddenBlueskyProfileSubscriptionsTest.php tests/Service/Social/HiddenProfileSwitchSweepTest.php`. Expected: undefined methods, classes not found.
 
@@ -3405,7 +3506,28 @@ Deletion checks:
     }
 ```
 
-`SubscriptionRepository` (add `use App\Entity\SocialAccount;`, `use App\Enum\SocialAccountStatus;`, `use App\Enum\SocialNetwork;`, `use Symfony\Component\HttpFoundation\Response;` — `Response::HTTP_*` constants are what `DomainKnowsNoHttpRule` permits in a repository):
+`FeedUnreachableException` — the one home of the wording the switch's query matches:
+
+```php
+final class FeedUnreachableException extends FetchException
+{
+    public const string STATUS_MARKER = ': HTTP ';
+```
+
+`ResponseClassifier::fromHeaders()` — write the generic failure with it:
+
+```php
+        if ($status < Response::HTTP_OK || $status >= Response::HTTP_MULTIPLE_CHOICES) {
+            throw new FeedUnreachableException(
+                $attempt->url . FeedUnreachableException::STATUS_MARKER . $status,
+                statusCode: $status,
+            );
+        }
+```
+
+(the 410 and 429 messages keep their own `sprintf`: the switch never reads them).
+
+`SubscriptionRepository` (add `use App\Entity\SocialAccount;`, `use App\Enum\SocialAccountStatus;`, `use App\Enum\SocialNetwork;`, `use App\Service\Fetch\Exception\FeedUnreachableException;` — a `Service\…\Exception\` class is a value `PersistenceKnowsNoServiceRule` lets a repository name — and `use Symfony\Component\HttpFoundation\Response;` — `Response::HTTP_*` constants are what `DomainKnowsNoHttpRule` permits in a repository):
 
 ```php
     public function findOneForUserAndFeed(int $userId, int $feedId): ?Subscription
@@ -3436,7 +3558,7 @@ Deletion checks:
             ))
             ->setParameter('bluesky', SocialNetwork::Bluesky)
             ->setParameter('xml', SourceFormat::XML)
-            ->setParameter('forbidden', '%: HTTP ' . Response::HTTP_FORBIDDEN)
+            ->setParameter('forbidden', '%' . FeedUnreachableException::STATUS_MARKER . Response::HTTP_FORBIDDEN)
             ->setParameter('connected', SocialAccountStatus::Connected)
             ->orderBy('f.id', 'ASC')
             ->addOrderBy('s.id', 'ASC')
@@ -3559,6 +3681,27 @@ final readonly class HiddenProfileSwitchReportModel
 }
 ```
 
+`backend/src/Service/Social/Model/RefusedProfileSubscriptionModel.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Social\Model;
+
+use App\Entity\Subscription;
+
+final readonly class RefusedProfileSubscriptionModel
+{
+    public function __construct(
+        public Subscription $subscription,
+        public string $actor,
+    ) {
+    }
+}
+```
+
 `backend/src/Service/Social/HiddenProfileMove.php`:
 
 ```php
@@ -3659,7 +3802,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
-use App\Entity\Subscription;
 use App\Enum\SocialNetwork;
 use App\Repository\SubscriptionRepository;
 use App\Service\Bluesky\AppViewClient;
@@ -3669,6 +3811,7 @@ use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileMoveOutcome;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\RefusedProfileSubscriptionModel;
 use App\Service\Social\Support\BlueskyActor;
 use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
@@ -3687,18 +3830,18 @@ final readonly class HiddenProfileSwitchSweep
         private HiddenProfilesInterface $hiddenProfiles,
         private PublicProfileCache $publicProfiles,
         private HiddenProfileMove $move,
+        private AppViewClient $appView,
         private LoggerInterface $logger,
     ) {
     }
 
     public function sweep(ProfileImageBudgetModel $budget): HiddenProfileSwitchReportModel
     {
-        if ($budget->isEmpty()) {
+        if ($this->appView->isThrottled()) {
             return HiddenProfileSwitchReportModel::none();
         }
-        $subscriptions = $this->subscriptions->findOnForbiddenBlueskyProfileFeeds(self::CANDIDATES_PER_SWEEP);
-        $actors = $this->unsettledActorsOf($subscriptions);
-        $asked = \array_slice(array_values(array_unique($actors)), 0, $budget->calls * AppViewClient::URIS_PER_CALL);
+        $candidates = $this->unsettledCandidates();
+        $asked = self::askedActorsOf($candidates, $budget);
         if ([] === $asked) {
             return HiddenProfileSwitchReportModel::none();
         }
@@ -3711,52 +3854,64 @@ final readonly class HiddenProfileSwitchSweep
         }
         $this->publicProfiles->rememberPublic(array_values(array_diff($asked, array_keys($hidden))));
 
-        return $this->moveHidden($subscriptions, $actors, $hidden);
+        return $this->moveHidden($candidates, $hidden);
     }
 
-    /**
-     * @param list<Subscription> $subscriptions
-     *
-     * @return array<int, string> the actor each subscription's feed follows, by its position, unless known public
-     */
-    private function unsettledActorsOf(array $subscriptions): array
+    /** @return list<RefusedProfileSubscriptionModel> the refused subscriptions whose actor is not known public */
+    private function unsettledCandidates(): array
     {
-        $actors = [];
-        foreach ($subscriptions as $index => $subscription) {
-            $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $subscription->getFeed()->getUrl());
+        $candidates = [];
+        foreach ($this->subscriptions->findOnForbiddenBlueskyProfileFeeds(self::CANDIDATES_PER_SWEEP) as $refused) {
+            $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $refused->getFeed()->getUrl());
             if (null !== $actor && BlueskyActor::isValid($actor) && !$this->publicProfiles->isPublic($actor)) {
-                $actors[$index] = $actor;
+                $candidates[] = new RefusedProfileSubscriptionModel($refused, $actor);
             }
         }
 
-        return $actors;
+        return $candidates;
     }
 
     /**
-     * @param list<Subscription>                $subscriptions
-     * @param array<int, string>                $actors
-     * @param array<string, HiddenProfileModel> $hidden
+     * @param list<RefusedProfileSubscriptionModel> $candidates
+     *
+     * @return list<string>
      */
-    private function moveHidden(array $subscriptions, array $actors, array $hidden): HiddenProfileSwitchReportModel
+    private static function askedActorsOf(array $candidates, ProfileImageBudgetModel $budget): array
+    {
+        $actors = array_map(
+            static fn (RefusedProfileSubscriptionModel $candidate): string => $candidate->actor,
+            $candidates,
+        );
+
+        return \array_slice(array_values(array_unique($actors)), 0, $budget->calls * AppViewClient::URIS_PER_CALL);
+    }
+
+    /**
+     * @param list<RefusedProfileSubscriptionModel> $candidates
+     * @param array<string, HiddenProfileModel>     $hidden
+     */
+    private function moveHidden(array $candidates, array $hidden): HiddenProfileSwitchReportModel
     {
         $report = HiddenProfileSwitchReportModel::none();
-        foreach ($actors as $index => $actor) {
-            $profile = $hidden[$actor] ?? null;
+        foreach ($candidates as $candidate) {
+            $profile = $hidden[$candidate->actor] ?? null;
             if (null !== $profile) {
-                $report = $report->counting($this->moveOne($subscriptions[$index], $profile));
+                $report = $report->counting($this->moveOne($candidate, $profile));
             }
         }
 
         return $report;
     }
 
-    private function moveOne(Subscription $subscription, HiddenProfileModel $profile): HiddenProfileMoveOutcome
-    {
+    private function moveOne(
+        RefusedProfileSubscriptionModel $candidate,
+        HiddenProfileModel $profile,
+    ): HiddenProfileMoveOutcome {
         try {
-            return $this->move->move($subscription, $profile);
+            return $this->move->move($candidate->subscription, $profile);
         } catch (SubscriptionLimitReachedException $exception) {
             $this->logger->info('Hidden-profile switch skipped a subscriber at the subscription cap.', [
-                'subscriptionId' => $subscription->requireId(),
+                'subscriptionId' => $candidate->subscription->requireId(),
                 'exception' => $exception,
             ]);
 
@@ -3766,12 +3921,14 @@ final readonly class HiddenProfileSwitchSweep
 }
 ```
 
+`isThrottled()` reads the same host backoff `ProfileImageSweep` respects: a 429 on any AppView call holds both sweeps until it ends. The queue is fetched before the public-cache filter, so 200 refused feeds of public profiles can delay a hidden one by a sweep; accepted (the cache is daily, and such a backlog is rare).
+
 - [ ] **Step 4: Run the tests and see them pass.** Same command. Expected: PASS. Then `php bin/phpunit tests/Service/Subscription tests/Repository/SubscriptionRepositoryTest.php` (the repository grew).
 
 - [ ] **Step 5: Commit.** `composer cs`, then:
 
 ```bash
-git add backend/src/Entity/Subscription.php backend/src/Repository/SubscriptionRepository.php backend/config/packages/cache.yaml backend/src/Service/Social backend/tests
+git add backend/src/Entity/Subscription.php backend/src/Repository/SubscriptionRepository.php backend/src/Service/Fetch/Exception/FeedUnreachableException.php backend/src/Service/Fetch/ResponseClassifier.php backend/config/packages/cache.yaml backend/src/Service/Social backend/tests
 git commit -m "feat(#1667): move subscribers of a hidden profile's refused RSS feed to author feeds"
 ```
 
@@ -4057,17 +4214,72 @@ git commit -m "feat(#1667): run the hidden-profile switch from the worker and th
 
 ### Task 12: Gates, and the checklist for the main checkout
 
-- [ ] **Step 1: Backend gates** (from `backend/`):
+- [ ] **Step 1: Merge develop.** `git fetch origin develop && git merge origin/develop`.
+
+- [ ] **Step 2: The unmatched favourite reaches #1666's saved feed — only if #1666 has landed; otherwise stop and report.** #1666 has landed when `git log --oneline --grep='(#1666)' origin/develop` lists its commits. If it lists none, stop here, do not open the PR for merge, and report back that the switch waits for #1666. If it has landed, append to `backend/tests/Service/Social/HiddenProfileSwitchSweepTest.php`:
+
+```php
+    public function testAFavouriteWithoutATwinInTheAuthorFeedEndsUpInTheSavedFeed(): void
+    {
+        $user = $this->user('switch-unmatched@example.test');
+        $account = $this->accountOf($user);
+        $rss = $this->rssSubscription($user);
+        $at = new \DateTimeImmutable(self::NOW);
+        $older = new Entry($rss->getFeed(), self::RUSTY_OLDER_POST, null, 'Older than the first page', $at, $at);
+        $this->entityManager->persist($older);
+        $favourite = new EntryState($user, $older);
+        $favourite->markFavorite();
+        $this->entityManager->persist($favourite);
+        $this->entityManager->flush();
+        $this->sweep(1);
+        $authorFeed = $this->authorSubscriptionOf($account)?->getFeed();
+        self::assertNotNull($authorFeed);
+        $this->entry($authorFeed);
+        $authorFeed->recordSuccessfulFetch(new \DateTimeImmutable(self::NOW), 15);
+        $this->entityManager->flush();
+
+        self::assertEquals(new HiddenProfileSwitchReportModel(0, 1), $this->sweep(1));
+
+        $this->entityManager->clear();
+        $savedFeed = $this->entityManager->getRepository(Feed::class)->findOneBy([
+            'url' => sprintf('saved:%d:bluesky', $user->requireId()),
+        ]);
+        self::assertNotNull($savedFeed);
+        $saved = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $savedFeed]);
+        self::assertSame(
+            ['Older than the first page'],
+            array_map(static fn (Entry $entry): string => $entry->getTitle(), $saved),
+        );
+        $states = $this->entityManager->getRepository(EntryState::class);
+        self::assertInstanceOf(EntryStateRepository::class, $states);
+        self::assertTrue($states->findOneForUserEntry($user->requireId(), $saved[0]->requireId())?->isFavorite());
+    }
+```
+
+and the constant next to `POST`:
+
+```php
+    private const string RUSTY_OLDER_POST = 'at://did:plc:hczfd45prvqtdrw77256syag/app.bsky.feed.post/2zzz';
+```
+
+The author feed holds only the twin of `POST`, so `sameGuidEntryIds` pairs nothing for `RUSTY_OLDER_POST`, `SavedStateMover` leaves it alone, and only #1666's save-before-reclaim keeps it when `finish()` unsubscribes the RSS feed. Run `cd backend && php bin/phpunit tests/Service/Social/HiddenProfileSwitchSweepTest.php`. If #1666 names its saved feed or copies the post differently than `saved:<userId>:bluesky` with the post's own title, adjust only this test's lookup to #1666's code, never #1666's code; if the favourite is lost, stop and report: the switch must not merge while it drops saved posts. Deletion check: remove `$this->subscriptionService->unsubscribe($rssSubscription)` from `HiddenProfileMove::finish()` → nothing is reclaimed, no saved feed exists → `assertNotNull($savedFeed)` red; the report assertion pins that the move did finish. Commit:
+
+```bash
+git add backend/tests/Service/Social/HiddenProfileSwitchSweepTest.php
+git commit -m "test(#1667): a switched subscription's unmatched favourite reaches the saved feed"
+```
+
+- [ ] **Step 3: Backend gates** (from `backend/`):
   - `bin/console cache:warmup`, then `composer check` (cs + stan + tramp). PHPStan watch points: `ServiceRoleRule` (the new classes sit in root, `Model/`, `Support/`, `HiddenProfiles/`, `SubscribeRoute/`, `Exception/` as planned), `ServiceModuleCycleRule` (`SavedPosts` imports no `Service` module), `DomainKnowsNoHttpRule` (only `Response::HTTP_FORBIDDEN` in `SubscriptionRepository`), `AbbreviatedNameRule`, `NoCollaboratorDefaultRule`, `InvocationMatchersOnThisRule`. phptramp: `$tags` crosses `SubscriptionService` only inside `SubscribeRequestModel`; `AuthorFeeds::create` → `SubscriptionCreator::create` is the existing two-method creator chain.
   - `composer md` — every touched `src` file PHPMD-clean (`MaintenanceTick` stays at 9 constructor parameters).
   - `composer test:parallel`, and `php bin/phpunit` once in full.
   - `composer infection:diff` — kill every escaped mutant on a changed line with a test, or delete the condition it proves redundant; never lower `minMsi`.
   - `bin/console lint:container`; `EveryApplicationServiceBuildsTest` is part of the suite.
   - `ls -t var/log/dev-*.log | head -1 | xargs tail -n 100 | jq .` — no new deprecation.
-- [ ] **Step 2: Frontend gate** (from `frontend/`): `npm run check`.
-- [ ] **Step 3: Commit any gate fixes** as `refactor(#1667): …` or `test(#1667): …`.
-- [ ] **Step 4: PR body notes** (`Closes #1667`): the switch runs as a scheduled sweep plus the tick, not a dispatched message, and why (no async transport; the refresh runs inside the tick request on Strato); the two feeds coexist for one refresh cycle; saved state on posts older than the author feed's first page (50 posts) is not carried; the import decides the label server-side with `getProfiles`, not from the picker's `getFollows` labels; preview of a hidden profile's `/rss` is unchanged (the route answers before discovery offers it).
-- [ ] **Step 5: Manual checklist after merging into the main checkout** (Docker stack; none of it runs from this worktree):
+- [ ] **Step 4: Frontend gate** (from `frontend/`): `npm run check`.
+- [ ] **Step 5: Commit any gate fixes** as `refactor(#1667): …` or `test(#1667): …`.
+- [ ] **Step 6: PR body notes** (`Closes #1667`): the switch runs as a scheduled sweep plus the tick, not a dispatched message, and why (no async transport; the refresh runs inside the tick request on Strato); the two feeds coexist for one refresh cycle; saved state on posts older than the author feed's first page (50 posts) has no twin to move to, and #1666 saves those favourites and kept posts to "Saved from Bluesky" when the RSS feed is reclaimed; the import decides the label server-side with `getProfiles`, not from the picker's `getFollows` labels; preview of a hidden profile's `/rss` is unchanged (the route answers before discovery offers it).
+- [ ] **Step 7: Manual checklist after merging into the main checkout** (Docker stack; none of it runs from this worktree):
   1. `docker compose exec php composer test` — the MySQL leg (exercises `copyLike`'s `INSERT IGNORE`).
   2. With a connected Bluesky account, add `https://bsky.app/profile/rusty-17.bsky.social` (and once more as `…/rss` in another user): the dialog closes; the feed sits under Bluesky → People, gets its avatar after the next picture sweep, loads posts after the next refresh, shows no reposts and no replies to others, and counts in the network's People view.
   3. Without a Bluesky account (or with one that needs a reconnect), the same URL shows "This profile is only visible to logged-in Bluesky users. Connect a Bluesky account in Settings → Social Media to subscribe." under the URL field.
@@ -4078,8 +4290,7 @@ git commit -m "feat(#1667): run the hidden-profile switch from the worker and th
 
 ## Open questions for the implementer
 
-- `SocialAccountRepositoryTest`'s helper names (`userNamed()`, `repository()` in Task 4) stand for whatever that file already uses; match them.
 - Task 3's `AppViewHiddenProfiles::modelOf()` casts the DID; if PHPStan level max objects, assert it non-null instead.
 - If `ApiProblem`'s detail property is not called `detail`, adjust `SocialProblemsTest`.
 - Check `copyLike`'s column names against the `social_like` migration.
-- For Lars, not blocking: the two-phase window shows the person twice (refused RSS + not-yet-fetched author feed) until the next refresh; and saved state on posts beyond the author feed's first page is lost when the RSS feed is reclaimed. Should a move wait while unmatched favourites or kept posts exist?
+- For Lars, not blocking: the two-phase window shows the person twice (refused RSS + not-yet-fetched author feed) until the next refresh. (Saved state on posts beyond the author feed's first page: settled, #1666 saves it; Task 12 Step 2 tests it.)
