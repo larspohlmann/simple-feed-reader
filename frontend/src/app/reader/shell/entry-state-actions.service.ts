@@ -82,7 +82,7 @@ export class EntryStateActions implements EntryActionHandler {
   open(entry: EntryDto): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { entry: entryParam(entry.id, entry.title) },
+      queryParams: { entry: entryParam(entry.id, entry.title), link: null },
       queryParamsHandling: 'merge',
     });
   }

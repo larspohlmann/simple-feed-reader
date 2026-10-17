@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
+import { LinkReaderNavigation } from './link-reader-navigation.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ListHeading } from './list-heading.service';
 import { EntryStateActions } from './entry-state-actions.service';
@@ -91,6 +92,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     PendingEntriesPoll,
     { provide: PreviewProgress, useExisting: PendingEntriesPoll },
     ReaderRouteState,
+    LinkReaderNavigation,
     ListHeading,
     EntryStateActions,
     MarkReadActions,
@@ -330,7 +332,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   onCloseReader(): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { entry: null },
+      queryParams: { entry: null, link: null },
       queryParamsHandling: 'merge',
     });
   }
