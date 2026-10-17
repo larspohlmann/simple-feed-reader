@@ -82,6 +82,15 @@ describe('ArticleBody', () => {
     document.body.innerHTML = '';
   });
 
+  it('hands nothing on when destroyed before the decoration runs', async () => {
+    connectBody('<a href="https://ext.test/z">ext</a>');
+
+    injector.destroy();
+    await Promise.resolve();
+
+    expect(decorated).not.toHaveBeenCalled();
+  });
+
   it('decorates the body once it renders, then hands it on', async () => {
     connectBody('<a href="https://ext.test/z">ext</a>');
     expect(decorated).not.toHaveBeenCalled();

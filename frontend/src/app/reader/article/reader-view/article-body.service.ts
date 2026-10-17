@@ -37,12 +37,16 @@ export class ArticleBody {
   private readonly zone = inject(NgZone);
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
+  private destroyed = false;
 
   constructor() {
     const onKeydown = (event: KeyboardEvent): void =>
       toggleCinemaByKey(event, this.content()?.nativeElement);
     document.addEventListener('keydown', onKeydown);
-    inject(DestroyRef).onDestroy(() => document.removeEventListener('keydown', onKeydown));
+    inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
+      document.removeEventListener('keydown', onKeydown);
+    });
   }
 
   connect(parts: ArticleBodyParts): void {
@@ -89,7 +93,7 @@ export class ArticleBody {
         });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
-          if (!host) return;
+          if (!host || this.destroyed) return;
           decorateArticle(host, this.i18n, parts.enclosureUrl());
           this.zone.runOutsideAngular(() => this.media.follow(host));
           parts.decorated(host);
