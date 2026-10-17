@@ -64,8 +64,8 @@ export class EntryRowComponent {
    *  one — the template renders plain interpolation instead of two
    *  `<app-marked-text>` instances per row, so the ordinary list pays nothing
    *  for a feature it never uses. */
-  protected readonly total = computed(() => this.entry().thread.length + 1);
   readonly marking = computed(() => this.terms().length > 0);
+  protected readonly total = computed(() => this.entry().thread.length + 1);
 
   readonly imgError = signal(false);
   // The entry's image, from the same shared helper the magazine uses: the
