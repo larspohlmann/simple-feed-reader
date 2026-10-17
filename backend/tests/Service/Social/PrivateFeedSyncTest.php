@@ -233,7 +233,10 @@ final class PrivateFeedSyncTest extends DbTestCase
 
         self::assertEquals(new PrivateFeedSyncOutcomeModel(added: 11), $outcome);
         self::assertCount(11, $this->subscribedUrls());
-        self::assertCount(10, $this->changes());
+        self::assertSame(
+            array_map(static fn (int $index): string => 'Feed ' . $index, range(2, 11)),
+            array_column($this->changes(), 2),
+        );
     }
 
     public function testAFullAccountSkipsAnAdditionAndTriesAgainNextTime(): void

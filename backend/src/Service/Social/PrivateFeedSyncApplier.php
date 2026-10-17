@@ -48,7 +48,8 @@ final readonly class PrivateFeedSyncApplier
         $this->entityManager->beginTransaction();
         try {
             $removed = $this->remove($account, $network, $plan->removals());
-            $outcome = new PrivateFeedSyncOutcomeModel($this->add($account, $plan->additions()), $removed);
+            $added = $this->add($account, $plan->additions());
+            $outcome = new PrivateFeedSyncOutcomeModel($added, $removed);
             $this->rememberAndStamp($account, $plan);
             $this->entityManager->commit();
         } catch (\Throwable $exception) {

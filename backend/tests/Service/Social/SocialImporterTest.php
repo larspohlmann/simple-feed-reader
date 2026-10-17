@@ -321,7 +321,12 @@ final class SocialImporterTest extends DbTestCase
         $result = $this->importer()->import($account, new SocialImportModel([], [], [$news]));
 
         self::assertSame(1, $result->imported);
-        $this->subscriptionIdOf($newsUrl);
+        $feed = $this->feedAt($newsUrl);
+        self::assertNotNull($feed);
+        self::assertSame(1, $this->entityManager->getRepository(Subscription::class)->count([
+            'user' => $this->user,
+            'feed' => $feed,
+        ]));
         /** @var KnownSocialCollectionRepository $known */
         $known = $this->entityManager->getRepository(KnownSocialCollection::class);
         self::assertSame(['custom_feed:' . self::NEWS => true], $known->keysOf($account));
