@@ -341,10 +341,8 @@ final class SocialAccountControllerTest extends ApiTestCase
         self::assertSame('unreachable', $sync['skipped']);
         self::assertSame(
             [
-                ['kind' => 'list', 'name' => 'News', 'reason' => 'deleted', 'added' => false,
-                    'at' => '2026-10-17T10:30:00+00:00'],
-                ['kind' => 'list', 'name' => 'News', 'reason' => 'saved', 'added' => true,
-                    'at' => '2026-10-17T10:00:00+00:00'],
+                ['kind' => 'list', 'name' => 'News', 'reason' => 'deleted', 'at' => '2026-10-17T10:30:00+00:00'],
+                ['kind' => 'list', 'name' => 'News', 'reason' => 'saved', 'at' => '2026-10-17T10:00:00+00:00'],
             ],
             $sync['changes'],
         );

@@ -146,9 +146,9 @@ final class EntryJson
     }
 
     /**
-     * Who posted the entry when that is someone other than the feed. A private or saved social post names its own
-     * author; every post of a profile feed is that person's, so it shows their picture and profile unless the post
-     * brings an avatar of its own (a repost); a saved article names the feed it was saved from.
+     * Who posted the entry when that is someone other than the feed. A private feed's post names its own author; every
+     * post of a profile feed is that person's, so it shows their picture and profile unless the post brings an avatar
+     * of its own (a repost).
      *
      * @return array{name: string, url: string|null, imageUrl: string|null}|null
      */

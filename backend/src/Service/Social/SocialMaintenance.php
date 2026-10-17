@@ -10,7 +10,6 @@ use App\Service\Social\Model\ProfileImageBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use Psr\Clock\ClockInterface;
 
-/** The maintenance tick's social halves: profile pictures where they ran before, the private feeds' sync last. */
 final readonly class SocialMaintenance
 {
     private const int PROFILE_IMAGE_MAX_CALLS = 1;

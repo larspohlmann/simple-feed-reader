@@ -10,7 +10,6 @@ use App\Repository\EntryStateRepository;
 use App\Repository\SocialLikeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** Moves a user's marks from one entry to another of the same post: favourite and kept merge, the source's go. */
 final readonly class SavedStateMover
 {
     public function __construct(

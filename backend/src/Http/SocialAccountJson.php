@@ -19,17 +19,14 @@ final readonly class SocialAccountJson
     {
         return [
             'accounts' => array_map(
-                fn (SocialAccount $account): array => $this->account(
-                    $account,
-                    $recentChanges[$account->requireId()] ?? [],
-                ),
+                fn (SocialAccount $account): array => $this->account($account, $recentChanges),
                 $accounts,
             ),
         ];
     }
 
     /**
-     * @param list<PrivateFeedSyncChange> $recentChanges
+     * @param array<int, list<PrivateFeedSyncChange>> $recentChanges by account id
      *
      * @return array<string, mixed>
      */
@@ -44,14 +41,14 @@ final readonly class SocialAccountJson
             'isDefault' => $account->isDefault(),
             'credentialHint' => $account->getCredentialHint(),
             'connectedAt' => $account->getConnectedAt()->format(\DateTimeInterface::ATOM),
-            'sync' => $this->syncOf($account, $recentChanges),
+            'sync' => $this->syncOf($account, $recentChanges[$account->requireId()] ?? []),
         ];
     }
 
     /**
      * @param list<PrivateFeedSyncChange> $recentChanges
      *
-     * @return array{checkedAt: string|null, skipped: string|null, changes: list<array<string, string|bool>>}
+     * @return array{checkedAt: string|null, skipped: string|null, changes: list<array<string, string>>}
      */
     private function syncOf(SocialAccount $account, array $recentChanges): array
     {
@@ -63,7 +60,6 @@ final readonly class SocialAccountJson
                     'kind' => $change->getKind()->value,
                     'name' => $change->getName(),
                     'reason' => $change->getReason()->value,
-                    'added' => $change->getReason()->isAddition(),
                     'at' => $change->getChangedAt()->format(\DateTimeInterface::ATOM),
                 ],
                 $recentChanges,

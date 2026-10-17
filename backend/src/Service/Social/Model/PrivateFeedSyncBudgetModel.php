@@ -8,7 +8,7 @@ namespace App\Service\Social\Model;
 final readonly class PrivateFeedSyncBudgetModel
 {
     /** What the tick asks to have left before it starts one account: typical checks take 1-3 s. */
-    public const int TICK_ACCOUNT_SECONDS = 5;
+    private const int TICK_ACCOUNT_SECONDS = 5;
 
     private function __construct(public int $accounts)
     {

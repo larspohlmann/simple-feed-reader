@@ -9,8 +9,8 @@ use App\Dto\Social\ConnectMastodonRequest;
 use App\Dto\Social\ReplaceCredentialRequest;
 use App\Entity\User;
 use App\Http\SocialAccountJson;
+use App\Repository\PrivateFeedSyncChangeRepository;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Social\PrivateFeedSyncLog;
 use App\Service\Social\SocialAccountConnector;
 use App\Service\Social\SocialAccountEditor;
 use App\Service\Social\SocialAccountForUser;
@@ -31,7 +31,7 @@ final readonly class SocialAccountController
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialAccountLimiter,
         private SocialAccountJson $accountJson,
-        private PrivateFeedSyncLog $syncLog,
+        private PrivateFeedSyncChangeRepository $syncChanges,
     ) {
     }
 
@@ -40,7 +40,7 @@ final readonly class SocialAccountController
     {
         $accounts = $this->editor->accountsOf($user);
 
-        return new JsonResponse($this->accountJson->list($accounts, $this->syncLog->recentOf($accounts)));
+        return new JsonResponse($this->accountJson->list($accounts, $this->syncChanges->recentOf($accounts)));
     }
 
     #[Route('/bluesky', name: 'api_me_social_accounts_connect_bluesky', methods: ['POST'])]
@@ -84,7 +84,7 @@ final readonly class SocialAccountController
 
         $account = $this->connector->reconnect($account, $credentials);
 
-        return new JsonResponse($this->accountJson->account($account, $this->syncLog->recentOfOne($account)));
+        return new JsonResponse($this->accountJson->account($account, $this->syncChanges->recentOf([$account])));
     }
 
     #[Route('/{id}/default', name: 'api_me_social_accounts_default', requirements: ['id' => '\d+'], methods: ['PUT'])]

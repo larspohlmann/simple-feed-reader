@@ -17,7 +17,7 @@ use Psr\Log\LoggerInterface;
 
 final readonly class PrivateFeedSyncSweep
 {
-    public const string DUE_AFTER = '-1 hour';
+    private const string DUE_AFTER = '-1 hour';
 
     public function __construct(
         private SocialAccountRepository $socialAccounts,
@@ -29,7 +29,6 @@ final readonly class PrivateFeedSyncSweep
     ) {
     }
 
-    /** One account's failure is logged and stamped `failed`; the sweep stops early only when the entity manager stays closed. */
     public function sweep(PrivateFeedSyncBudgetModel $budget): PrivateFeedSyncReportModel
     {
         $report = PrivateFeedSyncReportModel::none();
