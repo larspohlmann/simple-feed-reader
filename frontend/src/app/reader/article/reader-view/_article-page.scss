@@ -1,0 +1,110 @@
+@use '../../../theme/breakpoints' as bp;
+@use '../../../theme/glass-rim';
+
+@mixin article-page {
+  article {
+    position: relative;
+
+    /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+       tuned reading measure, not a spacing value. */
+    max-width: 720px;
+    margin: 0 auto;
+
+    /* The tail is the largest bottom need: the reading focus's (#107), which ReadingScope
+       grants only when the article overflows, and a widened video's (#1479). */
+    padding: var(--space-5) var(--space-4)
+      max(var(--space-5), var(--reader-focus-tail, 0%), var(--reader-cinema-tail, 0%));
+  }
+
+  @container reader-pane (width > #{bp.$container-reader-cinema}) {
+    article:has(.reader-cinema--on) {
+      --reader-cinema-tail: calc(100cqb - var(--reader-top));
+    }
+  }
+
+  /* The toolbar carries the back button in every mode now (#128), so this is
+     just the title's box. */
+  .title-row {
+    margin: 0 0 var(--space-2);
+  }
+
+  .title {
+    font-size: var(--fs-xl);
+    margin: 0;
+    color: var(--text-primary);
+  }
+
+  .meta {
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    margin: 0 0 var(--space-3);
+  }
+
+  .meta a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  /* The only icon in a genuine run of text rather than a flex row, so vertical
+     alignment matters. Reads as a superscript footnote mark on the link, not a
+     glyph sharing the line — scoped here since flex-row icons centre exactly. */
+  .meta a app-icon {
+    vertical-align: super;
+  }
+
+  .lead-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    margin-bottom: var(--space-5);
+  }
+
+  .placeholder {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    color: var(--text-muted);
+  }
+
+  /* The card chrome (amber ring, surface, padding) lives in app-warning-box; this
+     owns only the note's place in the reader and its inner layout. The glyph sits
+     in the box's gutter, the body hangs beside it — the paywall-notice pattern. */
+  .reader-fallback {
+    margin: 0 0 var(--space-3);
+    font-size: var(--fs-sm);
+  }
+
+  .reader-note {
+    margin: 0;
+  }
+
+  .reader-fallback-quiet {
+    margin: 0 0 var(--space-3);
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+  }
+
+  .reader-error {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+  }
+
+  .reader-error summary {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .reader-error pre {
+    @include glass-rim.filled(var(--surface-0));
+
+    margin: var(--space-2) 0 0;
+    padding: var(--space-3);
+    border-radius: var(--radius);
+    font-family: ui-monospace, monospace;
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

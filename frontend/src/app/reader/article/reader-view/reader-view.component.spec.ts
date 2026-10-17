@@ -7,6 +7,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
 import { ArticleGestures } from './article-gestures.service';
+import { ArticleLayerComponent } from '../article-layer/article-layer.component';
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { entryScrollKey } from '../../scroll/list-scroll-memory';
@@ -97,7 +98,7 @@ class FakeEntryBodyService {
 /** What the body store answers for entry 1 by default (see `beforeEach` below),
  *  so most of these presentational tests need no body-store setup of their own. */
 const gestures = (fixture: ComponentFixture<ReaderViewComponent>): ArticleGestures =>
-  fixture.debugElement.injector.get(ArticleGestures);
+  fixture.debugElement.query(By.directive(ArticleLayerComponent)).injector.get(ArticleGestures);
 
 const scrollerOf = (fixture: ComponentFixture<ReaderViewComponent>): HTMLElement =>
   (fixture.nativeElement as HTMLElement).querySelector('.scroller') as HTMLElement;
@@ -1056,7 +1057,9 @@ describe('ReaderViewComponent', () => {
 
   it('reserves the toolbar’s measured height above the article', () => {
     const fixture = mount(entry());
-    const element = fixture.nativeElement as HTMLElement;
+    const element = (fixture.nativeElement as HTMLElement).querySelector(
+      'app-article-layer',
+    ) as HTMLElement;
     const bar = element.querySelector('.bar') as HTMLElement;
     Object.defineProperty(bar, 'offsetHeight', { configurable: true, value: 44 });
 

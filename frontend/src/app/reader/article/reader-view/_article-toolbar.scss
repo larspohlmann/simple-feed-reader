@@ -1,0 +1,62 @@
+@use '../../../theme/breakpoints' as bp;
+
+/* The nameplate and actions a reader projects into its article layer's toolbar
+   and strip: projected, so the reader's own styles must carry them. */
+@mixin article-toolbar {
+  /* The same nameplate on the split pane, where the toolbar is always there to
+     carry it. Flexible so it takes the width the back button and the actions
+     leave; `min-width: 0` so that width may also shrink — see .mini-title. */
+  .bar-name {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 var(--space-3);
+  }
+
+  /* One line, cut with an ellipsis. `min-width: 0` because a flex item's floor is
+     its content width, and without it a long title pushes its row wide and
+     scrolls the pane sideways instead of truncating. */
+  .mini-title,
+  .bar-title {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Small enough to stay chrome on a phone; the split pane's toolbar is taller
+     and its nameplate carries the article at reading-UI size. */
+  .mini-title {
+    font-size: var(--fs-sm);
+  }
+
+  .bar-title {
+    font-size: var(--fs-base);
+  }
+
+  /* The toolbar's buttons carry different type sizes (mode toggle vs arrows),
+     so inline left them staggered on differing baselines. A flex row centres
+     them by layout instead of by type metrics. */
+  .nav {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+  }
+
+  /* The .nav actions carry the shared list-action look (see _list-action.scss).
+     On a phone the icon-only ones drop their labels and become bordered icon
+     buttons, sitting tighter than the spaced text links; the mode toggle keeps
+     its label so the current view stays named. */
+  @media (width <= bp.$bp-sm) {
+    .nav {
+      gap: var(--space-1);
+    }
+
+    .nav .mobile-icon-only .txt {
+      display: none;
+    }
+  }
+}

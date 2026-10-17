@@ -1,0 +1,46 @@
+<div
+  class="frame"
+  [class.with-bar]="!fullscreen()"
+  [style.transform]="gestures.swipeTransform()"
+  [style.transition]="gestures.snapTransition()"
+>
+  @if (fullscreen()) {
+    <!-- The toolbar below retracts on scroll, so full-screen the nameplate needs
+         a strip of its own. aria-hidden: the h1 carries the same title, so
+         announcing this too would read the headline twice. -->
+    <div class="mini" aria-hidden="true">
+      <ng-content select="[articleMini]" />
+    </div>
+  }
+  <div #bar class="bar" [class.hidden]="toolbarHidden()">
+    <button class="close" type="button" [attr.aria-label]="backLabel()" (click)="back()">
+      <app-icon name="arrow_back" size="md" />
+    </button>
+    <ng-content select="[articleBar]" />
+  </div>
+  <div
+    #scroller
+    class="scroller"
+    [appScrollProgress]="progressRail()"
+    (scroll)="onScroll(scroller.scrollTop)"
+  >
+    <div
+      class="reader"
+      [class.with-tail]="withTail()"
+      [style.transform]="gestures.pullTransform()"
+      [style.transition]="gestures.snapTransition()"
+    >
+      <ng-content />
+      @if (fullscreen() && gestures.pulling()) {
+        <div class="pull-back" [class.armed]="gestures.pullArmed()" aria-hidden="true">
+          <app-spinner [size]="22" />
+        </div>
+      }
+    </div>
+  </div>
+  <!-- No progressbar role: announcing every scroll frame would only be noise. -->
+  <app-progress-rail [progress]="progressRail()" />
+</div>
+@if (showToTop()) {
+  <app-to-top-button (activate)="toTop.emit()" />
+}
