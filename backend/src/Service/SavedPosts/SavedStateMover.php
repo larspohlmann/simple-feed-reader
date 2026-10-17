@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\SavedPosts;
 
+use App\Entity\BackedUpReadMark;
 use App\Entity\EntryState;
 use App\Repository\EntryStateRepository;
 use App\Repository\SocialLikeRepository;
@@ -65,9 +66,8 @@ final readonly class SavedStateMover
 
     private static function copyReading(EntryState $source, EntryState $target): void
     {
-        $hiddenSince = self::hiddenSinceOf($source);
-        if (null !== $hiddenSince && !$target->isHidden()) {
-            $target->hide($hiddenSince);
+        if ($source->isHidden() && !$target->isHidden()) {
+            $target->restoreReadMark(new BackedUpReadMark(true, $source->getHiddenAt()));
         }
         $viewedAt = $source->getViewedAt();
         if (null !== $viewedAt) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\SavedPosts;
 
+use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
 use App\Entity\EntryOrigin;
 use App\Entity\EntryState;
@@ -179,6 +180,48 @@ final class SavedPostRescueTest extends DbTestCase
         self::assertEquals(new \DateTimeImmutable(self::AT), $twinState->getHiddenAt());
     }
 
+    public function testALegacyReadMarkArrivesReadOnANewCopyWithItsInstantUnknown(): void
+    {
+        $feed = $this->feed('https://legacy.example/feed.xml', 'Legacy');
+        $subscription = $this->subscribe($this->user, $feed);
+        $state = $this->state($this->user, $this->entry($feed, 'legacy', null));
+        $state->markFavorite();
+        $state->restoreReadMark(new BackedUpReadMark(true, null));
+        $this->entityManager->flush();
+
+        $this->service()->unsubscribe($subscription);
+        $this->entityManager->clear();
+
+        $copyState = $this->stateOf($this->entriesOf($this->savedFeed(null))[0]);
+        self::assertTrue($copyState->isHidden());
+        self::assertNull($copyState->getHiddenAt());
+    }
+
+    public function testALegacyReadMarkArrivesReadOnAnUnreadTwin(): void
+    {
+        $twinId = $this->unsubscribeFromATwinOf(
+            new BackedUpReadMark(true, null),
+            new BackedUpReadMark(false, null),
+        );
+
+        $twinState = $this->stateOfId($twinId);
+        self::assertTrue($twinState->isHidden());
+        self::assertNull($twinState->getHiddenAt());
+    }
+
+    public function testAnAlreadyReadTwinKeepsItsOwnReadInstant(): void
+    {
+        $twinReadAt = new \DateTimeImmutable('2026-10-01 08:00:00');
+        $twinId = $this->unsubscribeFromATwinOf(
+            new BackedUpReadMark(true, new \DateTimeImmutable(self::AT)),
+            new BackedUpReadMark(true, $twinReadAt),
+        );
+
+        $twinState = $this->stateOfId($twinId);
+        self::assertTrue($twinState->isHidden());
+        self::assertEquals($twinReadAt, $twinState->getHiddenAt());
+    }
+
     public function testAFeedAnotherReaderKeepsLosesOnlyTheFlagsThatMoved(): void
     {
         $shared = $this->feed('https://shared.example/feed.xml', 'Shared');
@@ -300,6 +343,28 @@ final class SavedPostRescueTest extends DbTestCase
         $this->service()->unsubscribe($subscription);
 
         self::assertSame(0, $this->entityManager->getRepository(Subscription::class)->count(['user' => $this->user]));
+    }
+
+    /** @return int the twin's id, after the feed holding the kept original was left and the manager cleared */
+    private function unsubscribeFromATwinOf(BackedUpReadMark $originalRead, BackedUpReadMark $twinRead): int
+    {
+        $leaving = $this->feed('https://twin-leaving.example/feed.xml', 'Leaving');
+        $kept = $this->feed('https://twin-kept.example/feed.xml', 'Kept');
+        $subscription = $this->subscribe($this->user, $leaving);
+        $this->subscribe($this->user, $kept);
+        $original = $this->entry($leaving, 'a', 'https://news.example/twin');
+        $twin = $this->entry($kept, 'b', 'https://news.example/twin');
+        $originalState = $this->state($this->user, $original);
+        $originalState->markKept();
+        $originalState->restoreReadMark($originalRead);
+        $this->state($this->user, $twin)->restoreReadMark($twinRead);
+        $this->entityManager->flush();
+        $twinId = $twin->requireId();
+
+        $this->service()->unsubscribe($subscription);
+        $this->entityManager->clear();
+
+        return $twinId;
     }
 
     private function newUser(string $email): User
