@@ -11,6 +11,7 @@ use App\Service\Bluesky\PostEnricher;
 use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
+use App\Service\Refresh\FeedShareEnrichment;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -96,7 +97,7 @@ final class FeedOutcomePersisters
             FeedSchedulers::build($this->clock),
             new EntryIndexer($this->indexWriter, new NullLogger()),
             PostEnrichers::queue($this->entityManager, $this->clock),
-            $postEnricher,
+            new FeedShareEnrichment($postEnricher, SelfThreadEnrichers::idle($this->entityManager, $this->clock)),
             $this->logger,
         );
     }

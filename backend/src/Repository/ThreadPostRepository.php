@@ -69,6 +69,17 @@ final class ThreadPostRepository extends ServiceEntityRepository
         return $grouped;
     }
 
+    public function hasAnyFor(Entry $entry): bool
+    {
+        return $this->createQueryBuilder('post')
+            ->select('post.id')
+            ->andWhere('post.entry = :entry')
+            ->setParameter('entry', $entry)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getScalarResult() !== [];
+    }
+
     /** @return list<string> the reply URLs of the entry's thread, in position order */
     public function urlsOf(Entry $entry): array
     {

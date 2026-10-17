@@ -13,6 +13,7 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\ShareEnrichmentRepository;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Completion\SelfThreadPass\SelfThreadPassInterface;
 use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\ShareLinkCards;
 
@@ -25,6 +26,7 @@ final readonly class EntryCompletion
         private EntryListRowEnricher $enricher,
         private ShareEnrichmentRepository $enrichments,
         private PostEnricher $postEnricher,
+        private SelfThreadPassInterface $selfThreads,
         private ShareLinkCards $shareLinkCards,
         private NaiveUtcClock $clock,
     ) {
@@ -44,18 +46,29 @@ final readonly class EntryCompletion
     }
 
     /**
-     * Bluesky posts go first, as one AppView call fills them all; link posts then share the call's page fetches.
+     * Bluesky posts go first, as one AppView call fills them all; self-reply threads follow, and link posts last, so a
+     * root a fold hands on gets its cards in the same completion. Each step re-queries what the one before handed on.
      *
      * @param list<Entry> $entries
      */
     private function completeQueued(array $entries): void
     {
-        $queued = $this->enrichments->findClaimableFor($entries, $this->clock->now());
-        $this->postEnricher->complete(self::ofKind($queued, ShareEnrichmentKind::AppView));
+        $this->postEnricher->complete($this->queuedOfKind($entries, ShareEnrichmentKind::AppView));
+        $this->selfThreads->complete($this->queuedOfKind($entries, ShareEnrichmentKind::SelfThread));
         $this->shareLinkCards->complete(
-            self::ofKind($queued, ShareEnrichmentKind::LinkCards),
+            $this->queuedOfKind($entries, ShareEnrichmentKind::LinkCards),
             LinkCardBudgetModel::fetches(self::LINK_CARD_FETCHES),
         );
+    }
+
+    /**
+     * @param list<Entry> $entries
+     *
+     * @return list<ShareEnrichment>
+     */
+    private function queuedOfKind(array $entries, ShareEnrichmentKind $kind): array
+    {
+        return self::ofKind($this->enrichments->findClaimableFor($entries, $this->clock->now()), $kind);
     }
 
     /**
