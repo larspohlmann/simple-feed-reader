@@ -7,7 +7,6 @@ namespace App\Service\Backup;
 use App\Entity\Entry;
 use App\Entity\EntryMedia;
 use App\Entity\EntryState;
-use App\Entity\Feed;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
@@ -19,7 +18,7 @@ use App\Entity\User;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Support\BackupSchema;
-use App\Service\Social\Support\ExportedFeed;
+use App\Service\Social\Model\ExportedSubscriptionModel;
 
 /**
  * Encodes one backup record as its NDJSON line, the schema BackupReader parses back. The exporter decides which
@@ -86,25 +85,29 @@ final readonly class BackupLines
         ]);
     }
 
-    public function feedLine(Feed $feed): string
+    public function feedLine(ExportedSubscriptionModel $exported): string
     {
+        $feed = $exported->subscription->getFeed();
+
         return $this->encode([
             'kind' => BackupSchema::KIND_FEED,
-            'url' => ExportedFeed::urlOf($feed),
+            'url' => $exported->feedUrl,
             'siteUrl' => $feed->getSiteUrl(),
             'title' => $feed->getTitle(),
             'description' => $feed->getDescription(),
             'faviconUrl' => $feed->getFaviconUrl(),
             'imageUrl' => $feed->getImageUrl(),
-            'sourceFormat' => ExportedFeed::sourceFormatOf($feed),
+            'sourceFormat' => $exported->feedSourceFormat,
         ]);
     }
 
-    public function subscriptionLine(Subscription $subscription): string
+    public function subscriptionLine(ExportedSubscriptionModel $exported): string
     {
+        $subscription = $exported->subscription;
+
         return $this->encode([
             'kind' => BackupSchema::KIND_SUBSCRIPTION,
-            'feedUrl' => ExportedFeed::urlOf($subscription->getFeed()),
+            'feedUrl' => $exported->feedUrl,
             'customTitle' => $subscription->getCustomTitle(),
             'position' => $subscription->getPosition(),
             'markedReadUntil' => $this->formatDateOrNull($subscription->getMarkedReadUntil()),

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social\Support;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Enum\SourceFormat;
+use App\Service\Social\Model\ExportedSubscriptionModel;
 use App\Service\Social\Support\ExportedFeed;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
@@ -18,43 +19,64 @@ final class ExportedFeedTest extends TestCase
 
     public function testAnAuthorFeedIsExportedAsItsProfilesPublicRss(): void
     {
-        $author = self::feed('social:bluesky:4:author:' . self::RUSTY, SourceFormat::BLUESKY_API);
+        $author = self::subscription('social:bluesky:4:author:' . self::RUSTY, SourceFormat::BLUESKY_API);
 
-        self::assertSame(self::RUSTY_RSS, ExportedFeed::urlOf($author));
-        self::assertSame(SourceFormat::XML, ExportedFeed::sourceFormatOf($author));
+        self::assertEquals(
+            new ExportedSubscriptionModel($author, self::RUSTY_RSS, SourceFormat::XML),
+            ExportedFeed::of($author),
+        );
     }
 
     public function testAnyOtherFeedIsExportedAsItIs(): void
     {
-        $scraped = self::feed('https://blog.example.com/', SourceFormat::SCRAPED);
-        $mastodonAuthor = self::feed('social:mastodon:4:author:' . self::RUSTY, SourceFormat::MASTODON_API);
+        $scraped = self::subscription('https://blog.example.com/', SourceFormat::SCRAPED);
+        $mastodonAuthor = self::subscription('social:mastodon:4:author:' . self::RUSTY, SourceFormat::MASTODON_API);
 
-        self::assertSame('https://blog.example.com/', ExportedFeed::urlOf($scraped));
-        self::assertSame(SourceFormat::SCRAPED, ExportedFeed::sourceFormatOf($scraped));
-        self::assertSame('social:mastodon:4:author:' . self::RUSTY, ExportedFeed::urlOf($mastodonAuthor));
-        self::assertSame(SourceFormat::MASTODON_API, ExportedFeed::sourceFormatOf($mastodonAuthor));
+        self::assertEquals(
+            new ExportedSubscriptionModel($scraped, 'https://blog.example.com/', SourceFormat::SCRAPED),
+            ExportedFeed::of($scraped),
+        );
+        self::assertEquals(
+            new ExportedSubscriptionModel(
+                $mastodonAuthor,
+                'social:mastodon:4:author:' . self::RUSTY,
+                SourceFormat::MASTODON_API,
+            ),
+            ExportedFeed::of($mastodonAuthor),
+        );
     }
 
     public function testAnAuthorFeedAndTheRssFeedItReplacesExportAsTheFirstOfThem(): void
     {
-        $rss = self::subscription(self::feed(self::RUSTY_RSS, SourceFormat::XML));
-        $author = self::subscription(self::feed('social:bluesky:4:author:' . self::RUSTY, SourceFormat::BLUESKY_API));
-        $other = self::subscription(self::feed('https://blog.example.com/feed.xml', SourceFormat::XML));
+        $rss = self::subscription(self::RUSTY_RSS, SourceFormat::XML);
+        $author = self::subscription('social:bluesky:4:author:' . self::RUSTY, SourceFormat::BLUESKY_API);
+        $other = self::subscription('https://blog.example.com/feed.xml', SourceFormat::XML);
 
-        self::assertSame([$rss, $other], ExportedFeed::withoutRepeats([$rss, $author, $other]));
-        self::assertSame([$author, $other], ExportedFeed::withoutRepeats([$author, $rss, $other]));
+        self::assertSame([$rss, $other], self::subscriptionsOf(ExportedFeed::withoutRepeats([$rss, $author, $other])));
+        self::assertSame(
+            [$author, $other],
+            self::subscriptionsOf(ExportedFeed::withoutRepeats([$author, $rss, $other])),
+        );
     }
 
-    private static function feed(string $url, string $sourceFormat): Feed
+    /**
+     * @param list<ExportedSubscriptionModel> $exported
+     *
+     * @return list<Subscription>
+     */
+    private static function subscriptionsOf(array $exported): array
+    {
+        return array_map(
+            static fn (ExportedSubscriptionModel $subscription): Subscription => $subscription->subscription,
+            $exported,
+        );
+    }
+
+    private static function subscription(string $url, string $sourceFormat): Subscription
     {
         $feed = new Feed($url);
         $feed->setSourceFormat($sourceFormat);
 
-        return $feed;
-    }
-
-    private static function subscription(Feed $feed): Subscription
-    {
         return new Subscription(SocialAccounts::owner(), $feed, new \DateTimeImmutable('2026-10-17 12:00:00'));
     }
 }
