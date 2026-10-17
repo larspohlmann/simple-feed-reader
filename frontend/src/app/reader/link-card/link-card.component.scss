@@ -4,6 +4,7 @@
   @include link-card-layout.frame;
 
   display: block;
+  position: relative;
 }
 
 :host(.article) {
