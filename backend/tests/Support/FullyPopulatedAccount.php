@@ -6,9 +6,10 @@ namespace App\Tests\Support;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
-use App\Entity\EntryAuthor;
 use App\Entity\EntryAttachment;
+use App\Entity\EntryAuthor;
 use App\Entity\EntryMedium;
+use App\Entity\EntryOrigin;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Headline;
@@ -17,6 +18,7 @@ use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
+use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -65,6 +67,9 @@ final readonly class FullyPopulatedAccount
             'https://shared.example/story.jpg',
             'Shared Example',
         )));
+        $this->entityManager->persist(
+            new SavedEntryOrigin($entry, new EntryOrigin('Populated origin', 'https://populated.example/favicon.ico')),
+        );
 
         $this->entityManager->flush();
 

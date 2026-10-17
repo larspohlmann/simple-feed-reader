@@ -38,10 +38,15 @@ final class SocialAccounts
 
     public static function blueskyOf(User $owner): SocialAccount
     {
+        return self::blueskyAs($owner, 'did:plc:alice');
+    }
+
+    public static function blueskyAs(User $owner, string $did): SocialAccount
+    {
         return new SocialAccount(
             $owner,
             SocialNetwork::Bluesky,
-            'did:plc:alice',
+            $did,
             '@alice.bsky.social',
             'https://pds.example.test',
             self::cipher()->seal($owner->requireId(), self::APP_PASSWORD),
@@ -57,21 +62,26 @@ final class SocialAccounts
 
     public static function mastodonOf(User $owner): SocialAccount
     {
-        return self::mastodonAt($owner, 'https://mastodon.example');
+        return self::mastodonAs($owner, 'alice@mastodon.example');
+    }
+
+    public static function mastodonAs(User $owner, string $identity): SocialAccount
+    {
+        return self::mastodonAt($owner, $identity, 'https://mastodon.example');
     }
 
     public static function mastodonOn(string $instanceUrl): SocialAccount
     {
-        return self::mastodonAt(self::owner(), $instanceUrl);
+        return self::mastodonAt(self::owner(), 'alice@mastodon.example', $instanceUrl);
     }
 
-    private static function mastodonAt(User $owner, string $instanceUrl): SocialAccount
+    private static function mastodonAt(User $owner, string $identity, string $instanceUrl): SocialAccount
     {
         return new SocialAccount(
             $owner,
             SocialNetwork::Mastodon,
-            'alice@mastodon.example',
-            '@alice@mastodon.example',
+            $identity,
+            '@' . $identity,
             $instanceUrl,
             self::cipher()->seal($owner->requireId(), self::ACCESS_TOKEN),
             '7890',

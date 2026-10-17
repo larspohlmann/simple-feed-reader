@@ -7,6 +7,7 @@ namespace App\Service\Backup\Factory;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\LinkCardRepository;
+use App\Repository\SavedEntryOriginRepository;
 use App\Service\Backup\BackupLines;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Pass\BackupPartWalk;
@@ -19,6 +20,7 @@ final readonly class BackupPartWalkFactory
         private EntryRepository $entries,
         private EntryStateRepository $entryStates,
         private LinkCardRepository $linkCards,
+        private SavedEntryOriginRepository $savedOrigins,
         private BackupLines $lines,
     ) {
     }
@@ -30,6 +32,7 @@ final readonly class BackupPartWalkFactory
             $this->entries,
             $this->entryStates,
             $this->linkCards,
+            $this->savedOrigins,
             $this->lines,
             $provenance,
             $userId,

@@ -36,6 +36,6 @@ final readonly class RestoreLoader
             $this->foundationFactory,
         );
 
-        return $pass->run($user, $this->reader->read($gzipBytes));
+        return $pass->run($user, $this->reader->read($gzipBytes, $user->requireId()));
     }
 }

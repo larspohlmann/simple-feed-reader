@@ -48,4 +48,17 @@ final class SocialLikeRepository extends ServiceEntityRepository
 
         return array_fill_keys($likedEntryIds, true);
     }
+
+    /** The like moves with a saved post; a like the target already carries wins. */
+    public function copyLike(int $userId, int $fromEntryId, int $toEntryId): void
+    {
+        $this->getEntityManager()->getConnection()->executeStatement(
+            'INSERT INTO social_like (user_id, entry_id, social_account_id, remote_id, liked_at)'
+            . ' SELECT user_id, :toEntry, social_account_id, remote_id, liked_at FROM social_like'
+            . ' WHERE user_id = :user AND entry_id = :fromEntry'
+            . ' AND NOT EXISTS (SELECT 1 FROM social_like held'
+            . ' WHERE held.user_id = :user AND held.entry_id = :toEntry)',
+            ['user' => $userId, 'fromEntry' => $fromEntryId, 'toEntry' => $toEntryId],
+        );
+    }
 }

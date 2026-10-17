@@ -36,6 +36,29 @@ final class FeedLineTest extends TestCase
         self::assertSame('https://example.com/feed.xml', $line->url);
     }
 
+    public function testASavedFeedIsRead(): void
+    {
+        $line = FeedLine::fromLine(self::line('saved:4', SourceFormat::SAVED));
+
+        self::assertSame('saved:4', $line->url);
+    }
+
+    public function testASavedFormatOnASharedFeedAddressIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('mixes a saved-feed address and format');
+
+        FeedLine::fromLine(self::line('https://shared.example/feed.xml', SourceFormat::SAVED));
+    }
+
+    public function testASavedAddressWithAFetchedFormatIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('mixes a saved-feed address and format');
+
+        FeedLine::fromLine(self::line('saved:4', SourceFormat::XML));
+    }
+
     /** @return array<string, mixed> */
     private static function line(string $url, string $sourceFormat): array
     {

@@ -98,7 +98,7 @@ final class EntryState
         return $this->hiddenAt;
     }
 
-    // Restore only: a legacy "read, instant unknown" (null hiddenAt) must survive, which hide() cannot express.
+    // Restore and saved-post moves: a legacy "read, instant unknown" (null hiddenAt) survives, which hide() cannot do.
     public function restoreReadMark(BackedUpReadMark $readMark): void
     {
         $this->isHidden = $readMark->isHidden;

@@ -14,6 +14,7 @@ use App\Service\Social\Model\CollectedItemsModel;
 use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\MastodonSessionModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\StoredCredential;
 use App\Service\Social\Support\LinkHeader;
@@ -38,7 +39,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
 
     public function candidates(SocialAccount $account): NetworkCandidatesModel
     {
-        $session = new MastodonSessionModel($account->getServiceUrl(), $this->storedCredential->open($account));
+        $session = $this->sessionOf($account);
         $follows = $this->collectFollows($session, $this->ownAccountId($session));
 
         return new NetworkCandidatesModel(
@@ -47,6 +48,16 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
             [],
             $follows->truncated,
         );
+    }
+
+    public function collections(SocialAccount $account): NetworkCollectionsModel
+    {
+        return new NetworkCollectionsModel($this->lists($this->sessionOf($account)), []);
+    }
+
+    private function sessionOf(SocialAccount $account): MastodonSessionModel
+    {
+        return new MastodonSessionModel($account->getServiceUrl(), $this->storedCredential->open($account));
     }
 
     private function ownAccountId(MastodonSessionModel $session): string

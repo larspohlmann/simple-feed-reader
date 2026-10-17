@@ -19,6 +19,7 @@ function account(over: Partial<SocialAccount> = {}): SocialAccount {
     isDefault: true,
     credentialHint: 'abcd',
     connectedAt: '2026-10-12T08:00:00+00:00',
+    sync: { checkedAt: null, skipped: null, changes: [] },
     ...over,
   };
 }

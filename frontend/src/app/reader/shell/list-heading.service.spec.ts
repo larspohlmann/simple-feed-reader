@@ -57,6 +57,7 @@ const accountsOf = (...handles: string[]): SocialSection => ({
   profiles: socialProfiles([]),
   unreadCount: 0,
   entryCount: 0,
+  saved: null,
   showsHandles: handles.length > 1,
   accounts: handles.map((handle, index) => ({
     accountId: index + 1,

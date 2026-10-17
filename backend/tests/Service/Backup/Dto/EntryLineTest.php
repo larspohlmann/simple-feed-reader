@@ -8,7 +8,9 @@ use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
+use App\Entity\EntryOrigin;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Backup\Exception\InvalidBackupException;
 use PHPUnit\Framework\TestCase;
 
 final class EntryLineTest extends TestCase
@@ -42,6 +44,49 @@ final class EntryLineTest extends TestCase
 
         self::assertSame([], $line->media);
         self::assertSame([], $line->attachments);
+    }
+
+    public function testReadsTheOriginOfASavedCopy(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['origin' => [
+            'title' => 'Heise',
+            'faviconUrl' => 'https://heise.example/favicon.ico',
+        ]]);
+
+        self::assertEquals(new EntryOrigin('Heise', 'https://heise.example/favicon.ico'), $line->origin);
+    }
+
+    public function testAnOriginFaviconThatIsNotHttpIsDropped(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['origin' => [
+            'title' => 'Heise',
+            'faviconUrl' => 'javascript:alert(1)',
+        ]]);
+
+        self::assertEquals(new EntryOrigin('Heise', null), $line->origin);
+    }
+
+    public function testAnOriginTitleOverTheColumnIsClipped(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['origin' => [
+            'title' => str_repeat('t', 600),
+            'faviconUrl' => null,
+        ]]);
+
+        self::assertSame(str_repeat('t', 512), $line->origin?->title);
+    }
+
+    public function testAMissingOrNullOriginReadsAsNone(): void
+    {
+        self::assertNull(EntryLine::fromLine($this->baseLine())->origin);
+        self::assertNull(EntryLine::fromLine($this->baseLine() + ['origin' => null])->origin);
+    }
+
+    public function testAnOriginThatIsNotAnObjectIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+
+        EntryLine::fromLine($this->baseLine() + ['origin' => 'Heise']);
     }
 
     public function testAnOlderFilesShareUrlIsIgnored(): void

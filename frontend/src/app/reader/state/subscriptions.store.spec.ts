@@ -454,6 +454,7 @@ describe('SubscriptionsStore', () => {
           profiles: socialProfiles([]),
           unreadCount: 6,
           entryCount: 0,
+          saved: null,
           showsHandles: false,
         },
         {
@@ -462,6 +463,7 @@ describe('SubscriptionsStore', () => {
           profiles: socialProfiles([untaggedProfile]),
           unreadCount: 8,
           entryCount: 0,
+          saved: null,
           showsHandles: false,
         },
       ]);

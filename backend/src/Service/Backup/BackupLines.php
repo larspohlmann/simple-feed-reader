@@ -18,6 +18,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\BackupProvenanceModel;
+use App\Service\Backup\Model\EntryCompanionsModel;
 use App\Service\Backup\Support\BackupSchema;
 
 /**
@@ -128,8 +129,7 @@ final readonly class BackupLines
         );
     }
 
-    /** @param list<LinkCardContent> $linkCards */
-    public function entryLine(Entry $entry, string $feedUrl, array $linkCards): string
+    public function entryLine(Entry $entry, string $feedUrl, EntryCompanionsModel $companions): string
     {
         $discussion = $entry->getDiscussion();
 
@@ -157,7 +157,11 @@ final readonly class BackupLines
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->getRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
-            'linkCards' => array_map(self::linkCardFields(...), $linkCards),
+            'linkCards' => array_map(self::linkCardFields(...), $companions->linkCards),
+            'origin' => null === $companions->origin ? null : [
+                'title' => $companions->origin->title,
+                'faviconUrl' => $companions->origin->faviconUrl,
+            ],
             'publishedAt' => $this->formatDateOrNull($entry->getPublishedAt()),
             'createdAt' => $this->formatDate($entry->getCreatedAt()),
             'effectiveDate' => $this->formatDate($entry->getEffectiveDate()),
