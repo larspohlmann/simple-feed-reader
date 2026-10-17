@@ -26,7 +26,6 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
-use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\SocialAccount;
@@ -154,8 +153,6 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'radius of a leaked backup file for no gain.',
         SavedSearchEntry::class => 'A derived saved-search membership row (#1116); rebuilt by the sweep, '
             . 'so a restore carries none.',
-        SavedEntryOrigin::class => 'The origin of an article saved from a left feed (#1666). '
-            . 'A backup carries it from #1666 Task 8 on.',
     ];
 
     /**

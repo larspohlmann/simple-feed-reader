@@ -19,6 +19,7 @@ use App\Service\Backup\Pass\BackupPartGuard;
 use App\Service\Backup\Support\BackupSchema;
 use App\Service\Backup\Support\GzipLineReader;
 use App\Service\Backup\Support\LineField;
+use App\Service\SavedPosts\Support\SavedFeedUrl;
 
 /**
  * Reads a backup front to back in the order BackupLineOrderModel admits. The footer's counts are the truncation
@@ -46,7 +47,7 @@ final readonly class BackupReader
     /**
      * @return \Generator<int, object>
      */
-    public function read(string $gzipBytes): \Generator
+    public function read(string $gzipBytes, ?int $restoringUserId = null): \Generator
     {
         $lineNumber = 0;
         $order = BackupLineOrderModel::beforeTheFirstLine();
@@ -103,7 +104,7 @@ final readonly class BackupReader
                 ++$counts[$kind];
             }
 
-            yield $this->toDto($kind, $decoded);
+            yield $this->toDto($kind, self::rebound($decoded, $restoringUserId));
         }
 
         if (!$footerSeen) {
@@ -173,6 +174,27 @@ final readonly class BackupReader
         }
 
         return $fields;
+    }
+
+    /**
+     * A feed line's own address is `url`; every other kind names its feed as `feedUrl`. An entry line's `url` is the
+     * article's and is never rebound.
+     *
+     * @param array<string, mixed> $decoded
+     *
+     * @return array<string, mixed>
+     */
+    private static function rebound(array $decoded, ?int $restoringUserId): array
+    {
+        if (null === $restoringUserId) {
+            return $decoded;
+        }
+        $feedKey = BackupSchema::KIND_FEED === $decoded['kind'] ? 'url' : 'feedUrl';
+        if (\is_string($decoded[$feedKey] ?? null)) {
+            $decoded[$feedKey] = SavedFeedUrl::rebound($decoded[$feedKey], $restoringUserId);
+        }
+
+        return $decoded;
     }
 
     /**

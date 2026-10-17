@@ -75,6 +75,31 @@ final readonly class EntryBatchInserter
         }
     }
 
+    /**
+     * The origins of saved copies just inserted.
+     *
+     * @param array<string, int> $entryIdsByGuidHash
+     * @param list<EntryLine>    $lines
+     */
+    public function insertOrigins(array $entryIdsByGuidHash, array $lines): void
+    {
+        $rows = [];
+        foreach ($lines as $line) {
+            if (null !== $line->origin) {
+                $rows[] = [$entryIdsByGuidHash[$line->guidHash], $line->origin->title, $line->origin->faviconUrl];
+            }
+        }
+        foreach (array_chunk($rows, self::CARDS_PER_STATEMENT) as $chunk) {
+            $this->connection->executeStatement(
+                sprintf(
+                    'INSERT INTO saved_entry_origin (entry_id, title, favicon_url) VALUES %s',
+                    implode(', ', array_fill(0, \count($chunk), '(?, ?, ?)')),
+                ),
+                array_merge(...$chunk),
+            );
+        }
+    }
+
     /** @param non-empty-list<EntryLine> $chunk */
     private function insertChunk(int $feedId, array $chunk): void
     {

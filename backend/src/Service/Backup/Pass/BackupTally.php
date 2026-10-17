@@ -11,6 +11,7 @@ use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Model\BackupInventoryModel;
+use App\Service\SavedPosts\Support\SavedFeedUrl;
 
 /**
  * One foundation inspection's working state: the header, a count per line
@@ -129,6 +130,8 @@ final class BackupTally
         }
 
         $this->subscribedFeedUrls[$line->feedUrl] = true;
-        ++$this->counts['subscriptions'];
+        if (!SavedFeedUrl::isSaved($line->feedUrl)) {
+            ++$this->counts['subscriptions'];
+        }
     }
 }

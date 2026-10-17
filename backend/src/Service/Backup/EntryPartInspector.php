@@ -35,7 +35,7 @@ final readonly class EntryPartInspector
      */
     public function inspect(User $user, string $gzipBytes): array
     {
-        [$feedUrls, $guidHashesByFeedUrl] = $this->scan($gzipBytes);
+        [$feedUrls, $guidHashesByFeedUrl] = $this->scan($gzipBytes, $user->requireId());
         $feedIdsByUrl = $this->subscribedFeedIds($user, $feedUrls);
         $this->assertFits($user, $this->newEntryCount($guidHashesByFeedUrl, $feedIdsByUrl));
 
@@ -45,12 +45,12 @@ final readonly class EntryPartInspector
     /**
      * @return array{array<string, true>, array<string, array<string, true>>}
      */
-    private function scan(string $gzipBytes): array
+    private function scan(string $gzipBytes, int $userId): array
     {
         $feedUrls = [];
         $guidHashesByFeedUrl = [];
         $isFirstLine = true;
-        foreach ($this->reader->read($gzipBytes) as $line) {
+        foreach ($this->reader->read($gzipBytes, $userId) as $line) {
             if ($isFirstLine) {
                 $this->assertEntryPart($line);
                 $isFirstLine = false;
