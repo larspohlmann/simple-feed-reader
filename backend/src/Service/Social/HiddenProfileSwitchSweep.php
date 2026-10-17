@@ -122,7 +122,7 @@ final readonly class HiddenProfileSwitchSweep
             return [];
         }
         try {
-            $hidden = $this->hiddenProfiles->hiddenAmong($asked);
+            return $this->hiddenProfiles->hiddenAmong($asked);
         } catch (SocialNetworkUnreachableException $exception) {
             $this->logger->warning('Hidden-profile switch stopped: Bluesky did not answer.', [
                 'exception' => $exception,
@@ -130,9 +130,6 @@ final readonly class HiddenProfileSwitchSweep
 
             return [];
         }
-        $this->profileVisibility->remember($asked, $hidden);
-
-        return $hidden;
     }
 
     /**

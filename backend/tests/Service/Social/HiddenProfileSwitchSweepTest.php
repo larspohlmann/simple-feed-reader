@@ -21,6 +21,7 @@ use App\Service\SavedPosts\SavedStateMover;
 use App\Service\Social\AuthorFeeds;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfileMove;
+use App\Service\Social\HiddenProfiles\CachedHiddenProfiles;
 use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileMoveOutcome;
@@ -320,7 +321,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     {
         return (new HiddenProfileSwitchSweep(
             self::service(RefusedProfileSubscriptionRepository::class),
-            $this->hiddenProfiles,
+            new CachedHiddenProfiles($this->hiddenProfiles, $this->profileVisibility),
             $this->profileVisibility,
             $this->move(),
             $this->logger,
