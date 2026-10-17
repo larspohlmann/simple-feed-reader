@@ -11,8 +11,6 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class ProfileVisibilityCache
 {
-    private const bool PUBLIC = false;
-
     public function __construct(
         #[Autowire(service: 'social.profile_visibility.cache')]
         private CacheItemPoolInterface $cache,
@@ -23,11 +21,7 @@ final readonly class ProfileVisibilityCache
     {
         $verdict = $this->cache->getItem(self::keyOf($actor))->get();
 
-        return match (true) {
-            $verdict instanceof HiddenProfileModel => ProfileVisibilityModel::hiddenProfile($verdict),
-            self::PUBLIC === $verdict => ProfileVisibilityModel::publicProfile(),
-            default => ProfileVisibilityModel::unknown(),
-        };
+        return $verdict instanceof ProfileVisibilityModel ? $verdict : ProfileVisibilityModel::unknown();
     }
 
     /**
@@ -37,7 +31,10 @@ final readonly class ProfileVisibilityCache
     public function remember(array $asked, array $hidden): void
     {
         foreach ($asked as $actor) {
-            $verdict = $hidden[$actor] ?? self::PUBLIC;
+            $profile = $hidden[$actor] ?? null;
+            $verdict = null === $profile
+                ? ProfileVisibilityModel::publicProfile()
+                : ProfileVisibilityModel::hiddenProfile($profile);
             $this->cache->saveDeferred($this->cache->getItem(self::keyOf($actor))->set($verdict));
         }
         $this->cache->commit();
