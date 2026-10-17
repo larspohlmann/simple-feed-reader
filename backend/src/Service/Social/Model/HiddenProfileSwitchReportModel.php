@@ -9,6 +9,7 @@ final readonly class HiddenProfileSwitchReportModel
     public function __construct(
         public int $started,
         public int $finished,
+        public int $waiting = 0,
     ) {
     }
 
@@ -20,15 +21,21 @@ final readonly class HiddenProfileSwitchReportModel
     public function counting(HiddenProfileMoveOutcome $outcome): self
     {
         return match ($outcome) {
-            HiddenProfileMoveOutcome::Started => new self($this->started + 1, $this->finished),
-            HiddenProfileMoveOutcome::Finished => new self($this->started, $this->finished + 1),
-            HiddenProfileMoveOutcome::Skipped, HiddenProfileMoveOutcome::Waiting => $this,
+            HiddenProfileMoveOutcome::Started => new self($this->started + 1, $this->finished, $this->waiting),
+            HiddenProfileMoveOutcome::Finished => new self($this->started, $this->finished + 1, $this->waiting),
+            HiddenProfileMoveOutcome::Waiting => new self($this->started, $this->finished, $this->waiting + 1),
+            HiddenProfileMoveOutcome::Skipped => $this,
         };
     }
 
-    /** @return array{started: int, finished: int} */
+    public function isIdle(): bool
+    {
+        return 0 === $this->started + $this->finished + $this->waiting;
+    }
+
+    /** @return array{started: int, finished: int, waiting: int} */
     public function toLogContext(): array
     {
-        return ['started' => $this->started, 'finished' => $this->finished];
+        return ['started' => $this->started, 'finished' => $this->finished, 'waiting' => $this->waiting];
     }
 }

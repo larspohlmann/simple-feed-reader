@@ -22,6 +22,6 @@ final class SwitchHiddenProfileFeedsHandlerTest extends DbTestCase
 
         self::assertCount(1, $logger->records);
         self::assertSame('Worker hidden-profile switch finished.', $logger->records[0]['message']);
-        self::assertSame(['started' => 0, 'finished' => 0], $logger->records[0]['context']['report']);
+        self::assertSame(['started' => 0, 'finished' => 0, 'waiting' => 0], $logger->records[0]['context']['report']);
     }
 }

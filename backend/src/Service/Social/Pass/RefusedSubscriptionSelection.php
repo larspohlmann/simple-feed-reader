@@ -22,6 +22,8 @@ final class RefusedSubscriptionSelection
 
     private int $knownHidden = 0;
 
+    private bool $passComplete = false;
+
     public function __construct(
         private readonly int $askLimit,
         private readonly int $moveLimit,
@@ -57,6 +59,13 @@ final class RefusedSubscriptionSelection
     public function restart(): void
     {
         $this->position = null;
+        $this->passComplete = true;
+    }
+
+    /** Whether this run read on to the last refused subscription. */
+    public function isPassComplete(): bool
+    {
+        return $this->passComplete;
     }
 
     public function position(): ?RefusedFeedPositionModel

@@ -15,7 +15,6 @@ use App\Service\Social\Model\HiddenProfileMoveOutcome;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileVisibilityModel;
-use App\Service\Social\Model\RefusedFeedPositionModel;
 use App\Service\Social\Model\RefusedProfileSubscriptionModel;
 use App\Service\Social\Pass\RefusedSubscriptionSelection;
 use App\Service\Social\Support\BlueskyActor;
@@ -33,6 +32,8 @@ final readonly class HiddenProfileSwitchSweep
     private const int PAGE_SIZE = 200;
     private const int MAX_PAGES = 3;
     private const int MAX_MOVES = 20;
+    private const string IDLE_PAUSE = '+1 hour';
+    private const string UNANSWERED_PAUSE = '+5 minutes';
 
     public function __construct(
         private RefusedProfileSubscriptionRepository $refusedSubscriptions,
@@ -46,13 +47,20 @@ final readonly class HiddenProfileSwitchSweep
 
     public function sweep(ProfileCallBudgetModel $budget): HiddenProfileSwitchReportModel
     {
+        if ($this->cursor->isPaused()) {
+            return HiddenProfileSwitchReportModel::none();
+        }
         $selection = $this->selected(new RefusedSubscriptionSelection(
             $budget->calls * AppViewClient::URIS_PER_CALL,
             self::MAX_MOVES,
             $this->cursor->position(),
         ));
+        $report = $this->moveHidden($selection->candidates(), $this->askedHidden($selection));
+        if ($selection->isPassComplete() && [] === $selection->unknownActors() && $report->isIdle()) {
+            $this->cursor->pauseFor(self::IDLE_PAUSE);
+        }
 
-        return $this->moveHidden($selection->candidates(), $this->askedHidden($selection));
+        return $report;
     }
 
     /** Reads on from the cursor, a few pages at most, and starts over from the first row after the last page. */
@@ -143,22 +151,13 @@ final readonly class HiddenProfileSwitchSweep
             $this->logger->warning('Hidden-profile switch stopped: Bluesky did not answer.', [
                 'exception' => $exception,
             ]);
+            $this->cursor->pauseFor(self::UNANSWERED_PAUSE);
 
             return [];
         }
-        $this->keepPosition($selection->position());
+        $this->cursor->store($selection->position());
 
         return $hidden;
-    }
-
-    private function keepPosition(?RefusedFeedPositionModel $position): void
-    {
-        if (null === $position) {
-            $this->cursor->restart();
-
-            return;
-        }
-        $this->cursor->resumeAfter($position);
     }
 
     /**

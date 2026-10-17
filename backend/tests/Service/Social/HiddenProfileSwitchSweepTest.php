@@ -18,6 +18,7 @@ use App\Repository\EntryTwinRepository;
 use App\Repository\RefusedProfileSubscriptionRepository;
 use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\SavedPosts\SavedStateMover;
 use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -42,6 +43,7 @@ use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class HiddenProfileSwitchSweepTest extends DbTestCase
@@ -54,6 +56,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     private StubHiddenProfiles $hiddenProfiles;
     private ProfileVisibilityCache $profileVisibility;
     private HiddenProfileSwitchCursor $cursor;
+    private MockClock $clock;
     private RecordingLogger $logger;
 
     protected function setUp(): void
@@ -62,7 +65,8 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->hiddenProfiles = new StubHiddenProfiles();
         $this->hiddenProfiles->hide(new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'));
         $this->profileVisibility = new ProfileVisibilityCache(new ArrayAdapter());
-        $this->cursor = new HiddenProfileSwitchCursor(new ArrayAdapter());
+        $this->clock = new MockClock(self::NOW, 'UTC');
+        $this->cursor = new HiddenProfileSwitchCursor(new ArrayAdapter(), new NaiveUtcClock($this->clock));
         $this->logger = new RecordingLogger();
     }
 
@@ -185,7 +189,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $rss = $this->rssSubscription($user);
         $this->sweep(1);
 
-        self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
+        self::assertEquals(new HiddenProfileSwitchReportModel(0, 0, 1), $this->sweep(1));
         self::assertNotNull($this->entityManager->find(Subscription::class, $rss->requireId()));
         self::assertSame([[BlueskyProfiles::RUSTY]], $this->hiddenProfiles->asked);
     }
@@ -273,6 +277,61 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertSame($failure, $this->logger->records[0]['context']['exception'] ?? null);
 
         $this->hiddenProfiles->failure = null;
+        $this->clock->modify('+5 minutes 1 second');
+
+        self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
+    }
+
+    public function testAnUnansweredCheckHoldsTheSwitchForFiveMinutes(): void
+    {
+        $user = $this->user('switch-unanswered-pause@example.test');
+        $this->accountOf($user);
+        $this->rssSubscription($user);
+        $this->hiddenProfiles->failure = new SocialNetworkUnreachableException('down');
+        $this->sweep(1);
+        $this->hiddenProfiles->failure = null;
+        $this->clock->modify('+4 minutes 59 seconds');
+
+        self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
+        self::assertCount(1, $this->hiddenProfiles->asked);
+    }
+
+    public function testAPassThatFindsNothingToDoHoldsTheNextRunForAnHour(): void
+    {
+        $user = $this->user('switch-idle@example.test');
+        $this->accountOf($user);
+        $this->rssSubscription($user, 'did:plc:public');
+        $this->profileVisibility->remember(['did:plc:public'], []);
+        $this->sweep(1);
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+        $this->clock->modify('+59 minutes');
+        $this->rssSubscription($user);
+
+        self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
+        self::assertSame([], $this->hiddenProfiles->asked);
+        self::assertCount(0, $recorder->queriesMatching(' LIKE '));
+    }
+
+    public function testTheIdlePauseExpires(): void
+    {
+        $user = $this->user('switch-idle-expires@example.test');
+        $this->accountOf($user);
+        $this->sweep(1);
+        $this->rssSubscription($user);
+        $this->clock->modify('+1 hour 1 second');
+
+        self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
+    }
+
+    public function testAPassThatAskedIsNotIdle(): void
+    {
+        $user = $this->user('switch-asked-not-idle@example.test');
+        $this->accountOf($user);
+        $this->rssSubscription($user, 'did:plc:public');
+        $this->sweep(1);
+        $this->rssSubscription($user);
 
         self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
     }
@@ -414,6 +473,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->hiddenProfiles->failure = new SocialNetworkUnreachableException('down');
         $this->sweep(1);
         $this->hiddenProfiles->failure = null;
+        $this->clock->modify('+5 minutes 1 second');
 
         $this->sweep(1);
 
