@@ -64,7 +64,7 @@ export class ArticleLayerComponent {
   readonly scroller = computed(() => this.scrollerRef()?.nativeElement);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   protected readonly gestures = inject(ArticleGestures);
-  readonly leaving = this.gestures.leaving.asReadonly();
+  readonly leaving = this.gestures.leaving;
 
   /** Back-to-top affordance: revealed once the reader has scrolled past a screen. */
   protected readonly showToTop = signal(false);

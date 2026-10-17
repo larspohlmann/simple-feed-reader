@@ -12,7 +12,6 @@ import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-eleme
   template: `<app-article-content
     [html]="html()"
     [pageUrl]="null"
-    [enclosureUrl]="null"
     (decorated)="decorated.push($event)"
   />`,
 })

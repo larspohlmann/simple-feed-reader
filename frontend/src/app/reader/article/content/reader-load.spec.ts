@@ -38,7 +38,10 @@ describe('ReaderLoad', () => {
 
   it('reports a transport error without a payload', () => {
     const settled = jest.fn();
-    load.run(throwError(() => new HttpErrorResponse({ status: 0, url: 'https://x' })), settled);
+    load.run(
+      throwError(() => new HttpErrorResponse({ status: 0, url: 'https://x' })),
+      settled,
+    );
     expect(load.failed()).toBe(true);
     expect(load.failure()).toBeNull();
     expect(load.errorDetail()).toContain('https://x');

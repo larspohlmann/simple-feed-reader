@@ -5,7 +5,6 @@ import { LinkCardRef } from '../../query/link-param';
 import { ReaderContentService } from '../content/reader-content.service';
 import { ReaderLoad } from '../content/reader-load';
 
-/** The linked page a link reader shows, and its load lifecycle. */
 @Injectable()
 export class LinkArticleSource {
   private readonly reader = inject(ReaderContentService);
@@ -25,7 +24,6 @@ export class LinkArticleSource {
     this.run(this.reader.load(ref));
   }
 
-  /** Drop the page from the browser cache and refetch it. */
   reload(ref: LinkCardRef): void {
     this.run(this.reader.reload(ref));
   }

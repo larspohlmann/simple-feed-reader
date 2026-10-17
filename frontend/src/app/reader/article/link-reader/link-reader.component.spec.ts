@@ -5,7 +5,8 @@ import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { aLinkCard } from '../../../../testing/entry-testing';
-import { ReaderArticle, ReaderContent, ReaderFailure } from '../../models';
+import { ReaderContent } from '../../models';
+import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { LinkCardDto } from '../../link-card/link-card';
 import { ReaderContentService } from '../content/reader-content.service';
 import { LinkCardRef } from '../../query/link-param';
@@ -16,27 +17,17 @@ import { LinkReaderComponent } from './link-reader.component';
 const FIRST_CARD: LinkCardRef = { entryId: 7, position: 0 };
 const SECOND_CARD: LinkCardRef = { entryId: 7, position: 1 };
 
-const okContent = (over: Partial<ReaderArticle> = {}): ReaderArticle => ({
-  status: 'ok',
+const linkedPage = aReaderArticle({
   url: 'https://news.test/story',
   title: 'The extracted story',
-  byline: null,
   siteName: 'News',
   contentHtml: '<p>LINKED PAGE</p>',
-  excerpt: null,
-  paywalled: false,
-  originalHero: null,
-  extractedAt: '',
-  ...over,
 });
 
-const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
-  status: 'failed',
+const linkedPageFailure = aReaderFailure({
   url: 'https://news.test/story',
-  reason: 'fetch',
   detail: 'HTTP 503',
   originalHero: { url: 'https://news.test/hero.jpg', width: 800, height: 450 },
-  ...over,
 });
 
 describe('LinkReaderComponent', () => {
@@ -99,7 +90,7 @@ describe('LinkReaderComponent', () => {
   it('renders the extracted page', () => {
     const fixture = mount(null);
 
-    reply(fixture, okContent());
+    reply(fixture, linkedPage);
 
     const element = elementOf(fixture);
     expect(element.querySelector('.content')!.textContent).toContain('LINKED PAGE');
@@ -111,7 +102,7 @@ describe('LinkReaderComponent', () => {
   it('offers the original with the card image when the page cannot be read', () => {
     const fixture = mount();
 
-    reply(fixture, failedContent());
+    reply(fixture, linkedPageFailure);
 
     const element = elementOf(fixture);
     expect(element.querySelector('app-warning-box.reader-fallback')!.textContent).toContain(
@@ -187,7 +178,7 @@ describe('LinkReaderComponent', () => {
 
   it('reloads the open card from the toolbar', () => {
     const fixture = mount();
-    reply(fixture, okContent());
+    reply(fixture, linkedPage);
 
     elementOf(fixture).querySelector<HTMLButtonElement>('.nav button')!.click();
 
@@ -197,7 +188,7 @@ describe('LinkReaderComponent', () => {
   it('offers the reload after a failed load, and reloads the card from it', () => {
     const fixture = mount();
     expect(elementOf(fixture).querySelector('.nav button')).toBeNull();
-    reply(fixture, failedContent());
+    reply(fixture, linkedPageFailure);
 
     elementOf(fixture).querySelector<HTMLButtonElement>('.nav button')!.click();
 
@@ -206,7 +197,7 @@ describe('LinkReaderComponent', () => {
 
   it('carries none of the entry reader chrome', () => {
     const fixture = mount();
-    reply(fixture, okContent());
+    reply(fixture, linkedPage);
 
     const element = elementOf(fixture);
     expect(element.querySelector('app-link-cards')).toBeNull();

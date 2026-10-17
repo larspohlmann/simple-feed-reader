@@ -51,7 +51,8 @@ export class ArticleGestures {
   private readonly dragX = signal(0);
   private readonly pull = signal(0);
   private readonly snapping = signal(false);
-  readonly leaving = signal(false);
+  private readonly leavingState = signal(false);
+  readonly leaving = this.leavingState.asReadonly();
   private touchStartX = 0;
   private touchStartY = 0;
   private touchDx = 0;
@@ -183,7 +184,7 @@ export class ArticleGestures {
 
   /** Commit to returning to the list once the leave animation has played. */
   private leave(): void {
-    this.leaving.set(true);
+    this.leavingState.set(true);
     this.leaveTimer = window.setTimeout(
       () => this.host.close(),
       this.reduceMotion ? 0 : LEAVE_ANIM_MS,

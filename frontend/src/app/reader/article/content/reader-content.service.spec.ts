@@ -3,20 +3,10 @@ import { NEVER, TimeoutError, firstValueFrom, of } from 'rxjs';
 import { ReaderContentService } from './reader-content.service';
 import { ReaderCacheService } from './reader-cache.service';
 import { ReaderApi } from '../../reader-api';
-import { ReaderArticle, ReaderContent } from '../../models';
+import { ReaderContent } from '../../models';
+import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 
-const ARTICLE: ReaderArticle = {
-  status: 'ok',
-  url: 'https://x/1',
-  title: 'T',
-  byline: null,
-  siteName: null,
-  contentHtml: '<p>b</p>',
-  excerpt: null,
-  paywalled: false,
-  originalHero: null,
-  extractedAt: '2026-07-23T00:00:00Z',
-};
+const ARTICLE = aReaderArticle({ url: 'https://x/1' });
 
 describe('ReaderContentService', () => {
   let apiGet: jest.Mock;
@@ -88,14 +78,7 @@ describe('ReaderContentService', () => {
 
   it('does not cache a failure', async () => {
     cacheGet.mockResolvedValue(null);
-    const failure: ReaderContent = {
-      status: 'failed',
-      url: null,
-      reason: 'fetch',
-      detail: null,
-      originalHero: null,
-    };
-    apiGet.mockReturnValue(of(failure));
+    apiGet.mockReturnValue(of(aReaderFailure()));
     const service = TestBed.inject(ReaderContentService);
     await firstValueFrom(service.load(1));
     expect(cachePut).not.toHaveBeenCalled();
@@ -112,14 +95,7 @@ describe('ReaderContentService', () => {
   });
 
   it('reload does not cache a failed refetch', async () => {
-    const failure: ReaderContent = {
-      status: 'failed',
-      url: null,
-      reason: 'fetch',
-      detail: null,
-      originalHero: null,
-    };
-    apiGet.mockReturnValue(of(failure));
+    apiGet.mockReturnValue(of(aReaderFailure()));
     const service = TestBed.inject(ReaderContentService);
     await firstValueFrom(service.reload(1));
     expect(cacheDelete).toHaveBeenCalledWith(1);
@@ -148,24 +124,14 @@ describe('ReaderContentService', () => {
 
     it('does not cache a failed card', async () => {
       cacheGet.mockResolvedValue(null);
-      cardApiGet.mockReturnValue(
-        of<ReaderContent>({
-          status: 'failed',
-          url: null,
-          reason: 'fetch',
-          detail: null,
-          originalHero: null,
-        }),
-      );
+      cardApiGet.mockReturnValue(of(aReaderFailure()));
       await firstValueFrom(TestBed.inject(ReaderContentService).load(CARD));
       expect(cachePut).not.toHaveBeenCalled();
     });
 
     it('reload deletes the card key, then fetches and re-caches', async () => {
       cardApiGet.mockReturnValue(of(ARTICLE));
-      const result = await firstValueFrom(
-        TestBed.inject(ReaderContentService).reload(CARD),
-      );
+      const result = await firstValueFrom(TestBed.inject(ReaderContentService).reload(CARD));
       expect(cacheDelete).toHaveBeenCalledWith('card:7.1');
       expect(result).toEqual(ARTICLE);
       expect(cachePut).toHaveBeenCalledWith('card:7.1', ARTICLE);

@@ -12,17 +12,17 @@ import { ArticleBody } from '../reader-view/article-body.service';
 export class ArticleContentComponent {
   readonly html = input.required<string>();
   readonly pageUrl = input.required<string | null>();
-  readonly enclosureUrl = input.required<string | null>();
+  readonly enclosureUrl = input<string | null>(null);
   readonly decorated = output<HTMLElement>();
 
-  readonly element = signal(inject<ElementRef<HTMLElement>>(ElementRef)).asReadonly();
+  readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
 
   constructor() {
     inject(ArticleBody).connect({
-      content: this.element,
+      content: signal(this.element),
       html: this.html,
-      pageUrl: () => this.pageUrl(),
-      enclosureUrl: () => this.enclosureUrl(),
+      pageUrl: this.pageUrl,
+      enclosureUrl: this.enclosureUrl,
       decorated: (host) => this.decorated.emit(host),
     });
   }

@@ -84,8 +84,7 @@ export class LinkReaderComponent {
     () => this.card()?.siteName ?? this.source.article()?.siteName ?? '',
   );
   protected readonly originalUrl = computed(
-    () =>
-      this.card()?.url ?? this.source.article()?.url ?? this.source.failure()?.url ?? null,
+    () => this.card()?.url ?? this.source.article()?.url ?? this.source.failure()?.url ?? null,
   );
   protected readonly backLabelKey = computed(() =>
     this.returnsTo() === 'article' ? 'reader.backToArticle' : 'reader.backToList',
@@ -99,7 +98,7 @@ export class LinkReaderComponent {
 
     this.scope.connect({
       scroller: computed(() => this.layer()?.scroller()),
-      content: computed(() => this.articleContent()?.element()),
+      content: computed(() => this.articleContent()?.element),
       trailing: [],
     });
 

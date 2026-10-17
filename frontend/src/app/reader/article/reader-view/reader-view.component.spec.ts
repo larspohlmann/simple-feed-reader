@@ -12,7 +12,8 @@ import { ArticleLayerComponent } from '../article-layer/article-layer.component'
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { entryScrollKey } from '../../scroll/list-scroll-memory';
-import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../../models';
+import { EntryDto, ReaderContent } from '../../models';
+import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
@@ -135,29 +136,6 @@ function mount(testEntry: EntryDto | null) {
   return fixture;
 }
 
-const okContent = (over: Partial<ReaderArticle> = {}): ReaderArticle => ({
-  status: 'ok',
-  contentHtml: '<p>READER</p>',
-  url: '',
-  title: '',
-  byline: null,
-  siteName: null,
-  excerpt: null,
-  originalHero: null,
-  extractedAt: '',
-  paywalled: false,
-  ...over,
-});
-
-const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
-  status: 'failed',
-  reason: 'fetch',
-  detail: null,
-  url: null,
-  originalHero: null,
-  ...over,
-});
-
 const loadedReplies = (comments: EntryCommentDto[]): CommentsState => ({
   status: 'ok',
   comments,
@@ -182,8 +160,8 @@ describe('ReaderViewComponent', () => {
     installMockResizeObserver();
     // Default: extraction fails so the existing presentational tests keep
     // asserting against the feed's own content. Reader-specific tests override.
-    loadMock = jest.fn(() => of<ReaderContent>(failedContent()));
-    reloadMock = jest.fn(() => of<ReaderContent>(okContent()));
+    loadMock = jest.fn(() => of<ReaderContent>(aReaderFailure()));
+    reloadMock = jest.fn(() => of<ReaderContent>(aReaderArticle()));
     fakeBody = new FakeEntryBodyService();
     fakeBody.setDefault(1, DEFAULT_BODY);
     TestBed.configureTestingModule({
@@ -631,7 +609,7 @@ describe('ReaderViewComponent', () => {
 
     it('restores the remembered offset when extraction fails', async () => {
       const { fixture, scroll, load } = mountRemembering(900);
-      load.next(failedContent());
+      load.next(aReaderFailure());
       await settle(fixture);
       expect(scroll.top).toBe(900);
       fixture.destroy();
@@ -639,7 +617,7 @@ describe('ReaderViewComponent', () => {
 
     it('restores the remembered offset when extraction succeeds', async () => {
       const { fixture, scroll, load } = mountRemembering(900);
-      load.next(okContent());
+      load.next(aReaderArticle());
       await settle(fixture);
       expect(scroll.top).toBe(900);
       fixture.destroy();
@@ -647,7 +625,7 @@ describe('ReaderViewComponent', () => {
 
     it('leaves an article with no remembered offset at the top', async () => {
       const { fixture, scroll, load } = mountRemembering(0);
-      load.next(failedContent());
+      load.next(aReaderFailure());
       await settle(fixture);
       expect(scroll.top).toBe(0);
       fixture.destroy();
@@ -1254,7 +1232,7 @@ describe('ReaderViewComponent', () => {
 
   describe('article refresh', () => {
     it('shows the refresh button in reader mode in both layouts', () => {
-      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
       const pane = mount(entry()).nativeElement as HTMLElement;
       expect(pane.querySelector('.bar [aria-label="Reload article"]')).not.toBeNull();
 
@@ -1269,7 +1247,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('hides the refresh button once the reader switches to original', () => {
-      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
       const fixture = mount(entry());
       const element = fixture.nativeElement as HTMLElement;
       expect(element.querySelector('.bar [aria-label="Reload article"]')).not.toBeNull();
@@ -1286,7 +1264,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('refetches past the cache and shows the loading state', () => {
-      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
       const subject = new Subject<ReaderContent>();
       reloadMock.mockReturnValue(subject.asObservable());
       const fixture = mount(entry());
@@ -1297,7 +1275,7 @@ describe('ReaderViewComponent', () => {
       expect(reloadMock).toHaveBeenCalledWith(1);
       expect(element.querySelector('app-loading-overlay.shown')).not.toBeNull();
 
-      subject.next(okContent({ contentHtml: '<p>FRESH</p>' }));
+      subject.next(aReaderArticle({ contentHtml: '<p>FRESH</p>' }));
       subject.complete();
       fixture.detectChanges();
       expect(element.querySelector('app-loading-overlay.shown')).toBeNull();
@@ -1307,8 +1285,8 @@ describe('ReaderViewComponent', () => {
     it('refreshArticle does not reset the reader/original mode', () => {
       // The button is reader-only, but the method must leave the mode alone —
       // only a genuine entry change resets it.
-      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
-      reloadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
+      reloadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
       const fixture = mount(entry());
       fixture.componentInstance.toggleMode(); // reader -> original
       expect(fixture.componentInstance.mode()).toBe('original');
@@ -1320,13 +1298,13 @@ describe('ReaderViewComponent', () => {
   });
 
   it('renders extracted reader content when extraction succeeds', () => {
-    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+    loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
     const element = mount(entry()).nativeElement as HTMLElement;
     expect(element.querySelector('.content')!.innerHTML).toContain('READER');
   });
 
   it('falls back to feed content and shows a note when extraction fails', () => {
-    loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
+    loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure()));
     const element = mount(entry()).nativeElement as HTMLElement;
     expect(element.querySelector('.content')!.innerHTML).toContain('Body');
     expect(element.querySelector('.reader-note')).not.toBeNull();
@@ -1334,7 +1312,7 @@ describe('ReaderViewComponent', () => {
 
   describe('reader fallback: retry and error detail', () => {
     it('retries extraction past the cache when the note link is clicked', () => {
-      loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure()));
       const subject = new Subject<ReaderContent>();
       reloadMock.mockReturnValue(subject.asObservable());
       const fixture = mount(entry());
@@ -1345,7 +1323,7 @@ describe('ReaderViewComponent', () => {
       expect(reloadMock).toHaveBeenCalledWith(1);
       expect(element.querySelector('app-loading-overlay.shown')).not.toBeNull();
 
-      subject.next(okContent({ contentHtml: '<p>FRESH</p>' }));
+      subject.next(aReaderArticle({ contentHtml: '<p>FRESH</p>' }));
       subject.complete();
       fixture.detectChanges();
       expect(element.querySelector('.content')!.innerHTML).toContain('FRESH');
@@ -1353,7 +1331,7 @@ describe('ReaderViewComponent', () => {
 
     it('reveals the server-supplied cause behind a collapsed "show error" disclosure', () => {
       loadMock.mockReturnValue(
-        of<ReaderContent>(failedContent({ reason: 'fetch', detail: 'HTTP 403 Forbidden' })),
+        of<ReaderContent>(aReaderFailure({ reason: 'fetch', detail: 'HTTP 403 Forbidden' })),
       );
       const element = mount(entry()).nativeElement as HTMLElement;
 
@@ -1368,7 +1346,7 @@ describe('ReaderViewComponent', () => {
       ['unextractable', "Couldn't find an article on this page — showing the feed's summary."],
       ['mismatch', "The page didn't match this entry — showing the feed's summary."],
     ] as const)('says why the %s failure fell back to the feed', (reason, message) => {
-      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason })));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason })));
       const element = mount(entry()).nativeElement as HTMLElement;
 
       expect(element.querySelector('.reader-fallback .reader-note')!.textContent).toContain(
@@ -1377,7 +1355,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('falls back to the feed body without a note when the page is a player page', () => {
-      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'player_page' })));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason: 'player_page' })));
       const element = mount(entry()).nativeElement as HTMLElement;
 
       expect(element.querySelector('.reader-fallback')).toBeNull();
@@ -1397,7 +1375,7 @@ describe('ReaderViewComponent', () => {
     it.each(['empty', 'unextractable', 'mismatch', 'player_page'] as const)(
       'offers no Retry and no error disclosure when the page holds no article (%s)',
       (reason) => {
-        loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason, detail: null })));
+        loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason, detail: null })));
         const element = mount(entry()).nativeElement as HTMLElement;
 
         expect(element.querySelector('.note-link')).toBeNull();
@@ -1406,7 +1384,9 @@ describe('ReaderViewComponent', () => {
     );
 
     it('offers no error disclosure for a fetch failure the server gave no cause for', () => {
-      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'fetch', detail: null })));
+      loadMock.mockReturnValue(
+        of<ReaderContent>(aReaderFailure({ reason: 'fetch', detail: null })),
+      );
       const element = mount(entry()).nativeElement as HTMLElement;
 
       expect(element.querySelector('.note-link')).not.toBeNull();
@@ -1414,7 +1394,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('notes a page no longer than the feed quietly, outside the warning box', () => {
-      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'empty' })));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason: 'empty' })));
       const element = mount(entry()).nativeElement as HTMLElement;
 
       expect(element.querySelector('app-warning-box')).toBeNull();
@@ -1449,7 +1429,7 @@ describe('ReaderViewComponent', () => {
       it.each(['empty', 'unextractable', 'mismatch'] as const)(
         'shows the summary and player with no note when the page holds no article (%s)',
         (reason) => {
-          loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason })));
+          loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason })));
           const element = mount(audioEntry()).nativeElement as HTMLElement;
 
           expect(element.querySelector('.reader-fallback')).toBeNull();
@@ -1460,7 +1440,7 @@ describe('ReaderViewComponent', () => {
       );
 
       it('keeps the note with Retry when the page could not be fetched', () => {
-        loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'fetch' })));
+        loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason: 'fetch' })));
         const element = mount(audioEntry()).nativeElement as HTMLElement;
 
         expect(element.querySelector('.reader-fallback .note-link')).not.toBeNull();
@@ -1475,7 +1455,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('keeps the note on an entry without audio whose page holds no article', () => {
-      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'empty' })));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason: 'empty' })));
       const element = mount(entry()).nativeElement as HTMLElement;
 
       expect(element.querySelector('.reader-fallback-quiet')).not.toBeNull();
@@ -1484,7 +1464,7 @@ describe('ReaderViewComponent', () => {
 
   it('says above the body that this is the free preview of a paywalled article', () => {
     loadMock.mockReturnValue(
-      of<ReaderContent>(okContent({ paywalled: true, url: 'https://pub.test/a' })),
+      of<ReaderContent>(aReaderArticle({ paywalled: true, url: 'https://pub.test/a' })),
     );
     const element = mount(entry()).nativeElement as HTMLElement;
     const note = element.querySelector('.paywall-note');
@@ -1495,13 +1475,13 @@ describe('ReaderViewComponent', () => {
   });
 
   it('shows no paywall note for a freely readable article', () => {
-    loadMock.mockReturnValue(of<ReaderContent>(okContent({ paywalled: false })));
+    loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle({ paywalled: false })));
     const element = mount(entry()).nativeElement as HTMLElement;
     expect(element.querySelector('.paywall-note')).toBeNull();
   });
 
   it('drops the paywall note in the original view, which shows the feed body', () => {
-    loadMock.mockReturnValue(of<ReaderContent>(okContent({ paywalled: true })));
+    loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle({ paywalled: true })));
     const fixture = mount(entry());
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('.paywall-note')).not.toBeNull();
@@ -1512,7 +1492,7 @@ describe('ReaderViewComponent', () => {
   });
 
   it('toggles between reader and original', () => {
-    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+    loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
     const fixture = mount(entry());
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('.content')!.innerHTML).toContain('READER');
@@ -1536,7 +1516,7 @@ describe('ReaderViewComponent', () => {
   });
 
   it('does not reload or reset the toggle when the same entry changes by reference', () => {
-    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+    loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
     const fixture = mount(entry());
     const element = fixture.nativeElement as HTMLElement;
     expect(loadMock).toHaveBeenCalledTimes(1);
@@ -1553,7 +1533,7 @@ describe('ReaderViewComponent', () => {
   });
 
   it('reloads when a different entry (new id) is shown', () => {
-    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+    loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
     const fixture = mount(entry({ id: 1 }));
     expect(loadMock).toHaveBeenCalledTimes(1);
 
@@ -1572,7 +1552,7 @@ describe('ReaderViewComponent', () => {
     // (#681), so reader mode shows it as part of the article, not a hero element.
     loadMock.mockReturnValue(
       of<ReaderContent>(
-        okContent({
+        aReaderArticle({
           contentHtml: '<figure><img src="https://img.test/hero.jpg"></figure><p>Body</p>',
         }),
       ),
@@ -1587,7 +1567,9 @@ describe('ReaderViewComponent', () => {
   it('shows the original hero only after toggling to the original view', () => {
     loadMock.mockReturnValue(
       of<ReaderContent>(
-        okContent({ originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 } }),
+        aReaderArticle({
+          originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 },
+        }),
       ),
     );
     const fixture = mount(entry());
@@ -1605,7 +1587,7 @@ describe('ReaderViewComponent', () => {
   it('renders the original hero when extraction failed', () => {
     loadMock.mockReturnValue(
       of<ReaderContent>(
-        failedContent({
+        aReaderFailure({
           originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 },
         }),
       ),
@@ -1617,7 +1599,7 @@ describe('ReaderViewComponent', () => {
   it('hides the original hero whose image fails to load', async () => {
     loadMock.mockReturnValue(
       of<ReaderContent>(
-        failedContent({
+        aReaderFailure({
           originalHero: { url: 'https://img.test/gone.jpg', width: null, height: null },
         }),
       ),
@@ -1632,7 +1614,7 @@ describe('ReaderViewComponent', () => {
   });
 
   it('renders no hero in reader mode when the backend resolved none', () => {
-    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+    loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
 
     expect(hero(mount(entry()))).toBeNull();
   });
@@ -1857,7 +1839,7 @@ describe('ReaderViewComponent', () => {
   });
 
   it('falls back to the feed summary when contentHtml is null on failure', () => {
-    loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
+    loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure()));
     const element = mount(entryWithBody(null, { summary: 'Just a summary' }))
       .nativeElement as HTMLElement;
     expect(element.querySelector('.content')!.innerHTML).toContain('Just a summary');
@@ -2049,7 +2031,7 @@ describe('ReaderViewComponent', () => {
     it("drops the page's own player for the enclosure, so only Listen plays it (#1434)", async () => {
       loadMock.mockReturnValue(
         of<ReaderContent>(
-          okContent({
+          aReaderArticle({
             contentHtml:
               '<audio><source src="https://x.test/ep.mp3?_=1"></audio>' +
               '<audio src="https://x.test/other.mp3"></audio><p>Notes</p>',
@@ -2132,7 +2114,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('suppresses the inline body error once reader mode has extracted content', () => {
-      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderArticle()));
       fakeBody.setError(1);
 
       const element = mount(entry()).nativeElement as HTMLElement;

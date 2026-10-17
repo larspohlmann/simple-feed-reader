@@ -105,7 +105,7 @@ export class ReaderViewComponent {
   readonly close = output<void>();
 
   private readonly articleContent = viewChild(ArticleContentComponent);
-  private readonly content = computed(() => this.articleContent()?.element());
+  private readonly content = computed(() => this.articleContent()?.element);
   private readonly commentsSection = viewChild(EntryCommentsComponent, {
     read: ElementRef<HTMLElement>,
   });
