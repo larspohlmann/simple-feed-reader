@@ -7,6 +7,7 @@ namespace App\Service\Social\SocialCandidates;
 use App\Entity\SocialAccount;
 use App\Service\Social\CandidateSource\CandidateSourceInterface;
 use App\Service\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Model\NetworkCollectionsModel;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
@@ -24,5 +25,13 @@ final readonly class NetworkSocialCandidates implements SocialCandidatesInterfac
         \assert($source instanceof CandidateSourceInterface);
 
         return $source->candidates($account);
+    }
+
+    public function collections(SocialAccount $account): NetworkCollectionsModel
+    {
+        $source = $this->sources->get($account->getNetwork()->value);
+        \assert($source instanceof CandidateSourceInterface);
+
+        return $source->collections($account);
     }
 }

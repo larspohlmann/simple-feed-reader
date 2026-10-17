@@ -10,27 +10,24 @@ use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\BlueskyApiClient;
-use App\Service\Social\BlueskySessions;
+use App\Service\Social\BlueskySavedCollections;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\CollectedItemsModel;
 use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 {
-    private const string GET_FEED_GENERATORS = AppViewClient::BASE_URL . 'app.bsky.feed.getFeedGenerators';
-    private const string GET_PREFERENCES = '/xrpc/app.bsky.actor.getPreferences';
-    private const string SAVED_FEEDS = 'app.bsky.actor.defs#savedFeedsPrefV2';
     private const string CURATED_LIST = 'app.bsky.graph.defs#curatelist';
     private const int PAGE_SIZE = 100;
-    private const int GENERATORS_PER_CALL = 25;
 
     public function __construct(
         private BlueskyApiClient $bluesky,
-        private BlueskySessions $sessions,
+        private BlueskySavedCollections $savedCollections,
     ) {
     }
 
@@ -41,16 +38,42 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 
     public function candidates(SocialAccount $account): NetworkCandidatesModel
     {
-        $customFeeds = $this->customFeeds($account);
+        $collections = $this->collections($account);
         $follows = $this->collect(self::actorPage('app.bsky.graph.getFollows', $account->getIdentity()), 'follows');
-        $lists = $this->collect(self::actorPage('app.bsky.graph.getLists', $account->getIdentity()), 'lists');
 
         return new NetworkCandidatesModel(
             self::follows($follows->items),
-            self::curatedLists($lists->items),
-            $customFeeds,
-            $follows->truncated || $lists->truncated,
+            $collections->lists,
+            $collections->customFeeds,
+            $follows->truncated || $collections->truncated,
         );
+    }
+
+    public function collections(SocialAccount $account): NetworkCollectionsModel
+    {
+        $saved = $this->savedCollections->savedItemsOf($account);
+        $owned = $this->collect(self::actorPage('app.bsky.graph.getLists', $account->getIdentity()), 'lists');
+        $ownedLists = self::curatedLists($owned->items);
+        $others = $this->savedCollections->resolve($saved, self::urisOf($ownedLists));
+
+        return new NetworkCollectionsModel(
+            [...$ownedLists, ...$others->lists],
+            $others->customFeeds,
+            $others->goneIds,
+            $owned->truncated,
+            $others->savedListsCapped,
+            $others->savedFeedsKnown,
+        );
+    }
+
+    /**
+     * @param list<SocialCollectionModel> $lists
+     *
+     * @return array<string, true>
+     */
+    private static function urisOf(array $lists): array
+    {
+        return array_fill_keys(array_map(static fn (SocialCollectionModel $list): string => $list->id, $lists), true);
     }
 
     private static function actorPage(string $method, string $did): string
@@ -116,84 +139,6 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
         }
 
         return $lists;
-    }
-
-    /** @return list<SocialCollectionModel> */
-    private function customFeeds(SocialAccount $account): array
-    {
-        $uris = $this->savedFeedUris($account);
-        $names = $this->generatorNames($uris);
-
-        return array_map(
-            static fn (string $uri): SocialCollectionModel => new SocialCollectionModel($uri, $names[$uri] ?? $uri),
-            $uris,
-        );
-    }
-
-    /** @return list<string> */
-    private function savedFeedUris(SocialAccount $account): array
-    {
-        $answer = BlueskySessions::accepted($this->sessions->askAs($account, self::GET_PREFERENCES));
-        $preferences = JsonNodeModel::of($answer->json())->nodes('preferences');
-
-        $uris = [];
-        foreach ($preferences as $preference) {
-            if (self::SAVED_FEEDS === $preference->type()) {
-                $uris = [...$uris, ...self::feedUris($preference->nodes('items'))];
-            }
-        }
-
-        return array_values(array_unique($uris));
-    }
-
-    /**
-     * @param list<JsonNodeModel> $items
-     *
-     * @return list<string>
-     */
-    private static function feedUris(array $items): array
-    {
-        $uris = [];
-        foreach ($items as $item) {
-            $uri = $item->string('value');
-            if ('feed' === $item->string('type') && null !== $uri) {
-                $uris[] = $uri;
-            }
-        }
-
-        return $uris;
-    }
-
-    /**
-     * @param list<string> $uris
-     *
-     * @return array<string, string>
-     */
-    private function generatorNames(array $uris): array
-    {
-        $names = [];
-        foreach (array_chunk($uris, self::GENERATORS_PER_CALL) as $batch) {
-            $query = implode('&', array_map(static fn (string $uri): string => 'feeds=' . rawurlencode($uri), $batch));
-            $answer = $this->json(ApiRequestModel::get(self::GET_FEED_GENERATORS . '?' . $query));
-            $names = [...$names, ...self::namesIn($answer)];
-        }
-
-        return $names;
-    }
-
-    /** @return array<string, string> */
-    private static function namesIn(JsonNodeModel $answer): array
-    {
-        $names = [];
-        foreach (self::collectionIn($answer, 'feeds') as $generator) {
-            $uri = $generator->string('uri');
-            $name = $generator->string('displayName');
-            if (null !== $uri && null !== $name) {
-                $names[$uri] = $name;
-            }
-        }
-
-        return $names;
     }
 
     /** @return list<JsonNodeModel> */

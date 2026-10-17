@@ -7,7 +7,9 @@ namespace App\Tests\Service\Social\SocialCandidates;
 use App\Entity\SocialAccount;
 use App\Service\Social\CandidateSource\CandidateSourceInterface;
 use App\Service\Social\Model\NetworkCandidatesModel;
+use App\Service\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\SocialCandidates\NetworkSocialCandidates;
+use App\Service\Social\Model\SocialCollectionModel;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -30,6 +32,11 @@ final class NetworkSocialCandidatesTest extends TestCase
             {
                 return $this->answer;
             }
+
+            public function collections(SocialAccount $account): NetworkCollectionsModel
+            {
+                return new NetworkCollectionsModel($this->answer->lists, $this->answer->customFeeds);
+            }
         };
     }
 
@@ -44,5 +51,18 @@ final class NetworkSocialCandidatesTest extends TestCase
 
         self::assertSame($bluesky, $candidates->candidates(SocialAccounts::bluesky()));
         self::assertSame($mastodon, $candidates->candidates(SocialAccounts::mastodon()));
+    }
+
+    public function testCollectionsReachTheAccountsOwnNetworksSource(): void
+    {
+        $bluesky = new NetworkCandidatesModel([], [new SocialCollectionModel('at://list', 'List')], [], false);
+        $mastodon = new NetworkCandidatesModel([], [new SocialCollectionModel('7', 'Seven')], [], false);
+        $candidates = new NetworkSocialCandidates(new ServiceLocator([
+            'bluesky' => fn () => $this->sourceAnswering($bluesky),
+            'mastodon' => fn () => $this->sourceAnswering($mastodon),
+        ]));
+
+        self::assertEquals($bluesky->lists, $candidates->collections(SocialAccounts::bluesky())->lists);
+        self::assertEquals($mastodon->lists, $candidates->collections(SocialAccounts::mastodon())->lists);
     }
 }

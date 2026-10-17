@@ -299,4 +299,19 @@ final class MastodonCandidateSourceTest extends TestCase
 
         $this->source($http)->candidates(SocialAccounts::mastodon());
     }
+
+    public function testCollectionsAskOnlyForTheListsAndHoldNoCustomFeedsOrGoneIds(): void
+    {
+        $http = new RoutedHttpClient([
+            self::LISTS => self::json([['id' => '7', 'title' => 'Friends']]),
+        ]);
+
+        $collections = $this->source($http)->collections(SocialAccounts::mastodon());
+
+        self::assertEquals([new SocialCollectionModel('7', 'Friends')], $collections->lists);
+        self::assertSame([], $collections->customFeeds);
+        self::assertSame([], $collections->goneIds);
+        self::assertFalse($collections->truncated);
+        self::assertCount(1, $http->requests);
+    }
 }
