@@ -21,7 +21,7 @@ final class SavedFeedUrl
 
     public static function isSaved(string $url): bool
     {
-        return str_starts_with($url, self::SCHEME);
+        return 1 === preg_match(self::PATTERN, $url);
     }
 
     public static function networkOf(string $url): ?SocialNetwork

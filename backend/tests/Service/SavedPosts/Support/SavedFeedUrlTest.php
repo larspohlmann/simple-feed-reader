@@ -43,6 +43,12 @@ final class SavedFeedUrlTest extends TestCase
         self::assertFalse(SavedFeedUrl::isSaved('https://saved.example/feed'));
     }
 
+    public function testAMalformedSavedUrlIsNeitherSavedNorRebound(): void
+    {
+        self::assertFalse(SavedFeedUrl::isSaved('saved:abc'));
+        self::assertSame('saved:abc', SavedFeedUrl::rebound('saved:abc', 9));
+    }
+
     public function testReboundNamesTheSameFeedOfAnotherUserAndLeavesOtherUrlsAlone(): void
     {
         self::assertSame('saved:9:bluesky', SavedFeedUrl::rebound('saved:42:bluesky', 9));
