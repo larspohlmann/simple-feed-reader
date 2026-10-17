@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Service\Bluesky\Support\BlueskyActorKey;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Model\HiddenProfileModel;
@@ -26,7 +27,7 @@ final class StubHiddenProfiles implements HiddenProfilesInterface
     {
         $this->hidden[$profile->did] = $profile;
         foreach ($handles as $handle) {
-            $this->hidden[strtolower($handle)] = $profile;
+            $this->hidden[BlueskyActorKey::of($handle)] = $profile;
         }
     }
 

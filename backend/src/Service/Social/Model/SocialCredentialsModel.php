@@ -26,10 +26,7 @@ final readonly class SocialCredentialsModel
     /** @throws NotAnAppPasswordException */
     public static function bluesky(string $handle, string $appPassword): self
     {
-        $address = trim($handle);
-        if (!BlueskyActorKey::isDid($address)) {
-            $address = strtolower(ltrim($address, '@'));
-        }
+        $address = BlueskyActorKey::of(ltrim(trim($handle), '@'));
 
         return new self(SocialNetwork::Bluesky, $address, self::appPassword($appPassword));
     }
