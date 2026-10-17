@@ -78,6 +78,17 @@ final class PrivateFeedsTest extends DbTestCase
         self::assertSame(1, $this->entityManager->getRepository(SocialFeed::class)->count([]));
     }
 
+    public function testCreatingTheSameListTwiceRemembersItOnce(): void
+    {
+        $account = $this->stored(SocialAccounts::blueskyOf($this->user));
+        $this->privateFeeds()->create($account, PrivateFeedModel::userList('at://list/news', 'News'));
+
+        $outcome = $this->privateFeeds()->create($account, PrivateFeedModel::userList('at://list/news', 'News'));
+
+        self::assertSame(PrivateFeedOutcome::AlreadySubscribed, $outcome);
+        self::assertSame(1, $this->entityManager->getRepository(KnownSocialCollection::class)->count([]));
+    }
+
     public function testAMastodonListLinksToTheListOnItsInstance(): void
     {
         $account = $this->stored(SocialAccounts::mastodonOf($this->user));

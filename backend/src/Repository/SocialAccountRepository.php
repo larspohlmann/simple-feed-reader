@@ -9,8 +9,8 @@ use App\Entity\User;
 use App\Enum\PrivateFeedSyncSkip;
 use App\Enum\SocialNetwork;
 use App\Enum\UserStatus;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**

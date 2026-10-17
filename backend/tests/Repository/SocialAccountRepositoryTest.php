@@ -166,6 +166,21 @@ final class SocialAccountRepositoryTest extends DbTestCase
         self::assertSame([$never->requireId()], $this->repository()->findIdsDueForSync($now->modify('-1 hour'), 1));
     }
 
+    public function testAnAccountCheckedExactlyAtTheCutoffIsNotYetDue(): void
+    {
+        $now = new \DateTimeImmutable('2026-10-17 12:00:00');
+        $cutoff = $now->modify('-1 hour');
+        $atCutoff = SocialAccounts::blueskyAs($this->owner, 'did:plc:cutoff-1');
+        $beforeCutoff = SocialAccounts::blueskyAs($this->owner, 'did:plc:cutoff-2');
+        $atCutoff->recordSync($cutoff);
+        $beforeCutoff->recordSync($cutoff->modify('-1 second'));
+        $this->entityManager->persist($atCutoff);
+        $this->entityManager->persist($beforeCutoff);
+        $this->entityManager->flush();
+
+        self::assertSame([$beforeCutoff->requireId()], $this->repository()->findIdsDueForSync($cutoff, 10));
+    }
+
     public function testTheAccountOfASuspendedUserIsNeverDue(): void
     {
         /** @var UserPasswordHasherInterface $hasher */

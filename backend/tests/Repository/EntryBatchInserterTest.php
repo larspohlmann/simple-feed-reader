@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryOrigin;
 use App\Entity\Feed;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
+use App\Entity\SavedEntryOrigin;
 use App\Enum\ShareKind;
+use App\Enum\SourceFormat;
 use App\Repository\EntryBatchInserter;
 use App\Repository\LinkCardRepository;
 use App\Repository\PendingImageVerificationRepository;
@@ -45,6 +48,7 @@ final class EntryBatchInserterTest extends DbTestCase
         ?string $shareKind = null,
         array $linkCards = [],
         ?QuotedPostContent $quote = null,
+        ?EntryOrigin $origin = null,
     ): EntryLine {
         return new EntryLine(
             feedUrl: 'https://batch.example/feed.xml',
@@ -65,6 +69,7 @@ final class EntryBatchInserterTest extends DbTestCase
             shareKind: $shareKind,
             linkCards: $linkCards,
             quote: $quote,
+            origin: $origin,
         );
     }
 
@@ -264,6 +269,28 @@ final class EntryBatchInserterTest extends DbTestCase
         $stored = $linkCards->contentsByEntryIds(array_values($entryIdsByGuidHash));
         self::assertEquals($withCards->linkCards, $stored[$entryIdsByGuidHash[$withCards->guidHash]]);
         self::assertArrayNotHasKey($entryIdsByGuidHash[$without->guidHash], $stored);
+    }
+
+    public function testStoresTheOriginOfASavedFeedsEntry(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+        $line = $this->entryLine('saved-copy', origin: new EntryOrigin('Source', 'https://source.example/favicon.ico'));
+        $this->inserter()->insert($feedId, [$line]);
+
+        $this->inserter()->insertOrigins($this->entryIdsByGuidHash($feedId), [$line], SourceFormat::SAVED);
+
+        self::assertSame(1, $this->entityManager->getRepository(SavedEntryOrigin::class)->count([]));
+    }
+
+    public function testDropsACraftedOriginOnAnOrdinaryFeedsEntry(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+        $line = $this->entryLine('crafted', origin: new EntryOrigin('Source', 'https://evil.example/favicon.ico'));
+        $this->inserter()->insert($feedId, [$line]);
+
+        $this->inserter()->insertOrigins($this->entryIdsByGuidHash($feedId), [$line], SourceFormat::XML);
+
+        self::assertSame(0, $this->entityManager->getRepository(SavedEntryOrigin::class)->count([]));
     }
 
     /** @return array<string, int> */

@@ -8,6 +8,7 @@ use App\Entity\EntryMedia;
 use App\Entity\QuotedPostContent;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareKind;
+use App\Enum\SourceFormat;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\DBAL\Connection;
@@ -76,13 +77,17 @@ final readonly class EntryBatchInserter
     }
 
     /**
-     * The origins of saved copies just inserted.
+     * The origins of saved copies just inserted; a feed of any other format keeps none.
      *
      * @param array<string, int> $entryIdsByGuidHash
      * @param list<EntryLine>    $lines
      */
-    public function insertOrigins(array $entryIdsByGuidHash, array $lines): void
+    public function insertOrigins(array $entryIdsByGuidHash, array $lines, string $feedSourceFormat): void
     {
+        if (SourceFormat::SAVED !== $feedSourceFormat) {
+            return;
+        }
+
         $rows = [];
         foreach ($lines as $line) {
             if (null !== $line->origin) {

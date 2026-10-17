@@ -369,6 +369,22 @@ final class SocialAccountControllerTest extends ApiTestCase
         self::assertSame([$firstId => 1, $secondId => 0], $changeCounts);
     }
 
+    public function testAnotherUsersSyncChangesAreAbsentFromTheList(): void
+    {
+        $client = $this->clientVerifying($this->alice());
+        $this->accountOn($client, 'social-sync-owner@example.test');
+        $ownerAccountId = $this->connectedId($client);
+        $this->recordChange($ownerAccountId, PrivateFeedSyncReason::Created, '2026-10-17 10:00:00');
+        $this->accountOn($client, 'social-sync-other@example.test');
+        $this->connectBluesky($client, 'bob.bsky.social');
+
+        $client->request('GET', '/api/me/social-accounts');
+
+        $accounts = $this->listedAccounts($client);
+        self::assertCount(1, $accounts);
+        self::assertSame([], $accounts[0]['sync']['changes']);
+    }
+
     public function testAReconnectAnswersTheAccountWithItsRecentChanges(): void
     {
         $client = $this->clientVerifying($this->alice());

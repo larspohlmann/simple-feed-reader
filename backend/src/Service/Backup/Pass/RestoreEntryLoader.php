@@ -156,7 +156,7 @@ final class RestoreEntryLoader
             $this->inserter->insert($target->feedId, $fresh);
             $createdIds = $this->recordCreatedIds($target, $fresh);
             $this->inserter->insertLinkCards($createdIds, $fresh);
-            $this->inserter->insertOrigins($createdIds, $fresh);
+            $this->inserter->insertOrigins($createdIds, $fresh, $target->sourceFormat);
         } catch (DbalException $exception) {
             throw BackupLoadFailedException::duringEntries($exception);
         }

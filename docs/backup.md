@@ -235,6 +235,12 @@ These rows belong to your account. A backup drops each of them completely.
 Your "For you" **settings** and **results** are both dropped. A restore leaves
 the settings at their defaults; set them again once, and run the engine.
 
+A restore also removes the subscriptions to a connected account's private lists
+and custom feeds, but it keeps what the hourly sync remembers about that account.
+Every list and custom feed is then known and not subscribed, which the sync reads
+as dropped by you, so it does not add them back. Add them again in the import
+picker.
+
 ### 6.3 Fields the file drops
 
 **On the account.**

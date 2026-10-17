@@ -15,6 +15,7 @@ final class RestoreFeedTarget
     public function __construct(
         public readonly int $feedId,
         public readonly bool $acceptsNewEntries,
+        public readonly string $sourceFormat,
         private array $entryIdsByGuidHash,
     ) {
     }
