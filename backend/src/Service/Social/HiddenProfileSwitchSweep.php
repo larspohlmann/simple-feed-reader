@@ -155,31 +155,13 @@ final readonly class HiddenProfileSwitchSweep
     ): HiddenProfileMoveOutcome {
         try {
             return $this->move->move($candidate->subscription, $profile);
-        } catch (SubscriptionLimitReachedException $exception) {
-            return $this->skipped(
-                'Hidden-profile switch skipped a subscriber at the subscription cap.',
-                $candidate,
-                $exception,
-            );
-        } catch (AlreadySubscribedException $exception) {
-            return $this->skipped(
-                'Hidden-profile switch skipped a subscriber already subscribed to the author feed.',
-                $candidate,
-                $exception,
-            );
+        } catch (SubscriptionLimitReachedException | AlreadySubscribedException $exception) {
+            $this->logger->info('Hidden-profile switch skipped a subscriber it cannot give the author feed.', [
+                'subscriptionId' => $candidate->subscription->requireId(),
+                'exception' => $exception,
+            ]);
+
+            return HiddenProfileMoveOutcome::Skipped;
         }
-    }
-
-    private function skipped(
-        string $message,
-        RefusedProfileSubscriptionModel $candidate,
-        \RuntimeException $exception,
-    ): HiddenProfileMoveOutcome {
-        $this->logger->info($message, [
-            'subscriptionId' => $candidate->subscription->requireId(),
-            'exception' => $exception,
-        ]);
-
-        return HiddenProfileMoveOutcome::Skipped;
     }
 }
