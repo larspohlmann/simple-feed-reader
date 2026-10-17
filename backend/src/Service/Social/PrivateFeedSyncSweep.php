@@ -42,7 +42,7 @@ final readonly class PrivateFeedSyncSweep
             if (null !== $account) {
                 $report = $report->adding($this->syncIsolated($account));
             }
-            if (!$this->hasUsableEntityManager()) {
+            if (!$this->reopenedEntityManagerIsOpen()) {
                 break;
             }
         }
@@ -78,7 +78,7 @@ final readonly class PrivateFeedSyncSweep
         }
     }
 
-    private function hasUsableEntityManager(): bool
+    private function reopenedEntityManagerIsOpen(): bool
     {
         if (!$this->entityManager->isOpen()) {
             $this->registry->resetManager();

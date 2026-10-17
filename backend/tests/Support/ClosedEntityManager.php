@@ -6,7 +6,7 @@ namespace App\Tests\Support;
 
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 
-/** An entity manager a failed flush closed and nothing reopens: every flush throws. */
+/** An entity manager a failed flush closed: every flush throws until reopen() is called. */
 final class ClosedEntityManager extends EntityManagerDecorator
 {
     private bool $open = true;
@@ -16,6 +16,11 @@ final class ClosedEntityManager extends EntityManagerDecorator
         $this->open = false;
     }
 
+    public function reopen(): void
+    {
+        $this->open = true;
+    }
+
     public function isOpen(): bool
     {
         return $this->open && parent::isOpen();
@@ -23,6 +28,10 @@ final class ClosedEntityManager extends EntityManagerDecorator
 
     public function flush(): void
     {
-        throw new \RuntimeException('The entity manager is closed.');
+        if (!$this->open) {
+            throw new \RuntimeException('The entity manager is closed.');
+        }
+
+        parent::flush();
     }
 }

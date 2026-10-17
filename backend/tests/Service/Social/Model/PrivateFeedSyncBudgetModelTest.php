@@ -15,6 +15,7 @@ final class PrivateFeedSyncBudgetModelTest extends TestCase
     {
         self::assertSame(2, $this->fittingWithin(12, 3)->accounts);
         self::assertSame(1, $this->fittingWithin(9, 3)->accounts);
+        self::assertSame(1, $this->fittingWithin(5, 3)->accounts);
     }
 
     public function testTheMaximumCapsTheAccounts(): void

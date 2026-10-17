@@ -87,7 +87,7 @@ final class PrivateFeedSyncSweepTest extends DbTestCase
         self::assertNull($this->reloaded($dormant)->getLastCheckedAt());
     }
 
-    public function testAnAccountThatNeedsReconnectingStaysDueAndItsSkipIsRecorded(): void
+    public function testAnAccountThatNeedsReconnectingIsCheckedAndItsSkipIsRecorded(): void
     {
         $account = $this->accountOf($this->user, 'did:plc:sweep-1');
         $account->markNeedsReconnect();
@@ -176,6 +176,36 @@ final class PrivateFeedSyncSweepTest extends DbTestCase
 
         self::assertSame(1, $report->checked);
         self::assertNull($this->reloaded($second)->getLastCheckedAt());
+    }
+
+    public function testTheSweepGoesOnOnceTheRegistryHasReopenedTheEntityManager(): void
+    {
+        $this->accountOf($this->user, 'did:plc:sweep-1');
+        $second = $this->accountOf($this->user, 'did:plc:sweep-2');
+        $this->entityManager->flush();
+        $closed = new ClosedEntityManager($this->entityManager);
+        $closed->close();
+        $resets = 0;
+        $registry = $this->createStub(ManagerRegistry::class);
+        $registry->method('resetManager')->willReturnCallback(
+            function () use ($closed, &$resets): ObjectManager {
+                if (++$resets > 1) {
+                    $closed->reopen();
+                }
+
+                return $this->createStub(ObjectManager::class);
+            },
+        );
+        $network = new StubSocialCandidates(
+            new NetworkCandidatesModel([], [], [], false),
+            new \ValueError('broken answer'),
+        );
+
+        $report = $this->sweepOver($network, new RecordingLogger(), $closed, $registry)
+            ->sweep(PrivateFeedSyncBudgetModel::accounts(10));
+
+        self::assertSame(2, $report->checked);
+        self::assertNotNull($this->reloaded($second)->getLastCheckedAt());
     }
 
     private static function quietNetwork(): StubSocialCandidates
