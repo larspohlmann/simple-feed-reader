@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\SocialLike;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -47,5 +48,22 @@ final class SocialLikeRepository extends ServiceEntityRepository
             ->getSingleColumnResult();
 
         return array_fill_keys($likedEntryIds, true);
+    }
+
+    public function copyLike(int $userId, int $sourceEntryId, int $targetEntryId): void
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $conflictClause = DatabasePlatform::isMySql($connection) ? 'IGNORE' : 'OR IGNORE';
+
+        $connection->executeStatement(
+            sprintf(
+                'INSERT %s INTO social_like (user_id, entry_id, social_account_id, remote_id, liked_at)'
+                . ' SELECT user_id, ?, social_account_id, remote_id, liked_at FROM social_like'
+                . ' WHERE user_id = ? AND entry_id = ?',
+                $conflictClause,
+            ),
+            [$targetEntryId, $userId, $sourceEntryId],
+            [Types::INTEGER, Types::INTEGER, Types::INTEGER],
+        );
     }
 }
