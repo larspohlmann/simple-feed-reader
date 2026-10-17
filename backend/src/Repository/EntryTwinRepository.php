@@ -28,7 +28,7 @@ final class EntryTwinRepository extends ServiceEntityRepository
             ->join(
                 Entry::class,
                 'targetEntry',
-                Join::WITH,
+                Join::ON,
                 'targetEntry.feed = :targetFeed AND targetEntry.guid.hash = sourceEntry.guid.hash',
             )
             ->andWhere('sourceEntry.feed = :sourceFeed')
