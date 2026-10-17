@@ -7,11 +7,13 @@ namespace App\Tests\Service\Social;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\PrivateFeedSyncSkip;
+use App\Enum\SocialAccountStatus;
 use App\Enum\UserStatus;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
 use App\Service\Social\PrivateFeedSyncSweep;
+use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ClosedEntityManager;
 use App\Tests\Support\FlushFailingEntityManager;
@@ -23,6 +25,7 @@ use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\Persistence\ObjectManager;
+use Psr\Log\AbstractLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -206,6 +209,53 @@ final class PrivateFeedSyncSweepTest extends DbTestCase
 
         self::assertSame(2, $report->checked);
         self::assertNotNull($this->reloaded($second)->getLastCheckedAt());
+    }
+
+    public function testTheNextAccountStartsCleanAfterAFailureThatEscapedTheSkipRecording(): void
+    {
+        $first = $this->accountOf($this->user, 'did:plc:sweep-1');
+        $this->accountOf($this->user, 'did:plc:sweep-2');
+        $this->entityManager->flush();
+        $network = new class implements SocialCandidatesInterface {
+            private int $calls = 0;
+
+            public function candidates(SocialAccount $account): NetworkCandidatesModel
+            {
+                return new NetworkCandidatesModel([], [], [], false);
+            }
+
+            public function collections(SocialAccount $account): NetworkCollectionsModel
+            {
+                if (1 === ++$this->calls) {
+                    $account->markNeedsReconnect();
+
+                    throw new \ValueError('broken answer');
+                }
+
+                return new NetworkCollectionsModel([], []);
+            }
+        };
+        $logger = new class extends AbstractLogger {
+            private int $logged = 0;
+
+            public function log(mixed $level, string|\Stringable $message, array $context = []): void
+            {
+                if (1 === ++$this->logged) {
+                    throw new \RuntimeException('The log is unavailable.');
+                }
+            }
+        };
+
+        $report = PrivateFeedSyncWiring::sweep(
+            self::getContainer(),
+            $this->entityManager,
+            $this->clock,
+            $network,
+            $logger,
+        )->sweep(PrivateFeedSyncBudgetModel::accounts(10));
+
+        self::assertSame(2, $report->checked);
+        self::assertSame(SocialAccountStatus::Connected, $this->reloaded($first)->getStatus());
     }
 
     private static function quietNetwork(): StubSocialCandidates

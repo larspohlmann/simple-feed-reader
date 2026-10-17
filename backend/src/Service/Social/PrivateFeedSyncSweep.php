@@ -61,6 +61,9 @@ final readonly class PrivateFeedSyncSweep
                 'exception' => $exception,
             ]);
             $this->stampFailed($accountId);
+            if ($this->entityManager->isOpen()) {
+                $this->entityManager->clear();
+            }
 
             return new PrivateFeedSyncOutcomeModel(skip: PrivateFeedSyncSkip::Failed);
         }
