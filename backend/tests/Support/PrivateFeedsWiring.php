@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\KnownSocialCollection;
 use App\Entity\Subscription;
+use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\PrivateFeeds;
@@ -30,10 +32,13 @@ final class PrivateFeedsWiring
         $socialFeeds = SocialFeeds::repository($entityManager);
         /** @var SubscriptionRepository $subscriptions */
         $subscriptions = $entityManager->getRepository(Subscription::class);
+        /** @var KnownSocialCollectionRepository $knownCollections */
+        $knownCollections = $entityManager->getRepository(KnownSocialCollection::class);
 
         return new PrivateFeeds(
             $socialFeeds,
             $subscriptions,
+            $knownCollections,
             $creator,
             $subscriptionService,
             $entityManager,

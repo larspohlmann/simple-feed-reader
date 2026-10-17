@@ -9,6 +9,8 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Enum\SocialFeedKind;
+use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SocialFeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Clock\NaiveUtcClock;
@@ -26,6 +28,7 @@ final readonly class PrivateFeeds
     public function __construct(
         private SocialFeedRepository $socialFeeds,
         private SubscriptionRepository $subscriptions,
+        private KnownSocialCollectionRepository $knownCollections,
         private SubscriptionCreator $subscriptionCreator,
         private SubscriptionService $subscriptionService,
         private EntityManagerInterface $entityManager,
@@ -83,6 +86,9 @@ final readonly class PrivateFeeds
         $feed->setSiteUrl(PrivateFeedSite::of($account, $privateFeed));
         if (null === $socialFeed) {
             $this->entityManager->persist(new SocialFeed($account, $feed, $privateFeed->kind, $privateFeed->remoteId));
+        }
+        if (SocialFeedKind::Home !== $privateFeed->kind) {
+            $this->knownCollections->remember($account, $privateFeed->kind, $privateFeed->remoteId);
         }
         $this->entityManager->flush();
 
