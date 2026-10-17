@@ -98,7 +98,8 @@ final readonly class BlueskyThreadReplies
 
     private static function isByEntryAuthor(JsonNodeModel $author, ?string $entryAuthor): bool
     {
-        return $entryAuthor !== null && \in_array($entryAuthor, [$author->string('did'), $author->string('handle')], true);
+        return $entryAuthor !== null
+            && \in_array($entryAuthor, [$author->string('did'), $author->string('handle')], true);
     }
 
     private static function publishedAtOf(JsonNodeModel $post): ?\DateTimeImmutable
