@@ -7,10 +7,13 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
+use App\Entity\ThreadPost;
+use App\Entity\ThreadPostContent;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\LinkCardRepository;
+use App\Service\LinkCard\Model\PlacedLinkCardModel;
 use App\Tests\DbTestCase;
 
 final class LinkCardRepositoryTest extends DbTestCase
@@ -20,7 +23,7 @@ final class LinkCardRepositoryTest extends DbTestCase
         $entry = $this->entry('one');
         $subscriber = $this->subscriberOf($entry, 'subscriber');
         $cards = $this->repository();
-        $cards->append($entry, [], [$this->content('a'), $this->content('b')]);
+        $cards->append($entry, [$this->content('a'), $this->content('b')]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
@@ -32,7 +35,7 @@ final class LinkCardRepositoryTest extends DbTestCase
         $entry = $this->entry('one');
         $subscriber = $this->subscriberOf($entry, 'subscriber');
         $cards = $this->repository();
-        $cards->append($entry, [], [$this->content('a')]);
+        $cards->append($entry, [$this->content('a')]);
         $this->entityManager->flush();
 
         $this->expectException(RecordNotFoundException::class);
@@ -45,7 +48,7 @@ final class LinkCardRepositoryTest extends DbTestCase
         $other = $this->entry('other');
         $subscriber = $this->subscriberOf($other, 'subscriber');
         $cards = $this->repository();
-        $cards->append($holder, [], [$this->content('a')]);
+        $cards->append($holder, [$this->content('a')]);
         $this->entityManager->flush();
 
         $this->expectException(RecordNotFoundException::class);
@@ -58,7 +61,7 @@ final class LinkCardRepositoryTest extends DbTestCase
         $this->subscriberOf($entry, 'owner');
         $stranger = $this->subscriberOf($this->entry('elsewhere'), 'stranger');
         $cards = $this->repository();
-        $cards->append($entry, [], [$this->content('a')]);
+        $cards->append($entry, [$this->content('a')]);
         $this->entityManager->flush();
 
         $this->expectException(RecordNotFoundException::class);
@@ -70,7 +73,7 @@ final class LinkCardRepositoryTest extends DbTestCase
         $entry = $this->entry('one');
         $cards = $this->repository();
 
-        $cards->append($entry, [], [$this->content('b'), $this->content('a'), $this->content('c')]);
+        $cards->append($entry, [$this->content('b'), $this->content('a'), $this->content('c')]);
         $this->entityManager->flush();
 
         $stored = $cards->contentsByEntryIds([$entry->requireId()]);
@@ -84,7 +87,7 @@ final class LinkCardRepositoryTest extends DbTestCase
         $full = new LinkCardContent('https://example.com/a', 'Title', 'About', 'https://example.com/a.jpg', 'Example');
         $bare = new LinkCardContent('https://example.com/b', 'Bare', null, null, 'example.com');
 
-        $cards->append($entry, [], [$full, $bare]);
+        $cards->append($entry, [$full, $bare]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
@@ -94,7 +97,7 @@ final class LinkCardRepositoryTest extends DbTestCase
     public function testCardsGoWithTheirEntry(): void
     {
         $entry = $this->entry('gone');
-        $this->repository()->append($entry, [], [$this->content('a')]);
+        $this->repository()->append($entry, [$this->content('a')]);
         $this->entityManager->flush();
 
         $connection = $this->entityManager->getConnection();
@@ -109,8 +112,8 @@ final class LinkCardRepositoryTest extends DbTestCase
         $second = $this->entry('second');
         $empty = $this->entry('empty');
         $cards = $this->repository();
-        $cards->append($second, [], [$this->content('s1')]);
-        $cards->append($first, [], [$this->content('f1'), $this->content('f2')]);
+        $cards->append($second, [$this->content('s1')]);
+        $cards->append($first, [$this->content('f1'), $this->content('f2')]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
@@ -130,15 +133,75 @@ final class LinkCardRepositoryTest extends DbTestCase
     {
         $entry = $this->entry('one');
         $cards = $this->repository();
-        $cards->append($entry, [], [$this->content('a')]);
+        $cards->append($entry, [$this->content('a')]);
         $this->entityManager->flush();
 
-        $cards->append($entry, [$this->content('a')], [$this->content('b'), $this->content('c')]);
+        $cards->append($entry, [$this->content('b'), $this->content('c')]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
         $stored = $cards->contentsByEntryIds([$entry->requireId()]);
         self::assertSame(['a', 'b', 'c'], self::titlesOf($stored[$entry->requireId()]));
+    }
+
+    public function testAThreadCardTakesTheNextPositionAndStaysOutOfTheRootCards(): void
+    {
+        $cards = $this->repository();
+        $entry = $this->entry('one');
+        $subscriber = $this->subscriberOf($entry, 'subscriber');
+        $cards->append($entry, [$this->content('root')]);
+        $post = new ThreadPost(
+            $entry,
+            1,
+            new ThreadPostContent('https://bsky.app/profile/a/post/r1', null, '<p>r</p>', []),
+        );
+        $this->entityManager->persist($post);
+        $cards->appendToThreadPost($post, $this->content('reply'));
+        $this->entityManager->flush();
+
+        self::assertSame(['https://example.com/root'], array_map(
+            static fn (LinkCardContent $card): string => $card->url,
+            $cards->contentsByEntryIds([$entry->requireId()])[$entry->requireId()],
+        ));
+        self::assertSame(
+            'https://example.com/reply',
+            $cards->contentAt($subscriber->requireId(), $entry->requireId(), 1)->url,
+        );
+    }
+
+    public function testRootCardsAppendedAfterAThreadCardDoNotCollide(): void
+    {
+        $cards = $this->repository();
+        $entry = $this->entry('one');
+        $post = new ThreadPost($entry, 1, new ThreadPostContent(null, null, '<p>r</p>', []));
+        $this->entityManager->persist($post);
+        $cards->appendToThreadPost($post, $this->content('reply'));
+        $this->entityManager->flush();
+
+        $cards->append($entry, [$this->content('a'), $this->content('b')]);
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [1, 2],
+            array_map(
+                static fn (PlacedLinkCardModel $card): int => $card->position,
+                $cards->placedByEntryIds([$entry->requireId()])[$entry->requireId()],
+            ),
+        );
+    }
+
+    public function testUnflushedCardsCountWhenNumberingTheNext(): void
+    {
+        $cards = $this->repository();
+        $entry = $this->entry('one');
+        $cards->append($entry, [$this->content('a')]);
+        $cards->append($entry, [$this->content('b')]);
+        $this->entityManager->flush();
+
+        self::assertSame([0, 1], array_map(
+            static fn (PlacedLinkCardModel $card): int => $card->position,
+            $cards->placedByEntryIds([$entry->requireId()])[$entry->requireId()],
+        ));
     }
 
     /**

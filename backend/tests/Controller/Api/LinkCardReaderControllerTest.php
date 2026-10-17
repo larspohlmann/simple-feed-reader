@@ -63,7 +63,7 @@ final class LinkCardReaderControllerTest extends ApiTestCase
         $entityManager->persist($entry);
         $linkCards = self::getContainer()->get(LinkCardRepository::class);
         self::assertInstanceOf(LinkCardRepository::class, $linkCards);
-        $linkCards->append($entry, [], [
+        $linkCards->append($entry, [
             new LinkCardContent('https://example.com/article', 'Card title', null, $imageUrl, 'Example'),
         ]);
         $entityManager->flush();
