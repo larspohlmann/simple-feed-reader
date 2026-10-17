@@ -11,29 +11,22 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
-use App\Tests\Support\FakeArticleExtractor;
+use App\Tests\Support\ReaderEndpointFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class EntryReaderControllerTest extends WebTestCase
 {
+    use ReaderEndpointFixtures;
+
     protected function setUp(): void
     {
-        // The reader limiter counts in a FILESYSTEM pool that outlives the run,
-        // so a prior case's spend must not bleed into this one and trip a 429.
-        self::bootKernel();
-        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
-        $rateLimiterCache->clear();
-        self::ensureKernelShutdown();
+        $this->clearReaderRateLimiter();
     }
 
     /** @return array{0: array<string,string>, 1: User} */
@@ -75,21 +68,6 @@ final class EntryReaderControllerTest extends WebTestCase
         $entityManager->flush();
 
         return $entry;
-    }
-
-    private function spendReaderBudget(User $user): void
-    {
-        $readerLimiter = self::getContainer()->get('limiter.reader');
-        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
-        $readerLimiter->create('user-' . $user->requireId())->consume(60);
-    }
-
-    private function installFake(): FakeArticleExtractor
-    {
-        $fake = new FakeArticleExtractor();
-        self::getContainer()->set(ArticleExtractorInterface::class, $fake);
-
-        return $fake;
     }
 
     public function testOwnedEntryOkReturnsExtractedArticle(): void

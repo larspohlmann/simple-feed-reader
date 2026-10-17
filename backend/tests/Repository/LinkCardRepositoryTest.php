@@ -7,44 +7,62 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
+use App\Entity\Subscription;
+use App\Entity\User;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\LinkCardRepository;
 use App\Tests\DbTestCase;
 
 final class LinkCardRepositoryTest extends DbTestCase
 {
-    public function testFindsTheCardAtAPosition(): void
+    public function testFindsTheCardAtAPositionForASubscriber(): void
     {
         $entry = $this->entry('one');
+        $subscriber = $this->subscriberOf($entry, 'subscriber');
         $cards = $this->repository();
         $cards->append($entry, [], [$this->content('a'), $this->content('b')]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        self::assertSame('b', $cards->contentAt($entry->requireId(), 1)->title);
+        self::assertSame('b', $cards->contentAt($subscriber->requireId(), $entry->requireId(), 1)->title);
     }
 
     public function testAPositionPastTheLastCardIsNotFound(): void
     {
         $entry = $this->entry('one');
+        $subscriber = $this->subscriberOf($entry, 'subscriber');
         $cards = $this->repository();
         $cards->append($entry, [], [$this->content('a')]);
         $this->entityManager->flush();
 
         $this->expectException(RecordNotFoundException::class);
-        $cards->contentAt($entry->requireId(), 1);
+        $cards->contentAt($subscriber->requireId(), $entry->requireId(), 1);
     }
 
     public function testAnotherEntrysCardIsNotFound(): void
     {
         $holder = $this->entry('holder');
         $other = $this->entry('other');
+        $subscriber = $this->subscriberOf($other, 'subscriber');
         $cards = $this->repository();
         $cards->append($holder, [], [$this->content('a')]);
         $this->entityManager->flush();
 
         $this->expectException(RecordNotFoundException::class);
-        $cards->contentAt($other->requireId(), 0);
+        $cards->contentAt($subscriber->requireId(), $other->requireId(), 0);
+    }
+
+    public function testACardOfAFeedTheUserDoesNotSubscribeToIsNotFound(): void
+    {
+        $entry = $this->entry('one');
+        $this->subscriberOf($entry, 'owner');
+        $stranger = $this->subscriberOf($this->entry('elsewhere'), 'stranger');
+        $cards = $this->repository();
+        $cards->append($entry, [], [$this->content('a')]);
+        $this->entityManager->flush();
+
+        $this->expectException(RecordNotFoundException::class);
+        $cards->contentAt($stranger->requireId(), $entry->requireId(), 0);
     }
 
     public function testAppendingKeepsTheGivenOrder(): void
@@ -154,6 +172,18 @@ final class LinkCardRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function subscriberOf(Entry $entry, string $name): User
+    {
+        $user = new User($name . '@example.com', new \DateTimeImmutable('2026-10-10 08:00:00'));
+        $this->entityManager->persist($user);
+        $this->entityManager->persist(
+            new Subscription($user, $entry->getFeed(), new \DateTimeImmutable('2026-10-10 08:00:00')),
+        );
+        $this->entityManager->flush();
+
+        return $user;
     }
 
     private function repository(): LinkCardRepository

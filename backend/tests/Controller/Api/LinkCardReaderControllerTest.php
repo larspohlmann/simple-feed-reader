@@ -10,31 +10,23 @@ use App\Entity\LinkCardContent;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\LinkCardRepository;
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
-use App\Tests\Support\FakeArticleExtractor;
+use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\ReaderEndpointFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
-final class LinkCardReaderControllerTest extends WebTestCase
+final class LinkCardReaderControllerTest extends ApiTestCase
 {
+    use ReaderEndpointFixtures;
+
     protected function setUp(): void
     {
-        // The reader limiter counts in a FILESYSTEM pool that outlives the run,
-        // so a prior case's spend must not bleed into this one and trip a 429.
-        self::bootKernel();
-        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
-        $rateLimiterCache->clear();
-        self::ensureKernelShutdown();
+        $this->clearReaderRateLimiter();
     }
 
     /** @return array{0: array<string,string>, 1: User} */
@@ -50,21 +42,6 @@ final class LinkCardReaderControllerTest extends WebTestCase
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
 
         return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
-
-    private function spendReaderBudget(User $user): void
-    {
-        $readerLimiter = self::getContainer()->get('limiter.reader');
-        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
-        $readerLimiter->create('user-' . $user->requireId())->consume(60);
-    }
-
-    private function installFake(): FakeArticleExtractor
-    {
-        $fake = new FakeArticleExtractor();
-        self::getContainer()->set(ArticleExtractorInterface::class, $fake);
-
-        return $fake;
     }
 
     private function seedEntryWithCard(User $user, ?string $imageUrl = 'https://example.com/card.jpg'): Entry
@@ -94,15 +71,6 @@ final class LinkCardReaderControllerTest extends WebTestCase
         return $entry;
     }
 
-    /** @return array<mixed> */
-    private function bodyOf(KernelBrowser $client): array
-    {
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-
-        return $body;
-    }
-
     public function testExtractsTheCardsPage(): void
     {
         $client = self::createClient();
@@ -121,7 +89,7 @@ final class LinkCardReaderControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/' . $entry->requireId() . '/link-cards/0/reader', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $body = $this->bodyOf($client);
+        $body = $this->payload($client);
         self::assertSame('ok', $body['status']);
         self::assertSame('<p>Body</p>', $body['contentHtml']);
         self::assertSame(['https://example.com/article'], $fake->calls);
@@ -140,7 +108,7 @@ final class LinkCardReaderControllerTest extends WebTestCase
 
         $client->request('GET', '/api/entries/' . $entry->requireId() . '/link-cards/0/reader', server: $headers);
 
-        $body = $this->bodyOf($client);
+        $body = $this->payload($client);
         self::assertSame('failed', $body['status']);
         self::assertSame(
             ['url' => 'https://example.com/card.jpg', 'width' => null, 'height' => null],

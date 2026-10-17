@@ -6,7 +6,6 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\ReaderJson;
-use App\Repository\EntryListRepository;
 use App\Repository\LinkCardRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\LinkCardArticleReader;
@@ -20,7 +19,6 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final readonly class LinkCardReaderController
 {
     public function __construct(
-        private EntryListRepository $entryList,
         private LinkCardRepository $linkCards,
         private ClockInterface $clock,
         private LinkCardArticleReader $articleReader,
@@ -37,9 +35,7 @@ final readonly class LinkCardReaderController
     )]
     public function reader(int $id, int $position, #[CurrentUser] User $user): JsonResponse
     {
-        // Ownership is checked BEFORE the limiter so an unowned card 404s without spending the caller's reader budget.
-        $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
-        $card = $this->linkCards->contentAt($entry->requireId(), $position);
+        $card = $this->linkCards->contentAt($user->requireId(), $id, $position);
         $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
 
         return new JsonResponse(ReaderJson::one(
