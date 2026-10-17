@@ -81,12 +81,12 @@ final readonly class HiddenProfileSwitchSweep
         $candidates = [];
         foreach ($page as $subscription) {
             $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $subscription->getFeed()->getUrl());
-            if (null !== $actor && BlueskyActor::isValid($actor) && !$this->profileVisibility->isPublic($actor)) {
-                $candidates[] = new RefusedProfileSubscriptionModel(
-                    $subscription,
-                    $actor,
-                    $this->profileVisibility->hiddenOf($actor),
-                );
+            if (null === $actor || !BlueskyActor::isValid($actor)) {
+                continue;
+            }
+            $visibility = $this->profileVisibility->visibilityOf($actor);
+            if (!$visibility->isPublic()) {
+                $candidates[] = new RefusedProfileSubscriptionModel($subscription, $actor, $visibility->hidden);
             }
         }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Model\ProfileVisibilityModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -18,16 +19,15 @@ final readonly class ProfileVisibilityCache
     ) {
     }
 
-    public function isPublic(string $actor): bool
-    {
-        return self::PUBLIC === $this->cache->getItem(self::keyOf($actor))->get();
-    }
-
-    public function hiddenOf(string $actor): ?HiddenProfileModel
+    public function visibilityOf(string $actor): ProfileVisibilityModel
     {
         $verdict = $this->cache->getItem(self::keyOf($actor))->get();
 
-        return $verdict instanceof HiddenProfileModel ? $verdict : null;
+        return match (true) {
+            $verdict instanceof HiddenProfileModel => ProfileVisibilityModel::hiddenProfile($verdict),
+            self::PUBLIC === $verdict => ProfileVisibilityModel::publicProfile(),
+            default => ProfileVisibilityModel::unknown(),
+        };
     }
 
     /**
@@ -36,9 +36,14 @@ final readonly class ProfileVisibilityCache
      */
     public function remember(array $asked, array $hidden): void
     {
+        $actorByKey = [];
         foreach ($asked as $actor) {
-            $this->cache->save($this->cache->getItem(self::keyOf($actor))->set($hidden[$actor] ?? self::PUBLIC));
+            $actorByKey[self::keyOf($actor)] = $actor;
         }
+        foreach ($this->cache->getItems(array_keys($actorByKey)) as $key => $item) {
+            $this->cache->saveDeferred($item->set($hidden[$actorByKey[$key]] ?? self::PUBLIC));
+        }
+        $this->cache->commit();
     }
 
     /** A DID holds colons, which PSR-6 reserves in keys. */
