@@ -36,6 +36,8 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
 
     private const int THREADS_PER_COMPLETION = 2;
 
+    private const int GIVEN_UP_PER_PASS = 200;
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private ShareEnrichmentRepository $enrichments,
@@ -82,20 +84,45 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         }
     }
 
+    /** Rows past the give-up window settle in their own lane, unasked, so they never take a thread's slot. */
     private function enrichQueued(Feed $feed): void
     {
         if (!$this->enrichments->hasPendingForFeed($feed, ShareEnrichmentKind::SelfThread)) {
             return;
         }
-        $budget = SelfThreadBudgetModel::threads(self::THREADS_PER_PASS);
         $now = $this->clock->now();
-        $queued = $this->enrichments->findClaimableForFeed(
+        $this->giveUp(
+            $this->enrichments->findClaimableGivenUpForFeed(
+                $feed,
+                ShareEnrichmentKind::SelfThread,
+                $now,
+                self::GIVEN_UP_PER_PASS,
+            ),
+            $now,
+        );
+
+        $budget = SelfThreadBudgetModel::threads(self::THREADS_PER_PASS);
+        $queued = $this->enrichments->findClaimableLiveForFeed(
             $feed,
             ShareEnrichmentKind::SelfThread,
             $now,
             $budget->threads,
         );
         $this->claimAndSettle($queued, $budget, $now);
+    }
+
+    /** @param list<ShareEnrichment> $queued */
+    private function giveUp(array $queued, \DateTimeImmutable $claimedAt): void
+    {
+        $claimed = $this->enrichments->claim($queued, $claimedAt);
+        if ($claimed === []) {
+            return;
+        }
+        foreach ($claimed as $row) {
+            $this->handOnOrDrop($row);
+        }
+        $this->entityManager->flush();
+        $this->enrichments->release(self::awaitingLinkCards($claimed), $claimedAt);
     }
 
     /**

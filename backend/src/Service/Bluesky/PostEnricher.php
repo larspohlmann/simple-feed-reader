@@ -23,6 +23,8 @@ final readonly class PostEnricher
 {
     private const int POSTS_PER_PASS = 100;
 
+    private const int GIVEN_UP_PER_PASS = 200;
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private ShareEnrichmentRepository $enrichments,
@@ -68,16 +70,38 @@ final readonly class PostEnricher
             return;
         }
         $now = $this->clock->now();
-        $this->enrichments->deleteQueuedBefore(
-            $feed,
-            ShareEnrichmentKind::AppView,
-            $now->sub(new \DateInterval(ShareEnrichment::APPVIEW_GIVE_UP_AFTER)),
+        $this->drop(
+            $this->enrichments->findClaimableGivenUpForFeed(
+                $feed,
+                ShareEnrichmentKind::AppView,
+                $now,
+                self::GIVEN_UP_PER_PASS,
+            ),
+            $now,
         );
 
         $this->claimAndSettle(
-            $this->enrichments->findClaimableForFeed($feed, ShareEnrichmentKind::AppView, $now, self::POSTS_PER_PASS),
+            $this->enrichments->findClaimableLiveForFeed(
+                $feed,
+                ShareEnrichmentKind::AppView,
+                $now,
+                self::POSTS_PER_PASS,
+            ),
             $now,
         );
+    }
+
+    /** @param list<ShareEnrichment> $givenUp */
+    private function drop(array $givenUp, \DateTimeImmutable $claimedAt): void
+    {
+        $claimed = $this->enrichments->claim($givenUp, $claimedAt);
+        if ($claimed === []) {
+            return;
+        }
+        foreach ($claimed as $row) {
+            $this->entityManager->remove($row);
+        }
+        $this->entityManager->flush();
     }
 
     /**

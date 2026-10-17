@@ -117,6 +117,21 @@ final class SelfThreadEnricherTest extends DbTestCase
         self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
     }
 
+    public function testGivenUpRowsTakeNoThreadSlot(): void
+    {
+        for ($index = 0; $index < 30; $index++) {
+            $this->queuedEntry(sprintf('-4 days -%d minutes', $index), self::POST . '-old-' . $index);
+        }
+        $live = $this->queuedEntry('-1 minute', self::POST . '-live');
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame(['inPublic ' . self::POST . '-live'], $this->publicAsks());
+        self::assertSame([$live->requireId()], $this->foldedEntryIds());
+        self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
+    }
+
     public function testALinkRootWhoseLinkIsAlreadyCardedIsDequeued(): void
     {
         $entry = $this->queuedEntry();
