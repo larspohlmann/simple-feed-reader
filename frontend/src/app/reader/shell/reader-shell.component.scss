@@ -146,8 +146,23 @@ app-reader-header.hidden {
 }
 
 .main.split .reader {
+  position: relative;
   flex: 1;
   min-width: 0;
+}
+
+/* The linked article covers the reader pane; the entry beneath stays mounted so back keeps its scroll (#1664). */
+.link-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  animation: article-enter 0.22s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link-overlay {
+    animation: none;
+  }
 }
 
 /* The drag handle on the seam between panes (#810). Straddles it with a

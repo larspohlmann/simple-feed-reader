@@ -1,0 +1,151 @@
+/* `clip`, not `hidden`: the return swipe's overflow is cut without the host
+   becoming a scroller the chrome would sit in (#1332). Isolated so the back-to-top
+   button's z-index stays under a layer stacked over this one (#1664). */
+:host {
+  display: block;
+  position: relative;
+  height: 100%;
+  overflow: clip;
+  isolation: isolate;
+}
+
+/* The article layer the return swipe moves. The back-to-top button stays
+   outside it: a transform re-anchors `position: fixed` (#100). Isolated so the
+   chrome's z-indices stay off the shell's pane divider (#128). */
+.frame {
+  position: relative;
+  height: 100%;
+  isolation: isolate;
+}
+
+/* The only scroller. Chrome a tap must reach stays outside it: iOS spends a tap
+   inside a coasting scroller on stopping it (#1332). Isolated so nothing that
+   scrolls, dimmed paragraphs included, paints over that chrome. */
+.scroller {
+  --reader-top: calc(var(--reader-mini-h) + var(--reader-bar-h) + var(--bar-gap));
+
+  container: reader-pane / size;
+  height: 100%;
+  overflow: auto;
+  isolation: isolate;
+  scroll-padding-top: calc(var(--reader-mini-h) + var(--bar-gap));
+}
+
+/* Opaque and full-height so this overlay hides the still-mounted list until a
+   swipe slides it aside. Reserves the chrome floating above it (#87). */
+.reader {
+  position: relative;
+  min-height: 100%;
+  padding-top: var(--reader-top);
+  background: var(--surface-read);
+}
+
+/* Split pane: the shell's bar floats over this panel and the toolbar hangs
+   beneath it, never retracting, so the whole stack stays covered. */
+.with-bar .scroller {
+  --reader-top: calc(var(--app-bar-h, var(--bar-h)) + var(--reader-bar-h) + var(--bar-gap));
+
+  scroll-padding-top: var(--reader-top);
+}
+
+/* Set on .reader, not the projected article this layer's styles cannot reach;
+   the article inherits it. */
+.reader.with-tail {
+  --reader-focus-tail: 50cqb;
+}
+
+/* Overscroll-to-return affordance: anchored just below the article's end, so a
+         pull past the bottom (which translates .reader up) slides it into view.
+         .armed marks that releasing now will return to the list. */
+.pull-back {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+  color: var(--text-muted);
+}
+
+.pull-back.armed {
+  color: var(--accent);
+}
+
+/* Back-to-top affordance, pinned to the pane's corner, so it sits clear of the audio player. */
+app-to-top-button {
+  position: absolute;
+  right: 24px;
+  bottom: calc(24px + var(--toast-lift, 0px));
+  z-index: 20;
+}
+
+/* A narrow-layout run pill is a bottom toast that would bury this button
+   (#641). `--app-toast-height` is the live toast's measured height; its
+   fallback is zero so the button keeps its base offset when none is up. */
+:host-context(.is-narrow) app-to-top-button {
+  --toast-lift: calc(var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
+}
+
+/* Standing nameplate: the toolbar retracts, leaving nothing naming a
+   scrolled-down article (#270). Above the toolbar, which slides up beneath it. */
+.mini {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  /* The token, not `min-height`: the toolbar hangs at exactly this offset, so
+     the strip's box may not grow away from it. */
+  height: var(--reader-mini-h);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.bar {
+  position: absolute;
+  top: var(--reader-mini-h);
+  left: 0;
+  right: 0;
+  z-index: 1;
+  transition: transform 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.bar.hidden {
+  transform: translateY(-100%);
+}
+
+.with-bar .bar {
+  top: var(--app-bar-h, var(--bar-h));
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}
+
+.close {
+  /* Centre the glyph within the button rather than letting it sit on the
+     button's text baseline, where a 20px icon over 15px type hangs low. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}

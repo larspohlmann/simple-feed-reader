@@ -224,6 +224,7 @@ const SELECTION_PARAM_NAMES = [
   'feedKind',
   'subscription',
   'entry',
+  'link',
   'q',
 ] as const;
 

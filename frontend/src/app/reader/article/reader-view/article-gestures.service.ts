@@ -14,7 +14,6 @@ import {
   overscrollTriggersBack,
   rubberBand,
 } from '../../reader-gestures';
-import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 
 /** How far the rubber-banded overscroll pull may travel. */
@@ -42,7 +41,6 @@ export interface ArticleGestureHost {
 @Injectable()
 export class ArticleGestures {
   private readonly layer = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  private readonly restore = inject(ArticleScrollRestore);
   private readonly reduceMotion = prefersReducedMotion();
   private host: ArticleGestureHost = {
     fullscreen: signal(false),
@@ -53,7 +51,8 @@ export class ArticleGestures {
   private readonly dragX = signal(0);
   private readonly pull = signal(0);
   private readonly snapping = signal(false);
-  readonly leaving = signal(false);
+  private readonly leavingState = signal(false);
+  readonly leaving = this.leavingState.asReadonly();
   private touchStartX = 0;
   private touchStartY = 0;
   private touchDx = 0;
@@ -103,7 +102,6 @@ export class ArticleGestures {
   }
 
   onTouchStart(touchEvent: TouchEvent): void {
-    this.restore.abort(); // the user is taking over; stop restoring
     if (!this.tracking(touchEvent)) return;
     this.gestureSuppressed = startsOnMediaControl(touchEvent.target);
     if (this.gestureSuppressed) return;
@@ -186,7 +184,7 @@ export class ArticleGestures {
 
   /** Commit to returning to the list once the leave animation has played. */
   private leave(): void {
-    this.leaving.set(true);
+    this.leavingState.set(true);
     this.leaveTimer = window.setTimeout(
       () => this.host.close(),
       this.reduceMotion ? 0 : LEAVE_ANIM_MS,

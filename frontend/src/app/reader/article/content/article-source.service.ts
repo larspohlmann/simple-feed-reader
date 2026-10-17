@@ -1,15 +1,11 @@
-import { DestroyRef, Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { Observable, Subscription, timeout } from 'rxjs';
-import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../../models';
+import { Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { Observable } from 'rxjs';
+import { EntryDto, ReaderContent, ReaderFailure } from '../../models';
 import { EntryBodyService } from './entry-body.service';
 import { ReaderContentService } from './reader-content.service';
-import { describeLoadError } from './reader-load-error';
+import { ReaderLoad, ReaderLoadOutcome } from './reader-load';
 import { ReaderModeService } from './reader-mode.service';
 import { isPost } from '../../entry/entry-text';
-
-/** Give up on a hung extraction and fall back to feed content (backend caps a
- *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
-const READER_LOAD_TIMEOUT_MS = 30_000;
 
 /** Failures that say the page holds no article, which Retry cannot change. */
 const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([
@@ -18,11 +14,6 @@ const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([
   'mismatch',
   'player_page',
 ]);
-
-type SourceState =
-  | { status: 'idle' | 'loading' }
-  | { status: 'ok'; article: ReaderArticle }
-  | { status: 'failed'; failure: ReaderFailure | null; error: unknown };
 
 /** What the open article shows: the extracted reader article, or the feed's
  *  own body, and the load lifecycle between them. */
@@ -33,37 +24,19 @@ export class ArticleSource {
   private readonly readerMode = inject(ReaderModeService);
   private entry: Signal<EntryDto | null> = signal(null);
 
-  private loadSub: Subscription | null = null;
-  private readonly state = signal<SourceState>({ status: 'idle' });
+  private readonly load = new ReaderLoad();
 
-  readonly loading = computed(() => this.state().status === 'loading');
-  readonly failed = computed(() => this.state().status === 'failed');
+  readonly loading = this.load.loading;
+  readonly failed = this.load.failed;
+  readonly errorDetail = this.load.errorDetail;
+  private readonly article = this.load.article;
   readonly pageHoldsNoArticle = computed(() => {
-    const state = this.state();
-    return (
-      state.status === 'failed' &&
-      state.failure !== null &&
-      NO_ARTICLE_REASONS.has(state.failure.reason)
-    );
+    const failure = this.load.failure();
+    return failure !== null && NO_ARTICLE_REASONS.has(failure.reason);
   });
   /** The backend's reason the reader fell back; null after a transport failure,
    *  which carries no payload. */
-  readonly failureReason = computed<ReaderFailure['reason'] | null>(() => {
-    const state = this.state();
-    return state.status === 'failed' ? (state.failure?.reason ?? null) : null;
-  });
-  /** The diagnostic detail behind the fallback note's "show error" disclosure: the
-   *  server's own cause (a fetch's HTTP status or transport message), or the
-   *  complete HTTP message of a transport failure in the browser. */
-  readonly errorDetail = computed<string | null>(() => {
-    const state = this.state();
-    if (state.status !== 'failed') return null;
-    return state.failure ? state.failure.detail : describeLoadError(state.error);
-  });
-  private readonly article = computed(() => {
-    const state = this.state();
-    return state.status === 'ok' ? state.article : null;
-  });
+  readonly failureReason = computed(() => this.load.failure()?.reason ?? null);
   /** The reader body is the free preview of a paywalled article (#785). The
    *  original view shows the feed's own teaser, which needs no such note. */
   readonly paywalled = computed(
@@ -74,22 +47,13 @@ export class ArticleSource {
    *  hides rather than leaving a torn placeholder. Reset on every entry change. */
   readonly heroFailed = signal(false);
 
-  /** The payload the heroes come from. Null while loading, and after a
-   *  transport error, where no payload arrived at all. */
-  private readonly heroSource = computed<ReaderContent | null>(() => {
-    const state = this.state();
-    if (state.status === 'ok') return state.article;
-    if (state.status === 'failed') return state.failure;
-    return null;
-  });
-
   /**
    * The picture that leads the ORIGINAL view. The reader view carries its own
    * lead inside contentHtml now (#681), so it needs no hero element here; only
    * the original view, which renders the raw feed body, still gets one.
    */
   readonly hero = computed(() => {
-    const source = this.heroSource();
+    const source = this.load.payload();
     if (source === null || this.readerMode.mode() === 'reader') return null;
     const image = source.originalHero;
     return image === null || this.heroFailed() ? null : image;
@@ -122,10 +86,6 @@ export class ArticleSource {
     return body?.status === 'ok' && body.html !== null ? body.html : (entry.summary ?? '');
   });
 
-  constructor() {
-    inject(DestroyRef).onDestroy(() => this.loadSub?.unsubscribe());
-  }
-
   connect(entry: Signal<EntryDto | null>): void {
     this.entry = entry;
   }
@@ -134,13 +94,11 @@ export class ArticleSource {
   open(entry: EntryDto | null): void {
     this.heroFailed.set(false);
     if (!entry) {
-      this.loadSub?.unsubscribe();
-      this.state.set({ status: 'idle' });
+      this.load.idle();
       return;
     }
     if (!entry.url || isPost(entry)) {
-      this.loadSub?.unsubscribe();
-      this.state.set({ status: 'idle' });
+      this.load.idle();
       this.readerMode.setOriginalOnly();
       return;
     }
@@ -157,29 +115,12 @@ export class ArticleSource {
     this.bodyService.retry(id);
   }
 
-  /** Subscribe to a content source (initial load or cache-busting reload),
-   *  driving the loading → ok/failed lifecycle. Reader/original mode is
-   *  untouched here — only a genuine entry change resets it. */
   private runLoad(source: Observable<ReaderContent>): void {
-    this.loadSub?.unsubscribe();
-    this.state.set({ status: 'loading' });
-    this.loadSub = source.pipe(timeout({ first: READER_LOAD_TIMEOUT_MS })).subscribe({
-      next: (content) => {
-        if (content.status === 'ok') {
-          this.state.set({ status: 'ok', article: content });
-          this.readerMode.enableToggle();
-        } else {
-          this.state.set({ status: 'failed', failure: content, error: null });
-          this.readerMode.setOriginalOnly();
-        }
-      },
-      error: (error: unknown) => {
-        // A timeout or a transport error leaves no payload, so this article
-        // shows the feed's content with no hero. Keep the error so the reader
-        // can reveal the complete HTTP message behind the fallback note.
-        this.state.set({ status: 'failed', failure: null, error });
-        this.readerMode.setOriginalOnly();
-      },
-    });
+    this.load.run(source, (outcome) => this.settleMode(outcome));
+  }
+
+  private settleMode(outcome: ReaderLoadOutcome): void {
+    if (outcome === 'ok') this.readerMode.enableToggle();
+    else this.readerMode.setOriginalOnly();
   }
 }

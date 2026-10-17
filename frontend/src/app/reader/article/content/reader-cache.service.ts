@@ -1,16 +1,26 @@
 import { Injectable, inject } from '@angular/core';
 import { ReaderOutputVersion } from '../../../core/http/reader-output-version';
 import { ReaderArticle } from '../../models';
+import { LinkCardRef } from '../../query/link-param';
+
+/** What the reader shows: an entry's own page (its id), or a link card's page. */
+export type ReaderTarget = number | LinkCardRef;
+
+export type ReaderCacheKey = number | `card:${number}.${number}`;
+
+export function readerCacheKey(target: ReaderTarget): ReaderCacheKey {
+  return typeof target === 'number' ? target : `card:${target.entryId}.${target.position}`;
+}
 
 interface CacheRecord {
-  entryId: number;
+  key: ReaderCacheKey;
   article: ReaderArticle;
   cachedAt: number;
   readerVersion: string;
 }
 
 /**
- * Persistent, size-capped cache of extracted articles, keyed by entry id. Only
+ * Persistent, size-capped cache of extracted articles. Only
  * successful extractions are stored (failures should be retryable). An article
  * extracted under another reader-output version than the backend's current one
  * misses; VERSION is only the schema of the store itself.
@@ -20,31 +30,31 @@ export class ReaderCacheService {
   static readonly MAX_ENTRIES = 100;
   private static readonly DB = 'sfr-reader';
   private static readonly STORE = 'articles';
-  private static readonly VERSION = 30;
+  private static readonly VERSION = 31;
 
   private readonly readerVersion = inject(ReaderOutputVersion);
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
   private lastCachedAt = 0;
 
-  async get(entryId: number): Promise<ReaderArticle | null> {
+  async get(key: ReaderCacheKey): Promise<ReaderArticle | null> {
     const database = await this.open();
     if (!database) return null;
     return new Promise((resolve) => {
       const tx = database.transaction(ReaderCacheService.STORE, 'readonly');
-      const request = tx.objectStore(ReaderCacheService.STORE).get(entryId);
+      const request = tx.objectStore(ReaderCacheService.STORE).get(key);
       request.onsuccess = () => resolve(this.current(request.result as CacheRecord | undefined));
       request.onerror = () => resolve(null);
     });
   }
 
-  async put(entryId: number, article: ReaderArticle): Promise<void> {
+  async put(key: ReaderCacheKey, article: ReaderArticle): Promise<void> {
     const readerVersion = this.readerVersion.current();
     const database = await this.open();
     if (!database || readerVersion === null) return;
     this.lastCachedAt = Math.max(Date.now(), this.lastCachedAt + 1);
     const record: CacheRecord = {
-      entryId,
+      key,
       article,
       cachedAt: this.lastCachedAt,
       readerVersion,
@@ -58,12 +68,12 @@ export class ReaderCacheService {
     await this.evict(database);
   }
 
-  async delete(entryId: number): Promise<void> {
+  async delete(key: ReaderCacheKey): Promise<void> {
     const database = await this.open();
     if (!database) return;
     await new Promise<void>((resolve) => {
       const tx = database.transaction(ReaderCacheService.STORE, 'readwrite');
-      tx.objectStore(ReaderCacheService.STORE).delete(entryId);
+      tx.objectStore(ReaderCacheService.STORE).delete(key);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     });
@@ -108,7 +118,7 @@ export class ReaderCacheService {
         if (database.objectStoreNames.contains(ReaderCacheService.STORE)) {
           database.deleteObjectStore(ReaderCacheService.STORE);
         }
-        const store = database.createObjectStore(ReaderCacheService.STORE, { keyPath: 'entryId' });
+        const store = database.createObjectStore(ReaderCacheService.STORE, { keyPath: 'key' });
         store.createIndex('cachedAt', 'cachedAt');
       };
       // A tab from before the bump holds the old schema and never closes: read

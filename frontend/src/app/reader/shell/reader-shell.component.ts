@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
+import { LinkReaderNavigation } from './link-reader-navigation.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ListHeading } from './list-heading.service';
 import { EntryStateActions } from './entry-state-actions.service';
@@ -39,6 +40,7 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
 import { isDirectSearch } from '../query/query';
+import { entryChangeParams } from '../query/link-param';
 import { UnreadFilterService } from '../list/unread-filter.service';
 import { ListOrderService } from '../list/list-order.service';
 import { ListPreferences } from '../list/list-preferences.service';
@@ -48,6 +50,7 @@ import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ReaderViewComponent } from '../article/reader-view/reader-view.component';
+import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { AudioPlayerBarComponent } from './audio-player-bar/audio-player-bar.component';
 import { ManageActions } from '../feeds/manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
@@ -71,6 +74,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     SidebarComponent,
     EntryListComponent,
     ReaderViewComponent,
+    LinkReaderComponent,
     AudioPlayerBarComponent,
     DrawerSwipeDirective,
     PaneResizeDirective,
@@ -91,6 +95,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     PendingEntriesPoll,
     { provide: PreviewProgress, useExisting: PendingEntriesPoll },
     ReaderRouteState,
+    LinkReaderNavigation,
     ListHeading,
     EntryStateActions,
     MarkReadActions,
@@ -145,6 +150,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly selection = this.routeState.selection;
   readonly entryId = this.routeState.entryId;
   readonly openEntry = this.routeState.openEntry;
+  readonly linkCard = this.routeState.linkCard;
+  readonly openLinkCard = computed(() => {
+    const ref = this.linkCard();
+    return ref === null ? null : (this.entries.entry(ref.entryId)?.linkCards[ref.position] ?? null);
+  });
+  readonly linkReturnsTo = computed(() => (this.entryId() === null ? 'list' : 'article'));
+  protected readonly linkNavigation = inject(LinkReaderNavigation);
   readonly heading = inject(ListHeading);
   readonly entryActions = inject(EntryStateActions);
   readonly markRead = inject(MarkReadActions);
@@ -166,9 +178,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
   readonly searchPane = computed(() => this.screen.isWide() && isDirectSearch(this.selection()));
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
-  /** An article filling the whole main area (not the split pane) — the top bar
-   *  takes over its back button, reader switch and prev/next. */
-  readonly articleFullscreen = computed(() => this.openEntry() !== null && !this.splitView());
+  /** An article or link card filling the whole main area (not the split pane). */
+  readonly articleFullscreen = computed(
+    () => (this.openEntry() !== null || this.linkCard() !== null) && !this.splitView(),
+  );
 
   /** The user's tags for the mobile swipe row (the sidebar covers wider screens). */
   readonly headerTags = computed<TagDto[]>(() => this.subs.tagTree().map((node) => node.tag));
@@ -330,7 +343,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   onCloseReader(): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { entry: null },
+      queryParams: entryChangeParams(null),
       queryParamsHandling: 'merge',
     });
   }
@@ -342,7 +355,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   // Preserve the underlying list so clearing a direct search returns to it.
   onSearch(term: string): void {
     void this.router.navigate(['/'], {
-      queryParams: { q: term || null, entry: null },
+      queryParams: { q: term || null, ...entryChangeParams(null) },
       queryParamsHandling: 'merge',
     });
   }

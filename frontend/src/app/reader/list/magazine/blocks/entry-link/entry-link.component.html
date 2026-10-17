@@ -10,6 +10,8 @@
     <app-link-card
       [card]="shared"
       layout="block"
+      [openableInReader]="true"
+      (openInReader)="openInReaderAlone()"
       (click)="$event.stopPropagation()"
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"

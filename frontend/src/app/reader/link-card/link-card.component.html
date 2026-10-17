@@ -21,3 +21,16 @@
     <small>{{ card().siteName }}</small>
   }
 </a>
+@if (openableInReader()) {
+  <button
+    type="button"
+    class="open-in-reader"
+    [attr.aria-label]="'reader.openInReader' | transloco"
+    [attr.title]="'reader.openInReader' | transloco"
+    (click)="onOpenInReader($event)"
+    (keydown.enter)="$event.stopPropagation()"
+    (keydown.space)="$event.stopPropagation()"
+  >
+    <app-icon name="chrome_reader_mode" size="sm" />
+  </button>
+}

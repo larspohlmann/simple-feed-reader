@@ -6,6 +6,7 @@ import { MagazineBlockComponent } from './magazine-block.component';
 import { ENTRY_KINDS, EntryKind, MagazineBlock } from './magazine-block';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
+import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { aQuotedPost, anEntry } from '../../../../testing/entry-testing';
 
@@ -31,6 +32,7 @@ function mount(block: MagazineBlock): HTMLElement {
     providers: [
       { provide: EntryActionHandler, useValue: { open: jest.fn() } },
       { provide: ImageProxyService, useValue: neverRecoveringImageProxy() },
+      { provide: LinkReaderNavigation, useValue: { openAlone: jest.fn() } },
       provideRouter([]),
     ],
   });

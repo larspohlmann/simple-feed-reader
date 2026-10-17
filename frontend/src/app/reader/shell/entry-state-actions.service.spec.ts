@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { EntryStateActions } from './entry-state-actions.service';
 import { EntriesStore } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
@@ -61,5 +61,32 @@ describe('EntryStateActions liking (#1600)', () => {
     });
 
     expect(show).toHaveBeenCalledWith({ message: 'The post is no longer on Mastodon.' });
+  });
+});
+
+describe('EntryStateActions opening', () => {
+  it('drops a standalone link card when an entry is opened from the list', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        EntryStateActions,
+        provideRouter([]),
+        { provide: EntriesStore, useValue: {} },
+        { provide: SubscriptionsStore, useValue: {} },
+        { provide: SavedSearchesStore, useValue: {} },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntryId: signal(null), openEntry: signal(null) },
+        },
+        { provide: ToastService, useValue: {} },
+      ],
+    });
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    TestBed.inject(EntryStateActions).open(anEntry({ id: 514, title: 'Some Title' }));
+
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({ queryParams: { entry: '514-some-title', link: null } }),
+    );
   });
 });

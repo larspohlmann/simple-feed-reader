@@ -1770,6 +1770,7 @@ magazine's link block, with the site line first and the image at `link-card.$ima
 (1.91:1). `_link-card-layout.scss` holds the frame both share with the `.link-card` that #1499
 writes into stored bodies. The chrome is `theme/_link-card.scss`'s `surface`, which the
 placeholder of a link share still being completed shares.
+A card with `openableInReader` carries an always-visible corner button (`--media-scrim`, `--on-media-scrim`; `--tap-target` on coarse pointers) that opens the page in the reader (#1664); comment cards leave it off.
 
 **A quoted post is one component** (#1612). `<app-quoted-post>` (`reader/quoted-post/`) renders a `QuotedPostDto` in
 two layouts: `block`, in the magazine's quoting block, clamped; `article`, under the post in the reader, whole, with the

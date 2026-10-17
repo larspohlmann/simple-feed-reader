@@ -456,6 +456,25 @@ describe('ReaderApi', () => {
     expect(received?.status).toBe('failed');
   });
 
+  it('GETs reader content for a link card', () => {
+    let received: ReaderContent | undefined;
+    api
+      .linkCardReaderContent({ entryId: 7, position: 1 })
+      .subscribe((content) => (received = content));
+
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/7/link-cards/1/reader');
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush({
+      status: 'failed',
+      url: null,
+      reason: 'no_url',
+      detail: null,
+      originalHero: null,
+    } satisfies ReaderContent);
+
+    expect(received?.status).toBe('failed');
+  });
+
   it('GETs comments for an entry', () => {
     let received: unknown;
     api.comments(7).subscribe((comments) => (received = comments));

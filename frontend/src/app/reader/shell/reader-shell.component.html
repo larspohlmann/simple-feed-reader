@@ -106,6 +106,11 @@
       ></div>
       <section class="reader">
         <ng-container *ngTemplateOutlet="readerPane; context: { fullscreen: false }" />
+        @if (linkCard()) {
+          <div class="link-overlay">
+            <ng-container *ngTemplateOutlet="linkPane; context: { fullscreen: false }" />
+          </div>
+        }
       </section>
     } @else {
       <!-- The list stays mounted; a full-screen article overlays it, so swiping it
@@ -118,6 +123,11 @@
                On wide screens the bar is app chrome, so the full-pane article slots
                beneath it with the same toolbar arrangement the split pane uses. -->
           <ng-container *ngTemplateOutlet="readerPane; context: { fullscreen: !screen.isWide() }" />
+        </div>
+      }
+      @if (linkCard()) {
+        <div class="article-overlay">
+          <ng-container *ngTemplateOutlet="linkPane; context: { fullscreen: !screen.isWide() }" />
         </div>
       }
     }
@@ -173,6 +183,17 @@
       (openOriginal)="withOpen(entryActions.openOriginal)"
       (close)="onCloseReader()"
     />
+  </ng-template>
+  <ng-template #linkPane let-fullscreen="fullscreen">
+    @if (linkCard(); as ref) {
+      <app-link-reader
+        [ref]="ref"
+        [card]="openLinkCard()"
+        [fullscreen]="fullscreen"
+        [returnsTo]="linkReturnsTo()"
+        (close)="linkNavigation.close()"
+      />
+    }
   </ng-template>
 </div>
 <app-audio-player-bar />

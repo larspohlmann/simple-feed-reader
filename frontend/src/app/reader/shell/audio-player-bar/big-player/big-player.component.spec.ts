@@ -277,6 +277,17 @@ describe('BigPlayerComponent', () => {
     });
   }
 
+  it('drops a link card layered over the list when it opens the article', async () => {
+    const fixture = render();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/?subscription=1&link=7.1');
+
+    query(fixture, '.open-article')!.click();
+    await fixture.whenStable();
+
+    expect(router.url).toBe('/?subscription=1&entry=42-episode-2-the-headline');
+  });
+
   it('leaves out the details a track saved before #1442 does not carry', () => {
     const fixture = render(first);
 

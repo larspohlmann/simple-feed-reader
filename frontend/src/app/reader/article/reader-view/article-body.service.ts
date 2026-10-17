@@ -27,8 +27,7 @@ export interface ArticleBodyParts {
 }
 
 /** The rendered article body's DOM wiring: its decorations, its media recovery, its media's
- *  turn in the article's one-at-a-time playback and the `t` cinema key. `connect` creates its
- *  effects, so the host decides where they fall in its own effect order. */
+ *  turn in the article's one-at-a-time playback and the `t` cinema key. */
 @Injectable()
 export class ArticleBody {
   private readonly i18n = inject(TranslocoService);
@@ -37,12 +36,16 @@ export class ArticleBody {
   private readonly zone = inject(NgZone);
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
+  private destroyed = false;
 
   constructor() {
     const onKeydown = (event: KeyboardEvent): void =>
       toggleCinemaByKey(event, this.content()?.nativeElement);
     document.addEventListener('keydown', onKeydown);
-    inject(DestroyRef).onDestroy(() => document.removeEventListener('keydown', onKeydown));
+    inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
+      document.removeEventListener('keydown', onKeydown);
+    });
   }
 
   connect(parts: ArticleBodyParts): void {
@@ -89,7 +92,7 @@ export class ArticleBody {
         });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
-          if (!host) return;
+          if (!host || this.destroyed) return;
           decorateArticle(host, this.i18n, parts.enclosureUrl());
           this.zone.runOutsideAngular(() => this.media.follow(host));
           parts.decorated(host);

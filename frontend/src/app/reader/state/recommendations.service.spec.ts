@@ -135,6 +135,7 @@ describe('RecommendationsService', () => {
         feedKind: null,
         subscription: null,
         entry: null,
+        link: null,
         q: null,
       },
     });

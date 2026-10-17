@@ -54,6 +54,7 @@ import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast
 import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../../testing/refresh-report';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
+import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
 import { aLinkCard, anEntry } from '../../../testing/entry-testing';
 
 describe('ReaderShellComponent', () => {
@@ -2054,6 +2055,7 @@ describe('ReaderShellComponent', () => {
             feedKind: null,
             subscription: 9,
             entry: null,
+            link: null,
             q: null,
           },
         }),
@@ -2072,7 +2074,7 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         ['/'],
         expect.objectContaining({
-          queryParams: { q: 'angular', entry: null },
+          queryParams: { q: 'angular', entry: null, link: null },
           queryParamsHandling: 'merge',
         }),
       );
@@ -2087,7 +2089,7 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         ['/'],
         expect.objectContaining({
-          queryParams: { q: null, entry: null },
+          queryParams: { q: null, entry: null, link: null },
           queryParamsHandling: 'merge',
         }),
       );
@@ -4506,6 +4508,98 @@ describe('ReaderShellComponent', () => {
 
       expect(retry).toHaveBeenCalledTimes(1);
       expect(dismiss).toHaveBeenCalledTimes(1);
+    });
+  });
+  describe('link reader (#1664)', () => {
+    function openWide(fixture: ReturnType<typeof boot>): void {
+      screen.isWide.set(true);
+      fixture.componentInstance.layout.set('pane');
+      fixture.detectChanges();
+    }
+
+    function openLink(fixture: ReturnType<typeof boot>, params: Record<string, string>): void {
+      qp.next(convertToParamMap(params));
+      fixture.detectChanges();
+      ctrl.match(() => true);
+      fixture.detectChanges();
+    }
+
+    function linkReaderOf(fixture: ReturnType<typeof boot>): LinkReaderComponent {
+      return fixture.debugElement.query(By.directive(LinkReaderComponent)).componentInstance;
+    }
+
+    it('layers the link reader inside the reader pane over the open entry in split view', () => {
+      const fixture = boot({ linkCards: [aLinkCard()] });
+      openWide(fixture);
+      openLink(fixture, { entry: '1', link: '1.0' });
+
+      const host: HTMLElement = fixture.nativeElement;
+      expect(host.querySelector('section.reader app-reader-view')).not.toBeNull();
+      expect(host.querySelector('section.reader .link-overlay app-link-reader')).not.toBeNull();
+      expect(linkReaderOf(fixture).returnsTo()).toBe('article');
+    });
+
+    it('opens a standalone link card as an overlay over the list on the narrow layout', () => {
+      const fixture = boot({ linkCards: [aLinkCard()] });
+      openLink(fixture, { link: '1.0' });
+
+      const host: HTMLElement = fixture.nativeElement;
+      expect(host.querySelector('.article-overlay app-link-reader')).not.toBeNull();
+      expect(linkReaderOf(fixture).returnsTo()).toBe('list');
+      expect(
+        fixture.debugElement
+          .query(By.directive(EntryListComponent))
+          .componentInstance.openEntryId(),
+      ).toBeNull();
+    });
+
+    it('layers a link over the open entry on the narrow layout, returning to the article', () => {
+      const fixture = boot({ linkCards: [aLinkCard()] });
+      openLink(fixture, { entry: '1', link: '1.0' });
+
+      const overlays = (fixture.nativeElement as HTMLElement).querySelectorAll('.article-overlay');
+      expect(overlays).toHaveLength(2);
+      expect(overlays[0].querySelector('app-reader-view')).not.toBeNull();
+      expect(overlays[1].querySelector('app-link-reader')).not.toBeNull();
+      expect(linkReaderOf(fixture).returnsTo()).toBe('article');
+    });
+
+    it('returns to the article while the route names an entry that has not loaded', () => {
+      const fixture = boot({ linkCards: [aLinkCard()] });
+      openLink(fixture, { entry: '99', link: '99.0' });
+
+      expect(fixture.componentInstance.openEntry()).toBeNull();
+      expect(fixture.componentInstance.linkReturnsTo()).toBe('article');
+    });
+
+    it('closes the link reader by dropping the link and keeping the entry', () => {
+      const fixture = boot({ linkCards: [aLinkCard()] });
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      openLink(fixture, { entry: '1', link: '1.0' });
+
+      linkReaderOf(fixture).close.emit();
+
+      expect(nav).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({ queryParams: { link: null }, queryParamsHandling: 'merge' }),
+      );
+    });
+
+    it('is full screen for a standalone link on the narrow layout, which disables the swipe', () => {
+      const fixture = boot({ linkCards: [aLinkCard()] });
+      expect(fixture.componentInstance.articleFullscreen()).toBe(false);
+      openLink(fixture, { link: '1.0' });
+
+      expect(fixture.componentInstance.articleFullscreen()).toBe(true);
+    });
+
+    it('resolves the open link card from the store entry, or null when it is not stored', () => {
+      const fixture = boot({ linkCards: [aLinkCard({ title: 'Stored card' })] });
+      openLink(fixture, { link: '1.0' });
+      expect(fixture.componentInstance.openLinkCard()?.title).toBe('Stored card');
+
+      openLink(fixture, { link: '99.0' });
+      expect(fixture.componentInstance.openLinkCard()).toBeNull();
     });
   });
 });

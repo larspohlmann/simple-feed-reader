@@ -156,7 +156,7 @@ describe('listSelectionFrom (#579)', () => {
 describe('selectionQueryParams', () => {
   it('pins the selection vocabulary — this must not shrink silently', () => {
     expect(Object.keys(selectionQueryParams({})).sort()).toEqual(
-      ['entry', 'feedKind', 'network', 'q', 'subscription', 'tag', 'view'].sort(),
+      ['entry', 'feedKind', 'link', 'network', 'q', 'subscription', 'tag', 'view'].sort(),
     );
   });
   it('nulls every selection parameter the caller did not set', () => {
@@ -167,6 +167,7 @@ describe('selectionQueryParams', () => {
       feedKind: null,
       subscription: null,
       entry: null,
+      link: null,
       q: null,
     });
   });
@@ -178,6 +179,7 @@ describe('selectionQueryParams', () => {
       feedKind: null,
       subscription: null,
       entry: null,
+      link: null,
       q: null,
     });
     expect(selectionQueryParams({ subscription: 7 })).toEqual({
@@ -187,6 +189,7 @@ describe('selectionQueryParams', () => {
       feedKind: null,
       subscription: 7,
       entry: null,
+      link: null,
       q: null,
     });
     expect(selectionQueryParams({ view: 'favorites' })).toEqual({
@@ -196,6 +199,7 @@ describe('selectionQueryParams', () => {
       feedKind: null,
       subscription: null,
       entry: null,
+      link: null,
       q: null,
     });
   });
@@ -207,6 +211,7 @@ describe('selectionQueryParams', () => {
       feedKind: null,
       subscription: null,
       entry: null,
+      link: null,
       q: null,
     });
   });
@@ -244,6 +249,7 @@ describe('selectionQueryParams', () => {
         feedKind: null,
         subscription: null,
         entry: null,
+        link: null,
         q: null,
       });
     });
@@ -257,6 +263,7 @@ describe('selectionQueryParams', () => {
       feedKind: null,
       subscription: null,
       entry: null,
+      link: null,
       q: 'angular',
     });
   });

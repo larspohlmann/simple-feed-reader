@@ -11,8 +11,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
-import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -21,12 +19,7 @@ import { ListActionDirective } from '../../../shared/list-action/list-action.dir
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
-import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
-import {
-  BACK_TO_TOP_AFTER_PX,
-  ToTopButtonComponent,
-} from '../../../shared/to-top-button/to-top-button.component';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
@@ -38,7 +31,6 @@ import { ReaderModeService } from '../content/reader-mode.service';
 import { ArticleSource } from '../content/article-source.service';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { LayoutService } from '../../layout.service';
-import { nextHeaderHidden } from '../../scroll/header-scroll';
 import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { ReadingScope, type TrailingPart } from '../reading/reading-scope.service';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
@@ -51,11 +43,11 @@ import { SocialCountsComponent } from '../social-counts/social-counts.component'
 import { SocialCountsService } from '../social-counts/social-counts.service';
 import { CommentsService } from '../entry-comments/comments.service';
 import { CommentsForecast } from '../entry-comments/comments-forecast';
-import { ArticleBody } from './article-body.service';
+import { ArticleContentComponent } from '../article-content/article-content.component';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 import { AUTOPLAY_REGION, AutoplayRegion } from '../../media/autoplay/autoplay-region';
-import { ArticleGestures } from './article-gestures.service';
+import { ArticleLayerComponent } from '../article-layer/article-layer.component';
 import { relativeTime } from '../../format';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { AudioPlayerService } from '../../audio-player.service';
@@ -65,19 +57,15 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 @Component({
   selector: 'app-reader-view',
   imports: [
-    ProgressRailComponent,
-    ScrollProgressDirective,
     ProxiedImageDirective,
     IconComponent,
     ListActionDirective,
     FlagToggleDirective,
     FaviconComponent,
     EntrySourceComponent,
-    SpinnerComponent,
     LoadingOverlayComponent,
     EntryPillsComponent,
     EntryActionsComponent,
-    ToTopButtonComponent,
     TranslocoPipe,
     PaywallNoticeComponent,
     WarningBoxComponent,
@@ -88,19 +76,19 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     ListenRowComponent,
     QuotedPostComponent,
     SocialCountsComponent,
+    ArticleContentComponent,
+    ArticleLayerComponent,
   ],
   providers: [
     ArticleScrollRestore,
-    ArticleGestures,
     ArticleSource,
     ReadingScope,
-    ArticleBody,
     ListAutoplayCoordinator,
     UnlockedVideoElements,
     { provide: AUTOPLAY_REGION, useFactory: theArticleComments },
   ],
   templateUrl: './reader-view.component.html',
-  styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
+  styleUrl: './reader-view.component.scss',
 })
 export class ReaderViewComponent {
   protected readonly entryDisplayTitle = entryDisplayTitle;
@@ -108,9 +96,6 @@ export class ReaderViewComponent {
 
   readonly entry = input.required<EntryDto | null>();
   readonly tags = input<SubscriptionTagDto[]>([]);
-  /** Full-screen reading (the mobile overlay) vs. the split pane. The article
-   *  is its own layer: its own hide-on-scroll toolbar, slide-out back button,
-   *  and return gestures. The shell's app bar stays beneath, untouched (#128). */
   readonly fullscreen = input(false);
   protected readonly actions = inject(EntryActionHandler);
 
@@ -119,7 +104,8 @@ export class ReaderViewComponent {
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly close = output<void>();
 
-  private readonly content = viewChild<ElementRef<HTMLElement>>('content');
+  private readonly articleContent = viewChild(ArticleContentComponent);
+  private readonly content = computed(() => this.articleContent()?.element);
   private readonly commentsSection = viewChild(EntryCommentsComponent, {
     read: ElementRef<HTMLElement>,
   });
@@ -144,21 +130,16 @@ export class ReaderViewComponent {
       expectedHeight: this.commentsForecast.expectedHeight,
     },
   ];
-  /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
-  private readonly scroller = computed(() => this.scrollerRef()?.nativeElement);
-  private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
+  private readonly layer = viewChild(ArticleLayerComponent);
+  protected readonly scroller = computed(() => this.layer()?.scroller());
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   private readonly screen = inject(LayoutService);
   private readonly reduceMotion = prefersReducedMotion();
   private readonly restore = inject(ArticleScrollRestore);
-  protected readonly gestures = inject(ArticleGestures);
   protected readonly source = inject(ArticleSource);
   protected readonly scope = inject(ReadingScope);
-  private readonly body = inject(ArticleBody);
   private readonly autoplay = inject(ListAutoplayCoordinator);
   protected readonly progressRail = new ScrollProgressRail({
     isWide: this.screen.isWide,
@@ -197,25 +178,11 @@ export class ReaderViewComponent {
   readonly toc = signal<TocEntry[]>([]);
   readonly tocOpen = signal(false);
 
-  /** Back-to-top affordance: revealed once the reader has scrolled past a screen. */
-  readonly showToTop = signal(false);
-
-  /** Full-screen only: the toolbar retracts scrolling down and returns
-   *  scrolling up, exactly like the list's app bar over the list — driven by
-   *  this article's own scroller alone. */
-  readonly toolbarHidden = signal(false);
-  private lastToolbarScrollTop = 0;
-
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
   readonly readingMinutes = computed(() => estimateReadingMinutes(this.source.displayHtml()));
 
   constructor() {
     this.source.connect(this.entry);
-    this.gestures.connect({
-      fullscreen: this.fullscreen,
-      scroller: this.scroller,
-      close: () => this.close.emit(),
-    });
     this.restore.connect(this.scroller);
 
     effect(() => {
@@ -229,14 +196,9 @@ export class ReaderViewComponent {
       // Before the source opens: a synchronous load calls enableToggle().
       this.readerMode.reset();
       this.restore.arm(id);
-      // A new article starts at the top, with a fresh, collapsed TOC and its
-      // toolbar presented — this instance is reused, and a retracted toolbar
-      // must not carry over to the next article.
+      // This instance is reused: a new article starts with a fresh, collapsed TOC.
       this.toc.set([]);
       this.tocOpen.set(false);
-      this.showToTop.set(false);
-      this.toolbarHidden.set(false);
-      this.lastToolbarScrollTop = 0;
       this.autoplay.soundChanged(false);
       this.source.open(entry);
     });
@@ -247,72 +209,23 @@ export class ReaderViewComponent {
       trailing: this.trailingParts,
     });
 
-    this.body.connect({
-      content: this.content,
-      html: this.source.displayHtml,
-      pageUrl: () => this.entry()?.url ?? null,
-      enclosureUrl: () => this.audio.attachment()?.url ?? null,
-      decorated: (host) => {
-        this.toc.set(collectToc(host));
-        this.scope.refresh();
-        // Runs on the original render and again when the reader content swaps in.
-        this.restore.reseat(() => this.entry()?.id);
-      },
-    });
-
     this.scope.observeResizes();
-    this.reserveToolbarHeight();
   }
 
-  /** The toolbar floats over the scroller, which reserves its height (#1332). */
-  private reserveToolbarHeight(): void {
-    effect((onCleanup) => {
-      const bar = this.bar()?.nativeElement;
-      if (!bar || typeof ResizeObserver === 'undefined') return;
-      const style = this.host.nativeElement.style;
-      const observer = new ResizeObserver(() => {
-        style.setProperty('--reader-bar-h', `${bar.offsetHeight}px`);
-        this.scope.refresh();
-      });
-      observer.observe(bar);
-      onCleanup(() => observer.disconnect());
-    });
-  }
-
-  /** The toolbar's back button. Full-screen it plays the same slide-out as a
-   *  back-swipe rather than cutting straight to the list; the split pane has
-   *  no overlay to slide, so it closes directly. */
-  onBack(): void {
-    if (this.fullscreen()) this.gestures.slideBack();
-    else this.close.emit();
+  protected onDecorated(host: HTMLElement): void {
+    this.toc.set(collectToc(host));
+    this.scope.refresh();
+    // Runs on the original render and again when the reader content swaps in.
+    this.restore.reseat(() => this.entry()?.id);
   }
 
   protected onScroll(scrollTop: number): void {
-    this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
-    if (this.fullscreen()) {
-      // `isWide` is false by definition here: full-screen reading only exists
-      // on the narrow layout, and the split pane keeps its toolbar put.
-      this.toolbarHidden.set(
-        nextHeaderHidden({
-          previousHidden: this.toolbarHidden(),
-          lastTop: this.lastToolbarScrollTop,
-          top: scrollTop,
-          isWide: false,
-        }),
-      );
-    }
-    this.lastToolbarScrollTop = scrollTop;
-    if (!this.gestures.leaving()) this.restore.remember(this.entry()?.id, scrollTop);
+    if (!this.layer()?.leaving()) this.restore.remember(this.entry()?.id, scrollTop);
   }
 
-  /** Jump the reading pane back to the top of the article. */
   scrollToTop(): void {
     this.restore.abort(); // don't let a restore fight the jump
-    this.scroller()?.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
-    // Land focus on the title, not wherever the button was — an unmounted button
-    // drops focus to <body>. preventScroll is needed since the heading is still
-    // off-screen (why the button showed); a plain focus() would cancel the scroll.
-    this.titleHeading()?.nativeElement.focus({ preventScroll: true });
+    this.layer()?.scrollToTop(this.titleHeading()?.nativeElement);
   }
 
   /** Scroll the reading pane to a heading, clearing the chrome that covers the scroller. */

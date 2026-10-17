@@ -7,6 +7,7 @@ import { EntriesStore } from '../state/entries.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
 import { sameSelection } from '../query/query';
+import { linkCardFromParam, sameLinkCard } from '../query/link-param';
 
 @Injectable()
 export class ReaderRouteState {
@@ -31,6 +32,9 @@ export class ReaderRouteState {
     equal: sameSelection,
   });
   readonly entryId = computed(() => this.parsed().entryId);
+  readonly linkCard = computed(() => linkCardFromParam(this.queryParameters().get('link')), {
+    equal: sameLinkCard,
+  });
 
   readonly openEntry = computed(() => {
     const id = this.entryId();

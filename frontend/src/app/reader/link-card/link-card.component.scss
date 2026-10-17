@@ -4,6 +4,7 @@
   @include link-card-layout.frame;
 
   display: block;
+  position: relative;
 }
 
 :host(.article) {
@@ -15,4 +16,32 @@
 
 :host(.block) {
   @include link-card-layout.block-type;
+}
+
+// A leading text line would sit under the button, so it makes room.
+:host(.openable) a > :first-child:not(img) {
+  padding-inline-end: calc(var(--tap-target) + var(--space-2));
+}
+
+// Always visible, not hover-only: touch is a first-class target (#1664).
+.open-in-reader {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--media-scrim);
+  color: var(--on-media-scrim);
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .open-in-reader {
+    min-width: var(--tap-target);
+    min-height: var(--tap-target);
+  }
 }
