@@ -10,6 +10,7 @@ use App\Service\Bluesky\Support\BlueskyWeb;
 final class ProfileFeedUrl
 {
     private const string BLUESKY_PATH = '#^/profile/([^/@]+)/rss/?$#';
+    private const string BLUESKY_PROFILE_PAGE = '#^/profile/([^/@]+)(?:/rss)?/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
     private const string DID_PREFIX = 'did:';
 
@@ -64,6 +65,22 @@ final class ProfileFeedUrl
         return null;
     }
 
+    /** @return string|null the DID or lower-cased handle a bsky.app profile page or its feed names; null otherwise */
+    public static function blueskyProfileActorOf(string $url): ?string
+    {
+        $parts = self::webPartsOf($url);
+        if (
+            null === $parts
+            || BlueskyWeb::HOST !== $parts['host']
+            || 1 !== preg_match(self::BLUESKY_PROFILE_PAGE, $parts['path'], $match)
+        ) {
+            return null;
+        }
+        $actor = self::actorIn($match[1]);
+
+        return BlueskyActor::isValid($actor) ? $actor : null;
+    }
+
     /** @return array{host: string, path: string}|null */
     private static function webPartsOf(string $url): ?array
     {
@@ -100,7 +117,13 @@ final class ProfileFeedUrl
         if (BlueskyWeb::HOST !== $host || 1 !== preg_match(self::BLUESKY_PATH, $path, $match)) {
             return null;
         }
-        $actor = rawurldecode($match[1]);
+
+        return self::actorIn($match[1]);
+    }
+
+    private static function actorIn(string $segment): string
+    {
+        $actor = rawurldecode($segment);
 
         return self::isDid($actor) ? $actor : strtolower($actor);
     }

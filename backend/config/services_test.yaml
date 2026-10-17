@@ -35,6 +35,12 @@ services:
     App\Service\Recommendation\Scoring\RerankClient\RerankClientInterface:
         alias: App\Tests\Support\StubRerankClient
 
+    App\Tests\Support\StubHiddenProfiles: ~
+
+    # Every test asks StubHiddenProfiles, never the public AppView, whether a Bluesky profile hides itself.
+    App\Service\Social\HiddenProfiles\HiddenProfilesInterface:
+        alias: App\Tests\Support\StubHiddenProfiles
+
     # No container-wired code path may exec() a real drainer process against the test database.
     App\Tests\Support\NullShellCommandRunner:
         autowire: true
