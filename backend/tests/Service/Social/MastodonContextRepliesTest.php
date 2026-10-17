@@ -101,6 +101,16 @@ final class MastodonContextRepliesTest extends TestCase
         self::assertFalse($replies[0]->comment()->byEntryAuthor);
     }
 
+    public function testANodeKnowsItsAuthorshipAndUrlWithoutBuildingTheComment(): void
+    {
+        $replies = $this->replies();
+
+        self::assertTrue($replies[0]->replies[0]->byEntryAuthor);
+        self::assertSame($replies[0]->replies[0]->comment()->url, $replies[0]->replies[0]->url);
+        self::assertNotNull($replies[0]->replies[0]->url);
+        self::assertFalse($replies[0]->byEntryAuthor);
+    }
+
     public function testTheOriginalPosterIsKnownByTheirAccountUriToo(): void
     {
         $answer = self::contextOf([self::statusOf('300', '110', [

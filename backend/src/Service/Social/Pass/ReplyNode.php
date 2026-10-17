@@ -16,6 +16,8 @@ final readonly class ReplyNode
         public ?\DateTimeImmutable $publishedAt,
         private \Closure $commentOf,
         public array $replies = [],
+        public ?string $url = null,
+        public bool $byEntryAuthor = false,
     ) {
     }
 

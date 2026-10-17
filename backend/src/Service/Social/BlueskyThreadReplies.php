@@ -59,6 +59,8 @@ final readonly class BlueskyThreadReplies
                     fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
                         => $this->commentOf($post, $publishedAt, $entryAuthor),
                     $this->nodesOf($reply->nodes('replies'), $entryAuthor),
+                    url: AtPostUri::webUrl($post->string('uri') ?? ''),
+                    byEntryAuthor: self::isByEntryAuthor($post->node('author'), $entryAuthor),
                 );
             }
         }
@@ -89,9 +91,14 @@ final readonly class BlueskyThreadReplies
             AtPostUri::webUrl($post->string('uri') ?? ''),
             $publishedAt,
             $this->htmlOf($post->node('record'), $rendered?->uncardedLink),
-            $entryAuthor !== null && \in_array($entryAuthor, [$author->string('did'), $author->string('handle')], true),
+            self::isByEntryAuthor($author, $entryAuthor),
             self::embedsOf($rendered),
         );
+    }
+
+    private static function isByEntryAuthor(JsonNodeModel $author, ?string $entryAuthor): bool
+    {
+        return $entryAuthor !== null && \in_array($entryAuthor, [$author->string('did'), $author->string('handle')], true);
     }
 
     private static function publishedAtOf(JsonNodeModel $post): ?\DateTimeImmutable
