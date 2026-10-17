@@ -3,7 +3,6 @@ import { NEVER, TimeoutError, firstValueFrom, of } from 'rxjs';
 import { ReaderContentService } from './reader-content.service';
 import { ReaderCacheService } from './reader-cache.service';
 import { ReaderApi } from '../../reader-api';
-import { ReaderContent } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 
 const ARTICLE = aReaderArticle({ url: 'https://x/1' });
