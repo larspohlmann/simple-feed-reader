@@ -7,6 +7,7 @@ namespace App\Service\Opml;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
+use App\Service\Social\Support\ExportedFeed;
 
 /**
  * Serialises a user's subscriptions to OPML 2.0, grouped by tag. A feed with
@@ -25,7 +26,9 @@ final readonly class OpmlExporter
      */
     public function export(User $user): string
     {
-        $subscriptions = $this->subscriptions->findExportableForUserWithTags($user->requireId());
+        $subscriptions = ExportedFeed::withoutRepeats(
+            $this->subscriptions->findExportableForUserWithTags($user->requireId()),
+        );
 
         $document = new \DOMDocument('1.0', 'UTF-8');
         $document->formatOutput = true;
@@ -89,13 +92,13 @@ final readonly class OpmlExporter
     private function feedOutline(\DOMDocument $document, Subscription $subscription): \DOMElement
     {
         $feed = $subscription->getFeed();
-        $title = $subscription->getCustomTitle() ?? $feed->getTitle() ?? $feed->getUrl();
+        $title = $subscription->getCustomTitle() ?? $feed->getTitle() ?? ExportedFeed::urlOf($feed);
 
         $outline = $document->createElement('outline');
         $outline->setAttribute('type', 'rss');
         $outline->setAttribute('text', $title);
         $outline->setAttribute('title', $title);
-        $outline->setAttribute('xmlUrl', $feed->getUrl());
+        $outline->setAttribute('xmlUrl', ExportedFeed::urlOf($feed));
         if ($feed->getSiteUrl() !== null) {
             $outline->setAttribute('htmlUrl', $feed->getSiteUrl());
         }

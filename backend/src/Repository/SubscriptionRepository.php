@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
+use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -48,7 +50,8 @@ final class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
-     * What an OPML or backup export carries: a private social feed is read through an account neither file holds.
+     * What an OPML or backup export carries: a private social feed is read through an account neither file holds,
+     * except an author feed, which follows one person a public RSS feed names too.
      *
      * @return list<Subscription>
      */
@@ -56,8 +59,10 @@ final class SubscriptionRepository extends ServiceEntityRepository
     {
         /** @var list<Subscription> $rows */
         $rows = $this->withTagsForUser($userId)
-            ->andWhere('f.sourceFormat NOT IN (:socialFormats)')
+            ->leftJoin(SocialFeed::class, 'sf', 'WITH', 'sf.feed = f')
+            ->andWhere('f.sourceFormat NOT IN (:socialFormats) OR sf.kind = :author')
             ->setParameter('socialFormats', SourceFormat::SOCIAL)
+            ->setParameter('author', SocialFeedKind::Author)
             ->getQuery()
             ->getResult();
 

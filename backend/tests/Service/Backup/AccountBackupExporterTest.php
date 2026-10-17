@@ -19,14 +19,21 @@ use App\Enum\RecommendationBatchSize;
 use App\Enum\SourceFormat;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\BackupReader;
+use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Model\BackupPartModel;
+use App\Service\Social\AuthorFeeds;
+use App\Service\Social\Model\HiddenProfileModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FullyPopulatedAccount;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class AccountBackupExporterTest extends DbTestCase
 {
+    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
+
     private function hasher(): UserPasswordHasherInterface
     {
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
@@ -515,5 +522,60 @@ final class AccountBackupExporterTest extends DbTestCase
 
         self::assertStringContainsString('https://example.com/feed.xml', $exported);
         self::assertStringNotContainsString('social:', $exported);
+    }
+
+    public function testAnAuthorFeedTravelsAsItsProfilesPublicRssWithItsTagsTitleAndPosts(): void
+    {
+        $user = $this->makeUser('backup-author@example.test');
+        $tag = new Tag($user, 'People');
+        $tag->setPosition(0);
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
+        $authorFeeds = self::getContainer()->get(AuthorFeeds::class);
+        self::assertInstanceOf(AuthorFeeds::class, $authorFeeds);
+        $subscription = $authorFeeds->create($account, new HiddenProfileModel(self::RUSTY, 'Rusty'), [$tag]);
+        $subscription->setCustomTitle('Rusty, the person');
+        $now = new \DateTimeImmutable('2026-10-12 10:00:00');
+        $entry = new Entry($subscription->getFeed(), 'at://' . self::RUSTY . '/post/1', null, 'Post', $now, $now);
+        $entry->getImage()->storePending(null, null, null);
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
+
+        [$entriesPart, $foundationPart] = $this->decodedParts($user);
+
+        $rss = 'https://bsky.app/profile/' . self::RUSTY . '/rss';
+        $feedLine = $foundationPart[3];
+        self::assertSame(
+            ['feed', $rss, SourceFormat::XML],
+            [$feedLine['kind'], $feedLine['url'], $feedLine['sourceFormat']],
+        );
+        self::assertSame($rss, FeedLine::fromLine($feedLine)->url);
+        self::assertSame($rss, $foundationPart[4]['feedUrl']);
+        self::assertSame('Rusty, the person', $foundationPart[4]['customTitle']);
+        self::assertSame([['name' => 'People', 'position' => 0]], $foundationPart[4]['tags']);
+        self::assertSame($rss, $entriesPart[1]['feedUrl']);
+        $exported = json_encode([$entriesPart, $foundationPart], \JSON_THROW_ON_ERROR);
+        self::assertStringNotContainsString('social:', $exported);
+    }
+
+    public function testAnAuthorFeedAndTheRefusedRssFeedItReplacesTravelAsOneFeed(): void
+    {
+        $user = $this->makeUser('backup-author-twice@example.test');
+        $rss = new Feed('https://bsky.app/profile/' . self::RUSTY . '/rss');
+        $this->entityManager->persist($rss);
+        $this->entityManager->persist(new Subscription($user, $rss, new \DateTimeImmutable('2026-10-12 10:00:00')));
+        $this->entityManager->flush();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
+        $authorFeeds = self::getContainer()->get(AuthorFeeds::class);
+        self::assertInstanceOf(AuthorFeeds::class, $authorFeeds);
+        $authorFeeds->create($account, new HiddenProfileModel(self::RUSTY, 'Rusty'), []);
+
+        $foundationPart = $this->decodedParts($user)[0];
+
+        self::assertSame(
+            ['header', 'account', 'feed', 'subscription', 'footer'],
+            array_column($foundationPart, 'kind'),
+        );
     }
 }

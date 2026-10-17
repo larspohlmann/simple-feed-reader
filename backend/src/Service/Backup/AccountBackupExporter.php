@@ -16,6 +16,7 @@ use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\FoundationSnapshotModel;
 use App\Service\Backup\Pass\BackupPartWalk;
+use App\Service\Social\Support\ExportedFeed;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -61,7 +62,7 @@ final readonly class AccountBackupExporter
 
     private function foundationSnapshot(int $userId): FoundationSnapshotModel
     {
-        $subscriptions = $this->subscriptions->findExportableForUserWithTags($userId);
+        $subscriptions = ExportedFeed::withoutRepeats($this->subscriptions->findExportableForUserWithTags($userId));
         $feedsById = $this->feedsById($subscriptions);
 
         return new FoundationSnapshotModel(
@@ -70,7 +71,7 @@ final readonly class AccountBackupExporter
             array_map($this->lines->savedSearchLine(...), $this->savedSearches->findForUser($userId)),
             array_map($this->lines->feedLine(...), array_values($feedsById)),
             array_map($this->lines->subscriptionLine(...), $subscriptions),
-            array_map(static fn (Feed $feed): string => $feed->getUrl(), $feedsById),
+            array_map(ExportedFeed::urlOf(...), $feedsById),
         );
     }
 

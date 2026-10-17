@@ -19,6 +19,7 @@ use App\Entity\User;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Support\BackupSchema;
+use App\Service\Social\Support\ExportedFeed;
 
 /**
  * Encodes one backup record as its NDJSON line, the schema BackupReader parses back. The exporter decides which
@@ -89,13 +90,13 @@ final readonly class BackupLines
     {
         return $this->encode([
             'kind' => BackupSchema::KIND_FEED,
-            'url' => $feed->getUrl(),
+            'url' => ExportedFeed::urlOf($feed),
             'siteUrl' => $feed->getSiteUrl(),
             'title' => $feed->getTitle(),
             'description' => $feed->getDescription(),
             'faviconUrl' => $feed->getFaviconUrl(),
             'imageUrl' => $feed->getImageUrl(),
-            'sourceFormat' => $feed->getSourceFormat(),
+            'sourceFormat' => ExportedFeed::sourceFormatOf($feed),
         ]);
     }
 
@@ -103,7 +104,7 @@ final readonly class BackupLines
     {
         return $this->encode([
             'kind' => BackupSchema::KIND_SUBSCRIPTION,
-            'feedUrl' => $subscription->getFeed()->getUrl(),
+            'feedUrl' => ExportedFeed::urlOf($subscription->getFeed()),
             'customTitle' => $subscription->getCustomTitle(),
             'position' => $subscription->getPosition(),
             'markedReadUntil' => $this->formatDateOrNull($subscription->getMarkedReadUntil()),
