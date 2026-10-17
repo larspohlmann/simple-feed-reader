@@ -204,6 +204,25 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertSame('info', $this->logger->records[0]['level'] ?? null);
     }
 
+    public function testASubscriberAlreadyOnTheAuthorUrlIsSkippedAndTheNextOneStillMoves(): void
+    {
+        $stuck = $this->user('switch-stuck@example.test');
+        $stuckAccount = $this->accountOf($stuck);
+        $orphan = new Feed(sprintf('social:bluesky:%d:author:%s', $stuckAccount->requireId(), self::RUSTY));
+        $this->entityManager->persist($orphan);
+        $this->entityManager->persist(new Subscription($stuck, $orphan, new \DateTimeImmutable(self::NOW)));
+        $rss = $this->rssSubscription($stuck);
+        $next = $this->user('switch-next@example.test');
+        $nextAccount = $this->accountOf($next);
+        $this->entityManager->persist(new Subscription($next, $rss->getFeed(), new \DateTimeImmutable(self::NOW)));
+        $this->entityManager->flush();
+
+        self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
+        self::assertNotNull($this->authorSubscriptionOf($nextAccount));
+        self::assertSame('info', $this->logger->records[0]['level'] ?? null);
+        self::assertSame($rss->requireId(), $this->logger->records[0]['context']['subscriptionId'] ?? null);
+    }
+
     public function testAMoveForASubscriberWhoseAccountWentIsSkipped(): void
     {
         $rss = $this->rssSubscription($this->user('switch-account-gone@example.test'));
