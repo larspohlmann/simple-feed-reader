@@ -141,8 +141,7 @@ export class ReaderViewComponent {
     {
       query: this.commentsSection,
       joinsFocus: true,
-      expectedHeight: (section, readingFontSize) =>
-        this.commentsForecast.expectedHeight(section, readingFontSize),
+      expectedHeight: this.commentsForecast.expectedHeight,
     },
   ];
   /** Focus target for the corner button on activation — see scrollToTop(). */
@@ -163,7 +162,7 @@ export class ReaderViewComponent {
   private readonly autoplay = inject(ListAutoplayCoordinator);
   protected readonly progressRail = new ScrollProgressRail({
     isWide: this.screen.isWide,
-    contentBottom: () => this.scope.readingEnd(),
+    contentBottom: this.scope.readingEnd,
     layout: this.scope.readingEnd,
   });
 

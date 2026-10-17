@@ -14,6 +14,15 @@ function sectionOfWidth(width: number): HTMLElement {
   return section;
 }
 
+function contentOfFont(fontSize: string): HTMLElement {
+  const content = document.createElement('div');
+  content.style.fontSize = fontSize;
+  return content;
+}
+
+const phoneSection = sectionOfWidth(PHONE_WIDTH);
+const readingContent = contentOfFont(`${READING_FONT}px`);
+
 const countsOf = (replies: number): SocialCountsState => ({
   status: 'ok',
   counts: { likes: 0, reposts: 0, replies, quotes: 0 },
@@ -59,54 +68,42 @@ describe('expectedCommentHeight', () => {
 });
 
 describe('CommentsForecast', () => {
-  it('expects the thread a social post counts while its comments are on the way', () => {
-    const expected = expectedThreadSize(10) * expectedCommentHeight(READING_FONT, PHONE_WIDTH);
+  const loaded: CommentsState = {
+    status: 'ok',
+    comments: [],
+    omitted: 0,
+    fetchedAt: '2026-10-17T12:00:00Z',
+    loadedAt: 0,
+  };
 
-    for (const status of ['idle', 'loading'] as const) {
+  it.each(['idle', 'loading'] as const)(
+    'expects the thread a social post counts while its comments are %s',
+    (status) => {
       const forecast = forecastFor(socialPost(), { status });
-      expect(forecast.expectedHeight(sectionOfWidth(PHONE_WIDTH), READING_FONT)).toBeCloseTo(
-        expected,
+
+      expect(forecast.expectedHeight(phoneSection, readingContent)).toBeCloseTo(
+        expectedThreadSize(10) * expectedCommentHeight(READING_FONT, PHONE_WIDTH),
       );
-    }
-  });
+    },
+  );
 
-  it('leaves the comments to their own height once they arrive', () => {
-    const loaded: CommentsState = {
-      status: 'ok',
-      comments: [],
-      omitted: 0,
-      fetchedAt: '2026-10-17T12:00:00Z',
-      loadedAt: 0,
-    };
-
-    expect(
-      forecastFor(socialPost(), loaded).expectedHeight(sectionOfWidth(PHONE_WIDTH), READING_FONT),
-    ).toBeNull();
-  });
-
-  it('expects nothing before the post counts its replies', () => {
-    const forecast = forecastFor(socialPost(), { status: 'idle' }, { status: 'loading' });
-
-    expect(forecast.expectedHeight(sectionOfWidth(PHONE_WIDTH), READING_FONT)).toBeNull();
-  });
-
-  it('expects nothing of comments the reader loads by hand', () => {
-    const forecast = forecastFor(socialPost({ comments: 'manual' }));
-
-    expect(forecast.expectedHeight(sectionOfWidth(PHONE_WIDTH), READING_FONT)).toBeNull();
-  });
-
-  it('expects nothing of a discussion without a reply count', () => {
-    const forecast = forecastFor(socialPost({ social: null }));
-
-    expect(forecast.expectedHeight(sectionOfWidth(PHONE_WIDTH), READING_FONT)).toBeNull();
+  it.each([
+    ['once the comments arrive', forecastFor(socialPost(), loaded)],
+    [
+      'before the post counts its replies',
+      forecastFor(socialPost(), { status: 'idle' }, { status: 'loading' }),
+    ],
+    ['of comments the reader loads by hand', forecastFor(socialPost({ comments: 'manual' }))],
+    ['of a discussion without a reply count', forecastFor(socialPost({ social: null }))],
+  ])('expects nothing %s', (_case, forecast) => {
+    expect(forecast.expectedHeight(phoneSection, readingContent)).toBeNull();
   });
 
   it('expects nothing it cannot lay out', () => {
     const forecast = forecastFor(socialPost());
 
-    expect(forecast.expectedHeight(sectionOfWidth(0), READING_FONT)).toBeNull();
-    expect(forecast.expectedHeight(sectionOfWidth(PHONE_WIDTH), Number.NaN)).toBeNull();
-    expect(forecast.expectedHeight(sectionOfWidth(PHONE_WIDTH), 0)).toBeNull();
+    expect(forecast.expectedHeight(sectionOfWidth(0), readingContent)).toBeNull();
+    expect(forecast.expectedHeight(phoneSection, contentOfFont(''))).toBeNull();
+    expect(forecast.expectedHeight(phoneSection, contentOfFont('0px'))).toBeNull();
   });
 });

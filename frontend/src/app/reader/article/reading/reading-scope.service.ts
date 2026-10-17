@@ -25,7 +25,7 @@ export interface TrailingPart {
   readonly query: ElementQuery;
   readonly joinsFocus: boolean;
   /** The part's height once its content arrives, or null when it already shows it. */
-  readonly expectedHeight?: (part: HTMLElement, readingFontSize: number) => number | null;
+  readonly expectedHeight?: (part: HTMLElement, content: HTMLElement) => number | null;
 }
 
 export interface ReadingScopeParts {
@@ -70,11 +70,10 @@ export class ReadingScope {
 
   // The tail keys on what is on screen; the progress rail also counts what is still on the way.
   private readonly readingBottom = signal(0);
-  private readonly measuredReadingEnd = signal(0);
   private readonly viewportHeight = signal(0);
 
   /** Where the reading scope will end inside the pane, for the progress rail. */
-  readonly readingEnd = this.measuredReadingEnd.asReadonly();
+  readonly readingEnd = computed(() => this.readingBottom() + this.expectedGrowth());
 
   /** Whether the article carries tail space below it. */
   readonly hasTail = computed(() => needsReadingTail(this.readingBottom(), this.viewportHeight()));
@@ -151,15 +150,6 @@ export class ReadingScope {
       },
       { injector: this.injector },
     );
-
-    // An expected height follows its part's loading state, which no resize announces.
-    effect(
-      () => {
-        for (const part of this.trailing) part.query();
-        this.measureScrollRange();
-      },
-      { injector: this.injector },
-    );
   }
 
   /** The content re-rendered: re-seat the focus and re-measure. */
@@ -169,9 +159,8 @@ export class ReadingScope {
   }
 
   /**
-   * Measure where the scope ends on screen (for the tail) and where it will end once
-   * still-loading parts grow (for the rail). Takes the article's own content box — never the panel's, which already includes
-   * the tail and would feed the measurement back into itself.
+   * Measure how far the scope reaches on screen. Takes the article's own content box — never
+   * the panel's, which already includes the tail and would feed the measurement back into itself.
    */
   private measureScrollRange(): void {
     const scroller = untracked(this.scroller);
@@ -179,26 +168,25 @@ export class ReadingScope {
     if (!scroller || !content) {
       this.viewportHeight.set(0);
       this.readingBottom.set(0);
-      this.measuredReadingEnd.set(0);
       return;
     }
     const lastPart = this.presentElements(this.trailing).at(-1) ?? content;
-    const readingBottom = bottomWithin(scroller, lastPart);
     this.viewportHeight.set(scroller.clientHeight);
-    this.readingBottom.set(readingBottom);
-    this.measuredReadingEnd.set(readingBottom + this.expectedGrowth(content));
+    this.readingBottom.set(bottomWithin(scroller, lastPart));
   }
 
-  private expectedGrowth(content: HTMLElement): number {
-    let readingFontSize: number | undefined;
-    return this.trailing.reduce((growth, part) => {
+  // Reads the DOM untracked: `readingEnd` refreshes because every re-measure moves `readingBottom`.
+  private expectedGrowth(): number {
+    const content = untracked(this.content)?.nativeElement;
+    if (!content) return 0;
+    let growth = 0;
+    for (const part of this.trailing) {
       const element = untracked(part.query)?.nativeElement;
-      if (!element || !part.expectedHeight) return growth;
-      readingFontSize ??= parseFloat(getComputedStyle(content).fontSize);
-      const expected = part.expectedHeight(element, readingFontSize);
-      if (expected === null) return growth;
-      return growth + Math.max(0, expected - element.getBoundingClientRect().height);
-    }, 0);
+      const expected = element && part.expectedHeight?.(element, content);
+      if (element && expected)
+        growth += Math.max(0, expected - element.getBoundingClientRect().height);
+    }
+    return growth;
   }
 
   // Untracked: `blocks()` runs inside effects, which must not rerun when a trailing part mounts.

@@ -142,17 +142,15 @@ describe('ReadingScope', () => {
 
   it('runs the progress rail on by what a part still expects to grow', () => {
     const content = partEndingAt(400);
-    content.style.fontSize = '16px';
     const expected = signal<number | null>(3000);
     const expectedHeight = jest.fn(() => expected());
     const comments = partSpanning(2000, 2400);
     const scope = connectScope({ content, comments, commentsExpected: expectedHeight });
 
-    expect(expectedHeight).toHaveBeenCalledWith(comments, 16);
     expect(scope.readingEnd()).toBe(5000);
+    expect(expectedHeight).toHaveBeenCalledWith(comments, content);
 
     expected.set(null);
-    TestBed.tick();
 
     expect(scope.readingEnd()).toBe(2400);
   });

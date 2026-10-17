@@ -8,6 +8,7 @@ type ForecastEntry = Pick<EntryDto, 'id' | 'comments' | 'social'>;
 const COMMENTS_PER_REPLY = 1.7;
 /** The backend's `social_replies_max_count`. */
 const MOST_THREAD_COMMENTS = 100;
+/** The comment body's `--lh-normal`. */
 const COMMENT_LINE_HEIGHT = 1.5;
 /** A comment's byline, padding and media, in lines. */
 const COMMENT_CHROME_LINES = 3;
@@ -30,21 +31,18 @@ export class CommentsForecast {
     private readonly counts: SocialCountsService,
   ) {}
 
-  expectedHeight(section: HTMLElement, readingFontSize: number): number | null {
+  /** The section's height once its comments render, or null when it already shows what it will. */
+  readonly expectedHeight = (section: HTMLElement, content: HTMLElement): number | null => {
     const entry = this.entry();
     if (!entry?.social || entry.comments !== 'auto' || !this.awaitsComments(entry.id)) return null;
     const replies = this.replies(entry.id);
-    if (
-      replies === null ||
-      !Number.isFinite(readingFontSize) ||
-      readingFontSize <= 0 ||
-      section.clientWidth === 0
-    )
-      return null;
+    if (replies === null || section.clientWidth === 0) return null;
+    const readingFontSize = parseFloat(getComputedStyle(content).fontSize);
+    if (!Number.isFinite(readingFontSize) || readingFontSize <= 0) return null;
     return (
       expectedThreadSize(replies) * expectedCommentHeight(readingFontSize, section.clientWidth)
     );
-  }
+  };
 
   private awaitsComments(id: number): boolean {
     const status = this.comments.state(id)().status;
