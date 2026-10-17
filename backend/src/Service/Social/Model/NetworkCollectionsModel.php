@@ -23,4 +23,10 @@ final readonly class NetworkCollectionsModel
         public bool $savedFeedsKnown = true,
     ) {
     }
+
+    /** Without savedFeedsPrefV2 the saved lists and feeds are unknown too: absent from the answer is not gone. */
+    public function isComplete(): bool
+    {
+        return !$this->truncated && !$this->savedListsCapped && $this->savedFeedsKnown;
+    }
 }

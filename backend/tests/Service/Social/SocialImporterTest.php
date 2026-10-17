@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
+use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\KnownSocialCollection;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
@@ -13,6 +16,8 @@ use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Exception\InvalidSelectionException;
+use App\Repository\EntryStateRepository;
+use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\FollowAvatarCache;
@@ -23,6 +28,7 @@ use App\Service\Social\Model\SocialImportModel;
 use App\Service\Social\SocialImporter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
+use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -304,6 +310,55 @@ final class SocialImporterTest extends DbTestCase
         self::assertSame(1, $result->alreadySubscribed);
     }
 
+    public function testReTickingADroppedCollectionSubscribesItAgain(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $news = PrivateFeedModel::customFeed(self::NEWS, 'News');
+        $this->importer()->import($account, new SocialImportModel([], [], [$news]));
+        $newsUrl = sprintf('social:bluesky:%d:feed:%s', $account->requireId(), self::NEWS);
+        $this->importer()->import($account, new SocialImportModel([], [$this->subscriptionIdOf($newsUrl)]));
+
+        $result = $this->importer()->import($account, new SocialImportModel([], [], [$news]));
+
+        self::assertSame(1, $result->imported);
+        $this->subscriptionIdOf($newsUrl);
+        /** @var KnownSocialCollectionRepository $known */
+        $known = $this->entityManager->getRepository(KnownSocialCollection::class);
+        self::assertSame(['custom_feed:' . self::NEWS => true], $known->keysOf($account));
+    }
+
+    public function testUntickingASubscribedCollectionKeepsItsFavouritesInSavedFromBluesky(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->importer()->import($account, new SocialImportModel([], [], [
+            PrivateFeedModel::customFeed(self::NEWS, 'News'),
+        ]));
+        $newsUrl = sprintf('social:bluesky:%d:feed:%s', $account->requireId(), self::NEWS);
+        $feed = $this->feedAt($newsUrl);
+        self::assertNotNull($feed);
+        $guid = 'at://did:plc:carol/app.bsky.feed.post/1';
+        $post = SavedPostFixtures::entry($this->entityManager, $feed, $guid, null);
+        SavedPostFixtures::state($this->entityManager, $this->user, $post)->markFavorite();
+        $this->entityManager->flush();
+
+        $result = $this->importer()->import(
+            $account,
+            new SocialImportModel([], [$this->subscriptionIdOf($newsUrl)]),
+        );
+
+        self::assertSame(1, $result->removed);
+        $this->entityManager->clear();
+        $saved = $this->feedAt(sprintf('saved:%d:bluesky', $this->user->requireId()));
+        self::assertNotNull($saved);
+        $copies = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $saved, 'guid.value' => $guid]);
+        self::assertCount(1, $copies);
+        /** @var EntryStateRepository $states */
+        $states = $this->entityManager->getRepository(EntryState::class);
+        self::assertTrue(
+            $states->findOneForUserEntry($this->user->requireId(), $copies[0]->requireId())?->isFavorite(),
+        );
+    }
+
     #[DataProvider('foreignCollections')]
     public function testACollectionItsNetworkCannotHoldRefusesTheWholeImport(
         SocialNetwork $network,
@@ -350,6 +405,19 @@ final class SocialImporterTest extends DbTestCase
     private static function profileFeed(string $did): string
     {
         return 'https://bsky.app/profile/' . $did . '/rss';
+    }
+
+    private function subscriptionIdOf(string $feedUrl): int
+    {
+        $feed = $this->feedAt($feedUrl);
+        self::assertNotNull($feed);
+        $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy([
+            'user' => $this->user,
+            'feed' => $feed,
+        ]);
+        self::assertNotNull($subscription);
+
+        return $subscription->requireId();
     }
 
     private function storedAccount(SocialAccount $account): SocialAccount
