@@ -15,7 +15,7 @@
     </span>
   }
   <div articleBar class="nav">
-    @if (source.article()) {
+    @if (source.article() || source.failure()) {
       <button
         appListAction
         class="mobile-icon-only"

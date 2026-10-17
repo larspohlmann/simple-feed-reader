@@ -194,6 +194,16 @@ describe('LinkReaderComponent', () => {
     expect(reloadLinkCard).toHaveBeenCalledWith(FIRST_CARD);
   });
 
+  it('offers the reload after a failed load, and reloads the card from it', () => {
+    const fixture = mount();
+    expect(elementOf(fixture).querySelector('.nav button')).toBeNull();
+    reply(fixture, failedContent());
+
+    elementOf(fixture).querySelector<HTMLButtonElement>('.nav button')!.click();
+
+    expect(reloadLinkCard).toHaveBeenCalledWith(FIRST_CARD);
+  });
+
   it('carries none of the entry reader chrome', () => {
     const fixture = mount();
     reply(fixture, okContent());
