@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Entity\Entry;
 use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
 use App\Enum\SourceFormat;
@@ -77,7 +78,7 @@ final class EntryJson
             'source' => $row->subscriptionTitle,
             'poster' => self::posterOf($row),
             // The feed is fetch-joined in the row query, so this adds no N+1.
-            'faviconUrl' => $entry->getFeed()->getFaviconUrl(),
+            'faviconUrl' => $row->enrichment->origin->faviconUrl ?? $entry->getFeed()->getFaviconUrl(),
             'isHidden' => $row->isHidden,
             'isFavorite' => $row->isFavorite,
             'isKept' => $row->isKept,
@@ -145,9 +146,9 @@ final class EntryJson
     }
 
     /**
-     * Who posted the entry when that is someone other than the feed. A private feed's post names its own author; every
-     * post of a profile feed is that person's, so it shows their picture and profile unless the post brings an avatar
-     * of its own (a repost).
+     * Who posted the entry when that is someone other than the feed. A private or saved social post names its own
+     * author; every post of a profile feed is that person's, so it shows their picture and profile unless the post
+     * brings an avatar of its own (a repost); a saved article names the feed it was saved from.
      *
      * @return array{name: string, url: string|null, imageUrl: string|null}|null
      */
@@ -155,12 +156,14 @@ final class EntryJson
     {
         $entry = $row->entry;
         $feed = $entry->getFeed();
-        $author = $entry->getAuthor();
-        $isPrivateFeed = SourceFormat::isSocial($feed->getSourceFormat());
-        if ($isPrivateFeed && $author !== null && $author !== '') {
-            return ['name' => $author, 'url' => $entry->getAuthorUrl(), 'imageUrl' => $entry->getAuthorAvatarUrl()];
+        $sourceFormat = $feed->getSourceFormat();
+        if (SourceFormat::SAVED === $sourceFormat) {
+            return null === $feed->getNetwork() ? self::originPosterOf($row) : self::authorPosterOf($entry);
         }
-        if (!$isPrivateFeed && null !== $feed->getNetwork()) {
+        if (SourceFormat::isSocial($sourceFormat)) {
+            return self::authorPosterOf($entry);
+        }
+        if (null !== $feed->getNetwork()) {
             return [
                 'name' => $row->subscriptionTitle,
                 'url' => AbsoluteHttpUrl::orNull(FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl())),
@@ -169,5 +172,24 @@ final class EntryJson
         }
 
         return null;
+    }
+
+    /** @return array{name: string, url: string|null, imageUrl: string|null}|null */
+    private static function authorPosterOf(Entry $entry): ?array
+    {
+        $author = $entry->getAuthor();
+        if (null === $author || '' === $author) {
+            return null;
+        }
+
+        return ['name' => $author, 'url' => $entry->getAuthorUrl(), 'imageUrl' => $entry->getAuthorAvatarUrl()];
+    }
+
+    /** @return array{name: string, url: null, imageUrl: null}|null */
+    private static function originPosterOf(EntryListRow $row): ?array
+    {
+        $title = $row->enrichment->origin?->title;
+
+        return null === $title ? null : ['name' => $title, 'url' => null, 'imageUrl' => null];
     }
 }

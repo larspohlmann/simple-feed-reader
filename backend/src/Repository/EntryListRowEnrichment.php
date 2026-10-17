@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\EntryOrigin;
 use App\Entity\LinkCardContent;
 
 final readonly class EntryListRowEnrichment
@@ -21,6 +22,8 @@ final readonly class EntryListRowEnrichment
         public ?EntryListRowSocial $social = null,
         /** a post's replies stand in for its stored discussion; null keeps the stored one */
         public ?EntryListRowDiscussion $discussion = null,
+        /** where a saved article came from; null for every other entry */
+        public ?EntryOrigin $origin = null,
     ) {
     }
 }
