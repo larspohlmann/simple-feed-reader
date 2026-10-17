@@ -20,6 +20,14 @@ final class SocialFeeds
         return $repository;
     }
 
+    public static function persisted(EntityManagerInterface $entityManager, SocialFeed $socialFeed): SocialFeed
+    {
+        $entityManager->persist($socialFeed);
+        $entityManager->flush();
+
+        return $socialFeed;
+    }
+
     public static function persistedAccount(
         EntityManagerInterface $entityManager,
         SocialAccount $account,

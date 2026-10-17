@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\Feed;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
+use App\Enum\SourceFormat;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Clock\NaiveUtcClock;
@@ -16,8 +19,10 @@ use App\Service\Social\Model\ProfileImageBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\ProfileImageSweep;
 use App\Tests\DbTestCase;
-use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
+use App\Tests\Support\StubFeedFetcher;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -212,6 +217,25 @@ final class ProfileImageSweepTest extends DbTestCase
         self::assertSame('https://cdn.example/a.jpg', $second->getImageUrl());
     }
 
+    public function testAnAuthorFeedIsPicturedByTheDidItReads(): void
+    {
+        $author = new Feed('social:bluesky:1:author:did:plc:rusty');
+        $author->setSourceFormat(SourceFormat::BLUESKY_API);
+        $subscriber = $this->persistSubscribed($author)->getUser();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($subscriber));
+        SocialFeeds::persisted(
+            $this->entityManager,
+            new SocialFeed($account, $author, SocialFeedKind::Author, 'did:plc:rusty'),
+        );
+        $this->answer(['did:plc:rusty'], [
+            ['did' => 'did:plc:rusty', 'handle' => 'rusty.bsky.social', 'avatar' => 'https://cdn.example/rusty.jpg'],
+        ]);
+
+        $this->sweep(1);
+
+        self::assertSame('https://cdn.example/rusty.jpg', $author->getImageUrl());
+    }
+
     public function testAnUnchangedOrUnknownPictureCountsAsCheckedButNotChanged(): void
     {
         $this->profileFeed('same.bsky.social', null, 'https://cdn.example/same.jpg');
@@ -318,13 +342,16 @@ final class ProfileImageSweepTest extends DbTestCase
         self::assertSame([], $this->fetcher->fetchedUrls);
     }
 
-    private function persistSubscribed(Feed $feed): void
+    private function persistSubscribed(Feed $feed): Subscription
     {
         $this->subscriber ??= new User('profile-image-sweep@example.com', $this->clock->now());
         $this->entityManager->persist($this->subscriber);
         $this->entityManager->persist($feed);
-        $this->entityManager->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
+        $subscription = new Subscription($this->subscriber, $feed, $this->clock->now());
+        $this->entityManager->persist($subscription);
         $this->entityManager->flush();
+
+        return $subscription;
     }
 
     private function throttle(): HostThrottle

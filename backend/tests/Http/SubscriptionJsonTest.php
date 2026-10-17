@@ -379,4 +379,16 @@ final class SubscriptionJsonTest extends TestCase
 
         self::assertSame('home', SubscriptionJson::one($this->subscriptionTo($feed))['social']['kind'] ?? null);
     }
+
+    public function testAnAuthorFeedIsAProfileFeedOfItsNetwork(): void
+    {
+        $feed = new Feed('social:bluesky:12:author:did:plc:rusty');
+        $feed->setSourceFormat(SourceFormat::BLUESKY_API);
+        $feed->classifyAs(SocialNetwork::Bluesky);
+
+        self::assertSame(
+            ['network' => 'bluesky', 'accountId' => null, 'kind' => 'profile'],
+            SubscriptionJson::one($this->subscriptionTo($feed))['social'],
+        );
+    }
 }

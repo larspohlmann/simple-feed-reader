@@ -15,14 +15,14 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Social\Model\ProfileImageBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\Support\BlueskyActor;
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Social\Support\ProfileIdentity;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Fills and refreshes the pictures of Bluesky profile feeds, whose RSS carries none, from the public AppView. A shared
- * feed row, so the picture is the person's public avatar; asked again about weekly.
+ * Fills and refreshes the pictures of Bluesky profile and author feeds, whose RSS or timeline carries none, from the
+ * public AppView. A shared feed row, so the picture is the person's public avatar; asked again about weekly.
  */
 final readonly class ProfileImageSweep
 {
@@ -129,7 +129,7 @@ final readonly class ProfileImageSweep
     {
         $actors = [];
         foreach ($batch as $index => $feed) {
-            $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $feed->getUrl());
+            $actor = ProfileIdentity::of(SocialNetwork::Bluesky, $feed->getUrl());
             if (null !== $actor && BlueskyActor::isValid($actor)) {
                 $actors[$index] = $actor;
             }

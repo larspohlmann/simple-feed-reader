@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Feed;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 
 final class FeedRepositoryProfileImageDueTest extends DbTestCase
 {
@@ -73,6 +77,26 @@ final class FeedRepositoryProfileImageDueTest extends DbTestCase
             [],
             $this->feeds()->findBlueskyProfileFeedsWithImageDue(new \DateTimeImmutable(self::CHECKED_BEFORE), 10),
         );
+    }
+
+    public function testAnAuthorFeedIsDueLikeAProfileFeed(): void
+    {
+        $author = new Feed('social:bluesky:1:author:did:plc:rusty');
+        $author->setSourceFormat(SourceFormat::BLUESKY_API);
+        $this->entityManager->persist($author);
+        $this->entityManager->persist(
+            new Subscription($this->subscriber(), $author, new \DateTimeImmutable(self::CHECKED_BEFORE)),
+        );
+        $this->entityManager->flush();
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->subscriber()));
+        SocialFeeds::persisted(
+            $this->entityManager,
+            new SocialFeed($account, $author, SocialFeedKind::Author, 'did:plc:rusty'),
+        );
+
+        $due = $this->feeds()->findBlueskyProfileFeedsWithImageDue(new \DateTimeImmutable(self::CHECKED_BEFORE), 10);
+
+        self::assertSame([$author->requireId()], array_map(static fn (Feed $feed): int => $feed->requireId(), $due));
     }
 
     private function feed(string $url, ?string $checkedAt, bool $subscribed = true): Feed
