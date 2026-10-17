@@ -19,7 +19,7 @@ final readonly class ProfileVisibilityCache
     }
 
     /**
-     * @param list<string> $actors
+     * @param array<string> $actors
      *
      * @return array<string, ProfileVisibilityModel> by actor
      */
@@ -55,7 +55,7 @@ final readonly class ProfileVisibilityCache
     }
 
     /**
-     * @param list<string> $actors
+     * @param array<string> $actors
      *
      * @return array<string, CacheItemInterface> by key
      */

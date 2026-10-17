@@ -68,6 +68,17 @@ final class AppViewHiddenProfilesTest extends TestCase
         self::assertCount(2, $this->fetcher->fetchedUrls);
     }
 
+    public function testTheHiddenOfEveryPageAreAnswered(): void
+    {
+        $actors = array_map(static fn (int $index): string => sprintf('user%02d.bsky.social', $index), range(1, 25));
+        $this->answer([BlueskyProfiles::RUSTY, ...\array_slice($actors, 0, 24)], [self::rusty()]);
+        $this->answer([$actors[24]], []);
+
+        $hidden = $this->hiddenProfiles()->hiddenAmong([BlueskyProfiles::RUSTY, ...$actors]);
+
+        self::assertArrayHasKey(BlueskyProfiles::RUSTY, $hidden);
+    }
+
     public function testAnActorNamedTwiceIsAskedOnce(): void
     {
         $this->answer([BlueskyProfiles::RUSTY], [self::rusty()]);

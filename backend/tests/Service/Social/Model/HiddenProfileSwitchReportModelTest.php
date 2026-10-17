@@ -28,5 +28,7 @@ final class HiddenProfileSwitchReportModelTest extends TestCase
         self::assertFalse(new HiddenProfileSwitchReportModel(1, 0)->isIdle());
         self::assertFalse(new HiddenProfileSwitchReportModel(0, 1)->isIdle());
         self::assertFalse(new HiddenProfileSwitchReportModel(0, 0, 1)->isIdle());
+        self::assertFalse(new HiddenProfileSwitchReportModel(1, 1)->isIdle());
+        self::assertFalse(new HiddenProfileSwitchReportModel(0, 1, 1)->isIdle());
     }
 }

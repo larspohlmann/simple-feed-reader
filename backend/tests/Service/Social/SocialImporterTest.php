@@ -426,6 +426,24 @@ final class SocialImporterTest extends DbTestCase
         self::assertSame(SourceFormat::BLUESKY_API, $author?->getSourceFormat());
     }
 
+    public function testEveryHiddenFollowGetsAnAuthorFeedAfterTheChosenCollections(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->hiddenProfiles()->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'));
+        $this->hiddenProfiles()->hide(new HiddenProfileModel('did:plc:carol', 'Carol'));
+
+        $result = $this->importer()->import($account, new SocialImportModel(
+            [new SocialImportFeedModel('did:plc:rusty', 'Rusty'), new SocialImportFeedModel('did:plc:carol', 'Carol')],
+            [],
+            [PrivateFeedModel::home()],
+        ));
+
+        self::assertSame(3, $result->imported);
+        foreach (['did:plc:rusty', 'did:plc:carol'] as $did) {
+            self::assertNotNull($this->feedAt(sprintf('social:bluesky:%d:author:%s', $account->requireId(), $did)));
+        }
+    }
+
     public function testAHiddenFollowAlreadyReadThroughTheAccountCountsAsAlreadySubscribed(): void
     {
         $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));

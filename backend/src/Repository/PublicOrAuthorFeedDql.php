@@ -27,13 +27,13 @@ final class PublicOrAuthorFeedDql
             ->setParameter('personKinds', self::personKinds());
     }
 
-    /** @return list<SocialFeedKind> */
+    /** @return array<int, SocialFeedKind> */
     private static function personKinds(): array
     {
-        return array_values(array_filter(
+        return array_filter(
             SocialFeedKind::cases(),
             static fn (SocialFeedKind $kind): bool => $kind->followsOnePerson(),
-        ));
+        );
     }
 
     private function __construct()

@@ -36,12 +36,12 @@ final readonly class HiddenProfileSwitchCursor
     /** @param RefusedFeedPositionModel|null $position null to start the next run from the first refused subscription */
     public function store(?RefusedFeedPositionModel $position): void
     {
-        if (null === $position) {
-            $this->cache->deleteItem(self::POSITION);
+        if (null !== $position) {
+            $this->cache->save($this->cache->getItem(self::POSITION)->set($position));
 
             return;
         }
-        $this->cache->save($this->cache->getItem(self::POSITION)->set($position));
+        $this->cache->deleteItem(self::POSITION);
     }
 
     /** @param string $delay a relative date modifier, such as '+1 hour' */

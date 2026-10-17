@@ -71,6 +71,19 @@ final class CachedHiddenProfilesTest extends TestCase
         self::assertSame([[BlueskyProfiles::RUSTY]], $this->appView->asked);
     }
 
+    public function testTheHiddenOfEveryCallAreAnswered(): void
+    {
+        $public = array_map(
+            static fn (int $index): string => 'did:plc:public' . $index,
+            range(1, AppViewClient::URIS_PER_CALL),
+        );
+
+        $hidden = $this->hiddenProfiles->askUnknown([BlueskyProfiles::RUSTY, ...$public, 'did:plc:carol']);
+
+        self::assertEquals([BlueskyProfiles::RUSTY => self::rusty()], $hidden);
+        self::assertCount(2, $this->appView->asked);
+    }
+
     public function testTheCallsAnsweredBeforeAFailureAreRemembered(): void
     {
         $answered = array_map(

@@ -224,6 +224,17 @@ final class SocialFeedRepositoryTest extends DbTestCase
             ->findSubscriptionFor($this->account, self::rusty()));
     }
 
+    public function testAnotherUsersOwnAuthorFeedOfTheProfileIsNotTheUsers(): void
+    {
+        $stranger = $this->stranger();
+        $strangerAccount = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($stranger));
+        $strangersAuthorFeed = $this->socialFeed($strangerAccount, SocialFeedKind::Author, BlueskyProfiles::RUSTY);
+        $this->subscribeAs($stranger, $strangersAuthorFeed);
+
+        self::assertNull(SocialFeeds::repository($this->entityManager)
+            ->findSubscriptionFor($this->account, self::rusty()));
+    }
+
     public function testThePageNewestIdIsKeptAndAnEmptyPageKeepsTheLastOne(): void
     {
         $home = $this->socialFeed($this->account, SocialFeedKind::Home, '');

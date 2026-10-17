@@ -89,7 +89,7 @@ final readonly class HiddenProfileSwitchSweep
     private function selectAmong(array $page, RefusedSubscriptionSelection $selection): bool
     {
         $actors = self::actorsOf($page);
-        $visibilities = $this->profileVisibility->visibilitiesOf(array_values(array_unique($actors)));
+        $visibilities = $this->profileVisibility->visibilitiesOf($actors);
         foreach ($page as $index => $subscription) {
             $candidate = self::candidateOf($subscription, $actors[$index] ?? null, $visibilities);
             if (null === $candidate) {

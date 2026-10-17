@@ -323,7 +323,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->blueskyAccountOf($user);
         $this->sweep(1);
         $this->rssSubscription($user);
-        $this->clock->modify('+1 hour 1 second');
+        $this->clock->modify('+1 hour');
 
         self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
     }

@@ -130,10 +130,12 @@ final readonly class SocialImporter
      */
     private static function authorFeedsOf(array $hidden): array
     {
-        return array_values(array_map(
-            static fn (HiddenProfileModel $profile): PrivateFeedModel => $profile->toAuthorFeed(),
-            $hidden,
-        ));
+        $authorFeeds = [];
+        foreach ($hidden as $profile) {
+            $authorFeeds[] = $profile->toAuthorFeed();
+        }
+
+        return $authorFeeds;
     }
 
     /**
