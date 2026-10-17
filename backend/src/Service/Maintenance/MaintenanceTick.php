@@ -16,7 +16,7 @@ use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\ProfileSweeps;
 use Psr\Clock\ClockInterface;
 
@@ -74,10 +74,10 @@ final readonly class MaintenanceTick
             LinkCardBudgetModel::fittingBefore($deadline, $this->clock->now(), self::LINK_CARD_MAX_FETCHES),
         );
         $profileImages = $this->profileSweeps->pictures(
-            ProfileImageBudgetModel::fittingBefore($deadline, $this->clock->now(), self::PROFILE_IMAGE_MAX_CALLS),
+            ProfileCallBudgetModel::fittingBefore($deadline, $this->clock->now(), self::PROFILE_IMAGE_MAX_CALLS),
         );
         $hiddenProfiles = $this->profileSweeps->switches(
-            ProfileImageBudgetModel::fittingBefore($deadline, $this->clock->now(), self::HIDDEN_PROFILE_MAX_CALLS),
+            ProfileCallBudgetModel::fittingBefore($deadline, $this->clock->now(), self::HIDDEN_PROFILE_MAX_CALLS),
         );
         $budget = SweepBudgetModel::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
 

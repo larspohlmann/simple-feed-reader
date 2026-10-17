@@ -28,7 +28,7 @@ use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileMoveOutcome;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
-use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\PublicProfileCache;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
@@ -224,7 +224,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
             $this->move(),
             new AppViewClient(new StubFeedFetcher(), $this->throttle),
             $this->logger,
-        ))->sweep(ProfileImageBudgetModel::calls($calls));
+        ))->sweep(ProfileCallBudgetModel::calls($calls));
     }
 
     private function move(): HiddenProfileMove

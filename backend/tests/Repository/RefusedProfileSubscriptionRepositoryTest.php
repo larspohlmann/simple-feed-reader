@@ -23,21 +23,21 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
 
     public function testASubscriberWithAnAccountOnAProfileFeedRefusedWith403IsACandidate(): void
     {
-        $user = $this->user('forbidden-candidate@example.test');
+        $user = $this->user('refused-candidate@example.test');
         $this->connect($user);
         $subscription = $this->subscribe($user, self::PROFILE, 'HTTP 403');
 
-        self::assertSame([$subscription], $this->subscriptions()->findOnForbiddenBlueskyProfileFeeds(10));
+        self::assertSame([$subscription], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(10));
     }
 
     #[DataProvider('otherFeeds')]
     public function testNoOtherFeedIsACandidate(string $feedUrl, ?string $failure, string $sourceFormat): void
     {
-        $user = $this->user('forbidden-other-feed@example.test');
+        $user = $this->user('refused-other-feed@example.test');
         $this->connect($user);
         $this->subscribe($user, $feedUrl, $failure, $sourceFormat);
 
-        self::assertSame([], $this->subscriptions()->findOnForbiddenBlueskyProfileFeeds(10));
+        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(10));
     }
 
     /** @return iterable<string, array{string, ?string, string}> */
@@ -51,29 +51,29 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
 
     public function testASubscriberWithoutAnAccountIsNoCandidate(): void
     {
-        $this->subscribe($this->user('forbidden-no-account@example.test'), self::PROFILE, 'HTTP 403');
+        $this->subscribe($this->user('refused-no-account@example.test'), self::PROFILE, 'HTTP 403');
 
-        self::assertSame([], $this->subscriptions()->findOnForbiddenBlueskyProfileFeeds(10));
+        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(10));
     }
 
     public function testASubscriberWhoseAccountNeedsAReconnectIsNoCandidate(): void
     {
-        $user = $this->user('forbidden-reconnect@example.test');
+        $user = $this->user('refused-reconnect@example.test');
         $this->connect($user)->markNeedsReconnect();
         $this->entityManager->flush();
         $this->subscribe($user, self::PROFILE, 'HTTP 403');
 
-        self::assertSame([], $this->subscriptions()->findOnForbiddenBlueskyProfileFeeds(10));
+        self::assertSame([], $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(10));
     }
 
     public function testTheLimitHolds(): void
     {
-        $user = $this->user('forbidden-limit@example.test');
+        $user = $this->user('refused-limit@example.test');
         $this->connect($user);
         $this->subscribe($user, 'https://bsky.app/profile/did:plc:one/rss', 'HTTP 403');
         $this->subscribe($user, 'https://bsky.app/profile/did:plc:two/rss', 'HTTP 403');
 
-        self::assertCount(1, $this->subscriptions()->findOnForbiddenBlueskyProfileFeeds(1));
+        self::assertCount(1, $this->subscriptions()->findOnRefusedBlueskyProfileFeeds(1));
     }
 
     private function subscribe(

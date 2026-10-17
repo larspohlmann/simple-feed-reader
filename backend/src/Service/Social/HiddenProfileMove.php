@@ -31,7 +31,7 @@ final readonly class HiddenProfileMove
         private SubscriptionRepository $subscriptions,
         private AuthorFeeds $authorFeeds,
         private EntryTwinRepository $entryTwins,
-        private SavedStateMover $savedStates,
+        private SavedStateMover $savedStateMover,
         private SubscriptionService $subscriptionService,
         private EntityManagerInterface $entityManager,
     ) {
@@ -79,7 +79,7 @@ final readonly class HiddenProfileMove
     private function finish(Subscription $rssSubscription, Subscription $authorSubscription): void
     {
         $userId = $rssSubscription->getUser()->requireId();
-        $this->savedStates->move($userId, $this->entryTwins->sameGuidEntryIds(
+        $this->savedStateMover->move($userId, $this->entryTwins->sameGuidEntryIds(
             $userId,
             $rssSubscription->getFeed()->requireId(),
             $authorSubscription->getFeed()->requireId(),

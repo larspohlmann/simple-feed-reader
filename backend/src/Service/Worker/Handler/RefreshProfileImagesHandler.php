@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Worker\Handler;
 
-use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\ProfileImageSweep;
 use App\Service\Worker\Message\RefreshProfileImages;
 use Psr\Log\LoggerInterface;
@@ -23,7 +23,7 @@ final readonly class RefreshProfileImagesHandler
 
     public function __invoke(RefreshProfileImages $message): void
     {
-        $report = $this->profileImageSweep->sweep(ProfileImageBudgetModel::calls(self::CALLS));
+        $report = $this->profileImageSweep->sweep(ProfileCallBudgetModel::calls(self::CALLS));
         $this->logger->info('Worker profile picture sweep finished.', ['report' => $report->toLogContext()]);
     }
 }

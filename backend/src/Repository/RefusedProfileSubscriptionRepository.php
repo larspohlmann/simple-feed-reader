@@ -28,7 +28,7 @@ final class RefusedProfileSubscriptionRepository extends ServiceEntityRepository
      *
      * @return list<Subscription>
      */
-    public function findOnForbiddenBlueskyProfileFeeds(int $limit): array
+    public function findOnRefusedBlueskyProfileFeeds(int $limit): array
     {
         /** @var list<Subscription> $subscriptions */
         $subscriptions = $this->createQueryBuilder('s')

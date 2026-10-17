@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\Model;
 
-use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\ProfileCallBudgetModel;
 use PHPUnit\Framework\TestCase;
 
-final class ProfileImageBudgetModelTest extends TestCase
+final class ProfileCallBudgetModelTest extends TestCase
 {
     private const string NOW = '2026-10-12T12:00:00Z';
 
@@ -32,13 +32,13 @@ final class ProfileImageBudgetModelTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        ProfileImageBudgetModel::calls(-1);
+        ProfileCallBudgetModel::calls(-1);
     }
 
-    private function fittingWithin(int $seconds, int $maxCalls): ProfileImageBudgetModel
+    private function fittingWithin(int $seconds, int $maxCalls): ProfileCallBudgetModel
     {
         $now = new \DateTimeImmutable(self::NOW);
 
-        return ProfileImageBudgetModel::fittingBefore($now->modify(sprintf('%+d seconds', $seconds)), $now, $maxCalls);
+        return ProfileCallBudgetModel::fittingBefore($now->modify(sprintf('%+d seconds', $seconds)), $now, $maxCalls);
     }
 }

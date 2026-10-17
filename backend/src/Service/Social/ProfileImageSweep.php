@@ -12,7 +12,7 @@ use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FetchException;
-use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\Support\BlueskyActor;
 use App\Service\Social\Support\ProfileIdentity;
@@ -37,7 +37,7 @@ final readonly class ProfileImageSweep
     ) {
     }
 
-    public function sweep(ProfileImageBudgetModel $budget): ProfileImageSweepReportModel
+    public function sweep(ProfileCallBudgetModel $budget): ProfileImageSweepReportModel
     {
         if ($budget->isEmpty() || $this->appView->isThrottled()) {
             return ProfileImageSweepReportModel::none();

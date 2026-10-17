@@ -15,7 +15,7 @@ use App\Service\Bluesky\AppViewClient;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
-use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
 use App\Service\Social\ProfileImageSweep;
 use App\Tests\DbTestCase;
@@ -320,7 +320,7 @@ final class ProfileImageSweepTest extends DbTestCase
             $logger,
         );
 
-        return $sweep->sweep(ProfileImageBudgetModel::calls($calls));
+        return $sweep->sweep(ProfileCallBudgetModel::calls($calls));
     }
 
     /** @param list<string> $actors */

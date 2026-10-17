@@ -12,7 +12,7 @@ use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileMoveOutcome;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
-use App\Service\Social\Model\ProfileImageBudgetModel;
+use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\Model\RefusedProfileSubscriptionModel;
 use App\Service\Social\Support\BlueskyActor;
 use App\Service\Social\Support\ProfileFeedUrl;
@@ -37,7 +37,7 @@ final readonly class HiddenProfileSwitchSweep
     ) {
     }
 
-    public function sweep(ProfileImageBudgetModel $budget): HiddenProfileSwitchReportModel
+    public function sweep(ProfileCallBudgetModel $budget): HiddenProfileSwitchReportModel
     {
         if ($this->appView->isThrottled()) {
             return HiddenProfileSwitchReportModel::none();
@@ -65,7 +65,7 @@ final readonly class HiddenProfileSwitchSweep
     private function unsettledCandidates(): array
     {
         $candidates = [];
-        $refused = $this->refusedSubscriptions->findOnForbiddenBlueskyProfileFeeds(self::CANDIDATES_PER_SWEEP);
+        $refused = $this->refusedSubscriptions->findOnRefusedBlueskyProfileFeeds(self::CANDIDATES_PER_SWEEP);
         foreach ($refused as $subscription) {
             $actor = ProfileFeedUrl::identityOf(SocialNetwork::Bluesky, $subscription->getFeed()->getUrl());
             if (null !== $actor && BlueskyActor::isValid($actor) && !$this->publicProfiles->isPublic($actor)) {
@@ -81,7 +81,7 @@ final readonly class HiddenProfileSwitchSweep
      *
      * @return list<string>
      */
-    private static function askedActorsOf(array $candidates, ProfileImageBudgetModel $budget): array
+    private static function askedActorsOf(array $candidates, ProfileCallBudgetModel $budget): array
     {
         $actors = array_map(
             static fn (RefusedProfileSubscriptionModel $candidate): string => $candidate->actor,

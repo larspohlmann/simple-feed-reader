@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Model;
 
 /** How many AppView profile calls one pass may spend, each asking for up to a page of actors. */
-final readonly class ProfileImageBudgetModel
+final readonly class ProfileCallBudgetModel
 {
     /** The guarded fetcher's max_duration, the longest one call can take. */
     public const int CALL_SECONDS = 20;
@@ -17,7 +17,7 @@ final readonly class ProfileImageBudgetModel
     public static function calls(int $count): self
     {
         if ($count < 0) {
-            throw new \InvalidArgumentException('A profile-picture budget cannot be negative.');
+            throw new \InvalidArgumentException('A profile call budget cannot be negative.');
         }
 
         return new self($count);
