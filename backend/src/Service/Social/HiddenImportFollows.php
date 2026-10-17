@@ -7,18 +7,14 @@ namespace App\Service\Social;
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Support\BlueskyActorKey;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Support\BlueskyActor;
-use Psr\Log\LoggerInterface;
 
 final readonly class HiddenImportFollows
 {
     public function __construct(
-        private HiddenProfilesInterface $hiddenProfiles,
-        private LoggerInterface $logger,
+        private TolerantHiddenProfiles $hiddenProfiles,
     ) {
     }
 
@@ -34,15 +30,10 @@ final readonly class HiddenImportFollows
         if ([] === $actorByIdentity) {
             return [];
         }
-        try {
-            $hidden = $this->hiddenProfiles->hiddenAmong(array_values($actorByIdentity));
-        } catch (SocialNetworkUnreachableException $exception) {
-            $this->logger->warning('Import could not tell which Bluesky follows are hidden; all come in by RSS.', [
-                'exception' => $exception,
-            ]);
-
-            return [];
-        }
+        $hidden = $this->hiddenProfiles->hiddenAmongOrNone(
+            array_values($actorByIdentity),
+            'Import could not tell which Bluesky follows are hidden; all come in by RSS.',
+        );
 
         return self::byIdentity($actorByIdentity, $hidden);
     }

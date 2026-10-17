@@ -8,6 +8,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenImportFollows;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\SocialImportFeedModel;
+use App\Service\Social\TolerantHiddenProfiles;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
@@ -91,6 +92,6 @@ final class HiddenImportFollowsTest extends TestCase
 
     private function follows(): HiddenImportFollows
     {
-        return new HiddenImportFollows($this->hiddenProfiles, $this->logger);
+        return new HiddenImportFollows(new TolerantHiddenProfiles($this->hiddenProfiles, $this->logger));
     }
 }

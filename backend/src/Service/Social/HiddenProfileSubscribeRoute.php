@@ -7,15 +7,11 @@ namespace App\Service\Social;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use App\Service\Social\Exception\BlueskyProfileHiddenException;
-use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
-use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Model\SubscribeOutcomeModel;
 use App\Service\Subscription\Model\SubscribeRequestModel;
 use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
-use Psr\Log\LoggerInterface;
 
 final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterface
 {
@@ -23,10 +19,9 @@ final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterf
         . ' Bluesky account in Settings → Social Media to subscribe.';
 
     public function __construct(
-        private HiddenProfilesInterface $hiddenProfiles,
+        private TolerantHiddenProfiles $hiddenProfiles,
         private SocialAccountRepository $socialAccounts,
         private PrivateFeeds $privateFeeds,
-        private LoggerInterface $logger,
     ) {
     }
 
@@ -37,7 +32,10 @@ final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterf
     public function subscribe(SubscribeRequestModel $request): ?SubscribeOutcomeModel
     {
         $actor = ProfileFeedUrl::blueskyProfileActorOf($request->url);
-        $profile = null === $actor ? null : $this->hiddenProfileOf($actor);
+        $profile = null === $actor ? null : $this->hiddenProfiles->hiddenAmongOrNone(
+            [$actor],
+            'Subscribe could not tell whether a Bluesky profile is hidden; discovery decides.',
+        )[$actor] ?? null;
         if (null === $profile) {
             return null;
         }
@@ -50,18 +48,5 @@ final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterf
         }
 
         return SubscribeOutcomeModel::subscribed($this->privateFeeds->subscribe($account, $author, $request->tags));
-    }
-
-    private function hiddenProfileOf(string $actor): ?HiddenProfileModel
-    {
-        try {
-            return $this->hiddenProfiles->hiddenAmong([$actor])[$actor] ?? null;
-        } catch (SocialNetworkUnreachableException $exception) {
-            $this->logger->warning('Subscribe could not tell whether a Bluesky profile is hidden; discovery decides.', [
-                'exception' => $exception,
-            ]);
-
-            return null;
-        }
     }
 }

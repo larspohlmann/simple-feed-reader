@@ -9,6 +9,7 @@ use App\Repository\SocialAccountRepository;
 use App\Service\Social\Exception\BlueskyProfileHiddenException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfileSubscribeRoute;
+use App\Service\Social\TolerantHiddenProfiles;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Subscription\Model\SubscribeRequestModel;
 use App\Tests\DbTestCase;
@@ -117,6 +118,10 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
         self::assertInstanceOf(SocialAccountRepository::class, $socialAccounts);
         $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
 
-        return new HiddenProfileSubscribeRoute($this->hiddenProfiles, $socialAccounts, $privateFeeds, $this->logger);
+        return new HiddenProfileSubscribeRoute(
+            new TolerantHiddenProfiles($this->hiddenProfiles, $this->logger),
+            $socialAccounts,
+            $privateFeeds,
+        );
     }
 }
