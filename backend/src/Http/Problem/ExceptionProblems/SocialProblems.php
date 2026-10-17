@@ -6,6 +6,7 @@ namespace App\Http\Problem\ExceptionProblems;
 
 use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
+use App\Service\Social\Exception\BlueskyProfileHiddenException;
 use App\Service\Social\Exception\InvalidInstanceUrlException;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\Exception\NotAnAppPasswordException;
@@ -68,6 +69,12 @@ final readonly class SocialProblems implements ExceptionProblemsInterface
             self::isUnresolvable($exception) => new ResolvedProblem(new ApiProblem(
                 'social_account_unresolvable',
                 'Account not found on the network',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
+            $exception instanceof BlueskyProfileHiddenException => new ResolvedProblem(new ApiProblem(
+                'bluesky_profile_hidden',
+                'Profile hidden from logged-out readers',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),
