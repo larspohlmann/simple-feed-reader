@@ -9,6 +9,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Social\HiddenProfileSubscribeRoute;
 use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\SocialAccounts;
@@ -76,8 +77,8 @@ final class SubscriptionHiddenProfileTest extends ApiTestCase
         $this->entityManager()->persist($default);
         $this->entityManager()->persist($other);
         $this->entityManager()->flush();
-        $authorFeeds = SocialFeeds::authorFeeds(self::getContainer());
-        $authorFeeds->create($other, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), []);
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
+        $privateFeeds->subscribe($other, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), []);
 
         $this->post(['url' => 'https://bsky.app/profile/rusty-17.bsky.social']);
 

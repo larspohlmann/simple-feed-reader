@@ -457,6 +457,19 @@ final class SocialImportControllerTest extends ApiTestCase
         self::assertSame(['collections[0].kind'], $this->invalidFields($client));
     }
 
+    public function testImportRefusesAnAuthorFeedTheClientSends(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-author-kind@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['collections' => [
+            ['kind' => 'author', 'id' => 'did:plc:rusty', 'name' => 'Rusty'],
+        ]]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame(['collections[0].kind'], $this->invalidFields($client));
+    }
+
     public function testImportTakesAtMostAHundredCollections(): void
     {
         $client = $this->clientWith($this->nothingFollowed());

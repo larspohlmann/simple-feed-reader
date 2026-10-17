@@ -11,4 +11,9 @@ final readonly class HiddenProfileModel
         public string $name,
     ) {
     }
+
+    public function toAuthorFeed(): PrivateFeedModel
+    {
+        return PrivateFeedModel::author($this->did, $this->name);
+    }
 }

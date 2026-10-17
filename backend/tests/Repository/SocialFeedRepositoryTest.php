@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\ProfileFeedSubscriptions;
@@ -196,7 +197,7 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $own = $this->subscribe($this->socialFeed($second, SocialFeedKind::Author, BlueskyProfiles::RUSTY));
 
         self::assertSame($own, SocialFeeds::repository($this->entityManager)
-            ->findAuthorSubscriptionOf($this->user, BlueskyProfiles::RUSTY));
+            ->findSubscriptionFor($this->account, self::rusty()));
     }
 
     public function testTwoAuthorFeedsOfOneProfileFindTheEarlierSubscription(): void
@@ -206,7 +207,7 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $this->subscribe($this->socialFeed($second, SocialFeedKind::Author, BlueskyProfiles::RUSTY));
 
         self::assertSame($earlier, SocialFeeds::repository($this->entityManager)
-            ->findAuthorSubscriptionOf($this->user, BlueskyProfiles::RUSTY));
+            ->findSubscriptionFor($this->account, self::rusty()));
     }
 
     public function testOnlyTheUsersOwnSubscriptionToAnAuthorFeedOfTheirsCounts(): void
@@ -220,7 +221,7 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $this->subscribe($this->socialFeed($this->account, SocialFeedKind::UserList, BlueskyProfiles::RUSTY));
 
         self::assertNull(SocialFeeds::repository($this->entityManager)
-            ->findAuthorSubscriptionOf($this->user, BlueskyProfiles::RUSTY));
+            ->findSubscriptionFor($this->account, self::rusty()));
     }
 
     public function testThePageNewestIdIsKeptAndAnEmptyPageKeepsTheLastOne(): void
@@ -300,5 +301,10 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
         return (new UserFactory($this->entityManager, $hasher))->create('stranger@example.test');
+    }
+
+    private static function rusty(): PrivateFeedModel
+    {
+        return PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty');
     }
 }

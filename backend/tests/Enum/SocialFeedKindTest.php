@@ -18,4 +18,14 @@ final class SocialFeedKindTest extends TestCase
 
         self::assertSame([SocialFeedKind::Author], array_values($followingOnePerson));
     }
+
+    public function testOnlyAListOrACustomFeedIsARememberedCollection(): void
+    {
+        $remembered = array_filter(
+            SocialFeedKind::cases(),
+            static fn (SocialFeedKind $kind): bool => $kind->isRememberedCollection(),
+        );
+
+        self::assertSame([SocialFeedKind::UserList, SocialFeedKind::CustomFeed], array_values($remembered));
+    }
 }

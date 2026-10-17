@@ -21,7 +21,7 @@ use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\BackupReader;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Model\BackupPartModel;
-use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\FullyPopulatedAccount;
@@ -530,8 +530,9 @@ final class AccountBackupExporterTest extends DbTestCase
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
-        $authorFeeds = SocialFeeds::authorFeeds(self::getContainer());
-        $subscription = $authorFeeds->create($account, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), [$tag]);
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
+        $subscription = $privateFeeds
+            ->subscribe($account, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), [$tag]);
         $subscription->setCustomTitle('Rusty, the person');
         $now = new \DateTimeImmutable('2026-10-12 10:00:00');
         $guid = 'at://' . BlueskyProfiles::RUSTY . '/post/1';
@@ -565,8 +566,8 @@ final class AccountBackupExporterTest extends DbTestCase
         $this->entityManager->persist(new Subscription($user, $rss, new \DateTimeImmutable('2026-10-12 10:00:00')));
         $this->entityManager->flush();
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
-        $authorFeeds = SocialFeeds::authorFeeds(self::getContainer());
-        $authorFeeds->create($account, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), []);
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
+        $privateFeeds->subscribe($account, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), []);
 
         $foundationPart = $this->decodedParts($user)[0];
 

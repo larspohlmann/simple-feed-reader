@@ -10,7 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Service\Opml\OpmlExporter;
-use App\Service\Social\Model\HiddenProfileModel;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\SocialAccounts;
@@ -124,8 +124,8 @@ final class OpmlExporterTest extends DbTestCase
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
-        $authorFeeds = SocialFeeds::authorFeeds(self::getContainer());
-        $authorFeeds->create($account, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), [$tag]);
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
+        $privateFeeds->subscribe($account, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), [$tag]);
 
         $xml = $this->exporter()->export($user);
 
@@ -146,8 +146,8 @@ final class OpmlExporterTest extends DbTestCase
         $this->entityManager->persist(new Subscription($user, $rss, new \DateTimeImmutable('2026-10-12T00:00:00Z')));
         $this->entityManager->flush();
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
-        $authorFeeds = SocialFeeds::authorFeeds(self::getContainer());
-        $authorFeeds->create($account, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), []);
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
+        $privateFeeds->subscribe($account, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), []);
 
         self::assertSame(1, substr_count($this->exporter()->export($user), 'type="rss"'));
     }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Social;
 
-use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryTwinRepository;
@@ -15,7 +14,6 @@ use App\Service\Social\Model\HiddenProfileMoveOutcome;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\SubscriptionService;
-use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Moves one subscriber of a hidden profile's refused RSS feed to an author feed of their own, over two sweeps: the
@@ -25,11 +23,10 @@ final readonly class HiddenProfileMove
 {
     public function __construct(
         private SocialAccountRepository $socialAccounts,
-        private AuthorFeeds $authorFeeds,
+        private PrivateFeeds $privateFeeds,
         private EntryTwinRepository $entryTwins,
         private SavedStateMover $savedStateMover,
         private SubscriptionService $subscriptionService,
-        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -43,9 +40,10 @@ final readonly class HiddenProfileMove
         if (null === $account) {
             return HiddenProfileMoveOutcome::Skipped;
         }
-        $authorSubscription = $this->authorFeeds->subscriptionOf($account->getUser(), $profile->did);
+        $author = $profile->toAuthorFeed();
+        $authorSubscription = $this->privateFeeds->subscriptionOf($account, $author);
         if (null === $authorSubscription) {
-            $this->start($account, $profile, $rssSubscription);
+            $this->privateFeeds->subscribeInPlaceOf($account, $author, $rssSubscription);
 
             return HiddenProfileMoveOutcome::Started;
         }
@@ -55,12 +53,6 @@ final readonly class HiddenProfileMove
         $this->finish($rssSubscription, $authorSubscription);
 
         return HiddenProfileMoveOutcome::Finished;
-    }
-
-    private function start(SocialAccount $account, HiddenProfileModel $profile, Subscription $rssSubscription): void
-    {
-        $this->authorFeeds->createMissing($account, $profile, [])->takeSettingsFrom($rssSubscription);
-        $this->entityManager->flush();
     }
 
     private function finish(Subscription $rssSubscription, Subscription $authorSubscription): void

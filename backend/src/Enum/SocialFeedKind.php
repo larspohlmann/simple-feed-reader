@@ -15,4 +15,9 @@ enum SocialFeedKind: string
     {
         return self::Author === $this;
     }
+
+    public function isRememberedCollection(): bool
+    {
+        return self::UserList === $this || self::CustomFeed === $this;
+    }
 }

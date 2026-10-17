@@ -20,7 +20,6 @@ use App\Repository\SocialAccountRepository;
 use App\Repository\SocialLikeRepository;
 use App\Service\SavedPosts\SavedStateMover;
 use App\Service\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Social\AuthorFeeds;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfileMove;
 use App\Service\Social\HiddenProfiles\CachedHiddenProfiles;
@@ -29,7 +28,9 @@ use App\Service\Social\HiddenProfileSwitchSweep;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileMoveOutcome;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\ProfileCallBudgetModel;
+use App\Service\Social\PrivateFeeds;
 use App\Service\Social\ProfileVisibilityCache;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
@@ -226,8 +227,8 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $default = $this->accountOf($user);
         $default->becomeDefault();
         $imported = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::secondBlueskyOf($user));
-        $authorFeed = self::service(AuthorFeeds::class)
-            ->create($imported, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), [])
+        $authorFeed = self::service(PrivateFeeds::class)
+            ->subscribe($imported, PrivateFeedModel::author(BlueskyProfiles::RUSTY, 'Rusty'), [])
             ->getFeed();
         $authorFeed->recordSuccessfulFetch(new \DateTimeImmutable(self::NOW), 15);
         $rssId = $this->rssSubscription($user)->requireId();
@@ -468,7 +469,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     {
         return new HiddenProfileMove(
             self::service(SocialAccountRepository::class),
-            self::service(AuthorFeeds::class),
+            self::service(PrivateFeeds::class),
             self::service(EntryTwinRepository::class),
             new SavedStateMover(
                 self::service(EntryStateRepository::class),
@@ -476,7 +477,6 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
                 $this->entityManager,
             ),
             self::service(SubscriptionService::class),
-            $this->entityManager,
         );
     }
 

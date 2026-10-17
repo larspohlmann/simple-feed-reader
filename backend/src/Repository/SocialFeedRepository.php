@@ -8,8 +8,8 @@ use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
-use App\Entity\User;
 use App\Enum\SocialFeedKind;
+use App\Service\Social\Model\PrivateFeedModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -110,25 +110,28 @@ final class SocialFeedRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    public function findAuthorSubscriptionOf(User $user, string $did): ?Subscription
+    /** A person's feed counts through any account of the user, a collection only through $account. */
+    public function findSubscriptionFor(SocialAccount $account, PrivateFeedModel $privateFeed): ?Subscription
     {
-        /** @var Subscription|null $subscription */
-        $subscription = $this->getEntityManager()->createQueryBuilder()
+        $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('s')
             ->from(Subscription::class, 's')
             ->join(SocialFeed::class, 'sf', 'ON', 'sf.feed = s.feed')
             ->join('sf.socialAccount', 'sa')
-            ->andWhere('s.user = :user')
-            ->andWhere('sa.user = :user')
-            ->andWhere('sf.kind = :author')
-            ->andWhere('sf.remoteId = :did')
-            ->setParameter('user', $user)
-            ->setParameter('author', SocialFeedKind::Author)
-            ->setParameter('did', $did)
+            ->andWhere('s.user = sa.user')
+            ->andWhere('sf.kind = :kind')
+            ->andWhere('sf.remoteId = :remoteId')
+            ->setParameter('kind', $privateFeed->kind)
+            ->setParameter('remoteId', $privateFeed->remoteId)
             ->orderBy('s.id', 'ASC')
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
+            ->setMaxResults(1);
+        if ($privateFeed->kind->followsOnePerson()) {
+            $qb->andWhere('sa.user = :user')->setParameter('user', $account->getUser());
+        } else {
+            $qb->andWhere('sf.socialAccount = :account')->setParameter('account', $account);
+        }
+        /** @var Subscription|null $subscription */
+        $subscription = $qb->getQuery()->getOneOrNullResult();
 
         return $subscription;
     }

@@ -11,6 +11,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfiles\HiddenProfilesInterface;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Model\SubscribeOutcomeModel;
 use App\Service\Subscription\Model\SubscribeRequestModel;
 use App\Service\Subscription\SubscribeRoute\SubscribeRouteInterface;
@@ -24,12 +25,15 @@ final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterf
     public function __construct(
         private HiddenProfilesInterface $hiddenProfiles,
         private SocialAccountRepository $socialAccounts,
-        private AuthorFeeds $authorFeeds,
+        private PrivateFeeds $privateFeeds,
         private LoggerInterface $logger,
     ) {
     }
 
-    /** @throws BlueskyProfileHiddenException when the profile is hidden and no connected Bluesky account can read it */
+    /**
+     * @throws BlueskyProfileHiddenException when the profile is hidden and no connected Bluesky account can read it
+     * @throws AlreadySubscribedException
+     */
     public function subscribe(SubscribeRequestModel $request): ?SubscribeOutcomeModel
     {
         $actor = ProfileFeedUrl::blueskyProfileActorOf($request->url);
@@ -40,7 +44,12 @@ final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterf
         $account = $this->socialAccounts->findReadyActingOnNetwork($request->user, SocialNetwork::Bluesky)
             ?? throw new BlueskyProfileHiddenException(self::CONNECT_AN_ACCOUNT);
 
-        return SubscribeOutcomeModel::subscribed($this->authorFeeds->create($account, $profile, $request->tags));
+        $author = $profile->toAuthorFeed();
+        if (null !== $this->privateFeeds->subscriptionOf($account, $author)) {
+            throw new AlreadySubscribedException();
+        }
+
+        return SubscribeOutcomeModel::subscribed($this->privateFeeds->subscribe($account, $author, $request->tags));
     }
 
     private function hiddenProfileOf(string $actor): ?HiddenProfileModel

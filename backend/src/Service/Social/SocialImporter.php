@@ -11,7 +11,6 @@ use App\Exception\InvalidSelectionException;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\PrivateFeedImportModel;
-use App\Service\Social\Model\PrivateFeedOutcome;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Model\SocialImportModel;
@@ -19,7 +18,6 @@ use App\Service\Social\Model\SocialImportResultModel;
 use App\Service\Social\Support\PrivateFeedRules;
 use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Subscription\BulkSubscriber;
-use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
 use App\Service\Subscription\OwnedSubscriptions;
@@ -36,7 +34,6 @@ final readonly class SocialImporter
         private PrivateFeeds $privateFeeds,
         private ImportedProfilePictures $importedPictures,
         private HiddenImportFollows $hiddenFollows,
-        private AuthorFeeds $authorFeeds,
     ) {
     }
 
@@ -50,11 +47,12 @@ final readonly class SocialImporter
         $hidden = $this->hiddenFollows->among($account, $import->subscribe);
         $items = self::items($network, self::withoutHidden($import->subscribe, $hidden));
         self::assertCollectionsOf($network, $import->collections);
+        $privateFeeds = [...$import->collections, ...self::authorFeedsOf($hidden)];
         $toRemove = $this->ownedSubscriptions->resolve($account->getUser()->requireId(), $import->unsubscribe);
 
         // Removals first, so the slots they free count toward the subscription cap.
         return $this->entityManager->wrapInTransaction(
-            function () use ($account, $import, $items, $toRemove, $hidden): SocialImportResultModel {
+            function () use ($account, $items, $privateFeeds, $toRemove): SocialImportResultModel {
                 $removed = $this->subscriptionService->unsubscribeAll(array_values($toRemove));
                 $subscribed = $this->bulkSubscriber->subscribeAll($account->getUser(), $items);
                 $this->importedPictures->picture(
@@ -62,11 +60,9 @@ final readonly class SocialImporter
                     array_map(static fn (BulkSubscribeItemModel $item): string => $item->feedUrl, $items),
                 );
 
-                $privateFeedTally = $this->addCollections($account, $import->collections);
-
                 return SocialImportResultModel::from(
                     $subscribed,
-                    $this->addAuthors($account, $hidden, $privateFeedTally),
+                    $this->addPrivateFeeds($account, $privateFeeds),
                     $removed,
                 );
             },
@@ -98,13 +94,13 @@ final readonly class SocialImporter
         };
     }
 
-    /** @param list<PrivateFeedModel> $collections */
-    private function addCollections(SocialAccount $account, array $collections): PrivateFeedImportModel
+    /** @param list<PrivateFeedModel> $privateFeeds */
+    private function addPrivateFeeds(SocialAccount $account, array $privateFeeds): PrivateFeedImportModel
     {
         $tally = new PrivateFeedImportModel();
-        foreach ($collections as $collection) {
+        foreach ($privateFeeds as $privateFeed) {
             try {
-                $tally = $tally->counting($this->privateFeeds->create($account, $collection));
+                $tally = $tally->counting($this->privateFeeds->create($account, $privateFeed));
             } catch (SubscriptionLimitReachedException) {
                 $tally = $tally->countingOverLimit();
             }
@@ -127,24 +123,17 @@ final readonly class SocialImporter
         ));
     }
 
-    /** @param array<string, HiddenProfileModel> $hidden */
-    private function addAuthors(
-        SocialAccount $account,
-        array $hidden,
-        PrivateFeedImportModel $tally,
-    ): PrivateFeedImportModel {
-        foreach ($hidden as $profile) {
-            try {
-                $this->authorFeeds->create($account, $profile, []);
-                $tally = $tally->counting(PrivateFeedOutcome::Created);
-            } catch (AlreadySubscribedException) {
-                $tally = $tally->counting(PrivateFeedOutcome::AlreadySubscribed);
-            } catch (SubscriptionLimitReachedException) {
-                $tally = $tally->countingOverLimit();
-            }
-        }
-
-        return $tally;
+    /**
+     * @param array<string, HiddenProfileModel> $hidden
+     *
+     * @return list<PrivateFeedModel>
+     */
+    private static function authorFeedsOf(array $hidden): array
+    {
+        return array_values(array_map(
+            static fn (HiddenProfileModel $profile): PrivateFeedModel => $profile->toAuthorFeed(),
+            $hidden,
+        ));
     }
 
     /**

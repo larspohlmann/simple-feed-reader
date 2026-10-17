@@ -115,8 +115,8 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
     {
         $socialAccounts = self::getContainer()->get(SocialAccountRepository::class);
         self::assertInstanceOf(SocialAccountRepository::class, $socialAccounts);
-        $authorFeeds = SocialFeeds::authorFeeds(self::getContainer());
+        $privateFeeds = SocialFeeds::privateFeeds(self::getContainer());
 
-        return new HiddenProfileSubscribeRoute($this->hiddenProfiles, $socialAccounts, $authorFeeds, $this->logger);
+        return new HiddenProfileSubscribeRoute($this->hiddenProfiles, $socialAccounts, $privateFeeds, $this->logger);
     }
 }

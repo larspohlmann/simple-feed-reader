@@ -7,7 +7,7 @@ namespace App\Tests\Support;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Repository\SocialFeedRepository;
-use App\Service\Social\AuthorFeeds;
+use App\Service\Social\PrivateFeeds;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Assert;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -41,11 +41,11 @@ final class SocialFeeds
         return $account;
     }
 
-    public static function authorFeeds(ContainerInterface $container): AuthorFeeds
+    public static function privateFeeds(ContainerInterface $container): PrivateFeeds
     {
-        $authorFeeds = $container->get(AuthorFeeds::class);
-        Assert::assertInstanceOf(AuthorFeeds::class, $authorFeeds);
+        $privateFeeds = $container->get(PrivateFeeds::class);
+        Assert::assertInstanceOf(PrivateFeeds::class, $privateFeeds);
 
-        return $authorFeeds;
+        return $privateFeeds;
     }
 }
