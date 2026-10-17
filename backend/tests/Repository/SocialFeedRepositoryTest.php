@@ -23,6 +23,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class SocialFeedRepositoryTest extends DbTestCase
 {
     private const string WRITERS = 'at://did:plc:alice/app.bsky.graph.list/3l1';
+    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
 
     private User $user;
     private SocialAccount $account;
@@ -168,6 +169,29 @@ final class SocialFeedRepositoryTest extends DbTestCase
             [['kind' => SocialFeedKind::Home, 'remoteId' => '', 'subscriptionId' => $own->requireId()]],
             SocialFeeds::repository($this->entityManager)->subscribedCollectionsOf($this->account),
         );
+    }
+
+    public function testAnAuthorSubscriptionIsFoundThroughAnyOfTheUsersAccountsWhateverItsStatus(): void
+    {
+        $second = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::secondBlueskyOf($this->user));
+        $second->markNeedsReconnect();
+        $own = $this->subscribe($this->socialFeed($second, SocialFeedKind::Author, self::RUSTY));
+
+        self::assertSame($own, SocialFeeds::repository($this->entityManager)
+            ->findAuthorSubscriptionOf($this->user, self::RUSTY));
+    }
+
+    public function testOnlyTheUsersOwnSubscriptionToAnAuthorFeedOfTheirsCounts(): void
+    {
+        $stranger = $this->stranger();
+        $strangerAccount = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($stranger));
+        $this->subscribeAs($stranger, $this->socialFeed($this->account, SocialFeedKind::Author, self::RUSTY));
+        $this->subscribe($this->socialFeed($strangerAccount, SocialFeedKind::Author, self::RUSTY));
+        $this->subscribe($this->socialFeed($this->account, SocialFeedKind::Author, 'did:plc:someone-else'));
+        $this->subscribe($this->socialFeed($this->account, SocialFeedKind::UserList, self::RUSTY));
+
+        self::assertNull(SocialFeeds::repository($this->entityManager)
+            ->findAuthorSubscriptionOf($this->user, self::RUSTY));
     }
 
     public function testThePageNewestIdIsKeptAndAnEmptyPageKeepsTheLastOne(): void

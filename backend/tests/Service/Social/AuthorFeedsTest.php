@@ -69,6 +69,27 @@ final class AuthorFeedsTest extends DbTestCase
         $this->authorFeeds()->create($account, self::rusty(), []);
     }
 
+    public function testAProfileAlreadyReadThroughAnotherAccountOfTheUserIsRefused(): void
+    {
+        $this->authorFeeds()->create($this->secondAccount(), self::rusty(), []);
+
+        try {
+            $this->authorFeeds()->create($this->account(), self::rusty(), []);
+            self::fail('One user follows one profile through one author feed.');
+        } catch (AlreadySubscribedException) {
+            self::assertSame(1, $this->entityManager->getRepository(Subscription::class)->count([]));
+        }
+    }
+
+    public function testTheUsersSubscriptionToAProfileIsFoundWhicheverAccountReadsIt(): void
+    {
+        $subscription = $this->authorFeeds()->create($this->secondAccount(), self::rusty(), []);
+        $this->account();
+
+        self::assertSame($subscription, $this->authorFeeds()->subscriptionOf($this->user, self::RUSTY));
+        self::assertNull($this->authorFeeds()->subscriptionOf($this->user, 'did:plc:someone-else'));
+    }
+
     public function testAFullAccountGetsNoAuthorFeedAndTheEntityManagerStaysOpen(): void
     {
         $this->user->setMaxSubscriptions(0);
@@ -107,6 +128,11 @@ final class AuthorFeedsTest extends DbTestCase
     private function account(): SocialAccount
     {
         return SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
+    }
+
+    private function secondAccount(): SocialAccount
+    {
+        return SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::secondBlueskyOf($this->user));
     }
 
     private function tag(string $name): Tag

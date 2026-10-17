@@ -38,11 +38,22 @@ final class SocialAccounts
 
     public static function blueskyOf(User $owner): SocialAccount
     {
+        return self::blueskyAs($owner, 'did:plc:alice', '@alice.bsky.social');
+    }
+
+    /** A further Bluesky account of $owner, under another identity. */
+    public static function secondBlueskyOf(User $owner): SocialAccount
+    {
+        return self::blueskyAs($owner, 'did:plc:alice2', '@alice2.bsky.social');
+    }
+
+    private static function blueskyAs(User $owner, string $identity, string $handle): SocialAccount
+    {
         return new SocialAccount(
             $owner,
             SocialNetwork::Bluesky,
-            'did:plc:alice',
-            '@alice.bsky.social',
+            $identity,
+            $handle,
             'https://pds.example.test',
             self::cipher()->seal($owner->requireId(), self::APP_PASSWORD),
             'mnop',

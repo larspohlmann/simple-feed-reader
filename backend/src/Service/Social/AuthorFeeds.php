@@ -9,6 +9,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
 use App\Repository\SocialFeedRepository;
@@ -38,6 +39,9 @@ final readonly class AuthorFeeds
      */
     public function create(SocialAccount $account, HiddenProfileModel $profile, array $tags): Subscription
     {
+        if (null !== $this->subscriptionOf($account->getUser(), $profile->did)) {
+            throw new AlreadySubscribedException();
+        }
         $author = PrivateFeedModel::author($profile->did, $profile->name);
         $this->entityManager->beginTransaction();
         try {
@@ -57,6 +61,11 @@ final readonly class AuthorFeeds
         }
 
         return $subscription;
+    }
+
+    public function subscriptionOf(User $user, string $did): ?Subscription
+    {
+        return $this->socialFeeds->findAuthorSubscriptionOf($user, $did);
     }
 
     private function recordAuthor(SocialAccount $account, Feed $feed, PrivateFeedModel $author): void

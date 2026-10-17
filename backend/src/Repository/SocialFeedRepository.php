@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\Subscription;
+use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -95,6 +96,29 @@ final class SocialFeedRepository extends ServiceEntityRepository
             ->getArrayResult();
 
         return $rows;
+    }
+
+    public function findAuthorSubscriptionOf(User $user, string $did): ?Subscription
+    {
+        /** @var Subscription|null $subscription */
+        $subscription = $this->getEntityManager()->createQueryBuilder()
+            ->select('s')
+            ->from(Subscription::class, 's')
+            ->join(SocialFeed::class, 'sf', 'ON', 'sf.feed = s.feed')
+            ->join('sf.socialAccount', 'sa')
+            ->andWhere('s.user = :user')
+            ->andWhere('sa.user = :user')
+            ->andWhere('sf.kind = :author')
+            ->andWhere('sf.remoteId = :did')
+            ->setParameter('user', $user)
+            ->setParameter('author', SocialFeedKind::Author)
+            ->setParameter('did', $did)
+            ->orderBy('s.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $subscription;
     }
 
     public function forFeed(Feed $feed): ?SocialFeed

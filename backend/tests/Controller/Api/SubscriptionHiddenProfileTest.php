@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Social\AuthorFeeds;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\SocialAccounts;
@@ -68,6 +70,25 @@ final class SubscriptionHiddenProfileTest extends ApiTestCase
             . ' Media to subscribe.',
             $problem['detail'] ?? null,
         );
+    }
+
+    public function testAProfileAlreadyReadThroughAnotherAccountIsAnAlreadySubscribedAnswer(): void
+    {
+        $default = SocialAccounts::blueskyOf($this->user);
+        $default->becomeDefault();
+        $other = SocialAccounts::secondBlueskyOf($this->user);
+        $this->entityManager()->persist($default);
+        $this->entityManager()->persist($other);
+        $this->entityManager()->flush();
+        $authorFeeds = self::getContainer()->get(AuthorFeeds::class);
+        self::assertInstanceOf(AuthorFeeds::class, $authorFeeds);
+        $authorFeeds->create($other, new HiddenProfileModel(self::RUSTY, 'Rusty'), []);
+
+        $this->post(['url' => 'https://bsky.app/profile/rusty-17.bsky.social']);
+
+        $this->assertRejected($this->client, Response::HTTP_CONFLICT);
+        self::assertSame('already_subscribed', $this->payload($this->client)['type'] ?? null);
+        self::assertSame(1, $this->entityManager()->getRepository(Subscription::class)->count([]));
     }
 
     /** @param array<string, mixed> $body */

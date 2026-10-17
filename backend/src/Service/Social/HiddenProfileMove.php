@@ -6,15 +6,13 @@ namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
-use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryTwinRepository;
 use App\Repository\SocialAccountRepository;
-use App\Repository\SocialFeedRepository;
-use App\Repository\SubscriptionRepository;
 use App\Service\SavedPosts\SavedStateMover;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\HiddenProfileMoveOutcome;
+use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,8 +25,6 @@ final readonly class HiddenProfileMove
 {
     public function __construct(
         private SocialAccountRepository $socialAccounts,
-        private SocialFeedRepository $socialFeeds,
-        private SubscriptionRepository $subscriptions,
         private AuthorFeeds $authorFeeds,
         private EntryTwinRepository $entryTwins,
         private SavedStateMover $savedStateMover,
@@ -37,14 +33,17 @@ final readonly class HiddenProfileMove
     ) {
     }
 
-    /** @throws SubscriptionLimitReachedException */
+    /**
+     * @throws SubscriptionLimitReachedException
+     * @throws AlreadySubscribedException
+     */
     public function move(Subscription $rssSubscription, HiddenProfileModel $profile): HiddenProfileMoveOutcome
     {
         $account = $this->socialAccounts->findReadyActingOnNetwork($rssSubscription->getUser(), SocialNetwork::Bluesky);
         if (null === $account) {
             return HiddenProfileMoveOutcome::Skipped;
         }
-        $authorSubscription = $this->authorSubscriptionOf($account, $profile);
+        $authorSubscription = $this->authorFeeds->subscriptionOf($account->getUser(), $profile->did);
         if (null === $authorSubscription) {
             $this->start($account, $profile, $rssSubscription);
 
@@ -56,18 +55,6 @@ final readonly class HiddenProfileMove
         $this->finish($rssSubscription, $authorSubscription);
 
         return HiddenProfileMoveOutcome::Finished;
-    }
-
-    private function authorSubscriptionOf(SocialAccount $account, HiddenProfileModel $profile): ?Subscription
-    {
-        $socialFeed = $this->socialFeeds->findOneFor($account, SocialFeedKind::Author, $profile->did);
-
-        return null === $socialFeed
-            ? null
-            : $this->subscriptions->findOneForUserAndFeed(
-                $account->getUser()->requireId(),
-                $socialFeed->getFeed()->requireId(),
-            );
     }
 
     private function start(SocialAccount $account, HiddenProfileModel $profile, Subscription $rssSubscription): void

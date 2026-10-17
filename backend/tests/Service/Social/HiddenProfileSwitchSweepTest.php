@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
+use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -15,9 +16,7 @@ use App\Repository\EntryStateRepository;
 use App\Repository\EntryTwinRepository;
 use App\Repository\RefusedProfileSubscriptionRepository;
 use App\Repository\SocialAccountRepository;
-use App\Repository\SocialFeedRepository;
 use App\Repository\SocialLikeRepository;
-use App\Repository\SubscriptionRepository;
 use App\Service\SavedPosts\SavedStateMover;
 use App\Service\Social\AuthorFeeds;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -129,6 +128,25 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertNotNull($this->entityManager->find(Subscription::class, $rss->requireId()));
     }
 
+    public function testAnAuthorFeedReadThroughAnotherAccountIsTheOneTheSwitchFinishesOnto(): void
+    {
+        $user = $this->user('switch-other-account@example.test');
+        $default = $this->accountOf($user);
+        $default->becomeDefault();
+        $imported = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::secondBlueskyOf($user));
+        $authorFeed = self::service(AuthorFeeds::class)
+            ->create($imported, new HiddenProfileModel(self::RUSTY, 'Rusty'), [])
+            ->getFeed();
+        $authorFeed->recordSuccessfulFetch(new \DateTimeImmutable(self::NOW), 15);
+        $rssId = $this->rssSubscription($user)->requireId();
+
+        self::assertEquals(new HiddenProfileSwitchReportModel(0, 1), $this->sweep(1));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(Subscription::class, $rssId));
+        self::assertNull($this->authorSubscriptionOf($default));
+        self::assertSame(1, $this->entityManager->getRepository(SocialFeed::class)->count([]));
+    }
+
     public function testASubscriberWithoutAnAccountKeepsTheRefusedFeed(): void
     {
         $this->rssSubscription($this->user('switch-no-account@example.test'));
@@ -211,8 +229,6 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     {
         return new HiddenProfileMove(
             self::service(SocialAccountRepository::class),
-            self::service(SocialFeedRepository::class),
-            self::service(SubscriptionRepository::class),
             self::service(AuthorFeeds::class),
             self::service(EntryTwinRepository::class),
             new SavedStateMover(
