@@ -9,8 +9,8 @@ use App\Service\Search\EntryIndexer;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Three passes: entries fetched before their retention window (a social network's feeds have their own), a feed's
- * entries beyond its cap, then completed runs left empty.
+ * Four passes: entries fetched before their retention window (a social network's feeds have their own), a feed's
+ * entries beyond its cap, a saved feed's entries nobody flags any more, then completed runs left empty.
  * Age counts from the fetch (`createdAt`), never `effectiveDate`: a backfilled article was re-added forever (#384).
  */
 final readonly class EntryPruner
@@ -37,7 +37,7 @@ final readonly class EntryPruner
      */
     public function prune(): int
     {
-        $deletedEntries = $this->pruneByAge() + $this->pruneByFeedCap();
+        $deletedEntries = $this->pruneByAge() + $this->pruneByFeedCap() + $this->pruneUnsaved();
         $this->retention->deleteEmptyCompletedRuns();
 
         return $deletedEntries;
@@ -89,6 +89,11 @@ final readonly class EntryPruner
         }
 
         return $deleted;
+    }
+
+    private function pruneUnsaved(): int
+    {
+        return $this->deleteByIds($this->retention->unsavedIdsInSavedFeeds());
     }
 
     /** An override below the floor would defeat it, and zero would make the boundary's offset negative. */

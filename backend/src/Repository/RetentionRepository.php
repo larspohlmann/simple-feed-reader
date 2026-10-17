@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Enum\RunStatus;
+use App\Enum\SourceFormat;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -59,6 +60,21 @@ final readonly class RetentionRepository
             ?->andWhere('e.createdAt < :cutoff')?->setParameter('cutoff', $cutoff);
 
         return self::idsOf($query);
+    }
+
+    /** @return list<int> the entries of saved feeds that nobody favourites or keeps any more (#1666) */
+    public function unsavedIdsInSavedFeeds(): array
+    {
+        return self::idsOf(
+            $this->entityManager->createQueryBuilder()
+                ->select('e.id')
+                ->from(Entry::class, 'e')
+                ->join('e.feed', 'f')
+                ->where('f.sourceFormat = :saved')
+                ->andWhere($this->notProtectedDql())
+                ->setParameter('saved', SourceFormat::SAVED)
+                ->setParameter('true', true, Types::BOOLEAN),
+        );
     }
 
     /** @param list<int> $ids */
