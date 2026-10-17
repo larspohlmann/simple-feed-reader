@@ -229,6 +229,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
 | `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |
 | `SavedSearchEntry` | Which articles match one of your saved searches. A derived row: the sweep that matches searches against articles rebuilds it, so a restore leaves it to be rebuilt rather than carrying it. |
+| `SavedEntryOrigin` | Where an article saved from a feed you left came from: that feed's title and icon. The file does not carry it yet. |
 
 Your "For you" **settings** and **results** are both dropped. A restore leaves
 the settings at their defaults; set them again once, and run the engine.
