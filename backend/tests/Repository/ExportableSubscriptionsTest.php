@@ -25,6 +25,37 @@ final class ExportableSubscriptionsTest extends DbTestCase
         self::assertSame([$rss, $private], $this->subscriptions()->findForUserWithTags($user->requireId()));
     }
 
+    public function testAnOpmlLeavesTheSavedFeedsOutAndABackupKeepsThem(): void
+    {
+        $user = new User('exportable-saved@example.com', new \DateTimeImmutable('2026-10-17T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $rss = $this->subscribed($user, 'https://example.com/saved-test.xml', SourceFormat::XML);
+        $this->subscribed($user, 'social:mastodon:2:home', SourceFormat::MASTODON_API);
+        $saved = $this->subscribed($user, sprintf('saved:%d:bluesky', $user->requireId()), SourceFormat::SAVED);
+        $this->entityManager->flush();
+
+        self::assertSame([$rss], $this->subscriptions()->findExportableForUserWithTags($user->requireId()));
+        self::assertSame([$rss, $saved], $this->subscriptions()->findBackedUpForUserWithTags($user->requireId()));
+    }
+
+    public function testTheCapCountsNoSavedFeed(): void
+    {
+        $user = new User('count-saved@example.com', new \DateTimeImmutable('2026-10-17T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $rss = $this->subscribed($user, 'https://example.com/counted.xml', SourceFormat::XML);
+        $saved = $this->subscribed($user, sprintf('saved:%d', $user->requireId()), SourceFormat::SAVED);
+        $this->entityManager->flush();
+
+        self::assertSame(1, $this->subscriptions()->countForUser($user->requireId()));
+        $savedUrl = sprintf('saved:%d', $user->requireId());
+        self::assertSame($saved, $this->subscriptions()->findOneForUserAndFeedUrl($user->requireId(), $savedUrl));
+        self::assertNull(
+            $this->subscriptions()->findOneForUserAndFeedUrl($user->requireId() + 1000, $rss->getFeed()->getUrl()),
+        );
+    }
+
     private function subscribed(User $user, string $url, string $sourceFormat): Subscription
     {
         $feed = new Feed($url);

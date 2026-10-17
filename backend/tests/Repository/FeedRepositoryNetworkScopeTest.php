@@ -11,6 +11,7 @@ use App\Enum\SourceFormat;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Repository\NetworkScope;
+use App\Repository\SubscriptionScopeRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\SeedsUsers;
@@ -66,6 +67,27 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
 
         self::assertSame([$profile->requireId()], $this->idsOf($this->feeds()->findDue($criteria, 50)));
         self::assertSame(1, $this->feeds()->countDue($criteria));
+    }
+
+    public function testASavedFeedIsInTheWholeNetworkAndNotAmongItsProfiles(): void
+    {
+        $owner = $this->user('network-scope-saved@example.com');
+        $saved = $this->fixtures()->subscribe(
+            $owner,
+            sprintf('saved:%d:bluesky', $owner->requireId()),
+            SourceFormat::SAVED,
+        );
+        $subscriptions = self::getContainer()->get(SubscriptionScopeRepository::class);
+        self::assertInstanceOf(SubscriptionScopeRepository::class, $subscriptions);
+
+        $whole = $subscriptions->findForUserOnNetwork($owner->requireId(), NetworkScope::whole(SocialNetwork::Bluesky));
+        $profiles = $subscriptions->findForUserOnNetwork(
+            $owner->requireId(),
+            NetworkScope::profiles(SocialNetwork::Bluesky),
+        );
+
+        self::assertSame([$saved], $whole);
+        self::assertSame([], $profiles);
     }
 
     public function testANetworkScopeNeverReachesAFeedTheUserDoesNotSubscribeTo(): void

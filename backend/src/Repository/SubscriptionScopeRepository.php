@@ -34,6 +34,20 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
     }
 
     /** @return list<Subscription> */
+    public function findIncludedInAllItemsForUser(int $userId): array
+    {
+        /** @var list<Subscription> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->andWhere('s.includeInAllItems = true')
+            ->orderBy('s.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
+    /** @return list<Subscription> */
     public function findForUserOnNetwork(int $userId, NetworkScope $networkScope): array
     {
         $qb = $this->createQueryBuilder('s')

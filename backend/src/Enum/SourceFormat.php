@@ -28,6 +28,12 @@ final class SourceFormat
     /** The formats of private feeds: read through an account, never fetched by URL, never exported. */
     public const array SOCIAL = [self::BLUESKY_API, self::MASTODON_API];
 
+    /** A user's "Saved from …" feed of favourites and kept posts from feeds they left (#1666); never fetched. */
+    public const string SAVED = 'saved';
+
+    /** Formats whose networked feed is no person's profile. */
+    public const array NOT_PROFILES = [self::BLUESKY_API, self::MASTODON_API, self::SAVED];
+
     public static function isSocial(string $sourceFormat): bool
     {
         return \in_array($sourceFormat, self::SOCIAL, true);

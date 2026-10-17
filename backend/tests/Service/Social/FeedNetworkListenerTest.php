@@ -7,6 +7,7 @@ namespace App\Tests\Service\Social;
 use App\Entity\Feed;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Service\Social\FeedNetworkListener;
 use App\Tests\DbTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -84,6 +85,30 @@ final class FeedNetworkListenerTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame(SocialNetwork::Bluesky, $this->storedNetworkOf($feedId));
+    }
+
+    public function testASavedFeedTakesItsNetworkFromItsUrl(): void
+    {
+        $bluesky = new Feed('saved:5:bluesky');
+        $bluesky->setSourceFormat(SourceFormat::SAVED);
+        $feeds = new Feed('saved:5');
+        $feeds->setSourceFormat(SourceFormat::SAVED);
+        $listener = new FeedNetworkListener();
+
+        $listener->preFlush($bluesky);
+        $listener->preFlush($feeds);
+
+        self::assertSame(SocialNetwork::Bluesky, $bluesky->getNetwork());
+        self::assertNull($feeds->getNetwork());
+    }
+
+    /** Guard test: passes before the saved format exists too; it pins that only the format makes a saved feed. */
+    public function testASavedUrlStoredAsAnotherFormatGetsNoNetwork(): void
+    {
+        $feed = new Feed('saved:5:bluesky');
+        (new FeedNetworkListener())->preFlush($feed);
+
+        self::assertNull($feed->getNetwork());
     }
 
     private function storedFeed(string $url, string $sourceFormat): int
