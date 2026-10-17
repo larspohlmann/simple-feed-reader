@@ -53,6 +53,20 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
         self::assertSame([['rusty-17.bsky.social']], $this->hiddenProfiles->asked);
     }
 
+    public function testAFeedUrlNamingTheProfilesDidIsAskedAboutByThatDid(): void
+    {
+        $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($this->user));
+        $url = 'https://bsky.app/profile/' . self::RUSTY . '/rss';
+
+        $outcome = $this->route()->subscribe(new SubscribeRequestModel($this->user, $url, []));
+
+        self::assertSame(
+            sprintf('social:bluesky:%d:author:%s', $account->requireId(), self::RUSTY),
+            $outcome?->subscription?->getFeed()->getUrl(),
+        );
+        self::assertSame([[self::RUSTY]], $this->hiddenProfiles->asked);
+    }
+
     public function testAHiddenProfileWithoutAConnectedAccountIsRefusedWithTheWayOut(): void
     {
         $this->expectException(BlueskyProfileHiddenException::class);

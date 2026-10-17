@@ -91,6 +91,16 @@ final class FeedRepositoryNetworkScopeTest extends DbTestCase
             new SocialFeed($account, $author, SocialFeedKind::Author, 'did:plc:rusty'),
         );
         SocialFeeds::persisted($this->entityManager, new SocialFeed($account, $home, SocialFeedKind::Home, ''));
+        $writers = 'at://did:plc:alice/app.bsky.graph.list/writers';
+        $list = $this->fixtures()->subscribe(
+            $owner,
+            sprintf('social:bluesky:%d:list:%s', $account->requireId(), $writers),
+            SourceFormat::BLUESKY_API,
+        )->getFeed();
+        SocialFeeds::persisted(
+            $this->entityManager,
+            new SocialFeed($account, $list, SocialFeedKind::UserList, $writers),
+        );
 
         $criteria = $this->criteria($owner, NetworkScope::profiles(SocialNetwork::Bluesky));
 

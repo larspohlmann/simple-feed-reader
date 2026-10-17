@@ -72,6 +72,30 @@ final class SocialLikeCopyTest extends DbTestCase
         self::assertNull($this->likes()->findOneFor($this->user, $target));
     }
 
+    public function testOnlyTheUsersOwnLikeIsCopied(): void
+    {
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $other = (new UserFactory($this->entityManager, $hasher))->create('social-like-copy-other@example.test');
+        $otherAccount = SocialAccounts::blueskyOf($other);
+        $this->entityManager->persist($otherAccount);
+        $source = $this->entry('https://bsky.app/profile/did:plc:rusty/rss');
+        $target = $this->entry('social:bluesky:1:author:did:plc:rusty');
+        $this->entityManager->persist(new SocialLike(
+            $other,
+            $source,
+            $otherAccount,
+            'at://other-like',
+            new \DateTimeImmutable('2026-10-16 07:30:00'),
+        ));
+        $this->like($source, self::LIKE, '2026-10-16 08:00:00');
+
+        $this->likes()->copyLike($this->user->requireId(), $source->requireId(), $target->requireId());
+
+        self::assertSame(self::LIKE, $this->likes()->findOneFor($this->user, $target)?->getRemoteId());
+        self::assertNull($this->likes()->findOneFor($other, $target));
+    }
+
     private function like(Entry $entry, string $remoteId, string $likedAt): void
     {
         $this->entityManager->persist(
