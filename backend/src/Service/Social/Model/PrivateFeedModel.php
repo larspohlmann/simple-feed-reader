@@ -47,14 +47,6 @@ final readonly class PrivateFeedModel
         return $kind->value . ':' . $remoteId;
     }
 
-    /** The model a key names, without the name, which no key carries. */
-    public static function fromKey(string $key): self
-    {
-        [$kind, $remoteId] = explode(':', $key, 2);
-
-        return self::of(SocialFeedKind::from($kind), $remoteId, '');
-    }
-
     public function key(): string
     {
         return self::keyOf($this->kind, $this->remoteId);

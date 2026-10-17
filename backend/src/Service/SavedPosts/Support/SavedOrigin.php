@@ -40,10 +40,7 @@ final class SavedOrigin
 
     private static function nameOf(Subscription $leaving): string
     {
-        $feed = $leaving->getFeed();
-        $title = SubscriptionDisplayTitle::from($leaving->getCustomTitle(), $feed->getTitle(), $feed->getUrl());
-
-        return mb_substr($title, 0, self::NAME_MAX_LENGTH);
+        return mb_substr(SubscriptionDisplayTitle::ofSubscription($leaving), 0, self::NAME_MAX_LENGTH);
     }
 
     private function __construct()

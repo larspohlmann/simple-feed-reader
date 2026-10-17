@@ -19,16 +19,16 @@ use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\PrivateFeedOutcome;
 use App\Service\Social\Model\PrivateFeedSyncOutcomeModel;
 use App\Service\Social\Model\SocialCollectionModel;
+use App\Service\Social\Model\SubscribedCollectionModel;
 use App\Service\Social\Pass\CollectionSyncPlan;
 use App\Service\Social\Support\PrivateFeedSyncReasons;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** Writes one complete check: removals through the unsubscribe's rescue, additions with import defaults, the log. */
 final readonly class PrivateFeedSyncApplier
 {
-    public const int KEPT_CHANGES = 10;
+    private const int KEPT_CHANGES = 10;
 
     public function __construct(
         private SocialFeedRepository $socialFeeds,
@@ -51,6 +51,7 @@ final readonly class PrivateFeedSyncApplier
             $added = $this->add($account, $plan->additions());
             $outcome = new PrivateFeedSyncOutcomeModel($added, $removed);
             $this->rememberAndStamp($account, $plan);
+            $this->trimLogAfter($account, $outcome);
             $this->entityManager->commit();
         } catch (\Throwable $exception) {
             $this->entityManager->rollback();
@@ -72,21 +73,19 @@ final readonly class PrivateFeedSyncApplier
             : CollectionSyncPlan::following($onNetwork, $subscribed, $known);
     }
 
-    /** @param array<string, int> $removals subscription id by key */
+    /** @param array<int, PrivateFeedModel> $removals collection by subscription id */
     private function remove(SocialAccount $account, NetworkCollectionsModel $network, array $removals): int
     {
-        $leaving = $this->subscriptions->findAllByIdsForUser(
-            $account->getUser()->requireId(),
-            array_values($removals),
-        );
+        $leaving = $this->subscriptions->findAllByIdsForUser($account->getUser()->requireId(), array_keys($removals));
         $titles = self::titlesOf($leaving);
         $this->subscriptionService->unsubscribeAll($leaving);
-        $keyById = array_flip($removals);
+        $forgotten = [];
         foreach ($titles as $subscriptionId => $title) {
-            $collection = PrivateFeedModel::fromKey($keyById[$subscriptionId]);
-            $this->knownCollections->forget($account, $collection->kind, $collection->remoteId);
+            $collection = $removals[$subscriptionId];
+            $forgotten[] = $collection;
             $this->log($account, $collection, $title, PrivateFeedSyncReasons::removed($account, $collection, $network));
         }
+        $this->knownCollections->forget($account, $forgotten);
         $this->entityManager->flush();
 
         return \count($leaving);
@@ -123,6 +122,13 @@ final readonly class PrivateFeedSyncApplier
         }
         $account->recordSync($this->clock->now());
         $this->entityManager->flush();
+    }
+
+    private function trimLogAfter(SocialAccount $account, PrivateFeedSyncOutcomeModel $outcome): void
+    {
+        if (0 === $outcome->added + $outcome->removed) {
+            return;
+        }
         $this->changes->trimTo($account, self::KEPT_CHANGES);
     }
 
@@ -142,12 +148,13 @@ final readonly class PrivateFeedSyncApplier
         ));
     }
 
-    /** @return array<string, int> subscription id by key, of the allow-listed kinds only */
+    /** @return array<string, SubscribedCollectionModel> by key, of the allow-listed kinds only */
     private function subscribedOf(SocialAccount $account): array
     {
         $subscribed = [];
         foreach ($this->socialFeeds->subscribedCollectionsOfKinds($account, PrivateFeedSync::SYNCED_KINDS) as $row) {
-            $subscribed[PrivateFeedModel::keyOf($row['kind'], $row['remoteId'])] = $row['subscriptionId'];
+            $collection = PrivateFeedModel::of($row['kind'], $row['remoteId'], '');
+            $subscribed[$collection->key()] = new SubscribedCollectionModel($row['subscriptionId'], $collection);
         }
 
         return $subscribed;
@@ -189,12 +196,7 @@ final readonly class PrivateFeedSyncApplier
     {
         $titles = [];
         foreach ($subscriptions as $subscription) {
-            $feed = $subscription->getFeed();
-            $titles[$subscription->requireId()] = SubscriptionDisplayTitle::from(
-                $subscription->getCustomTitle(),
-                $feed->getTitle(),
-                $feed->getUrl(),
-            );
+            $titles[$subscription->requireId()] = SubscriptionDisplayTitle::ofSubscription($subscription);
         }
 
         return $titles;

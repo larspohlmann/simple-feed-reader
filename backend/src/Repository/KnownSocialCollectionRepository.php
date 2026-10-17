@@ -40,14 +40,21 @@ final class KnownSocialCollectionRepository extends ServiceEntityRepository
         $this->getEntityManager()->persist(new KnownSocialCollection($account, $kind, $remoteId));
     }
 
-    public function forget(SocialAccount $account, SocialFeedKind $kind, string $remoteId): void
+    /** @param list<PrivateFeedModel> $collections */
+    public function forget(SocialAccount $account, array $collections): void
     {
-        $this->createQueryBuilder('known')
+        if ([] === $collections) {
+            return;
+        }
+        $qb = $this->createQueryBuilder('known')
             ->delete()
-            ->andWhere('known.socialAccount = :account')->setParameter('account', $account)
-            ->andWhere('known.kind = :kind')->setParameter('kind', $kind)
-            ->andWhere('known.remoteId = :remoteId')->setParameter('remoteId', $remoteId)
-            ->getQuery()
-            ->execute();
+            ->andWhere('known.socialAccount = :account')->setParameter('account', $account);
+        $matches = $qb->expr()->orX();
+        foreach ($collections as $index => $collection) {
+            $matches->add(sprintf('known.kind = :kind%1$d AND known.remoteId = :remoteId%1$d', $index));
+            $qb->setParameter('kind' . $index, $collection->kind)
+                ->setParameter('remoteId' . $index, $collection->remoteId);
+        }
+        $qb->andWhere($matches)->getQuery()->execute();
     }
 }

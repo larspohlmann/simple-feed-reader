@@ -32,6 +32,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\PrivateFeedSyncWiring;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
@@ -237,6 +238,19 @@ final class PrivateFeedSyncTest extends DbTestCase
             array_map(static fn (int $index): string => 'Feed ' . $index, range(2, 11)),
             array_column($this->changes(), 2),
         );
+    }
+
+    public function testACheckThatChangesNothingLeavesTheLogAlone(): void
+    {
+        $this->stampAnHourAgo();
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $outcome = $this->syncAgainst(self::network([]));
+
+        self::assertEquals(new PrivateFeedSyncOutcomeModel(), $outcome);
+        self::assertSame([], $recorder->queriesMatching('private_feed_sync_change'));
     }
 
     public function testAFullAccountSkipsAnAdditionAndTriesAgainNextTime(): void

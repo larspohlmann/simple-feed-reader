@@ -8,6 +8,7 @@ use App\Entity\KnownSocialCollection;
 use App\Entity\SocialAccount;
 use App\Enum\SocialFeedKind;
 use App\Repository\KnownSocialCollectionRepository;
+use App\Service\Social\Model\PrivateFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -47,16 +48,22 @@ final class KnownSocialCollectionRepositoryTest extends DbTestCase
         );
     }
 
-    public function testForgettingRemovesOnlyThatCollection(): void
+    public function testForgettingRemovesOnlyThoseCollections(): void
     {
         $this->repository()->remember($this->account, SocialFeedKind::UserList, 'at://l/1');
+        $this->repository()->remember($this->account, SocialFeedKind::UserList, 'at://l/2');
         $this->repository()->remember($this->account, SocialFeedKind::CustomFeed, 'at://f/1');
+        $this->repository()->remember($this->otherAccount, SocialFeedKind::UserList, 'at://l/2');
         $this->entityManager->flush();
 
-        $this->repository()->forget($this->account, SocialFeedKind::UserList, 'at://l/1');
+        $this->repository()->forget(
+            $this->account,
+            [PrivateFeedModel::userList('at://l/1', ''), PrivateFeedModel::userList('at://l/2', '')],
+        );
         $this->entityManager->clear();
 
         self::assertSame(['custom_feed:at://f/1' => true], $this->repository()->keysOf($this->accountAgain()));
+        self::assertSame(['list:at://l/2' => true], $this->repository()->keysOf($this->otherAccount));
     }
 
     public function testEachAccountKeepsItsOwnMemory(): void
