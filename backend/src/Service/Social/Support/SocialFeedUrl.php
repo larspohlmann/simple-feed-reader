@@ -47,19 +47,18 @@ final class SocialFeedUrl
             return null;
         }
 
-        return new SocialFeedAddressModel($network, (int) $accountId, $kind);
+        return new SocialFeedAddressModel($network, (int) $accountId, $kind, $parts[4] ?? '');
     }
 
     /** @return string|null the DID an author feed of $network follows; null for any other URL */
     public static function authorOf(SocialNetwork $network, string $url): ?string
     {
         $address = self::addressOf($url);
-        if (null === $address || $network !== $address->network || SocialFeedKind::Author !== $address->kind) {
+        if (null === $address || $network !== $address->network || !$address->kind->followsOnePerson()) {
             return null;
         }
-        $did = explode(':', $url, 5)[4] ?? '';
 
-        return BlueskyActorKey::isDid($did) ? $did : null;
+        return BlueskyActorKey::isDid($address->remoteId) ? $address->remoteId : null;
     }
 
     private static function segmentOf(SocialFeedKind $kind): string

@@ -10,4 +10,9 @@ enum SocialFeedKind: string
     case UserList = 'list';
     case CustomFeed = 'custom_feed';
     case Author = 'author';
+
+    public function followsOnePerson(): bool
+    {
+        return self::Author === $this;
+    }
 }

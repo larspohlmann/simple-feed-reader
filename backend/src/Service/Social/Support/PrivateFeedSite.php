@@ -23,7 +23,7 @@ final class PrivateFeedSite
 
     private static function bluesky(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
-        if (SocialFeedKind::Author === $privateFeed->kind) {
+        if ($privateFeed->kind->followsOnePerson()) {
             return BlueskyWeb::profileUrl($privateFeed->remoteId);
         }
 

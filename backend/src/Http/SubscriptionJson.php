@@ -7,7 +7,6 @@ namespace App\Http;
 use App\Entity\Feed;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
-use App\Enum\SocialFeedKind;
 use App\Service\Social\Support\SocialFeedClassifier;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\Support\PlainText;
@@ -120,7 +119,7 @@ final class SubscriptionJson
             return null;
         }
         $address = SocialFeedClassifier::privateAddressOf($feed);
-        if (null === $address || SocialFeedKind::Author === $address->kind) {
+        if (null === $address || $address->kind->followsOnePerson()) {
             return ['network' => $network->value, 'accountId' => null, 'kind' => self::PROFILE_KIND];
         }
 

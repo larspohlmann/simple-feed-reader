@@ -60,23 +60,23 @@ final class SocialFeedUrlTest extends TestCase
     {
         yield 'home' => [
             'social:bluesky:12:home',
-            new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::Home),
+            new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::Home, ''),
         ];
         yield 'list with colons' => [
             'social:bluesky:12:list:' . self::LIST,
-            new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::UserList),
+            new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::UserList, self::LIST),
         ];
         yield 'custom feed' => [
             'social:bluesky:12:feed:' . self::FEED,
-            new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::CustomFeed),
+            new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::CustomFeed, self::FEED),
         ];
         yield 'author' => [
             'social:bluesky:12:author:did:plc:rusty',
-            new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::Author),
+            new SocialFeedAddressModel(SocialNetwork::Bluesky, 12, SocialFeedKind::Author, 'did:plc:rusty'),
         ];
         yield 'mastodon list' => [
             'social:mastodon:4:list:42',
-            new SocialFeedAddressModel(SocialNetwork::Mastodon, 4, SocialFeedKind::UserList),
+            new SocialFeedAddressModel(SocialNetwork::Mastodon, 4, SocialFeedKind::UserList, '42'),
         ];
         yield 'an rss feed' => ['https://bsky.app/profile/did:plc:bob/rss', null];
         yield 'an unknown network' => ['social:threads:4:home', null];
