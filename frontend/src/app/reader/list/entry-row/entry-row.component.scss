@@ -111,3 +111,21 @@
 .title.post {
   @include post-text.post-text;
 }
+
+.reply {
+  @include post-text.post-text;
+
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.reply > app-thread-count {
+  margin-inline-start: var(--space-1);
+}
+
+app-link-card {
+  margin-top: var(--space-1);
+}

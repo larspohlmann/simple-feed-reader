@@ -38,6 +38,7 @@ import { TocEntry, collectToc } from '../reading/reading-toc';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
 import { ListenRowComponent } from '../listen-row/listen-row.component';
 import { LinkCardsComponent } from '../link-cards/link-cards.component';
+import { ThreadRepliesComponent } from '../thread-replies/thread-replies.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { SocialCountsComponent } from '../social-counts/social-counts.component';
 import { SocialCountsService } from '../social-counts/social-counts.service';
@@ -73,6 +74,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     EntryCommentsComponent,
     ReaderTocComponent,
     LinkCardsComponent,
+    ThreadRepliesComponent,
     ListenRowComponent,
     QuotedPostComponent,
     SocialCountsComponent,

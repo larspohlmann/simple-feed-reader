@@ -11,7 +11,9 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
 import { describeShortMarking } from '../../../../testing/short-marking-testing';
 import { describePortraitCover } from '../../../../testing/portrait-cover-testing';
-import { anEntry } from '../../../../testing/entry-testing';
+import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
+import { aThreadPost } from '../../../../testing/thread-testing';
+import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 
 const entryActions = {
@@ -264,5 +266,37 @@ describe('EntryRowComponent', () => {
       'https://cdn.test/a-150.jpg 150w, https://cdn.test/a-300.jpg 300w',
     );
     expect(img.getAttribute('sizes')).toBe('132px');
+  });
+
+  describe('self-reply thread', () => {
+    const navigation = { layer: jest.fn(), openAlone: jest.fn() };
+
+    function mountThread(thread: EntryDto['thread']): HTMLElement {
+      TestBed.configureTestingModule({
+        providers: [{ provide: LinkReaderNavigation, useValue: navigation }],
+      });
+      return mount(entry({ id: 9, thread })).nativeElement as HTMLElement;
+    }
+
+    it('draws a thread post per reply', () => {
+      const element = mountThread([aThreadPost({ text: 'One' }), aThreadPost({ text: 'Two' })]);
+
+      expect(element.querySelectorAll('app-thread-line-post')).toHaveLength(2);
+      expect(element.querySelector('.snippet')).not.toBeNull();
+    });
+
+    it('draws no thread line without replies', () => {
+      expect(mountThread([]).querySelector('app-thread-line')).toBeNull();
+    });
+
+    it('opens a reply’s card alone by that card’s stored position', () => {
+      const element = mountThread([
+        aThreadPost({ linkCard: aLinkCard({ url: 'https://reply.test/', position: 3 }) }),
+      ]);
+
+      element.querySelector<HTMLButtonElement>('button.open-in-reader')!.click();
+
+      expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: 9, position: 3 });
+    });
   });
 });

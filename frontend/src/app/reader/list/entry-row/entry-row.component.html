@@ -23,6 +23,33 @@
         }
       </p>
     }
+    @if (entry().thread.length) {
+      <app-thread-line>
+        @for (reply of entry().thread; track $index; let index = $index) {
+          <app-thread-line-post>
+            @if (reply.text) {
+              <p class="reply">
+                {{ reply.text }}
+                <app-thread-count [position]="index + 2" [total]="entry().thread.length + 1" />
+              </p>
+            } @else {
+              <app-thread-count [position]="index + 2" [total]="entry().thread.length + 1" />
+            }
+            @if (reply.linkCard; as card) {
+              <app-link-card
+                [card]="card"
+                layout="block"
+                [openableInReader]="true"
+                (openInReader)="openInReaderAlone(card.position)"
+                (click)="$event.stopPropagation()"
+                (keydown.enter)="$event.stopPropagation()"
+                (keydown.space)="$event.stopPropagation()"
+              />
+            }
+          </app-thread-line-post>
+        }
+      </app-thread-line>
+    }
     <div class="tagline">
       <app-entry-pills
         [tags]="tags()"

@@ -1,4 +1,5 @@
 @use '../../../theme/breakpoints' as bp;
+@use '../post-body';
 
 :host {
   display: block;
@@ -93,32 +94,7 @@ a.when:hover {
   color: var(--text-primary);
 }
 
-.body ::ng-deep :is(p, ul, ol, blockquote, pre) {
-  margin: 0 0 var(--space-2);
-}
-
-.body ::ng-deep > :last-child {
-  margin-bottom: 0;
-}
-
-.body ::ng-deep blockquote {
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--border-strong);
-  color: var(--text-secondary);
-}
-
-.body ::ng-deep pre {
-  overflow-x: auto;
-}
-
-.body ::ng-deep img {
-  max-width: 100%;
-  height: auto;
-}
-
-.body ::ng-deep a[href] {
-  color: var(--accent);
-}
+@include post-body.sanitized-html;
 
 :is(app-post-media, app-quoted-post, app-link-card) {
   margin-top: var(--space-2);

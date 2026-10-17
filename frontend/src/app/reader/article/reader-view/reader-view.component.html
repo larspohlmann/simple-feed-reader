@@ -190,6 +190,9 @@
         @if (e.linkCards.length || e.pending) {
           <app-link-cards [entry]="e" />
         }
+        @if (e.thread.length) {
+          <app-thread-replies [entry]="e" />
+        }
         @if (e.social) {
           <app-social-counts [entry]="e" />
         }

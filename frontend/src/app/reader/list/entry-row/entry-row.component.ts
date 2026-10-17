@@ -5,6 +5,7 @@ import {
   effect,
   forwardRef,
   inject,
+  Injector,
   input,
   signal,
 } from '@angular/core';
@@ -22,6 +23,11 @@ import { RenditionsDirective } from '../renditions.directive';
 import { ShortBadgeComponent } from '../short-badge/short-badge.component';
 import { COVER_BOX_SIZES } from '../rendition-sizes';
 import { OpensEntryDirective } from '../opens-entry.directive';
+import { LinkCardComponent } from '../../link-card/link-card.component';
+import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
+import { ThreadLineComponent } from '../../../shared/thread-line/thread-line.component';
+import { ThreadLinePostComponent } from '../../../shared/thread-line/thread-line-post.component';
+import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.component';
 
 @Component({
   selector: 'app-entry-row',
@@ -39,6 +45,10 @@ import { OpensEntryDirective } from '../opens-entry.directive';
     forwardRef(() => EntryDuplicatesComponent),
     RenditionsDirective,
     ShortBadgeComponent,
+    LinkCardComponent,
+    ThreadLineComponent,
+    ThreadLinePostComponent,
+    ThreadCountComponent,
   ],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',
@@ -69,9 +79,14 @@ export class EntryRowComponent {
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
   private readonly language = inject(LanguageService);
+  private readonly injector = inject(Injector);
   readonly when = computed(() =>
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),
   );
+
+  protected openInReaderAlone(position: number): void {
+    this.injector.get(LinkReaderNavigation).openAlone({ entryId: this.entry().id, position });
+  }
 
   // Reset the failed-image flag whenever the row is reused for a different entry.
   private readonly _resetOnEntryChange = effect(() => {
