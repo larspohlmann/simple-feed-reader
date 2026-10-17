@@ -20,6 +20,7 @@ use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\SelfThreadEnricher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeReplyThreadSource;
+use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SelfThreadEnrichers;
@@ -30,6 +31,8 @@ final class SelfThreadEnricherTest extends DbTestCase
     use ReloadsEntities;
 
     private const string POST = 'at://did:plc:test/app.bsky.feed.post/root';
+    private const string LINKED_PAGE = 'https://example.com/story';
+    private const string LINKED_TEXT = '<p>Read this. ' . self::LINKED_PAGE . '</p>';
 
     private MockClock $clock;
     private FakeReplyThreadSource $thread;
@@ -74,6 +77,7 @@ final class SelfThreadEnricherTest extends DbTestCase
     {
         $entry = $this->queuedEntry();
         $entry->setShareKind(ShareKind::Link);
+        $entry->setContentHtml(self::LINKED_TEXT);
         $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
 
         $this->enricher()->enrich($this->feed);
@@ -81,6 +85,72 @@ final class SelfThreadEnricherTest extends DbTestCase
         $row = $this->onlyRow();
         self::assertSame(ShareEnrichmentKind::LinkCards, $row->getKind());
         self::assertNull($this->claimedAtOf($row));
+    }
+
+    public function testAQuotedPostWhoseTextLinksAPageMovesOnToLinkCards(): void
+    {
+        $entry = $this->queuedEntry();
+        $entry->setShareKind(ShareKind::Quote);
+        $entry->setContentHtml(self::LINKED_TEXT);
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame(ShareEnrichmentKind::LinkCards, $this->onlyRow()->getKind());
+        $posts = SelfThreadEnrichers::threadPosts($this->entityManager)->byEntryIds([$entry->requireId()]);
+        self::assertCount(1, $posts[$entry->requireId()]);
+    }
+
+    public function testALinkRootWhoseLinkIsAlreadyCardedIsDequeued(): void
+    {
+        $entry = $this->queuedEntry();
+        $entry->setShareKind(ShareKind::Link);
+        $entry->setContentHtml(self::LINKED_TEXT);
+        PostEnrichers::linkCards($this->entityManager)->append($entry, [
+            new LinkCardContent(self::LINKED_PAGE, 'Story', null, null, 'example.com'),
+        ]);
+        $this->entityManager->flush();
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
+    }
+
+    public function testARowPastTheGiveUpWindowWhoseRootLinksAPageMovesOnToLinkCardsUnasked(): void
+    {
+        $entry = $this->queuedEntry('-4 days');
+        $entry->setContentHtml(self::LINKED_TEXT);
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([], $this->thread->calls);
+        $row = $this->onlyRow();
+        self::assertSame(ShareEnrichmentKind::LinkCards, $row->getKind());
+        self::assertNull($this->claimedAtOf($row));
+    }
+
+    public function testAnEntryWithoutASocialAddressIsDropped(): void
+    {
+        $this->queuedEntry(guid: 'https://example.com/not-a-post');
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([], $this->thread->calls);
+        self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
+    }
+
+    public function testAnEntryWithoutASocialAddressWhoseRootLinksAPageMovesOnToLinkCards(): void
+    {
+        $entry = $this->queuedEntry(guid: 'https://example.com/not-a-post');
+        $entry->setContentHtml(self::LINKED_TEXT);
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([], $this->thread->calls);
+        self::assertSame(ShareEnrichmentKind::LinkCards, $this->onlyRow()->getKind());
     }
 
     public function testAThrottledNetworkLeavesTheRowQueued(): void
@@ -157,10 +227,10 @@ final class SelfThreadEnricherTest extends DbTestCase
         return SelfThreadEnrichers::build($this->entityManager, $this->clock, $this->thread, $this->logger);
     }
 
-    private function queuedEntry(string $queuedAt = 'now'): Entry
+    private function queuedEntry(string $queuedAt = 'now', string $guid = self::POST): Entry
     {
         $now = new \DateTimeImmutable('2026-10-17 12:00:00');
-        $entry = new Entry($this->feed, self::POST, null, 'Post', $now, $now);
+        $entry = new Entry($this->feed, $guid, null, 'Post', $now, $now);
         $this->entityManager->persist($entry);
         $this->entityManager->persist(new ShareEnrichment(
             $entry,

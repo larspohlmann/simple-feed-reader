@@ -11,6 +11,7 @@ use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
+use App\Enum\SocialNetwork;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
@@ -19,6 +20,9 @@ use App\Service\Bluesky\PostEnricher;
 use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\ShareLinkCards;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Comments\Model\CommentAuthorModel;
+use App\Service\Comments\Model\CommentEmbedsModel;
+use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -28,16 +32,19 @@ use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Service\Search\EntryIndexer;
+use App\Service\Social\Pass\ReplyNode;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FailingEmbedWriter;
 use App\Tests\Support\FakeAppView;
+use App\Tests\Support\FakeReplyThreadSource;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
+use App\Tests\Support\SelfThreadEnrichers;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -56,6 +63,7 @@ final class PostEnricherTest extends DbTestCase
     private const string APPLES = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mv3shqdfuc2e';
     private const string TEST_POST = 'at://did:plc:test/app.bsky.feed.post/';
     private const string UNTITLED = self::TEST_POST . 'untitled';
+    private const string QUOTING = 'at://did:plc:mtr3pwmbnirvyp3robuicd57/app.bsky.feed.post/3mxhy7vmqec2f';
 
     private MockClock $clock;
     private HostThrottle $throttle;
@@ -133,6 +141,39 @@ final class PostEnricherTest extends DbTestCase
         self::assertCount(1, $rows);
         self::assertSame(ShareEnrichmentKind::SelfThread, $rows[0]->getKind());
         self::assertCount(1, $this->cardsOf($this->reload($tisch)));
+    }
+
+    public function testAQuotePostWithRepliesWhoseTextLinksAPageGetsItsCardAfterItsThread(): void
+    {
+        $this->feed->classifyAs(SocialNetwork::Bluesky);
+        $this->appView->knowsPost(self::postView('record', 1));
+        $quote = $this->queuedEntry(self::QUOTING, '<p>Check it out. https://example.com/story</p>');
+        $this->entityManager->flush();
+        $thread = new FakeReplyThreadSource();
+        $thread->readsReplies([new ReplyNode(
+            $this->clock->now(),
+            static fn (?\DateTimeImmutable $at): EntryCommentModel => new EntryCommentModel(
+                new CommentAuthorModel('A', null, null, null),
+                'https://bsky.app/profile/test/post/reply',
+                $at,
+                '<p>And more.</p>',
+                true,
+                new CommentEmbedsModel([], null),
+            ),
+            [],
+            null,
+            true,
+        )]);
+
+        $this->enricher()->enrich($this->feed);
+        SelfThreadEnrichers::build($this->entityManager, $this->clock, $thread, $this->logger)->enrich($this->feed);
+
+        self::assertSame(ShareKind::Quote, $this->reload($quote)->getShareKind());
+        $rows = $this->rowsOf([$quote]);
+        self::assertCount(1, $rows);
+        self::assertSame(ShareEnrichmentKind::LinkCards, $rows[0]->getKind());
+        $posts = SelfThreadEnrichers::threadPosts($this->entityManager)->byEntryIds([$quote->requireId()]);
+        self::assertCount(1, $posts[$quote->requireId()]);
     }
 
     public function testAFeedWithNothingPendingCostsOneQueryAndNoFlush(): void

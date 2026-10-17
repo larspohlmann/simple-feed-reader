@@ -44,6 +44,7 @@ final class SelfThreadEnrichers
             new SelfReplyChain(),
             new SelfThreadFolder($entityManager, new ThreadPostFactory(), PostEnrichers::linkCards($entityManager)),
             self::threadPosts($entityManager),
+            PostEnrichers::linkCards($entityManager),
             new NaiveUtcClock($clock),
             $logger,
         );

@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
-use App\Enum\ShareKind;
+use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Repository\ThreadPostRepository;
 use App\Service\Clock\NaiveUtcClock;
@@ -18,6 +19,7 @@ use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\SocialPostAddressModel;
+use App\Service\Share\Support\ShareTargets;
 use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
 use App\Service\Social\Support\SocialPostAddress;
 use Doctrine\ORM\EntityManagerInterface;
@@ -37,6 +39,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
         private SelfReplyChain $chain,
         private SelfThreadFolder $folder,
         private ThreadPostRepository $threadPosts,
+        private LinkCardRepository $linkCards,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
@@ -76,12 +79,6 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
             return;
         }
         $now = $this->clock->now();
-        $this->enrichments->deleteQueuedBefore(
-            $feed,
-            ShareEnrichmentKind::SelfThread,
-            $now->sub(new \DateInterval(ShareEnrichment::APPVIEW_GIVE_UP_AFTER)),
-        );
-
         $queued = $this->enrichments->findClaimableForFeed(
             $feed,
             ShareEnrichmentKind::SelfThread,
@@ -105,7 +102,7 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
 
         $unsettled = [];
         foreach ($this->enrichments->stillHeld($claimed, $claimedAt) as $row) {
-            if (!$this->settle($row)) {
+            if (!$this->settle($row, $claimedAt)) {
                 $unsettled[] = $row;
             }
         }
@@ -114,12 +111,12 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     }
 
     /** @return bool whether the row is settled; false leaves it queued for a later pass */
-    private function settle(ShareEnrichment $row): bool
+    private function settle(ShareEnrichment $row, \DateTimeImmutable $claimedAt): bool
     {
         $entry = $row->getEntry();
         $address = SocialPostAddress::of($entry);
-        if ($address === null) {
-            $this->entityManager->remove($row);
+        if ($address === null || $row->isQueuedBefore(self::giveUpCutoff($claimedAt))) {
+            $this->handOnOrDrop($row);
 
             return true;
         }
@@ -133,18 +130,31 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
             return false;
         }
 
-        $rootSharesLink = $entry->getShareKind() === ShareKind::Link;
         if (!$this->threadPosts->hasAnyFor($entry)) {
             $this->folder->fold($entry, $chain);
         }
-        if ($rootSharesLink) {
-            $row->awaitLinkCards();
-
-            return true;
-        }
-        $this->entityManager->remove($row);
+        $this->handOnOrDrop($row);
 
         return true;
+    }
+
+    /** The link-card pass takes a row whose root still links a page without a card; the fold stored the replies' own. */
+    private function handOnOrDrop(ShareEnrichment $row): void
+    {
+        $entry = $row->getEntry();
+        $rootCards = $this->linkCards->contentsByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [];
+        $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $rootCards);
+        if (ShareTargets::uncardedOf($entry, $cardedUrls) !== []) {
+            $row->awaitLinkCards();
+
+            return;
+        }
+        $this->entityManager->remove($row);
+    }
+
+    private static function giveUpCutoff(\DateTimeImmutable $claimedAt): \DateTimeImmutable
+    {
+        return $claimedAt->sub(new \DateInterval(ShareEnrichment::APPVIEW_GIVE_UP_AFTER));
     }
 
     /**

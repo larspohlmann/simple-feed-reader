@@ -66,6 +66,11 @@ final class ShareEnrichment
         return $this->kind;
     }
 
+    public function isQueuedBefore(\DateTimeImmutable $cutoff): bool
+    {
+        return $this->queuedAt < $cutoff;
+    }
+
     public function awaitLinkCards(): void
     {
         $this->kind = ShareEnrichmentKind::LinkCards;
