@@ -58,7 +58,7 @@ function sharesLink(entry: EntryDto): boolean {
   return entry.share === 'link' && (entry.linkCards.length > 0 || entry.pending);
 }
 
-const MAX_SHARED_MEDIA = 4;
+export const MAX_SHARED_MEDIA = 4;
 
 const sharedMediaOf = new WeakMap<EntryDto, EntryMediumDto[]>();
 

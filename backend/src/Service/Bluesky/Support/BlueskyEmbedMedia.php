@@ -36,14 +36,12 @@ final class BlueskyEmbedMedia
         }
         $ratio = $image->node('aspectRatio');
 
-        $alt = $image->string('alt');
-
         return new ParsedMediumModel(
             $url,
             VisualMediaKind::Image,
             $ratio->int('width'),
             $ratio->int('height'),
-            alt: $alt === '' ? null : $alt,
+            alt: $image->string('alt'),
         );
     }
 

@@ -390,6 +390,15 @@ describe('ReaderViewComponent', () => {
         expect(element.querySelector('app-post-media')).toBeNull();
       });
 
+      it('still renders the media when the body failed to load', () => {
+        const built = postWith('<p>Hi</p>');
+        fakeBody.setError(built.id);
+
+        const element = mount(built).nativeElement as HTMLElement;
+
+        expect(element.querySelector('app-post-media img')).not.toBeNull();
+      });
+
       it('renders nothing when the body already shows the picture', () => {
         const element = mount(postWith(`<p>Hi</p><img src="${PHOTO}">`))
           .nativeElement as HTMLElement;

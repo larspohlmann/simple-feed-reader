@@ -184,14 +184,13 @@
           [enclosureUrl]="audio.attachment()?.url ?? null"
           (decorated)="onDecorated($event)"
         />
-        @if (source.postMedia(); as media) {
-          @if (media.length) {
-            <app-post-media
-              [media]="media"
-              [ratio]="ratio(e, media[0])"
-              [videoLabel]="'reader.mediaVideo' | transloco"
-            />
-          }
+        @let media = source.postMedia();
+        @if (media.length) {
+          <app-post-media
+            [media]="media"
+            [ratio]="ratio(e, media[0])"
+            [videoLabel]="'reader.mediaVideo' | transloco"
+          />
         }
         @if (e.share === 'quote' && e.quote) {
           <app-quoted-post [quote]="e.quote" layout="article" />

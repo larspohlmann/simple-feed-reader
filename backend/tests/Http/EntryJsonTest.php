@@ -509,11 +509,14 @@ final class EntryJsonTest extends TestCase
         );
     }
 
-    public function testAMediaOnlyUntitledPostHasMediaAndNoExcerpt(): void
+    public function testAnUntitledBlueskyPostStoredBeforeItsMediaLeftTheBodyHasMediaAndNoExcerpt(): void
     {
         $entry = $this->entryTitled('');
         $entry->setHeadline(Headline::untitledPost());
-        $entry->setContentHtml('');
+        $entry->setContentHtml(
+            '<figure class="post-images"><img src="https://v.test/p.jpg" alt=""></figure>'
+            . '<p><a href="https://bsky.app/profile/a/post/1">View embedded content on Bluesky</a></p>',
+        );
         $entry->setMedia([new EntryMedium('https://v.test/p.m3u8', 'video', 1080, 1920)], []);
 
         $json = EntryJson::listRow($this->row($entry));

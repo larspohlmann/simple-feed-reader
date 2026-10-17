@@ -61,4 +61,17 @@ describe('articlePostMedia', () => {
       [],
     );
   });
+
+  it('skips a video whose source element the body plays', () => {
+    const html = `<video><source src="${clip.url}"></video>`;
+    expect(articlePostMedia(post({ media: [clip] }), html)).toEqual([]);
+  });
+
+  it('shows at most four, as the list does', () => {
+    const photos = [1, 2, 3, 4, 5].map((index) => ({
+      ...photo,
+      url: `https://files.example/${index}.jpg`,
+    }));
+    expect(articlePostMedia(post({ media: photos }), '')).toEqual(photos.slice(0, 4));
+  });
 });
