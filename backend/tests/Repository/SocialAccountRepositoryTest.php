@@ -143,6 +143,22 @@ final class SocialAccountRepositoryTest extends DbTestCase
         self::assertSame($first, $this->repository()->findActingOnNetwork($this->owner, SocialNetwork::Bluesky));
     }
 
+    public function testTheReadyActingAccountIsTheDefaultAmongTheConnectedOnes(): void
+    {
+        $older = $this->accountConnectedAt('did:plc:older', '2026-10-01 10:00:00');
+        $default = $this->accountConnectedAt('did:plc:default', '2026-10-05 10:00:00');
+        $default->becomeDefault();
+        $this->entityManager->flush();
+
+        self::assertSame($default, $this->repository()->findReadyActingOnNetwork($this->owner, SocialNetwork::Bluesky));
+
+        $default->markNeedsReconnect();
+        $this->entityManager->flush();
+
+        self::assertSame($older, $this->repository()->findReadyActingOnNetwork($this->owner, SocialNetwork::Bluesky));
+        self::assertNull($this->repository()->findReadyActingOnNetwork($this->owner, SocialNetwork::Mastodon));
+    }
+
     private function accountConnectedAt(string $identity, string $connectedAt): SocialAccount
     {
         $account = $this->persistAccount($this->owner, SocialNetwork::Bluesky, $identity);
