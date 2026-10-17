@@ -4553,6 +4553,25 @@ describe('ReaderShellComponent', () => {
       ).toBeNull();
     });
 
+    it('layers a link over the open entry on the narrow layout, returning to the article', () => {
+      const fixture = boot({ linkCards: [aLinkCard()] });
+      openLink(fixture, { entry: '1', link: '1.0' });
+
+      const overlays = (fixture.nativeElement as HTMLElement).querySelectorAll('.article-overlay');
+      expect(overlays).toHaveLength(2);
+      expect(overlays[0].querySelector('app-reader-view')).not.toBeNull();
+      expect(overlays[1].querySelector('app-link-reader')).not.toBeNull();
+      expect(linkReaderOf(fixture).returnsTo()).toBe('article');
+    });
+
+    it('returns to the article while the route names an entry that has not loaded', () => {
+      const fixture = boot({ linkCards: [aLinkCard()] });
+      openLink(fixture, { entry: '99', link: '99.0' });
+
+      expect(fixture.componentInstance.openEntry()).toBeNull();
+      expect(fixture.componentInstance.linkReturnsTo()).toBe('article');
+    });
+
     it('closes the link reader by dropping the link and keeping the entry', () => {
       const fixture = boot({ linkCards: [aLinkCard()] });
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);

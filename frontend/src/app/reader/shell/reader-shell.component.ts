@@ -154,7 +154,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const ref = this.linkCard();
     return ref === null ? null : (this.entries.entry(ref.entryId)?.linkCards[ref.position] ?? null);
   });
-  readonly linkReturnsTo = computed(() => (this.openEntry() === null ? 'list' : 'article'));
+  readonly linkReturnsTo = computed(() => (this.entryId() === null ? 'list' : 'article'));
   private readonly linkNavigation = inject(LinkReaderNavigation);
   readonly heading = inject(ListHeading);
   readonly entryActions = inject(EntryStateActions);
@@ -177,8 +177,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
   readonly searchPane = computed(() => this.screen.isWide() && isDirectSearch(this.selection()));
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
-  /** An article filling the whole main area (not the split pane) — the top bar
-   *  takes over its back button, reader switch and prev/next. */
+  /** An article or link card filling the whole main area (not the split pane). */
   readonly articleFullscreen = computed(
     () => (this.openEntry() !== null || this.linkCard() !== null) && !this.splitView(),
   );

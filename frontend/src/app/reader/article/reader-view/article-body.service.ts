@@ -27,8 +27,7 @@ export interface ArticleBodyParts {
 }
 
 /** The rendered article body's DOM wiring: its decorations, its media recovery, its media's
- *  turn in the article's one-at-a-time playback and the `t` cinema key. `connect` creates its
- *  effects, so the host decides where they fall in its own effect order. */
+ *  turn in the article's one-at-a-time playback and the `t` cinema key. */
 @Injectable()
 export class ArticleBody {
   private readonly i18n = inject(TranslocoService);
