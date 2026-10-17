@@ -49,6 +49,7 @@ final class SavedStateMoverTest extends DbTestCase
         $target = $this->storedState($this->target);
         self::assertTrue($target?->isFavorite());
         self::assertTrue($target->isKept());
+        self::assertFalse($target->isHidden());
         $source = $this->storedState($this->source);
         self::assertFalse($source?->isFavorite());
         self::assertFalse($source->isKept());

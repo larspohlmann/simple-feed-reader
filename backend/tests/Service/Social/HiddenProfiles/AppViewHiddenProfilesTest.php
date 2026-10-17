@@ -68,6 +68,13 @@ final class AppViewHiddenProfilesTest extends TestCase
         self::assertCount(2, $this->fetcher->fetchedUrls);
     }
 
+    public function testAnActorNamedTwiceIsAskedOnce(): void
+    {
+        $this->answer([self::RUSTY], [self::rusty()]);
+
+        self::assertArrayHasKey(self::RUSTY, $this->hiddenProfiles()->hiddenAmong([self::RUSTY, self::RUSTY]));
+    }
+
     public function testNoActorsAskNothing(): void
     {
         self::assertSame([], $this->hiddenProfiles()->hiddenAmong([]));

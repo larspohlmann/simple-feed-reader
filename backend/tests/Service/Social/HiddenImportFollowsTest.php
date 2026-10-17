@@ -27,12 +27,18 @@ final class HiddenImportFollowsTest extends TestCase
 
     public function testTheHiddenFollowsAreFoundByTheirIdentity(): void
     {
+        $this->hiddenProfiles->hide(new HiddenProfileModel('did:plc:carol', 'Carol'));
+
         $hidden = $this->follows()->among(SocialAccounts::bluesky(), [
             new SocialImportFeedModel('did:plc:rusty', 'Rusty'),
             new SocialImportFeedModel('did:plc:bob', 'Bob'),
+            new SocialImportFeedModel('did:plc:carol', 'Carol'),
         ]);
 
-        self::assertEquals(['did:plc:rusty' => new HiddenProfileModel('did:plc:rusty', 'Rusty')], $hidden);
+        self::assertEquals([
+            'did:plc:rusty' => new HiddenProfileModel('did:plc:rusty', 'Rusty'),
+            'did:plc:carol' => new HiddenProfileModel('did:plc:carol', 'Carol'),
+        ], $hidden);
     }
 
     public function testAHandleIsAskedLowerCasedAndAnsweredByTheIdentityChosen(): void
@@ -73,12 +79,14 @@ final class HiddenImportFollowsTest extends TestCase
 
     public function testAnUnansweredCheckLeavesEveryFollowToRssAndIsLogged(): void
     {
-        $this->hiddenProfiles->failure = new SocialNetworkUnreachableException('down');
+        $failure = new SocialNetworkUnreachableException('down');
+        $this->hiddenProfiles->failure = $failure;
 
         self::assertSame([], $this->follows()->among(SocialAccounts::bluesky(), [
             new SocialImportFeedModel('did:plc:rusty', null),
         ]));
         self::assertSame('warning', $this->logger->records[0]['level'] ?? null);
+        self::assertSame($failure, $this->logger->records[0]['context']['exception'] ?? null);
     }
 
     private function follows(): HiddenImportFollows

@@ -43,9 +43,11 @@ final class AuthorFeedsTest extends DbTestCase
     {
         $account = $this->account();
         $tag = $this->tag('People');
+        $nesting = $this->entityManager->getConnection()->getTransactionNestingLevel();
 
         $subscription = $this->authorFeeds()->create($account, self::rusty(), [$tag]);
 
+        self::assertSame($nesting, $this->entityManager->getConnection()->getTransactionNestingLevel());
         $feed = $subscription->getFeed();
         self::assertSame(sprintf('social:bluesky:%d:author:%s', $account->requireId(), self::RUSTY), $feed->getUrl());
         self::assertSame(SourceFormat::BLUESKY_API, $feed->getSourceFormat());
@@ -94,11 +96,13 @@ final class AuthorFeedsTest extends DbTestCase
     {
         $this->user->setMaxSubscriptions(0);
         $account = $this->account();
+        $nesting = $this->entityManager->getConnection()->getTransactionNestingLevel();
 
         try {
             $this->authorFeeds()->create($account, self::rusty(), []);
             self::fail('The subscription cap must hold for author feeds too.');
         } catch (SubscriptionLimitReachedException) {
+            self::assertSame($nesting, $this->entityManager->getConnection()->getTransactionNestingLevel());
             self::assertTrue($this->entityManager->isOpen());
             self::assertSame(0, $this->entityManager->getRepository(Feed::class)->count([]));
             self::assertSame(0, $this->entityManager->getRepository(SocialFeed::class)->count([]));

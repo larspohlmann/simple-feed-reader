@@ -41,6 +41,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class HiddenProfileSwitchSweepTest extends DbTestCase
 {
     private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
+    private const string CAROL = 'did:plc:carol';
     private const string NOW = '2026-10-17 12:00:00';
     private const string POST = 'at://did:plc:hczfd45prvqtdrw77256syag/app.bsky.feed.post/3abc';
 
@@ -74,6 +75,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $report = $this->sweep(1);
 
         self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $report);
+        $this->entityManager->clear();
         $author = $this->authorSubscriptionOf($account);
         self::assertSame('Rusty, old', $author?->getCustomTitle());
         self::assertSame(7, $author->getPosition());
@@ -130,11 +132,13 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         self::assertSame([[self::RUSTY]], $this->hiddenProfiles->asked);
     }
 
-    public function testAHiddenProfileBehindAFullPageOfPublicOnesStillSwitches(): void
+    public function testHiddenProfilesOnEitherSideOfAFullPageOfPublicOnesAllSwitch(): void
     {
+        $this->hiddenProfiles->hide(new HiddenProfileModel(self::CAROL, 'Carol'));
         $user = $this->user('switch-behind-public@example.test');
         $user->setMaxSubscriptions(300);
         $account = $this->accountOf($user);
+        $this->persistRssSubscription($user, self::CAROL);
         $publicActors = array_map(static fn (int $index): string => 'did:plc:public' . $index, range(1, 201));
         foreach ($publicActors as $actor) {
             $this->persistRssSubscription($user, $actor);
@@ -142,8 +146,20 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->rssSubscription($user);
         $this->profileVisibility->remember($publicActors, []);
 
-        self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
+        self::assertEquals(new HiddenProfileSwitchReportModel(2, 0), $this->sweep(1));
         self::assertNotNull($this->authorSubscriptionOf($account));
+        self::assertSame([[self::CAROL, self::RUSTY]], $this->hiddenProfiles->asked);
+    }
+
+    public function testAFeedNamingNoActorIsNeverAsked(): void
+    {
+        $user = $this->user('switch-no-actor@example.test');
+        $this->accountOf($user);
+        $this->rssSubscription($user, 'not_an_actor!');
+        $this->rssSubscription($user);
+
+        $this->sweep(1);
+
         self::assertSame([[self::RUSTY]], $this->hiddenProfiles->asked);
     }
 
@@ -191,10 +207,12 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $user = $this->user('switch-unanswered@example.test');
         $this->accountOf($user);
         $this->rssSubscription($user);
-        $this->hiddenProfiles->failure = new SocialNetworkUnreachableException('down');
+        $failure = new SocialNetworkUnreachableException('down');
+        $this->hiddenProfiles->failure = $failure;
 
         self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
         self::assertSame('warning', $this->logger->records[0]['level'] ?? null);
+        self::assertSame($failure, $this->logger->records[0]['context']['exception'] ?? null);
 
         $this->hiddenProfiles->failure = null;
 
@@ -232,12 +250,17 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->accountOf($user);
         $unknownActors = array_map(
             static fn (int $index): string => sprintf('did:plc:unknown%03d', $index),
-            range(1, 201),
+            range(1, 25),
         );
-        foreach ($unknownActors as $actor) {
+        $publicActors = array_map(
+            static fn (int $index): string => sprintf('did:plc:public%03d', $index),
+            range(1, 176),
+        );
+        foreach ([...$unknownActors, ...$publicActors] as $actor) {
             $this->persistRssSubscription($user, $actor);
         }
         $this->entityManager->flush();
+        $this->profileVisibility->remember($publicActors, []);
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);
         $recorder->reset();
@@ -245,7 +268,22 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->sweep(1);
 
         self::assertCount(1, $recorder->queriesMatching(' LIKE '));
-        self::assertSame([\array_slice($unknownActors, 0, 25)], $this->hiddenProfiles->asked);
+        self::assertSame([$unknownActors], $this->hiddenProfiles->asked);
+    }
+
+    public function testOneCallAsksForAPageOfActorsAtMost(): void
+    {
+        $user = $this->user('switch-one-call@example.test');
+        $this->accountOf($user);
+        $actors = array_map(static fn (int $index): string => sprintf('did:plc:actor%02d', $index), range(1, 26));
+        foreach ($actors as $actor) {
+            $this->persistRssSubscription($user, $actor);
+        }
+        $this->entityManager->flush();
+
+        $this->sweep(1);
+
+        self::assertSame([\array_slice($actors, 0, 25)], $this->hiddenProfiles->asked);
     }
 
     public function testASubscriberAlreadyOnTheAuthorUrlIsSkippedAndTheNextOneStillMoves(): void
@@ -262,6 +300,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
+        self::assertSame([[self::RUSTY]], $this->hiddenProfiles->asked);
         self::assertNotNull($this->authorSubscriptionOf($nextAccount));
         self::assertSame('info', $this->logger->records[0]['level'] ?? null);
         self::assertSame($rss->requireId(), $this->logger->records[0]['context']['subscriptionId'] ?? null);

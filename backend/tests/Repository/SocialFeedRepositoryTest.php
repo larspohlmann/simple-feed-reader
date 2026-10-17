@@ -181,6 +181,16 @@ final class SocialFeedRepositoryTest extends DbTestCase
             ->findAuthorSubscriptionOf($this->user, self::RUSTY));
     }
 
+    public function testTwoAuthorFeedsOfOneProfileFindTheEarlierSubscription(): void
+    {
+        $second = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::secondBlueskyOf($this->user));
+        $earlier = $this->subscribe($this->socialFeed($this->account, SocialFeedKind::Author, self::RUSTY));
+        $this->subscribe($this->socialFeed($second, SocialFeedKind::Author, self::RUSTY));
+
+        self::assertSame($earlier, SocialFeeds::repository($this->entityManager)
+            ->findAuthorSubscriptionOf($this->user, self::RUSTY));
+    }
+
     public function testOnlyTheUsersOwnSubscriptionToAnAuthorFeedOfTheirsCounts(): void
     {
         $stranger = $this->stranger();

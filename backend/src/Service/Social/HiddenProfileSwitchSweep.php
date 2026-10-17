@@ -65,7 +65,7 @@ final readonly class HiddenProfileSwitchSweep
         do {
             $page = $this->refusedSubscriptions->findOnRefusedBlueskyProfileFeeds($after, self::PAGE_SIZE);
             $candidates = [...$candidates, ...$this->unsettledAmong($page)];
-            $after = $page[\count($page) - 1] ?? null;
+            $after = $page[array_key_last($page)] ?? null;
         } while (self::PAGE_SIZE === \count($page) && \count(self::unknownActorsOf($candidates)) < $askLimit);
 
         return $candidates;

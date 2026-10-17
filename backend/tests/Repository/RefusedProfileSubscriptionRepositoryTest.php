@@ -44,6 +44,7 @@ final class RefusedProfileSubscriptionRepositoryTest extends DbTestCase
     public static function otherFeeds(): iterable
     {
         yield 'another failure' => [self::PROFILE, 'HTTP 500', SourceFormat::XML];
+        yield 'a failure that only ends in 403' => [self::PROFILE, 'timed out after 403', SourceFormat::XML];
         yield 'a healthy feed' => [self::PROFILE, null, SourceFormat::XML];
         yield 'a private feed' => ['social:bluesky:1:author:did:plc:rusty', 'HTTP 403', SourceFormat::BLUESKY_API];
         yield 'a mastodon profile' => ['https://mastodon.social/@rusty.rss', 'HTTP 403', SourceFormat::XML];

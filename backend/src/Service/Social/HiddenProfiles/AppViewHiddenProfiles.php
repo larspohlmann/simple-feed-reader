@@ -25,7 +25,7 @@ final readonly class AppViewHiddenProfiles implements HiddenProfilesInterface
             throw new SocialNetworkUnreachableException('Bluesky asked us to wait before asking about profiles again.');
         }
         $hidden = [];
-        foreach (array_chunk(array_values(array_unique($actors)), AppViewClient::URIS_PER_CALL) as $batch) {
+        foreach (array_chunk(array_unique($actors), AppViewClient::URIS_PER_CALL) as $batch) {
             foreach ($this->profilesOf($batch) as $key => $profile) {
                 if (BlueskyProfileLabels::hidesFromLoggedOut($profile)) {
                     $hidden[$key] = self::modelOf($profile);
@@ -48,8 +48,7 @@ final readonly class AppViewHiddenProfiles implements HiddenProfilesInterface
         } catch (FetchException | AppViewAnswerException $exception) {
             throw new SocialNetworkUnreachableException(
                 'Bluesky could not say whether a profile is hidden.',
-                0,
-                $exception,
+                previous: $exception,
             );
         }
     }

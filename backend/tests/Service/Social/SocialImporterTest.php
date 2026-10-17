@@ -337,6 +337,11 @@ final class SocialImporterTest extends DbTestCase
             PrivateFeedModel::userList('42', 'Friends'),
             '42 is no Bluesky list.',
         ];
+        yield 'an author feed on mastodon' => [
+            SocialNetwork::Mastodon,
+            PrivateFeedModel::author('did:plc:rusty', 'Rusty'),
+            'did:plc:rusty is no Mastodon profile.',
+        ];
         yield 'a custom feed on mastodon' => [
             SocialNetwork::Mastodon,
             PrivateFeedModel::customFeed(self::NEWS, 'News'),

@@ -107,10 +107,12 @@ final class HiddenProfileSubscribeRouteTest extends DbTestCase
 
     public function testAnUnansweredLabelCheckIsLeftToDiscoveryAndLogged(): void
     {
-        $this->hiddenProfiles->failure = new SocialNetworkUnreachableException('down');
+        $failure = new SocialNetworkUnreachableException('down');
+        $this->hiddenProfiles->failure = $failure;
 
         self::assertNull($this->route()->subscribe(new SubscribeRequestModel($this->user, self::PAGE, [])));
         self::assertSame('warning', $this->logger->records[0]['level'] ?? null);
+        self::assertSame($failure, $this->logger->records[0]['context']['exception'] ?? null);
     }
 
     private function route(): HiddenProfileSubscribeRoute

@@ -35,7 +35,7 @@ final readonly class HiddenImportFollows
             return [];
         }
         try {
-            $hidden = $this->hiddenProfiles->hiddenAmong(array_values(array_unique($actorByIdentity)));
+            $hidden = $this->hiddenProfiles->hiddenAmong(array_values($actorByIdentity));
         } catch (SocialNetworkUnreachableException $exception) {
             $this->logger->warning('Import could not tell which Bluesky follows are hidden; all come in by RSS.', [
                 'exception' => $exception,
