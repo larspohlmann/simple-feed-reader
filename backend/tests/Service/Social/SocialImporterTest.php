@@ -17,6 +17,7 @@ use App\Repository\SubscriptionRepository;
 use App\Service\Social\Exception\InvalidSocialImportFeedException;
 use App\Service\Social\FollowAvatarCache;
 use App\Service\Social\Model\FollowedAccountModel;
+use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SocialImportFeedModel;
 use App\Service\Social\Model\SocialImportModel;
@@ -24,6 +25,7 @@ use App\Service\Social\SocialImporter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
@@ -340,6 +342,61 @@ final class SocialImporterTest extends DbTestCase
             PrivateFeedModel::customFeed(self::NEWS, 'News'),
             self::NEWS . ' is no Mastodon custom feed.',
         ];
+    }
+
+    public function testAHiddenFollowIsImportedAsAnAuthorFeedAndTheRestAsRss(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->hiddenProfiles()->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'));
+
+        $result = $this->importer()->import($account, new SocialImportModel([
+            new SocialImportFeedModel('did:plc:rusty', 'Rusty'),
+            new SocialImportFeedModel('did:plc:bob', 'Bob'),
+        ], []));
+
+        self::assertSame(2, $result->imported);
+        self::assertNotNull($this->feedAt('https://bsky.app/profile/did:plc:bob/rss'));
+        self::assertNull($this->feedAt('https://bsky.app/profile/did:plc:rusty/rss'));
+        $author = $this->feedAt(sprintf('social:bluesky:%d:author:did:plc:rusty', $account->requireId()));
+        self::assertSame(SourceFormat::BLUESKY_API, $author?->getSourceFormat());
+    }
+
+    public function testAHiddenFollowAlreadyReadThroughTheAccountCountsAsAlreadySubscribed(): void
+    {
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->hiddenProfiles()->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'));
+        $import = new SocialImportModel([new SocialImportFeedModel('did:plc:rusty', 'Rusty')], []);
+        $this->importer()->import($account, $import);
+
+        $result = $this->importer()->import($account, $import);
+
+        self::assertSame(0, $result->imported);
+        self::assertSame(1, $result->alreadySubscribed);
+    }
+
+    public function testAHiddenFollowOverTheCapIsSkippedWhileTheRssFollowsKeepTheirSlots(): void
+    {
+        $this->user->setMaxSubscriptions(1);
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $this->hiddenProfiles()->hide(new HiddenProfileModel('did:plc:rusty', 'Rusty'));
+
+        $result = $this->importer()->import($account, new SocialImportModel([
+            new SocialImportFeedModel('did:plc:rusty', 'Rusty'),
+            new SocialImportFeedModel('did:plc:bob', 'Bob'),
+        ], []));
+
+        self::assertSame(1, $result->imported);
+        self::assertSame(1, $result->skippedOverLimit);
+        self::assertNotNull($this->feedAt('https://bsky.app/profile/did:plc:bob/rss'));
+        self::assertNull($this->feedAt(sprintf('social:bluesky:%d:author:did:plc:rusty', $account->requireId())));
+    }
+
+    private function hiddenProfiles(): StubHiddenProfiles
+    {
+        $hiddenProfiles = self::getContainer()->get(StubHiddenProfiles::class);
+        self::assertInstanceOf(StubHiddenProfiles::class, $hiddenProfiles);
+
+        return $hiddenProfiles;
     }
 
     private static function follow(string $did, string $avatarUrl): FollowedAccountModel
