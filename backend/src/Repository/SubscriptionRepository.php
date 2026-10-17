@@ -48,16 +48,50 @@ final class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
-     * What an OPML or backup export carries: a private social feed is read through an account neither file holds.
+     * What an OPML export carries: a private feed is read through an account the file does not hold, and a saved feed
+     * is this reader's own.
      *
      * @return list<Subscription>
      */
     public function findExportableForUserWithTags(int $userId): array
     {
+        return $this->withTagsExcluding($userId, SourceFormat::NOT_PROFILES);
+    }
+
+    /**
+     * What a backup carries: everything but the private feeds; saved feeds are restored as saved feeds (#1666).
+     *
+     * @return list<Subscription>
+     */
+    public function findBackedUpForUserWithTags(int $userId): array
+    {
+        return $this->withTagsExcluding($userId, SourceFormat::SOCIAL);
+    }
+
+    public function findOneForUserAndFeedUrl(int $userId, string $feedUrl): ?Subscription
+    {
+        /** @var Subscription|null $subscription */
+        $subscription = $this->createQueryBuilder('s')
+            ->join('s.feed', 'f')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->andWhere('f.url = :feedUrl')->setParameter('feedUrl', $feedUrl)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $subscription;
+    }
+
+    /**
+     * @param list<string> $excludedFormats
+     *
+     * @return list<Subscription>
+     */
+    private function withTagsExcluding(int $userId, array $excludedFormats): array
+    {
         /** @var list<Subscription> $rows */
         $rows = $this->withTagsForUser($userId)
-            ->andWhere('f.sourceFormat NOT IN (:socialFormats)')
-            ->setParameter('socialFormats', SourceFormat::SOCIAL)
+            ->andWhere('f.sourceFormat NOT IN (:excludedFormats)')
+            ->setParameter('excludedFormats', $excludedFormats)
             ->getQuery()
             ->getResult();
 
@@ -75,27 +109,16 @@ final class SubscriptionRepository extends ServiceEntityRepository
             ->addOrderBy('s.id', 'ASC');
     }
 
-    /** @return list<Subscription> */
-    public function findIncludedInAllItemsForUser(int $userId): array
-    {
-        /** @var list<Subscription> $rows */
-        $rows = $this->createQueryBuilder('s')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->andWhere('s.includeInAllItems = true')
-            ->orderBy('s.id', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        return $rows;
-    }
-
+    /** The count the cap holds against: a saved feed is never a subscription the user chose (#1666). */
     public function countForUser(int $userId): int
     {
-        return (int) $this->createQueryBuilder('s')
+        $qb = $this->createQueryBuilder('s')
             ->select('COUNT(s.id)')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->join('s.feed', 'f')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId);
+        SavedFeedDql::exclude($qb, 'f');
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**

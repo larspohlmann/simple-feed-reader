@@ -7,9 +7,11 @@ namespace App\Tests\Repository;
 use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
+use App\Entity\EntryOrigin;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\ShareEnrichment;
@@ -21,6 +23,7 @@ use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
 use App\Repository\EntryListRowEnricher;
@@ -29,6 +32,7 @@ use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Repository\LinkCardRepository;
 use App\Service\LinkCard\Model\PlacedLinkCardModel;
+use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\QueryRecorder;
@@ -183,10 +187,23 @@ final class EntryListRowEnricherTest extends DbTestCase
         self::assertFalse($rows[1]->duplicates[0]->enrichment->pending);
     }
 
+    public function testASavedArticleGainsItsOriginAndAnyOtherEntryGainsNone(): void
+    {
+        $saved = $this->savedEntry('saved');
+        $plain = $this->entry('plain-origin');
+        $this->entityManager->persist(new SavedEntryOrigin($saved, new EntryOrigin('Heise', 'https://h.test/f.ico')));
+        $this->entityManager->flush();
+
+        $rows = $this->enrich([$this->row($saved), $this->row($plain)]);
+
+        self::assertEquals(new EntryOrigin('Heise', 'https://h.test/f.ico'), $rows[0]->enrichment->origin);
+        self::assertNull($rows[1]->enrichment->origin);
+    }
+
     public function testAPageCostsOneQueryPerLookup(): void
     {
         $first = $this->queued('first', ShareEnrichmentKind::LinkCards);
-        $second = $this->entry('second');
+        $second = $this->savedEntry('second');
         $duplicate = $this->entry('second-duplicate');
         $this->category($first, 0, 'Tech');
         $this->category($duplicate, 0, 'Science');
@@ -197,11 +214,27 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->enrich([$this->row($first), $this->row($second, [$this->row($duplicate)])]);
 
         $queries = implode("\n", $recorder->queries());
-        self::assertCount(5, $recorder->queries(), $queries);
-        $tables = ['entry_category', 'saved_search_entry', 'link_card', 'FROM thread_post', 'share_enrichment'];
+        self::assertCount(6, $recorder->queries(), $queries);
+        $tables = [
+            'entry_category',
+            'saved_search_entry',
+            'link_card',
+            'FROM thread_post',
+            'share_enrichment',
+            'saved_entry_origin',
+        ];
         foreach ($tables as $table) {
             self::assertCount(1, $recorder->queriesMatching($table), $table . ":\n" . $queries);
         }
+    }
+
+    public function testAPageWithoutASavedArticleLooksUpNoOrigins(): void
+    {
+        $recorder = $this->recorder();
+
+        $this->enrich([$this->row($this->entry('unsaved'))]);
+
+        self::assertSame([], $recorder->queriesMatching('saved_entry_origin'));
     }
 
     public function testAPostOnANetworkTheUserHasAnAccountOnCarriesItsSocialStateAndLike(): void
@@ -347,6 +380,15 @@ final class EntryListRowEnricherTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function savedEntry(string $guid): Entry
+    {
+        $feed = new Feed(SavedFeedUrl::of($this->user->requireId(), null));
+        $feed->setSourceFormat(SourceFormat::SAVED);
+        $this->entityManager->persist($feed);
+
+        return $this->postOn($feed, 'https://x.test/' . $guid);
     }
 
     private function mastodonFeed(): Feed

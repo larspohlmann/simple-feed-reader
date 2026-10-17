@@ -17,7 +17,7 @@ export interface FollowCandidate {
   readonly subscriptionId: number | null;
 }
 
-export type CollectionKind = Exclude<SocialFeedRefDto['kind'], 'profile'>;
+export type CollectionKind = Exclude<SocialFeedRefDto['kind'], 'profile' | 'saved'>;
 export type CollectionState = 'new' | 'subscribed';
 
 export interface CollectionCandidate {

@@ -9,6 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionScopeRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -54,9 +55,17 @@ final class SubscriptionRepositoryTest extends DbTestCase
             [$included->requireId(), $alsoIncluded->requireId()],
             array_map(
                 static fn (Subscription $subscription): int => $subscription->requireId(),
-                $this->repository()->findIncludedInAllItemsForUser($owner->requireId()),
+                $this->scopeRepository()->findIncludedInAllItemsForUser($owner->requireId()),
             ),
         );
+    }
+
+    private function scopeRepository(): SubscriptionScopeRepository
+    {
+        $repository = self::getContainer()->get(SubscriptionScopeRepository::class);
+        self::assertInstanceOf(SubscriptionScopeRepository::class, $repository);
+
+        return $repository;
     }
 
     private function repository(): SubscriptionRepository

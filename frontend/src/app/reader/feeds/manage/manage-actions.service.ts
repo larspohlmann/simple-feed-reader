@@ -21,6 +21,7 @@ import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.comp
 import { TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { pluralKey } from '../../../core/i18n/plural-key';
+import { bulkSavedNote, unsubscribeMessage } from './unsubscribe-messages';
 
 /** The most feed titles a bulk confirmation names before it says "and N more".
  *  Five is enough to recognise the selection and short enough to read. */
@@ -184,7 +185,7 @@ export class ManageActions {
   unsubscribe(sub: SubscriptionDto): void {
     const data: ConfirmData = {
       title: this.i18n.translate('manage.unsubscribeTitle'),
-      message: this.i18n.translate('manage.unsubscribeMessage', { title: sub.title }),
+      message: unsubscribeMessage(this.i18n, sub),
       confirmLabel: this.i18n.translate('manage.unsubscribeConfirm'),
       danger: true,
     };
@@ -349,9 +350,10 @@ export class ManageActions {
     return {
       title: this.i18n.translate(pluralKey('manage.bulk.unsubscribeTitle', count), { count }),
       message:
-        rest > 0
+        (rest > 0
           ? this.i18n.translate('manage.bulk.unsubscribeMessageMore', { named, rest })
-          : this.i18n.translate('manage.bulk.unsubscribeMessage', { named }),
+          : this.i18n.translate('manage.bulk.unsubscribeMessage', { named })) +
+        bulkSavedNote(this.i18n, subscriptions),
       confirmLabel: this.i18n.translate('manage.unsubscribeConfirm'),
       danger: true,
       requireText: count >= TYPED_CONFIRM_THRESHOLD ? String(count) : undefined,

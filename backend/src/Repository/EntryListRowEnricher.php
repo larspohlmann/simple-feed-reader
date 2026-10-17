@@ -7,11 +7,12 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
+use App\Enum\SourceFormat;
 use App\Service\Social\Support\SocialPostAddress;
 
 /**
- * Gives a page of rows their categories, saved searches, link cards, thread posts, pending flag, social state and
- * discussion: one query per lookup, two for the thread posts and their cards.
+ * Gives a page of rows their categories, saved searches, link cards, thread posts, pending flag, social state,
+ * discussion and saved origin: one query per lookup, two for the thread posts and their cards.
  */
 final readonly class EntryListRowEnricher
 {
@@ -23,6 +24,7 @@ final readonly class EntryListRowEnricher
         private SocialAccountRepository $socialAccounts,
         private SocialLikeRepository $socialLikes,
         private ThreadPostRepository $threadPosts,
+        private SavedEntryOriginRepository $savedOrigins,
     ) {
     }
 
@@ -53,6 +55,7 @@ final readonly class EntryListRowEnricher
         $threads = $this->threadPosts->byEntryIds($entryIds);
         $pendingIds = array_flip($this->shareEnrichments->pendingEntryIdsAmong(self::topLevelEntryIdsOf($rows)));
         $socialStates = $this->socialStatesOf($entries, $userId);
+        $origins = $this->savedOrigins->originsByEntryIds(self::savedEntryIdsOf($entries));
 
         $enrichments = [];
         foreach ($entryIds as $entryId) {
@@ -63,6 +66,7 @@ final readonly class EntryListRowEnricher
                 isset($pendingIds[$entryId]),
                 $socialStates[$entryId] ?? null,
                 isset($socialStates[$entryId]) ? self::repliesDiscussionOf($entries[$entryId]) : null,
+                $origins[$entryId] ?? null,
                 $threads[$entryId] ?? [],
             );
         }
@@ -116,6 +120,19 @@ final readonly class EntryListRowEnricher
         }
 
         return $networks;
+    }
+
+    /**
+     * @param array<int, Entry> $entries
+     *
+     * @return list<int>
+     */
+    private static function savedEntryIdsOf(array $entries): array
+    {
+        return array_keys(array_filter(
+            $entries,
+            static fn (Entry $entry): bool => SourceFormat::isSaved($entry->getFeed()->getSourceFormat()),
+        ));
     }
 
     private static function repliesDiscussionOf(Entry $post): EntryListRowDiscussion

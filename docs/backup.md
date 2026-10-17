@@ -171,9 +171,9 @@ file.
 | `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), and the magazine style (`magazineStyle`). |
 | `tag` | Each tag: `name`, `color`, `icon` and `position`. |
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
-| `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. |
+| `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. Your Saved from … feeds are included and come back as your own. |
 | `subscription` | Each subscription, with the address of its feed: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), whether its articles show in All items (`includeInAllItems`) and in "For you" (`includeInForYou`), and the tags on the subscription with their order. |
-| `entry` | Each article, with the address of the feed it came from: `guid`, `guidHash`, `url`, `title`, `titleDerived` (the title was taken from the text, the feed gave none), `author`, the author's profile and picture (`authorUrl`, `authorAvatarUrl`; a restore drops one that is not an http(s) address or is longer than 2048 characters), `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`, and its renditions at other widths, `imageRenditions`), its embedded media and attachments (`media`, `attachments`), the preview cards of the links a post shares, in order (`linkCards`: each with `url`, `title`, `description`, `imageUrl` and `siteName`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`), and what it shares (`shareKind`, `link`, `media` or `quote`, and `shareUrl`, its target; for a quote the post it quotes as one `quote` object: `url`, `authorName`, `authorHandle`, `authorAvatarUrl`, `postedAt`, `text`, `media` and `nestedQuote`, the post that one quotes in turn, with its `url` and `handle`; a restore drops a quote whose address is not an http(s) address or is longer than 2048 characters, and a quote share left without one comes back as a `link`). |
+| `entry` | Each article, with the address of the feed it came from: `guid`, `guidHash`, `url`, `title`, `titleDerived` (the title was taken from the text, the feed gave none), `author`, the author's profile and picture (`authorUrl`, `authorAvatarUrl`; a restore drops one that is not an http(s) address or is longer than 2048 characters), `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`, and its renditions at other widths, `imageRenditions`), its embedded media and attachments (`media`, `attachments`), the preview cards of the links a post shares, in order (`linkCards`: each with `url`, `title`, `description`, `imageUrl` and `siteName`), its origin when it is an article saved from a feed you left (`origin`: `title`, `faviconUrl`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`), and what it shares (`shareKind`, `link`, `media` or `quote`, and `shareUrl`, its target; for a quote the post it quotes as one `quote` object: `url`, `authorName`, `authorHandle`, `authorAvatarUrl`, `postedAt`, `text`, `media` and `nestedQuote`, the post that one quotes in turn, with its `url` and `handle`; a restore drops a quote whose address is not an http(s) address or is longer than 2048 characters, and a quote share left without one comes back as a `link`). |
 | `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
 | `footer` | The number of lines of each kind, counting the lines of that part only. The restore uses these numbers to show you what the part holds. |
 
@@ -219,8 +219,10 @@ These rows belong to your account. A backup drops each of them completely.
 |---|---|
 | `AiProviderSettings` | Your AI connections: the endpoint and the API key. A backup is a file you handle, store and send. A key must not travel in such a file. Your AI connections stay in the account, and a restore does not touch them. |
 | `SocialAccount` | Your connected Bluesky and Mastodon accounts and their credentials. A backup is a file that leaves the server, and a credential is bound to this instance's key. A restore does not touch your connected accounts; reconnect them there. |
-| `SocialFeed` | Which of your feeds are the private timeline, lists and custom feeds of a connected Bluesky or Mastodon account. They belong to that account, which the file leaves out, so the export also leaves out their feeds, subscriptions and posts. After a restore, reconnect the account and add them again in the import picker. |
+| `SocialFeed` | Which of your feeds are the private timeline, lists and custom feeds of a connected Bluesky or Mastodon account. They belong to that account, which the file leaves out, so the export also leaves out their feeds, subscriptions and posts. Your Saved from … feeds are not among them: they are yours and travel in the file. After a restore, reconnect the account and add them again in the import picker. |
 | `SocialLike` | Your likes of Bluesky and Mastodon posts, given through a connected account. They belong to that account, which the file leaves out. The likes themselves stay on the networks. |
+| `KnownSocialCollection` | The lists and custom feeds the hourly sync has seen for a connected account, which it uses to tell a feed you dropped from a new one. They belong to that account, which the file leaves out. |
+| `PrivateFeedSyncChange` | The recent automatic changes the hourly sync made to a connected account's lists and feeds. They are that account's own log, and the file leaves the account out. |
 | `UserIdentity` | Your links to Google and Apple sign-in. A restore writes what the file says, and the file comes from you. See section 7. |
 | `ActionToken` | Short-lived tokens for address verification and password reset. Each token lives for minutes and works once. |
 | `RecommendationSettings` | Your "For you" settings: the guidance prompt, the learned profile, the caps and limits, and the batch size. They are quick to set again after a restore, and not worth carrying in a file you handle and send. |
@@ -233,6 +235,12 @@ These rows belong to your account. A backup drops each of them completely.
 
 Your "For you" **settings** and **results** are both dropped. A restore leaves
 the settings at their defaults; set them again once, and run the engine.
+
+A restore also removes the subscriptions to a connected account's private lists
+and custom feeds, but it keeps what the hourly sync remembers about that account.
+Every list and custom feed is then known and not subscribed, which the sync reads
+as dropped by you, so it does not add them back. Add them again in the import
+picker.
 
 ### 6.3 Fields the file drops
 

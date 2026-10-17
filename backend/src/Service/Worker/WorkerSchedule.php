@@ -13,6 +13,7 @@ use App\Service\Worker\Message\SendDueDigests;
 use App\Service\Worker\Message\StartDueProfileRuns;
 use App\Service\Worker\Message\StartDueRecommendationRuns;
 use App\Service\Worker\Message\SweepSavedSearchMemberships;
+use App\Service\Worker\Message\SyncPrivateFeeds;
 use App\Service\Worker\Message\VerifyPendingImages;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
@@ -48,6 +49,7 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
             ->add(RecurringMessage::every('5 minutes', new StartDueProfileRuns()))
             ->add(RecurringMessage::every('1 minute', new CompleteQueuedLinkCards()))
             ->add(RecurringMessage::every('10 minutes', new RefreshProfileImages()))
+            ->add(RecurringMessage::every('10 minutes', new SyncPrivateFeeds()))
             ->stateful($this->schedulerStateCache)
             ->processOnlyLastMissedRun(true);
     }

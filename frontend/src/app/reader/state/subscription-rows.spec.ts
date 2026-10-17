@@ -21,6 +21,18 @@ const list = makeSubscription({
   title: 'Writers',
   social: { network: 'bluesky', accountId: 1, kind: 'list' },
 });
+const savedMastodon = makeSubscription({
+  id: 7,
+  title: 'Saved from mastodon',
+  sourceFormat: 'saved',
+  social: { network: 'mastodon', accountId: null, kind: 'saved' },
+});
+const savedRenamed = makeSubscription({
+  id: 8,
+  title: 'My keepers',
+  customTitle: 'My keepers',
+  sourceFormat: 'saved',
+});
 const ordinary = makeSubscription({ id: 5, title: 'Heise' });
 
 function rows(): SubscriptionRows {
@@ -61,5 +73,13 @@ describe('SubscriptionRows', () => {
     i18n.setActiveLang('de');
 
     expect(title()).toMatch(/^Start@/);
+  });
+
+  it('titles an unrenamed saved feed from the language and keeps a custom title', () => {
+    const held = rows();
+    held.stored.set([savedMastodon, savedRenamed]);
+
+    expect(held.find(7)?.title).toBe('Saved from Mastodon');
+    expect(held.find(8)?.title).toBe('My keepers');
   });
 });

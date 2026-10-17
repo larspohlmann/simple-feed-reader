@@ -70,4 +70,13 @@
       </div>
     }
   }
+  @if (current.saved; as saved) {
+    <div class="feedrow" data-testid="sidebar-social-saved">
+      <app-sidebar-feed-row
+        [subscription]="saved"
+        [selection]="selection()"
+        [organising]="organising()"
+      />
+    </div>
+  }
 }

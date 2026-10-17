@@ -187,7 +187,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         /** @var list<Feed> $feeds */
         $feeds = $this->createQueryBuilder('f')
             ->andWhere('f.network = :bluesky')->setParameter('bluesky', SocialNetwork::Bluesky)
-            ->andWhere('f.sourceFormat NOT IN (:socialFormats)')->setParameter('socialFormats', SourceFormat::SOCIAL)
+            ->andWhere('f.sourceFormat NOT IN (:notProfiles)')->setParameter('notProfiles', SourceFormat::NOT_PROFILES)
             ->andWhere(sprintf('EXISTS (SELECT s.id FROM %s s WHERE s.feed = f)', Subscription::class))
             ->andWhere('f.imageCheckedAt IS NULL OR f.imageCheckedAt < :checkedBefore')
             ->setParameter('checkedBefore', $checkedBefore)
@@ -204,6 +204,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
     {
         $qb = $this->createQueryBuilder('f');
 
+        $this->restrictToFetchable($qb);
         $this->restrictToSchedule($qb, $criteria);
         $this->restrictToOwnership($qb, $criteria);
         $this->restrictToNetwork($qb, $criteria);
@@ -211,6 +212,11 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         $this->restrictToConnectedAccounts($qb);
 
         return $qb;
+    }
+
+    private function restrictToFetchable(QueryBuilder $qb): void
+    {
+        SavedFeedDql::exclude($qb, 'f');
     }
 
     private function restrictToSchedule(QueryBuilder $qb, DueFeedCriteria $criteria): void

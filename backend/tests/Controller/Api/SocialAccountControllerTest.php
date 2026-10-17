@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\PrivateFeedSyncChange;
+use App\Entity\SocialAccount;
 use App\Entity\User;
+use App\Enum\PrivateFeedSyncReason;
+use App\Enum\PrivateFeedSyncSkip;
+use App\Enum\SocialFeedKind;
 use App\Service\Social\AccountVerifier\AccountVerifierInterface;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -64,9 +69,10 @@ final class SocialAccountControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         $account = $this->payload($client);
         self::assertSame(
-            ['id', 'network', 'handle', 'serviceUrl', 'status', 'isDefault', 'credentialHint', 'connectedAt'],
+            ['id', 'network', 'handle', 'serviceUrl', 'status', 'isDefault', 'credentialHint', 'connectedAt', 'sync'],
             array_keys($account),
         );
+        self::assertSame(['checkedAt' => null, 'skipped' => null, 'changes' => []], $account['sync']);
         self::assertSame('bluesky', $account['network']);
         self::assertSame(self::ALICE, $account['handle']);
         self::assertSame('https://bsky.social', $account['serviceUrl']);
@@ -316,6 +322,127 @@ final class SocialAccountControllerTest extends ApiTestCase
         $this->connectBluesky($client);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    public function testTheListShowsTheLastCheckAndTheRecentChangesNewestFirst(): void
+    {
+        $client = $this->clientVerifying($this->alice());
+        $this->accountOn($client, 'social-sync-list@example.test');
+        $id = $this->connectedId($client);
+        $this->stampSkippedCheck($id, '2026-10-17 11:00:00');
+        $this->recordChange($id, PrivateFeedSyncReason::Saved, '2026-10-17 10:00:00');
+        $this->recordChange($id, PrivateFeedSyncReason::Deleted, '2026-10-17 10:30:00');
+
+        $client->request('GET', '/api/me/social-accounts');
+
+        self::assertResponseIsSuccessful();
+        $sync = $this->syncOfFirstListed($client);
+        self::assertSame('2026-10-17T11:00:00+00:00', $sync['checkedAt']);
+        self::assertSame('unreachable', $sync['skipped']);
+        self::assertSame(
+            [
+                ['kind' => 'list', 'name' => 'News', 'reason' => 'deleted', 'at' => '2026-10-17T10:30:00+00:00'],
+                ['kind' => 'list', 'name' => 'News', 'reason' => 'saved', 'at' => '2026-10-17T10:00:00+00:00'],
+            ],
+            $sync['changes'],
+        );
+    }
+
+    public function testEachListedAccountCarriesOnlyItsOwnChanges(): void
+    {
+        $client = $this->clientVerifying($this->echoingVerifier());
+        $this->accountOn($client, 'social-sync-own@example.test');
+        $firstId = $this->connectedId($client);
+        $this->connectBluesky($client, 'bob.bsky.social');
+        $secondId = $this->payload($client)['id'];
+        self::assertIsInt($secondId);
+        $this->recordChange($firstId, PrivateFeedSyncReason::Created, '2026-10-17 10:00:00');
+
+        $client->request('GET', '/api/me/social-accounts');
+
+        $changeCounts = [];
+        foreach ($this->listedAccounts($client) as $account) {
+            $changeCounts[$account['id']] = count($account['sync']['changes']);
+        }
+        self::assertSame([$firstId => 1, $secondId => 0], $changeCounts);
+    }
+
+    public function testAnotherUsersSyncChangesAreAbsentFromTheList(): void
+    {
+        $client = $this->clientVerifying($this->alice());
+        $this->accountOn($client, 'social-sync-owner@example.test');
+        $ownerAccountId = $this->connectedId($client);
+        $this->recordChange($ownerAccountId, PrivateFeedSyncReason::Created, '2026-10-17 10:00:00');
+        $this->accountOn($client, 'social-sync-other@example.test');
+        $this->connectBluesky($client, 'bob.bsky.social');
+
+        $client->request('GET', '/api/me/social-accounts');
+
+        $accounts = $this->listedAccounts($client);
+        self::assertCount(1, $accounts);
+        self::assertSame([], $accounts[0]['sync']['changes']);
+    }
+
+    public function testAReconnectAnswersTheAccountWithItsRecentChanges(): void
+    {
+        $client = $this->clientVerifying($this->alice());
+        $this->accountOn($client, 'social-sync-reconnect@example.test');
+        $id = $this->connectedId($client);
+        $this->recordChange($id, PrivateFeedSyncReason::Unsaved, '2026-10-17 10:00:00');
+
+        $this->replaceCredential($client, $id);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['unsaved'], $this->changeReasonsOfAccount($client));
+    }
+
+    private function stampSkippedCheck(int $accountId, string $checkedAt): void
+    {
+        $entityManager = $this->entityManager();
+        $account = $entityManager->find(SocialAccount::class, $accountId);
+        self::assertInstanceOf(SocialAccount::class, $account);
+        $account->recordSkippedSync(new \DateTimeImmutable($checkedAt), PrivateFeedSyncSkip::Unreachable);
+        $entityManager->flush();
+    }
+
+    private function recordChange(int $accountId, PrivateFeedSyncReason $reason, string $changedAt): void
+    {
+        $entityManager = $this->entityManager();
+        $account = $entityManager->find(SocialAccount::class, $accountId);
+        self::assertInstanceOf(SocialAccount::class, $account);
+        $entityManager->persist(new PrivateFeedSyncChange(
+            $account,
+            SocialFeedKind::UserList,
+            'at://list/news',
+            'News',
+            $reason,
+            new \DateTimeImmutable($changedAt),
+        ));
+        $entityManager->flush();
+    }
+
+    /** @return list<string> */
+    private function changeReasonsOfAccount(KernelBrowser $client): array
+    {
+        /** @var array{sync: array{changes: list<array{reason: string}>}} $account */
+        $account = $this->payload($client);
+
+        return array_map(static fn (array $change): string => $change['reason'], $account['sync']['changes']);
+    }
+
+    /** @return array{checkedAt: string|null, skipped: string|null, changes: list<array<string, mixed>>} */
+    private function syncOfFirstListed(KernelBrowser $client): array
+    {
+        return $this->listedAccounts($client)[0]['sync'];
+    }
+
+    /** @return list<array{id: int, sync: array{checkedAt: string|null, skipped: string|null, changes: list<array<string, mixed>>}}> */
+    private function listedAccounts(KernelBrowser $client): array
+    {
+        /** @var list<array{id: int, sync: array{checkedAt: string|null, skipped: string|null, changes: list<array<string, mixed>>}}> $accounts */
+        $accounts = $this->payload($client)['accounts'];
+
+        return $accounts;
     }
 
     private function alice(): StubAccountVerifier

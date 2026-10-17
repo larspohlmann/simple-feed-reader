@@ -9,6 +9,7 @@ use App\Entity\Entry;
 use App\Entity\EntryAuthor;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
+use App\Entity\EntryOrigin;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
@@ -677,6 +678,49 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
+    }
+
+    public function testASavedSocialPostNamesItsPosterAndTheSavedFeedStaysTheSource(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(
+            SourceFormat::SAVED,
+            new EntryAuthor('Bob', 'https://bsky.app/profile/did:plc:bob', 'https://cdn.example/bob.jpg'),
+        );
+        $entry->getFeed()->classifyAs(SocialNetwork::Bluesky);
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('Source', $json['source']);
+        self::assertSame([
+            'name' => 'Bob',
+            'url' => 'https://bsky.app/profile/did:plc:bob',
+            'imageUrl' => 'https://cdn.example/bob.jpg',
+        ], $json['poster']);
+    }
+
+    public function testASavedArticleNamesItsOriginFeedAndShowsItsIconNotItsAuthor(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::SAVED, new EntryAuthor('A. Writer'));
+        $entry->getFeed()->setFaviconUrl('https://saved.example/none.ico');
+
+        $json = EntryJson::listRow($this->row(
+            $entry,
+            new EntryListRowEnrichment(origin: new EntryOrigin('Heise', 'https://heise.example/favicon.ico')),
+        ));
+
+        self::assertSame(['name' => 'Heise', 'url' => null, 'imageUrl' => null], $json['poster']);
+        self::assertSame('https://heise.example/favicon.ico', $json['faviconUrl']);
+    }
+
+    public function testASavedArticleWithoutAnOriginHasNoPosterAndTheFeedsIcon(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::SAVED, new EntryAuthor('A. Writer'));
+        $entry->getFeed()->setFaviconUrl('https://saved.example/feed.ico');
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertNull($json['poster']);
+        self::assertSame('https://saved.example/feed.ico', $json['faviconUrl']);
     }
 
     private function entryOfFeedWithFormat(string $sourceFormat, EntryAuthor $author): Entry

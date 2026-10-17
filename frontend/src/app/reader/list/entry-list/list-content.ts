@@ -13,7 +13,7 @@ import { planMagazine } from '../magazine/magazine-planner';
 import { REVEAL_STEP, isAppendedPage } from '../paging';
 import { EntryDto } from '../../models';
 import { Selection, isSingleStreamView } from '../../query/query';
-import { isPrivateFeed } from '../../state/social-sections';
+import { isPrivateFeed, isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { blocksWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
 
@@ -32,14 +32,14 @@ export class ListContent {
   private readonly zone = inject(NgZone);
   private readonly subscriptions = inject(SubscriptionRows);
 
-  /** A home timeline, list or custom feed carries many people: never filed under one source
+  /** A home timeline, list, custom feed or saved feed carries many people: never filed under one source
    *  in a group widget. Equal by members, so a counts-only refresh does not re-plan. */
   private readonly uncollapsibleSources = computed<ReadonlySet<number>>(
     () =>
       new Set(
         this.subscriptions
           .stored()
-          .filter(isPrivateFeed)
+          .filter((subscription) => isPrivateFeed(subscription) || isSavedFeed(subscription))
           .map(({ id }) => id),
       ),
     { equal: (left, right) => left.size === right.size && [...left].every((id) => right.has(id)) },

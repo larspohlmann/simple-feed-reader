@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
+use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\SealedSecret;
 use App\Entity\SocialAccount;
@@ -11,6 +13,7 @@ use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
+use App\Repository\EntryStateRepository;
 use App\Repository\SocialAccountRepository;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Social\BlueskySessionCache;
@@ -22,6 +25,7 @@ use App\Service\Social\SocialAccountEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\ProfileFeedSubscriptions;
+use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -137,6 +141,31 @@ final class SocialAccountEditorTest extends DbTestCase
         $this->editor()->disconnect($account);
 
         self::assertSame([], $this->sessionCacheStore->getValues());
+    }
+
+    public function testDisconnectingMovesKeptPostsToSavedFromBluesky(): void
+    {
+        $account = $this->stored(SocialNetwork::Bluesky, 'did:plc:one', true);
+        $this->privateFeeds()->create($account, PrivateFeedModel::home());
+        $home = $this->entityManager->getRepository(SocialFeed::class)->findOneBy(['socialAccount' => $account]);
+        self::assertNotNull($home);
+        $guid = 'at://did:plc:x/app.bsky.feed.post/1';
+        $post = SavedPostFixtures::entry($this->entityManager, $home->getFeed(), $guid, null);
+        SavedPostFixtures::state($this->entityManager, $this->user, $post)->markKept();
+        $this->entityManager->flush();
+
+        $this->editor()->disconnect($account);
+        $this->entityManager->clear();
+
+        $saved = $this->entityManager->getRepository(Feed::class)->findOneBy([
+            'url' => sprintf('saved:%d:bluesky', $this->user->requireId()),
+        ]);
+        self::assertNotNull($saved);
+        $copies = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $saved, 'guid.value' => $guid]);
+        self::assertCount(1, $copies);
+        /** @var EntryStateRepository $states */
+        $states = $this->entityManager->getRepository(EntryState::class);
+        self::assertTrue($states->findOneForUserEntry($this->user->requireId(), $copies[0]->requireId())?->isKept());
     }
 
     private function stored(SocialNetwork $network, string $identity, bool $default): SocialAccount

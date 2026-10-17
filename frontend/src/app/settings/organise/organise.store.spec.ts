@@ -98,6 +98,20 @@ describe('OrganiseStore', () => {
     expect(store.groups()[2].subscriptions.map((subscription) => subscription.id)).toEqual([13]);
   });
 
+  it('lists an empty saved feed, though the sidebar hides it', () => {
+    const emptySaved = makeSubscription({
+      id: 30,
+      feedId: 30,
+      title: 'Saved from feeds',
+      sourceFormat: 'saved',
+      entryCount: 0,
+    });
+    const store = make([...SUBS, emptySaved]);
+
+    const untagged = store.groups().find((group) => group.key === 'untagged');
+    expect(untagged?.subscriptions.map((subscription) => subscription.id)).toContain(30);
+  });
+
   it('shows a feed with two tags in both groups', () => {
     const store = make();
 

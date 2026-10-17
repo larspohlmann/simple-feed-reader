@@ -8,10 +8,12 @@ use App\Entity\Entry;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\LinkCardRepository;
+use App\Repository\SavedEntryOriginRepository;
 use App\Service\Backup\BackupLines;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
+use App\Service\Backup\Model\EntryCompanionsModel;
 use App\Service\Backup\Support\BackupSchema;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -33,6 +35,7 @@ final class BackupPartWalk
         private readonly EntryRepository $entries,
         private readonly EntryStateRepository $entryStates,
         private readonly LinkCardRepository $linkCards,
+        private readonly SavedEntryOriginRepository $savedOrigins,
         private readonly BackupLines $lines,
         private readonly BackupProvenanceModel $provenance,
         private readonly int $userId,
@@ -91,11 +94,15 @@ final class BackupPartWalk
         $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $batch);
         $statesByEntryId = $this->entryStates->forUserByEntryIds($this->userId, $entryIds);
         $cardsByEntryId = $this->linkCards->contentsByEntryIds($entryIds);
+        $originsByEntryId = $this->savedOrigins->originsByEntryIds($entryIds);
 
         foreach ($batch as $entry) {
             $state = $statesByEntryId[$entry->requireId()] ?? null;
             yield from $this->bufferLines(
-                $this->lines->entryLine($entry, $feedUrl, $cardsByEntryId[$entry->requireId()] ?? []),
+                $this->lines->entryLine($entry, $feedUrl, new EntryCompanionsModel(
+                    $cardsByEntryId[$entry->requireId()] ?? [],
+                    $originsByEntryId[$entry->requireId()] ?? null,
+                )),
                 null !== $state ? $this->lines->entryStateLine($state, $feedUrl) : null,
             );
         }

@@ -11,6 +11,7 @@ use App\Enum\SourceFormat;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Feed\OrphanedFeedReclaimer;
+use App\Service\SavedPosts\SavedPostRescue;
 use App\Service\Subscription\Model\SubscribeOutcomeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -30,26 +31,19 @@ final readonly class SubscriptionService
         private ScrapeFallbackPolicy $scrapeFallbackPolicy,
         private FirstFetchRecorder $firstFetch,
         private OrphanedFeedReclaimer $orphanedFeeds,
+        private SavedPostRescue $savedPostRescue,
         private EntityManagerInterface $entityManager,
     ) {
     }
 
-    /**
-     * Flushes the removal before reclaiming the feed, so the DELETE's no-subscriber guard sees the row gone;
-     * reclaim() does nothing while anybody else subscribes.
-     */
     public function unsubscribe(Subscription $subscription): void
     {
-        $feedId = $subscription->getFeed()->requireId();
-
-        $this->entityManager->remove($subscription);
-        $this->entityManager->flush();
-
-        $this->orphanedFeeds->reclaim($feedId);
+        $this->unsubscribeAll([$subscription]);
     }
 
     /**
-     * One flush for the whole selection, then one reclaim per distinct feed: two removed subscriptions may share one.
+     * Saved feeds of the call go first, so the rescue of the others never copies into a saved feed this call deletes.
+     * Each half flushes its removal before reclaiming, so the DELETE's no-subscriber guard sees the rows gone.
      *
      * @param list<Subscription> $subscriptions
      */
@@ -59,16 +53,10 @@ final readonly class SubscriptionService
             return 0;
         }
 
-        $feedIds = [];
-        foreach ($subscriptions as $subscription) {
-            $feedIds[$subscription->getFeed()->requireId()] = true;
-            $this->entityManager->remove($subscription);
-        }
-        $this->entityManager->flush();
-
-        foreach (array_keys($feedIds) as $feedId) {
-            $this->orphanedFeeds->reclaim($feedId);
-        }
+        [$savedFeeds, $others] = self::savedFeedsAndOthers($subscriptions);
+        $this->removeRescuing($savedFeeds, []);
+        $copyIds = $this->removeRescuing($others, $others);
+        $this->savedPostRescue->indexCopies($copyIds);
 
         return \count($subscriptions);
     }
@@ -110,6 +98,73 @@ final readonly class SubscriptionService
         $unread = $this->firstFetch->record($subscription->getFeed(), $discovered);
 
         return SubscribeOutcomeModel::subscribed($subscription, $unread);
+    }
+
+    /**
+     * @param list<Subscription> $subscriptions
+     * @param list<Subscription> $rescued       the ones whose favourites and kept posts are saved before they go
+     *
+     * @return list<int> the saved copies the rescue created
+     */
+    private function removeRescuing(array $subscriptions, array $rescued): array
+    {
+        if ([] === $subscriptions) {
+            return [];
+        }
+        $feedIds = self::feedIdsOf($subscriptions);
+        $this->entityManager->beginTransaction();
+        try {
+            $result = $this->savedPostRescue->rescueFrom($rescued);
+            foreach ($subscriptions as $subscription) {
+                $this->entityManager->remove($subscription);
+            }
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+        } catch (\Throwable $exception) {
+            $this->entityManager->rollback();
+
+            throw $exception;
+        }
+        foreach ($feedIds as $feedId) {
+            $this->orphanedFeeds->reclaim($feedId);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param list<Subscription> $subscriptions
+     *
+     * @return list<int> each distinct feed once: two removed subscriptions may share one
+     */
+    private static function feedIdsOf(array $subscriptions): array
+    {
+        $feedIds = [];
+        foreach ($subscriptions as $subscription) {
+            $feedIds[$subscription->getFeed()->requireId()] = true;
+        }
+
+        return array_keys($feedIds);
+    }
+
+    /**
+     * @param list<Subscription> $subscriptions
+     *
+     * @return array{list<Subscription>, list<Subscription>} the saved feeds, then the others
+     */
+    private static function savedFeedsAndOthers(array $subscriptions): array
+    {
+        $savedFeeds = [];
+        $others = [];
+        foreach ($subscriptions as $subscription) {
+            if (SourceFormat::isSaved($subscription->getFeed()->getSourceFormat())) {
+                $savedFeeds[] = $subscription;
+                continue;
+            }
+            $others[] = $subscription;
+        }
+
+        return [$savedFeeds, $others];
     }
 
     /**

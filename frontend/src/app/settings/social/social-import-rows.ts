@@ -22,6 +22,8 @@ export interface ImportRow {
   readonly haystack: string;
   readonly stateLabel: string;
   readonly checkboxLabel: string;
+  readonly removable: boolean;
+  readonly locked: boolean;
 }
 
 export type RowsByTab = Readonly<Record<ImportTab, readonly ImportRow[]>>;
@@ -74,6 +76,11 @@ export function collectionKey(collection: CollectionCandidate): string {
   return `${collection.kind}:${collection.id ?? ''}`;
 }
 
+/** A subscribed list or custom feed can be unticked to remove it; Home stays. */
+export function isRemovable(collection: CollectionCandidate): boolean {
+  return collection.state === 'subscribed' && collection.kind !== 'home';
+}
+
 export function followKey(follow: FollowCandidate): string {
   return `follow:${follow.feedUrl}`;
 }
@@ -114,12 +121,15 @@ function toFollowRow(follow: FollowCandidate, translate: Translate): ImportRow {
     haystack: `${follow.handle}\n${follow.displayName ?? ''}`.toLowerCase(),
     stateLabel: translate(FILTER_KEYS[follow.state]),
     checkboxLabel: translate(CHECKBOX_KEYS[follow.state], { handle: follow.handle }),
+    removable: false,
+    locked: follow.state === 'subscribed',
   };
 }
 
 function toCollectionRow(collection: CollectionCandidate, translate: Translate): ImportRow {
   const name =
     collection.kind === 'home' ? translate('settings.social.importHome') : collection.name;
+  const removable = isRemovable(collection);
   return {
     key: collectionKey(collection),
     testId: `social-import-collection-${collectionKey(collection)}`,
@@ -130,6 +140,14 @@ function toCollectionRow(collection: CollectionCandidate, translate: Translate):
     icon: COLLECTION_ICONS[collection.kind],
     haystack: name.toLowerCase(),
     stateLabel: translate(FILTER_KEYS[collection.state]),
-    checkboxLabel: translate(COLLECTION_CHECKBOX_KEYS[collection.state], { name }),
+    checkboxLabel: translate(collectionCheckboxKey(collection, removable), { name }),
+    removable,
+    locked: collection.state === 'subscribed' && !removable,
   };
+}
+
+function collectionCheckboxKey(collection: CollectionCandidate, removable: boolean): string {
+  return removable
+    ? 'settings.social.importRemoveCollection'
+    : COLLECTION_CHECKBOX_KEYS[collection.state];
 }
