@@ -393,8 +393,12 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         }
         $this->entityManager->flush();
         $this->profileVisibility->remember(array_keys($hidden), $hidden);
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
 
         self::assertEquals(new HiddenProfileSwitchReportModel(20, 0), $this->sweep(1));
+        self::assertCount(1, $recorder->queriesMatching(' LIKE '));
         self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
         self::assertSame([], $this->hiddenProfiles->asked);
     }

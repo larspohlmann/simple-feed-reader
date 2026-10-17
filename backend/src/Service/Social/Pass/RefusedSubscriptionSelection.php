@@ -17,7 +17,7 @@ final class RefusedSubscriptionSelection
     /** @var list<RefusedProfileSubscriptionModel> */
     private array $candidates = [];
 
-    /** @var array<string, true> */
+    /** @var array<string, string> actor => actor, so each counts once */
     private array $unknownActors = [];
 
     private int $knownHidden = 0;
@@ -42,7 +42,7 @@ final class RefusedSubscriptionSelection
     {
         $this->candidates[] = $candidate;
         if (null === $candidate->knownHidden) {
-            $this->unknownActors[$candidate->actor] = true;
+            $this->unknownActors[$candidate->actor] = $candidate->actor;
         } else {
             ++$this->knownHidden;
         }
@@ -59,11 +59,6 @@ final class RefusedSubscriptionSelection
         $this->position = null;
     }
 
-    public function isFull(): bool
-    {
-        return $this->isAskFull() || $this->knownHidden >= $this->moveLimit;
-    }
-
     public function position(): ?RefusedFeedPositionModel
     {
         return $this->position;
@@ -78,10 +73,10 @@ final class RefusedSubscriptionSelection
     /** @return list<string> */
     public function unknownActors(): array
     {
-        return array_keys($this->unknownActors);
+        return array_values($this->unknownActors);
     }
 
-    private function isAskFull(): bool
+    public function isAskFull(): bool
     {
         return \count($this->unknownActors) >= $this->askLimit;
     }

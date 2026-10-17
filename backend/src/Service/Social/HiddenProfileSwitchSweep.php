@@ -45,9 +45,6 @@ final readonly class HiddenProfileSwitchSweep
 
     public function sweep(ProfileCallBudgetModel $budget): HiddenProfileSwitchReportModel
     {
-        if ($budget->isEmpty()) {
-            return HiddenProfileSwitchReportModel::none();
-        }
         $selection = $this->selected(new RefusedSubscriptionSelection(
             $budget->calls * AppViewClient::URIS_PER_CALL,
             self::MAX_MOVES,
@@ -60,7 +57,7 @@ final readonly class HiddenProfileSwitchSweep
     /** Reads on from the cursor, a few pages at most, and starts over from the first row after the last page. */
     private function selected(RefusedSubscriptionSelection $selection): RefusedSubscriptionSelection
     {
-        for ($pagesRead = 0; $pagesRead < self::MAX_PAGES && !$selection->isFull(); ++$pagesRead) {
+        for ($pagesRead = 0; $pagesRead < self::MAX_PAGES && !$selection->isAskFull(); ++$pagesRead) {
             $page = $this->refusedSubscriptions->findOnRefusedBlueskyProfileFeeds(
                 $selection->position(),
                 self::PAGE_SIZE,
