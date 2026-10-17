@@ -10,6 +10,7 @@ use PHPUnit\Framework\Assert;
 final class Bluesky
 {
     public const string GET_POSTS = 'https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts';
+    public const string GET_POST_THREAD = 'https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread';
     public const string CARD = 'https://www.motherjones.com/politics/2026/10/ice-shooting-nypd-bronx-tisch/';
 
     public static function fixture(string $name): string

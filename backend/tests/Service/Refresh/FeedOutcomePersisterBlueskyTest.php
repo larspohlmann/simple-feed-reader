@@ -24,6 +24,7 @@ use App\Tests\Support\FakeAppView;
 use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReadsFixtures;
+use App\Tests\Support\SelfThreadEnrichers;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -33,6 +34,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
     use ReadsFixtures;
 
     private const string TISCH = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t';
+    private const string TECHPRESSO = 'at://did:plc:t3o4nfbk4lq62necw2n35m4f/app.bsky.feed.post/3my2nlat6px2v';
     private const string VIDEO_POST = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxhlfehxzi27';
     private const string CARD = 'https://www.motherjones.com/politics/2026/10/ice-shooting-nypd-bronx-tisch/';
     private const string TISCH_TEXT = 'Billionaire heiress Jessica Tisch is a holdover from Eric Adams’ mayoral'
@@ -126,6 +128,27 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
         self::assertSame(2, $this->pendingCount());
     }
 
+    public function testAPostWithSelfRepliesIsFoldedIntoItsThreadInTheSameRefresh(): void
+    {
+        $this->appView->knowsFixture('self-thread');
+        $this->appView->knowsThreadFixture('self-thread-replies');
+        $feed = new Feed('https://bsky.app/profile/techpresso.bsky.social/rss');
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+
+        $this->persisterFolding()->persist($feed, $this->fetchedRss($feed, self::techpressoRss()), $this->clock->now());
+
+        $techpresso = $this->entry(self::TECHPRESSO);
+        $thread = SelfThreadEnrichers::threadPosts($this->entityManager)->byEntryIds([$techpresso->requireId()]);
+        $posts = $thread[$techpresso->requireId()] ?? [];
+        self::assertCount(2, $posts);
+        self::assertSame(
+            'https://www.macrumors.com/2026/10/16/app-store-rules-deepfakes/',
+            $posts[1]->linkCard->content->url ?? null,
+        );
+        self::assertSame(0, $this->pendingCount());
+    }
+
     /** FeedOutcomePersister and PostEnricher may be inlined; building RefreshRunner autowires both. */
     public function testTheContainerBuildsTheRefreshWithTheEnricher(): void
     {
@@ -145,6 +168,40 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
             )),
             $this->clock->now(),
         );
+    }
+
+    private function persisterFolding(): FeedOutcomePersister
+    {
+        $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
+        $appView = new AppViewClient($this->appView, $throttle);
+        $postEnricher = PostEnrichers::build(
+            $this->entityManager,
+            $this->clock,
+            $appView,
+            new NullLogger(),
+            $this->indexWriter,
+        );
+
+        return FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->indexingInto($this->indexWriter)
+            ->foldingWith(SelfThreadEnrichers::overBluesky($this->entityManager, $this->clock, $appView))
+            ->enrichingWith($postEnricher);
+    }
+
+    private function fetchedRss(Feed $feed, string $body): FetchOutcomeModel
+    {
+        return FetchOutcomeModel::succeeded(FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null));
+    }
+
+    private static function techpressoRss(): string
+    {
+        return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><description>News</description>'
+            . '<link>https://bsky.app/profile/techpresso.bsky.social</link><title>@techpresso.bsky.social</title><item>'
+            . '<link>https://bsky.app/profile/techpresso.bsky.social/post/3my2nlat6px2v</link>'
+            . '<description>Apple has updated its App Store guidelines to ban apps that produce AI-generated'
+            . " nonconsensual intimate imagery, including so-called 'nudify' apps.</description>"
+            . '<pubDate>17 Oct 2026 08:15 +0000</pubDate>'
+            . '<guid isPermaLink="false">' . self::TECHPRESSO . '</guid></item></channel></rss>';
     }
 
     private function persister(): FeedOutcomePersister

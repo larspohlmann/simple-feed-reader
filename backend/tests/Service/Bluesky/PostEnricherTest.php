@@ -52,6 +52,7 @@ final class PostEnricherTest extends DbTestCase
     use ReloadsEntities;
 
     private const string TISCH = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t';
+    private const string TECHPRESSO = 'at://did:plc:t3o4nfbk4lq62necw2n35m4f/app.bsky.feed.post/3my2nlat6px2v';
     private const string APPLES = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mv3shqdfuc2e';
     private const string TEST_POST = 'at://did:plc:test/app.bsky.feed.post/';
     private const string UNTITLED = self::TEST_POST . 'untitled';
@@ -90,6 +91,48 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame('<p>Read this.</p>', $stored->getContentHtml());
         self::assertCount(1, $this->cardsOf($stored));
         self::assertSame('Read this.', $stored->getSummary());
+    }
+
+    public function testAPostWithRepliesWaitsForItsThread(): void
+    {
+        $this->appView->knowsFixture('self-thread');
+        $post = $this->queuedEntry(self::TECHPRESSO, '<p>Apple has updated.</p>');
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($this->feed);
+
+        $rows = $this->rowsOf([$post]);
+        self::assertCount(1, $rows);
+        self::assertSame(ShareEnrichmentKind::SelfThread, $rows[0]->getKind());
+        self::assertNull($this->claimedAtOf($rows[0]));
+        self::assertNull($this->reload($post)->getShareKind());
+    }
+
+    public function testAPostWithoutRepliesIsDequeuedAsBefore(): void
+    {
+        $post = self::postView('self-thread', 0);
+        $this->appView->knowsPost($post);
+        $entry = $this->queuedEntry(self::TECHPRESSO, '<p>Apple has updated.</p>');
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([], $this->rowsOf([$entry]));
+    }
+
+    public function testACardedPostWithRepliesStillGetsItsCardFirst(): void
+    {
+        $post = self::postView('external', 2);
+        $this->appView->knowsPost($post);
+        $tisch = $this->queuedEntry(self::TISCH, '<p>Read this.<br />' . Bluesky::CARD . '</p>');
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($this->feed);
+
+        $rows = $this->rowsOf([$tisch]);
+        self::assertCount(1, $rows);
+        self::assertSame(ShareEnrichmentKind::SelfThread, $rows[0]->getKind());
+        self::assertCount(1, $this->cardsOf($this->reload($tisch)));
     }
 
     public function testAFeedWithNothingPendingCostsOneQueryAndNoFlush(): void
@@ -696,6 +739,25 @@ final class PostEnricherTest extends DbTestCase
         $this->entityManager->flush();
 
         return $guids;
+    }
+
+    /** @return array<mixed> */
+    private static function postView(string $fixture, int $replyCount): array
+    {
+        /** @var array{posts: list<array<mixed>>} $answer */
+        $answer = json_decode(Bluesky::fixture($fixture), true, flags: \JSON_THROW_ON_ERROR);
+        $post = $answer['posts'][0];
+        $post['replyCount'] = $replyCount;
+
+        return $post;
+    }
+
+    private function claimedAtOf(ShareEnrichment $row): mixed
+    {
+        return $this->entityManager->getConnection()->fetchOne(
+            'SELECT claimed_at FROM share_enrichment WHERE id = ?',
+            [$row->requireId()],
+        ) ?: null;
     }
 
     private function pendingCount(): int

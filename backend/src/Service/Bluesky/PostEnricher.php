@@ -82,7 +82,8 @@ final readonly class PostEnricher
 
     /**
      * A chunk settles only the rows the claim still holds: a slow pass may have outlived the lease on later ones. A row
-     * handed to the link-card pass is released only once its new kind is flushed, or an AppView pass would refill it.
+     * handed to the link-card or self-thread pass is released only once its new kind is flushed, or an AppView pass
+     * would refill it.
      *
      * @param list<ShareEnrichment> $queued
      */
@@ -112,7 +113,7 @@ final readonly class PostEnricher
             }
         }
         $this->entityManager->flush();
-        $this->enrichments->release([...$unsettled, ...self::awaitingLinkCards($claimed)], $claimedAt);
+        $this->enrichments->release([...$unsettled, ...self::handedOn($claimed)], $claimedAt);
         $this->indexer->index($filled);
     }
 
@@ -121,17 +122,17 @@ final readonly class PostEnricher
      *
      * @return list<ShareEnrichment>
      */
-    private static function awaitingLinkCards(array $claimed): array
+    private static function handedOn(array $claimed): array
     {
         return array_values(array_filter(
             $claimed,
-            static fn (ShareEnrichment $row): bool => $row->getKind() === ShareEnrichmentKind::LinkCards,
+            static fn (ShareEnrichment $row): bool => $row->getKind() !== ShareEnrichmentKind::AppView,
         ));
     }
 
     /**
      * A post the AppView omits was deleted or hidden, so it is dequeued unfilled. One whose link still needs its card
-     * stays queued for the link-card pass.
+     * stays queued for the link-card pass, and one with replies for the self-thread pass.
      *
      * @param list<ShareEnrichment> $chunk
      *
@@ -154,17 +155,26 @@ final readonly class PostEnricher
             if ($outcome !== FillOutcome::Unfilled) {
                 $filled[] = $entry;
             }
+            if ($outcome === FillOutcome::Unfilled) {
+                $entry->setShareKind(null);
+            }
+            if ($post !== null && self::hasReplies($post)) {
+                $pending->awaitSelfThread();
+                continue;
+            }
             if ($outcome === FillOutcome::AwaitingLinkCards) {
                 $pending->awaitLinkCards();
                 continue;
-            }
-            if ($outcome === FillOutcome::Unfilled) {
-                $entry->setShareKind(null);
             }
             $this->entityManager->remove($pending);
         }
 
         return $filled;
+    }
+
+    private static function hasReplies(JsonNodeModel $post): bool
+    {
+        return ($post->int('replyCount') ?? 0) > 0;
     }
 
     private function filled(Entry $entry, JsonNodeModel $post): FillOutcome

@@ -13,6 +13,7 @@ use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\FeedShareEnrichment;
 use App\Service\Search\EntryIndexer;
+use App\Service\Social\SelfThreadEnricher;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +29,7 @@ final class FeedOutcomePersisters
     private EntityManagerInterface $flushingEntityManager;
     private SearchIndexWriterInterface $indexWriter;
     private LoggerInterface $logger;
+    private ?SelfThreadEnricher $selfThreadEnricher = null;
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -75,6 +77,14 @@ final class FeedOutcomePersisters
         return $copy;
     }
 
+    public function foldingWith(SelfThreadEnricher $selfThreadEnricher): self
+    {
+        $copy = clone $this;
+        $copy->selfThreadEnricher = $selfThreadEnricher;
+
+        return $copy;
+    }
+
     public function idle(): FeedOutcomePersister
     {
         return $this->enrichingWith(PostEnrichers::idle($this->entityManager, $this->clock));
@@ -97,7 +107,10 @@ final class FeedOutcomePersisters
             FeedSchedulers::build($this->clock),
             new EntryIndexer($this->indexWriter, new NullLogger()),
             PostEnrichers::queue($this->entityManager, $this->clock),
-            new FeedShareEnrichment($postEnricher, SelfThreadEnrichers::idle($this->entityManager, $this->clock)),
+            new FeedShareEnrichment(
+                $postEnricher,
+                $this->selfThreadEnricher ?? SelfThreadEnrichers::idle($this->entityManager, $this->clock),
+            ),
             $this->logger,
         );
     }
