@@ -416,7 +416,7 @@
       "syncChecked": "Lists and feeds last checked {{when}}",
       "syncSkipped": {
         "unreachable": "Skipped {{when}}: {{network}} did not answer",
-        "incomplete": "Skipped {{when}}: {{network}} sent an incomplete answer",
+        "incomplete": "Skipped {{when}}: {{network}}'s answer was incomplete (or the account keeps no saved-feeds list), so nothing was changed",
         "needs_reconnect": "Skipped {{when}}: the account needs reconnecting",
         "failed": "Skipped {{when}}: the check failed and is tried again within the hour"
       },
@@ -856,6 +856,7 @@
     "unsubscribeTitle": "Unsubscribe",
     "unsubscribeMessage": "Remove “{{title}}” and its entries from your feeds?",
     "savedPostsMove": "Favourites and kept posts move to {{saved}}.",
+    "savedPostsMoveNew": "Favourites and kept posts move to a new {{saved}}.",
     "unsubscribeSavedMessage": "Remove “{{title}}”? Its saved posts are deleted for good.",
     "unsubscribeConfirm": "Unsubscribe",
     "deleteTagTitle": "Delete tag",

@@ -416,7 +416,7 @@
       "syncChecked": "Listen und Feeds zuletzt geprüft {{when}}",
       "syncSkipped": {
         "unreachable": "Übersprungen {{when}}: {{network}} hat nicht geantwortet",
-        "incomplete": "Übersprungen {{when}}: {{network}} hat unvollständig geantwortet",
+        "incomplete": "Übersprungen {{when}}: Die Antwort von {{network}} war unvollständig (oder das Konto führt keine Liste gespeicherter Feeds), daher wurde nichts geändert",
         "needs_reconnect": "Übersprungen {{when}}: Das Konto muss neu verbunden werden",
         "failed": "Übersprungen {{when}}: Die Prüfung ist fehlgeschlagen und wird innerhalb einer Stunde wiederholt"
       },
@@ -856,6 +856,7 @@
     "unsubscribeTitle": "Abbestellen",
     "unsubscribeMessage": "„{{title}}“ und seine Einträge aus deinen Feeds entfernen?",
     "savedPostsMove": "Favoriten und behaltene Beiträge wandern nach „{{saved}}“.",
+    "savedPostsMoveNew": "Favoriten und behaltene Beiträge wandern in einen neuen Feed „{{saved}}“.",
     "unsubscribeSavedMessage": "„{{title}}“ entfernen? Seine gespeicherten Beiträge werden endgültig gelöscht.",
     "unsubscribeConfirm": "Abbestellen",
     "deleteTagTitle": "Tag löschen",

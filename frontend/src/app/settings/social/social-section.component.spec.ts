@@ -162,6 +162,60 @@ describe('SocialSectionComponent', () => {
       expect(byTestId(fixture, 'social-sync-changes-1')).toBeNull();
     });
 
+    it('says nothing was changed when the answer was incomplete', () => {
+      const fixture = mount([
+        account({ sync: { checkedAt: fiveMinutesAgo(), skipped: 'incomplete', changes: [] } }),
+      ]);
+
+      expect(description(fixture)).toContain('so nothing was changed');
+    });
+
+    it('says the account needs reconnecting when the check was skipped for it', () => {
+      const fixture = mount([
+        account({ sync: { checkedAt: fiveMinutesAgo(), skipped: 'needs_reconnect', changes: [] } }),
+      ]);
+
+      expect(description(fixture)).toContain('the account needs reconnecting');
+    });
+
+    it.each([
+      ['saved', 'Added News (newly saved)'],
+      ['created', 'Added News (new list)'],
+      ['unsaved', 'Removed News (no longer saved)'],
+      ['deleted', 'Removed News (deleted on the network)'],
+    ] as const)('words the %s change', (reason, expected) => {
+      const at = fiveMinutesAgo();
+      const fixture = mount([
+        account({
+          sync: {
+            checkedAt: at,
+            skipped: null,
+            changes: [{ kind: 'list', name: 'News', reason, added: reason === 'saved', at }],
+          },
+        }),
+      ]);
+
+      expect(byTestId(fixture, 'social-sync-changes-1')?.textContent).toContain(expected);
+    });
+
+    it('lists two changes with the same name and second', () => {
+      const at = fiveMinutesAgo();
+      const fixture = mount([
+        account({
+          sync: {
+            checkedAt: at,
+            skipped: null,
+            changes: [
+              { kind: 'list', name: 'Tech', reason: 'deleted', added: false, at },
+              { kind: 'list', name: 'Tech', reason: 'created', added: true, at },
+            ],
+          },
+        }),
+      ]);
+
+      expect(byTestId(fixture, 'social-sync-changes-1')?.querySelectorAll('li')).toHaveLength(2);
+    });
+
     it('says a failed check is tried again', () => {
       const fixture = mount([
         account({ sync: { checkedAt: fiveMinutesAgo(), skipped: 'failed', changes: [] } }),

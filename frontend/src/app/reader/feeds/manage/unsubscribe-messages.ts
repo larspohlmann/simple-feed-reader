@@ -27,7 +27,14 @@ export function bulkSavedNote(
   const parts: string[] = [];
   if (destinations.size === 1) {
     const [network] = destinations;
-    parts.push(i18n.translate('manage.savedPostsMove', { saved: savedFeedLabel(i18n, network) }));
+    const movesToNewFeed = savedOnes.some(
+      (subscription) => (subscription.social?.network ?? null) === network,
+    );
+    parts.push(
+      i18n.translate(movesToNewFeed ? 'manage.savedPostsMoveNew' : 'manage.savedPostsMove', {
+        saved: savedFeedLabel(i18n, network),
+      }),
+    );
   } else if (destinations.size > 1) {
     parts.push(i18n.translate('manage.bulk.savedPostsMoveMany'));
   }

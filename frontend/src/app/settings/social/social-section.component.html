@@ -246,7 +246,7 @@
           </app-settings-row>
           @if (account.sync.changes.length) {
             <ul class="sync-changes" [attr.data-testid]="'social-sync-changes-' + account.id">
-              @for (change of account.sync.changes; track change.at + change.name) {
+              @for (change of account.sync.changes; track $index) {
                 <li>{{ describeChange(change) }}</li>
               }
             </ul>

@@ -392,6 +392,18 @@ describe('ManageActions', () => {
           'The saved posts in Saved from feeds are deleted for good.',
         );
       });
+
+      it('says the posts move to a new Saved feed when their destination leaves too', () => {
+        const savedFeed = makeSubscription({
+          id: 22,
+          title: 'Saved from feeds',
+          sourceFormat: 'saved',
+        });
+
+        expect(confirmMessage([subscriptions(1)[0], savedFeed])).toContain(
+          'move to a new Saved from feeds.',
+        );
+      });
     });
 
     it('does not ask for typed text at four feeds', () => {
