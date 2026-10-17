@@ -39,6 +39,8 @@ import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
 import { ListenRowComponent } from '../listen-row/listen-row.component';
 import { LinkCardsComponent } from '../link-cards/link-cards.component';
 import { ThreadRepliesComponent } from '../thread-replies/thread-replies.component';
+import { PostMediaComponent } from '../../media/post-media/post-media.component';
+import { entryMediumRatio } from '../../entry-medium';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { SocialCountsComponent } from '../social-counts/social-counts.component';
 import { SocialCountsService } from '../social-counts/social-counts.service';
@@ -77,6 +79,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     ThreadRepliesComponent,
     ListenRowComponent,
     QuotedPostComponent,
+    PostMediaComponent,
     SocialCountsComponent,
     ArticleContentComponent,
     ArticleLayerComponent,
@@ -95,6 +98,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 export class ReaderViewComponent {
   protected readonly entryDisplayTitle = entryDisplayTitle;
   protected readonly isPost = isPost;
+  protected readonly ratio = entryMediumRatio;
 
   readonly entry = input.required<EntryDto | null>();
   readonly tags = input<SubscriptionTagDto[]>([]);
@@ -111,6 +115,7 @@ export class ReaderViewComponent {
   private readonly commentsSection = viewChild(EntryCommentsComponent, {
     read: ElementRef<HTMLElement>,
   });
+  private readonly postMedia = viewChild(PostMediaComponent, { read: ElementRef<HTMLElement> });
   private readonly quotedPost = viewChild(QuotedPostComponent, {
     read: ElementRef<HTMLElement>,
   });
@@ -126,6 +131,7 @@ export class ReaderViewComponent {
     inject(SocialCountsService),
   );
   private readonly trailingParts: readonly TrailingPart[] = [
+    { query: this.postMedia, joinsFocus: false },
     { query: this.quotedPost, joinsFocus: false },
     { query: this.linkCards, joinsFocus: false },
     { query: this.threadReplies, joinsFocus: false },

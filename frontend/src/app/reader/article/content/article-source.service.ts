@@ -6,6 +6,7 @@ import { ReaderContentService } from './reader-content.service';
 import { ReaderLoad, ReaderLoadOutcome } from './reader-load';
 import { ReaderModeService } from './reader-mode.service';
 import { isPost } from '../../entry/entry-text';
+import { articlePostMedia } from '../post-media/article-post-media';
 
 /** Failures that say the page holds no article, which Retry cannot change. */
 const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([
@@ -84,6 +85,14 @@ export class ArticleSource {
     // replaces it in place, and a failed fetch leaves the summary standing.
     const body = this.feedBody();
     return body?.status === 'ok' && body.html !== null ? body.html : (entry.summary ?? '');
+  });
+
+  /** The post's own media still to show under its body, once the body settled (#1656). */
+  readonly postMedia = computed(() => {
+    const entry = this.entry();
+    const body = this.feedBody();
+    if (!entry || !body || body.status === 'loading') return [];
+    return articlePostMedia(entry, body.status === 'ok' ? (body.html ?? '') : '');
   });
 
   connect(entry: Signal<EntryDto | null>): void {
