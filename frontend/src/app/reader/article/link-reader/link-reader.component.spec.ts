@@ -52,7 +52,7 @@ describe('LinkReaderComponent', () => {
     TestBed.configureTestingModule({
       imports: [LinkReaderComponent, provideTranslocoTesting()],
       providers: [
-        { provide: ReaderContentService, useValue: { loadLinkCard, reloadLinkCard } },
+        { provide: ReaderContentService, useValue: { load: loadLinkCard, reload: reloadLinkCard } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
         {
           provide: ImageProxyService,

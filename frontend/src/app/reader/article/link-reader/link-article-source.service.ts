@@ -22,12 +22,12 @@ export class LinkArticleSource {
   );
 
   open(ref: LinkCardRef): void {
-    this.run(this.reader.loadLinkCard(ref));
+    this.run(this.reader.load(ref));
   }
 
   /** Drop the page from the browser cache and refetch it. */
   reload(ref: LinkCardRef): void {
-    this.run(this.reader.reloadLinkCard(ref));
+    this.run(this.reader.reload(ref));
   }
 
   private run(source: Observable<ReaderContent>): void {

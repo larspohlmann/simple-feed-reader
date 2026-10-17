@@ -131,7 +131,7 @@ describe('ReaderContentService', () => {
 
     it('serves a cached card without calling the API', async () => {
       cacheGet.mockResolvedValue(ARTICLE);
-      const result = await firstValueFrom(TestBed.inject(ReaderContentService).loadLinkCard(CARD));
+      const result = await firstValueFrom(TestBed.inject(ReaderContentService).load(CARD));
       expect(result).toEqual(ARTICLE);
       expect(cacheGet).toHaveBeenCalledWith('card:7.1');
       expect(cardApiGet).not.toHaveBeenCalled();
@@ -140,7 +140,7 @@ describe('ReaderContentService', () => {
     it('fetches a missing card and caches it under its card key', async () => {
       cacheGet.mockResolvedValue(null);
       cardApiGet.mockReturnValue(of(ARTICLE));
-      const result = await firstValueFrom(TestBed.inject(ReaderContentService).loadLinkCard(CARD));
+      const result = await firstValueFrom(TestBed.inject(ReaderContentService).load(CARD));
       expect(result).toEqual(ARTICLE);
       expect(cardApiGet).toHaveBeenCalledWith(CARD);
       expect(cachePut).toHaveBeenCalledWith('card:7.1', ARTICLE);
@@ -157,14 +157,14 @@ describe('ReaderContentService', () => {
           originalHero: null,
         }),
       );
-      await firstValueFrom(TestBed.inject(ReaderContentService).loadLinkCard(CARD));
+      await firstValueFrom(TestBed.inject(ReaderContentService).load(CARD));
       expect(cachePut).not.toHaveBeenCalled();
     });
 
     it('reload deletes the card key, then fetches and re-caches', async () => {
       cardApiGet.mockReturnValue(of(ARTICLE));
       const result = await firstValueFrom(
-        TestBed.inject(ReaderContentService).reloadLinkCard(CARD),
+        TestBed.inject(ReaderContentService).reload(CARD),
       );
       expect(cacheDelete).toHaveBeenCalledWith('card:7.1');
       expect(result).toEqual(ARTICLE);

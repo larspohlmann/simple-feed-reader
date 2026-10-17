@@ -1,8 +1,16 @@
 import { Injectable, inject } from '@angular/core';
 import { ReaderOutputVersion } from '../../../core/http/reader-output-version';
 import { ReaderArticle } from '../../models';
+import { LinkCardRef } from '../../query/link-param';
 
-export type ReaderCacheKey = number | `card:${string}`;
+/** What the reader shows: an entry's own page (its id), or a link card's page. */
+export type ReaderTarget = number | LinkCardRef;
+
+export type ReaderCacheKey = number | `card:${number}.${number}`;
+
+export function readerCacheKey(target: ReaderTarget): ReaderCacheKey {
+  return typeof target === 'number' ? target : `card:${target.entryId}.${target.position}`;
+}
 
 interface CacheRecord {
   key: ReaderCacheKey;
@@ -12,8 +20,7 @@ interface CacheRecord {
 }
 
 /**
- * Persistent, size-capped cache of extracted articles, keyed by entry id, or
- * `card:<entryId>.<position>` for a link card's page. Only
+ * Persistent, size-capped cache of extracted articles. Only
  * successful extractions are stored (failures should be retryable). An article
  * extracted under another reader-output version than the backend's current one
  * misses; VERSION is only the schema of the store itself.

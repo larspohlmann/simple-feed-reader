@@ -1,8 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, from, of, switchMap, tap, timeout } from 'rxjs';
 import { ReaderApi } from '../../reader-api';
-import { LinkCardRef, linkParam } from '../../query/link-param';
-import { ReaderCacheKey, ReaderCacheService } from './reader-cache.service';
+import { ReaderCacheService, ReaderTarget, readerCacheKey } from './reader-cache.service';
 import { ReaderContent } from '../../models';
 
 /**
@@ -20,55 +19,32 @@ export class ReaderContentService {
   private readonly api = inject(ReaderApi);
   private readonly cache = inject(ReaderCacheService);
 
-  load(entryId: number): Observable<ReaderContent> {
-    return this.cacheFirst(entryId, () => this.api.readerContent(entryId));
-  }
-
-  loadLinkCard(ref: LinkCardRef): Observable<ReaderContent> {
-    return this.cacheFirst(cardKey(ref), () => this.api.linkCardReaderContent(ref));
-  }
-
-  /** Drop this entry's cached copy, then fetch and re-cache a fresh one. */
-  reload(entryId: number): Observable<ReaderContent> {
-    return this.refetch(entryId, () => this.api.readerContent(entryId));
-  }
-
-  reloadLinkCard(ref: LinkCardRef): Observable<ReaderContent> {
-    return this.refetch(cardKey(ref), () => this.api.linkCardReaderContent(ref));
-  }
-
-  private cacheFirst(
-    key: ReaderCacheKey,
-    request: () => Observable<ReaderContent>,
-  ): Observable<ReaderContent> {
-    return from(this.cache.get(key)).pipe(
+  load(target: ReaderTarget): Observable<ReaderContent> {
+    return from(this.cache.get(readerCacheKey(target))).pipe(
       timeout({ first: ReaderContentService.CACHE_WAIT_MS, with: () => of(null) }),
-      switchMap((cached) =>
-        cached ? of<ReaderContent>(cached) : this.fetchAndCache(key, request),
-      ),
+      switchMap((cached) => (cached ? of<ReaderContent>(cached) : this.fetchAndCache(target))),
     );
   }
 
-  private refetch(
-    key: ReaderCacheKey,
-    request: () => Observable<ReaderContent>,
-  ): Observable<ReaderContent> {
-    return from(this.cache.delete(key)).pipe(switchMap(() => this.fetchAndCache(key, request)));
+  /** Drop the target's cached copy, then fetch and re-cache a fresh one. */
+  reload(target: ReaderTarget): Observable<ReaderContent> {
+    return from(this.cache.delete(readerCacheKey(target))).pipe(
+      switchMap(() => this.fetchAndCache(target)),
+    );
   }
 
-  private fetchAndCache(
-    key: ReaderCacheKey,
-    request: () => Observable<ReaderContent>,
-  ): Observable<ReaderContent> {
-    return request().pipe(
+  private fetchAndCache(target: ReaderTarget): Observable<ReaderContent> {
+    return this.fetch(target).pipe(
       timeout({ first: ReaderContentService.LOAD_TIMEOUT_MS }),
       tap((content) => {
-        if (content.status === 'ok') void this.cache.put(key, content);
+        if (content.status === 'ok') void this.cache.put(readerCacheKey(target), content);
       }),
     );
   }
-}
 
-function cardKey(ref: LinkCardRef): ReaderCacheKey {
-  return `card:${linkParam(ref)}`;
+  private fetch(target: ReaderTarget): Observable<ReaderContent> {
+    return typeof target === 'number'
+      ? this.api.readerContent(target)
+      : this.api.linkCardReaderContent(target);
+  }
 }
