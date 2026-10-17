@@ -18,7 +18,7 @@ use Psr\Log\LoggerInterface;
 
 final readonly class HiddenProfileSubscribeRoute implements SubscribeRouteInterface
 {
-    private const string CONNECT_AN_ACCOUNT = 'This profile is only visible to logged-in Bluesky users. Connect a'
+    public const string CONNECT_AN_ACCOUNT = 'This profile is only visible to logged-in Bluesky users. Connect a'
         . ' Bluesky account in Settings → Social Media to subscribe.';
 
     public function __construct(

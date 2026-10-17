@@ -7,7 +7,10 @@ namespace App\Tests\Support;
 use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Repository\SocialFeedRepository;
+use App\Service\Social\AuthorFeeds;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Assert;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /** Test access to social feeds on a real entity manager. */
 final class SocialFeeds
@@ -36,5 +39,13 @@ final class SocialFeeds
         $entityManager->flush();
 
         return $account;
+    }
+
+    public static function authorFeeds(ContainerInterface $container): AuthorFeeds
+    {
+        $authorFeeds = $container->get(AuthorFeeds::class);
+        Assert::assertInstanceOf(AuthorFeeds::class, $authorFeeds);
+
+        return $authorFeeds;
     }
 }

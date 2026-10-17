@@ -18,6 +18,7 @@ use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\SubscriptionCreator;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -27,8 +28,6 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class AuthorFeedsTest extends DbTestCase
 {
-    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
-
     private User $user;
 
     protected function setUp(): void
@@ -49,16 +48,19 @@ final class AuthorFeedsTest extends DbTestCase
 
         self::assertSame($nesting, $this->entityManager->getConnection()->getTransactionNestingLevel());
         $feed = $subscription->getFeed();
-        self::assertSame(sprintf('social:bluesky:%d:author:%s', $account->requireId(), self::RUSTY), $feed->getUrl());
+        self::assertSame(
+            sprintf('social:bluesky:%d:author:%s', $account->requireId(), BlueskyProfiles::RUSTY),
+            $feed->getUrl(),
+        );
         self::assertSame(SourceFormat::BLUESKY_API, $feed->getSourceFormat());
         self::assertSame('Rusty', $feed->getTitle());
-        self::assertSame('https://bsky.app/profile/' . self::RUSTY, $feed->getSiteUrl());
+        self::assertSame('https://bsky.app/profile/' . BlueskyProfiles::RUSTY, $feed->getSiteUrl());
         self::assertTrue($subscription->isIncludeInAllItems());
         self::assertTrue($subscription->isIncludeInForYou());
         $tagNames = array_map(static fn (Tag $each): string => $each->getName(), $subscription->getTags()->toArray());
         self::assertSame(['People'], $tagNames);
         $socialFeed = SocialFeeds::repository($this->entityManager)
-            ->findOneFor($account, SocialFeedKind::Author, self::RUSTY);
+            ->findOneFor($account, SocialFeedKind::Author, BlueskyProfiles::RUSTY);
         self::assertSame($feed, $socialFeed?->getFeed());
     }
 
@@ -88,7 +90,7 @@ final class AuthorFeedsTest extends DbTestCase
         $subscription = $this->authorFeeds()->create($this->secondAccount(), self::rusty(), []);
         $this->account();
 
-        self::assertSame($subscription, $this->authorFeeds()->subscriptionOf($this->user, self::RUSTY));
+        self::assertSame($subscription, $this->authorFeeds()->subscriptionOf($this->user, BlueskyProfiles::RUSTY));
         self::assertNull($this->authorFeeds()->subscriptionOf($this->user, 'did:plc:someone-else'));
     }
 
@@ -151,6 +153,6 @@ final class AuthorFeedsTest extends DbTestCase
 
     private static function rusty(): HiddenProfileModel
     {
-        return new HiddenProfileModel(self::RUSTY, 'Rusty');
+        return new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty');
     }
 }

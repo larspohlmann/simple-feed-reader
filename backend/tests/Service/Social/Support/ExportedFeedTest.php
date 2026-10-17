@@ -9,17 +9,17 @@ use App\Entity\Subscription;
 use App\Enum\SourceFormat;
 use App\Service\Social\Model\ExportedSubscriptionModel;
 use App\Service\Social\Support\ExportedFeed;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\SocialAccounts;
 use PHPUnit\Framework\TestCase;
 
 final class ExportedFeedTest extends TestCase
 {
-    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
-    private const string RUSTY_RSS = 'https://bsky.app/profile/' . self::RUSTY . '/rss';
+    private const string RUSTY_RSS = 'https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss';
 
     public function testAnAuthorFeedIsExportedAsItsProfilesPublicRss(): void
     {
-        $author = self::subscription('social:bluesky:4:author:' . self::RUSTY, SourceFormat::BLUESKY_API);
+        $author = self::subscription('social:bluesky:4:author:' . BlueskyProfiles::RUSTY, SourceFormat::BLUESKY_API);
 
         self::assertEquals(
             new ExportedSubscriptionModel($author, self::RUSTY_RSS, SourceFormat::XML),
@@ -30,7 +30,10 @@ final class ExportedFeedTest extends TestCase
     public function testAnyOtherFeedIsExportedAsItIs(): void
     {
         $scraped = self::subscription('https://blog.example.com/', SourceFormat::SCRAPED);
-        $mastodonAuthor = self::subscription('social:mastodon:4:author:' . self::RUSTY, SourceFormat::MASTODON_API);
+        $mastodonAuthor = self::subscription(
+            'social:mastodon:4:author:' . BlueskyProfiles::RUSTY,
+            SourceFormat::MASTODON_API,
+        );
 
         self::assertEquals(
             new ExportedSubscriptionModel($scraped, 'https://blog.example.com/', SourceFormat::SCRAPED),
@@ -39,7 +42,7 @@ final class ExportedFeedTest extends TestCase
         self::assertEquals(
             new ExportedSubscriptionModel(
                 $mastodonAuthor,
-                'social:mastodon:4:author:' . self::RUSTY,
+                'social:mastodon:4:author:' . BlueskyProfiles::RUSTY,
                 SourceFormat::MASTODON_API,
             ),
             ExportedFeed::of($mastodonAuthor),
@@ -49,7 +52,7 @@ final class ExportedFeedTest extends TestCase
     public function testAnAuthorFeedAndTheRssFeedItReplacesExportAsTheFirstOfThem(): void
     {
         $rss = self::subscription(self::RUSTY_RSS, SourceFormat::XML);
-        $author = self::subscription('social:bluesky:4:author:' . self::RUSTY, SourceFormat::BLUESKY_API);
+        $author = self::subscription('social:bluesky:4:author:' . BlueskyProfiles::RUSTY, SourceFormat::BLUESKY_API);
         $other = self::subscription('https://blog.example.com/feed.xml', SourceFormat::XML);
 
         self::assertSame([$rss, $other], self::subscriptionsOf(ExportedFeed::withoutRepeats([$rss, $author, $other])));

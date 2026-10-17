@@ -21,9 +21,9 @@ use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\BackupReader;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Model\BackupPartModel;
-use App\Service\Social\AuthorFeeds;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\FullyPopulatedAccount;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -32,8 +32,6 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class AccountBackupExporterTest extends DbTestCase
 {
-    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
-
     private function hasher(): UserPasswordHasherInterface
     {
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
@@ -532,19 +530,19 @@ final class AccountBackupExporterTest extends DbTestCase
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
-        $authorFeeds = self::getContainer()->get(AuthorFeeds::class);
-        self::assertInstanceOf(AuthorFeeds::class, $authorFeeds);
-        $subscription = $authorFeeds->create($account, new HiddenProfileModel(self::RUSTY, 'Rusty'), [$tag]);
+        $authorFeeds = SocialFeeds::authorFeeds(self::getContainer());
+        $subscription = $authorFeeds->create($account, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), [$tag]);
         $subscription->setCustomTitle('Rusty, the person');
         $now = new \DateTimeImmutable('2026-10-12 10:00:00');
-        $entry = new Entry($subscription->getFeed(), 'at://' . self::RUSTY . '/post/1', null, 'Post', $now, $now);
+        $guid = 'at://' . BlueskyProfiles::RUSTY . '/post/1';
+        $entry = new Entry($subscription->getFeed(), $guid, null, 'Post', $now, $now);
         $entry->getImage()->storePending(null, null, null);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
 
         [$entriesPart, $foundationPart] = $this->decodedParts($user);
 
-        $rss = 'https://bsky.app/profile/' . self::RUSTY . '/rss';
+        $rss = 'https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss';
         $feedLine = $foundationPart[3];
         self::assertSame(
             ['feed', $rss, SourceFormat::XML],
@@ -562,14 +560,13 @@ final class AccountBackupExporterTest extends DbTestCase
     public function testAnAuthorFeedAndTheRefusedRssFeedItReplacesTravelAsOneFeed(): void
     {
         $user = $this->makeUser('backup-author-twice@example.test');
-        $rss = new Feed('https://bsky.app/profile/' . self::RUSTY . '/rss');
+        $rss = new Feed('https://bsky.app/profile/' . BlueskyProfiles::RUSTY . '/rss');
         $this->entityManager->persist($rss);
         $this->entityManager->persist(new Subscription($user, $rss, new \DateTimeImmutable('2026-10-12 10:00:00')));
         $this->entityManager->flush();
         $account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($user));
-        $authorFeeds = self::getContainer()->get(AuthorFeeds::class);
-        self::assertInstanceOf(AuthorFeeds::class, $authorFeeds);
-        $authorFeeds->create($account, new HiddenProfileModel(self::RUSTY, 'Rusty'), []);
+        $authorFeeds = SocialFeeds::authorFeeds(self::getContainer());
+        $authorFeeds->create($account, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), []);
 
         $foundationPart = $this->decodedParts($user)[0];
 

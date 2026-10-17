@@ -7,10 +7,12 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Social\AuthorFeeds;
+use App\Service\Social\HiddenProfileSubscribeRoute;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubHiddenProfiles;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -18,8 +20,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class SubscriptionHiddenProfileTest extends ApiTestCase
 {
-    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
-
     private KernelBrowser $client;
     private User $user;
 
@@ -28,7 +28,7 @@ final class SubscriptionHiddenProfileTest extends ApiTestCase
         $this->client = self::createClient();
         $hiddenProfiles = self::getContainer()->get(StubHiddenProfiles::class);
         self::assertInstanceOf(StubHiddenProfiles::class, $hiddenProfiles);
-        $hiddenProfiles->hide(new HiddenProfileModel(self::RUSTY, 'Rusty'), 'rusty-17.bsky.social');
+        $hiddenProfiles->hide(new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), 'rusty-17.bsky.social');
         $this->user = $this->factory()->create('hidden-profile-api@example.test');
     }
 
@@ -47,7 +47,7 @@ final class SubscriptionHiddenProfileTest extends ApiTestCase
         $subscription = $this->payload($this->client)['subscription'] ?? null;
         self::assertIsArray($subscription);
         self::assertSame(
-            sprintf('social:bluesky:%d:author:%s', $account->requireId(), self::RUSTY),
+            sprintf('social:bluesky:%d:author:%s', $account->requireId(), BlueskyProfiles::RUSTY),
             $subscription['feedUrl'],
         );
         self::assertSame('Rusty', $subscription['title']);
@@ -65,11 +65,7 @@ final class SubscriptionHiddenProfileTest extends ApiTestCase
         $this->assertRejected($this->client, Response::HTTP_UNPROCESSABLE_ENTITY);
         $problem = $this->payload($this->client);
         self::assertSame('bluesky_profile_hidden', $problem['type'] ?? null);
-        self::assertSame(
-            'This profile is only visible to logged-in Bluesky users. Connect a Bluesky account in Settings → Social'
-            . ' Media to subscribe.',
-            $problem['detail'] ?? null,
-        );
+        self::assertSame(HiddenProfileSubscribeRoute::CONNECT_AN_ACCOUNT, $problem['detail'] ?? null);
     }
 
     public function testAProfileAlreadyReadThroughAnotherAccountIsAnAlreadySubscribedAnswer(): void
@@ -80,9 +76,8 @@ final class SubscriptionHiddenProfileTest extends ApiTestCase
         $this->entityManager()->persist($default);
         $this->entityManager()->persist($other);
         $this->entityManager()->flush();
-        $authorFeeds = self::getContainer()->get(AuthorFeeds::class);
-        self::assertInstanceOf(AuthorFeeds::class, $authorFeeds);
-        $authorFeeds->create($other, new HiddenProfileModel(self::RUSTY, 'Rusty'), []);
+        $authorFeeds = SocialFeeds::authorFeeds(self::getContainer());
+        $authorFeeds->create($other, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), []);
 
         $this->post(['url' => 'https://bsky.app/profile/rusty-17.bsky.social']);
 

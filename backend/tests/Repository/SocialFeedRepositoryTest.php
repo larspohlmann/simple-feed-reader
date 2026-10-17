@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SocialAccounts;
@@ -23,7 +24,6 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class SocialFeedRepositoryTest extends DbTestCase
 {
     private const string WRITERS = 'at://did:plc:alice/app.bsky.graph.list/3l1';
-    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
 
     private User $user;
     private SocialAccount $account;
@@ -175,33 +175,34 @@ final class SocialFeedRepositoryTest extends DbTestCase
     {
         $second = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::secondBlueskyOf($this->user));
         $second->markNeedsReconnect();
-        $own = $this->subscribe($this->socialFeed($second, SocialFeedKind::Author, self::RUSTY));
+        $own = $this->subscribe($this->socialFeed($second, SocialFeedKind::Author, BlueskyProfiles::RUSTY));
 
         self::assertSame($own, SocialFeeds::repository($this->entityManager)
-            ->findAuthorSubscriptionOf($this->user, self::RUSTY));
+            ->findAuthorSubscriptionOf($this->user, BlueskyProfiles::RUSTY));
     }
 
     public function testTwoAuthorFeedsOfOneProfileFindTheEarlierSubscription(): void
     {
         $second = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::secondBlueskyOf($this->user));
-        $earlier = $this->subscribe($this->socialFeed($this->account, SocialFeedKind::Author, self::RUSTY));
-        $this->subscribe($this->socialFeed($second, SocialFeedKind::Author, self::RUSTY));
+        $earlier = $this->subscribe($this->socialFeed($this->account, SocialFeedKind::Author, BlueskyProfiles::RUSTY));
+        $this->subscribe($this->socialFeed($second, SocialFeedKind::Author, BlueskyProfiles::RUSTY));
 
         self::assertSame($earlier, SocialFeeds::repository($this->entityManager)
-            ->findAuthorSubscriptionOf($this->user, self::RUSTY));
+            ->findAuthorSubscriptionOf($this->user, BlueskyProfiles::RUSTY));
     }
 
     public function testOnlyTheUsersOwnSubscriptionToAnAuthorFeedOfTheirsCounts(): void
     {
         $stranger = $this->stranger();
         $strangerAccount = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::blueskyOf($stranger));
-        $this->subscribeAs($stranger, $this->socialFeed($this->account, SocialFeedKind::Author, self::RUSTY));
-        $this->subscribe($this->socialFeed($strangerAccount, SocialFeedKind::Author, self::RUSTY));
+        $usersAuthorFeed = $this->socialFeed($this->account, SocialFeedKind::Author, BlueskyProfiles::RUSTY);
+        $this->subscribeAs($stranger, $usersAuthorFeed);
+        $this->subscribe($this->socialFeed($strangerAccount, SocialFeedKind::Author, BlueskyProfiles::RUSTY));
         $this->subscribe($this->socialFeed($this->account, SocialFeedKind::Author, 'did:plc:someone-else'));
-        $this->subscribe($this->socialFeed($this->account, SocialFeedKind::UserList, self::RUSTY));
+        $this->subscribe($this->socialFeed($this->account, SocialFeedKind::UserList, BlueskyProfiles::RUSTY));
 
         self::assertNull(SocialFeeds::repository($this->entityManager)
-            ->findAuthorSubscriptionOf($this->user, self::RUSTY));
+            ->findAuthorSubscriptionOf($this->user, BlueskyProfiles::RUSTY));
     }
 
     public function testThePageNewestIdIsKeptAndAnEmptyPageKeepsTheLastOne(): void

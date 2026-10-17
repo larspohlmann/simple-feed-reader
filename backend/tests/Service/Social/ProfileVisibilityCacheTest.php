@@ -7,21 +7,20 @@ namespace App\Tests\Service\Social;
 use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\Model\ProfileVisibilityModel;
 use App\Service\Social\ProfileVisibilityCache;
+use App\Tests\Support\BlueskyProfiles;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 final class ProfileVisibilityCacheTest extends TestCase
 {
-    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
-
     public function testAnAskedProfileIsRememberedAsHiddenOrPublic(): void
     {
         $cache = new ProfileVisibilityCache(new ArrayAdapter());
-        $rusty = new HiddenProfileModel(self::RUSTY, 'Rusty');
+        $rusty = new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty');
 
-        $cache->remember([self::RUSTY, 'did:plc:bob'], [self::RUSTY => $rusty]);
+        $cache->remember([BlueskyProfiles::RUSTY, 'did:plc:bob'], [BlueskyProfiles::RUSTY => $rusty]);
 
-        self::assertEquals(ProfileVisibilityModel::hiddenProfile($rusty), $cache->visibilityOf(self::RUSTY));
+        self::assertEquals(ProfileVisibilityModel::hiddenProfile($rusty), $cache->visibilityOf(BlueskyProfiles::RUSTY));
         self::assertEquals(ProfileVisibilityModel::publicProfile(), $cache->visibilityOf('did:plc:bob'));
     }
 

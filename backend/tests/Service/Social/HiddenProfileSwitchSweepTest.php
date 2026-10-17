@@ -31,6 +31,7 @@ use App\Service\Social\Model\ProfileCallBudgetModel;
 use App\Service\Social\ProfileVisibilityCache;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SocialAccounts;
@@ -42,7 +43,6 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class HiddenProfileSwitchSweepTest extends DbTestCase
 {
-    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
     private const string CAROL = 'did:plc:carol';
     private const string NOW = '2026-10-17 12:00:00';
     private const string POST = 'at://did:plc:hczfd45prvqtdrw77256syag/app.bsky.feed.post/3abc';
@@ -56,7 +56,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     {
         parent::setUp();
         $this->hiddenProfiles = new StubHiddenProfiles();
-        $this->hiddenProfiles->hide(new HiddenProfileModel(self::RUSTY, 'Rusty'));
+        $this->hiddenProfiles->hide(new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'));
         $this->profileVisibility = new ProfileVisibilityCache(new ArrayAdapter());
         $this->cursor = new HiddenProfileSwitchCursor(new ArrayAdapter());
         $this->logger = new RecordingLogger();
@@ -147,7 +147,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
 
         self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(1));
         self::assertNotNull($this->entityManager->find(Subscription::class, $rss->requireId()));
-        self::assertSame([[self::RUSTY]], $this->hiddenProfiles->asked);
+        self::assertSame([[BlueskyProfiles::RUSTY]], $this->hiddenProfiles->asked);
     }
 
     public function testHiddenProfilesOnEitherSideOfAFullPageOfPublicOnesAllSwitch(): void
@@ -166,7 +166,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
 
         self::assertEquals(new HiddenProfileSwitchReportModel(2, 0), $this->sweep(1));
         self::assertNotNull($this->authorSubscriptionOf($account));
-        self::assertSame([[self::CAROL, self::RUSTY]], $this->hiddenProfiles->asked);
+        self::assertSame([[self::CAROL, BlueskyProfiles::RUSTY]], $this->hiddenProfiles->asked);
     }
 
     public function testAFeedNamingNoActorIsNeverAsked(): void
@@ -178,7 +178,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
 
         $this->sweep(1);
 
-        self::assertSame([[self::RUSTY]], $this->hiddenProfiles->asked);
+        self::assertSame([[BlueskyProfiles::RUSTY]], $this->hiddenProfiles->asked);
     }
 
     public function testAnAuthorFeedReadThroughAnotherAccountIsTheOneTheSwitchFinishesOnto(): void
@@ -188,7 +188,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $default->becomeDefault();
         $imported = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::secondBlueskyOf($user));
         $authorFeed = self::service(AuthorFeeds::class)
-            ->create($imported, new HiddenProfileModel(self::RUSTY, 'Rusty'), [])
+            ->create($imported, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty'), [])
             ->getFeed();
         $authorFeed->recordSuccessfulFetch(new \DateTimeImmutable(self::NOW), 15);
         $rssId = $this->rssSubscription($user)->requireId();
@@ -242,8 +242,8 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $user = $this->user('switch-budget@example.test');
         $this->accountOf($user);
         $this->rssSubscription($user);
-        $rusty = new HiddenProfileModel(self::RUSTY, 'Rusty');
-        $this->profileVisibility->remember([self::RUSTY], [self::RUSTY => $rusty]);
+        $rusty = new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty');
+        $this->profileVisibility->remember([BlueskyProfiles::RUSTY], [BlueskyProfiles::RUSTY => $rusty]);
 
         self::assertEquals(HiddenProfileSwitchReportModel::none(), $this->sweep(0));
         self::assertSame([], $this->hiddenProfiles->asked);
@@ -308,7 +308,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     {
         $stuck = $this->user('switch-stuck@example.test');
         $stuckAccount = $this->accountOf($stuck);
-        $orphan = new Feed(sprintf('social:bluesky:%d:author:%s', $stuckAccount->requireId(), self::RUSTY));
+        $orphan = new Feed(sprintf('social:bluesky:%d:author:%s', $stuckAccount->requireId(), BlueskyProfiles::RUSTY));
         $this->entityManager->persist($orphan);
         $this->entityManager->persist(new Subscription($stuck, $orphan, new \DateTimeImmutable(self::NOW)));
         $rss = $this->rssSubscription($stuck);
@@ -318,7 +318,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertEquals(new HiddenProfileSwitchReportModel(1, 0), $this->sweep(1));
-        self::assertSame([[self::RUSTY]], $this->hiddenProfiles->asked);
+        self::assertSame([[BlueskyProfiles::RUSTY]], $this->hiddenProfiles->asked);
         self::assertNotNull($this->authorSubscriptionOf($nextAccount));
         self::assertSame('info', $this->logger->records[0]['level'] ?? null);
         self::assertSame($rss->requireId(), $this->logger->records[0]['context']['subscriptionId'] ?? null);
@@ -405,7 +405,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
 
         self::assertSame(
             HiddenProfileMoveOutcome::Skipped,
-            $this->move()->move($rss, new HiddenProfileModel(self::RUSTY, 'Rusty')),
+            $this->move()->move($rss, new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty')),
         );
     }
 
@@ -452,7 +452,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
         return $service;
     }
 
-    private function rssSubscription(User $user, string $did = self::RUSTY): Subscription
+    private function rssSubscription(User $user, string $did = BlueskyProfiles::RUSTY): Subscription
     {
         $subscription = $this->persistRssSubscription($user, $did);
         $this->entityManager->flush();
@@ -486,7 +486,7 @@ final class HiddenProfileSwitchSweepTest extends DbTestCase
     private function authorSubscriptionOf(SocialAccount $account): ?Subscription
     {
         $feed = $this->entityManager->getRepository(Feed::class)->findOneBy([
-            'url' => sprintf('social:bluesky:%d:author:%s', $account->requireId(), self::RUSTY),
+            'url' => sprintf('social:bluesky:%d:author:%s', $account->requireId(), BlueskyProfiles::RUSTY),
         ]);
 
         return null === $feed

@@ -10,6 +10,7 @@ use App\Service\Fetch\HostThrottle;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\HiddenProfiles\AppViewHiddenProfiles;
 use App\Service\Social\Model\HiddenProfileModel;
+use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -18,7 +19,6 @@ use Symfony\Component\Clock\MockClock;
 final class AppViewHiddenProfilesTest extends TestCase
 {
     private const string GET_PROFILES = 'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfiles';
-    private const string RUSTY = 'did:plc:hczfd45prvqtdrw77256syag';
 
     private StubFeedFetcher $fetcher;
     private HostThrottle $throttle;
@@ -36,9 +36,9 @@ final class AppViewHiddenProfilesTest extends TestCase
 
         $hidden = $this->hiddenProfiles()->hiddenAmong(['rusty-17.bsky.social']);
 
-        $expected = new HiddenProfileModel(self::RUSTY, 'Rusty');
+        $expected = new HiddenProfileModel(BlueskyProfiles::RUSTY, 'Rusty');
         self::assertEquals($expected, $hidden['rusty-17.bsky.social'] ?? null);
-        self::assertEquals($expected, $hidden[self::RUSTY] ?? null);
+        self::assertEquals($expected, $hidden[BlueskyProfiles::RUSTY] ?? null);
     }
 
     public function testAPublicProfileIsNotAmongTheHidden(): void
@@ -50,11 +50,11 @@ final class AppViewHiddenProfilesTest extends TestCase
 
     public function testAHiddenProfileWithoutADisplayNameIsNamedByItsHandle(): void
     {
-        $this->answer([self::RUSTY], [self::rusty()]);
+        $this->answer([BlueskyProfiles::RUSTY], [self::rusty()]);
 
-        $hidden = $this->hiddenProfiles()->hiddenAmong([self::RUSTY]);
+        $hidden = $this->hiddenProfiles()->hiddenAmong([BlueskyProfiles::RUSTY]);
 
-        self::assertSame('Rusty-17.bsky.social', $hidden[self::RUSTY]->name);
+        self::assertSame('Rusty-17.bsky.social', $hidden[BlueskyProfiles::RUSTY]->name);
     }
 
     public function testActorsAreAskedAPageAtATime(): void
@@ -70,9 +70,12 @@ final class AppViewHiddenProfilesTest extends TestCase
 
     public function testAnActorNamedTwiceIsAskedOnce(): void
     {
-        $this->answer([self::RUSTY], [self::rusty()]);
+        $this->answer([BlueskyProfiles::RUSTY], [self::rusty()]);
 
-        self::assertArrayHasKey(self::RUSTY, $this->hiddenProfiles()->hiddenAmong([self::RUSTY, self::RUSTY]));
+        self::assertArrayHasKey(
+            BlueskyProfiles::RUSTY,
+            $this->hiddenProfiles()->hiddenAmong([BlueskyProfiles::RUSTY, BlueskyProfiles::RUSTY]),
+        );
     }
 
     public function testNoActorsAskNothing(): void
@@ -83,18 +86,18 @@ final class AppViewHiddenProfilesTest extends TestCase
 
     public function testAnUnreachableAppViewIsAnUnreachableNetwork(): void
     {
-        $this->fetcher->willThrow(self::profilesUrl([self::RUSTY]), new FeedUnreachableException('timeout'));
+        $this->fetcher->willThrow(self::profilesUrl([BlueskyProfiles::RUSTY]), new FeedUnreachableException('timeout'));
 
         $this->expectException(SocialNetworkUnreachableException::class);
-        $this->hiddenProfiles()->hiddenAmong([self::RUSTY]);
+        $this->hiddenProfiles()->hiddenAmong([BlueskyProfiles::RUSTY]);
     }
 
     public function testAMalformedAnswerIsAnUnreachableNetwork(): void
     {
-        $this->fetcher->willReturnBody(self::profilesUrl([self::RUSTY]), '{"posts":[]}');
+        $this->fetcher->willReturnBody(self::profilesUrl([BlueskyProfiles::RUSTY]), '{"posts":[]}');
 
         $this->expectException(SocialNetworkUnreachableException::class);
-        $this->hiddenProfiles()->hiddenAmong([self::RUSTY]);
+        $this->hiddenProfiles()->hiddenAmong([BlueskyProfiles::RUSTY]);
     }
 
     public function testAThrottledAppViewIsAnUnreachableNetworkAndIsNotAsked(): void
@@ -102,7 +105,7 @@ final class AppViewHiddenProfilesTest extends TestCase
         $this->throttle->record(self::GET_PROFILES, 60);
 
         try {
-            $this->hiddenProfiles()->hiddenAmong([self::RUSTY]);
+            $this->hiddenProfiles()->hiddenAmong([BlueskyProfiles::RUSTY]);
             self::fail('A throttled AppView must not be asked.');
         } catch (SocialNetworkUnreachableException) {
             self::assertSame([], $this->fetcher->fetchedUrls);
@@ -117,11 +120,11 @@ final class AppViewHiddenProfilesTest extends TestCase
     private static function rusty(array $overrides = []): array
     {
         return $overrides + [
-            'did' => self::RUSTY,
+            'did' => BlueskyProfiles::RUSTY,
             'handle' => 'Rusty-17.bsky.social',
             'labels' => [[
-                'src' => self::RUSTY,
-                'uri' => 'at://' . self::RUSTY . '/app.bsky.actor.profile/self',
+                'src' => BlueskyProfiles::RUSTY,
+                'uri' => 'at://' . BlueskyProfiles::RUSTY . '/app.bsky.actor.profile/self',
                 'val' => '!no-unauthenticated',
             ]],
         ];
