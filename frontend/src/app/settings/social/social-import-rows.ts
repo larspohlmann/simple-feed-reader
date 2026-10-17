@@ -23,6 +23,7 @@ export interface ImportRow {
   readonly stateLabel: string;
   readonly checkboxLabel: string;
   readonly removable: boolean;
+  readonly locked: boolean;
 }
 
 export type RowsByTab = Readonly<Record<ImportTab, readonly ImportRow[]>>;
@@ -75,6 +76,11 @@ export function collectionKey(collection: CollectionCandidate): string {
   return `${collection.kind}:${collection.id ?? ''}`;
 }
 
+/** A subscribed list or custom feed can be unticked to remove it; Home stays. */
+export function isRemovable(collection: CollectionCandidate): boolean {
+  return collection.state === 'subscribed' && collection.kind !== 'home';
+}
+
 export function followKey(follow: FollowCandidate): string {
   return `follow:${follow.feedUrl}`;
 }
@@ -116,13 +122,14 @@ function toFollowRow(follow: FollowCandidate, translate: Translate): ImportRow {
     stateLabel: translate(FILTER_KEYS[follow.state]),
     checkboxLabel: translate(CHECKBOX_KEYS[follow.state], { handle: follow.handle }),
     removable: false,
+    locked: follow.state === 'subscribed',
   };
 }
 
 function toCollectionRow(collection: CollectionCandidate, translate: Translate): ImportRow {
   const name =
     collection.kind === 'home' ? translate('settings.social.importHome') : collection.name;
-  const removable = collection.state === 'subscribed' && collection.kind !== 'home';
+  const removable = isRemovable(collection);
   return {
     key: collectionKey(collection),
     testId: `social-import-collection-${collectionKey(collection)}`,
@@ -135,6 +142,7 @@ function toCollectionRow(collection: CollectionCandidate, translate: Translate):
     stateLabel: translate(FILTER_KEYS[collection.state]),
     checkboxLabel: translate(collectionCheckboxKey(collection, removable), { name }),
     removable,
+    locked: collection.state === 'subscribed' && !removable,
   };
 }
 

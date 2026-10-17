@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { EntryDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
+import { isSavedFeed } from '../../state/social-sections';
 import { SubscriptionRows } from '../../state/subscription-rows';
 
 /** Where the source sits: a list row names it unlinked, a magazine kicker and the article link the feed's list. */
@@ -35,7 +36,7 @@ export class EntrySourceComponent {
   /** A saved post names the feed it now lives in after its poster or origin. */
   protected readonly savedIn = computed(() => {
     const row = this.rows.find(this.entry().subscriptionId);
-    return row?.sourceFormat === 'saved' && this.entry().poster ? row.title : null;
+    return row && isSavedFeed(row) && this.entry().poster ? row.title : null;
   });
 
   /** In a list the line sits inside a card that opens the entry; the source's own link must not open it too. */

@@ -1,6 +1,6 @@
 import { TranslocoService } from '@jsverse/transloco';
 import { SubscriptionDto } from '../../models';
-import { isSavedFeed } from '../../state/social-sections';
+import { isSavedFeed, networkOf } from '../../state/social-sections';
 import { savedFeedLabel } from '../display-title';
 
 export function unsubscribeMessage(i18n: TranslocoService, subscription: SubscriptionDto): string {
@@ -8,7 +8,7 @@ export function unsubscribeMessage(i18n: TranslocoService, subscription: Subscri
     return i18n.translate('manage.unsubscribeSavedMessage', { title: subscription.title });
   }
   const moves = i18n.translate('manage.savedPostsMove', {
-    saved: savedFeedLabel(i18n, subscription.social?.network ?? null),
+    saved: savedFeedLabel(i18n, networkOf(subscription)),
   });
   return `${i18n.translate('manage.unsubscribeMessage', { title: subscription.title })} ${moves}`;
 }
@@ -20,16 +20,12 @@ export function bulkSavedNote(
 ): string {
   const savedOnes = subscriptions.filter(isSavedFeed);
   const destinations = new Set(
-    subscriptions
-      .filter((subscription) => !isSavedFeed(subscription))
-      .map((subscription) => subscription.social?.network ?? null),
+    subscriptions.filter((subscription) => !isSavedFeed(subscription)).map(networkOf),
   );
   const parts: string[] = [];
   if (destinations.size === 1) {
     const [network] = destinations;
-    const movesToNewFeed = savedOnes.some(
-      (subscription) => (subscription.social?.network ?? null) === network,
-    );
+    const movesToNewFeed = savedOnes.some((subscription) => networkOf(subscription) === network);
     parts.push(
       i18n.translate(movesToNewFeed ? 'manage.savedPostsMoveNew' : 'manage.savedPostsMove', {
         saved: savedFeedLabel(i18n, network),

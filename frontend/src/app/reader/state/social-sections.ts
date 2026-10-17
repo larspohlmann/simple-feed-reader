@@ -49,6 +49,15 @@ export function isSavedFeed(subscription: SubscriptionDto): boolean {
   return subscription.sourceFormat === 'saved';
 }
 
+/** A saved feed shows only while it holds posts. */
+export function isEmptySavedFeed(subscription: SubscriptionDto): boolean {
+  return isSavedFeed(subscription) && subscription.entryCount === 0;
+}
+
+export function networkOf(subscription: SubscriptionDto): SocialNetworkName | null {
+  return subscription.social?.network ?? null;
+}
+
 /** A timeline, list or custom feed read through a connected account; a profile feed is ordinary RSS. */
 export function isPrivateFeed(subscription: SubscriptionDto): subscription is PrivateSubscription {
   return isSocialFeed(subscription) && !isProfileFeed(subscription) && !isSavedFeed(subscription);
@@ -73,9 +82,7 @@ export function buildSocialSections(
 ): SocialSection[] {
   const handles = new Map(accounts.map((account) => [account.id, account.handle]));
   return SOCIAL_NETWORKS.map((network) => {
-    const ofNetwork = subscriptions.filter(
-      (subscription) => subscription.social?.network === network,
-    );
+    const ofNetwork = subscriptions.filter((subscription) => networkOf(subscription) === network);
     const accounts = accountGroups(ofNetwork.filter(isPrivateFeed), handles);
     return {
       network,
@@ -87,7 +94,7 @@ export function buildSocialSections(
       ),
       saved:
         ofNetwork.find(
-          (subscription) => isSavedFeed(subscription) && subscription.entryCount > 0,
+          (subscription) => isSavedFeed(subscription) && !isEmptySavedFeed(subscription),
         ) ?? null,
       unreadCount: sum(ofNetwork, (subscription) => subscription.unreadCount),
       entryCount: sum(ofNetwork, (subscription) => subscription.entryCount),

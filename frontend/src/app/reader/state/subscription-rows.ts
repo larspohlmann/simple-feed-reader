@@ -8,6 +8,7 @@ import {
   savedFeedLabel,
 } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
+import { networkOf } from './social-sections';
 
 /**
  * The user's subscriptions, held once. SubscriptionsStore loads and patches them; a component that only reads a
@@ -41,7 +42,7 @@ export class SubscriptionRows {
   private withDisplayTitle(subscription: SubscriptionDto): SubscriptionDto {
     const social = subscription.social;
     if (isUnrenamedSavedFeed(subscription)) {
-      return { ...subscription, title: savedFeedLabel(this.i18n, social?.network ?? null) };
+      return { ...subscription, title: savedFeedLabel(this.i18n, networkOf(subscription)) };
     }
     return social && isUnrenamedHome(subscription)
       ? { ...subscription, title: homeLabel(this.i18n, social.network) }

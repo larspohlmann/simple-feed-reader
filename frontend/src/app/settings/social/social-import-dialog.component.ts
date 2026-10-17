@@ -36,6 +36,7 @@ import {
   buildRows,
   collectionKey,
   followKey,
+  isRemovable,
   tally,
 } from './social-import-rows';
 import {
@@ -149,7 +150,7 @@ export class SocialImportDialogComponent {
   }
 
   protected toggle(row: ImportRow): void {
-    if (row.state === 'subscribed' && !row.removable) return;
+    if (row.locked) return;
     this.chosen.update((current) => toggled(current, row.key));
   }
 
@@ -247,7 +248,7 @@ export class SocialImportDialogComponent {
   private untickedCollections(): CollectionCandidate[] {
     const candidates = this.importer.candidates();
     return [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
-      .filter((collection) => collection.state === 'subscribed' && collection.kind !== 'home')
+      .filter(isRemovable)
       .filter((collection) => this.chosen().has(collectionKey(collection)));
   }
 

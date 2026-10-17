@@ -88,8 +88,8 @@
           >
             <input
               type="checkbox"
-              [checked]="row.removable ? !picked : picked || row.state === 'subscribed'"
-              [disabled]="row.state === 'subscribed' && !row.removable"
+              [checked]="row.removable ? !picked : picked || row.locked"
+              [disabled]="row.locked"
               [attr.aria-label]="row.checkboxLabel"
               (change)="toggle(row)"
             />

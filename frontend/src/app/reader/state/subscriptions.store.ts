@@ -9,7 +9,12 @@ import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
 import { SocialAccountRefDto } from '../social-feed';
 import { SubscriptionRows } from './subscription-rows';
-import { buildSocialSections, isProfileFeed, isSavedFeed, isSocialFeed } from './social-sections';
+import {
+  buildSocialSections,
+  isEmptySavedFeed,
+  isProfileFeed,
+  isSocialFeed,
+} from './social-sections';
 import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
 import { SubscriptionCountsResponse, SubscriptionDto, SubscriptionsResponse } from '../models';
 import {
@@ -51,9 +56,7 @@ export class SubscriptionsStore {
   readonly untagged = computed(() =>
     untaggedSubscriptions(
       this.subscriptions().filter(
-        (subscription) =>
-          !isSocialFeed(subscription) &&
-          !(isSavedFeed(subscription) && subscription.entryCount === 0),
+        (subscription) => !isSocialFeed(subscription) && !isEmptySavedFeed(subscription),
       ),
     ),
   );

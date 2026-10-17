@@ -15,7 +15,6 @@ export interface SyncChange {
   readonly kind: 'list' | 'custom_feed';
   readonly name: string;
   readonly reason: SyncReason;
-  readonly added: boolean;
   readonly at: string;
 }
 

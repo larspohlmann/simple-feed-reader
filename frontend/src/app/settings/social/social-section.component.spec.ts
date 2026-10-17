@@ -142,7 +142,7 @@ describe('SocialSectionComponent', () => {
           sync: {
             checkedAt: at,
             skipped: null,
-            changes: [{ kind: 'list', name: 'News', reason: 'saved', added: true, at }],
+            changes: [{ kind: 'list', name: 'News', reason: 'saved', at }],
           },
         }),
       ]);
@@ -190,7 +190,7 @@ describe('SocialSectionComponent', () => {
           sync: {
             checkedAt: at,
             skipped: null,
-            changes: [{ kind: 'list', name: 'News', reason, added: reason === 'saved', at }],
+            changes: [{ kind: 'list', name: 'News', reason, at }],
           },
         }),
       ]);
@@ -206,8 +206,8 @@ describe('SocialSectionComponent', () => {
             checkedAt: at,
             skipped: null,
             changes: [
-              { kind: 'list', name: 'Tech', reason: 'deleted', added: false, at },
-              { kind: 'list', name: 'Tech', reason: 'created', added: true, at },
+              { kind: 'list', name: 'Tech', reason: 'deleted', at },
+              { kind: 'list', name: 'Tech', reason: 'created', at },
             ],
           },
         }),

@@ -13,6 +13,7 @@ describe('tally', () => {
     stateLabel: state,
     checkboxLabel: key,
     removable: false,
+    locked: state === 'subscribed',
   });
   const rows: RowsByTab = {
     accounts: [row('a', 'new', 'ada'), row('b', 'subscribed', 'bea'), row('c', 'new', 'cara')],

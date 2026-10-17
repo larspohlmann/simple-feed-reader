@@ -1,6 +1,7 @@
 import { TranslocoService } from '@jsverse/transloco';
 import { SubscriptionDto } from '../models';
 import { SocialNetworkName } from '../../core/social-network';
+import { isSavedFeed } from '../state/social-sections';
 
 export function isUnrenamedHome(subscription: SubscriptionDto): boolean {
   return subscription.social?.kind === 'home' && subscription.customTitle === null;
@@ -13,7 +14,7 @@ export function homeLabel(i18n: TranslocoService, network: SocialNetworkName): s
 }
 
 export function isUnrenamedSavedFeed(subscription: SubscriptionDto): boolean {
-  return subscription.sourceFormat === 'saved' && subscription.customTitle === null;
+  return isSavedFeed(subscription) && subscription.customTitle === null;
 }
 
 export function savedFeedLabel(i18n: TranslocoService, network: SocialNetworkName | null): string {
