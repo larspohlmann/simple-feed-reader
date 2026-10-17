@@ -194,6 +194,14 @@ describe('ReaderViewComponent', () => {
         { provide: ImageProxyService, useValue: imageProxy },
         { provide: PreviewProgress, useValue: { isLoading: () => true } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
+        {
+          provide: CommentsService,
+          useValue: { state: () => signal<CommentsState>({ status: 'idle' }), load: jest.fn() },
+        },
+        {
+          provide: SocialCountsService,
+          useValue: { state: () => signal<SocialCountsState>({ status: 'idle' }), load: jest.fn() },
+        },
       ],
     });
   });
@@ -748,9 +756,65 @@ describe('ReaderViewComponent', () => {
       comments.getBoundingClientRect = () => ({ top: 400, bottom: 2400 }) as DOMRect;
 
       const host = stubGeometry(fixture, 400, 800);
+      TestBed.tick();
+      fixture.detectChanges();
 
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
-      expect(host.querySelector('app-progress-rail:not(.idle)')).toBeNull();
+      expect(host.querySelector('app-progress-rail:not(.idle)')).not.toBeNull();
+    });
+
+    it('runs the rail on through the comments below the body (#1662)', () => {
+      stubComments(signal<CommentsState>({ status: 'idle' }));
+      const fixture = mount(entry({ comments: 'manual' }));
+      const comments = (fixture.nativeElement as HTMLElement).querySelector(
+        'app-entry-comments',
+      ) as HTMLElement;
+      const { scroller, scrollTo, fill } = scrollingArticle(fixture);
+      comments.getBoundingClientRect = () =>
+        ({
+          top: 2400 - scroller.scrollTop,
+          bottom: 4000 - scroller.scrollTop,
+          height: 1600,
+        }) as DOMRect;
+
+      scrollTo(1600);
+
+      expect(fill()).toBe('50');
+    });
+
+    it('runs the rail on by the thread a social post counts before it loads (#1662)', () => {
+      stubComments(signal<CommentsState>({ status: 'idle' }));
+      TestBed.overrideProvider(SocialCountsService, {
+        useValue: {
+          state: () =>
+            signal<SocialCountsState>({
+              status: 'ok',
+              counts: { likes: 0, reposts: 0, replies: 10, quotes: 0 },
+              likedAtLoad: false,
+              loadedAt: 0,
+            }),
+          load: jest.fn(),
+          reload: jest.fn(),
+        },
+      });
+      const fixture = mount(
+        entry({ comments: 'auto', social: { network: 'bluesky', isLiked: false, canLike: true } }),
+      );
+      const host = fixture.nativeElement as HTMLElement;
+      const comments = host.querySelector('app-entry-comments') as HTMLElement;
+      const { scroller, scrollTo, fill } = scrollingArticle(fixture);
+      comments.getBoundingClientRect = () =>
+        ({
+          top: 2400 - scroller.scrollTop,
+          bottom: 2448 - scroller.scrollTop,
+          height: 48,
+        }) as DOMRect;
+      Object.defineProperty(comments, 'clientWidth', { value: 343 });
+      (host.querySelector('.content') as HTMLElement).style.fontSize = '16px';
+
+      scrollTo(1600);
+
+      expect(Number(fill())).toBeLessThan(40);
     });
 
     /** A short post whose one link card reaches `cardsBottom`. */

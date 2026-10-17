@@ -48,6 +48,9 @@ import { ListenRowComponent } from '../listen-row/listen-row.component';
 import { LinkCardsComponent } from '../link-cards/link-cards.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { SocialCountsComponent } from '../social-counts/social-counts.component';
+import { SocialCountsService } from '../social-counts/social-counts.service';
+import { CommentsService } from '../entry-comments/comments.service';
+import { CommentsForecast } from '../entry-comments/comments-forecast';
 import { ArticleBody } from './article-body.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
@@ -126,11 +129,20 @@ export class ReaderViewComponent {
   private readonly linkCards = viewChild(LinkCardsComponent, { read: ElementRef<HTMLElement> });
   private readonly socialCountsRow = viewChild(SocialCountsComponent);
   private readonly socialCounts = computed(() => this.socialCountsRow()?.host);
+  private readonly commentsForecast = new CommentsForecast(
+    this.entry,
+    inject(CommentsService),
+    inject(SocialCountsService),
+  );
   private readonly trailingParts: readonly TrailingPart[] = [
     { query: this.quotedPost, joinsFocus: false },
     { query: this.linkCards, joinsFocus: false },
     { query: this.socialCounts, joinsFocus: false },
-    { query: this.commentsSection, joinsFocus: true },
+    {
+      query: this.commentsSection,
+      joinsFocus: true,
+      expectedHeight: this.commentsForecast.expectedHeight,
+    },
   ];
   /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
@@ -150,8 +162,8 @@ export class ReaderViewComponent {
   private readonly autoplay = inject(ListAutoplayCoordinator);
   protected readonly progressRail = new ScrollProgressRail({
     isWide: this.screen.isWide,
-    contentBottom: () => this.scope.contentBottom(),
-    layout: this.scope.contentBottom,
+    contentBottom: this.scope.readingEnd,
+    layout: this.scope.readingEnd,
   });
 
   /** The entry's first playable audio enclosure, surfaced as a listen control

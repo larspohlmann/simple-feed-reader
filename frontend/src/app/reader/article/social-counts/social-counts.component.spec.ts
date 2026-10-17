@@ -6,7 +6,6 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { Lang } from '../../../core/i18n/language';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { EntrySocialDto, SocialCountsDto } from '../../entry-social';
-import { prefetchMargin } from '../../list/paging';
 import { EntryDto } from '../../models';
 import { SocialCountsComponent } from './social-counts.component';
 import { SocialCountsService, SocialCountsState } from './social-counts.service';
@@ -19,32 +18,12 @@ describe('SocialCountsComponent', () => {
   let service: { state: jest.Mock; load: jest.Mock };
   let actions: { like: jest.Mock };
   let language: { lang: WritableSignal<Lang> };
-  let observers: { init: IntersectionObserverInit | undefined }[];
-  let trigger: ((visible: boolean) => void) | undefined;
-  let scroller: HTMLElement;
-  const realIntersectionObserver = globalThis.IntersectionObserver;
 
   beforeEach(() => {
     states = new Map();
     service = { state: jest.fn((id: number) => stateOf(id)), load: jest.fn() };
     actions = { like: jest.fn() };
     language = { lang: signal<Lang>('en') };
-    observers = [];
-    trigger = undefined;
-    scroller = document.createElement('div');
-    Object.defineProperty(scroller, 'clientHeight', { value: 900 });
-    globalThis.IntersectionObserver = jest.fn(
-      (callback: IntersectionObserverCallback, init?: IntersectionObserverInit) => {
-        const observer = { observe: jest.fn(), disconnect: jest.fn() };
-        observers.push({ init });
-        trigger = (visible) =>
-          callback(
-            [{ isIntersecting: visible } as IntersectionObserverEntry],
-            observer as unknown as IntersectionObserver,
-          );
-        return observer;
-      },
-    ) as unknown as typeof IntersectionObserver;
     TestBed.configureTestingModule({
       imports: [SocialCountsComponent, provideTranslocoTesting()],
       providers: [
@@ -54,10 +33,6 @@ describe('SocialCountsComponent', () => {
       ],
     });
     fixture = TestBed.createComponent(SocialCountsComponent);
-  });
-
-  afterEach(() => {
-    globalThis.IntersectionObserver = realIntersectionObserver;
   });
 
   function stateOf(id: number): WritableSignal<SocialCountsState> {
@@ -82,7 +57,6 @@ describe('SocialCountsComponent', () => {
   });
 
   function show(entry: EntryDto): HTMLElement {
-    fixture.componentRef.setInput('scroller', scroller);
     fixture.componentRef.setInput('entry', entry);
     fixture.detectChanges();
     return fixture.nativeElement;
@@ -101,22 +75,18 @@ describe('SocialCountsComponent', () => {
   const likeNumber = (element: HTMLElement) =>
     likeButton(element)?.querySelector('.number')?.textContent?.trim() ?? null;
 
-  it('loads only once the row nears the viewport', () => {
+  it('loads as soon as the post opens', () => {
     const entry = post();
     show(entry);
-    expect(service.load).not.toHaveBeenCalled();
-
-    trigger!(false);
-    expect(service.load).not.toHaveBeenCalled();
-    trigger!(true);
 
     expect(service.load).toHaveBeenCalledWith({ id: 1, social: entry.social });
   });
 
-  it('looks ahead within the reader scroller', () => {
+  it('loads a post once, however often its like changes', () => {
     show(post());
+    show(post({ isLiked: true }));
 
-    expect(observers[0].init).toEqual({ root: scroller, rootMargin: prefetchMargin(900) });
+    expect(service.load).toHaveBeenCalledTimes(1);
   });
 
   it('offers the like alone until the counts arrive', () => {

@@ -5,7 +5,7 @@ import { ReadingFocusService } from '../../../core/preferences/reading-focus.ser
 import { articleHost } from '../../../../testing/article-host-testing';
 import { LayoutService } from '../../layout.service';
 import { ReadingFocusApplier, type ReadingFocusConfig } from './reading-focus-applier';
-import { ReadingScope } from './reading-scope.service';
+import { ReadingScope, type TrailingPart } from './reading-scope.service';
 import {
   MockResizeObserver,
   installMockResizeObserver,
@@ -27,6 +27,12 @@ function partEndingAt(bottom: number, html = '<p>Text</p>'): HTMLElement {
   return part;
 }
 
+function partSpanning(top: number, bottom: number): HTMLElement {
+  const part = articleHost('<p>Comment</p>');
+  part.getBoundingClientRect = () => ({ top, bottom, height: bottom - top }) as DOMRect;
+  return part;
+}
+
 function scrollerOfViewport(): HTMLElement {
   const scroller = document.createElement('div');
   Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: VIEWPORT });
@@ -41,6 +47,7 @@ function connectScope(parts: {
   content: HTMLElement;
   linkCards?: HTMLElement;
   comments?: HTMLElement;
+  commentsExpected?: TrailingPart['expectedHeight'];
 }): ReadingScope {
   const scope = TestBed.inject(ReadingScope);
   scope.connect({
@@ -48,7 +55,7 @@ function connectScope(parts: {
     content: query(parts.content),
     trailing: [
       { query: query(parts.linkCards), joinsFocus: false },
-      { query: query(parts.comments), joinsFocus: true },
+      { query: query(parts.comments), joinsFocus: true, expectedHeight: parts.commentsExpected },
     ],
   });
   scope.observeResizes();
@@ -123,13 +130,38 @@ describe('ReadingScope', () => {
     const scope = connectScope({ content: partEndingAt(2400) });
 
     expect(scope.hasTail()).toBe(true);
-    expect(scope.contentBottom()).toBe(2400);
+    expect(scope.readingEnd()).toBe(2400);
   });
 
-  it('measures the progress rail to the body alone', () => {
+  it('ends the progress rail at the end of the scope, past the body', () => {
     const scope = connectScope({ content: partEndingAt(400), comments: partEndingAt(2400) });
 
     expect(scope.hasTail()).toBe(true);
-    expect(scope.contentBottom()).toBe(400);
+    expect(scope.readingEnd()).toBe(2400);
+  });
+
+  it('runs the progress rail on by what a part still expects to grow', () => {
+    const content = partEndingAt(400);
+    const expected = signal<number | null>(3000);
+    const expectedHeight = jest.fn(() => expected());
+    const comments = partSpanning(2000, 2400);
+    const scope = connectScope({ content, comments, commentsExpected: expectedHeight });
+
+    expect(scope.readingEnd()).toBe(5000);
+    expect(expectedHeight).toHaveBeenCalledWith(comments, content);
+
+    expected.set(null);
+
+    expect(scope.readingEnd()).toBe(2400);
+  });
+
+  it('adds nothing for a part already as tall as it expects to be', () => {
+    const scope = connectScope({
+      content: partEndingAt(400),
+      comments: partSpanning(400, 2400),
+      commentsExpected: () => 1500,
+    });
+
+    expect(scope.readingEnd()).toBe(2400);
   });
 });
