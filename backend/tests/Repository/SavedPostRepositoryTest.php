@@ -26,6 +26,7 @@ use App\Repository\SavedPostRepository;
 use App\Repository\SocialLikeRepository;
 use App\Service\SavedPosts\Model\SavedCopyModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\UserFactory;
@@ -372,20 +373,12 @@ final class SavedPostRepositoryTest extends DbTestCase
 
     private function entry(Feed $feed, string $guid, ?string $url): Entry
     {
-        $at = new \DateTimeImmutable(self::AT);
-        $entry = new Entry($feed, $guid, $url, 'Title ' . $guid, $at, $at, null === $url ? null : hash('sha256', $url));
-        $this->entityManager->persist($entry);
-        $this->entityManager->flush();
-
-        return $entry;
+        return SavedPostFixtures::entry($this->entityManager, $feed, $guid, $url);
     }
 
     private function state(Entry $entry): EntryState
     {
-        $state = new EntryState($this->user, $entry);
-        $this->entityManager->persist($state);
-
-        return $state;
+        return SavedPostFixtures::state($this->entityManager, $this->user, $entry);
     }
 
     /** Nothing injects it yet, so the test container has removed it. */
