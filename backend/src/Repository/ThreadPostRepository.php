@@ -125,6 +125,7 @@ final class ThreadPostRepository extends ServiceEntityRepository
             ->from(LinkCard::class, 'card')
             ->andWhere('card.threadPost IN (:postIds)')
             ->setParameter('postIds', $postIds)
+            ->orderBy('card.position', 'ASC')
             ->getQuery()
             ->getArrayResult();
 

@@ -46,6 +46,38 @@ final class ThreadPostRepositoryTest extends DbTestCase
         self::assertSame(['https://x/1', 'https://x/2'], $this->threadPosts()->urlsOf($entry));
     }
 
+    public function testTheThreadsOfSeveralEntriesComeBackByEntry(): void
+    {
+        $first = $this->entry();
+        $second = $this->entry('other-guid', $first->getFeed());
+        $this->entityManager->persist(new ThreadPost($first, 1, new ThreadPostContent('https://x/1', null, '', [])));
+        $this->entityManager->persist(new ThreadPost($second, 1, new ThreadPostContent('https://y/1', null, '', [])));
+        $this->entityManager->flush();
+
+        $posts = $this->threadPosts()->byEntryIds([$first->requireId(), $second->requireId()]);
+
+        self::assertSame([$first->requireId(), $second->requireId()], array_keys($posts));
+        self::assertSame('https://y/1', $posts[$second->requireId()][0]->url);
+    }
+
+    public function testEachReplyComesBackWithItsOwnCardAndPosition(): void
+    {
+        $entry = $this->entry();
+        $first = new ThreadPost($entry, 1, new ThreadPostContent('https://x/1', null, '', []));
+        $second = new ThreadPost($entry, 2, new ThreadPostContent('https://x/2', null, '', []));
+        $this->entityManager->persist($first);
+        $this->entityManager->persist($second);
+        $this->linkCards()->appendToThreadPost($first, new LinkCardContent('https://a.example/', 'A', null, null, 'a'));
+        $this->entityManager->flush();
+        $this->linkCards()->appendToThreadPost($second, new LinkCardContent('https://b.ex/', 'B', null, null, 'b'));
+        $this->entityManager->flush();
+
+        $posts = $this->threadPosts()->byEntryIds([$entry->requireId()])[$entry->requireId()];
+
+        self::assertSame([0, 1], [$posts[0]->linkCard?->position, $posts[1]->linkCard?->position]);
+        self::assertSame('https://b.ex/', $posts[1]->linkCard?->content->url);
+    }
+
     public function testAnEntryWithoutThreadIsAbsent(): void
     {
         $entry = $this->entry();
@@ -55,12 +87,12 @@ final class ThreadPostRepositoryTest extends DbTestCase
         self::assertSame([], $this->threadPosts()->byEntryIds([]));
     }
 
-    private function entry(): Entry
+    private function entry(string $guid = 'thread-guid', ?Feed $feed = null): Entry
     {
-        $feed = new Feed('https://example.com/thread/rss');
+        $feed ??= new Feed('https://example.com/thread/rss');
         $entry = new Entry(
             $feed,
-            'thread-guid',
+            $guid,
             null,
             'Post',
             new \DateTimeImmutable('2026-10-10 08:00:00'),

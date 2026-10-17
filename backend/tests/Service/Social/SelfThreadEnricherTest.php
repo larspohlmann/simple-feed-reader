@@ -11,16 +11,19 @@ use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
 use App\Enum\SocialNetwork;
+use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentEmbedsModel;
 use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\SelfThreadEnricher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeReplyThreadSource;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SelfThreadEnrichers;
@@ -179,6 +182,26 @@ final class SelfThreadEnricherTest extends DbTestCase
         self::assertSame(['warning'], array_column($this->logger->records, 'level'));
     }
 
+    public function testAThreadGoneFromTheNetworkFoldsNothingAndDequeues(): void
+    {
+        $entry = $this->queuedEntry();
+        $this->thread->failInPublicWith(new SocialPostNotFoundException('gone'));
+
+        $this->enricher()->enrich($this->feed);
+
+        $this->assertDequeuedUnfoldedWithAWarning($entry);
+    }
+
+    public function testAnUnreadableThreadFoldsNothingAndDequeues(): void
+    {
+        $entry = $this->queuedEntry();
+        $this->thread->failRepliesWith(new CommentsUnavailableException('no descendants'));
+
+        $this->enricher()->enrich($this->feed);
+
+        $this->assertDequeuedUnfoldedWithAWarning($entry);
+    }
+
     public function testAThrottleDuringTheCallLeavesTheRowQueued(): void
     {
         $entry = $this->queuedEntry();
@@ -191,6 +214,29 @@ final class SelfThreadEnricherTest extends DbTestCase
         self::assertNull($this->claimedAtOf($row));
         $posts = SelfThreadEnrichers::threadPosts($this->entityManager)->byEntryIds([$entry->requireId()]);
         self::assertSame([], $posts);
+        self::assertSame([], $this->logger->records);
+    }
+
+    public function testARowQueuedExactlyAtTheGiveUpCutoffIsStillAsked(): void
+    {
+        $entry = $this->queuedEntry('-3 days');
+        $this->thread->readsReplies([self::ownReply('<p>one</p>', '2026-10-17 10:00:00')]);
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([$entry->requireId()], $this->foldedEntryIds());
+    }
+
+    public function testAFeedWithNothingQueuedCostsOneQuery(): void
+    {
+        $this->entityManager->flush();
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->enricher()->enrich($this->feed);
+
+        self::assertCount(1, $recorder->queries());
         self::assertSame([], $this->logger->records);
     }
 
@@ -302,6 +348,17 @@ final class SelfThreadEnricherTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function assertDequeuedUnfoldedWithAWarning(Entry $entry): void
+    {
+        $posts = SelfThreadEnrichers::threadPosts($this->entityManager)->byEntryIds([$entry->requireId()]);
+        self::assertSame([], $posts);
+        self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count([]));
+        self::assertSame(['warning'], array_column($this->logger->records, 'level'));
+        $context = $this->logger->records[0]['context'];
+        self::assertSame(self::POST, $context['address'] ?? null);
+        self::assertInstanceOf(\RuntimeException::class, $context['exception'] ?? null);
     }
 
     /** @return list<string> */

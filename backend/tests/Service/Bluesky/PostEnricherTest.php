@@ -116,6 +116,22 @@ final class PostEnricherTest extends DbTestCase
         self::assertNull($this->reload($post)->getShareKind());
     }
 
+    public function testAPostAfterOneWithRepliesInTheSameAnswerIsStillSettled(): void
+    {
+        $this->appView->knowsPost(self::postView('self-thread', 1));
+        $this->appView->knowsFixture('external');
+        $threaded = $this->queuedEntry(self::TECHPRESSO, '<p>Apple has updated.</p>');
+        $plain = $this->queuedEntry(self::TISCH, '<p>Read this.<br />' . Bluesky::CARD . '</p>');
+        $this->entityManager->flush();
+
+        $this->enricher()->complete([...$this->rowsOf([$threaded]), ...$this->rowsOf([$plain])]);
+
+        self::assertCount(1, $this->appView->requests);
+        self::assertSame([], $this->rowsOf([$plain]));
+        self::assertCount(1, $this->cardsOf($this->reload($plain)));
+        self::assertSame(ShareEnrichmentKind::SelfThread, $this->rowsOf([$threaded])[0]->getKind());
+    }
+
     public function testAPostWithoutRepliesIsDequeuedAsBefore(): void
     {
         $post = self::postView('self-thread', 0);
