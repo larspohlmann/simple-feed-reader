@@ -18,7 +18,6 @@ use PHPUnit\Framework\TestCase;
 
 final class PostEmbedRendererTest extends TestCase
 {
-    private const string MOTHER_JONES = 'https://bsky.app/profile/did:plc:qobvnkudcv3zlaklxxjduqoi/post/';
     private const string THUMBNAILS = 'https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:qobvnkudcv3zlaklxxjduqoi/';
     private const string CARD_THUMB = self::THUMBNAILS
         . 'bafkreie2nvxxbwowodsbtm3rksbshxxyrzr7jp6qkebllexxwjkmjs3a4y';
@@ -51,16 +50,11 @@ final class PostEmbedRendererTest extends TestCase
         self::assertSame([], $embed->media);
     }
 
-    public function testAVideoPlaysThePlaylistUnderItsPosterAndLinksThePost(): void
+    public function testAVideoKeepsItsPlaylistAndPosterInMediaAndLeavesTheBodyEmpty(): void
     {
         $embed = $this->rendered('video');
 
-        self::assertSame(
-            '<figure class="post-video"><video controls preload="none" poster="' . self::VIDEO
-                . 'thumbnail.jpg" src="' . self::VIDEO . 'playlist.m3u8"></video></figure>'
-                . '<p><a href="' . self::MOTHER_JONES . '3mxhlfehxzi27">Watch on Bluesky</a></p>',
-            $embed->html,
-        );
+        self::assertSame('', $embed->html);
         self::assertSame(
             [self::VIDEO . 'thumbnail.jpg', 1080, 1920],
             [$embed->leadImage?->url, $embed->leadImage?->width, $embed->leadImage?->height],
@@ -78,17 +72,11 @@ final class PostEmbedRendererTest extends TestCase
         self::assertSame([], $embed->linkCards);
     }
 
-    public function testImagesShowFullSizeWithAltTextAndDimensions(): void
+    public function testImagesLeaveTheBodyEmptyAndKeepTheirFullSizeInMedia(): void
     {
         $embed = $this->rendered('images');
 
-        self::assertSame(
-            '<figure class="post-images"><img src="' . self::FULLSIZE . '" alt="An enormous pile of red apples and'
-                . ' green apples—sweet, tart, delicious, and coming soon to an Apple Store near you! Keep your eye on'
-                . ' this thread (and maybe put on a sturdy hat) to learn more about today&apos;s big drops."'
-                . ' width="4000" height="3000"></figure>',
-            $embed->html,
-        );
+        self::assertSame('', $embed->html);
         self::assertSame(
             [self::FULLSIZE, 4000, 3000],
             [$embed->leadImage?->url, $embed->leadImage?->width, $embed->leadImage?->height],
@@ -329,26 +317,23 @@ final class PostEmbedRendererTest extends TestCase
             ],
         ]));
 
-        self::assertSame(
-            '<figure class="post-images"><img src="https://example.com/b.jpg" alt="&lt;b&gt;">'
-                . '<img src="https://example.com/c.jpg" alt=""></figure>',
-            $rendered?->html,
-        );
+        self::assertSame('', $rendered?->html);
         self::assertSame('https://example.com/b.jpg', $rendered->leadImage?->url);
-        self::assertCount(2, $rendered->media);
+        self::assertSame(
+            ['https://example.com/b.jpg', 'https://example.com/c.jpg'],
+            array_map(static fn (ParsedMediumModel $medium): string => $medium->url, $rendered->media),
+        );
     }
 
-    public function testAnImageWithHalfAnAspectRatioHasNoDimensions(): void
+    public function testAnImageWithHalfAnAspectRatioKeepsOnlyTheDimensionItHas(): void
     {
         $rendered = $this->renderer()->render(self::post([
             '$type' => 'app.bsky.embed.images#view',
             'images' => [['fullsize' => 'https://example.com/a.jpg', 'aspectRatio' => ['width' => 800]]],
         ]));
 
-        self::assertSame(
-            '<figure class="post-images"><img src="https://example.com/a.jpg" alt=""></figure>',
-            $rendered?->html,
-        );
+        self::assertSame('', $rendered?->html);
+        self::assertSame([800, null], [$rendered->media[0]->width, $rendered->media[0]->height]);
     }
 
     public function testAGifPickerEmbedIsAnAnimatedImage(): void
@@ -371,11 +356,7 @@ final class PostEmbedRendererTest extends TestCase
             [self::CARD_THUMB, 498, 280],
             [$rendered->leadImage?->url, $rendered->leadImage?->width, $rendered->leadImage?->height],
         );
-        self::assertSame(
-            '<figure class="post-images"><img src="' . htmlspecialchars(self::KLIPY_GIF, \ENT_QUOTES | \ENT_HTML5)
-                . '" alt="Audience Clapping and Applauding" width="498" height="280"></figure>',
-            $rendered->html,
-        );
+        self::assertSame('', $rendered->html);
         self::assertSame([], $rendered->linkCards);
         self::assertNull($rendered->uncardedLink);
     }
@@ -402,7 +383,7 @@ final class PostEmbedRendererTest extends TestCase
 
         self::assertCount(1, $rendered->media);
         self::assertSame($alt, $rendered->media[0]->alt);
-        self::assertStringContainsString('alt="' . ($alt ?? '') . '"', $rendered->html);
+        self::assertSame('', $rendered->html);
     }
 
     public function testAGifWithoutAThumbHasNoStillAndNoLeadImage(): void
@@ -493,32 +474,21 @@ final class PostEmbedRendererTest extends TestCase
         self::assertSame('', $rendered->html);
     }
 
-    public function testAVideoWithoutAThumbnailHasNoPosterAndNoLeadImage(): void
+    public function testAVideoWithoutAThumbnailHasNoPreviewAndNoLeadImage(): void
     {
         $rendered = $this->renderer()->render(self::post([
             '$type' => 'app.bsky.embed.video#view',
             'playlist' => 'https://video.example/p.m3u8',
         ]));
 
-        self::assertStringStartsWith(
-            '<figure class="post-video"><video controls preload="none" src="https://video.example/p.m3u8">',
-            (string) $rendered?->html,
-        );
-        self::assertNull($rendered?->leadImage);
-        self::assertNull($rendered?->media[0]->previewImageUrl);
+        self::assertSame('', $rendered?->html);
+        self::assertNull($rendered->leadImage);
+        self::assertNull($rendered->media[0]->previewImageUrl);
     }
 
     /** @return iterable<string, array{string, list<string>}> */
     public static function sanitizedParts(): iterable
     {
-        yield 'images' => ['images', [
-            '<figure class="post-images"><img src="' . self::FULLSIZE . '" alt="An enormous pile',
-            ' width="4000" height="3000" /></figure>',
-        ]];
-        yield 'video' => ['video', [
-            '<figure class="post-video"><video controls preload="none" poster="' . self::VIDEO
-                . 'thumbnail.jpg" src="' . self::VIDEO . 'playlist.m3u8"></video></figure>',
-        ]];
         yield 'fallback' => ['starter-pack', [
             '<p><a href="https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3mwolmfws5k2r"'
                 . ' rel="noopener noreferrer" target="_blank">View embedded content on Bluesky</a></p>',

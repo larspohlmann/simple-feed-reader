@@ -457,10 +457,8 @@ final class PostEnricherTest extends DbTestCase
 
         self::assertSame([$apples->requireId()], $this->indexedIds());
         self::assertSame(0, $this->pendingCount());
-        self::assertStringStartsWith(
-            '<p>Apples.</p><figure class="post-images">',
-            (string) $this->reload($apples)->getContentHtml(),
-        );
+        self::assertSame('<p>Apples.</p>', $this->reload($apples)->getContentHtml());
+        self::assertStringContainsString('feed_fullsize', $this->reload($apples)->getMedia()[0]->url ?? '');
         self::assertSame(['warning'], array_column($this->logger->records, 'level'));
         self::assertSame('Bluesky post {entry} could not be filled', $this->logger->records[0]['message']);
         self::assertSame($broken->requireId(), $this->logger->records[0]['context']['entry']);

@@ -268,10 +268,7 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         $this->writer()->fill($entry, Bluesky::post('video'));
 
-        self::assertStringStartsWith(
-            '<p>Watch.</p><figure class="post-video"><video controls',
-            (string) $entry->getContentHtml(),
-        );
+        self::assertSame('<p>Watch.</p>', $entry->getContentHtml());
         self::assertSame(self::VIDEO . 'thumbnail.jpg', $entry->getImageUrl());
         self::assertSame([1080, 1920], [$entry->getImageWidth(), $entry->getImageHeight()]);
         self::assertEquals(
@@ -306,10 +303,8 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         $this->writer()->fill($entry, Bluesky::post('images'));
 
-        self::assertStringStartsWith(
-            '<figure class="post-images"><img src="' . self::FULLSIZE . '"',
-            (string) $entry->getContentHtml(),
-        );
+        self::assertSame('', (string) $entry->getContentHtml());
+        self::assertSame(self::FULLSIZE, $entry->getMedia()[0]->url ?? null);
         self::assertNull($entry->getSummary());
         self::assertSame(self::FULLSIZE, $entry->getImageUrl());
     }
@@ -321,7 +316,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         $this->writer()->fill($entry, Bluesky::post('images'));
 
         $stored = (string) $entry->getContentHtml();
-        self::assertStringStartsWith('<p>Hi.</p><figure class="post-images">', $stored);
+        self::assertSame('<p>Hi.</p>', $stored);
         self::assertStringNotContainsString('script', $stored);
         self::assertStringNotContainsString('onclick', $stored);
     }
