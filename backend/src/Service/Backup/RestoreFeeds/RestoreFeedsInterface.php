@@ -16,6 +16,4 @@ interface RestoreFeedsInterface
     public function findByUrlsIndexedByUrl(array $urls): array;
 
     public function isReadByAnotherUser(int $feedId, int $excludedUserId): bool;
-
-    public function sourceFormatOf(int $feedId): string;
 }

@@ -38,7 +38,6 @@ final class RestoreFeedTargets
         return new RestoreFeedTarget(
             $feedId,
             !$this->feeds->isReadByAnotherUser($feedId, $this->userId),
-            $this->feeds->sourceFormatOf($feedId),
             $this->entries->guidHashToIdMapForFeed($feedId),
         );
     }

@@ -13,7 +13,6 @@ use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Entity\SavedEntryOrigin;
 use App\Enum\ShareKind;
-use App\Enum\SourceFormat;
 use App\Repository\EntryBatchInserter;
 use App\Repository\LinkCardRepository;
 use App\Repository\PendingImageVerificationRepository;
@@ -277,7 +276,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $line = $this->entryLine('saved-copy', origin: new EntryOrigin('Source', 'https://source.example/favicon.ico'));
         $this->inserter()->insert($feedId, [$line]);
 
-        $this->inserter()->insertOrigins($this->entryIdsByGuidHash($feedId), [$line], SourceFormat::SAVED);
+        $this->inserter()->insertOrigins($this->entryIdsByGuidHash($feedId), [$line], 'saved:1');
 
         self::assertSame(1, $this->entityManager->getRepository(SavedEntryOrigin::class)->count([]));
     }
@@ -288,7 +287,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $line = $this->entryLine('crafted', origin: new EntryOrigin('Source', 'https://evil.example/favicon.ico'));
         $this->inserter()->insert($feedId, [$line]);
 
-        $this->inserter()->insertOrigins($this->entryIdsByGuidHash($feedId), [$line], SourceFormat::XML);
+        $this->inserter()->insertOrigins($this->entryIdsByGuidHash($feedId), [$line], 'https://batch.example/feed.xml');
 
         self::assertSame(0, $this->entityManager->getRepository(SavedEntryOrigin::class)->count([]));
     }

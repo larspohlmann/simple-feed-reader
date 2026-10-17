@@ -27,16 +27,6 @@ final class FeedRepositoryTest extends DbTestCase
         $this->now = new \DateTimeImmutable('2026-07-21 12:00:00');
     }
 
-    public function testTheSourceFormatOfAFeedIsReadByItsId(): void
-    {
-        $feed = new Feed('https://saved.example/feed');
-        $feed->setSourceFormat('saved');
-        $this->entityManager->persist($feed);
-        $this->entityManager->flush();
-
-        self::assertSame('saved', $this->feeds->sourceFormatOf($feed->requireId()));
-    }
-
     private function persistedFeed(Feed $feed, ?\DateTimeImmutable $nextFetchAt): Feed
     {
         if (null !== $nextFetchAt) {

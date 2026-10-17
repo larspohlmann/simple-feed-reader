@@ -145,15 +145,6 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         return $others > 0;
     }
 
-    public function sourceFormatOf(int $feedId): string
-    {
-        return (string) $this->createQueryBuilder('f')
-            ->select('f.sourceFormat')
-            ->andWhere('f.id = :feedId')->setParameter('feedId', $feedId)
-            ->getQuery()
-            ->getSingleScalarResult();
-    }
-
     /**
      * The subset of the given urls this user subscribes to, keyed by url.
      *

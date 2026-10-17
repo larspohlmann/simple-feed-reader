@@ -11,7 +11,7 @@ final class RestoreFeedTargetTest extends TestCase
 {
     public function testKnowsTheRowsItWasBuiltWithAndTheOnesItLearns(): void
     {
-        $target = new RestoreFeedTarget(7, true, 'xml', ['old-hash' => 1]);
+        $target = new RestoreFeedTarget(7, true, ['old-hash' => 1]);
         self::assertTrue($target->knowsEntry('old-hash'));
         self::assertFalse($target->knowsEntry('new-hash'));
         self::assertNull($target->entryId('new-hash'));
@@ -25,7 +25,7 @@ final class RestoreFeedTargetTest extends TestCase
 
     public function testLearningKeepsWhatEarlierBatchesTaught(): void
     {
-        $target = new RestoreFeedTarget(7, true, 'xml', []);
+        $target = new RestoreFeedTarget(7, true, []);
 
         $target->learn(['first-batch' => 10]);
         $target->learn(['second-batch' => 11]);
