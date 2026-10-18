@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\NetworkFeedKind;
-use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use Doctrine\ORM\QueryBuilder;
 
@@ -14,15 +13,10 @@ final class NetworkScopeDql
 {
     public static function restrict(QueryBuilder $qb, string $feedAlias, NetworkScope $scope): void
     {
-        self::restrictToNetwork($qb, $feedAlias, $scope->network);
+        $qb->andWhere(\sprintf('%s.network = :network', $feedAlias))->setParameter('network', $scope->network);
         if ($scope->feedKind === NetworkFeedKind::Profile) {
             self::restrictToProfiles($qb, $feedAlias);
         }
-    }
-
-    public static function restrictToNetwork(QueryBuilder $qb, string $feedAlias, SocialNetwork $network): void
-    {
-        $qb->andWhere(\sprintf('%s.network = :network', $feedAlias))->setParameter('network', $network);
     }
 
     public static function restrictToProfiles(QueryBuilder $qb, string $feedAlias): void
