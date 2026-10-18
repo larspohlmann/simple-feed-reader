@@ -75,8 +75,8 @@ export class SubscriptionsStore {
   private lastLoadedAt = 0;
   private inFlight: Subscription | null = null;
 
-  /** Counts the optimistic patches this store has applied on its own — a read,
-   *  a favourite, an emptied feed. A quiet reload compares it across its own
+  /** Counts the optimistic patches this store has applied on its own — a read
+   *  or a favourite. A quiet reload compares it across its own
    *  round trip to know whether the user has overtaken the server's answer. */
   private localEdits = 0;
 
@@ -231,8 +231,8 @@ export class SubscriptionsStore {
           if (!this.settle(request)) return;
           // Only the server edits the totals, so even an overtaken answer carries the latest ones.
           this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
-          // The user changed a feed count while this was on the wire (marked read,
-          // favourited, emptied a feed). The server counted before that, so
+          // The user changed a feed count while this was on the wire (read an
+          // article, favourited one). The server counted before that, so
           // adopting those counts now would put the badge back up; drop them.
           if (this.localEdits !== editsWhenSent) return;
           apply(response);
