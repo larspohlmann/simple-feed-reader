@@ -15,7 +15,8 @@ final class SubscriptionCountsJson
     /**
      * @return array{
      *   subscriptions: list<array{id: int, unreadCount: int, entryCount: int}>,
-     *   favoritesCount: int, keptCount: int, viewedCount: int
+     *   favoritesCount: int, keptCount: int, viewedCount: int,
+     *   unreadTotals: array<string, mixed>
      * }
      */
     public static function from(SubscriptionTalliesModel $tallies): array
@@ -29,7 +30,11 @@ final class SubscriptionCountsJson
             ];
         }
 
-        return ['subscriptions' => $subscriptions, ...self::surfaceTotals($tallies)];
+        return [
+            'subscriptions' => $subscriptions,
+            ...self::surfaceTotals($tallies),
+            'unreadTotals' => UnreadTotalsJson::from($tallies->unreadTotals),
+        ];
     }
 
     /** @return array{favoritesCount: int, keptCount: int, viewedCount: int} */

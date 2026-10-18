@@ -15,6 +15,7 @@ final readonly class SubscriptionTalliesModel
         public array $unreadCounts,
         public array $entryCounts,
         public array $flagCounts,
+        public UnreadTotalsModel $unreadTotals,
     ) {
     }
 }

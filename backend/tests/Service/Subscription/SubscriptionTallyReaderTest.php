@@ -9,7 +9,6 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\EntryStateRepository;
 use App\Service\Subscription\SubscriptionTallyReader;
 use App\Tests\DbTestCase;
 
@@ -34,11 +33,10 @@ final class SubscriptionTallyReaderTest extends DbTestCase
 
         $reader = self::getContainer()->get(SubscriptionTallyReader::class);
         self::assertInstanceOf(SubscriptionTallyReader::class, $reader);
-        $entryStates = $this->entityManager->getRepository(EntryState::class);
-        self::assertInstanceOf(EntryStateRepository::class, $entryStates);
         $tallies = $reader->forUser($user->requireId());
 
-        self::assertSame($entryStates->unreadCountsForUser($user->requireId()), $tallies->unreadCounts);
+        self::assertSame([$subscription->requireId() => 1], $tallies->unreadCounts);
+        self::assertSame(1, $tallies->unreadTotals->allItems);
         self::assertSame([$subscription->requireId() => 2], $tallies->entryCounts);
         self::assertSame(['favorites' => 1, 'kept' => 0, 'viewed' => 0], $tallies->flagCounts);
         self::assertNotSame($tallies->entryCounts, $tallies->unreadCounts);

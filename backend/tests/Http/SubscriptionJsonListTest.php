@@ -8,7 +8,9 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Http\SubscriptionJson;
+use App\Http\UnreadTotalsJson;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
+use App\Service\Subscription\Model\UnreadTotalsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SocialAccounts;
 
@@ -24,12 +26,13 @@ final class SubscriptionJsonListTest extends DbTestCase
             [$counted->requireId() => 3],
             [$counted->requireId() => 40],
             ['favorites' => 8, 'kept' => 2, 'viewed' => 41],
+            new UnreadTotalsModel(7, [], [], []),
         );
 
         $payload = SubscriptionJson::list([$counted, $silent], $tallies, []);
 
         self::assertSame(
-            ['subscriptions', 'favoritesCount', 'keptCount', 'viewedCount', 'socialAccounts'],
+            ['subscriptions', 'favoritesCount', 'keptCount', 'viewedCount', 'unreadTotals', 'socialAccounts'],
             array_keys($payload),
         );
         self::assertSame(
@@ -39,6 +42,8 @@ final class SubscriptionJsonListTest extends DbTestCase
         self::assertSame(8, $payload['favoritesCount']);
         self::assertSame(2, $payload['keptCount']);
         self::assertSame(41, $payload['viewedCount']);
+        self::assertSame(7, UnreadTotalsJson::from($tallies->unreadTotals)['allItems']);
+        self::assertSame(UnreadTotalsJson::from($tallies->unreadTotals), $payload['unreadTotals']);
     }
 
     public function testTheListNamesEachConnectedAccountInOrder(): void
@@ -54,7 +59,12 @@ final class SubscriptionJsonListTest extends DbTestCase
 
         $payload = SubscriptionJson::list(
             [],
-            new SubscriptionTalliesModel([], [], ['favorites' => 0, 'kept' => 0, 'viewed' => 0]),
+            new SubscriptionTalliesModel(
+                [],
+                [],
+                ['favorites' => 0, 'kept' => 0, 'viewed' => 0],
+                new UnreadTotalsModel(0, [], [], []),
+            ),
             [$bluesky, $mastodon],
         );
 
@@ -89,7 +99,12 @@ final class SubscriptionJsonListTest extends DbTestCase
 
         $payload = SubscriptionJson::list(
             [],
-            new SubscriptionTalliesModel([], [], ['favorites' => 0, 'kept' => 0, 'viewed' => 0]),
+            new SubscriptionTalliesModel(
+                [],
+                [],
+                ['favorites' => 0, 'kept' => 0, 'viewed' => 0],
+                new UnreadTotalsModel(0, [], [], []),
+            ),
             [$bluesky],
         );
 
