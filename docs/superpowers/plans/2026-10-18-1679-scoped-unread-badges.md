@@ -574,3 +574,23 @@ and make the predicate `e.location.urlHash IS NULL OR e.location.urlHash NOT IN 
 - [ ] **Step 2:** `php bin/phpunit tests/Repository` and the full `php bin/phpunit` must stay green unchanged (the change preserves behaviour). Run the MySQL leg too: `docker compose exec -T php composer test`. MySQL's handling of `NOT IN` with a grouped subselect is what this is for, and a dialect error would only show there.
 - [ ] **Step 3:** Run `composer check`, `composer md` and `composer infection:diff`. A mutant that deletes the prefilter can survive, since no behaviour test can tell the difference. Report the MSI, and whether the gate still passes, rather than writing a test that pins the DQL text.
 - [ ] **Step 4:** Commit `perf(#1679): run the duplicate semi-join only for entries that have a copy`. The controller measures afterwards with the same benchmark as the baseline.
+
+---
+
+### Task 9: Backend — the feed/effective-date index covers `url_hash`
+
+Measured after Task 8 (dev DB, MySQL profiling, per-subscription count): the plain unread scan takes 40–70 ms because it is index-only on `idx_entry_feed_effective (feed_id, effective_date)`. Any query that reads `entry.url_hash`, as every duplicate collapse does, falls back to one clustered-row lookup per entry: ~750 ms for 64k rows. A probe index `(feed_id, effective_date, url_hash)` (created, timed and dropped again on the dev DB) brought the counts down as follows:
+
+| per-subscription count | without index | with index |
+|---|---|---|
+| NOT EXISTS only (pre-Task 8) | 1.09–1.23 s | 0.37–0.44 s |
+| with the Task 8 prefilter | 1.53 s | 0.13 s |
+
+**Files:**
+- Modify: `backend/src/Entity/Entry.php:16`: replace `#[ORM\Index(name: 'idx_entry_feed_effective', columns: ['feed_id', 'effective_date'])]` with `#[ORM\Index(name: 'idx_entry_feed_effective_hash', columns: ['feed_id', 'effective_date', 'url_hash'])]`. It is a strict extension, so every query the old index served keeps a usable left prefix.
+- Create: `backend/migrations/Version<timestamp>.php`, following the house pattern for an index migration that serves MySQL and SQLite. Look at the existing migrations touching `idx_entry_*` (`grep -ln "idx_entry_" migrations`) and mirror how they branch per platform. `up()` drops `idx_entry_feed_effective` and creates `idx_entry_feed_effective_hash`; `down()` reverses it.
+
+- [ ] **Step 1:** Write the entity change and the migration.
+- [ ] **Step 2:** Prove the migration on both dialects, per CLAUDE.md "Migrations need their own verification". Native SQLite: migrate a scratch database from empty (`DATABASE_URL=sqlite:///<scratchpad>/m.db php bin/console doctrine:migrations:migrate -n` then `doctrine:schema:validate`). MySQL: run the same on a scratch database in the Docker MySQL (`feedreader_migration_1679`, created and dropped by you). **Never migrate or alter the `feedreader` dev database**; the controller applies the migration there afterwards.
+- [ ] **Step 3:** `php bin/phpunit` (SQLite), `docker compose exec -T php composer test` (MySQL), `composer check`, `composer md`.
+- [ ] **Step 4:** Commit `perf(#1679): the feed and effective-date index carries url_hash for the duplicate collapse`.
