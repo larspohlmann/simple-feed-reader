@@ -106,10 +106,16 @@ export class EntryStateActions implements EntryActionHandler {
   readonly openOriginal = (entry: EntryDto): void => {
     if (entry.isViewed) return;
     this.subscriptions.bumpViewed(1);
+    const alsoReads = !entry.isHidden;
     this.entries.setState(
       entry.id,
       { isViewed: true },
-      { onFailed: () => this.subscriptions.bumpViewed(-1) },
+      {
+        onSaved: () => {
+          if (alsoReads) this.subscriptions.reloadCountsQuietly();
+        },
+        onFailed: () => this.subscriptions.bumpViewed(-1),
+      },
     );
   };
 

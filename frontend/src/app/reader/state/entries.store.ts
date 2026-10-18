@@ -32,7 +32,7 @@ interface InFlightPatch {
 
 type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social'>;
 
-/** What a state change does once the server answers; a failed one has already rolled its row back. */
+/** A failed state change has already rolled its row back when `onFailed` runs. */
 export interface StateSaveOutcome {
   readonly onSaved?: () => void;
   readonly onFailed?: () => void;

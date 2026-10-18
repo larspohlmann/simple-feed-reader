@@ -19,6 +19,7 @@ import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
 import {
   EntryDto,
   SubscriptionCountsResponse,
+  UnreadTotalsDto,
   SubscriptionDto,
   SubscriptionsResponse,
 } from '../models';
@@ -86,6 +87,8 @@ export class SubscriptionsStore {
    *  a favourite, an emptied feed. A quiet reload compares it across its own
    *  round trip to know whether the user has overtaken the server's answer. */
   private localEdits = 0;
+  /** `localEdits` for the scope totals, which only a mark-scope-read edits: a read leaves them to the server. */
+  private totalsEdits = 0;
 
   constructor() {
     onIdentityChange(() => this.invalidate());
@@ -223,13 +226,20 @@ export class SubscriptionsStore {
    *  answer if the user has overtaken it, so a silent refresh never flickers
    *  the surface or fights an optimistic edit. The gates that decide WHEN to
    *  fire belong to each caller. */
-  private quietFetch<T>(fetch: () => Observable<T>, apply: (response: T) => void): void {
+  private quietFetch<T extends { unreadTotals: UnreadTotalsDto }>(
+    fetch: () => Observable<T>,
+    apply: (response: T) => void,
+  ): void {
     const request = this.beginRequest();
     const editsWhenSent = this.localEdits;
+    const totalsEditsWhenSent = this.totalsEdits;
     this.inFlight = this.trackWhileOpen(
       fetch().subscribe({
         next: (response) => {
           if (!this.settle(request)) return;
+          if (this.totalsEdits === totalsEditsWhenSent) {
+            this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
+          }
           // The user changed a count while this was on the wire (marked read,
           // favourited, emptied a feed). The server counted before that, so
           // adopting the response now would put the badge back up; drop it.
@@ -268,7 +278,6 @@ export class SubscriptionsStore {
     this.setIfMoved(this.favoritesCount, response.favoritesCount);
     this.setIfMoved(this.keptCount, response.keptCount);
     this.setIfMoved(this.viewedCount, response.viewedCount);
-    this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
   }
 
   private setIfMoved(count: WritableSignal<number>, value: number): void {
@@ -297,8 +306,7 @@ export class SubscriptionsStore {
     count.update((current) => Math.max(0, current + by));
   }
 
-  /** The server mirrors a read onto every visible copy, so each copy's feed moves; the scope totals are the
-   *  server's to recount once the read is saved (`reloadCountsQuietly`). */
+  /** Each visible copy's feed moves; the scope totals are recounted by the server. */
   markArticleRead(entry: EntryDto): void {
     this.shiftArticleUnread(entry, -1);
   }
@@ -358,7 +366,7 @@ export class SubscriptionsStore {
   }
 
   private patchUnreadTotals(patch: (totals: UnreadTotals) => UnreadTotals): void {
-    ++this.localEdits;
+    ++this.totalsEdits;
     this.storedUnreadTotals.update(patch);
   }
 }

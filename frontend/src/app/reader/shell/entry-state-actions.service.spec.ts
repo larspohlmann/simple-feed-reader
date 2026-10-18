@@ -139,7 +139,7 @@ describe('EntryStateActions reading counts (#1679)', () => {
     actions = TestBed.inject(EntryStateActions);
   });
 
-  const outcome = (): StateSaveOutcome => setState.mock.calls[0][2] ?? {};
+  const outcome = (call = 0): StateSaveOutcome => setState.mock.calls[call][2] ?? {};
 
   it('ticking an unread entry reads the article, and a failed save puts it back', () => {
     const entry = anEntry();
@@ -176,9 +176,18 @@ describe('EntryStateActions reading counts (#1679)', () => {
     openEntry.set(opened);
     openEntryId.set(opened.id);
     TestBed.tick();
-    setState.mock.calls[1][2]?.onSaved?.();
+    outcome(1).onSaved?.();
 
     expect(reloadCountsQuietly).toHaveBeenCalledTimes(2);
+  });
+
+  it('recounts once following the original link reads the entry, but not for a hidden one', () => {
+    actions.openOriginal(anEntry({ id: 1 }));
+    outcome().onSaved?.();
+    actions.openOriginal(anEntry({ id: 2, isHidden: true }));
+    outcome(1).onSaved?.();
+
+    expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
   });
 
   it('does not recount when un-ticking, which reads nothing', () => {

@@ -892,6 +892,34 @@ describe('SubscriptionsStore counts-only reload', () => {
     expect(store.totalUnread()).toBe(0);
   });
 
+  it('adopts the scope totals even when a feed count was edited while it was on the wire', () => {
+    store.load();
+    ctrl.expectOne(list).flush(counts([sub(1, 2)], { unreadTotals: { allItems: 2 } }));
+
+    store.reloadCountsQuietly();
+    store.bumpFavorites(1);
+    ctrl
+      .expectOne(countsUrl)
+      .flush(countsBody([{ id: 1, unreadCount: 1 }], { unreadTotals: { allItems: 1 } }));
+
+    expect(store.totalUnread()).toBe(1);
+    expect(store.subscriptions()[0].unreadCount).toBe(2);
+    expect(store.favoritesCount()).toBe(1);
+  });
+
+  it('drops the scope totals when a mark-scope-read zeroed them while it was on the wire', () => {
+    store.load();
+    ctrl.expectOne(list).flush(counts([sub(1, 2)], { unreadTotals: { allItems: 2 } }));
+
+    store.reloadCountsQuietly();
+    store.zeroUnread('all');
+    ctrl
+      .expectOne(countsUrl)
+      .flush(countsBody([{ id: 1, unreadCount: 2 }], { unreadTotals: { allItems: 2 } }));
+
+    expect(store.totalUnread()).toBe(0);
+  });
+
   it('fetches the cheap counts endpoint, not the full list', () => {
     settleAndAge([sub(1, 2)]);
 
