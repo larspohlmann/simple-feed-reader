@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { API_BASE_URL } from '../../core/api';
+import { API_BASE_URL } from '../../../core/api';
 import { ImportCandidates, SocialImportService } from './social-import.service';
 
 const BASE = 'https://api.test';

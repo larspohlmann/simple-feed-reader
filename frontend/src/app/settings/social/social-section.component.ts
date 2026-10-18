@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Dialog } from '@angular/cdk/dialog';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { formatLongDate, relativeTime } from '../../reader/format';
+import { SocialFeedsPicker } from '../../reader/feeds/social-picker/social-feeds-picker.service';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -16,11 +16,6 @@ import { SettingsStackComponent } from '../../shared/settings/stack/settings-sta
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { SocialNetworkName } from '../../core/social-network';
 import { SocialAccount, SocialAccountsService, SyncChange } from './social-accounts.service';
-import {
-  SocialImportDialogComponent,
-  SocialImportDialogData,
-} from './social-import-dialog.component';
-import { SocialImportResult } from './social-import.service';
 
 @Component({
   selector: 'app-social-section',
@@ -43,7 +38,7 @@ import { SocialImportResult } from './social-import.service';
 export class SocialSectionComponent {
   protected readonly svc = inject(SocialAccountsService);
   private readonly confirm = inject(ConfirmService);
-  private readonly dialog = inject(Dialog);
+  private readonly picker = inject(SocialFeedsPicker);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
@@ -148,17 +143,7 @@ export class SocialSectionComponent {
   }
 
   protected openImport(account: SocialAccount): void {
-    const data: SocialImportDialogData = {
-      accountId: account.id,
-      network: account.network,
-      handle: account.handle,
-    };
-    this.dialog
-      .open<SocialImportResult | undefined>(SocialImportDialogComponent, {
-        data,
-        panelClass: 'app-dialog',
-      })
-      .closed.subscribe(() => this.svc.load());
+    this.picker.open(account).subscribe(() => this.svc.load());
   }
 
   protected makeDefault(account: SocialAccount): void {
