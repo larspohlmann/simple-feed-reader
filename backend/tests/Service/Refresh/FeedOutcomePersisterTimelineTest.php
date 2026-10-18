@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
 use App\Entity\ThreadPost;
+use App\Enum\ShareKind;
 use App\Enum\SourceFormat;
 use App\Repository\ThreadPostRepository;
 use App\Service\Bluesky\AppViewClient;
@@ -170,6 +171,32 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         self::assertSame(0, $this->entityManager->getRepository(ThreadPost::class)->count());
     }
 
+    public function testASelfRepliesLinkCardSurvivesTheRootsShareSettling(): void
+    {
+        $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
+        $linkEmbed = ['post' => ['embed' => [
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://example.com/story', 'title' => 'The story', 'description' => 'What.'],
+        ]]];
+
+        $replyWithCard = array_replace_recursive(self::itemFields(self::REPLY_ONE, self::ROOT, self::ROOT), $linkEmbed);
+
+        $this->persister()->storeTimeline($feed, self::page([
+            JsonNodeModel::of($replyWithCard),
+            self::item(self::ROOT),
+        ]), $this->clock->now());
+
+        $root = $this->entityManager->getRepository(Entry::class)
+            ->findOneBy(['feed' => $feed, 'guid.value' => self::ROOT]);
+        self::assertInstanceOf(Entry::class, $root);
+        self::assertSame(ShareKind::Link, $root->getShareKind());
+        $threadPosts = self::getContainer()->get(ThreadPostRepository::class);
+        self::assertInstanceOf(ThreadPostRepository::class, $threadPosts);
+        $posts = $threadPosts->byEntryIds([$root->requireId()])[$root->requireId()] ?? [];
+        self::assertCount(1, $posts);
+        self::assertNotNull($posts[0]->linkCard);
+    }
+
     public function testAStoredFailureBacksTheFeedOffAndKeepsTheMessage(): void
     {
         $feed = $this->feed('social:mastodon:1:home', SourceFormat::MASTODON_API);
@@ -222,13 +249,19 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
 
     private static function item(string $uri, ?string $replyRoot = null, ?string $replyParent = null): JsonNodeModel
     {
+        return JsonNodeModel::of(self::itemFields($uri, $replyRoot, $replyParent));
+    }
+
+    /** @return array<string, mixed> */
+    private static function itemFields(string $uri, ?string $replyRoot = null, ?string $replyParent = null): array
+    {
         $author = ['did' => self::BOB, 'viewer' => ['following' => 'at://did:plc:alice/app.bsky.graph.follow/1']];
         $reply = $replyRoot === null || $replyParent === null ? [] : ['reply' => [
             'root' => ['uri' => $replyRoot, 'author' => $author],
             'parent' => ['uri' => $replyParent, 'author' => $author],
         ]];
 
-        return JsonNodeModel::of($reply + [
+        return $reply + [
             'post' => [
                 'uri' => $uri,
                 'author' => ['did' => self::BOB, 'handle' => 'bob.bsky.social', 'displayName' => 'Bob'],
@@ -239,7 +272,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
                 ],
                 'indexedAt' => self::POSTED_AT[$uri],
             ],
-        ]);
+        ];
     }
 
     private static function webUrl(string $uri): string
