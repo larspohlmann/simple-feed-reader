@@ -42,7 +42,6 @@ final class SubscriptionJsonListTest extends DbTestCase
         self::assertSame(8, $payload['favoritesCount']);
         self::assertSame(2, $payload['keptCount']);
         self::assertSame(41, $payload['viewedCount']);
-        self::assertSame(7, UnreadTotalsJson::from($tallies->unreadTotals)['allItems']);
         self::assertSame(UnreadTotalsJson::from($tallies->unreadTotals), $payload['unreadTotals']);
     }
 

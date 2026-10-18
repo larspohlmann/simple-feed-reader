@@ -16,7 +16,11 @@ final class SubscriptionCountsJson
      * @return array{
      *   subscriptions: list<array{id: int, unreadCount: int, entryCount: int}>,
      *   favoritesCount: int, keptCount: int, viewedCount: int,
-     *   unreadTotals: array<string, mixed>
+     *   unreadTotals: array{
+     *     allItems: int,
+     *     tags: list<array{id: int, unreadCount: int}>,
+     *     networks: list<array{network: string, unreadCount: int, profilesUnreadCount: int}>
+     *   }
      * }
      */
     public static function from(SubscriptionTalliesModel $tallies): array

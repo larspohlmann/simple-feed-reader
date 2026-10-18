@@ -51,10 +51,7 @@ final readonly class UnreadCountRepository
     /** @return array<string, int> network => unread entries; a network with none is absent */
     public function perNetwork(int $userId): array
     {
-        $everyFeed = static function (QueryBuilder $qb, string $feedAlias): void {
-        };
-
-        return $this->countsByNetwork($this->networkCounts($userId, $everyFeed));
+        return $this->countsByNetwork($this->networkCounts($userId, self::everyFeed()));
     }
 
     /** @return array<string, int> network => unread entries of its profile feeds; a network with none is absent */
@@ -95,6 +92,12 @@ final readonly class UnreadCountRepository
         });
 
         return $qb;
+    }
+
+    /** @return \Closure(QueryBuilder, string): void */
+    private static function everyFeed(): \Closure
+    {
+        return static fn (QueryBuilder $qb, string $feedAlias) => null;
     }
 
     private function unreadEntries(int $userId): QueryBuilder

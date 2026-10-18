@@ -1196,7 +1196,7 @@ final class EntryControllerTest extends WebTestCase
      * Each feed's badge counts its own copy of a cross-feed duplicate. Hiding the survivor alone would leave the
      * sibling's copy unread, so isHidden mirrors onto the sibling and both badges clear.
      */
-    public function testHidingASurvivorMirrorsToTheSiblingSoItsBadgeStaysClear(): void
+    public function testHidingASurvivorMirrorsToTheSiblingSoItsBadgeClearsToo(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-mirror@example.com');
