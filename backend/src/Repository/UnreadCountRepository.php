@@ -115,7 +115,7 @@ final readonly class UnreadCountRepository
     /** @param callable(QueryBuilder): void $correlateScope keeps the semi-join inside the outer row's scope */
     private function collapseWithin(QueryBuilder $qb, int $userId, callable $correlateScope): void
     {
-        $this->collapse->apply(
+        $this->collapse->applyToCount(
             $qb,
             static function (QueryBuilder $inner, EntryAliases $aliases) use ($correlateScope): void {
                 $inner->andWhere(UnreadDql::predicate($aliases));
