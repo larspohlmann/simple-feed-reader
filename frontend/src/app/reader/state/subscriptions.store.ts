@@ -23,12 +23,7 @@ import {
   sumUnread,
   untaggedSubscriptions,
 } from './subscription-derivations';
-
-export type ZeroTarget =
-  | 'all'
-  | { tag: number }
-  | { subscription: number }
-  | { network: SocialNetworkName; feedKind?: NetworkFeedKind };
+import { ZeroTarget } from './unread-totals';
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {

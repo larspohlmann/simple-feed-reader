@@ -128,6 +128,7 @@ export function subscriptionsJson(
     keptCount: 0,
     viewedCount: 0,
     socialAccounts: [],
+    unreadTotals: { allItems: 0, tags: [], networks: [] },
     ...totals,
   };
 }
