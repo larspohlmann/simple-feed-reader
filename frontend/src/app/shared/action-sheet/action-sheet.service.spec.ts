@@ -23,8 +23,8 @@ describe('ActionSheet', () => {
     container = TestBed.inject(OverlayContainer).getContainerElement();
   });
 
-  const open = () => {
-    const closed = sheet.open(DATA);
+  const open = (data: ActionSheetData = DATA) => {
+    const closed = sheet.open(data);
     TestBed.inject(ApplicationRef).tick();
     return closed;
   };
@@ -39,6 +39,14 @@ describe('ActionSheet', () => {
     expect(items()[1].textContent).toContain('Delete tag');
     expect(items()[1].classList).toContain('danger');
     expect(items()[0].classList).not.toContain('danger');
+  });
+
+  it('renders a disabled action as a disabled item', () => {
+    open({
+      title: 'News',
+      actions: [{ id: 'manage', label: 'Reconnect @a in settings', disabled: true }],
+    }).subscribe();
+    expect((items()[0] as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('resolves with the chosen action id', (done) => {

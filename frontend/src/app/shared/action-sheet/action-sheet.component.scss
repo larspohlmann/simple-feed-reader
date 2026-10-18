@@ -40,9 +40,14 @@ nav button {
   cursor: pointer;
 }
 
-nav button:hover,
+nav button:hover:not(:disabled),
 nav button:focus-visible {
   background: var(--surface-0);
+}
+
+nav button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 nav button.danger {
