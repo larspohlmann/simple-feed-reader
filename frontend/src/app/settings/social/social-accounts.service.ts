@@ -4,9 +4,8 @@ import { Observable, finalize, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem, problemMessage } from '../../core/problem';
 import { SocialNetworkName } from '../../core/social-network';
+import { SocialAccountStatus } from '../../reader/social-feed';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
-
-export type SocialAccountStatus = 'connected' | 'needs_reconnect';
 
 export type SyncSkip = 'unreachable' | 'incomplete' | 'needs_reconnect' | 'failed';
 export type SyncReason = 'saved' | 'created' | 'unsaved' | 'deleted';

@@ -10,37 +10,38 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { toggled } from '../../core/toggled-set';
-import { RefreshService } from '../../reader/state/refresh.service';
-import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
-import { TagsStore } from '../../reader/state/tags.store';
-import { savedFeedLabel } from '../../reader/feeds/display-title';
-import { ButtonComponent } from '../../shared/button/button.component';
-import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
-import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { inputValue } from '../../shared/input-value';
-import { AvatarComponent } from '../../shared/avatar/avatar.component';
-import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
-import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
-import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
-import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
-import { SocialNetworkName } from '../../core/social-network';
+import { pluralKey } from '../../../core/i18n/plural-key';
+import { toggled } from '../../../core/toggled-set';
+import { RefreshService } from '../../state/refresh.service';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { TagsStore } from '../../state/tags.store';
+import { savedFeedLabel } from '../display-title';
+import { ButtonComponent } from '../../../shared/button/button.component';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { inputValue } from '../../../shared/input-value';
+import { AvatarComponent } from '../../../shared/avatar/avatar.component';
+import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
+import { SegmentedChoiceComponent } from '../../../shared/segmented-choice/segmented-choice.component';
+import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
+import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
+import { SocialNetworkName } from '../../../core/social-network';
 import {
   FILTER_KEYS,
   ImportRow,
   ImportTab,
+  Removal,
   StateFilter,
   TAB_TEST_IDS,
   buildRows,
   collectionKey,
   followKey,
-  isRemovable,
+  removals,
   tally,
 } from './social-import-rows';
 import {
-  CollectionCandidate,
   ImportCandidateState,
   SocialImportCollection,
   SocialImportFeed,
@@ -130,6 +131,9 @@ export class SocialImportDialogComponent {
     const matched = this.tally().matched;
     return filter === 'all' ? matched : matched.filter((row) => row.state === filter);
   });
+  protected readonly applyCountKey = computed(() =>
+    pluralKey('settings.social.importApplyCount', this.chosen().size),
+  );
   private readonly rowLimit = linkedSignal({
     source: () => [this.tab(), this.activeFilter(), this.needle()],
     computation: () => ROWS_PER_PAGE,
@@ -139,7 +143,9 @@ export class SocialImportDialogComponent {
     Math.min(ROWS_PER_PAGE, this.visibleRows().length - this.rowLimit()),
   );
   protected readonly visibleNewCount = computed(() => this.visibleCount('new'));
-  protected readonly hasLeftovers = computed(() => this.visibleCount('no_longer_followed') > 0);
+  protected readonly hasSubscribedRows = computed(() =>
+    this.visibleRows().some((row) => row.removable),
+  );
 
   constructor() {
     this.load();
@@ -150,7 +156,6 @@ export class SocialImportDialogComponent {
   }
 
   protected toggle(row: ImportRow): void {
-    if (row.locked) return;
     this.chosen.update((current) => toggled(current, row.key));
   }
 
@@ -166,9 +171,11 @@ export class SocialImportDialogComponent {
   }
 
   protected apply(): void {
-    const unticked = this.untickedCollections();
+    const unticked = removals(this.importer.candidates(), this.chosen(), (key, params) =>
+      this.i18n.translate(key, params),
+    );
     if (unticked.length === 0) {
-      this.send();
+      this.send(unticked);
       return;
     }
     this.confirm.confirmThen(
@@ -178,14 +185,14 @@ export class SocialImportDialogComponent {
         confirmLabel: this.i18n.translate('settings.social.importRemoveConfirm'),
         danger: true,
       },
-      () => this.send(),
+      () => this.send(unticked),
     );
   }
 
-  private send(): void {
+  private send(unticked: readonly Removal[]): void {
     const selection = {
       subscribe: this.chosenFollows(),
-      unsubscribe: this.chosenRemovals(),
+      unsubscribe: unticked.map((removal) => removal.subscriptionId),
       collections: this.chosenCollections(),
     };
 
@@ -236,26 +243,13 @@ export class SocialImportDialogComponent {
       .map((follow) => ({ identity: follow.identity, title: follow.displayName }));
   }
 
-  private chosenRemovals(): number[] {
-    const leftovers = (this.importer.candidates()?.follows ?? [])
-      .filter((follow) => follow.state === 'no_longer_followed')
-      .filter((follow) => this.chosen().has(followKey(follow)))
-      .map((follow) => follow.subscriptionId);
-    const unticked = this.untickedCollections().map((collection) => collection.subscriptionId);
-    return [...leftovers, ...unticked].flatMap((id) => (id === null ? [] : [id]));
-  }
-
-  private untickedCollections(): CollectionCandidate[] {
-    const candidates = this.importer.candidates();
-    return [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
-      .filter(isRemovable)
-      .filter((collection) => this.chosen().has(collectionKey(collection)));
-  }
-
-  private removalMessage(unticked: readonly CollectionCandidate[]): string {
-    const removal = this.i18n.translate('settings.social.importRemoveMessage', {
-      names: unticked.map((collection) => collection.name).join(', '),
-    });
+  private removalMessage(unticked: readonly Removal[]): string {
+    const removal =
+      unticked.length === 1
+        ? this.i18n.translate('settings.social.importRemoveMessage', { name: unticked[0].name })
+        : this.i18n.translate('settings.social.importRemoveCountMessage', {
+            count: unticked.length,
+          });
     const moves = this.i18n.translate('manage.savedPostsMove', {
       saved: savedFeedLabel(this.i18n, this.data.network),
     });

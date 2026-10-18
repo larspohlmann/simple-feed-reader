@@ -2,16 +2,16 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { API_BASE_URL } from '../../core/api';
-import { RefreshService } from '../../reader/state/refresh.service';
-import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
-import { TagsStore } from '../../reader/state/tags.store';
-import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
-import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
-import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { SocialNetworkName } from '../../core/social-network';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { API_BASE_URL } from '../../../core/api';
+import { RefreshService } from '../../state/refresh.service';
+import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { TagsStore } from '../../state/tags.store';
+import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
+import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
+import { SocialNetworkName } from '../../../core/social-network';
 import { SocialImportDialogComponent } from './social-import-dialog.component';
 import { CollectionCandidate, FollowCandidate, ImportCandidates } from './social-import.service';
 
@@ -266,9 +266,9 @@ describe('SocialImportDialogComponent', () => {
     expect(byTestId(fixture, 'social-import-state-all')?.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('hints how to unsubscribe only while a leftover is listed', () => {
-    const hint = 'Tick a “No longer followed” account to unsubscribe.';
-    const fixture = loaded(candidates({ follows: [follow(), DAVE] }));
+  it('hints how to unsubscribe only while a subscribed row is listed', () => {
+    const hint = 'Untick a feed to unsubscribe.';
+    const fixture = loaded(candidates({ follows: [follow(), CAROL] }));
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(hint);
 
     showState(fixture, 'new');
@@ -316,34 +316,33 @@ describe('SocialImportDialogComponent', () => {
     expect(textOf(bob(), '.avatar')).toBe('B');
   });
 
-  it('counts the selection in the footer and on the Import button', () => {
+  it('counts the selection on the Save button, singular for one change', () => {
     const fixture = loaded(candidates({ follows: [follow(), DAVE] }));
-    expect(byTestId(fixture, 'social-import-selected')).toBeNull();
-    expect(applyButton(fixture).textContent?.trim()).toBe('Import');
+    expect(applyButton(fixture).textContent?.trim()).toBe('Save');
 
     tick(fixture, 'did:plc:bob');
-    expect(byTestId(fixture, 'social-import-selected')?.textContent?.trim()).toBe('1 selected');
+    expect(applyButton(fixture).textContent?.trim()).toBe('Save 1 change');
 
     tick(fixture, 'did:plc:dave');
-    expect(byTestId(fixture, 'social-import-selected')?.textContent?.trim()).toBe('2 selected');
-    expect(applyButton(fixture).textContent?.trim()).toBe('Import 2');
+    expect(applyButton(fixture).textContent?.trim()).toBe('Save 2 changes');
   });
 
-  it('marks each follow with its state and shows subscribed ones checked and fixed', () => {
+  it('ticks every subscribed follow, a no longer followed one too, and fixes none', () => {
     const fixture = loaded(candidates({ follows: [follow(), CAROL, DAVE] }));
 
     expect(checkboxOf(fixture, 'did:plc:bob').checked).toBe(false);
-    expect(checkboxOf(fixture, 'did:plc:bob').disabled).toBe(false);
     expect(checkboxOf(fixture, 'did:plc:carol').checked).toBe(true);
-    expect(checkboxOf(fixture, 'did:plc:carol').disabled).toBe(true);
-    expect(checkboxOf(fixture, 'did:plc:dave').checked).toBe(false);
+    expect(checkboxOf(fixture, 'did:plc:dave').checked).toBe(true);
+    for (const identity of ['did:plc:bob', 'did:plc:carol', 'did:plc:dave']) {
+      expect(checkboxOf(fixture, identity).disabled).toBe(false);
+    }
     const text = byTestId(fixture, 'social-import-follows')?.textContent ?? '';
     expect(text).toContain('New');
     expect(text).toContain('Subscribed');
     expect(text).toContain('No longer followed');
   });
 
-  it('offers lists and custom feeds as checkboxes; an added list stays ticked and can be unticked, Home stays fixed', () => {
+  it('offers lists and custom feeds as checkboxes; every added one, Home too, stays ticked and can be unticked', () => {
     const fixture = loaded(
       candidates({
         lists: [
@@ -362,7 +361,8 @@ describe('SocialImportDialogComponent', () => {
     showTab(fixture, 'Lists');
 
     expect(collectionBox(fixture, 'home:').checked).toBe(true);
-    expect(collectionBox(fixture, 'home:').disabled).toBe(true);
+    expect(collectionBox(fixture, 'home:').disabled).toBe(false);
+    expect(collectionBox(fixture, 'home:').getAttribute('aria-label')).toBe('Remove Home timeline');
     expect(collectionBox(fixture, 'list:at://list/a').checked).toBe(true);
     expect(collectionBox(fixture, 'list:at://list/a').disabled).toBe(false);
     expect(collectionBox(fixture, 'list:at://list/a').getAttribute('aria-label')).toBe(
@@ -443,7 +443,7 @@ describe('SocialImportDialogComponent', () => {
     http.expectNone(IMPORT);
   });
 
-  it('never unticks a subscribed Home', () => {
+  it('removes a subscribed Home when it is unticked', () => {
     const home = collection({
       kind: 'home',
       id: null,
@@ -454,11 +454,51 @@ describe('SocialImportDialogComponent', () => {
     const fixture = loaded(candidates({ lists: [home] }));
     showTab(fixture, 'Lists');
 
-    collectionBox(fixture, 'home:').dispatchEvent(new Event('change'));
+    collectionBox(fixture, 'home:').click();
+    fixture.detectChanges();
+    press(fixture, 'social-import-apply');
+
+    const [data] = confirmStub.confirmThen.mock.calls[0];
+    expect(data.message).toContain('Remove Home timeline and its entries');
+    const post = http.expectOne(IMPORT);
+    expect(post.request.body).toEqual({ subscribe: [], unsubscribe: [11], collections: [] });
+    post.flush({ imported: 0, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 1 });
+  });
+
+  it('unsubscribes a subscribed follow when it is unticked, after asking by name', () => {
+    const fixture = loaded(candidates({ follows: [CAROL] }));
+
+    tick(fixture, 'did:plc:carol');
+    expect(checkboxOf(fixture, 'did:plc:carol').checked).toBe(false);
+    press(fixture, 'social-import-apply');
+
+    const [data] = confirmStub.confirmThen.mock.calls[0];
+    expect(data.message).toContain('Carol');
+    const post = http.expectOne(IMPORT);
+    expect(post.request.body).toEqual({ subscribe: [], unsubscribe: [9], collections: [] });
+    post.flush({ imported: 0, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 1 });
+  });
+
+  it('asks by count when several feeds go', () => {
+    const fixture = loaded(
+      candidates({
+        follows: [CAROL, DAVE],
+        lists: [collection({ state: 'subscribed', subscriptionId: 12 })],
+      }),
+    );
+    tick(fixture, 'did:plc:carol');
+    tick(fixture, 'did:plc:dave');
+    showTab(fixture, 'Lists');
+    collectionBox(fixture, 'list:at://list/a').click();
     fixture.detectChanges();
 
-    expect(collectionBox(fixture, 'home:').checked).toBe(true);
-    expect(applyButton(fixture).disabled).toBe(true);
+    press(fixture, 'social-import-apply');
+
+    const [data] = confirmStub.confirmThen.mock.calls[0];
+    expect(data.message).toContain('Remove these 3 feeds and their entries from your feeds?');
+    const post = http.expectOne(IMPORT);
+    expect(post.request.body).toEqual({ subscribe: [], unsubscribe: [9, 10, 12], collections: [] });
+    post.flush({ imported: 0, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 3 });
   });
 
   it('filters collections by the translated Home name', () => {
@@ -563,9 +603,7 @@ describe('SocialImportDialogComponent', () => {
     const fixture = loaded(candidates({ follows: manyFollows(150) }));
 
     press(fixture, 'social-import-select-new');
-    expect(
-      textOf(fixture.nativeElement as HTMLElement, '[data-testid="social-import-selected"]'),
-    ).toBe('150 selected');
+    expect(applyButton(fixture).textContent?.trim()).toBe('Save 150 changes');
   });
 
   it('selects every visible new follow at once', () => {
@@ -681,7 +719,7 @@ describe('SocialImportDialogComponent', () => {
       'Subscribe to @bob.bsky.social',
     );
     expect(checkboxOf(fixture, 'did:plc:carol').getAttribute('aria-label')).toBe(
-      'Already subscribed to @carol.bsky.social',
+      'Unsubscribe from @carol.bsky.social',
     );
     expect(checkboxOf(fixture, 'did:plc:dave').getAttribute('aria-label')).toBe(
       'Unsubscribe from did:plc:dave',

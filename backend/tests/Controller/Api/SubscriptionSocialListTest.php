@@ -43,7 +43,12 @@ final class SubscriptionSocialListTest extends ApiTestCase
         );
         self::assertFalse($home['includeInAllItems']);
         self::assertSame(
-            [['id' => $account->requireId(), 'network' => 'bluesky', 'handle' => '@alice.bsky.social']],
+            [[
+                'id' => $account->requireId(),
+                'network' => 'bluesky',
+                'handle' => '@alice.bsky.social',
+                'status' => 'connected',
+            ]],
             $payload['socialAccounts'],
         );
     }

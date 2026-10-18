@@ -31,7 +31,7 @@ import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
-import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
+import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { TagNode } from '../../state/subscription-derivations';
 import { SocialSection } from '../../state/social-sections';
@@ -82,7 +82,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     CdkDropList,
     CdkDrag,
     CdkDragHandle,
-    DismissOnOutsideDirective,
+    SidebarRowMenuComponent,
     IconButtonDirective,
   ],
   templateUrl: './sidebar.component.html',

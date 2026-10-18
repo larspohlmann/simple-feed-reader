@@ -44,47 +44,36 @@
     }
   </a>
   @if (!screen.isCoarse()) {
-    <div
-      class="rowmenu"
-      [appDismissOnOutside]="rows.menuFor() === menuKey()"
-      (dismiss)="rows.closeMenu()"
+    <app-sidebar-row-menu
+      [menuKey]="menuKey()"
+      [label]="'reader.manage' | transloco: { name: name }"
     >
-      <button
-        class="dots"
-        type="button"
-        [attr.aria-label]="'reader.manage' | transloco: { name: name }"
-        (click)="rows.toggleMenu(menuKey(), $event)"
-      >
-        <app-icon name="more_horiz" size="sm" />
-      </button>
-      @if (rows.menuFor() === menuKey()) {
-        <div class="pop" role="menu">
-          <button role="menuitem" (click)="manage.editSubscription(feed); rows.closeMenu()">
-            {{ 'reader.editFeed' | transloco }}
-          </button>
-          <button
-            role="menuitem"
-            (click)="manage.setIncludeInAllItems(feed, !feed.includeInAllItems); rows.closeMenu()"
-          >
-            {{
-              (feed.includeInAllItems ? 'reader.excludeFromAllItems' : 'reader.includeInAllItems')
-                | transloco
-            }}
-          </button>
-          <button
-            role="menuitem"
-            (click)="manage.setIncludeInForYou(feed, !feed.includeInForYou); rows.closeMenu()"
-          >
-            {{
-              (feed.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou')
-                | transloco
-            }}
-          </button>
-          <button role="menuitem" (click)="manage.unsubscribe(feed); rows.closeMenu()">
-            {{ 'reader.unsubscribe' | transloco }}
-          </button>
-        </div>
-      }
-    </div>
+      <ng-template>
+        <button role="menuitem" (click)="manage.editSubscription(feed); rows.closeMenu()">
+          {{ 'reader.editFeed' | transloco }}
+        </button>
+        <button
+          role="menuitem"
+          (click)="manage.setIncludeInAllItems(feed, !feed.includeInAllItems); rows.closeMenu()"
+        >
+          {{
+            (feed.includeInAllItems ? 'reader.excludeFromAllItems' : 'reader.includeInAllItems')
+              | transloco
+          }}
+        </button>
+        <button
+          role="menuitem"
+          (click)="manage.setIncludeInForYou(feed, !feed.includeInForYou); rows.closeMenu()"
+        >
+          {{
+            (feed.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou')
+              | transloco
+          }}
+        </button>
+        <button role="menuitem" (click)="manage.unsubscribe(feed); rows.closeMenu()">
+          {{ 'reader.unsubscribe' | transloco }}
+        </button>
+      </ng-template>
+    </app-sidebar-row-menu>
   }
 }

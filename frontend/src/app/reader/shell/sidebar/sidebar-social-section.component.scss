@@ -3,6 +3,7 @@
 @include row.tag-head;
 @include row.tag-feeds;
 @include row.nav-states('.section-link', '.section-count');
+@include row.row-dots;
 
 :host {
   display: contents;

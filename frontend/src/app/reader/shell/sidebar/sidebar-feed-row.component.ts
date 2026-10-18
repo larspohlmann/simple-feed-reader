@@ -4,13 +4,13 @@ import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
-import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
 import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
+import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 
 /** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
  *  in the sidebar, and the handle here registers with it through DI; a social row has none, so no handle. */
@@ -22,7 +22,7 @@ import { SidebarRowActions } from './sidebar-row-actions.service';
     TranslocoPipe,
     IconComponent,
     FaviconComponent,
-    DismissOnOutsideDirective,
+    SidebarRowMenuComponent,
   ],
   templateUrl: './sidebar-feed-row.component.html',
   styleUrl: './sidebar-feed-row.component.scss',

@@ -28,7 +28,7 @@ final class SubscriptionJson
 
     /**
      * @param list<Subscription>  $subscriptions
-     * @param list<SocialAccount> $socialAccounts the handles the sidebar labels a network's accounts with
+     * @param list<SocialAccount> $socialAccounts the handles and statuses the sidebar labels a network's accounts with
      *
      * @return array<string, mixed>
      */
@@ -132,13 +132,14 @@ final class SubscriptionJson
         return ['network' => $network->value, 'accountId' => $address->accountId, 'kind' => $address->kind->value];
     }
 
-    /** @return array{id: int, network: string, handle: string} */
+    /** @return array{id: int, network: string, handle: string, status: string} */
     private static function socialAccount(SocialAccount $account): array
     {
         return [
             'id' => $account->requireId(),
             'network' => $account->getNetwork()->value,
             'handle' => $account->getHandle(),
+            'status' => $account->getStatus()->value,
         ];
     }
 

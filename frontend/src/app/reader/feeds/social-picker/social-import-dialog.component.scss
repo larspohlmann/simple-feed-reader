@@ -1,4 +1,4 @@
-@use '../../theme/glass-rim';
+@use '../../../theme/glass-rim';
 
 :host {
   display: contents;
@@ -112,10 +112,6 @@
   background: var(--accent-soft);
 }
 
-.row.is-done {
-  cursor: default;
-}
-
 .tile {
   display: flex;
   flex: none;
@@ -171,13 +167,6 @@
 
 .empty {
   padding: var(--space-3) 0;
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-}
-
-.summary {
-  align-self: center;
-  margin-right: auto;
   color: var(--text-secondary);
   font-size: var(--fs-sm);
 }

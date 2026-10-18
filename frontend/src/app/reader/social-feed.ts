@@ -9,9 +9,12 @@ export type SocialFeedRefDto = { network: SocialNetworkName } & (
 
 export type PrivateFeedRefDto = Extract<SocialFeedRefDto, { accountId: number }>;
 
-/** A connected account, named once per subscriptions answer for the sidebar's account labels. */
+export type SocialAccountStatus = 'connected' | 'needs_reconnect';
+
+/** A connected account, named once per subscriptions answer for the sidebar's account labels and menus. */
 export interface SocialAccountRefDto {
   id: number;
   network: SocialNetworkName;
   handle: string;
+  status: SocialAccountStatus;
 }

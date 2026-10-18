@@ -1,9 +1,9 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, tap } from 'rxjs';
-import { API_BASE_URL } from '../../core/api';
-import { parseProblem, problemMessage } from '../../core/problem';
-import { SocialFeedRefDto } from '../../reader/social-feed';
+import { API_BASE_URL } from '../../../core/api';
+import { parseProblem, problemMessage } from '../../../core/problem';
+import { SocialFeedRefDto } from '../../social-feed';
 
 export type ImportCandidateState = 'new' | 'subscribed' | 'no_longer_followed';
 

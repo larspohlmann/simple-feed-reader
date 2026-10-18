@@ -1,0 +1,15 @@
+<div [appDismissOnOutside]="open()" (dismiss)="rows.closeMenu()">
+  <button
+    class="dots"
+    type="button"
+    [attr.aria-label]="label()"
+    (click)="rows.toggleMenu(menuKey(), $event)"
+  >
+    <app-icon name="more_horiz" size="sm" />
+  </button>
+  @if (open()) {
+    <div class="pop" role="menu">
+      <ng-container [ngTemplateOutlet]="items()" />
+    </div>
+  }
+</div>

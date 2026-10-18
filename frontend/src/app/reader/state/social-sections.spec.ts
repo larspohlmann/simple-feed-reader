@@ -29,8 +29,31 @@ describe('buildSocialSections', () => {
     expect(sections.map((section) => section.network)).toEqual(['bluesky', 'mastodon']);
   });
 
-  it('leaves out a network without private feeds', () => {
+  it('names every account of the network for its menu, by id, even one without private feeds', () => {
+    const sections = buildSocialSections(
+      [feed(1, ref('bluesky', 3, 'home'))],
+      [
+        { id: 9, network: 'bluesky', handle: '@bob.bsky.social', status: 'needs_reconnect' },
+        { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
+        { id: 5, network: 'mastodon', handle: '@carol@mastodon.example', status: 'connected' },
+      ],
+    );
+
+    expect(sections[0].networkAccounts.map((account) => account.id)).toEqual([3, 9]);
+  });
+
+  it('leaves out a network without accounts or feeds', () => {
     expect(buildSocialSections([makeSubscription()], [])).toEqual([]);
+  });
+
+  it('keeps a network with an account but no feeds, so its head can still manage feeds', () => {
+    const sections = buildSocialSections(
+      [],
+      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
+    );
+
+    expect(sections.map((section) => section.network)).toEqual(['bluesky']);
+    expect(sections[0].accounts).toEqual([]);
   });
 
   it("orders accounts by id and each account's feeds Home, lists, custom feeds, then by title", () => {
@@ -42,7 +65,7 @@ describe('buildSocialSections', () => {
         feed(4, ref('bluesky', 3, 'list'), 'Artists'),
         feed(5, ref('bluesky', 3, 'home')),
       ],
-      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social' }],
+      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
     );
 
     expect(
@@ -75,7 +98,7 @@ describe('buildSocialSections', () => {
         profile(3, 'bluesky', 'amy'),
         profile(4, 'mastodon', 'Other network'),
       ],
-      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social' }],
+      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
     );
 
     expect(sections[0].accounts.map((group) => group.accountId)).toEqual([3]);
@@ -108,7 +131,7 @@ describe('buildSocialSections', () => {
           social: { network: 'bluesky', accountId: null, kind: 'profile' },
         }),
       ],
-      [{ id: 3, network: 'bluesky', handle: '@a' }],
+      [{ id: 3, network: 'bluesky', handle: '@a', status: 'connected' }],
     );
 
     expect(sections[0].profiles.unreadCount).toBe(3);

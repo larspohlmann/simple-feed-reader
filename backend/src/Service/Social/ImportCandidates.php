@@ -93,7 +93,7 @@ final readonly class ImportCandidates
     /**
      * @param list<ImportCandidateModel> $follows
      *
-     * @return list<ImportCandidateModel> without unfollows when the follow list was cut off
+     * @return list<ImportCandidateModel> a cut-off follow list cannot tell an unfollow, so a leftover stays subscribed
      */
     private static function trustedFollows(NetworkCandidatesModel $network, array $follows): array
     {
@@ -101,10 +101,11 @@ final readonly class ImportCandidates
             return $follows;
         }
 
-        return array_values(array_filter(
+        return array_map(
+            static fn (ImportCandidateModel $follow): ImportCandidateModel => $follow->state
+                === ImportCandidateState::NoLongerFollowed ? $follow->asSubscribed() : $follow,
             $follows,
-            static fn (ImportCandidateModel $follow): bool => ImportCandidateState::NoLongerFollowed !== $follow->state,
-        ));
+        );
     }
 
     private function networkCandidatesOf(SocialAccount $account): NetworkCandidatesModel

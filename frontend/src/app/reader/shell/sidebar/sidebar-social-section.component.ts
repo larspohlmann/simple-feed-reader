@@ -1,13 +1,16 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SocialNetworkName } from '../../../core/social-network';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
+import { LayoutService } from '../../layout.service';
 import { SocialSection } from '../../state/social-sections';
+import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
+import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 
 const collapsedKey = (network: SocialNetworkName): string => `sfr.${network}.collapsed`;
 const profilesCollapsedKey = (network: SocialNetworkName): string =>
@@ -20,6 +23,7 @@ const profilesCollapsedKey = (network: SocialNetworkName): string =>
     RouterLink,
     TranslocoPipe,
     IconComponent,
+    SidebarRowMenuComponent,
     SidebarFeedRowComponent,
     SidebarGroupRowComponent,
   ],
@@ -30,6 +34,9 @@ export class SidebarSocialSectionComponent {
   readonly section = input.required<SocialSection>();
   readonly selection = input.required<Selection>();
   readonly organising = input(false);
+
+  protected readonly rows = inject(SidebarRowActions);
+  protected readonly screen = inject(LayoutService);
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
   protected readonly expanded = this.collapsible.expanded;
@@ -47,6 +54,8 @@ export class SidebarSocialSectionComponent {
     () => this.onThisNetwork() && this.selection().feedKind === 'profile',
   );
   protected readonly selectionQueryParams = selectionQueryParams;
+
+  protected readonly menuKey = computed(() => `social-${this.section().network}`);
 
   protected toggle(): void {
     this.collapsible.toggle();

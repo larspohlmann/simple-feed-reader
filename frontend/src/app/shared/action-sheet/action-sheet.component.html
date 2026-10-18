@@ -6,6 +6,7 @@
       role="menuitem"
       type="button"
       [class.danger]="action.danger"
+      [disabled]="action.disabled"
       (click)="ref.close(action.id)"
     >
       {{ action.label }}

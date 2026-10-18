@@ -1,9 +1,13 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
+import { ActionSheetAction } from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { SubscriptionDto, TagDto } from '../../models';
+import { SocialAccountRefDto } from '../../social-feed';
+import { SocialSection } from '../../state/social-sections';
 
 /** The row menus and action sheets of the sidebar's tag and feed rows. Provided
  *  on the sidebar, so all rows share one open menu and a late sheet choice dies
@@ -13,6 +17,7 @@ export class SidebarRowActions {
   private readonly manage = inject(ManageActions);
   private readonly sheet = inject(ActionSheet);
   private readonly transloco = inject(TranslocoService);
+  private readonly picker = inject(SocialFeedsPicker);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly menuFor = signal<string | null>(null);
@@ -85,6 +90,42 @@ export class SidebarRowActions {
           this.manage.setIncludeInForYou(subscription, !subscription.includeInForYou);
         if (choice === 'unsubscribe') this.manage.unsubscribe(subscription);
       });
+  }
+
+  /** ⋯ on a network head (coarse): one item per account of the network. */
+  openSocialSheet(section: SocialSection): void {
+    this.sheet
+      .open({
+        title: this.transloco.translate(`settings.social.${section.network}`),
+        actions: this.socialAccountActions(section),
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((choice) => {
+        const account = section.networkAccounts.find(({ id }) => String(id) === choice);
+        if (account) this.manageSocialFeeds(account);
+      });
+  }
+
+  socialAccountActions(section: SocialSection): ActionSheetAction[] {
+    return section.networkAccounts.map((account) => ({
+      id: String(account.id),
+      label: this.socialAccountLabel(section, account),
+      disabled: account.status !== 'connected',
+    }));
+  }
+
+  manageSocialFeeds(account: SocialAccountRefDto): void {
+    this.closeMenu();
+    this.picker.open(account).subscribe();
+  }
+
+  private socialAccountLabel(section: SocialSection, account: SocialAccountRefDto): string {
+    if (account.status !== 'connected') {
+      return this.transloco.translate('reader.reconnectSocialAccount', { handle: account.handle });
+    }
+    return section.networkAccounts.length === 1
+      ? this.transloco.translate('reader.manageSocialFeeds')
+      : this.transloco.translate('reader.manageSocialFeedsOf', { handle: account.handle });
   }
 
   /** Label for a feed exclusion toggle, state-dependent: when the feed is

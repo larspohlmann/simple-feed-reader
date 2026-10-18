@@ -7,6 +7,7 @@ export interface ActionSheetAction {
   id: string;
   label: string;
   danger?: boolean;
+  disabled?: boolean;
 }
 
 /** What the sheet shows: the row it acts on, and that row's actions. */

@@ -421,7 +421,9 @@ describe('SubscriptionsStore', () => {
           untaggedHome,
           untaggedProfile,
         ]),
-        socialAccounts: [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social' }],
+        socialAccounts: [
+          { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
+        ],
       });
     });
 
@@ -444,6 +446,9 @@ describe('SubscriptionsStore', () => {
       expect(store.socialSections()).toEqual([
         {
           network: 'bluesky',
+          networkAccounts: [
+            { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
+          ],
           accounts: [
             {
               accountId: 3,
@@ -459,6 +464,7 @@ describe('SubscriptionsStore', () => {
         },
         {
           network: 'mastodon',
+          networkAccounts: [],
           accounts: [],
           profiles: socialProfiles([untaggedProfile]),
           unreadCount: 8,

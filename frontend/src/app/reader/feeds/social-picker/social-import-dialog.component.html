@@ -61,7 +61,7 @@
 
     <div class="list-head">
       <p class="note">
-        @if (hasLeftovers()) {
+        @if (hasSubscribedRows()) {
           {{ 'settings.social.importUnsubscribeHint' | transloco }}
         }
       </p>
@@ -88,8 +88,7 @@
           >
             <input
               type="checkbox"
-              [checked]="row.removable ? !picked : picked || row.locked"
-              [disabled]="row.locked"
+              [checked]="row.removable ? !picked : picked"
               [attr.aria-label]="row.checkboxLabel"
               (change)="toggle(row)"
             />
@@ -143,11 +142,6 @@
     />
   }
 
-  @if (chosen().size > 0) {
-    <span footer class="summary" data-testid="social-import-selected">
-      {{ 'settings.social.importSelected' | transloco: { count: chosen().size } }}
-    </span>
-  }
   <app-button
     footer
     data-testid="social-import-cancel"
@@ -165,7 +159,7 @@
     (click)="apply()"
   >
     @if (chosen().size > 0) {
-      {{ 'settings.social.importApplyCount' | transloco: { count: chosen().size } }}
+      {{ applyCountKey() | transloco: { count: chosen().size } }}
     } @else {
       {{ 'settings.social.importApply' | transloco }}
     }

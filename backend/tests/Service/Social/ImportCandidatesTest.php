@@ -184,11 +184,11 @@ final class ImportCandidatesTest extends DbTestCase
         self::assertSame('https://cdn.test/bob.jpg', $follows[2]->account->avatarUrl);
     }
 
-    public function testACutOffFollowListOffersNothingAsNoLongerFollowed(): void
+    public function testACutOffFollowListShowsAnUnmatchedSubscriptionAsSubscribed(): void
     {
         $account = $this->account();
         $bob = $this->subscribe('https://bsky.app/profile/did:plc:bob/rss');
-        $this->subscribe('https://bsky.app/profile/did:plc:beyond-the-cut/rss');
+        $beyondTheCut = $this->subscribe('https://bsky.app/profile/did:plc:beyond-the-cut/rss');
         $network = new StubSocialCandidates(new NetworkCandidatesModel(
             [self::follow('did:plc:bob', '@bob.bsky.social'), self::follow('did:plc:amy', '@amy.bsky.social')],
             [],
@@ -199,7 +199,11 @@ final class ImportCandidatesTest extends DbTestCase
         $follows = $this->importCandidates($network)->forAccount($account)->follows;
 
         self::assertSame(
-            [['@amy.bsky.social', 'new', null], ['@bob.bsky.social', 'subscribed', $bob->requireId()]],
+            [
+                ['@amy.bsky.social', 'new', null],
+                ['@bob.bsky.social', 'subscribed', $bob->requireId()],
+                ['did:plc:beyond-the-cut', 'subscribed', $beyondTheCut->requireId()],
+            ],
             self::summary($follows),
         );
     }
