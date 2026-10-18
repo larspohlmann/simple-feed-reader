@@ -124,7 +124,11 @@ const SURFACES = ['surface-0', 'surface-1', 'surface-2', 'surface-read'];
 // Every colour token is scaled; only favicon-backdrop is not.
 const SCALED = Object.keys(TODAY.light).filter((token) => token !== 'favicon-backdrop');
 const TEXT = ['text-primary', 'text-secondary', 'text-muted'];
-const MEDIA: Partial<Record<number, string>> = {
+const MEDIA: Record<Theme, Partial<Record<number, string>>> = {
+  light: { [-1]: '0.92', [-2]: '0.84', [-3]: '0.76', [-4]: '0.68', [-5]: '0.6', [-6]: '0.52' },
+  dark: { 0: '0.85', [-1]: '0.65', [-2]: '0.45', [-3]: '0.25' },
+};
+const USER_COLOUR: Partial<Record<number, string>> = {
   [-1]: '0.92',
   [-2]: '0.84',
   [-3]: '0.76',
@@ -165,12 +169,12 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
     expect(emittedSteps(theme)).toEqual([...STEPS[theme]]);
   });
 
-  it('carries no media factor at step 0', () => {
-    expect(base['media-brightness']).toBeUndefined();
+  it('carries the resting media factor at step 0', () => {
+    expect(base['media-brightness']).toBe(MEDIA[theme][0]);
   });
 
   it.each(STEPS[theme])('step %i redefines every colour token and nothing else', (step) => {
-    const mediaToken = step < 0 ? ['media-brightness'] : [];
+    const mediaToken = step < 0 ? ['media-brightness', 'user-colour-brightness'] : [];
     expect(Object.keys(paletteAt(theme, step)).sort()).toEqual(
       [...SCALED, 'rim-light', ...mediaToken].sort(),
     );
@@ -215,7 +219,11 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
   });
 
   it.each(STEPS[theme])('step %i dims media only when dimming', (step) => {
-    expect(paletteAt(theme, step)['media-brightness']).toBe(MEDIA[step]);
+    expect(paletteAt(theme, step)['media-brightness']).toBe(MEDIA[theme][step]);
+  });
+
+  it.each(STEPS[theme])('step %i dims user colours 8 %% per dimming step', (step) => {
+    expect(paletteAt(theme, step)['user-colour-brightness']).toBe(USER_COLOUR[step]);
   });
 });
 
