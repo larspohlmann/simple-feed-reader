@@ -1,7 +1,10 @@
+@use '../../theme/breakpoints' as bp;
 @use 'link-card-layout';
 
 :host {
   @include link-card-layout.frame;
+
+  --open-in-reader-width: var(--tap-target);
 
   display: block;
   position: relative;
@@ -20,7 +23,7 @@
 
 // A leading text line would sit under the button, so it makes room.
 :host(.openable) a > :first-child:not(img) {
-  padding-inline-end: calc(var(--tap-target) + var(--space-2));
+  padding-inline-end: calc(var(--open-in-reader-width) + var(--space-2));
 }
 
 // Always visible, not hover-only: touch is a first-class target (#1664).
@@ -31,12 +34,35 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-1);
   padding: var(--space-1);
   border: none;
   border-radius: var(--radius);
   background: var(--media-scrim);
   color: var(--on-media-scrim);
   cursor: pointer;
+}
+
+.open-in-reader-label {
+  display: none;
+}
+
+@media (width >= bp.$bp-lg) {
+  :host {
+    // The longest label, "Im Reader öffnen", is 11.5em of --fs-xs.
+    --open-in-reader-width: calc(12 * var(--fs-xs));
+  }
+
+  .open-in-reader {
+    padding-inline: var(--space-2);
+    font: inherit;
+    font-size: var(--fs-xs);
+  }
+
+  .open-in-reader-label {
+    display: inline;
+    white-space: nowrap;
+  }
 }
 
 @media (pointer: coarse) {

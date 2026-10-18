@@ -66,6 +66,7 @@ describe('LinkCardComponent', () => {
 
       expect(button).not.toBeNull();
       expect(button!.getAttribute('aria-label')).toBe('Open in reader');
+      expect(button!.querySelector('.open-in-reader-label')!.textContent).toBe('Open in reader');
       expect(button!.closest('a')).toBeNull();
     });
 
