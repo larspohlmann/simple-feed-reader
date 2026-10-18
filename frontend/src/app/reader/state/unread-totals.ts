@@ -1,11 +1,5 @@
-import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
+import { SocialNetworkName } from '../../core/social-network';
 import { UnreadTotalsDto } from '../models';
-
-export type ZeroTarget =
-  | 'all'
-  | { tag: number }
-  | { subscription: number }
-  | { network: SocialNetworkName; feedKind?: NetworkFeedKind };
 
 export interface UnreadTotals {
   readonly allItems: number;
@@ -39,28 +33,6 @@ export function sameUnreadTotals(left: UnreadTotals, right: UnreadTotals): boole
     sameCounts(left.networks, right.networks) &&
     sameCounts(left.networkProfiles, right.networkProfiles)
   );
-}
-
-export function zeroUnreadTotals(totals: UnreadTotals, target: ZeroTarget): UnreadTotals {
-  if (target === 'all') return { ...totals, allItems: 0 };
-  if ('tag' in target) return { ...totals, tags: withZero(totals.tags, target.tag) };
-  if ('network' in target) return zeroNetwork(totals, target.network, target.feedKind);
-  return totals;
-}
-
-function zeroNetwork(
-  totals: UnreadTotals,
-  network: SocialNetworkName,
-  feedKind: NetworkFeedKind | undefined,
-): UnreadTotals {
-  const networkProfiles = withZero(totals.networkProfiles, network);
-  if (feedKind === 'profile') return { ...totals, networkProfiles };
-  return { ...totals, networks: withZero(totals.networks, network), networkProfiles };
-}
-
-function withZero<Key>(counts: ReadonlyMap<Key, number>, key: Key): ReadonlyMap<Key, number> {
-  if (!counts.has(key)) return counts;
-  return new Map(counts).set(key, 0);
 }
 
 function sameCounts<Key>(left: ReadonlyMap<Key, number>, right: ReadonlyMap<Key, number>): boolean {

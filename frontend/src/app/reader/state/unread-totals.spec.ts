@@ -3,7 +3,6 @@ import {
   UnreadTotals,
   sameUnreadTotals,
   unreadTotalsFrom,
-  zeroUnreadTotals,
 } from './unread-totals';
 
 const totals: UnreadTotals = {
@@ -43,40 +42,6 @@ describe('unreadTotalsFrom', () => {
       ['bluesky', 2],
       ['mastodon', 0],
     ]);
-  });
-});
-
-describe('zeroUnreadTotals', () => {
-  it("zeroes the all-items total for 'all'", () => {
-    expect(zeroUnreadTotals(totals, 'all').allItems).toBe(0);
-  });
-
-  it('zeroes one tag and keeps the others', () => {
-    const result = zeroUnreadTotals(totals, { tag: 3 });
-
-    expect([...result.tags]).toEqual([
-      [3, 0],
-      [5, 2],
-    ]);
-  });
-
-  it('zeroes a network, profiles included', () => {
-    const result = zeroUnreadTotals(totals, { network: 'bluesky' });
-
-    expect(result.networks.get('bluesky')).toBe(0);
-    expect(result.networks.get('mastodon')).toBe(1);
-    expect(result.networkProfiles.get('bluesky')).toBe(0);
-  });
-
-  it('zeroes only the profile total for the profile feed kind', () => {
-    const result = zeroUnreadTotals(totals, { network: 'bluesky', feedKind: 'profile' });
-
-    expect(result.networkProfiles.get('bluesky')).toBe(0);
-    expect(result.networks.get('bluesky')).toBe(6);
-  });
-
-  it('leaves the totals as they are for a single subscription', () => {
-    expect(zeroUnreadTotals(totals, { subscription: 1 })).toBe(totals);
   });
 });
 
