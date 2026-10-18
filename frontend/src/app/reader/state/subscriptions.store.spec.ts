@@ -393,27 +393,24 @@ describe('SubscriptionsStore', () => {
         duplicates: [anEntry({ id: 2, subscriptionId: 2, ...copyOverrides })],
       });
 
-    it('moves every copy and each scope once per copy, and restores them', () => {
+    it('moves every copy and restores it, leaving the scope totals to the server', () => {
       const entry = withCopy();
 
       store.markArticleRead(entry);
 
       expect([unreadOf(1), unreadOf(2)]).toEqual([2, 4]);
-      expect(store.totalUnread()).toBe(6);
-      expect(store.unreadTotals().networks.get('bluesky')).toBe(6);
+      expect(store.totalUnread()).toBe(8);
+      expect(store.unreadTotals().networks.get('bluesky')).toBe(8);
 
       store.markArticleUnread(entry);
 
       expect([unreadOf(1), unreadOf(2)]).toEqual([3, 5]);
-      expect(store.totalUnread()).toBe(8);
-      expect(store.unreadTotals().networks.get('bluesky')).toBe(8);
     });
 
     it('leaves a hidden copy alone', () => {
       store.markArticleRead(withCopy({ isHidden: true }));
 
       expect([unreadOf(1), unreadOf(2)]).toEqual([2, 5]);
-      expect(store.totalUnread()).toBe(7);
     });
 
     it('zeroes the targeted tag total', () => {

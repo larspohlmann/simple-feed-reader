@@ -2,13 +2,13 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
 import { EntryStateActions } from './entry-state-actions.service';
-import { EntriesStore } from '../state/entries.store';
+import { EntriesStore, StateSaveOutcome } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ToastService } from '../../shared/toast/toast.service';
 import { Problem } from '../../core/problem';
-import { EntryDto } from '../models';
+import { EntryDto, EntryStatePatch } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
 
 describe('EntryStateActions liking (#1600)', () => {
@@ -94,7 +94,8 @@ describe('EntryStateActions opening', () => {
 describe('EntryStateActions reading counts (#1679)', () => {
   const markArticleRead = jest.fn();
   const markArticleUnread = jest.fn();
-  const setState = jest.fn();
+  const reloadCountsQuietly = jest.fn();
+  const setState = jest.fn<void, [number, EntryStatePatch, StateSaveOutcome?]>();
   const openEntryId = signal<number | null>(null);
   const openEntry = signal<EntryDto | null>(null);
   let actions: EntryStateActions;
@@ -102,6 +103,7 @@ describe('EntryStateActions reading counts (#1679)', () => {
   beforeEach(() => {
     markArticleRead.mockReset();
     markArticleUnread.mockReset();
+    reloadCountsQuietly.mockReset();
     setState.mockReset();
     openEntryId.set(null);
     openEntry.set(null);
@@ -112,7 +114,12 @@ describe('EntryStateActions reading counts (#1679)', () => {
         { provide: EntriesStore, useValue: { setState } },
         {
           provide: SubscriptionsStore,
-          useValue: { bumpViewed: jest.fn(), markArticleRead, markArticleUnread },
+          useValue: {
+            bumpViewed: jest.fn(),
+            markArticleRead,
+            markArticleUnread,
+            reloadCountsQuietly,
+          },
         },
         {
           provide: SavedSearchesStore,
@@ -132,6 +139,8 @@ describe('EntryStateActions reading counts (#1679)', () => {
     actions = TestBed.inject(EntryStateActions);
   });
 
+  const outcome = (): StateSaveOutcome => setState.mock.calls[0][2] ?? {};
+
   it('ticking an unread entry reads the article, and a failed save puts it back', () => {
     const entry = anEntry();
 
@@ -139,8 +148,9 @@ describe('EntryStateActions reading counts (#1679)', () => {
 
     expect(markArticleRead).toHaveBeenCalledWith(entry);
     expect(markArticleUnread).not.toHaveBeenCalled();
-    setState.mock.calls[0][2]();
+    outcome().onFailed?.();
     expect(markArticleUnread).toHaveBeenCalledWith(entry);
+    expect(reloadCountsQuietly).not.toHaveBeenCalled();
   });
 
   it('opening an unread entry reads the article, and a failed save puts it back', () => {
@@ -152,7 +162,29 @@ describe('EntryStateActions reading counts (#1679)', () => {
 
     expect(markArticleRead).toHaveBeenCalledWith(entry);
     expect(markArticleUnread).not.toHaveBeenCalled();
-    setState.mock.calls[0][2]();
+    outcome().onFailed?.();
     expect(markArticleUnread).toHaveBeenCalledWith(entry);
+    expect(reloadCountsQuietly).not.toHaveBeenCalled();
+  });
+
+  it('recounts the scope totals once a read is saved, by ticking or by opening', () => {
+    actions.toggleRead(anEntry({ id: 1 }));
+    outcome().onSaved?.();
+    expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
+
+    const opened = anEntry({ id: 2 });
+    openEntry.set(opened);
+    openEntryId.set(opened.id);
+    TestBed.tick();
+    setState.mock.calls[1][2]?.onSaved?.();
+
+    expect(reloadCountsQuietly).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not recount when un-ticking, which reads nothing', () => {
+    actions.toggleRead(anEntry({ isViewed: true }));
+    outcome().onSaved?.();
+
+    expect(reloadCountsQuietly).not.toHaveBeenCalled();
   });
 });

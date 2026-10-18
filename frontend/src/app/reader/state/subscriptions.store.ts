@@ -28,7 +28,6 @@ import {
   UnreadTotals,
   ZeroTarget,
   sameUnreadTotals,
-  shiftUnreadTotals,
   unreadTotalsFrom,
   zeroUnreadTotals,
 } from './unread-totals';
@@ -298,7 +297,8 @@ export class SubscriptionsStore {
     count.update((current) => Math.max(0, current + by));
   }
 
-  /** The server mirrors a read onto every visible copy, so each copy moves, and each scope once per copy it holds. */
+  /** The server mirrors a read onto every visible copy, so each copy's feed moves; the scope totals are the
+   *  server's to recount once the read is saved (`reloadCountsQuietly`). */
   markArticleRead(entry: EntryDto): void {
     this.shiftArticleUnread(entry, -1);
   }
@@ -313,13 +313,11 @@ export class SubscriptionsStore {
         (copy) => copy.subscriptionId,
       ),
     );
-    const held = this.storedSubscriptions().filter((subscription) => copyIds.has(subscription.id));
     this.patchSubscriptions((subscription) =>
       copyIds.has(subscription.id)
         ? { ...subscription, unreadCount: Math.max(0, subscription.unreadCount + by) }
         : subscription,
     );
-    this.patchUnreadTotals((totals) => shiftUnreadTotals(totals, held, by));
   }
 
   /** Optimistically apply an exclusion-flag toggle (All items / For you) so the

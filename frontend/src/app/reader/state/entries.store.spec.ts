@@ -594,19 +594,34 @@ describe('EntriesStore', () => {
     });
   });
 
-  it('invokes the onError callback on a failed state PATCH', () => {
+  it('reports a failed state PATCH to onFailed only', () => {
     store.load({ view: 'all' });
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: null });
 
-    let called = 0;
-    store.setState(1, { isHidden: true }, () => called++);
-    expect(called).toBe(0);
+    const outcome = { onSaved: jest.fn(), onFailed: jest.fn() };
+    store.setState(1, { isHidden: true }, outcome);
+    expect(outcome.onFailed).not.toHaveBeenCalled();
     ctrl
       .expectOne('https://api.test/api/entries/1/state')
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-    expect(called).toBe(1);
+    expect(outcome.onFailed).toHaveBeenCalledTimes(1);
+    expect(outcome.onSaved).not.toHaveBeenCalled();
+  });
+
+  it('reports a saved state PATCH to onSaved only', () => {
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: null });
+
+    const outcome = { onSaved: jest.fn(), onFailed: jest.fn() };
+    store.setState(1, { isHidden: true }, outcome);
+    expect(outcome.onSaved).not.toHaveBeenCalled();
+    ctrl.expectOne('https://api.test/api/entries/1/state').flush({ state: { entryId: 1 } });
+    expect(outcome.onSaved).toHaveBeenCalledTimes(1);
+    expect(outcome.onFailed).not.toHaveBeenCalled();
   });
 
   // #996: the error surface offers a retry that replays exactly the operation

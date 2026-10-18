@@ -1,7 +1,7 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
-import { EntriesStore, localStatePatch } from '../state/entries.store';
+import { EntriesStore, StateSaveOutcome, localStatePatch } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { Selection } from '../query/query';
@@ -43,8 +43,10 @@ export class EntryStateActions implements EntryActionHandler {
   favorite(entry: EntryDto): void {
     const delta = entry.isFavorite ? -1 : 1;
     this.subscriptions.bumpFavorites(delta);
-    this.patchInList(entry, { isFavorite: !entry.isFavorite }, () =>
-      this.subscriptions.bumpFavorites(-delta),
+    this.patchInList(
+      entry,
+      { isFavorite: !entry.isFavorite },
+      { onFailed: () => this.subscriptions.bumpFavorites(-delta) },
     );
   }
 
@@ -57,7 +59,11 @@ export class EntryStateActions implements EntryActionHandler {
   keep(entry: EntryDto): void {
     const delta = entry.isKept ? -1 : 1;
     this.subscriptions.bumpKept(delta);
-    this.patchInList(entry, { isKept: !entry.isKept }, () => this.subscriptions.bumpKept(-delta));
+    this.patchInList(
+      entry,
+      { isKept: !entry.isKept },
+      { onFailed: () => this.subscriptions.bumpKept(-delta) },
+    );
   }
 
   /** Ticking also reads the entry; un-ticking lets a later reopen mark it viewed again. */
@@ -71,13 +77,22 @@ export class EntryStateActions implements EntryActionHandler {
       this.savedSearches.markEntryRead(entry.id);
     }
     if (!viewed) this.viewedOnOpen.delete(entry.id);
-    this.patchInList(entry, { isViewed: viewed }, () => {
-      this.subscriptions.bumpViewed(-viewedDelta);
-      if (alsoReads) {
-        this.subscriptions.markArticleUnread(entry);
-        this.savedSearches.markEntryUnread(entry.id);
-      }
-    });
+    this.patchInList(
+      entry,
+      { isViewed: viewed },
+      {
+        onSaved: () => {
+          if (alsoReads) this.subscriptions.reloadCountsQuietly();
+        },
+        onFailed: () => {
+          this.subscriptions.bumpViewed(-viewedDelta);
+          if (alsoReads) {
+            this.subscriptions.markArticleUnread(entry);
+            this.savedSearches.markEntryUnread(entry.id);
+          }
+        },
+      },
+    );
   }
 
   open(entry: EntryDto): void {
@@ -91,7 +106,11 @@ export class EntryStateActions implements EntryActionHandler {
   readonly openOriginal = (entry: EntryDto): void => {
     if (entry.isViewed) return;
     this.subscriptions.bumpViewed(1);
-    this.entries.setState(entry.id, { isViewed: true }, () => this.subscriptions.bumpViewed(-1));
+    this.entries.setState(
+      entry.id,
+      { isViewed: true },
+      { onFailed: () => this.subscriptions.bumpViewed(-1) },
+    );
   };
 
   clearLeaving(): void {
@@ -105,20 +124,32 @@ export class EntryStateActions implements EntryActionHandler {
       this.savedSearches.markEntryRead(entry.id);
     }
     this.subscriptions.bumpViewed(1);
-    this.entries.setState(entry.id, { isViewed: true }, () => {
-      if (alsoReads) {
-        this.subscriptions.markArticleUnread(entry);
-        this.savedSearches.markEntryUnread(entry.id);
-      }
-      this.subscriptions.bumpViewed(-1);
-    });
+    this.entries.setState(
+      entry.id,
+      { isViewed: true },
+      {
+        onSaved: () => {
+          if (alsoReads) this.subscriptions.reloadCountsQuietly();
+        },
+        onFailed: () => {
+          if (alsoReads) {
+            this.subscriptions.markArticleUnread(entry);
+            this.savedSearches.markEntryUnread(entry.id);
+          }
+          this.subscriptions.bumpViewed(-1);
+        },
+      },
+    );
   }
 
-  private patchInList(entry: EntryDto, patch: EntryStatePatch, onError: () => void): void {
+  private patchInList(entry: EntryDto, patch: EntryStatePatch, outcome: StateSaveOutcome): void {
     const revertLeave = this.leaveExcludedRow(entry, patch);
-    this.entries.setState(entry.id, patch, () => {
-      onError();
-      revertLeave();
+    this.entries.setState(entry.id, patch, {
+      onSaved: outcome.onSaved,
+      onFailed: () => {
+        outcome.onFailed?.();
+        revertLeave();
+      },
     });
   }
 
