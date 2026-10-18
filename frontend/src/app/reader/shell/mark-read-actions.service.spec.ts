@@ -24,8 +24,11 @@ const subscription = (
   social: SubscriptionDto['social'],
 ): SubscriptionDto => makeSubscription({ id, unreadCount, social });
 
-describe('MarkReadActions marking a network read', () => {
-  const profileFeed = subscription(1, 4, { network: 'bluesky', accountId: null, kind: 'profile' });
+describe('MarkReadActions recounting after a mark-read', () => {
+  const profileFeed = {
+    ...subscription(1, 4, { network: 'bluesky', accountId: null, kind: 'profile' }),
+    tags: [{ id: 5, name: 'News', color: null, icon: null, position: 0 }],
+  };
   const homeFeed = subscription(2, 6, { network: 'bluesky', accountId: 3, kind: 'home' });
   const otherNetworkProfile = subscription(3, 8, {
     network: 'mastodon',
@@ -35,8 +38,8 @@ describe('MarkReadActions marking a network read', () => {
 
   let actions: MarkReadActions;
   let subscriptions: SubscriptionsStore;
-  let markRead: jest.SpyInstance;
   let reloadCountsQuietly: jest.SpyInstance;
+  let fullLoad: jest.SpyInstance;
   const currentSelection = signal<Selection | null>(null);
 
   const unreadCounts = () => subscriptions.subscriptions().map((feed) => feed.unreadCount);
@@ -64,6 +67,7 @@ describe('MarkReadActions marking a network read', () => {
           useValue: {
             loadedAt: () => '2026-10-16T10:00:00Z',
             load: jest.fn(),
+            markHiddenLocally: jest.fn(),
             runThenReload: (
               mutation: { subscribe: (next: () => void) => void },
               reload: () => void,
@@ -76,7 +80,17 @@ describe('MarkReadActions marking a network read', () => {
       ],
     });
     TestBed.inject(TokenStore).set('user-a.jwt');
-    markRead = jest.spyOn(TestBed.inject(ReaderApi), 'markRead').mockReturnValue(of(undefined));
+    const api = TestBed.inject(ReaderApi);
+    for (const request of [
+      'markRead',
+      'markSearchRead',
+      'markForYouRead',
+      'markSavedSearchesRead',
+      'markSingleSavedSearchRead',
+      'markEntriesRead',
+    ] as const) {
+      jest.spyOn(api, request).mockReturnValue(of(undefined));
+    }
     subscriptions = TestBed.inject(SubscriptionsStore);
     subscriptions.load();
     TestBed.inject(HttpTestingController)
@@ -89,35 +103,34 @@ describe('MarkReadActions marking a network read', () => {
         unreadTotals: { allItems: 0, tags: [{ id: 5, unreadCount: 4 }], networks: [] },
       });
     reloadCountsQuietly = jest.spyOn(subscriptions, 'reloadCountsQuietly').mockImplementation();
+    fullLoad = jest.spyOn(subscriptions, 'load');
     actions = TestBed.inject(MarkReadActions);
   });
 
-  it('zeroes only the profile feeds of the network when its Feeds row is marked read', () => {
-    markSelectionRead({
-      kind: 'network',
-      id: null,
-      unread: true,
-      network: 'bluesky',
-      feedKind: 'profile',
-    });
+  it.each<Selection>([
+    { kind: 'all', id: null, unread: true },
+    { kind: 'tag', id: 5, unread: true },
+    { kind: 'subscription', id: 1, unread: true },
+    { kind: 'network', id: null, unread: true, network: 'bluesky' },
+    { kind: 'network', id: null, unread: true, network: 'bluesky', feedKind: 'profile' },
+    { kind: 'search', id: null, unread: true, term: 'news' },
+    { kind: 'for-you', id: null, unread: true },
+    { kind: 'saved-searches', id: null, unread: true },
+    { kind: 'saved-search', id: 7, unread: true },
+  ])('leaves the badges to the server recount after marking $kind read', (selection) => {
+    markSelectionRead(selection);
 
-    expect(markRead).toHaveBeenCalledTimes(1);
-    expect(unreadCounts()).toEqual([0, 6, 8]);
+    expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
+    expect(fullLoad).not.toHaveBeenCalled();
+    expect(unreadCounts()).toEqual([4, 6, 8]);
   });
 
-  it('zeroes every feed of the network when the whole network is marked read', () => {
-    markSelectionRead({ kind: 'network', id: null, unread: true, network: 'bluesky' });
+  it('recounts from the server after marking the entries above read', () => {
+    currentSelection.set({ kind: 'all', id: null, unread: false });
 
-    expect(unreadCounts()).toEqual([0, 0, 8]);
-  });
+    actions.confirmMarkAboveRead([1, 2], jest.fn());
 
-  it('zeroes the tag total, then reloads quietly to settle it with the server', () => {
-    const order: string[] = [];
-    jest.spyOn(subscriptions, 'zeroUnread').mockImplementation(() => void order.push('zero'));
-    reloadCountsQuietly.mockImplementation(() => void order.push('reload'));
-
-    markSelectionRead({ kind: 'tag', id: 5, unread: true });
-
-    expect(order).toEqual(['zero', 'reload']);
+    expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
+    expect(fullLoad).not.toHaveBeenCalled();
   });
 });

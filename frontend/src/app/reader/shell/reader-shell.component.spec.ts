@@ -83,6 +83,14 @@ describe('ReaderShellComponent', () => {
 
   const NO_UNREAD_TOTALS_DTO: UnreadTotalsDto = { allItems: 0, tags: [], networks: [] };
 
+  const markedReadCountsBody = {
+    subscriptions: [{ id: 5, unreadCount: 0, entryCount: 0 }],
+    favoritesCount: 0,
+    keptCount: 0,
+    viewedCount: 0,
+    unreadTotals: NO_UNREAD_TOTALS_DTO,
+  };
+
   const subscriptionsBody = {
     subscriptions: [
       {
@@ -3396,7 +3404,7 @@ describe('ReaderShellComponent', () => {
       return fixture;
     }
 
-    it('calls the search mark-read endpoint with the term verbatim, then reloads entries, subscriptions and saved searches', () => {
+    it('calls the search mark-read endpoint with the term verbatim, then reloads entries, counts and saved searches', () => {
       const fixture = bootWithSearchSelected();
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
@@ -3413,7 +3421,7 @@ describe('ReaderShellComponent', () => {
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     });
 
@@ -3443,7 +3451,7 @@ describe('ReaderShellComponent', () => {
       expect(heading?.textContent).toContain('Mastodon');
     });
 
-    it('marks the network read by name, reloads the list and zeroes its feeds locally', () => {
+    it('marks the network read by name, then reloads the list and the counts', () => {
       const fixture = boot();
       qp.next(convertToParamMap({ network: 'bluesky' }));
       fixture.detectChanges();
@@ -3451,7 +3459,6 @@ describe('ReaderShellComponent', () => {
       expect(list.request.params.get('network')).toBe('bluesky');
       list.flush({ entries: [], nextCursor: null });
       fixture.detectChanges();
-      const zeroUnread = jest.spyOn(TestBed.inject(SubscriptionsStore), 'zeroUnread');
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
 
       fixture.componentInstance.markRead.confirmMarkAllRead();
@@ -3467,7 +3474,7 @@ describe('ReaderShellComponent', () => {
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
-      expect(zeroUnread).toHaveBeenCalledWith({ network: 'bluesky' });
+      ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
     });
   });
 
@@ -3505,7 +3512,7 @@ describe('ReaderShellComponent', () => {
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'none',
@@ -3544,7 +3551,7 @@ describe('ReaderShellComponent', () => {
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'completed',
@@ -3573,7 +3580,7 @@ describe('ReaderShellComponent', () => {
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'none',
@@ -3781,7 +3788,7 @@ describe('ReaderShellComponent', () => {
       expect(header.hasUnreadFilter()).toBe(true);
     });
 
-    it('marks it read via its by-id endpoint, then reloads entries, subscriptions and saved searches', () => {
+    it('marks it read via its by-id endpoint, then reloads entries, counts and saved searches', () => {
       const fixture = bootSingleSavedSearch();
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
 
@@ -3793,7 +3800,7 @@ describe('ReaderShellComponent', () => {
       testRequest.flush(null);
 
       ctrl.expectOne((request) => request.url === 'https://api.test/api/entries/saved-searches/4');
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     });
 
@@ -3916,7 +3923,7 @@ describe('ReaderShellComponent', () => {
       return fixture;
     }
 
-    it('calls the saved-searches endpoint with only a watermark, then reloads entries, subscriptions and saved searches', () => {
+    it('calls the saved-searches endpoint with only a watermark, then reloads entries, counts and saved searches', () => {
       const fixture = bootWithSavedSearchesSelected();
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
@@ -3931,7 +3938,7 @@ describe('ReaderShellComponent', () => {
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/entries/saved-searches')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     });
 
