@@ -1,6 +1,7 @@
 import { SubscriptionDto } from '../models';
 import { PrivateFeedRefDto, SocialAccountRefDto } from '../social-feed';
 import { SOCIAL_NETWORKS, SocialNetworkName } from '../../core/social-network';
+import type { UnreadTotals } from './unread-totals';
 
 export interface SocialAccountGroup {
   readonly accountId: number;
@@ -81,6 +82,7 @@ export function feedAvatarUrl(subscription: SubscriptionDto | null): string | nu
 export function buildSocialSections(
   subscriptions: readonly SubscriptionDto[],
   socialAccounts: readonly SocialAccountRefDto[],
+  totals: UnreadTotals,
 ): SocialSection[] {
   const handles = new Map(socialAccounts.map((account) => [account.id, account.handle]));
   return SOCIAL_NETWORKS.map((network) => {
@@ -96,12 +98,13 @@ export function buildSocialSections(
         ofNetwork.filter(
           (subscription) => !isPrivateFeed(subscription) && !isSavedFeed(subscription),
         ),
+        totals.networkProfiles.get(network) ?? 0,
       ),
       saved:
         ofNetwork.find(
           (subscription) => isSavedFeed(subscription) && !isEmptySavedFeed(subscription),
         ) ?? null,
-      unreadCount: sum(ofNetwork, (subscription) => subscription.unreadCount),
+      unreadCount: totals.networks.get(network) ?? 0,
       entryCount: sum(ofNetwork, (subscription) => subscription.entryCount),
       showsHandles: accounts.length > 1,
     };
@@ -114,11 +117,14 @@ export function buildSocialSections(
   );
 }
 
-export function socialProfiles(subscriptions: readonly SubscriptionDto[]): SocialProfiles {
+export function socialProfiles(
+  subscriptions: readonly SubscriptionDto[],
+  unreadCount: number,
+): SocialProfiles {
   const sorted = [...subscriptions].sort((left, right) => left.title.localeCompare(right.title));
   return {
     subscriptions: sorted,
-    unreadCount: sum(sorted, (subscription) => subscription.unreadCount),
+    unreadCount,
     entryCount: sum(sorted, (subscription) => subscription.entryCount),
   };
 }

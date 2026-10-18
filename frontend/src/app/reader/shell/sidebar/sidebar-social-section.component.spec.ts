@@ -36,7 +36,7 @@ const ONE_ACCOUNT: SocialSection = {
   networkAccounts: [
     { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
   ],
-  profiles: socialProfiles([]),
+  profiles: socialProfiles([], 0),
   unreadCount: 3,
   entryCount: 0,
   saved: null,
@@ -130,7 +130,7 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: false,
       networkAccounts: [],
-      profiles: socialProfiles([]),
+      profiles: socialProfiles([], 0),
       accounts: [
         {
           accountId: 3,
@@ -153,7 +153,7 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: true,
       networkAccounts: [],
-      profiles: socialProfiles([]),
+      profiles: socialProfiles([], 0),
       accounts: [
         {
           accountId: 3,
@@ -207,7 +207,7 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: true,
       networkAccounts: [],
-      profiles: socialProfiles([]),
+      profiles: socialProfiles([], 0),
       accounts: [
         { accountId: 3, handle: null, subscriptions: [feed(1, 'home')] },
         { accountId: 4, handle: '@work.bsky.social', subscriptions: [feed(2, 'home')] },
@@ -230,7 +230,7 @@ describe('SidebarSocialSectionComponent', () => {
       saved: null,
       showsHandles: false,
       networkAccounts: [],
-      profiles: socialProfiles([]),
+      profiles: socialProfiles([], 0),
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
 
@@ -256,10 +256,13 @@ describe('SidebarSocialSectionComponent', () => {
 
   const WITH_PROFILES: SocialSection = {
     ...ONE_ACCOUNT,
-    profiles: socialProfiles([
-      { ...person(7, 'Amy'), unreadCount: 2 },
-      { ...person(8, 'Zed'), unreadCount: 3 },
-    ]),
+    profiles: socialProfiles(
+      [
+        { ...person(7, 'Amy'), unreadCount: 2 },
+        { ...person(8, 'Zed'), unreadCount: 3 },
+      ],
+      5,
+    ),
   };
   const feedsRow = (root: HTMLElement) =>
     root.querySelector('[data-testid="sidebar-social-feeds"]') as HTMLElement | null;
@@ -329,7 +332,7 @@ describe('SidebarSocialSectionComponent', () => {
       showsHandles: false,
       networkAccounts: [],
       accounts: [],
-      profiles: socialProfiles([person(7, 'Amy')]),
+      profiles: socialProfiles([person(7, 'Amy')], 0),
     };
 
     expandProfiles('mastodon');
@@ -345,7 +348,7 @@ describe('SidebarSocialSectionComponent', () => {
     const section: SocialSection = {
       network: 'bluesky',
       accounts: [],
-      profiles: socialProfiles([excluded]),
+      profiles: socialProfiles([excluded], 0),
       unreadCount: 0,
       entryCount: 0,
       saved: null,
@@ -461,7 +464,7 @@ describe('SidebarSocialSectionComponent', () => {
       const section: SocialSection = {
         network: 'bluesky',
         accounts: [],
-        profiles: socialProfiles([subscription]),
+        profiles: socialProfiles([subscription], 0),
         unreadCount: 0,
         entryCount: 0,
         saved: null,
@@ -500,7 +503,7 @@ describe('SidebarSocialSectionComponent', () => {
       const section: SocialSection = {
         network: 'bluesky',
         accounts: [],
-        profiles: socialProfiles([amy]),
+        profiles: socialProfiles([amy], 0),
         unreadCount: 0,
         entryCount: 0,
         saved: null,

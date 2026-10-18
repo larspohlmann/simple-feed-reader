@@ -11,13 +11,8 @@ import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { socialProfiles } from './social-sections';
 import { SubscriptionsStore } from './subscriptions.store';
 import { SubscriptionRows } from './subscription-rows';
-import {
-  buildTagTree,
-  sumEntries,
-  sumUnread,
-  untaggedSubscriptions,
-} from './subscription-derivations';
-import { SubscriptionDto } from '../models';
+import { buildTagTree, sumEntries, untaggedSubscriptions } from './subscription-derivations';
+import { SubscriptionDto, UnreadTotalsDto } from '../models';
 
 const tag = (id: number, name: string) => ({ id, name, color: null, icon: null, position: 0 });
 const sub = (
@@ -56,13 +51,22 @@ interface CountTotals {
   favorites?: number;
   kept?: number;
   viewed?: number;
+  unreadTotals?: Partial<UnreadTotalsDto>;
 }
+
+const unreadTotalsDto = (over: Partial<UnreadTotalsDto> = {}): UnreadTotalsDto => ({
+  allItems: 0,
+  tags: [],
+  networks: [],
+  ...over,
+});
 
 const counts = <Row>(subscriptions: Row[], totals: CountTotals = {}) => ({
   subscriptions,
   favoritesCount: totals.favorites ?? 0,
   keptCount: totals.kept ?? 0,
   viewedCount: totals.viewed ?? 0,
+  unreadTotals: unreadTotalsDto(totals.unreadTotals),
 });
 
 describe('subscription derivations', () => {
@@ -71,11 +75,18 @@ describe('subscription derivations', () => {
     sub(2, 6, [tag(20, 'Tech')]),
     sub(3, 0, []),
   ];
-  it('sums per-tag unread with overlap', () => {
-    const tree = buildTagTree(subscriptions);
+  it("takes a tag's unread from the tag totals, not the sum of its feeds", () => {
+    const tree = buildTagTree(
+      subscriptions,
+      [],
+      new Map([
+        [10, 2],
+        [20, 5],
+      ]),
+    );
     expect(tree.map((node) => [node.tag.name, node.unreadCount])).toEqual([
-      ['News', 3],
-      ['Tech', 9],
+      ['News', 2],
+      ['Tech', 5],
     ]);
     expect(
       tree
@@ -83,11 +94,10 @@ describe('subscription derivations', () => {
         .subscriptions.map((subscription) => subscription.id),
     ).toEqual([1, 2]);
   });
-  it('lists untagged subs and totals each sub once', () => {
+  it('lists untagged subs', () => {
     expect(untaggedSubscriptions(subscriptions).map((subscription) => subscription.id)).toEqual([
       3,
     ]);
-    expect(sumUnread(subscriptions)).toBe(9);
   });
 
   it('orders untagged feeds by their position', () => {
@@ -97,14 +107,9 @@ describe('subscription derivations', () => {
     ).toEqual([2, 3, 1]);
   });
 
-  it('excludes includeInAllItems=false feeds from the All items badge', () => {
-    const excludedSubscriptions = [sub(1, 5), { ...sub(2, 8), includeInAllItems: false }];
-    expect(sumUnread(excludedSubscriptions)).toBe(5);
-  });
-
-  it('still counts an excluded feed under its tag', () => {
+  it("reads an excluded feed's tag unread from the tag totals", () => {
     const excluded = { ...sub(2, 8, [tag(3, 'Tech')]), includeInAllItems: false };
-    const tree = buildTagTree([excluded]);
+    const tree = buildTagTree([excluded], [], new Map([[3, 8]]));
     expect(tree[0].unreadCount).toBe(8);
   });
 
@@ -174,10 +179,11 @@ describe('SubscriptionsStore', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       subscriptions: [sub(1, 3, [tag(20, 'Tech')]), sub(2, 6, [tag(20, 'Tech')])],
       favoritesCount: 4,
+      unreadTotals: unreadTotalsDto({ allItems: 4, tags: [{ id: 20, unreadCount: 4 }] }),
       keptCount: 2,
     });
-    expect(store.totalUnread()).toBe(9);
-    expect(store.tagTree()[0].unreadCount).toBe(9);
+    expect(store.totalUnread()).toBe(4);
+    expect(store.tagTree()[0].unreadCount).toBe(4);
     expect(store.favoritesCount()).toBe(4);
     expect(store.keptCount()).toBe(2);
     expect(store.loading()).toBe(false);
@@ -189,7 +195,12 @@ describe('SubscriptionsStore', () => {
     store.load();
     const newerRequest = ctrl.expectOne('https://api.test/api/subscriptions');
 
-    newerRequest.flush({ subscriptions: [sub(1, 5)], favoritesCount: 0, keptCount: 0 });
+    newerRequest.flush({
+      subscriptions: [sub(1, 5)],
+      favoritesCount: 0,
+      keptCount: 0,
+      unreadTotals: unreadTotalsDto({ allItems: 5 }),
+    });
 
     expect(olderRequest.cancelled).toBe(true);
     expect(store.totalUnread()).toBe(5);
@@ -200,7 +211,12 @@ describe('SubscriptionsStore', () => {
     store.load();
     const [olderRequest, newerRequest] = ctrl.match('https://api.test/api/subscriptions');
 
-    newerRequest.flush({ subscriptions: [sub(1, 5)], favoritesCount: 0, keptCount: 0 });
+    newerRequest.flush({
+      subscriptions: [sub(1, 5)],
+      favoritesCount: 0,
+      keptCount: 0,
+      unreadTotals: unreadTotalsDto(),
+    });
     tokens.clear();
     TestBed.tick();
 
@@ -212,6 +228,7 @@ describe('SubscriptionsStore', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       subscriptions: [],
       favoritesCount: 0,
+      unreadTotals: unreadTotalsDto(),
       keptCount: 0,
       viewedCount: 0,
     });
@@ -223,6 +240,7 @@ describe('SubscriptionsStore', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       subscriptions: [sub(1, 3)],
       favoritesCount: 0,
+      unreadTotals: unreadTotalsDto(),
       keptCount: 0,
       viewedCount: 0,
     });
@@ -235,6 +253,7 @@ describe('SubscriptionsStore', () => {
       ctrl.expectOne('https://api.test/api/subscriptions').flush({
         subscriptions: [sub(1, 3)],
         favoritesCount: 2,
+        unreadTotals: unreadTotalsDto(),
         keptCount: 1,
         viewedCount: 4,
       });
@@ -267,6 +286,7 @@ describe('SubscriptionsStore', () => {
       ctrl.expectOne('https://api.test/api/subscriptions').flush({
         subscriptions: [],
         favoritesCount: 0,
+        unreadTotals: unreadTotalsDto(),
         keptCount: 0,
         viewedCount: 0,
       });
@@ -279,6 +299,7 @@ describe('SubscriptionsStore', () => {
       ctrl.expectOne('https://api.test/api/subscriptions').flush({
         subscriptions: [sub(2, 1)],
         favoritesCount: 0,
+        unreadTotals: unreadTotalsDto(),
         keptCount: 0,
         viewedCount: 0,
       });
@@ -294,6 +315,7 @@ describe('SubscriptionsStore', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       subscriptions: [sub(1, 2)],
       favoritesCount: 0,
+      unreadTotals: unreadTotalsDto(),
       keptCount: 0,
     });
     store.loadIfStale();
@@ -308,6 +330,7 @@ describe('SubscriptionsStore', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       subscriptions: [sub(1, 3)],
       favoritesCount: 0,
+      unreadTotals: unreadTotalsDto(),
       keptCount: 0,
     });
 
@@ -316,9 +339,12 @@ describe('SubscriptionsStore', () => {
 
   it('optimistically bumps favourite/kept totals, clamped at zero', () => {
     store.load();
-    ctrl
-      .expectOne('https://api.test/api/subscriptions')
-      .flush({ subscriptions: [sub(1, 3)], favoritesCount: 1, keptCount: 0 });
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [sub(1, 3)],
+      favoritesCount: 1,
+      keptCount: 0,
+      unreadTotals: unreadTotalsDto(),
+    });
     store.bumpFavorites(1);
     expect(store.favoritesCount()).toBe(2);
     store.bumpFavorites(-5);
@@ -332,6 +358,7 @@ describe('SubscriptionsStore', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       subscriptions: [sub(1, 3, [tag(20, 'Tech')]), sub(2, 6)],
       favoritesCount: 0,
+      unreadTotals: unreadTotalsDto(),
       keptCount: 0,
     });
     store.decrementUnread(1);
@@ -353,6 +380,7 @@ describe('SubscriptionsStore', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       subscriptions: [sub(1, 3), sub(2, 6)],
       favoritesCount: 0,
+      unreadTotals: unreadTotalsDto(),
       keptCount: 0,
     });
     store.patchLocal(1, { includeInAllItems: false });
@@ -414,13 +442,19 @@ describe('SubscriptionsStore', () => {
     beforeEach(() => {
       store.load();
       ctrl.expectOne('https://api.test/api/subscriptions').flush({
-        ...counts([
-          sub(1, 1, [tag(20, 'Tech')]),
-          sub(2, 16, []),
-          taggedList,
-          untaggedHome,
-          untaggedProfile,
-        ]),
+        ...counts(
+          [sub(1, 1, [tag(20, 'Tech')]), sub(2, 16, []), taggedList, untaggedHome, untaggedProfile],
+          {
+            unreadTotals: {
+              allItems: 25,
+              tags: [{ id: 20, unreadCount: 3 }],
+              networks: [
+                { network: 'bluesky', unreadCount: 6, profilesUnreadCount: 0 },
+                { network: 'mastodon', unreadCount: 8, profilesUnreadCount: 8 },
+              ],
+            },
+          },
+        ),
         socialAccounts: [
           { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
         ],
@@ -456,7 +490,7 @@ describe('SubscriptionsStore', () => {
               subscriptions: [{ ...untaggedHome, title: 'Home@bsky' }, taggedList],
             },
           ],
-          profiles: socialProfiles([]),
+          profiles: socialProfiles([], 0),
           unreadCount: 6,
           entryCount: 0,
           saved: null,
@@ -466,7 +500,7 @@ describe('SubscriptionsStore', () => {
           network: 'mastodon',
           networkAccounts: [],
           accounts: [],
-          profiles: socialProfiles([untaggedProfile]),
+          profiles: socialProfiles([untaggedProfile], 8),
           unreadCount: 8,
           entryCount: 0,
           saved: null,
@@ -561,9 +595,14 @@ describe('SubscriptionsStore quiet reload', () => {
     store.reloadQuietlyIfStale();
     expect(store.loading()).toBe(false);
 
-    ctrl
-      .expectOne('https://api.test/api/subscriptions')
-      .flush(counts([sub(1, 7)], { favorites: 4, kept: 5, viewed: 6 }));
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(
+      counts([sub(1, 7)], {
+        favorites: 4,
+        kept: 5,
+        viewed: 6,
+        unreadTotals: { allItems: 7 },
+      }),
+    );
     expect(store.totalUnread()).toBe(7);
     expect(store.favoritesCount()).toBe(4);
     expect(store.keptCount()).toBe(5);
@@ -595,7 +634,7 @@ describe('SubscriptionsStore quiet reload', () => {
 
     ctrl.expectNone('https://api.test/api/subscriptions');
     expect(slowTick.cancelled).toBe(false);
-    slowTick.flush(counts([sub(1, 4)]));
+    slowTick.flush(counts([sub(1, 4)], { unreadTotals: { allItems: 4 } }));
     expect(store.totalUnread()).toBe(4);
   });
 
@@ -609,7 +648,7 @@ describe('SubscriptionsStore quiet reload', () => {
     ctrl.expectNone('https://api.test/api/subscriptions');
     expect(pendingLoad.cancelled).toBe(false);
 
-    pendingLoad.flush(counts([sub(1, 4)]));
+    pendingLoad.flush(counts([sub(1, 4)], { unreadTotals: { allItems: 4 } }));
     expect(store.totalUnread()).toBe(4);
     expect(store.resolved()).toBe(true);
   });
@@ -659,7 +698,11 @@ describe('SubscriptionsStore quiet reload', () => {
   });
 
   it('swallows a failed tick instead of raising the error banner', () => {
-    settleAndAge([sub(1, 5)]);
+    store.load();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(counts([sub(1, 5)], { unreadTotals: { allItems: 5 } }));
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
 
     store.reloadQuietlyIfStale();
     ctrl
@@ -693,6 +736,7 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
   const respond = (unread: number) => ({
     subscriptions: [sub(1, unread)],
     favoritesCount: 0,
+    unreadTotals: unreadTotalsDto({ allItems: unread }),
     keptCount: 0,
     viewedCount: 0,
   });
@@ -769,14 +813,57 @@ describe('SubscriptionsStore counts-only reload', () => {
     store.reloadCountsIfStale();
 
     ctrl.expectNone(list);
-    ctrl
-      .expectOne(countsUrl)
-      .flush(countsBody([{ id: 1, unreadCount: 7 }], { favorites: 4, kept: 5, viewed: 6 }));
+    ctrl.expectOne(countsUrl).flush(
+      countsBody([{ id: 1, unreadCount: 7 }], {
+        favorites: 4,
+        kept: 5,
+        viewed: 6,
+        unreadTotals: { allItems: 7 },
+      }),
+    );
     expect(store.totalUnread()).toBe(7);
     expect(store.favoritesCount()).toBe(4);
     expect(store.keptCount()).toBe(5);
     expect(store.viewedCount()).toBe(6);
     expect(store.loading()).toBe(false);
+  });
+
+  it('adopts the scope totals of a counts tick', () => {
+    settleAndAge([sub(1, 2)]);
+
+    store.reloadCountsIfStale();
+    ctrl.expectOne(countsUrl).flush(
+      countsBody([{ id: 1, unreadCount: 2 }], {
+        unreadTotals: { allItems: 1, tags: [{ id: 20, unreadCount: 1 }] },
+      }),
+    );
+
+    expect(store.unreadTotals().allItems).toBe(1);
+    expect(store.unreadTotals().tags.get(20)).toBe(1);
+  });
+
+  it('keeps the same totals object when a tick changes none of them', () => {
+    settleAndAge([sub(1, 2)]);
+    const before = store.unreadTotals();
+
+    store.reloadCountsIfStale();
+    ctrl.expectOne(countsUrl).flush(countsBody([{ id: 1, unreadCount: 2 }]));
+
+    expect(store.unreadTotals()).toBe(before);
+  });
+
+  it('moves a tag node when the tick changes its tag total', () => {
+    settleAndAge([sub(1, 2, [tag(20, 'Tech')])]);
+    expect(store.tagTree()[0].unreadCount).toBe(0);
+
+    store.reloadCountsIfStale();
+    ctrl.expectOne(countsUrl).flush(
+      countsBody([{ id: 1, unreadCount: 2 }], {
+        unreadTotals: { tags: [{ id: 20, unreadCount: 2 }] },
+      }),
+    );
+
+    expect(store.tagTree()[0].unreadCount).toBe(2);
   });
 
   it('patches unread into the feed rows it already holds', () => {
@@ -844,6 +931,6 @@ describe('SubscriptionsStore counts-only reload', () => {
     store.reloadCountsIfStale();
     ctrl.expectNone(countsUrl);
     expect(pendingLoad.cancelled).toBe(false);
-    pendingLoad.flush(counts([sub(1, 4)]));
+    pendingLoad.flush(counts([sub(1, 4)], { unreadTotals: { allItems: 4 } }));
   });
 });

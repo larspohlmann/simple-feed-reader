@@ -102,6 +102,7 @@ describe('ReaderShellComponent', () => {
       },
     ],
     socialAccounts: [],
+    unreadTotals: { allItems: 2, tags: [], networks: [] },
   };
   const entry = anEntry({
     title: 'e1',
@@ -260,9 +261,13 @@ describe('ReaderShellComponent', () => {
   function bootWith(subscriptions: unknown[]) {
     const fixture = TestBed.createComponent(ReaderShellComponent);
     fixture.detectChanges();
-    ctrl
-      .expectOne('https://api.test/api/subscriptions')
-      .flush({ subscriptions, favoritesCount: 0, keptCount: 0, socialAccounts: [] });
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions,
+      favoritesCount: 0,
+      keptCount: 0,
+      socialAccounts: [],
+      unreadTotals: { allItems: 0, tags: [], networks: [] },
+    });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
@@ -1429,6 +1434,7 @@ describe('ReaderShellComponent', () => {
           testRequest.flush({
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
             favoritesCount: 0,
+            unreadTotals: { allItems: 0, tags: [], networks: [] },
             socialAccounts: [],
             keptCount: 0,
           }),
@@ -1464,6 +1470,7 @@ describe('ReaderShellComponent', () => {
             nextCursor: null,
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
             favoritesCount: 0,
+            unreadTotals: { allItems: 0, tags: [], networks: [] },
             socialAccounts: [],
             keptCount: 0,
             tags: [],
@@ -1619,6 +1626,7 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       ...subscriptionsBody,
       subscriptions: [{ ...subscriptionsBody.subscriptions[0], unreadCount: 3 }],
+      unreadTotals: { allItems: 3, tags: [], networks: [] },
     });
     fixture.detectChanges();
 
@@ -2536,6 +2544,7 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/subscriptions').flush({
         subscriptions: [],
         favoritesCount: 0,
+        unreadTotals: { allItems: 0, tags: [], networks: [] },
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
@@ -2578,6 +2587,7 @@ describe('ReaderShellComponent', () => {
       currentSubscriptions.flush({
         subscriptions: [SUBSCRIPTION_FIXTURE],
         favoritesCount: 0,
+        unreadTotals: { allItems: 0, tags: [], networks: [] },
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
@@ -2992,6 +3002,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
+            unreadTotals: { allItems: 0, tags: [], networks: [] },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3042,6 +3053,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
+            unreadTotals: { allItems: 0, tags: [], networks: [] },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3072,6 +3084,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
+            unreadTotals: { allItems: 0, tags: [], networks: [] },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3119,6 +3132,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
+            unreadTotals: { allItems: 0, tags: [], networks: [] },
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -4204,6 +4218,7 @@ describe('ReaderShellComponent', () => {
     const countsBody = {
       subscriptions: [{ id: 5, unreadCount: 2 }],
       favoritesCount: 0,
+      unreadTotals: { allItems: 0, tags: [], networks: [] },
       socialAccounts: [],
       keptCount: 0,
       viewedCount: 0,
@@ -4246,6 +4261,7 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
         ...countsBody,
         subscriptions: [{ id: 5, unreadCount: 9 }],
+        unreadTotals: { allItems: 9, tags: [], networks: [] },
       });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       fixture.detectChanges();

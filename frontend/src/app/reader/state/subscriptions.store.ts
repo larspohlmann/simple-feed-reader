@@ -17,13 +17,14 @@ import {
 } from './social-sections';
 import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
 import { SubscriptionCountsResponse, SubscriptionDto, SubscriptionsResponse } from '../models';
+import { buildTagTree, sumEntries, untaggedSubscriptions } from './subscription-derivations';
 import {
-  buildTagTree,
-  sumEntries,
-  sumUnread,
-  untaggedSubscriptions,
-} from './subscription-derivations';
-import { ZeroTarget } from './unread-totals';
+  NO_UNREAD_TOTALS,
+  UnreadTotals,
+  ZeroTarget,
+  sameUnreadTotals,
+  unreadTotalsFrom,
+} from './unread-totals';
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
@@ -46,7 +47,15 @@ export class SubscriptionsStore {
    *  fire against an empty list the server has not answered on yet. */
   readonly resolved = signal(false);
 
-  readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
+  private readonly storedUnreadTotals = signal<UnreadTotals>(NO_UNREAD_TOTALS, {
+    equal: sameUnreadTotals,
+  });
+  /** The server's per-scope unread totals: each badge counts its own scope. */
+  readonly unreadTotals = this.storedUnreadTotals.asReadonly();
+
+  readonly tagTree = computed(() =>
+    buildTagTree(this.subscriptions(), this.tags.tags(), this.unreadTotals().tags),
+  );
   /** Social feeds live in their network's section, and an empty saved feed shows nowhere. */
   readonly untagged = computed(() =>
     untaggedSubscriptions(
@@ -56,9 +65,9 @@ export class SubscriptionsStore {
     ),
   );
   readonly socialSections = computed(() =>
-    buildSocialSections(this.subscriptions(), this.socialAccounts()),
+    buildSocialSections(this.subscriptions(), this.socialAccounts(), this.unreadTotals()),
   );
-  readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
+  readonly totalUnread = computed(() => this.unreadTotals().allItems);
   readonly totalEntries = computed(() => sumEntries(this.subscriptions()));
   readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
   readonly unhealthyCount = computed(() => this.unhealthy().length);
@@ -134,6 +143,7 @@ export class SubscriptionsStore {
     this.keptCount.set(0);
     this.viewedCount.set(0);
     this.socialAccounts.set([]);
+    this.storedUnreadTotals.set(NO_UNREAD_TOTALS);
     this.loading.set(false);
     this.error.set(null);
     this.resolved.set(false);
@@ -223,11 +233,12 @@ export class SubscriptionsStore {
     this.keptCount.set(response.keptCount);
     this.viewedCount.set(response.viewedCount);
     this.socialAccounts.set(response.socialAccounts);
+    this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
   }
 
   /** Patch unread and entry counts into the list already held, replacing the
    *  array only when a number actually moved, so an unchanged tick keeps
-   *  array identity and `tagTree`/`untagged`/`totalUnread` don't recompute (#720). */
+   *  array identity and `tagTree`/`untagged` don't recompute (#720). */
   private applyCountsOnly(response: SubscriptionCountsResponse): void {
     const countsById = new Map(response.subscriptions.map((counts) => [counts.id, counts]));
     let moved = false;
@@ -243,6 +254,7 @@ export class SubscriptionsStore {
     this.setIfMoved(this.favoritesCount, response.favoritesCount);
     this.setIfMoved(this.keptCount, response.keptCount);
     this.setIfMoved(this.viewedCount, response.viewedCount);
+    this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
   }
 
   private setIfMoved(count: WritableSignal<number>, value: number): void {
