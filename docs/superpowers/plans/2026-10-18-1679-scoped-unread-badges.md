@@ -544,3 +544,33 @@ The article's copies are `[entry, ...(entry.duplicates ?? []).filter((copy) => !
 - [ ] **Step 1:** `gh pr checks <PR> --repo larspohlmann/simple-feed-reader --watch --fail-fast --interval 30` in the background; merge with `gh pr merge <PR> --merge` only after it exits 0 (`--auto` merges immediately here). Verify #1679 closed.
 - [ ] **Step 2: Pick the tag.** `git fetch --tags`; list release tags (`git tag --sort=-v:refname | grep -v -- -dev | head -3`) and dev tags (`git tag --sort=-v:refname | grep -- -dev | head -3`). If the newest release equals the newest dev tag's base, bump the patch and start at `.1`; otherwise increment `N`. When it's ambiguous, ask.
 - [ ] **Step 3:** wait until CI is green on the merge commit on `develop`, then `git tag vX.Y.Z-dev.N <merge-sha> && git push origin vX.Y.Z-dev.N`, and watch `deploy-strato.yml` (`gh run watch`) to completion. Report the result.
+
+---
+
+### Task 8: Backend — run the collapse semi-join only for entries that have a copy
+
+Measured on the dev DB (user 2, 75,164 subscribed entries, 64,166 with a URL hash): the scope counts take ~2.5 s, of which the base scan is ~50 ms and each `DuplicateCollapseDql` semi-join is ~850 ms. Only 2,036 entries (1,013 URL hashes) have a copy among the user's subscriptions. The `NOT EXISTS` lookup runs for every hashed row, though for 97% of them it can only answer "no copy".
+
+**Files:**
+- Modify: `backend/src/Repository/DuplicateCollapseDql.php`
+- Test: `backend/tests/Repository/` (find the existing `DuplicateCollapseDql` coverage with `grep -rln "DuplicateCollapseDql\|collapse" tests/Repository`)
+
+**Interfaces:** `DuplicateCollapseDql::apply()` keeps its signature and meaning. All callers (the entry list, search, `rowsByIdsForUser`, `UnreadCountRepository`, `RecommendationCandidateRepository`) get the speed-up unchanged.
+
+- [ ] **Step 1:** Add an uncorrelated subselect of the URL hashes that occur more than once among the caller's subscribed entries (aliases `e3`/`s3`, which no caller uses):
+
+```php
+$duplicatedHashes = $this->entityManager->createQueryBuilder()
+    ->select('e3.location.urlHash')
+    ->from(Entry::class, 'e3')
+    ->join(Subscription::class, 's3', 'ON', 's3.feed = e3.feed AND s3.user = :user')
+    ->andWhere('e3.location.urlHash IS NOT NULL')
+    ->groupBy('e3.location.urlHash')
+    ->having('COUNT(e3.id) > 1');
+```
+
+and make the predicate `e.location.urlHash IS NULL OR e.location.urlHash NOT IN (<duplicatedHashes>) OR NOT EXISTS (<inner>)`. This is a superset test: a hash held once among all the user's subscriptions can have no copy in any narrower scope, so the result is identical. Update the class docblock only if its sentence about the predicate stops being true.
+
+- [ ] **Step 2:** `php bin/phpunit tests/Repository` and the full `php bin/phpunit` must stay green unchanged (the change preserves behaviour). Run the MySQL leg too: `docker compose exec -T php composer test`. MySQL's handling of `NOT IN` with a grouped subselect is what this is for, and a dialect error would only show there.
+- [ ] **Step 3:** Run `composer check`, `composer md` and `composer infection:diff`. A mutant that deletes the prefilter can survive, since no behaviour test can tell the difference. Report the MSI, and whether the gate still passes, rather than writing a test that pins the DQL text.
+- [ ] **Step 4:** Commit `perf(#1679): run the duplicate semi-join only for entries that have a copy`. The controller measures afterwards with the same benchmark as the baseline.
