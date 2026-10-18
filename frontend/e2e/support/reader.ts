@@ -5,6 +5,7 @@ import type {
   SavedSearchWire,
   SubscriptionDto,
   SubscriptionsResponse,
+  UnreadTotalsDto,
 } from '../../src/app/reader/models';
 import type { EntryDetailResponse } from '../../src/app/reader/state/completed-entry';
 import { anEntry } from '../../src/testing/entry-testing';
@@ -128,8 +129,25 @@ export function subscriptionsJson(
     keptCount: 0,
     viewedCount: 0,
     socialAccounts: [],
-    unreadTotals: { allItems: 0, tags: [], networks: [] },
+    unreadTotals: unreadTotalsOf(subscriptions),
     ...totals,
+  };
+}
+
+/** The scope totals a fixture's feeds imply, each feed counted once per scope. */
+function unreadTotalsOf(subscriptions: SubscriptionDto[]): UnreadTotalsDto {
+  const tagTotals = new Map<number, number>();
+  for (const subscription of subscriptions) {
+    for (const tag of subscription.tags) {
+      tagTotals.set(tag.id, (tagTotals.get(tag.id) ?? 0) + subscription.unreadCount);
+    }
+  }
+  return {
+    allItems: subscriptions
+      .filter((subscription) => subscription.includeInAllItems)
+      .reduce((total, subscription) => total + subscription.unreadCount, 0),
+    tags: [...tagTotals].map(([id, unreadCount]) => ({ id, unreadCount })),
+    networks: [],
   };
 }
 

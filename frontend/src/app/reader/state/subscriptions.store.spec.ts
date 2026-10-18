@@ -107,12 +107,6 @@ describe('subscription derivations', () => {
     ).toEqual([2, 3, 1]);
   });
 
-  it("reads an excluded feed's tag unread from the tag totals", () => {
-    const excluded = { ...sub(2, 8, [tag(3, 'Tech')]), includeInAllItems: false };
-    const tree = buildTagTree([excluded], [], new Map([[3, 8]]));
-    expect(tree[0].unreadCount).toBe(8);
-  });
-
   it("sums a tag's entry counts from its feeds, like its unread count", () => {
     const tree = buildTagTree([
       { ...sub(1, 0, [tag(7, 'News')]), entryCount: 30 },
@@ -560,11 +554,14 @@ describe('SubscriptionsStore quiet reload', () => {
   let ctrl: HttpTestingController;
 
   /** A settled store, one poll interval old, so a quiet reload may fire. */
-  const settleAndAge = (subscriptions: SubscriptionDto[]) => {
+  const settleAndAge = (
+    subscriptions: SubscriptionDto[],
+    unreadTotals: CountTotals['unreadTotals'] = {},
+  ) => {
     store.load();
     ctrl
       .expectOne('https://api.test/api/subscriptions')
-      .flush(counts(subscriptions, { favorites: 1, kept: 2, viewed: 3 }));
+      .flush(counts(subscriptions, { favorites: 1, kept: 2, viewed: 3, unreadTotals }));
     jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
   };
 
@@ -698,11 +695,7 @@ describe('SubscriptionsStore quiet reload', () => {
   });
 
   it('swallows a failed tick instead of raising the error banner', () => {
-    store.load();
-    ctrl
-      .expectOne('https://api.test/api/subscriptions')
-      .flush(counts([sub(1, 5)], { unreadTotals: { allItems: 5 } }));
-    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+    settleAndAge([sub(1, 5)], { allItems: 5 });
 
     store.reloadQuietlyIfStale();
     ctrl

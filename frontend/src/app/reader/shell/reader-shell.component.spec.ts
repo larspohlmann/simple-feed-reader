@@ -28,7 +28,7 @@ import { ReaderShellComponent } from './reader-shell.component';
 import { ListHeaderComponent } from '../list/list-header/list-header.component';
 import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ListScrollMemory } from '../scroll/list-scroll-memory';
-import { EntryDto, SavedSearchDto, SavedSearchWire } from '../models';
+import { EntryDto, SavedSearchDto, SavedSearchWire, UnreadTotalsDto } from '../models';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -80,6 +80,8 @@ describe('ReaderShellComponent', () => {
     answerPasskeyOffer: jest.fn(() => of(undefined)),
     markPasskeyOfferAnswered: jest.fn(),
   };
+
+  const NO_UNREAD_TOTALS_DTO: UnreadTotalsDto = { allItems: 0, tags: [], networks: [] };
 
   const subscriptionsBody = {
     subscriptions: [
@@ -266,7 +268,7 @@ describe('ReaderShellComponent', () => {
       favoritesCount: 0,
       keptCount: 0,
       socialAccounts: [],
-      unreadTotals: { allItems: 0, tags: [], networks: [] },
+      unreadTotals: NO_UNREAD_TOTALS_DTO,
     });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
@@ -1434,7 +1436,7 @@ describe('ReaderShellComponent', () => {
           testRequest.flush({
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
             favoritesCount: 0,
-            unreadTotals: { allItems: 0, tags: [], networks: [] },
+            unreadTotals: NO_UNREAD_TOTALS_DTO,
             socialAccounts: [],
             keptCount: 0,
           }),
@@ -1470,7 +1472,7 @@ describe('ReaderShellComponent', () => {
             nextCursor: null,
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
             favoritesCount: 0,
-            unreadTotals: { allItems: 0, tags: [], networks: [] },
+            unreadTotals: NO_UNREAD_TOTALS_DTO,
             socialAccounts: [],
             keptCount: 0,
             tags: [],
@@ -2544,7 +2546,7 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/subscriptions').flush({
         subscriptions: [],
         favoritesCount: 0,
-        unreadTotals: { allItems: 0, tags: [], networks: [] },
+        unreadTotals: NO_UNREAD_TOTALS_DTO,
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
@@ -2587,7 +2589,7 @@ describe('ReaderShellComponent', () => {
       currentSubscriptions.flush({
         subscriptions: [SUBSCRIPTION_FIXTURE],
         favoritesCount: 0,
-        unreadTotals: { allItems: 0, tags: [], networks: [] },
+        unreadTotals: NO_UNREAD_TOTALS_DTO,
         socialAccounts: [],
         keptCount: 0,
         viewedCount: 0,
@@ -3002,7 +3004,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
-            unreadTotals: { allItems: 0, tags: [], networks: [] },
+            unreadTotals: NO_UNREAD_TOTALS_DTO,
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3053,7 +3055,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
-            unreadTotals: { allItems: 0, tags: [], networks: [] },
+            unreadTotals: NO_UNREAD_TOTALS_DTO,
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3084,7 +3086,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
-            unreadTotals: { allItems: 0, tags: [], networks: [] },
+            unreadTotals: NO_UNREAD_TOTALS_DTO,
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -3132,7 +3134,7 @@ describe('ReaderShellComponent', () => {
             entries: [],
             savedSearches: [],
             favoritesCount: 0,
-            unreadTotals: { allItems: 0, tags: [], networks: [] },
+            unreadTotals: NO_UNREAD_TOTALS_DTO,
             socialAccounts: [],
             keptCount: 0,
             nextCursor: null,
@@ -4218,7 +4220,7 @@ describe('ReaderShellComponent', () => {
     const countsBody = {
       subscriptions: [{ id: 5, unreadCount: 2 }],
       favoritesCount: 0,
-      unreadTotals: { allItems: 0, tags: [], networks: [] },
+      unreadTotals: NO_UNREAD_TOTALS_DTO,
       socialAccounts: [],
       keptCount: 0,
       viewedCount: 0,
