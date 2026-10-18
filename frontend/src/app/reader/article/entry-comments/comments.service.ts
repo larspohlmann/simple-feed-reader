@@ -1,7 +1,9 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Observable, catchError, of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, catchError, finalize, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { CommentsResponse, EntryCommentDto } from '../../entry-comment';
+import { Problem, parseProblem } from '../../../core/problem';
+import { CommentsResponse, EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { ReaderApi } from '../../reader-api';
 
 const CACHE_CAP = 50;
@@ -25,6 +27,7 @@ export type CommentsState =
 export class CommentsService {
   private readonly api = inject(ReaderApi);
   private readonly states = new Map<number, WritableSignal<CommentsState>>();
+  private readonly likesInFlight = new Set<string>();
   private generation = 0;
 
   constructor() {
@@ -44,6 +47,30 @@ export class CommentsService {
     const state = this.stateFor(id);
     if (state().status === 'loading') return;
     this.fetch(state, this.api.comments(id, true));
+  }
+
+  /** Optimistic like of one comment; dropped while a like of the same comment is on the wire. */
+  toggleLike(
+    entryId: number,
+    post: EntryCommentPostDto,
+    onError: (problem: Problem) => void,
+  ): void {
+    const { address } = post;
+    const isLiked = !post.isLiked;
+    const key = `${entryId} ${address}`;
+    if (this.likesInFlight.has(key)) return;
+    const state = this.stateFor(entryId);
+    const request$ = isLiked
+      ? this.api.likeComment(entryId, address)
+      : this.api.unlikeComment(entryId, address);
+    this.likesInFlight.add(key);
+    state.update((current) => withLike(current, address, isLiked));
+    request$.pipe(finalize(() => this.likesInFlight.delete(key))).subscribe({
+      error: (error: HttpErrorResponse) => {
+        state.update((current) => withLike(current, address, !isLiked));
+        onError(parseProblem(error));
+      },
+    });
   }
 
   private stateFor(id: number): WritableSignal<CommentsState> {
@@ -66,6 +93,7 @@ export class CommentsService {
   private clear(): void {
     this.generation++;
     this.states.clear();
+    this.likesInFlight.clear();
   }
 }
 
@@ -99,4 +127,16 @@ function settled(response: CommentsResponse): CommentsState {
     default:
       return { status: 'failed', failedAt: Date.now() };
   }
+}
+
+/** The state with the comment at `address` liked or not, its like count following. */
+function withLike(state: CommentsState, address: string, isLiked: boolean): CommentsState {
+  if (state.status !== 'ok') return state;
+  const comments = state.comments.map((comment) => {
+    const post = comment.post;
+    if (post?.address !== address || post.isLiked === isLiked) return comment;
+    const likes = Math.max(0, post.counts.likes + (isLiked ? 1 : -1));
+    return { ...comment, post: { ...post, isLiked, counts: { ...post.counts, likes } } };
+  });
+  return { ...state, comments };
 }

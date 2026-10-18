@@ -85,6 +85,7 @@ export function anEntryComment(overrides: Partial<EntryCommentDto> = {}): EntryC
     media: [],
     linkCard: null,
     quote: null,
+    post: null,
     ...overrides,
   };
 }

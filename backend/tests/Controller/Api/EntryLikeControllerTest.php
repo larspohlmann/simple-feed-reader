@@ -6,16 +6,10 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\SocialAccount;
 use App\Entity\SocialLike;
-use App\Entity\User;
 use App\Enum\SocialAccountStatus;
-use App\Enum\SocialNetwork;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RoutesSocialApis;
-use App\Tests\Support\SocialAccounts;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -281,36 +275,6 @@ final class EntryLikeControllerTest extends ApiTestCase
         $this->assertRejected($client, Response::HTTP_NOT_FOUND);
     }
 
-    private function signIn(KernelBrowser $client, string $email): User
-    {
-        $user = $this->factory()->create($email);
-        /** @var JWTTokenManagerInterface $tokens */
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $tokens->create($user));
-
-        return $user;
-    }
-
-    private function mastodonAccountOf(User $user): SocialAccount
-    {
-        /** @var InstanceSecretCipher $instanceCipher */
-        $instanceCipher = self::getContainer()->get(InstanceSecretCipher::class);
-        $account = new SocialAccount(
-            $user,
-            SocialNetwork::Mastodon,
-            'alice@mastodon.example',
-            '@alice@mastodon.example',
-            'https://mastodon.example',
-            (new SocialCredentialCipher($instanceCipher))->seal($user->requireId(), SocialAccounts::ACCESS_TOKEN),
-            '7890',
-            new \DateTimeImmutable('2026-10-12 10:00:00'),
-        );
-        $this->entityManager()->persist($account);
-        $this->entityManager()->flush();
-
-        return $account;
-    }
-
     private static function found(): MockResponse
     {
         return new MockResponse('{"statuses":[{"id":"110"}]}');
@@ -340,14 +304,5 @@ final class EntryLikeControllerTest extends ApiTestCase
         $this->entityManager()->clear();
 
         return $this->entityManager()->getRepository(SocialLike::class)->count([]);
-    }
-
-    /** @return list<string> */
-    private function routesAsked(): array
-    {
-        return array_map(
-            static fn (array $request): string => $request['method'] . ' ' . $request['url'],
-            $this->http->requests,
-        );
     }
 }

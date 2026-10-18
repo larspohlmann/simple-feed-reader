@@ -14,7 +14,8 @@ final readonly class SocialPostModel
      *
      * @param string      $postId         the Bluesky AT URI, or the status id on the account's own Mastodon instance
      * @param string|null $contentId      the Bluesky record's CID, which a like or a reply must name; null on Mastodon
-     * @param string|null $existingLikeId the AT URI of the acting account's existing like, Bluesky only
+     * @param string|null $existingLikeId what unlikes the acting account's existing like: its Bluesky AT URI, or the
+     *                                    status id on Mastodon
      */
     private function __construct(
         public SocialAccount $account,

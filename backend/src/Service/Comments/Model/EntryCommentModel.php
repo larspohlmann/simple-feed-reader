@@ -14,6 +14,7 @@ final readonly class EntryCommentModel
         public bool $byEntryAuthor,
         public CommentEmbedsModel $embeds = new CommentEmbedsModel(),
         public int $depth = 0,
+        public ?CommentPostModel $post = null,
     ) {
     }
 
@@ -27,6 +28,7 @@ final readonly class EntryCommentModel
             $this->byEntryAuthor,
             $this->embeds,
             $depth,
+            $this->post,
         );
     }
 }

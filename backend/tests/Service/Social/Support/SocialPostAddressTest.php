@@ -119,6 +119,45 @@ final class SocialPostAddressTest extends TestCase
         SocialPostAddress::ofOrRefuse(self::entry(new Feed('https://example.com/feed.xml'), self::POST_URI, null));
     }
 
+    #[DataProvider('replies')]
+    public function testAReplyIsAddressedOnItsEntrysNetwork(SocialNetwork $network, string $address): void
+    {
+        self::assertEquals(
+            new SocialPostAddressModel($network, $address),
+            SocialPostAddress::replyOrRefuse(self::postOn($network), $address),
+        );
+    }
+
+    /** @return iterable<string, array{SocialNetwork, string}> */
+    public static function replies(): iterable
+    {
+        yield 'bluesky reply by its at-uri' => [SocialNetwork::Bluesky, 'at://did:plc:ann/app.bsky.feed.post/2'];
+        yield 'mastodon reply by its status uri' => [SocialNetwork::Mastodon, self::STATUS_URI];
+    }
+
+    #[DataProvider('foreignReplies')]
+    public function testAReplyThatIsNoPostOnItsEntrysNetworkIsRefused(SocialNetwork $network, string $address): void
+    {
+        $this->expectExceptionObject(new NotASocialPostException('The reply is no post on the entry\'s network.'));
+
+        SocialPostAddress::replyOrRefuse(self::postOn($network), $address);
+    }
+
+    /** @return iterable<string, array{SocialNetwork, string}> */
+    public static function foreignReplies(): iterable
+    {
+        yield 'a status url under a bluesky post' => [SocialNetwork::Bluesky, self::STATUS_URL];
+        yield 'an at-uri under a mastodon post' => [SocialNetwork::Mastodon, self::POST_URI];
+    }
+
+    private static function postOn(SocialNetwork $network): Entry
+    {
+        $feed = new Feed('https://social.example/feed');
+        $feed->classifyAs($network);
+
+        return self::entry($feed, SocialNetwork::Bluesky === $network ? self::POST_URI : self::STATUS_URL, null);
+    }
+
     private static function entry(Feed $feed, string $guid, ?string $url): Entry
     {
         $now = new \DateTimeImmutable('2026-10-13 10:00:00');

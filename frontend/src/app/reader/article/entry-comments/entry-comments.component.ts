@@ -23,12 +23,16 @@ import { SOCIAL_NETWORK_NAMES } from '../../../core/social-network';
 import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
-import { EntryCommentDto } from '../../entry-comment';
+import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
+import { likeableSocial } from '../../entry-social';
 import { mediumRatio } from '../../entry-medium';
 import { observeOnSight } from '../../list/paging';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { LinkCardComponent } from '../../link-card/link-card.component';
+import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
+import { ToastService } from '../../../shared/toast/toast.service';
+import { problemMessage } from '../../../core/problem';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl' | 'social'>;
 
@@ -48,6 +52,7 @@ const DEEPEST_INDENT = 5;
     PostMediaComponent,
     QuotedPostComponent,
     LinkCardComponent,
+    SocialCountsRowComponent,
   ],
   templateUrl: './entry-comments.component.html',
   styleUrl: './entry-comments.component.scss',
@@ -60,6 +65,7 @@ export class EntryCommentsComponent {
   readonly refreshed = output<void>();
 
   private readonly service = inject(CommentsService);
+  private readonly toast = inject(ToastService);
   private readonly language = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly zone = inject(NgZone);
@@ -68,6 +74,7 @@ export class EntryCommentsComponent {
   private readonly loadsOnSight = computed(() => this.entry().comments === 'auto');
 
   readonly state = computed(() => this.service.state(this.entryId())());
+  protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
   readonly network = computed(() => {
     const social = this.entry().social;
     return social ? SOCIAL_NETWORK_NAMES[social.network] : null;
@@ -109,6 +116,12 @@ export class EntryCommentsComponent {
   refresh(): void {
     this.service.reload(this.entryId());
     this.refreshed.emit();
+  }
+
+  toggleLike(post: EntryCommentPostDto): void {
+    this.service.toggleLike(this.entryId(), post, (problem) =>
+      this.toast.show({ message: problemMessage(problem) }),
+    );
   }
 
   when(iso: string): string {

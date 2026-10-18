@@ -5,26 +5,19 @@ declare(strict_types=1);
 namespace App\Service\Social;
 
 use App\Entity\Entry;
-use App\Entity\SocialAccount;
 use App\Entity\SocialLike;
 use App\Entity\User;
 use App\Repository\SocialLikeRepository;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Social\Model\SocialLikeResultModel;
-use App\Service\Social\PostLiker\PostLikerInterface;
 use App\Service\Social\Support\SocialPostAddress;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Container\ContainerInterface;
-use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
 final readonly class SocialLikes
 {
     public function __construct(
         private SocialLikeRepository $likes,
         private SocialPostFinder $posts,
-        private ActingAccountGuard $guard,
-        #[AutowireLocator('app.social_post_liker', defaultIndexMethod: 'network')]
-        private ContainerInterface $likers,
+        private PostLiking $liking,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
         private SocialCountsCache $countsCache,
@@ -37,8 +30,7 @@ final readonly class SocialLikes
             return;
         }
         $post = $this->posts->find($user, $entry);
-        $liker = $this->likerOf($post->account);
-        $result = $this->guard->actAs($post->account, static fn (): SocialLikeResultModel => $liker->like($post));
+        $result = $this->liking->like($post);
 
         $this->entityManager->persist(new SocialLike(
             $user,
@@ -57,11 +49,7 @@ final readonly class SocialLikes
         if (null === $like) {
             return;
         }
-        $account = $like->getSocialAccount();
-        $liker = $this->likerOf($account);
-        $this->guard->actAs($account, static function () use ($liker, $account, $like): void {
-            $liker->unlike($account, $like->getRemoteId());
-        });
+        $this->liking->unlike($like->getSocialAccount(), $like->getRemoteId());
 
         $this->entityManager->remove($like);
         $this->entityManager->flush();
@@ -75,13 +63,5 @@ final readonly class SocialLikes
             return;
         }
         $this->countsCache->forget($post);
-    }
-
-    private function likerOf(SocialAccount $account): PostLikerInterface
-    {
-        $liker = $this->likers->get($account->getNetwork()->value);
-        \assert($liker instanceof PostLikerInterface);
-
-        return $liker;
     }
 }

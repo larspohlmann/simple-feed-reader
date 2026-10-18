@@ -24,6 +24,8 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
 
     private ?SocialCountsModel $counts = null;
 
+    private bool $alreadyLiked = false;
+
     public static function network(): string
     {
         return SocialNetwork::Mastodon->value;
@@ -39,11 +41,17 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
         $this->counts = $counts;
     }
 
+    public function knowsTheLike(): void
+    {
+        $this->alreadyLiked = true;
+    }
+
     public function resolve(SocialAccount $account, string $address): SocialPostModel
     {
         $this->record('resolve ' . $address);
+        $post = SocialPostModel::onMastodon($account, self::STATUS_ID)->withCounts($this->counts);
 
-        return SocialPostModel::onMastodon($account, self::STATUS_ID)->withCounts($this->counts);
+        return $this->alreadyLiked ? $post->alreadyLikedAs(self::STATUS_ID) : $post;
     }
 
     public function like(SocialPostModel $post): SocialLikeResultModel

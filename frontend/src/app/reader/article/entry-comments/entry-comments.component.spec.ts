@@ -5,7 +5,7 @@ import { CommentsService, CommentsState } from './comments.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { CommentsLoad } from '../../models';
 import { EntrySocialDto } from '../../entry-social';
-import { EntryCommentDto } from '../../entry-comment';
+import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { prefetchMargin } from '../../list/paging';
 import { aLinkCard, anEntryComment, aQuotedPost } from '../../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -19,7 +19,7 @@ const BLUESKY: EntrySocialDto = { network: 'bluesky', isLiked: false, canLike: t
 describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
   let states: Map<number, WritableSignal<CommentsState>>;
-  let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock };
+  let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock; toggleLike: jest.Mock };
   let sightObservers: { init: IntersectionObserverInit | undefined; disconnect: jest.Mock }[];
   let trigger: ((visible: boolean) => void) | undefined;
   let scroller: HTMLElement;
@@ -31,6 +31,7 @@ describe('EntryCommentsComponent', () => {
       state: jest.fn((id: number) => stateOf(id)),
       load: jest.fn(),
       reload: jest.fn(),
+      toggleLike: jest.fn(),
     };
     sightObservers = [];
     trigger = undefined;
@@ -95,6 +96,46 @@ describe('EntryCommentsComponent', () => {
     fixture.detectChanges();
     return fixture.nativeElement;
   }
+
+  describe('a comment that is a network post', () => {
+    const post: EntryCommentPostDto = {
+      address: 'at://did:plc:ann/app.bsky.feed.post/2',
+      counts: { likes: 4, reposts: 1, replies: 2, quotes: 0 },
+      isLiked: false,
+    };
+    const likeButton = (element: HTMLElement) =>
+      element.querySelector('.comment button.like') as HTMLButtonElement | null;
+
+    it('shows its counters and a like button with its likes', () => {
+      showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
+      const element = settleComments([anEntryComment({ post })]);
+
+      expect(element.querySelectorAll('.comment .count')).toHaveLength(3);
+      expect(likeButton(element)?.querySelector('.number')?.textContent?.trim()).toBe('4');
+    });
+
+    it('likes the comment through the service', () => {
+      showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
+      likeButton(settleComments([anEntryComment({ post })]))?.click();
+
+      expect(service.toggleLike).toHaveBeenCalledWith(5, post, expect.any(Function));
+    });
+
+    it('counts likes without a button when the reader has no account to like with', () => {
+      const social = { ...BLUESKY, canLike: false };
+      showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social });
+      const element = settleComments([anEntryComment({ post })]);
+
+      expect(likeButton(element)).toBeNull();
+      expect(element.querySelectorAll('.comment .count')).toHaveLength(4);
+    });
+
+    it('shows no row for a comment from a feed', () => {
+      showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
+
+      expect(settleComments([anEntryComment()]).querySelector('app-social-counts-row')).toBeNull();
+    });
+  });
 
   it('auto-loads only once the section nears the viewport', () => {
     show('auto');

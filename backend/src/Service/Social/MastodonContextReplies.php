@@ -13,6 +13,7 @@ use App\Service\Parser\Support\DateParser;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Social\Pass\MastodonReplyThread;
 use App\Service\Social\Pass\ReplyNode;
+use App\Service\Social\Support\CommentPost;
 use App\Service\Social\Support\MastodonAttachments;
 use App\Service\Social\Support\MastodonAuthor;
 use App\Service\Social\Support\MastodonCard;
@@ -95,6 +96,7 @@ final readonly class MastodonContextReplies
             $this->htmlOf($status),
             $byPostAuthor,
             self::embedsOf($status),
+            post: CommentPost::ofMastodonStatus($status),
         );
     }
 
