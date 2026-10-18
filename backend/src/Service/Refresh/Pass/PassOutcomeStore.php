@@ -9,7 +9,6 @@ use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
-use App\Service\Refresh\Model\IncomingFeedModel;
 use App\Service\Social\Model\TimelineOutcome\AccountPausedTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\AccountThrottledTimelineModel;
 use App\Service\Social\Model\TimelineOutcome\FailedTimelineModel;
@@ -34,9 +33,9 @@ final readonly class PassOutcomeStore
     public function storeTimeline(Feed $feed, TimelineOutcomeModelInterface $outcome): FeedRefreshResultModel
     {
         return match (true) {
-            $outcome instanceof FetchedTimelineModel => $this->outcomePersister->storeParsed(
+            $outcome instanceof FetchedTimelineModel => $this->outcomePersister->storeTimeline(
                 $feed,
-                new IncomingFeedModel($outcome->page->parsed, $outcome->page->knownShares),
+                $outcome->page,
                 $this->now,
             ),
             $outcome instanceof ThrottledTimelineModel => $this->outcomePersister->storeThrottled(
