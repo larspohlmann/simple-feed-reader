@@ -67,14 +67,14 @@ export class EntryStateActions implements EntryActionHandler {
     const viewedDelta = viewed ? 1 : -1;
     this.subscriptions.bumpViewed(viewedDelta);
     if (alsoReads) {
-      this.subscriptions.decrementUnread(entry.subscriptionId);
+      this.subscriptions.markArticleRead(entry);
       this.savedSearches.markEntryRead(entry.id);
     }
     if (!viewed) this.viewedOnOpen.delete(entry.id);
     this.patchInList(entry, { isViewed: viewed }, () => {
       this.subscriptions.bumpViewed(-viewedDelta);
       if (alsoReads) {
-        this.subscriptions.incrementUnread(entry.subscriptionId);
+        this.subscriptions.markArticleUnread(entry);
         this.savedSearches.markEntryUnread(entry.id);
       }
     });
@@ -101,13 +101,13 @@ export class EntryStateActions implements EntryActionHandler {
   private markOpenedViewed(entry: EntryDto): void {
     const alsoReads = !entry.isHidden;
     if (alsoReads) {
-      this.subscriptions.decrementUnread(entry.subscriptionId);
+      this.subscriptions.markArticleRead(entry);
       this.savedSearches.markEntryRead(entry.id);
     }
     this.subscriptions.bumpViewed(1);
     this.entries.setState(entry.id, { isViewed: true }, () => {
       if (alsoReads) {
-        this.subscriptions.incrementUnread(entry.subscriptionId);
+        this.subscriptions.markArticleUnread(entry);
         this.savedSearches.markEntryUnread(entry.id);
       }
       this.subscriptions.bumpViewed(-1);

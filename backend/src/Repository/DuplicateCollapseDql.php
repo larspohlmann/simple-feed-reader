@@ -25,6 +25,41 @@ final readonly class DuplicateCollapseDql
      */
     public function apply(QueryBuilder $qb, callable $applyScope, int $userId): void
     {
+        $inner = $this->copyLookup($applyScope);
+
+        $qb->andWhere('e.location.urlHash IS NULL OR NOT EXISTS (' . $inner->getDQL() . ')')
+            ->setParameter('user', $userId);
+    }
+
+    /**
+     * A count probes every row, so hashes held once are skipped first; a page probes few, where that costs more.
+     *
+     * @param callable(QueryBuilder, EntryAliases): void $applyScope
+     */
+    public function applyToCount(QueryBuilder $qb, callable $applyScope, int $userId): void
+    {
+        $inner = $this->copyLookup($applyScope);
+        $duplicatedHashes = $this->entityManager->createQueryBuilder()
+            ->select('e3.location.urlHash')
+            ->from(Entry::class, 'e3')
+            ->join(Subscription::class, 's3', 'ON', 's3.feed = e3.feed AND s3.user = :user')
+            ->andWhere('e3.location.urlHash IS NOT NULL')
+            ->groupBy('e3.location.urlHash')
+            ->having('COUNT(e3.id) > 1');
+
+        $qb->andWhere(
+            'e.location.urlHash IS NULL'
+            . ' OR e.location.urlHash NOT IN (' . $duplicatedHashes->getDQL() . ')'
+            . ' OR NOT EXISTS (' . $inner->getDQL() . ')'
+        )
+            ->setParameter('user', $userId);
+    }
+
+    /**
+     * @param callable(QueryBuilder, EntryAliases): void $applyScope
+     */
+    private function copyLookup(callable $applyScope): QueryBuilder
+    {
         $inner = $this->entityManager->createQueryBuilder()
             ->select('1')
             ->from(Entry::class, 'e2')
@@ -34,7 +69,6 @@ final readonly class DuplicateCollapseDql
             ->andWhere('e2.id < e.id');
         $applyScope($inner, EntryAliases::collapse());
 
-        $qb->andWhere('e.location.urlHash IS NULL OR NOT EXISTS (' . $inner->getDQL() . ')')
-            ->setParameter('user', $userId);
+        return $inner;
     }
 }

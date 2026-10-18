@@ -184,9 +184,12 @@ describe('DiscoverComponent', () => {
 
     // The success handler reloads subscriptions and tags; drain those follow-on
     // GETs so afterEach's http.verify() sees no outstanding requests.
-    http
-      .match('https://api.test/api/subscriptions')
-      .forEach((followUpRequest) => followUpRequest.flush({ subscriptions: [] }));
+    http.match('https://api.test/api/subscriptions').forEach((followUpRequest) =>
+      followUpRequest.flush({
+        subscriptions: [],
+        unreadTotals: { allItems: 0, tags: [], networks: [] },
+      }),
+    );
     http
       .match('https://api.test/api/tags')
       .forEach((followUpRequest) => followUpRequest.flush({ tags: [] }));
@@ -209,9 +212,12 @@ describe('DiscoverComponent', () => {
 
     // The success handler reloads subscriptions and tags; drain those follow-on
     // GETs so afterEach's http.verify() sees no outstanding requests.
-    http
-      .match('https://api.test/api/subscriptions')
-      .forEach((followUpRequest) => followUpRequest.flush({ subscriptions: [] }));
+    http.match('https://api.test/api/subscriptions').forEach((followUpRequest) =>
+      followUpRequest.flush({
+        subscriptions: [],
+        unreadTotals: { allItems: 0, tags: [], networks: [] },
+      }),
+    );
     http
       .match('https://api.test/api/tags')
       .forEach((followUpRequest) => followUpRequest.flush({ tags: [] }));

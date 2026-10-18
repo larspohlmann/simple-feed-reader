@@ -8,8 +8,9 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Entity\User;
-use App\Repository\EntryStateRepository;
+use App\Enum\SourceFormat;
 use App\Service\Subscription\SubscriptionTallyReader;
 use App\Tests\DbTestCase;
 
@@ -34,14 +35,47 @@ final class SubscriptionTallyReaderTest extends DbTestCase
 
         $reader = self::getContainer()->get(SubscriptionTallyReader::class);
         self::assertInstanceOf(SubscriptionTallyReader::class, $reader);
-        $entryStates = $this->entityManager->getRepository(EntryState::class);
-        self::assertInstanceOf(EntryStateRepository::class, $entryStates);
         $tallies = $reader->forUser($user->requireId());
 
-        self::assertSame($entryStates->unreadCountsForUser($user->requireId()), $tallies->unreadCounts);
+        self::assertSame([$subscription->requireId() => 1], $tallies->unreadCounts);
+        self::assertSame(1, $tallies->unreadTotals->allItems);
         self::assertSame([$subscription->requireId() => 2], $tallies->entryCounts);
         self::assertSame(['favorites' => 1, 'kept' => 0, 'viewed' => 0], $tallies->flagCounts);
         self::assertNotSame($tallies->entryCounts, $tallies->unreadCounts);
+    }
+
+    public function testCarriesTheTagAndNetworkTotalsFromTheirOwnScopes(): void
+    {
+        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $user = new User('tallies-scopes@example.com', $when);
+        $this->entityManager->persist($user);
+        $tag = new Tag($user, 'news');
+        $this->entityManager->persist($tag);
+        $homeFeed = new Feed('social:bluesky:1:home');
+        $homeFeed->setSourceFormat(SourceFormat::BLUESKY_API);
+        $profileFeed = new Feed('https://bsky.app/profile/alice.bsky.social/rss');
+        $subscriptions = [];
+        foreach ([$homeFeed, $profileFeed] as $feed) {
+            $this->entityManager->persist($feed);
+            $subscription = new Subscription($user, $feed, $when);
+            $this->entityManager->persist($subscription);
+            $subscriptions[] = $subscription;
+        }
+        $subscriptions[0]->addTag($tag);
+        foreach (['home-1', 'home-2'] as $guid) {
+            $this->entry($homeFeed, $guid);
+        }
+        $this->entry($profileFeed, 'profile-1');
+        $this->entityManager->flush();
+
+        $reader = self::getContainer()->get(SubscriptionTallyReader::class);
+        self::assertInstanceOf(SubscriptionTallyReader::class, $reader);
+        $totals = $reader->forUser($user->requireId())->unreadTotals;
+
+        self::assertSame(3, $totals->allItems);
+        self::assertSame([$tag->requireId() => 2], $totals->tags);
+        self::assertSame(['bluesky' => 3], $totals->networks);
+        self::assertSame(['bluesky' => 1], $totals->networkProfiles);
     }
 
     private function entry(Feed $feed, string $guid): Entry

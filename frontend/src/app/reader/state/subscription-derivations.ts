@@ -17,6 +17,7 @@ export interface TagNode {
 export function buildTagTree(
   subscriptions: SubscriptionDto[],
   orderedTags: TagDto[] = [],
+  tagUnread: ReadonlyMap<number, number> = new Map(),
 ): TagNode[] {
   const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subscriptions);
 
@@ -41,7 +42,7 @@ export function buildTagTree(
     return {
       tag,
       subscriptions: feeds,
-      unreadCount: feeds.reduce((total, subscription) => total + subscription.unreadCount, 0),
+      unreadCount: tagUnread.get(tag.id) ?? 0,
       entryCount: feeds.reduce((total, subscription) => total + subscription.entryCount, 0),
     };
   });
@@ -72,19 +73,8 @@ export function untaggedSubscriptions(subscriptions: SubscriptionDto[]): Subscri
     .sort((left, right) => left.position - right.position);
 }
 
-/** All-items badge total: a feed excluded from All items (`includeInAllItems:
- *  false`) contributes nothing here, though it still counts under its own
- *  per-feed row and any tag it carries (see `buildTagTree`). */
-export function sumUnread(subscriptions: SubscriptionDto[]): number {
-  return subscriptions.reduce(
-    (total, subscription) =>
-      subscription.includeInAllItems ? total + subscription.unreadCount : total,
-    0,
-  );
-}
-
-/** All-items list total: the same inclusion rule as `sumUnread`, over entry
- *  counts instead of unread counts. */
+/** All-items list total: a feed excluded from All items (`includeInAllItems:
+ *  false`) contributes nothing. */
 export function sumEntries(subscriptions: SubscriptionDto[]): number {
   return subscriptions.reduce(
     (total, subscription) =>

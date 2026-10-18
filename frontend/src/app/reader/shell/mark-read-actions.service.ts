@@ -5,7 +5,8 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { ReaderApi } from '../reader-api';
 import { EntriesStore } from '../state/entries.store';
-import { SubscriptionsStore, ZeroTarget } from '../state/subscriptions.store';
+import { SubscriptionsStore } from '../state/subscriptions.store';
+import { ZeroTarget } from '../state/unread-totals';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { MarkReadTarget, markReadTarget, queryFromSelection } from '../query/query';
@@ -92,8 +93,12 @@ export class MarkReadActions {
   private reloadAfterMarkRead(target: MarkReadTarget): void {
     const watermark = watermarkOf(target);
     this.entries.load(queryFromSelection(this.routeState.selection()));
-    if (watermark === null) this.subscriptions.load();
-    else this.subscriptions.zeroUnread(watermark);
+    if (watermark === null) {
+      this.subscriptions.load();
+    } else {
+      this.subscriptions.zeroUnread(watermark);
+      this.subscriptions.reloadCountsQuietly();
+    }
     this.savedSearches.load();
     // Marked picks move no watermark the reload sees, so re-read the for-you summary.
     if (target.scope === 'for-you') this.recommendations.refreshStatus();

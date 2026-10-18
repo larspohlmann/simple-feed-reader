@@ -137,6 +137,7 @@ export interface SubscriptionsResponse {
   keptCount: number;
   viewedCount: number;
   socialAccounts: SocialAccountRefDto[];
+  unreadTotals: UnreadTotalsDto;
 }
 
 /** The sidebar poll's cheap payload (#720): unread and entry counts per feed
@@ -147,6 +148,14 @@ export interface SubscriptionCountsResponse {
   favoritesCount: number;
   keptCount: number;
   viewedCount: number;
+  unreadTotals: UnreadTotalsDto;
+}
+
+/** Unread per scope, each article counted once within its scope (#1679). */
+export interface UnreadTotalsDto {
+  allItems: number;
+  tags: { id: number; unreadCount: number }[];
+  networks: { network: SocialNetworkName; unreadCount: number; profilesUnreadCount: number }[];
 }
 
 /** One playable or downloadable enclosure the feed declared (#906). */

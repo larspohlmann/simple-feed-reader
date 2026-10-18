@@ -41,7 +41,7 @@ describe('SidebarRowActions', () => {
       network: 'bluesky',
       accounts: [],
       networkAccounts,
-      profiles: socialProfiles([]),
+      profiles: socialProfiles([], 0),
       saved: null,
       unreadCount: 0,
       entryCount: 0,

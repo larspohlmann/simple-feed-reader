@@ -10,7 +10,6 @@ use App\Entity\Subscription;
 use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -18,10 +17,8 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class EntryStateRepository extends ServiceEntityRepository implements RestoreEntryStatesInterface
 {
-    public function __construct(
-        ManagerRegistry $registry,
-        private readonly DuplicateCollapseDql $collapse,
-    ) {
+    public function __construct(ManagerRegistry $registry)
+    {
         parent::__construct($registry, EntryState::class);
     }
 
@@ -226,41 +223,5 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
             ->getScalarResult();
 
         return array_map(static fn (array $row): int => (int) $row['entryId'], $rows);
-    }
-
-    /**
-     * Unread counts keyed by subscription id, in one query; a subscription with none is absent (callers default 0).
-     *
-     * @return array<int, int>
-     */
-    public function unreadCountsForUser(int $userId): array
-    {
-        $qb = $this->getEntityManager()->createQueryBuilder()
-            ->select('s.id AS subscriptionId', 'COUNT(e.id) AS unreadCount')
-            ->from(Subscription::class, 's')
-            ->join(Entry::class, 'e', 'ON', 'e.feed = s.feed')
-            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = s.user')
-            ->andWhere('s.user = :user')
-            ->andWhere(UnreadDql::predicate())
-            ->groupBy('s.id')
-            ->setParameter('user', $userId)
-            ->setParameter('notHidden', false, Types::BOOLEAN);
-        $this->collapse->apply(
-            $qb,
-            static function (QueryBuilder $inner, EntryAliases $aliases): void {
-                $inner->andWhere(UnreadDql::predicate($aliases));
-            },
-            $userId,
-        );
-
-        /** @var list<array{subscriptionId: int, unreadCount: int}> $rows */
-        $rows = $qb->getQuery()->getResult();
-
-        $map = [];
-        foreach ($rows as $row) {
-            $map[(int) $row['subscriptionId']] = (int) $row['unreadCount'];
-        }
-
-        return $map;
     }
 }

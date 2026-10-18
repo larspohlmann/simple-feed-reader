@@ -16,19 +16,22 @@ import {
   isSocialFeed,
 } from './social-sections';
 import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
-import { SubscriptionCountsResponse, SubscriptionDto, SubscriptionsResponse } from '../models';
 import {
-  buildTagTree,
-  sumEntries,
-  sumUnread,
-  untaggedSubscriptions,
-} from './subscription-derivations';
-
-export type ZeroTarget =
-  | 'all'
-  | { tag: number }
-  | { subscription: number }
-  | { network: SocialNetworkName; feedKind?: NetworkFeedKind };
+  EntryDto,
+  SubscriptionCountsResponse,
+  SubscriptionDto,
+  SubscriptionsResponse,
+} from '../models';
+import { buildTagTree, sumEntries, untaggedSubscriptions } from './subscription-derivations';
+import {
+  NO_UNREAD_TOTALS,
+  UnreadTotals,
+  ZeroTarget,
+  sameUnreadTotals,
+  shiftUnreadTotals,
+  unreadTotalsFrom,
+  zeroUnreadTotals,
+} from './unread-totals';
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
@@ -51,7 +54,15 @@ export class SubscriptionsStore {
    *  fire against an empty list the server has not answered on yet. */
   readonly resolved = signal(false);
 
-  readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
+  private readonly storedUnreadTotals = signal<UnreadTotals>(NO_UNREAD_TOTALS, {
+    equal: sameUnreadTotals,
+  });
+  /** The server's per-scope unread totals: each badge counts its own scope. */
+  readonly unreadTotals = this.storedUnreadTotals.asReadonly();
+
+  readonly tagTree = computed(() =>
+    buildTagTree(this.subscriptions(), this.tags.tags(), this.unreadTotals().tags),
+  );
   /** Social feeds live in their network's section, and an empty saved feed shows nowhere. */
   readonly untagged = computed(() =>
     untaggedSubscriptions(
@@ -61,9 +72,9 @@ export class SubscriptionsStore {
     ),
   );
   readonly socialSections = computed(() =>
-    buildSocialSections(this.subscriptions(), this.socialAccounts()),
+    buildSocialSections(this.subscriptions(), this.socialAccounts(), this.unreadTotals()),
   );
-  readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
+  readonly totalUnread = computed(() => this.unreadTotals().allItems);
   readonly totalEntries = computed(() => sumEntries(this.subscriptions()));
   readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
   readonly unhealthyCount = computed(() => this.unhealthy().length);
@@ -139,6 +150,7 @@ export class SubscriptionsStore {
     this.keptCount.set(0);
     this.viewedCount.set(0);
     this.socialAccounts.set([]);
+    this.storedUnreadTotals.set(NO_UNREAD_TOTALS);
     this.loading.set(false);
     this.error.set(null);
     this.resolved.set(false);
@@ -174,12 +186,22 @@ export class SubscriptionsStore {
   /** Refresh the held list after a deliberate action that changed server state
    *  — a manual feed retry — WITHOUT the loading skeleton, so the surface stays
    *  put and only the row that recovered drops out. No staleness gate: unlike a
-   *  poll tick, the caller knows the list moved. */
+   *  poll tick, the caller knows the list moved. Takes over a quiet tick on the
+   *  wire, whose answer predates the change. */
   reloadQuietly(): void {
-    if (!this.resolved() || this.inFlight) return;
+    if (!this.resolved()) return;
     this.quietFetch(
       () => this.api.subscriptions(),
       (response) => this.applyCounts(response),
+    );
+  }
+
+  /** `reloadQuietly` for a change that moved only counts, such as a mark-read. */
+  reloadCountsQuietly(): void {
+    if (!this.resolved()) return;
+    this.quietFetch(
+      () => this.api.subscriptionCounts(),
+      (response) => this.applyCountsOnly(response),
     );
   }
 
@@ -191,9 +213,7 @@ export class SubscriptionsStore {
     // first real load would stamp the freshness clock, silence that load, and
     // leave `resolved` false — so the onboarding redirect could never decide.
     if (!this.resolved()) return;
-    // A request already on the wire is about to answer this tick's question. It
-    // is also the one request a tick may NOT cancel: `load()` has taken
-    // `resolved` down and only its own response puts it back.
+    // A tick already on the wire is about to answer this question; don't stack another.
     if (this.inFlight) return;
     if (!countsAreStale(this.lastLoadedAt)) return;
 
@@ -228,11 +248,12 @@ export class SubscriptionsStore {
     this.keptCount.set(response.keptCount);
     this.viewedCount.set(response.viewedCount);
     this.socialAccounts.set(response.socialAccounts);
+    this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
   }
 
   /** Patch unread and entry counts into the list already held, replacing the
    *  array only when a number actually moved, so an unchanged tick keeps
-   *  array identity and `tagTree`/`untagged`/`totalUnread` don't recompute (#720). */
+   *  array identity and `tagTree`/`untagged` don't recompute (#720). */
   private applyCountsOnly(response: SubscriptionCountsResponse): void {
     const countsById = new Map(response.subscriptions.map((counts) => [counts.id, counts]));
     let moved = false;
@@ -248,6 +269,7 @@ export class SubscriptionsStore {
     this.setIfMoved(this.favoritesCount, response.favoritesCount);
     this.setIfMoved(this.keptCount, response.keptCount);
     this.setIfMoved(this.viewedCount, response.viewedCount);
+    this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
   }
 
   private setIfMoved(count: WritableSignal<number>, value: number): void {
@@ -276,20 +298,28 @@ export class SubscriptionsStore {
     count.update((current) => Math.max(0, current + by));
   }
 
-  decrementUnread(subscriptionId: number, by = 1): void {
-    this.patchSubscriptions((subscription) =>
-      subscription.id === subscriptionId
-        ? { ...subscription, unreadCount: Math.max(0, subscription.unreadCount - by) }
-        : subscription,
-    );
+  /** The server mirrors a read onto every visible copy, so each copy and each scope moves once. */
+  markArticleRead(entry: EntryDto): void {
+    this.shiftArticleUnread(entry, -1);
   }
 
-  incrementUnread(subscriptionId: number, by = 1): void {
+  markArticleUnread(entry: EntryDto): void {
+    this.shiftArticleUnread(entry, 1);
+  }
+
+  private shiftArticleUnread(entry: EntryDto, by: number): void {
+    const copyIds = new Set(
+      [entry, ...(entry.duplicates ?? []).filter((copy) => !copy.isHidden)].map(
+        (copy) => copy.subscriptionId,
+      ),
+    );
+    const held = this.storedSubscriptions().filter((subscription) => copyIds.has(subscription.id));
     this.patchSubscriptions((subscription) =>
-      subscription.id === subscriptionId
-        ? { ...subscription, unreadCount: subscription.unreadCount + by }
+      copyIds.has(subscription.id)
+        ? { ...subscription, unreadCount: Math.max(0, subscription.unreadCount + by) }
         : subscription,
     );
+    this.patchUnreadTotals((totals) => shiftUnreadTotals(totals, held, by));
   }
 
   /** Optimistically apply an exclusion-flag toggle (All items / For you) so the
@@ -304,6 +334,7 @@ export class SubscriptionsStore {
   }
 
   zeroUnread(target: ZeroTarget): void {
+    this.patchUnreadTotals((totals) => zeroUnreadTotals(totals, target));
     this.patchSubscriptions((subscription) => {
       if (target === 'all')
         return subscription.includeInAllItems ? { ...subscription, unreadCount: 0 } : subscription;
@@ -326,6 +357,11 @@ export class SubscriptionsStore {
   private patchSubscriptions(patch: (sub: SubscriptionDto) => SubscriptionDto): void {
     ++this.localEdits;
     this.storedSubscriptions.update((subscriptions) => subscriptions.map(patch));
+  }
+
+  private patchUnreadTotals(patch: (totals: UnreadTotals) => UnreadTotals): void {
+    ++this.localEdits;
+    this.storedUnreadTotals.update(patch);
   }
 }
 

@@ -1193,10 +1193,10 @@ final class EntryControllerTest extends WebTestCase
     }
 
     /**
-     * The badge counts one unread per duplicate group, on the lowest-id survivor. Hiding the survivor alone would
-     * resurface the sibling's copy as unread (0 to 1), so isHidden mirrors onto the sibling and its badge stays 0.
+     * Each feed's badge counts its own copy of a cross-feed duplicate. Hiding the survivor alone would leave the
+     * sibling's copy unread, so isHidden mirrors onto the sibling and both badges clear.
      */
-    public function testHidingASurvivorMirrorsToTheSiblingSoItsBadgeStaysClear(): void
+    public function testHidingASurvivorMirrorsToTheSiblingSoItsBadgeClearsToo(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-mirror@example.com');
@@ -1216,7 +1216,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(Subscription::class, $siblingSubscription);
 
         self::assertSame(1, $this->unreadCountOf($client, $headers, $survivorSubscription->requireId()));
-        self::assertSame(0, $this->unreadCountOf($client, $headers, $siblingSubscription->requireId()));
+        self::assertSame(1, $this->unreadCountOf($client, $headers, $siblingSubscription->requireId()));
 
         $client->request(
             'PATCH',
@@ -1230,7 +1230,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame(
             0,
             $this->unreadCountOf($client, $headers, $siblingSubscription->requireId()),
-            'Hiding the survivor must mirror isHidden onto the sibling copy, not resurrect it as unread.',
+            'Hiding the survivor must mirror isHidden onto the sibling copy, so its badge clears too.',
         );
     }
 

@@ -11,6 +11,7 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SocialSection, buildSocialSections, socialProfiles } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
+import { NO_UNREAD_TOTALS, UnreadTotals } from '../state/unread-totals';
 import { makeSubscription } from '../testing/subscription.factory';
 import { ListHeading } from './list-heading.service';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -55,7 +56,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
 const accountsOf = (...handles: string[]): SocialSection => ({
   network: 'bluesky',
   networkAccounts: [],
-  profiles: socialProfiles([]),
+  profiles: socialProfiles([], 0),
   unreadCount: 0,
   entryCount: 0,
   saved: null,
@@ -125,6 +126,18 @@ describe("ListHeading for a network's combined view", () => {
     }),
   ];
 
+  const NETWORK_TOTALS: UnreadTotals = {
+    ...NO_UNREAD_TOTALS,
+    networks: new Map([
+      ['bluesky', 7],
+      ['mastodon', 14],
+    ]),
+    networkProfiles: new Map([
+      ['bluesky', 4],
+      ['mastodon', 9],
+    ]),
+  };
+
   function networkHeading(unread: boolean, selected: Partial<Selection> = {}): ListHeading {
     const selection: Selection = {
       kind: 'network',
@@ -142,7 +155,7 @@ describe("ListHeading for a network's combined view", () => {
           provide: SubscriptionsStore,
           useValue: {
             subscriptions: signal(subscriptions),
-            socialSections: signal(buildSocialSections(subscriptions, [])),
+            socialSections: signal(buildSocialSections(subscriptions, [], NETWORK_TOTALS)),
           },
         },
         { provide: LanguageService, useValue: { lang: signal('en') } },

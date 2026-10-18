@@ -1,7 +1,14 @@
+import { SocialAccountRefDto, SocialFeedRefDto } from '../social-feed';
 import { SubscriptionDto } from '../models';
-import { SocialFeedRefDto } from '../social-feed';
 import { makeSubscription } from '../testing/subscription.factory';
 import { buildSocialSections, isPrivateFeed, isSocialFeed } from './social-sections';
+import { NO_UNREAD_TOTALS, UnreadTotals } from './unread-totals';
+
+const sectionsOf = (
+  subscriptions: SubscriptionDto[],
+  socialAccounts: SocialAccountRefDto[],
+  totals: UnreadTotals = NO_UNREAD_TOTALS,
+) => buildSocialSections(subscriptions, socialAccounts, totals);
 
 const ref = (
   network: 'bluesky' | 'mastodon',
@@ -17,7 +24,7 @@ const feed = (id: number, social: SocialFeedRefDto, title = `Feed ${id}`): Subsc
 
 describe('buildSocialSections', () => {
   it('builds one section per network holding a private feed, Bluesky first', () => {
-    const sections = buildSocialSections(
+    const sections = sectionsOf(
       [
         feed(1, ref('mastodon', 8, 'home')),
         feed(2, ref('bluesky', 3, 'home')),
@@ -30,7 +37,7 @@ describe('buildSocialSections', () => {
   });
 
   it('names every account of the network for its menu, by id, even one without private feeds', () => {
-    const sections = buildSocialSections(
+    const sections = sectionsOf(
       [feed(1, ref('bluesky', 3, 'home'))],
       [
         { id: 9, network: 'bluesky', handle: '@bob.bsky.social', status: 'needs_reconnect' },
@@ -43,11 +50,11 @@ describe('buildSocialSections', () => {
   });
 
   it('leaves out a network without accounts or feeds', () => {
-    expect(buildSocialSections([makeSubscription()], [])).toEqual([]);
+    expect(sectionsOf([makeSubscription()], [])).toEqual([]);
   });
 
   it('keeps a network with an account but no feeds, so its head can still manage feeds', () => {
-    const sections = buildSocialSections(
+    const sections = sectionsOf(
       [],
       [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
     );
@@ -57,7 +64,7 @@ describe('buildSocialSections', () => {
   });
 
   it("orders accounts by id and each account's feeds Home, lists, custom feeds, then by title", () => {
-    const sections = buildSocialSections(
+    const sections = sectionsOf(
       [
         feed(1, ref('bluesky', 9, 'home')),
         feed(2, ref('bluesky', 3, 'custom_feed'), 'Art'),
@@ -82,7 +89,7 @@ describe('buildSocialSections', () => {
   });
 
   it('shows a network that has only profile feeds, with no account group', () => {
-    const sections = buildSocialSections([profile(1, 'mastodon', 'Bob')], []);
+    const sections = sectionsOf([profile(1, 'mastodon', 'Bob')], []);
 
     expect(sections.map((section) => [section.network, section.accounts.length])).toEqual([
       ['mastodon', 0],
@@ -91,7 +98,7 @@ describe('buildSocialSections', () => {
   });
 
   it('keeps private feeds per account and lists profile feeds alphabetically', () => {
-    const sections = buildSocialSections(
+    const sections = sectionsOf(
       [
         profile(1, 'bluesky', 'Zed'),
         feed(2, ref('bluesky', 3, 'home')),
@@ -109,8 +116,8 @@ describe('buildSocialSections', () => {
     ]);
   });
 
-  it("sums only the profile feeds' counts into the profiles group", () => {
-    const sections = buildSocialSections(
+  it('takes the profiles unread from the totals and sums only their entries', () => {
+    const sections = sectionsOf(
       [
         makeSubscription({
           id: 1,
@@ -132,11 +139,22 @@ describe('buildSocialSections', () => {
         }),
       ],
       [{ id: 3, network: 'bluesky', handle: '@a', status: 'connected' }],
+      {
+        ...NO_UNREAD_TOTALS,
+        networks: new Map([['bluesky', 6]]),
+        networkProfiles: new Map([['bluesky', 2]]),
+      },
     );
 
-    expect(sections[0].profiles.unreadCount).toBe(3);
+    expect(sections[0].profiles.unreadCount).toBe(2);
     expect(sections[0].profiles.entryCount).toBe(5);
-    expect(sections[0].unreadCount).toBe(8);
+    expect(sections[0].unreadCount).toBe(6);
+  });
+
+  it('counts zero for a network the totals do not list', () => {
+    const [section] = sectionsOf([profile(1, 'mastodon', 'Bob')], []);
+
+    expect([section.unreadCount, section.profiles.unreadCount]).toEqual([0, 0]);
   });
 
   it('counts a profile feed as social but not as private', () => {
@@ -152,22 +170,20 @@ describe('buildSocialSections', () => {
     expect(isPrivateFeed(makeSubscription())).toBe(false);
   });
 
-  it("sums a network's unread and entries over its private and profile feeds, excluded ones included", () => {
+  it("sums a network's entries over its private and profile feeds, excluded ones included", () => {
     const subscriptions = [
       {
         ...feed(1, ref('bluesky', 3, 'home')),
-        unreadCount: 2,
         entryCount: 20,
         includeInAllItems: false,
       },
-      { ...profile(2, 'bluesky', 'Amy'), unreadCount: 5, entryCount: 50 },
-      { ...profile(3, 'mastodon', 'Bob'), unreadCount: 7, entryCount: 70 },
-      { ...makeSubscription({ id: 4 }), unreadCount: 11, entryCount: 110 },
+      { ...profile(2, 'bluesky', 'Amy'), entryCount: 50 },
+      { ...profile(3, 'mastodon', 'Bob'), entryCount: 70 },
+      { ...makeSubscription({ id: 4 }), entryCount: 110 },
     ];
 
-    const [bluesky, mastodon] = buildSocialSections(subscriptions, []);
-    expect([bluesky.unreadCount, bluesky.entryCount]).toEqual([7, 70]);
-    expect([mastodon.unreadCount, mastodon.entryCount]).toEqual([7, 70]);
+    const [bluesky, mastodon] = sectionsOf(subscriptions, []);
+    expect([bluesky.entryCount, mastodon.entryCount]).toEqual([70, 70]);
   });
 });
 
@@ -182,10 +198,7 @@ const saved = (id: number, network: 'bluesky' | 'mastodon', entryCount: number):
 
 describe('saved feeds in the social sections', () => {
   it('shows a network’s saved feed apart from its profiles while it holds posts', () => {
-    const [section] = buildSocialSections(
-      [profile(1, 'bluesky', 'Bob'), saved(2, 'bluesky', 3)],
-      [],
-    );
+    const [section] = sectionsOf([profile(1, 'bluesky', 'Bob'), saved(2, 'bluesky', 3)], []);
 
     expect(section.saved?.id).toBe(2);
     expect(section.profiles.subscriptions.map(({ id }) => id)).toEqual([1]);
@@ -193,7 +206,7 @@ describe('saved feeds in the social sections', () => {
   });
 
   it('hides an empty saved feed and keeps a section that holds only saved posts', () => {
-    expect(buildSocialSections([saved(2, 'bluesky', 0)], [])).toEqual([]);
-    expect(buildSocialSections([saved(3, 'mastodon', 1)], [])[0].network).toBe('mastodon');
+    expect(sectionsOf([saved(2, 'bluesky', 0)], [])).toEqual([]);
+    expect(sectionsOf([saved(3, 'mastodon', 1)], [])[0].network).toBe('mastodon');
   });
 });

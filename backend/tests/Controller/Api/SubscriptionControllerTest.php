@@ -142,6 +142,8 @@ final class SubscriptionControllerTest extends WebTestCase
         // Sidebar favourite/kept badge totals travel on the same payload.
         self::assertSame(0, $list['favoritesCount']);
         self::assertSame(0, $list['keptCount']);
+        self::assertIsArray($list['unreadTotals']);
+        self::assertSame(2, $list['unreadTotals']['allItems']);
     }
 
     public function testCountsReturnsUnreadPerFeedAndSurfaceTotals(): void
@@ -185,6 +187,8 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertSame(0, $counts['favoritesCount']);
         self::assertSame(0, $counts['keptCount']);
         self::assertSame(0, $counts['viewedCount']);
+        self::assertIsArray($counts['unreadTotals']);
+        self::assertSame(2, $counts['unreadTotals']['allItems']);
     }
 
     public function testCountsRejectsAnonymous(): void
