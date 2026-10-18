@@ -37,4 +37,9 @@ final readonly class ImportCandidateModel
             $profileFeed->subscriptionId,
         );
     }
+
+    public function asSubscribed(): self
+    {
+        return new self($this->account, ImportCandidateState::Subscribed, $this->subscriptionId);
+    }
 }
