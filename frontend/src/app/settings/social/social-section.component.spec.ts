@@ -100,7 +100,7 @@ describe('SocialSectionComponent', () => {
 
   afterEach(() => http.verify());
 
-  it('offers "Select feeds…" per account in the import section, disabled when reconnecting is needed', () => {
+  it('offers "Manage feeds…" per account in the import section, disabled when reconnecting is needed', () => {
     const fixture = mount([
       account(),
       account({ id: 2, handle: 'bob.bsky.social', isDefault: false, status: 'needs_reconnect' }),
@@ -110,7 +110,7 @@ describe('SocialSectionComponent', () => {
     const button = (id: number) =>
       section.querySelector(`[data-testid="social-import-${id}"] button`) as HTMLButtonElement;
     expect(button(1).disabled).toBe(false);
-    expect(button(1).textContent).toContain('Select feeds…');
+    expect(button(1).textContent).toContain('Manage feeds…');
     expect(button(2).disabled).toBe(true);
     const row = (id: number) => button(id).closest('app-settings-row')?.textContent ?? '';
     expect(row(1)).toContain('alice.bsky.social');
@@ -234,8 +234,8 @@ describe('SocialSectionComponent', () => {
     const fixture = mount([account()]);
 
     const section = byTestId(fixture, 'social-import-section');
-    expect(section?.textContent).toContain('Import follows');
-    expect(section?.textContent).toContain('Subscribe to the accounts you follow');
+    expect(section?.textContent).toContain('Manage feeds');
+    expect(section?.textContent).toContain('A tick means you are subscribed');
     expect(section?.textContent).toContain('under the Feeds row');
   });
 
