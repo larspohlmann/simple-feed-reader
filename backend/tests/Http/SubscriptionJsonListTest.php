@@ -77,6 +77,35 @@ final class SubscriptionJsonListTest extends DbTestCase
         );
     }
 
+    public function testTheListReportsAnAccountThatNeedsReconnecting(): void
+    {
+        $user = new User('subscription-list-reconnect@example.com', new \DateTimeImmutable('2026-10-12T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $bluesky = SocialAccounts::blueskyOf($user);
+        $bluesky->markNeedsReconnect();
+        $this->entityManager->persist($bluesky);
+        $this->entityManager->flush();
+
+        $payload = SubscriptionJson::list(
+            [],
+            new SubscriptionTalliesModel([], [], ['favorites' => 0, 'kept' => 0, 'viewed' => 0]),
+            [$bluesky],
+        );
+
+        self::assertSame(
+            [
+                [
+                    'id' => $bluesky->requireId(),
+                    'network' => 'bluesky',
+                    'handle' => '@alice.bsky.social',
+                    'status' => 'needs_reconnect',
+                ],
+            ],
+            $payload['socialAccounts'],
+        );
+    }
+
     private function subscription(User $user, string $url): Subscription
     {
         $feed = new Feed($url);

@@ -102,10 +102,8 @@ final readonly class ImportCandidates
         }
 
         return array_map(
-            static fn (ImportCandidateModel $follow): ImportCandidateModel => match ($follow->state) {
-                ImportCandidateState::NoLongerFollowed => $follow->asSubscribed(),
-                default => $follow,
-            },
+            static fn (ImportCandidateModel $follow): ImportCandidateModel => $follow->state
+                === ImportCandidateState::NoLongerFollowed ? $follow->asSubscribed() : $follow,
             $follows,
         );
     }
