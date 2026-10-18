@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\SocialAccount;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Repository\ThreadPostRepository;
 use App\Service\Comments\CommentsSource\CommentsSourceInterface;
 use App\Service\Comments\Exception\CommentsThrottledException;
 use App\Service\Comments\Exception\CommentsUnavailableException;
@@ -27,7 +26,6 @@ use App\Service\Social\Exception\SocialPostRefusedException;
 use App\Service\Social\Exception\SocialTokenScopeMissingException;
 use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
-use App\Service\Social\Support\FoldedReplies;
 use App\Service\Social\Support\SocialPostAddress;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -47,7 +45,6 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
         private ReplyThreadOrder $order,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $socialRepliesLimiter,
-        private ThreadPostRepository $threadPosts,
     ) {
     }
 
@@ -85,10 +82,7 @@ final readonly class SocialRepliesSource implements CommentsSourceInterface
     {
         $post = self::postOf($entry);
 
-        return $this->order->pageOf(FoldedReplies::without(
-            $this->threadOn($post->network)->repliesIn($post->address, $answer),
-            $this->threadPosts->urlsOf($entry),
-        ));
+        return $this->order->pageOf($this->threadOn($post->network)->repliesIn($post->address, $answer));
     }
 
     private function accountOrPublicThreadOf(
