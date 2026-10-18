@@ -51,12 +51,7 @@ final class CommentsJson
     {
         return [
             'address' => $post->address,
-            'counts' => [
-                'likes' => $post->counts->likes,
-                'reposts' => $post->counts->reposts,
-                'replies' => $post->counts->replies,
-                'quotes' => $post->counts->quotes,
-            ],
+            'counts' => SocialCountsJson::ofReply($post->counts),
             'isLiked' => $post->isLiked,
         ];
     }

@@ -4,18 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\SocialAccount;
 use App\Entity\User;
-use App\Enum\SocialNetwork;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RoutesSocialApis;
-use App\Tests\Support\SocialAccounts;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -180,33 +173,6 @@ final class EntrySocialCountsControllerTest extends ApiTestCase
         $client->request('GET', $path);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
-    }
-
-    private function signIn(KernelBrowser $client, string $email): User
-    {
-        $user = $this->factory()->create($email);
-        /** @var JWTTokenManagerInterface $tokens */
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $tokens->create($user));
-
-        return $user;
-    }
-
-    private function mastodonAccountOf(User $user): void
-    {
-        /** @var InstanceSecretCipher $instanceCipher */
-        $instanceCipher = self::getContainer()->get(InstanceSecretCipher::class);
-        $this->entityManager()->persist(new SocialAccount(
-            $user,
-            SocialNetwork::Mastodon,
-            'alice@mastodon.example',
-            '@alice@mastodon.example',
-            'https://mastodon.example',
-            (new SocialCredentialCipher($instanceCipher))->seal($user->requireId(), SocialAccounts::ACCESS_TOKEN),
-            '7890',
-            new \DateTimeImmutable('2026-10-12 10:00:00'),
-        ));
-        $this->entityManager()->flush();
     }
 
     private static function originStatus(): MockResponse

@@ -19,7 +19,7 @@ const BLUESKY: EntrySocialDto = { network: 'bluesky', isLiked: false, canLike: t
 describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
   let states: Map<number, WritableSignal<CommentsState>>;
-  let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock; setLiked: jest.Mock };
+  let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock; toggleLike: jest.Mock };
   let sightObservers: { init: IntersectionObserverInit | undefined; disconnect: jest.Mock }[];
   let trigger: ((visible: boolean) => void) | undefined;
   let scroller: HTMLElement;
@@ -31,7 +31,7 @@ describe('EntryCommentsComponent', () => {
       state: jest.fn((id: number) => stateOf(id)),
       load: jest.fn(),
       reload: jest.fn(),
-      setLiked: jest.fn(),
+      toggleLike: jest.fn(),
     };
     sightObservers = [];
     trigger = undefined;
@@ -118,11 +118,7 @@ describe('EntryCommentsComponent', () => {
       showEntry({ id: 5, comments: 'manual', discussionUrl: DISCUSSION, social: BLUESKY });
       likeButton(settleComments([anEntryComment({ post })]))?.click();
 
-      expect(service.setLiked).toHaveBeenCalledWith(
-        5,
-        { address: post.address, isLiked: true },
-        expect.any(Function),
-      );
+      expect(service.toggleLike).toHaveBeenCalledWith(5, post, expect.any(Function));
     });
 
     it('counts likes without a button when the reader has no account to like with', () => {

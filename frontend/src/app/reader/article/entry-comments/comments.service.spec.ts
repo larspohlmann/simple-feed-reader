@@ -27,7 +27,7 @@ describe('CommentsService', () => {
 
   afterEach(() => jest.useRealTimers());
 
-  describe('setLiked', () => {
+  describe('toggleLike', () => {
     const address = 'at://did:plc:ann/app.bsky.feed.post/2';
     const post: EntryCommentPostDto = {
       address,
@@ -55,35 +55,35 @@ describe('CommentsService', () => {
     };
 
     it('likes the comment at once and counts the like', () => {
-      service.setLiked(1, { address, isLiked: true }, onError);
+      service.toggleLike(1, post, onError);
 
       expect(likes.likeComment).toHaveBeenCalledWith(1, address);
       expect(shownPost()).toEqual({ ...post, isLiked: true, counts: { ...post.counts, likes: 5 } });
     });
 
     it('takes a like back through the unlike call', () => {
-      service.setLiked(1, { address, isLiked: true }, onError);
+      service.toggleLike(1, post, onError);
       answer.next({ isLiked: true });
       answer.complete();
       answer = new Subject();
       likes.unlikeComment.mockReturnValue(answer);
 
-      service.setLiked(1, { address, isLiked: false }, onError);
+      service.toggleLike(1, { ...post, isLiked: true }, onError);
 
       expect(likes.unlikeComment).toHaveBeenCalledWith(1, address);
       expect(shownPost()).toEqual(post);
     });
 
     it('ignores a second toggle while the first is on the wire', () => {
-      service.setLiked(1, { address, isLiked: true }, onError);
-      service.setLiked(1, { address, isLiked: false }, onError);
+      service.toggleLike(1, post, onError);
+      service.toggleLike(1, { ...post, isLiked: true }, onError);
 
       expect(likes.unlikeComment).not.toHaveBeenCalled();
       expect(shownPost()?.isLiked).toBe(true);
     });
 
     it('puts the like back and reports the problem when the call fails', () => {
-      service.setLiked(1, { address, isLiked: true }, onError);
+      service.toggleLike(1, post, onError);
 
       answer.error(new HttpErrorResponse({ status: 409, error: { title: 'No account' } }));
 
@@ -92,7 +92,7 @@ describe('CommentsService', () => {
     });
 
     it('leaves the other comments alone', () => {
-      service.setLiked(1, { address, isLiked: true }, onError);
+      service.toggleLike(1, post, onError);
 
       const state = service.state(1)();
       expect(state.status === 'ok' && state.comments[1].post).toBeNull();

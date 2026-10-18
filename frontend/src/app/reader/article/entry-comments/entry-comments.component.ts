@@ -24,6 +24,7 @@ import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
 import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
+import { likeableSocial } from '../../entry-social';
 import { mediumRatio } from '../../entry-medium';
 import { observeOnSight } from '../../list/paging';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
@@ -73,6 +74,7 @@ export class EntryCommentsComponent {
   private readonly loadsOnSight = computed(() => this.entry().comments === 'auto');
 
   readonly state = computed(() => this.service.state(this.entryId())());
+  protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
   readonly network = computed(() => {
     const social = this.entry().social;
     return social ? SOCIAL_NETWORK_NAMES[social.network] : null;
@@ -117,8 +119,7 @@ export class EntryCommentsComponent {
   }
 
   toggleLike(post: EntryCommentPostDto): void {
-    const like = { address: post.address, isLiked: !post.isLiked };
-    this.service.setLiked(this.entryId(), like, (problem) =>
+    this.service.toggleLike(this.entryId(), post, (problem) =>
       this.toast.show({ message: problemMessage(problem) }),
     );
   }

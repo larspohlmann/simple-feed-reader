@@ -15,6 +15,7 @@ use App\Service\Social\ActingAccountChooser;
 use App\Service\Social\ActingAccountGuard;
 use App\Service\Social\Exception\NotASocialPostException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\PostLiking;
 use App\Service\Social\SocialCommentLikes;
 use App\Service\Social\SocialPostFinder;
 use App\Tests\DbTestCase;
@@ -179,8 +180,7 @@ final class SocialCommentLikesTest extends DbTestCase
                 $guard,
                 $network,
             ),
-            $guard,
-            $network,
+            new PostLiking($guard, $network),
             $this->comments,
         );
     }

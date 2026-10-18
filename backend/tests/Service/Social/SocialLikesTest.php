@@ -24,6 +24,7 @@ use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
 use App\Service\Social\Model\SocialCountsModel;
 use App\Service\Social\Model\SocialPostAddressModel;
+use App\Service\Social\PostLiking;
 use App\Service\Social\SocialCountsCache;
 use App\Service\Social\SocialLikes;
 use App\Service\Social\SocialPostFinder;
@@ -277,8 +278,7 @@ final class SocialLikesTest extends DbTestCase
                 $guard,
                 new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
             ),
-            $guard,
-            new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon]),
+            new PostLiking($guard, new ServiceLocator(['mastodon' => static fn (): FakeMastodonNetwork => $mastodon])),
             $this->entityManager,
             new NaiveUtcClock(new MockClock(new \DateTimeImmutable('2026-10-13T08:30:00+02:00'))),
             $this->countsCache,

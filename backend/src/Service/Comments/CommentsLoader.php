@@ -42,7 +42,6 @@ final readonly class CommentsLoader
         return $this->fetched(new CommentsRequest($this->sourceFor($entry), $user, $entry));
     }
 
-    /** Drops what is cached for the user's view of the entry's comments, so the next load asks the source. */
     public function forget(User $user, Entry $entry): void
     {
         $source = $this->sourceOrNull($entry);

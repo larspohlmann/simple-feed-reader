@@ -20,7 +20,6 @@ export interface EntryCommentDto {
   post: EntryCommentPostDto | null;
 }
 
-/** `address` names the reply to `PUT`/`DELETE /api/entries/{id}/comments/like`. */
 export interface EntryCommentPostDto {
   address: string;
   counts: SocialCountsDto;

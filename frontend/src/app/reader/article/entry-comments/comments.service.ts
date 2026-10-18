@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, finalize, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { Problem, parseProblem } from '../../../core/problem';
-import { CommentsResponse, EntryCommentDto } from '../../entry-comment';
+import { CommentsResponse, EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { ReaderApi } from '../../reader-api';
 
 const CACHE_CAP = 50;
@@ -22,12 +22,6 @@ export type CommentsState =
     }
   | { status: 'throttled'; retryAt: number }
   | { status: 'failed'; failedAt: number };
-
-/** The comment to like, named by its post address, and whether it should end up liked. */
-export interface CommentLike {
-  address: string;
-  isLiked: boolean;
-}
 
 @Injectable({ providedIn: 'root' })
 export class CommentsService {
@@ -56,8 +50,13 @@ export class CommentsService {
   }
 
   /** Optimistic like of one comment; dropped while a like of the same comment is on the wire. */
-  setLiked(entryId: number, like: CommentLike, onError: (problem: Problem) => void): void {
-    const { address, isLiked } = like;
+  toggleLike(
+    entryId: number,
+    post: EntryCommentPostDto,
+    onError: (problem: Problem) => void,
+  ): void {
+    const { address } = post;
+    const isLiked = !post.isLiked;
     const key = `${entryId} ${address}`;
     if (this.likesInFlight.has(key)) return;
     const state = this.stateFor(entryId);

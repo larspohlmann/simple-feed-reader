@@ -35,6 +35,7 @@
       @if (s.comments.length === 0) {
         <p class="empty">{{ 'reader.comments.empty' | transloco }}</p>
       } @else {
+        @let social = entry().social;
         <ol class="list">
           @for (c of s.comments; track $index) {
             <li class="comment" [class.reply]="c.depth > 0" [style.--depth]="indentOf(c)">
@@ -88,15 +89,13 @@
               @if (c.linkCard) {
                 <app-link-card [card]="c.linkCard" layout="article" />
               }
-              @if (c.post; as post) {
-                @if (entry().social; as social) {
-                  <app-social-counts-row
-                    [network]="social.network"
-                    [counts]="post.counts"
-                    [liked]="social.canLike ? post.isLiked : null"
-                    (likeToggled)="toggleLike(post)"
-                  />
-                }
+              @if (social && c.post; as post) {
+                <app-social-counts-row
+                  [network]="social.network"
+                  [counts]="post.counts"
+                  [liked]="likeable() ? post.isLiked : null"
+                  (likeToggled)="toggleLike(post)"
+                />
               }
             </li>
           }
