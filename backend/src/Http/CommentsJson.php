@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\EntryMedia;
+use App\Service\Comments\Model\CommentPostModel;
 use App\Service\Comments\Model\CommentsResultModel;
 use App\Service\Comments\Model\CommentsStatus;
 use App\Service\Comments\Model\EntryCommentModel;
@@ -41,6 +42,22 @@ final class CommentsJson
             'media' => EntryMedia::toJsonList($comment->embeds->media),
             'linkCard' => LinkCardJson::ofOrNull($comment->embeds->linkCard),
             'quote' => QuotedPostJson::ofOrNull($comment->embeds->quote),
+            'post' => null === $comment->post ? null : self::post($comment->post),
+        ];
+    }
+
+    /** @return array{address: string, counts: array{likes: int, reposts: int, replies: int, quotes: int|null}, isLiked: bool} */
+    private static function post(CommentPostModel $post): array
+    {
+        return [
+            'address' => $post->address,
+            'counts' => [
+                'likes' => $post->counts->likes,
+                'reposts' => $post->counts->reposts,
+                'replies' => $post->counts->replies,
+                'quotes' => $post->counts->quotes,
+            ],
+            'isLiked' => $post->isLiked,
         ];
     }
 }

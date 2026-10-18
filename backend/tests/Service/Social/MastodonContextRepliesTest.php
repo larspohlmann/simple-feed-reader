@@ -47,6 +47,23 @@ final class MastodonContextRepliesTest extends TestCase
         self::assertTrue($selfReply->byEntryAuthor);
     }
 
+    public function testAReplyIsThePostALikeGoesTo(): void
+    {
+        $answer = self::contextOf([self::statusOf('300', '110', [
+            'favourites_count' => 4,
+            'reblogs_count' => 1,
+            'replies_count' => 0,
+            'favourited' => true,
+        ])]);
+
+        $post = $this->replies($answer)[0]->comment()->post;
+
+        self::assertNotNull($post);
+        self::assertSame('https://example.social/users/someone/statuses/300', $post->address);
+        self::assertSame(4, $post->counts->likes);
+        self::assertTrue($post->isLiked);
+    }
+
     public function testANonPublicReplyGoesWithItsAnswers(): void
     {
         $urls = self::allUrlsOf($this->replies());

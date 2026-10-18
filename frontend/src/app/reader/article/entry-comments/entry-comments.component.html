@@ -88,6 +88,16 @@
               @if (c.linkCard) {
                 <app-link-card [card]="c.linkCard" layout="article" />
               }
+              @if (c.post; as post) {
+                @if (entry().social; as social) {
+                  <app-social-counts-row
+                    [network]="social.network"
+                    [counts]="post.counts"
+                    [liked]="social.canLike ? post.isLiked : null"
+                    (likeToggled)="toggleLike(post)"
+                  />
+                }
+              }
             </li>
           }
         </ol>

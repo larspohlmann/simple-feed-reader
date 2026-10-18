@@ -29,6 +29,21 @@ final class SocialPostAddress
         return self::of($entry) ?? throw new NotASocialPostException('This entry is not a Bluesky or Mastodon post.');
     }
 
+    /**
+     * A reply in the entry's thread, named by the address its comment carries.
+     *
+     * @throws NotASocialPostException
+     */
+    public static function replyOrRefuse(Entry $entry, string $address): SocialPostAddressModel
+    {
+        $reply = match (self::ofOrRefuse($entry)->network) {
+            SocialNetwork::Bluesky => self::blueskyPost($address),
+            SocialNetwork::Mastodon => self::mastodonStatus(AbsoluteHttpUrl::orNull($address)),
+        };
+
+        return $reply ?? throw new NotASocialPostException('The reply is no post on the entry\'s network.');
+    }
+
     private static function blueskyPost(string $guid): ?SocialPostAddressModel
     {
         return AtPostUri::matches($guid) ? new SocialPostAddressModel(SocialNetwork::Bluesky, $guid) : null;
@@ -38,6 +53,11 @@ final class SocialPostAddress
     {
         $statusAddress = AbsoluteHttpUrl::orNull($entry->getGuid()) ?? AbsoluteHttpUrl::orNull($entry->getUrl());
 
+        return self::mastodonStatus($statusAddress);
+    }
+
+    private static function mastodonStatus(?string $statusAddress): ?SocialPostAddressModel
+    {
         return null === $statusAddress ? null : new SocialPostAddressModel(SocialNetwork::Mastodon, $statusAddress);
     }
 

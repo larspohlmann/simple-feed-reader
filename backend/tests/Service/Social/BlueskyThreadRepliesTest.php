@@ -247,6 +247,23 @@ final class BlueskyThreadRepliesTest extends TestCase
         self::assertNull($embeds->quote);
     }
 
+    public function testAReplyIsThePostALikeGoesTo(): void
+    {
+        $reply = self::replyBy('did:plc:ann', [], [], [
+            'likeCount' => 3,
+            'repostCount' => 0,
+            'replyCount' => 1,
+            'viewer' => ['like' => 'at://did:plc:viewer/app.bsky.feed.like/1'],
+        ]);
+
+        $post = self::commentAt($this->replies(self::threadOf([$reply])), 0)->post;
+
+        self::assertNotNull($post);
+        self::assertSame('at://did:plc:ann/app.bsky.feed.post/reply', $post->address);
+        self::assertSame(3, $post->counts->likes);
+        self::assertTrue($post->isLiked);
+    }
+
     public function testAnAnswerWithoutAThreadIsUnavailable(): void
     {
         $this->expectException(CommentsUnavailableException::class);
@@ -273,10 +290,11 @@ final class BlueskyThreadRepliesTest extends TestCase
     /**
      * @param array<string, mixed> $viewer
      * @param array<string, mixed> $embed
+     * @param array<string, mixed> $postFields
      *
      * @return array<string, mixed>
      */
-    private static function replyBy(string $did, array $viewer, array $embed = []): array
+    private static function replyBy(string $did, array $viewer, array $embed = [], array $postFields = []): array
     {
         return [
             '$type' => 'app.bsky.feed.defs#threadViewPost',
@@ -285,6 +303,7 @@ final class BlueskyThreadRepliesTest extends TestCase
                 'author' => ['did' => $did, 'handle' => 'someone.test', 'viewer' => $viewer],
                 'record' => ['$type' => 'app.bsky.feed.post', 'text' => 'A reply'],
                 'embed' => $embed,
+                ...$postFields,
             ],
         ];
     }

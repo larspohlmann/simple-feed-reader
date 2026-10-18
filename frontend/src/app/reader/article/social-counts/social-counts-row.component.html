@@ -1,0 +1,29 @@
+@if (shown()) {
+  <div class="row">
+    @for (shownCount of shownCounts(); track shownCount.kind) {
+      @let label =
+        labelKey(shownCount.kind, shownCount.count) | transloco: { count: shownCount.count };
+      <span class="count" role="img" [attr.title]="label" [attr.aria-label]="label">
+        <app-icon [name]="shownCount.icon" size="sm" />
+        <span class="number">{{ format(shownCount.count) }}</span>
+      </span>
+    }
+    @if (liked() !== null) {
+      @let likeCount = counts()?.likes ?? null;
+      <button
+        type="button"
+        class="like"
+        [class.on]="liked()"
+        [attr.aria-pressed]="liked()"
+        [attr.title]="'reader.actionHint.' + likeKey() | transloco"
+        [attr.aria-label]="'reader.' + likeKey() | transloco"
+        (click)="likeToggled.emit()"
+      >
+        <app-icon name="thumb_up" size="sm" [fill]="liked() === true" />
+        @if (likeCount !== null) {
+          <span class="number">{{ format(likeCount) }}</span>
+        }
+      </button>
+    }
+  </div>
+}

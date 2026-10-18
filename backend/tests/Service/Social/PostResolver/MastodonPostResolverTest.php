@@ -55,6 +55,15 @@ final class MastodonPostResolverTest extends TestCase
         self::assertEquals(new SocialCountsModel(5, 2, 1, null), $post->counts);
     }
 
+    public function testAStatusTheAccountFavouritedIsAlreadyLikedAsItsStatusId(): void
+    {
+        $http = new RoutedHttpClient([self::SEARCH => self::statuses([['id' => '109876', 'favourited' => true]])]);
+
+        $post = $this->resolver($http)->resolve(SocialAccounts::mastodon(), self::STATUS_URL);
+
+        self::assertSame('109876', $post->existingLikeId);
+    }
+
     public function testAnAddressCannotInjectSearchParameters(): void
     {
         $address = 'https://mastodon.social/@a/1&resolve=false#x';
@@ -143,7 +152,7 @@ final class MastodonPostResolverTest extends TestCase
         );
     }
 
-    /** @param list<array<string, string|int>> $statuses */
+    /** @param list<array<string, string|int|bool>> $statuses */
     private static function statuses(array $statuses): MockResponse
     {
         return new MockResponse(json_encode(

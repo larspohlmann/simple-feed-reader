@@ -42,6 +42,15 @@ final readonly class CommentsLoader
         return $this->fetched(new CommentsRequest($this->sourceFor($entry), $user, $entry));
     }
 
+    /** Drops what is cached for the user's view of the entry's comments, so the next load asks the source. */
+    public function forget(User $user, Entry $entry): void
+    {
+        $source = $this->sourceOrNull($entry);
+        if (null !== $source) {
+            $this->cache->forget((new CommentsRequest($source, $user, $entry))->cacheKey);
+        }
+    }
+
     private function fetched(CommentsRequest $request): CommentsResultModel
     {
         try {
@@ -69,12 +78,17 @@ final readonly class CommentsLoader
 
     private function sourceFor(Entry $entry): CommentsSourceInterface
     {
+        return $this->sourceOrNull($entry) ?? throw new NoCommentsFeedException('No comments source serves the entry.');
+    }
+
+    private function sourceOrNull(Entry $entry): ?CommentsSourceInterface
+    {
         foreach ($this->sources as $source) {
             if ($source->serves($entry)) {
                 return $source;
             }
         }
 
-        throw new NoCommentsFeedException('No comments source serves the entry.');
+        return null;
     }
 }

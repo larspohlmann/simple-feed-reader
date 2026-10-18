@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError, Subject } from 'rxjs';
 import { CommentsService } from './comments.service';
 import { ReaderApi } from '../../reader-api';
-import { CommentsResponse } from '../../entry-comment';
+import { CommentsResponse, EntryCommentPostDto } from '../../entry-comment';
 import { anEntryComment } from '../../../../testing/entry-testing';
 
 describe('CommentsService', () => {
@@ -25,6 +26,78 @@ describe('CommentsService', () => {
   });
 
   afterEach(() => jest.useRealTimers());
+
+  describe('setLiked', () => {
+    const address = 'at://did:plc:ann/app.bsky.feed.post/2';
+    const post: EntryCommentPostDto = {
+      address,
+      counts: { likes: 4, reposts: 0, replies: 1, quotes: 0 },
+      isLiked: false,
+    };
+    let likes: { likeComment: jest.Mock; unlikeComment: jest.Mock };
+    let answer: Subject<{ isLiked: boolean }>;
+    let onError: jest.Mock;
+
+    beforeEach(() => {
+      answer = new Subject();
+      likes = { likeComment: jest.fn(() => answer), unlikeComment: jest.fn(() => answer) };
+      Object.assign(api, likes);
+      api.comments.mockReturnValue(
+        of({ ...ok, comments: [anEntryComment({ post }), anEntryComment()] }),
+      );
+      onError = jest.fn();
+      service.load(1);
+    });
+
+    const shownPost = () => {
+      const state = service.state(1)();
+      return state.status === 'ok' ? state.comments[0].post : undefined;
+    };
+
+    it('likes the comment at once and counts the like', () => {
+      service.setLiked(1, { address, isLiked: true }, onError);
+
+      expect(likes.likeComment).toHaveBeenCalledWith(1, address);
+      expect(shownPost()).toEqual({ ...post, isLiked: true, counts: { ...post.counts, likes: 5 } });
+    });
+
+    it('takes a like back through the unlike call', () => {
+      service.setLiked(1, { address, isLiked: true }, onError);
+      answer.next({ isLiked: true });
+      answer.complete();
+      answer = new Subject();
+      likes.unlikeComment.mockReturnValue(answer);
+
+      service.setLiked(1, { address, isLiked: false }, onError);
+
+      expect(likes.unlikeComment).toHaveBeenCalledWith(1, address);
+      expect(shownPost()).toEqual(post);
+    });
+
+    it('ignores a second toggle while the first is on the wire', () => {
+      service.setLiked(1, { address, isLiked: true }, onError);
+      service.setLiked(1, { address, isLiked: false }, onError);
+
+      expect(likes.unlikeComment).not.toHaveBeenCalled();
+      expect(shownPost()?.isLiked).toBe(true);
+    });
+
+    it('puts the like back and reports the problem when the call fails', () => {
+      service.setLiked(1, { address, isLiked: true }, onError);
+
+      answer.error(new HttpErrorResponse({ status: 409, error: { title: 'No account' } }));
+
+      expect(shownPost()).toEqual(post);
+      expect(onError).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the other comments alone', () => {
+      service.setLiked(1, { address, isLiked: true }, onError);
+
+      const state = service.state(1)();
+      expect(state.status === 'ok' && state.comments[1].post).toBeNull();
+    });
+  });
 
   it('starts idle and fetches nothing until asked', () => {
     expect(service.state(1)()).toEqual({ status: 'idle' });

@@ -13,6 +13,7 @@ use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Exception\SocialPostNotFoundException;
+use App\Service\Social\Model\SocialPostAddressModel;
 use App\Service\Social\Model\SocialPostModel;
 use App\Service\Social\PostResolver\PostResolverInterface;
 use App\Service\Social\Support\SocialPostAddress;
@@ -40,7 +41,26 @@ final readonly class SocialPostFinder
      */
     public function find(User $user, Entry $entry): SocialPostModel
     {
-        $address = SocialPostAddress::ofOrRefuse($entry);
+        return $this->resolvedFor($user, $entry, SocialPostAddress::ofOrRefuse($entry));
+    }
+
+    /**
+     * A reply in the entry's thread, found on the account that acts on the entry.
+     *
+     * @throws NotASocialPostException
+     * @throws NoSocialAccountForNetworkException
+     * @throws SocialAccountNeedsReconnectException
+     * @throws SocialPostNotFoundException
+     * @throws SocialCredentialsRejectedException
+     * @throws SocialNetworkUnreachableException
+     */
+    public function findReply(User $user, Entry $entry, string $address): SocialPostModel
+    {
+        return $this->resolvedFor($user, $entry, SocialPostAddress::replyOrRefuse($entry, $address));
+    }
+
+    private function resolvedFor(User $user, Entry $entry, SocialPostAddressModel $address): SocialPostModel
+    {
         $account = $this->accounts->accountFor($user, $entry, $address->network);
         $resolver = $this->resolverOn($address->network);
 

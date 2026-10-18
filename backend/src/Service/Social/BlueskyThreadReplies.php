@@ -18,6 +18,7 @@ use App\Service\Parser\Support\DateParser;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\Support\BlueskyAuthor;
+use App\Service\Social\Support\CommentPost;
 use App\Service\Text\Support\HtmlAnchor;
 
 final readonly class BlueskyThreadReplies
@@ -98,6 +99,7 @@ final readonly class BlueskyThreadReplies
             $this->htmlOf($post->node('record'), $rendered?->uncardedLink),
             self::isByEntryAuthor($author, $entryAuthor),
             self::embedsOf($rendered),
+            post: CommentPost::ofBlueskyPost($post),
         );
     }
 

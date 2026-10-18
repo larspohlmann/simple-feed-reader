@@ -36,6 +36,11 @@ final readonly class CommentsCache
         $this->cache->save($item);
     }
 
+    public function forget(string $key): void
+    {
+        $this->cache->deleteItem(self::keyOf($key));
+    }
+
     private function lifetimeOf(CommentsAnswerModel $answer): int
     {
         return $answer->isStillGathering ? $this->gatheringLifetime : $this->settledLifetime;

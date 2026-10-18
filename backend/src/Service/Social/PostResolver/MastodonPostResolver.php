@@ -38,6 +38,8 @@ final readonly class MastodonPostResolver implements PostResolverInterface
             throw new SocialNetworkUnreachableException('The Mastodon instance named a status id it cannot mean.');
         }
 
-        return SocialPostModel::onMastodon($account, $statusId)->withCounts(PostCounts::ofMastodonStatus($status));
+        $post = SocialPostModel::onMastodon($account, $statusId)->withCounts(PostCounts::ofMastodonStatus($status));
+
+        return $status->isTrue('favourited') ? $post->alreadyLikedAs($statusId) : $post;
     }
 }

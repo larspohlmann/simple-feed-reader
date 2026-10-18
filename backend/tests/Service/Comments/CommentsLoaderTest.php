@@ -100,6 +100,27 @@ final class CommentsLoaderTest extends TestCase
         self::assertEquals($this->clock->now(), $result->fetchedAt);
     }
 
+    public function testAForgottenAnswerIsFetchedAgainOnTheNextLoad(): void
+    {
+        $loader = $this->loader();
+        $loader->load($this->user, $this->entry);
+
+        $loader->forget($this->user, $this->entry);
+        $result = $loader->load($this->user, $this->entry);
+
+        self::assertCount(2, $this->source->fetches);
+        self::assertSame('answer-2', self::firstHtml($result));
+    }
+
+    public function testForgettingAnEntryNoSourceServesDoesNothing(): void
+    {
+        $this->source->servesEntries = false;
+
+        $this->loader()->forget($this->user, $this->entry);
+
+        self::assertSame(0, $this->source->audienceAsks);
+    }
+
     public function testARefreshedAnswerIsWhatTheNextLoadReads(): void
     {
         $loader = $this->loader();

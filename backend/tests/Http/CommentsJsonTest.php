@@ -11,7 +11,9 @@ use App\Entity\QuotedPostContent;
 use App\Http\CommentsJson;
 use App\Http\QuotedPostJson;
 use App\Service\Comments\Model\CommentAuthorModel;
+use App\Service\Comments\Model\CommentCountsModel;
 use App\Service\Comments\Model\CommentEmbedsModel;
+use App\Service\Comments\Model\CommentPostModel;
 use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\CommentsResultModel;
 use App\Service\Comments\Model\EntryCommentModel;
@@ -41,6 +43,7 @@ final class CommentsJsonTest extends TestCase
             false,
             new CommentEmbedsModel([$medium], $card, $quote),
             2,
+            new CommentPostModel('at://did:plc:ann/app.bsky.feed.post/2', new CommentCountsModel(5, 1, 2, 0), true),
         );
 
         $json = CommentsJson::one(CommentsResultModel::ok(
@@ -70,7 +73,24 @@ final class CommentsJsonTest extends TestCase
                 'siteName' => 'site.test',
             ],
             'quote' => QuotedPostJson::ofOrNull($quote),
+            'post' => [
+                'address' => 'at://did:plc:ann/app.bsky.feed.post/2',
+                'counts' => ['likes' => 5, 'reposts' => 1, 'replies' => 2, 'quotes' => 0],
+                'isLiked' => true,
+            ],
         ], self::firstComment($json));
+    }
+
+    public function testACommentThatIsNoNetworkPostHasNoPost(): void
+    {
+        $comment = new EntryCommentModel(new CommentAuthorModel(null), null, null, '', false);
+
+        $json = self::firstComment(CommentsJson::one(CommentsResultModel::ok(
+            new CommentsPageModel([$comment]),
+            new \DateTimeImmutable('2026-10-16T11:00:00+00:00'),
+        )));
+
+        self::assertNull($json['post']);
     }
 
     public function testACommentWithoutEmbedsHasNoCardNoQuoteAndNoMedia(): void

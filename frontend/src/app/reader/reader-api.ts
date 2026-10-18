@@ -127,6 +127,18 @@ export class ReaderApi {
     return this.http.delete<EntryLikeDto>(`${this.base}/api/entries/${id}/like`);
   }
 
+  likeComment(entryId: number, address: string): Observable<EntryLikeDto> {
+    return this.http.put<EntryLikeDto>(`${this.base}/api/entries/${entryId}/comments/like`, null, {
+      params: { address },
+    });
+  }
+
+  unlikeComment(entryId: number, address: string): Observable<EntryLikeDto> {
+    return this.http.delete<EntryLikeDto>(`${this.base}/api/entries/${entryId}/comments/like`, {
+      params: { address },
+    });
+  }
+
   markRead(target: ScopedMarkReadTarget, until: string): Observable<void> {
     return this.http.post<void>(`${this.base}/api/entries/mark-read`, { ...target, until });
   }
