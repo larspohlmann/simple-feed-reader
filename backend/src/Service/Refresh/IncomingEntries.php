@@ -11,7 +11,7 @@ use App\Service\Refresh\Model\IncomingFeedModel;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\TimelineSelfThreads;
 
-/** What a refresh does with a page's entries besides storing them: a timeline's threads, then each new entry's share. */
+/** What a refresh does with a page's entries besides storing them: a timeline's threads, then each share. */
 final readonly class IncomingEntries
 {
     public function __construct(

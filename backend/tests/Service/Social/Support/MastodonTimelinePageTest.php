@@ -369,15 +369,53 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertSame([], $page->selfReplies);
     }
 
+    public function testABoostedSelfReplyStaysAnEntry(): void
+    {
+        $boost = self::timelineStatus([
+            'id' => '103',
+            'uri' => 'https://mastodon.example/users/carol/statuses/103',
+            'url' => 'https://mastodon.example/@carol/103',
+            'account' => ['id' => '9', 'acct' => 'carol', 'url' => 'https://mastodon.example/@carol'],
+            'reblog' => self::selfReplyFields('101', '100'),
+        ]);
+
+        $page = MastodonTimelinePage::of([$boost, self::timelineStatus(['id' => '100'])]);
+
+        self::assertCount(2, $page->parsed->entries);
+        self::assertSame([], $page->selfReplies);
+    }
+
+    public function testASelfRepliesCardIsStillKnown(): void
+    {
+        $withCard = self::timelineStatus(
+            ['card' => ['url' => 'https://example.com/story', 'title' => 'The story']]
+            + self::selfReplyFields('101', '100'),
+        );
+
+        $page = MastodonTimelinePage::of([$withCard, self::timelineStatus(['id' => '100'])]);
+
+        self::assertCount(1, $page->selfReplies);
+        self::assertInstanceOf(
+            LinkCardContent::class,
+            $page->knownShares->linkCardFor('https://mastodon.example/users/bob/statuses/101'),
+        );
+    }
+
     private static function selfReply(string $id, string $parentId): JsonNodeModel
     {
-        return self::timelineStatus([
+        return self::timelineStatus(self::selfReplyFields($id, $parentId));
+    }
+
+    /** @return array<string, mixed> */
+    private static function selfReplyFields(string $id, string $parentId): array
+    {
+        return [
             'id' => $id,
             'uri' => 'https://mastodon.example/users/bob/statuses/' . $id,
             'url' => 'https://mastodon.example/@bob/' . $id,
             'in_reply_to_id' => $parentId,
             'in_reply_to_account_id' => '7',
-        ]);
+        ];
     }
 
     /** @return array<string, mixed> */

@@ -73,7 +73,7 @@ final class MastodonTimelinePage
         ParsedEntryModel $entry,
         array $byId,
     ): ?TimelineSelfReplyModel {
-        $parent = self::isBoost($status) ? null : self::ownParentOf($status, $byId);
+        $parent = self::ownParentOf($status, $byId);
         if (null === $parent) {
             return null;
         }

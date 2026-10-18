@@ -65,14 +65,18 @@ final readonly class MastodonContextReplies
     private function nodesOf(array $statuses, MastodonReplyThread $thread): array
     {
         return array_map(
-            fn (JsonNodeModel $status): ReplyNode => new ReplyNode(
-                self::publishedAtOf($status),
-                fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
-                    => $this->commentOf($status, $publishedAt, $thread->isByPostAuthor($status->node('account'))),
-                $this->nodesOf($thread->answersTo($status), $thread),
-                url: self::urlOf($status),
-                byEntryAuthor: $thread->isByPostAuthor($status->node('account')),
-            ),
+            function (JsonNodeModel $status) use ($thread): ReplyNode {
+                $byPostAuthor = $thread->isByPostAuthor($status->node('account'));
+
+                return new ReplyNode(
+                    self::publishedAtOf($status),
+                    fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
+                        => $this->commentOf($status, $publishedAt, $byPostAuthor),
+                    $this->nodesOf($thread->answersTo($status), $thread),
+                    url: self::urlOf($status),
+                    byEntryAuthor: $byPostAuthor,
+                );
+            },
             $statuses,
         );
     }

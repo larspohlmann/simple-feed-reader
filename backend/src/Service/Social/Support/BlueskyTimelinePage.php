@@ -14,7 +14,7 @@ use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Model\TimelineSelfReplyModel;
 
-/** A getTimeline / getListFeed / getFeed / getAuthorFeed answer as entries and self-replies; each post view rides along for its embed. */
+/** A timeline, list, feed or author-feed answer as entries and self-replies, post views kept for embeds. */
 final class BlueskyTimelinePage
 {
     private const string REPOST = 'app.bsky.feed.defs#reasonRepost';
