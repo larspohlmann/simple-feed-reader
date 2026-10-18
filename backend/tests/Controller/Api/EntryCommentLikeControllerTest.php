@@ -13,6 +13,7 @@ use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\SocialAccounts;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -28,6 +29,9 @@ final class EntryCommentLikeControllerTest extends ApiTestCase
         . 'https%3A%2F%2Fhachyderm.io%2F%40ann%2F200&resolve=true&type=statuses&limit=1';
     private const string FAVOURITE = 'POST https://mastodon.example/api/v1/statuses/200/favourite';
     private const string UNFAVOURITE = 'POST https://mastodon.example/api/v1/statuses/200/unfavourite';
+
+    /** Must match framework.rate_limiter.social_like.limit in rate_limiter.yaml. */
+    private const int LIKE_BUDGET = 60;
 
     protected function setUp(): void
     {
@@ -115,6 +119,29 @@ final class EntryCommentLikeControllerTest extends ApiTestCase
 
         $this->assertRejected($client, Response::HTTP_NOT_FOUND);
         self::assertSame([], $this->http->requests);
+    }
+
+    #[DataProvider('likeMethods')]
+    public function testCommentLikesDrawOnTheLikeBudget(string $method): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, sprintf('comment-like-budget-%s@example.test', strtolower($method)));
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+        for ($attempt = 0; $attempt < self::LIKE_BUDGET; ++$attempt) {
+            $client->request('PUT', sprintf('/api/entries/%d/like', $entryId));
+        }
+
+        $client->request($method, $this->likePath($entryId, self::REPLY));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function likeMethods(): iterable
+    {
+        yield 'like' => ['PUT'];
+        yield 'unlike' => ['DELETE'];
     }
 
     private function likePath(int $entryId, string $address): string
