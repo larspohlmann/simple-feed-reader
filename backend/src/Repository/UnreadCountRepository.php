@@ -7,7 +7,6 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
-use App\Enum\NetworkFeedKind;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
@@ -41,13 +40,21 @@ final readonly class UnreadCountRepository
     /** @return array<string, int> network => unread entries; a network with none is absent */
     public function perNetwork(int $userId): array
     {
-        return $this->countsByNetwork($this->networkCounts($userId, null));
+        $aliases = EntryAliases::primary();
+
+        return $this->countsByNetwork(
+            $this->countedBy($this->networkEntries($userId, $aliases), $aliases->networkKey()),
+        );
     }
 
     /** @return array<string, int> network => unread entries of its profile feeds; a network with none is absent */
     public function perNetworkProfiles(int $userId): array
     {
-        return $this->countsByNetwork($this->networkCounts($userId, NetworkFeedKind::Profile));
+        $aliases = EntryAliases::primary();
+        $qb = $this->networkEntries($userId, $aliases);
+        NetworkScopeDql::restrictToProfiles($qb, $aliases->networkFeed);
+
+        return $this->countsByNetwork($this->countedBy($qb, $aliases->networkKey()));
     }
 
     public function allItems(int $userId): int
@@ -58,14 +65,12 @@ final readonly class UnreadCountRepository
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
-    private function networkCounts(int $userId, ?NetworkFeedKind $feedKind): QueryBuilder
+    private function networkEntries(int $userId, EntryAliases $aliases): QueryBuilder
     {
-        $aliases = EntryAliases::primary();
         $qb = $this->unreadEntries($userId);
-        $this->scope->joinNetworkFeeds($qb, $aliases, $feedKind);
-        $qb->andWhere($aliases->networkKey() . ' IS NOT NULL');
+        $this->scope->joinNetworkFeeds($qb, $aliases);
 
-        return $this->countedBy($qb, $aliases->networkKey());
+        return $qb;
     }
 
     private function unreadEntries(int $userId): QueryBuilder

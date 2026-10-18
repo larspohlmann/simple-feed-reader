@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\EntryView;
-use App\Enum\NetworkFeedKind;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
@@ -30,8 +29,8 @@ final readonly class EntryScopePredicates
             $qb->andWhere($aliases->tagKey() . ' = :tagId')->setParameter('tagId', $query->tagId);
         }
         if ($query->networkScope !== null) {
-            $this->joinNetworkFeeds($qb, $aliases, $query->networkScope->feedKind);
-            NetworkScopeDql::restrictToNetwork($qb, $aliases->networkFeed, $query->networkScope->network);
+            $this->joinNetworkFeeds($qb, $aliases);
+            NetworkScopeDql::restrict($qb, $aliases->networkFeed, $query->networkScope);
         }
         if ($query->hidesExcludedFeeds()) {
             $this->inAllItems($qb, $aliases);
@@ -45,10 +44,10 @@ final readonly class EntryScopePredicates
         $qb->innerJoin(\sprintf('%s.subscriptionTags', $aliases->subscription), $aliases->tag);
     }
 
-    public function joinNetworkFeeds(QueryBuilder $qb, EntryAliases $aliases, ?NetworkFeedKind $feedKind): void
+    public function joinNetworkFeeds(QueryBuilder $qb, EntryAliases $aliases): void
     {
-        $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed);
-        NetworkScopeDql::restrictToKind($qb, $aliases->networkFeed, $feedKind);
+        $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed)
+            ->andWhere($aliases->networkKey() . ' IS NOT NULL');
     }
 
     public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void

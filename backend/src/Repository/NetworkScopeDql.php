@@ -15,7 +15,9 @@ final class NetworkScopeDql
     public static function restrict(QueryBuilder $qb, string $feedAlias, NetworkScope $scope): void
     {
         self::restrictToNetwork($qb, $feedAlias, $scope->network);
-        self::restrictToKind($qb, $feedAlias, $scope->feedKind);
+        if ($scope->feedKind === NetworkFeedKind::Profile) {
+            self::restrictToProfiles($qb, $feedAlias);
+        }
     }
 
     public static function restrictToNetwork(QueryBuilder $qb, string $feedAlias, SocialNetwork $network): void
@@ -23,11 +25,9 @@ final class NetworkScopeDql
         $qb->andWhere(\sprintf('%s.network = :network', $feedAlias))->setParameter('network', $network);
     }
 
-    public static function restrictToKind(QueryBuilder $qb, string $feedAlias, ?NetworkFeedKind $feedKind): void
+    public static function restrictToProfiles(QueryBuilder $qb, string $feedAlias): void
     {
-        if ($feedKind === NetworkFeedKind::Profile) {
-            PublicOrAuthorFeedDql::restrict($qb, $feedAlias, SourceFormat::NOT_PROFILES);
-        }
+        PublicOrAuthorFeedDql::restrict($qb, $feedAlias, SourceFormat::NOT_PROFILES);
     }
 
     private function __construct()

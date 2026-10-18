@@ -65,9 +65,9 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $user = $this->user();
         [$subscriptionA, $feedA] = $this->subscribedFeed($user, 'https://example.com/a.xml');
         [$subscriptionB, $feedB] = $this->subscribedFeed($user, 'https://example.com/b.xml');
-        $lower = $this->unreadEntry($feedA, 'guid-lower', 'shared-hash');
-        $this->unreadEntry($feedB, 'guid-higher', 'shared-hash');
-        $state = new EntryState($user, $lower);
+        $readCopy = $this->unreadEntry($feedA, 'read-copy', 'shared-hash');
+        $this->unreadEntry($feedB, 'unread-copy', 'shared-hash');
+        $state = new EntryState($user, $readCopy);
         $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->entityManager->persist($state);
         $this->entityManager->flush();
@@ -110,8 +110,8 @@ final class UnreadCountRepositoryTest extends DbTestCase
         [$excluded, $excludedFeed] = $this->subscribedFeed($user, 'https://example.com/excluded.xml');
         $excluded->setIncludeInAllItems(false);
         [, $includedFeed] = $this->subscribedFeed($user, 'https://example.com/included.xml');
-        $this->unreadEntry($excludedFeed, 'lower', 'shared-hash');
-        $this->unreadEntry($includedFeed, 'higher', 'shared-hash');
+        $this->unreadEntry($excludedFeed, 'excluded-copy', 'shared-hash');
+        $this->unreadEntry($includedFeed, 'included-copy', 'shared-hash');
 
         self::assertSame(1, $this->repository()->allItems($user->requireId()));
     }
@@ -139,8 +139,8 @@ final class UnreadCountRepositoryTest extends DbTestCase
         [, $untaggedFeed] = $this->subscribedFeed($user, 'https://example.com/untagged.xml');
         [$tagged, $taggedFeed] = $this->subscribedFeed($user, 'https://example.com/tagged.xml');
         $tagged->addTag($tag);
-        $this->unreadEntry($untaggedFeed, 'lower', 'shared-hash');
-        $this->unreadEntry($taggedFeed, 'higher', 'shared-hash');
+        $this->unreadEntry($untaggedFeed, 'untagged-copy', 'shared-hash');
+        $this->unreadEntry($taggedFeed, 'tagged-copy', 'shared-hash');
 
         $counts = $this->repository()->perTag($user->requireId());
 
@@ -212,8 +212,8 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $user = $this->user();
         [, $blueskyFeed] = $this->subscribedFeed($user, 'social:bluesky:1:home', SourceFormat::BLUESKY_API);
         [, $mastodonFeed] = $this->subscribedFeed($user, 'social:mastodon:2:home', SourceFormat::MASTODON_API);
-        $this->unreadEntry($blueskyFeed, 'lower', 'shared-hash');
-        $this->unreadEntry($mastodonFeed, 'higher', 'shared-hash');
+        $this->unreadEntry($blueskyFeed, 'bluesky-copy', 'shared-hash');
+        $this->unreadEntry($mastodonFeed, 'mastodon-copy', 'shared-hash');
 
         $counts = $this->repository()->perNetwork($user->requireId());
 

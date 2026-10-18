@@ -25,17 +25,6 @@ final readonly class DuplicateCollapseDql
      */
     public function apply(QueryBuilder $qb, callable $applyScope, int $userId): void
     {
-        $inner = $this->copyLookup($applyScope);
-
-        $qb->andWhere('e.location.urlHash IS NULL OR NOT EXISTS (' . $inner->getDQL() . ')')
-            ->setParameter('user', $userId);
-    }
-
-    /**
-     * @param callable(QueryBuilder, EntryAliases): void $applyScope
-     */
-    private function copyLookup(callable $applyScope): QueryBuilder
-    {
         $inner = $this->entityManager->createQueryBuilder()
             ->select('1')
             ->from(Entry::class, 'e2')
@@ -45,6 +34,7 @@ final readonly class DuplicateCollapseDql
             ->andWhere('e2.id < e.id');
         $applyScope($inner, EntryAliases::collapse());
 
-        return $inner;
+        $qb->andWhere('e.location.urlHash IS NULL OR NOT EXISTS (' . $inner->getDQL() . ')')
+            ->setParameter('user', $userId);
     }
 }
