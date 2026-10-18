@@ -13,6 +13,7 @@ import { SubscriptionsStore } from './subscriptions.store';
 import { SubscriptionRows } from './subscription-rows';
 import { buildTagTree, sumEntries, untaggedSubscriptions } from './subscription-derivations';
 import { SubscriptionDto, UnreadTotalsDto } from '../models';
+import { anEntry } from '../../../testing/entry-testing';
 
 const tag = (id: number, name: string) => ({ id, name, color: null, icon: null, position: 0 });
 const sub = (
@@ -355,18 +356,71 @@ describe('SubscriptionsStore', () => {
       unreadTotals: unreadTotalsDto(),
       keptCount: 0,
     });
-    store.decrementUnread(1);
+    store.markArticleRead(anEntry({ subscriptionId: 1 }));
     expect(store.subscriptions().find((subscription) => subscription.id === 1)!.unreadCount).toBe(
       2,
-    );
-    store.decrementUnread(1, 99);
-    expect(store.subscriptions().find((subscription) => subscription.id === 1)!.unreadCount).toBe(
-      0,
     );
     store.zeroUnread({ subscription: 2 });
     expect(store.subscriptions().find((subscription) => subscription.id === 2)!.unreadCount).toBe(
       0,
     );
+  });
+
+  describe('reading an article with copies (#1679)', () => {
+    const bluesky = (id: number, unread: number): SubscriptionDto => ({
+      ...sub(id, unread),
+      social: { network: 'bluesky', accountId: 1, kind: 'home' },
+    });
+    const unreadOf = (id: number) =>
+      store.subscriptions().find((subscription) => subscription.id === id)!.unreadCount;
+
+    beforeEach(() => {
+      store.load();
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(
+        counts([bluesky(1, 3), bluesky(2, 5)], {
+          unreadTotals: {
+            allItems: 7,
+            tags: [{ id: 3, unreadCount: 4 }],
+            networks: [{ network: 'bluesky', unreadCount: 7, profilesUnreadCount: 0 }],
+          },
+        }),
+      );
+    });
+
+    const withCopy = (copyOverrides = {}) =>
+      anEntry({
+        subscriptionId: 1,
+        duplicates: [anEntry({ id: 2, subscriptionId: 2, ...copyOverrides })],
+      });
+
+    it('moves every copy once and each scope once, and restores them', () => {
+      const entry = withCopy();
+
+      store.markArticleRead(entry);
+
+      expect([unreadOf(1), unreadOf(2)]).toEqual([2, 4]);
+      expect(store.totalUnread()).toBe(6);
+      expect(store.unreadTotals().networks.get('bluesky')).toBe(6);
+
+      store.markArticleUnread(entry);
+
+      expect([unreadOf(1), unreadOf(2)]).toEqual([3, 5]);
+      expect(store.totalUnread()).toBe(7);
+      expect(store.unreadTotals().networks.get('bluesky')).toBe(7);
+    });
+
+    it('leaves a hidden copy alone', () => {
+      store.markArticleRead(withCopy({ isHidden: true }));
+
+      expect([unreadOf(1), unreadOf(2)]).toEqual([2, 5]);
+      expect(store.totalUnread()).toBe(6);
+    });
+
+    it('zeroes the targeted tag total', () => {
+      store.zeroUnread({ tag: 3 });
+
+      expect(store.unreadTotals().tags.get(3)).toBe(0);
+    });
   });
 
   it('optimistically patches the exclusion flags in place', () => {
@@ -657,7 +711,7 @@ describe('SubscriptionsStore quiet reload', () => {
 
     // The user reads one entry while the tick is on the wire. The response was
     // counted before that, so adopting it would put the badge back up to 5.
-    store.decrementUnread(1);
+    store.markArticleRead(anEntry({ subscriptionId: 1 }));
     tick.flush(counts([sub(1, 5)], { favorites: 9, kept: 9, viewed: 9 }));
 
     expect(store.subscriptions()[0].unreadCount).toBe(4);
@@ -668,7 +722,7 @@ describe('SubscriptionsStore quiet reload', () => {
     settleAndAge([sub(1, 5)]);
     store.reloadQuietlyIfStale();
     const overtaken = ctrl.expectOne('https://api.test/api/subscriptions');
-    store.decrementUnread(1);
+    store.markArticleRead(anEntry({ subscriptionId: 1 }));
     overtaken.flush(counts([sub(1, 5)]));
 
     jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
@@ -902,7 +956,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     store.reloadCountsIfStale();
     const tick = ctrl.expectOne(countsUrl);
 
-    store.decrementUnread(1);
+    store.markArticleRead(anEntry({ subscriptionId: 1 }));
     tick.flush(countsBody([{ id: 1, unreadCount: 5 }], { favorites: 9, kept: 9, viewed: 9 }));
 
     expect(store.subscriptions()[0].unreadCount).toBe(4);

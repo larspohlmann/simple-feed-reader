@@ -93,8 +93,12 @@ export class MarkReadActions {
   private reloadAfterMarkRead(target: MarkReadTarget): void {
     const watermark = watermarkOf(target);
     this.entries.load(queryFromSelection(this.routeState.selection()));
-    if (watermark === null) this.subscriptions.load();
-    else this.subscriptions.zeroUnread(watermark);
+    if (watermark === null) {
+      this.subscriptions.load();
+    } else {
+      this.subscriptions.zeroUnread(watermark);
+      this.subscriptions.reloadQuietly();
+    }
     this.savedSearches.load();
     // Marked picks move no watermark the reload sees, so re-read the for-you summary.
     if (target.scope === 'for-you') this.recommendations.refreshStatus();

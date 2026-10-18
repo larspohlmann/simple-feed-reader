@@ -36,6 +36,7 @@ describe('MarkReadActions marking a network read', () => {
   let actions: MarkReadActions;
   let subscriptions: SubscriptionsStore;
   let markRead: jest.SpyInstance;
+  let reloadQuietly: jest.SpyInstance;
   const currentSelection = signal<Selection | null>(null);
 
   const unreadCounts = () => subscriptions.subscriptions().map((feed) => feed.unreadCount);
@@ -85,7 +86,9 @@ describe('MarkReadActions marking a network read', () => {
         favoritesCount: 0,
         keptCount: 0,
         viewedCount: 0,
+        unreadTotals: { allItems: 0, tags: [{ id: 5, unreadCount: 4 }], networks: [] },
       });
+    reloadQuietly = jest.spyOn(subscriptions, 'reloadQuietly').mockImplementation();
     actions = TestBed.inject(MarkReadActions);
   });
 
@@ -106,5 +109,15 @@ describe('MarkReadActions marking a network read', () => {
     markSelectionRead({ kind: 'network', id: null, unread: true, network: 'bluesky' });
 
     expect(unreadCounts()).toEqual([0, 0, 8]);
+  });
+
+  it('zeroes the tag total, then reloads quietly to settle it with the server', () => {
+    const order: string[] = [];
+    jest.spyOn(subscriptions, 'zeroUnread').mockImplementation(() => void order.push('zero'));
+    reloadQuietly.mockImplementation(() => void order.push('reload'));
+
+    markSelectionRead({ kind: 'tag', id: 5, unread: true });
+
+    expect(order).toEqual(['zero', 'reload']);
   });
 });

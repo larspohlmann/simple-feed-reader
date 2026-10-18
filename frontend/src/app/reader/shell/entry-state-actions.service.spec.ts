@@ -90,3 +90,51 @@ describe('EntryStateActions opening', () => {
     );
   });
 });
+
+describe('EntryStateActions reading counts (#1679)', () => {
+  const markArticleRead = jest.fn();
+  const markArticleUnread = jest.fn();
+  const setState = jest.fn();
+  let actions: EntryStateActions;
+
+  beforeEach(() => {
+    markArticleRead.mockReset();
+    markArticleUnread.mockReset();
+    setState.mockReset();
+    TestBed.configureTestingModule({
+      providers: [
+        EntryStateActions,
+        provideRouter([]),
+        { provide: EntriesStore, useValue: { setState } },
+        {
+          provide: SubscriptionsStore,
+          useValue: { bumpViewed: jest.fn(), markArticleRead, markArticleUnread },
+        },
+        {
+          provide: SavedSearchesStore,
+          useValue: { markEntryRead: jest.fn(), markEntryUnread: jest.fn() },
+        },
+        {
+          provide: ReaderRouteState,
+          useValue: {
+            openEntryId: signal(null),
+            openEntry: signal(null),
+            selection: () => ({ kind: 'all' }),
+          },
+        },
+        { provide: ToastService, useValue: { show: jest.fn() } },
+      ],
+    });
+    actions = TestBed.inject(EntryStateActions);
+  });
+
+  it('ticking an unread entry reads the article, and a failed save puts it back', () => {
+    const entry = anEntry();
+
+    actions.toggleRead(entry);
+
+    expect(markArticleRead).toHaveBeenCalledWith(entry);
+    setState.mock.calls[0][2]();
+    expect(markArticleUnread).toHaveBeenCalledWith(entry);
+  });
+});

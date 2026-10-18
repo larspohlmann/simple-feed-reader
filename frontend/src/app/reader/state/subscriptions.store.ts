@@ -16,14 +16,21 @@ import {
   isSocialFeed,
 } from './social-sections';
 import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
-import { SubscriptionCountsResponse, SubscriptionDto, SubscriptionsResponse } from '../models';
+import {
+  EntryDto,
+  SubscriptionCountsResponse,
+  SubscriptionDto,
+  SubscriptionsResponse,
+} from '../models';
 import { buildTagTree, sumEntries, untaggedSubscriptions } from './subscription-derivations';
 import {
   NO_UNREAD_TOTALS,
   UnreadTotals,
   ZeroTarget,
   sameUnreadTotals,
+  shiftUnreadTotals,
   unreadTotalsFrom,
+  zeroUnreadTotals,
 } from './unread-totals';
 
 @Injectable({ providedIn: 'root' })
@@ -283,20 +290,28 @@ export class SubscriptionsStore {
     count.update((current) => Math.max(0, current + by));
   }
 
-  decrementUnread(subscriptionId: number, by = 1): void {
-    this.patchSubscriptions((subscription) =>
-      subscription.id === subscriptionId
-        ? { ...subscription, unreadCount: Math.max(0, subscription.unreadCount - by) }
-        : subscription,
-    );
+  /** The server mirrors a read onto every visible copy, so each copy and each scope moves once. */
+  markArticleRead(entry: EntryDto): void {
+    this.shiftArticleUnread(entry, -1);
   }
 
-  incrementUnread(subscriptionId: number, by = 1): void {
+  markArticleUnread(entry: EntryDto): void {
+    this.shiftArticleUnread(entry, 1);
+  }
+
+  private shiftArticleUnread(entry: EntryDto, by: number): void {
+    const copyIds = new Set(
+      [entry, ...(entry.duplicates ?? []).filter((copy) => !copy.isHidden)].map(
+        (copy) => copy.subscriptionId,
+      ),
+    );
+    const held = this.storedSubscriptions().filter((subscription) => copyIds.has(subscription.id));
     this.patchSubscriptions((subscription) =>
-      subscription.id === subscriptionId
-        ? { ...subscription, unreadCount: subscription.unreadCount + by }
+      copyIds.has(subscription.id)
+        ? { ...subscription, unreadCount: Math.max(0, subscription.unreadCount + by) }
         : subscription,
     );
+    this.patchUnreadTotals((totals) => shiftUnreadTotals(totals, held, by));
   }
 
   /** Optimistically apply an exclusion-flag toggle (All items / For you) so the
@@ -311,6 +326,7 @@ export class SubscriptionsStore {
   }
 
   zeroUnread(target: ZeroTarget): void {
+    this.patchUnreadTotals((totals) => zeroUnreadTotals(totals, target));
     this.patchSubscriptions((subscription) => {
       if (target === 'all')
         return subscription.includeInAllItems ? { ...subscription, unreadCount: 0 } : subscription;
@@ -333,6 +349,11 @@ export class SubscriptionsStore {
   private patchSubscriptions(patch: (sub: SubscriptionDto) => SubscriptionDto): void {
     ++this.localEdits;
     this.storedSubscriptions.update((subscriptions) => subscriptions.map(patch));
+  }
+
+  private patchUnreadTotals(patch: (totals: UnreadTotals) => UnreadTotals): void {
+    ++this.localEdits;
+    this.storedUnreadTotals.update(patch);
   }
 }
 
