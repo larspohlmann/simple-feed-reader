@@ -15,8 +15,13 @@ final class NetworkScopeDql
     {
         $qb->andWhere(\sprintf('%s.network = :network', $feedAlias))->setParameter('network', $scope->network);
         if ($scope->feedKind === NetworkFeedKind::Profile) {
-            PublicOrAuthorFeedDql::restrict($qb, $feedAlias, SourceFormat::NOT_PROFILES);
+            self::restrictToProfiles($qb, $feedAlias);
         }
+    }
+
+    public static function restrictToProfiles(QueryBuilder $qb, string $feedAlias): void
+    {
+        PublicOrAuthorFeedDql::restrict($qb, $feedAlias, SourceFormat::NOT_PROFILES);
     }
 
     private function __construct()

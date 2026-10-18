@@ -298,7 +298,7 @@ export class SubscriptionsStore {
     count.update((current) => Math.max(0, current + by));
   }
 
-  /** The server mirrors a read onto every visible copy, so each copy and each scope moves once. */
+  /** The server mirrors a read onto every visible copy, so each copy moves, and each scope once per copy it holds. */
   markArticleRead(entry: EntryDto): void {
     this.shiftArticleUnread(entry, -1);
   }

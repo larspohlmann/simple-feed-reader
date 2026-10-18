@@ -523,6 +523,22 @@ final class EntryListTest extends DbTestCase
         self::assertSame('tagged', $rows[0]->entry->getGuid());
     }
 
+    public function testATagListsNoFeedThatOnlyCarriesAnotherTag(): void
+    {
+        [$newsFeed, $news] = $this->taggedFeedAndSubscription();
+        [$techFeed, $techSubscription] = $this->secondSubscription('https://tech.example.com/feed.xml');
+        $tech = new Tag($this->user, 'tech');
+        $this->entityManager->persist($tech);
+        $techSubscription->addTag($tech);
+        $this->entityManager->flush();
+        $this->entryIn($newsFeed, 'news', '2026-07-05T00:00:00Z');
+        $this->entryIn($techFeed, 'tech', '2026-07-06T00:00:00Z');
+
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), tagId: $news->getId()));
+
+        self::assertSame(['news'], $this->guids($rows));
+    }
+
     public function testANetworkListsOnlyItsFeedsExcludedOnesIncluded(): void
     {
         [$profile, $profileSubscription] = $this->secondSubscription(NetworkFeedSubscriptions::BLUESKY_PROFILE);

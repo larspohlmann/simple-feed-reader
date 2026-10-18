@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-/** The DQL aliases a scope predicate reads, so one scope serves the outer query and the duplicate-collapse join. */
+/** The DQL aliases a scope rule reads, so one rule serves the list, its duplicate-collapse join and the unread counts. */
 final readonly class EntryAliases
 {
     public function __construct(
@@ -24,5 +24,20 @@ final readonly class EntryAliases
     public static function collapse(): self
     {
         return new self('e2', 'es2', 's2', 'st2', 'nf2');
+    }
+
+    public function subscriptionKey(): string
+    {
+        return $this->subscription . '.id';
+    }
+
+    public function tagKey(): string
+    {
+        return \sprintf('IDENTITY(%s.tag)', $this->tag);
+    }
+
+    public function networkKey(): string
+    {
+        return $this->networkFeed . '.network';
     }
 }
