@@ -18,8 +18,8 @@ use App\Service\Social\Support\MastodonAuthor;
 use App\Service\Social\Support\MastodonCard;
 use App\Service\Social\Support\MastodonQuotedStatus;
 use App\Service\Social\Support\MastodonStatusAddress;
+use App\Service\Social\Support\MastodonStatusUrl;
 use App\Service\Text\Support\HtmlEscape;
-use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class MastodonContextReplies
 {
@@ -73,7 +73,7 @@ final readonly class MastodonContextReplies
                     fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
                         => $this->commentOf($status, $publishedAt, $byPostAuthor),
                     $this->nodesOf($thread->answersTo($status), $thread),
-                    url: self::urlOf($status),
+                    url: MastodonStatusUrl::of($status),
                     byEntryAuthor: $byPostAuthor,
                 );
             },
@@ -90,7 +90,7 @@ final readonly class MastodonContextReplies
 
         return new EntryCommentModel(
             self::authorOf($account),
-            self::urlOf($status),
+            MastodonStatusUrl::of($status),
             $publishedAt,
             $this->htmlOf($status),
             $byPostAuthor,
@@ -101,11 +101,6 @@ final readonly class MastodonContextReplies
     public function selfReplyOf(JsonNodeModel $status): EntryCommentModel
     {
         return $this->commentOf($status, self::publishedAtOf($status), true);
-    }
-
-    private static function urlOf(JsonNodeModel $status): ?string
-    {
-        return AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri'));
     }
 
     private static function publishedAtOf(JsonNodeModel $status): ?\DateTimeImmutable

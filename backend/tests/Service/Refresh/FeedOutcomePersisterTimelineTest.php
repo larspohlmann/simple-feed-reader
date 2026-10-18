@@ -22,6 +22,7 @@ use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
+use App\Service\Social\Model\ThreadPostModel;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\BlueskyTimelinePage;
 use App\Tests\DbTestCase;
@@ -186,13 +187,8 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
             self::item(self::ROOT),
         ]), $this->clock->now());
 
-        $root = $this->entityManager->getRepository(Entry::class)
-            ->findOneBy(['feed' => $feed, 'guid.value' => self::ROOT]);
-        self::assertInstanceOf(Entry::class, $root);
-        self::assertSame(ShareKind::Link, $root->getShareKind());
-        $threadPosts = self::getContainer()->get(ThreadPostRepository::class);
-        self::assertInstanceOf(ThreadPostRepository::class, $threadPosts);
-        $posts = $threadPosts->byEntryIds([$root->requireId()])[$root->requireId()] ?? [];
+        self::assertSame(ShareKind::Link, $this->rootOf($feed)->getShareKind());
+        $posts = $this->threadPostsOf($feed);
         self::assertCount(1, $posts);
         self::assertNotNull($posts[0]->linkCard);
     }
@@ -295,15 +291,36 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
     /** @return array<string, int> */
     private function positionsOf(Feed $feed): array
     {
-        $root = $this->entityManager->getRepository(Entry::class)
-            ->findOneBy(['feed' => $feed, 'guid.value' => self::ROOT]);
-        self::assertInstanceOf(Entry::class, $root);
-        $threadPosts = self::getContainer()->get(ThreadPostRepository::class);
-        self::assertInstanceOf(ThreadPostRepository::class, $threadPosts);
-        $positions = $threadPosts->positionsByEntryIds([$root->requireId()])[$root->requireId()] ?? [];
+        $root = $this->rootOf($feed);
+        $positions = $this->threadPostRepository()->positionsByEntryIds([$root->requireId()])[$root->requireId()] ?? [];
         asort($positions);
 
         return $positions;
+    }
+
+    private function rootOf(Feed $feed): Entry
+    {
+        $root = $this->entityManager->getRepository(Entry::class)
+            ->findOneBy(['feed' => $feed, 'guid.value' => self::ROOT]);
+        self::assertInstanceOf(Entry::class, $root);
+
+        return $root;
+    }
+
+    /** @return list<ThreadPostModel> */
+    private function threadPostsOf(Feed $feed): array
+    {
+        $rootId = $this->rootOf($feed)->requireId();
+
+        return $this->threadPostRepository()->byEntryIds([$rootId])[$rootId] ?? [];
+    }
+
+    private function threadPostRepository(): ThreadPostRepository
+    {
+        $threadPosts = self::getContainer()->get(ThreadPostRepository::class);
+        self::assertInstanceOf(ThreadPostRepository::class, $threadPosts);
+
+        return $threadPosts;
     }
 
     private function parsedMotherJones(Feed $rssFeed): ParsedFeedModel

@@ -19,7 +19,6 @@ use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Model\TimelineSelfReplyModel;
 use App\Service\Text\Support\HtmlEscape;
-use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /** A home or list timeline answer as entries; a thread of the author's own replies on the page is handed on. */
 final class MastodonTimelinePage
@@ -79,7 +78,7 @@ final class MastodonTimelinePage
         }
         $root = self::rootOf($parent, $byId);
         $rootUri = $root?->string('uri');
-        $parentUrl = self::urlOf($parent);
+        $parentUrl = MastodonStatusUrl::of($parent);
         if (null === $root || null === $rootUri || null === $parentUrl || null !== $root->string('in_reply_to_id')) {
             return null;
         }
@@ -118,11 +117,6 @@ final class MastodonTimelinePage
         return $byId[$status->string('in_reply_to_id') ?? ''] ?? null;
     }
 
-    private static function urlOf(JsonNodeModel $post): ?string
-    {
-        return AbsoluteHttpUrl::orNull($post->string('url')) ?? AbsoluteHttpUrl::orNull($post->string('uri'));
-    }
-
     /** @param array<string, JsonNodeModel> $postsByGuid */
     private static function knownSharesOf(array $postsByGuid): KnownSharesModel
     {
@@ -142,7 +136,7 @@ final class MastodonTimelinePage
     {
         $post = self::originalOf($status);
         $uri = $post->string('uri');
-        $url = self::urlOf($post);
+        $url = MastodonStatusUrl::of($post);
         if (null === $uri || null === $url) {
             return null;
         }

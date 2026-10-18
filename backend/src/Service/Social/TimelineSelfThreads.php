@@ -17,6 +17,7 @@ use App\Service\Social\Model\TimelineSelfReplyModel;
 use App\Service\Social\Model\TimelineThreadsModel;
 use App\Service\Social\Pass\SelfThreadPlacement;
 use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
+use App\Service\Social\Support\OldestFirstUndatedLast;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
@@ -37,12 +38,16 @@ final readonly class TimelineSelfThreads
         if ($page->selfReplies === []) {
             return new TimelinePlanModel($page->parsed, TimelineThreadsModel::none());
         }
-        $unstored = $this->unstoredOf($feed, $page->selfReplies);
-        $placements = $this->placementsOf($feed, $page, $unstored);
+        $stored = $this->storedByGuid($feed, $page->selfReplies);
+        $byRoot = self::unstoredByRoot($page->selfReplies, $stored);
+        if ($byRoot === []) {
+            return new TimelinePlanModel($page->parsed, TimelineThreadsModel::none());
+        }
+        $placements = $this->placementsOf($page, $byRoot, $stored);
         $placed = [];
         $unplaced = [];
         foreach ($placements as $rootGuid => $placement) {
-            $placement->place(self::repliesUnder($rootGuid, $unstored));
+            $placement->place(self::oldestFirst($byRoot[$rootGuid]));
             array_push($placed, ...$placement->placed());
             array_push($unplaced, ...$placement->unplaced());
         }
@@ -50,7 +55,7 @@ final readonly class TimelineSelfThreads
         return new TimelinePlanModel(
             $page->parsed->withEntries([
                 ...$page->parsed->entries,
-                ...self::orphansOf($unstored, $placements),
+                ...self::orphansOf($byRoot, $placements),
                 ...$unplaced,
             ]),
             new TimelineThreadsModel($placed),
@@ -67,76 +72,79 @@ final readonly class TimelineSelfThreads
         $source = $this->sourceFor($feed);
         foreach ($threads->placed as $reply) {
             $root = $roots[$reply->rootGuid] ?? null;
-            if ($root !== null) {
-                $this->folder->foldAt($root, $reply->position, $source->selfReplyOf($reply->post));
+            if ($root === null) {
+                continue;
             }
+            $this->folder->foldAt($root, $reply->position, $source->selfReplyOf($reply->post));
         }
     }
 
     /**
+     * The entries already stored for the replies and their roots.
+     *
      * @param list<TimelineSelfReplyModel> $replies
      *
-     * @return list<TimelineSelfReplyModel>
+     * @return array<string, Entry> by guid
      */
-    private function unstoredOf(Feed $feed, array $replies): array
+    private function storedByGuid(Feed $feed, array $replies): array
     {
-        $guids = array_map(static fn (TimelineSelfReplyModel $reply): string => $reply->entry->guid, $replies);
-        $storedGuids = array_map(
-            static fn (Entry $entry): string => $entry->getGuid(),
-            $this->entries->findByFeedIndexedByGuidHash($feed, self::hashesOf($guids)),
-        );
+        $guids = [];
+        foreach ($replies as $reply) {
+            array_push($guids, $reply->entry->guid, $reply->rootGuid);
+        }
+        $stored = [];
+        foreach ($this->entries->findByFeedIndexedByGuidHash($feed, self::hashesOf($guids)) as $entry) {
+            $stored[$entry->getGuid()] = $entry;
+        }
 
-        return array_values(array_filter(
-            $replies,
-            static fn (TimelineSelfReplyModel $reply): bool => !\in_array($reply->entry->guid, $storedGuids, true),
-        ));
+        return $stored;
+    }
+
+    /**
+     * @param list<TimelineSelfReplyModel> $replies
+     * @param array<string, Entry>         $stored
+     *
+     * @return array<string, list<TimelineSelfReplyModel>> the replies not stored yet, by root guid
+     */
+    private static function unstoredByRoot(array $replies, array $stored): array
+    {
+        $byRoot = [];
+        foreach ($replies as $reply) {
+            if (!isset($stored[$reply->entry->guid])) {
+                $byRoot[$reply->rootGuid][] = $reply;
+            }
+        }
+
+        return $byRoot;
     }
 
     /**
      * Keyed by root guid: a stored root with its thread so far, else a root on the page; any other root is no key.
      *
-     * @param list<TimelineSelfReplyModel> $replies
+     * @param array<string, list<TimelineSelfReplyModel>> $byRoot
+     * @param array<string, Entry>                        $stored
      *
      * @return array<string, SelfThreadPlacement>
      */
-    private function placementsOf(Feed $feed, TimelinePageModel $page, array $replies): array
+    private function placementsOf(TimelinePageModel $page, array $byRoot, array $stored): array
     {
-        $rootGuids = array_values(array_unique(array_map(
-            static fn (TimelineSelfReplyModel $reply): string => $reply->rootGuid,
-            $replies,
+        $storedRoots = array_intersect_key($stored, $byRoot);
+        $threadPositions = $this->threadPosts->positionsByEntryIds(array_values(array_map(
+            static fn (Entry $root): int => $root->requireId(),
+            $storedRoots,
         )));
         $placements = [];
-        foreach ($this->storedPositionsOf($feed, $rootGuids) as $rootGuid => $positions) {
-            $placements[$rootGuid] = new SelfThreadPlacement($rootGuid, $positions);
+        foreach ($storedRoots as $rootGuid => $root) {
+            $thread = $threadPositions[$root->requireId()] ?? [];
+            $placements[$rootGuid] = new SelfThreadPlacement($rootGuid, [(string) $root->getUrl() => 0] + $thread);
         }
         foreach ($page->parsed->entries as $entry) {
-            if (!isset($placements[$entry->guid]) && \in_array($entry->guid, $rootGuids, true)) {
+            if (!isset($placements[$entry->guid]) && isset($byRoot[$entry->guid])) {
                 $placements[$entry->guid] = new SelfThreadPlacement($entry->guid, [(string) $entry->url => 0]);
             }
         }
 
         return $placements;
-    }
-
-    /**
-     * @param list<string> $rootGuids
-     *
-     * @return array<string, array<string, int>> by root guid: url => position, the root at 0
-     */
-    private function storedPositionsOf(Feed $feed, array $rootGuids): array
-    {
-        $roots = $this->entries->findByFeedIndexedByGuidHash($feed, self::hashesOf($rootGuids));
-        $threadPositions = $this->threadPosts->positionsByEntryIds(array_values(array_map(
-            static fn (Entry $root): int => $root->requireId(),
-            $roots,
-        )));
-        $positions = [];
-        foreach ($roots as $root) {
-            $thread = $threadPositions[$root->requireId()] ?? [];
-            $positions[$root->getGuid()] = [(string) $root->getUrl() => 0] + $thread;
-        }
-
-        return $positions;
     }
 
     /**
@@ -174,37 +182,33 @@ final readonly class TimelineSelfThreads
      *
      * @return list<TimelineSelfReplyModel> oldest first, an undated one last
      */
-    private static function repliesUnder(string $rootGuid, array $replies): array
+    private static function oldestFirst(array $replies): array
     {
-        $under = array_values(array_filter(
-            $replies,
-            static fn (TimelineSelfReplyModel $reply): bool => $reply->rootGuid === $rootGuid,
-        ));
         usort(
-            $under,
+            $replies,
             static fn (TimelineSelfReplyModel $left, TimelineSelfReplyModel $right): int
-                => [$left->entry->publishedAt === null, $left->entry->publishedAt]
-                <=> [$right->entry->publishedAt === null, $right->entry->publishedAt],
+                => OldestFirstUndatedLast::compare($left->entry->publishedAt, $right->entry->publishedAt),
         );
 
-        return $under;
+        return $replies;
     }
 
     /**
-     * @param list<TimelineSelfReplyModel>        $replies
-     * @param array<string, SelfThreadPlacement> $placements
+     * @param array<string, list<TimelineSelfReplyModel>> $byRoot
+     * @param array<string, SelfThreadPlacement>          $placements
      *
      * @return list<ParsedEntryModel>
      */
-    private static function orphansOf(array $replies, array $placements): array
+    private static function orphansOf(array $byRoot, array $placements): array
     {
-        return array_values(array_map(
-            static fn (TimelineSelfReplyModel $reply): ParsedEntryModel => $reply->entry,
-            array_filter(
-                $replies,
-                static fn (TimelineSelfReplyModel $reply): bool => !isset($placements[$reply->rootGuid]),
-            ),
-        ));
+        $orphans = [];
+        foreach (array_diff_key($byRoot, $placements) as $replies) {
+            foreach ($replies as $reply) {
+                $orphans[] = $reply->entry;
+            }
+        }
+
+        return $orphans;
     }
 
     /**
@@ -215,7 +219,7 @@ final readonly class TimelineSelfThreads
     private static function hashesOf(array $guids): array
     {
         return array_values(array_unique(array_map(
-            static fn (string $guid): string => (new EntryGuid($guid))->getHash(),
+            static fn (string $guid): string => EntryGuid::hashOf($guid),
             $guids,
         )));
     }
