@@ -60,8 +60,18 @@ final class SubscriptionJsonListTest extends DbTestCase
 
         self::assertSame(
             [
-                ['id' => $bluesky->requireId(), 'network' => 'bluesky', 'handle' => '@alice.bsky.social'],
-                ['id' => $mastodon->requireId(), 'network' => 'mastodon', 'handle' => '@alice@mastodon.example'],
+                [
+                    'id' => $bluesky->requireId(),
+                    'network' => 'bluesky',
+                    'handle' => '@alice.bsky.social',
+                    'status' => 'connected',
+                ],
+                [
+                    'id' => $mastodon->requireId(),
+                    'network' => 'mastodon',
+                    'handle' => '@alice@mastodon.example',
+                    'status' => 'connected',
+                ],
             ],
             $payload['socialAccounts'],
         );
