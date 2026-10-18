@@ -9,13 +9,7 @@ import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
 import { SocialAccountRefDto } from '../social-feed';
 import { SubscriptionRows } from './subscription-rows';
-import {
-  buildSocialSections,
-  isEmptySavedFeed,
-  isProfileFeed,
-  isSocialFeed,
-} from './social-sections';
-import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
+import { buildSocialSections, isEmptySavedFeed, isSocialFeed } from './social-sections';
 import {
   EntryDto,
   SubscriptionCountsResponse,
@@ -27,10 +21,8 @@ import { buildTagTree, sumEntries, untaggedSubscriptions } from './subscription-
 import {
   NO_UNREAD_TOTALS,
   UnreadTotals,
-  ZeroTarget,
   sameUnreadTotals,
   unreadTotalsFrom,
-  zeroUnreadTotals,
 } from './unread-totals';
 
 @Injectable({ providedIn: 'root' })
@@ -83,12 +75,8 @@ export class SubscriptionsStore {
   private lastLoadedAt = 0;
   private inFlight: Subscription | null = null;
 
-  /** Counts the optimistic patches this store has applied on its own — a read,
-   *  a favourite, an emptied feed. A quiet reload compares it across its own
-   *  round trip to know whether the user has overtaken the server's answer. */
+  /** Optimistic patches this store applied; a quiet reload compares it across its round trip. */
   private localEdits = 0;
-  /** Kept apart from `localEdits` so a favourite or a read on the wire never drops a recount's totals. */
-  private totalsEdits = 0;
 
   constructor() {
     onIdentityChange(() => this.invalidate());
@@ -195,6 +183,7 @@ export class SubscriptionsStore {
     this.quietFetch(
       () => this.api.subscriptions(),
       (response) => this.applyCounts(response),
+      () => this.reloadQuietly(),
     );
   }
 
@@ -204,6 +193,7 @@ export class SubscriptionsStore {
     this.quietFetch(
       () => this.api.subscriptionCounts(),
       (response) => this.applyCountsOnly(response),
+      () => this.reloadCountsQuietly(),
     );
   }
 
@@ -222,31 +212,34 @@ export class SubscriptionsStore {
     if (this.inFlight) return;
     if (!countsAreStale(this.lastLoadedAt)) return;
 
-    this.quietFetch(fetch, apply);
+    this.quietFetch(fetch, apply, () => undefined);
   }
 
   /** Fire a reload that leaves `loading`/`resolved` untouched and drops its
    *  answer if the user has overtaken it, so a silent refresh never flickers
-   *  the surface or fights an optimistic edit. The gates that decide WHEN to
-   *  fire belong to each caller. */
+   *  the surface or fights an optimistic edit. A deliberate reload asks again
+   *  through `whenOvertaken`, since only its answer carries the change; a poll
+   *  tick waits for the next one. The gates that decide WHEN to fire belong to
+   *  each caller. */
   private quietFetch<T extends { unreadTotals: UnreadTotalsDto }>(
     fetch: () => Observable<T>,
     apply: (response: T) => void,
+    whenOvertaken: () => void,
   ): void {
     const request = this.beginRequest();
     const editsWhenSent = this.localEdits;
-    const totalsEditsWhenSent = this.totalsEdits;
     this.inFlight = this.trackWhileOpen(
       fetch().subscribe({
         next: (response) => {
           if (!this.settle(request)) return;
-          if (this.totalsEdits === totalsEditsWhenSent) {
-            this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
+          // Only the server edits the totals, so even an overtaken answer carries the latest ones.
+          this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
+          // The user changed a feed count while this was on the wire. The server
+          // counted before that, so adopting those counts now would put the badge back up.
+          if (this.localEdits !== editsWhenSent) {
+            whenOvertaken();
+            return;
           }
-          // The user changed a feed count while this was on the wire (marked read,
-          // favourited, emptied a feed). The server counted before that, so
-          // adopting those counts now would put the badge back up; drop them.
-          if (this.localEdits !== editsWhenSent) return;
           apply(response);
         },
         error: () => void this.settle(request),
@@ -341,42 +334,10 @@ export class SubscriptionsStore {
     );
   }
 
-  zeroUnread(target: ZeroTarget): void {
-    this.patchUnreadTotals((totals) => zeroUnreadTotals(totals, target));
-    this.patchSubscriptions((subscription) => {
-      if (target === 'all')
-        return subscription.includeInAllItems ? { ...subscription, unreadCount: 0 } : subscription;
-      if ('tag' in target)
-        return subscription.tags.some((tag) => tag.id === target.tag)
-          ? { ...subscription, unreadCount: 0 }
-          : subscription;
-      if ('network' in target)
-        return inNetworkTarget(subscription, target)
-          ? { ...subscription, unreadCount: 0 }
-          : subscription;
-      return subscription.id === target.subscription
-        ? { ...subscription, unreadCount: 0 }
-        : subscription;
-    });
-  }
-
   /** THE way this store edits its own rows. Every optimistic patch goes through
    *  here so none can forget to register itself against an in-flight reload. */
   private patchSubscriptions(patch: (sub: SubscriptionDto) => SubscriptionDto): void {
     ++this.localEdits;
     this.storedSubscriptions.update((subscriptions) => subscriptions.map(patch));
   }
-
-  private patchUnreadTotals(patch: (totals: UnreadTotals) => UnreadTotals): void {
-    ++this.totalsEdits;
-    this.storedUnreadTotals.update(patch);
-  }
-}
-
-function inNetworkTarget(
-  subscription: SubscriptionDto,
-  target: { network: SocialNetworkName; feedKind?: NetworkFeedKind },
-): boolean {
-  if (subscription.social?.network !== target.network) return false;
-  return target.feedKind === undefined || isProfileFeed(subscription);
 }

@@ -348,7 +348,7 @@ describe('SubscriptionsStore', () => {
     expect(store.keptCount()).toBe(1);
   });
 
-  it('optimistically decrements and zeroes unread', () => {
+  it('optimistically decrements unread', () => {
     store.load();
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       subscriptions: [sub(1, 3, [tag(20, 'Tech')]), sub(2, 6)],
@@ -359,10 +359,6 @@ describe('SubscriptionsStore', () => {
     store.markArticleRead(anEntry({ subscriptionId: 1 }));
     expect(store.subscriptions().find((subscription) => subscription.id === 1)!.unreadCount).toBe(
       2,
-    );
-    store.zeroUnread({ subscription: 2 });
-    expect(store.subscriptions().find((subscription) => subscription.id === 2)!.unreadCount).toBe(
-      0,
     );
   });
 
@@ -411,12 +407,6 @@ describe('SubscriptionsStore', () => {
       store.markArticleRead(withCopy({ isHidden: true }));
 
       expect([unreadOf(1), unreadOf(2)]).toEqual([2, 5]);
-    });
-
-    it('zeroes the targeted tag total', () => {
-      store.zeroUnread({ tag: 3 });
-
-      expect(store.unreadTotals().tags.get(3)).toBe(0);
     });
   });
 
@@ -554,31 +544,6 @@ describe('SubscriptionsStore', () => {
       ]);
     });
 
-    it('zeroes exactly the feeds of a network marked read', () => {
-      store.zeroUnread({ network: 'bluesky' });
-
-      const unread = (id: number) =>
-        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
-      expect([unread(1), unread(2), unread(5), unread(6), unread(7)]).toEqual([1, 16, 0, 0, 8]);
-    });
-
-    it("zeroes only a network's profile feeds when the Feeds row is marked read", () => {
-      store.zeroUnread({ network: 'mastodon', feedKind: 'profile' });
-      store.zeroUnread({ network: 'bluesky', feedKind: 'profile' });
-
-      const unread = (id: number) =>
-        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
-      expect([unread(1), unread(2), unread(5), unread(6), unread(7)]).toEqual([1, 16, 2, 4, 0]);
-    });
-
-    it('marks All items read only in the feeds All items holds, as the backend does', () => {
-      store.zeroUnread('all');
-
-      const unread = (id: number) =>
-        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
-      expect([unread(1), unread(2), unread(5), unread(6), unread(7)]).toEqual([0, 0, 2, 4, 0]);
-    });
-
     it("reads each feed's network from the loaded list and forgets it on logout", () => {
       const rows = TestBed.inject(SubscriptionRows);
       const networkOf = (id: number) => rows.find(id)?.social?.network ?? null;
@@ -588,14 +553,6 @@ describe('SubscriptionsStore', () => {
       TestBed.tick();
 
       expect(networkOf(6)).toBeNull();
-    });
-
-    it("zeroes a tag's private feeds along with the rest when the tag is marked read", () => {
-      store.zeroUnread({ tag: 20 });
-
-      const unread = (id: number) =>
-        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
-      expect([unread(1), unread(5), unread(6)]).toEqual([0, 0, 4]);
     });
   });
 });
@@ -706,7 +663,6 @@ describe('SubscriptionsStore quiet reload', () => {
     store.reloadQuietlyIfStale();
     const staleTick = ctrl.expectOne('https://api.test/api/subscriptions');
 
-    store.zeroUnread('all');
     store.reloadQuietly();
 
     expect(staleTick.cancelled).toBe(true);
@@ -892,7 +848,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     expect(store.totalUnread()).toBe(0);
   });
 
-  it('adopts the scope totals even when a feed count was edited while it was on the wire', () => {
+  it('adopts the totals of an overtaken recount and asks again for the feed counts', () => {
     store.load();
     ctrl.expectOne(list).flush(counts([sub(1, 2)], { unreadTotals: { allItems: 2 } }));
 
@@ -900,24 +856,19 @@ describe('SubscriptionsStore counts-only reload', () => {
     store.bumpFavorites(1);
     ctrl
       .expectOne(countsUrl)
-      .flush(countsBody([{ id: 1, unreadCount: 1 }], { unreadTotals: { allItems: 1 } }));
-
-    expect(store.totalUnread()).toBe(1);
-    expect(store.subscriptions()[0].unreadCount).toBe(2);
-    expect(store.favoritesCount()).toBe(1);
-  });
-
-  it('drops the scope totals when a mark-scope-read zeroed them while it was on the wire', () => {
-    store.load();
-    ctrl.expectOne(list).flush(counts([sub(1, 2)], { unreadTotals: { allItems: 2 } }));
-
-    store.reloadCountsQuietly();
-    store.zeroUnread('all');
-    ctrl
-      .expectOne(countsUrl)
-      .flush(countsBody([{ id: 1, unreadCount: 2 }], { unreadTotals: { allItems: 2 } }));
+      .flush(countsBody([{ id: 1, unreadCount: 0 }], { unreadTotals: { allItems: 0 } }));
 
     expect(store.totalUnread()).toBe(0);
+    expect(store.subscriptions()[0].unreadCount).toBe(2);
+
+    ctrl
+      .expectOne(countsUrl)
+      .flush(
+        countsBody([{ id: 1, unreadCount: 0 }], { favorites: 1, unreadTotals: { allItems: 0 } }),
+      );
+
+    expect(store.subscriptions()[0].unreadCount).toBe(0);
+    expect(store.favoritesCount()).toBe(1);
   });
 
   it('fetches the cheap counts endpoint, not the full list', () => {

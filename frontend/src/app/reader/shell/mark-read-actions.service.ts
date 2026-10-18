@@ -6,7 +6,6 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { ReaderApi } from '../reader-api';
 import { EntriesStore } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
-import { ZeroTarget } from '../state/unread-totals';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { MarkReadTarget, markReadTarget, queryFromSelection } from '../query/query';
@@ -54,7 +53,7 @@ export class MarkReadActions {
     this.api.markEntriesRead(ids).subscribe({
       next: () => {
         hideLocally();
-        this.subscriptions.load();
+        this.subscriptions.reloadCountsQuietly();
         this.savedSearches.load();
         this.recommendations.refreshStatus();
       },
@@ -91,32 +90,10 @@ export class MarkReadActions {
   }
 
   private reloadAfterMarkRead(target: MarkReadTarget): void {
-    const watermark = watermarkOf(target);
     this.entries.load(queryFromSelection(this.routeState.selection()));
-    if (watermark === null) {
-      this.subscriptions.load();
-    } else {
-      this.subscriptions.zeroUnread(watermark);
-      this.subscriptions.reloadCountsQuietly();
-    }
+    this.subscriptions.reloadCountsQuietly();
     this.savedSearches.load();
     // Marked picks move no watermark the reload sees, so re-read the for-you summary.
     if (target.scope === 'for-you') this.recommendations.refreshStatus();
-  }
-}
-
-/** The scopes the backend marks by watermark, whose unread counts can be zeroed locally. */
-function watermarkOf(target: MarkReadTarget): ZeroTarget | null {
-  switch (target.scope) {
-    case 'all':
-      return 'all';
-    case 'tag':
-      return { tag: target.id };
-    case 'feed':
-      return { subscription: target.id };
-    case 'network':
-      return { network: target.network, feedKind: target.feedKind };
-    default:
-      return null;
   }
 }
