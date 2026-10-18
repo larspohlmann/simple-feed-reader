@@ -143,8 +143,8 @@ export class SocialImportDialogComponent {
     Math.min(ROWS_PER_PAGE, this.visibleRows().length - this.rowLimit()),
   );
   protected readonly visibleNewCount = computed(() => this.visibleCount('new'));
-  protected readonly hasSubscribedRows = computed(
-    () => this.visibleCount('subscribed') + this.visibleCount('no_longer_followed') > 0,
+  protected readonly hasSubscribedRows = computed(() =>
+    this.visibleRows().some((row) => row.removable),
   );
 
   constructor() {
@@ -246,7 +246,7 @@ export class SocialImportDialogComponent {
   private removalMessage(unticked: readonly Removal[]): string {
     const removal =
       unticked.length === 1
-        ? this.i18n.translate('settings.social.importRemoveMessage', { names: unticked[0].name })
+        ? this.i18n.translate('settings.social.importRemoveMessage', { name: unticked[0].name })
         : this.i18n.translate('settings.social.importRemoveCountMessage', {
             count: unticked.length,
           });

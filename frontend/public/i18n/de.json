@@ -409,7 +409,7 @@
       "importAddCollection": "{{name}} hinzufügen",
       "importRemoveCollection": "{{name}} entfernen",
       "importRemoveTitle": "Aus deinen Feeds entfernen",
-      "importRemoveMessage": "{{names}} und die Einträge aus deinen Feeds entfernen?",
+      "importRemoveMessage": "{{name}} und die Einträge aus deinen Feeds entfernen?",
       "importRemoveCountMessage": "Diese {{count}} Feeds und ihre Einträge aus deinen Feeds entfernen?",
       "importRemoveConfirm": "Entfernen",
       "syncNever": "Noch nicht geprüft",
