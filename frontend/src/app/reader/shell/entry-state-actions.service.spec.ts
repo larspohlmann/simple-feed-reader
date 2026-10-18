@@ -95,12 +95,16 @@ describe('EntryStateActions reading counts (#1679)', () => {
   const markArticleRead = jest.fn();
   const markArticleUnread = jest.fn();
   const setState = jest.fn();
+  const openEntryId = signal<number | null>(null);
+  const openEntry = signal<EntryDto | null>(null);
   let actions: EntryStateActions;
 
   beforeEach(() => {
     markArticleRead.mockReset();
     markArticleUnread.mockReset();
     setState.mockReset();
+    openEntryId.set(null);
+    openEntry.set(null);
     TestBed.configureTestingModule({
       providers: [
         EntryStateActions,
@@ -117,8 +121,8 @@ describe('EntryStateActions reading counts (#1679)', () => {
         {
           provide: ReaderRouteState,
           useValue: {
-            openEntryId: signal(null),
-            openEntry: signal(null),
+            openEntryId,
+            openEntry,
             selection: () => ({ kind: 'all' }),
           },
         },
@@ -134,6 +138,20 @@ describe('EntryStateActions reading counts (#1679)', () => {
     actions.toggleRead(entry);
 
     expect(markArticleRead).toHaveBeenCalledWith(entry);
+    expect(markArticleUnread).not.toHaveBeenCalled();
+    setState.mock.calls[0][2]();
+    expect(markArticleUnread).toHaveBeenCalledWith(entry);
+  });
+
+  it('opening an unread entry reads the article, and a failed save puts it back', () => {
+    const entry = anEntry();
+
+    openEntry.set(entry);
+    openEntryId.set(entry.id);
+    TestBed.tick();
+
+    expect(markArticleRead).toHaveBeenCalledWith(entry);
+    expect(markArticleUnread).not.toHaveBeenCalled();
     setState.mock.calls[0][2]();
     expect(markArticleUnread).toHaveBeenCalledWith(entry);
   });
