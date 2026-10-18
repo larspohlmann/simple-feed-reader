@@ -97,7 +97,7 @@ export class MarkReadActions {
       this.subscriptions.load();
     } else {
       this.subscriptions.zeroUnread(watermark);
-      this.subscriptions.reloadQuietly();
+      this.subscriptions.reloadCountsQuietly();
     }
     this.savedSearches.load();
     // Marked picks move no watermark the reload sees, so re-read the for-you summary.

@@ -7,7 +7,7 @@ namespace App\Http;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 
 /**
- * The sidebar poll's payload: each subscription's counts and the three surface totals, nothing else. A subscription
+ * The sidebar poll's payload: each subscription's counts and the surface totals, nothing else. A subscription
  * missing from the list has no entries; the client counts it as zero.
  */
 final class SubscriptionCountsJson
@@ -34,20 +34,26 @@ final class SubscriptionCountsJson
             ];
         }
 
-        return [
-            'subscriptions' => $subscriptions,
-            ...self::surfaceTotals($tallies),
-            'unreadTotals' => UnreadTotalsJson::from($tallies->unreadTotals),
-        ];
+        return ['subscriptions' => $subscriptions, ...self::surfaceTotals($tallies)];
     }
 
-    /** @return array{favoritesCount: int, keptCount: int, viewedCount: int} */
+    /**
+     * @return array{
+     *   favoritesCount: int, keptCount: int, viewedCount: int,
+     *   unreadTotals: array{
+     *     allItems: int,
+     *     tags: list<array{id: int, unreadCount: int}>,
+     *     networks: list<array{network: string, unreadCount: int, profilesUnreadCount: int}>
+     *   }
+     * }
+     */
     public static function surfaceTotals(SubscriptionTalliesModel $tallies): array
     {
         return [
             'favoritesCount' => $tallies->flagCounts['favorites'],
             'keptCount' => $tallies->flagCounts['kept'],
             'viewedCount' => $tallies->flagCounts['viewed'],
+            'unreadTotals' => UnreadTotalsJson::from($tallies->unreadTotals),
         ];
     }
 }

@@ -13,8 +13,6 @@ use Doctrine\ORM\QueryBuilder;
 /**
  * Hides every copy of an article but the lowest-id one in scope, as a plain WHERE so a page still holds `limit`
  * rows. The semi-join takes the outer query's own scope callback: a survivor picked outside the scope leaves a hole.
- * A page probes few rows, so apply() looks each up; a count probes every row,
- * so applyToCount() first skips the hashes held once.
  */
 final readonly class DuplicateCollapseDql
 {
@@ -34,6 +32,8 @@ final readonly class DuplicateCollapseDql
     }
 
     /**
+     * A count probes every row, so hashes held once are skipped first; a page probes few, where that costs more.
+     *
      * @param callable(QueryBuilder, EntryAliases): void $applyScope
      */
     public function applyToCount(QueryBuilder $qb, callable $applyScope, int $userId): void

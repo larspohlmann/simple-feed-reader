@@ -186,14 +186,22 @@ export class SubscriptionsStore {
   /** Refresh the held list after a deliberate action that changed server state
    *  — a manual feed retry — WITHOUT the loading skeleton, so the surface stays
    *  put and only the row that recovered drops out. No staleness gate: unlike a
-   *  poll tick, the caller knows the list moved. A quiet tick on the wire is
-   *  taken over, its answer predates the change; a `load()` has taken `resolved`
-   *  down, so the guard leaves it alone. */
+   *  poll tick, the caller knows the list moved. Takes over a quiet tick on the
+   *  wire, whose answer predates the change. */
   reloadQuietly(): void {
     if (!this.resolved()) return;
     this.quietFetch(
       () => this.api.subscriptions(),
       (response) => this.applyCounts(response),
+    );
+  }
+
+  /** `reloadQuietly` for a change that moved only counts, such as a mark-read. */
+  reloadCountsQuietly(): void {
+    if (!this.resolved()) return;
+    this.quietFetch(
+      () => this.api.subscriptionCounts(),
+      (response) => this.applyCountsOnly(response),
     );
   }
 
@@ -205,9 +213,7 @@ export class SubscriptionsStore {
     // first real load would stamp the freshness clock, silence that load, and
     // leave `resolved` false — so the onboarding redirect could never decide.
     if (!this.resolved()) return;
-    // A request already on the wire is about to answer this tick's question. It
-    // is also the one request a tick may NOT cancel: `load()` has taken
-    // `resolved` down and only its own response puts it back.
+    // A tick already on the wire is about to answer this question; don't stack another.
     if (this.inFlight) return;
     if (!countsAreStale(this.lastLoadedAt)) return;
 

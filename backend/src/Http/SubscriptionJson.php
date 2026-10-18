@@ -47,7 +47,6 @@ final class SubscriptionJson
                 $subscriptions,
             ),
             ...SubscriptionCountsJson::surfaceTotals($tallies),
-            'unreadTotals' => UnreadTotalsJson::from($tallies->unreadTotals),
             'socialAccounts' => array_map(self::socialAccount(...), $socialAccounts),
         ];
     }

@@ -882,6 +882,19 @@ describe('SubscriptionsStore counts-only reload', () => {
     jest.useRealTimers();
   });
 
+  it('reloads counts on demand, before the freshness window has passed', () => {
+    store.load();
+    ctrl.expectOne(list).flush(counts([sub(1, 2)], { unreadTotals: { allItems: 2 } }));
+
+    store.reloadCountsQuietly();
+
+    ctrl.expectNone(list);
+    ctrl
+      .expectOne(countsUrl)
+      .flush(countsBody([{ id: 1, unreadCount: 0 }], { unreadTotals: { allItems: 0 } }));
+    expect(store.totalUnread()).toBe(0);
+  });
+
   it('fetches the cheap counts endpoint, not the full list', () => {
     settleAndAge([sub(1, 2)]);
 
