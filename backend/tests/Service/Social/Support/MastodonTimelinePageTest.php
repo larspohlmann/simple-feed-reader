@@ -7,9 +7,9 @@ namespace App\Tests\Service\Social\Support;
 use App\Entity\LinkCardContent;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
-use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelineSelfReplyModel;
 use App\Service\Social\Support\MastodonTimelinePage;
@@ -341,6 +341,32 @@ final class MastodonTimelinePageTest extends TestCase
         ]);
 
         self::assertSame([], MastodonTimelinePage::of([$reply, $root])->selfReplies);
+    }
+
+    public function testAStatusRepliedToItselfStaysAnEntry(): void
+    {
+        $page = MastodonTimelinePage::of([self::selfReply('101', '101')]);
+
+        self::assertCount(1, $page->parsed->entries);
+        self::assertSame([], $page->selfReplies);
+    }
+
+    public function testStatusesRepliedToEachOtherStayEntries(): void
+    {
+        $page = MastodonTimelinePage::of([self::selfReply('101', '102'), self::selfReply('102', '101')]);
+
+        self::assertCount(2, $page->parsed->entries);
+        self::assertSame([], $page->selfReplies);
+    }
+
+    public function testASelfReplyUnderARootThatRepliesToSomeoneElseStaysAnEntry(): void
+    {
+        $root = self::timelineStatus(['id' => '100', 'in_reply_to_id' => '50', 'in_reply_to_account_id' => '8']);
+
+        $page = MastodonTimelinePage::of([self::selfReply('101', '100'), $root]);
+
+        self::assertCount(2, $page->parsed->entries);
+        self::assertSame([], $page->selfReplies);
     }
 
     private static function selfReply(string $id, string $parentId): JsonNodeModel

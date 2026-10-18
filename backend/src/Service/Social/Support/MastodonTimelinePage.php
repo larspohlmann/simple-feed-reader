@@ -78,9 +78,9 @@ final class MastodonTimelinePage
             return null;
         }
         $root = self::rootOf($parent, $byId);
-        $rootUri = $root->string('uri');
+        $rootUri = $root?->string('uri');
         $parentUrl = self::urlOf($parent);
-        if (null === $rootUri || null === $parentUrl || null !== $root->string('in_reply_to_id')) {
+        if (null === $root || null === $rootUri || null === $parentUrl || null !== $root->string('in_reply_to_id')) {
             return null;
         }
 
@@ -88,11 +88,19 @@ final class MastodonTimelinePage
     }
 
     /** @param array<string, JsonNodeModel> $byId */
-    private static function rootOf(JsonNodeModel $status, array $byId): JsonNodeModel
+    private static function rootOf(JsonNodeModel $status, array $byId): ?JsonNodeModel
     {
-        $parent = self::ownParentOf($status, $byId);
+        $visited = [];
+        while (null !== $parent = self::ownParentOf($status, $byId)) {
+            $id = $status->string('id') ?? '';
+            if (isset($visited[$id])) {
+                return null;
+            }
+            $visited[$id] = true;
+            $status = $parent;
+        }
 
-        return null === $parent ? $status : self::rootOf($parent, $byId);
+        return $status;
     }
 
     /**
