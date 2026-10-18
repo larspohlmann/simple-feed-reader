@@ -704,6 +704,34 @@ describe('SubscriptionsStore quiet reload', () => {
     expect(store.resolved()).toBe(true);
   });
 
+  it('takes over a tick on the wire when a deliberate reload follows', () => {
+    settleAndAge([sub(1, 5)], { allItems: 5 });
+    store.reloadQuietlyIfStale();
+    const staleTick = ctrl.expectOne('https://api.test/api/subscriptions');
+
+    store.zeroUnread('all');
+    store.reloadQuietly();
+
+    expect(staleTick.cancelled).toBe(true);
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(counts([sub(1, 0)], { unreadTotals: { allItems: 2 } }));
+    expect(store.totalUnread()).toBe(2);
+  });
+
+  it('leaves a load in flight alone when a deliberate reload follows', () => {
+    settleAndAge([sub(1, 1)]);
+    store.load();
+    const pendingLoad = ctrl.expectOne('https://api.test/api/subscriptions');
+
+    store.reloadQuietly();
+
+    ctrl.expectNone('https://api.test/api/subscriptions');
+    expect(pendingLoad.cancelled).toBe(false);
+    pendingLoad.flush(counts([sub(1, 4)], { unreadTotals: { allItems: 4 } }));
+    expect(store.resolved()).toBe(true);
+  });
+
   it('drops a response the user has overtaken by reading an entry', () => {
     settleAndAge([sub(1, 5)]);
     store.reloadQuietlyIfStale();

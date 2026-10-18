@@ -186,9 +186,11 @@ export class SubscriptionsStore {
   /** Refresh the held list after a deliberate action that changed server state
    *  — a manual feed retry — WITHOUT the loading skeleton, so the surface stays
    *  put and only the row that recovered drops out. No staleness gate: unlike a
-   *  poll tick, the caller knows the list moved. */
+   *  poll tick, the caller knows the list moved. A quiet tick on the wire is
+   *  taken over, its answer predates the change; a `load()` has taken `resolved`
+   *  down, so the guard leaves it alone. */
   reloadQuietly(): void {
-    if (!this.resolved() || this.inFlight) return;
+    if (!this.resolved()) return;
     this.quietFetch(
       () => this.api.subscriptions(),
       (response) => this.applyCounts(response),
