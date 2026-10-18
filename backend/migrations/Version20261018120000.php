@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DoctrineMigrations;
 
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
@@ -39,8 +40,21 @@ final class Version20261018120000 extends AbstractMigration
 
     private function dropIndex(string $name): string
     {
-        return $this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform
+        return $this->mysql()
             ? sprintf('DROP INDEX %s ON entry', $name)
             : sprintf('DROP INDEX %s', $name);
+    }
+
+    /** Refuses any platform but the two supported ones: better a refusal than DDL nobody tested. */
+    private function mysql(): bool
+    {
+        $platform = $this->connection->getDatabasePlatform();
+
+        $this->abortIf(
+            !$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform,
+            \sprintf('No DDL defined for platform %s; only MySQL and SQLite are supported.', $platform::class),
+        );
+
+        return $platform instanceof AbstractMySQLPlatform;
     }
 }
