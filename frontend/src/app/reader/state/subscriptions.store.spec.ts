@@ -379,9 +379,9 @@ describe('SubscriptionsStore', () => {
       ctrl.expectOne('https://api.test/api/subscriptions').flush(
         counts([bluesky(1, 3), bluesky(2, 5)], {
           unreadTotals: {
-            allItems: 7,
+            allItems: 8,
             tags: [{ id: 3, unreadCount: 4 }],
-            networks: [{ network: 'bluesky', unreadCount: 7, profilesUnreadCount: 0 }],
+            networks: [{ network: 'bluesky', unreadCount: 8, profilesUnreadCount: 0 }],
           },
         }),
       );
@@ -393,7 +393,7 @@ describe('SubscriptionsStore', () => {
         duplicates: [anEntry({ id: 2, subscriptionId: 2, ...copyOverrides })],
       });
 
-    it('moves every copy once and each scope once, and restores them', () => {
+    it('moves every copy and each scope once per copy, and restores them', () => {
       const entry = withCopy();
 
       store.markArticleRead(entry);
@@ -405,15 +405,15 @@ describe('SubscriptionsStore', () => {
       store.markArticleUnread(entry);
 
       expect([unreadOf(1), unreadOf(2)]).toEqual([3, 5]);
-      expect(store.totalUnread()).toBe(7);
-      expect(store.unreadTotals().networks.get('bluesky')).toBe(7);
+      expect(store.totalUnread()).toBe(8);
+      expect(store.unreadTotals().networks.get('bluesky')).toBe(8);
     });
 
     it('leaves a hidden copy alone', () => {
       store.markArticleRead(withCopy({ isHidden: true }));
 
       expect([unreadOf(1), unreadOf(2)]).toEqual([2, 5]);
-      expect(store.totalUnread()).toBe(6);
+      expect(store.totalUnread()).toBe(7);
     });
 
     it('zeroes the targeted tag total', () => {

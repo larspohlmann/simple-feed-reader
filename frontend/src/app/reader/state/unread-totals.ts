@@ -42,24 +42,13 @@ export function sameUnreadTotals(left: UnreadTotals, right: UnreadTotals): boole
   );
 }
 
-/** Move every scope holding at least one of an article's copies by `by`, once per scope, never below 0. */
+/** Move every scope by `by` once per copy it holds, never below 0, as the server counts every copy. */
 export function shiftUnreadTotals(
   totals: UnreadTotals,
   copies: readonly SubscriptionDto[],
   by: number,
 ): UnreadTotals {
-  return {
-    allItems: copies.some((copy) => copy.includeInAllItems)
-      ? Math.max(0, totals.allItems + by)
-      : totals.allItems,
-    tags: shifted(
-      totals.tags,
-      new Set(copies.flatMap((copy) => copy.tags.map((tag) => tag.id))),
-      by,
-    ),
-    networks: shifted(totals.networks, networksOf(copies), by),
-    networkProfiles: shifted(totals.networkProfiles, networksOf(copies.filter(isProfileFeed)), by),
-  };
+  return copies.reduce((current, copy) => shiftOneCopy(current, copy, by), totals);
 }
 
 export function zeroUnreadTotals(totals: UnreadTotals, target: ZeroTarget): UnreadTotals {
@@ -79,16 +68,27 @@ function zeroNetwork(
   return { ...totals, networks: withZero(totals.networks, network), networkProfiles };
 }
 
-function networksOf(copies: readonly SubscriptionDto[]): ReadonlySet<SocialNetworkName> {
-  return new Set(copies.flatMap((copy) => networkOf(copy) ?? []));
+function shiftOneCopy(totals: UnreadTotals, copy: SubscriptionDto, by: number): UnreadTotals {
+  const network = networkOf(copy);
+  const networks = network === null ? [] : [network];
+  return {
+    allItems: copy.includeInAllItems ? Math.max(0, totals.allItems + by) : totals.allItems,
+    tags: shifted(
+      totals.tags,
+      copy.tags.map((tag) => tag.id),
+      by,
+    ),
+    networks: shifted(totals.networks, networks, by),
+    networkProfiles: shifted(totals.networkProfiles, isProfileFeed(copy) ? networks : [], by),
+  };
 }
 
 function shifted<Key>(
   counts: ReadonlyMap<Key, number>,
-  keys: ReadonlySet<Key>,
+  keys: readonly Key[],
   by: number,
 ): ReadonlyMap<Key, number> {
-  if (keys.size === 0) return counts;
+  if (keys.length === 0) return counts;
   const next = new Map(counts);
   for (const key of keys) next.set(key, Math.max(0, (counts.get(key) ?? 0) + by));
   return next;

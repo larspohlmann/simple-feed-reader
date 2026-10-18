@@ -68,14 +68,15 @@ describe('unreadTotalsFrom', () => {
 });
 
 describe('shiftUnreadTotals', () => {
-  it('moves each scope once, however many copies of the article sit in it', () => {
-    const copies = [blueskyHome(1, { tags: [tag(3)] }), blueskyHome(2, { tags: [tag(3)] })];
+  it('moves each scope once per copy of the article it holds', () => {
+    const copies = [blueskyHome(1, { tags: [tag(3)] }), blueskyHome(2, { tags: [tag(3), tag(5)] })];
 
     const result = shiftUnreadTotals(totals, copies, -1);
 
-    expect(result.allItems).toBe(9);
-    expect(result.tags.get(3)).toBe(3);
-    expect(result.networks.get('bluesky')).toBe(5);
+    expect(result.allItems).toBe(8);
+    expect(result.tags.get(3)).toBe(2);
+    expect(result.tags.get(5)).toBe(1);
+    expect(result.networks.get('bluesky')).toBe(4);
   });
 
   it('leaves the all-items total alone for copies outside All items', () => {
