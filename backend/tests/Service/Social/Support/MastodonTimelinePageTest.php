@@ -9,7 +9,9 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Support\EntryTitle;
+use App\Service\Social\Model\TimelineSelfReplyModel;
 use App\Service\Social\Support\MastodonTimelinePage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -292,6 +294,66 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertNull(MastodonTimelinePage::of([self::timelineStatus()])->knownShares->quotedPostFor(self::URI));
     }
 
+    public function testAThreadOnThePageFoldsIntoItsRoot(): void
+    {
+        $root = self::timelineStatus([
+            'id' => '100',
+            'uri' => 'https://mastodon.example/users/bob/statuses/100',
+            'url' => 'https://mastodon.example/@bob/100',
+        ]);
+        $first = self::selfReply('101', '100');
+        $second = self::selfReply('102', '101');
+
+        $page = MastodonTimelinePage::of([$second, $first, $root]);
+
+        self::assertSame(['https://mastodon.example/users/bob/statuses/100'], array_map(
+            static fn (ParsedEntryModel $entry): string => $entry->guid,
+            $page->parsed->entries,
+        ));
+        self::assertSame(
+            [
+                ['https://mastodon.example/users/bob/statuses/100', 'https://mastodon.example/@bob/101'],
+                ['https://mastodon.example/users/bob/statuses/100', 'https://mastodon.example/@bob/100'],
+            ],
+            array_map(
+                static fn (TimelineSelfReplyModel $reply): array => [$reply->rootGuid, $reply->parentUrl],
+                $page->selfReplies,
+            ),
+        );
+    }
+
+    public function testASelfReplyWhoseParentIsNotOnThePageStaysAnEntry(): void
+    {
+        $page = MastodonTimelinePage::of([self::selfReply('101', '99')]);
+
+        self::assertCount(1, $page->parsed->entries);
+        self::assertSame([], $page->selfReplies);
+    }
+
+    public function testAReplyToSomeoneElseStaysAnEntry(): void
+    {
+        $root = self::timelineStatus(['id' => '100']);
+        $reply = self::timelineStatus([
+            'id' => '101',
+            'uri' => 'https://mastodon.example/users/bob/statuses/101',
+            'in_reply_to_id' => '100',
+            'in_reply_to_account_id' => '8',
+        ]);
+
+        self::assertSame([], MastodonTimelinePage::of([$reply, $root])->selfReplies);
+    }
+
+    private static function selfReply(string $id, string $parentId): JsonNodeModel
+    {
+        return self::timelineStatus([
+            'id' => $id,
+            'uri' => 'https://mastodon.example/users/bob/statuses/' . $id,
+            'url' => 'https://mastodon.example/@bob/' . $id,
+            'in_reply_to_id' => $parentId,
+            'in_reply_to_account_id' => '7',
+        ]);
+    }
+
     /** @return array<string, mixed> */
     private static function acceptedQuote(): array
     {
@@ -322,7 +384,10 @@ final class MastodonTimelinePageTest extends TestCase
             'created_at' => '2026-10-12T10:00:00.000+02:00',
             'content' => self::CONTENT,
             'spoiler_text' => '',
+            'in_reply_to_id' => null,
+            'in_reply_to_account_id' => null,
             'account' => [
+                'id' => '7',
                 'acct' => 'bob',
                 'display_name' => 'Bob',
                 'url' => 'https://mastodon.example/@bob',
