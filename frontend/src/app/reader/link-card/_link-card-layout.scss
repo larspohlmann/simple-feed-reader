@@ -20,14 +20,14 @@
     outline-offset: -2px;
   }
 
-  img {
+  a > img {
     display: block;
     width: 100%;
     margin-bottom: var(--space-2);
     border-radius: 0;
   }
 
-  :is(strong, span, small) {
+  a > :is(strong, span, small) {
     padding-inline: var(--space-4);
   }
 
@@ -35,14 +35,14 @@
     padding-top: var(--space-3);
   }
 
-  small {
+  a > small {
     color: var(--text-muted);
     font-size: var(--fs-xs);
   }
 }
 
 @mixin article-type {
-  span {
+  a > span {
     color: var(--text-secondary);
     font-size: var(--fs-sm);
     line-height: 1.5;
@@ -50,17 +50,17 @@
 }
 
 @mixin block-type {
-  img {
+  a > img {
     aspect-ratio: link-card.$image-ratio;
     object-fit: cover;
   }
 
-  strong {
+  a > strong {
     font-size: var(--fs-base);
     line-height: var(--lh-tight);
   }
 
-  span {
+  a > span {
     color: var(--text-secondary);
     font-size: var(--fs-sm);
     line-height: var(--lh-normal);
