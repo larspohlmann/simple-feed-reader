@@ -34,7 +34,19 @@ final readonly class DuplicateCollapseDql
             ->andWhere('e2.id < e.id');
         $applyScope($inner, EntryAliases::collapse());
 
-        $qb->andWhere('e.location.urlHash IS NULL OR NOT EXISTS (' . $inner->getDQL() . ')')
+        $duplicatedHashes = $this->entityManager->createQueryBuilder()
+            ->select('e3.location.urlHash')
+            ->from(Entry::class, 'e3')
+            ->join(Subscription::class, 's3', 'ON', 's3.feed = e3.feed AND s3.user = :user')
+            ->andWhere('e3.location.urlHash IS NOT NULL')
+            ->groupBy('e3.location.urlHash')
+            ->having('COUNT(e3.id) > 1');
+
+        $qb->andWhere(
+            'e.location.urlHash IS NULL'
+            . ' OR e.location.urlHash NOT IN (' . $duplicatedHashes->getDQL() . ')'
+            . ' OR NOT EXISTS (' . $inner->getDQL() . ')'
+        )
             ->setParameter('user', $userId);
     }
 }
