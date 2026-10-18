@@ -116,6 +116,7 @@ export class EntryListComponent implements OnDestroy {
   readonly leavingIds = input<ReadonlySet<number>>(new Set());
 
   readonly loading = input.required<boolean>();
+  readonly mutating = input(false);
   readonly loadingMore = input.required<boolean>();
   readonly error = input.required<Problem | null>();
   readonly hasMore = input.required<boolean>();
@@ -220,7 +221,9 @@ export class EntryListComponent implements OnDestroy {
    * A search excludes this: it reloads on every keystroke, and the search field
    * already spins its own icon — dimming there read as a flicker, not progress.
    */
-  readonly reloadCue = computed(() => this.loading() && this.selection().kind !== 'search');
+  readonly reloadCue = computed(
+    () => (this.loading() || this.mutating()) && this.selection().kind !== 'search',
+  );
 
   /**
    * Whether the reload overlay is up. A reload keeps outgoing rows on screen

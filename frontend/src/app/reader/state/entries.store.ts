@@ -49,6 +49,9 @@ export class EntriesStore {
   readonly entries = this.rawEntries.asReadonly();
   readonly nextCursor = accountSignal<string | null>(null);
   readonly loading = accountSignal(false);
+  /** A mutation that changes the list in place, with no reload to follow — kept off `loading`,
+   *  whose true -> false edge the list reads as a finished reload. */
+  readonly mutating = accountSignal(false);
   readonly loadingMore = accountSignal(false);
   readonly error = accountSignal<Problem | null>(null);
   readonly loadedAt = accountSignal<string>('');
@@ -112,6 +115,11 @@ export class EntriesStore {
   runThenReload(mutation$: Observable<unknown>, reload: () => void): void {
     this.loading.set(true);
     mutation$.subscribe({ next: () => reload(), error: () => this.loading.set(false) });
+  }
+
+  withMutatingCue<T>(mutation$: Observable<T>): Observable<T> {
+    this.mutating.set(true);
+    return mutation$.pipe(finalize(() => this.mutating.set(false)));
   }
 
   loadMore(): void {
