@@ -86,11 +86,13 @@ describe('removals', () => {
     };
 
     expect(
-      removals(candidates, new Set(['follow:u:a', 'follow:u:b', 'follow:u:c', 'home:'])),
+      removals(candidates, new Set(['follow:u:a', 'follow:u:b', 'follow:u:c', 'home:']), (key) =>
+        key === 'settings.social.importHome' ? 'Home timeline' : key,
+      ),
     ).toEqual([
       { name: 'Ann', subscriptionId: 1 },
       { name: 'did:plc:b', subscriptionId: 2 },
-      { name: 'Home', subscriptionId: 3 },
+      { name: 'Home timeline', subscriptionId: 3 },
     ]);
   });
 });

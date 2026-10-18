@@ -83,6 +83,7 @@ export interface Removal {
 export function removals(
   candidates: ImportCandidates | null,
   chosen: ReadonlySet<string>,
+  translate: Translate,
 ): Removal[] {
   const follows = (candidates?.follows ?? [])
     .filter((follow) => follow.state !== 'new' && chosen.has(followKey(follow)))
@@ -92,7 +93,10 @@ export function removals(
     }));
   const collections = [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
     .filter((collection) => isRemovable(collection) && chosen.has(collectionKey(collection)))
-    .map((collection) => ({ name: collection.name, subscriptionId: collection.subscriptionId }));
+    .map((collection) => ({
+      name: collectionName(collection, translate),
+      subscriptionId: collection.subscriptionId,
+    }));
   return [...follows, ...collections].flatMap(({ name, subscriptionId }) =>
     subscriptionId === null ? [] : [{ name, subscriptionId }],
   );
@@ -142,9 +146,12 @@ function toFollowRow(follow: FollowCandidate, translate: Translate): ImportRow {
   };
 }
 
+function collectionName(collection: CollectionCandidate, translate: Translate): string {
+  return collection.kind === 'home' ? translate('settings.social.importHome') : collection.name;
+}
+
 function toCollectionRow(collection: CollectionCandidate, translate: Translate): ImportRow {
-  const name =
-    collection.kind === 'home' ? translate('settings.social.importHome') : collection.name;
+  const name = collectionName(collection, translate);
   const removable = isRemovable(collection);
   return {
     key: collectionKey(collection),
@@ -156,13 +163,10 @@ function toCollectionRow(collection: CollectionCandidate, translate: Translate):
     icon: COLLECTION_ICONS[collection.kind],
     haystack: name.toLowerCase(),
     stateLabel: translate(FILTER_KEYS[collection.state]),
-    checkboxLabel: translate(collectionCheckboxKey(removable), { name }),
+    checkboxLabel: translate(
+      removable ? 'settings.social.importRemoveCollection' : 'settings.social.importAddCollection',
+      { name },
+    ),
     removable,
   };
-}
-
-function collectionCheckboxKey(removable: boolean): string {
-  return removable
-    ? 'settings.social.importRemoveCollection'
-    : 'settings.social.importAddCollection';
 }

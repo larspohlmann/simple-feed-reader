@@ -42,8 +42,18 @@ describe('buildSocialSections', () => {
     expect(sections[0].networkAccounts.map((account) => account.id)).toEqual([3, 9]);
   });
 
-  it('leaves out a network without private feeds', () => {
+  it('leaves out a network without accounts or feeds', () => {
     expect(buildSocialSections([makeSubscription()], [])).toEqual([]);
+  });
+
+  it('keeps a network with an account but no feeds, so its head can still manage feeds', () => {
+    const sections = buildSocialSections(
+      [],
+      [{ id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' }],
+    );
+
+    expect(sections.map((section) => section.network)).toEqual(['bluesky']);
+    expect(sections[0].accounts).toEqual([]);
   });
 
   it("orders accounts by id and each account's feeds Home, lists, custom feeds, then by title", () => {

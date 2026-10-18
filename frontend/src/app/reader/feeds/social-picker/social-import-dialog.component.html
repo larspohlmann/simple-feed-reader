@@ -142,11 +142,6 @@
     />
   }
 
-  @if (chosen().size > 0) {
-    <span footer class="summary" data-testid="social-import-selected">
-      {{ 'settings.social.importSelected' | transloco: { count: chosen().size } }}
-    </span>
-  }
   <app-button
     footer
     data-testid="social-import-cancel"
@@ -164,7 +159,7 @@
     (click)="apply()"
   >
     @if (chosen().size > 0) {
-      {{ 'settings.social.importApplyCount' | transloco: { count: chosen().size } }}
+      {{ applyCountKey() | transloco: { count: chosen().size } }}
     } @else {
       {{ 'settings.social.importApply' | transloco }}
     }

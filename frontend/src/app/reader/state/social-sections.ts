@@ -108,6 +108,7 @@ export function buildSocialSections(
   }).filter(
     (section) =>
       section.accounts.length > 0 ||
+      section.networkAccounts.length > 0 ||
       section.profiles.subscriptions.length > 0 ||
       section.saved !== null,
   );

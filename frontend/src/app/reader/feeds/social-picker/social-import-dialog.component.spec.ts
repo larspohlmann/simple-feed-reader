@@ -316,16 +316,14 @@ describe('SocialImportDialogComponent', () => {
     expect(textOf(bob(), '.avatar')).toBe('B');
   });
 
-  it('counts the selection in the footer and on the Save button', () => {
+  it('counts the selection on the Save button, singular for one change', () => {
     const fixture = loaded(candidates({ follows: [follow(), DAVE] }));
-    expect(byTestId(fixture, 'social-import-selected')).toBeNull();
     expect(applyButton(fixture).textContent?.trim()).toBe('Save');
 
     tick(fixture, 'did:plc:bob');
-    expect(byTestId(fixture, 'social-import-selected')?.textContent?.trim()).toBe('1 selected');
+    expect(applyButton(fixture).textContent?.trim()).toBe('Save 1 change');
 
     tick(fixture, 'did:plc:dave');
-    expect(byTestId(fixture, 'social-import-selected')?.textContent?.trim()).toBe('2 selected');
     expect(applyButton(fixture).textContent?.trim()).toBe('Save 2 changes');
   });
 
@@ -460,6 +458,8 @@ describe('SocialImportDialogComponent', () => {
     fixture.detectChanges();
     press(fixture, 'social-import-apply');
 
+    const [data] = confirmStub.confirmThen.mock.calls[0];
+    expect(data.message).toContain('Remove Home timeline and its entries');
     const post = http.expectOne(IMPORT);
     expect(post.request.body).toEqual({ subscribe: [], unsubscribe: [11], collections: [] });
     post.flush({ imported: 0, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 1 });
@@ -603,9 +603,7 @@ describe('SocialImportDialogComponent', () => {
     const fixture = loaded(candidates({ follows: manyFollows(150) }));
 
     press(fixture, 'social-import-select-new');
-    expect(
-      textOf(fixture.nativeElement as HTMLElement, '[data-testid="social-import-selected"]'),
-    ).toBe('150 selected');
+    expect(applyButton(fixture).textContent?.trim()).toBe('Save 150 changes');
   });
 
   it('selects every visible new follow at once', () => {

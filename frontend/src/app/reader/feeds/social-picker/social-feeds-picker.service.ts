@@ -14,7 +14,6 @@ export interface PickerAccount {
   readonly handle: string;
 }
 
-/** Opens one account's Manage feeds picker, from settings or the sidebar. */
 @Injectable({ providedIn: 'root' })
 export class SocialFeedsPicker {
   private readonly dialog = inject(Dialog);

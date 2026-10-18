@@ -391,7 +391,7 @@
       "importLoading": "Loading the accounts you follow…",
       "importFilter": "Filter by name or handle",
       "importSelectAllNew": "Select all new ({{count}})",
-      "importTabs": "What to import",
+      "importTabs": "Feed types",
       "importTab": {
         "accounts": "Accounts",
         "lists": "Lists",
@@ -430,8 +430,8 @@
       "importShowMore": "Show {{count}} more",
       "importTruncated": "Only the first 5,000 are listed.",
       "importApply": "Save",
-      "importApplyCount": "Save {{count}} changes",
-      "importSelected": "{{count}} selected",
+      "importApplyCountOne": "Save 1 change",
+      "importApplyCountOther": "Save {{count}} changes",
       "importDone": "{{imported}} added, {{removed}} removed, {{alreadySubscribed}} already subscribed.",
       "importOverLimit": "{{count}} not added: subscription limit reached."
     },

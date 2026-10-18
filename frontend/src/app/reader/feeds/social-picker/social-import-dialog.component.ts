@@ -10,6 +10,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { pluralKey } from '../../../core/i18n/plural-key';
 import { toggled } from '../../../core/toggled-set';
 import { RefreshService } from '../../state/refresh.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
@@ -130,6 +131,9 @@ export class SocialImportDialogComponent {
     const matched = this.tally().matched;
     return filter === 'all' ? matched : matched.filter((row) => row.state === filter);
   });
+  protected readonly applyCountKey = computed(() =>
+    pluralKey('settings.social.importApplyCount', this.chosen().size),
+  );
   private readonly rowLimit = linkedSignal({
     source: () => [this.tab(), this.activeFilter(), this.needle()],
     computation: () => ROWS_PER_PAGE,
@@ -167,9 +171,11 @@ export class SocialImportDialogComponent {
   }
 
   protected apply(): void {
-    const unticked = removals(this.importer.candidates(), this.chosen());
+    const unticked = removals(this.importer.candidates(), this.chosen(), (key, params) =>
+      this.i18n.translate(key, params),
+    );
     if (unticked.length === 0) {
-      this.send();
+      this.send(unticked);
       return;
     }
     this.confirm.confirmThen(
@@ -179,14 +185,14 @@ export class SocialImportDialogComponent {
         confirmLabel: this.i18n.translate('settings.social.importRemoveConfirm'),
         danger: true,
       },
-      () => this.send(),
+      () => this.send(unticked),
     );
   }
 
-  private send(): void {
+  private send(unticked: readonly Removal[]): void {
     const selection = {
       subscribe: this.chosenFollows(),
-      unsubscribe: this.chosenRemovals(),
+      unsubscribe: unticked.map((removal) => removal.subscriptionId),
       collections: this.chosenCollections(),
     };
 
@@ -235,12 +241,6 @@ export class SocialImportDialogComponent {
     return (this.importer.candidates()?.follows ?? [])
       .filter((follow) => follow.state === 'new' && this.chosen().has(followKey(follow)))
       .map((follow) => ({ identity: follow.identity, title: follow.displayName }));
-  }
-
-  private chosenRemovals(): number[] {
-    return removals(this.importer.candidates(), this.chosen()).map(
-      (removal) => removal.subscriptionId,
-    );
   }
 
   private removalMessage(unticked: readonly Removal[]): string {

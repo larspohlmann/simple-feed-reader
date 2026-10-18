@@ -1,4 +1,7 @@
 @let current = section();
+@let manageLabel =
+  'reader.manageSocialSection'
+    | transloco: { network: ('settings.social.' + current.network | transloco) };
 <div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
   <a
     class="section-link"
@@ -17,10 +20,7 @@
       <button
         class="dots"
         type="button"
-        [attr.aria-label]="
-          'reader.manageSocialSection'
-            | transloco: { network: ('settings.social.' + current.network | transloco) }
-        "
+        [attr.aria-label]="manageLabel"
         (click)="rows.openSocialSheet(current)"
       >
         <app-icon name="more_horiz" size="sm" />
@@ -34,10 +34,7 @@
         <button
           class="dots"
           type="button"
-          [attr.aria-label]="
-            'reader.manageSocialSection'
-              | transloco: { network: ('settings.social.' + current.network | transloco) }
-          "
+          [attr.aria-label]="manageLabel"
           (click)="rows.toggleMenu(menuKey(), $event)"
         >
           <app-icon name="more_horiz" size="sm" />
