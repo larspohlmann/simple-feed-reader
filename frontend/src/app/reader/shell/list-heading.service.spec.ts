@@ -54,6 +54,7 @@ function listHeadingFor(subscription: SubscriptionDto, sections: SocialSection[]
 
 const accountsOf = (...handles: string[]): SocialSection => ({
   network: 'bluesky',
+  networkAccounts: [],
   profiles: socialProfiles([]),
   unreadCount: 0,
   entryCount: 0,

@@ -18,6 +18,8 @@ export interface SocialProfiles {
 export interface SocialSection {
   readonly network: SocialNetworkName;
   readonly accounts: readonly SocialAccountGroup[];
+  /** Every connected account of the network, by id: the head's menu opens each one's picker. */
+  readonly networkAccounts: readonly SocialAccountRefDto[];
   readonly profiles: SocialProfiles;
   /** Shown only while it holds posts. */
   readonly saved: SubscriptionDto | null;
@@ -78,15 +80,18 @@ export function feedAvatarUrl(subscription: SubscriptionDto | null): string | nu
 /** One section per network holding a social feed: private feeds per account by id, each Home first, then the profiles. */
 export function buildSocialSections(
   subscriptions: readonly SubscriptionDto[],
-  accounts: readonly SocialAccountRefDto[],
+  connectedAccounts: readonly SocialAccountRefDto[],
 ): SocialSection[] {
-  const handles = new Map(accounts.map((account) => [account.id, account.handle]));
+  const handles = new Map(connectedAccounts.map((account) => [account.id, account.handle]));
   return SOCIAL_NETWORKS.map((network) => {
     const ofNetwork = subscriptions.filter((subscription) => networkOf(subscription) === network);
     const accounts = accountGroups(ofNetwork.filter(isPrivateFeed), handles);
     return {
       network,
       accounts,
+      networkAccounts: connectedAccounts
+        .filter((account) => account.network === network)
+        .sort((left, right) => left.id - right.id),
       profiles: socialProfiles(
         ofNetwork.filter(
           (subscription) => !isPrivateFeed(subscription) && !isSavedFeed(subscription),

@@ -1,11 +1,16 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SocialNetworkName } from '../../../core/social-network';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
+import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
+import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
+import { LayoutService } from '../../layout.service';
+import { SocialAccountRefDto } from '../../social-feed';
 import { SocialSection } from '../../state/social-sections';
+import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 
@@ -20,6 +25,7 @@ const profilesCollapsedKey = (network: SocialNetworkName): string =>
     RouterLink,
     TranslocoPipe,
     IconComponent,
+    DismissOnOutsideDirective,
     SidebarFeedRowComponent,
     SidebarGroupRowComponent,
   ],
@@ -30,6 +36,10 @@ export class SidebarSocialSectionComponent {
   readonly section = input.required<SocialSection>();
   readonly selection = input.required<Selection>();
   readonly organising = input(false);
+
+  protected readonly rows = inject(SidebarRowActions);
+  protected readonly screen = inject(LayoutService);
+  private readonly picker = inject(SocialFeedsPicker);
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
   protected readonly expanded = this.collapsible.expanded;
@@ -47,6 +57,13 @@ export class SidebarSocialSectionComponent {
     () => this.onThisNetwork() && this.selection().feedKind === 'profile',
   );
   protected readonly selectionQueryParams = selectionQueryParams;
+
+  protected readonly menuKey = computed(() => `social-${this.section().network}`);
+
+  protected manageFeeds(account: SocialAccountRefDto): void {
+    this.rows.closeMenu();
+    this.picker.open(account).subscribe();
+  }
 
   protected toggle(): void {
     this.collapsible.toggle();

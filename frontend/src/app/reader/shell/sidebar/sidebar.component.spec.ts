@@ -1902,6 +1902,7 @@ describe('organise mode', () => {
   describe('social sections', () => {
     const section: SocialSection = {
       network: 'bluesky',
+      networkAccounts: [],
       profiles: socialProfiles([]),
       unreadCount: 2,
       entryCount: 0,

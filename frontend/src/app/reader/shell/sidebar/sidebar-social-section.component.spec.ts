@@ -1,4 +1,5 @@
 import { signal } from '@angular/core';
+import { of } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -9,6 +10,7 @@ import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { LayoutService } from '../../layout.service';
 import { SubscriptionDto } from '../../models';
 import { Selection } from '../../query/query';
+import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -32,6 +34,9 @@ const feed = (
 
 const ONE_ACCOUNT: SocialSection = {
   network: 'bluesky',
+  networkAccounts: [
+    { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
+  ],
   profiles: socialProfiles([]),
   unreadCount: 3,
   entryCount: 0,
@@ -54,9 +59,26 @@ const expandProfiles = (network: SocialSection['network']): void =>
 
 const ALL: Selection = { kind: 'all', id: null, unread: true };
 
+const pickerStub = { open: jest.fn(() => of(undefined)) };
+const rowActions = {
+  menuFor: signal<string | null>(null),
+  toggleMenu: jest.fn(),
+  closeMenu: jest.fn(),
+  openFeedSheet: jest.fn(),
+  openSocialSheet: jest.fn(),
+  socialAccountLabel: (section: SocialSection, account: { handle: string; status: string }) =>
+    account.status !== 'connected'
+      ? `Reconnect ${account.handle} in settings`
+      : section.networkAccounts.length === 1
+        ? 'Manage feeds…'
+        : `Manage feeds of ${account.handle}`,
+  exclusionTitle: () => 'Not in All items',
+};
+
 function mount(
   section: SocialSection,
   selection: Selection = ALL,
+  coarse = false,
 ): ComponentFixture<SidebarSocialSectionComponent> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
@@ -66,18 +88,10 @@ function mount(
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
-      { provide: LayoutService, useValue: { isCoarse: signal(false), isNarrow: signal(false) } },
+      { provide: LayoutService, useValue: { isCoarse: signal(coarse), isNarrow: signal(false) } },
       { provide: ManageActions, useValue: {} },
-      {
-        provide: SidebarRowActions,
-        useValue: {
-          menuFor: signal<string | null>(null),
-          toggleMenu: jest.fn(),
-          closeMenu: jest.fn(),
-          openFeedSheet: jest.fn(),
-          exclusionTitle: () => 'Not in All items',
-        },
-      },
+      { provide: SidebarRowActions, useValue: rowActions },
+      { provide: SocialFeedsPicker, useValue: pickerStub },
     ],
   });
   const fixture = TestBed.createComponent(SidebarSocialSectionComponent);
@@ -91,7 +105,11 @@ const element = (fixture: ComponentFixture<SidebarSocialSectionComponent>): HTML
   fixture.nativeElement as HTMLElement;
 
 describe('SidebarSocialSectionComponent', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    rowActions.menuFor.set(null);
+    jest.clearAllMocks();
+  });
   afterEach(() => localStorage.clear());
 
   it('titles the section by its network and lists each feed by its display title', () => {
@@ -113,6 +131,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: false,
+      networkAccounts: [],
       profiles: socialProfiles([]),
       accounts: [
         {
@@ -135,6 +154,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: true,
+      networkAccounts: [],
       profiles: socialProfiles([]),
       accounts: [
         {
@@ -188,6 +208,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: true,
+      networkAccounts: [],
       profiles: socialProfiles([]),
       accounts: [
         { accountId: 3, handle: null, subscriptions: [feed(1, 'home')] },
@@ -210,6 +231,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: false,
+      networkAccounts: [],
       profiles: socialProfiles([]),
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
@@ -307,6 +329,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: false,
+      networkAccounts: [],
       accounts: [],
       profiles: socialProfiles([person(7, 'Amy')]),
     };
@@ -329,6 +352,7 @@ describe('SidebarSocialSectionComponent', () => {
       entryCount: 0,
       saved: null,
       showsHandles: false,
+      networkAccounts: [],
     };
 
     expandProfiles('bluesky');
@@ -375,6 +399,57 @@ describe('SidebarSocialSectionComponent', () => {
     expect(element(mount(quiet)).querySelector('.section-count')).toBeNull();
   });
 
+  describe("the head's menu", () => {
+    const itemsOf = (fixture: ComponentFixture<SidebarSocialSectionComponent>) => [
+      ...element(fixture).querySelectorAll<HTMLButtonElement>(
+        '[data-testid="sidebar-social-bluesky"] .pop button',
+      ),
+    ];
+
+    it('opens Manage feeds for the network’s only account from the head’s menu', () => {
+      const fixture = mount(ONE_ACCOUNT);
+      rowActions.menuFor.set('social-bluesky');
+      fixture.detectChanges();
+
+      const [item] = itemsOf(fixture);
+      expect(item.textContent?.trim()).toBe('Manage feeds…');
+      item.click();
+
+      expect(pickerStub.open).toHaveBeenCalledWith(ONE_ACCOUNT.networkAccounts[0]);
+    });
+
+    it('offers one item per account, naming each, and disables one that needs reconnecting', () => {
+      const fixture = mount({
+        ...ONE_ACCOUNT,
+        networkAccounts: [
+          { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
+          { id: 9, network: 'bluesky', handle: '@bob.bsky.social', status: 'needs_reconnect' },
+        ],
+      });
+      rowActions.menuFor.set('social-bluesky');
+      fixture.detectChanges();
+
+      expect(itemsOf(fixture).map((item) => [item.textContent?.trim(), item.disabled])).toEqual([
+        ['Manage feeds of @alice.bsky.social', false],
+        ['Reconnect @bob.bsky.social in settings', true],
+      ]);
+    });
+
+    it('shows no menu for a network without accounts', () => {
+      const fixture = mount({ ...ONE_ACCOUNT, networkAccounts: [] });
+
+      expect(element(fixture).querySelector('.section-head .dots')).toBeNull();
+    });
+
+    it('opens the sheet on a coarse pointer', () => {
+      const fixture = mount(ONE_ACCOUNT, ALL, true);
+
+      (element(fixture).querySelector('.section-head .dots') as HTMLButtonElement).click();
+
+      expect(rowActions.openSocialSheet).toHaveBeenCalledWith(ONE_ACCOUNT);
+    });
+  });
+
   describe('row avatars', () => {
     const avatarOf = (subscription: SubscriptionDto): string | null => {
       const section: SocialSection = {
@@ -385,6 +460,7 @@ describe('SidebarSocialSectionComponent', () => {
         entryCount: 0,
         saved: null,
         showsHandles: false,
+        networkAccounts: [],
       };
       expandProfiles('bluesky');
       const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;
@@ -423,6 +499,7 @@ describe('SidebarSocialSectionComponent', () => {
         entryCount: 0,
         saved: null,
         showsHandles: false,
+        networkAccounts: [],
       };
       expandProfiles('bluesky');
       const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;

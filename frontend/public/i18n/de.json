@@ -1162,6 +1162,10 @@
     "feeds": "Feeds",
     "toggleFeeds": "Feeds ein-/ausklappen",
     "toggleSocialSection": "{{network}} ein-/ausklappen",
+    "manageSocialFeeds": "Feeds verwalten…",
+    "manageSocialFeedsOf": "Feeds von {{handle}} verwalten",
+    "reconnectSocialAccount": "{{handle}} in den Einstellungen neu verbinden",
+    "manageSocialSection": "{{network}}-Optionen",
     "socialFeeds": "Feeds",
     "socialHome": "Startseite@{{network}}",
     "savedFrom": {

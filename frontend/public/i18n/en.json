@@ -1162,6 +1162,10 @@
     "feeds": "Feeds",
     "toggleFeeds": "Toggle feeds",
     "toggleSocialSection": "Toggle {{network}}",
+    "manageSocialFeeds": "Manage feeds…",
+    "manageSocialFeedsOf": "Manage feeds of {{handle}}",
+    "reconnectSocialAccount": "Reconnect {{handle}} in settings",
+    "manageSocialSection": "{{network}} options",
     "socialFeeds": "Feeds",
     "socialHome": "Home@{{network}}",
     "savedFrom": {
