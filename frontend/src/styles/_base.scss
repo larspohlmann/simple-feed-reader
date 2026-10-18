@@ -22,16 +22,20 @@ h3 {
   outline-offset: 2px;
 }
 
-/* Dimming brightness steps dim pixel media and, via `.user-colour`, inline
-   colours the palette cannot reach (#832). The attribute guard keeps `filter`
-   off the default render, which carries no media factor at all. */
-:root[data-brightness^='-'] :is(img, video, iframe, .user-colour) {
+/* Pixel media dims at every dark step and on light's dimming steps (#832, #1691);
+   the guard keeps `filter` off light's default render, which has no media factor. */
+:root:is([data-theme='dark'], [data-brightness^='-']) :is(img, video, iframe) {
   filter: brightness(var(--media-brightness));
+}
+
+/* An inline colour the palette cannot reach, e.g. a tag glyph, dims only on dimming steps. */
+:root[data-brightness^='-'] .user-colour {
+  filter: brightness(var(--user-colour-brightness));
 }
 
 /* Audio is chrome, not a photo: a light native player must recede into a dimmed
    page, so it dims by the square of the media factor -- far harder than an image
    wants. */
-:root[data-brightness^='-'] audio {
+:root:is([data-theme='dark'], [data-brightness^='-']) audio {
   filter: brightness(calc(var(--media-brightness) * var(--media-brightness)));
 }

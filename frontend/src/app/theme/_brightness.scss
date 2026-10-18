@@ -9,23 +9,28 @@ $surface-dim: 1.11;
 $surface-brighten: 1.05;
 $colour-dim: 1.055;
 $colour-brighten: 1.09;
-$media-dim: 0.08;
+$user-colour-dim: 0.08;
 
 // The Sass mirror of BRIGHTNESS_MIN/MAX in brightness.ts. Light drives its text
 // to true black exactly at its floor; dark stays short of black (0.13 < 1/3) so
 // text holds up as the surface sinks, and reaches white exactly at its top.
+// Dark media rests below 1 and dims faster, or a white picture outshines the text (#1691).
 $ranges: (
   light: (
     min: -6,
     max: 0,
     text-dim: math.div(1, 6),
     text-brighten: 0,
+    media-rest: 1,
+    media-dim: 0.08,
   ),
   dark: (
     min: -3,
     max: 3,
     text-dim: 0.13,
     text-brighten: math.div(1, 3),
+    media-rest: 0.85,
+    media-dim: 0.2,
   ),
 );
 $surfaces:
@@ -88,9 +93,21 @@ $text: text-primary, text-secondary, text-muted;
 
   --rim-light: #{scale(white, $step, $surface-dim, $surface-brighten)};
 
-  // Only dimming steps carry a media factor; every consumer is guarded to them.
   @if $step < 0 {
-    --media-brightness: #{1 - $media-dim * math.abs($step)};
+    $media-drop: map.get($range, media-dim) * math.abs($step);
+
+    --media-brightness: #{map.get($range, media-rest) - $media-drop};
+    --user-colour-brightness: #{1 - $user-colour-dim * math.abs($step)};
+  }
+}
+
+// The theme's base block carries a media factor only when it rests below 1;
+// the guard in styles/_base.scss must cover exactly those themes.
+@mixin media-at-rest($theme) {
+  $rest: map.get($ranges, $theme, media-rest);
+
+  @if $rest < 1 {
+    --media-brightness: #{$rest};
   }
 }
 

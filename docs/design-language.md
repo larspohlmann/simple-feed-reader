@@ -246,12 +246,15 @@ rate so they stay themselves and only soften; **text** interpolates toward an
 extreme, black when dimming and white when brightening, reaching it exactly at
 the range end (light reaches black at `-6`; dark stays short of black so text
 holds up as the surface sinks, and reaches white at `+3`). Contrast eases as you
-dim instead of being pinned. Dimming steps also emit `--media-brightness`
-(`0.92…0.52`, 8 % per step; absent at and above the default), which one guarded
-rule in `styles/_base.scss` applies as a `filter` to `img`, `video`, `iframe`
-and any element carrying `.user-colour` (an inline colour the palette cannot
-reach, e.g. a tag glyph), and squared to `audio`, whose light native chrome must
-recede harder than a photo. To retune, edit the rate constants and `$ranges`
+dim instead of being pinned. `--media-brightness` is per theme (#1691): light
+has none at and above the default and `0.92…0.52` (8 % per step) when dimming;
+dark rests at `0.85` at every step and dims 20 % per step to `0.25`, or a white
+picture outshines the dimmed text. One guarded rule in `styles/_base.scss`
+applies it as a `filter` to `img`, `video` and `iframe`, and squared to `audio`,
+whose light native chrome must recede harder than a photo. Dimming steps also
+emit `--user-colour-brightness` (8 % per step, both themes) for any element
+carrying `.user-colour` (an inline colour the palette cannot reach, e.g. a tag
+glyph). To retune, edit the rate constants and `$ranges`
 (the Sass mirror of `brightness.ts`) in `_brightness.scss`; never hand-tune a
 step block. Each step also emits `--rim-light`, white scaled like a surface, so
 the [glass rim](#glass-rim-1402) highlight dims with the panels.
