@@ -19,6 +19,7 @@ import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
 import {
   EntryDto,
   SubscriptionCountsResponse,
+  UnreadTotalsDto,
   SubscriptionDto,
   SubscriptionsResponse,
 } from '../models';
@@ -28,7 +29,6 @@ import {
   UnreadTotals,
   ZeroTarget,
   sameUnreadTotals,
-  shiftUnreadTotals,
   unreadTotalsFrom,
   zeroUnreadTotals,
 } from './unread-totals';
@@ -87,6 +87,8 @@ export class SubscriptionsStore {
    *  a favourite, an emptied feed. A quiet reload compares it across its own
    *  round trip to know whether the user has overtaken the server's answer. */
   private localEdits = 0;
+  /** Kept apart from `localEdits` so a favourite or a read on the wire never drops a recount's totals. */
+  private totalsEdits = 0;
 
   constructor() {
     onIdentityChange(() => this.invalidate());
@@ -208,7 +210,10 @@ export class SubscriptionsStore {
   /** The shared body of every silent tick: refresh only when worth a request,
    *  drop an answer the user has overtaken, never touch `loading`/`resolved`.
    *  The `apply` closure is the only difference between full and counts-only. */
-  private quietReload<T>(fetch: () => Observable<T>, apply: (response: T) => void): void {
+  private quietReload<T extends { unreadTotals: UnreadTotalsDto }>(
+    fetch: () => Observable<T>,
+    apply: (response: T) => void,
+  ): void {
     // A tick refreshes counts; it never bootstraps them. Fetching before the
     // first real load would stamp the freshness clock, silence that load, and
     // leave `resolved` false — so the onboarding redirect could never decide.
@@ -224,16 +229,23 @@ export class SubscriptionsStore {
    *  answer if the user has overtaken it, so a silent refresh never flickers
    *  the surface or fights an optimistic edit. The gates that decide WHEN to
    *  fire belong to each caller. */
-  private quietFetch<T>(fetch: () => Observable<T>, apply: (response: T) => void): void {
+  private quietFetch<T extends { unreadTotals: UnreadTotalsDto }>(
+    fetch: () => Observable<T>,
+    apply: (response: T) => void,
+  ): void {
     const request = this.beginRequest();
     const editsWhenSent = this.localEdits;
+    const totalsEditsWhenSent = this.totalsEdits;
     this.inFlight = this.trackWhileOpen(
       fetch().subscribe({
         next: (response) => {
           if (!this.settle(request)) return;
-          // The user changed a count while this was on the wire (marked read,
+          if (this.totalsEdits === totalsEditsWhenSent) {
+            this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
+          }
+          // The user changed a feed count while this was on the wire (marked read,
           // favourited, emptied a feed). The server counted before that, so
-          // adopting the response now would put the badge back up; drop it.
+          // adopting those counts now would put the badge back up; drop them.
           if (this.localEdits !== editsWhenSent) return;
           apply(response);
         },
@@ -269,7 +281,6 @@ export class SubscriptionsStore {
     this.setIfMoved(this.favoritesCount, response.favoritesCount);
     this.setIfMoved(this.keptCount, response.keptCount);
     this.setIfMoved(this.viewedCount, response.viewedCount);
-    this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
   }
 
   private setIfMoved(count: WritableSignal<number>, value: number): void {
@@ -298,7 +309,6 @@ export class SubscriptionsStore {
     count.update((current) => Math.max(0, current + by));
   }
 
-  /** The server mirrors a read onto every visible copy, so each copy moves, and each scope once per copy it holds. */
   markArticleRead(entry: EntryDto): void {
     this.shiftArticleUnread(entry, -1);
   }
@@ -313,13 +323,11 @@ export class SubscriptionsStore {
         (copy) => copy.subscriptionId,
       ),
     );
-    const held = this.storedSubscriptions().filter((subscription) => copyIds.has(subscription.id));
     this.patchSubscriptions((subscription) =>
       copyIds.has(subscription.id)
         ? { ...subscription, unreadCount: Math.max(0, subscription.unreadCount + by) }
         : subscription,
     );
-    this.patchUnreadTotals((totals) => shiftUnreadTotals(totals, held, by));
   }
 
   /** Optimistically apply an exclusion-flag toggle (All items / For you) so the
@@ -360,7 +368,7 @@ export class SubscriptionsStore {
   }
 
   private patchUnreadTotals(patch: (totals: UnreadTotals) => UnreadTotals): void {
-    ++this.localEdits;
+    ++this.totalsEdits;
     this.storedUnreadTotals.update(patch);
   }
 }

@@ -1,6 +1,5 @@
 import { NetworkFeedKind, SocialNetworkName } from '../../core/social-network';
-import { SubscriptionDto, UnreadTotalsDto } from '../models';
-import { isProfileFeed, networkOf } from './social-sections';
+import { UnreadTotalsDto } from '../models';
 
 export type ZeroTarget =
   | 'all'
@@ -42,15 +41,6 @@ export function sameUnreadTotals(left: UnreadTotals, right: UnreadTotals): boole
   );
 }
 
-/** Move every scope by `by` once per copy it holds, never below 0, as the server counts every copy. */
-export function shiftUnreadTotals(
-  totals: UnreadTotals,
-  copies: readonly SubscriptionDto[],
-  by: number,
-): UnreadTotals {
-  return copies.reduce((current, copy) => shiftOneCopy(current, copy, by), totals);
-}
-
 export function zeroUnreadTotals(totals: UnreadTotals, target: ZeroTarget): UnreadTotals {
   if (target === 'all') return { ...totals, allItems: 0 };
   if ('tag' in target) return { ...totals, tags: withZero(totals.tags, target.tag) };
@@ -66,32 +56,6 @@ function zeroNetwork(
   const networkProfiles = withZero(totals.networkProfiles, network);
   if (feedKind === 'profile') return { ...totals, networkProfiles };
   return { ...totals, networks: withZero(totals.networks, network), networkProfiles };
-}
-
-function shiftOneCopy(totals: UnreadTotals, copy: SubscriptionDto, by: number): UnreadTotals {
-  const network = networkOf(copy);
-  const networks = network === null ? [] : [network];
-  return {
-    allItems: copy.includeInAllItems ? Math.max(0, totals.allItems + by) : totals.allItems,
-    tags: shifted(
-      totals.tags,
-      copy.tags.map((tag) => tag.id),
-      by,
-    ),
-    networks: shifted(totals.networks, networks, by),
-    networkProfiles: shifted(totals.networkProfiles, isProfileFeed(copy) ? networks : [], by),
-  };
-}
-
-function shifted<Key>(
-  counts: ReadonlyMap<Key, number>,
-  keys: readonly Key[],
-  by: number,
-): ReadonlyMap<Key, number> {
-  if (keys.length === 0) return counts;
-  const next = new Map(counts);
-  for (const key of keys) next.set(key, Math.max(0, (counts.get(key) ?? 0) + by));
-  return next;
 }
 
 function withZero<Key>(counts: ReadonlyMap<Key, number>, key: Key): ReadonlyMap<Key, number> {

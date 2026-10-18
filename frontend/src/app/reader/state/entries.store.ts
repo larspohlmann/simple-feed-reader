@@ -32,6 +32,12 @@ interface InFlightPatch {
 
 type RowPatch = EntryStatePatch & Pick<Partial<EntryDto>, 'social'>;
 
+/** A failed state change has already rolled its row back when `onFailed` runs. */
+export interface StateSaveOutcome {
+  readonly onSaved?: () => void;
+  readonly onFailed?: () => void;
+}
+
 @Injectable({ providedIn: 'root' })
 export class EntriesStore {
   private readonly api = inject(ReaderApi);
@@ -172,18 +178,19 @@ export class EntriesStore {
   }
 
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
-   *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
-  setState(entryId: number, patch: EntryStatePatch, onError?: () => void): void {
+   *  fails (never clobbering pages appended in the meantime), surfaces the error, and reports to `outcome`. */
+  setState(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
     const target = this.entryOrCopy(entryId);
     if (!target) return;
     this.error.set(null);
     this.failedOperation.set(null);
     const request$ = this.api.updateState(entryId, patch);
     this.optimistic(target, localStatePatch(patch), request$).subscribe({
+      next: () => outcome.onSaved?.(),
       error: (error: HttpErrorResponse) => {
         this.error.set(parseProblem(error));
-        this.failedOperation.set(() => this.setState(entryId, patch, onError));
-        onError?.();
+        this.failedOperation.set(() => this.setState(entryId, patch, outcome));
+        outcome.onFailed?.();
       },
     });
   }

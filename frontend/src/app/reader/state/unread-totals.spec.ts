@@ -1,31 +1,10 @@
-import { SubscriptionDto, SubscriptionTagDto } from '../models';
-import { makeSubscription } from '../testing/subscription.factory';
 import {
   NO_UNREAD_TOTALS,
   UnreadTotals,
   sameUnreadTotals,
-  shiftUnreadTotals,
   unreadTotalsFrom,
   zeroUnreadTotals,
 } from './unread-totals';
-
-const tag = (id: number): SubscriptionTagDto => ({
-  id,
-  name: `Tag ${id}`,
-  color: null,
-  icon: null,
-  position: id,
-});
-
-const blueskyHome = (id: number, overrides: Partial<SubscriptionDto> = {}): SubscriptionDto =>
-  makeSubscription({
-    id,
-    social: { network: 'bluesky', accountId: 1, kind: 'home' },
-    ...overrides,
-  });
-
-const blueskyProfile = (id: number): SubscriptionDto =>
-  makeSubscription({ id, social: { network: 'bluesky', accountId: null, kind: 'profile' } });
 
 const totals: UnreadTotals = {
   allItems: 10,
@@ -67,57 +46,6 @@ describe('unreadTotalsFrom', () => {
   });
 });
 
-describe('shiftUnreadTotals', () => {
-  it('moves each scope once per copy of the article it holds', () => {
-    const copies = [blueskyHome(1, { tags: [tag(3)] }), blueskyHome(2, { tags: [tag(3), tag(5)] })];
-
-    const result = shiftUnreadTotals(totals, copies, -1);
-
-    expect(result.allItems).toBe(8);
-    expect(result.tags.get(3)).toBe(2);
-    expect(result.tags.get(5)).toBe(1);
-    expect(result.networks.get('bluesky')).toBe(4);
-  });
-
-  it('leaves the all-items total alone for copies outside All items', () => {
-    const result = shiftUnreadTotals(totals, [makeSubscription({ includeInAllItems: false })], -1);
-
-    expect(result.allItems).toBe(10);
-  });
-
-  it('moves the profile total for a profile copy but not for a Home copy', () => {
-    expect(shiftUnreadTotals(totals, [blueskyProfile(1)], -1).networkProfiles.get('bluesky')).toBe(
-      2,
-    );
-    expect(shiftUnreadTotals(totals, [blueskyHome(1)], -1).networkProfiles.get('bluesky')).toBe(3);
-  });
-
-  it('never goes below zero', () => {
-    const result = shiftUnreadTotals(
-      { ...totals, allItems: 0, tags: new Map([[3, 0]]) },
-      [makeSubscription({ tags: [tag(3)] })],
-      -1,
-    );
-
-    expect(result.allItems).toBe(0);
-    expect(result.tags.get(3)).toBe(0);
-  });
-
-  it('counts a scope that had no entry yet', () => {
-    const result = shiftUnreadTotals(totals, [makeSubscription({ tags: [tag(9)] })], 1);
-
-    expect(result.tags.get(9)).toBe(1);
-  });
-
-  it('keeps the identity of every map no copy touches', () => {
-    const result = shiftUnreadTotals(totals, [makeSubscription()], -1);
-
-    expect(result.tags).toBe(totals.tags);
-    expect(result.networks).toBe(totals.networks);
-    expect(result.networkProfiles).toBe(totals.networkProfiles);
-  });
-});
-
 describe('zeroUnreadTotals', () => {
   it("zeroes the all-items total for 'all'", () => {
     expect(zeroUnreadTotals(totals, 'all').allItems).toBe(0);
@@ -154,7 +82,7 @@ describe('zeroUnreadTotals', () => {
 
 describe('sameUnreadTotals', () => {
   it('is true for structurally equal totals', () => {
-    expect(sameUnreadTotals(totals, shiftUnreadTotals(totals, [], 1))).toBe(true);
+    expect(sameUnreadTotals(totals, { ...totals, tags: new Map(totals.tags) })).toBe(true);
     expect(
       sameUnreadTotals(NO_UNREAD_TOTALS, unreadTotalsFrom({ allItems: 0, tags: [], networks: [] })),
     ).toBe(true);

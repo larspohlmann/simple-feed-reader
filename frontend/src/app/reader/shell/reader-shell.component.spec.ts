@@ -882,6 +882,7 @@ describe('ReaderShellComponent', () => {
       },
     });
     fixture.detectChanges();
+    ctrl.expectOne('https://api.test/api/subscriptions/counts');
 
     fixture.componentInstance.entryActions.toggleRead(fixture.componentInstance.openEntry()!);
     fixture.detectChanges();
