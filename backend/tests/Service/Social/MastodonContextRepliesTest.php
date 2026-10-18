@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
+use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Parser\Model\VisualMediaKind;
@@ -28,6 +29,22 @@ final class MastodonContextRepliesTest extends TestCase
         );
         self::assertSame(['https://mastodon.social/@Gargron/201'], self::urlsOf($replies[0]->replies));
         self::assertSame([], $replies[1]->replies);
+    }
+
+    public function testASelfReplyRendersLikeItsThreadComment(): void
+    {
+        $descendants = JsonNodeModel::of(json_decode(self::fixture(), true))->nodes('descendants');
+        $status = array_values(array_filter(
+            $descendants,
+            static fn (JsonNodeModel $candidate): bool => $candidate->string('id') === '201',
+        ))[0];
+        $reader = new MastodonContextReplies(new EntrySanitizer(new TrailingBlankRemover()));
+        $node = $this->replies()[0]->replies[0];
+
+        $selfReply = $reader->selfReplyOf($status);
+
+        self::assertEquals($node->comment(), $selfReply);
+        self::assertTrue($selfReply->byEntryAuthor);
     }
 
     public function testANonPublicReplyGoesWithItsAnswers(): void

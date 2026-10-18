@@ -68,6 +68,11 @@ final readonly class BlueskyThreadReplies
         return $nodes;
     }
 
+    public function selfReplyOf(JsonNodeModel $post): EntryCommentModel
+    {
+        return $this->commentOf($post, self::publishedAtOf($post), $post->node('author')->string('did'));
+    }
+
     private static function isShown(JsonNodeModel $reply): bool
     {
         $viewer = $reply->node('post')->node('author')->node('viewer');

@@ -6,7 +6,9 @@ namespace App\Service\Social\ReplyThreadSource;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Comments\Model\CommentsAnswerModel;
+use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\MastodonAccountApi;
@@ -62,5 +64,10 @@ final readonly class MastodonReplyThreadSource implements ReplyThreadSourceInter
     public function repliesIn(string $address, string $answer): array
     {
         return $this->replies->of($address, $answer);
+    }
+
+    public function selfReplyOf(JsonNodeModel $post): EntryCommentModel
+    {
+        return $this->replies->selfReplyOf($post);
     }
 }

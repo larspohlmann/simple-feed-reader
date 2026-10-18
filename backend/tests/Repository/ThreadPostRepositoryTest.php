@@ -43,7 +43,21 @@ final class ThreadPostRepositoryTest extends DbTestCase
         self::assertNull($posts[0]->linkCard);
         self::assertSame(0, $replyCard?->position);
         self::assertSame('https://macrumors.example/a', $replyCard->content->url);
-        self::assertSame(['https://x/1', 'https://x/2'], $this->threadPosts()->urlsOf($entry));
+    }
+
+    public function testPositionsComeBackByEntryAndUrl(): void
+    {
+        $entry = $this->entry();
+        $this->entityManager->persist(new ThreadPost($entry, 2, new ThreadPostContent('https://x/2', null, '', [])));
+        $this->entityManager->persist(new ThreadPost($entry, 1, new ThreadPostContent('https://x/1', null, '', [])));
+        $this->entityManager->persist(new ThreadPost($entry, 3, new ThreadPostContent(null, null, '', [])));
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$entry->requireId() => ['https://x/1' => 1, 'https://x/2' => 2]],
+            $this->threadPosts()->positionsByEntryIds([$entry->requireId()]),
+        );
+        self::assertSame([], $this->threadPosts()->positionsByEntryIds([]));
     }
 
     public function testTheThreadsOfSeveralEntriesComeBackByEntry(): void

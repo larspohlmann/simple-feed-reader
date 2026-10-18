@@ -68,7 +68,7 @@ final readonly class MastodonContextReplies
             fn (JsonNodeModel $status): ReplyNode => new ReplyNode(
                 self::publishedAtOf($status),
                 fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
-                    => $this->commentOf($status, $publishedAt, $thread),
+                    => $this->commentOf($status, $publishedAt, $thread->isByPostAuthor($status->node('account'))),
                 $this->nodesOf($thread->answersTo($status), $thread),
                 url: self::urlOf($status),
                 byEntryAuthor: $thread->isByPostAuthor($status->node('account')),
@@ -80,7 +80,7 @@ final readonly class MastodonContextReplies
     private function commentOf(
         JsonNodeModel $status,
         ?\DateTimeImmutable $publishedAt,
-        MastodonReplyThread $thread,
+        bool $byPostAuthor,
     ): EntryCommentModel {
         $account = $status->node('account');
 
@@ -89,9 +89,14 @@ final readonly class MastodonContextReplies
             self::urlOf($status),
             $publishedAt,
             $this->htmlOf($status),
-            $thread->isByPostAuthor($account),
+            $byPostAuthor,
             self::embedsOf($status),
         );
+    }
+
+    public function selfReplyOf(JsonNodeModel $status): EntryCommentModel
+    {
+        return $this->commentOf($status, self::publishedAtOf($status), true);
     }
 
     private static function urlOf(JsonNodeModel $status): ?string
