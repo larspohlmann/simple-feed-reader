@@ -159,12 +159,7 @@
   }
 }
 
-@mixin row-menu {
-  .rowmenu {
-    position: relative;
-    flex: 0 0 auto;
-  }
-
+@mixin row-dots {
   .dots {
     display: inline-flex;
     background: none;
@@ -185,6 +180,26 @@
     }
   }
 
+  @media (pointer: coarse) {
+    .dots {
+      width: var(--tap-target);
+      height: var(--tap-target);
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+  }
+}
+
+/* The row menu component's own styles; its items are projected from the row's template, hence `::ng-deep`. */
+@mixin row-menu {
+  :host {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  @include row-dots;
+
   .pop {
     @include glass-rim.filled(var(--surface-2));
 
@@ -193,13 +208,15 @@
     top: 28px;
     z-index: 2;
     border-radius: var(--radius);
+    width: max-content;
+    max-width: 22rem;
 
     /* stylelint-disable-next-line declaration-property-unit-allowed-list --
        tuned popover measure, not a spacing value. */
     min-width: 140px;
   }
 
-  .pop button {
+  .pop ::ng-deep button {
     display: block;
     width: 100%;
     text-align: left;
@@ -210,22 +227,19 @@
     cursor: pointer;
   }
 
+  .pop ::ng-deep button:disabled {
+    color: var(--text-muted);
+    cursor: default;
+  }
+
   @media (hover: hover) {
-    .pop button:hover {
+    .pop ::ng-deep button:hover:not(:disabled) {
       background: var(--surface-0);
     }
   }
 
   @media (pointer: coarse) {
-    .dots {
-      width: var(--tap-target);
-      height: var(--tap-target);
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-    }
-
-    .pop button {
+    .pop ::ng-deep button {
       min-height: var(--tap-target);
     }
   }

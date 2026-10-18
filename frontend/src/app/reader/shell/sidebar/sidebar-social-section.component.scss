@@ -3,7 +3,7 @@
 @include row.tag-head;
 @include row.tag-feeds;
 @include row.nav-states('.section-link', '.section-count');
-@include row.row-menu;
+@include row.row-dots;
 
 :host {
   display: contents;
@@ -47,15 +47,4 @@
   font-size: var(--fs-xs);
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.pop {
-  width: max-content;
-  max-width: 22rem;
-}
-
-.pop button:disabled {
-  background: none;
-  color: var(--text-muted);
-  cursor: default;
 }

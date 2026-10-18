@@ -200,37 +200,25 @@
                   (toggled)="toggle(node.tag.id)"
                 >
                   @if (!screen.isCoarse()) {
-                    @let tagMenuKey = 'tag-' + node.tag.id;
-                    <div
-                      class="rowmenu"
-                      [appDismissOnOutside]="rows.menuFor() === tagMenuKey"
-                      (dismiss)="rows.closeMenu()"
+                    <app-sidebar-row-menu
+                      [menuKey]="'tag-' + node.tag.id"
+                      [label]="'reader.manage' | transloco: { name: node.tag.name }"
                     >
-                      <button
-                        class="dots"
-                        type="button"
-                        [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
-                        (click)="rows.toggleMenu(tagMenuKey, $event)"
-                      >
-                        <app-icon name="more_horiz" size="sm" />
-                      </button>
-                      @if (rows.menuFor() === tagMenuKey) {
-                        <div class="pop" role="menu">
-                          <button
-                            role="menuitem"
-                            (click)="manage.editTag(node.tag); rows.closeMenu()"
-                          >
-                            {{ 'reader.editTag' | transloco }}
-                          </button>
-                          <button
-                            role="menuitem"
-                            (click)="manage.deleteTag(node.tag); rows.closeMenu()"
-                          >
-                            {{ 'reader.deleteTag' | transloco }}
-                          </button>
-                        </div>
-                      }
-                    </div>
+                      <ng-template>
+                        <button
+                          role="menuitem"
+                          (click)="manage.editTag(node.tag); rows.closeMenu()"
+                        >
+                          {{ 'reader.editTag' | transloco }}
+                        </button>
+                        <button
+                          role="menuitem"
+                          (click)="manage.deleteTag(node.tag); rows.closeMenu()"
+                        >
+                          {{ 'reader.deleteTag' | transloco }}
+                        </button>
+                      </ng-template>
+                    </app-sidebar-row-menu>
                   }
                 </app-sidebar-group-row>
               }

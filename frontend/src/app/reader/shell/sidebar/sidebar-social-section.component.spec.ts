@@ -1,16 +1,15 @@
 import { signal } from '@angular/core';
-import { of } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { API_BASE_URL } from '../../../core/api';
+import { ActionSheetAction } from '../../../shared/action-sheet/action-sheet.component';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { LayoutService } from '../../layout.service';
 import { SubscriptionDto } from '../../models';
 import { Selection } from '../../query/query';
-import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -59,19 +58,18 @@ const expandProfiles = (network: SocialSection['network']): void =>
 
 const ALL: Selection = { kind: 'all', id: null, unread: true };
 
-const pickerStub = { open: jest.fn(() => of(undefined)) };
+const LONE_ACCOUNT_ACTIONS: ActionSheetAction[] = [
+  { id: '3', label: 'Manage feeds…', disabled: false },
+];
+let socialActions = LONE_ACCOUNT_ACTIONS;
 const rowActions = {
   menuFor: signal<string | null>(null),
   toggleMenu: jest.fn(),
   closeMenu: jest.fn(),
   openFeedSheet: jest.fn(),
   openSocialSheet: jest.fn(),
-  socialAccountLabel: (section: SocialSection, account: { handle: string; status: string }) =>
-    account.status !== 'connected'
-      ? `Reconnect ${account.handle} in settings`
-      : section.networkAccounts.length === 1
-        ? 'Manage feeds…'
-        : `Manage feeds of ${account.handle}`,
+  socialAccountActions: jest.fn(() => socialActions),
+  manageSocialFeeds: jest.fn(),
   exclusionTitle: () => 'Not in All items',
 };
 
@@ -91,7 +89,6 @@ function mount(
       { provide: LayoutService, useValue: { isCoarse: signal(coarse), isNarrow: signal(false) } },
       { provide: ManageActions, useValue: {} },
       { provide: SidebarRowActions, useValue: rowActions },
-      { provide: SocialFeedsPicker, useValue: pickerStub },
     ],
   });
   const fixture = TestBed.createComponent(SidebarSocialSectionComponent);
@@ -108,6 +105,7 @@ describe('SidebarSocialSectionComponent', () => {
   beforeEach(() => {
     localStorage.clear();
     rowActions.menuFor.set(null);
+    socialActions = LONE_ACCOUNT_ACTIONS;
     jest.clearAllMocks();
   });
   afterEach(() => localStorage.clear());
@@ -415,16 +413,24 @@ describe('SidebarSocialSectionComponent', () => {
       expect(item.textContent?.trim()).toBe('Manage feeds…');
       item.click();
 
-      expect(pickerStub.open).toHaveBeenCalledWith(ONE_ACCOUNT.networkAccounts[0]);
+      expect(rowActions.socialAccountActions).toHaveBeenCalledWith(ONE_ACCOUNT);
+      expect(rowActions.manageSocialFeeds).toHaveBeenCalledWith(ONE_ACCOUNT.networkAccounts[0]);
     });
 
-    it('offers one item per account, naming each, and disables one that needs reconnecting', () => {
+    it('renders one item per account action, disabling the disabled ones', () => {
+      const bob = {
+        id: 9,
+        network: 'bluesky' as const,
+        handle: '@bob.bsky.social',
+        status: 'needs_reconnect' as const,
+      };
+      socialActions = [
+        { id: '3', label: 'Manage feeds of @alice.bsky.social', disabled: false },
+        { id: '9', label: 'Reconnect @bob.bsky.social in settings', disabled: true },
+      ];
       const fixture = mount({
         ...ONE_ACCOUNT,
-        networkAccounts: [
-          { id: 3, network: 'bluesky', handle: '@alice.bsky.social', status: 'connected' },
-          { id: 9, network: 'bluesky', handle: '@bob.bsky.social', status: 'needs_reconnect' },
-        ],
+        networkAccounts: [...ONE_ACCOUNT.networkAccounts, bob],
       });
       rowActions.menuFor.set('social-bluesky');
       fixture.detectChanges();

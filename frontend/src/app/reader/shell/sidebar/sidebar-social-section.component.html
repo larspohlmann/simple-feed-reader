@@ -1,7 +1,4 @@
 @let current = section();
-@let manageLabel =
-  'reader.manageSocialSection'
-    | transloco: { network: ('settings.social.' + current.network | transloco) };
 <div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
   <a
     class="section-link"
@@ -16,6 +13,9 @@
     }
   </a>
   @if (current.networkAccounts.length > 0) {
+    @let manageLabel =
+      'reader.manageSocialSection'
+        | transloco: { network: ('settings.social.' + current.network | transloco) };
     @if (screen.isCoarse()) {
       <button
         class="dots"
@@ -26,33 +26,19 @@
         <app-icon name="more_horiz" size="sm" />
       </button>
     } @else {
-      <div
-        class="rowmenu"
-        [appDismissOnOutside]="rows.menuFor() === menuKey()"
-        (dismiss)="rows.closeMenu()"
-      >
-        <button
-          class="dots"
-          type="button"
-          [attr.aria-label]="manageLabel"
-          (click)="rows.toggleMenu(menuKey(), $event)"
-        >
-          <app-icon name="more_horiz" size="sm" />
-        </button>
-        @if (rows.menuFor() === menuKey()) {
-          <div class="pop" role="menu">
-            @for (account of current.networkAccounts; track account.id) {
-              <button
-                role="menuitem"
-                [disabled]="account.status !== 'connected'"
-                (click)="manageFeeds(account)"
-              >
-                {{ rows.socialAccountLabel(current, account) }}
-              </button>
-            }
-          </div>
-        }
-      </div>
+      <app-sidebar-row-menu [menuKey]="menuKey()" [label]="manageLabel">
+        <ng-template>
+          @for (action of rows.socialAccountActions(current); track action.id; let index = $index) {
+            <button
+              role="menuitem"
+              [disabled]="action.disabled"
+              (click)="rows.manageSocialFeeds(current.networkAccounts[index])"
+            >
+              {{ action.label }}
+            </button>
+          }
+        </ng-template>
+      </app-sidebar-row-menu>
     }
   }
   <button

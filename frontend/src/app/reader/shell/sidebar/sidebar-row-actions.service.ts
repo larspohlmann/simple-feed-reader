@@ -1,6 +1,7 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
+import { ActionSheetAction } from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
@@ -96,20 +97,29 @@ export class SidebarRowActions {
     this.sheet
       .open({
         title: this.transloco.translate(`settings.social.${section.network}`),
-        actions: section.networkAccounts.map((account) => ({
-          id: String(account.id),
-          label: this.socialAccountLabel(section, account),
-          disabled: account.status !== 'connected',
-        })),
+        actions: this.socialAccountActions(section),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         const account = section.networkAccounts.find(({ id }) => String(id) === choice);
-        if (account) this.picker.open(account).subscribe();
+        if (account) this.manageSocialFeeds(account);
       });
   }
 
-  socialAccountLabel(section: SocialSection, account: SocialAccountRefDto): string {
+  socialAccountActions(section: SocialSection): ActionSheetAction[] {
+    return section.networkAccounts.map((account) => ({
+      id: String(account.id),
+      label: this.socialAccountLabel(section, account),
+      disabled: account.status !== 'connected',
+    }));
+  }
+
+  manageSocialFeeds(account: SocialAccountRefDto): void {
+    this.closeMenu();
+    this.picker.open(account).subscribe();
+  }
+
+  private socialAccountLabel(section: SocialSection, account: SocialAccountRefDto): string {
     if (account.status !== 'connected') {
       return this.transloco.translate('reader.reconnectSocialAccount', { handle: account.handle });
     }

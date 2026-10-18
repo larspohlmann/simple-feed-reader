@@ -1,7 +1,7 @@
 @use 'sidebar-row' as row;
 @include row.nav-row;
 @include row.drag-handle;
-@include row.row-menu;
+@include row.row-dots;
 
 :host {
   display: contents;
