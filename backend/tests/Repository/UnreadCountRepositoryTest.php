@@ -112,7 +112,6 @@ final class UnreadCountRepositoryTest extends DbTestCase
         [, $includedFeed] = $this->subscribedFeed($user, 'https://example.com/included.xml');
         $this->unreadEntry($excludedFeed, 'lower', 'shared-hash');
         $this->unreadEntry($includedFeed, 'higher', 'shared-hash');
-        $this->entityManager->flush();
 
         self::assertSame(1, $this->repository()->allItems($user->requireId()));
     }
