@@ -87,7 +87,7 @@ export class SubscriptionsStore {
    *  a favourite, an emptied feed. A quiet reload compares it across its own
    *  round trip to know whether the user has overtaken the server's answer. */
   private localEdits = 0;
-  /** `localEdits` for the scope totals, which only a mark-scope-read edits: a read leaves them to the server. */
+  /** Kept apart from `localEdits` so a favourite or a read on the wire never drops a recount's totals. */
   private totalsEdits = 0;
 
   constructor() {
@@ -210,7 +210,10 @@ export class SubscriptionsStore {
   /** The shared body of every silent tick: refresh only when worth a request,
    *  drop an answer the user has overtaken, never touch `loading`/`resolved`.
    *  The `apply` closure is the only difference between full and counts-only. */
-  private quietReload<T>(fetch: () => Observable<T>, apply: (response: T) => void): void {
+  private quietReload<T extends { unreadTotals: UnreadTotalsDto }>(
+    fetch: () => Observable<T>,
+    apply: (response: T) => void,
+  ): void {
     // A tick refreshes counts; it never bootstraps them. Fetching before the
     // first real load would stamp the freshness clock, silence that load, and
     // leave `resolved` false — so the onboarding redirect could never decide.
@@ -240,9 +243,9 @@ export class SubscriptionsStore {
           if (this.totalsEdits === totalsEditsWhenSent) {
             this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
           }
-          // The user changed a count while this was on the wire (marked read,
+          // The user changed a feed count while this was on the wire (marked read,
           // favourited, emptied a feed). The server counted before that, so
-          // adopting the response now would put the badge back up; drop it.
+          // adopting those counts now would put the badge back up; drop them.
           if (this.localEdits !== editsWhenSent) return;
           apply(response);
         },
@@ -306,7 +309,6 @@ export class SubscriptionsStore {
     count.update((current) => Math.max(0, current + by));
   }
 
-  /** Each visible copy's feed moves; the scope totals are recounted by the server. */
   markArticleRead(entry: EntryDto): void {
     this.shiftArticleUnread(entry, -1);
   }

@@ -69,29 +69,14 @@ export class EntryStateActions implements EntryActionHandler {
   /** Ticking also reads the entry; un-ticking lets a later reopen mark it viewed again. */
   toggleRead(entry: EntryDto): void {
     const viewed = !entry.isViewed;
-    const alsoReads = viewed && !entry.isHidden;
     const viewedDelta = viewed ? 1 : -1;
     this.subscriptions.bumpViewed(viewedDelta);
-    if (alsoReads) {
-      this.subscriptions.markArticleRead(entry);
-      this.savedSearches.markEntryRead(entry.id);
-    }
     if (!viewed) this.viewedOnOpen.delete(entry.id);
+    const undoViewed = () => this.subscriptions.bumpViewed(-viewedDelta);
     this.patchInList(
       entry,
       { isViewed: viewed },
-      {
-        onSaved: () => {
-          if (alsoReads) this.subscriptions.reloadCountsQuietly();
-        },
-        onFailed: () => {
-          this.subscriptions.bumpViewed(-viewedDelta);
-          if (alsoReads) {
-            this.subscriptions.markArticleUnread(entry);
-            this.savedSearches.markEntryUnread(entry.id);
-          }
-        },
-      },
+      viewed ? this.viewOptimistically(entry, undoViewed) : { onFailed: undoViewed },
     );
   }
 
@@ -105,18 +90,7 @@ export class EntryStateActions implements EntryActionHandler {
 
   readonly openOriginal = (entry: EntryDto): void => {
     if (entry.isViewed) return;
-    this.subscriptions.bumpViewed(1);
-    const alsoReads = !entry.isHidden;
-    this.entries.setState(
-      entry.id,
-      { isViewed: true },
-      {
-        onSaved: () => {
-          if (alsoReads) this.subscriptions.reloadCountsQuietly();
-        },
-        onFailed: () => this.subscriptions.bumpViewed(-1),
-      },
-    );
+    this.markOpenedViewed(entry);
   };
 
   clearLeaving(): void {
@@ -124,34 +98,33 @@ export class EntryStateActions implements EntryActionHandler {
   }
 
   private markOpenedViewed(entry: EntryDto): void {
-    const alsoReads = !entry.isHidden;
-    if (alsoReads) {
-      this.subscriptions.markArticleRead(entry);
-      this.savedSearches.markEntryRead(entry.id);
-    }
     this.subscriptions.bumpViewed(1);
     this.entries.setState(
       entry.id,
       { isViewed: true },
-      {
-        onSaved: () => {
-          if (alsoReads) this.subscriptions.reloadCountsQuietly();
-        },
-        onFailed: () => {
-          if (alsoReads) {
-            this.subscriptions.markArticleUnread(entry);
-            this.savedSearches.markEntryUnread(entry.id);
-          }
-          this.subscriptions.bumpViewed(-1);
-        },
-      },
+      this.viewOptimistically(entry, () => this.subscriptions.bumpViewed(-1)),
     );
+  }
+
+  /** Viewing a visible entry reads it too: read it now, recount once saved, put it back if the save fails. */
+  private viewOptimistically(entry: EntryDto, undoViewed: () => void): StateSaveOutcome {
+    if (entry.isHidden) return { onFailed: undoViewed };
+    this.subscriptions.markArticleRead(entry);
+    this.savedSearches.markEntryRead(entry.id);
+    return {
+      onSaved: () => this.subscriptions.reloadCountsQuietly(),
+      onFailed: () => {
+        undoViewed();
+        this.subscriptions.markArticleUnread(entry);
+        this.savedSearches.markEntryUnread(entry.id);
+      },
+    };
   }
 
   private patchInList(entry: EntryDto, patch: EntryStatePatch, outcome: StateSaveOutcome): void {
     const revertLeave = this.leaveExcludedRow(entry, patch);
     this.entries.setState(entry.id, patch, {
-      onSaved: outcome.onSaved,
+      ...outcome,
       onFailed: () => {
         outcome.onFailed?.();
         revertLeave();

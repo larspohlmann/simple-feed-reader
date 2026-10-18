@@ -181,12 +181,13 @@ describe('EntryStateActions reading counts (#1679)', () => {
     expect(reloadCountsQuietly).toHaveBeenCalledTimes(2);
   });
 
-  it('recounts once following the original link reads the entry, but not for a hidden one', () => {
+  it('reads and recounts when following the original link reads the entry, but not for a hidden one', () => {
     actions.openOriginal(anEntry({ id: 1 }));
     outcome().onSaved?.();
     actions.openOriginal(anEntry({ id: 2, isHidden: true }));
     outcome(1).onSaved?.();
 
+    expect(markArticleRead).toHaveBeenCalledTimes(1);
     expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
   });
 

@@ -178,7 +178,7 @@ export class EntriesStore {
   }
 
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
-   *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
+   *  fails (never clobbering pages appended in the meantime), surfaces the error, and reports to `outcome`. */
   setState(entryId: number, patch: EntryStatePatch, outcome: StateSaveOutcome = {}): void {
     const target = this.entryOrCopy(entryId);
     if (!target) return;
