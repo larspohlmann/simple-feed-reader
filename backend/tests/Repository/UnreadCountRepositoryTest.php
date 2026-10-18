@@ -12,7 +12,6 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
-use App\Repository\DuplicateCollapseDql;
 use App\Repository\UnreadCountRepository;
 use App\Tests\DbTestCase;
 
@@ -212,7 +211,10 @@ final class UnreadCountRepositoryTest extends DbTestCase
 
     private function repository(): UnreadCountRepository
     {
-        return new UnreadCountRepository($this->entityManager, new DuplicateCollapseDql($this->entityManager));
+        $repository = self::getContainer()->get(UnreadCountRepository::class);
+        self::assertInstanceOf(UnreadCountRepository::class, $repository);
+
+        return $repository;
     }
 
     private function user(): User

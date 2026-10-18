@@ -51,13 +51,21 @@ final readonly class UnreadCountRepository
     /** @return array<string, int> network => unread entries; a network with none is absent */
     public function perNetwork(int $userId): array
     {
-        return $this->countsByNetwork($this->networkCounts($userId, null));
+        $everyFeed = static function (QueryBuilder $qb, string $feedAlias): void {
+        };
+
+        return $this->countsByNetwork($this->networkCounts($userId, $everyFeed));
     }
 
     /** @return array<string, int> network => unread entries of its profile feeds; a network with none is absent */
     public function perNetworkProfiles(int $userId): array
     {
-        return $this->countsByNetwork($this->networkCounts($userId, SourceFormat::NOT_PROFILES));
+        return $this->countsByNetwork($this->networkCounts(
+            $userId,
+            static function (QueryBuilder $qb, string $feedAlias): void {
+                PublicOrAuthorFeedDql::restrict($qb, $feedAlias, SourceFormat::NOT_PROFILES);
+            },
+        ));
     }
 
     public function allItems(int $userId): int
@@ -72,14 +80,9 @@ final readonly class UnreadCountRepository
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
-    /** @param list<string>|null $nonProfileFormats when set, only feeds that are a person's profile count */
-    private function networkCounts(int $userId, ?array $nonProfileFormats): QueryBuilder
+    /** @param \Closure(QueryBuilder, string): void $restrictFeeds narrows the feeds behind an alias, outer and inner */
+    private function networkCounts(int $userId, \Closure $restrictFeeds): QueryBuilder
     {
-        $restrictFeeds = static function (QueryBuilder $qb, string $feedAlias) use ($nonProfileFormats): void {
-            if ($nonProfileFormats !== null) {
-                PublicOrAuthorFeedDql::restrict($qb, $feedAlias, $nonProfileFormats);
-            }
-        };
         $qb = $this->unreadEntries($userId)
             ->innerJoin('e.feed', 'nf')
             ->andWhere('nf.network IS NOT NULL')
