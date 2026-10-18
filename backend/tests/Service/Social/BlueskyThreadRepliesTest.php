@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
+use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
@@ -55,6 +56,20 @@ final class BlueskyThreadRepliesTest extends TestCase
         ]);
 
         self::assertSame([self::WEB . 'did:plc:shown/post/reply'], self::urlsOf($this->replies($answer)));
+    }
+
+    public function testASelfReplyRendersLikeItsThreadComment(): void
+    {
+        $contents = file_get_contents(__DIR__ . '/../../Fixtures/Bluesky/self-thread-replies.json');
+        Assert::assertIsString($contents);
+        $thread = JsonNodeModel::of(json_decode($contents, true))->node('thread');
+        $reader = new BlueskyThreadReplies(new PostEmbedRenderer(), new EntrySanitizer(new TrailingBlankRemover()));
+        $node = $reader->of($thread->node('post')->string('uri') ?? '', $contents)[0];
+
+        $selfReply = $reader->selfReplyOf($thread->nodes('replies')[0]->node('post'));
+
+        self::assertEquals($node->comment(), $selfReply);
+        self::assertTrue($selfReply->byEntryAuthor);
     }
 
     public function testAReplyNamesItsAuthor(): void

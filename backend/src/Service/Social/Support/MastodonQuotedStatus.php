@@ -11,7 +11,6 @@ use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\LinkCard\Support\StorableQuotedPost;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Text\Support\PlainText;
-use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /** A status another one quotes, as its quote card shows it. */
 final class MastodonQuotedStatus
@@ -26,7 +25,7 @@ final class MastodonQuotedStatus
 
     public static function of(JsonNodeModel $status): ?QuotedPostContent
     {
-        $url = AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri'));
+        $url = MastodonStatusUrl::of($status);
         $account = $status->node('account');
         $handle = MastodonAuthor::handle($account);
         if ($url === null || $handle === null) {

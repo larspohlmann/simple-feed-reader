@@ -18,8 +18,8 @@ use App\Service\Social\Support\MastodonAuthor;
 use App\Service\Social\Support\MastodonCard;
 use App\Service\Social\Support\MastodonQuotedStatus;
 use App\Service\Social\Support\MastodonStatusAddress;
+use App\Service\Social\Support\MastodonStatusUrl;
 use App\Service\Text\Support\HtmlEscape;
-use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class MastodonContextReplies
 {
@@ -65,14 +65,18 @@ final readonly class MastodonContextReplies
     private function nodesOf(array $statuses, MastodonReplyThread $thread): array
     {
         return array_map(
-            fn (JsonNodeModel $status): ReplyNode => new ReplyNode(
-                self::publishedAtOf($status),
-                fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
-                    => $this->commentOf($status, $publishedAt, $thread),
-                $this->nodesOf($thread->answersTo($status), $thread),
-                url: self::urlOf($status),
-                byEntryAuthor: $thread->isByPostAuthor($status->node('account')),
-            ),
+            function (JsonNodeModel $status) use ($thread): ReplyNode {
+                $byPostAuthor = $thread->isByPostAuthor($status->node('account'));
+
+                return new ReplyNode(
+                    self::publishedAtOf($status),
+                    fn (?\DateTimeImmutable $publishedAt): EntryCommentModel
+                        => $this->commentOf($status, $publishedAt, $byPostAuthor),
+                    $this->nodesOf($thread->answersTo($status), $thread),
+                    url: MastodonStatusUrl::of($status),
+                    byEntryAuthor: $byPostAuthor,
+                );
+            },
             $statuses,
         );
     }
@@ -80,23 +84,23 @@ final readonly class MastodonContextReplies
     private function commentOf(
         JsonNodeModel $status,
         ?\DateTimeImmutable $publishedAt,
-        MastodonReplyThread $thread,
+        bool $byPostAuthor,
     ): EntryCommentModel {
         $account = $status->node('account');
 
         return new EntryCommentModel(
             self::authorOf($account),
-            self::urlOf($status),
+            MastodonStatusUrl::of($status),
             $publishedAt,
             $this->htmlOf($status),
-            $thread->isByPostAuthor($account),
+            $byPostAuthor,
             self::embedsOf($status),
         );
     }
 
-    private static function urlOf(JsonNodeModel $status): ?string
+    public function selfReplyOf(JsonNodeModel $status): EntryCommentModel
     {
-        return AbsoluteHttpUrl::orNull($status->string('url')) ?? AbsoluteHttpUrl::orNull($status->string('uri'));
+        return $this->commentOf($status, self::publishedAtOf($status), true);
     }
 
     private static function publishedAtOf(JsonNodeModel $status): ?\DateTimeImmutable

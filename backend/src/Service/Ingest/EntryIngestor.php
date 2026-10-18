@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ingest;
 
 use App\Entity\Entry;
+use App\Entity\EntryGuid;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
@@ -176,6 +177,6 @@ final readonly class EntryIngestor
 
     private static function guidHash(string $guid): string
     {
-        return hash('sha256', $guid);
+        return EntryGuid::hashOf($guid);
     }
 }

@@ -41,6 +41,25 @@ final class SelfThreadFolderTest extends DbTestCase
         self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
+    public function testFoldAtAppendsAtTheGivenPosition(): void
+    {
+        $entry = $this->entry();
+        $this->folder()->fold($entry, [self::reply('<p>one</p>', null)]);
+        $card = self::card('https://two.example/');
+
+        $this->folder()->foldAt($entry, 2, self::reply('<p>two</p>', $card));
+        $this->entityManager->flush();
+
+        $posts = $this->threadPosts()->byEntryIds([$entry->requireId()])[$entry->requireId()];
+        self::assertSame(
+            ['<p>one</p>', '<p>two</p>'],
+            array_map(static fn (ThreadPostModel $post): string => $post->html, $posts),
+        );
+        self::assertNull($posts[0]->linkCard);
+        self::assertSame('https://two.example/', $posts[1]->linkCard?->content->url);
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
+    }
+
     public function testAnEntryThatSharesSomethingKeepsItsKind(): void
     {
         $entry = $this->entry();

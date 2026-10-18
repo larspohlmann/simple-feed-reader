@@ -45,7 +45,7 @@ final readonly class RefreshRunners
     private function __construct(
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
-        private FeedBodyParser $bodyParser,
+        private FeedOutcomePersisters $outcomePersisters,
         private EntityManagerInterface $flushingEntityManager,
         private LockFactory $lockFactory,
         private ContentChangeMarkerInterface $changeMarker,
@@ -62,7 +62,12 @@ final readonly class RefreshRunners
         return new self(
             $entityManager,
             $clock,
-            self::bodyParser($container),
+            new FeedOutcomePersisters(
+                $entityManager,
+                $clock,
+                self::bodyParser($container),
+                FeedOutcomePersisters::timelineSelfThreads($container),
+            ),
             $entityManager,
             new LockFactory(new InMemoryStore()),
             new RecordingContentChangeMarker(),
@@ -77,7 +82,7 @@ final readonly class RefreshRunners
         return new self(
             $this->entityManager,
             $this->clock,
-            $this->bodyParser,
+            $this->outcomePersisters,
             $flushingEntityManager,
             $this->lockFactory,
             $this->changeMarker,
@@ -91,7 +96,7 @@ final readonly class RefreshRunners
         return new self(
             $this->entityManager,
             $this->clock,
-            $this->bodyParser,
+            $this->outcomePersisters,
             $this->flushingEntityManager,
             $lockFactory,
             $this->changeMarker,
@@ -105,7 +110,7 @@ final readonly class RefreshRunners
         return new self(
             $this->entityManager,
             $this->clock,
-            $this->bodyParser,
+            $this->outcomePersisters,
             $this->flushingEntityManager,
             $this->lockFactory,
             $changeMarker,
@@ -119,7 +124,7 @@ final readonly class RefreshRunners
         return new self(
             $this->entityManager,
             $this->clock,
-            $this->bodyParser,
+            $this->outcomePersisters,
             $this->flushingEntityManager,
             $this->lockFactory,
             $this->changeMarker,
@@ -133,7 +138,7 @@ final readonly class RefreshRunners
         return new self(
             $this->entityManager,
             $this->clock,
-            $this->bodyParser,
+            $this->outcomePersisters,
             $this->flushingEntityManager,
             $this->lockFactory,
             $this->changeMarker,
@@ -149,7 +154,7 @@ final readonly class RefreshRunners
         /** @var FeedRepository $feedRepository */
         $feedRepository = $this->entityManager->getRepository(Feed::class);
         $indexer = new EntryIndexer($this->indexWriter, new NullLogger());
-        $outcomePersister = (new FeedOutcomePersisters($this->entityManager, $this->clock, $this->bodyParser))
+        $outcomePersister = $this->outcomePersisters
             ->flushingThrough($this->flushingEntityManager)
             ->indexingInto($this->indexWriter)
             ->idle();

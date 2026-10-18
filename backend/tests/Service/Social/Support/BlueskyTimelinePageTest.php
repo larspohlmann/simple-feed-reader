@@ -15,6 +15,8 @@ final class BlueskyTimelinePageTest extends TestCase
     private const string ALICE = 'did:plc:alice';
     private const string BOB = 'did:plc:bob';
     private const string POST_URI = 'at://did:plc:bob/app.bsky.feed.post/3abc';
+    private const string ROOT_URI = 'at://did:plc:bob/app.bsky.feed.post/3root';
+    private const string PARENT_URI = 'at://did:plc:bob/app.bsky.feed.post/3parent';
 
     public function testAPostBecomesAnEntryWithItsWebUrlAuthorAndUtcDate(): void
     {
@@ -155,6 +157,72 @@ final class BlueskyTimelinePageTest extends TestCase
             0,
         ];
         yield 'a reply to a deleted post' => [['reply' => ['parent' => ['notFound' => true]]], 0];
+    }
+
+    public function testAnAuthorsReplyToTheirOwnThreadIsHandedOnNotListed(): void
+    {
+        $item = self::item(['reply' => self::reply(self::BOB, self::BOB, self::PARENT_URI)]);
+
+        $page = BlueskyTimelinePage::of([$item], self::ALICE);
+
+        self::assertSame([], $page->parsed->entries);
+        $selfReply = $page->selfReplies[0];
+        self::assertSame(self::ROOT_URI, $selfReply->rootGuid);
+        self::assertSame('https://bsky.app/profile/did:plc:bob/post/3parent', $selfReply->parentUrl);
+        self::assertSame(self::POST_URI, $selfReply->entry->guid);
+        self::assertSame(self::POST_URI, $selfReply->post->string('uri'));
+        self::assertSame(self::POST_URI, $page->knownShares->blueskyPostFor(self::POST_URI)?->string('uri'));
+    }
+
+    public function testTheAuthorsOwnFeedHandsItsSelfRepliesOnToo(): void
+    {
+        $item = self::item(['reply' => self::reply(self::BOB, self::BOB, self::ROOT_URI)]);
+
+        $page = BlueskyTimelinePage::ofAuthor([$item], self::BOB);
+
+        self::assertSame([], $page->parsed->entries);
+        self::assertSame('https://bsky.app/profile/did:plc:bob/post/3root', $page->selfReplies[0]->parentUrl);
+    }
+
+    /** @param array<string, mixed> $item */
+    #[DataProvider('notSelfReplies')]
+    public function testAnythingButASelfReplyStaysAnEntry(array $item): void
+    {
+        $page = BlueskyTimelinePage::of([self::item($item)], self::BOB);
+
+        self::assertCount(1, $page->parsed->entries);
+        self::assertSame([], $page->selfReplies);
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function notSelfReplies(): iterable
+    {
+        yield 'a reply to someone else' => [['reply' => self::reply(self::ALICE, self::ALICE, self::PARENT_URI)]];
+        yield 'a self-reply under someone else\'s root' => [
+            ['reply' => self::reply(self::ALICE, self::BOB, self::PARENT_URI)],
+        ];
+        yield 'a repost of a self-reply' => [[
+            'reply' => self::reply(self::BOB, self::BOB, self::PARENT_URI),
+            'reason' => [
+                '$type' => 'app.bsky.feed.defs#reasonRepost',
+                'by' => ['did' => self::ALICE],
+                'indexedAt' => '2026-10-12T09:30:00Z',
+            ],
+        ]];
+        yield 'a reply without its root' => [[
+            'reply' => ['parent' => ['uri' => self::PARENT_URI, 'author' => ['did' => self::BOB]]],
+        ]];
+    }
+
+    /** @return array<string, mixed> */
+    private static function reply(string $rootAuthor, string $parentAuthor, string $parentUri): array
+    {
+        $followed = ['following' => 'at://did:plc:bob/app.bsky.graph.follow/1'];
+
+        return [
+            'root' => ['uri' => self::ROOT_URI, 'author' => ['did' => $rootAuthor, 'viewer' => $followed]],
+            'parent' => ['uri' => $parentUri, 'author' => ['did' => $parentAuthor, 'viewer' => $followed]],
+        ];
     }
 
     /** @param array<string, mixed> $overrides */

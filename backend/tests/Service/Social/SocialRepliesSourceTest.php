@@ -11,7 +11,6 @@ use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
 use App\Entity\User;
 use App\Repository\SocialAccountRepository;
-use App\Repository\ThreadPostRepository;
 use App\Service\Comments\Exception\CommentsThrottledException;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentAuthorModel;
@@ -282,7 +281,7 @@ final class SocialRepliesSourceTest extends DbTestCase
         self::assertSame(['repliesIn ' . self::STATUS_URL . ' the thread'], $this->threads->calls);
     }
 
-    public function testAFoldedReplyIsLeftOutButItsChildrenStay(): void
+    public function testAFoldedReplyStillShowsWithItsChildren(): void
     {
         $entry = $this->post();
         $this->entityManager->persist(new ThreadPost(
@@ -299,7 +298,7 @@ final class SocialRepliesSourceTest extends DbTestCase
 
         $page = $this->source()->read($entry, 'the thread');
 
-        self::assertSame(['child', 'other'], array_map(
+        self::assertSame(['folded', 'child', 'other'], array_map(
             static fn (EntryCommentModel $comment): string => $comment->html,
             $page->comments,
         ));
@@ -362,8 +361,6 @@ final class SocialRepliesSourceTest extends DbTestCase
         self::assertInstanceOf(ReplyThreadOrder::class, $order);
         $limiter = self::getContainer()->get('limiter.social_replies');
         self::assertInstanceOf(RateLimiterFactoryInterface::class, $limiter);
-        /** @var ThreadPostRepository $threadPosts */
-        $threadPosts = $this->entityManager->getRepository(ThreadPost::class);
 
         return new SocialRepliesSource(
             new ActingAccountChooser(SocialFeeds::repository($this->entityManager), $accounts),
@@ -372,7 +369,6 @@ final class SocialRepliesSourceTest extends DbTestCase
             $order,
             new RateLimitGuard(new MockClock('2026-10-16 10:00:00')),
             $limiter,
-            $threadPosts,
         );
     }
 }

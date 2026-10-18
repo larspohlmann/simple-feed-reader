@@ -17,26 +17,104 @@ use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Social\Model\TimelineSelfReplyModel;
 use App\Service\Text\Support\HtmlEscape;
-use App\Service\Url\Support\AbsoluteHttpUrl;
 
-/** A home or list timeline answer as entries; replies are already filtered by the instance. */
+/** A home or list timeline answer as entries; a thread of the author's own replies on the page is handed on. */
 final class MastodonTimelinePage
 {
     /** @param list<JsonNodeModel> $statuses */
     public static function of(array $statuses): TimelinePageModel
     {
+        $byId = self::ownStatusesById($statuses);
         $entries = [];
+        $selfReplies = [];
         $postsByGuid = [];
         foreach ($statuses as $status) {
             $entry = self::entryOf($status);
-            if (null !== $entry) {
+            if (null === $entry) {
+                continue;
+            }
+            $postsByGuid[$entry->guid] = self::originalOf($status);
+            $selfReply = self::selfReplyOf($status, $entry, $byId);
+            if (null === $selfReply) {
                 $entries[] = $entry;
-                $postsByGuid[$entry->guid] = self::originalOf($status);
+                continue;
+            }
+            $selfReplies[] = $selfReply;
+        }
+
+        return TimelinePageModel::of($entries, self::knownSharesOf($postsByGuid), self::newestIdOf($statuses))
+            ->withSelfReplies($selfReplies);
+    }
+
+    /**
+     * @param list<JsonNodeModel> $statuses
+     *
+     * @return array<string, JsonNodeModel>
+     */
+    private static function ownStatusesById(array $statuses): array
+    {
+        $byId = [];
+        foreach ($statuses as $status) {
+            $id = $status->string('id');
+            if (null !== $id && !self::isBoost($status)) {
+                $byId[$id] = $status;
             }
         }
 
-        return TimelinePageModel::of($entries, self::knownSharesOf($postsByGuid), self::newestIdOf($statuses));
+        return $byId;
+    }
+
+    /** @param array<string, JsonNodeModel> $byId */
+    private static function selfReplyOf(
+        JsonNodeModel $status,
+        ParsedEntryModel $entry,
+        array $byId,
+    ): ?TimelineSelfReplyModel {
+        $parent = self::ownParentOf($status, $byId);
+        if (null === $parent) {
+            return null;
+        }
+        $root = self::rootOf($parent, $byId);
+        $rootUri = $root?->string('uri');
+        $parentUrl = MastodonStatusUrl::of($parent);
+        if (null === $root || null === $rootUri || null === $parentUrl || null !== $root->string('in_reply_to_id')) {
+            return null;
+        }
+
+        return new TimelineSelfReplyModel($rootUri, $parentUrl, $entry, $status);
+    }
+
+    /** @param array<string, JsonNodeModel> $byId */
+    private static function rootOf(JsonNodeModel $status, array $byId): ?JsonNodeModel
+    {
+        $visited = [];
+        while (null !== $parent = self::ownParentOf($status, $byId)) {
+            $id = $status->string('id') ?? '';
+            if (isset($visited[$id])) {
+                return null;
+            }
+            $visited[$id] = true;
+            $status = $parent;
+        }
+
+        return $status;
+    }
+
+    /**
+     * The post a status answers when its author answers themself and the post is on the page.
+     *
+     * @param array<string, JsonNodeModel> $byId
+     */
+    private static function ownParentOf(JsonNodeModel $status, array $byId): ?JsonNodeModel
+    {
+        $accountId = $status->node('account')->string('id');
+        if (null === $accountId || $accountId !== $status->string('in_reply_to_account_id')) {
+            return null;
+        }
+
+        return $byId[$status->string('in_reply_to_id') ?? ''] ?? null;
     }
 
     /** @param array<string, JsonNodeModel> $postsByGuid */
@@ -58,7 +136,7 @@ final class MastodonTimelinePage
     {
         $post = self::originalOf($status);
         $uri = $post->string('uri');
-        $url = AbsoluteHttpUrl::orNull($post->string('url')) ?? AbsoluteHttpUrl::orNull($uri);
+        $url = MastodonStatusUrl::of($post);
         if (null === $uri || null === $url) {
             return null;
         }

@@ -6,7 +6,10 @@ namespace App\Tests\Support;
 
 use App\Entity\SocialAccount;
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentsAnswerModel;
+use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Social\Pass\ReplyNode;
 use App\Service\Social\ReplyThreadSource\ReplyThreadSourceInterface;
 
@@ -123,5 +126,16 @@ final class FakeReplyThreadSource implements ReplyThreadSourceInterface
         }
 
         return $this->replies;
+    }
+
+    public function selfReplyOf(JsonNodeModel $post): EntryCommentModel
+    {
+        return new EntryCommentModel(
+            new CommentAuthorModel('Fake'),
+            $post->string('uri'),
+            null,
+            '<p>' . $post->string('uri') . '</p>',
+            true,
+        );
     }
 }

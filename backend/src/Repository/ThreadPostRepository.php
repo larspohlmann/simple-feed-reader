@@ -80,20 +80,30 @@ final class ThreadPostRepository extends ServiceEntityRepository
             ->getScalarResult() !== [];
     }
 
-    /** @return list<string> the reply URLs of the entry's thread, in position order */
-    public function urlsOf(Entry $entry): array
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return array<int, array<string, int>> by entry id: each thread post's url => its position
+     */
+    public function positionsByEntryIds(array $entryIds): array
     {
-        /** @var list<array{url: string}> $rows */
+        if ($entryIds === []) {
+            return [];
+        }
+        /** @var list<array{entryId: int|string, url: string, position: int|string}> $rows */
         $rows = $this->createQueryBuilder('post')
-            ->select('post.url')
-            ->andWhere('post.entry = :entry')
+            ->select('IDENTITY(post.entry) AS entryId', 'post.url', 'post.position')
+            ->andWhere('post.entry IN (:entryIds)')
             ->andWhere('post.url IS NOT NULL')
-            ->setParameter('entry', $entry)
-            ->orderBy('post.position', 'ASC')
+            ->setParameter('entryIds', $entryIds)
             ->getQuery()
             ->getArrayResult();
+        $positions = [];
+        foreach ($rows as $row) {
+            $positions[(int) $row['entryId']][$row['url']] = (int) $row['position'];
+        }
 
-        return array_column($rows, 'url');
+        return $positions;
     }
 
     /**

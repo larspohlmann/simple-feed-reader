@@ -12,8 +12,10 @@ use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\FeedShareEnrichment;
+use App\Service\Refresh\IncomingEntries;
 use App\Service\Search\EntryIndexer;
 use App\Service\Social\SelfThreadEnricher;
+use App\Service\Social\TimelineSelfThreads;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,6 +37,7 @@ final class FeedOutcomePersisters
         private readonly EntityManagerInterface $entityManager,
         private readonly ClockInterface $clock,
         private readonly FeedBodyParser $bodyParser,
+        private readonly TimelineSelfThreads $timelineSelfThreads,
     ) {
         $this->flushingEntityManager = $entityManager;
         $this->indexWriter = new RecordingSearchIndexWriter();
@@ -49,7 +52,15 @@ final class FeedOutcomePersisters
         $bodyParser = $container->get(FeedBodyParser::class);
         Assert::assertInstanceOf(FeedBodyParser::class, $bodyParser);
 
-        return new self($entityManager, $clock, $bodyParser);
+        return new self($entityManager, $clock, $bodyParser, self::timelineSelfThreads($container));
+    }
+
+    public static function timelineSelfThreads(ContainerInterface $container): TimelineSelfThreads
+    {
+        $timelineSelfThreads = $container->get(TimelineSelfThreads::class);
+        Assert::assertInstanceOf(TimelineSelfThreads::class, $timelineSelfThreads);
+
+        return $timelineSelfThreads;
     }
 
     /** Only the outcome flushes go through this EntityManager; the repositories keep the real one. */
@@ -106,7 +117,7 @@ final class FeedOutcomePersisters
             ),
             FeedSchedulers::build($this->clock),
             new EntryIndexer($this->indexWriter, new NullLogger()),
-            PostEnrichers::queue($this->entityManager, $this->clock),
+            new IncomingEntries(PostEnrichers::queue($this->entityManager, $this->clock), $this->timelineSelfThreads),
             new FeedShareEnrichment(
                 $postEnricher,
                 $this->selfThreadEnricher ?? SelfThreadEnrichers::idle($this->entityManager, $this->clock),

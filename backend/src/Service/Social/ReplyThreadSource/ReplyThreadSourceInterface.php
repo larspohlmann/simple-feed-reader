@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Social\ReplyThreadSource;
 
 use App\Entity\SocialAccount;
+use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Comments\Exception\CommentsUnavailableException;
 use App\Service\Comments\Model\CommentsAnswerModel;
+use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -51,4 +53,7 @@ interface ReplyThreadSourceInterface
      * @throws CommentsUnavailableException
      */
     public function repliesIn(string $address, string $answer): array;
+
+    /** The author's own reply, from a timeline's post view, as a thread fold stores it. */
+    public function selfReplyOf(JsonNodeModel $post): EntryCommentModel;
 }

@@ -24,26 +24,21 @@ final readonly class SelfThreadFolder
     public function fold(Entry $entry, array $chain): void
     {
         foreach ($chain as $index => $reply) {
-            $this->foldOne($entry, $index + 1, $reply);
-        }
-        if ($entry->getShareKind() === null && self::sharesALink($chain)) {
-            $entry->setShareKind(ShareKind::Link);
+            $this->foldAt($entry, $index + 1, $reply);
         }
     }
 
-    private function foldOne(Entry $entry, int $position, EntryCommentModel $reply): void
+    public function foldAt(Entry $entry, int $position, EntryCommentModel $reply): void
     {
         $post = $this->threadPostFactory->build($entry, $position, $reply);
         $this->entityManager->persist($post);
         $card = $reply->embeds->linkCard;
-        if ($card !== null) {
-            $this->linkCards->appendToThreadPost($post, $card);
+        if ($card === null) {
+            return;
         }
-    }
-
-    /** @param list<EntryCommentModel> $chain */
-    private static function sharesALink(array $chain): bool
-    {
-        return array_any($chain, static fn (EntryCommentModel $reply): bool => $reply->embeds->linkCard !== null);
+        $this->linkCards->appendToThreadPost($post, $card);
+        if ($entry->getShareKind() === null) {
+            $entry->setShareKind(ShareKind::Link);
+        }
     }
 }

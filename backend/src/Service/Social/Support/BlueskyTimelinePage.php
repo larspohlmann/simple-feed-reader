@@ -12,8 +12,9 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelinePageModel;
+use App\Service\Social\Model\TimelineSelfReplyModel;
 
-/** A getTimeline / getListFeed / getFeed / getAuthorFeed answer as entries; each post view rides along for its embed. */
+/** A timeline, list, feed or author-feed answer as entries and self-replies, post views kept for embeds. */
 final class BlueskyTimelinePage
 {
     private const string REPOST = 'app.bsky.feed.defs#reasonRepost';
@@ -41,17 +42,48 @@ final class BlueskyTimelinePage
     private static function pageOf(array $items, \Closure $isShown): TimelinePageModel
     {
         $entries = [];
+        $selfReplies = [];
         $posts = [];
         foreach ($items as $item) {
             $entry = $isShown($item) ? self::entryOf($item) : null;
             if (null === $entry) {
                 continue;
             }
-            $entries[] = $entry;
             $posts[$entry->guid] = $item->node('post');
+            $selfReply = self::selfReplyOf($item, $entry);
+            if (null === $selfReply) {
+                $entries[] = $entry;
+                continue;
+            }
+            $selfReplies[] = $selfReply;
         }
 
-        return TimelinePageModel::of($entries, KnownSharesModel::ofBlueskyPosts($posts), null);
+        return TimelinePageModel::of($entries, KnownSharesModel::ofBlueskyPosts($posts), null)
+            ->withSelfReplies($selfReplies);
+    }
+
+    private static function selfReplyOf(JsonNodeModel $item, ParsedEntryModel $entry): ?TimelineSelfReplyModel
+    {
+        $reply = $item->node('reply');
+        $rootUri = $reply->node('root')->string('uri');
+        $parentUrl = AtPostUri::webUrl($reply->node('parent')->string('uri') ?? '');
+        if (null === $rootUri || null === $parentUrl || !self::continuesOwnThread($item)) {
+            return null;
+        }
+
+        return new TimelineSelfReplyModel($rootUri, $parentUrl, $entry, $item->node('post'));
+    }
+
+    /** A reply to its author's own post, under a root they wrote, and not a repost of one. */
+    private static function continuesOwnThread(JsonNodeModel $item): bool
+    {
+        $author = $item->node('post')->node('author')->string('did');
+        $reply = $item->node('reply');
+
+        return null !== $author
+            && self::REPOST !== $item->node('reason')->type()
+            && $author === $reply->node('parent')->node('author')->string('did')
+            && $author === $reply->node('root')->node('author')->string('did');
     }
 
     private static function isAuthorsOwn(JsonNodeModel $item, string $authorDid): bool

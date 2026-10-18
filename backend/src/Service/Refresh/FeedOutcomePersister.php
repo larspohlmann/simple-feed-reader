@@ -6,7 +6,6 @@ namespace App\Service\Refresh;
 
 use App\Entity\Feed;
 use App\Repository\FeedRepository;
-use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Feed\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -20,6 +19,7 @@ use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\Model\IncomingFeedModel;
 use App\Service\Search\EntryIndexer;
+use App\Service\Social\Model\TimelinePageModel;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -38,7 +38,7 @@ final readonly class FeedOutcomePersister
         private EntryIngestor $ingestor,
         private FeedScheduler $scheduler,
         private EntryIndexer $indexer,
-        private ShareEnrichmentQueue $enrichmentQueue,
+        private IncomingEntries $incomingEntries,
         private FeedShareEnrichment $shareEnrichment,
         private LoggerInterface $logger,
     ) {
@@ -53,15 +53,16 @@ final readonly class FeedOutcomePersister
         return $this->guarded($feed, fn (): FeedRefreshResultModel => $this->record($feed, $outcome, $context));
     }
 
-    /** Entries a source mapped itself (a social timeline): stored through the very step a fetched body takes. */
-    public function storeParsed(
-        Feed $feed,
-        IncomingFeedModel $incoming,
-        \DateTimeImmutable $now,
-    ): FeedRefreshResultModel {
+    /** A social timeline's page: stored through the very step a fetched body takes, its self-replies folded. */
+    public function storeTimeline(Feed $feed, TimelinePageModel $page, \DateTimeImmutable $now): FeedRefreshResultModel
+    {
         $context = new FeedIngestContext($now, $feed->getLastSuccessfulFetchAt());
 
-        return $this->guarded($feed, fn (): FeedRefreshResultModel => $this->storeIngested($feed, $incoming, $context));
+        return $this->guarded($feed, fn (): FeedRefreshResultModel => $this->storeIngested(
+            $feed,
+            $this->incomingEntries->ofTimeline($feed, $page),
+            $context,
+        ));
     }
 
     public function storeFailure(Feed $feed, \Exception $failure): FeedRefreshResultModel
@@ -142,7 +143,7 @@ final readonly class FeedOutcomePersister
         // A backfilled image is not new content, so it stays out of the count.
         $this->ingestor->fillMissingImages($feed, $incoming->parsed);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
-        $this->enrichmentQueue->queueWithKnownShares($createdEntries, $incoming->knownShares);
+        $this->incomingEntries->settle($feed, $incoming, $createdEntries);
         $this->entityManager->flush();
         // Only the flush assigns ids, so indexing has to follow it.
         $this->indexer->index($createdEntries);
