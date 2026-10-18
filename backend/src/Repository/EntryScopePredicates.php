@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\EntryView;
+use App\Enum\NetworkFeedKind;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
 /**
  * The entry-list scope filters, applied to a given EntryAliases set so the
- * primary query and the duplicate-collapse semi-join share one definition.
+ * list, its duplicate-collapse semi-join and the unread counts share one definition.
  * Holds no query state; the caller passes the aliases and the query.
  */
 final readonly class EntryScopePredicates
@@ -22,27 +23,37 @@ final readonly class EntryScopePredicates
     public function applyList(QueryBuilder $qb, EntryAliases $aliases, EntryQuery $query): void
     {
         if ($query->subscriptionId !== null) {
-            $qb->andWhere(\sprintf('%s.id = :sid', $aliases->subscription))
-                ->setParameter('sid', $query->subscriptionId);
+            $qb->andWhere($aliases->subscriptionKey() . ' = :sid')->setParameter('sid', $query->subscriptionId);
         }
         if ($query->tagId !== null) {
-            // A tag matches at most one join row per subscription, so this inner
-            // join never duplicates an entry. IDENTITY() reads the tag_id FK
-            // without a second join to the tag table.
-            $qb->innerJoin(
-                \sprintf('%s.subscriptionTags', $aliases->subscription),
-                $aliases->tag,
-                'WITH',
-                \sprintf('IDENTITY(%s.tag) = :tagId', $aliases->tag),
-            )->setParameter('tagId', $query->tagId);
+            $this->joinTags($qb, $aliases);
+            $qb->andWhere($aliases->tagKey() . ' = :tagId')->setParameter('tagId', $query->tagId);
         }
         if ($query->networkScope !== null) {
-            $this->onNetwork($qb, $aliases, $query->networkScope);
+            $this->joinNetworkFeeds($qb, $aliases, $query->networkScope->feedKind);
+            NetworkScopeDql::restrictToNetwork($qb, $aliases->networkFeed, $query->networkScope->network);
         }
         if ($query->hidesExcludedFeeds()) {
-            $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
+            $this->inAllItems($qb, $aliases);
         }
         $this->applyView($qb, $aliases, $query->view);
+    }
+
+    /** One row per tag a subscription carries: filter it to one tag, or group by the tag. */
+    public function joinTags(QueryBuilder $qb, EntryAliases $aliases): void
+    {
+        $qb->innerJoin(\sprintf('%s.subscriptionTags', $aliases->subscription), $aliases->tag);
+    }
+
+    public function joinNetworkFeeds(QueryBuilder $qb, EntryAliases $aliases, ?NetworkFeedKind $feedKind): void
+    {
+        $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed);
+        NetworkScopeDql::restrictToKind($qb, $aliases->networkFeed, $feedKind);
+    }
+
+    public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void
+    {
+        $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
     }
 
     public function applySearch(QueryBuilder $qb, EntryAliases $aliases, EntrySearchQuery $query): void
@@ -59,12 +70,6 @@ final readonly class EntryScopePredicates
     public function applyIds(QueryBuilder $qb, EntryAliases $aliases, array $entryIds): void
     {
         $qb->andWhere(\sprintf('%s.id IN (:ids)', $aliases->entry))->setParameter('ids', $entryIds);
-    }
-
-    private function onNetwork(QueryBuilder $qb, EntryAliases $aliases, NetworkScope $networkScope): void
-    {
-        $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed);
-        NetworkScopeDql::restrict($qb, $aliases->networkFeed, $networkScope);
     }
 
     private function applyView(QueryBuilder $qb, EntryAliases $aliases, EntryView $view): void
@@ -92,7 +97,7 @@ final readonly class EntryScopePredicates
         $qb->andWhere(\sprintf('%s.%s = :flag', $aliases->state, $flag))->setParameter('flag', true, Types::BOOLEAN);
     }
 
-    private function unread(QueryBuilder $qb, EntryAliases $aliases): void
+    public function unread(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->andWhere(UnreadDql::predicate($aliases))->setParameter('notHidden', false, Types::BOOLEAN);
     }
