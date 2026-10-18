@@ -4002,6 +4002,29 @@ describe('ReaderShellComponent', () => {
       expect(hideAboveMarked).not.toHaveBeenCalled();
     });
 
+    it.each([
+      ['lands', (response: Subject<void>) => response.next()],
+      [
+        'fails',
+        (response: Subject<void>) => response.error(new HttpErrorResponse({ status: 500 })),
+      ],
+    ])(
+      'raises the mutating cue from the confirm click and lowers it once the request %s',
+      (_, settle) => {
+        const fixture = bootUnreadView();
+        const response = new Subject<void>();
+        jest.spyOn(TestBed.inject(ReaderApi), 'markEntriesRead').mockReturnValue(response);
+        jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+
+        fixture.componentInstance.onMarkAboveRead([1, 2]);
+        expect(fixture.componentInstance.entries.mutating()).toBe(true);
+
+        settle(response);
+        response.complete();
+        expect(fixture.componentInstance.entries.mutating()).toBe(false);
+      },
+    );
+
     it('restyles in place without a re-fetch, on an all-items view', () => {
       const fixture = boot();
       const api = TestBed.inject(ReaderApi);

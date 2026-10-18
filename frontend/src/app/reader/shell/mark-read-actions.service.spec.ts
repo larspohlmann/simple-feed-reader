@@ -72,6 +72,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
               mutation: { subscribe: (next: () => void) => void },
               reload: () => void,
             ) => mutation.subscribe(reload),
+            withMutatingCue: <T>(mutation: T) => mutation,
           },
         },
         { provide: SavedSearchesStore, useValue: { load: jest.fn() } },

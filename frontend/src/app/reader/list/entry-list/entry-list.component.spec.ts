@@ -638,6 +638,15 @@ describe('EntryListComponent', () => {
     expect(rows.getAttribute('aria-busy')).toBe('true');
   });
 
+  it('dims the rows and makes them inert while a mutation is on the wire', () => {
+    const element = mount({ mutating: true, entries: [entry(1), entry(2)], layout: 'list' })
+      .nativeElement as HTMLElement;
+    const rows = element.querySelector('.rows')!;
+    expect(rows.classList).toContain('reloading');
+    expect(rows.hasAttribute('inert')).toBe(true);
+    expect(rows.getAttribute('aria-busy')).toBe('true');
+  });
+
   it('drops the inert guard once the rows are current', () => {
     const element = mount({ loading: false, entries: [entry(1)], layout: 'list' })
       .nativeElement as HTMLElement;
@@ -2437,6 +2446,18 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(0);
+    });
+
+    it('keeps hiddenAboveIds once the mark-read mutation settles — it is no reload', () => {
+      const fixture = mount({ entries: [entry(1), entry(2)] });
+      fixture.componentRef.setInput('mutating', true);
+      fixture.detectChanges();
+      fixture.componentInstance.hideAboveMarked([1]);
+
+      fixture.componentRef.setInput('mutating', false);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.content.hiddenAboveIds()).toEqual(new Set([1]));
     });
 
     it('resets hiddenAboveIds on a genuine reload', () => {

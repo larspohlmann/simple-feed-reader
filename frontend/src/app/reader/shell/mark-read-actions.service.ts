@@ -50,7 +50,7 @@ export class MarkReadActions {
     const hideLocally = this.routeState.selection().unread
       ? hideInUnreadList
       : () => this.entries.markHiddenLocally(ids);
-    this.api.markEntriesRead(ids).subscribe({
+    this.entries.withMutatingCue(this.api.markEntriesRead(ids)).subscribe({
       next: () => {
         hideLocally();
         this.subscriptions.reloadCountsQuietly();
