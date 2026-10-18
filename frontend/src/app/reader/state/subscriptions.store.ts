@@ -75,9 +75,7 @@ export class SubscriptionsStore {
   private lastLoadedAt = 0;
   private inFlight: Subscription | null = null;
 
-  /** Counts the optimistic patches this store has applied on its own — a read
-   *  or a favourite. A quiet reload compares it across its own
-   *  round trip to know whether the user has overtaken the server's answer. */
+  /** Optimistic patches this store applied; a quiet reload compares it across its round trip. */
   private localEdits = 0;
 
   constructor() {
@@ -185,6 +183,7 @@ export class SubscriptionsStore {
     this.quietFetch(
       () => this.api.subscriptions(),
       (response) => this.applyCounts(response),
+      () => this.reloadQuietly(),
     );
   }
 
@@ -194,6 +193,7 @@ export class SubscriptionsStore {
     this.quietFetch(
       () => this.api.subscriptionCounts(),
       (response) => this.applyCountsOnly(response),
+      () => this.reloadCountsQuietly(),
     );
   }
 
@@ -212,16 +212,19 @@ export class SubscriptionsStore {
     if (this.inFlight) return;
     if (!countsAreStale(this.lastLoadedAt)) return;
 
-    this.quietFetch(fetch, apply);
+    this.quietFetch(fetch, apply, () => undefined);
   }
 
   /** Fire a reload that leaves `loading`/`resolved` untouched and drops its
    *  answer if the user has overtaken it, so a silent refresh never flickers
-   *  the surface or fights an optimistic edit. The gates that decide WHEN to
-   *  fire belong to each caller. */
+   *  the surface or fights an optimistic edit. A deliberate reload asks again
+   *  through `whenOvertaken`, since only its answer carries the change; a poll
+   *  tick waits for the next one. The gates that decide WHEN to fire belong to
+   *  each caller. */
   private quietFetch<T extends { unreadTotals: UnreadTotalsDto }>(
     fetch: () => Observable<T>,
     apply: (response: T) => void,
+    whenOvertaken: () => void,
   ): void {
     const request = this.beginRequest();
     const editsWhenSent = this.localEdits;
@@ -231,10 +234,12 @@ export class SubscriptionsStore {
           if (!this.settle(request)) return;
           // Only the server edits the totals, so even an overtaken answer carries the latest ones.
           this.storedUnreadTotals.set(unreadTotalsFrom(response.unreadTotals));
-          // The user changed a feed count while this was on the wire (read an
-          // article, favourited one). The server counted before that, so
-          // adopting those counts now would put the badge back up; drop them.
-          if (this.localEdits !== editsWhenSent) return;
+          // The user changed a feed count while this was on the wire. The server
+          // counted before that, so adopting those counts now would put the badge back up.
+          if (this.localEdits !== editsWhenSent) {
+            whenOvertaken();
+            return;
+          }
           apply(response);
         },
         error: () => void this.settle(request),

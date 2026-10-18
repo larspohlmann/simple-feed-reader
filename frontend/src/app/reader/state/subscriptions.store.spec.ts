@@ -848,7 +848,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     expect(store.totalUnread()).toBe(0);
   });
 
-  it('adopts the scope totals even when a feed count was edited while it was on the wire', () => {
+  it('adopts the totals of an overtaken recount and asks again for the feed counts', () => {
     store.load();
     ctrl.expectOne(list).flush(counts([sub(1, 2)], { unreadTotals: { allItems: 2 } }));
 
@@ -856,10 +856,18 @@ describe('SubscriptionsStore counts-only reload', () => {
     store.bumpFavorites(1);
     ctrl
       .expectOne(countsUrl)
-      .flush(countsBody([{ id: 1, unreadCount: 1 }], { unreadTotals: { allItems: 1 } }));
+      .flush(countsBody([{ id: 1, unreadCount: 0 }], { unreadTotals: { allItems: 0 } }));
 
-    expect(store.totalUnread()).toBe(1);
+    expect(store.totalUnread()).toBe(0);
     expect(store.subscriptions()[0].unreadCount).toBe(2);
+
+    ctrl
+      .expectOne(countsUrl)
+      .flush(
+        countsBody([{ id: 1, unreadCount: 0 }], { favorites: 1, unreadTotals: { allItems: 0 } }),
+      );
+
+    expect(store.subscriptions()[0].unreadCount).toBe(0);
     expect(store.favoritesCount()).toBe(1);
   });
 
