@@ -1,4 +1,4 @@
-import { ImportRow, RowsByTab, tally } from './social-import-rows';
+import { ImportRow, RowsByTab, removals, tally } from './social-import-rows';
 
 describe('tally', () => {
   const row = (key: string, state: ImportRow['state'], haystack: string): ImportRow => ({
@@ -13,7 +13,6 @@ describe('tally', () => {
     stateLabel: state,
     checkboxLabel: key,
     removable: false,
-    locked: state === 'subscribed',
   });
   const rows: RowsByTab = {
     accounts: [row('a', 'new', 'ada'), row('b', 'subscribed', 'bea'), row('c', 'new', 'cara')],
@@ -38,5 +37,60 @@ describe('tally', () => {
 
     expect(result.tabCounts).toEqual({ accounts: 1, lists: 0, customFeeds: 0 });
     expect(result.matched.map((match) => match.key)).toEqual(['c']);
+  });
+});
+
+describe('removals', () => {
+  it('lists the unticked subscribed follows and collections, skipping new rows', () => {
+    const candidates = {
+      follows: [
+        {
+          identity: 'a',
+          handle: '@a',
+          displayName: 'Ann',
+          avatarUrl: null,
+          feedUrl: 'u:a',
+          state: 'subscribed' as const,
+          subscriptionId: 1,
+        },
+        {
+          identity: 'b',
+          handle: 'did:plc:b',
+          displayName: null,
+          avatarUrl: null,
+          feedUrl: 'u:b',
+          state: 'no_longer_followed' as const,
+          subscriptionId: 2,
+        },
+        {
+          identity: 'c',
+          handle: '@c',
+          displayName: null,
+          avatarUrl: null,
+          feedUrl: 'u:c',
+          state: 'new' as const,
+          subscriptionId: null,
+        },
+      ],
+      lists: [
+        {
+          kind: 'home' as const,
+          id: null,
+          name: 'Home',
+          state: 'subscribed' as const,
+          subscriptionId: 3,
+        },
+      ],
+      customFeeds: [],
+      truncated: false,
+    };
+
+    expect(
+      removals(candidates, new Set(['follow:u:a', 'follow:u:b', 'follow:u:c', 'home:'])),
+    ).toEqual([
+      { name: 'Ann', subscriptionId: 1 },
+      { name: 'did:plc:b', subscriptionId: 2 },
+      { name: 'Home', subscriptionId: 3 },
+    ]);
   });
 });

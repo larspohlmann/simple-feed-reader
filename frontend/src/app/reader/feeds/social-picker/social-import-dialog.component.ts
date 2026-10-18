@@ -31,16 +31,16 @@ import {
   FILTER_KEYS,
   ImportRow,
   ImportTab,
+  Removal,
   StateFilter,
   TAB_TEST_IDS,
   buildRows,
   collectionKey,
   followKey,
-  isRemovable,
+  removals,
   tally,
 } from './social-import-rows';
 import {
-  CollectionCandidate,
   ImportCandidateState,
   SocialImportCollection,
   SocialImportFeed,
@@ -139,7 +139,9 @@ export class SocialImportDialogComponent {
     Math.min(ROWS_PER_PAGE, this.visibleRows().length - this.rowLimit()),
   );
   protected readonly visibleNewCount = computed(() => this.visibleCount('new'));
-  protected readonly hasLeftovers = computed(() => this.visibleCount('no_longer_followed') > 0);
+  protected readonly hasSubscribedRows = computed(
+    () => this.visibleCount('subscribed') + this.visibleCount('no_longer_followed') > 0,
+  );
 
   constructor() {
     this.load();
@@ -150,7 +152,6 @@ export class SocialImportDialogComponent {
   }
 
   protected toggle(row: ImportRow): void {
-    if (row.locked) return;
     this.chosen.update((current) => toggled(current, row.key));
   }
 
@@ -166,7 +167,7 @@ export class SocialImportDialogComponent {
   }
 
   protected apply(): void {
-    const unticked = this.untickedCollections();
+    const unticked = removals(this.importer.candidates(), this.chosen());
     if (unticked.length === 0) {
       this.send();
       return;
@@ -237,25 +238,18 @@ export class SocialImportDialogComponent {
   }
 
   private chosenRemovals(): number[] {
-    const leftovers = (this.importer.candidates()?.follows ?? [])
-      .filter((follow) => follow.state === 'no_longer_followed')
-      .filter((follow) => this.chosen().has(followKey(follow)))
-      .map((follow) => follow.subscriptionId);
-    const unticked = this.untickedCollections().map((collection) => collection.subscriptionId);
-    return [...leftovers, ...unticked].flatMap((id) => (id === null ? [] : [id]));
+    return removals(this.importer.candidates(), this.chosen()).map(
+      (removal) => removal.subscriptionId,
+    );
   }
 
-  private untickedCollections(): CollectionCandidate[] {
-    const candidates = this.importer.candidates();
-    return [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
-      .filter(isRemovable)
-      .filter((collection) => this.chosen().has(collectionKey(collection)));
-  }
-
-  private removalMessage(unticked: readonly CollectionCandidate[]): string {
-    const removal = this.i18n.translate('settings.social.importRemoveMessage', {
-      names: unticked.map((collection) => collection.name).join(', '),
-    });
+  private removalMessage(unticked: readonly Removal[]): string {
+    const removal =
+      unticked.length === 1
+        ? this.i18n.translate('settings.social.importRemoveMessage', { names: unticked[0].name })
+        : this.i18n.translate('settings.social.importRemoveCountMessage', {
+            count: unticked.length,
+          });
     const moves = this.i18n.translate('manage.savedPostsMove', {
       saved: savedFeedLabel(this.i18n, this.data.network),
     });

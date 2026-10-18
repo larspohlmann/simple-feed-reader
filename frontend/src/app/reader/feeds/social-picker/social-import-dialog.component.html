@@ -61,7 +61,7 @@
 
     <div class="list-head">
       <p class="note">
-        @if (hasLeftovers()) {
+        @if (hasSubscribedRows()) {
           {{ 'settings.social.importUnsubscribeHint' | transloco }}
         }
       </p>
@@ -88,8 +88,7 @@
           >
             <input
               type="checkbox"
-              [checked]="row.removable ? !picked : picked || row.locked"
-              [disabled]="row.locked"
+              [checked]="row.removable ? !picked : picked"
               [attr.aria-label]="row.checkboxLabel"
               (change)="toggle(row)"
             />

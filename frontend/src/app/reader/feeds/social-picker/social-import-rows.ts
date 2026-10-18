@@ -1,7 +1,6 @@
 import {
   CollectionCandidate,
   CollectionKind,
-  CollectionState,
   FollowCandidate,
   ImportCandidateState,
   ImportCandidates,
@@ -23,7 +22,6 @@ export interface ImportRow {
   readonly stateLabel: string;
   readonly checkboxLabel: string;
   readonly removable: boolean;
-  readonly locked: boolean;
 }
 
 export type RowsByTab = Readonly<Record<ImportTab, readonly ImportRow[]>>;
@@ -50,13 +48,8 @@ export const FILTER_KEYS: Readonly<Record<StateFilter, string>> = {
 
 const CHECKBOX_KEYS: Readonly<Record<ImportCandidateState, string>> = {
   new: 'settings.social.importSubscribe',
-  subscribed: 'settings.social.importAlreadySubscribed',
+  subscribed: 'settings.social.importUnsubscribe',
   no_longer_followed: 'settings.social.importUnsubscribe',
-};
-
-const COLLECTION_CHECKBOX_KEYS: Readonly<Record<CollectionState, string>> = {
-  new: 'settings.social.importAddCollection',
-  subscribed: 'settings.social.importCollectionAdded',
 };
 
 const COLLECTION_ICONS: Readonly<Record<CollectionKind, string>> = {
@@ -76,9 +69,33 @@ export function collectionKey(collection: CollectionCandidate): string {
   return `${collection.kind}:${collection.id ?? ''}`;
 }
 
-/** A subscribed list or custom feed can be unticked to remove it; Home stays. */
+/** Any added list, custom feed or Home can be unticked to remove it. */
 export function isRemovable(collection: CollectionCandidate): boolean {
-  return collection.state === 'subscribed' && collection.kind !== 'home';
+  return collection.state === 'subscribed';
+}
+
+export interface Removal {
+  readonly name: string;
+  readonly subscriptionId: number;
+}
+
+/** The subscribed rows the user unticked, follows first. */
+export function removals(
+  candidates: ImportCandidates | null,
+  chosen: ReadonlySet<string>,
+): Removal[] {
+  const follows = (candidates?.follows ?? [])
+    .filter((follow) => follow.state !== 'new' && chosen.has(followKey(follow)))
+    .map((follow) => ({
+      name: follow.displayName ?? follow.handle,
+      subscriptionId: follow.subscriptionId,
+    }));
+  const collections = [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
+    .filter((collection) => isRemovable(collection) && chosen.has(collectionKey(collection)))
+    .map((collection) => ({ name: collection.name, subscriptionId: collection.subscriptionId }));
+  return [...follows, ...collections].flatMap(({ name, subscriptionId }) =>
+    subscriptionId === null ? [] : [{ name, subscriptionId }],
+  );
 }
 
 export function followKey(follow: FollowCandidate): string {
@@ -121,8 +138,7 @@ function toFollowRow(follow: FollowCandidate, translate: Translate): ImportRow {
     haystack: `${follow.handle}\n${follow.displayName ?? ''}`.toLowerCase(),
     stateLabel: translate(FILTER_KEYS[follow.state]),
     checkboxLabel: translate(CHECKBOX_KEYS[follow.state], { handle: follow.handle }),
-    removable: false,
-    locked: follow.state === 'subscribed',
+    removable: follow.state !== 'new',
   };
 }
 
@@ -140,14 +156,13 @@ function toCollectionRow(collection: CollectionCandidate, translate: Translate):
     icon: COLLECTION_ICONS[collection.kind],
     haystack: name.toLowerCase(),
     stateLabel: translate(FILTER_KEYS[collection.state]),
-    checkboxLabel: translate(collectionCheckboxKey(collection, removable), { name }),
+    checkboxLabel: translate(collectionCheckboxKey(removable), { name }),
     removable,
-    locked: collection.state === 'subscribed' && !removable,
   };
 }
 
-function collectionCheckboxKey(collection: CollectionCandidate, removable: boolean): string {
+function collectionCheckboxKey(removable: boolean): string {
   return removable
     ? 'settings.social.importRemoveCollection'
-    : COLLECTION_CHECKBOX_KEYS[collection.state];
+    : 'settings.social.importAddCollection';
 }
