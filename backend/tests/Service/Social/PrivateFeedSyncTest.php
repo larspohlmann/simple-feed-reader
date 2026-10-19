@@ -203,11 +203,12 @@ final class PrivateFeedSyncTest extends DbTestCase
     {
         $this->useAMastodonAccount();
         $this->privateFeeds()->create($this->account, PrivateFeedModel::followedTag('caturday', '#caturday'));
-        $this->stampAnHourAgo();
 
         $outcome = $this->syncAgainst(self::network([]));
 
         self::assertEquals(new PrivateFeedSyncOutcomeModel(removed: 1), $outcome);
+        self::assertSame([], $this->subscribedUrls());
+        self::assertSame([], $this->knownKeys());
         self::assertSame([['tag', 'caturday', '#caturday', PrivateFeedSyncReason::Unfollowed]], $this->changes());
     }
 
@@ -215,7 +216,6 @@ final class PrivateFeedSyncTest extends DbTestCase
     {
         $this->useAMastodonAccount();
         $this->privateFeeds()->create($this->account, PrivateFeedModel::followedTag('caturday', '#caturday'));
-        $this->stampAnHourAgo();
 
         $outcome = $this->syncAgainst(new NetworkCollectionsModel(
             [],
@@ -224,6 +224,12 @@ final class PrivateFeedSyncTest extends DbTestCase
         ));
 
         self::assertEquals(new PrivateFeedSyncOutcomeModel(), $outcome);
+        self::assertSame(
+            [sprintf('social:mastodon:%d:tag:caturday', $this->account->requireId())],
+            $this->subscribedUrls(),
+        );
+        self::assertSame(['tag:caturday'], $this->knownKeys());
+        self::assertSame([], $this->changes());
     }
 
     public function testAnUnreachableNetworkSkipsTheAccountAndChangesNothing(): void

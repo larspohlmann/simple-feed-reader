@@ -14,7 +14,7 @@ use App\Service\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Model\PrivateFeedSyncOutcomeModel;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 
-/** Makes one account's lists and custom feeds follow the network (#1666); any doubt skips the account. */
+/** Makes one account's lists, custom feeds and followed tags follow the network (#1666); any doubt skips the account. */
 final readonly class PrivateFeedSync
 {
     /** An allow-list, never "all but Home": a kind added to SocialFeedKind stays untouched until listed here. */
