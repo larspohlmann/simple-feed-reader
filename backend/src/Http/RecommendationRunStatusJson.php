@@ -34,9 +34,6 @@ final class RecommendationRunStatusJson
             'etaSeconds' => $status->forecast?->etaSeconds,
             'finishedShare' => $status->forecast?->finishedShare,
             'forYou' => [
-                // The count of unread surviving picks; the field name
-                // stays `itemCount` for wire compatibility.
-                'itemCount' => $summary->itemCount,
                 'totalCount' => $summary->totalCount,
                 'generatedAt' => $summary->generatedAt?->format(\DateTimeInterface::ATOM),
                 'newestRunId' => $summary->newestRunId,

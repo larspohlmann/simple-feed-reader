@@ -112,7 +112,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
 
     public function testForYouCarriesTheNewestCompletedRunId(): void
     {
-        $summary = new RecommendationForYouSummaryModel(4, 9, new \DateTimeImmutable('2026-08-09T10:00:00Z'), 42);
+        $summary = new RecommendationForYouSummaryModel(9, new \DateTimeImmutable('2026-08-09T10:00:00Z'), 42);
 
         $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
             RecommendationRunReportModel::none(),
@@ -150,7 +150,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
                 'elapsedSeconds' => null,
                 'etaSeconds' => null,
                 'finishedShare' => null,
-                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+                'forYou' => ['totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $json,
         );
@@ -191,7 +191,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
                 'elapsedSeconds' => 90,
                 'etaSeconds' => 42,
                 'finishedShare' => 0.25,
-                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+                'forYou' => ['totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $json,
         );
@@ -217,6 +217,6 @@ final class RecommendationRunStatusJsonTest extends TestCase
 
     private function emptySummary(): RecommendationForYouSummaryModel
     {
-        return new RecommendationForYouSummaryModel(0, 0, null, null);
+        return new RecommendationForYouSummaryModel(0, null, null);
     }
 }

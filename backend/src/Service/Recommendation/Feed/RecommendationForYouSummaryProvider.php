@@ -23,7 +23,6 @@ final readonly class RecommendationForYouSummaryProvider
         $newestCompletedRun = $this->runs->findLatestForUser($user, RunStatus::Completed);
 
         return new RecommendationForYouSummaryModel(
-            $this->items->countForYou($user->requireId()),
             $this->items->countForYouIncludingRead($user->requireId()),
             $newestCompletedRun?->getCompletedAt(),
             $newestCompletedRun?->getId(),
