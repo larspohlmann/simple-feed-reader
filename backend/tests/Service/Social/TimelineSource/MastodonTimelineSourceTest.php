@@ -82,6 +82,21 @@ final class MastodonTimelineSourceTest extends TestCase
         self::assertSame('https://mastodon.example/api/v1/trends/statuses?limit=40', $request->url);
     }
 
+    /** @return iterable<string, array{SocialFeedKind}> */
+    public static function kindsMastodonHasNoTimelineFor(): iterable
+    {
+        yield 'author' => [SocialFeedKind::Author];
+        yield 'custom feed' => [SocialFeedKind::CustomFeed];
+    }
+
+    #[DataProvider('kindsMastodonHasNoTimelineFor')]
+    public function testAKindMastodonHasNoTimelineForIsNeverTurnedIntoARequest(SocialFeedKind $kind): void
+    {
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->source(new RoutedHttpClient([]))->request(self::socialFeed($kind, 'at://did:plc:alice'));
+    }
+
     public function testANonLatinTagIsPercentEncodedInThePath(): void
     {
         $request = $this->source(new RoutedHttpClient([]))->request(self::socialFeed(SocialFeedKind::Tag, '日本語'));

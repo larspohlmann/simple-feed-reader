@@ -39,7 +39,7 @@ final class PrivateFeedSite
             SocialFeedKind::UserList => $instance . '/lists/' . rawurlencode($privateFeed->remoteId),
             SocialFeedKind::Tag => $instance . '/tags/' . rawurlencode($privateFeed->remoteId),
             SocialFeedKind::Trending => $instance . '/explore',
-            default => $instance,
+            SocialFeedKind::Home, SocialFeedKind::Author, SocialFeedKind::CustomFeed => $instance,
         };
     }
 
