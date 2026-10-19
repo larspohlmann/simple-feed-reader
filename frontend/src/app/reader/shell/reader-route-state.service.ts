@@ -8,6 +8,7 @@ import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
 import { sameSelection } from '../query/query';
 import { linkCardFromParam, sameLinkCard } from '../query/link-param';
+import { linkCardAt } from '../link-card/link-card-at';
 
 @Injectable()
 export class ReaderRouteState {
@@ -34,6 +35,14 @@ export class ReaderRouteState {
   readonly entryId = computed(() => this.parsed().entryId);
   readonly linkCard = computed(() => linkCardFromParam(this.queryParameters().get('link')), {
     equal: sameLinkCard,
+  });
+
+  /** The open link's card as the store lists it; null on a deep link to a card not in view. */
+  readonly openLinkCard = computed(() => {
+    const ref = this.linkCard();
+    if (ref === null) return null;
+    const entry = this.entries.entry(ref.entryId);
+    return entry === null ? null : linkCardAt(entry, ref.position);
   });
 
   readonly openEntry = computed(() => {
