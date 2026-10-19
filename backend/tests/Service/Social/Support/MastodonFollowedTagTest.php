@@ -26,6 +26,7 @@ final class MastodonFollowedTagTest extends TestCase
         yield 'no name' => [['following' => true]];
         yield 'a name that is no hashtag' => [['name' => 'cat/../day']];
         yield 'a numeric name' => [['name' => 42]];
+        yield 'a name over 100 characters' => [['name' => str_repeat('a', 101)]];
     }
 
     /** @param array<string, mixed> $tag */

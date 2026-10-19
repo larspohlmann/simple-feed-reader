@@ -291,6 +291,10 @@ final class MastodonCandidateSourceTest extends TestCase
         yield 'follows that are not a list' => [self::FOLLOWING, new MockResponse('{"error":"gone"}')];
         yield 'follows that are not JSON' => [self::FOLLOWING, new MockResponse('not json')];
         yield 'lists that are not a list' => [self::LISTS, new MockResponse('{"error":"gone"}')];
+        yield 'a server error on the tags' => [
+            self::FOLLOWED_TAGS,
+            new MockResponse('', ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR]),
+        ];
         yield 'tags that are not a list' => [self::FOLLOWED_TAGS, new MockResponse('{"error":"gone"}')];
     }
 
@@ -353,5 +357,33 @@ final class MastodonCandidateSourceTest extends TestCase
 
         self::assertTrue($collections->truncated);
         self::assertFalse($collections->isComplete());
+    }
+
+    public function testAnInstanceWithoutFollowedTagsStillOffersItsFollowsAndLists(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::FOLLOWING => self::json([['id' => '1', 'acct' => 'bob']]),
+            self::LISTS => self::json([['id' => '7', 'title' => 'Friends']]),
+            self::FOLLOWED_TAGS => new MockResponse('', ['http_code' => Response::HTTP_NOT_FOUND]),
+        ]));
+
+        $candidates = $this->source($http)->candidates(SocialAccounts::mastodon());
+
+        self::assertSame([], $candidates->tags);
+        self::assertCount(1, $candidates->follows);
+        self::assertEquals([new SocialCollectionModel('7', 'Friends')], $candidates->lists);
+    }
+
+    public function testCollectionsOfAnInstanceWithoutFollowedTagsAreComplete(): void
+    {
+        $http = new RoutedHttpClient([
+            self::LISTS => self::json([]),
+            self::FOLLOWED_TAGS => new MockResponse('', ['http_code' => Response::HTTP_NOT_FOUND]),
+        ]);
+
+        $collections = $this->source($http)->collections(SocialAccounts::mastodon());
+
+        self::assertSame([], $collections->tags);
+        self::assertTrue($collections->isComplete());
     }
 }
