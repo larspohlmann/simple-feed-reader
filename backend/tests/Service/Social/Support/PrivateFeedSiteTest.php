@@ -64,6 +64,18 @@ final class PrivateFeedSiteTest extends TestCase
         );
     }
 
+    public function testAMastodonAuthorOrCustomFeedLinksToTheInstance(): void
+    {
+        self::assertSame(
+            'https://mastodon.example',
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::author('109', 'Alice')),
+        );
+        self::assertSame(
+            'https://mastodon.example',
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::customFeed('feed', 'Art')),
+        );
+    }
+
     public function testAnInstanceUrlWithATrailingSlashLinksWithoutADoubleSlash(): void
     {
         self::assertSame(
