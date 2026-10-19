@@ -87,21 +87,14 @@ final readonly class ImportCandidates
      */
     private static function singletonsOf(SocialAccount $account, array $subscribed): array
     {
-        $offered = array_filter(
-            [PrivateFeedModel::home(), PrivateFeedModel::trending()],
-            static fn (PrivateFeedModel $privateFeed): bool => PrivateFeedRules::allows(
-                $account->getNetwork(),
-                $privateFeed,
-            ),
-        );
+        $singletons = [];
+        foreach ([PrivateFeedModel::home(), PrivateFeedModel::trending()] as $privateFeed) {
+            if (PrivateFeedRules::allows($account->getNetwork(), $privateFeed)) {
+                $singletons[] = CollectionCandidateModel::of($privateFeed, $subscribed);
+            }
+        }
 
-        return array_values(array_map(
-            static fn (PrivateFeedModel $privateFeed): CollectionCandidateModel => CollectionCandidateModel::of(
-                $privateFeed,
-                $subscribed,
-            ),
-            $offered,
-        ));
+        return $singletons;
     }
 
     /** @return array<string, int> subscription id by PrivateFeedModel::key() */

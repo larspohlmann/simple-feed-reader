@@ -76,16 +76,12 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance gave no account for this token.');
     }
 
-    private function followingUrl(MastodonSessionModel $session): string
-    {
-        return $session->url(
-            '/api/v1/accounts/' . rawurlencode($this->ownAccountId($session)) . '/following?limit=' . self::PAGE_SIZE,
-        );
-    }
-
     private function follows(MastodonSessionModel $session): CollectedItemsModel
     {
-        return $this->collectFrom($session, $this->mastodon->send($session->get($this->followingUrl($session))));
+        $following = '/api/v1/accounts/' . rawurlencode($this->ownAccountId($session))
+            . '/following?limit=' . self::PAGE_SIZE;
+
+        return $this->collectFrom($session, $this->mastodon->send($session->get($session->url($following))));
     }
 
     private function followedTags(MastodonSessionModel $session): CollectedItemsModel
@@ -101,19 +97,20 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
     private function collectFrom(MastodonSessionModel $session, ApiResponseModel $firstPage): CollectedItemsModel
     {
         $items = [];
-        $answer = $firstPage;
-        while (true) {
-            $fresh = self::nodesOf($answer);
+        $page = $firstPage;
+        do {
+            $fresh = self::nodesOf($page);
             array_push($items, ...$fresh);
-            $url = LinkHeader::next($answer->header('link'));
-            if (null === $url || [] === $fresh || \count($items) > CollectedItemsModel::MAX_ITEMS) {
-                return CollectedItemsModel::capped($items);
-            }
-            if (!LinkHeader::isOn($session->instanceUrl, $url)) {
+            $next = LinkHeader::next($page->header('link'));
+            if (null !== $next && !LinkHeader::isOn($session->instanceUrl, $next)) {
                 return CollectedItemsModel::cutShort($items);
             }
-            $answer = $this->mastodon->send($session->get($url));
-        }
+            $page = null === $next || [] === $fresh || \count($items) > CollectedItemsModel::MAX_ITEMS
+                ? null
+                : $this->mastodon->send($session->get($next));
+        } while (null !== $page);
+
+        return CollectedItemsModel::capped($items);
     }
 
     /** @return list<SocialCollectionModel> */
