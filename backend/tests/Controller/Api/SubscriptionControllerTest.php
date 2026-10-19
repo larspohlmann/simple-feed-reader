@@ -144,6 +144,7 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertSame(0, $list['keptCount']);
         self::assertIsArray($list['unreadTotals']);
         self::assertSame(2, $list['unreadTotals']['allItems']);
+        self::assertSame(0, $list['unreadTotals']['forYou']);
     }
 
     public function testCountsReturnsUnreadPerFeedAndSurfaceTotals(): void
@@ -189,6 +190,7 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertSame(0, $counts['viewedCount']);
         self::assertIsArray($counts['unreadTotals']);
         self::assertSame(2, $counts['unreadTotals']['allItems']);
+        self::assertSame(0, $counts['unreadTotals']['forYou']);
     }
 
     public function testCountsRejectsAnonymous(): void

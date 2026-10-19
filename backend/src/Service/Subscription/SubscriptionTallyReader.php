@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Subscription;
 
 use App\Repository\EntryStateRepository;
+use App\Repository\RecommendationItemRepository;
 use App\Repository\SubscriptionEntryCountRepository;
 use App\Repository\UnreadCountRepository;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
@@ -16,6 +17,7 @@ final readonly class SubscriptionTallyReader
         private EntryStateRepository $entryStates,
         private SubscriptionEntryCountRepository $entryCounts,
         private UnreadCountRepository $unreadCounts,
+        private RecommendationItemRepository $recommendationItems,
     ) {
     }
 
@@ -30,6 +32,7 @@ final readonly class SubscriptionTallyReader
                 $this->unreadCounts->perTag($userId),
                 $this->unreadCounts->perNetwork($userId),
                 $this->unreadCounts->perNetworkProfiles($userId),
+                $this->recommendationItems->countForYou($userId),
             ),
         );
     }

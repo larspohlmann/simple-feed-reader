@@ -11,6 +11,7 @@ final class UnreadTotalsJson
     /**
      * @return array{
      *   allItems: int,
+     *   forYou: int,
      *   tags: list<array{id: int, unreadCount: int}>,
      *   networks: list<array{network: string, unreadCount: int, profilesUnreadCount: int}>
      * }
@@ -30,6 +31,6 @@ final class UnreadTotalsJson
             ];
         }
 
-        return ['allItems' => $totals->allItems, 'tags' => $tags, 'networks' => $networks];
+        return ['allItems' => $totals->allItems, 'forYou' => $totals->forYou, 'tags' => $tags, 'networks' => $networks];
     }
 }

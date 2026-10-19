@@ -17,10 +17,12 @@ final class UnreadTotalsJsonTest extends TestCase
             tags: [3 => 2],
             networks: ['bluesky' => 5, 'mastodon' => 1],
             networkProfiles: ['bluesky' => 2],
+            forYou: 4,
         ));
 
         self::assertSame([
             'allItems' => 7,
+            'forYou' => 4,
             'tags' => [['id' => 3, 'unreadCount' => 2]],
             'networks' => [
                 ['network' => 'bluesky', 'unreadCount' => 5, 'profilesUnreadCount' => 2],
