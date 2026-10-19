@@ -1,13 +1,4 @@
-import {
-  Component,
-  computed,
-  effect,
-  inject,
-  input,
-  output,
-  untracked,
-  viewChild,
-} from '@angular/core';
+import { Component, computed, inject, input, output, viewChild } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
@@ -16,7 +7,6 @@ import { ListActionDirective } from '../../../shared/list-action/list-action.dir
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { LayoutService } from '../../layout.service';
-import { LinkCardDto } from '../../link-card/link-card';
 import { LinkCardRef } from '../../query/link-param';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
@@ -48,7 +38,6 @@ import { ShareButtonComponent } from '../share/share-button.component';
   ],
   providers: [
     ReadingScope,
-    LinkArticleSource,
     ListAutoplayCoordinator,
     UnlockedVideoElements,
     // Nothing autoplays in a linked page: an undefined region covers nothing.
@@ -59,8 +48,6 @@ import { ShareButtonComponent } from '../share/share-button.component';
 })
 export class LinkReaderComponent {
   readonly ref = input.required<LinkCardRef>();
-  /** The card as the store lists it; null on a deep link to a card not in view. */
-  readonly card = input<LinkCardDto | null>(null);
   readonly fullscreen = input(false);
   readonly returnsTo = input.required<LinkReaderReturn>();
 
@@ -79,25 +66,19 @@ export class LinkReaderComponent {
     layout: this.scope.readingEnd,
   });
 
-  protected readonly title = computed(
-    () => this.card()?.title ?? this.source.article()?.title ?? '',
-  );
+  protected readonly title = this.source.title;
   protected readonly siteName = computed(
-    () => this.card()?.siteName ?? this.source.article()?.siteName ?? '',
+    () => this.source.card()?.siteName ?? this.source.article()?.siteName ?? '',
   );
   protected readonly originalUrl = computed(
-    () => this.card()?.url ?? this.source.article()?.url ?? this.source.failure()?.url ?? null,
+    () =>
+      this.source.card()?.url ?? this.source.article()?.url ?? this.source.failure()?.url ?? null,
   );
   protected readonly backLabelKey = computed(() =>
     this.returnsTo() === 'article' ? 'reader.backToArticle' : 'reader.backToList',
   );
 
   constructor() {
-    effect(() => {
-      const ref = this.ref();
-      untracked(() => this.source.open(ref));
-    });
-
     this.scope.connect({
       scroller: computed(() => this.layer()?.scroller()),
       content: computed(() => this.articleContent()?.element),
@@ -108,6 +89,6 @@ export class LinkReaderComponent {
   }
 
   protected reload(): void {
-    this.source.reload(this.ref());
+    this.source.reload();
   }
 }

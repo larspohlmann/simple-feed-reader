@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject } from 'rxjs';
@@ -13,6 +13,8 @@ import { LinkCardRef } from '../../query/link-param';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
 import { LinkReaderComponent } from './link-reader.component';
+import { LinkArticleSource } from './link-article-source.service';
+import { ReaderRouteState } from '../../shell/reader-route-state.service';
 
 const FIRST_CARD: LinkCardRef = { entryId: 7, position: 0 };
 const SECOND_CARD: LinkCardRef = { entryId: 7, position: 1 };
@@ -34,15 +36,22 @@ describe('LinkReaderComponent', () => {
   let replies: Subject<ReaderContent>;
   let loadLinkCard: jest.Mock;
   let reloadLinkCard: jest.Mock;
+  let routeState: {
+    linkCard: WritableSignal<LinkCardRef | null>;
+    openLinkCard: WritableSignal<LinkCardDto | null>;
+  };
 
   beforeEach(() => {
     installMockResizeObserver();
     replies = new Subject<ReaderContent>();
     loadLinkCard = jest.fn(() => replies);
     reloadLinkCard = jest.fn(() => replies);
+    routeState = { linkCard: signal(null), openLinkCard: signal(null) };
     TestBed.configureTestingModule({
       imports: [LinkReaderComponent, provideTranslocoTesting()],
       providers: [
+        LinkArticleSource,
+        { provide: ReaderRouteState, useValue: routeState },
         { provide: ReaderContentService, useValue: { load: loadLinkCard, reload: reloadLinkCard } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
         {
@@ -58,8 +67,9 @@ describe('LinkReaderComponent', () => {
     returnsTo: 'article' | 'list' = 'article',
   ): ComponentFixture<LinkReaderComponent> {
     const fixture = TestBed.createComponent(LinkReaderComponent);
+    routeState.linkCard.set(FIRST_CARD);
+    routeState.openLinkCard.set(card);
     fixture.componentRef.setInput('ref', FIRST_CARD);
-    fixture.componentRef.setInput('card', card);
     fixture.componentRef.setInput('returnsTo', returnsTo);
     fixture.detectChanges();
     return fixture;
@@ -166,10 +176,11 @@ describe('LinkReaderComponent', () => {
     );
   });
 
-  it('loads the card it is given, and the next one when that changes', () => {
+  it('loads the card the route opens, and the next one when that changes', () => {
     const fixture = mount();
     expect(loadLinkCard).toHaveBeenCalledWith(FIRST_CARD);
 
+    routeState.linkCard.set(SECOND_CARD);
     fixture.componentRef.setInput('ref', SECOND_CARD);
     fixture.detectChanges();
 

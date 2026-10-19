@@ -4660,10 +4660,11 @@ describe('ReaderShellComponent', () => {
     it('resolves the open link card from the store entry, or null when it is not stored', () => {
       const fixture = boot({ linkCards: [aLinkCard({ title: 'Stored card' })] });
       openLink(fixture, { link: '1.0' });
-      expect(fixture.componentInstance.openLinkCard()?.title).toBe('Stored card');
+      const routeState = fixture.debugElement.injector.get(ReaderRouteState);
+      expect(routeState.openLinkCard()?.title).toBe('Stored card');
 
       openLink(fixture, { link: '99.0' });
-      expect(fixture.componentInstance.openLinkCard()).toBeNull();
+      expect(routeState.openLinkCard()).toBeNull();
     });
   });
 });

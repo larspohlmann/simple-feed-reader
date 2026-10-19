@@ -190,7 +190,6 @@
     @if (linkCard(); as ref) {
       <app-link-reader
         [ref]="ref"
-        [card]="openLinkCard()"
         [fullscreen]="fullscreen"
         [returnsTo]="linkReturnsTo()"
         (close)="linkNavigation.close()"

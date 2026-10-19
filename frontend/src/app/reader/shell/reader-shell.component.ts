@@ -28,7 +28,6 @@ import { ReaderTabTitle } from './reader-tab-title.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
-import { linkCardAt } from '../link-card/link-card-at';
 import { TagsStore } from '../state/tags.store';
 import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
@@ -52,6 +51,7 @@ import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ReaderViewComponent } from '../article/reader-view/reader-view.component';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
+import { LinkArticleSource } from '../article/link-reader/link-article-source.service';
 import { AudioPlayerBarComponent } from './audio-player-bar/audio-player-bar.component';
 import { ManageActions } from '../feeds/manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
@@ -105,6 +105,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     SavedSearchToggle,
     RefreshActions,
     ListReload,
+    LinkArticleSource,
     ReaderTabTitle,
     { provide: EntryActionHandler, useExisting: EntryStateActions },
   ],
@@ -152,12 +153,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly entryId = this.routeState.entryId;
   readonly openEntry = this.routeState.openEntry;
   readonly linkCard = this.routeState.linkCard;
-  readonly openLinkCard = computed(() => {
-    const ref = this.linkCard();
-    if (ref === null) return null;
-    const entry = this.entries.entry(ref.entryId);
-    return entry === null ? null : linkCardAt(entry, ref.position);
-  });
   readonly linkReturnsTo = computed(() => (this.entryId() === null ? 'list' : 'article'));
   protected readonly linkNavigation = inject(LinkReaderNavigation);
   readonly heading = inject(ListHeading);
