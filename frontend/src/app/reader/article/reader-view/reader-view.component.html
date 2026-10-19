@@ -98,7 +98,7 @@
             >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
           /></a>
         }
-        @if (e.discussionUrl) {
+        @if (e.discussionUrl && e.discussionUrl !== e.url) {
           ·
           <a
             class="discussion-link"

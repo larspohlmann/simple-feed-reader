@@ -1719,6 +1719,14 @@ describe('ReaderViewComponent', () => {
 
       expect(element.querySelector('a.discussion-link')).toBeNull();
     });
+
+    it('shows no discussion link when it would repeat the original (#1701)', () => {
+      const postUrl = 'https://bsky.app/profile/alice.bsky.social/post/3k';
+      const element = mount(entry({ url: postUrl, discussionUrl: postUrl }))
+        .nativeElement as HTMLElement;
+
+      expect(element.querySelector('a.discussion-link')).toBeNull();
+    });
   });
 
   describe('comments section (#1140)', () => {
