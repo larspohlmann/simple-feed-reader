@@ -1,10 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   OnInit,
   computed,
   inject,
   signal,
+  viewChild,
+  viewChildren,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
@@ -37,6 +40,8 @@ import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { SubscriptionFlags } from '../../reader/subscription-bulk';
+import { TagDragGap } from './tag-drag-gap.service';
+import { moveToGap, verticalMiddle } from './tag-drop-gap';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
  *  value, and the i18n key for its label. A readonly literal array so the
@@ -74,7 +79,7 @@ interface VisibilityMenuItem {
     IconButtonDirective,
     CdkDropListGroup,
   ],
-  providers: [OrganiseStore],
+  providers: [OrganiseStore, TagDragGap],
   templateUrl: './organise-section.component.html',
   styleUrl: './organise-section.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -85,6 +90,9 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly subs = inject(SubscriptionsStore);
   protected readonly tags = inject(TagsStore);
   private readonly dialog = inject(Dialog);
+  protected readonly tagGap = inject(TagDragGap);
+  private readonly tree = viewChild<ElementRef<HTMLElement>>('tree');
+  private readonly panels = viewChildren(OrganiseTagGroupComponent, { read: ElementRef });
 
   /** The last refused bulk write, shown as a banner above the list. */
   readonly error = signal<Problem | null>(null);
@@ -211,5 +219,33 @@ export class OrganiseSectionComponent implements OnInit {
     if (from < 0 || to < 0 || to >= ids.length) return;
     [ids[from], ids[to]] = [ids[to], ids[from]];
     this.manage.reorderTags(ids);
+  }
+
+  protected startTagDrag(group: OrganiseGroup): void {
+    const from = this.tags.tags().findIndex((tag) => tag.id === group.tag?.id);
+    const treeTop = this.treeTop();
+    const middles = this.panels()
+      .filter((_, index) => this.store.groups()[index]?.tag != null)
+      .map((panel) => verticalMiddle(panel.nativeElement as HTMLElement) - treeTop);
+    this.tagGap.start(from, middles);
+  }
+
+  protected moveTagDrag(clientY: number): void {
+    this.tagGap.move(clientY - this.treeTop());
+  }
+
+  protected endTagDrag(): void {
+    const move = this.tagGap.end();
+    if (move === null || this.store.filterActive()) return;
+    this.manage.reorderTags(
+      moveToGap(
+        this.tags.tags().map((tag) => tag.id),
+        move,
+      ),
+    );
+  }
+
+  private treeTop(): number {
+    return this.tree()?.nativeElement.getBoundingClientRect().top ?? 0;
   }
 }

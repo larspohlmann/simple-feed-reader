@@ -36,6 +36,8 @@ function makeSubscriptionsStoreMock(initialSubscriptions: SubscriptionDto[]) {
 }
 
 const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
+const WORLD: TagDto = { id: 4, name: 'World', color: null, icon: null, position: 1 };
+const ART: TagDto = { id: 6, name: 'Art', color: null, icon: null, position: 2 };
 
 const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
   makeSubscription({
@@ -82,7 +84,7 @@ describe('OrganiseSectionComponent', () => {
     reorderUntagged: jest.fn(),
   };
 
-  async function renderWithMocks(subscriptions: SubscriptionDto[] = SUBS) {
+  async function renderWithMocks(subscriptions: SubscriptionDto[] = SUBS, tags: TagDto[] = [TECH]) {
     localStorage.clear();
     for (const spy of Object.values(manage)) spy.mockReset();
     manage.bulkAddTag.mockReturnValue(of(undefined));
@@ -103,7 +105,7 @@ describe('OrganiseSectionComponent', () => {
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
           { provide: LanguageService, useValue: { lang: () => 'en' } },
           { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(subscriptions) },
-          { provide: TagsStore, useValue: { tags: signal([TECH]), load: jest.fn() } },
+          { provide: TagsStore, useValue: { tags: signal(tags), load: jest.fn() } },
         ],
       })
       .compileComponents();
@@ -417,6 +419,101 @@ describe('OrganiseSectionComponent', () => {
       await renderWithMocks(SUBS);
 
       expect(fixture.debugElement.query(By.directive(UnhealthyFeedRowComponent))).toBeNull();
+    });
+  });
+
+  describe('tag drag gap (#1708)', () => {
+    // Tree top at 100; panels 80 px tall, 20 px apart: middles at 140, 240, 340 (+ untagged at 440).
+    const TREE_TOP = 100;
+
+    async function renderThreeTags() {
+      const rendered = await renderWithMocks(SUBS, [TECH, WORLD, ART]);
+      const tree = fixture.debugElement.query(By.css('.tree')).nativeElement as HTMLElement;
+      jest.spyOn(tree, 'getBoundingClientRect').mockReturnValue({ top: TREE_TOP } as DOMRect);
+      panels().forEach((panel, index) =>
+        jest
+          .spyOn(panel.nativeElement as HTMLElement, 'getBoundingClientRect')
+          .mockReturnValue({ top: TREE_TOP + index * 100, height: 80 } as DOMRect),
+      );
+      return rendered;
+    }
+
+    const panels = () => fixture.debugElement.queryAll(By.directive(OrganiseTagGroupComponent));
+    const gapBefore = () =>
+      panels().map((panel) =>
+        (panel.nativeElement as HTMLElement).classList.contains('gap-before'),
+      );
+
+    function drag(fromPanel: number, clientY: number): void {
+      panels()[fromPanel].triggerEventHandler('tagDragStarted');
+      panels()[fromPanel].triggerEventHandler('tagDragMoved', clientY);
+      fixture.detectChanges();
+    }
+
+    it('opens the gap above the first tag', async () => {
+      await renderThreeTags();
+
+      drag(2, 110);
+
+      expect(gapBefore()).toEqual([true, false, false, false]);
+    });
+
+    it('opens the gap below the last tag, above the untagged group', async () => {
+      await renderThreeTags();
+
+      drag(0, 400);
+
+      expect(gapBefore()).toEqual([false, false, false, true]);
+    });
+
+    it('opens no gap beside the dragged tag itself', async () => {
+      await renderThreeTags();
+
+      drag(1, 260);
+
+      expect(gapBefore()).toEqual([false, false, false, false]);
+    });
+
+    it('measures against the tree, so a scrolled page keeps the same gap', async () => {
+      await renderThreeTags();
+      panels()[2].triggerEventHandler('tagDragStarted');
+      const tree = fixture.debugElement.query(By.css('.tree')).nativeElement as HTMLElement;
+      jest.spyOn(tree, 'getBoundingClientRect').mockReturnValue({ top: TREE_TOP - 300 } as DOMRect);
+
+      panels()[2].triggerEventHandler('tagDragMoved', 110 - 300);
+      fixture.detectChanges();
+
+      expect(gapBefore()).toEqual([true, false, false, false]);
+    });
+
+    it('moves the tag into the gap on drop and closes the gap', async () => {
+      const { manage } = await renderThreeTags();
+      drag(0, 400);
+
+      panels()[0].triggerEventHandler('tagDragEnded');
+      fixture.detectChanges();
+
+      expect(manage.reorderTags).toHaveBeenCalledWith([WORLD.id, ART.id, TECH.id]);
+      expect(gapBefore()).toEqual([false, false, false, false]);
+    });
+
+    it('writes nothing when the tag is dropped where it was', async () => {
+      const { manage } = await renderThreeTags();
+      drag(1, 260);
+
+      panels()[1].triggerEventHandler('tagDragEnded');
+
+      expect(manage.reorderTags).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing under an active filter', async () => {
+      const { manage, store } = await renderThreeTags();
+      drag(0, 400);
+      store.titleFilter.set('taz');
+
+      panels()[0].triggerEventHandler('tagDragEnded');
+
+      expect(manage.reorderTags).not.toHaveBeenCalled();
     });
   });
 });
