@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
+import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
@@ -273,56 +274,6 @@ describe('OrganiseTagGroupComponent', () => {
     expect(manage.reorderUntagged).not.toHaveBeenCalled();
   });
 
-  /**
-   * #659: the header's cdkDropList takes a dropped TAG as well as feeds.
-   * reorderTags(tagIds) is the write, ordered from the full, unfiltered tags()
-   * list -- not the filtered group().
-   */
-  it('reorders tags when a tag header is dropped on another tag header', async () => {
-    const { manage, component } = await render(THIRD_GROUP);
-
-    // store.tags() = [TECH(2), OTHER_TAG(4), THIRD_TAG(6)]. Dragging TECH and
-    // dropping it on THIRD_GROUP's header (6) moves it after THIRD_TAG.
-    component.onHeaderDropped({
-      previousContainer: { data: GROUP },
-      container: { data: THIRD_GROUP },
-      item: { data: TECH },
-      previousIndex: 0,
-      currentIndex: 0,
-    } as never);
-
-    expect(manage.reorderTags).toHaveBeenCalledWith([OTHER_TAG.id, THIRD_TAG.id, TECH.id]);
-  });
-
-  it('does nothing when a tag is dropped on its own header', async () => {
-    const { manage, component } = await render(THIRD_GROUP);
-
-    component.onHeaderDropped({
-      previousContainer: { data: THIRD_GROUP },
-      container: { data: THIRD_GROUP },
-      item: { data: THIRD_TAG },
-      previousIndex: 0,
-      currentIndex: 0,
-    } as never);
-
-    expect(manage.reorderTags).not.toHaveBeenCalled();
-  });
-
-  it('ignores a tag-header reorder drop under an active filter, and writes nothing', async () => {
-    const { store, manage, component } = await render(THIRD_GROUP);
-    store.titleFilter.set('heise');
-
-    component.onHeaderDropped({
-      previousContainer: { data: GROUP },
-      container: { data: THIRD_GROUP },
-      item: { data: TECH },
-      previousIndex: 0,
-      currentIndex: 0,
-    } as never);
-
-    expect(manage.reorderTags).not.toHaveBeenCalled();
-  });
-
   it('appends a feed dropped on the header, which shows no list to index into', async () => {
     const { manage, component } = await render(THIRD_GROUP);
 
@@ -386,20 +337,40 @@ describe('OrganiseTagGroupComponent', () => {
     });
   });
 
-  it('does not reorder tags when a tag is dropped on the untagged group header', async () => {
-    const { manage, component } = await render(UNTAGGED_GROUP);
+  describe('drop lists', () => {
+    const listsOf = () =>
+      fixture.debugElement
+        .queryAll(By.directive(CdkDropList))
+        .map((list) => list.injector.get(CdkDropList));
 
-    // The untagged group has no tag to reorder against — reorderDroppedTag's
-    // `targetTag === null` guard must stop the write before it ever reaches
-    // ManageActions (#659 review).
-    component.onHeaderDropped({
-      previousContainer: { data: GROUP },
-      container: { data: UNTAGGED_GROUP },
-      item: { data: TECH },
-      previousIndex: 0,
-      currentIndex: 0,
-    } as never);
+    it('lets feeds, and only feeds, into the header and the feed list', async () => {
+      await render(GROUP);
+      const feedDrag = { data: SUB_A } as CdkDrag;
+      const tagDrag = { data: TECH } as CdkDrag;
 
-    expect(manage.reorderTags).not.toHaveBeenCalled();
+      for (const list of listsOf()) {
+        expect(list.enterPredicate(feedDrag, list)).toBe(true);
+        expect(list.enterPredicate(tagDrag, list)).toBe(false);
+      }
+      expect(listsOf()).toHaveLength(2);
+    });
+  });
+
+  describe('header drag', () => {
+    const header = () => fixture.debugElement.query(By.css('.head'));
+
+    it('reports the drag of its header: start, pointer height, end', async () => {
+      const { component } = await render(GROUP);
+      const reported: string[] = [];
+      component.tagDragStarted.subscribe(() => reported.push('started'));
+      component.tagDragMoved.subscribe((clientY) => reported.push(`moved ${clientY}`));
+      component.tagDragEnded.subscribe(() => reported.push('ended'));
+
+      header().triggerEventHandler('cdkDragStarted', {});
+      header().triggerEventHandler('cdkDragMoved', { pointerPosition: { x: 5, y: 120 } });
+      header().triggerEventHandler('cdkDragEnded', {});
+
+      expect(reported).toEqual(['started', 'moved 120', 'ended']);
+    });
   });
 });

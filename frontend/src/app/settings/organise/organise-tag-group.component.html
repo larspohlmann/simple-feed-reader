@@ -1,14 +1,21 @@
 <section class="panel">
-  <!-- The header is its own single-item drop list so a tag can be reordered by
-       drag without nesting it inside the feed list below. -->
   <div
     class="head-drop"
     cdkDropList
     [cdkDropListData]="group()"
     [cdkDropListSortingDisabled]="true"
+    [cdkDropListEnterPredicate]="acceptsFeeds"
     (cdkDropListDropped)="onHeaderDropped($event)"
   >
-    <div class="head" cdkDrag [cdkDragData]="group().tag" [cdkDragDisabled]="headerDragDisabled()">
+    <div
+      class="head"
+      cdkDrag
+      [cdkDragData]="group().tag"
+      [cdkDragDisabled]="headerDragDisabled()"
+      (cdkDragStarted)="tagDragStarted.emit()"
+      (cdkDragMoved)="tagDragMoved.emit($event.pointerPosition.y)"
+      (cdkDragEnded)="tagDragEnded.emit()"
+    >
       <button
         type="button"
         class="chev"
@@ -93,6 +100,7 @@
       class="feeds"
       cdkDropList
       [cdkDropListData]="group()"
+      [cdkDropListEnterPredicate]="acceptsFeeds"
       (cdkDropListDropped)="onFeedDropped($event)"
     >
       @for (s of group().subscriptions; track s.id; let i = $index, last = $last) {

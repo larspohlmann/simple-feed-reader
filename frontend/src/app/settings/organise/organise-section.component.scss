@@ -239,6 +239,33 @@
   gap: var(--space-4);
 }
 
+// The slot a dragged tag will land in, drawn in the stepped-down panel's margin.
+.tree > app-organise-tag-group {
+  --tag-gap: var(--tap-target);
+
+  position: relative;
+}
+
+.tree > .gap-before {
+  margin-top: calc(var(--tag-gap) + var(--space-4));
+}
+
+.tree > .gap-before::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: calc(100% + var(--space-4));
+  height: var(--tag-gap);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-lg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tree > app-organise-tag-group {
+    transition: margin-top 0.12s ease;
+  }
+}
+
 // The list has no per-row card the way a tag panel does, so the list itself
 // is the page's one box for that view -- the same card treatment a tag panel
 // gives itself below.

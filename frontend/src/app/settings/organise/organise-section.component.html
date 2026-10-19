@@ -279,10 +279,11 @@
   @if (subs.loading()) {
     <app-skeleton class="state" [label]="'settings.organise.loading' | transloco" [rows]="6" />
   } @else if (store.view() === 'tree') {
-    <div class="tree" [class.has-bulk-bar]="store.selectedCount() > 0" cdkDropListGroup>
+    <div class="tree" #tree [class.has-bulk-bar]="store.selectedCount() > 0" cdkDropListGroup>
       @for (group of store.groups(); track group.key; let i = $index, last = $last) {
         <app-organise-tag-group
           [group]="group"
+          [class.gap-before]="tagGap.gap() === i"
           [canMoveTagUp]="group.tag !== null && i > 0 && !store.filterActive()"
           [canMoveTagDown]="
             group.tag !== null &&
@@ -292,6 +293,9 @@
           "
           (moveTagUp)="moveTag(group, -1)"
           (moveTagDown)="moveTag(group, 1)"
+          (tagDragStarted)="startTagDrag(group)"
+          (tagDragMoved)="moveTagDrag($event)"
+          (tagDragEnded)="endTagDrag()"
         />
       }
     </div>
