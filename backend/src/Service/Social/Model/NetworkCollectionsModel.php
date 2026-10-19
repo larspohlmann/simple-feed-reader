@@ -13,6 +13,7 @@ final readonly class NetworkCollectionsModel
      * @param bool                        $truncated         follows or owned lists were cut
      * @param bool                        $savedListsCapped  saved lists by others were cut at the cap
      * @param bool                        $savedFeedsKnown   false when the account keeps no savedFeedsPrefV2
+     * @param list<SocialCollectionModel> $tags              followed hashtags; Mastodon only
      */
     public function __construct(
         public array $lists,
@@ -21,6 +22,7 @@ final readonly class NetworkCollectionsModel
         public bool $truncated = false,
         public bool $savedListsCapped = false,
         public bool $savedFeedsKnown = true,
+        public array $tags = [],
     ) {
     }
 
