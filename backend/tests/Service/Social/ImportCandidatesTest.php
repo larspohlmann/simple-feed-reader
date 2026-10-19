@@ -322,6 +322,44 @@ final class ImportCandidatesTest extends DbTestCase
         self::assertSame([['custom_feed', 'News', 'new', null]], array_map($summary, $candidates->customFeeds));
     }
 
+    public function testAMastodonAccountIsOfferedTrendingRightAfterHome(): void
+    {
+        $account = SocialAccounts::mastodonOf($this->user);
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [],
+            [new SocialCollectionModel('42', 'Friends')],
+            [],
+            false,
+        ));
+
+        $candidates = $this->importCandidates($network)->forAccount($account);
+
+        self::assertSame(
+            ['home', 'trending', 'list'],
+            array_map(
+                static fn (CollectionCandidateModel $list): string => $list->privateFeed->kind->value,
+                $candidates->lists,
+            ),
+        );
+    }
+
+    public function testABlueskyAccountIsNotOfferedTrending(): void
+    {
+        $network = new StubSocialCandidates(new NetworkCandidatesModel([], [], [], false));
+
+        $candidates = $this->importCandidates($network)->forAccount($this->account());
+
+        self::assertSame(
+            [SocialFeedKind::Home],
+            array_map(
+                static fn (CollectionCandidateModel $list): SocialFeedKind => $list->privateFeed->kind,
+                $candidates->lists,
+            ),
+        );
+    }
+
     public function testEveryAddedCollectionReadsAsSubscribed(): void
     {
         $account = $this->account();

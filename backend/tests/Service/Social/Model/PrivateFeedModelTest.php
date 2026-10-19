@@ -26,4 +26,14 @@ final class PrivateFeedModelTest extends TestCase
         self::assertSame('tag:caturday', $tag->key());
         self::assertEquals($tag, PrivateFeedModel::of(SocialFeedKind::Tag, 'CATURDAY', '#Caturday'));
     }
+
+    public function testTrendingIsOnePerAccountLikeHome(): void
+    {
+        $trending = PrivateFeedModel::trending();
+
+        self::assertSame(SocialFeedKind::Trending, $trending->kind);
+        self::assertSame('', $trending->remoteId);
+        self::assertSame('trending:', $trending->key());
+        self::assertEquals($trending, PrivateFeedModel::of(SocialFeedKind::Trending, 'ignored', 'ignored'));
+    }
 }

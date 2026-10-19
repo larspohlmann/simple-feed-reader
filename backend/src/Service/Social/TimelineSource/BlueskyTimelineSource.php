@@ -68,7 +68,9 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
             SocialFeedKind::CustomFeed => '/xrpc/app.bsky.feed.getFeed?feed=' . $remoteId . '&',
             SocialFeedKind::Author => '/xrpc/app.bsky.feed.getAuthorFeed?actor=' . $remoteId
                 . '&filter=posts_and_author_threads&',
-            SocialFeedKind::Tag => throw new SocialNetworkUnreachableException('Bluesky has no followed tags.'),
+            SocialFeedKind::Tag, SocialFeedKind::Trending => throw new SocialNetworkUnreachableException(
+                'Bluesky has no such timeline.',
+            ),
         } . 'limit=' . self::PAGE_SIZE;
     }
 

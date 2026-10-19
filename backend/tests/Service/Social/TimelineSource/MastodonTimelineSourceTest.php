@@ -72,6 +72,16 @@ final class MastodonTimelineSourceTest extends TestCase
         self::assertSame('Bearer ' . SocialAccounts::ACCESS_TOKEN, $request->headers['Authorization'] ?? null);
     }
 
+    public function testTrendingAsksForTheCurrentRankingAndNeverForWhatCameAfterTheNewestSeen(): void
+    {
+        $trending = self::socialFeed(SocialFeedKind::Trending, '');
+        $trending->recordNewestSeen('100');
+
+        $request = $this->source(new RoutedHttpClient([]))->request($trending);
+
+        self::assertSame('https://mastodon.example/api/v1/trends/statuses?limit=40', $request->url);
+    }
+
     public function testANonLatinTagIsPercentEncodedInThePath(): void
     {
         $request = $this->source(new RoutedHttpClient([]))->request(self::socialFeed(SocialFeedKind::Tag, '日本語'));

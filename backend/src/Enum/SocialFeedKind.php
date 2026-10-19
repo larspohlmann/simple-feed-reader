@@ -11,6 +11,7 @@ enum SocialFeedKind: string
     case CustomFeed = 'custom_feed';
     case Author = 'author';
     case Tag = 'tag';
+    case Trending = 'trending';
 
     public function followsOnePerson(): bool
     {

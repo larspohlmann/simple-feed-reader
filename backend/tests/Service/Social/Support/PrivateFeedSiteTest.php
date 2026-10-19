@@ -47,6 +47,10 @@ final class PrivateFeedSiteTest extends TestCase
             PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::home()),
         );
         self::assertSame(
+            'https://mastodon.example/explore',
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::trending()),
+        );
+        self::assertSame(
             'https://mastodon.example/lists/42',
             PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::userList('42', 'Friends')),
         );

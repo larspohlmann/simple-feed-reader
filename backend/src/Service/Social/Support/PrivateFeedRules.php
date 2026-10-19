@@ -26,6 +26,7 @@ final class PrivateFeedRules
                 && BlueskyActor::isDid($privateFeed->remoteId),
             SocialFeedKind::Tag => SocialNetwork::Mastodon === $network
                 && self::isMastodonTagName($privateFeed->remoteId),
+            SocialFeedKind::Trending => SocialNetwork::Mastodon === $network,
         };
     }
 

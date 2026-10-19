@@ -60,6 +60,14 @@ final class SocialFeedUrlTest extends TestCase
         );
     }
 
+    public function testMastodonTrendingIsAddressedWithoutARemoteId(): void
+    {
+        self::assertSame(
+            'social:mastodon:4:trending',
+            SocialFeedUrl::of(self::withId(SocialAccounts::mastodon(), 4), PrivateFeedModel::trending()),
+        );
+    }
+
     #[DataProvider('addresses')]
     public function testAnAddressIsReadBackFromTheUrl(string $url, ?SocialFeedAddressModel $address): void
     {

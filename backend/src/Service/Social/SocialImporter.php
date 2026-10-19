@@ -92,6 +92,7 @@ final readonly class SocialImporter
             SocialFeedKind::CustomFeed => 'custom feed',
             SocialFeedKind::Author => 'profile',
             SocialFeedKind::Tag => 'followed tag',
+            SocialFeedKind::Trending => 'trending timeline',
         };
     }
 

@@ -93,6 +93,8 @@ final class PrivateFeedRulesTest extends TestCase
             PrivateFeedModel::followedTag('caturday', '#caturday'),
             false,
         ];
+        yield 'trending on mastodon' => [SocialNetwork::Mastodon, PrivateFeedModel::trending(), true];
+        yield 'trending on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::trending(), false];
         yield 'home on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::home(), true];
         yield 'home on mastodon' => [SocialNetwork::Mastodon, PrivateFeedModel::home(), true];
         yield 'bluesky list' => [SocialNetwork::Bluesky, PrivateFeedModel::userList(self::LIST, 'Writers'), true];

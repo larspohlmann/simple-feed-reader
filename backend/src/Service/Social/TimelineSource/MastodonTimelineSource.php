@@ -74,6 +74,9 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
 
     private static function pathOf(SocialFeed $socialFeed): string
     {
+        if (SocialFeedKind::Trending === $socialFeed->getKind()) {
+            return '/api/v1/trends/statuses?limit=' . self::PAGE_SIZE;
+        }
         $path = match ($socialFeed->getKind()) {
             SocialFeedKind::UserList => '/api/v1/timelines/list/' . self::listId($socialFeed),
             SocialFeedKind::Tag => '/api/v1/timelines/tag/' . rawurlencode(self::tagName($socialFeed)),
