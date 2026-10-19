@@ -27,6 +27,14 @@ final class PrivateFeedModelTest extends TestCase
         self::assertEquals($tag, PrivateFeedModel::of(SocialFeedKind::Tag, 'CATURDAY', '#Caturday'));
     }
 
+    public function testAFollowedTagLowercasesBeyondAscii(): void
+    {
+        $tag = PrivateFeedModel::followedTag('Ärger', '#Ärger');
+
+        self::assertSame('ärger', $tag->remoteId);
+        self::assertSame('#Ärger', $tag->name);
+    }
+
     public function testTrendingIsOnePerAccountLikeHome(): void
     {
         $trending = PrivateFeedModel::trending();

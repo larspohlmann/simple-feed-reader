@@ -100,6 +100,23 @@ final class SocialImportControllerTest extends ApiTestCase
         self::assertFalse($payload['truncated']);
     }
 
+    public function testTheCandidatesOfAMastodonAccountListItsFollowedTags(): void
+    {
+        $client = $this->clientWith(new StubSocialCandidates(new NetworkCandidatesModel(
+            [],
+            [],
+            [],
+            false,
+            [new SocialCollectionModel('Caturday', '#Caturday')],
+        )));
+        $user = $this->signIn($client, 'import-candidates-tags@example.test');
+
+        $this->requestCandidates($client, $this->stored(SocialAccounts::mastodonOf($user)));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([self::collection('tag', 'caturday', '#Caturday')], $this->payload($client)['tags']);
+    }
+
     public function testAnImportRightAfterTheCandidatesPicturesTheNewProfileFeeds(): void
     {
         $client = $this->clientWith(new StubSocialCandidates(new NetworkCandidatesModel(
