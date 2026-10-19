@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Feed\Model;
 
 /**
- * The header's and sidebar's view of the surviving for-you list, which a later failed run leaves untouched; the latest
+ * The header's view of the surviving for-you list, which a later failed run leaves untouched; the latest
  * run itself is RecommendationRunReportModel.
  */
 final readonly class RecommendationForYouSummaryModel
