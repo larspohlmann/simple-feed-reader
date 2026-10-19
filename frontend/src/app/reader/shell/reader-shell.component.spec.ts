@@ -881,6 +881,35 @@ describe('ReaderShellComponent', () => {
     ctrl.verify();
   });
 
+  it('lowers the For You badge when a single read happens on another list (#1700)', () => {
+    const fixture = boot({}, 1);
+    const subscriptions = TestBed.inject(SubscriptionsStore);
+    expect(subscriptions.forYouUnread()).toBe(1);
+
+    qp.next(convertToParamMap({ entry: '1' }));
+    fixture.detectChanges();
+    ctrl.expectOne('https://api.test/api/entries/1/state').flush({
+      state: {
+        entryId: 1,
+        isHidden: true,
+        isFavorite: false,
+        isKept: false,
+        hiddenAt: 'x',
+        isViewed: true,
+        viewedAt: 'x',
+      },
+    });
+    ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
+      subscriptions: [],
+      favoritesCount: 0,
+      keptCount: 0,
+      viewedCount: 1,
+      unreadTotals: { ...subscriptionsBody.unreadTotals, forYou: 0 },
+    });
+
+    expect(subscriptions.forYouUnread()).toBe(0);
+  });
+
   it('does not re-mark the open entry viewed after the user un-ticks it', () => {
     // The tick must turn off and stay off. The auto-open effect (which marks the
     // open entry viewed once) must not re-fire when un-ticking flips isViewed
