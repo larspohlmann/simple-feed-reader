@@ -57,6 +57,7 @@ import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
+import { ShareButtonComponent } from '../share/share-button.component';
 @Component({
   selector: 'app-reader-view',
   imports: [
@@ -83,6 +84,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     SocialCountsComponent,
     ArticleContentComponent,
     ArticleLayerComponent,
+    ShareButtonComponent,
   ],
   providers: [
     ArticleScrollRestore,

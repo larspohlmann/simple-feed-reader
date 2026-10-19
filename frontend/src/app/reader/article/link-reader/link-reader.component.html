@@ -29,6 +29,9 @@
         <span class="txt">{{ 'reader.refreshArticle' | transloco }}</span>
       </button>
     }
+    @if (originalUrl(); as url) {
+      <app-share-button [url]="url" [title]="title()" />
+    }
   </div>
   <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
     <div class="title-row">

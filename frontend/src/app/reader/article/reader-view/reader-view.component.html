@@ -54,6 +54,9 @@
           <span class="txt">{{ 'reader.refreshArticle' | transloco }}</span>
         </button>
       }
+      @if (e.url) {
+        <app-share-button [url]="e.url" [title]="e.title" />
+      }
       <button
         appListAction
         class="mobile-icon-only"

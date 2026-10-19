@@ -68,6 +68,10 @@
 // The reader view's nav has no list-header container and opts in per action.
 @media (width <= bp.$bp-sm) {
   @include icon-only-box('.list-action.mobile-icon-only');
+
+  .list-action.mobile-icon-only .txt {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

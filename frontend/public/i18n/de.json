@@ -1386,7 +1386,15 @@
       "seconds": "~{{count}} Sek. übrig",
       "minutes": "~{{count}} Min. übrig"
     },
-    "recommendationScore": "Punkte: {{ score }}"
+    "recommendationScore": "Punkte: {{ score }}",
+    "share": {
+      "button": "Teilen",
+      "system": "Systemfreigabe",
+      "copyLink": "Link kopieren",
+      "copied": "Link kopiert",
+      "copyFailed": "Link konnte nicht kopiert werden",
+      "failed": "Link konnte nicht geteilt werden"
+    }
   },
   "common": {
     "save": "Speichern",
