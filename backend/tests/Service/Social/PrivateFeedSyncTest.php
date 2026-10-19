@@ -399,7 +399,7 @@ final class PrivateFeedSyncTest extends DbTestCase
         $this->syncAgainst(new SocialNetworkUnreachableException('Bluesky did not answer.'));
         self::assertSame(PrivateFeedSyncSkip::Unreachable, $this->account->getLastSyncSkip());
         self::assertSame(self::NOW, $this->account->getLastCheckedAt()?->format('Y-m-d H:i:s'));
-        self::assertNull($this->account->getLastSyncedAt());
+        self::assertSame(SocialFeedKind::rememberedCollections(), $this->account->getKindsNotYetSynced());
         $this->clock->modify('+2 hours');
 
         $outcome = $this->syncAgainst(self::network([self::news()], [self::art()]));
@@ -519,7 +519,7 @@ final class PrivateFeedSyncTest extends DbTestCase
     {
         $this->persistAMastodonAccount();
         $anHourAgo = new \DateTimeImmutable(self::AN_HOUR_AGO);
-        $stampBeforeTags = new SyncStamp($anHourAgo, $anHourAgo, null, ['list', 'custom_feed']);
+        $stampBeforeTags = new SyncStamp($anHourAgo, null, ['list', 'custom_feed']);
         new \ReflectionProperty(SocialAccount::class, 'syncStamp')->setValue($this->account, $stampBeforeTags);
         $this->entityManager->flush();
     }
@@ -619,7 +619,7 @@ final class PrivateFeedSyncTest extends DbTestCase
     {
         $account = $this->reloadedAccount();
         self::assertSame($at, $account->getLastCheckedAt()?->format('Y-m-d H:i:s'));
-        self::assertSame($at, $account->getLastSyncedAt()?->format('Y-m-d H:i:s'));
+        self::assertSame([], $account->getKindsNotYetSynced());
         self::assertNull($account->getLastSyncSkip());
     }
 
@@ -628,7 +628,6 @@ final class PrivateFeedSyncTest extends DbTestCase
         $account = $this->reloadedAccount();
         self::assertSame($skip, $account->getLastSyncSkip());
         self::assertSame(self::NOW, $account->getLastCheckedAt()?->format('Y-m-d H:i:s'));
-        self::assertSame(self::AN_HOUR_AGO, $account->getLastSyncedAt()?->format('Y-m-d H:i:s'));
         self::assertSame([], $account->getKindsNotYetSynced());
     }
 

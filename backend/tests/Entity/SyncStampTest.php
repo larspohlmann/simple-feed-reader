@@ -24,7 +24,7 @@ final class SyncStampTest extends TestCase
 
         self::assertSame(
             [SocialFeedKind::Tag],
-            new SyncStamp($at, $at, null, ['list', 'custom_feed'])->kindsNotYetSynced(),
+            new SyncStamp($at, null, ['list', 'custom_feed'])->kindsNotYetSynced(),
         );
     }
 
