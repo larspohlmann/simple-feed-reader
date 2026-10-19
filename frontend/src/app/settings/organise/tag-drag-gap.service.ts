@@ -6,7 +6,6 @@ interface TagDrag {
   readonly middles: readonly number[];
 }
 
-/** The gap a dragged tag would land in, for the Organise tree that provides it. */
 @Injectable()
 export class TagDragGap {
   private readonly drag = signal<TagDrag | null>(null);

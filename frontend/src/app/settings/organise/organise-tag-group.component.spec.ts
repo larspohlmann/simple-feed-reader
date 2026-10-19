@@ -372,18 +372,5 @@ describe('OrganiseTagGroupComponent', () => {
 
       expect(reported).toEqual(['started', 'moved 120', 'ended']);
     });
-
-    it('marks its own header list lifted while its header is dragged', async () => {
-      await render(GROUP);
-      const headList = () => fixture.debugElement.query(By.css('.head-drop')).nativeElement;
-
-      header().triggerEventHandler('cdkDragStarted', {});
-      fixture.detectChanges();
-      expect(headList().classList).toContain('lifted');
-
-      header().triggerEventHandler('cdkDragEnded', {});
-      fixture.detectChanges();
-      expect(headList().classList).not.toContain('lifted');
-    });
   });
 });

@@ -1,12 +1,10 @@
 <section class="panel">
-  <!-- Its own single-item list, a sibling of the feed list: lists never nest. -->
   <div
     class="head-drop"
     cdkDropList
     [cdkDropListData]="group()"
     [cdkDropListSortingDisabled]="true"
     [cdkDropListEnterPredicate]="acceptsFeeds"
-    [class.lifted]="headerLifted()"
     (cdkDropListDropped)="onHeaderDropped($event)"
   >
     <div
@@ -14,9 +12,9 @@
       cdkDrag
       [cdkDragData]="group().tag"
       [cdkDragDisabled]="headerDragDisabled()"
-      (cdkDragStarted)="onHeaderDragStarted()"
+      (cdkDragStarted)="tagDragStarted.emit()"
       (cdkDragMoved)="tagDragMoved.emit($event.pointerPosition.y)"
-      (cdkDragEnded)="onHeaderDragEnded()"
+      (cdkDragEnded)="tagDragEnded.emit()"
     >
       <button
         type="button"

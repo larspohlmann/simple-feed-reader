@@ -1,12 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -83,8 +75,6 @@ export class OrganiseTagGroupComponent {
   /** A tag never drops into a header or a feed list: the section's gap places it between panels. */
   protected readonly acceptsFeeds = (drag: CdkDrag): boolean => isSubscriptionDrag(drag.data);
 
-  protected readonly headerLifted = signal(false);
-
   protected readonly expanded = computed(() => this.store.isExpanded(this.group().key));
   protected readonly state = computed(() => this.store.groupState(this.group()));
 
@@ -114,10 +104,7 @@ export class OrganiseTagGroupComponent {
     this.persistOrder(ids);
   }
 
-  /** A drop inside this group's feed list reorders it; a drop from another
-   *  group's feed list moves the feed between tags. This list only ever
-   *  carries feeds, so a non-feed drop is ignored rather than treated as a
-   *  subscription. */
+  /** A drop from this group's own feed list reorders it; one from another group moves the feed here. */
   onFeedDropped(event: CdkDragDrop<OrganiseGroup>): void {
     if (!isSubscriptionDrag(event.item.data)) return;
     const subscription = event.item.data;
@@ -130,21 +117,10 @@ export class OrganiseTagGroupComponent {
     this.moveFeedHere(subscription, event.previousContainer.data, event.currentIndex);
   }
 
-  /** A feed dropped on this group's HEADER moves onto this tag; a header shows
-   *  no feed list, so it appends (a null position) rather than landing at an index. */
+  /** A header shows no feed list to index into, so a feed dropped on it appends. */
   onHeaderDropped(event: CdkDragDrop<OrganiseGroup>): void {
     if (!isSubscriptionDrag(event.item.data)) return;
     this.moveFeedHere(event.item.data, event.previousContainer.data, null);
-  }
-
-  protected onHeaderDragStarted(): void {
-    this.headerLifted.set(true);
-    this.tagDragStarted.emit();
-  }
-
-  protected onHeaderDragEnded(): void {
-    this.headerLifted.set(false);
-    this.tagDragEnded.emit();
   }
 
   private reorderTo(subscription: SubscriptionDto, from: number, to: number): void {

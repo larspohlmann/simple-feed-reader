@@ -211,17 +211,12 @@ export class OrganiseSectionComponent implements OnInit {
   }
 
   protected moveTag(group: OrganiseGroup, offset: number): void {
-    // The template also disables the tag arrows under a filter, but
-    // `store.groups()` — what canMoveTagUp/Down index — is the filtered
-    // list while this swaps within the full, unfiltered tags() list; under
-    // a filter that mismatch can silently swap with an invisible tag.
-    if (this.store.filterActive()) return;
-    const ids = this.tags.tags().map((tag) => tag.id);
+    const ids = this.tagIds();
     const from = ids.indexOf(group.tag?.id ?? -1);
     const to = from + offset;
     if (from < 0 || to < 0 || to >= ids.length) return;
     [ids[from], ids[to]] = [ids[to], ids[from]];
-    this.manage.reorderTags(ids);
+    this.persistTagOrder(ids);
   }
 
   protected startTagDrag(group: OrganiseGroup): void {
@@ -230,8 +225,8 @@ export class OrganiseSectionComponent implements OnInit {
     const panels = this.panels();
     const middles = this.store
       .groups()
-      .flatMap((group, index) =>
-        group.tag === null ? [] : [verticalMiddle(panels[index].nativeElement) - treeTop],
+      .flatMap((shown, index) =>
+        shown.tag === null ? [] : [verticalMiddle(panels[index].nativeElement) - treeTop],
       );
     this.tagGap.start(from, middles);
   }
@@ -242,13 +237,17 @@ export class OrganiseSectionComponent implements OnInit {
 
   protected endTagDrag(): void {
     const move = this.tagGap.end();
-    if (move === null || this.store.filterActive()) return;
-    this.manage.reorderTags(
-      moveToGap(
-        this.tags.tags().map((tag) => tag.id),
-        move,
-      ),
-    );
+    if (move !== null) this.persistTagOrder(moveToGap(this.tagIds(), move));
+  }
+
+  private tagIds(): number[] {
+    return this.tags.tags().map((tag) => tag.id);
+  }
+
+  /** Under a filter `store.groups()` is a subset of the full tag order, so no position derived from it is written. */
+  private persistTagOrder(ids: number[]): void {
+    if (this.store.filterActive()) return;
+    this.manage.reorderTags(ids);
   }
 
   private treeTop(): number {

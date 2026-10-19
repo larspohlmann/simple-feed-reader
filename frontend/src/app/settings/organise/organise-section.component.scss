@@ -241,11 +241,13 @@
 
 // The slot a dragged tag will land in, drawn in the stepped-down panel's margin.
 .tree > app-organise-tag-group {
+  --tag-gap: var(--tap-target);
+
   position: relative;
 }
 
 .tree > .gap-before {
-  margin-top: calc(var(--tap-target) + var(--space-4));
+  margin-top: calc(var(--tag-gap) + var(--space-4));
 }
 
 .tree > .gap-before::before {
@@ -253,7 +255,7 @@
   position: absolute;
   inset-inline: 0;
   bottom: calc(100% + var(--space-4));
-  height: var(--tap-target);
+  height: var(--tag-gap);
   border: 2px dashed var(--accent);
   border-radius: var(--radius-lg);
 }
