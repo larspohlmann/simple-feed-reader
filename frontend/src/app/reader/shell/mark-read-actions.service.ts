@@ -7,7 +7,6 @@ import { ReaderApi } from '../reader-api';
 import { EntriesStore } from '../state/entries.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { RecommendationsService } from '../state/recommendations.service';
 import { MarkReadTarget, markReadTarget, queryFromSelection } from '../query/query';
 import { ReaderRouteState } from './reader-route-state.service';
 
@@ -19,7 +18,6 @@ export class MarkReadActions {
   private readonly entries = inject(EntriesStore);
   private readonly subscriptions = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
-  private readonly recommendations = inject(RecommendationsService);
   private readonly routeState = inject(ReaderRouteState);
 
   readonly canMarkAllRead = computed(() => markReadTarget(this.routeState.selection()) !== null);
@@ -55,7 +53,6 @@ export class MarkReadActions {
         hideLocally();
         this.subscriptions.reloadCountsQuietly();
         this.savedSearches.load();
-        this.recommendations.refreshStatus();
       },
       error: (error: HttpErrorResponse) =>
         this.entries.reportMutationFailure(error, () =>
@@ -67,7 +64,7 @@ export class MarkReadActions {
   private markAllReadNow(target: MarkReadTarget): void {
     const until = this.entries.loadedAt() || new Date().toISOString();
     this.entries.runThenReload(this.markReadRequest(target, until), () =>
-      this.reloadAfterMarkRead(target),
+      this.reloadAfterMarkRead(),
     );
   }
 
@@ -89,11 +86,9 @@ export class MarkReadActions {
     }
   }
 
-  private reloadAfterMarkRead(target: MarkReadTarget): void {
+  private reloadAfterMarkRead(): void {
     this.entries.load(queryFromSelection(this.routeState.selection()));
     this.subscriptions.reloadCountsQuietly();
     this.savedSearches.load();
-    // Marked picks move no watermark the reload sees, so re-read the for-you summary.
-    if (target.scope === 'for-you') this.recommendations.refreshStatus();
   }
 }

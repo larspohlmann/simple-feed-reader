@@ -58,12 +58,13 @@ export class ListReload {
       });
     });
 
-    // Reload the list when a for-you run completes while the user is already
-    // on that feed. `completedStamp` starts at 0, which is the signal's
+    // A completed for-you run changes the For You unread count, and reloads the
+    // list if the user is on it. `completedStamp` starts at 0, which is the signal's
     // initial value, not a completion — the guard keeps a boot from reloading.
     effect(() => {
       if (this.recs.completedStamp() === 0) return;
       untracked(() => {
+        this.subs.reloadCountsQuietly();
         const selection = this.selection();
         if (selection.kind === 'for-you') this.entries.load(queryFromSelection(selection));
       });

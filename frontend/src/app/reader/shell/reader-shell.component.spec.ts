@@ -2247,6 +2247,13 @@ describe('ReaderShellComponent', () => {
     ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });
 
+  it('recounts when a run completes, whatever list is open', () => {
+    const fixture = boot();
+    TestBed.inject(RecommendationsService).completedStamp.update((stamp) => stamp + 1);
+    fixture.detectChanges();
+    ctrl.expectOne('https://api.test/api/subscriptions/counts');
+  });
+
   // The run trigger lives in the list header now (#325), gated on AI being
   // ready — the same gate the sidebar's For You link uses — so a booted for-you
   // view marks readiness before it expects the button.
@@ -3524,15 +3531,7 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
       ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
-      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
-        status: 'none',
-        batchesTotal: null,
-        batchesDone: 0,
-        error: null,
-        background: false,
-        streamedChars: 0,
-        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
-      });
+      ctrl.expectNone('https://api.test/api/recommendations/runs/current');
     });
 
     it('takes the for-you count from the recount after marking all read', () => {
@@ -3556,15 +3555,7 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
       ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
-      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
-        status: 'none',
-        batchesTotal: null,
-        batchesDone: 0,
-        error: null,
-        background: false,
-        streamedChars: 0,
-        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
-      });
+      ctrl.expectNone('https://api.test/api/recommendations/runs/current');
 
       expect(subscriptions.forYouUnread()).toBe(0);
     });
@@ -3585,15 +3576,7 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
       ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
-      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
-        status: 'none',
-        batchesTotal: null,
-        batchesDone: 0,
-        error: null,
-        background: false,
-        streamedChars: 0,
-        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
-      });
+      ctrl.expectNone('https://api.test/api/recommendations/runs/current');
     });
 
     // The lag the user saw was the mark-read round trip: nothing showed the

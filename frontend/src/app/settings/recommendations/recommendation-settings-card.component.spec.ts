@@ -15,6 +15,7 @@ import {
 } from '../../../testing/recommendation-capabilities';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 import { RecommendationSettingsState } from './recommendation-settings.service';
 
@@ -697,6 +698,7 @@ describe('RecommendationSettingsCardComponent', () => {
 
     it('purges, refreshes the recommendation status and shows the confirmation line', () => {
       const fixture = mount();
+      const reloadCounts = jest.spyOn(TestBed.inject(SubscriptionsStore), 'reloadCountsQuietly');
       dialogStub.open.mockReturnValue({ closed: of(true) });
 
       fixture.componentInstance.confirmPurge();
@@ -726,6 +728,7 @@ describe('RecommendationSettingsCardComponent', () => {
       });
       fixture.detectChanges();
 
+      expect(reloadCounts).toHaveBeenCalledTimes(1);
       expect(fixture.nativeElement.textContent).toContain('Recommendations cleared.');
     });
 

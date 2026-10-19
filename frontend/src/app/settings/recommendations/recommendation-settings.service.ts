@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../../core/problem';
 import { DraftSettingsService } from '../../shared/settings/draft-settings.service';
 import { ReaderApi } from '../../reader/reader-api';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { RecommendationsService } from '../../reader/state/recommendations.service';
 
 export type ContextWindowSource = 'user' | 'provider' | 'fallback';
@@ -95,6 +96,7 @@ export class RecommendationSettingsService extends DraftSettingsService<
 > {
   private readonly api = inject(ReaderApi);
   private readonly recommendations = inject(RecommendationsService);
+  private readonly subscriptions = inject(SubscriptionsStore);
 
   protected readonly endpoint = `${this.base}/api/me/ai/recommendations`;
 
@@ -143,6 +145,7 @@ export class RecommendationSettingsService extends DraftSettingsService<
         this.purging.set(false);
         this.purged.set(true);
         this.recommendations.refreshStatus();
+        this.subscriptions.reloadCountsQuietly();
       },
       error: (error: HttpErrorResponse) => {
         this.purging.set(false);

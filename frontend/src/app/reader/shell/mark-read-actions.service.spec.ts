@@ -11,7 +11,6 @@ import { ReaderApi } from '../reader-api';
 import { SubscriptionDto } from '../models';
 import { Selection } from '../query/query';
 import { EntriesStore } from '../state/entries.store';
-import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { makeSubscription } from '../testing/subscription.factory';
@@ -76,7 +75,6 @@ describe('MarkReadActions recounting after a mark-read', () => {
           },
         },
         { provide: SavedSearchesStore, useValue: { load: jest.fn() } },
-        { provide: RecommendationsService, useValue: { refreshStatus: jest.fn() } },
         { provide: ReaderRouteState, useValue: { selection: currentSelection } },
       ],
     });

@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '../../core/api';
 import { ReaderApi } from '../../reader/reader-api';
 import { RecommendationsService } from '../../reader/state/recommendations.service';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import {
   RecommendationSettingsService,
   RecommendationSettingsState,
@@ -62,6 +63,7 @@ describe('RecommendationSettingsService', () => {
         { provide: API_BASE_URL, useValue: BASE },
         { provide: ReaderApi, useValue: {} },
         { provide: RecommendationsService, useValue: {} },
+        { provide: SubscriptionsStore, useValue: {} },
       ],
     });
     service = TestBed.inject(RecommendationSettingsService);
