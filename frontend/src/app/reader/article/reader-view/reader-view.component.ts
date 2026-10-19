@@ -193,11 +193,6 @@ export class ReaderViewComponent {
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
   readonly readingMinutes = computed(() => estimateReadingMinutes(this.source.displayHtml()));
 
-  protected readonly discussionUrl = computed(() => {
-    const entry = this.entry();
-    return entry?.discussionUrl === entry?.url ? null : (entry?.discussionUrl ?? null);
-  });
-
   constructor() {
     this.source.connect(this.entry);
     this.restore.connect(this.scroller);
