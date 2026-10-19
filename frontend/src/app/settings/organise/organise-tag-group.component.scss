@@ -24,9 +24,13 @@
   min-height: var(--tap-target);
 }
 
-.head-drop.cdk-drop-list-dragging,
-.head-drop:has(.cdk-drag-preview) {
+// A feed held over a header lights it up: the drop lands in that tag.
+.head-drop.cdk-drop-list-dragging:not(.lifted) {
   background: var(--accent-soft);
+}
+
+.head-drop .cdk-drag-placeholder {
+  opacity: 0.4;
 }
 
 // `.ib` (move/edit/delete) is the shared `appIconButton` directive's look

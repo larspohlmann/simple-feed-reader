@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -9,8 +17,8 @@ import { IconButtonDirective } from '../../shared/icon-button/icon-button.direct
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { LanguageService } from '../../core/i18n/language.service';
-import { SubscriptionDto, TagDto } from '../../reader/models';
-import { isSubscriptionDrag, isTagDrag } from '../../reader/drag-payload';
+import { SubscriptionDto } from '../../reader/models';
+import { isSubscriptionDrag } from '../../reader/drag-payload';
 
 /** One tag panel: a header row, and -- when open -- its feeds.
  *
@@ -43,6 +51,9 @@ export class OrganiseTagGroupComponent {
 
   readonly moveTagUp = output<void>();
   readonly moveTagDown = output<void>();
+  readonly tagDragStarted = output<void>();
+  readonly tagDragMoved = output<number>();
+  readonly tagDragEnded = output<void>();
 
   protected readonly store = inject(OrganiseStore);
   protected readonly manage = inject(ManageActions);
@@ -68,6 +79,11 @@ export class OrganiseTagGroupComponent {
   protected readonly headerDragDisabled = computed(
     () => this.dragDisabled() || this.group().tag === null,
   );
+
+  /** A tag never drops into a header or a feed list: the section's gap places it between panels. */
+  protected readonly acceptsFeeds = (drag: CdkDrag): boolean => isSubscriptionDrag(drag.data);
+
+  protected readonly headerLifted = signal(false);
 
   protected readonly expanded = computed(() => this.store.isExpanded(this.group().key));
   protected readonly state = computed(() => this.store.groupState(this.group()));
@@ -100,9 +116,8 @@ export class OrganiseTagGroupComponent {
 
   /** A drop inside this group's feed list reorders it; a drop from another
    *  group's feed list moves the feed between tags. This list only ever
-   *  carries feeds, so a non-feed drop (a dragged tag header, which the
-   *  cross-group `cdkDropListGroup` also lets reach here) is ignored rather
-   *  than treated as a subscription. */
+   *  carries feeds, so a non-feed drop is ignored rather than treated as a
+   *  subscription. */
   onFeedDropped(event: CdkDragDrop<OrganiseGroup>): void {
     if (!isSubscriptionDrag(event.item.data)) return;
     const subscription = event.item.data;
@@ -115,37 +130,21 @@ export class OrganiseTagGroupComponent {
     this.moveFeedHere(subscription, event.previousContainer.data, event.currentIndex);
   }
 
-  /** A drop on this group's HEADER: a dragged feed moves onto this tag, but a
-   *  header shows no feed list, so it appends (a null position) rather than
-   *  landing at an index. A dragged tag header reorders the tags themselves.
-   *  The header is the only list a tag header can sensibly be dropped on: a
-   *  tag has no body list of its own to sort into. */
+  /** A feed dropped on this group's HEADER moves onto this tag; a header shows
+   *  no feed list, so it appends (a null position) rather than landing at an index. */
   onHeaderDropped(event: CdkDragDrop<OrganiseGroup>): void {
-    if (isSubscriptionDrag(event.item.data)) {
-      this.moveFeedHere(event.item.data, event.previousContainer.data, null);
-      return;
-    }
-    if (isTagDrag(event.item.data)) {
-      this.reorderDroppedTag(event.item.data);
-    }
+    if (!isSubscriptionDrag(event.item.data)) return;
+    this.moveFeedHere(event.item.data, event.previousContainer.data, null);
   }
 
-  /** Persists a tag reorder from a header-to-header drag. The order comes
-   *  from `store.tags()` — the full, unfiltered tag list — never
-   *  `group().subscriptions`/`group()`'s own filtered view: the same reason
-   *  persistOrder() below reads the unfiltered list for feeds. Mirrors
-   *  OrganiseSectionComponent.moveTag(), the arrows' own equivalent. */
-  private reorderDroppedTag(draggedTag: TagDto): void {
-    if (this.store.filterActive()) return;
-    const targetTag = this.group().tag;
-    if (targetTag === null || draggedTag.id === targetTag.id) return;
+  protected onHeaderDragStarted(): void {
+    this.headerLifted.set(true);
+    this.tagDragStarted.emit();
+  }
 
-    const ids = this.store.tags().map((tag) => tag.id);
-    const from = ids.indexOf(draggedTag.id);
-    const to = ids.indexOf(targetTag.id);
-    if (from < 0 || to < 0) return;
-    moveItemInArray(ids, from, to);
-    this.manage.reorderTags(ids);
+  protected onHeaderDragEnded(): void {
+    this.headerLifted.set(false);
+    this.tagDragEnded.emit();
   }
 
   private reorderTo(subscription: SubscriptionDto, from: number, to: number): void {
