@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.5.0] - 2026-10-19
+
 ### Highlights
 
 **Bluesky and Mastodon, built in.** Connect your accounts in Settings → Social
@@ -18,6 +20,120 @@ custom feeds and the people you follow, with your lists kept in sync
 automatically. Posts show their images, videos, quotes and self-reply threads,
 along with live like counts and the replies underneath, and a thumbs up goes
 straight back to the network.
+
+## What's Changed
+* feat(#1497): github repository, youtube playlist and video links subscribe to their feeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1498
+* feat(#1500): the page title leads with the count by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1501
+* feat(#1495): title-less posts get a derived title and read as posts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1503
+* feat(#1499): Bluesky posts show their embeds from the public AppView by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1504
+* feat(#1505): play feed videos inline on iPhone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1506
+* feat(#1508): replace a video the browser cannot play with a link to the original page by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1509
+* fix(#1507): a page video yields when the body already plays one by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1510
+* feat(#1502): link cards for the links a post shares by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1511
+* fix(#1518): run the magazine page budget on the settled kinds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1519
+* perf(#1512): a link card's head read stops once the page's head has ended by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1520
+* refactor(#1513): opening an entry writes nothing by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1521
+* feat(#1522): bsky-style media card for image, video and Short posts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1523
+* feat(#1525): quoted social-media posts get a link card by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1526
+* fix(#1527): every link a post shares ends with a card by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1528
+* feat(#1524): link and media cards for shared entries from any feed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1529
+* fix(#1524): read a page head up to 1 MB so a YouTube link gets its card by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1530
+* fix(#1517): a settled entry never takes a pending answer again by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1531
+* fix(#1516): a link-card placeholder stops pulsing once the poll gives up by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1532
+* feat(#1514): link cards drained in the background, one fetch per completion call by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1534
+* feat(#1533): a fediverse remote-profile link subscribes the account's home feed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1535
+* refactor(#1552): declare the entry row shape once by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1564
+* refactor(#1551): the server declares what a completion may change, the client takes all of it by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1565
+* refactor(#1539): one target() replaces the embed providers' matches/normalize/poster/label by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1566
+* refactor(#1538): youtube url rules get one home, the entry json ships a short's player url by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1567
+* refactor(#1544): one shared character clip and html escape in text support by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1568
+* refactor(#1543): one namespaced-child api, one home for feed namespaces by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1569
+* refactor(#1542): one enclosure reader and one mime-type mapping by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1570
+* refactor(#1537): one guarded redirect path, a budget that counts hops by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1571
+* refactor(#1536): split the head read out of HtmlPageFetcher by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1573
+* refactor(#1572): rename FaviconFetcher to GuardedImageDownloader by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1574
+* refactor(#1540): a reader service decides whether an entry has a page to read by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1575
+* refactor(#1541): carry one headline value from parser to entity by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1576
+* refactor(#1548): module seams for share, link card and bluesky; one owner for a post's provisional link by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1577
+* refactor(#1546): one url link text rule for own prose and shared links by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1578
+* refactor(#1547): drop share_url and take the share out of EntryLocation by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1579
+* refactor(#1545): split ShareLinkCards into a queue runner and an entry card writer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1580
+* refactor(#1549): enrichment indexes what it changes; PostEnricher stops signalling failure with null by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1581
+* refactor(#1550): one enrichment pass replaces the four EntryListRow loaders by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1582
+* refactor(#1561): the backend owns the reader-output version by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1583
+* refactor(#1554): one shared EntryDto builder for the specs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1584
+* refactor(#1563): EntryBodyService cancels superseded fetches instead of keeping three staleness guards by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1585
+* refactor(#1553): one home for the open entry, so completions and state patches are written once by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1586
+* refactor(#1557): share for the pinned blocks, post only for titleDerived, one entry-text module by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1587
+* refactor(#1556): pin share blocks once; the slot ladder knows only template kinds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1588
+* refactor(#1555): one owner for the magazine card shell by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1589
+* refactor(#1562): pin the decorator hand-offs in one spec, one host-fixture helper by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1590
+* refactor(#1560): reading scope takes its trailing parts as one ordered list by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1591
+* refactor(#1559): move the article-body DOM wiring into a provided ArticleBody by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1592
+* refactor(#1558): reader media gets one home, HLS a host-owned lifetime by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1593
+* fix(#1594): YouTube Shorts play inline in the list on iPhone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1595
+* feat(#1597): connect Bluesky and Mastodon accounts (Settings → Social Media) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1601
+* Social accounts: import picker for followed Bluesky/Mastodon accounts (#1598) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1603
+* fix(#1602): raise the phpunit memory limit to 1G by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1605
+* feat(#1599): private Bluesky and Mastodon feeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1604
+* Rename the social import button to "Select feeds…" by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1617
+* Keep a disabled app-button inert and looking off by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1618
+* Never collapse an aggregated social feed into a magazine group by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1619
+* fix(#1289): triple the entry list's bottom tail past the back-to-top button by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1620
+* chore: turn off Claude attribution in commits, PRs and comments by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1621
+* feat(#1611): social import dialog with tabs and a state filter by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1622
+* Skeleton on panels, themed checkboxes, paged import rows by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1628
+* feat(#1600): thumbs up sent to the post's origin by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1627
+* Persist a feed's social network instead of classifying it on every read (#1606) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1629
+* Fetch private social timelines concurrently through one shared request engine (#1607) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1630
+* feat(#1608): one engine run across RSS and private feeds, in staleness order by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1631
+* Refresh pass: renew Bluesky sessions inside the one engine run; per-kind lanes; typed slots (#1632) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1633
+* feat(#1615): live social counts in the article view by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1634
+* feat(#1612): quoted posts as nested, playable quote cards by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1635
+* fix(#1636): send social import follows as identities, not feed URLs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1637
+* fix(#1639): clamp post and quote text only for outliers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1640
+* fix(#1642): drop the greyed-out style on hidden list entries by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1643
+* fix(#1644): hold the reading focus from 30% to 50% of the viewport by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1647
+* feat(#1646): complete a link card's preview as soon as it is seen by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1648
+* feat(#1645): social posts kept 7 days; admin-set retention windows by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1649
+* fix(#1638): escape slashes in request bodies past the host's content filter by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1651
+* feat(#1625): social import dialog shows real avatars by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1652
+* feat(#1641): autoplay list videos muted, with a per-device setting by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1650
+* feat(#1613): imported Bluesky profile feeds show their avatars right away by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1653
+* List autoplay: sound carries to later videos on iOS; no controls while autoplaying by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1655
+* fix(#1657): social sections stay while organising by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1658
+* feat(#1616): show a social post's replies in the article view by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1660
+* feat(#1659): social sidebar Feeds row with a combined profile list by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1661
+* fix(#1662): the progress rail spans the comments and approximates them before they load by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1663
+* feat(#1664): open link cards in the internal reader by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1665
+* feat(#1666): saved feeds keep favourites; private feeds follow the network hourly by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1669
+* fix(#1670): a restore lets the private-feed sync add the lists and feeds back by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1672
+* feat(#1668): fold an author's self-replies into the entry by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1671
+* feat(#1667): subscribe to Bluesky profiles hidden from logged-out readers through the account session by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1673
+* fix(#1656): show a post's own photos, videos and gifs in the article view by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1674
+* Fold an author's self-replies on social timelines (#1675) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1676
+* Manage feeds: untick to unsubscribe, open it from the sidebar (#1677) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1678
+* fix(#1679): each unread badge counts its own scope by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1680
+* refactor(#1681): raw unread counts built from the list's scope rules by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1682
+* feat(#1684): label the link card's open-in-reader button on desktop by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1685
+* refactor(#1683): unread totals after a read come from the server by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1686
+* fix(#1688): link card's open-in-reader label is white and tight by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1689
+* refactor(#1687): mark-read badges come from the server recount by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1690
+* fix(#1691): stronger picture dimming in dark mode by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1692
+* fix(#1693): social like button is green only when liked by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1694
+* feat(#1695): like social comments and show their counters by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1696
+* fix(#1697): mark everything above as read shows the wait cue at once by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1698
+* fix(#1701): hide the Discussion link when it repeats Open original by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1702
+* fix(#1700): the For You badge follows the server's unread totals by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1703
+* feat(#1704): Mastodon followed tags and trending posts as private feeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1706
+* feat(#1699): share the article link from a json-configured menu by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1709
+* refactor(#1705): drop the unread social_account.last_synced_at column by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1710
+* fix(#1707): name the tab after the link reader's page by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1711
+* feat(#1708): open a gap between tags while a tag is dragged on organise by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1712
+* docs(#1713): prepare v1.5.0 release highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1714
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.4.1...v1.5.0
 
 ## [v1.4.1] - 2026-10-10
 
