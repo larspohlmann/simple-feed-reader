@@ -29,7 +29,6 @@ use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\SocialFeedKind;
 use App\Service\Account\AccountReset;
-use App\Service\Social\PrivateFeedSync;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
@@ -110,7 +109,7 @@ final class AccountResetTest extends DbTestCase
     {
         $account = SocialAccounts::blueskyOf($this->user($email));
         $this->entityManager->persist($account);
-        $account->recordSync(new \DateTimeImmutable(self::LAST_SYNCED_AT), PrivateFeedSync::SYNCED_KINDS);
+        $account->recordSync(new \DateTimeImmutable(self::LAST_SYNCED_AT));
         $listId = 'at://did:plc:alice/app.bsky.graph.list/news';
         $this->entityManager->persist(new KnownSocialCollection($account, SocialFeedKind::UserList, $listId));
         $this->entityManager->persist(new PrivateFeedSyncChange(
@@ -145,7 +144,7 @@ final class AccountResetTest extends DbTestCase
         $kept = $this->entityManager->find(SocialAccount::class, $accountId);
         self::assertInstanceOf(SocialAccount::class, $kept);
         self::assertSame(self::LAST_SYNCED_AT, $kept->getLastSyncedAt()?->format('Y-m-d H:i:s'));
-        self::assertSame(PrivateFeedSync::SYNCED_KINDS, $kept->getSyncedKinds());
+        self::assertSame([], $kept->getKindsNotYetSynced());
     }
 
     public function testWipesEverythingTheUserOwns(): void

@@ -197,15 +197,14 @@ final class SocialAccount
     }
 
     /** @return list<SocialFeedKind> */
-    public function getSyncedKinds(): array
+    public function getKindsNotYetSynced(): array
     {
-        return $this->syncStamp->syncedKinds();
+        return $this->syncStamp->kindsNotYetSynced();
     }
 
-    /** @param list<SocialFeedKind> $syncedKinds */
-    public function recordSync(\DateTimeImmutable $checkedAt, array $syncedKinds): void
+    public function recordSync(\DateTimeImmutable $checkedAt): void
     {
-        $this->syncStamp = SyncStamp::completed($checkedAt, $syncedKinds);
+        $this->syncStamp = SyncStamp::completed($checkedAt);
     }
 
     public function recordSkippedSync(\DateTimeImmutable $checkedAt, PrivateFeedSyncSkip $skip): void

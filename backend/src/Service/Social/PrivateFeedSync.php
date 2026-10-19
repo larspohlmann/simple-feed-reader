@@ -6,7 +6,6 @@ namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
 use App\Enum\PrivateFeedSyncSkip;
-use App\Enum\SocialFeedKind;
 use App\Service\Social\Exception\SocialAccountNeedsReconnectException;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -17,9 +16,6 @@ use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 /** Makes one account's lists, custom feeds and followed tags follow the network (#1666); any doubt skips the account. */
 final readonly class PrivateFeedSync
 {
-    /** An allow-list, never "all but Home": a kind added to SocialFeedKind stays untouched until listed here. */
-    public const array SYNCED_KINDS = [SocialFeedKind::UserList, SocialFeedKind::CustomFeed, SocialFeedKind::Tag];
-
     public function __construct(
         private SocialCandidatesInterface $networkCollections,
         private ActingAccountGuard $guard,

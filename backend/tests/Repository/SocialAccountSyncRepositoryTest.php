@@ -11,7 +11,6 @@ use App\Enum\PrivateFeedSyncSkip;
 use App\Enum\SocialNetwork;
 use App\Enum\UserStatus;
 use App\Repository\SocialAccountSyncRepository;
-use App\Service\Social\PrivateFeedSync;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\SocialAccounts;
@@ -37,8 +36,8 @@ final class SocialAccountSyncRepositoryTest extends DbTestCase
         $never = SocialAccounts::blueskyAs($this->owner, 'did:plc:due-1');
         $old = SocialAccounts::blueskyAs($this->owner, 'did:plc:due-2');
         $recent = SocialAccounts::blueskyAs($this->owner, 'did:plc:due-3');
-        $old->recordSync($now->modify('-2 hours'), PrivateFeedSync::SYNCED_KINDS);
-        $recent->recordSync($now->modify('-10 minutes'), PrivateFeedSync::SYNCED_KINDS);
+        $old->recordSync($now->modify('-2 hours'));
+        $recent->recordSync($now->modify('-10 minutes'));
         foreach ([$old, $recent, $never] as $account) {
             $this->entityManager->persist($account);
         }
@@ -57,8 +56,8 @@ final class SocialAccountSyncRepositoryTest extends DbTestCase
         $cutoff = $now->modify('-1 hour');
         $atCutoff = SocialAccounts::blueskyAs($this->owner, 'did:plc:cutoff-1');
         $beforeCutoff = SocialAccounts::blueskyAs($this->owner, 'did:plc:cutoff-2');
-        $atCutoff->recordSync($cutoff, PrivateFeedSync::SYNCED_KINDS);
-        $beforeCutoff->recordSync($cutoff->modify('-1 second'), PrivateFeedSync::SYNCED_KINDS);
+        $atCutoff->recordSync($cutoff);
+        $beforeCutoff->recordSync($cutoff->modify('-1 second'));
         $this->entityManager->persist($atCutoff);
         $this->entityManager->persist($beforeCutoff);
         $this->entityManager->flush();

@@ -30,10 +30,12 @@ final readonly class SyncStamp
     ) {
     }
 
-    /** @param list<SocialFeedKind> $syncedKinds */
-    public static function completed(\DateTimeImmutable $at, array $syncedKinds): self
+    public static function completed(\DateTimeImmutable $at): self
     {
-        $values = array_map(static fn (SocialFeedKind $kind): string => $kind->value, $syncedKinds);
+        $values = array_map(
+            static fn (SocialFeedKind $kind): string => $kind->value,
+            SocialFeedKind::rememberedCollections(),
+        );
 
         return new self($at, $at, null, $values);
     }
@@ -59,8 +61,13 @@ final readonly class SyncStamp
     }
 
     /** @return list<SocialFeedKind> */
-    public function syncedKinds(): array
+    public function kindsNotYetSynced(): array
     {
-        return array_map(SocialFeedKind::from(...), $this->syncedKinds ?? []);
+        $synced = $this->syncedKinds ?? [];
+
+        return array_values(array_filter(
+            SocialFeedKind::rememberedCollections(),
+            static fn (SocialFeedKind $kind): bool => !\in_array($kind->value, $synced, true),
+        ));
     }
 }

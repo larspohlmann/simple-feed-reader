@@ -20,37 +20,31 @@ final readonly class CollectionSyncPlan
     }
 
     /**
-     * @param array<string, PrivateFeedModel>          $onNetwork  by key
-     * @param array<string, SubscribedCollectionModel> $subscribed by key
+     * A baselined kind takes its first complete check: what is on the network is remembered, so what the user has
+     * not subscribed counts as dropped, and nothing of that kind is added.
+     *
+     * @param array<string, PrivateFeedModel>          $onNetwork      by key
+     * @param array<string, SubscribedCollectionModel> $subscribed     by key
      * @param array<string, true>                      $known
+     * @param list<SocialFeedKind>                     $baselinedKinds
      */
-    public static function following(array $onNetwork, array $subscribed, array $known): self
+    public static function following(array $onNetwork, array $subscribed, array $known, array $baselinedKinds): self
     {
         $unknownOnNetwork = array_diff_key($onNetwork, $known);
-        $additions = array_diff_key($unknownOnNetwork, $subscribed);
+        $additions = [];
+        $baselined = [];
+        foreach (array_diff_key($unknownOnNetwork, $subscribed) as $collection) {
+            if (\in_array($collection->kind, $baselinedKinds, true)) {
+                $baselined[] = $collection;
+                continue;
+            }
+            $additions[] = $collection;
+        }
 
         return new self(
-            array_values($additions),
+            $additions,
             self::collectionsBySubscriptionId(array_diff_key($subscribed, $onNetwork)),
-            array_values(array_diff_key($unknownOnNetwork, $additions)),
-        );
-    }
-
-    /**
-     * The given kinds' first complete check: what is on the network is remembered, so what the user has not
-     * subscribed counts as dropped, and nothing of those kinds is added.
-     *
-     * @param list<SocialFeedKind> $kinds
-     */
-    public function baselining(array $kinds): self
-    {
-        $isBaselined = static fn (PrivateFeedModel $collection): bool => \in_array($collection->kind, $kinds, true);
-        $isKept = static fn (PrivateFeedModel $collection): bool => !$isBaselined($collection);
-
-        return new self(
-            array_values(array_filter($this->additions, $isKept)),
-            $this->removals,
-            [...$this->toRemember, ...array_values(array_filter($this->additions, $isBaselined))],
+            [...array_values(array_intersect_key($unknownOnNetwork, $subscribed)), ...$baselined],
         );
     }
 

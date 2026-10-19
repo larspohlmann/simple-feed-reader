@@ -12,7 +12,6 @@ use App\Enum\UserStatus;
 use App\Service\Social\Model\NetworkCandidatesModel;
 use App\Service\Social\Model\NetworkCollectionsModel;
 use App\Service\Social\Model\PrivateFeedSyncBudgetModel;
-use App\Service\Social\PrivateFeedSync;
 use App\Service\Social\PrivateFeedSyncSweep;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Tests\DbTestCase;
@@ -47,9 +46,9 @@ final class PrivateFeedSyncSweepTest extends DbTestCase
     public function testOnlyAccountsUncheckedForAnHourAreDueAndNeverCheckedComeFirst(): void
     {
         $recent = $this->accountOf($this->user, 'did:plc:sweep-1');
-        $recent->recordSync(new \DateTimeImmutable('2026-10-17 11:30:00'), PrivateFeedSync::SYNCED_KINDS);
+        $recent->recordSync(new \DateTimeImmutable('2026-10-17 11:30:00'));
         $stale = $this->accountOf($this->user, 'did:plc:sweep-2');
-        $stale->recordSync(new \DateTimeImmutable('2026-10-17 10:30:00'), PrivateFeedSync::SYNCED_KINDS);
+        $stale->recordSync(new \DateTimeImmutable('2026-10-17 10:30:00'));
         $never = $this->accountOf($this->user, 'did:plc:sweep-3');
         $this->entityManager->flush();
         $network = self::quietNetwork();

@@ -11,6 +11,7 @@ use App\Entity\KnownSocialCollection;
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
+use App\Entity\SyncStamp;
 use App\Entity\User;
 use App\Enum\PrivateFeedSyncReason;
 use App\Enum\PrivateFeedSyncSkip;
@@ -76,7 +77,7 @@ final class PrivateFeedSyncTest extends DbTestCase
         self::assertSame(['list:' . self::NEWS], $this->knownKeys());
         self::assertSame([], $this->changes());
         $this->assertCompleteCheckAt(self::NOW);
-        self::assertSame(PrivateFeedSync::SYNCED_KINDS, $this->reloadedAccount()->getSyncedKinds());
+        self::assertSame([], $this->reloadedAccount()->getKindsNotYetSynced());
     }
 
     public function testANewlySavedFeedIsAddedWithImportDefaultsAndLogged(): void
@@ -168,7 +169,7 @@ final class PrivateFeedSyncTest extends DbTestCase
     {
         self::assertSame(
             [SocialFeedKind::UserList, SocialFeedKind::CustomFeed, SocialFeedKind::Tag],
-            PrivateFeedSync::SYNCED_KINDS,
+            SocialFeedKind::rememberedCollections(),
         );
         $this->privateFeeds()->create($this->account, PrivateFeedModel::home());
         $this->stampAnHourAgo();
@@ -210,7 +211,7 @@ final class PrivateFeedSyncTest extends DbTestCase
         self::assertSame([], $this->subscribedUrls());
         self::assertSame(['tag:caturday', 'tag:rust'], $this->knownKeys());
         self::assertSame([], $this->changes());
-        self::assertSame(PrivateFeedSync::SYNCED_KINDS, $this->reloadedAccount()->getSyncedKinds());
+        self::assertSame([], $this->reloadedAccount()->getKindsNotYetSynced());
     }
 
     public function testTheHourAfterTheTagBaselineANewlyFollowedTagIsAdded(): void
@@ -510,23 +511,27 @@ final class PrivateFeedSyncTest extends DbTestCase
 
     private function useAMastodonAccount(): void
     {
-        $this->account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $this->persistAMastodonAccount();
         $this->stampAnHourAgo();
     }
 
     private function useAMastodonAccountSyncedBeforeTags(): void
     {
-        $this->account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
-        $this->account->recordSync(
-            new \DateTimeImmutable(self::AN_HOUR_AGO),
-            [SocialFeedKind::UserList, SocialFeedKind::CustomFeed],
-        );
+        $this->persistAMastodonAccount();
+        $anHourAgo = new \DateTimeImmutable(self::AN_HOUR_AGO);
+        $stampBeforeTags = new SyncStamp($anHourAgo, $anHourAgo, null, ['list', 'custom_feed']);
+        new \ReflectionProperty(SocialAccount::class, 'syncStamp')->setValue($this->account, $stampBeforeTags);
         $this->entityManager->flush();
+    }
+
+    private function persistAMastodonAccount(): void
+    {
+        $this->account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
     }
 
     private function stampAnHourAgo(): void
     {
-        $this->account->recordSync(new \DateTimeImmutable(self::AN_HOUR_AGO), PrivateFeedSync::SYNCED_KINDS);
+        $this->account->recordSync(new \DateTimeImmutable(self::AN_HOUR_AGO));
         $this->entityManager->flush();
     }
 
@@ -624,7 +629,7 @@ final class PrivateFeedSyncTest extends DbTestCase
         self::assertSame($skip, $account->getLastSyncSkip());
         self::assertSame(self::NOW, $account->getLastCheckedAt()?->format('Y-m-d H:i:s'));
         self::assertSame(self::AN_HOUR_AGO, $account->getLastSyncedAt()?->format('Y-m-d H:i:s'));
-        self::assertSame(PrivateFeedSync::SYNCED_KINDS, $account->getSyncedKinds());
+        self::assertSame([], $account->getKindsNotYetSynced());
     }
 
     private function artUrl(): string

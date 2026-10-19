@@ -26,6 +26,7 @@ final class CollectionSyncPlanTest extends TestCase
             ]),
             [],
             ['list:' . self::DROPPED => true],
+            [],
         );
 
         self::assertEquals([PrivateFeedModel::userList(self::NEWS, 'News')], $plan->additions());
@@ -39,6 +40,7 @@ final class CollectionSyncPlanTest extends TestCase
             self::network([]),
             self::subscribed(12, PrivateFeedModel::customFeed(self::ART, '')),
             ['custom_feed:' . self::ART => true],
+            [],
         );
 
         self::assertEquals([12 => PrivateFeedModel::customFeed(self::ART, '')], $plan->removals());
@@ -47,7 +49,12 @@ final class CollectionSyncPlanTest extends TestCase
 
     public function testACompleteEmptyAnswerStillRemoves(): void
     {
-        $plan = CollectionSyncPlan::following([], self::subscribed(3, PrivateFeedModel::userList(self::NEWS, '')), []);
+        $plan = CollectionSyncPlan::following(
+            [],
+            self::subscribed(3, PrivateFeedModel::userList(self::NEWS, '')),
+            [],
+            [],
+        );
 
         self::assertEquals([3 => PrivateFeedModel::userList(self::NEWS, '')], $plan->removals());
     }
@@ -58,6 +65,7 @@ final class CollectionSyncPlanTest extends TestCase
             self::network([PrivateFeedModel::customFeed(self::ART, 'Art')]),
             self::subscribed(12, PrivateFeedModel::customFeed(self::ART, '')),
             ['custom_feed:' . self::ART => true],
+            [],
         );
 
         self::assertSame([], $plan->additions());
@@ -74,7 +82,8 @@ final class CollectionSyncPlanTest extends TestCase
             ]),
             self::subscribed(4, PrivateFeedModel::customFeed(self::ART, '')),
             [],
-        )->baselining(self::LISTS_AND_FEEDS);
+            self::LISTS_AND_FEEDS,
+        );
 
         self::assertSame([], $plan->additions());
         self::assertSame([], $plan->removals());
@@ -90,7 +99,8 @@ final class CollectionSyncPlanTest extends TestCase
             self::network([PrivateFeedModel::userList(self::NEWS, 'News')]),
             self::subscribed(4, PrivateFeedModel::customFeed(self::ART, '')),
             [],
-        )->baselining(self::LISTS_AND_FEEDS);
+            self::LISTS_AND_FEEDS,
+        );
 
         self::assertEquals([4 => PrivateFeedModel::customFeed(self::ART, '')], $plan->removals());
         self::assertEquals([PrivateFeedModel::userList(self::NEWS, 'News')], $plan->toRemember());
@@ -102,7 +112,8 @@ final class CollectionSyncPlanTest extends TestCase
             self::network([PrivateFeedModel::userList(self::NEWS, 'News')]),
             [],
             ['list:' . self::NEWS => true],
-        )->baselining(self::LISTS_AND_FEEDS);
+            self::LISTS_AND_FEEDS,
+        );
 
         self::assertSame([], $plan->toRemember());
     }
@@ -112,6 +123,7 @@ final class CollectionSyncPlanTest extends TestCase
         $plan = CollectionSyncPlan::following(
             self::network([PrivateFeedModel::userList(self::NEWS, 'News')]),
             self::subscribed(5, PrivateFeedModel::userList(self::NEWS, '')),
+            [],
             [],
         );
 
@@ -128,19 +140,12 @@ final class CollectionSyncPlanTest extends TestCase
             ]),
             self::subscribed(6, PrivateFeedModel::followedTag('gone', '')),
             [],
-        )->baselining([SocialFeedKind::Tag]);
+            [SocialFeedKind::Tag],
+        );
 
         self::assertEquals([PrivateFeedModel::userList(self::NEWS, 'News')], $plan->additions());
         self::assertEquals([6 => PrivateFeedModel::followedTag('gone', '')], $plan->removals());
         self::assertEquals([PrivateFeedModel::followedTag('Caturday', '#Caturday')], $plan->toRemember());
-    }
-
-    public function testBaseliningNoKindChangesNothing(): void
-    {
-        $network = self::network([PrivateFeedModel::userList(self::NEWS, 'News')]);
-        $following = CollectionSyncPlan::following($network, [], []);
-
-        self::assertEquals($following, $following->baselining([]));
     }
 
     /** @return array<string, SubscribedCollectionModel> */
