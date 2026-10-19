@@ -4,7 +4,7 @@ import { SocialNetworkName } from '../core/social-network';
 export type SocialFeedRefDto = { network: SocialNetworkName } & (
   | { kind: 'profile'; accountId: null }
   | { kind: 'saved'; accountId: null }
-  | { kind: 'home' | 'list' | 'custom_feed'; accountId: number }
+  | { kind: 'home' | 'trending' | 'list' | 'custom_feed' | 'tag'; accountId: number }
 );
 
 export type PrivateFeedRefDto = Extract<SocialFeedRefDto, { accountId: number }>;

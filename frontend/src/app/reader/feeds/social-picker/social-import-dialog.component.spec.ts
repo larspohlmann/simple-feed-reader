@@ -71,7 +71,7 @@ const HOME = collection({ kind: 'home', id: null, name: 'Home' });
 const DISCOVER = collection({ kind: 'custom_feed', id: 'at://feed/a', name: 'Discover' });
 
 function candidates(overrides: Partial<ImportCandidates> = {}): ImportCandidates {
-  return { follows: [], lists: [], customFeeds: [], truncated: false, ...overrides };
+  return { follows: [], lists: [], customFeeds: [], tags: [], truncated: false, ...overrides };
 }
 
 describe('SocialImportDialogComponent', () => {
@@ -225,10 +225,45 @@ describe('SocialImportDialogComponent', () => {
     expect(byTestId(fixture, 'social-import-collection-home:')).not.toBeNull();
   });
 
-  it('has no custom feeds tab on Mastodon', () => {
-    const fixture = loaded(candidates(), 'mastodon');
+  it('offers followed tags instead of custom feeds on Mastodon', () => {
+    const fixture = loaded(
+      candidates({
+        tags: [collection({ kind: 'tag', id: 'caturday', name: '#Caturday' })],
+      }),
+      'mastodon',
+    );
 
-    expect(tabLabels(fixture)).toEqual(['Accounts 0', 'Lists 0']);
+    expect(tabLabels(fixture)).toEqual(['Accounts 0', 'Lists 0', 'Tags 1']);
+  });
+
+  it("names the trending row in the user's language", () => {
+    const trending = collection({ kind: 'trending', id: null, name: 'Trending' });
+    const fixture = loaded(candidates({ lists: [HOME, trending] }), 'mastodon');
+    showTab(fixture, 'Lists');
+
+    expect(byTestId(fixture, 'social-import-collection-trending:')?.textContent).toContain(
+      'Trending posts',
+    );
+  });
+
+  it('imports a ticked tag', () => {
+    const fixture = loaded(
+      candidates({ tags: [collection({ kind: 'tag', id: 'caturday', name: '#Caturday' })] }),
+      'mastodon',
+    );
+    showTab(fixture, 'Tags');
+    collectionBox(fixture, 'tag:caturday').click();
+    fixture.detectChanges();
+
+    press(fixture, 'social-import-apply');
+    const post = http.expectOne(IMPORT);
+
+    expect(post.request.body).toEqual({
+      subscribe: [],
+      unsubscribe: [],
+      collections: [{ kind: 'tag', id: 'caturday', name: '#Caturday' }],
+    });
+    post.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0, removed: 0 });
   });
 
   it('narrows the rows to one state and drops the now redundant state labels', () => {

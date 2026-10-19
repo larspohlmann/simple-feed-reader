@@ -7,7 +7,13 @@ import { ImportCandidates, SocialImportService } from './social-import.service';
 const BASE = 'https://api.test';
 const CANDIDATES = `${BASE}/api/me/social-accounts/4/import-candidates`;
 const IMPORT = `${BASE}/api/me/social-accounts/4/import`;
-const EMPTY: ImportCandidates = { follows: [], lists: [], customFeeds: [], truncated: false };
+const EMPTY: ImportCandidates = {
+  follows: [],
+  lists: [],
+  customFeeds: [],
+  tags: [],
+  truncated: false,
+};
 
 describe('SocialImportService', () => {
   let http: HttpTestingController;

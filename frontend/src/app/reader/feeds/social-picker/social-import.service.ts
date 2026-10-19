@@ -38,6 +38,7 @@ export interface ImportCandidates {
   readonly follows: readonly FollowCandidate[];
   readonly lists: readonly CollectionCandidate[];
   readonly customFeeds: readonly CollectionCandidate[];
+  readonly tags: readonly CollectionCandidate[];
   readonly truncated: boolean;
 }
 

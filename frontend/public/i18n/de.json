@@ -395,7 +395,8 @@
       "importTab": {
         "accounts": "Konten",
         "lists": "Listen",
-        "customFeeds": "Feeds"
+        "customFeeds": "Feeds",
+        "tags": "Hashtags"
       },
       "importStates": "Anzeigen",
       "importStateAll": "Alle",
@@ -406,6 +407,7 @@
       "importUnsubscribe": "{{handle}} abbestellen",
       "importUnsubscribeHint": "Entferne den Haken, um einen Feed abzubestellen.",
       "importHome": "Home-Timeline",
+      "importTrending": "Angesagte Beiträge",
       "importAddCollection": "{{name}} hinzufügen",
       "importRemoveCollection": "{{name}} entfernen",
       "importRemoveTitle": "Aus deinen Feeds entfernen",
