@@ -67,6 +67,7 @@ export class SubscriptionsStore {
     buildSocialSections(this.subscriptions(), this.socialAccounts(), this.unreadTotals()),
   );
   readonly totalUnread = computed(() => this.unreadTotals().allItems);
+  readonly forYouUnread = computed(() => this.unreadTotals().forYou);
   readonly totalEntries = computed(() => sumEntries(this.subscriptions()));
   readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
   readonly unhealthyCount = computed(() => this.unhealthy().length);

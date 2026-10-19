@@ -18,6 +18,7 @@ final class SubscriptionCountsJson
      *   favoritesCount: int, keptCount: int, viewedCount: int,
      *   unreadTotals: array{
      *     allItems: int,
+     *     forYou: int,
      *     tags: list<array{id: int, unreadCount: int}>,
      *     networks: list<array{network: string, unreadCount: int, profilesUnreadCount: int}>
      *   }
@@ -42,6 +43,7 @@ final class SubscriptionCountsJson
      *   favoritesCount: int, keptCount: int, viewedCount: int,
      *   unreadTotals: array{
      *     allItems: int,
+     *     forYou: int,
      *     tags: list<array{id: int, unreadCount: int}>,
      *     networks: list<array{network: string, unreadCount: int, profilesUnreadCount: int}>
      *   }

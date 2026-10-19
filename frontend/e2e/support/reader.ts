@@ -146,6 +146,7 @@ function unreadTotalsOf(subscriptions: SubscriptionDto[]): UnreadTotalsDto {
     allItems: subscriptions
       .filter((subscription) => subscription.includeInAllItems)
       .reduce((total, subscription) => total + subscription.unreadCount, 0),
+    forYou: 0,
     tags: [...tagTotals].map(([id, unreadCount]) => ({ id, unreadCount })),
     networks: [],
   };

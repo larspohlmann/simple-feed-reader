@@ -58,9 +58,12 @@ export class ListReload {
       });
     });
 
-    // Reload the list when a for-you run completes while the user is already
-    // on that feed. `completedStamp` starts at 0, which is the signal's
-    // initial value, not a completion — the guard keeps a boot from reloading.
+    // `completedStamp` starts at 0, the signal's initial value, not a completion, so a boot doesn't fire.
+    effect(() => {
+      if (this.recs.completedStamp() === 0) return;
+      untracked(() => this.subs.reloadCountsQuietly());
+    });
+
     effect(() => {
       if (this.recs.completedStamp() === 0) return;
       untracked(() => {

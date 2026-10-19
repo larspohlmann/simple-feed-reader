@@ -277,7 +277,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'firstBatchStarted' => false,
                 'etaSeconds' => null,
                 'finishedShare' => null,
-                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+                'forYou' => ['totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $payload,
         );
@@ -394,7 +394,8 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertGreaterThanOrEqual(0, $current['elapsedSeconds']);
         $forYou = $current['forYou'];
         self::assertIsArray($forYou);
-        self::assertSame(1, $forYou['itemCount']);
+        self::assertSame(1, $forYou['totalCount']);
+        self::assertArrayNotHasKey('itemCount', $forYou);
         self::assertIsString($forYou['generatedAt']);
         // The completed run's own id rides along, so the client can suppress its divider by identity rather than by
         // matching timestamps.
@@ -424,7 +425,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'elapsedSeconds' => null,
                 'etaSeconds' => null,
                 'finishedShare' => null,
-                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+                'forYou' => ['totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $this->payload($client->getResponse()),
         );
@@ -816,7 +817,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'elapsedSeconds' => null,
                 'etaSeconds' => null,
                 'finishedShare' => null,
-                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+                'forYou' => ['totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $this->payload($client->getResponse()),
         );
@@ -859,7 +860,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertSame('none', $payload['status']);
         $forYou = $payload['forYou'];
         self::assertIsArray($forYou);
-        self::assertSame(0, $forYou['itemCount']);
+        self::assertSame(0, $forYou['totalCount']);
         self::assertNull($forYou['generatedAt']);
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);

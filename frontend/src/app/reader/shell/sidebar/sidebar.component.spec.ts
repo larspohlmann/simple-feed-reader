@@ -1512,7 +1512,7 @@ describe('for-you row', () => {
   // AiAvailabilityService and RecommendationsService are faked with plain
   // signals — structural typing accepts them in place of the readonly ones
   // the real services expose.
-  function mountWithAi(ready: boolean, running = false, forYouCount = 0) {
+  function mountWithAi(ready: boolean, running = false, forYouUnread = 0) {
     TestBed.configureTestingModule({
       imports: [SidebarComponent, provideTranslocoTesting()],
       providers: [
@@ -1527,7 +1527,7 @@ describe('for-you row', () => {
         { provide: AiAvailabilityService, useValue: { ready: signal(ready) } },
         {
           provide: RecommendationsService,
-          useValue: { running: signal(running), forYouCount: signal(forYouCount) },
+          useValue: { running: signal(running) },
         },
       ],
     });
@@ -1535,6 +1535,7 @@ describe('for-you row', () => {
     fixture.componentRef.setInput('tagTree', []);
     fixture.componentRef.setInput('untagged', []);
     fixture.componentRef.setInput('totalUnread', 0);
+    fixture.componentRef.setInput('forYouUnread', forYouUnread);
     fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
     fixture.componentRef.setInput('loading', false);
     fixture.componentRef.setInput('organising', false);

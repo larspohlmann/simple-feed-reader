@@ -101,6 +101,7 @@ export class SidebarComponent {
   readonly favoritesCount = input(0);
   readonly keptCount = input(0);
   readonly viewedCount = input(0);
+  readonly forYouUnread = input(0);
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell
    *  decides it — re-encoding the term to string-compare made a subtly

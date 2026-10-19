@@ -57,6 +57,7 @@ interface CountTotals {
 
 const unreadTotalsDto = (over: Partial<UnreadTotalsDto> = {}): UnreadTotalsDto => ({
   allItems: 0,
+  forYou: 0,
   tags: [],
   networks: [],
   ...over,
@@ -904,6 +905,19 @@ describe('SubscriptionsStore counts-only reload', () => {
 
     expect(store.unreadTotals().allItems).toBe(1);
     expect(store.unreadTotals().tags.get(20)).toBe(1);
+  });
+
+  it('adopts the For You unread count of a counts tick', () => {
+    settleAndAge([sub(1, 2)]);
+
+    store.reloadCountsIfStale();
+    ctrl.expectOne(countsUrl).flush(
+      countsBody([{ id: 1, unreadCount: 2 }], {
+        unreadTotals: { allItems: 1, forYou: 4, tags: [{ id: 20, unreadCount: 1 }] },
+      }),
+    );
+
+    expect(store.forYouUnread()).toBe(4);
   });
 
   it('keeps the same totals object when a tick changes none of them', () => {

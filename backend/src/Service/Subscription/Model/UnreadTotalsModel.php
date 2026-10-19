@@ -16,6 +16,7 @@ final readonly class UnreadTotalsModel
         public array $tags,
         public array $networks,
         public array $networkProfiles,
+        public int $forYou,
     ) {
     }
 }

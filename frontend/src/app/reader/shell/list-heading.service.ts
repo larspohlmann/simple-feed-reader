@@ -168,7 +168,7 @@ export class ListHeading {
     kept: () => items(this.subscriptions.keptCount()),
     viewed: () => items(this.subscriptions.viewedCount()),
     'for-you': (selection) =>
-      bySwitch(selection, this.recommendations.forYouCount(), this.recommendations.forYouTotal()),
+      bySwitch(selection, this.subscriptions.forYouUnread(), this.recommendations.forYouTotal()),
     'saved-searches': (selection) =>
       bySwitch(selection, this.savedSearchesUnread(), this.savedSearchesTotal()),
     'saved-search': (selection) => {
