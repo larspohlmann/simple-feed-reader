@@ -187,7 +187,7 @@ describe('DiscoverComponent', () => {
     http.match('https://api.test/api/subscriptions').forEach((followUpRequest) =>
       followUpRequest.flush({
         subscriptions: [],
-        unreadTotals: { allItems: 0, tags: [], networks: [] },
+        unreadTotals: { allItems: 0, forYou: 0, tags: [], networks: [] },
       }),
     );
     http
@@ -215,7 +215,7 @@ describe('DiscoverComponent', () => {
     http.match('https://api.test/api/subscriptions').forEach((followUpRequest) =>
       followUpRequest.flush({
         subscriptions: [],
-        unreadTotals: { allItems: 0, tags: [], networks: [] },
+        unreadTotals: { allItems: 0, forYou: 0, tags: [], networks: [] },
       }),
     );
     http

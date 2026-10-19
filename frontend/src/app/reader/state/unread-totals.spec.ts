@@ -7,6 +7,7 @@ import {
 
 const totals: UnreadTotals = {
   allItems: 10,
+  forYou: 3,
   tags: new Map([
     [3, 4],
     [5, 2],
@@ -25,6 +26,7 @@ describe('unreadTotalsFrom', () => {
   it('maps the DTO lists into maps', () => {
     const result = unreadTotalsFrom({
       allItems: 7,
+      forYou: 5,
       tags: [{ id: 3, unreadCount: 4 }],
       networks: [
         { network: 'bluesky', unreadCount: 6, profilesUnreadCount: 2 },
@@ -33,6 +35,7 @@ describe('unreadTotalsFrom', () => {
     });
 
     expect(result.allItems).toBe(7);
+    expect(result.forYou).toBe(5);
     expect([...result.tags]).toEqual([[3, 4]]);
     expect([...result.networks]).toEqual([
       ['bluesky', 6],
@@ -49,7 +52,10 @@ describe('sameUnreadTotals', () => {
   it('is true for structurally equal totals', () => {
     expect(sameUnreadTotals(totals, { ...totals, tags: new Map(totals.tags) })).toBe(true);
     expect(
-      sameUnreadTotals(NO_UNREAD_TOTALS, unreadTotalsFrom({ allItems: 0, tags: [], networks: [] })),
+      sameUnreadTotals(
+        NO_UNREAD_TOTALS,
+        unreadTotalsFrom({ allItems: 0, forYou: 0, tags: [], networks: [] }),
+      ),
     ).toBe(true);
   });
 
@@ -64,5 +70,6 @@ describe('sameUnreadTotals', () => {
       }),
     ).toBe(false);
     expect(sameUnreadTotals(totals, { ...totals, allItems: 9 })).toBe(false);
+    expect(sameUnreadTotals(totals, { ...totals, forYou: 2 })).toBe(false);
   });
 });

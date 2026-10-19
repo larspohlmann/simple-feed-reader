@@ -15,7 +15,6 @@ import {
 } from '../../../testing/recommendation-capabilities';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { RecommendationsService } from '../../reader/state/recommendations.service';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 import { RecommendationSettingsState } from './recommendation-settings.service';
 
@@ -711,7 +710,7 @@ describe('RecommendationSettingsCardComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 3, generatedAt: '2026-08-08T09:00:00Z', newestRunId: null },
+        forYou: { generatedAt: '2026-08-08T09:00:00Z', newestRunId: null },
       });
 
       const statusRequest = http.expectOne('/api/recommendations/runs/current');
@@ -723,12 +722,11 @@ describe('RecommendationSettingsCardComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { generatedAt: null, newestRunId: null },
       });
       fixture.detectChanges();
 
       expect(fixture.nativeElement.textContent).toContain('Recommendations cleared.');
-      expect(TestBed.inject(RecommendationsService).forYouCount()).toBe(0);
     });
 
     it('shows the 409 detail when a run is active instead of a generic error', () => {

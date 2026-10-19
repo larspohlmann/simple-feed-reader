@@ -154,6 +154,7 @@ export interface SubscriptionCountsResponse {
 /** Unread per scope, each article counted once within its scope (#1679). */
 export interface UnreadTotalsDto {
   allItems: number;
+  forYou: number;
   tags: { id: number; unreadCount: number }[];
   networks: { network: SocialNetworkName; unreadCount: number; profilesUnreadCount: number }[];
 }
@@ -493,12 +494,11 @@ export interface RecommendationRunReport {
   /** The finished batches' share of the predicted run time, phase-weighted like the ETA so a long last step keeps
    *  its weight. Null without history; optional for older-backend responses. */
   readonly finishedShare?: number | null;
-  /** The surviving for-you list's own summary: unread count (#724), last-generated
-   *  time, and the generating run. `itemCount` keeps its wire name. Describes the
-   *  *list* not this run — a failed run still carries the previous list's data;
-   *  `newestRunId` lets the reader suppress that run's divider by identity (#348). */
+  /** The surviving for-you list's own summary: total, last-generated time, and the
+   *  generating run. Describes the *list* not this run — a failed run still carries
+   *  the previous list's data; `newestRunId` lets the reader suppress that run's
+   *  divider by identity (#348). */
   forYou: {
-    itemCount: number;
     totalCount: number;
     generatedAt: string | null;
     newestRunId: number | null;

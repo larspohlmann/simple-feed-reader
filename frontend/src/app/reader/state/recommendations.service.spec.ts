@@ -20,7 +20,7 @@ const report = (over: Partial<RecommendationRunReport>): RecommendationRunReport
   streamedChars: 0,
   elapsedSeconds: null,
   firstBatchStarted: true,
-  forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
+  forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
   ...over,
 });
 
@@ -217,7 +217,6 @@ describe('RecommendationsService', () => {
         batchesTotal: 2,
         batchesDone: 2,
         forYou: {
-          itemCount: 2,
           totalCount: 7,
           generatedAt: '2026-08-08T09:00:00Z',
           newestRunId: null,
@@ -227,7 +226,6 @@ describe('RecommendationsService', () => {
 
     ctrl.verify(); // no tick request -- a finished run is not resumed
     expect(service.running()).toBe(false);
-    expect(service.forYouCount()).toBe(2);
     expect(service.forYouTotal()).toBe(7);
     expect(service.generatedAt()).toBe('2026-08-08T09:00:00Z');
   });

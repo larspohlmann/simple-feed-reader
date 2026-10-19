@@ -82,7 +82,7 @@ async function stubReader(page: Page): Promise<void> {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
     }
     if (path.endsWith('/api/version')) {

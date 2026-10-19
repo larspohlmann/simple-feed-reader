@@ -101,7 +101,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
         favoritesCount: 0,
         keptCount: 0,
         viewedCount: 0,
-        unreadTotals: { allItems: 0, tags: [{ id: 5, unreadCount: 4 }], networks: [] },
+        unreadTotals: { allItems: 0, forYou: 0, tags: [{ id: 5, unreadCount: 4 }], networks: [] },
       });
     reloadCountsQuietly = jest.spyOn(subscriptions, 'reloadCountsQuietly').mockImplementation();
     fullLoad = jest.spyOn(subscriptions, 'load');

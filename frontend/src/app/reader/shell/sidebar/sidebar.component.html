@@ -98,8 +98,8 @@
       >
         <app-icon name="auto_awesome" size="sm" [class.pulse]="recs.running()" />
         <span>{{ 'reader.forYou' | transloco }}</span>
-        @if (recs.forYouCount() > 0) {
-          <span class="count">{{ recs.forYouCount() }}</span>
+        @if (forYouUnread() > 0) {
+          <span class="count">{{ forYouUnread() }}</span>
         }
       </a>
     }

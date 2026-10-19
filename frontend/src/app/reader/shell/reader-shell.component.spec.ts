@@ -81,7 +81,12 @@ describe('ReaderShellComponent', () => {
     markPasskeyOfferAnswered: jest.fn(),
   };
 
-  const NO_UNREAD_TOTALS_DTO: UnreadTotalsDto = { allItems: 0, tags: [], networks: [] };
+  const NO_UNREAD_TOTALS_DTO: UnreadTotalsDto = {
+    allItems: 0,
+    forYou: 0,
+    tags: [],
+    networks: [],
+  };
 
   const markedReadCountsBody = {
     subscriptions: [{ id: 5, unreadCount: 0, entryCount: 0 }],
@@ -112,7 +117,7 @@ describe('ReaderShellComponent', () => {
       },
     ],
     socialAccounts: [],
-    unreadTotals: { allItems: 2, tags: [], networks: [] },
+    unreadTotals: { allItems: 2, forYou: 0, tags: [], networks: [] },
   };
   const entry = anEntry({
     title: 'e1',
@@ -195,12 +200,17 @@ describe('ReaderShellComponent', () => {
     ctrl = TestBed.inject(HttpTestingController);
   }
 
-  function boot(entryOverride: Partial<typeof entry> = {}) {
+  function boot(entryOverride: Partial<typeof entry> = {}, forYouUnread = 0) {
     const fixture = TestBed.createComponent(ReaderShellComponent);
     fixture.detectChanges(); // ngOnInit + initial effects
     const subscriptions = ctrl.match('https://api.test/api/subscriptions');
     expect(subscriptions.length).toBeLessThanOrEqual(1);
-    subscriptions.forEach((request) => request.flush(subscriptionsBody));
+    subscriptions.forEach((request) =>
+      request.flush({
+        ...subscriptionsBody,
+        unreadTotals: { ...subscriptionsBody.unreadTotals, forYou: forYouUnread },
+      }),
+    );
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
@@ -215,7 +225,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
     });
     // The sidebar's update badge: the shell checks once on load. No release to
     // report here, so no badge — the request just has to be drained.
@@ -290,7 +300,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
     });
     // The sidebar's update badge: the shell checks once on load. No release to
     // report here, so no badge — the request just has to be drained.
@@ -1308,7 +1318,7 @@ describe('ReaderShellComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
       ctrl.expectOne('https://api.test/api/version').flush({
         version: 'dev',
@@ -1637,7 +1647,7 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       ...subscriptionsBody,
       subscriptions: [{ ...subscriptionsBody.subscriptions[0], unreadCount: 3 }],
-      unreadTotals: { allItems: 3, tags: [], networks: [] },
+      unreadTotals: { allItems: 3, forYou: 0, tags: [], networks: [] },
     });
     fixture.detectChanges();
 
@@ -1663,7 +1673,7 @@ describe('ReaderShellComponent', () => {
   // feed already do. Otherwise the same number is described two ways.
   it('titles the for-you count as unread, matching the sidebar badge', () => {
     localStorage.setItem('sfr.user.1.unread-only', '1');
-    const fixture = boot();
+    const fixture = boot({}, 7);
     TestBed.inject(RecommendationsService).report.set({
       status: 'completed',
       batchesTotal: 1,
@@ -1672,7 +1682,7 @@ describe('ReaderShellComponent', () => {
       background: false,
       streamedChars: 0,
       elapsedSeconds: null,
-      forYou: { itemCount: 7, totalCount: 7, generatedAt: null, newestRunId: null },
+      forYou: { totalCount: 7, generatedAt: null, newestRunId: null },
     });
     qp.next(convertToParamMap({ view: 'for-you' }));
     fixture.detectChanges();
@@ -1695,7 +1705,7 @@ describe('ReaderShellComponent', () => {
       background: false,
       streamedChars: 0,
       elapsedSeconds: null,
-      forYou: { itemCount: 7, totalCount: 20, generatedAt: null, newestRunId: null },
+      forYou: { totalCount: 20, generatedAt: null, newestRunId: null },
     });
     qp.next(convertToParamMap({ view: 'for-you' }));
     fixture.detectChanges();
@@ -2260,7 +2270,7 @@ describe('ReaderShellComponent', () => {
     background: false,
     streamedChars: 0,
     elapsedSeconds: null,
-    forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
+    forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
   };
 
   const failedReport = {
@@ -2272,7 +2282,7 @@ describe('ReaderShellComponent', () => {
     resumable: true,
     streamedChars: 0,
     elapsedSeconds: null,
-    forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
+    forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
   };
 
   function menuItem(text: string): HTMLElement {
@@ -2513,7 +2523,7 @@ describe('ReaderShellComponent', () => {
       error: null,
       background: false,
       streamedChars: 0,
-      forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
     });
     fixture.detectChanges();
 
@@ -2580,7 +2590,7 @@ describe('ReaderShellComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
       ctrl.expectOne('https://api.test/api/version').flush({
         version: 'dev',
@@ -2664,7 +2674,7 @@ describe('ReaderShellComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
       ctrl.expectOne('https://api.test/api/version').flush({
         version: 'dev',
@@ -2954,7 +2964,7 @@ describe('ReaderShellComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
       ctrl.expectOne('https://api.test/api/version').flush({
         version: 'dev',
@@ -3205,7 +3215,7 @@ describe('ReaderShellComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
       fixture.detectChanges();
       return fixture;
@@ -3521,27 +3531,20 @@ describe('ReaderShellComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
     });
 
-    // The badge counts unread picks now (#724), so marking them all read must
-    // drop it to zero — the for-you summary is re-read after the mark-read,
-    // since the marked picks do not move a watermark the list reload would see.
-    it('refreshes the for-you count to zero after marking all read', () => {
-      const fixture = bootWithForYouSelected();
-      const recommendations = TestBed.inject(RecommendationsService);
-      recommendations.report.set({
-        status: 'completed',
-        batchesTotal: 1,
-        batchesDone: 1,
-        error: null,
-        background: false,
-        streamedChars: 0,
-        elapsedSeconds: null,
-        forYou: { itemCount: 5, totalCount: 5, generatedAt: null, newestRunId: null },
-      });
-      expect(recommendations.forYouCount()).toBe(5);
+    it('takes the for-you count from the recount after marking all read', () => {
+      const fixture = boot({}, 5);
+      qp.next(convertToParamMap({ view: 'for-you' }));
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      fixture.detectChanges();
+      const subscriptions = TestBed.inject(SubscriptionsStore);
+      expect(subscriptions.forYouUnread()).toBe(5);
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
@@ -3554,16 +3557,16 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(markedReadCountsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
-        status: 'completed',
-        batchesTotal: 1,
-        batchesDone: 1,
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
 
-      expect(recommendations.forYouCount()).toBe(0);
+      expect(subscriptions.forYouUnread()).toBe(0);
     });
 
     // A watermark is what the feed and tag scopes move; this list must never
@@ -3589,7 +3592,7 @@ describe('ReaderShellComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
     });
 
@@ -4294,7 +4297,7 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
         ...countsBody,
         subscriptions: [{ id: 5, unreadCount: 9 }],
-        unreadTotals: { allItems: 9, tags: [], networks: [] },
+        unreadTotals: { allItems: 9, forYou: 0, tags: [], networks: [] },
       });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       fixture.detectChanges();
