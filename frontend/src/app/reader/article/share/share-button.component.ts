@@ -5,7 +5,8 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
-import { SHARE_TARGETS, ShareTarget, shareGlyph, shareUrl } from './share-targets';
+import { stepMenuFocus } from '../../../shared/menu-keys';
+import { SHARE_GLYPH, SHARE_TARGETS, ShareTarget, shareUrl } from './share-targets';
 import { stripTracking } from './tracking-params';
 
 const POSITIONS: ConnectedPosition[] = [
@@ -34,11 +35,9 @@ export class ShareButtonComponent {
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
 
-  protected readonly glyph = shareGlyph();
+  protected readonly glyph = SHARE_GLYPH;
   protected readonly positions = POSITIONS;
-  protected readonly targets = SHARE_TARGETS.filter(
-    (target) => target.kind !== 'system' || typeof navigator.share === 'function',
-  );
+  protected readonly targets = SHARE_TARGETS;
   protected readonly open = signal(false);
 
   constructor() {
@@ -49,7 +48,7 @@ export class ShareButtonComponent {
   }
 
   /** Runs inside the click, so Safari still sees the gesture that share and clipboard need. */
-  protected choose(target: ShareTarget): void {
+  protected choose(target: Exclude<ShareTarget, { kind: 'divider' }>): void {
     this.open.set(false);
     const url = stripTracking(this.url());
     if (target.kind === 'system') this.shareThroughSystem(url);
@@ -58,13 +57,8 @@ export class ShareButtonComponent {
   }
 
   protected step(event: KeyboardEvent): void {
-    const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
-    const menu = (event.target as HTMLElement).closest('[role="menu"]');
-    if (step === 0 || menu === null) return;
-    event.preventDefault();
-    const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'));
-    const active = items.indexOf(document.activeElement as HTMLElement);
-    items[(active + step + items.length) % items.length]?.focus();
+    const menu = (event.target as Element).closest('[role="menu"]');
+    if (menu !== null) stepMenuFocus(event, menu);
   }
 
   private shareThroughSystem(url: string): void {

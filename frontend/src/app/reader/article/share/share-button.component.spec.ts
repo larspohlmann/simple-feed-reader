@@ -41,10 +41,6 @@ describe('ShareButtonComponent', () => {
     expect(menu.querySelectorAll('hr').length).toBeGreaterThan(0);
   });
 
-  it('leaves out the system share where the browser has none', () => {
-    expect(item(openMenu(), 'System share')).toBeUndefined();
-  });
-
   it('opens a target with the article, tracking parameters removed', () => {
     const open = jest.spyOn(window, 'open').mockReturnValue(null);
 

@@ -1,6 +1,6 @@
 [
-  { "kind": "system" },
-  { "kind": "copy" },
+  { "kind": "system", "labelKey": "reader.share.system" },
+  { "kind": "copy", "labelKey": "reader.share.copyLink", "symbol": "link" },
   {
     "kind": "link",
     "label": "E-Mail",

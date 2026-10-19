@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { stepMenuFocus } from '../menu-keys';
 
 /** One choice on the sheet. `label` arrives already translated — this lives in
  *  shared/ and must not know any feature's i18n keys. */
@@ -36,20 +37,8 @@ export class ActionSheetComponent {
   private startY = 0;
   private dy = 0;
 
-  /** role=menu's keyboard contract: Arrow keys walk the items, wrapping. The
-   *  CDK dialog already owns Tab (focus trap) and Escape (dismiss). */
   onKeydown(event: KeyboardEvent): void {
-    const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
-    if (step === 0) return;
-    event.preventDefault();
-    const items = Array.from(
-      this.host.nativeElement.querySelectorAll<HTMLElement>('[role="menuitem"]'),
-    );
-    if (items.length === 0) return;
-    const active = items.indexOf(document.activeElement as HTMLElement);
-    // From outside the items, ArrowDown enters at the first, ArrowUp at the last.
-    const from = active === -1 ? (step === 1 ? -1 : 0) : active;
-    items[(from + step + items.length) % items.length].focus();
+    stepMenuFocus(event, this.host.nativeElement);
   }
 
   onTouchStart(event: TouchEvent): void {

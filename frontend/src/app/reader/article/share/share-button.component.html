@@ -35,34 +35,23 @@
     [attr.aria-label]="'reader.share.button' | transloco"
   >
     @for (target of targets; track $index) {
-      @switch (target.kind) {
-        @case ('divider') {
-          <hr role="separator" />
-        }
-        @case ('link') {
-          <button role="menuitem" type="button" (click)="choose(target)">
-            @if (target.icon) {
-              <span
-                class="logo"
-                aria-hidden="true"
-                [style.background-color]="target.color ?? 'var(--text-primary)'"
-                [style.mask-image]="'url(share-targets/' + target.icon + ')'"
-                [style.-webkit-mask-image]="'url(share-targets/' + target.icon + ')'"
-              ></span>
-            } @else {
-              <app-icon [name]="target.symbol ?? 'public'" size="sm" />
-            }
-            {{ target.label }}
-          </button>
-        }
-        @default {
-          <button role="menuitem" type="button" (click)="choose(target)">
-            <app-icon [name]="target.kind === 'copy' ? 'link' : glyph" size="sm" />
-            {{
-              (target.kind === 'copy' ? 'reader.share.copyLink' : 'reader.share.system') | transloco
-            }}
-          </button>
-        }
+      @if (target.kind === 'divider') {
+        <hr role="separator" />
+      } @else {
+        <button role="menuitem" type="button" (click)="choose(target)">
+          @if (target.icon) {
+            <span
+              class="logo"
+              aria-hidden="true"
+              [style.background-color]="target.color ?? 'var(--text-primary)'"
+              [style.mask-image]="'url(share-targets/' + target.icon + ')'"
+              [style.-webkit-mask-image]="'url(share-targets/' + target.icon + ')'"
+            ></span>
+          } @else {
+            <app-icon [name]="target.symbol ?? glyph" size="sm" />
+          }
+          {{ target.labelKey ? (target.labelKey | transloco) : target.label }}
+        </button>
       }
     }
   </div>

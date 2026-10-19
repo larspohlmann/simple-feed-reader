@@ -1,4 +1,4 @@
-const TRACKING_PARAMS = new Set([
+const CLICK_IDS = new Set([
   'fbclid',
   'gclid',
   'dclid',
@@ -14,29 +14,14 @@ const TRACKING_PARAMS = new Set([
 
 function isTracking(key: string): boolean {
   const lower = key.toLowerCase();
-  return lower.startsWith('utm_') || TRACKING_PARAMS.has(lower);
-}
-
-function isTrackingPiece(piece: string): boolean {
-  const key = piece.split('=')[0].replace(/\+/g, ' ');
-  try {
-    return isTracking(decodeURIComponent(key));
-  } catch {
-    return isTracking(key);
-  }
+  return lower.startsWith('utm_') || CLICK_IDS.has(lower);
 }
 
 export function stripTracking(url: string): string {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return url;
-  }
-  if (parsed.search === '') return url;
-  const pieces = parsed.search.slice(1).split('&');
-  const kept = pieces.filter((piece) => !isTrackingPiece(piece));
-  if (kept.length === pieces.length) return url;
-  parsed.search = kept.join('&');
+  if (!URL.canParse(url)) return url;
+  const parsed = new URL(url);
+  const tracking = [...parsed.searchParams.keys()].filter(isTracking);
+  if (tracking.length === 0) return url;
+  tracking.forEach((key) => parsed.searchParams.delete(key));
   return parsed.toString();
 }

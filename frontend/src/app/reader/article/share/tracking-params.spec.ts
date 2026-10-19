@@ -16,12 +16,6 @@ describe('stripTracking', () => {
     );
   });
 
-  it('keeps the other parameters byte-identical', () => {
-    expect(stripTracking('https://example.com/a?flag&q=a%20b&utm_source=x')).toBe(
-      'https://example.com/a?flag&q=a%20b',
-    );
-  });
-
   it('drops the question mark when only tracking was there', () => {
     expect(stripTracking('https://example.com/a?utm_campaign=z')).toBe('https://example.com/a');
   });

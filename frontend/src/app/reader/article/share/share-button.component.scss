@@ -1,15 +1,7 @@
-@use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
 
 :host {
   display: contents;
-}
-
-/* An encapsulated child misses the toolbar mixin's phone rule: the label drops here too. */
-@media (width <= bp.$bp-sm) {
-  .mobile-icon-only .txt {
-    display: none;
-  }
 }
 
 .menu {
