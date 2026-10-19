@@ -37,7 +37,7 @@ final class AccountResetTest extends DbTestCase
 {
     use SeedsUsers;
 
-    private const string LAST_SYNCED_AT = '2026-10-17 11:00:00';
+    private const string LAST_CHECKED_AT = '2026-10-17 11:00:00';
 
     private function reset(): AccountReset
     {
@@ -109,7 +109,7 @@ final class AccountResetTest extends DbTestCase
     {
         $account = SocialAccounts::blueskyOf($this->user($email));
         $this->entityManager->persist($account);
-        $account->recordSync(new \DateTimeImmutable(self::LAST_SYNCED_AT));
+        $account->recordSync(new \DateTimeImmutable(self::LAST_CHECKED_AT));
         $listId = 'at://did:plc:alice/app.bsky.graph.list/news';
         $this->entityManager->persist(new KnownSocialCollection($account, SocialFeedKind::UserList, $listId));
         $this->entityManager->persist(new PrivateFeedSyncChange(
@@ -118,7 +118,7 @@ final class AccountResetTest extends DbTestCase
             $listId,
             'News',
             PrivateFeedSyncReason::Saved,
-            new \DateTimeImmutable(self::LAST_SYNCED_AT),
+            new \DateTimeImmutable(self::LAST_CHECKED_AT),
         ));
         $this->entityManager->flush();
 
@@ -143,7 +143,7 @@ final class AccountResetTest extends DbTestCase
         self::assertCount(1, $changes->findBy(['socialAccount' => $bystanderId]));
         $kept = $this->entityManager->find(SocialAccount::class, $accountId);
         self::assertInstanceOf(SocialAccount::class, $kept);
-        self::assertSame(self::LAST_SYNCED_AT, $kept->getLastSyncedAt()?->format('Y-m-d H:i:s'));
+        self::assertSame(self::LAST_CHECKED_AT, $kept->getLastCheckedAt()?->format('Y-m-d H:i:s'));
         self::assertSame([], $kept->getKindsNotYetSynced());
     }
 

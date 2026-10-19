@@ -186,11 +186,6 @@ final class SocialAccount
         return $this->syncStamp->checkedAt();
     }
 
-    public function getLastSyncedAt(): ?\DateTimeImmutable
-    {
-        return $this->syncStamp->syncedAt();
-    }
-
     public function getLastSyncSkip(): ?PrivateFeedSyncSkip
     {
         return $this->syncStamp->skip();
