@@ -69,8 +69,8 @@ final class PrivateFeedRulesTest extends TestCase
         yield 'non-latin letters' => ['日本語', true];
         yield 'a combining mark' => ["cafe\u{0301}", true];
         yield 'a middle dot' => ["l\u{00B7}l", true];
-        yield 'the longest name' => [str_repeat('a', 255), true];
-        yield 'a name over 255 characters' => [str_repeat('a', 256), false];
+        yield 'the longest name' => [str_repeat('a', 100), true];
+        yield 'a name over 100 characters' => [str_repeat('a', 101), false];
         yield 'empty' => ['', false];
         yield 'a leading hash' => ['#caturday', false];
         yield 'a space' => ['cat day', false];

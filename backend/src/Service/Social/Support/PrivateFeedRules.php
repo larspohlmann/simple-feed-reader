@@ -11,7 +11,7 @@ use App\Service\Social\Model\PrivateFeedModel;
 final class PrivateFeedRules
 {
     private const string MASTODON_LIST = '/^\d{1,32}$/D';
-    private const string MASTODON_TAG = '/^[\p{L}\p{M}\p{N}_\x{00B7}\x{200C}]{1,255}$/uD';
+    private const string MASTODON_TAG = '/^[\p{L}\p{M}\p{N}_\x{00B7}\x{200C}]{1,100}$/uD';
 
     public static function allows(SocialNetwork $network, PrivateFeedModel $privateFeed): bool
     {
