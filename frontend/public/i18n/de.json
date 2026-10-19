@@ -385,7 +385,7 @@
       "connectedSince": "Verbunden seit {{date}}",
       "connectAnother": "Weiteres Konto verbinden",
       "importSectionTitle": "Feeds verwalten",
-      "importSectionCaption": "Wähle, welche deiner Bluesky- und Mastodon-Konten, -Listen und -Feeds hier als Feeds ankommen; gefolgte Konten landen unter „Feeds“ im Bluesky- oder Mastodon-Bereich. Ein Haken heißt abonniert: Entferne ihn, um einen Feed abzubestellen, und schau jederzeit wieder für neu Gefolgte vorbei. Listen und Feeds, die du im Netzwerk speicherst oder anlegst, kommen innerhalb einer Stunde dazu, und was du dort entfernst, verschwindet auch hier; was du hier entfernst, wird nicht wieder hinzugefügt.",
+      "importSectionCaption": "Wähle, welche deiner Bluesky- und Mastodon-Konten, -Listen und -Feeds hier als Feeds ankommen; gefolgte Konten landen unter „Feeds“ im Bluesky- oder Mastodon-Bereich. Ein Haken heißt abonniert: Entferne ihn, um einen Feed abzubestellen, und schau jederzeit wieder für neu Gefolgte vorbei. Listen, gefolgte Hashtags und Feeds, die du im Netzwerk speicherst, abonnierst oder anlegst, kommen innerhalb einer Stunde dazu, und was du dort entfernst oder entfolgst, verschwindet auch hier; was du hier entfernst, wird nicht wieder hinzugefügt.",
       "importChoose": "Feeds verwalten…",
       "importTitle": "Feeds von {{handle}} verwalten",
       "importLoading": "Lade die Konten, denen du folgst…",
@@ -415,7 +415,7 @@
       "importRemoveCountMessage": "Diese {{count}} Feeds und ihre Einträge aus deinen Feeds entfernen?",
       "importRemoveConfirm": "Entfernen",
       "syncNever": "Noch nicht geprüft",
-      "syncChecked": "Listen und Feeds zuletzt geprüft {{when}}",
+      "syncChecked": "Listen, Hashtags und Feeds zuletzt geprüft {{when}}",
       "syncSkipped": {
         "unreachable": "Übersprungen {{when}}: {{network}} hat nicht geantwortet",
         "incomplete": "Übersprungen {{when}}: Die Antwort von {{network}} war unvollständig (oder das Konto führt keine Liste gespeicherter Feeds), daher wurde nichts geändert",
@@ -426,7 +426,9 @@
         "saved": "{{name}} hinzugefügt (neu gespeichert)",
         "created": "{{name}} hinzugefügt (neue Liste)",
         "unsaved": "{{name}} entfernt (nicht mehr gespeichert)",
-        "deleted": "{{name}} entfernt (im Netzwerk gelöscht)"
+        "deleted": "{{name}} entfernt (im Netzwerk gelöscht)",
+        "followed": "{{name}} hinzugefügt (neu gefolgt)",
+        "unfollowed": "{{name}} entfernt (nicht mehr gefolgt)"
       },
       "importEmpty": "Nichts anzuzeigen.",
       "importShowMore": "{{count}} weitere anzeigen",

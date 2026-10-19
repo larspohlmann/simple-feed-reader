@@ -146,7 +146,7 @@ describe('SocialSectionComponent', () => {
         }),
       ]);
 
-      expect(description(fixture)).toContain('Lists and feeds last checked');
+      expect(description(fixture)).toContain('Lists, tags and feeds last checked');
       expect(byTestId(fixture, 'social-sync-changes-1')?.textContent).toContain(
         'Added News (newly saved)',
       );
@@ -195,6 +195,26 @@ describe('SocialSectionComponent', () => {
       ]);
 
       expect(byTestId(fixture, 'social-sync-changes-1')?.textContent).toContain(expected);
+    });
+
+    it('words followed and unfollowed tags', () => {
+      const at = fiveMinutesAgo();
+      const fixture = mount([
+        account({
+          sync: {
+            checkedAt: at,
+            skipped: null,
+            changes: [
+              { kind: 'tag', name: '#Caturday', reason: 'followed', at },
+              { kind: 'tag', name: '#fediverse', reason: 'unfollowed', at },
+            ],
+          },
+        }),
+      ]);
+
+      const changes = byTestId(fixture, 'social-sync-changes-1')?.textContent;
+      expect(changes).toContain('Added #Caturday (newly followed)');
+      expect(changes).toContain('Removed #fediverse (no longer followed)');
     });
 
     it('lists two changes with the same name and second', () => {
