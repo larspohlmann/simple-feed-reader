@@ -1,12 +1,12 @@
-# Mastodon Followed Tags as Private Feeds Implementation Plan
+# Mastodon Followed Tags and Trending Posts as Private Feeds Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A connected Mastodon account's followed hashtags show up in "Manage feeds" as a third tab. Ticking one creates a private feed that reads the instance's tag timeline with the account's token. The hourly private-feed sync keeps the subscribed tags in line with the tags the account follows.
+**Goal:** A connected Mastodon account's followed hashtags show up in "Manage feeds" as a third tab. Ticking one creates a private feed that reads the instance's tag timeline with the account's token. The hourly private-feed sync keeps the subscribed tags in line with the tags the account follows. The picker's Lists tab also offers the instance's **Trending posts** (Explore → Posts) as a private feed, a row after Home.
 
-**Architecture:** Followed tags are a new `SocialFeedKind::Tag`. Lists already travel candidate source → picker → `PrivateFeeds::create` → `SocialFeed` row → `MastodonTimelineSource` → `PrivateFeedSync`, and a tag rides that same path. The work is one more case at each step that branches on the kind, so there is no new pipeline. A tag's remote id is its name, lowercased in exactly one place (`PrivateFeedModel::followedTag`). Its display name is `#Name`.
+**Architecture:** Followed tags are a new `SocialFeedKind::Tag`. Lists already travel candidate source → picker → `PrivateFeeds::create` → `SocialFeed` row → `MastodonTimelineSource` → `PrivateFeedSync`, and a tag rides that same path. The work is one more case at each step that branches on the kind, so there is no new pipeline. A tag's remote id is its name, lowercased in exactly one place (`PrivateFeedModel::followedTag`). Its display name is `#Name`. Trending posts are a second new kind, `SocialFeedKind::Trending`. Like Home it has an empty remote id, so there is one per account, and it is never synced.
 
-**Tech Stack:** Symfony 7.4 / PHP 8.4 (backend), Angular 20 standalone + signals, Transloco, Jest (frontend). Mastodon REST API: `GET /api/v1/followed_tags` (4.0+, paged by `Link` header, `limit` ≤ 200) and `GET /api/v1/timelines/tag/:hashtag` (`limit` ≤ 40, `min_id`).
+**Tech Stack:** Symfony 7.4 / PHP 8.4 (backend), Angular 20 standalone + signals, Transloco, Jest (frontend). Mastodon REST API: `GET /api/v1/followed_tags` (4.0+, paged by `Link` header, `limit` ≤ 200) and `GET /api/v1/timelines/tag/:hashtag` (`limit` ≤ 40, `min_id`), `GET /api/v1/trends/statuses` (`limit` ≤ 40, ranked, paged by `offset`, no `min_id`).
 
 **Spec:** GitHub issue [larspohlmann/simple-feed-reader#1704](https://github.com/larspohlmann/simple-feed-reader/issues/1704). It builds on the list private feeds of #1599 (`docs/superpowers/plans/2026-10-12-1599-social-private-feeds.md`) and the hourly sync of #1666.
 
@@ -16,7 +16,8 @@
 - **Correction to the issue, decided here:** the issue says an unfollowed tag is "never removed automatically". That is wrong for lists too: since #1666 a list that disappears on the network is unsubscribed by the sync. A tag follows the same rule as a list. Following a tag on Mastodon adds it within the hour, and unfollowing it removes it. A tag the user unticks here is not added back, which `KnownSocialCollection` already guarantees. Post this as a comment on #1704 when the PR opens.
 - A tag's remote id is `mb_strtolower($name)`. Mastodon matches tags case-insensitively, so `#Caturday` and `#caturday` must be one feed. Display name: `'#' . $name` with the casing the instance sent.
 - A tag name is valid only if it matches `/^[\p{L}\p{M}\p{N}_\x{00B7}\x{200C}]{1,255}$/uD`: no `:`, `/`, `?`, `&`, `#` or whitespace. It is still `rawurlencode`d wherever it enters a URL.
-- Tags are Mastodon-only. `PrivateFeedRules` refuses a tag on Bluesky, and Bluesky's picker gets no tags tab.
+- **Trending posts (added after the issue was filed, at the user's request):** "trending" means trending *posts*; trending hashtags and news links stay out of scope. `/api/v1/trends/statuses` is a ranking, not a timeline, so its request never carries `min_id`: each fetch takes the current top 40, and entry de-duplication by GUID keeps repeats out. Trending is not a remembered collection, is not in `PrivateFeedSync::SYNCED_KINDS`, and, like Home, is excluded from All items and For you (`PrivateFeeds::subscribed()` already does this for any kind that does not follow one person). An instance with trends switched off answers an empty list or an error; the feed then shows nothing or the usual fetch error, with no special handling. Add a comment to #1704 saying trending posts were added to the scope.
+- Tags and trending posts are Mastodon-only. `PrivateFeedRules` refuses a tag on Bluesky, and Bluesky's picker gets no tags tab.
 - No migration: `kind` and `reason` are `VARCHAR(16)` with a PHP enum (`'tag'`, `'followed'`, `'unfollowed'` all fit). Run `bin/console doctrine:schema:validate` to prove it.
 - HTTP statuses in tests are `Response::HTTP_*`, never literals.
 - Commit format is `type(#1704): …`, with no Claude attribution.
@@ -50,6 +51,7 @@ Backend, modified:
 | `backend/src/Service/Social/PrivateFeedSyncApplier.php` | tags in `byKey()` |
 | `backend/src/Service/Social/Support/PrivateFeedSyncReasons.php` | `Followed` / `Unfollowed` |
 | `backend/tests/Support/StubSocialCandidates.php` | carry `tags` into collections |
+| (Task 5) `SocialFeedKind`, `PrivateFeedModel`, `PrivateFeedRules`, `SocialFeedUrl`, `PrivateFeedSite`, both timeline sources, `SocialImporter`, `SocialImportCollectionItem`, `ImportCandidates` | the `Trending` kind |
 
 Backend, created: `backend/src/Service/Social/Support/MastodonFollowedTag.php` (a tag JSON node → `SocialCollectionModel`) and its test.
 
@@ -764,7 +766,178 @@ git commit -m "feat(#1704): sync followed Mastodon tags hourly"
 
 ---
 
-### Task 5: The picker shows a Tags tab for Mastodon
+### Task 5: Trending posts are a private feed of a Mastodon account
+
+**Files:**
+- Modify: `backend/src/Enum/SocialFeedKind.php`
+- Modify: `backend/src/Service/Social/Model/PrivateFeedModel.php`
+- Modify: `backend/src/Service/Social/Support/PrivateFeedRules.php`
+- Modify: `backend/src/Service/Social/Support/SocialFeedUrl.php`
+- Modify: `backend/src/Service/Social/Support/PrivateFeedSite.php`
+- Modify: `backend/src/Service/Social/TimelineSource/MastodonTimelineSource.php`
+- Modify: `backend/src/Service/Social/TimelineSource/BlueskyTimelineSource.php`
+- Modify: `backend/src/Service/Social/SocialImporter.php`
+- Modify: `backend/src/Dto/Social/SocialImportCollectionItem.php`
+- Modify: `backend/src/Service/Social/ImportCandidates.php`
+- Test: the matching tests from Task 1, plus `backend/tests/Service/Social/ImportCandidatesTest.php` and `backend/tests/Controller/Api/SocialImportControllerTest.php`
+
+**Interfaces:**
+- Consumes: the `match`-based `pathOf()` / `mastodon()` from Task 1, and `ImportCandidatesModel` from Task 3.
+- Produces: `SocialFeedKind::Trending` (`'trending'`), with `isRememberedCollection()` and `followsOnePerson()` both false; `PrivateFeedModel::trending(): PrivateFeedModel` (remote id `''`, name `'Trending'`); URL `social:mastodon:<accountId>:trending`; a candidate `{kind: 'trending', id: null, name: 'Trending', …}` right after Home in `lists`, offered only where `PrivateFeedRules` allows it.
+
+- [ ] **Step 1: Write the failing tests**
+
+`SocialFeedKindTest`: both existing tests keep their expectations. That proves Trending is neither a person's feed nor a remembered collection, so leave them as they are.
+
+`PrivateFeedModelTest`:
+
+```php
+public function testTrendingIsOnePerAccountLikeHome(): void
+{
+    $trending = PrivateFeedModel::trending();
+
+    self::assertSame(SocialFeedKind::Trending, $trending->kind);
+    self::assertSame('', $trending->remoteId);
+    self::assertSame('trending:', $trending->key());
+    self::assertEquals($trending, PrivateFeedModel::of(SocialFeedKind::Trending, 'ignored', 'ignored'));
+}
+```
+
+`PrivateFeedRulesTest::verdicts()`:
+
+```php
+yield 'trending on mastodon' => [SocialNetwork::Mastodon, PrivateFeedModel::trending(), true];
+yield 'trending on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::trending(), false];
+```
+
+`SocialFeedUrlTest`: `testEveryKindIsReadBackFromItsOwnUrl` covers the new segment. Also assert `SocialFeedUrl::of(<the mastodon account the file uses>, PrivateFeedModel::trending())` ends in `:trending` with no trailing colon.
+
+`PrivateFeedSiteTest`: `https://mastodon.example/explore` for `PrivateFeedModel::trending()`.
+
+`MastodonTimelineSourceTest`:
+
+```php
+public function testTrendingAsksForTheCurrentRankingAndNeverForWhatCameAfterTheNewestSeen(): void
+{
+    $trending = self::socialFeed(SocialFeedKind::Trending, '');
+    $trending->recordNewestSeen('100');
+
+    $request = $this->source(new RoutedHttpClient([]))->request($trending);
+
+    self::assertSame('https://mastodon.example/api/v1/trends/statuses?limit=40', $request->url);
+}
+```
+
+`BlueskyTimelineSourceTest`: a `SocialFeedKind::Trending` feed throws `SocialNetworkUnreachableException` from `request()`.
+
+`ImportCandidatesTest`: read `testHomeLeadsTheListsAndAnAddedCollectionReadsAsSubscribed` (line 286) and the test at line 240. Add:
+- `testAMastodonAccountIsOfferedTrendingRightAfterHome`: for a Mastodon account with one list, the `lists` kinds read `['home', 'trending', 'list']`.
+- `testABlueskyAccountIsNotOfferedTrending`: for a Bluesky account, no candidate has kind `Trending`.
+
+Any existing expectation over a Mastodon account's `lists` gains the trending row; update it, and keep the Bluesky ones unchanged.
+
+`SocialImportControllerTest`: `testTrendingIsImportedAsAPrivateFeedOfTheMastodonAccount` POSTs `collections: [{kind: 'trending', id: null, name: 'Trending'}]` and asserts a subscription to `social:mastodon:<accountId>:trending` that is excluded from All items and For you. `testTrendingIsRefusedForABlueskyAccount` uses the same status the file uses for an invalid collection.
+
+- [ ] **Step 2: Run the tests to see them fail**
+
+Run: `cd backend && php bin/phpunit tests/Service/Social tests/Enum tests/Controller/Api/SocialImportControllerTest.php`
+Expected: FAIL on the undefined `SocialFeedKind::Trending` and `PrivateFeedModel::trending()`.
+
+- [ ] **Step 3: Implement**
+
+`SocialFeedKind`: `case Trending = 'trending';` (no change to the two predicates).
+
+`PrivateFeedModel`:
+
+```php
+private const string TRENDING_NAME = 'Trending';
+
+public static function trending(): self
+{
+    return new self(SocialFeedKind::Trending, '', self::TRENDING_NAME);
+}
+```
+
+with the arm `SocialFeedKind::Trending => self::trending(),` in `of()`, and `/** '' for Home and Trending */` on `$remoteId`.
+
+`PrivateFeedRules::allows()`: `SocialFeedKind::Trending => SocialNetwork::Mastodon === $network,`.
+
+`SocialFeedUrl::SEGMENTS`: append `'trending' => 'trending'`.
+
+`PrivateFeedSite::mastodon()`: the arm `SocialFeedKind::Trending => $instance . '/explore',`.
+
+`MastodonTimelineSource::pathOf()`: a ranking takes no `min_id`, so return early before the newest-seen suffix:
+
+```php
+private static function pathOf(SocialFeed $socialFeed): string
+{
+    if (SocialFeedKind::Trending === $socialFeed->getKind()) {
+        return '/api/v1/trends/statuses?limit=' . self::PAGE_SIZE;
+    }
+    $path = match ($socialFeed->getKind()) {
+        // …unchanged from Task 1…
+    };
+    // …unchanged from Task 1…
+}
+```
+
+If PHPMD flags `pathOf()`, extract the `match` into `timelinePathOf(SocialFeed $socialFeed): string` and fix the design rather than the threshold.
+
+`BlueskyTimelineSource::pathOf()`: Tag and Trending share one arm, `SocialFeedKind::Tag, SocialFeedKind::Trending => throw new SocialNetworkUnreachableException('Bluesky has no such timeline.'),`, which replaces Task 1's Tag arm. Update the Task 1 test's expected message if it pinned one.
+
+`SocialImporter::kindLabel()`: `SocialFeedKind::Trending => 'trending timeline',`.
+
+`SocialImportCollectionItem`: add `SocialFeedKind::Trending->value` to the choice.
+
+`ImportCandidates::forAccount()`: the singletons come before the lists, and only where the network has them:
+
+```php
+[
+    ...self::singletonsOf($account, $subscribed),
+    ...self::collections(SocialFeedKind::UserList, $network->lists, $subscribed),
+],
+```
+
+```php
+/**
+ * @param array<string, int> $subscribed subscription id by PrivateFeedModel::key()
+ *
+ * @return list<CollectionCandidateModel>
+ */
+private static function singletonsOf(SocialAccount $account, array $subscribed): array
+{
+    $offered = array_filter(
+        [PrivateFeedModel::home(), PrivateFeedModel::trending()],
+        static fn (PrivateFeedModel $privateFeed): bool => PrivateFeedRules::allows($account->getNetwork(), $privateFeed),
+    );
+
+    return array_values(array_map(
+        static fn (PrivateFeedModel $privateFeed): CollectionCandidateModel => CollectionCandidateModel::of(
+            $privateFeed,
+            $subscribed,
+        ),
+        $offered,
+    ));
+}
+```
+
+- [ ] **Step 4: Run the tests to see them pass**
+
+Run: `php bin/phpunit tests/Service/Social tests/Enum tests/Repository tests/Controller/Api`
+Expected: PASS. `PrivateFeedSyncTest::testHomeAndAnyKindOffTheAllowListAreNeverTouched` must still pass with the Task 4 list, because Trending is not synced.
+
+- [ ] **Step 5: Lint and commit**
+
+Run: `composer cs && composer stan && composer md`
+
+```bash
+git add backend/src backend/tests
+git commit -m "feat(#1704): offer a Mastodon account's trending posts as a private feed"
+```
+
+---
+
+### Task 6: The picker shows a Tags tab and a Trending row for Mastodon
 
 **Files:**
 - Modify: `frontend/src/app/reader/social-feed.ts`
@@ -776,7 +949,7 @@ git commit -m "feat(#1704): sync followed Mastodon tags hourly"
 - Test: `social-import-rows.spec.ts`, `social-import-dialog.component.spec.ts`, and `social-sections` spec if it pins `KIND_ORDER`
 
 **Interfaces:**
-- Consumes: the `tags` key and `kind: 'tag'` from Task 3.
+- Consumes: the `tags` key and `kind: 'tag'` from Task 3; `kind: 'trending'` in `lists` from Task 5.
 - Produces: `ImportTab` includes `'tags'`; the exported `collectionsOf(candidates: ImportCandidates | null): readonly CollectionCandidate[]` (lists, custom feeds, then tags).
 
 - [ ] **Step 1: Write the failing tests**
@@ -821,6 +994,8 @@ it('offers followed tags instead of custom feeds on Mastodon', () => {
 });
 ```
 
+Add `it('names the trending row in the user\'s language', …)`: a Mastodon load with `lists: [HOME, collection({ kind: 'trending', id: null, name: 'Trending' })]`, opened on the Lists tab, shows a row with test id `social-import-collection-trending:` whose text holds the `settings.social.importTrending` translation. Use the same testing translation the Home row's test relies on.
+
 Add a test that ticking a new tag and saving POSTs `collections: [{ kind: 'tag', id: 'caturday', name: '#Caturday' }]`. Model it on the file's existing test that saves a ticked list (read it; reuse its `http.expectOne` and request-body assertions).
 
 - [ ] **Step 2: Run the tests to see them fail**
@@ -830,9 +1005,9 @@ Expected: FAIL.
 
 - [ ] **Step 3: Implement**
 
-`social-feed.ts`: `{ kind: 'home' | 'list' | 'custom_feed' | 'tag'; accountId: number }`.
+`social-feed.ts`: `{ kind: 'home' | 'trending' | 'list' | 'custom_feed' | 'tag'; accountId: number }`.
 
-`social-sections.ts` `KIND_ORDER`: add `tag: 3,`.
+`social-sections.ts` `KIND_ORDER`: `{ home: 0, trending: 1, list: 2, custom_feed: 3, tag: 4 }`.
 
 `social-import.service.ts` `ImportCandidates`: add `readonly tags: readonly CollectionCandidate[];`.
 
@@ -842,7 +1017,7 @@ Expected: FAIL.
 export type ImportTab = 'accounts' | 'lists' | 'customFeeds' | 'tags';
 ```
 
-and add `tag: 'tag'` to `COLLECTION_ICONS` and `tags: 'social-import-tags'` to `TAB_TEST_IDS`.
+and add `trending: 'trending_up'` and `tag: 'tag'` to `COLLECTION_ICONS` and `tags: 'social-import-tags'` to `TAB_TEST_IDS`.
 
 ```ts
 /** Every collection the picker offers, in tab order. */
@@ -859,7 +1034,21 @@ export function collectionsOf(candidates: ImportCandidates | null): readonly Col
 
 `social-import-dialog.component.ts`: the Mastodon tabs become `['accounts', 'lists', 'tags']`, and `chosenCollections()` uses `collectionsOf(this.importer.candidates())`.
 
-`en.json` under `settings.social.importTab`: `"tags": "Tags"`. `de.json`: `"tags": "Hashtags"`.
+`collectionName()` translates the trending row the way it translates Home:
+
+```ts
+const SINGLETON_NAME_KEYS: Readonly<Partial<Record<CollectionKind, string>>> = {
+  home: 'settings.social.importHome',
+  trending: 'settings.social.importTrending',
+};
+
+function collectionName(collection: CollectionCandidate, translate: Translate): string {
+  const key = SINGLETON_NAME_KEYS[collection.kind];
+  return key === undefined ? collection.name : translate(key);
+}
+```
+
+`en.json` under `settings.social`: `importTab.tags`: `"Tags"`, and `"importTrending": "Trending posts"` next to `importHome`. `de.json`: `importTab.tags`: `"Hashtags"`, `"importTrending": "Angesagte Beiträge"`.
 
 - [ ] **Step 4: Run the tests to see them pass**
 
@@ -869,12 +1058,12 @@ Run: `npx jest src/app/reader src/app/settings`, then `npm run check`, which is 
 
 ```bash
 git add frontend
-git commit -m "feat(#1704): a Tags tab in the Mastodon picker"
+git commit -m "feat(#1704): a Tags tab and a Trending row in the Mastodon picker"
 ```
 
 ---
 
-### Task 6: The settings page explains tag sync and logs its changes
+### Task 7: The settings page explains tag sync and logs its changes
 
 **Files:**
 - Modify: `frontend/src/app/settings/social/social-accounts.service.ts`
@@ -882,7 +1071,7 @@ git commit -m "feat(#1704): a Tags tab in the Mastodon picker"
 - Test: `frontend/src/app/settings/social/social-section.component.spec.ts`
 
 **Interfaces:**
-- Consumes: `reason: 'followed' | 'unfollowed'` and `kind: 'tag'` from Task 4.
+- Consumes: `reason: 'followed' | 'unfollowed'` and `kind: 'tag'` from Task 4. (Trending is never synced, so the log never shows it.)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -932,7 +1121,7 @@ git commit -m "feat(#1704): explain and log followed-tag sync in settings"
 
 ---
 
-### Task 7: Verify the whole branch
+### Task 8: Verify the whole branch
 
 - [ ] **Step 1: Backend gates, both database legs**
 
@@ -948,8 +1137,8 @@ Run `composer infection:diff` (needs pcov). Kill each escaped mutant with a test
 
 - [ ] **Step 4: Live check against a real instance**
 
-This needs the running app, so do it after merging the branch into the checkout that owns the Docker stack, or ask the user to run it there. Open Settings → Social → Manage feeds for the connected Mastodon account. Confirm the Tags tab lists the account's followed tags, tick one, save, refresh that feed, and confirm posts with that hashtag arrive and the feed's site link opens `/tags/<name>` on the instance. Then follow a new tag on Mastodon, run the sync (`bin/console` command used by the hourly sweep; find it with `bin/console list app`), and confirm the change log shows "Added #… (newly followed)".
+This needs the running app, so do it after merging the branch into the checkout that owns the Docker stack, or ask the user to run it there. Open Settings → Social → Manage feeds for the connected Mastodon account. Confirm the Tags tab lists the account's followed tags, tick one, save, refresh that feed, and confirm posts with that hashtag arrive and the feed's site link opens `/tags/<name>` on the instance. Tick Trending posts, save, refresh, and confirm the instance's trending posts arrive, are absent from All items, and that a second refresh adds no duplicates. Then follow a new tag on Mastodon, run the sync (`bin/console` command used by the hourly sweep; find it with `bin/console list app`), and confirm the change log shows "Added #… (newly followed)".
 
 - [ ] **Step 5: PR**
 
-Merge `develop` into the branch first. Open the PR against `develop` with `Closes #1704`. Comment on #1704 with the sync-removal correction from Global Constraints.
+Merge `develop` into the branch first. Open the PR against `develop` with `Closes #1704`. Comment on #1704 with the sync-removal correction and the trending-posts scope addition from Global Constraints.
