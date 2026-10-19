@@ -69,9 +69,19 @@ final readonly class PrivateFeedSyncApplier
         $subscribed = $this->subscribedOf($account);
         $known = $this->knownCollections->keysOf($account);
 
-        return null === $account->getLastSyncedAt()
-            ? CollectionSyncPlan::baseline($onNetwork, $subscribed, $known)
-            : CollectionSyncPlan::following($onNetwork, $subscribed, $known);
+        return CollectionSyncPlan::following($onNetwork, $subscribed, $known)
+            ->baselining(self::kindsNotYetSynced($account));
+    }
+
+    /** @return list<SocialFeedKind> */
+    private static function kindsNotYetSynced(SocialAccount $account): array
+    {
+        $synced = $account->getSyncedKinds();
+
+        return array_values(array_filter(
+            PrivateFeedSync::SYNCED_KINDS,
+            static fn (SocialFeedKind $kind): bool => !\in_array($kind, $synced, true),
+        ));
     }
 
     /** @param array<int, PrivateFeedModel> $removals collection by subscription id */
@@ -121,7 +131,7 @@ final readonly class PrivateFeedSyncApplier
         foreach ($plan->toRemember() as $collection) {
             $this->knownCollections->remember($account, $collection->kind, $collection->remoteId);
         }
-        $account->recordSync($this->clock->now());
+        $account->recordSync($this->clock->now(), PrivateFeedSync::SYNCED_KINDS);
         $this->entityManager->flush();
     }
 

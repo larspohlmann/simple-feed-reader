@@ -76,6 +76,7 @@ final class PrivateFeedSyncTest extends DbTestCase
         self::assertSame(['list:' . self::NEWS], $this->knownKeys());
         self::assertSame([], $this->changes());
         $this->assertCompleteCheckAt(self::NOW);
+        self::assertSame(PrivateFeedSync::SYNCED_KINDS, $this->reloadedAccount()->getSyncedKinds());
     }
 
     public function testANewlySavedFeedIsAddedWithImportDefaultsAndLogged(): void
@@ -197,6 +198,54 @@ final class PrivateFeedSyncTest extends DbTestCase
         );
         self::assertSame(['tag:caturday'], $this->knownKeys());
         self::assertSame([['tag', 'caturday', '#Caturday', PrivateFeedSyncReason::Followed]], $this->changes());
+    }
+
+    public function testAnAccountSyncedBeforeTagsTakesATagBaselineAndAddsNoTag(): void
+    {
+        $this->useAMastodonAccountSyncedBeforeTags();
+
+        $outcome = $this->syncAgainst(self::followedTags(['Caturday', 'Rust']));
+
+        self::assertEquals(new PrivateFeedSyncOutcomeModel(), $outcome);
+        self::assertSame([], $this->subscribedUrls());
+        self::assertSame(['tag:caturday', 'tag:rust'], $this->knownKeys());
+        self::assertSame([], $this->changes());
+        self::assertSame(PrivateFeedSync::SYNCED_KINDS, $this->reloadedAccount()->getSyncedKinds());
+    }
+
+    public function testTheHourAfterTheTagBaselineANewlyFollowedTagIsAdded(): void
+    {
+        $this->useAMastodonAccountSyncedBeforeTags();
+        $this->syncAgainst(self::followedTags(['Caturday']));
+        $this->clock->modify('+1 hour');
+
+        $outcome = $this->syncAgainst(self::followedTags(['Caturday', 'Rust']));
+
+        self::assertEquals(new PrivateFeedSyncOutcomeModel(added: 1), $outcome);
+        self::assertSame(
+            [sprintf('social:mastodon:%d:tag:rust', $this->account->requireId())],
+            $this->subscribedUrls(),
+        );
+        self::assertSame([['tag', 'rust', '#Rust', PrivateFeedSyncReason::Followed]], $this->changes());
+    }
+
+    public function testListsKeepFollowingDuringTheTagBaseline(): void
+    {
+        $this->useAMastodonAccountSyncedBeforeTags();
+
+        $outcome = $this->syncAgainst(new NetworkCollectionsModel(
+            [new SocialCollectionModel('42', 'Friends')],
+            [],
+            tags: [new SocialCollectionModel('Caturday', '#Caturday')],
+        ));
+
+        self::assertEquals(new PrivateFeedSyncOutcomeModel(added: 1), $outcome);
+        self::assertSame(
+            [sprintf('social:mastodon:%d:list:42', $this->account->requireId())],
+            $this->subscribedUrls(),
+        );
+        self::assertSame(['list:42', 'tag:caturday'], $this->knownKeys());
+        self::assertSame([['list', '42', 'Friends', PrivateFeedSyncReason::Created]], $this->changes());
     }
 
     public function testAnUnfollowedTagIsRemovedAndLoggedAsUnfollowed(): void
@@ -465,9 +514,19 @@ final class PrivateFeedSyncTest extends DbTestCase
         $this->stampAnHourAgo();
     }
 
+    private function useAMastodonAccountSyncedBeforeTags(): void
+    {
+        $this->account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $this->account->recordSync(
+            new \DateTimeImmutable(self::AN_HOUR_AGO),
+            [SocialFeedKind::UserList, SocialFeedKind::CustomFeed],
+        );
+        $this->entityManager->flush();
+    }
+
     private function stampAnHourAgo(): void
     {
-        $this->account->recordSync(new \DateTimeImmutable(self::AN_HOUR_AGO));
+        $this->account->recordSync(new \DateTimeImmutable(self::AN_HOUR_AGO), PrivateFeedSync::SYNCED_KINDS);
         $this->entityManager->flush();
     }
 
@@ -565,6 +624,7 @@ final class PrivateFeedSyncTest extends DbTestCase
         self::assertSame($skip, $account->getLastSyncSkip());
         self::assertSame(self::NOW, $account->getLastCheckedAt()?->format('Y-m-d H:i:s'));
         self::assertSame(self::AN_HOUR_AGO, $account->getLastSyncedAt()?->format('Y-m-d H:i:s'));
+        self::assertSame(PrivateFeedSync::SYNCED_KINDS, $account->getSyncedKinds());
     }
 
     private function artUrl(): string
@@ -599,6 +659,15 @@ final class PrivateFeedSyncTest extends DbTestCase
     private static function network(array $lists, array $customFeeds = []): NetworkCollectionsModel
     {
         return new NetworkCollectionsModel($lists, $customFeeds);
+    }
+
+    /** @param list<string> $tagNames */
+    private static function followedTags(array $tagNames): NetworkCollectionsModel
+    {
+        return new NetworkCollectionsModel([], [], tags: array_map(
+            static fn (string $tagName): SocialCollectionModel => new SocialCollectionModel($tagName, '#' . $tagName),
+            $tagNames,
+        ));
     }
 
     private static function noCandidates(): NetworkCandidatesModel

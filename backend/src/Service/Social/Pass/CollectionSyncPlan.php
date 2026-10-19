@@ -4,43 +4,19 @@ declare(strict_types=1);
 
 namespace App\Service\Social\Pass;
 
+use App\Enum\SocialFeedKind;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\SubscribedCollectionModel;
 
 final readonly class CollectionSyncPlan
 {
-    /** @var list<PrivateFeedModel> */
-    private array $additions;
-
-    /** @var array<int, PrivateFeedModel> collection by subscription id */
-    private array $removals;
-
-    /** @var list<PrivateFeedModel> */
-    private array $toRemember;
-
     /**
-     * @param array<string, PrivateFeedModel>          $additions        by key
-     * @param array<string, SubscribedCollectionModel> $leaving          by key
-     * @param array<string, PrivateFeedModel>          $unknownOnNetwork by key
+     * @param list<PrivateFeedModel>       $additions
+     * @param array<int, PrivateFeedModel> $removals   collection by subscription id
+     * @param list<PrivateFeedModel>       $toRemember
      */
-    private function __construct(array $additions, array $leaving, array $unknownOnNetwork)
+    private function __construct(private array $additions, private array $removals, private array $toRemember)
     {
-        $this->additions = array_values($additions);
-        $this->removals = self::collectionsBySubscriptionId($leaving);
-        $this->toRemember = array_values(array_diff_key($unknownOnNetwork, $additions));
-    }
-
-    /**
-     * The account's first complete check: everything on the network is remembered, so what the user has not
-     * subscribed counts as dropped, and nothing is added.
-     *
-     * @param array<string, PrivateFeedModel>          $onNetwork  by key
-     * @param array<string, SubscribedCollectionModel> $subscribed by key
-     * @param array<string, true>                      $known
-     */
-    public static function baseline(array $onNetwork, array $subscribed, array $known): self
-    {
-        return new self([], array_diff_key($subscribed, $onNetwork), array_diff_key($onNetwork, $known));
     }
 
     /**
@@ -51,11 +27,30 @@ final readonly class CollectionSyncPlan
     public static function following(array $onNetwork, array $subscribed, array $known): self
     {
         $unknownOnNetwork = array_diff_key($onNetwork, $known);
+        $additions = array_diff_key($unknownOnNetwork, $subscribed);
 
         return new self(
-            array_diff_key($unknownOnNetwork, $subscribed),
-            array_diff_key($subscribed, $onNetwork),
-            $unknownOnNetwork,
+            array_values($additions),
+            self::collectionsBySubscriptionId(array_diff_key($subscribed, $onNetwork)),
+            array_values(array_diff_key($unknownOnNetwork, $additions)),
+        );
+    }
+
+    /**
+     * The given kinds' first complete check: what is on the network is remembered, so what the user has not
+     * subscribed counts as dropped, and nothing of those kinds is added.
+     *
+     * @param list<SocialFeedKind> $kinds
+     */
+    public function baselining(array $kinds): self
+    {
+        $isBaselined = static fn (PrivateFeedModel $collection): bool => \in_array($collection->kind, $kinds, true);
+        $isKept = static fn (PrivateFeedModel $collection): bool => !$isBaselined($collection);
+
+        return new self(
+            array_values(array_filter($this->additions, $isKept)),
+            $this->removals,
+            [...$this->toRemember, ...array_values(array_filter($this->additions, $isBaselined))],
         );
     }
 
