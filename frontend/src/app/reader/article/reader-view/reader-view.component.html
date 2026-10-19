@@ -98,13 +98,9 @@
             >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
           /></a>
         }
-        @if (e.discussionUrl) {
+        @if (discussionUrl(); as url) {
           ·
-          <a
-            class="discussion-link"
-            [href]="e.discussionUrl"
-            target="_blank"
-            rel="noopener noreferrer"
+          <a class="discussion-link" [href]="url" target="_blank" rel="noopener noreferrer"
             >{{ 'reader.discussion' | transloco }} <app-icon name="forum" size="text"
           /></a>
         }
