@@ -1,0 +1,73 @@
+[
+  { "kind": "system" },
+  { "kind": "copy" },
+  {
+    "kind": "link",
+    "label": "E-Mail",
+    "symbol": "mail",
+    "url": "mailto:?subject={title}&body={url}"
+  },
+  { "kind": "divider" },
+  {
+    "kind": "link",
+    "label": "Bluesky",
+    "icon": "bluesky.svg",
+    "color": "#1185fe",
+    "url": "https://bsky.app/intent/compose?text={text}"
+  },
+  {
+    "kind": "link",
+    "label": "Threads",
+    "icon": "threads.svg",
+    "url": "https://www.threads.net/intent/post?text={text}"
+  },
+  {
+    "kind": "link",
+    "label": "X",
+    "icon": "x.svg",
+    "url": "https://x.com/intent/post?text={title}&url={url}"
+  },
+  {
+    "kind": "link",
+    "label": "Facebook",
+    "icon": "facebook.svg",
+    "color": "#0866ff",
+    "url": "https://www.facebook.com/sharer/sharer.php?u={url}"
+  },
+  {
+    "kind": "link",
+    "label": "LinkedIn",
+    "icon": "linkedin.svg",
+    "color": "#0a66c2",
+    "url": "https://www.linkedin.com/sharing/share-offsite/?url={url}"
+  },
+  {
+    "kind": "link",
+    "label": "Reddit",
+    "icon": "reddit.svg",
+    "color": "#ff4500",
+    "url": "https://www.reddit.com/submit?url={url}&title={title}"
+  },
+  { "kind": "divider" },
+  {
+    "kind": "link",
+    "label": "WhatsApp",
+    "icon": "whatsapp.svg",
+    "color": "#25d366",
+    "url": "https://wa.me/?text={text}"
+  },
+  {
+    "kind": "link",
+    "label": "Telegram",
+    "icon": "telegram.svg",
+    "color": "#26a5e4",
+    "url": "https://t.me/share/url?url={url}&text={title}"
+  },
+  { "kind": "divider" },
+  {
+    "kind": "link",
+    "label": "Instapaper",
+    "icon": "instapaper.svg",
+    "url": "https://www.instapaper.com/hello2?url={url}&title={title}"
+  }
+]

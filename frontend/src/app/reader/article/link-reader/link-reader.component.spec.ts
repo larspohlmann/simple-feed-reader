@@ -180,17 +180,21 @@ describe('LinkReaderComponent', () => {
     const fixture = mount();
     reply(fixture, linkedPage);
 
-    elementOf(fixture).querySelector<HTMLButtonElement>('.nav button')!.click();
+    elementOf(fixture)
+      .querySelector<HTMLButtonElement>('.nav button[aria-label="Reload article"]')!
+      .click();
 
     expect(reloadLinkCard).toHaveBeenCalledWith(FIRST_CARD);
   });
 
   it('offers the reload after a failed load, and reloads the card from it', () => {
     const fixture = mount();
-    expect(elementOf(fixture).querySelector('.nav button')).toBeNull();
+    expect(elementOf(fixture).querySelector('.nav button[aria-label="Reload article"]')).toBeNull();
     reply(fixture, linkedPageFailure);
 
-    elementOf(fixture).querySelector<HTMLButtonElement>('.nav button')!.click();
+    elementOf(fixture)
+      .querySelector<HTMLButtonElement>('.nav button[aria-label="Reload article"]')!
+      .click();
 
     expect(reloadLinkCard).toHaveBeenCalledWith(FIRST_CARD);
   });

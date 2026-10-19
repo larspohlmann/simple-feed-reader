@@ -31,6 +31,7 @@ import { LinkArticleSource } from './link-article-source.service';
 export type LinkReaderReturn = 'article' | 'list';
 
 /** A link card's page in the reader, with only the chrome a page that is no entry has. */
+import { ShareButtonComponent } from '../share/share-button.component';
 @Component({
   selector: 'app-link-reader',
   imports: [
@@ -43,6 +44,7 @@ export type LinkReaderReturn = 'article' | 'list';
     PaywallNoticeComponent,
     ArticleLayerComponent,
     ArticleContentComponent,
+    ShareButtonComponent,
   ],
   providers: [
     ReadingScope,

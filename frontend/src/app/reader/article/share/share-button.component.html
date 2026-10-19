@@ -1,0 +1,69 @@
+<button
+  appListAction
+  class="mobile-icon-only"
+  type="button"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="open()"
+  [attr.aria-label]="'reader.share.button' | transloco"
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
+  #button
+  (click)="open.set(!open())"
+>
+  <app-icon [name]="glyph" size="sm" />
+  <span class="txt">{{ 'reader.share.button' | transloco }}</span>
+</button>
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="open()"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="8"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  [cdkConnectedOverlayDisposeOnNavigation]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  (backdropClick)="open.set(false)"
+  (overlayKeydown)="step($event)"
+  (detach)="open.set(false); button.focus()"
+>
+  <div
+    class="menu"
+    cdkTrapFocus
+    cdkTrapFocusAutoCapture
+    role="menu"
+    [attr.aria-label]="'reader.share.button' | transloco"
+  >
+    @for (target of targets; track $index) {
+      @switch (target.kind) {
+        @case ('divider') {
+          <hr role="separator" />
+        }
+        @case ('link') {
+          <button role="menuitem" type="button" (click)="choose(target)">
+            @if (target.icon) {
+              <span
+                class="logo"
+                aria-hidden="true"
+                [style.background-color]="target.color ?? 'var(--text-primary)'"
+                [style.mask-image]="'url(share-targets/' + target.icon + ')'"
+                [style.-webkit-mask-image]="'url(share-targets/' + target.icon + ')'"
+              ></span>
+            } @else {
+              <app-icon [name]="target.symbol ?? 'public'" size="sm" />
+            }
+            {{ target.label }}
+          </button>
+        }
+        @default {
+          <button role="menuitem" type="button" (click)="choose(target)">
+            <app-icon [name]="target.kind === 'copy' ? 'link' : glyph" size="sm" />
+            {{
+              (target.kind === 'copy' ? 'reader.share.copyLink' : 'reader.share.system') | transloco
+            }}
+          </button>
+        }
+      }
+    }
+  </div>
+</ng-template>
