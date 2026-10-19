@@ -239,8 +239,7 @@
   gap: var(--space-4);
 }
 
-// The gap a dragged tag would land in: the panel below it steps down, and the
-// slot it leaves is outlined where the tag will go (#1708).
+// The slot a dragged tag will land in, drawn in the stepped-down panel's margin.
 .tree > app-organise-tag-group {
   position: relative;
 }

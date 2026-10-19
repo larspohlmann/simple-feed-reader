@@ -92,7 +92,10 @@ export class OrganiseSectionComponent implements OnInit {
   private readonly dialog = inject(Dialog);
   protected readonly tagGap = inject(TagDragGap);
   private readonly tree = viewChild<ElementRef<HTMLElement>>('tree');
-  private readonly panels = viewChildren(OrganiseTagGroupComponent, { read: ElementRef });
+  private readonly panels = viewChildren<OrganiseTagGroupComponent, ElementRef<HTMLElement>>(
+    OrganiseTagGroupComponent,
+    { read: ElementRef },
+  );
 
   /** The last refused bulk write, shown as a banner above the list. */
   readonly error = signal<Problem | null>(null);
@@ -224,9 +227,12 @@ export class OrganiseSectionComponent implements OnInit {
   protected startTagDrag(group: OrganiseGroup): void {
     const from = this.tags.tags().findIndex((tag) => tag.id === group.tag?.id);
     const treeTop = this.treeTop();
-    const middles = this.panels()
-      .filter((_, index) => this.store.groups()[index]?.tag != null)
-      .map((panel) => verticalMiddle(panel.nativeElement as HTMLElement) - treeTop);
+    const panels = this.panels();
+    const middles = this.store
+      .groups()
+      .flatMap((group, index) =>
+        group.tag === null ? [] : [verticalMiddle(panels[index].nativeElement) - treeTop],
+      );
     this.tagGap.start(from, middles);
   }
 

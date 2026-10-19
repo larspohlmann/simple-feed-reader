@@ -6,7 +6,6 @@ export interface TagMove {
   readonly gap: number;
 }
 
-/** The gap the pointer is in: how many panels' middles lie above it. */
 export function gapIndexAt(offsetY: number, middles: readonly number[]): number {
   return middles.filter((middle) => middle < offsetY).length;
 }
