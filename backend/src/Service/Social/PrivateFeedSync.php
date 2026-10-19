@@ -18,7 +18,7 @@ use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 final readonly class PrivateFeedSync
 {
     /** An allow-list, never "all but Home": a kind added to SocialFeedKind stays untouched until listed here. */
-    public const array SYNCED_KINDS = [SocialFeedKind::UserList, SocialFeedKind::CustomFeed];
+    public const array SYNCED_KINDS = [SocialFeedKind::UserList, SocialFeedKind::CustomFeed, SocialFeedKind::Tag];
 
     public function __construct(
         private SocialCandidatesInterface $networkCollections,

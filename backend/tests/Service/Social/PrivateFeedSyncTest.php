@@ -165,7 +165,10 @@ final class PrivateFeedSyncTest extends DbTestCase
 
     public function testHomeAndAnyKindOffTheAllowListAreNeverTouched(): void
     {
-        self::assertSame([SocialFeedKind::UserList, SocialFeedKind::CustomFeed], PrivateFeedSync::SYNCED_KINDS);
+        self::assertSame(
+            [SocialFeedKind::UserList, SocialFeedKind::CustomFeed, SocialFeedKind::Tag],
+            PrivateFeedSync::SYNCED_KINDS,
+        );
         $this->privateFeeds()->create($this->account, PrivateFeedModel::home());
         $this->stampAnHourAgo();
 
@@ -175,6 +178,52 @@ final class PrivateFeedSyncTest extends DbTestCase
         self::assertSame([sprintf('social:bluesky:%d:home', $this->account->requireId())], $this->subscribedUrls());
         self::assertSame([], $this->knownKeys());
         self::assertSame([], $this->changes());
+    }
+
+    public function testANewlyFollowedTagIsAddedAndLoggedAsFollowed(): void
+    {
+        $this->useAMastodonAccount();
+
+        $outcome = $this->syncAgainst(new NetworkCollectionsModel(
+            [],
+            [],
+            tags: [new SocialCollectionModel('Caturday', '#Caturday')],
+        ));
+
+        self::assertEquals(new PrivateFeedSyncOutcomeModel(added: 1), $outcome);
+        self::assertSame(
+            [sprintf('social:mastodon:%d:tag:caturday', $this->account->requireId())],
+            $this->subscribedUrls(),
+        );
+        self::assertSame(['tag:caturday'], $this->knownKeys());
+        self::assertSame([['tag', 'caturday', '#Caturday', PrivateFeedSyncReason::Followed]], $this->changes());
+    }
+
+    public function testAnUnfollowedTagIsRemovedAndLoggedAsUnfollowed(): void
+    {
+        $this->useAMastodonAccount();
+        $this->privateFeeds()->create($this->account, PrivateFeedModel::followedTag('caturday', '#caturday'));
+        $this->stampAnHourAgo();
+
+        $outcome = $this->syncAgainst(self::network([]));
+
+        self::assertEquals(new PrivateFeedSyncOutcomeModel(removed: 1), $outcome);
+        self::assertSame([['tag', 'caturday', '#caturday', PrivateFeedSyncReason::Unfollowed]], $this->changes());
+    }
+
+    public function testATagWhoseCasingChangedOnTheInstanceIsKeptNotReplaced(): void
+    {
+        $this->useAMastodonAccount();
+        $this->privateFeeds()->create($this->account, PrivateFeedModel::followedTag('caturday', '#caturday'));
+        $this->stampAnHourAgo();
+
+        $outcome = $this->syncAgainst(new NetworkCollectionsModel(
+            [],
+            [],
+            tags: [new SocialCollectionModel('CatURDay', '#CatURDay')],
+        ));
+
+        self::assertEquals(new PrivateFeedSyncOutcomeModel(), $outcome);
     }
 
     public function testAnUnreachableNetworkSkipsTheAccountAndChangesNothing(): void
@@ -402,6 +451,12 @@ final class PrivateFeedSyncTest extends DbTestCase
         $restorer = self::getContainer()->get(AccountRestorer::class);
         self::assertInstanceOf(AccountRestorer::class, $restorer);
         $restorer->start($this->user, ExportedFoundation::of(self::getContainer(), $this->user), 'REPLACE');
+    }
+
+    private function useAMastodonAccount(): void
+    {
+        $this->account = SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->user));
+        $this->stampAnHourAgo();
     }
 
     private function stampAnHourAgo(): void
