@@ -134,7 +134,7 @@ describe('SocialSectionComponent', () => {
         ?.textContent ??
       '';
 
-    it('says when the lists and feeds were last checked and lists the changes', () => {
+    it('says when the lists, tags and feeds were last checked and lists the changes', () => {
       const at = fiveMinutesAgo();
       const fixture = mount([
         account({

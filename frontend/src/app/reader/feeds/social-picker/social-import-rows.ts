@@ -71,7 +71,6 @@ export function collectionKey(collection: CollectionCandidate): string {
   return `${collection.kind}:${collection.id ?? ''}`;
 }
 
-/** Every collection the picker offers, in tab order. */
 export function collectionsOf(candidates: ImportCandidates | null): readonly CollectionCandidate[] {
   return [
     ...(candidates?.lists ?? []),
