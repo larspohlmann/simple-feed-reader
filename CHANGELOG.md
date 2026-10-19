@@ -10,6 +10,15 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Bluesky and Mastodon, built in.** Connect your accounts in Settings → Social
+Media and manage what you follow from the reader: your home timeline, lists,
+custom feeds and the people you follow, with your lists kept in sync
+automatically. Posts show their images, videos, quotes and self-reply threads,
+along with live like counts and the replies underneath, and a thumbs up goes
+straight back to the network.
+
 ## [v1.4.1] - 2026-10-10
 
 ## What's Changed
