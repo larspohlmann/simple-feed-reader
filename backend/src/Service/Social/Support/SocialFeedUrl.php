@@ -18,7 +18,13 @@ final class SocialFeedUrl
 {
     private const string SCHEME = 'social:';
     private const string ACCOUNT_ID = '/^[1-9]\d*$/';
-    private const array SEGMENTS = ['home' => 'home', 'list' => 'list', 'custom_feed' => 'feed', 'author' => 'author'];
+    private const array SEGMENTS = [
+        'home' => 'home',
+        'list' => 'list',
+        'custom_feed' => 'feed',
+        'author' => 'author',
+        'tag' => 'tag',
+    ];
 
     public static function of(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {

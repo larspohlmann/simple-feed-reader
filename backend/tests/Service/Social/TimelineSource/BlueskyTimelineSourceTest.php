@@ -103,6 +103,15 @@ final class BlueskyTimelineSourceTest extends TestCase
         self::assertSame($route, $request->method . ' ' . $request->url);
     }
 
+    public function testBlueskyHasNoFollowedTags(): void
+    {
+        $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);
+
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->source($http->client())->request($this->socialFeed(SocialFeedKind::Tag, 'caturday'));
+    }
+
     public function testAnAuthorFeedAsksForTheProfilesPostsAndSelfThreads(): void
     {
         $http = new RoutedHttpClient([self::SESSION => self::session('jwt-1')]);

@@ -63,11 +63,22 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
             : throw new SocialNetworkUnreachableException('The Mastodon list id is not a number.');
     }
 
+    private static function tagName(SocialFeed $socialFeed): string
+    {
+        $tagName = $socialFeed->getRemoteId();
+
+        return PrivateFeedRules::isMastodonTagName($tagName)
+            ? $tagName
+            : throw new SocialNetworkUnreachableException('The Mastodon tag name is not a hashtag.');
+    }
+
     private static function pathOf(SocialFeed $socialFeed): string
     {
-        $path = SocialFeedKind::UserList === $socialFeed->getKind()
-            ? '/api/v1/timelines/list/' . self::listId($socialFeed)
-            : '/api/v1/timelines/home';
+        $path = match ($socialFeed->getKind()) {
+            SocialFeedKind::UserList => '/api/v1/timelines/list/' . self::listId($socialFeed),
+            SocialFeedKind::Tag => '/api/v1/timelines/tag/' . rawurlencode(self::tagName($socialFeed)),
+            default => '/api/v1/timelines/home',
+        };
         $newestSeen = $socialFeed->getNewestSeenId();
 
         return $path . '?limit=' . self::PAGE_SIZE

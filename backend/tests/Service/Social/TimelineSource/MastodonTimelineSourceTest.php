@@ -61,6 +61,44 @@ final class MastodonTimelineSourceTest extends TestCase
         $this->source(new RoutedHttpClient([]))->request(self::socialFeed(SocialFeedKind::UserList, $listId));
     }
 
+    public function testATagRequestReadsTheTagTimelineAfterTheNewestSeenStatus(): void
+    {
+        $tag = self::socialFeed(SocialFeedKind::Tag, 'caturday');
+        $tag->recordNewestSeen('100');
+
+        $request = $this->source(new RoutedHttpClient([]))->request($tag);
+
+        self::assertSame('https://mastodon.example/api/v1/timelines/tag/caturday?limit=40&min_id=100', $request->url);
+        self::assertSame('Bearer ' . SocialAccounts::ACCESS_TOKEN, $request->headers['Authorization'] ?? null);
+    }
+
+    public function testANonLatinTagIsPercentEncodedInThePath(): void
+    {
+        $request = $this->source(new RoutedHttpClient([]))->request(self::socialFeed(SocialFeedKind::Tag, '日本語'));
+
+        self::assertSame(
+            'https://mastodon.example/api/v1/timelines/tag/' . rawurlencode('日本語') . '?limit=40',
+            $request->url,
+        );
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function foreignTagNames(): iterable
+    {
+        yield 'parent path' => ['..'];
+        yield 'empty' => [''];
+        yield 'a query' => ['cat?limit=1'];
+        yield 'a slash' => ['cat/day'];
+    }
+
+    #[DataProvider('foreignTagNames')]
+    public function testAForeignTagNameIsNeverTurnedIntoARequest(string $tagName): void
+    {
+        $this->expectException(SocialNetworkUnreachableException::class);
+
+        $this->source(new RoutedHttpClient([]))->request(self::socialFeed(SocialFeedKind::Tag, $tagName));
+    }
+
     public function testAnAnswerMapsToThePageAndNamesItsNewestStatus(): void
     {
         $page = $this->pageOf(self::answered(self::statusesBody('109')));

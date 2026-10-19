@@ -10,6 +10,7 @@ enum SocialFeedKind: string
     case UserList = 'list';
     case CustomFeed = 'custom_feed';
     case Author = 'author';
+    case Tag = 'tag';
 
     public function followsOnePerson(): bool
     {
@@ -18,6 +19,6 @@ enum SocialFeedKind: string
 
     public function isRememberedCollection(): bool
     {
-        return self::UserList === $this || self::CustomFeed === $this;
+        return self::UserList === $this || self::CustomFeed === $this || self::Tag === $this;
     }
 }

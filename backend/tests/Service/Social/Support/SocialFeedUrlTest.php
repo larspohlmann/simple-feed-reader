@@ -49,6 +49,17 @@ final class SocialFeedUrlTest extends TestCase
         );
     }
 
+    public function testAMastodonTagIsAddressedByItsLowercasedName(): void
+    {
+        self::assertSame(
+            'social:mastodon:4:tag:caturday',
+            SocialFeedUrl::of(
+                self::withId(SocialAccounts::mastodon(), 4),
+                PrivateFeedModel::followedTag('Caturday', '#Caturday'),
+            ),
+        );
+    }
+
     #[DataProvider('addresses')]
     public function testAnAddressIsReadBackFromTheUrl(string $url, ?SocialFeedAddressModel $address): void
     {

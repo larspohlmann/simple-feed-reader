@@ -50,6 +50,10 @@ final class PrivateFeedSiteTest extends TestCase
             'https://mastodon.example/lists/42',
             PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::userList('42', 'Friends')),
         );
+        self::assertSame(
+            'https://mastodon.example/tags/caturday',
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::followedTag('Caturday', '#Caturday')),
+        );
     }
 
     public function testAnInstanceUrlWithATrailingSlashLinksWithoutADoubleSlash(): void

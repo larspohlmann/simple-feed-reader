@@ -33,6 +33,11 @@ final readonly class PrivateFeedModel
         return new self(SocialFeedKind::CustomFeed, $feedUri, $name);
     }
 
+    public static function followedTag(string $tagName, string $name): self
+    {
+        return new self(SocialFeedKind::Tag, mb_strtolower($tagName), $name);
+    }
+
     public static function author(string $did, string $name): self
     {
         return new self(SocialFeedKind::Author, $did, $name);
@@ -45,6 +50,7 @@ final readonly class PrivateFeedModel
             SocialFeedKind::UserList => self::userList($remoteId, $name),
             SocialFeedKind::CustomFeed => self::customFeed($remoteId, $name),
             SocialFeedKind::Author => self::author($remoteId, $name),
+            SocialFeedKind::Tag => self::followedTag($remoteId, $name),
         };
     }
 
