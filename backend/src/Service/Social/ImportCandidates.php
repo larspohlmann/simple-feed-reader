@@ -57,6 +57,7 @@ final readonly class ImportCandidates
                 ...self::collections(SocialFeedKind::UserList, $network->lists, $subscribed),
             ],
             self::collections(SocialFeedKind::CustomFeed, $network->customFeeds, $subscribed),
+            self::collections(SocialFeedKind::Tag, $network->tags, $subscribed),
             $network->truncated,
         );
     }
