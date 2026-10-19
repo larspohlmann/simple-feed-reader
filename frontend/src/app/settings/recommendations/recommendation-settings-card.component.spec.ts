@@ -712,7 +712,7 @@ describe('RecommendationSettingsCardComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { generatedAt: '2026-08-08T09:00:00Z', newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: '2026-08-08T09:00:00Z', newestRunId: null },
       });
 
       const statusRequest = http.expectOne('/api/recommendations/runs/current');
@@ -724,7 +724,7 @@ describe('RecommendationSettingsCardComponent', () => {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { generatedAt: null, newestRunId: null },
+        forYou: { totalCount: 0, generatedAt: null, newestRunId: null },
       });
       fixture.detectChanges();
 

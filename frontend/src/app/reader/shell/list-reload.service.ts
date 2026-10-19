@@ -58,13 +58,15 @@ export class ListReload {
       });
     });
 
-    // A completed for-you run changes the For You unread count, and reloads the
-    // list if the user is on it. `completedStamp` starts at 0, which is the signal's
-    // initial value, not a completion — the guard keeps a boot from reloading.
+    // `completedStamp` starts at 0, the signal's initial value, not a completion, so a boot doesn't fire.
+    effect(() => {
+      if (this.recs.completedStamp() === 0) return;
+      untracked(() => this.subs.reloadCountsQuietly());
+    });
+
     effect(() => {
       if (this.recs.completedStamp() === 0) return;
       untracked(() => {
-        this.subs.reloadCountsQuietly();
         const selection = this.selection();
         if (selection.kind === 'for-you') this.entries.load(queryFromSelection(selection));
       });

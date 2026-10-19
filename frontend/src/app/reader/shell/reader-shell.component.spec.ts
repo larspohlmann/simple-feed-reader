@@ -117,7 +117,7 @@ describe('ReaderShellComponent', () => {
       },
     ],
     socialAccounts: [],
-    unreadTotals: { allItems: 2, forYou: 0, tags: [], networks: [] },
+    unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 2 },
   };
   const entry = anEntry({
     title: 'e1',
@@ -1676,7 +1676,7 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       ...subscriptionsBody,
       subscriptions: [{ ...subscriptionsBody.subscriptions[0], unreadCount: 3 }],
-      unreadTotals: { allItems: 3, forYou: 0, tags: [], networks: [] },
+      unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 3 },
     });
     fixture.detectChanges();
 
@@ -4309,7 +4309,7 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
         ...countsBody,
         subscriptions: [{ id: 5, unreadCount: 9 }],
-        unreadTotals: { allItems: 9, forYou: 0, tags: [], networks: [] },
+        unreadTotals: { ...NO_UNREAD_TOTALS_DTO, allItems: 9 },
       });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       fixture.detectChanges();

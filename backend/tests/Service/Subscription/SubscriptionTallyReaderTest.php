@@ -14,8 +14,10 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\SourceFormat;
+use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Subscription\SubscriptionTallyReader;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 
 final class SubscriptionTallyReaderTest extends DbTestCase
 {
@@ -97,8 +99,8 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $state->hide($when);
         $this->entityManager->persist($state);
         $run = $this->completedRun($user);
-        $this->pick($run, $readPick, 1);
-        $this->pick($run, $unreadPick, 2);
+        $this->entityManager->persist(new RecommendationItem($run, $readPick, 1, 'reason'));
+        $this->entityManager->persist(new RecommendationItem($run, $unreadPick, 2, 'reason'));
         $this->entityManager->flush();
 
         $reader = self::getContainer()->get(SubscriptionTallyReader::class);
@@ -109,17 +111,13 @@ final class SubscriptionTallyReaderTest extends DbTestCase
 
     private function completedRun(User $user): RecommendationRun
     {
-        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $run = (new RecommendationRunFixtures($this->entityManager, $cipher))->createRun($user);
         $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $this->entityManager->persist($run);
 
         return $run;
-    }
-
-    private function pick(RecommendationRun $run, Entry $entry, int $position): void
-    {
-        $this->entityManager->persist(new RecommendationItem($run, $entry, $position, 'reason'));
     }
 
     private function entry(Feed $feed, string $guid): Entry
