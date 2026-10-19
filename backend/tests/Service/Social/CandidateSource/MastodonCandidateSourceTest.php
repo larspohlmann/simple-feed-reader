@@ -30,6 +30,8 @@ final class MastodonCandidateSourceTest extends TestCase
     private const string NEXT_PAGE = 'https://mastodon.example/api/v1/accounts/109/following?limit=80&max_id=5';
     private const string PREVIOUS_PAGE = 'https://mastodon.example/api/v1/accounts/109/following?since_id=9';
     private const string LISTS = 'GET https://mastodon.example/api/v1/lists';
+    private const string FOLLOWED_TAGS = 'GET https://mastodon.example/api/v1/followed_tags?limit=200';
+    private const string NEXT_TAGS = 'https://mastodon.example/api/v1/followed_tags?limit=200&max_id=7';
 
     private function source(RoutedHttpClient $http): MastodonCandidateSource
     {
@@ -55,6 +57,7 @@ final class MastodonCandidateSourceTest extends TestCase
             self::VERIFY => self::json(['id' => '109', 'username' => 'alice', 'acct' => 'alice']),
             self::FOLLOWING => self::json([]),
             self::LISTS => self::json([]),
+            self::FOLLOWED_TAGS => self::json([]),
         ];
     }
 
@@ -288,6 +291,11 @@ final class MastodonCandidateSourceTest extends TestCase
         yield 'follows that are not a list' => [self::FOLLOWING, new MockResponse('{"error":"gone"}')];
         yield 'follows that are not JSON' => [self::FOLLOWING, new MockResponse('not json')];
         yield 'lists that are not a list' => [self::LISTS, new MockResponse('{"error":"gone"}')];
+        yield 'a server error on the tags' => [
+            self::FOLLOWED_TAGS,
+            new MockResponse('', ['http_code' => Response::HTTP_INTERNAL_SERVER_ERROR]),
+        ];
+        yield 'tags that are not a list' => [self::FOLLOWED_TAGS, new MockResponse('{"error":"gone"}')];
     }
 
     #[DataProvider('unusableAnswers')]
@@ -300,18 +308,82 @@ final class MastodonCandidateSourceTest extends TestCase
         $this->source($http)->candidates(SocialAccounts::mastodon());
     }
 
-    public function testCollectionsAskOnlyForTheListsAndHoldNoCustomFeedsOrGoneIds(): void
+    public function testFollowedTagsAreOfferedAndPagedThroughTheLinkHeader(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::FOLLOWED_TAGS => self::json(
+                [['name' => 'Caturday'], ['name' => 'not/a/tag']],
+                '<' . self::NEXT_TAGS . '>; rel="next"',
+            ),
+            'GET ' . self::NEXT_TAGS => self::json([['name' => 'fediverse']]),
+        ]));
+
+        $candidates = $this->source($http)->candidates(SocialAccounts::mastodon());
+
+        self::assertEquals(
+            [new SocialCollectionModel('Caturday', '#Caturday'), new SocialCollectionModel('fediverse', '#fediverse')],
+            $candidates->tags,
+        );
+    }
+
+    public function testCollectionsHoldTheListsAndTheFollowedTags(): void
     {
         $http = new RoutedHttpClient([
             self::LISTS => self::json([['id' => '7', 'title' => 'Friends']]),
+            self::FOLLOWED_TAGS => self::json([['name' => 'caturday']]),
         ]);
 
         $collections = $this->source($http)->collections(SocialAccounts::mastodon());
 
         self::assertEquals([new SocialCollectionModel('7', 'Friends')], $collections->lists);
+        self::assertEquals([new SocialCollectionModel('caturday', '#caturday')], $collections->tags);
         self::assertSame([], $collections->customFeeds);
         self::assertSame([], $collections->goneIds);
-        self::assertFalse($collections->truncated);
-        self::assertCount(1, $http->requests);
+        self::assertTrue($collections->isComplete());
+        self::assertCount(2, $http->requests);
+    }
+
+    public function testTagsPagedOntoAnotherOriginMakeTheCollectionsIncomplete(): void
+    {
+        $http = new RoutedHttpClient([
+            self::LISTS => self::json([]),
+            self::FOLLOWED_TAGS => self::json(
+                [['name' => 'caturday']],
+                '<https://evil.example/api/v1/followed_tags?max_id=1>; rel="next"',
+            ),
+        ]);
+
+        $collections = $this->source($http)->collections(SocialAccounts::mastodon());
+
+        self::assertTrue($collections->truncated);
+        self::assertFalse($collections->isComplete());
+    }
+
+    public function testAnInstanceWithoutFollowedTagsStillOffersItsFollowsAndLists(): void
+    {
+        $http = new RoutedHttpClient($this->routes([
+            self::FOLLOWING => self::json([['id' => '1', 'acct' => 'bob']]),
+            self::LISTS => self::json([['id' => '7', 'title' => 'Friends']]),
+            self::FOLLOWED_TAGS => new MockResponse('', ['http_code' => Response::HTTP_NOT_FOUND]),
+        ]));
+
+        $candidates = $this->source($http)->candidates(SocialAccounts::mastodon());
+
+        self::assertSame([], $candidates->tags);
+        self::assertCount(1, $candidates->follows);
+        self::assertEquals([new SocialCollectionModel('7', 'Friends')], $candidates->lists);
+    }
+
+    public function testCollectionsOfAnInstanceWithoutFollowedTagsAreComplete(): void
+    {
+        $http = new RoutedHttpClient([
+            self::LISTS => self::json([]),
+            self::FOLLOWED_TAGS => new MockResponse('', ['http_code' => Response::HTTP_NOT_FOUND]),
+        ]);
+
+        $collections = $this->source($http)->collections(SocialAccounts::mastodon());
+
+        self::assertSame([], $collections->tags);
+        self::assertTrue($collections->isComplete());
     }
 }

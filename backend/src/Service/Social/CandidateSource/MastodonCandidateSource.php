@@ -19,11 +19,14 @@ use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\StoredCredential;
 use App\Service\Social\Support\LinkHeader;
 use App\Service\Social\Support\MastodonAccount;
+use App\Service\Social\Support\MastodonFollowedTag;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MastodonCandidateSource implements CandidateSourceInterface
 {
     private const string VERIFY_CREDENTIALS = '/api/v1/accounts/verify_credentials';
     private const string LISTS = '/api/v1/lists';
+    private const string FOLLOWED_TAGS = '/api/v1/followed_tags?limit=200';
     private const int PAGE_SIZE = 80;
 
     public function __construct(
@@ -40,19 +43,24 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
     public function candidates(SocialAccount $account): NetworkCandidatesModel
     {
         $session = $this->sessionOf($account);
-        $follows = $this->collectFollows($session, $this->ownAccountId($session));
+        $follows = $this->follows($session);
 
         return new NetworkCandidatesModel(
-            self::follows($follows->items, $session->host()),
+            self::followedAccounts($follows->items, $session->host()),
             $this->lists($session),
             [],
             $follows->truncated,
+            tags: self::tagsOf($this->followedTags($session)),
         );
     }
 
     public function collections(SocialAccount $account): NetworkCollectionsModel
     {
-        return new NetworkCollectionsModel($this->lists($this->sessionOf($account)), []);
+        $session = $this->sessionOf($account);
+        $lists = $this->lists($session);
+        $tags = $this->followedTags($session);
+
+        return new NetworkCollectionsModel($lists, [], truncated: $tags->truncated, tags: self::tagsOf($tags));
     }
 
     private function sessionOf(SocialAccount $account): MastodonSessionModel
@@ -68,21 +76,47 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
             ?? throw new SocialNetworkUnreachableException('The Mastodon instance gave no account for this token.');
     }
 
-    private function collectFollows(MastodonSessionModel $session, string $accountId): CollectedItemsModel
+    private function follows(MastodonSessionModel $session): CollectedItemsModel
+    {
+        $following = '/api/v1/accounts/' . rawurlencode($this->ownAccountId($session))
+            . '/following?limit=' . self::PAGE_SIZE;
+
+        return $this->collectFrom($session, $this->mastodon->send($session->get($session->url($following))));
+    }
+
+    private function followedTags(MastodonSessionModel $session): CollectedItemsModel
+    {
+        $firstPage = $this->mastodon->answer($session->get($session->url(self::FOLLOWED_TAGS)));
+        if (Response::HTTP_NOT_FOUND === $firstPage->status) {
+            return CollectedItemsModel::capped([]);
+        }
+
+        return $this->collectFrom($session, MastodonApiClient::accepted($firstPage));
+    }
+
+    private function collectFrom(MastodonSessionModel $session, ApiResponseModel $firstPage): CollectedItemsModel
     {
         $items = [];
-        $url = $session->url('/api/v1/accounts/' . rawurlencode($accountId) . '/following?limit=' . self::PAGE_SIZE);
+        $page = $firstPage;
         do {
-            $answer = $this->mastodon->send($session->get($url));
-            $fresh = self::nodesOf($answer);
+            $fresh = self::nodesOf($page);
             array_push($items, ...$fresh);
-            $url = LinkHeader::next($answer->header('link'));
-            if (null !== $url && !LinkHeader::isOn($session->instanceUrl, $url)) {
+            $next = LinkHeader::next($page->header('link'));
+            if (null !== $next && !LinkHeader::isOn($session->instanceUrl, $next)) {
                 return CollectedItemsModel::cutShort($items);
             }
-        } while (null !== $url && [] !== $fresh && \count($items) <= CollectedItemsModel::MAX_ITEMS);
+            $page = null === $next || [] === $fresh || \count($items) > CollectedItemsModel::MAX_ITEMS
+                ? null
+                : $this->mastodon->send($session->get($next));
+        } while (null !== $page);
 
         return CollectedItemsModel::capped($items);
+    }
+
+    /** @return list<SocialCollectionModel> */
+    private static function tagsOf(CollectedItemsModel $tags): array
+    {
+        return array_values(array_filter(array_map(MastodonFollowedTag::collectionOf(...), $tags->items)));
     }
 
     /** @return list<SocialCollectionModel> */
@@ -105,7 +139,7 @@ final readonly class MastodonCandidateSource implements CandidateSourceInterface
      *
      * @return list<FollowedAccountModel>
      */
-    private static function follows(array $nodes, string $instanceHost): array
+    private static function followedAccounts(array $nodes, string $instanceHost): array
     {
         $follows = [];
         foreach ($nodes as $node) {

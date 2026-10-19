@@ -51,9 +51,50 @@ final class PrivateFeedRulesTest extends TestCase
         yield 'a trailing letter' => ['42a', false];
     }
 
+    #[DataProvider('mastodonTagNames')]
+    public function testAMastodonTagNameIsWordCharactersOnly(string $tagName, bool $allowed): void
+    {
+        self::assertSame($allowed, PrivateFeedRules::isMastodonTagName($tagName));
+        self::assertSame(
+            $allowed,
+            PrivateFeedRules::allows(SocialNetwork::Mastodon, PrivateFeedModel::followedTag($tagName, '#' . $tagName)),
+        );
+    }
+
+    /** @return iterable<string, array{string, bool}> */
+    public static function mastodonTagNames(): iterable
+    {
+        yield 'letters' => ['caturday', true];
+        yield 'digits and underscore' => ['100_days', true];
+        yield 'non-latin letters' => ['日本語', true];
+        yield 'a combining mark' => ["cafe\u{0301}", true];
+        yield 'a middle dot' => ["l\u{00B7}l", true];
+        yield 'the longest name' => [str_repeat('a', 100), true];
+        yield 'a name over 100 characters' => [str_repeat('a', 101), false];
+        yield 'empty' => ['', false];
+        yield 'a leading hash' => ['#caturday', false];
+        yield 'a space' => ['cat day', false];
+        yield 'a trailing newline' => ["caturday\n", false];
+        yield 'a slash' => ['cat/../day', false];
+        yield 'a query' => ['cat?limit=1', false];
+        yield 'a colon' => ['cat:day', false];
+    }
+
     /** @return iterable<string, array{SocialNetwork, PrivateFeedModel, bool}> */
     public static function verdicts(): iterable
     {
+        yield 'mastodon followed tag' => [
+            SocialNetwork::Mastodon,
+            PrivateFeedModel::followedTag('caturday', '#caturday'),
+            true,
+        ];
+        yield 'bluesky followed tag' => [
+            SocialNetwork::Bluesky,
+            PrivateFeedModel::followedTag('caturday', '#caturday'),
+            false,
+        ];
+        yield 'trending on mastodon' => [SocialNetwork::Mastodon, PrivateFeedModel::trending(), true];
+        yield 'trending on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::trending(), false];
         yield 'home on bluesky' => [SocialNetwork::Bluesky, PrivateFeedModel::home(), true];
         yield 'home on mastodon' => [SocialNetwork::Mastodon, PrivateFeedModel::home(), true];
         yield 'bluesky list' => [SocialNetwork::Bluesky, PrivateFeedModel::userList(self::LIST, 'Writers'), true];

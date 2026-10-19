@@ -8,10 +8,10 @@ import { SocialAccountStatus } from '../../reader/social-feed';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 
 export type SyncSkip = 'unreachable' | 'incomplete' | 'needs_reconnect' | 'failed';
-export type SyncReason = 'saved' | 'created' | 'unsaved' | 'deleted';
+export type SyncReason = 'saved' | 'created' | 'unsaved' | 'deleted' | 'followed' | 'unfollowed';
 
 export interface SyncChange {
-  readonly kind: 'list' | 'custom_feed';
+  readonly kind: 'list' | 'custom_feed' | 'tag';
   readonly name: string;
   readonly reason: SyncReason;
   readonly at: string;

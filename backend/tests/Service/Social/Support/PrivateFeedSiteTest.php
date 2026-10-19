@@ -47,8 +47,32 @@ final class PrivateFeedSiteTest extends TestCase
             PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::home()),
         );
         self::assertSame(
+            'https://mastodon.example/explore',
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::trending()),
+        );
+        self::assertSame(
             'https://mastodon.example/lists/42',
             PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::userList('42', 'Friends')),
+        );
+        self::assertSame(
+            'https://mastodon.example/tags/caturday',
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::followedTag('Caturday', '#Caturday')),
+        );
+        self::assertSame(
+            'https://mastodon.example/tags/' . rawurlencode('日本語'),
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::followedTag('日本語', '#日本語')),
+        );
+    }
+
+    public function testAMastodonAuthorOrCustomFeedLinksToTheInstance(): void
+    {
+        self::assertSame(
+            'https://mastodon.example',
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::author('109', 'Alice')),
+        );
+        self::assertSame(
+            'https://mastodon.example',
+            PrivateFeedSite::of(SocialAccounts::mastodon(), PrivateFeedModel::customFeed('feed', 'Art')),
         );
     }
 

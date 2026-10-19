@@ -63,14 +63,33 @@ final readonly class MastodonTimelineSource implements TimelineSourceInterface
             : throw new SocialNetworkUnreachableException('The Mastodon list id is not a number.');
     }
 
+    private static function tagName(SocialFeed $socialFeed): string
+    {
+        $tagName = $socialFeed->getRemoteId();
+
+        return PrivateFeedRules::isMastodonTagName($tagName)
+            ? $tagName
+            : throw new SocialNetworkUnreachableException('The Mastodon tag name is not a hashtag.');
+    }
+
     private static function pathOf(SocialFeed $socialFeed): string
     {
-        $path = SocialFeedKind::UserList === $socialFeed->getKind()
-            ? '/api/v1/timelines/list/' . self::listId($socialFeed)
-            : '/api/v1/timelines/home';
+        return match ($socialFeed->getKind()) {
+            SocialFeedKind::Home => self::timelinePath($socialFeed, 'home'),
+            SocialFeedKind::UserList => self::timelinePath($socialFeed, 'list/' . self::listId($socialFeed)),
+            SocialFeedKind::Tag => self::timelinePath($socialFeed, 'tag/' . rawurlencode(self::tagName($socialFeed))),
+            SocialFeedKind::Trending => '/api/v1/trends/statuses?limit=' . self::PAGE_SIZE,
+            SocialFeedKind::Author, SocialFeedKind::CustomFeed => throw new SocialNetworkUnreachableException(
+                'Mastodon has no such timeline.',
+            ),
+        };
+    }
+
+    private static function timelinePath(SocialFeed $socialFeed, string $timeline): string
+    {
         $newestSeen = $socialFeed->getNewestSeenId();
 
-        return $path . '?limit=' . self::PAGE_SIZE
+        return '/api/v1/timelines/' . $timeline . '?limit=' . self::PAGE_SIZE
             . (null === $newestSeen ? '' : '&min_id=' . rawurlencode($newestSeen));
     }
 }

@@ -6,7 +6,7 @@ import {
   ImportCandidates,
 } from './social-import.service';
 
-export type ImportTab = 'accounts' | 'lists' | 'customFeeds';
+export type ImportTab = 'accounts' | 'lists' | 'customFeeds' | 'tags';
 export type StateFilter = 'all' | ImportCandidateState;
 export type Translate = (key: string, params?: Record<string, string>) => string;
 
@@ -48,19 +48,35 @@ export const FILTER_KEYS: Readonly<Record<StateFilter, string>> = {
 
 const COLLECTION_ICONS: Readonly<Record<CollectionKind, string>> = {
   home: 'home',
+  trending: 'trending_up',
   list: 'list',
   custom_feed: 'dynamic_feed',
+  tag: 'tag',
+};
+
+const SINGLETON_NAME_KEYS: Readonly<Partial<Record<CollectionKind, string>>> = {
+  home: 'settings.social.importHome',
+  trending: 'settings.social.importTrending',
 };
 
 export const TAB_TEST_IDS: Readonly<Record<ImportTab, string>> = {
   accounts: 'social-import-follows',
   lists: 'social-import-lists',
   customFeeds: 'social-import-feeds',
+  tags: 'social-import-tags',
 };
 
 /** Home has no id, and a list and a custom feed could share one, so the kind is part of the key. */
 export function collectionKey(collection: CollectionCandidate): string {
   return `${collection.kind}:${collection.id ?? ''}`;
+}
+
+export function collectionsOf(candidates: ImportCandidates | null): readonly CollectionCandidate[] {
+  return [
+    ...(candidates?.lists ?? []),
+    ...(candidates?.customFeeds ?? []),
+    ...(candidates?.tags ?? []),
+  ];
 }
 
 /** An already-subscribed row can be unticked to remove it. */
@@ -85,7 +101,7 @@ export function removals(
       name: followName(follow),
       subscriptionId: follow.subscriptionId,
     }));
-  const collections = [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
+  const collections = collectionsOf(candidates)
     .filter((collection) => isSubscribed(collection.state) && chosen.has(collectionKey(collection)))
     .map((collection) => ({
       name: collectionName(collection, translate),
@@ -106,11 +122,12 @@ export function buildRows(candidates: ImportCandidates | null, translate: Transl
     accounts: (candidates?.follows ?? []).map((follow) => toFollowRow(follow, translate)),
     lists: (candidates?.lists ?? []).map(collectionRow),
     customFeeds: (candidates?.customFeeds ?? []).map(collectionRow),
+    tags: (candidates?.tags ?? []).map(collectionRow),
   };
 }
 
 export function tally(rows: RowsByTab, { tabs, current, needle }: TallyQuery): Tally {
-  const tabCounts = { accounts: 0, lists: 0, customFeeds: 0 };
+  const tabCounts = { accounts: 0, lists: 0, customFeeds: 0, tags: 0 };
   const stateCounts: StateCounts = { all: 0, new: 0, subscribed: 0, no_longer_followed: 0 };
   const matched: ImportRow[] = [];
   for (const tab of tabs) {
@@ -149,7 +166,8 @@ function followName(follow: FollowCandidate): string {
 }
 
 function collectionName(collection: CollectionCandidate, translate: Translate): string {
-  return collection.kind === 'home' ? translate('settings.social.importHome') : collection.name;
+  const key = SINGLETON_NAME_KEYS[collection.kind];
+  return key === undefined ? collection.name : translate(key);
 }
 
 function toCollectionRow(collection: CollectionCandidate, translate: Translate): ImportRow {

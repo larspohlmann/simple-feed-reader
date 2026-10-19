@@ -37,6 +37,7 @@ import {
   TAB_TEST_IDS,
   buildRows,
   collectionKey,
+  collectionsOf,
   followKey,
   removals,
   tally,
@@ -101,7 +102,9 @@ export class SocialImportDialogComponent {
   protected readonly tabTestIds = TAB_TEST_IDS;
   protected readonly inputValue = inputValue;
   protected readonly tabs: readonly ImportTab[] =
-    this.data.network === 'bluesky' ? ['accounts', 'lists', 'customFeeds'] : ['accounts', 'lists'];
+    this.data.network === 'bluesky'
+      ? ['accounts', 'lists', 'customFeeds']
+      : ['accounts', 'lists', 'tags'];
   protected readonly tab = signal<ImportTab>('accounts');
   protected readonly stateFilter = signal<StateFilter>('all');
   protected readonly filter = signal('');
@@ -257,8 +260,7 @@ export class SocialImportDialogComponent {
   }
 
   private chosenCollections(): SocialImportCollection[] {
-    const candidates = this.importer.candidates();
-    return [...(candidates?.lists ?? []), ...(candidates?.customFeeds ?? [])]
+    return collectionsOf(this.importer.candidates())
       .filter(
         (collection) => collection.state === 'new' && this.chosen().has(collectionKey(collection)),
       )

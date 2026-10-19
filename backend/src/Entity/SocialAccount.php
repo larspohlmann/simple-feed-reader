@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Enum\PrivateFeedSyncSkip;
 use App\Enum\SocialAccountStatus;
+use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
 use Doctrine\DBAL\Types\Types;
@@ -193,6 +194,12 @@ final class SocialAccount
     public function getLastSyncSkip(): ?PrivateFeedSyncSkip
     {
         return $this->syncStamp->skip();
+    }
+
+    /** @return list<SocialFeedKind> */
+    public function getKindsNotYetSynced(): array
+    {
+        return $this->syncStamp->kindsNotYetSynced();
     }
 
     public function recordSync(\DateTimeImmutable $checkedAt): void

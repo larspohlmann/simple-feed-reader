@@ -8,6 +8,7 @@ use App\Entity\PrivateFeedSyncChange;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Enum\PrivateFeedSyncReason;
+use App\Enum\SocialFeedKind;
 use App\Repository\KnownSocialCollectionRepository;
 use App\Repository\PrivateFeedSyncChangeRepository;
 use App\Repository\SocialFeedRepository;
@@ -68,9 +69,7 @@ final readonly class PrivateFeedSyncApplier
         $subscribed = $this->subscribedOf($account);
         $known = $this->knownCollections->keysOf($account);
 
-        return null === $account->getLastSyncedAt()
-            ? CollectionSyncPlan::baseline($onNetwork, $subscribed, $known)
-            : CollectionSyncPlan::following($onNetwork, $subscribed, $known);
+        return CollectionSyncPlan::following($onNetwork, $subscribed, $known, $account->getKindsNotYetSynced());
     }
 
     /** @param array<int, PrivateFeedModel> $removals collection by subscription id */
@@ -152,7 +151,8 @@ final readonly class PrivateFeedSyncApplier
     private function subscribedOf(SocialAccount $account): array
     {
         $subscribed = [];
-        foreach ($this->socialFeeds->subscribedCollectionsOfKinds($account, PrivateFeedSync::SYNCED_KINDS) as $row) {
+        $rows = $this->socialFeeds->subscribedCollectionsOfKinds($account, SocialFeedKind::rememberedCollections());
+        foreach ($rows as $row) {
             $collection = PrivateFeedModel::of($row['kind'], $row['remoteId'], '');
             $subscribed[$collection->key()] = new SubscribedCollectionModel($row['subscriptionId'], $collection);
         }
@@ -164,20 +164,9 @@ final readonly class PrivateFeedSyncApplier
     private static function byKey(NetworkCollectionsModel $network): array
     {
         $collections = [
-            ...array_map(
-                static fn (SocialCollectionModel $list): PrivateFeedModel => PrivateFeedModel::userList(
-                    $list->id,
-                    $list->name,
-                ),
-                $network->lists,
-            ),
-            ...array_map(
-                static fn (SocialCollectionModel $feed): PrivateFeedModel => PrivateFeedModel::customFeed(
-                    $feed->id,
-                    $feed->name,
-                ),
-                $network->customFeeds,
-            ),
+            ...self::modelsOf(SocialFeedKind::UserList, $network->lists),
+            ...self::modelsOf(SocialFeedKind::CustomFeed, $network->customFeeds),
+            ...self::modelsOf(SocialFeedKind::Tag, $network->tags),
         ];
         $byKey = [];
         foreach ($collections as $collection) {
@@ -185,6 +174,23 @@ final readonly class PrivateFeedSyncApplier
         }
 
         return $byKey;
+    }
+
+    /**
+     * @param list<SocialCollectionModel> $collections
+     *
+     * @return list<PrivateFeedModel>
+     */
+    private static function modelsOf(SocialFeedKind $kind, array $collections): array
+    {
+        return array_map(
+            static fn (SocialCollectionModel $collection): PrivateFeedModel => PrivateFeedModel::of(
+                $kind,
+                $collection->id,
+                $collection->name,
+            ),
+            $collections,
+        );
     }
 
     /**

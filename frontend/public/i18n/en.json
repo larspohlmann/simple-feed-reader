@@ -385,7 +385,7 @@
       "connectedSince": "Connected since {{date}}",
       "connectAnother": "Connect another account",
       "importSectionTitle": "Manage feeds",
-      "importSectionCaption": "Choose which of your Bluesky and Mastodon follows, lists and feeds arrive here as feeds; follows land under the Feeds row of the Bluesky or Mastodon section. A tick means you are subscribed: untick a feed to unsubscribe, and come back any time for new follows. Lists and feeds you save or create on the network are added within the hour, and ones you remove there go too; anything you remove here is not added back.",
+      "importSectionCaption": "Choose which of your Bluesky and Mastodon follows, lists and feeds arrive here as feeds; follows land under the Feeds row of the Bluesky or Mastodon section. A tick means you are subscribed: untick a feed to unsubscribe, and come back any time for new follows. Lists, followed tags and feeds you save, follow or create on the network are added within the hour, and ones you remove or unfollow there go too; anything you remove here is not added back.",
       "importChoose": "Manage feeds…",
       "importTitle": "Manage feeds of {{handle}}",
       "importLoading": "Loading the accounts you follow…",
@@ -395,7 +395,8 @@
       "importTab": {
         "accounts": "Accounts",
         "lists": "Lists",
-        "customFeeds": "Feeds"
+        "customFeeds": "Feeds",
+        "tags": "Tags"
       },
       "importStates": "Show",
       "importStateAll": "All",
@@ -406,6 +407,7 @@
       "importUnsubscribe": "Unsubscribe from {{handle}}",
       "importUnsubscribeHint": "Untick a feed to unsubscribe.",
       "importHome": "Home timeline",
+      "importTrending": "Trending posts",
       "importAddCollection": "Add {{name}}",
       "importRemoveCollection": "Remove {{name}}",
       "importRemoveTitle": "Remove from your feeds",
@@ -413,7 +415,7 @@
       "importRemoveCountMessage": "Remove these {{count}} feeds and their entries from your feeds?",
       "importRemoveConfirm": "Remove",
       "syncNever": "Not checked yet",
-      "syncChecked": "Lists and feeds last checked {{when}}",
+      "syncChecked": "Lists, tags and feeds last checked {{when}}",
       "syncSkipped": {
         "unreachable": "Skipped {{when}}: {{network}} did not answer",
         "incomplete": "Skipped {{when}}: {{network}}'s answer was incomplete (or the account keeps no saved-feeds list), so nothing was changed",
@@ -424,7 +426,9 @@
         "saved": "Added {{name}} (newly saved)",
         "created": "Added {{name}} (new list)",
         "unsaved": "Removed {{name}} (no longer saved)",
-        "deleted": "Removed {{name}} (deleted on the network)"
+        "deleted": "Removed {{name}} (deleted on the network)",
+        "followed": "Added {{name}} (newly followed)",
+        "unfollowed": "Removed {{name}} (no longer followed)"
       },
       "importEmpty": "Nothing to show.",
       "importShowMore": "Show {{count}} more",

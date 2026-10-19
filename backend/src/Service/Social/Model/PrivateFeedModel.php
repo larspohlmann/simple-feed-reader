@@ -9,10 +9,11 @@ use App\Enum\SocialFeedKind;
 final readonly class PrivateFeedModel
 {
     private const string HOME_NAME = 'Home';
+    private const string TRENDING_NAME = 'Trending';
 
     private function __construct(
         public SocialFeedKind $kind,
-        /** '' for Home */
+        /** '' for Home and Trending */
         public string $remoteId,
         public string $name,
     ) {
@@ -23,6 +24,11 @@ final readonly class PrivateFeedModel
         return new self(SocialFeedKind::Home, '', self::HOME_NAME);
     }
 
+    public static function trending(): self
+    {
+        return new self(SocialFeedKind::Trending, '', self::TRENDING_NAME);
+    }
+
     public static function userList(string $listId, string $name): self
     {
         return new self(SocialFeedKind::UserList, $listId, $name);
@@ -31,6 +37,11 @@ final readonly class PrivateFeedModel
     public static function customFeed(string $feedUri, string $name): self
     {
         return new self(SocialFeedKind::CustomFeed, $feedUri, $name);
+    }
+
+    public static function followedTag(string $tagName, string $name): self
+    {
+        return new self(SocialFeedKind::Tag, mb_strtolower($tagName), $name);
     }
 
     public static function author(string $did, string $name): self
@@ -45,6 +56,8 @@ final readonly class PrivateFeedModel
             SocialFeedKind::UserList => self::userList($remoteId, $name),
             SocialFeedKind::CustomFeed => self::customFeed($remoteId, $name),
             SocialFeedKind::Author => self::author($remoteId, $name),
+            SocialFeedKind::Tag => self::followedTag($remoteId, $name),
+            SocialFeedKind::Trending => self::trending(),
         };
     }
 

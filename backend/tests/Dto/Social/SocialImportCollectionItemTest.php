@@ -6,6 +6,7 @@ namespace App\Tests\Dto\Social;
 
 use App\Dto\Social\SocialImportCollectionItem;
 use App\Enum\SocialFeedKind;
+use App\Service\Social\Model\PrivateFeedModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
@@ -42,5 +43,16 @@ final class SocialImportCollectionItemTest extends TestCase
         self::assertSame(SocialFeedKind::UserList, $privateFeed->kind);
         self::assertSame('at://list/a', $privateFeed->remoteId);
         self::assertSame('Writers', $privateFeed->name);
+    }
+
+    public function testAFollowedTagIsAValidKindAndKeepsItsRemoteIdLowercase(): void
+    {
+        $item = new SocialImportCollectionItem('tag', 'Caturday', '#Caturday');
+
+        $privateFeed = $item->toPrivateFeed();
+
+        self::assertCount(0, $this->validator->validate($item));
+        self::assertEquals(PrivateFeedModel::followedTag('Caturday', '#Caturday'), $privateFeed);
+        self::assertSame('caturday', $privateFeed->remoteId);
     }
 }

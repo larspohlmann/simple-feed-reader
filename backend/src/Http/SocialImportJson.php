@@ -18,6 +18,7 @@ final readonly class SocialImportJson
             'follows' => array_map(self::follow(...), $candidates->follows),
             'lists' => array_map(self::collection(...), $candidates->lists),
             'customFeeds' => array_map(self::collection(...), $candidates->customFeeds),
+            'tags' => array_map(self::collection(...), $candidates->tags),
             'truncated' => $candidates->truncated,
         ];
     }

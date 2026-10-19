@@ -8,6 +8,7 @@ use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
+use App\Enum\SocialFeedKind;
 use App\Repository\SubscriptionFeedUrls;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
@@ -321,6 +322,44 @@ final class ImportCandidatesTest extends DbTestCase
         self::assertSame([['custom_feed', 'News', 'new', null]], array_map($summary, $candidates->customFeeds));
     }
 
+    public function testAMastodonAccountIsOfferedTrendingRightAfterHome(): void
+    {
+        $account = SocialAccounts::mastodonOf($this->user);
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [],
+            [new SocialCollectionModel('42', 'Friends')],
+            [],
+            false,
+        ));
+
+        $candidates = $this->importCandidates($network)->forAccount($account);
+
+        self::assertSame(
+            ['home', 'trending', 'list'],
+            array_map(
+                static fn (CollectionCandidateModel $list): string => $list->privateFeed->kind->value,
+                $candidates->lists,
+            ),
+        );
+    }
+
+    public function testABlueskyAccountIsNotOfferedTrending(): void
+    {
+        $network = new StubSocialCandidates(new NetworkCandidatesModel([], [], [], false));
+
+        $candidates = $this->importCandidates($network)->forAccount($this->account());
+
+        self::assertSame(
+            [SocialFeedKind::Home],
+            array_map(
+                static fn (CollectionCandidateModel $list): SocialFeedKind => $list->privateFeed->kind,
+                $candidates->lists,
+            ),
+        );
+    }
+
     public function testEveryAddedCollectionReadsAsSubscribed(): void
     {
         $account = $this->account();
@@ -344,5 +383,49 @@ final class ImportCandidatesTest extends DbTestCase
 
         self::assertSame(ImportCandidateState::Subscribed, $candidates->lists[1]->state);
         self::assertSame(ImportCandidateState::Subscribed, $candidates->customFeeds[0]->state);
+    }
+
+    public function testFollowedTagsAreOfferedByNameAndASubscribedOneSaysSo(): void
+    {
+        $account = SocialAccounts::mastodonOf($this->user);
+        $this->entityManager->persist($account);
+        $this->entityManager->flush();
+        PrivateFeedsWiring::build(
+            self::getContainer(),
+            $this->entityManager,
+            new MockClock('2026-10-12 12:00:00', 'UTC'),
+        )->create($account, PrivateFeedModel::followedTag('caturday', '#caturday'));
+        $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy([]);
+        self::assertNotNull($subscription);
+        $subscriptionId = $subscription->requireId();
+        $network = new StubSocialCandidates(new NetworkCandidatesModel(
+            [],
+            [],
+            [],
+            false,
+            tags: [
+                new SocialCollectionModel('fediverse', '#fediverse'),
+                new SocialCollectionModel('Caturday', '#Caturday'),
+            ],
+        ));
+
+        $candidates = $this->importCandidates($network)->forAccount($account);
+
+        self::assertSame(
+            [
+                [SocialFeedKind::Tag, 'caturday', '#Caturday', ImportCandidateState::Subscribed, $subscriptionId],
+                [SocialFeedKind::Tag, 'fediverse', '#fediverse', ImportCandidateState::New, null],
+            ],
+            array_map(
+                static fn (CollectionCandidateModel $tag): array => [
+                    $tag->privateFeed->kind,
+                    $tag->privateFeed->remoteId,
+                    $tag->privateFeed->name,
+                    $tag->state,
+                    $tag->subscriptionId,
+                ],
+                $candidates->tags,
+            ),
+        );
     }
 }

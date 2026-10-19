@@ -15,6 +15,10 @@ final class PrivateFeedSyncReasons
 {
     public static function added(SocialAccount $account, PrivateFeedModel $collection): PrivateFeedSyncReason
     {
+        if (SocialFeedKind::Tag === $collection->kind) {
+            return PrivateFeedSyncReason::Followed;
+        }
+
         return self::isOwnedList($account, $collection)
             ? PrivateFeedSyncReason::Created
             : PrivateFeedSyncReason::Saved;
@@ -25,6 +29,9 @@ final class PrivateFeedSyncReasons
         PrivateFeedModel $collection,
         NetworkCollectionsModel $network,
     ): PrivateFeedSyncReason {
+        if (SocialFeedKind::Tag === $collection->kind) {
+            return PrivateFeedSyncReason::Unfollowed;
+        }
         if (\in_array($collection->remoteId, $network->goneIds, true) || self::isOwnedList($account, $collection)) {
             return PrivateFeedSyncReason::Deleted;
         }

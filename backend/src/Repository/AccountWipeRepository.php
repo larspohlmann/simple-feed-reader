@@ -50,7 +50,7 @@ final readonly class AccountWipeRepository
         $this->deleteByUser(SavedSearch::class, $user);
     }
 
-    /** Leaves each account's syncedAt: a null one makes the next check a baseline, which adds nothing back. */
+    /** Leaves each account's sync stamp: only a kind not yet synced takes a baseline, which adds nothing back. */
     public function deletePrivateFeedSyncMemory(User $user): void
     {
         foreach ([KnownSocialCollection::class, PrivateFeedSyncChange::class] as $memoryClass) {

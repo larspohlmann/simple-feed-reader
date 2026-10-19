@@ -35,8 +35,10 @@ type PrivateSubscription = SubscriptionDto & { social: PrivateFeedRefDto };
 
 const KIND_ORDER: Readonly<Record<PrivateFeedRefDto['kind'], number>> = {
   home: 0,
-  list: 1,
-  custom_feed: 2,
+  trending: 1,
+  list: 2,
+  custom_feed: 3,
+  tag: 4,
 };
 
 export function isSocialFeed(subscription: SubscriptionDto): boolean {

@@ -34,11 +34,13 @@ final class PrivateFeedSite
     private static function mastodon(SocialAccount $account, PrivateFeedModel $privateFeed): string
     {
         $instance = rtrim($account->getServiceUrl(), '/');
-        if (SocialFeedKind::UserList !== $privateFeed->kind) {
-            return $instance;
-        }
 
-        return $instance . '/lists/' . rawurlencode($privateFeed->remoteId);
+        return match ($privateFeed->kind) {
+            SocialFeedKind::UserList => $instance . '/lists/' . rawurlencode($privateFeed->remoteId),
+            SocialFeedKind::Tag => $instance . '/tags/' . rawurlencode($privateFeed->remoteId),
+            SocialFeedKind::Trending => $instance . '/explore',
+            SocialFeedKind::Home, SocialFeedKind::Author, SocialFeedKind::CustomFeed => $instance,
+        };
     }
 
     private function __construct()

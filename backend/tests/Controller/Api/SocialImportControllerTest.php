@@ -96,7 +96,25 @@ final class SocialImportControllerTest extends ApiTestCase
             $payload['lists'],
         );
         self::assertSame([self::collection('custom_feed', 'at://feed/a', 'Discover')], $payload['customFeeds']);
+        self::assertSame([], $payload['tags']);
         self::assertFalse($payload['truncated']);
+    }
+
+    public function testTheCandidatesOfAMastodonAccountListItsFollowedTags(): void
+    {
+        $client = $this->clientWith(new StubSocialCandidates(new NetworkCandidatesModel(
+            [],
+            [],
+            [],
+            false,
+            [new SocialCollectionModel('Caturday', '#Caturday')],
+        )));
+        $user = $this->signIn($client, 'import-candidates-tags@example.test');
+
+        $this->requestCandidates($client, $this->stored(SocialAccounts::mastodonOf($user)));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame([self::collection('tag', 'caturday', '#Caturday')], $this->payload($client)['tags']);
     }
 
     public function testAnImportRightAfterTheCandidatesPicturesTheNewProfileFeeds(): void
@@ -418,6 +436,78 @@ final class SocialImportControllerTest extends ApiTestCase
 
         $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame('social_import_invalid_feed', $this->payload($client)['type']);
+    }
+
+    public function testAFollowedTagIsImportedAsAPrivateFeedOfTheMastodonAccount(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-mastodon-tag@example.test');
+        $account = $this->stored(SocialAccounts::mastodonOf($user));
+
+        $this->postImport($client, $account, ['collections' => [
+            ['kind' => 'tag', 'id' => 'Caturday', 'name' => '#Caturday'],
+        ]]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(1, $this->payload($client)['imported']);
+        $feed = $this->entityManager()->getRepository(Feed::class)->findOneBy([
+            'url' => sprintf('social:mastodon:%d:tag:caturday', $account->requireId()),
+        ]);
+        self::assertNotNull($feed);
+        self::assertSame('#Caturday', $feed->getTitle());
+        self::assertSame('https://mastodon.example/tags/caturday', $feed->getSiteUrl());
+    }
+
+    public function testTrendingIsImportedAsAPrivateFeedOfTheMastodonAccount(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-mastodon-trending@example.test');
+        $account = $this->stored(SocialAccounts::mastodonOf($user));
+
+        $this->postImport($client, $account, ['collections' => [
+            ['kind' => 'trending', 'id' => null, 'name' => 'Trending'],
+        ]]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(1, $this->payload($client)['imported']);
+        $feed = $this->entityManager()->getRepository(Feed::class)->findOneBy([
+            'url' => sprintf('social:mastodon:%d:trending', $account->requireId()),
+        ]);
+        self::assertNotNull($feed);
+        self::assertSame('Trending', $feed->getTitle());
+        self::assertSame('https://mastodon.example/explore', $feed->getSiteUrl());
+        $subscription = $this->entityManager()->getRepository(Subscription::class)->findOneBy(['feed' => $feed]);
+        self::assertNotNull($subscription);
+        self::assertFalse($subscription->isIncludeInAllItems());
+        self::assertFalse($subscription->isIncludeInForYou());
+    }
+
+    public function testTrendingIsRefusedForABlueskyAccount(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-bluesky-trending@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['collections' => [
+            ['kind' => 'trending', 'id' => null, 'name' => 'Trending'],
+        ]]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_import_invalid_feed', $this->payload($client)['type']);
+        self::assertSame(0, $this->entityManager()->getRepository(SocialFeed::class)->count());
+    }
+
+    public function testAFollowedTagIsRefusedForABlueskyAccount(): void
+    {
+        $client = $this->clientWith($this->nothingFollowed());
+        $user = $this->signIn($client, 'import-bluesky-tag@example.test');
+
+        $this->postImport($client, $this->blueskyAccountOf($user), ['collections' => [
+            ['kind' => 'tag', 'id' => 'Caturday', 'name' => '#Caturday'],
+        ]]);
+
+        $this->assertRejected($client, Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('social_import_invalid_feed', $this->payload($client)['type']);
+        self::assertSame(0, $this->entityManager()->getRepository(SocialFeed::class)->count());
     }
 
     public function testARefusedCollectionWritesNothingElseOfTheImport(): void

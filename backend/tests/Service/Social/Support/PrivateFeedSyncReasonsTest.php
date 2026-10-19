@@ -127,6 +127,29 @@ final class PrivateFeedSyncReasonsTest extends TestCase
         );
     }
 
+    public function testANewlyFollowedTagWasFollowed(): void
+    {
+        self::assertSame(
+            PrivateFeedSyncReason::Followed,
+            PrivateFeedSyncReasons::added(
+                SocialAccounts::mastodon(),
+                PrivateFeedModel::followedTag('caturday', '#caturday'),
+            ),
+        );
+    }
+
+    public function testATagGoneFromTheNetworkWasUnfollowed(): void
+    {
+        self::assertSame(
+            PrivateFeedSyncReason::Unfollowed,
+            PrivateFeedSyncReasons::removed(
+                SocialAccounts::mastodon(),
+                PrivateFeedModel::followedTag('caturday', '#caturday'),
+                self::emptyNetwork(),
+            ),
+        );
+    }
+
     private static function emptyNetwork(): NetworkCollectionsModel
     {
         return new NetworkCollectionsModel([], []);

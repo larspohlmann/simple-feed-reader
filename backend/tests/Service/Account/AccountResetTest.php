@@ -144,6 +144,7 @@ final class AccountResetTest extends DbTestCase
         $kept = $this->entityManager->find(SocialAccount::class, $accountId);
         self::assertInstanceOf(SocialAccount::class, $kept);
         self::assertSame(self::LAST_SYNCED_AT, $kept->getLastSyncedAt()?->format('Y-m-d H:i:s'));
+        self::assertSame([], $kept->getKindsNotYetSynced());
     }
 
     public function testWipesEverythingTheUserOwns(): void

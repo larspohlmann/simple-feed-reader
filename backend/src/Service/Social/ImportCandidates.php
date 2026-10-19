@@ -22,6 +22,7 @@ use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\Pass\FollowMatching;
 use App\Service\Social\SocialCandidates\SocialCandidatesInterface;
 use App\Service\Social\Support\CandidateOrder;
+use App\Service\Social\Support\PrivateFeedRules;
 use App\Service\Social\Support\ProfileIdentity;
 
 final readonly class ImportCandidates
@@ -53,10 +54,11 @@ final readonly class ImportCandidates
         return new ImportCandidatesModel(
             CandidateOrder::follows(self::trustedFollows($network, $follows)),
             [
-                CollectionCandidateModel::of(PrivateFeedModel::home(), $subscribed),
+                ...self::singletonsOf($account, $subscribed),
                 ...self::collections(SocialFeedKind::UserList, $network->lists, $subscribed),
             ],
             self::collections(SocialFeedKind::CustomFeed, $network->customFeeds, $subscribed),
+            self::collections(SocialFeedKind::Tag, $network->tags, $subscribed),
             $network->truncated,
         );
     }
@@ -76,6 +78,23 @@ final readonly class ImportCandidates
             ),
             CandidateOrder::collections($collections),
         );
+    }
+
+    /**
+     * @param array<string, int> $subscribed subscription id by PrivateFeedModel::key()
+     *
+     * @return list<CollectionCandidateModel>
+     */
+    private static function singletonsOf(SocialAccount $account, array $subscribed): array
+    {
+        $singletons = [];
+        foreach ([PrivateFeedModel::home(), PrivateFeedModel::trending()] as $privateFeed) {
+            if (PrivateFeedRules::allows($account->getNetwork(), $privateFeed)) {
+                $singletons[] = CollectionCandidateModel::of($privateFeed, $subscribed);
+            }
+        }
+
+        return $singletons;
     }
 
     /** @return array<string, int> subscription id by PrivateFeedModel::key() */

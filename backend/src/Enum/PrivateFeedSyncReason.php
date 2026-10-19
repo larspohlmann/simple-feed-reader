@@ -10,4 +10,6 @@ enum PrivateFeedSyncReason: string
     case Created = 'created';
     case Unsaved = 'unsaved';
     case Deleted = 'deleted';
+    case Followed = 'followed';
+    case Unfollowed = 'unfollowed';
 }
