@@ -129,7 +129,12 @@ final class MastodonTimelinePage
             $postsByGuid,
         ));
 
-        return KnownSharesModel::ofMastodonShares($cards, $quotes);
+        $replied = array_filter(
+            $postsByGuid,
+            static fn (JsonNodeModel $post): bool => ($post->int('replies_count') ?? 0) > 0,
+        );
+
+        return KnownSharesModel::ofMastodonShares($cards, $quotes, array_keys($replied));
     }
 
     private static function entryOf(JsonNodeModel $status): ?ParsedEntryModel

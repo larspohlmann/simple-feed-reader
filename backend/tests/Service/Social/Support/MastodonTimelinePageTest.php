@@ -294,6 +294,37 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertNull(MastodonTimelinePage::of([self::timelineStatus()])->knownShares->quotedPostFor(self::URI));
     }
 
+    public function testAStatusTheInstanceCountsRepliesForIsKnownAsReplied(): void
+    {
+        $page = MastodonTimelinePage::of([self::timelineStatus(['replies_count' => 2])]);
+
+        self::assertTrue($page->knownShares->hasRepliesFor(self::URI));
+    }
+
+    public function testAStatusWithoutRepliesIsNotKnownAsReplied(): void
+    {
+        $unreplied = MastodonTimelinePage::of([self::timelineStatus(['replies_count' => 0])]);
+        $uncounted = MastodonTimelinePage::of([self::timelineStatus()]);
+
+        self::assertFalse($unreplied->knownShares->hasRepliesFor(self::URI));
+        self::assertFalse($uncounted->knownShares->hasRepliesFor(self::URI));
+    }
+
+    public function testABoostIsKnownAsRepliedByItsOriginalsCount(): void
+    {
+        $page = MastodonTimelinePage::of([self::timelineStatus([
+            'id' => '200',
+            'uri' => 'https://mastodon.example/users/carol/statuses/200/activity',
+            'created_at' => '2026-10-12T09:30:00Z',
+            'content' => '',
+            'account' => ['acct' => 'carol', 'display_name' => 'Carol', 'url' => 'https://mastodon.example/@carol'],
+            'replies_count' => 0,
+            'reblog' => self::statusFields(['replies_count' => 3]),
+        ])]);
+
+        self::assertTrue($page->knownShares->hasRepliesFor(self::URI));
+    }
+
     public function testAThreadOnThePageFoldsIntoItsRoot(): void
     {
         $root = self::timelineStatus([
