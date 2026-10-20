@@ -132,6 +132,13 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
+        # Per user: opening a social post asks the user's own account whether they liked it there, one or two calls.
+        social_like_state:
+            policy: 'sliding_window'
+            limit: 120
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
         # Starting a run is what spends money: its snapshot fixes how many provider calls it can make. Ten a quarter
         # hour is far beyond honest use (a run takes minutes and supersedes the last).
         ai_recommendation_starts:

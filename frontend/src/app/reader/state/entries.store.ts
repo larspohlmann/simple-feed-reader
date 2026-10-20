@@ -213,6 +213,16 @@ export class EntriesStore {
     });
   }
 
+  /** The like the network reports, laid over entries still showing `from`; a click made since wins. */
+  adoptLike(entryId: number, change: { from: boolean; to: boolean }): void {
+    if (change.from === change.to || this.likeInFlight(entryId)) return;
+    this.patchEntries([entryId], (entry) =>
+      entry.social?.isLiked === change.from
+        ? { ...entry, social: { ...entry.social, isLiked: change.to } }
+        : entry,
+    );
+  }
+
   /** Lays `patch` over `target` and its copies until `request$` settles, and puts the old values back if it fails. */
   private optimistic(
     target: EntryDto,

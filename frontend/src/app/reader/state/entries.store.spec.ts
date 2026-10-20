@@ -893,6 +893,53 @@ describe('EntriesStore', () => {
       expect(ctrl.expectOne('https://api.test/api/entries/1/like').request.method).toBe('DELETE');
     });
 
+    it('adopts the like the network reports without a request', () => {
+      loadPost();
+
+      store.adoptLike(1, { from: false, to: true });
+
+      expect(store.entries()[0].social?.isLiked).toBe(true);
+      ctrl.expectNone('https://api.test/api/entries/1/like');
+    });
+
+    it('adopts a like taken back on the network', () => {
+      loadPost(true);
+
+      store.adoptLike(1, { from: true, to: false });
+
+      expect(store.entries()[0].social?.isLiked).toBe(false);
+    });
+
+    it('lets a like on the wire win over the network report', () => {
+      loadPost();
+      store.setLiked(store.entries()[0], true, () => undefined);
+      const like = ctrl.expectOne('https://api.test/api/entries/1/like');
+
+      store.adoptLike(1, { from: true, to: false });
+
+      expect(store.entries()[0].social?.isLiked).toBe(true);
+      like.flush({ isLiked: true });
+    });
+
+    it('leaves a like settled since the network was asked alone', () => {
+      loadPost();
+      store.setLiked(store.entries()[0], true, () => undefined);
+      ctrl.expectOne('https://api.test/api/entries/1/like').flush({ isLiked: true });
+
+      store.adoptLike(1, { from: false, to: false });
+
+      expect(store.entries()[0].social?.isLiked).toBe(true);
+    });
+
+    it('keeps the row identity when the network agrees', () => {
+      loadPost(true);
+      const before = store.entries();
+
+      store.adoptLike(1, { from: true, to: true });
+
+      expect(store.entries()).toBe(before);
+    });
+
     it('keeps an in-flight like across a list reload that lands first', () => {
       loadPost();
       store.setLiked(store.entries()[0], true, () => undefined);
@@ -984,6 +1031,14 @@ describe('EntriesStore', () => {
 
         expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
         ctrl.expectOne('https://api.test/api/entries/2/like').flush({ isLiked: true });
+        expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
+      });
+
+      it('adopts the network like on the copy inside the row that holds it', () => {
+        loadRowWithCopy();
+
+        store.adoptLike(2, { from: false, to: true });
+
         expect(store.entries()[0].duplicates?.[0].social?.isLiked).toBe(true);
       });
 

@@ -7,7 +7,7 @@ export interface EntrySocialDto {
   canLike: boolean;
 }
 
-/** The answer of `PUT`/`DELETE /api/entries/{id}/like`. */
+/** The answer of `GET`/`PUT`/`DELETE /api/entries/{id}/like`. */
 export interface EntryLikeDto {
   isLiked: boolean;
 }

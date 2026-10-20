@@ -1,9 +1,10 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { SocialCountsDto } from '../../entry-social';
+import { EntryLikeDto, SocialCountsDto, likeableSocial } from '../../entry-social';
 import { EntryDto } from '../../models';
 import { ReaderApi } from '../../reader-api';
+import { EntriesStore } from '../../state/entries.store';
 
 const CACHE_CAP = 50;
 const FRESH_MS = 120 * 1000;
@@ -11,7 +12,7 @@ const FAILED_RETRY_MS = 60 * 1000;
 
 export type CountedEntry = Pick<EntryDto, 'id' | 'social'>;
 
-/** `likedAtLoad`: the post's `isLiked` when its counts were asked for; the shown likes count from it. */
+/** `likedAtLoad`: whether the loaded counts include the reader's like; the shown likes count from it. */
 export type SocialCountsState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -21,6 +22,7 @@ export type SocialCountsState =
 @Injectable({ providedIn: 'root' })
 export class SocialCountsService {
   private readonly api = inject(ReaderApi);
+  private readonly entries = inject(EntriesStore);
   private readonly states = new Map<number, WritableSignal<SocialCountsState>>();
   private generation = 0;
 
@@ -55,21 +57,36 @@ export class SocialCountsService {
   private fetch(
     entry: CountedEntry,
     state: WritableSignal<SocialCountsState>,
-    request: Observable<SocialCountsDto>,
+    counts$: Observable<SocialCountsDto>,
   ): void {
     const generation = this.generation;
-    const likedAtLoad = entry.social?.isLiked ?? false;
+    const likedBefore = entry.social?.isLiked ?? false;
     state.set({ status: 'loading' });
-    request.subscribe({
-      next: (counts) => {
-        if (generation === this.generation) {
-          state.set({ status: 'ok', counts, likedAtLoad, loadedAt: Date.now() });
-        }
+    forkJoin([counts$, this.networkLike(entry)]).subscribe({
+      next: ([counts, networkLike]) => {
+        if (generation !== this.generation) return;
+        if (networkLike !== null)
+          this.entries.adoptLike(entry.id, { from: likedBefore, to: networkLike });
+        state.set({
+          status: 'ok',
+          counts,
+          likedAtLoad: networkLike ?? likedBefore,
+          loadedAt: Date.now(),
+        });
       },
       error: () => {
         if (generation === this.generation) state.set({ status: 'failed', failedAt: Date.now() });
       },
     });
+  }
+
+  /** Whether the network says the reader liked the post; null when it cannot say. */
+  private networkLike(entry: CountedEntry): Observable<boolean | null> {
+    if (!likeableSocial({ social: entry.social })) return of(null);
+    return this.api.likeState(entry.id).pipe(
+      map((like: EntryLikeDto) => like.isLiked),
+      catchError(() => of(null)),
+    );
   }
 
   private clear(): void {
