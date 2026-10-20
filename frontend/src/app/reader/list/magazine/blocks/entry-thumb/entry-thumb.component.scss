@@ -8,33 +8,33 @@
   @include magazine-card.chrome;
 
   display: flex;
-  gap: var(--space-3);
-
-  /* Stretch, so the text column fills a taller image's height and the meta row
-     can drop to the bottom of the card. The image is pinned back to the top
-     below — stretching it would override its fixed 88x66 box. */
-  align-items: stretch;
+  flex-direction: column;
+  gap: var(--space-1);
   padding: var(--card-pad);
   cursor: pointer;
 
   @include magazine-card.card-states;
 }
 
+.top {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
 .img-frame {
   position: relative;
   flex: none;
-  align-self: flex-start;
 
   /* Drops the image onto the kicker text's letters, not the line-box top:
-     `align-self: flex-start` pins it ~0.35em above where letters begin,
+     `align-items: flex-start` pins it ~0.35em above where letters begin,
      leaving it looking too high without this nudge. */
   margin-top: 0.35em;
 }
 
 .img {
-  /* Fixed 88×66, both dimensions explicit, not width + aspect-ratio: a flex
-     row stretches an aspect-ratio-only image, and a not-yet-loaded lazy image
-     has no intrinsic size to hold the ratio. object-fit crops either way. */
+  /* Fixed 88×66, both dimensions explicit, not width + aspect-ratio: a
+     not-yet-loaded lazy image has no intrinsic size to hold the ratio. */
   /* stylelint-disable declaration-property-unit-allowed-list --
      tuned thumbnail box, not spacing values. */
   width: 88px;

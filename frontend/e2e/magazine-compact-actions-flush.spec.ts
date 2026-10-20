@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
 import { entryWire } from './support/reader';
+import { stubFixtureImages } from './support/images';
 
 /**
  * Short titles on purpose. The bug this guards (#414) hid behind long ones: the
@@ -194,14 +195,6 @@ function splitEntry(id: number) {
 
 const SPLIT_ENTRIES = Array.from({ length: 6 }, (_, index) => splitEntry(index + 1));
 
-/** A single opaque pixel, served for every fixture image so the `<img>` loads
- *  instead of erroring — an errored image sets `imgError`, which removes the
- *  element via `@if (showImage())` and would silently defeat the whole test. */
-const ONE_PIXEL_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-  'base64',
-);
-
 async function stubSplitEntries(page: Page): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/entries',
@@ -210,12 +203,7 @@ async function stubSplitEntries(page: Page): Promise<void> {
       await route.fulfill({ status: 200, json: { entries: SPLIT_ENTRIES, nextCursor: null } });
     },
   );
-  await page.route(
-    (url) => url.hostname === 'fixtures.invalid' && url.pathname.endsWith('.jpg'),
-    async (route) => {
-      await route.fulfill({ status: 200, contentType: 'image/png', body: ONE_PIXEL_PNG });
-    },
-  );
+  await stubFixtureImages(page);
 }
 
 async function signInForSplitFixture(page: Page): Promise<boolean> {

@@ -1362,9 +1362,11 @@ blocks use it — hero, wide, split, thumb, kicker, quote.
 Two pieces of its geometry are load-bearing, and are why this is a component
 rather than a row assembled per block. `align-items: flex-end` keeps the icons
 level with the **last** line of a wrapping pill list, so the card's bottom
-edge stays the reference. `margin-top: auto` drops the whole row to the
-bottom of a card whose image is taller than its text — `split` and `thumb`,
-which stretch their body for exactly this — and is inert everywhere else.
+edge stays the reference. And every image-beside-text block (`split`, `thumb`)
+places the row as a sibling *below* its image+text row rather than inside the
+text column: beside an image the column cannot hold the audio action cluster
+and the pills' names together (#1720), and the row's actions should align to
+the card's edge, not the column's (#486).
 
 **Not for:** `entry-compact`, which projects `app-entry-actions` directly onto
 its kicker line instead of using this row — see the exception in

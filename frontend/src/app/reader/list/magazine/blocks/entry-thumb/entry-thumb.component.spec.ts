@@ -86,6 +86,11 @@ describe('EntryThumbComponent', () => {
     expect(favorite).toHaveBeenCalled();
   });
 
+  it('lays its meta row below the image and text, not inside the text column', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('.thumb > .top + app-entry-meta')).not.toBeNull();
+  });
+
   it('offers its renditions to the browser at the 88×66 cover box, up to a 2:1 picture', () => {
     const renditions: ImageRenditionDto[] = [
       { url: 'https://i/a-150.jpg', width: 150 },
