@@ -1439,25 +1439,24 @@ describe('ReaderViewComponent', () => {
       );
     });
 
-    it.each(['empty', 'unextractable', 'mismatch', 'player_page'] as const)(
-      'offers no Retry and no error disclosure when the page holds no article (%s)',
+    it.each(['fetch', 'unextractable', 'mismatch'] as const)(
+      'offers Retry but no error disclosure when the server gave no cause (%s)',
       (reason) => {
         loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason, detail: null })));
         const element = mount(entry()).nativeElement as HTMLElement;
 
-        expect(element.querySelector('.note-link')).toBeNull();
+        expect(element.querySelector('.reader-fallback .note-link')).not.toBeNull();
         expect(element.querySelector('.reader-error')).toBeNull();
       },
     );
 
-    it('offers no error disclosure for a fetch failure the server gave no cause for', () => {
+    it('shows no note at all for a player page', () => {
       loadMock.mockReturnValue(
-        of<ReaderContent>(aReaderFailure({ reason: 'fetch', detail: null })),
+        of<ReaderContent>(aReaderFailure({ reason: 'player_page', detail: null })),
       );
       const element = mount(entry()).nativeElement as HTMLElement;
 
-      expect(element.querySelector('.note-link')).not.toBeNull();
-      expect(element.querySelector('.reader-error')).toBeNull();
+      expect(element.querySelector('.reader-fallback, .reader-fallback-quiet')).toBeNull();
     });
 
     it('notes a page no longer than the feed quietly, outside the warning box', () => {
@@ -1468,6 +1467,21 @@ describe('ReaderViewComponent', () => {
       expect(element.querySelector('.reader-fallback-quiet')!.textContent).toContain(
         "The page has no more text than the feed — showing the feed's version.",
       );
+    });
+
+    it('retries extraction past the cache from the quiet note too', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason: 'empty' })));
+      reloadMock.mockReturnValue(
+        of<ReaderContent>(aReaderArticle({ contentHtml: '<p>FRESH</p>' })),
+      );
+      const fixture = mount(entry());
+      const element = fixture.nativeElement as HTMLElement;
+
+      (element.querySelector('.reader-fallback-quiet .note-link') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(reloadMock).toHaveBeenCalledWith(1);
+      expect(element.querySelector('.content')!.innerHTML).toContain('FRESH');
     });
 
     it('reveals the complete HTTP message when the load fails at the transport', () => {

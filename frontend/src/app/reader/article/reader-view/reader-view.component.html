@@ -129,22 +129,21 @@
         }
         @if (fallbackNoticeShown()) {
           @if (source.failureReason() === 'empty') {
-            <p class="reader-fallback-quiet">{{ fallbackMessageKey() | transloco }}</p>
+            <p class="reader-fallback-quiet">
+              {{ fallbackMessageKey() | transloco }}
+              <button type="button" class="note-link reads-as-text" (click)="refreshArticle()">
+                {{ 'reader.retry' | transloco }}
+              </button>
+            </p>
           } @else {
             <app-warning-box class="reader-fallback">
               <span class="warning-glyph" aria-hidden="true">⚠</span>
               <div class="warning-text">
                 <p class="reader-note">
                   {{ fallbackMessageKey() | transloco }}
-                  @if (!source.pageHoldsNoArticle()) {
-                    <button
-                      type="button"
-                      class="note-link reads-as-text"
-                      (click)="refreshArticle()"
-                    >
-                      {{ 'reader.retry' | transloco }}
-                    </button>
-                  }
+                  <button type="button" class="note-link reads-as-text" (click)="refreshArticle()">
+                    {{ 'reader.retry' | transloco }}
+                  </button>
                 </p>
                 @if (source.errorDetail(); as detail) {
                   <details class="reader-error">

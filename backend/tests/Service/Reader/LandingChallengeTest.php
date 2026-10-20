@@ -22,6 +22,9 @@ final class LandingChallengeTest extends TestCase
         yield 'cloudflare challenge form' => ['<form id="challenge-form" action="/cdn-cgi/l/chk_jschl">'];
         yield 'anubis' => ['<script id="anubis_challenge" type="application/json">{}</script>'];
         yield 'siteground captcha' => ['<meta http-equiv="refresh" content="0;url=/.well-known/sgcaptcha/">'];
+        yield 'labrador proof of work' => [
+            '<title>Are we human?</title><script defer type="text/javascript" src="/_labrador/pow/slow.js"></script>',
+        ];
     }
 
     #[DataProvider('challengeBodies')]

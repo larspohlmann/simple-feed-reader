@@ -16,6 +16,7 @@ final readonly class LandingChallenge
         'id="challenge-form"',
         'anubis_challenge',
         '/.well-known/sgcaptcha/',
+        '/_labrador/pow/',
     ];
 
     public function matches(string $html): bool
