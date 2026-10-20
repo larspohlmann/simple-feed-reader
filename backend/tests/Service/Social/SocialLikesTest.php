@@ -242,6 +242,103 @@ final class SocialLikesTest extends DbTestCase
         }
     }
 
+    public function testALikeMadeOnTheNetworkIsStoredWithTheIdItReports(): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->mastodon->knowsTheLikeAs('2041');
+
+        self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
+
+        self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+        $like = $this->storedLikeOf($entry);
+        self::assertSame($account->requireId(), $like->getSocialAccount()->requireId());
+        self::assertSame('2041', $like->getRemoteId());
+        self::assertEquals(new \DateTimeImmutable('2026-10-13 06:30:00'), $like->getLikedAt());
+    }
+
+    public function testALikeTakenBackOnTheNetworkIsForgottenWithoutAnUnlike(): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->storeLike($entry, $account, '110');
+
+        self::assertFalse($this->likes()->syncFromNetwork($this->owner, $entry));
+
+        self::assertSame(['resolve ' . self::STATUS_URL], $this->mastodon->calls);
+        self::assertNull($this->likeRepository()->findOneFor($this->owner, $entry));
+    }
+
+    public function testAPostLikedNowhereStaysUnliked(): void
+    {
+        $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+
+        self::assertFalse($this->likes()->syncFromNetwork($this->owner, $entry));
+
+        self::assertSame(0, $this->likeRepository()->count([]));
+    }
+
+    public function testALikeTheNetworkConfirmsIsKeptAsItIs(): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->storeLike($entry, $account, '110');
+        $this->mastodon->knowsTheLike();
+
+        self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
+
+        self::assertEquals(new \DateTimeImmutable('2026-10-13 10:00:00'), $this->storedLikeOf($entry)->getLikedAt());
+    }
+
+    public function testALikeStoredUnderAnotherIdIsReplacedByTheOneTheNetworkReports(): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->storeLike($entry, $account, '97');
+        $this->mastodon->knowsTheLikeAs('2041');
+
+        self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
+
+        $like = $this->storedLikeOf($entry);
+        self::assertSame('2041', $like->getRemoteId());
+        self::assertEquals(new \DateTimeImmutable('2026-10-13 06:30:00'), $like->getLikedAt());
+        self::assertSame(1, $this->likeRepository()->count([]));
+    }
+
+    public function testALikeStoredUnderAnotherAccountMovesToTheActingOne(): void
+    {
+        $acting = $this->mastodonAccount();
+        $other = SocialFeeds::persistedAccount(
+            $this->entityManager,
+            SocialAccounts::mastodonAs($this->owner, 'alice2@mastodon.example'),
+        );
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->storeLike($entry, $other, '110');
+        $this->mastodon->knowsTheLike();
+
+        self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
+
+        self::assertSame($acting->requireId(), $this->storedLikeOf($entry)->getSocialAccount()->requireId());
+    }
+
+    public function testAnUnreachableNetworkKeepsTheStoredLike(): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->storeLike($entry, $account, '110');
+        $this->mastodon->failWith(new SocialNetworkUnreachableException('down'));
+
+        $this->assertRefused(
+            fn () => $this->likes()->syncFromNetwork($this->owner, $entry),
+            SocialNetworkUnreachableException::class,
+            'An unreachable network must reach the caller.',
+        );
+
+        $this->entityManager->clear();
+        self::assertSame(1, $this->likeRepository()->count([]));
+    }
+
     private function mastodonAccount(): SocialAccount
     {
         return SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
@@ -262,6 +359,23 @@ final class SocialLikesTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function storeLike(Entry $entry, SocialAccount $account, string $remoteId): void
+    {
+        $likedAt = new \DateTimeImmutable('2026-10-13 10:00:00');
+        $this->entityManager->persist(new SocialLike($this->owner, $entry, $account, $remoteId, $likedAt));
+        $this->entityManager->flush();
+    }
+
+    private function storedLikeOf(Entry $entry): SocialLike
+    {
+        $entryId = $entry->requireId();
+        $this->entityManager->clear();
+        $like = $this->likeRepository()->findOneBy(['entry' => $entryId]);
+        self::assertNotNull($like);
+
+        return $like;
     }
 
     private function likes(): SocialLikes
