@@ -1480,6 +1480,21 @@ describe('ReaderViewComponent', () => {
       expect(element.querySelector('.reader-fallback-quiet .note-link')).not.toBeNull();
     });
 
+    it('retries extraction past the cache from the quiet note too', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason: 'empty' })));
+      reloadMock.mockReturnValue(
+        of<ReaderContent>(aReaderArticle({ contentHtml: '<p>FRESH</p>' })),
+      );
+      const fixture = mount(entry());
+      const element = fixture.nativeElement as HTMLElement;
+
+      (element.querySelector('.reader-fallback-quiet .note-link') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(reloadMock).toHaveBeenCalledWith(1);
+      expect(element.querySelector('.content')!.innerHTML).toContain('FRESH');
+    });
+
     it('reveals the complete HTTP message when the load fails at the transport', () => {
       loadMock.mockReturnValue(
         throwError(
