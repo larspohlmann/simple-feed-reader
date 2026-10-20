@@ -21,6 +21,8 @@ export class SavedSearchToggle {
   private readonly selection = inject(ReaderRouteState).selection;
 
   readonly viewing = computed(() => this.selection().kind === 'saved-search');
+  /** Whether the save is out: the button disables and the list waits on it (#1718). */
+  readonly saving = this.savedSearchesStore.saving.asReadonly();
   /** Whether the header offers its Save/Remove control: a direct search can be
    *  saved, a saved search removed. Named so a third search-like kind can't slip
    *  the gate the way #1118 dropped this one. */
@@ -70,7 +72,7 @@ export class SavedSearchToggle {
    *  command, because the header offers one button whose label/icon flip on
    *  this state. Saving toasts on real HTTP success; removing confirms first (#581). */
   toggle(): void {
-    if (this.savedSearchesStore.saving()) return;
+    if (this.saving()) return;
     const saved = this.current();
     if (saved) {
       this.confirmRemoveSavedSearch(saved.id);

@@ -51,4 +51,20 @@ describe('heldFor', () => {
 
     expect(held()).toBe(false);
   });
+
+  it('keeps the clock running when a signal the source reads changes to the same verdict', () => {
+    const unrelated = signal(0);
+    source = signal(true);
+    held = TestBed.runInInjectionContext(() =>
+      heldFor(() => unrelated() >= 0 && source(), DELAY_MS),
+    );
+    TestBed.tick();
+    jest.advanceTimersByTime(DELAY_MS / 2);
+
+    unrelated.set(1);
+    TestBed.tick();
+    jest.advanceTimersByTime(DELAY_MS / 2);
+
+    expect(held()).toBe(true);
+  });
 });

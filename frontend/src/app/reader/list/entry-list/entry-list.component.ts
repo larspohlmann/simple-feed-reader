@@ -54,7 +54,7 @@ import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progres
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { heldFor } from '../../../core/held-for';
 
-// How long a reload or a command may run before it earns a spinner. One that
+// How long a reload or a command may run before it earns the overlay. One that
 // lands sooner would only flash it, which reads as a glitch rather than as progress.
 const WAIT_OVERLAY_DELAY_MS = 150;
 
@@ -119,8 +119,8 @@ export class EntryListComponent implements OnDestroy {
   readonly loading = input.required<boolean>();
   readonly mutating = input(false);
   /** A command of the shell's on the wire, such as saving the search (#1718).
-   *  Raises the wait overlay like a reload does, the search selection included:
-   *  the search field's own spinner speaks for keystrokes, not for this. */
+   *  Only the overlay: the rows stay current, so they are neither dimmed nor
+   *  marked busy; the waiting control carries the accessible state. */
   readonly busy = input(false);
   readonly loadingMore = input.required<boolean>();
   readonly error = input.required<Problem | null>();
@@ -234,7 +234,7 @@ export class EntryListComponent implements OnDestroy {
    * Whether the wait overlay is up. A reload keeps outgoing rows on screen
    * (#254); past a delay, this says plainly that new content is coming. Only
    * for a reload — the first load has skeletons, paging has its own footer —
-   * or for a command of the shell's, which waits over any list, even an empty one.
+   * or for a command of the shell's, which waits over an empty list too.
    */
   readonly waitOverlay = heldFor(
     () => this.busy() || (this.reloadCue() && this.entries().length > 0),
