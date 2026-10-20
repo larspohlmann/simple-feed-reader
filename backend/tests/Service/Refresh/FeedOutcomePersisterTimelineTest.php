@@ -28,9 +28,11 @@ use App\Service\Social\Support\BlueskyTimelinePage;
 use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FakeAppView;
+use App\Tests\Support\FakeReplyThreadSource;
 use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReadsFixtures;
+use App\Tests\Support\SelfThreadEnrichers;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -56,6 +58,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
 
     private MockClock $clock;
     private FakeAppView $appView;
+    private FakeReplyThreadSource $threadSource;
 
     protected function setUp(): void
     {
@@ -64,6 +67,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         $this->appView = new FakeAppView();
         $this->appView->knowsFixture('external');
         $this->appView->knowsFixture('video');
+        $this->threadSource = new FakeReplyThreadSource();
     }
 
     public function testATimelinePostEndsAsTheSameRssPostDoesOnceTheAppViewFilledIt(): void
@@ -114,6 +118,37 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
 
         self::assertSame(1, $result->entriesCreated);
         self::assertSame([self::ROOT], $this->guidsOf($feed));
+        self::assertSame(
+            [self::webUrl(self::REPLY_ONE) => 1, self::webUrl(self::REPLY_TWO) => 2],
+            $this->positionsOf($feed),
+        );
+    }
+
+    public function testARootWhoseRepliesAreNotOnThePageIsHandedToTheSelfThreadPass(): void
+    {
+        $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
+        $root = JsonNodeModel::of(self::itemFields(self::ROOT, null, null, 1));
+
+        $this->persister()->storeTimeline($feed, self::page([$root]), $this->clock->now());
+
+        self::assertNotSame([], $this->threadSource->calls);
+        foreach ($this->threadSource->calls as $call) {
+            self::assertStringContainsString(self::ROOT, $call);
+        }
+    }
+
+    public function testARootWhoseRepliesFoldFromThePageIsNotReadAgain(): void
+    {
+        $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
+
+        $this->persister()->storeTimeline($feed, self::page([
+            self::item(self::REPLY_TWO, self::ROOT, self::REPLY_ONE),
+            self::item(self::REPLY_ONE, self::ROOT, self::ROOT),
+            JsonNodeModel::of(self::itemFields(self::ROOT, null, null, 2)),
+        ]), $this->clock->now());
+
+        self::assertSame([], $this->threadSource->calls);
+        self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count());
         self::assertSame(
             [self::webUrl(self::REPLY_ONE) => 1, self::webUrl(self::REPLY_TWO) => 2],
             $this->positionsOf($feed),
@@ -218,8 +253,15 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
     private function persister(): FeedOutcomePersister
     {
         $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
+        $selfThreads = SelfThreadEnrichers::build(
+            $this->entityManager,
+            $this->clock,
+            $this->threadSource,
+            new NullLogger(),
+        );
 
         return FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->foldingWith($selfThreads)
             ->enrichingWith(PostEnrichers::build(
                 $this->entityManager,
                 $this->clock,
@@ -249,8 +291,12 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
     }
 
     /** @return array<string, mixed> */
-    private static function itemFields(string $uri, ?string $replyRoot = null, ?string $replyParent = null): array
-    {
+    private static function itemFields(
+        string $uri,
+        ?string $replyRoot = null,
+        ?string $replyParent = null,
+        ?int $replyCount = null,
+    ): array {
         $author = ['did' => self::BOB, 'viewer' => ['following' => 'at://did:plc:alice/app.bsky.graph.follow/1']];
         $reply = $replyRoot === null || $replyParent === null ? [] : ['reply' => [
             'root' => ['uri' => $replyRoot, 'author' => $author],
@@ -267,7 +313,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
                     'createdAt' => self::POSTED_AT[$uri],
                 ],
                 'indexedAt' => self::POSTED_AT[$uri],
-            ],
+            ] + ($replyCount === null ? [] : ['replyCount' => $replyCount]),
         ];
     }
 

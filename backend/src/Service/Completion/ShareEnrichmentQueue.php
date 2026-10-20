@@ -48,26 +48,33 @@ final readonly class ShareEnrichmentQueue
 
     private function queueOne(Entry $entry, KnownSharesModel $knownShares, \DateTimeImmutable $queuedAt): void
     {
+        $awaited = $this->settle($entry, $knownShares);
+        $queued = $knownShares->hasRepliesFor($entry->getGuid()) ? ShareEnrichmentKind::SelfThread : $awaited;
+        if ($queued !== null) {
+            $this->entityManager->persist(new ShareEnrichment($entry, $queued, $queuedAt));
+        }
+    }
+
+    /** @return ShareEnrichmentKind|null what the entry still waits for once its known shares are written */
+    private function settle(Entry $entry, KnownSharesModel $knownShares): ?ShareEnrichmentKind
+    {
         $post = $knownShares->blueskyPostFor($entry->getGuid());
         if ($post !== null) {
-            $this->knownShareSettler->settleEmbedded($entry, $post, $queuedAt);
-
-            return;
+            return $this->knownShareSettler->settleEmbedded($entry, $post);
         }
         $this->classifier->classify($entry);
         $quote = self::postedQuoteOf($entry, $knownShares);
         if ($quote !== null) {
             $this->knownShareSettler->settleQuoted($entry, $quote);
 
-            return;
+            return null;
         }
         $card = self::postedCardOf($entry, $knownShares);
         if ($card !== null) {
-            $this->knownShareSettler->settleCarded($entry, $card, $queuedAt);
-
-            return;
+            return $this->knownShareSettler->settleCarded($entry, $card);
         }
-        $this->queueCreated($entry, $queuedAt);
+
+        return $this->awaitedOfCreated($entry);
     }
 
     private static function postedQuoteOf(Entry $entry, KnownSharesModel $knownShares): ?QuotedPostContent
@@ -85,21 +92,15 @@ final readonly class ShareEnrichmentQueue
         return PostedLinkCard::of($entry, $card);
     }
 
-    private function queueCreated(Entry $entry, \DateTimeImmutable $queuedAt): void
+    private function awaitedOfCreated(Entry $entry): ?ShareEnrichmentKind
     {
         if ($this->pendingEmbed->awaitsEmbed($entry)) {
-            $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::AppView, $queuedAt));
-
-            return;
+            return ShareEnrichmentKind::AppView;
         }
         if ($this->pendingThread->awaitsThread($entry)) {
-            $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::SelfThread, $queuedAt));
+            return ShareEnrichmentKind::SelfThread;
+        }
 
-            return;
-        }
-        if ($entry->getShareKind() !== ShareKind::Link) {
-            return;
-        }
-        $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::LinkCards, $queuedAt));
+        return $entry->getShareKind() === ShareKind::Link ? ShareEnrichmentKind::LinkCards : null;
     }
 }

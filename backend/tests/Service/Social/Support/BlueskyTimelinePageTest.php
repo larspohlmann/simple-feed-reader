@@ -43,6 +43,22 @@ final class BlueskyTimelinePageTest extends TestCase
         self::assertNull($page->newestId);
     }
 
+    public function testAPostTheNetworkCountsRepliesForIsKnownAsReplied(): void
+    {
+        $page = BlueskyTimelinePage::of([self::item(post: ['replyCount' => 1])], self::ALICE);
+
+        self::assertTrue($page->knownShares->hasRepliesFor(self::POST_URI));
+    }
+
+    public function testAPostWithoutRepliesIsNotKnownAsReplied(): void
+    {
+        $unreplied = BlueskyTimelinePage::of([self::item(post: ['replyCount' => 0])], self::ALICE);
+        $uncounted = BlueskyTimelinePage::of([self::item()], self::ALICE);
+
+        self::assertFalse($unreplied->knownShares->hasRepliesFor(self::POST_URI));
+        self::assertFalse($uncounted->knownShares->hasRepliesFor(self::POST_URI));
+    }
+
     public function testARepostShowsTheOriginalWithATrailingAttributionAtTheRepostTime(): void
     {
         $item = self::item(['reason' => [
@@ -225,11 +241,14 @@ final class BlueskyTimelinePageTest extends TestCase
         ];
     }
 
-    /** @param array<string, mixed> $overrides */
-    private static function item(array $overrides = []): JsonNodeModel
+    /**
+     * @param array<string, mixed> $overrides
+     * @param array<string, mixed> $post
+     */
+    private static function item(array $overrides = [], array $post = []): JsonNodeModel
     {
         return JsonNodeModel::of($overrides + [
-            'post' => [
+            'post' => $post + [
                 'uri' => self::POST_URI,
                 'author' => ['did' => 'did:plc:bob', 'handle' => 'bob.bsky.social', 'displayName' => 'Bob',
                     'avatar' => 'https://cdn.bsky.app/img/avatar/plain/did:plc:bob/abc@jpeg',

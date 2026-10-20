@@ -193,6 +193,37 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         self::assertSame(ShareKind::Link, $this->reload($post)->getShareKind());
     }
 
+    public function testAKnownBlueskyPostWithRepliesWaitsForItsThreadBeforeItsCards(): void
+    {
+        $post = $this->post(self::AT_POST, '<p>See <a href="https://example.com/a">https://example.com/a</a></p>');
+
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::ofBlueskyPosts([
+                self::AT_POST => JsonNodeModel::of(['uri' => self::AT_POST, 'replyCount' => 1]),
+            ]),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([self::AT_POST => ShareEnrichmentKind::SelfThread], $this->queuedKinds());
+        self::assertSame(ShareKind::Link, $this->reload($post)->getShareKind());
+    }
+
+    public function testAKnownBlueskyPostWithRepliesAndNothingToCardWaitsForItsThread(): void
+    {
+        $post = $this->post(self::AT_POST, '<p>Just words.</p>');
+
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::ofBlueskyPosts([
+                self::AT_POST => JsonNodeModel::of(['uri' => self::AT_POST, 'replyCount' => 1]),
+            ]),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([self::AT_POST => ShareEnrichmentKind::SelfThread], $this->queuedKinds());
+    }
+
     public function testAMastodonCardCardsItsLinkWithoutAPageFetch(): void
     {
         $guid = 'https://mastodon.example/@someone/1';
@@ -402,6 +433,60 @@ final class ShareEnrichmentQueueTest extends DbTestCase
             ['https://mastodon.example/@thread/2' => ShareEnrichmentKind::LinkCards],
             $this->queuedKinds(),
         );
+    }
+
+    public function testAMastodonTimelinePostWithRepliesWaitsForItsThread(): void
+    {
+        $feed = $this->socialFeed('social:mastodon:3:home', SourceFormat::MASTODON_API);
+        $post = $this->postIn($feed, 'https://mastodon.example/@thread/3');
+
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::ofMastodonShares([], [], ['https://mastodon.example/@thread/3']),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame(
+            ['https://mastodon.example/@thread/3' => ShareEnrichmentKind::SelfThread],
+            $this->queuedKinds(),
+        );
+    }
+
+    public function testACardedMastodonPostWithRepliesStillWaitsForItsThread(): void
+    {
+        $guid = 'https://mastodon.example/@someone/1';
+        $post = $this->post($guid, '<p>Read <a href="https://example.com/story">https://example.com/story</a></p>');
+        $card = new LinkCardContent(
+            'https://example.com/story',
+            'The story',
+            'What happened.',
+            'https://example.com/story.jpg',
+            'Example',
+        );
+
+        $this->queue->queueWithKnownShares([$post], KnownSharesModel::ofMastodonShares([$guid => $card], [], [$guid]));
+        $this->entityManager->flush();
+
+        self::assertSame([$guid => ShareEnrichmentKind::SelfThread], $this->queuedKinds());
+        self::assertCount(1, $this->storedCards($this->reload($post)));
+    }
+
+    public function testAQuotingMastodonPostWithRepliesStillWaitsForItsThread(): void
+    {
+        $guid = 'https://mastodon.example/@someone/20';
+        $address = 'https://other.example/users/b/statuses/9';
+        $post = $this->post(
+            $guid,
+            '<p>Wow</p><p class="quote-inline">RE: <a href="' . $address . '">' . $address . '</a></p>',
+        );
+
+        $this->queue->queueWithKnownShares(
+            [$post],
+            KnownSharesModel::ofMastodonShares([], [$guid => self::quotedPost()], [$guid]),
+        );
+        $this->entityManager->flush();
+
+        self::assertSame([$guid => ShareEnrichmentKind::SelfThread], $this->queuedKinds());
     }
 
     private function socialFeed(string $url, string $sourceFormat): Feed

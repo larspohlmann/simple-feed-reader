@@ -74,7 +74,6 @@ final class PostEnrichers
             new BlueskyPendingEmbed(),
             new MastodonPendingThread(),
             new KnownShareSettler(
-                $entityManager,
                 self::embedWriter($entityManager),
                 ShareLinkCardsWiring::cardWriter($entityManager),
                 new NullLogger(),
