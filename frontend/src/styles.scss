@@ -17,6 +17,11 @@
 // app-overlay-panel's, and the prebuilt CSS already shrink-wraps and centres
 // it (discover, the one full-screen phone surface, is a route, not a pane).
 
+// WebKit leaves a dialog's initial focus on the container; a ring there outlines the whole sheet.
+cdk-dialog-container {
+  outline: none;
+}
+
 // The toast's global position strategy centres the pane but leaves it
 // shrink-to-fit, so a long message would run edge to edge on a phone. Capped
 // against the viewport, not a percentage: the pane has no size to resolve against.
