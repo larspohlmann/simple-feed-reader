@@ -1,15 +1,4 @@
-<div class="grabber" aria-hidden="true"></div>
-<p class="title" aria-hidden="true">{{ data.title }}</p>
-<button
-  type="button"
-  class="close"
-  appIconButton
-  [attr.aria-label]="'common.close' | transloco"
-  (click)="ref.close()"
->
-  <app-icon name="close" size="md" />
-</button>
-<nav role="menu" [attr.aria-label]="data.title">
+<nav #menu role="menu" [attr.aria-label]="data.title">
   @for (item of data.actions; track $index) {
     @if (isDivider(item)) {
       <hr role="separator" />
@@ -31,3 +20,16 @@
     }
   }
 </nav>
+<header class="head">
+  <div class="grabber" aria-hidden="true"></div>
+  <p class="title" aria-hidden="true">{{ data.title }}</p>
+  <button
+    type="button"
+    class="close boxed round"
+    appIconButton
+    [attr.aria-label]="'common.close' | transloco"
+    (click)="ref.close()"
+  >
+    <app-icon name="close" size="md" />
+  </button>
+</header>

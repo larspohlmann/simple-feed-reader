@@ -24,7 +24,6 @@ export const SHARE_GLYPH = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent
   ? 'ios_share'
   : 'share';
 
-/** The logo files sit next to the config, under the app's public root. */
 export function shareLogoUrl(file: string): string {
   return `share-targets/${file}`;
 }

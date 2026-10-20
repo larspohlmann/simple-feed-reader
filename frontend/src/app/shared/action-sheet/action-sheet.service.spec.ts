@@ -62,6 +62,14 @@ describe('ActionSheet', () => {
     items()[1].click();
   });
 
+  it('puts the actions before the close button, so the first action takes the initial focus', () => {
+    open().subscribe();
+    const close = container.querySelector('button.close')!;
+    expect(
+      items()[0].compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('closes from the corner button, resolving as a dismissal', (done) => {
     open().subscribe((choice) => {
       expect(choice).toBeUndefined();
@@ -138,7 +146,10 @@ describe('ActionSheetComponent swipe dismiss', () => {
         { provide: DialogRef, useValue: ref },
       ],
     });
-    return { cmp: TestBed.createComponent(ActionSheetComponent).componentInstance, ref };
+    const fixture = TestBed.createComponent(ActionSheetComponent);
+    fixture.detectChanges();
+    const menu = fixture.nativeElement.querySelector('nav') as HTMLElement;
+    return { cmp: fixture.componentInstance, ref, menu };
   };
 
   const touch = (clientY: number) => ({ touches: [{ clientY }] }) as unknown as TouchEvent;
@@ -149,6 +160,15 @@ describe('ActionSheetComponent swipe dismiss', () => {
     cmp.onTouchMove(touch(180));
     cmp.onTouchEnd();
     expect(ref.close).toHaveBeenCalledWith();
+  });
+
+  it('keeps a list that was scrolled down open while it is scrolled back up', () => {
+    const { cmp, ref, menu } = mount();
+    Object.defineProperty(menu, 'scrollTop', { value: 40 });
+    cmp.onTouchStart(touch(100));
+    cmp.onTouchMove(touch(180));
+    cmp.onTouchEnd();
+    expect(ref.close).not.toHaveBeenCalled();
   });
 
   it('ignores a swipe under the threshold and an upward swipe', () => {

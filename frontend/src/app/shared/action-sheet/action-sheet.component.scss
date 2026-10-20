@@ -1,21 +1,32 @@
 @use '../../theme/glass-rim';
+@use '../../theme/menu-items';
 
 :host {
   @include glass-rim.filled(var(--surface-2));
 
-  position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
   border-bottom: none;
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);
   padding: var(--space-2) var(--space-2) var(--space-4);
   max-height: 90vh;
   max-height: 90dvh;
-  overflow-y: auto;
   animation: sheet-enter 0.2s ease-out;
 }
 
+/* Sits after the menu in the DOM so the first action takes the initial focus, not the close button. */
+.head {
+  order: -1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  margin-block-end: var(--space-1);
+}
+
 .grabber {
+  grid-column: 1 / -1;
   width: var(--space-6);
   height: var(--space-1);
   border-radius: var(--radius-pill);
@@ -24,41 +35,22 @@
 }
 
 .title {
-  margin: 0 calc(var(--control-h) + var(--space-2)) var(--space-1) var(--space-3);
+  margin: 0 0 0 var(--space-3);
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
-.close {
-  @include glass-rim.filled(var(--surface-1), var(--border), control);
+nav {
+  @include menu-items.menu-items;
 
-  position: absolute;
-  inset-block-start: var(--space-2);
-  inset-inline-end: var(--space-2);
-  width: var(--control-h);
-  height: var(--control-h);
-  border-radius: var(--radius-pill);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 nav button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
   min-height: var(--tap-target);
-  padding: var(--row-pad-y) var(--row-pad-x);
-  background: none;
-  border: none;
   border-radius: var(--radius);
-  color: var(--text-primary);
-  font-size: var(--fs-base);
-  text-align: left;
-  cursor: pointer;
-}
-
-nav button:hover:not(:disabled),
-nav button:focus-visible {
-  background: var(--surface-0);
 }
 
 nav button:disabled {
@@ -68,16 +60,6 @@ nav button:disabled {
 
 nav button.danger {
   color: var(--danger);
-}
-
-nav app-icon {
-  color: var(--text-secondary);
-}
-
-hr {
-  border: none;
-  border-block-start: 1px solid var(--border);
-  margin: var(--space-1) var(--row-pad-x);
 }
 
 @keyframes sheet-enter {

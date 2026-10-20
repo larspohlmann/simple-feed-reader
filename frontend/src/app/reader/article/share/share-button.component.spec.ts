@@ -5,6 +5,7 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import {
+  ACTION_SHEET_DIVIDER,
   ActionSheetAction,
   ActionSheetData,
   ActionSheetItem,
@@ -126,7 +127,7 @@ describe('ShareButtonComponent', () => {
         url: 'share-targets/bluesky.svg',
         color: '#1185fe',
       });
-      expect(sheetData().actions.some((entry) => 'divider' in entry)).toBe(true);
+      expect(sheetData().actions).toContain(ACTION_SHEET_DIVIDER);
     });
 
     it('fires the chosen target', () => {

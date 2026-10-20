@@ -37,6 +37,10 @@
   border-radius: var(--radius);
 }
 
+.ib.round {
+  border-radius: var(--radius-pill);
+}
+
 /* Guarded by (hover: hover): on a touch device the tap that presses this
    button also fires :hover, and with no separate release event the hover
    style sticks until something else is tapped (#704). */

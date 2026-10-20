@@ -61,6 +61,12 @@ export class ShareButtonComponent {
   protected readonly logoUrl = shareLogoUrl;
   protected readonly open = signal(false);
 
+  private readonly targetsById = new Map(
+    this.targets.flatMap((target, index) =>
+      target.kind === 'divider' ? [] : [[String(index), target] as const],
+    ),
+  );
+
   constructor() {
     effect(() => {
       this.url();
@@ -68,7 +74,6 @@ export class ShareButtonComponent {
     });
   }
 
-  /** A coarse pointer gets the bottom sheet the sidebar rows use; the popover stays for fine ones. */
   protected press(): void {
     if (this.screen.isCoarse()) this.openSheet();
     else this.open.update((open) => !open);
@@ -95,7 +100,7 @@ export class ShareButtonComponent {
         actions: this.targets.map((target, index) => this.sheetItem(target, index)),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((choice) => this.chooseByIndex(choice));
+      .subscribe((choice) => this.chooseById(choice));
   }
 
   private sheetItem(target: ShareTarget, index: number): ActionSheetItem {
@@ -108,10 +113,9 @@ export class ShareButtonComponent {
     };
   }
 
-  private chooseByIndex(choice: string | undefined): void {
-    if (choice === undefined) return;
-    const target = this.targets[Number(choice)];
-    if (target.kind !== 'divider') this.choose(target);
+  private chooseById(choice: string | undefined): void {
+    const target = choice === undefined ? undefined : this.targetsById.get(choice);
+    if (target !== undefined) this.choose(target);
   }
 
   private shareThroughSystem(url: string): void {

@@ -1,9 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
-/** An SVG file drawn as a coloured mask at `--icon-sm`; the label beside it carries the meaning. */
 @Component({
   selector: 'app-masked-logo',
-  templateUrl: './masked-logo.component.html',
+  template: '',
   styleUrl: './masked-logo.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {

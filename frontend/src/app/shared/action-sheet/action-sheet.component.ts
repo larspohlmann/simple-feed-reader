@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, viewChild } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../icon/icon.component';
@@ -26,7 +26,7 @@ export const ACTION_SHEET_DIVIDER = { divider: true } as const;
 export type ActionSheetDivider = typeof ACTION_SHEET_DIVIDER;
 export type ActionSheetItem = ActionSheetAction | ActionSheetDivider;
 
-/** What the sheet shows: the row it acts on, and that row's actions with the dividers between their groups. */
+/** What the sheet shows: the row it acts on, and that row's actions. */
 export interface ActionSheetData {
   title: string;
   actions: readonly ActionSheetItem[];
@@ -49,9 +49,11 @@ export class ActionSheetComponent {
   readonly data = inject<ActionSheetData>(DIALOG_DATA);
   readonly ref = inject<DialogRef<string>>(DialogRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly menu = viewChild.required<ElementRef<HTMLElement>>('menu');
 
   private startY = 0;
   private dy = 0;
+  private pulling = false;
 
   protected isDivider(item: ActionSheetItem): item is ActionSheetDivider {
     return 'divider' in item;
@@ -61,10 +63,12 @@ export class ActionSheetComponent {
     stepMenuFocus(event, this.host.nativeElement);
   }
 
+  /** A list scrolled away from its top is being scrolled back, not pulled down. */
   onTouchStart(event: TouchEvent): void {
     if (event.touches.length !== 1) return;
     this.startY = event.touches[0].clientY;
     this.dy = 0;
+    this.pulling = this.menu().nativeElement.scrollTop === 0;
   }
 
   onTouchMove(event: TouchEvent): void {
@@ -74,6 +78,6 @@ export class ActionSheetComponent {
   /** A decisive downward pull dismisses, mirroring the sheet's slide-up entry.
    *  60px keeps a scroll-ish wobble from closing it. */
   onTouchEnd(): void {
-    if (this.dy > 60) this.ref.close();
+    if (this.pulling && this.dy > 60) this.ref.close();
   }
 }

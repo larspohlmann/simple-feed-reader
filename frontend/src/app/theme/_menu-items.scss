@@ -1,0 +1,36 @@
+// The rows of a role=menu, drawn alike by the share popover and the action sheet.
+@mixin menu-items {
+  [role='menuitem'] {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--row-pad-y) var(--row-pad-x);
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: var(--fs-base);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  [role='menuitem']:focus-visible {
+    background: var(--surface-0);
+  }
+
+  @media (hover: hover) {
+    [role='menuitem']:hover:not(:disabled) {
+      background: var(--surface-0);
+    }
+  }
+
+  app-icon {
+    color: var(--text-secondary);
+  }
+
+  [role='separator'] {
+    border: none;
+    border-block-start: 1px solid var(--border);
+    margin: var(--space-1) var(--row-pad-x);
+  }
+}
