@@ -8,6 +8,9 @@
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);
   padding: var(--space-2) var(--space-2) var(--space-4);
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
   animation: sheet-enter 0.2s ease-out;
 }
 
