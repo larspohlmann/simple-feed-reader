@@ -28,6 +28,7 @@
 nav button {
   display: flex;
   align-items: center;
+  gap: var(--space-3);
   width: 100%;
   min-height: var(--tap-target);
   padding: var(--row-pad-y) var(--row-pad-x);
@@ -52,6 +53,16 @@ nav button:disabled {
 
 nav button.danger {
   color: var(--danger);
+}
+
+nav app-icon {
+  color: var(--text-secondary);
+}
+
+hr {
+  border: none;
+  border-block-start: 1px solid var(--border);
+  margin: var(--space-1) var(--row-pad-x);
 }
 
 @keyframes sheet-enter {

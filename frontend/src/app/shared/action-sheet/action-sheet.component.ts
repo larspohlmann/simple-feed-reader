@@ -1,24 +1,38 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { IconComponent } from '../icon/icon.component';
+import { MaskedLogoComponent } from '../masked-logo/masked-logo.component';
 import { stepMenuFocus } from '../menu-keys';
+
+export interface ActionSheetLogo {
+  url: string;
+  color?: string;
+}
 
 /** One choice on the sheet. `label` arrives already translated — this lives in
  *  shared/ and must not know any feature's i18n keys. */
 export interface ActionSheetAction {
   id: string;
   label: string;
+  symbol?: string;
+  logo?: ActionSheetLogo;
   danger?: boolean;
   disabled?: boolean;
 }
 
-/** What the sheet shows: the row it acts on, and that row's actions. */
+export const ACTION_SHEET_DIVIDER = { divider: true } as const;
+export type ActionSheetDivider = typeof ACTION_SHEET_DIVIDER;
+export type ActionSheetItem = ActionSheetAction | ActionSheetDivider;
+
+/** What the sheet shows: the row it acts on, and that row's actions with the dividers between their groups. */
 export interface ActionSheetData {
   title: string;
-  actions: ActionSheetAction[];
+  actions: readonly ActionSheetItem[];
 }
 
 @Component({
   selector: 'app-action-sheet',
+  imports: [IconComponent, MaskedLogoComponent],
   templateUrl: './action-sheet.component.html',
   styleUrl: './action-sheet.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,6 +50,10 @@ export class ActionSheetComponent {
 
   private startY = 0;
   private dy = 0;
+
+  protected isDivider(item: ActionSheetItem): item is ActionSheetDivider {
+    return 'divider' in item;
+  }
 
   onKeydown(event: KeyboardEvent): void {
     stepMenuFocus(event, this.host.nativeElement);
