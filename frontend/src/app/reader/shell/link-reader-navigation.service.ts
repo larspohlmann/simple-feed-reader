@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LinkCardDto } from '../link-card/link-card';
-import { linkParam, refOf } from '../query/link-param';
+import { linkParam, signedUrlOf } from '../query/link-param';
 
 @Injectable()
 export class LinkReaderNavigation {
@@ -14,12 +14,12 @@ export class LinkReaderNavigation {
 
   layer(card: LinkCardDto): void {
     this.openedCard.set(card);
-    this.navigate({ link: linkParam(refOf(card)) });
+    this.navigate({ link: linkParam(signedUrlOf(card)) });
   }
 
   openAlone(card: LinkCardDto): void {
     this.openedCard.set(card);
-    this.navigate({ link: linkParam(refOf(card)), entry: null });
+    this.navigate({ link: linkParam(signedUrlOf(card)), entry: null });
   }
 
   close(): void {

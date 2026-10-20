@@ -107,7 +107,7 @@
       ></div>
       <section class="reader">
         <ng-container *ngTemplateOutlet="readerPane; context: { fullscreen: false }" />
-        @if (linkCard()) {
+        @if (linkTarget()) {
           <div class="link-overlay">
             <ng-container *ngTemplateOutlet="linkPane; context: { fullscreen: false }" />
           </div>
@@ -126,7 +126,7 @@
           <ng-container *ngTemplateOutlet="readerPane; context: { fullscreen: !screen.isWide() }" />
         </div>
       }
-      @if (linkCard()) {
+      @if (linkTarget()) {
         <div class="article-overlay">
           <ng-container *ngTemplateOutlet="linkPane; context: { fullscreen: !screen.isWide() }" />
         </div>
@@ -188,9 +188,9 @@
     />
   </ng-template>
   <ng-template #linkPane let-fullscreen="fullscreen">
-    @if (linkCard(); as ref) {
+    @if (linkTarget(); as target) {
       <app-link-reader
-        [ref]="ref"
+        [target]="target"
         [fullscreen]="fullscreen"
         [returnsTo]="linkReturnsTo()"
         (close)="linkNavigation.close()"

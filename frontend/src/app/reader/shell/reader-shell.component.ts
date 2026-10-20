@@ -152,7 +152,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly selection = this.routeState.selection;
   readonly entryId = this.routeState.entryId;
   readonly openEntry = this.routeState.openEntry;
-  readonly linkCard = this.routeState.linkCard;
+  readonly linkTarget = this.routeState.linkTarget;
   readonly linkReturnsTo = computed(() => (this.entryId() === null ? 'list' : 'article'));
   protected readonly linkNavigation = inject(LinkReaderNavigation);
   readonly heading = inject(ListHeading);
@@ -178,7 +178,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
   /** An article or link card filling the whole main area (not the split pane). */
   readonly articleFullscreen = computed(
-    () => (this.openEntry() !== null || this.linkCard() !== null) && !this.splitView(),
+    () => (this.openEntry() !== null || this.linkTarget() !== null) && !this.splitView(),
   );
 
   /** The user's tags for the mobile swipe row (the sidebar covers wider screens). */

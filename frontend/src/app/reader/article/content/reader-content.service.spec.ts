@@ -26,7 +26,7 @@ describe('ReaderContentService', () => {
         ReaderContentService,
         {
           provide: ReaderApi,
-          useValue: { readerContent: apiGet, linkCardReaderContent: cardApiGet },
+          useValue: { readerContent: apiGet, signedReaderContent: cardApiGet },
         },
         {
           provide: ReaderCacheService,
@@ -109,7 +109,7 @@ describe('ReaderContentService', () => {
       cacheGet.mockResolvedValue(ARTICLE);
       const result = await firstValueFrom(TestBed.inject(ReaderContentService).load(CARD));
       expect(result).toEqual(ARTICLE);
-      expect(cacheGet).toHaveBeenCalledWith('card:https://x/card');
+      expect(cacheGet).toHaveBeenCalledWith('url:https://x/card');
       expect(cardApiGet).not.toHaveBeenCalled();
     });
 
@@ -119,7 +119,7 @@ describe('ReaderContentService', () => {
       const result = await firstValueFrom(TestBed.inject(ReaderContentService).load(CARD));
       expect(result).toEqual(ARTICLE);
       expect(cardApiGet).toHaveBeenCalledWith(CARD);
-      expect(cachePut).toHaveBeenCalledWith('card:https://x/card', ARTICLE);
+      expect(cachePut).toHaveBeenCalledWith('url:https://x/card', ARTICLE);
     });
 
     it('does not cache a failed card', async () => {
@@ -132,9 +132,9 @@ describe('ReaderContentService', () => {
     it('reload deletes the card key, then fetches and re-caches', async () => {
       cardApiGet.mockReturnValue(of(ARTICLE));
       const result = await firstValueFrom(TestBed.inject(ReaderContentService).reload(CARD));
-      expect(cacheDelete).toHaveBeenCalledWith('card:https://x/card');
+      expect(cacheDelete).toHaveBeenCalledWith('url:https://x/card');
       expect(result).toEqual(ARTICLE);
-      expect(cachePut).toHaveBeenCalledWith('card:https://x/card', ARTICLE);
+      expect(cachePut).toHaveBeenCalledWith('url:https://x/card', ARTICLE);
     });
   });
 });

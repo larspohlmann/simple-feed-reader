@@ -45,6 +45,6 @@ export class ReaderContentService {
   private fetch(target: ReaderTarget): Observable<ReaderContent> {
     return typeof target === 'number'
       ? this.api.readerContent(target)
-      : this.api.linkCardReaderContent(target);
+      : this.api.signedReaderContent(target);
   }
 }

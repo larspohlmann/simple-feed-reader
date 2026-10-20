@@ -9,15 +9,15 @@ import { ReaderContent } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { LinkCardDto } from '../../link-card/link-card';
 import { ReaderContentService } from '../content/reader-content.service';
-import { LinkCardRef } from '../../query/link-param';
+import { SignedUrl } from '../../query/link-param';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
 import { LinkReaderComponent } from './link-reader.component';
 import { LinkArticleSource } from './link-article-source.service';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 
-const FIRST_CARD: LinkCardRef = { url: 'https://news.test/story', token: A_READER_TOKEN };
-const SECOND_CARD: LinkCardRef = { url: 'https://news.test/second', token: A_READER_TOKEN };
+const FIRST_CARD: SignedUrl = { url: 'https://news.test/story', token: A_READER_TOKEN };
+const SECOND_CARD: SignedUrl = { url: 'https://news.test/second', token: A_READER_TOKEN };
 
 const linkedPage = aReaderArticle({
   url: 'https://news.test/story',
@@ -36,7 +36,7 @@ describe('LinkReaderComponent', () => {
   let loadLinkCard: jest.Mock;
   let reloadLinkCard: jest.Mock;
   let routeState: {
-    linkCard: WritableSignal<LinkCardRef | null>;
+    linkTarget: WritableSignal<SignedUrl | null>;
     openLinkCard: WritableSignal<LinkCardDto | null>;
   };
 
@@ -45,7 +45,7 @@ describe('LinkReaderComponent', () => {
     replies = new Subject<ReaderContent>();
     loadLinkCard = jest.fn(() => replies);
     reloadLinkCard = jest.fn(() => replies);
-    routeState = { linkCard: signal(null), openLinkCard: signal(null) };
+    routeState = { linkTarget: signal(null), openLinkCard: signal(null) };
     TestBed.configureTestingModule({
       imports: [LinkReaderComponent, provideTranslocoTesting()],
       providers: [
@@ -66,9 +66,9 @@ describe('LinkReaderComponent', () => {
     returnsTo: 'article' | 'list' = 'article',
   ): ComponentFixture<LinkReaderComponent> {
     const fixture = TestBed.createComponent(LinkReaderComponent);
-    routeState.linkCard.set(FIRST_CARD);
+    routeState.linkTarget.set(FIRST_CARD);
     routeState.openLinkCard.set(card);
-    fixture.componentRef.setInput('ref', FIRST_CARD);
+    fixture.componentRef.setInput('target', FIRST_CARD);
     fixture.componentRef.setInput('returnsTo', returnsTo);
     fixture.detectChanges();
     return fixture;
@@ -179,8 +179,8 @@ describe('LinkReaderComponent', () => {
     const fixture = mount();
     expect(loadLinkCard).toHaveBeenCalledWith(FIRST_CARD);
 
-    routeState.linkCard.set(SECOND_CARD);
-    fixture.componentRef.setInput('ref', SECOND_CARD);
+    routeState.linkTarget.set(SECOND_CARD);
+    fixture.componentRef.setInput('target', SECOND_CARD);
     fixture.detectChanges();
 
     expect(loadLinkCard).toHaveBeenLastCalledWith(SECOND_CARD);
