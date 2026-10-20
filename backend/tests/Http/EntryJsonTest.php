@@ -25,7 +25,6 @@ use App\Repository\EntryListRowEnrichment;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
-use App\Service\Reader\ReaderUrlSignature;
 use App\Service\Social\Model\ThreadPostModel;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
@@ -207,7 +206,7 @@ final class EntryJsonTest extends TestCase
                 'description' => null,
                 'imageUrl' => null,
                 'siteName' => 'i.example',
-                'readerToken' => (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://i.example/chart'),
+                'readerToken' => JsonMappers::readerToken('https://i.example/chart'),
             ],
             JsonMappers::entryJson()->listRow($row)['linkCards'][0],
         );
@@ -235,7 +234,7 @@ final class EntryJsonTest extends TestCase
         self::assertSame('2026-10-17T08:15:31+00:00', $thread[0]['publishedAt']);
         self::assertSame('Second & last', $thread[0]['text']);
         self::assertSame(
-            (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://m.example/a'),
+            JsonMappers::readerToken('https://m.example/a'),
             $thread[0]['linkCard']['readerToken'] ?? null,
         );
         self::assertSame($thread, JsonMappers::entryJson()->completed($row)['thread']);
@@ -271,7 +270,7 @@ final class EntryJsonTest extends TestCase
                 'description' => null,
                 'imageUrl' => null,
                 'siteName' => 'i.example',
-                'readerToken' => (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://i.example/chart'),
+                'readerToken' => JsonMappers::readerToken('https://i.example/chart'),
             ]],
             $json['linkCards'],
         );

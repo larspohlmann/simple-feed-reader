@@ -16,7 +16,12 @@ use App\Service\Reader\ReaderUrlSignature;
 
 final class JsonMappers
 {
-    public const string SECRET = 'test-link-card-secret';
+    private const string SECRET = 'test-link-card-secret';
+
+    public static function readerToken(string $url): string
+    {
+        return (new ReaderUrlSignature(self::SECRET))->tokenFor($url);
+    }
 
     public static function linkCardJson(): LinkCardJson
     {

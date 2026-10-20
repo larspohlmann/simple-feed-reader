@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\Exception\ReaderUrlTokenMismatchException;
 use App\Service\Reader\ReaderUrlSignature;
+use ParagonIE\ConstantTime\Base64UrlSafe;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderUrlSignatureTest extends TestCase
@@ -44,7 +45,7 @@ final class ReaderUrlSignatureTest extends TestCase
 
     public function testATokenIsNotTheBareMacOfTheSecret(): void
     {
-        $bare = rtrim(strtr(base64_encode(hash_hmac('sha256', self::URL, 'secret', true)), '+/', '-_'), '=');
+        $bare = Base64UrlSafe::encodeUnpadded(hash_hmac('sha256', self::URL, 'secret', true));
 
         self::assertNotSame($bare, (new ReaderUrlSignature('secret'))->tokenFor(self::URL));
     }

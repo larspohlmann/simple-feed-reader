@@ -41,46 +41,6 @@ final class LinkCardRepository extends ServiceEntityRepository
      */
     public function contentsByEntryIds(array $entryIds): array
     {
-        $grouped = [];
-        foreach ($this->rootCardRows($entryIds) as $row) {
-            $grouped[(int) $row['entryId']][] = LinkCardContent::fromRow($row);
-        }
-
-        return $grouped;
-    }
-
-    /** An entry's root and reply cards share one numbering, cards still waiting for the flush included. */
-    private function nextPositionFor(Entry $entry): int
-    {
-        $highest = -1;
-        foreach ($this->getEntityManager()->getUnitOfWork()->getScheduledEntityInsertions() as $scheduled) {
-            if ($scheduled instanceof LinkCard && $scheduled->getEntry() === $entry) {
-                $highest = max($highest, $scheduled->getPosition());
-            }
-        }
-        if ($entry->getId() === null) {
-            return $highest + 1;
-        }
-        $stored = $this->createQueryBuilder('card')
-            ->select('MAX(card.position)')
-            ->andWhere('card.entry = :entry')
-            ->setParameter('entry', $entry)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return max($highest, $stored === null ? -1 : (int) $stored) + 1;
-    }
-
-    /**
-     * @param list<int> $entryIds
-     *
-     * @return list<array{
-     *   entryId: int|string, url: string, title: string, description: ?string,
-     *   imageUrl: ?string, siteName: string
-     * }>
-     */
-    private function rootCardRows(array $entryIds): array
-    {
         if ($entryIds === []) {
             return [];
         }
@@ -107,6 +67,33 @@ final class LinkCardRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
 
-        return $rows;
+        $grouped = [];
+        foreach ($rows as $row) {
+            $grouped[(int) $row['entryId']][] = LinkCardContent::fromRow($row);
+        }
+
+        return $grouped;
+    }
+
+    /** An entry's root and reply cards share one numbering, cards still waiting for the flush included. */
+    private function nextPositionFor(Entry $entry): int
+    {
+        $highest = -1;
+        foreach ($this->getEntityManager()->getUnitOfWork()->getScheduledEntityInsertions() as $scheduled) {
+            if ($scheduled instanceof LinkCard && $scheduled->getEntry() === $entry) {
+                $highest = max($highest, $scheduled->getPosition());
+            }
+        }
+        if ($entry->getId() === null) {
+            return $highest + 1;
+        }
+        $stored = $this->createQueryBuilder('card')
+            ->select('MAX(card.position)')
+            ->andWhere('card.entry = :entry')
+            ->setParameter('entry', $entry)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return max($highest, $stored === null ? -1 : (int) $stored) + 1;
     }
 }

@@ -7,8 +7,8 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\ReaderJson;
 use App\Service\RateLimit\RateLimitGuard;
+use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\ReaderUrlSignature;
-use App\Service\Reader\UrlArticleReader;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -22,7 +22,7 @@ final readonly class SignedUrlReaderController
     public function __construct(
         private ReaderUrlSignature $signature,
         private ClockInterface $clock,
-        private UrlArticleReader $articleReader,
+        private ArticleExtractorInterface $extractor,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $readerLimiter,
     ) {
@@ -37,6 +37,6 @@ final readonly class SignedUrlReaderController
         $this->signature->verify($url, $token);
         $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
 
-        return new JsonResponse(ReaderJson::one($this->articleReader->read($url), null, $this->clock->now()));
+        return new JsonResponse(ReaderJson::one($this->extractor->extract($url), null, $this->clock->now()));
     }
 }
