@@ -54,8 +54,8 @@ final readonly class SocialLikes
     /** The user's like as the network reports it now, mirrored into the stored likes. */
     public function syncFromNetwork(User $user, Entry $entry): bool
     {
-        $post = $this->posts->find($user, $entry);
         $stored = $this->likes->findOneFor($user, $entry);
+        $post = $this->posts->find($user, $entry);
         if (null !== $stored && !self::reportsTheSameLike($stored, $post)) {
             $this->entityManager->remove($stored);
             // Flushed apart: one flush inserts before it deletes, which trips uniq_social_like_user_entry.

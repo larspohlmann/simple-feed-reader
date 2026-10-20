@@ -339,6 +339,17 @@ final class SocialLikesTest extends DbTestCase
         self::assertSame(1, $this->likeRepository()->count([]));
     }
 
+    public function testALikeStoredWhileTheNetworkIsAskedSurvivesAnAnswerOfNotLiked(): void
+    {
+        $account = $this->mastodonAccount();
+        $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
+        $this->mastodon->onResolve(fn () => $this->storeLike($entry, $account, '110'));
+
+        self::assertFalse($this->likes()->syncFromNetwork($this->owner, $entry));
+
+        self::assertSame('110', $this->storedLikeOf($entry)->getRemoteId());
+    }
+
     private function mastodonAccount(): SocialAccount
     {
         return SocialFeeds::persistedAccount($this->entityManager, SocialAccounts::mastodonOf($this->owner));
