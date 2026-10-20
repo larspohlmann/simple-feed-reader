@@ -1439,16 +1439,25 @@ describe('ReaderViewComponent', () => {
       );
     });
 
-    it.each(['empty', 'unextractable', 'mismatch', 'player_page'] as const)(
-      'offers no Retry and no error disclosure when the page holds no article (%s)',
+    it.each(['unextractable', 'mismatch'] as const)(
+      'offers Retry but no error disclosure when the page holds no article (%s)',
       (reason) => {
         loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason, detail: null })));
         const element = mount(entry()).nativeElement as HTMLElement;
 
-        expect(element.querySelector('.note-link')).toBeNull();
+        expect(element.querySelector('.reader-fallback .note-link')).not.toBeNull();
         expect(element.querySelector('.reader-error')).toBeNull();
       },
     );
+
+    it('shows no note at all for a player page', () => {
+      loadMock.mockReturnValue(
+        of<ReaderContent>(aReaderFailure({ reason: 'player_page', detail: null })),
+      );
+      const element = mount(entry()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.reader-fallback, .reader-fallback-quiet')).toBeNull();
+    });
 
     it('offers no error disclosure for a fetch failure the server gave no cause for', () => {
       loadMock.mockReturnValue(
@@ -1468,6 +1477,7 @@ describe('ReaderViewComponent', () => {
       expect(element.querySelector('.reader-fallback-quiet')!.textContent).toContain(
         "The page has no more text than the feed — showing the feed's version.",
       );
+      expect(element.querySelector('.reader-fallback-quiet .note-link')).not.toBeNull();
     });
 
     it('reveals the complete HTTP message when the load fails at the transport', () => {
