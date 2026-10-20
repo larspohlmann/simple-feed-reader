@@ -1439,8 +1439,8 @@ describe('ReaderViewComponent', () => {
       );
     });
 
-    it.each(['unextractable', 'mismatch'] as const)(
-      'offers Retry but no error disclosure when the page holds no article (%s)',
+    it.each(['fetch', 'unextractable', 'mismatch'] as const)(
+      'offers Retry but no error disclosure when the server gave no cause (%s)',
       (reason) => {
         loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason, detail: null })));
         const element = mount(entry()).nativeElement as HTMLElement;
@@ -1459,16 +1459,6 @@ describe('ReaderViewComponent', () => {
       expect(element.querySelector('.reader-fallback, .reader-fallback-quiet')).toBeNull();
     });
 
-    it('offers no error disclosure for a fetch failure the server gave no cause for', () => {
-      loadMock.mockReturnValue(
-        of<ReaderContent>(aReaderFailure({ reason: 'fetch', detail: null })),
-      );
-      const element = mount(entry()).nativeElement as HTMLElement;
-
-      expect(element.querySelector('.note-link')).not.toBeNull();
-      expect(element.querySelector('.reader-error')).toBeNull();
-    });
-
     it('notes a page no longer than the feed quietly, outside the warning box', () => {
       loadMock.mockReturnValue(of<ReaderContent>(aReaderFailure({ reason: 'empty' })));
       const element = mount(entry()).nativeElement as HTMLElement;
@@ -1477,7 +1467,6 @@ describe('ReaderViewComponent', () => {
       expect(element.querySelector('.reader-fallback-quiet')!.textContent).toContain(
         "The page has no more text than the feed — showing the feed's version.",
       );
-      expect(element.querySelector('.reader-fallback-quiet .note-link')).not.toBeNull();
     });
 
     it('retries extraction past the cache from the quiet note too', () => {

@@ -8,7 +8,6 @@ import { ReaderModeService } from './reader-mode.service';
 import { isPost } from '../../entry/entry-text';
 import { articlePostMedia } from '../post-media/article-post-media';
 
-/** Failures that say the page holds no article; an audio-first entry shows no note for them. */
 const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([
   'unextractable',
   'empty',
