@@ -30,9 +30,12 @@
 }
 
 .close {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   position: absolute;
   inset-block-start: var(--space-2);
   inset-inline-end: var(--space-2);
+  border-radius: var(--radius-pill);
 }
 
 nav button {
