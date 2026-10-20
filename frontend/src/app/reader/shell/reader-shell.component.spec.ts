@@ -4161,6 +4161,45 @@ describe('ReaderShellComponent', () => {
       );
     });
 
+    const saveButton = (fixture: ComponentFixture<ReaderShellComponent>) =>
+      (fixture.nativeElement as HTMLElement).querySelector('.save-search') as HTMLButtonElement;
+    const overlay = (fixture: ComponentFixture<ReaderShellComponent>) =>
+      (fixture.nativeElement as HTMLElement).querySelector(
+        'app-entry-list app-loading-overlay.shown',
+      );
+
+    it('disables the button and raises the wait overlay from the click until the POST answers (#1718)', () => {
+      jest.useFakeTimers();
+      try {
+        const fixture = bootWithSearchSelected([]);
+        saveButton(fixture).click();
+        fixture.detectChanges();
+        const post = ctrl.expectOne('https://api.test/api/saved-searches');
+        expect(saveButton(fixture).disabled).toBe(true);
+        jest.advanceTimersByTime(5000);
+        fixture.detectChanges();
+        expect(overlay(fixture)).not.toBeNull();
+
+        post.flush({ savedSearch: savedClimate });
+        fixture.detectChanges();
+
+        expect(overlay(fixture)).toBeNull();
+        expect(saveButton(fixture).disabled).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('sends one POST however often the toggle fires while a save is out (#1718)', () => {
+      const fixture = bootWithSearchSelected([]);
+      fixture.componentInstance.savedSearch.toggle();
+      fixture.componentInstance.savedSearch.toggle();
+
+      const posts = ctrl.match('https://api.test/api/saved-searches');
+      expect(posts).toHaveLength(1);
+      posts[0].flush({ savedSearch: savedClimate });
+    });
+
     it('saves a quoted query as a phrase, with the bare term and the phrase flag', () => {
       const fixture = bootWithSearchSelected([], '"climate change"');
 

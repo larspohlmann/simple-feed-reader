@@ -93,6 +93,9 @@ function mount(over: Record<string, unknown> = {}, providers: Provider[] = []) {
   return fixture;
 }
 
+const overlay = (fixture: ComponentFixture<EntryListComponent>) =>
+  (fixture.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown');
+
 // A standalone host purely to mint a real TemplateRef — NgTemplateOutlet
 // accepts one from any module, so it doesn't need to come from the same
 // TestBed instance that renders EntryListComponent.
@@ -680,9 +683,7 @@ describe('EntryListComponent', () => {
         const fixture = mount(typing);
         jest.advanceTimersByTime(5000);
         fixture.detectChanges();
-        expect(
-          (fixture.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown'),
-        ).toBeNull();
+        expect(overlay(fixture)).toBeNull();
       } finally {
         jest.useRealTimers();
       }
@@ -694,12 +695,49 @@ describe('EntryListComponent', () => {
         const fixture = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' });
         jest.advanceTimersByTime(5000);
         fixture.detectChanges();
-        expect(
-          (fixture.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown'),
-        ).not.toBeNull();
+        expect(overlay(fixture)).not.toBeNull();
       } finally {
         jest.useRealTimers();
       }
+    });
+  });
+
+  describe('a per-selection command on the wire (#1718)', () => {
+    const search = { kind: 'search', id: null, unread: false, term: 'punk' };
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    /** A busy list past the overlay's arming delay. */
+    function busyList(entries: EntryDto[]): ComponentFixture<EntryListComponent> {
+      const fixture = mount({ busy: true, entries, layout: 'list', selection: search });
+      jest.advanceTimersByTime(5000);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('raises the wait overlay past the delay, the search selection included', () => {
+      expect(overlay(busyList([entry(1)]))).not.toBeNull();
+    });
+
+    it('raises the wait overlay over an empty result list too', () => {
+      expect(overlay(busyList([]))).not.toBeNull();
+    });
+
+    it('lowers the overlay once the command has answered', () => {
+      const fixture = busyList([entry(1)]);
+
+      fixture.componentRef.setInput('busy', false);
+      fixture.detectChanges();
+
+      expect(overlay(fixture)).toBeNull();
+    });
+
+    it('leaves the rows undimmed and clickable: they are current, not stale', () => {
+      const rows = (busyList([entry(1)]).nativeElement as HTMLElement).querySelector('.rows')!;
+
+      expect(rows.classList).not.toContain('reloading');
+      expect(rows.hasAttribute('inert')).toBe(false);
     });
   });
 

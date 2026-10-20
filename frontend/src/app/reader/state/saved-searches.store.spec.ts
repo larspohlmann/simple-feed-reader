@@ -109,6 +109,36 @@ describe('SavedSearchesStore', () => {
     expect(store.savedSearches()[0].unreadCount).toBe(9);
   });
 
+  describe('saving (#1718)', () => {
+    it('is false at rest', () => {
+      const store = setup({});
+
+      expect(store.saving()).toBe(false);
+    });
+
+    it('is true while the create request is out, and false once it answers', () => {
+      const response = new Subject<{ savedSearch: SavedSearchWire }>();
+      const store = setup({ createSavedSearch: () => response });
+
+      store.createSavedSearch({ term: 'rust lang', wholeWord: true, phrase: false });
+      expect(store.saving()).toBe(true);
+
+      response.next({ savedSearch: rows[0] });
+      response.complete();
+      expect(store.saving()).toBe(false);
+    });
+
+    it('is false again once the create request fails', () => {
+      const response = new Subject<{ savedSearch: SavedSearchWire }>();
+      const store = setup({ createSavedSearch: () => response });
+
+      store.createSavedSearch({ term: 'rust lang', wholeWord: true, phrase: false });
+      response.error(new Error('offline'));
+
+      expect(store.saving()).toBe(false);
+    });
+  });
+
   it('removeSavedSearch() drops the row locally without a reload', () => {
     const deleteSavedSearch = jest.fn(() => of(undefined));
     const savedSearches = jest.fn(() => of({ savedSearches: rows }));

@@ -1,5 +1,5 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Subscription, finalize } from 'rxjs';
 import { ReaderApi, SavedSearchDraft } from '../reader-api';
 import { countsAreStale } from './sidebar-freshness';
 import { SavedSearchDto, SavedSearchWire } from '../models';
@@ -25,6 +25,10 @@ export class SavedSearchesStore {
    *  the two things the counts poll needs to know before it spends a tick. */
   private lastLoadedAt = 0;
   private inFlight: Subscription | null = null;
+
+  /** Whether a create request is out. The server sweeps every entry for matches
+   *  before it answers, so the list shows its wait overlay meanwhile (#1718). */
+  readonly saving = signal(false);
 
   /** The sidebar view: each search with its unread count, the matches read
    *  since the last load already subtracted. */
@@ -97,17 +101,21 @@ export class SavedSearchesStore {
   /** `onSuccess` fires once the row has been adopted, so a caller can toast a
    *  confirmation off the real HTTP success rather than the click (#581). */
   createSavedSearch(draft: SavedSearchDraft, onSuccess?: () => void): void {
-    this.api.createSavedSearch(draft).subscribe({
-      // Saving a term already saved answers 200 with the existing row, so
-      // replace by id rather than prepending a duplicate.
-      next: (response) => {
-        this.loaded.update((rows) => [
-          response.savedSearch,
-          ...rows.filter((row) => row.id !== response.savedSearch.id),
-        ]);
-        onSuccess?.();
-      },
-    });
+    this.saving.set(true);
+    this.api
+      .createSavedSearch(draft)
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        // Saving a term already saved answers 200 with the existing row, so
+        // replace by id rather than prepending a duplicate.
+        next: (response) => {
+          this.loaded.update((rows) => [
+            response.savedSearch,
+            ...rows.filter((row) => row.id !== response.savedSearch.id),
+          ]);
+          onSuccess?.();
+        },
+      });
   }
 
   removeSavedSearch(id: number, onSuccess?: () => void): void {

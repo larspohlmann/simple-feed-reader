@@ -150,6 +150,7 @@
         [matchedWords]="entries.matchedWords()"
         [loading]="listLoading()"
         [mutating]="entries.mutating()"
+        [busy]="savedSearch.saving()"
         [loadingMore]="entries.loadingMore()"
         [error]="entries.error()"
         [hasMore]="heading.hasMore()"
@@ -280,6 +281,7 @@
       type="button"
       [attr.aria-label]="savedSearch.actionLabel() | transloco"
       [attr.title]="savedSearch.actionLabel() | transloco"
+      [disabled]="savedSearch.saving()"
       (click)="savedSearch.toggle()"
     >
       <app-icon [name]="savedSearch.current() ? 'bookmark_remove' : 'bookmark_add'" size="sm" />

@@ -52,10 +52,11 @@ import { ListReadingFocus } from './list-reading-focus';
 import { EstimatedListBottom } from './estimated-list-bottom';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
+import { heldFor } from '../../../core/held-for';
 
-// How long a reload may run before it earns a spinner. A switch that lands
-// sooner would only flash one, which reads as a glitch rather than as progress.
-const RELOAD_SPINNER_DELAY_MS = 150;
+// How long a reload or a command may run before it earns the overlay. One that
+// lands sooner would only flash it, which reads as a glitch rather than as progress.
+const WAIT_OVERLAY_DELAY_MS = 150;
 
 @Component({
   selector: 'app-entry-list',
@@ -117,6 +118,10 @@ export class EntryListComponent implements OnDestroy {
 
   readonly loading = input.required<boolean>();
   readonly mutating = input(false);
+  /** A command of the shell's on the wire, such as saving the search (#1718).
+   *  Only the overlay: the rows stay current, so they are neither dimmed nor
+   *  marked busy; the waiting control carries the accessible state. */
+  readonly busy = input(false);
   readonly loadingMore = input.required<boolean>();
   readonly error = input.required<Problem | null>();
   readonly hasMore = input.required<boolean>();
@@ -226,19 +231,15 @@ export class EntryListComponent implements OnDestroy {
   );
 
   /**
-   * Whether the reload overlay is up. A reload keeps outgoing rows on screen
+   * Whether the wait overlay is up. A reload keeps outgoing rows on screen
    * (#254); past a delay, this says plainly that new content is coming. Only
-   * for a reload — the first load has skeletons, paging has its own footer.
+   * for a reload — the first load has skeletons, paging has its own footer —
+   * or for a command of the shell's, which waits over an empty list too.
    */
-  readonly reloadSpinner = signal(false);
-  private readonly _armReloadSpinner = effect((onCleanup) => {
-    if (!this.reloadCue() || this.entries().length === 0) {
-      this.reloadSpinner.set(false);
-      return;
-    }
-    const timer = setTimeout(() => this.reloadSpinner.set(true), RELOAD_SPINNER_DELAY_MS);
-    onCleanup(() => clearTimeout(timer));
-  });
+  readonly waitOverlay = heldFor(
+    () => this.busy() || (this.reloadCue() && this.entries().length > 0),
+    WAIT_OVERLAY_DELAY_MS,
+  );
 
   /**
    * The header's EXPANDED height — the space the scroller reserves for it.
