@@ -4667,4 +4667,65 @@ describe('ReaderShellComponent', () => {
       expect(routeState.openLinkCard()).toBeNull();
     });
   });
+
+  describe('saving a search (#1718)', () => {
+    const overlay = (fixture: ComponentFixture<ReaderShellComponent>) =>
+      (fixture.nativeElement as HTMLElement).querySelector(
+        'app-entry-list app-loading-overlay.shown',
+      );
+    const saveButton = (fixture: ComponentFixture<ReaderShellComponent>) =>
+      (fixture.nativeElement as HTMLElement).querySelector('.save-search') as HTMLButtonElement;
+    const savedAngular: SavedSearchWire = {
+      id: 9,
+      slug: '9-angular',
+      term: 'angular',
+      wholeWord: false,
+      phrase: false,
+      position: 0,
+      unreadEntryIds: [],
+      memberCount: 1,
+      includeInDigest: false,
+    };
+
+    function searchForAngular(): ComponentFixture<ReaderShellComponent> {
+      const fixture = boot();
+      qp.next(convertToParamMap({ q: 'angular' }));
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry], nextCursor: null });
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('shows the wait overlay over the result list from the click until the POST answers', () => {
+      jest.useFakeTimers();
+      try {
+        const fixture = searchForAngular();
+        saveButton(fixture).click();
+        fixture.detectChanges();
+        const post = ctrl.expectOne('https://api.test/api/saved-searches');
+        jest.advanceTimersByTime(5000);
+        fixture.detectChanges();
+        expect(overlay(fixture)).not.toBeNull();
+
+        post.flush({ savedSearch: savedAngular });
+        fixture.detectChanges();
+
+        expect(overlay(fixture)).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('ignores a second click while the save is out', () => {
+      const fixture = searchForAngular();
+      saveButton(fixture).click();
+      saveButton(fixture).click();
+
+      const posts = ctrl.match('https://api.test/api/saved-searches');
+      expect(posts).toHaveLength(1);
+      posts[0].flush({ savedSearch: savedAngular });
+    });
+  });
 });

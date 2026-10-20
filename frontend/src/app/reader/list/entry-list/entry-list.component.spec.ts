@@ -703,6 +703,70 @@ describe('EntryListComponent', () => {
     });
   });
 
+  describe('a per-selection command on the wire (#1718)', () => {
+    const search = { kind: 'search', id: null, unread: false, term: 'punk' };
+    const overlay = (fixture: ComponentFixture<EntryListComponent>) =>
+      (fixture.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown');
+
+    it('raises the wait overlay past the delay, the search selection included', () => {
+      jest.useFakeTimers();
+      try {
+        const fixture = mount({
+          busy: true,
+          entries: [entry(1)],
+          layout: 'list',
+          selection: search,
+        });
+        jest.advanceTimersByTime(5000);
+        fixture.detectChanges();
+        expect(overlay(fixture)).not.toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('raises the wait overlay over an empty result list too', () => {
+      jest.useFakeTimers();
+      try {
+        const fixture = mount({ busy: true, entries: [], layout: 'list', selection: search });
+        jest.advanceTimersByTime(5000);
+        fixture.detectChanges();
+        expect(overlay(fixture)).not.toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('lowers the overlay once the command has answered', () => {
+      jest.useFakeTimers();
+      try {
+        const fixture = mount({
+          busy: true,
+          entries: [entry(1)],
+          layout: 'list',
+          selection: search,
+        });
+        jest.advanceTimersByTime(5000);
+        fixture.detectChanges();
+
+        fixture.componentRef.setInput('busy', false);
+        fixture.detectChanges();
+
+        expect(overlay(fixture)).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('leaves the rows undimmed and clickable: they are current, not stale', () => {
+      const element = mount({ busy: true, entries: [entry(1)], layout: 'list', selection: search })
+        .nativeElement as HTMLElement;
+      const rows = element.querySelector('.rows')!;
+      expect(rows.classList).not.toContain('reloading');
+      expect(rows.hasAttribute('inert')).toBe(false);
+    });
+  });
+
   it('shows skeletons while loading and an empty state when empty', () => {
     expect(
       (mount({ loading: true, entries: [] }).nativeElement as HTMLElement).querySelector(

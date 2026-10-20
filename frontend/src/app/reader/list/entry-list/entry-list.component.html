@@ -198,12 +198,10 @@
 
 <app-progress-rail [progress]="progressRail" />
 
-@if (entries().length > 0) {
-  <!-- Held in the DOM rather than switched in, so the fade plays on the way out
-       too — a structural @if would cut it off the frame the rows arrive.
-       Decorative: the rows already carry aria-busy. -->
-  <app-loading-overlay [shown]="reloadSpinner()" [label]="'common.loading' | transloco" />
-}
+<!-- Held in the DOM rather than switched in, so the fade plays on the way out
+     too — a structural @if would cut it off the frame the rows arrive.
+     Decorative: the rows already carry aria-busy. -->
+<app-loading-overlay [shown]="waitOverlay()" [label]="'common.loading' | transloco" />
 
 @if (scrolling.showToTop() && content.visibleEntryCount() > 0) {
   <app-to-top-button (activate)="scrollToTop()" />

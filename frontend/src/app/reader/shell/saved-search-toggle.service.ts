@@ -70,6 +70,7 @@ export class SavedSearchToggle {
    *  command, because the header offers one button whose label/icon flip on
    *  this state. Saving toasts on real HTTP success; removing confirms first (#581). */
   toggle(): void {
+    if (this.savedSearchesStore.saving()) return;
     const saved = this.current();
     if (saved) {
       this.confirmRemoveSavedSearch(saved.id);
