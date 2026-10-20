@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Service\Social\Model\ThreadPostModel;
-use PHPUnit\Framework\TestCase;
 use App\Tests\Support\JsonMappers;
+use PHPUnit\Framework\TestCase;
 
 final class ThreadPostJsonTest extends TestCase
 {

@@ -15,9 +15,9 @@ use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Reader\ReaderUrlSignature;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
+use App\Tests\Support\SignsReaderUrls;
 use App\Tests\Support\StubFeedFetcher;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
@@ -27,6 +27,7 @@ use Symfony\Component\HttpFoundation\Response;
 final class EntryCommentsControllerTest extends ApiTestCase
 {
     use RoutesSocialApis;
+    use SignsReaderUrls;
 
     private const string THREAD = 'https://www.reddit.com/r/PHP/comments/1woq4he/what_is_your_php_stack_2026/';
     private const string FEED = self::THREAD . '.rss';
@@ -280,14 +281,6 @@ final class EntryCommentsControllerTest extends ApiTestCase
         self::assertSame('https://example.org/review', $card['url']);
         self::assertSame($this->readerTokenFor('https://example.org/review'), $card['readerToken']);
         self::assertSame([self::PUBLIC_CONTEXT], $this->http->requestLines());
-    }
-
-    private function readerTokenFor(string $url): string
-    {
-        $signature = self::getContainer()->get(ReaderUrlSignature::class);
-        self::assertInstanceOf(ReaderUrlSignature::class, $signature);
-
-        return $signature->tokenFor($url);
     }
 
     public function testASocialPostsRepliesAreCachedAndRefreshable(): void

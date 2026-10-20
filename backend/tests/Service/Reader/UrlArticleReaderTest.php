@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Service\Reader\UrlArticleReader;
 use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Reader\UrlArticleReader;
 use App\Tests\Support\FakeArticleExtractor;
 use PHPUnit\Framework\TestCase;
 

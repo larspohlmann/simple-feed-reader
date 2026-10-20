@@ -6,8 +6,8 @@ namespace App\Tests\Http;
 
 use App\Entity\Discussion;
 use App\Entity\Entry;
-use App\Entity\EntryAuthor;
 use App\Entity\EntryAttachment;
+use App\Entity\EntryAuthor;
 use App\Entity\EntryMedium;
 use App\Entity\EntryOrigin;
 use App\Entity\Feed;
@@ -27,8 +27,8 @@ use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Service\Reader\ReaderUrlSignature;
 use App\Service\Social\Model\ThreadPostModel;
-use PHPUnit\Framework\TestCase;
 use App\Tests\Support\JsonMappers;
+use PHPUnit\Framework\TestCase;
 
 final class EntryJsonTest extends TestCase
 {

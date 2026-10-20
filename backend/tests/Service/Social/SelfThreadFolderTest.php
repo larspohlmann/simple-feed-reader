@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\Entry;
-use App\Entity\Feed;
 use App\Entity\EntryMedium;
+use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;

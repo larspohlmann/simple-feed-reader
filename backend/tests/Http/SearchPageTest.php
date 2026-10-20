@@ -13,8 +13,8 @@ use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Service\Search\Model\EntrySearchResultModel;
 use App\Tests\Support\AssignsEntityIds;
-use PHPUnit\Framework\TestCase;
 use App\Tests\Support\JsonMappers;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The paging rules themselves belong to EntryPage and are tested there; this

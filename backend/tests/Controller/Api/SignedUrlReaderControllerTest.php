@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
-use App\Service\Reader\ReaderUrlSignature;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ReaderEndpointFixtures;
+use App\Tests\Support\SignsReaderUrls;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -19,6 +19,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class SignedUrlReaderControllerTest extends ApiTestCase
 {
     use ReaderEndpointFixtures;
+    use SignsReaderUrls;
 
     private const string URL = 'https://example.com/article';
 
@@ -41,7 +42,7 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
             excerpt: null,
         ));
 
-        $client->request('GET', self::readerPath(self::URL, $this->tokenFor(self::URL)), server: $headers);
+        $client->request('GET', self::readerPath(self::URL, $this->readerTokenFor(self::URL)), server: $headers);
 
         self::assertResponseIsSuccessful();
         $body = $this->payload($client);
@@ -59,7 +60,7 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
             ExtractionResultModel::failed(self::URL, ExtractionFailure::Fetch, 'HTTP 403 Forbidden'),
         );
 
-        $client->request('GET', self::readerPath(self::URL, $this->tokenFor(self::URL)), server: $headers);
+        $client->request('GET', self::readerPath(self::URL, $this->readerTokenFor(self::URL)), server: $headers);
 
         $body = $this->payload($client);
         self::assertSame('failed', $body['status']);
@@ -88,7 +89,7 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
 
         $client->request(
             'GET',
-            self::readerPath('https://elsewhere.example/page', $this->tokenFor(self::URL)),
+            self::readerPath('https://elsewhere.example/page', $this->readerTokenFor(self::URL)),
             server: $headers,
         );
 
@@ -115,7 +116,7 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
         $fake = $this->installFake();
         $this->spendReaderBudget($user);
 
-        $client->request('GET', self::readerPath(self::URL, $this->tokenFor(self::URL)), server: $headers);
+        $client->request('GET', self::readerPath(self::URL, $this->readerTokenFor(self::URL)), server: $headers);
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
         self::assertSame([], $fake->calls);
@@ -143,14 +144,6 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
 
         return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
-
-    private function tokenFor(string $url): string
-    {
-        $signature = self::getContainer()->get(ReaderUrlSignature::class);
-        self::assertInstanceOf(ReaderUrlSignature::class, $signature);
-
-        return $signature->tokenFor($url);
     }
 
     private static function readerPath(string $url, string $token): string

@@ -13,8 +13,8 @@ use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Service\Search\Model\SavedSearchEntriesResultModel;
 use App\Tests\Support\AssignsEntityIds;
-use PHPUnit\Framework\TestCase;
 use App\Tests\Support\JsonMappers;
+use PHPUnit\Framework\TestCase;
 
 final class SavedSearchPageTest extends TestCase
 {

@@ -16,9 +16,9 @@ use App\Service\Comments\Model\CommentPostModel;
 use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\CommentsResultModel;
 use App\Service\Comments\Model\EntryCommentModel;
-use PHPUnit\Framework\TestCase;
 use App\Service\Reader\ReaderUrlSignature;
 use App\Tests\Support\JsonMappers;
+use PHPUnit\Framework\TestCase;
 
 final class CommentsJsonTest extends TestCase
 {

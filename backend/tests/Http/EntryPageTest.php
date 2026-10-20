@@ -15,8 +15,8 @@ use App\Repository\EntryListRowViewState;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Tests\Support\AssignsEntityIds;
-use PHPUnit\Framework\TestCase;
 use App\Tests\Support\JsonMappers;
+use PHPUnit\Framework\TestCase;
 
 final class EntryPageTest extends TestCase
 {

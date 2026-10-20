@@ -23,8 +23,8 @@ use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Reader\ReaderUrlSignature;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SignsReaderUrls;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -35,6 +35,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class EntryControllerTest extends WebTestCase
 {
+    use SignsReaderUrls;
+
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
@@ -244,14 +246,6 @@ final class EntryControllerTest extends WebTestCase
                 'readerToken' => $this->readerTokenFor('https://b.test/2'),
             ],
         ];
-    }
-
-    private function readerTokenFor(string $url): string
-    {
-        $signature = self::getContainer()->get(ReaderUrlSignature::class);
-        self::assertInstanceOf(ReaderUrlSignature::class, $signature);
-
-        return $signature->tokenFor($url);
     }
 
     public function testEntryListCarriesLinkCardsInPositionOrderAndEmptyOtherwise(): void
