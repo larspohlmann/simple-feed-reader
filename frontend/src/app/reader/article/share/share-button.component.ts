@@ -1,12 +1,28 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { CdkConnectedOverlay, CdkOverlayOrigin, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import {
+  ACTION_SHEET_DIVIDER,
+  ActionSheetItem,
+} from '../../../shared/action-sheet/action-sheet.component';
+import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
+import { MaskedLogoComponent } from '../../../shared/masked-logo/masked-logo.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { stepMenuFocus } from '../../../shared/menu-keys';
-import { SHARE_GLYPH, SHARE_TARGETS, ShareTarget, shareUrl } from './share-targets';
+import { LayoutService } from '../../layout.service';
+import { SHARE_GLYPH, SHARE_TARGETS, ShareTarget, shareLogoUrl, shareUrl } from './share-targets';
 import { stripTracking } from './tracking-params';
 
 const POSITIONS: ConnectedPosition[] = [
@@ -20,6 +36,7 @@ const POSITIONS: ConnectedPosition[] = [
     TranslocoPipe,
     IconComponent,
     ListActionDirective,
+    MaskedLogoComponent,
     CdkConnectedOverlay,
     CdkOverlayOrigin,
     CdkTrapFocus,
@@ -34,10 +51,14 @@ export class ShareButtonComponent {
 
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(TranslocoService);
+  private readonly screen = inject(LayoutService);
+  private readonly sheet = inject(ActionSheet);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly glyph = SHARE_GLYPH;
   protected readonly positions = POSITIONS;
   protected readonly targets = SHARE_TARGETS;
+  protected readonly logoUrl = shareLogoUrl;
   protected readonly open = signal(false);
 
   constructor() {
@@ -45,6 +66,12 @@ export class ShareButtonComponent {
       this.url();
       this.open.set(false);
     });
+  }
+
+  /** A coarse pointer gets the bottom sheet the sidebar rows use; the popover stays for fine ones. */
+  protected press(): void {
+    if (this.screen.isCoarse()) this.openSheet();
+    else this.open.update((open) => !open);
   }
 
   /** Runs inside the click, so Safari still sees the gesture that share and clipboard need. */
@@ -59,6 +86,32 @@ export class ShareButtonComponent {
   protected step(event: KeyboardEvent): void {
     const menu = (event.target as Element).closest('[role="menu"]');
     if (menu !== null) stepMenuFocus(event, menu);
+  }
+
+  private openSheet(): void {
+    this.sheet
+      .open({
+        title: this.i18n.translate('reader.share.button'),
+        actions: this.targets.map((target, index) => this.sheetItem(target, index)),
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((choice) => this.chooseByIndex(choice));
+  }
+
+  private sheetItem(target: ShareTarget, index: number): ActionSheetItem {
+    if (target.kind === 'divider') return ACTION_SHEET_DIVIDER;
+    return {
+      id: String(index),
+      label: target.labelKey ? this.i18n.translate(target.labelKey) : (target.label ?? ''),
+      symbol: target.icon ? undefined : (target.symbol ?? this.glyph),
+      logo: target.icon ? { url: shareLogoUrl(target.icon), color: target.color } : undefined,
+    };
+  }
+
+  private chooseByIndex(choice: string | undefined): void {
+    if (choice === undefined) return;
+    const target = this.targets[Number(choice)];
+    if (target.kind !== 'divider') this.choose(target);
   }
 
   private shareThroughSystem(url: string): void {

@@ -42,14 +42,6 @@
   color: var(--text-secondary);
 }
 
-.logo {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
-}
-
 hr {
   border: none;
   border-block-start: 1px solid var(--border);
