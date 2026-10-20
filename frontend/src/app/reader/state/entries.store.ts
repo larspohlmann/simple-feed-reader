@@ -213,12 +213,12 @@ export class EntriesStore {
     });
   }
 
-  /** The like the network reports, laid over the entry and its copies; a like still on the wire wins. */
-  adoptLike(entryId: number, isLiked: boolean): void {
+  /** The like the network reports, laid over entries still showing `from`; a click made since wins. */
+  adoptLike(entryId: number, change: { from: boolean; to: boolean }): void {
     if (this.likeInFlight(entryId)) return;
     this.patchEntries([entryId], (entry) =>
-      entry.social && entry.social.isLiked !== isLiked
-        ? { ...entry, social: { ...entry.social, isLiked } }
+      entry.social?.isLiked === change.from && change.from !== change.to
+        ? { ...entry, social: { ...entry.social, isLiked: change.to } }
         : entry,
     );
   }

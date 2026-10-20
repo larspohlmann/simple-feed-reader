@@ -65,7 +65,8 @@ export class SocialCountsService {
     forkJoin([counts$, this.networkLike(entry)]).subscribe({
       next: ([counts, networkLike]) => {
         if (generation !== this.generation) return;
-        if (networkLike !== null) this.entries.adoptLike(entry.id, networkLike);
+        if (networkLike !== null)
+          this.entries.adoptLike(entry.id, { from: likedBefore, to: networkLike });
         const likedAtLoad = networkLike ?? likedBefore;
         state.set({ status: 'ok', counts, likedAtLoad, loadedAt: Date.now() });
       },

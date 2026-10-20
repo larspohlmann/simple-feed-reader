@@ -87,7 +87,7 @@ describe('SocialCountsService', () => {
     service.load(post(1, false));
 
     expect(api.likeState).toHaveBeenCalledWith(1);
-    expect(entries.adoptLike).toHaveBeenCalledWith(1, true);
+    expect(entries.adoptLike).toHaveBeenCalledWith(1, { from: false, to: true });
     expect(service.state(1)()).toMatchObject({ status: 'ok', counts, likedAtLoad: true });
   });
 
