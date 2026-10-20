@@ -8,6 +8,12 @@ describe('link param', () => {
     expect(linkCardFromParam(linkParam(ref))).toEqual(ref);
   });
 
+  it('round-trips a url whose scheme the server accepts in any case', () => {
+    const upper = { url: 'HTTPS://News.test/A', token: A_READER_TOKEN };
+
+    expect(linkCardFromParam(linkParam(upper))).toEqual(upper);
+  });
+
   it('reads a card as its url and token', () => {
     expect(refOf(aLinkCard({ url: 'https://x.test/1' }))).toEqual({
       url: 'https://x.test/1',

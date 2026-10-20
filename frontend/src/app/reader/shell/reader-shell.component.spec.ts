@@ -31,6 +31,8 @@ import { ListScrollMemory } from '../scroll/list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire, UnreadTotalsDto } from '../models';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
+import { LinkReaderNavigation } from './link-reader-navigation.service';
+import { linkParam, refOf } from '../query/link-param';
 import { ReaderRouteState } from './reader-route-state.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
@@ -4707,6 +4709,18 @@ describe('ReaderShellComponent', () => {
 
       openLink(fixture, { link: UNKNOWN_LINK });
       expect(routeState.openLinkCard()).toBeNull();
+    });
+
+    it('prefers the card just opened over listed ones, even when no listed entry carries it', () => {
+      const fixture = boot({ linkCards: [aLinkCard({ title: 'Stored card' })] });
+      jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const opened = aLinkCard({ url: 'https://news.test/clicked', title: 'Clicked card' });
+      fixture.debugElement.injector.get(LinkReaderNavigation).layer(opened);
+
+      openLink(fixture, { link: linkParam(refOf(opened)) });
+
+      const routeState = fixture.debugElement.injector.get(ReaderRouteState);
+      expect(routeState.openLinkCard()?.title).toBe('Clicked card');
     });
   });
 });

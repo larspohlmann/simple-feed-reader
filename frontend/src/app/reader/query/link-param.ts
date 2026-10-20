@@ -6,7 +6,7 @@ export interface LinkCardRef {
   readonly token: string;
 }
 
-const PARAM = /^([A-Za-z0-9_-]{43})~(https?:\/\/.+)$/;
+const PARAM = /^([A-Za-z0-9_-]{43})~(https?:\/\/.+)$/i;
 
 export function refOf(card: LinkCardDto): LinkCardRef {
   return { url: card.url, token: card.readerToken };
