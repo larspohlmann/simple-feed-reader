@@ -32,7 +32,8 @@ import { EntryDto, SavedSearchDto, SavedSearchWire, UnreadTotalsDto } from '../m
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
 import { LinkReaderNavigation } from './link-reader-navigation.service';
-import { linkParam, signedUrlOf } from '../query/link-param';
+import { linkParam } from '../query/link-param';
+import { signedUrlOf } from '../link-card/link-card';
 import { ReaderRouteState } from './reader-route-state.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';

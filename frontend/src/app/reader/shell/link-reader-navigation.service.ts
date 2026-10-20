@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { LinkCardDto } from '../link-card/link-card';
-import { linkParam, signedUrlOf } from '../query/link-param';
+import { LinkCardDto, signedUrlOf } from '../link-card/link-card';
+import { linkParam } from '../query/link-param';
 
 @Injectable()
 export class LinkReaderNavigation {

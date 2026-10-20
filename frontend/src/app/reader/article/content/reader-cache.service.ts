@@ -3,7 +3,7 @@ import { ReaderOutputVersion } from '../../../core/http/reader-output-version';
 import { ReaderArticle } from '../../models';
 import { SignedUrl } from '../../query/link-param';
 
-/** What the reader shows: an entry's own page (its id), or a link card's page. */
+/** What the reader shows: an entry's own page (its id), or a signed URL's page. */
 export type ReaderTarget = number | SignedUrl;
 
 export type ReaderCacheKey = number | `url:${string}`;

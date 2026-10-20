@@ -457,7 +457,7 @@ describe('ReaderApi', () => {
     expect(received?.status).toBe('failed');
   });
 
-  it('GETs reader content for a signed link card', () => {
+  it('GETs reader content for a signed url', () => {
     let received: ReaderContent | undefined;
     api
       .signedReaderContent({ url: 'https://news.test/a?b=1', token: A_READER_TOKEN })

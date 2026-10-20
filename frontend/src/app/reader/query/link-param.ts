@@ -1,5 +1,3 @@
-import { LinkCardDto } from '../link-card/link-card';
-
 /** The `?link=` value: a URL and the server's signature of it. */
 export interface SignedUrl {
   readonly url: string;
@@ -7,10 +5,6 @@ export interface SignedUrl {
 }
 
 const PARAM = /^([A-Za-z0-9_-]+)~(https?:\/\/.+)$/i;
-
-export function signedUrlOf(card: LinkCardDto): SignedUrl {
-  return { url: card.url, token: card.readerToken };
-}
 
 export function linkParam(target: SignedUrl): string {
   return `${target.token}~${target.url}`;
