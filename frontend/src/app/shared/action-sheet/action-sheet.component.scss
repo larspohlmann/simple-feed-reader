@@ -24,7 +24,7 @@
 }
 
 .title {
-  margin: 0 calc(var(--icon-lg) + var(--space-2)) var(--space-1) var(--space-3);
+  margin: 0 calc(var(--control-h) + var(--space-2)) var(--space-1) var(--space-3);
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
@@ -35,6 +35,8 @@
   position: absolute;
   inset-block-start: var(--space-2);
   inset-inline-end: var(--space-2);
+  width: var(--control-h);
+  height: var(--control-h);
   border-radius: var(--radius-pill);
 }
 
