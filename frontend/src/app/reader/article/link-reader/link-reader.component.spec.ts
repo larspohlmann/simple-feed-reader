@@ -9,15 +9,15 @@ import { ReaderContent } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { LinkCardDto } from '../../link-card/link-card';
 import { ReaderContentService } from '../content/reader-content.service';
-import { LinkCardRef } from '../../query/link-param';
+import { SignedUrl } from '../../query/link-param';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
 import { LinkReaderComponent } from './link-reader.component';
 import { LinkArticleSource } from './link-article-source.service';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 
-const FIRST_CARD: LinkCardRef = { url: 'https://news.test/story', token: A_READER_TOKEN };
-const SECOND_CARD: LinkCardRef = { url: 'https://news.test/second', token: A_READER_TOKEN };
+const FIRST_LINK: SignedUrl = { url: 'https://news.test/story', token: A_READER_TOKEN };
+const SECOND_LINK: SignedUrl = { url: 'https://news.test/second', token: A_READER_TOKEN };
 
 const linkedPage = aReaderArticle({
   url: 'https://news.test/story',
@@ -33,25 +33,25 @@ const linkedPageFailure = aReaderFailure({
 
 describe('LinkReaderComponent', () => {
   let replies: Subject<ReaderContent>;
-  let loadLinkCard: jest.Mock;
-  let reloadLinkCard: jest.Mock;
+  let loadTarget: jest.Mock;
+  let reloadTarget: jest.Mock;
   let routeState: {
-    linkCard: WritableSignal<LinkCardRef | null>;
+    linkTarget: WritableSignal<SignedUrl | null>;
     openLinkCard: WritableSignal<LinkCardDto | null>;
   };
 
   beforeEach(() => {
     installMockResizeObserver();
     replies = new Subject<ReaderContent>();
-    loadLinkCard = jest.fn(() => replies);
-    reloadLinkCard = jest.fn(() => replies);
-    routeState = { linkCard: signal(null), openLinkCard: signal(null) };
+    loadTarget = jest.fn(() => replies);
+    reloadTarget = jest.fn(() => replies);
+    routeState = { linkTarget: signal(null), openLinkCard: signal(null) };
     TestBed.configureTestingModule({
       imports: [LinkReaderComponent, provideTranslocoTesting()],
       providers: [
         LinkArticleSource,
         { provide: ReaderRouteState, useValue: routeState },
-        { provide: ReaderContentService, useValue: { load: loadLinkCard, reload: reloadLinkCard } },
+        { provide: ReaderContentService, useValue: { load: loadTarget, reload: reloadTarget } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
         {
           provide: ImageProxyService,
@@ -66,9 +66,9 @@ describe('LinkReaderComponent', () => {
     returnsTo: 'article' | 'list' = 'article',
   ): ComponentFixture<LinkReaderComponent> {
     const fixture = TestBed.createComponent(LinkReaderComponent);
-    routeState.linkCard.set(FIRST_CARD);
+    routeState.linkTarget.set(FIRST_LINK);
     routeState.openLinkCard.set(card);
-    fixture.componentRef.setInput('ref', FIRST_CARD);
+    fixture.componentRef.setInput('target', FIRST_LINK);
     fixture.componentRef.setInput('returnsTo', returnsTo);
     fixture.detectChanges();
     return fixture;
@@ -175,18 +175,18 @@ describe('LinkReaderComponent', () => {
     );
   });
 
-  it('loads the card the route opens, and the next one when that changes', () => {
+  it('loads the link the route opens, and the next one when that changes', () => {
     const fixture = mount();
-    expect(loadLinkCard).toHaveBeenCalledWith(FIRST_CARD);
+    expect(loadTarget).toHaveBeenCalledWith(FIRST_LINK);
 
-    routeState.linkCard.set(SECOND_CARD);
-    fixture.componentRef.setInput('ref', SECOND_CARD);
+    routeState.linkTarget.set(SECOND_LINK);
+    fixture.componentRef.setInput('target', SECOND_LINK);
     fixture.detectChanges();
 
-    expect(loadLinkCard).toHaveBeenLastCalledWith(SECOND_CARD);
+    expect(loadTarget).toHaveBeenLastCalledWith(SECOND_LINK);
   });
 
-  it('reloads the open card from the toolbar', () => {
+  it('reloads the open link from the toolbar', () => {
     const fixture = mount();
     reply(fixture, linkedPage);
 
@@ -194,10 +194,10 @@ describe('LinkReaderComponent', () => {
       .querySelector<HTMLButtonElement>('.nav button[aria-label="Reload article"]')!
       .click();
 
-    expect(reloadLinkCard).toHaveBeenCalledWith(FIRST_CARD);
+    expect(reloadTarget).toHaveBeenCalledWith(FIRST_LINK);
   });
 
-  it('offers the reload after a failed load, and reloads the card from it', () => {
+  it('offers the reload after a failed load, and reloads the link from it', () => {
     const fixture = mount();
     expect(elementOf(fixture).querySelector('.nav button[aria-label="Reload article"]')).toBeNull();
     reply(fixture, linkedPageFailure);
@@ -206,7 +206,7 @@ describe('LinkReaderComponent', () => {
       .querySelector<HTMLButtonElement>('.nav button[aria-label="Reload article"]')!
       .click();
 
-    expect(reloadLinkCard).toHaveBeenCalledWith(FIRST_CARD);
+    expect(reloadTarget).toHaveBeenCalledWith(FIRST_LINK);
   });
 
   it('carries none of the entry reader chrome', () => {

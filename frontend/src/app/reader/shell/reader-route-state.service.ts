@@ -7,7 +7,7 @@ import { EntriesStore } from '../state/entries.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
 import { sameSelection } from '../query/query';
-import { linkCardFromParam, sameLinkCard } from '../query/link-param';
+import { signedUrlFromParam, sameSignedUrl } from '../query/link-param';
 import { linkCardWithUrl } from '../link-card/link-card-with-url';
 import { LinkReaderNavigation } from './link-reader-navigation.service';
 
@@ -35,19 +35,20 @@ export class ReaderRouteState {
     equal: sameSelection,
   });
   readonly entryId = computed(() => this.parsed().entryId);
-  readonly linkCard = computed(() => linkCardFromParam(this.queryParameters().get('link')), {
-    equal: sameLinkCard,
+  readonly linkTarget = computed(() => signedUrlFromParam(this.queryParameters().get('link')), {
+    equal: sameSignedUrl,
   });
 
   /** The open link's card: the one just clicked, else the first listed card with its URL; null on a deep link to neither. */
   readonly openLinkCard = computed(() => {
-    const ref = this.linkCard();
-    if (ref === null) return null;
+    const target = this.linkTarget();
+    if (target === null) return null;
     const opened = this.linkNavigation.opened();
-    if (opened?.url === ref.url) return opened;
+    if (opened?.url === target.url) return opened;
     const open = this.openEntry();
     return (
-      (open && linkCardWithUrl([open], ref.url)) ?? linkCardWithUrl(this.entries.entries(), ref.url)
+      (open && linkCardWithUrl([open], target.url)) ??
+      linkCardWithUrl(this.entries.entries(), target.url)
     );
   });
 

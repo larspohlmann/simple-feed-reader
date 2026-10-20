@@ -4,7 +4,7 @@ import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
-import { LinkCardRef } from './query/link-param';
+import { SignedUrl } from './query/link-param';
 import { RefreshScope, ScopedMarkReadTarget } from './query/query';
 import { EntryLikeDto, SocialCountsDto } from './entry-social';
 import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
@@ -182,9 +182,9 @@ export class ReaderApi {
     return this.http.get<ReaderContent>(`${this.base}/api/entries/${entryId}/reader`);
   }
 
-  linkCardReaderContent(ref: LinkCardRef): Observable<ReaderContent> {
+  signedReaderContent(target: SignedUrl): Observable<ReaderContent> {
     return this.http.get<ReaderContent>(`${this.base}/api/reader`, {
-      params: { url: ref.url, token: ref.token },
+      params: { url: target.url, token: target.token },
     });
   }
 

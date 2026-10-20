@@ -5,28 +5,28 @@ import { A_READER_TOKEN, aLinkCard } from '../../../../testing/entry-testing';
 import { aReaderArticle } from '../../../../testing/reader-content-testing';
 import { LinkCardDto } from '../../link-card/link-card';
 import { ReaderContent } from '../../models';
-import { LinkCardRef } from '../../query/link-param';
+import { SignedUrl } from '../../query/link-param';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { ReaderContentService } from '../content/reader-content.service';
 import { LinkArticleSource } from './link-article-source.service';
 
-const LINK: LinkCardRef = { url: 'https://news.test/story', token: A_READER_TOKEN };
+const LINK: SignedUrl = { url: 'https://news.test/story', token: A_READER_TOKEN };
 const story = aReaderArticle({ title: 'The extracted story' });
 
 describe('LinkArticleSource', () => {
   let replies: Subject<ReaderContent>;
-  const linkCard = signal<LinkCardRef | null>(null);
+  const linkTarget = signal<SignedUrl | null>(null);
   const openLinkCard = signal<LinkCardDto | null>(null);
   let source: LinkArticleSource;
 
   beforeEach(() => {
     replies = new Subject<ReaderContent>();
-    linkCard.set(null);
+    linkTarget.set(null);
     openLinkCard.set(null);
     TestBed.configureTestingModule({
       providers: [
         LinkArticleSource,
-        { provide: ReaderRouteState, useValue: { linkCard, openLinkCard } },
+        { provide: ReaderRouteState, useValue: { linkTarget, openLinkCard } },
         { provide: ReaderContentService, useValue: { load: () => replies } },
       ],
     });
@@ -34,7 +34,7 @@ describe('LinkArticleSource', () => {
   });
 
   function openTheLink(): void {
-    linkCard.set(LINK);
+    linkTarget.set(LINK);
     TestBed.tick();
     replies.next(story);
   }
@@ -55,7 +55,7 @@ describe('LinkArticleSource', () => {
   it('lets go of the page when the link closes', () => {
     openTheLink();
 
-    linkCard.set(null);
+    linkTarget.set(null);
     TestBed.tick();
 
     expect(source.article()).toBeNull();

@@ -1,27 +1,21 @@
-import { LinkCardDto } from '../link-card/link-card';
-
-/** The `?link=` value: a card's URL and the server's signature of it. */
-export interface LinkCardRef {
+/** The `?link=` value: a URL and the server's signature of it. */
+export interface SignedUrl {
   readonly url: string;
   readonly token: string;
 }
 
 const PARAM = /^([A-Za-z0-9_-]+)~(https?:\/\/.+)$/i;
 
-export function refOf(card: LinkCardDto): LinkCardRef {
-  return { url: card.url, token: card.readerToken };
+export function linkParam(target: SignedUrl): string {
+  return `${target.token}~${target.url}`;
 }
 
-export function linkParam(ref: LinkCardRef): string {
-  return `${ref.token}~${ref.url}`;
-}
-
-export function linkCardFromParam(value: string | null): LinkCardRef | null {
+export function signedUrlFromParam(value: string | null): SignedUrl | null {
   const match = PARAM.exec(value ?? '');
   return match === null ? null : { token: match[1], url: match[2] };
 }
 
-export function sameLinkCard(left: LinkCardRef | null, right: LinkCardRef | null): boolean {
+export function sameSignedUrl(left: SignedUrl | null, right: SignedUrl | null): boolean {
   return left?.url === right?.url && left?.token === right?.token;
 }
 

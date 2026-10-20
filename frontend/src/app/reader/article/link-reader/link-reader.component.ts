@@ -7,7 +7,7 @@ import { ListActionDirective } from '../../../shared/list-action/list-action.dir
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { LayoutService } from '../../layout.service';
-import { LinkCardRef } from '../../query/link-param';
+import { SignedUrl } from '../../query/link-param';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
 import { AUTOPLAY_REGION } from '../../media/autoplay/autoplay-region';
@@ -47,7 +47,7 @@ import { ShareButtonComponent } from '../share/share-button.component';
   styleUrl: './link-reader.component.scss',
 })
 export class LinkReaderComponent {
-  readonly ref = input.required<LinkCardRef>();
+  readonly target = input.required<SignedUrl>();
   readonly fullscreen = input(false);
   readonly returnsTo = input.required<LinkReaderReturn>();
 

@@ -24,14 +24,14 @@ export class LinkArticleSource {
 
   constructor() {
     effect(() => {
-      const ref = this.routeState.linkCard();
-      untracked(() => (ref === null ? this.load.idle() : this.run(this.reader.load(ref))));
+      const target = this.routeState.linkTarget();
+      untracked(() => (target === null ? this.load.idle() : this.run(this.reader.load(target))));
     });
   }
 
   reload(): void {
-    const ref = this.routeState.linkCard();
-    if (ref !== null) this.run(this.reader.reload(ref));
+    const target = this.routeState.linkTarget();
+    if (target !== null) this.run(this.reader.reload(target));
   }
 
   private run(source: Observable<ReaderContent>): void {
