@@ -30,10 +30,10 @@ const thread = (over: Partial<EntryDto> = {}): EntryDto =>
     excerpt: 'The root post.',
     titleDerived: true,
     share: 'link',
-    linkCards: [aLinkCard({ position: 0 })],
+    linkCards: [aLinkCard({ url: 'https://root.test/' })],
     thread: [
       aThreadPost({ text: 'The first reply.' }),
-      aThreadPost({ text: '', linkCard: aLinkCard({ url: 'https://reply.test/', position: 1 }) }),
+      aThreadPost({ text: '', linkCard: aLinkCard({ url: 'https://reply.test/' }) }),
     ],
     ...over,
   });
@@ -81,21 +81,25 @@ describe('EntryThreadComponent', () => {
     );
   });
 
-  it('opens a reply’s card alone in the reader by that card’s own position', () => {
+  it('opens a reply’s card alone in the reader', () => {
     const reply = mount(thread()).querySelectorAll('app-thread-line-post')[2];
 
     reply.querySelector<HTMLButtonElement>('button.open-in-reader')!.click();
 
-    expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: 41, position: 1 });
+    expect(navigation.openAlone).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://reply.test/' }),
+    );
     expect(entryActions.open).not.toHaveBeenCalled();
   });
 
-  it('opens the root’s card alone in the reader by its own position', () => {
+  it('opens the root’s card alone in the reader', () => {
     const root = mount(thread()).querySelector('app-thread-line-post')!;
 
     root.querySelector<HTMLButtonElement>('button.open-in-reader')!.click();
 
-    expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: 41, position: 0 });
+    expect(navigation.openAlone).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://root.test/' }),
+    );
   });
 
   it('counts a root that carries only its card', () => {

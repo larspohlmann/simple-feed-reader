@@ -6,10 +6,10 @@ import { LinkCardRef } from '../../query/link-param';
 /** What the reader shows: an entry's own page (its id), or a link card's page. */
 export type ReaderTarget = number | LinkCardRef;
 
-export type ReaderCacheKey = number | `card:${number}.${number}`;
+export type ReaderCacheKey = number | `card:${string}`;
 
 export function readerCacheKey(target: ReaderTarget): ReaderCacheKey {
-  return typeof target === 'number' ? target : `card:${target.entryId}.${target.position}`;
+  return typeof target === 'number' ? target : `card:${target.url}`;
 }
 
 interface CacheRecord {

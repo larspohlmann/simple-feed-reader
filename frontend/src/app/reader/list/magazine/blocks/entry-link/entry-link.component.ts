@@ -23,9 +23,5 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
   styleUrl: './entry-link.component.scss',
 })
 export class EntryLinkComponent extends EntryBlockBase {
-  private readonly navigation = inject(LinkReaderNavigation);
-
-  protected openInReaderAlone(position: number): void {
-    this.navigation.openAlone({ entryId: this.entry().id, position });
-  }
+  protected readonly navigation = inject(LinkReaderNavigation);
 }

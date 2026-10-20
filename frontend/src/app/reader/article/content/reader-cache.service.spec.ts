@@ -84,8 +84,8 @@ describe('ReaderCacheService', () => {
   });
 
   it('keeps a link card apart from the entry with the same numbers', async () => {
-    await cache.put('card:7.1', article('https://x/card'));
-    expect((await cache.get('card:7.1'))?.url).toBe('https://x/card');
+    await cache.put('card:https://x/card', article('https://x/card'));
+    expect((await cache.get('card:https://x/card'))?.url).toBe('https://x/card');
     expect(await cache.get(7)).toBeNull();
   });
 

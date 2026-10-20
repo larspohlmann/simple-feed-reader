@@ -19,9 +19,7 @@ export class LinkArticleSource {
   readonly failure = this.load.failure;
   readonly errorDetail = this.load.errorDetail;
   readonly leadFailed = signal(false);
-  readonly lead = computed(() =>
-    this.leadFailed() ? null : (this.failure()?.originalHero ?? null),
-  );
+  readonly lead = computed(() => (this.leadFailed() ? null : (this.card()?.imageUrl ?? null)));
   readonly title = computed(() => this.card()?.title || this.article()?.title || '');
 
   constructor() {

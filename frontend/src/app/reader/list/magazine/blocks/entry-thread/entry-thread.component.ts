@@ -40,17 +40,13 @@ import { threadTotal } from '../../../../thread-post';
   styleUrl: './entry-thread.component.scss',
 })
 export class EntryThreadComponent extends EntryBlockBase {
-  private readonly navigation = inject(LinkReaderNavigation);
+  protected readonly navigation = inject(LinkReaderNavigation);
 
   protected readonly total = computed(() => threadTotal(this.entry()));
   protected readonly rootMedia = computed(() => threadRootMedia(this.entry()));
   protected readonly rootQuote = computed(() =>
     sharesQuotedPost(this.entry()) ? this.entry().quote : null,
   );
-
-  protected openInReaderAlone(position: number): void {
-    this.navigation.openAlone({ entryId: this.entry().id, position });
-  }
 
   protected ratio(medium: EntryMediumDto): number {
     return entryMediumRatio(this.entry(), medium);

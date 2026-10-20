@@ -41,7 +41,7 @@
                 layout="block"
                 class="reply-card"
                 [openableInReader]="navigation !== null"
-                (openInReader)="openInReaderAlone(card.position)"
+                (openInReader)="navigation?.openAlone(card)"
                 (click)="$event.stopPropagation()"
                 (keydown.enter)="$event.stopPropagation()"
                 (keydown.space)="$event.stopPropagation()"

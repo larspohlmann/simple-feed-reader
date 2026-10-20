@@ -7,6 +7,7 @@ import { ReaderApi } from './reader-api';
 import { PAGE_SIZE } from './list/paging';
 import { ReaderContent } from './models';
 import { Observable } from 'rxjs';
+import { A_READER_TOKEN } from '../../testing/entry-testing';
 import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderApi', () => {
@@ -456,13 +457,18 @@ describe('ReaderApi', () => {
     expect(received?.status).toBe('failed');
   });
 
-  it('GETs reader content for a link card', () => {
+  it('GETs reader content for a signed link card', () => {
     let received: ReaderContent | undefined;
     api
-      .linkCardReaderContent({ entryId: 7, position: 1 })
+      .linkCardReaderContent({ url: 'https://news.test/a?b=1', token: A_READER_TOKEN })
       .subscribe((content) => (received = content));
 
-    const testRequest = ctrl.expectOne('https://api.test/api/entries/7/link-cards/1/reader');
+    const testRequest = ctrl.expectOne(
+      (request) =>
+        request.url === 'https://api.test/api/reader' &&
+        request.params.get('url') === 'https://news.test/a?b=1' &&
+        request.params.get('token') === A_READER_TOKEN,
+    );
     expect(testRequest.request.method).toBe('GET');
     testRequest.flush({
       status: 'failed',

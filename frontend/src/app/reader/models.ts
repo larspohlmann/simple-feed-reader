@@ -1,5 +1,5 @@
 import { EntryMediumDto } from './entry-medium';
-import { PlacedLinkCardDto } from './link-card/link-card';
+import { LinkCardDto } from './link-card/link-card';
 import { ThreadPostDto } from './thread-post';
 import { QuotedPostDto } from './quoted-post/quoted-post';
 import { SocialAccountRefDto, SocialFeedRefDto } from './social-feed';
@@ -228,7 +228,7 @@ export interface EntryDto {
   /** What the entry shares, so it takes the link, media or quote card; null for an article (#1524). */
   share: EntryShare | null;
   /** Preview cards for the links a post shares, in the order the post names them (#1502). */
-  linkCards: PlacedLinkCardDto[];
+  linkCards: LinkCardDto[];
   /** The author's own replies continuing the post, at most three, oldest first (#1668). */
   thread: ThreadPostDto[];
   /** The quoted post of a `quote` share; null otherwise (#1612). */

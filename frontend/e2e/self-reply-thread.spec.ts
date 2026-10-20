@@ -26,7 +26,7 @@ const ENTRY = entryWire({
       html: '<p>Third post</p>',
       text: 'Third post',
       media: [],
-      linkCard: aLinkCard({ position: 0, title: CARD_TITLE }),
+      linkCard: aLinkCard({ title: CARD_TITLE }),
     },
   ],
 });
@@ -58,9 +58,7 @@ async function stubThreadEntry(page: Page): Promise<void> {
   await page.route('**/api/entries/*/reader', (route) =>
     route.fulfill({ json: readerFailedJson('unextractable') }),
   );
-  await page.route(`**/api/entries/${ENTRY.id}/link-cards/0/reader`, (route) =>
-    route.fulfill({ json: LINKED_PAGE }),
-  );
+  await page.route('**/api/reader?*', (route) => route.fulfill({ json: LINKED_PAGE }));
   await page.route('**/api/entries/*/state', (route) => route.fulfill({ json: {} }));
 }
 

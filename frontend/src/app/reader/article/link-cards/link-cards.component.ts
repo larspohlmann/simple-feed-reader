@@ -13,9 +13,5 @@ import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service
 })
 export class LinkCardsComponent {
   readonly entry = input.required<EntryDto>();
-  private readonly navigation = inject(LinkReaderNavigation);
-
-  protected openInReader(position: number): void {
-    this.navigation.layer({ entryId: this.entry().id, position });
-  }
+  protected readonly navigation = inject(LinkReaderNavigation);
 }

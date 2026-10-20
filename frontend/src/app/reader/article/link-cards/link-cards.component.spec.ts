@@ -5,7 +5,7 @@ import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service
 import { LinkCardsComponent } from './link-cards.component';
 
 describe('LinkCardsComponent', () => {
-  it('opens the card whose button was pressed in the reader, by its position', () => {
+  it('opens the card whose button was pressed in the reader', () => {
     const navigation = { layer: jest.fn() };
     TestBed.configureTestingModule({
       imports: [LinkCardsComponent, provideTranslocoTesting()],
@@ -13,8 +13,8 @@ describe('LinkCardsComponent', () => {
     });
     const entry = anEntry({
       linkCards: [
-        aLinkCard({ position: 2 }),
-        aLinkCard({ url: 'https://other.test/', title: 'Second', position: 5 }),
+        aLinkCard({ url: 'https://first.test/' }),
+        aLinkCard({ url: 'https://other.test/', title: 'Second' }),
       ],
     });
     const fixture = TestBed.createComponent(LinkCardsComponent);
@@ -27,6 +27,6 @@ describe('LinkCardsComponent', () => {
     expect(buttons).toHaveLength(2);
     buttons[1].click();
 
-    expect(navigation.layer).toHaveBeenCalledWith({ entryId: entry.id, position: 5 });
+    expect(navigation.layer).toHaveBeenCalledWith(entry.linkCards[1]);
   });
 });

@@ -44,9 +44,7 @@ async function stubLinkCardEntry(page: Page): Promise<void> {
   await page.route('**/api/entries/*/reader', (route) =>
     route.fulfill({ json: readerFailedJson('unextractable') }),
   );
-  await page.route('**/api/entries/*/link-cards/0/reader', (route) =>
-    route.fulfill({ json: LINKED_PAGE }),
-  );
+  await page.route('**/api/reader?*', (route) => route.fulfill({ json: LINKED_PAGE }));
   await page.route('**/api/entries/*/state', (route) => route.fulfill({ json: {} }));
 }
 

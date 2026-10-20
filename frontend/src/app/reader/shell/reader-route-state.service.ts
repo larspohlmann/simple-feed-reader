@@ -8,7 +8,8 @@ import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
 import { sameSelection } from '../query/query';
 import { linkCardFromParam, sameLinkCard } from '../query/link-param';
-import { linkCardAt } from '../link-card/link-card-at';
+import { linkCardWithUrl } from '../link-card/link-card-with-url';
+import { LinkReaderNavigation } from './link-reader-navigation.service';
 
 @Injectable()
 export class ReaderRouteState {
@@ -17,6 +18,7 @@ export class ReaderRouteState {
   private readonly bodyService = inject(EntryBodyService);
   private readonly entries = inject(EntriesStore);
   private readonly listPreferences = inject(ListPreferences);
+  private readonly linkNavigation = inject(LinkReaderNavigation);
 
   private readonly queryParameters = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
@@ -37,12 +39,17 @@ export class ReaderRouteState {
     equal: sameLinkCard,
   });
 
-  /** The open link's card as the store lists it; null on a deep link to a card not in view. */
+  /** The open link's card: the one just clicked, else the first listed card with its URL; null on a deep link to neither. */
   readonly openLinkCard = computed(() => {
     const ref = this.linkCard();
     if (ref === null) return null;
-    const entry = this.entries.entry(ref.entryId);
-    return entry === null ? null : linkCardAt(entry, ref.position);
+    const opened = this.linkNavigation.opened();
+    if (opened?.url === ref.url) return opened;
+    const open = this.openEntry();
+    return linkCardWithUrl(
+      open === null ? this.entries.entries() : [open, ...this.entries.entries()],
+      ref.url,
+    );
   });
 
   readonly openEntry = computed(() => {

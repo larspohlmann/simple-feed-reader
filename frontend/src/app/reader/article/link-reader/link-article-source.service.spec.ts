@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
-import { aLinkCard } from '../../../../testing/entry-testing';
+import { A_READER_TOKEN, aLinkCard } from '../../../../testing/entry-testing';
 import { aReaderArticle } from '../../../../testing/reader-content-testing';
 import { LinkCardDto } from '../../link-card/link-card';
 import { ReaderContent } from '../../models';
@@ -10,7 +10,7 @@ import { ReaderRouteState } from '../../shell/reader-route-state.service';
 import { ReaderContentService } from '../content/reader-content.service';
 import { LinkArticleSource } from './link-article-source.service';
 
-const LINK: LinkCardRef = { entryId: 7, position: 0 };
+const LINK: LinkCardRef = { url: 'https://news.test/story', token: A_READER_TOKEN };
 const story = aReaderArticle({ title: 'The extracted story' });
 
 describe('LinkArticleSource', () => {

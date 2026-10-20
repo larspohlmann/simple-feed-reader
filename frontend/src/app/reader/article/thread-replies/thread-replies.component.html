@@ -14,7 +14,7 @@
           [card]="card"
           layout="article"
           [openableInReader]="true"
-          (openInReader)="navigation.layer({ entryId: entry().id, position: card.position })"
+          (openInReader)="navigation.layer(card)"
         />
       }
       <app-thread-count [position]="index + 2" [total]="total()" />

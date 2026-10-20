@@ -76,9 +76,7 @@
           <img
             appProxiedImage
             class="lead-image"
-            [src]="image.url"
-            [attr.width]="image.width"
-            [attr.height]="image.height"
+            [src]="image"
             (imageFailed)="source.leadFailed.set(true)"
             alt=""
             loading="lazy"

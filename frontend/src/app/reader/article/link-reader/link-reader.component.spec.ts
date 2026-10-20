@@ -4,7 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
-import { aLinkCard } from '../../../../testing/entry-testing';
+import { A_READER_TOKEN, aLinkCard } from '../../../../testing/entry-testing';
 import { ReaderContent } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { LinkCardDto } from '../../link-card/link-card';
@@ -16,8 +16,8 @@ import { LinkReaderComponent } from './link-reader.component';
 import { LinkArticleSource } from './link-article-source.service';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
 
-const FIRST_CARD: LinkCardRef = { entryId: 7, position: 0 };
-const SECOND_CARD: LinkCardRef = { entryId: 7, position: 1 };
+const FIRST_CARD: LinkCardRef = { url: 'https://news.test/story', token: A_READER_TOKEN };
+const SECOND_CARD: LinkCardRef = { url: 'https://news.test/second', token: A_READER_TOKEN };
 
 const linkedPage = aReaderArticle({
   url: 'https://news.test/story',
@@ -29,7 +29,6 @@ const linkedPage = aReaderArticle({
 const linkedPageFailure = aReaderFailure({
   url: 'https://news.test/story',
   detail: 'HTTP 503',
-  originalHero: { url: 'https://news.test/hero.jpg', width: 800, height: 450 },
 });
 
 describe('LinkReaderComponent', () => {
@@ -110,7 +109,7 @@ describe('LinkReaderComponent', () => {
   });
 
   it('offers the original with the card image when the page cannot be read', () => {
-    const fixture = mount();
+    const fixture = mount(aLinkCard({ imageUrl: 'https://news.test/hero.jpg' }));
 
     reply(fixture, linkedPageFailure);
 
@@ -132,7 +131,7 @@ describe('LinkReaderComponent', () => {
   });
 
   it('shows the failure without an image when the request itself fails', () => {
-    const fixture = mount();
+    const fixture = mount(aLinkCard({ imageUrl: null }));
 
     replies.error(new HttpErrorResponse({ status: 404, statusText: 'Not Found' }));
     fixture.detectChanges();

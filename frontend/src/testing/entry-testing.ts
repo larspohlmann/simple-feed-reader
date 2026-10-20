@@ -1,7 +1,7 @@
 import { EntryCommentDto } from '../app/reader/entry-comment';
 import { EntryDto } from '../app/reader/models';
 import { QuotedPostDto } from '../app/reader/quoted-post/quoted-post';
-import { PlacedLinkCardDto } from '../app/reader/link-card/link-card';
+import { LinkCardDto } from '../app/reader/link-card/link-card';
 
 /** A plain list entry: no image, no summary, nothing marked; `overrides` name what a test is about. */
 export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
@@ -58,15 +58,17 @@ export function aQuotedPost(overrides: Partial<QuotedPostDto> = {}): QuotedPostD
   };
 }
 
+export const A_READER_TOKEN = 'a'.repeat(43);
+
 /** A shared link's preview card with no description and no image. */
-export function aLinkCard(overrides: Partial<PlacedLinkCardDto> = {}): PlacedLinkCardDto {
+export function aLinkCard(overrides: Partial<LinkCardDto> = {}): LinkCardDto {
   return {
-    position: 0,
     url: 'https://news.test/story',
     title: 'A shared story',
     description: null,
     imageUrl: null,
     siteName: 'news.test',
+    readerToken: A_READER_TOKEN,
     ...overrides,
   };
 }

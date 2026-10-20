@@ -85,10 +85,6 @@ export class EntryRowComponent {
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),
   );
 
-  protected openInReaderAlone(position: number): void {
-    this.navigation?.openAlone({ entryId: this.entry().id, position });
-  }
-
   // Reset the failed-image flag whenever the row is reused for a different entry.
   private readonly _resetOnEntryChange = effect(() => {
     this.entry();

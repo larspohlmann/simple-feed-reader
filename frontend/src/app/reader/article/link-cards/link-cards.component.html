@@ -3,7 +3,7 @@
     [card]="card"
     layout="article"
     [openableInReader]="true"
-    (openInReader)="openInReader(card.position)"
+    (openInReader)="navigation.layer(card)"
   />
 } @empty {
   @if (entry().pending) {
