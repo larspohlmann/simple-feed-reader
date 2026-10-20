@@ -1,0 +1,10 @@
+:host {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  background-color: var(--text-primary);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
