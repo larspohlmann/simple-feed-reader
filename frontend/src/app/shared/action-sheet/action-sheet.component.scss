@@ -1,17 +1,32 @@
 @use '../../theme/glass-rim';
+@use '../../theme/menu-items';
 
 :host {
   @include glass-rim.filled(var(--surface-2));
 
-  display: block;
+  display: flex;
+  flex-direction: column;
   border-bottom: none;
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);
   padding: var(--space-2) var(--space-2) var(--space-4);
+  max-height: 90vh;
+  max-height: 90dvh;
   animation: sheet-enter 0.2s ease-out;
 }
 
+/* Sits after the menu in the DOM so the first action takes the initial focus, not the close button. */
+.head {
+  order: -1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  margin-block-end: var(--space-1);
+}
+
 .grabber {
+  grid-column: 1 / -1;
   width: var(--space-6);
   height: var(--space-1);
   border-radius: var(--radius-pill);
@@ -20,29 +35,22 @@
 }
 
 .title {
-  margin: 0 var(--space-3) var(--space-1);
+  margin: 0 0 0 var(--space-3);
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
-nav button {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: var(--tap-target);
-  padding: var(--row-pad-y) var(--row-pad-x);
-  background: none;
-  border: none;
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  font-size: var(--fs-base);
-  text-align: left;
-  cursor: pointer;
+nav {
+  @include menu-items.menu-items;
+
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
-nav button:hover:not(:disabled),
-nav button:focus-visible {
-  background: var(--surface-0);
+nav button {
+  min-height: var(--tap-target);
+  border-radius: var(--radius);
 }
 
 nav button:disabled {

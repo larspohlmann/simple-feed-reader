@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use '../../../theme/menu-items';
 
 :host {
   display: contents;
@@ -6,6 +7,7 @@
 
 .menu {
   @include glass-rim.filled(var(--surface-2));
+  @include menu-items.menu-items;
 
   border-radius: var(--radius);
   padding-block: var(--space-1);
@@ -14,44 +16,5 @@
 }
 
 .menu button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  padding: var(--row-pad-y) var(--row-pad-x);
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: var(--fs-base);
-  text-align: left;
   white-space: nowrap;
-  cursor: pointer;
-}
-
-.menu button:focus-visible {
-  background: var(--surface-0);
-}
-
-@media (hover: hover) {
-  .menu button:hover {
-    background: var(--surface-0);
-  }
-}
-
-.menu app-icon {
-  color: var(--text-secondary);
-}
-
-.logo {
-  width: var(--icon-sm);
-  height: var(--icon-sm);
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
-}
-
-hr {
-  border: none;
-  border-block-start: 1px solid var(--border);
-  margin: var(--space-1) var(--row-pad-x);
 }

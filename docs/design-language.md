@@ -385,6 +385,23 @@ consumers with a genuinely fluid pixel box — `app-favicon` and `app-user-avata
 **Not for:** a tag's or category's glyph — that is `<app-tag-glyph>`, which also
 owns the colour fallback and the square footprint.
 
+### `<app-masked-logo>`
+
+An SVG file drawn as a coloured mask, sized `--icon-sm`, hidden from assistive
+technology: the label beside it carries the meaning.
+
+| Input | Type | Default |
+|---|---|---|
+| `src` | `string` (required) | — |
+| `color` | `string` | `var(--text-primary)` |
+
+```html
+<app-masked-logo src="share-targets/bluesky.svg" color="#1185fe" />
+```
+
+**Not for:** a connected social network's mark, which is `<app-network-logo>`
+with its inline path and brand token.
+
 ### `<app-tag-glyph>`
 
 The one way to render a tag or catalog category. With an icon it renders the
@@ -1133,9 +1150,13 @@ this.sheet
 ```
 
 Labels and title are **already-translated strings** (shared component, no
-feature keys). `danger: true` renders the action in the danger colour.
-Dismissed by backdrop tap, Escape, or a downward swipe — all resolve
-`undefined`.
+feature keys). `danger: true` renders the action in the danger colour. An
+action may lead with a `symbol` (a Material symbol) or a `logo: { url, color? }`
+(drawn through `<app-masked-logo>`), and `ACTION_SHEET_DIVIDER` among the
+`actions` renders a separator between groups. The head (grabber, title, the
+round close button) stays pinned while a long list scrolls. Dismissed by the
+close button, a backdrop tap, Escape, or a downward pull on a list at its top —
+all resolve `undefined`.
 
 **Not for:** fine-pointer surfaces (the sidebar keeps its inline `.pop`
 popover on desktop) or anything with form controls — that is a dialog in

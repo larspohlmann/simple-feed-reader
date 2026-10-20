@@ -2,8 +2,13 @@ import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ActionSheet } from './action-sheet.service';
-import { ActionSheetComponent, ActionSheetData } from './action-sheet.component';
+import {
+  ACTION_SHEET_DIVIDER,
+  ActionSheetComponent,
+  ActionSheetData,
+} from './action-sheet.component';
 
 const DATA: ActionSheetData = {
   title: 'News',
@@ -18,7 +23,7 @@ describe('ActionSheet', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
     sheet = TestBed.inject(ActionSheet);
     container = TestBed.inject(OverlayContainer).getContainerElement();
   });
@@ -57,20 +62,60 @@ describe('ActionSheet', () => {
     items()[1].click();
   });
 
+  it('puts the actions before the close button, so the first action takes the initial focus', () => {
+    open().subscribe();
+    const close = container.querySelector('button.close')!;
+    expect(
+      items()[0].compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('closes from the corner button, resolving as a dismissal', (done) => {
+    open().subscribe((choice) => {
+      expect(choice).toBeUndefined();
+      done();
+    });
+    const close = container.querySelector<HTMLButtonElement>('button.close')!;
+    expect(close.getAttribute('aria-label')).toBe('Close');
+    close.click();
+  });
+
   it('pins the pane to the sheet panel class', () => {
     open().subscribe();
     expect(container.querySelector('.cdk-overlay-pane.app-action-sheet')).not.toBeNull();
   });
 
-  it('keeps the title outside the menu — role=menu children are menu items only', () => {
+  it('keeps the title outside the menu — role=menu children are items and separators only', () => {
     open().subscribe();
     expect(container.querySelector('[role=menu] .title')).toBeNull();
     expect(container.querySelector('.title')!.textContent).toContain('News');
     const menuChildren = Array.from(container.querySelector('[role=menu]')!.children);
     expect(menuChildren.length).toBeGreaterThan(0);
     for (const child of menuChildren) {
-      expect(child.getAttribute('role')).toBe('menuitem');
+      expect(['menuitem', 'separator']).toContain(child.getAttribute('role'));
     }
+  });
+
+  it('draws a symbol or a logo before the label and a divider between groups', () => {
+    open({
+      title: 'Share',
+      actions: [
+        { id: 'copy', label: 'Copy link', symbol: 'link' },
+        ACTION_SHEET_DIVIDER,
+        {
+          id: 'bluesky',
+          label: 'Bluesky',
+          logo: { url: 'share-targets/bluesky.svg', color: 'rgb(17, 133, 254)' },
+        },
+      ],
+    }).subscribe();
+
+    const menu = container.querySelector('[role=menu]')!;
+    expect(items()[0].querySelector('app-icon')).not.toBeNull();
+    expect(menu.querySelector('[role=separator]')).not.toBeNull();
+    const logo = items()[1].querySelector<HTMLElement>('app-masked-logo')!;
+    expect(logo.style.maskImage).toBe('url(share-targets/bluesky.svg)');
+    expect(logo.style.backgroundColor).toBe('rgb(17, 133, 254)');
   });
 
   it('walks the items with the arrow keys, wrapping at both ends', () => {
@@ -95,12 +140,16 @@ describe('ActionSheetComponent swipe dismiss', () => {
   const mount = () => {
     const ref = { close: jest.fn() };
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         { provide: DIALOG_DATA, useValue: DATA },
         { provide: DialogRef, useValue: ref },
       ],
     });
-    return { cmp: TestBed.createComponent(ActionSheetComponent).componentInstance, ref };
+    const fixture = TestBed.createComponent(ActionSheetComponent);
+    fixture.detectChanges();
+    const menu = fixture.nativeElement.querySelector('nav') as HTMLElement;
+    return { cmp: fixture.componentInstance, ref, menu };
   };
 
   const touch = (clientY: number) => ({ touches: [{ clientY }] }) as unknown as TouchEvent;
@@ -111,6 +160,15 @@ describe('ActionSheetComponent swipe dismiss', () => {
     cmp.onTouchMove(touch(180));
     cmp.onTouchEnd();
     expect(ref.close).toHaveBeenCalledWith();
+  });
+
+  it('keeps a list that was scrolled down open while it is scrolled back up', () => {
+    const { cmp, ref, menu } = mount();
+    Object.defineProperty(menu, 'scrollTop', { value: 40 });
+    cmp.onTouchStart(touch(100));
+    cmp.onTouchMove(touch(180));
+    cmp.onTouchEnd();
+    expect(ref.close).not.toHaveBeenCalled();
   });
 
   it('ignores a swipe under the threshold and an upward swipe', () => {

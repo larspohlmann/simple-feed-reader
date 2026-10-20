@@ -8,7 +8,7 @@
   cdkOverlayOrigin
   #origin="cdkOverlayOrigin"
   #button
-  (click)="open.set(!open())"
+  (click)="press()"
 >
   <app-icon [name]="glyph" size="sm" />
   <span class="txt">{{ 'reader.share.button' | transloco }}</span>
@@ -40,13 +40,7 @@
       } @else {
         <button role="menuitem" type="button" (click)="choose(target)">
           @if (target.icon) {
-            <span
-              class="logo"
-              aria-hidden="true"
-              [style.background-color]="target.color ?? 'var(--text-primary)'"
-              [style.mask-image]="'url(share-targets/' + target.icon + ')'"
-              [style.-webkit-mask-image]="'url(share-targets/' + target.icon + ')'"
-            ></span>
+            <app-masked-logo [src]="logoUrl(target.icon)" [color]="target.color" />
           } @else {
             <app-icon [name]="target.symbol ?? glyph" size="sm" />
           }

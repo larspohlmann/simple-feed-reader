@@ -24,6 +24,10 @@ export const SHARE_GLYPH = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent
   ? 'ios_share'
   : 'share';
 
+export function shareLogoUrl(file: string): string {
+  return `share-targets/${file}`;
+}
+
 /** Fills `{url}`, `{title}` and `{text}` (title and url together) into a target's address. */
 export function shareUrl(template: string, url: string, title: string): string {
   const text = title === '' ? url : `${title} ${url}`;
