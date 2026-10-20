@@ -15,10 +15,10 @@ use App\Service\LinkCard\Model\PlacedLinkCardModel;
  *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string, position: int
  * }
  */
-final class LinkCardJson
+final readonly class LinkCardJson
 {
     /** @return LinkCardRow */
-    public static function of(LinkCardContent $card): array
+    public function of(LinkCardContent $card): array
     {
         return [
             'url' => $card->url,
@@ -30,14 +30,14 @@ final class LinkCardJson
     }
 
     /** @return PlacedLinkCardRow */
-    public static function placed(PlacedLinkCardModel $card): array
+    public function placed(PlacedLinkCardModel $card): array
     {
-        return self::of($card->content) + ['position' => $card->position];
+        return $this->of($card->content) + ['position' => $card->position];
     }
 
     /** @return LinkCardRow|null */
-    public static function ofOrNull(?LinkCardContent $card): ?array
+    public function ofOrNull(?LinkCardContent $card): ?array
     {
-        return $card === null ? null : self::of($card);
+        return $card === null ? null : $this->of($card);
     }
 }

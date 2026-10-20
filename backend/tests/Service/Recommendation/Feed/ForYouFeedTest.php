@@ -15,7 +15,6 @@ use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Http\RecommendationFeedJson;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
@@ -24,6 +23,7 @@ use App\Service\Recommendation\Feed\ForYouFeed;
 use App\Service\Recommendation\Feed\RecommendationFeedPager;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
+use App\Tests\Support\JsonMappers;
 use App\Tests\Support\RecommendationRunFixtures;
 
 final class ForYouFeedTest extends DbTestCase
@@ -141,7 +141,7 @@ final class ForYouFeedTest extends DbTestCase
     {
         $page = $this->forYouFeed()->page(new ForYouFeedQuery($this->user, null, 50));
 
-        return RecommendationFeedJson::page($page)['entries'][0];
+        return JsonMappers::recommendationFeedJson()->page($page)['entries'][0];
     }
 
     private function forYouFeed(): ForYouFeed

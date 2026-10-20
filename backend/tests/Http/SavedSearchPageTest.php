@@ -6,7 +6,6 @@ namespace App\Tests\Http;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Http\SavedSearchPage;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnrichment;
@@ -15,6 +14,7 @@ use App\Repository\EntryListRowViewState;
 use App\Service\Search\Model\SavedSearchEntriesResultModel;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
+use App\Tests\Support\JsonMappers;
 
 final class SavedSearchPageTest extends TestCase
 {
@@ -24,7 +24,7 @@ final class SavedSearchPageTest extends TestCase
     {
         $result = new SavedSearchEntriesResultModel([$this->row(4)]);
 
-        $page = SavedSearchPage::of($result, 1);
+        $page = JsonMappers::savedSearchPage()->of($result, 1);
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
@@ -35,7 +35,7 @@ final class SavedSearchPageTest extends TestCase
     {
         $result = new SavedSearchEntriesResultModel([$this->row(4)]);
 
-        self::assertNull(SavedSearchPage::of($result, 50)['nextCursor']);
+        self::assertNull(JsonMappers::savedSearchPage()->of($result, 50)['nextCursor']);
     }
 
     public function testEachEntryCarriesItsOwnSavedSearchMembership(): void
@@ -46,7 +46,7 @@ final class SavedSearchPageTest extends TestCase
         );
         $result = new SavedSearchEntriesResultModel([$row]);
 
-        $page = SavedSearchPage::of($result, 50);
+        $page = JsonMappers::savedSearchPage()->of($result, 50);
 
         self::assertSame([['id' => 3, 'slug' => 'climate', 'term' => 'climate']], $page['entries'][0]['savedSearches']);
     }

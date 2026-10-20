@@ -8,7 +8,6 @@ use App\Entity\EntryMedia;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Http\CommentsJson;
 use App\Http\QuotedPostJson;
 use App\Service\Comments\Model\CommentAuthorModel;
 use App\Service\Comments\Model\CommentCountsModel;
@@ -18,6 +17,7 @@ use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\CommentsResultModel;
 use App\Service\Comments\Model\EntryCommentModel;
 use PHPUnit\Framework\TestCase;
+use App\Tests\Support\JsonMappers;
 
 final class CommentsJsonTest extends TestCase
 {
@@ -46,7 +46,7 @@ final class CommentsJsonTest extends TestCase
             new CommentPostModel('at://did:plc:ann/app.bsky.feed.post/2', new CommentCountsModel(5, 1, 2, 0), true),
         );
 
-        $json = CommentsJson::one(CommentsResultModel::ok(
+        $json = JsonMappers::commentsJson()->one(CommentsResultModel::ok(
             new CommentsPageModel([$comment], 7),
             new \DateTimeImmutable('2026-10-16T11:00:00+00:00'),
         ));
@@ -85,7 +85,7 @@ final class CommentsJsonTest extends TestCase
     {
         $comment = new EntryCommentModel(new CommentAuthorModel(null), null, null, '', false);
 
-        $json = self::firstComment(CommentsJson::one(CommentsResultModel::ok(
+        $json = self::firstComment(JsonMappers::commentsJson()->one(CommentsResultModel::ok(
             new CommentsPageModel([$comment]),
             new \DateTimeImmutable('2026-10-16T11:00:00+00:00'),
         )));
@@ -97,7 +97,7 @@ final class CommentsJsonTest extends TestCase
     {
         $comment = new EntryCommentModel(new CommentAuthorModel(null), null, null, '', false);
 
-        $json = self::firstComment(CommentsJson::one(CommentsResultModel::ok(
+        $json = self::firstComment(JsonMappers::commentsJson()->one(CommentsResultModel::ok(
             new CommentsPageModel([$comment]),
             new \DateTimeImmutable('2026-10-16T11:00:00+00:00'),
         )));
@@ -111,13 +111,13 @@ final class CommentsJsonTest extends TestCase
     {
         self::assertSame(
             ['status' => 'throttled', 'retryAfter' => 30],
-            CommentsJson::one(CommentsResultModel::throttled(30)),
+            JsonMappers::commentsJson()->one(CommentsResultModel::throttled(30)),
         );
     }
 
     public function testAFailedResultCarriesOnlyItsStatus(): void
     {
-        self::assertSame(['status' => 'failed'], CommentsJson::one(CommentsResultModel::failed()));
+        self::assertSame(['status' => 'failed'], JsonMappers::commentsJson()->one(CommentsResultModel::failed()));
     }
 
     /**

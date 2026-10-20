@@ -12,7 +12,6 @@ use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\User;
 use App\Enum\EntryView;
 use App\Enum\ListOrder;
-use App\Http\EntryJson;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
 use App\Http\RecommendationFeedJson;
@@ -47,6 +46,8 @@ final readonly class EntryController
         private ForYouFeed $forYouFeed,
         private ForYouMarkReadService $forYouMarkRead,
         private MarkEntriesReadService $markEntriesRead,
+        private EntryPage $entryPage,
+        private RecommendationFeedJson $recommendationFeedJson,
     ) {
     }
 
@@ -69,7 +70,7 @@ final readonly class EntryController
 
         // Score-ranked, with its own cursor.
         if ($entryView === EntryView::ForYou) {
-            return new JsonResponse(RecommendationFeedJson::page($this->forYouFeed->page(
+            return new JsonResponse($this->recommendationFeedJson->page($this->forYouFeed->page(
                 new ForYouFeedQuery($user, $page->cursor, $page->limit, $page->unread),
             )));
         }
@@ -87,18 +88,7 @@ final readonly class EntryController
 
         $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());
 
-        return new JsonResponse(EntryPage::of($rows, $query->limit, EntryListSort::forView($entryView)));
-    }
-
-    #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function get(
-        int $id,
-        #[CurrentUser] User $user,
-    ): JsonResponse {
-        $row = $this->entryList->getRowForUser($user->requireId(), $id);
-        $row = $this->enricher->enrich([$row], $user->requireId())[0];
-
-        return new JsonResponse(['entry' => EntryJson::detail($row), 'completed' => EntryJson::completed($row)]);
+        return new JsonResponse($this->entryPage->of($rows, $query->limit, EntryListSort::forView($entryView)));
     }
 
     #[Route('/mark-read', name: 'api_entries_mark_read', methods: ['POST'])]

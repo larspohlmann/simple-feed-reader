@@ -15,10 +15,15 @@ use App\Service\Social\Model\ThreadPostModel;
  *   media: list<array<string, string|int|true>>, linkCard: PlacedLinkCardRow|null
  * }
  */
-final class ThreadPostJson
+final readonly class ThreadPostJson
 {
+    public function __construct(
+        private LinkCardJson $linkCardJson,
+    ) {
+    }
+
     /** @return ThreadPostRow */
-    public static function of(ThreadPostModel $post): array
+    public function of(ThreadPostModel $post): array
     {
         return [
             'url' => $post->url,
@@ -26,11 +31,7 @@ final class ThreadPostJson
             'html' => $post->html,
             'text' => EntrySnippet::from($post->html) ?? '',
             'media' => EntryMedia::toJsonList($post->media),
-            'linkCard' => $post->linkCard === null ? null : LinkCardJson::placed($post->linkCard),
+            'linkCard' => $post->linkCard === null ? null : $this->linkCardJson->placed($post->linkCard),
         ];
-    }
-
-    private function __construct()
-    {
     }
 }

@@ -55,19 +55,25 @@ use App\Service\Url\Support\YouTubeUrl;
  *   quote: QuoteRow|null,
  * }
  */
-final class EntryJson
+final readonly class EntryJson
 {
     private const float SHORT_COVER_ASPECT_RATIO = 9 / 16;
+
+    public function __construct(
+        private LinkCardJson $linkCardJson,
+        private ThreadPostJson $threadPostJson,
+    ) {
+    }
 
     /**
      * @return EntryRow
      */
-    public static function listRow(EntryListRow $row): array
+    public function listRow(EntryListRow $row): array
     {
         $entry = $row->entry;
         $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
 
-        return self::completed($row) + [
+        return $this->completed($row) + [
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
         ] + self::discussionOf($row) + [
@@ -90,14 +96,14 @@ final class EntryJson
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->enrichment->savedSearches,
             'social' => self::socialOf($row),
-            'duplicates' => array_map(self::listRow(...), $row->duplicates),
+            'duplicates' => array_map($this->listRow(...), $row->duplicates),
         ];
     }
 
     /**
      * @return CompletedEntryRow
      */
-    public static function completed(EntryListRow $row): array
+    public function completed(EntryListRow $row): array
     {
         $entry = $row->entry;
 
@@ -114,8 +120,8 @@ final class EntryJson
             'imageHeight' => $entry->getImageHeight(),
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
-            'linkCards' => array_map(LinkCardJson::placed(...), $row->enrichment->linkCards),
-            'thread' => array_map(ThreadPostJson::of(...), $row->enrichment->threadPosts),
+            'linkCards' => array_map($this->linkCardJson->placed(...), $row->enrichment->linkCards),
+            'thread' => array_map($this->threadPostJson->of(...), $row->enrichment->threadPosts),
             'share' => $entry->getShareKind()?->value,
             'quote' => QuotedPostJson::ofOrNull($entry->getQuotedPost()),
         ];
@@ -124,9 +130,9 @@ final class EntryJson
     /**
      * @return EntryRow
      */
-    public static function detail(EntryListRow $row): array
+    public function detail(EntryListRow $row): array
     {
-        return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
+        return $this->listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
     }
 
     /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null} */

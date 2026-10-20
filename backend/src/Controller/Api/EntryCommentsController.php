@@ -19,6 +19,7 @@ final readonly class EntryCommentsController
     public function __construct(
         private EntryListRepository $entryList,
         private CommentsLoader $comments,
+        private CommentsJson $commentsJson,
     ) {
     }
 
@@ -30,6 +31,6 @@ final readonly class EntryCommentsController
             ? $this->comments->refreshed($user, $entry)
             : $this->comments->load($user, $entry);
 
-        return new JsonResponse(CommentsJson::one($result));
+        return new JsonResponse($this->commentsJson->one($result));
     }
 }

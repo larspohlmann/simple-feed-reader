@@ -10,14 +10,19 @@ use App\Service\Comments\Model\CommentsResultModel;
 use App\Service\Comments\Model\CommentsStatus;
 use App\Service\Comments\Model\EntryCommentModel;
 
-final class CommentsJson
+final readonly class CommentsJson
 {
+    public function __construct(
+        private LinkCardJson $linkCardJson,
+    ) {
+    }
+
     /** @return array<string, mixed> */
-    public static function one(CommentsResultModel $result): array
+    public function one(CommentsResultModel $result): array
     {
         return ['status' => $result->status->value] + match ($result->status) {
             CommentsStatus::Ok => [
-                'comments' => array_map(self::comment(...), $result->comments),
+                'comments' => array_map($this->comment(...), $result->comments),
                 'omitted' => $result->omitted,
                 'fetchedAt' => $result->fetchedAt?->format(\DateTimeInterface::ATOM),
             ],
@@ -27,7 +32,7 @@ final class CommentsJson
     }
 
     /** @return array<string, mixed> */
-    private static function comment(EntryCommentModel $comment): array
+    private function comment(EntryCommentModel $comment): array
     {
         return [
             'author' => $comment->author->name,
@@ -40,7 +45,7 @@ final class CommentsJson
             'byEntryAuthor' => $comment->byEntryAuthor,
             'depth' => $comment->depth,
             'media' => EntryMedia::toJsonList($comment->embeds->media),
-            'linkCard' => LinkCardJson::ofOrNull($comment->embeds->linkCard),
+            'linkCard' => $this->linkCardJson->ofOrNull($comment->embeds->linkCard),
             'quote' => QuotedPostJson::ofOrNull($comment->embeds->quote),
             'post' => null === $comment->post ? null : self::post($comment->post),
         ];
