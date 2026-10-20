@@ -1153,8 +1153,8 @@ Labels and title are **already-translated strings** (shared component, no
 feature keys). `danger: true` renders the action in the danger colour. An
 action may lead with a `symbol` (a Material symbol) or a `logo: { url, color? }`
 (drawn through `<app-masked-logo>`), and `ACTION_SHEET_DIVIDER` among the
-`actions` renders a separator between groups. Dismissed by backdrop tap,
-Escape, or a downward swipe — all resolve `undefined`.
+`actions` renders a separator between groups. Dismissed by the corner close
+button, a backdrop tap, Escape, or a downward swipe — all resolve `undefined`.
 
 **Not for:** fine-pointer surfaces (the sidebar keeps its inline `.pop`
 popover on desktop) or anything with form controls — that is a dialog in

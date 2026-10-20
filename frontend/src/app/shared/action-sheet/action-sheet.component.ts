@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../icon/icon.component';
+import { IconButtonDirective } from '../icon-button/icon-button.directive';
 import { MaskedLogoComponent } from '../masked-logo/masked-logo.component';
 import { stepMenuFocus } from '../menu-keys';
 
@@ -32,7 +34,7 @@ export interface ActionSheetData {
 
 @Component({
   selector: 'app-action-sheet',
-  imports: [IconComponent, MaskedLogoComponent],
+  imports: [TranslocoPipe, IconComponent, IconButtonDirective, MaskedLogoComponent],
   templateUrl: './action-sheet.component.html',
   styleUrl: './action-sheet.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

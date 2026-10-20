@@ -3,6 +3,7 @@
 :host {
   @include glass-rim.filled(var(--surface-2));
 
+  position: relative;
   display: block;
   border-bottom: none;
   border-top-left-radius: var(--radius-lg);
@@ -23,9 +24,15 @@
 }
 
 .title {
-  margin: 0 var(--space-3) var(--space-1);
+  margin: 0 calc(var(--icon-lg) + var(--space-2)) var(--space-1) var(--space-3);
   font-size: var(--fs-sm);
   color: var(--text-muted);
+}
+
+.close {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
 }
 
 nav button {

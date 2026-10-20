@@ -1,5 +1,14 @@
 <div class="grabber" aria-hidden="true"></div>
 <p class="title" aria-hidden="true">{{ data.title }}</p>
+<button
+  type="button"
+  class="close"
+  appIconButton
+  [attr.aria-label]="'common.close' | transloco"
+  (click)="ref.close()"
+>
+  <app-icon name="close" size="sm" />
+</button>
 <nav role="menu" [attr.aria-label]="data.title">
   @for (item of data.actions; track $index) {
     @if (isDivider(item)) {

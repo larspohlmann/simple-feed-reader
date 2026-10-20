@@ -2,6 +2,7 @@ import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ActionSheet } from './action-sheet.service';
 import {
   ACTION_SHEET_DIVIDER,
@@ -22,7 +23,7 @@ describe('ActionSheet', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
     sheet = TestBed.inject(ActionSheet);
     container = TestBed.inject(OverlayContainer).getContainerElement();
   });
@@ -59,6 +60,16 @@ describe('ActionSheet', () => {
       done();
     });
     items()[1].click();
+  });
+
+  it('closes from the corner button, resolving as a dismissal', (done) => {
+    open().subscribe((choice) => {
+      expect(choice).toBeUndefined();
+      done();
+    });
+    const close = container.querySelector<HTMLButtonElement>('button.close')!;
+    expect(close.getAttribute('aria-label')).toBe('Close');
+    close.click();
   });
 
   it('pins the pane to the sheet panel class', () => {
@@ -121,6 +132,7 @@ describe('ActionSheetComponent swipe dismiss', () => {
   const mount = () => {
     const ref = { close: jest.fn() };
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         { provide: DIALOG_DATA, useValue: DATA },
         { provide: DialogRef, useValue: ref },
