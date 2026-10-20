@@ -1883,6 +1883,13 @@ checkboxes, radios and colour swatches, none of which have a border to tint, wit
 no visible keyboard focus at all. That is a WCAG 2.4.7 failure, not a cosmetic
 one.
 
+**The focus ring is a hint, not a border (#1723).** `_base.scss`'s `:focus-visible`
+draws a 1px accent ring at reduced opacity with no offset, and only on
+fine-pointer devices: a coarse pointer never focuses through a keyboard, so there
+the ring is off. `cdk-dialog-container` has `outline: none`, because WebKit
+leaves a dialog's initial focus on it instead of moving it on to the first
+button, and the ring then outlined the whole sheet.
+
 **`accent-color: var(--accent)` is set once on `:root` (#1624).** It is inherited,
 so every native checkbox, radio, range and progress takes the theme accent; no
 component sets its own.
