@@ -3,11 +3,13 @@ import { Subject, of, throwError } from 'rxjs';
 import { TokenStore } from '../../../core/auth/token.store';
 import { SocialCountsDto } from '../../entry-social';
 import { ReaderApi } from '../../reader-api';
+import { EntriesStore } from '../../state/entries.store';
 import { anEntry } from '../../../../testing/entry-testing';
 import { SocialCountsService } from './social-counts.service';
 
 describe('SocialCountsService', () => {
-  let api: { socialCounts: jest.Mock };
+  let api: { socialCounts: jest.Mock; likeState: jest.Mock };
+  let entries: { adoptLike: jest.Mock };
   let tokens: TokenStore;
   let service: SocialCountsService;
 
@@ -19,8 +21,17 @@ describe('SocialCountsService', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-10-13T12:00:00Z'));
     localStorage.clear();
-    api = { socialCounts: jest.fn(() => of(counts)) };
-    TestBed.configureTestingModule({ providers: [{ provide: ReaderApi, useValue: api }] });
+    api = {
+      socialCounts: jest.fn(() => of(counts)),
+      likeState: jest.fn(() => of({ isLiked: false })),
+    };
+    entries = { adoptLike: jest.fn() };
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ReaderApi, useValue: api },
+        { provide: EntriesStore, useValue: entries },
+      ],
+    });
     tokens = TestBed.inject(TokenStore);
     tokens.set('account-a.jwt');
     service = TestBed.inject(SocialCountsService);
@@ -70,10 +81,52 @@ describe('SocialCountsService', () => {
     expect(api.socialCounts).toHaveBeenCalledTimes(2);
   });
 
-  it('remembers whether the post was liked when its counts were asked for', () => {
+  it('asks the network for the like alongside the counts and adopts it', () => {
+    api.likeState.mockReturnValue(of({ isLiked: true }));
+
+    service.load(post(1, false));
+
+    expect(api.likeState).toHaveBeenCalledWith(1);
+    expect(entries.adoptLike).toHaveBeenCalledWith(1, true);
+    expect(service.state(1)()).toMatchObject({ status: 'ok', counts, likedAtLoad: true });
+  });
+
+  it('counts from the entry when the like state cannot be had', () => {
+    api.likeState.mockReturnValue(throwError(() => new Error('rate limited')));
+
     service.load(post(1, true));
 
+    expect(entries.adoptLike).not.toHaveBeenCalled();
     expect(service.state(1)()).toMatchObject({ status: 'ok', likedAtLoad: true });
+  });
+
+  it('asks no like state for a post the reader cannot like', () => {
+    service.load(
+      anEntry({ id: 3, social: { network: 'mastodon', isLiked: false, canLike: false } }),
+    );
+
+    expect(api.likeState).not.toHaveBeenCalled();
+    expect(service.state(3)()).toMatchObject({ status: 'ok', likedAtLoad: false });
+  });
+
+  it('asks the like state again on a reload', () => {
+    service.load(post());
+    service.reload(post());
+
+    expect(api.likeState).toHaveBeenCalledTimes(2);
+  });
+
+  it('adopts no late like once another account signs in', () => {
+    const late = new Subject<{ isLiked: boolean }>();
+    api.likeState.mockReturnValue(late);
+    service.load(post(1));
+
+    tokens.set('account-b.jwt');
+    TestBed.tick();
+    late.next({ isLiked: true });
+    late.complete();
+
+    expect(entries.adoptLike).not.toHaveBeenCalled();
   });
 
   it('maps any error to failed', () => {
@@ -108,7 +161,13 @@ describe('SocialCountsService', () => {
   });
 
   it.each([
-    ['answer', (late: Subject<SocialCountsDto>) => late.next(counts)],
+    [
+      'answer',
+      (late: Subject<SocialCountsDto>) => {
+        late.next(counts);
+        late.complete();
+      },
+    ],
     ['error', (late: Subject<SocialCountsDto>) => late.error(new Error('offline'))],
   ])('forgets every count, and drops a late %s, once another account signs in', (_, settle) => {
     const late = new Subject<SocialCountsDto>();

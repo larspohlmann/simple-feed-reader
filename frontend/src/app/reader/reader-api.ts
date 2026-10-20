@@ -119,6 +119,10 @@ export class ReaderApi {
     return this.http.patch<{ state: EntryStateDto }>(`${this.base}/api/entries/${id}/state`, patch);
   }
 
+  likeState(id: number): Observable<EntryLikeDto> {
+    return this.http.get<EntryLikeDto>(`${this.base}/api/entries/${id}/like`);
+  }
+
   like(id: number): Observable<EntryLikeDto> {
     return this.http.put<EntryLikeDto>(`${this.base}/api/entries/${id}/like`, null);
   }
