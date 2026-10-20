@@ -28,6 +28,9 @@ final class EntryLikeControllerTest extends ApiTestCase
     /** Must match framework.rate_limiter.social_like.limit in rate_limiter.yaml. */
     private const int LIKE_BUDGET = 60;
 
+    /** Must match framework.rate_limiter.social_like_state.limit in rate_limiter.yaml. */
+    private const int LIKE_STATE_BUDGET = 120;
+
     protected function setUp(): void
     {
         self::bootKernel();
@@ -265,6 +268,82 @@ final class EntryLikeControllerTest extends ApiTestCase
         self::assertSame([], $this->http->requests);
     }
 
+    public function testOpeningAPostLikedOnTheNetworkStoresTheLikeForTheList(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [self::SEARCH => self::foundLiked()]);
+        $user = $this->signIn($client, 'like-state-liked@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+
+        $client->request('GET', sprintf('/api/entries/%d/like', $entryId));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['isLiked' => true], $this->payload($client));
+        self::assertSame([self::SEARCH], $this->routesAsked());
+        self::assertSame(
+            ['network' => 'mastodon', 'isLiked' => true, 'canLike' => true],
+            $this->socialOf($client, $entryId),
+        );
+    }
+
+    public function testOpeningAPostUnlikedOnTheNetworkForgetsTheStoredLike(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, [
+            self::SEARCH => self::found(),
+            self::FAVOURITE => self::accepted(),
+        ]);
+        $user = $this->signIn($client, 'like-state-unliked@example.test');
+        $this->mastodonAccountOf($user);
+        $entryId = $this->mastodonPostFor($user);
+        $client->request('PUT', sprintf('/api/entries/%d/like', $entryId));
+
+        $client->request('GET', sprintf('/api/entries/%d/like', $entryId));
+
+        self::assertSame(['isLiked' => false], $this->payload($client));
+        self::assertSame(0, $this->likeRows());
+    }
+
+    public function testTheLikeStateOfAPostWithoutAnAccountIsRefused(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'like-state-no-account@example.test');
+
+        $client->request('GET', sprintf('/api/entries/%d/like', $this->mastodonPostFor($user)));
+
+        $this->assertRejected($client, Response::HTTP_CONFLICT);
+        self::assertSame('social_account_missing', $this->payload($client)['type']);
+    }
+
+    public function testTheLikeStateOfAnotherUsersEntryReadsAsMissing(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $entryId = $this->mastodonPostFor($this->factory()->create('like-state-stranger@example.test'));
+        $user = $this->signIn($client, 'like-state-own@example.test');
+        $this->mastodonAccountOf($user);
+
+        $client->request('GET', sprintf('/api/entries/%d/like', $entryId));
+
+        $this->assertRejected($client, Response::HTTP_NOT_FOUND);
+        self::assertSame([], $this->http->requests);
+    }
+
+    public function testTheLikeStateHasItsOwnBudget(): void
+    {
+        $client = $this->clientRouting(self::ROUTED_HOSTS, []);
+        $user = $this->signIn($client, 'like-state-budget@example.test');
+        $path = sprintf('/api/entries/%d/like', $this->mastodonPostFor($user));
+        for ($attempt = 0; $attempt < self::LIKE_STATE_BUDGET; ++$attempt) {
+            $client->request('GET', $path);
+            $this->assertRejected($client, Response::HTTP_CONFLICT);
+        }
+
+        $client->request('GET', $path);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+        $client->request('DELETE', $path);
+        self::assertResponseIsSuccessful();
+    }
+
     public function testAnUnknownEntryReadsAsMissing(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, []);
@@ -278,6 +357,11 @@ final class EntryLikeControllerTest extends ApiTestCase
     private static function found(): MockResponse
     {
         return new MockResponse('{"statuses":[{"id":"110"}]}');
+    }
+
+    private static function foundLiked(): MockResponse
+    {
+        return new MockResponse('{"statuses":[{"id":"110","favourited":true}]}');
     }
 
     private static function accepted(): MockResponse
