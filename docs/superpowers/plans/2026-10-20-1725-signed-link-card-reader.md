@@ -5,8 +5,9 @@
 **Goal:** Every link card (root post, self-reply, social-media comment) opens in the internal reader through one
 endpoint that extracts a URL only when it carries the server's signature, replacing the entry/position lookup.
 
-**Architecture:** The server signs each link card's URL (HMAC-SHA256, key derived from `kernel.secret`) and sends the
-token with the card as `readerToken`. `GET /api/link-cards/reader?url=&token=` verifies it and extracts the page. The
+**Architecture:** The endpoint is generic (`/api/reader`, no mention of link cards) so other signed links can reuse it later.
+The server signs each link card's URL (HMAC-SHA256, key derived from `kernel.secret`) and sends the
+token with the card as `readerToken`. `GET /api/reader?url=&token=` verifies it and extracts the page. The
 client keys the link layer (`?link=<token>~<url>`) and its article cache by the URL. The card's stored `position` stops
 going over the wire. Since the JSON mappers that emit cards must now hold the signature, they become injected services.
 
@@ -18,7 +19,7 @@ Playwright e2e.
 ## Global Constraints
 
 - Branch `feature/1725-signed-link-card-reader` off `develop`; commits are `type(#1725): …`; no Claude attribution.
-- Token = unpadded base64url of `hash_hmac('sha256', $url, hash_hkdf('sha256', kernel.secret, 0, 'link-card-reader'), true)`, which is always 43 chars, `[A-Za-z0-9_-]`.
+- Token = unpadded base64url of `hash_hmac('sha256', $url, hash_hkdf('sha256', kernel.secret, 0, 'reader-url'), true)`, which is always 43 chars, `[A-Za-z0-9_-]`.
 - The token signs the URL **alone**. It is not bound to a user or an entry, and it does not expire.
 - A token that does not match is answered `404 application/problem+json`, before any rate-limit spend or fetch.
 - The endpoint keeps the reader's per-user rate limit (`limiter.reader`, `RateLimitGuard::enforceForUser`).
@@ -30,9 +31,9 @@ Playwright e2e.
 ## File Map
 
 Backend
-- `src/Service/LinkCard/LinkCardSignature.php`, `Exception/LinkCardTokenMismatchException.php`, `src/Http/Problem/ExceptionProblems/LinkCardProblems.php`: **done in Task 1**.
-- `src/Controller/Api/LinkCardReaderController.php`: rewritten for the new route.
-- `src/Service/Reader/LinkCardArticleReader.php`: `read(string $url)`; `lead()` goes.
+- `src/Service/Reader/ReaderUrlSignature.php`, `src/Service/Reader/Exception/ReaderUrlTokenMismatchException.php`, `src/Http/Problem/ExceptionProblems/ReaderProblems.php`: **done in Task 1**.
+- `src/Controller/Api/LinkCardReaderController.php`: deleted, replaced by `src/Controller/Api/SignedUrlReaderController.php`.
+- `src/Service/Reader/LinkCardArticleReader.php`: renamed `UrlArticleReader`, `read(string $url)`; `lead()` goes.
 - `src/Repository/LinkCardRepository.php`: `contentAt()` and `placedByEntryIds()` go.
 - `src/Repository/ThreadPostRepository.php`, `EntryListRowEnrichment.php`, `EntryListRowEnricher.php`, `src/Service/Social/Model/ThreadPostModel.php`: carry `LinkCardContent`.
 - `src/Service/LinkCard/Model/PlacedLinkCardModel.php`: deleted.
@@ -52,13 +53,13 @@ Frontend (`frontend/src/app/reader/…`)
 
 ---
 
-### Task 1: LinkCardSignature — DONE (commit 56d676d08)
+### Task 1: ReaderUrlSignature — DONE (commit 56d676d08)
 
-`App\Service\LinkCard\LinkCardSignature`, constructor `#[Autowire('%kernel.secret%')] string $secret`:
+`App\Service\Reader\ReaderUrlSignature`, constructor `#[Autowire('%kernel.secret%')] string $secret`:
 - `tokenFor(string $url): string`
-- `verify(string $url, string $token): void`, which throws `App\Service\LinkCard\Exception\LinkCardTokenMismatchException`.
+- `verify(string $url, string $token): void`, which throws `App\Service\Reader\Exception\ReaderUrlTokenMismatchException`.
 
-`LinkCardProblems` maps that exception to 404, and `tests/Service/LinkCard/LinkCardSignatureTest.php` covers it.
+`ReaderProblems` maps that exception to 404, and `tests/Service/Reader/ReaderUrlSignatureTest.php` covers it.
 Nothing is left to do here; later tasks consume these signatures.
 
 ---
@@ -66,16 +67,17 @@ Nothing is left to do here; later tasks consume these signatures.
 ### Task 2: One signed reader endpoint
 
 **Files:**
-- Modify: `backend/src/Controller/Api/LinkCardReaderController.php` (whole file)
-- Modify: `backend/src/Service/Reader/LinkCardArticleReader.php` (whole file)
+- Delete: `backend/src/Controller/Api/LinkCardReaderController.php`
+- Create: `backend/src/Controller/Api/SignedUrlReaderController.php`
+- Rename: `backend/src/Service/Reader/LinkCardArticleReader.php` → `UrlArticleReader.php` (`git mv`, whole file)
 - Modify: `backend/src/Repository/LinkCardRepository.php`: delete `contentAt()`; drop the `Subscription` and `RecordNotFoundException` imports
-- Test: `backend/tests/Controller/Api/LinkCardReaderControllerTest.php` (rewrite), `backend/tests/Service/Reader/LinkCardArticleReaderTest.php` (rewrite), `backend/tests/Repository/LinkCardRepositoryTest.php`
+- Test: `backend/tests/Controller/Api/LinkCardReaderControllerTest.php` → `SignedUrlReaderControllerTest.php` (`git mv`, rewrite), `backend/tests/Service/Reader/LinkCardArticleReaderTest.php` → `UrlArticleReaderTest.php` (`git mv`, rewrite), `backend/tests/Repository/LinkCardRepositoryTest.php`
 
 **Interfaces:**
-- Consumes: `LinkCardSignature::verify(string $url, string $token): void` (Task 1).
-- Produces: `GET /api/link-cards/reader?url=<url>&token=<token>`, route name `api_link_card_reader`, answering the existing `ReaderJson::one()` shape with `originalHero: null`; and `LinkCardArticleReader::read(string $url): ExtractionResultModel`.
+- Consumes: `ReaderUrlSignature::verify(string $url, string $token): void` (Task 1).
+- Produces: `GET /api/reader?url=<url>&token=<token>`, route name `api_reader`, answering the existing `ReaderJson::one()` shape with `originalHero: null`; and `UrlArticleReader::read(string $url): ExtractionResultModel`.
 
-- [ ] **Step 1: Write the failing controller test.** Replace `tests/Controller/Api/LinkCardReaderControllerTest.php` with:
+- [ ] **Step 1: Write the failing controller test.** `git mv tests/Controller/Api/LinkCardReaderControllerTest.php tests/Controller/Api/SignedUrlReaderControllerTest.php`, then replace its content with:
 
 ```php
 <?php
@@ -85,7 +87,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
-use App\Service\LinkCard\LinkCardSignature;
+use App\Service\Reader\ReaderUrlSignature;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
 use App\Tests\Support\ApiTestCase;
@@ -96,7 +98,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class LinkCardReaderControllerTest extends ApiTestCase
+final class SignedUrlReaderControllerTest extends ApiTestCase
 {
     use ReaderEndpointFixtures;
 
@@ -182,7 +184,7 @@ final class LinkCardReaderControllerTest extends ApiTestCase
         [$headers] = $this->auth('card-reader-tokenless@example.com');
         $fake = $this->installFake();
 
-        $client->request('GET', '/api/link-cards/reader?' . http_build_query(['url' => self::URL]), server: $headers);
+        $client->request('GET', '/api/reader?' . http_build_query(['url' => self::URL]), server: $headers);
 
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
         self::assertSame([], $fake->calls);
@@ -227,23 +229,23 @@ final class LinkCardReaderControllerTest extends ApiTestCase
 
     private function tokenFor(string $url): string
     {
-        $signature = self::getContainer()->get(LinkCardSignature::class);
-        self::assertInstanceOf(LinkCardSignature::class, $signature);
+        $signature = self::getContainer()->get(ReaderUrlSignature::class);
+        self::assertInstanceOf(ReaderUrlSignature::class, $signature);
 
         return $signature->tokenFor($url);
     }
 
     private static function readerPath(string $url, string $token): string
     {
-        return '/api/link-cards/reader?' . http_build_query(['url' => $url, 'token' => $token]);
+        return '/api/reader?' . http_build_query(['url' => $url, 'token' => $token]);
     }
 }
 ```
 
-- [ ] **Step 2: Run it to see it fail.** Run `cd backend && php bin/phpunit tests/Controller/Api/LinkCardReaderControllerTest.php`.
+- [ ] **Step 2: Run it to see it fail.** Run `cd backend && php bin/phpunit tests/Controller/Api/SignedUrlReaderControllerTest.php`.
   Expected: FAIL. The new route gives 404 everywhere, so `testExtractsTheSignedCardsPage` and the 429 test fail.
 
-- [ ] **Step 3: Rewrite the article reader and its test.** Replace `src/Service/Reader/LinkCardArticleReader.php` with:
+- [ ] **Step 3: Rewrite the article reader and its test.** `git mv src/Service/Reader/LinkCardArticleReader.php src/Service/Reader/UrlArticleReader.php` and `git mv tests/Service/Reader/LinkCardArticleReaderTest.php tests/Service/Reader/UrlArticleReaderTest.php`, then replace the source with:
 
 ```php
 <?php
@@ -256,7 +258,7 @@ use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\Model\EntryHintsModel;
 use App\Service\Reader\Model\ExtractionResultModel;
 
-final readonly class LinkCardArticleReader
+final readonly class UrlArticleReader
 {
     public function __construct(private ArticleExtractorInterface $extractor)
     {
@@ -269,7 +271,7 @@ final readonly class LinkCardArticleReader
 }
 ```
 
-Then replace `tests/Service/Reader/LinkCardArticleReaderTest.php` with:
+Then replace the test with:
 
 ```php
 <?php
@@ -278,12 +280,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Service\Reader\LinkCardArticleReader;
+use App\Service\Reader\UrlArticleReader;
 use App\Service\Reader\Model\ExtractionResultModel;
 use App\Tests\Support\FakeArticleExtractor;
 use PHPUnit\Framework\TestCase;
 
-final class LinkCardArticleReaderTest extends TestCase
+final class UrlArticleReaderTest extends TestCase
 {
     public function testExtractsTheUrlWithoutHints(): void
     {
@@ -291,7 +293,7 @@ final class LinkCardArticleReaderTest extends TestCase
         $extracted = ExtractionResultModel::ok('https://example.com/a', 'A', null, null, '<p>Body</p>', null);
         $extractor->willReturn($extracted);
 
-        $result = (new LinkCardArticleReader($extractor))->read('https://example.com/a');
+        $result = (new UrlArticleReader($extractor))->read('https://example.com/a');
 
         self::assertSame($extracted, $result);
         self::assertSame(['https://example.com/a'], $extractor->calls);
@@ -300,7 +302,7 @@ final class LinkCardArticleReaderTest extends TestCase
 }
 ```
 
-- [ ] **Step 4: Rewrite the controller.** Replace `src/Controller/Api/LinkCardReaderController.php` with:
+- [ ] **Step 4: Replace the controller.** `git rm src/Controller/Api/LinkCardReaderController.php` and create `src/Controller/Api/SignedUrlReaderController.php`:
 
 ```php
 <?php
@@ -311,9 +313,9 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\ReaderJson;
-use App\Service\LinkCard\LinkCardSignature;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Reader\LinkCardArticleReader;
+use App\Service\Reader\ReaderUrlSignature;
+use App\Service\Reader\UrlArticleReader;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -321,19 +323,19 @@ use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-#[Route('/api/link-cards')]
-final readonly class LinkCardReaderController
+#[Route('/api')]
+final readonly class SignedUrlReaderController
 {
     public function __construct(
-        private LinkCardSignature $signature,
+        private ReaderUrlSignature $signature,
         private ClockInterface $clock,
-        private LinkCardArticleReader $articleReader,
+        private UrlArticleReader $articleReader,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $readerLimiter,
     ) {
     }
 
-    #[Route('/reader', name: 'api_link_card_reader', methods: ['GET'])]
+    #[Route('/reader', name: 'api_reader', methods: ['GET'])]
     public function reader(
         #[MapQueryParameter] string $url,
         #[MapQueryParameter] string $token,
@@ -365,7 +367,7 @@ final readonly class LinkCardReaderController
   (Add `use App\Entity\LinkCard;` if the file lacks it.)
 
 - [ ] **Step 6: Run the touched tests and make sure they pass.** Run:
-  `php bin/phpunit tests/Controller/Api/LinkCardReaderControllerTest.php tests/Service/Reader/LinkCardArticleReaderTest.php tests/Repository/LinkCardRepositoryTest.php`.
+  `php bin/phpunit tests/Controller/Api/SignedUrlReaderControllerTest.php tests/Service/Reader/UrlArticleReaderTest.php tests/Repository/LinkCardRepositoryTest.php`.
   Expected: PASS.
 
 - [ ] **Step 7: Commit.** Run:
@@ -389,9 +391,9 @@ There is no behaviour change in this task: the JSON output is byte-identical. It
 - Modify tests: `backend/tests/Http/{EntryJsonTest,EntryPageTest,SearchPageTest,SavedSearchPageTest,ThreadPostJsonTest,CommentsJsonTest,RecommendationFeedJsonTest}.php`, `backend/tests/Service/Recommendation/Feed/ForYouFeedTest.php`, `backend/tests/Service/Recommendation/Scoring/{ScoringPipelineTest,RerankPipelineTest}.php`
 
 **Interfaces:**
-- Consumes: `LinkCardSignature` (Task 1).
+- Consumes: `ReaderUrlSignature` (Task 1).
 - Produces, each a `final readonly class` constructed by the container:
-  - `LinkCardJson()`, with no constructor yet (Task 4 adds `LinkCardSignature`) and public instance `of()`, `placed()` and `ofOrNull()`, unchanged in output.
+  - `LinkCardJson()`, with no constructor yet (Task 4 adds `ReaderUrlSignature`) and public instance `of()`, `placed()` and `ofOrNull()`, unchanged in output.
   - `ThreadPostJson(LinkCardJson $linkCardJson)`: `of(ThreadPostModel $post): array`.
   - `CommentsJson(LinkCardJson $linkCardJson)`: `one(CommentsResultModel $result): array`.
   - `EntryJson(LinkCardJson $linkCardJson, ThreadPostJson $threadPostJson)`: `listRow()`, `completed()`, `detail()`.
@@ -413,7 +415,7 @@ There is no behaviour change in this task: the JSON output is byte-identical. It
     - `EntryPage::of(...)` / `EntryPage::withMatchCount(...)` → `$this->entryPage->…`
   - Self-calls to public methods become `$this->…`. In `EntryJson` these are `self::completed($row)`, `self::listRow(...)` (the `duplicates` map) and `self::listRow($row)` in `detail`. In `EntryPage` it is `self::withMatchCount`.
   - Private static helpers that touch no collaborator stay `private static`: `EntryJson::discussionOf`/`posterOf`/`socialOf`, `EntryPage::cursorFromRow`, `CommentsJson::post`, `RecommendationFeedJson::entries` (make this one an instance method, since it calls `$this->entryJson`).
-  - `LinkCardJson` gets no constructor in this task; Task 4 adds `LinkCardSignature`.
+  - `LinkCardJson` gets no constructor in this task; Task 4 adds `ReaderUrlSignature`.
 
 - [ ] **Step 2: Split `get` out of `EntryController`.** Create `src/Controller/Api/EntryDetailController.php`:
 
@@ -574,7 +576,7 @@ git commit -m "refactor(#1725): the entry and comment JSON mappers become inject
 - Tests: `backend/tests/Support/JsonMappers.php`, `backend/tests/Http/{EntryJsonTest,CommentsJsonTest,ThreadPostJsonTest}.php`, `backend/tests/Repository/{LinkCardRepositoryTest,EntryListRowEnricherTest}.php`, `backend/tests/Controller/Api/{EntryControllerTest,EntryCommentsControllerTest}.php`
 
 **Interfaces:**
-- Consumes: `LinkCardSignature::tokenFor()` (Task 1) and the injected mappers (Task 3).
+- Consumes: `ReaderUrlSignature::tokenFor()` (Task 1) and the injected mappers (Task 3).
 - Produces: every card on the wire is `{url, title, description, imageUrl, siteName, readerToken}`, in that key order; there is no `position` key anywhere. `LinkCardJson::of(LinkCardContent): LinkCardRow` and `ofOrNull()` remain; `placed()` is gone. `EntryListRowEnrichment::$linkCards` is a `list<LinkCardContent>`, and `ThreadPostModel::$linkCard` is a `?LinkCardContent`.
 
 - [ ] **Step 1: Write the failing tests.**
@@ -593,7 +595,7 @@ git commit -m "refactor(#1725): the entry and comment JSON mappers become inject
                 'description' => null,
                 'imageUrl' => null,
                 'siteName' => 'i.example',
-                'readerToken' => (new LinkCardSignature(JsonMappers::SECRET))->tokenFor('https://i.example/chart'),
+                'readerToken' => (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://i.example/chart'),
             ],
             JsonMappers::entryJson()->listRow($row)['linkCards'][0],
         );
@@ -604,7 +606,7 @@ git commit -m "refactor(#1725): the entry and comment JSON mappers become inject
 
 ```php
         self::assertSame(
-            (new LinkCardSignature(JsonMappers::SECRET))->tokenFor('https://m.example/a'),
+            (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://m.example/a'),
             $thread[0]['linkCard']['readerToken'] ?? null,
         );
 ```
@@ -614,7 +616,7 @@ git commit -m "refactor(#1725): the entry and comment JSON mappers become inject
 
 ```php
         self::assertSame(
-            (new LinkCardSignature(JsonMappers::SECRET))->tokenFor('https://site.test/a'),
+            (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://site.test/a'),
             $json['comments'][0]['linkCard']['readerToken'] ?? null,
         );
 ```
@@ -627,8 +629,8 @@ git commit -m "refactor(#1725): the entry and comment JSON mappers become inject
 ```php
     private function readerTokenFor(string $url): string
     {
-        $signature = self::getContainer()->get(LinkCardSignature::class);
-        self::assertInstanceOf(LinkCardSignature::class, $signature);
+        $signature = self::getContainer()->get(ReaderUrlSignature::class);
+        self::assertInstanceOf(ReaderUrlSignature::class, $signature);
 
         return $signature->tokenFor($url);
     }
@@ -659,7 +661,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\LinkCardContent;
-use App\Service\LinkCard\LinkCardSignature;
+use App\Service\Reader\ReaderUrlSignature;
 
 /**
  * @phpstan-type LinkCardRow array{
@@ -669,7 +671,7 @@ use App\Service\LinkCard\LinkCardSignature;
  */
 final readonly class LinkCardJson
 {
-    public function __construct(private LinkCardSignature $signature)
+    public function __construct(private ReaderUrlSignature $signature)
     {
     }
 
@@ -703,10 +705,10 @@ final readonly class LinkCardJson
   - `EntryListRowEnricher:54`: `$this->linkCards->contentsByEntryIds($entryIds)`.
   - `LinkCardRepository`: delete `placedByEntryIds()`. `rootCardRows()` keeps `position` only if `contentsByEntryIds` needs it; it does not, so drop `'card.position'` from that select and from both shape docs, keeping the `orderBy`.
   - Delete `src/Service/LinkCard/Model/PlacedLinkCardModel.php`. If `src/Service/LinkCard/Model/` is then empty, delete the folder.
-  - In `tests/Support/JsonMappers.php`, add `use App\Service\LinkCard\LinkCardSignature;` and
+  - In `tests/Support/JsonMappers.php`, add `use App\Service\Reader\ReaderUrlSignature;` and
     `public const string SECRET = 'test-link-card-secret';`, and make `linkCardJson()` return
-    `new LinkCardJson(new LinkCardSignature(self::SECRET));`.
-  - In `EntryJsonTest` and `CommentsJsonTest`, add `use App\Service\LinkCard\LinkCardSignature;`; in
+    `new LinkCardJson(new ReaderUrlSignature(self::SECRET));`.
+  - In `EntryJsonTest` and `CommentsJsonTest`, add `use App\Service\Reader\ReaderUrlSignature;`; in
     `EntryControllerTest` and `EntryCommentsControllerTest`, add the same import for `readerTokenFor()`.
 
 - [ ] **Step 4: Fix the repository tests that read positions through `placedByEntryIds`.** In `LinkCardRepositoryTest`, `testRootCardsAppendedAfterAThreadCardDoNotCollide` and `testUnflushedCardsCountWhenNumberingTheNext` become position reads on the entity:
@@ -762,7 +764,7 @@ git commit -m "feat(#1725): a link card carries the token that opens it in the r
 - Modify: `src/testing/entry-testing.ts`, `src/app/reader/shell/reader-shell.component.spec.ts` (link-reader block, about lines 4616–4714), `e2e/support/reader.ts`, `e2e/link-card-reader.spec.ts`, `e2e/self-reply-thread.spec.ts`
 
 **Interfaces:**
-- Consumes: the wire card `{url, title, description, imageUrl, siteName, readerToken}`, and `GET /api/link-cards/reader?url&token` (Tasks 2 and 4).
+- Consumes: the wire card `{url, title, description, imageUrl, siteName, readerToken}`, and `GET /api/reader?url&token` (Tasks 2 and 4).
 - Produces:
   - `LinkCardDto` gains `readerToken: string`.
   - `LinkCardRef { readonly url: string; readonly token: string }`, plus `linkParam(ref): string` = `` `${token}~${url}` ``, `linkCardFromParam(value): LinkCardRef | null`, `sameLinkCard(left, right): boolean`, and `refOf(card: LinkCardDto): LinkCardRef`.
@@ -1039,7 +1041,7 @@ export class LinkReaderNavigation {
 
 ```ts
   linkCardReaderContent(ref: LinkCardRef): Observable<ReaderContent> {
-    return this.http.get<ReaderContent>(`${this.base}/api/link-cards/reader`, {
+    return this.http.get<ReaderContent>(`${this.base}/api/reader`, {
       params: { url: ref.url, token: ref.token },
     });
   }
@@ -1056,7 +1058,7 @@ export class LinkReaderNavigation {
 
     const testRequest = ctrl.expectOne(
       (request) =>
-        request.url === 'https://api.test/api/link-cards/reader' &&
+        request.url === 'https://api.test/api/reader' &&
         request.params.get('url') === 'https://news.test/a?b=1' &&
         request.params.get('token') === A_READER_TOKEN,
     );
@@ -1132,7 +1134,7 @@ export function readerCacheKey(target: ReaderTarget): ReaderCacheKey {
 
 - [ ] **Step 11: Playwright fixtures.**
   - `e2e/support/reader.ts`: the e2e `aLinkCard` (if it is a separate builder there, otherwise the one it imports) gains `readerToken: 'a'.repeat(43)` and loses `position`.
-  - `e2e/link-card-reader.spec.ts:47` and `e2e/self-reply-thread.spec.ts:61`: route `'**/api/link-cards/reader?*'` instead of the position paths.
+  - `e2e/link-card-reader.spec.ts:47` and `e2e/self-reply-thread.spec.ts:61`: route `'**/api/reader?*'` instead of the position paths.
   - `self-reply-thread.spec.ts:29` drops `position: 0`.
 
 - [ ] **Step 12: Run the frontend gate.** Run `docker compose exec -T frontend npm run check`.
@@ -1218,7 +1220,7 @@ git commit -m "feat(#1725): a comment's link card opens in the reader"
 
 - [ ] **Backend gates.** Run `cd backend && composer check && composer md`. Expected: clean.
 - [ ] **Both suite legs.** Run `composer test:parallel` (SQLite) and `docker compose exec php composer test` (MySQL) in parallel. Expected: PASS.
-- [ ] **Mutation gate.** Commit everything first; `infection:diff` ignores untracked files. Then run `composer infection:diff`. Expected: MSI ≥ `minMsi`. Kill any escaped mutant in `LinkCardSignature`, `LinkCardJson` or the controller with a test.
+- [ ] **Mutation gate.** Commit everything first; `infection:diff` ignores untracked files. Then run `composer infection:diff`. Expected: MSI ≥ `minMsi`. Kill any escaped mutant in `ReaderUrlSignature`, `LinkCardJson` or the controller with a test.
 - [ ] **Containers are current.** Recreate or restart `php` and the worker if `docker compose ps` shows stale images. Clear the dev cache: `docker compose exec php bin/console cache:clear`.
 - [ ] **Live check** in the built-in browser at `http://green-tara.local:4200/?subscription=1903&entry=626026-die-bundesregierung-will-das-informationsfreiheitsgesetz-faktisch-abschaffen`:
   - Open the comments, then a comment's card via "Open in reader". The layer loads the page.
