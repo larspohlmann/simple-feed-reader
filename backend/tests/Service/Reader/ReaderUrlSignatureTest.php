@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard;
+namespace App\Tests\Service\Reader;
 
-use App\Service\LinkCard\Exception\LinkCardTokenMismatchException;
-use App\Service\LinkCard\LinkCardSignature;
+use App\Service\Reader\Exception\ReaderUrlTokenMismatchException;
+use App\Service\Reader\ReaderUrlSignature;
 use PHPUnit\Framework\TestCase;
 
-final class LinkCardSignatureTest extends TestCase
+final class ReaderUrlSignatureTest extends TestCase
 {
     private const string URL = 'https://news.example/story?id=1';
 
     public function testATokenIsUnpaddedBase64UrlOfAFullMac(): void
     {
-        $token = (new LinkCardSignature('secret'))->tokenFor(self::URL);
+        $token = (new ReaderUrlSignature('secret'))->tokenFor(self::URL);
 
         self::assertMatchesRegularExpression('/^[A-Za-z0-9_-]{43}$/', $token);
     }
 
     public function testTheTokenOfAUrlVerifies(): void
     {
-        $signature = new LinkCardSignature('secret');
+        $signature = new ReaderUrlSignature('secret');
 
         $signature->verify(self::URL, $signature->tokenFor(self::URL));
 
@@ -30,22 +30,22 @@ final class LinkCardSignatureTest extends TestCase
 
     public function testATokenDoesNotVerifyAnotherUrl(): void
     {
-        $signature = new LinkCardSignature('secret');
+        $signature = new ReaderUrlSignature('secret');
 
-        $this->expectException(LinkCardTokenMismatchException::class);
+        $this->expectException(ReaderUrlTokenMismatchException::class);
         $signature->verify('https://news.example/story?id=2', $signature->tokenFor(self::URL));
     }
 
     public function testAnotherSecretsTokenDoesNotVerify(): void
     {
-        $this->expectException(LinkCardTokenMismatchException::class);
-        (new LinkCardSignature('secret'))->verify(self::URL, (new LinkCardSignature('other'))->tokenFor(self::URL));
+        $this->expectException(ReaderUrlTokenMismatchException::class);
+        (new ReaderUrlSignature('secret'))->verify(self::URL, (new ReaderUrlSignature('other'))->tokenFor(self::URL));
     }
 
     public function testATokenIsNotTheBareMacOfTheSecret(): void
     {
         $bare = rtrim(strtr(base64_encode(hash_hmac('sha256', self::URL, 'secret', true)), '+/', '-_'), '=');
 
-        self::assertNotSame($bare, (new LinkCardSignature('secret'))->tokenFor(self::URL));
+        self::assertNotSame($bare, (new ReaderUrlSignature('secret'))->tokenFor(self::URL));
     }
 }
