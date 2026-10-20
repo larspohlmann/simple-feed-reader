@@ -86,4 +86,11 @@ final class SocialLike
     {
         return $this->likedAt;
     }
+
+    public function replaceWith(SocialAccount $socialAccount, string $remoteId, \DateTimeImmutable $likedAt): void
+    {
+        $this->socialAccount = $socialAccount;
+        $this->remoteId = $remoteId;
+        $this->likedAt = $likedAt;
+    }
 }

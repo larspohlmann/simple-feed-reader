@@ -46,8 +46,7 @@ final readonly class SocialLikes
         }
         $this->liking->unlike($like->getSocialAccount(), $like->getRemoteId());
 
-        $this->entityManager->remove($like);
-        $this->entityManager->flush();
+        $this->drop($like);
         $this->forgetCountsOf($entry);
     }
 
@@ -56,17 +55,20 @@ final readonly class SocialLikes
     {
         $stored = $this->likes->findOneFor($user, $entry);
         $post = $this->posts->find($user, $entry);
-        if (null !== $stored && !self::reportsTheSameLike($stored, $post)) {
-            $this->entityManager->remove($stored);
-            // Flushed apart: one flush inserts before it deletes, which trips uniq_social_like_user_entry.
-            $this->entityManager->flush();
-            $stored = null;
-        }
-        if (null === $post->existingLikeId) {
+        $likeId = $post->existingLikeId;
+        if (null === $likeId) {
+            $this->drop($stored);
+
             return false;
         }
         if (null === $stored) {
-            $this->store($user, $entry, $post->account, $post->existingLikeId);
+            $this->store($user, $entry, $post->account, $likeId);
+
+            return true;
+        }
+        if (!self::reportsTheSameLike($stored, $post)) {
+            $stored->replaceWith($post->account, $likeId, $this->clock->now());
+            $this->entityManager->flush();
         }
 
         return true;
@@ -81,6 +83,15 @@ final readonly class SocialLikes
     private function store(User $user, Entry $entry, SocialAccount $account, string $remoteId): void
     {
         $this->entityManager->persist(new SocialLike($user, $entry, $account, $remoteId, $this->clock->now()));
+        $this->entityManager->flush();
+    }
+
+    private function drop(?SocialLike $like): void
+    {
+        if (null === $like) {
+            return;
+        }
+        $this->entityManager->remove($like);
         $this->entityManager->flush();
     }
 

@@ -126,9 +126,7 @@ final class SocialLikesTest extends DbTestCase
     {
         $account = $this->mastodonAccount();
         $entry = $this->entryOn('https://example.com/feed.xml', self::STATUS_URL);
-        $likedAt = new \DateTimeImmutable('2026-10-13 10:00:00');
-        $this->entityManager->persist(new SocialLike($this->owner, $entry, $account, '110', $likedAt));
-        $this->entityManager->flush();
+        $this->storeLike($entry, $account, '110');
         $this->countsCache->remember(self::address(), new SocialCountsModel(5, 0, 0, null));
 
         $this->likes()->unlike($this->owner, $entry);
@@ -246,7 +244,7 @@ final class SocialLikesTest extends DbTestCase
     {
         $account = $this->mastodonAccount();
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
-        $this->mastodon->knowsTheLikeAs('2041');
+        $this->mastodon->knowsTheLike('2041');
 
         self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
 
@@ -296,7 +294,7 @@ final class SocialLikesTest extends DbTestCase
         $account = $this->mastodonAccount();
         $entry = $this->entryOn(self::FEED_URL, self::STATUS_URL);
         $this->storeLike($entry, $account, '97');
-        $this->mastodon->knowsTheLikeAs('2041');
+        $this->mastodon->knowsTheLike('2041');
 
         self::assertTrue($this->likes()->syncFromNetwork($this->owner, $entry));
 

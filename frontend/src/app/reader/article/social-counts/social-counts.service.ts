@@ -12,7 +12,7 @@ const FAILED_RETRY_MS = 60 * 1000;
 
 export type CountedEntry = Pick<EntryDto, 'id' | 'social'>;
 
-/** `likedAtLoad`: whether the reader's like was in the counts when they loaded: the network's word, else the entry's. */
+/** `likedAtLoad`: whether the loaded counts include the reader's like; the shown likes count from it. */
 export type SocialCountsState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -67,8 +67,12 @@ export class SocialCountsService {
         if (generation !== this.generation) return;
         if (networkLike !== null)
           this.entries.adoptLike(entry.id, { from: likedBefore, to: networkLike });
-        const likedAtLoad = networkLike ?? likedBefore;
-        state.set({ status: 'ok', counts, likedAtLoad, loadedAt: Date.now() });
+        state.set({
+          status: 'ok',
+          counts,
+          likedAtLoad: networkLike ?? likedBefore,
+          loadedAt: Date.now(),
+        });
       },
       error: () => {
         if (generation === this.generation) state.set({ status: 'failed', failedAt: Date.now() });

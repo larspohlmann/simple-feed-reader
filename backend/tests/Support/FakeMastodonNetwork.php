@@ -43,12 +43,7 @@ final class FakeMastodonNetwork implements PostResolverInterface, PostLikerInter
         $this->counts = $counts;
     }
 
-    public function knowsTheLike(): void
-    {
-        $this->existingLikeId = self::STATUS_ID;
-    }
-
-    public function knowsTheLikeAs(string $likeId): void
+    public function knowsTheLike(string $likeId = self::STATUS_ID): void
     {
         $this->existingLikeId = $likeId;
     }
