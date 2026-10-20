@@ -77,8 +77,7 @@
   <app-link-card
     [card]="card"
     layout="block"
-    [openableInReader]="true"
-    (openInReader)="navigation.openAlone(card)"
+    opensInReader="alone"
     (click)="$event.stopPropagation()"
     (keydown.enter)="$event.stopPropagation()"
     (keydown.space)="$event.stopPropagation()"

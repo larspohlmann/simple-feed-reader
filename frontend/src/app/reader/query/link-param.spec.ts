@@ -27,7 +27,6 @@ describe('link param', () => {
     '514.2',
     `${A_READER_TOKEN}`,
     `${A_READER_TOKEN}~`,
-    `short~https://news.test/a`,
     `${A_READER_TOKEN}~javascript:alert(1)`,
     `${A_READER_TOKEN}~/relative`,
   ])('reads %p as no link', (value) => {

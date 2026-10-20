@@ -23,7 +23,6 @@ import { ShortBadgeComponent } from '../short-badge/short-badge.component';
 import { COVER_BOX_SIZES } from '../rendition-sizes';
 import { OpensEntryDirective } from '../opens-entry.directive';
 import { LinkCardComponent } from '../../link-card/link-card.component';
-import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { ThreadLineComponent } from '../../../shared/thread-line/thread-line.component';
 import { ThreadLinePostComponent } from '../../../shared/thread-line/thread-line-post.component';
 import { ThreadCountComponent } from '../../../shared/thread-line/thread-count.component';
@@ -80,7 +79,6 @@ export class EntryRowComponent {
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
   private readonly language = inject(LanguageService);
-  protected readonly navigation = inject(LinkReaderNavigation, { optional: true });
   readonly when = computed(() =>
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),
   );

@@ -10,12 +10,7 @@
         />
       }
       @if (reply.linkCard; as card) {
-        <app-link-card
-          [card]="card"
-          layout="article"
-          [openableInReader]="true"
-          (openInReader)="navigation.layer(card)"
-        />
+        <app-link-card [card]="card" layout="article" opensInReader="layer" />
       }
       <app-thread-count [position]="index + 2" [total]="total()" />
     </app-thread-line-post>

@@ -46,9 +46,8 @@ export class ReaderRouteState {
     const opened = this.linkNavigation.opened();
     if (opened?.url === ref.url) return opened;
     const open = this.openEntry();
-    return linkCardWithUrl(
-      open === null ? this.entries.entries() : [open, ...this.entries.entries()],
-      ref.url,
+    return (
+      (open && linkCardWithUrl([open], ref.url)) ?? linkCardWithUrl(this.entries.entries(), ref.url)
     );
   });
 

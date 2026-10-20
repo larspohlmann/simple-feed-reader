@@ -9,7 +9,7 @@ export class LinkReaderNavigation {
   private readonly route = inject(ActivatedRoute);
   private readonly openedCard = signal<LinkCardDto | null>(null);
 
-  /** The card last opened from the page; a deep link has none, and the route state looks the URL up instead. */
+  /** A comment's card is in no store, so its title and image are known only from the click. */
   readonly opened = this.openedCard.asReadonly();
 
   layer(card: LinkCardDto): void {

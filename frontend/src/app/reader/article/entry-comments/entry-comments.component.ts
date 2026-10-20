@@ -30,7 +30,6 @@ import { observeOnSight } from '../../list/paging';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { LinkCardComponent } from '../../link-card/link-card.component';
-import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { SocialCountsRowComponent } from '../social-counts/social-counts-row.component';
 import { ToastService } from '../../../shared/toast/toast.service';
 import { problemMessage } from '../../../core/problem';
@@ -65,7 +64,6 @@ export class EntryCommentsComponent {
   readonly scroller = input.required<HTMLElement>();
   readonly refreshed = output<void>();
 
-  protected readonly navigation = inject(LinkReaderNavigation);
   private readonly service = inject(CommentsService);
   private readonly toast = inject(ToastService);
   private readonly language = inject(LanguageService);
