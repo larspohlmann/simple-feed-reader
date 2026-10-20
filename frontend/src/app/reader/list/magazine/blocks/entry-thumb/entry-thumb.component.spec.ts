@@ -88,10 +88,7 @@ describe('EntryThumbComponent', () => {
 
   it('lays its meta row below the image and text, not inside the text column', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
-    const meta = element.querySelector('app-entry-meta')!;
-    expect(meta.closest('.body')).toBeNull();
-    expect(meta.previousElementSibling?.classList.contains('top')).toBe(true);
-    expect(meta.previousElementSibling?.querySelector('img.img')).not.toBeNull();
+    expect(element.querySelector('.thumb > .top + app-entry-meta')).not.toBeNull();
   });
 
   it('offers its renditions to the browser at the 88×66 cover box, up to a 2:1 picture', () => {

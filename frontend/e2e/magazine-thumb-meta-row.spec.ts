@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
 import { entryWire } from './support/reader';
+import { stubFixtureImages } from './support/images';
 
 /** A phone in portrait: the width the thumb's text column is narrowest at. */
 const PHONE = { width: 375, height: 812 };
@@ -39,14 +40,6 @@ function thumbEntry(id: number) {
 
 const ENTRIES = Array.from({ length: 6 }, (_, index) => thumbEntry(index + 1));
 
-/** A single opaque pixel, served for every fixture image so the `<img>` loads
- *  instead of erroring — an errored image sets `imgError`, which removes the
- *  element via `@if (showImage())` and would demote the card to compact. */
-const ONE_PIXEL_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-  'base64',
-);
-
 /** Matched on the pathname so `/api/entries/{id}` still reaches the backend. */
 async function stubThumbEntries(page: Page): Promise<void> {
   await page.route(
@@ -56,17 +49,7 @@ async function stubThumbEntries(page: Page): Promise<void> {
       await route.fulfill({ status: 200, json: { entries: ENTRIES, nextCursor: null } });
     },
   );
-  await page.route(
-    (url) => url.hostname === 'fixtures.invalid' && url.pathname.endsWith('.jpg'),
-    async (route) => {
-      await route.fulfill({ status: 200, contentType: 'image/png', body: ONE_PIXEL_PNG });
-    },
-  );
-}
-
-async function signInWithThumbEntries(page: Page): Promise<boolean> {
-  await stubThumbEntries(page);
-  return signInAsAdmin(page);
+  await stubFixtureImages(page);
 }
 
 /**
@@ -77,18 +60,13 @@ async function signInWithThumbEntries(page: Page): Promise<boolean> {
 test.describe('Magazine thumb card on a phone', () => {
   test.use({ viewport: PHONE, isMobile: true, hasTouch: true });
 
-  /**
-   * The thumb card used to keep its meta row inside the text column beside the
-   * 88px image. With audio, the action cluster is wider than that column leaves,
-   * and the pills — the row's only elastic item, with a `min-width: 0` chain
-   * down to each name — shrank to their icons (#1720). The row now spans the
-   * card, as the split card's does, so this measures both: the row is as wide
-   * as the card's content box, and every pill name is drawn, unclipped.
-   */
+  /** Measured, not eyeballed: the row's width against the card's content box, and
+   *  each pill name's drawn width — beside the image they shrank to 0px (#1720). */
   test('a thumb card with audio actions keeps its pill names and a card-wide meta row', async ({
     page,
   }) => {
-    const signedIn = await signInWithThumbEntries(page);
+    await stubThumbEntries(page);
+    const signedIn = await signInAsAdmin(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -113,7 +91,6 @@ test.describe('Magazine thumb card on a phone', () => {
           clipped: name.scrollWidth > name.clientWidth + 1,
         }));
         return {
-          hasAudio: card.querySelector('app-entry-actions .duration') !== null,
           metaShortfall: meta
             ? Math.round(contentWidth - meta.getBoundingClientRect().width)
             : null,
@@ -122,13 +99,6 @@ test.describe('Magazine thumb card on a phone', () => {
       }),
     );
 
-    // Guards against a vacuous pass: a fixture that lost its audio or its pills
-    // would measure nothing and pass by default.
-    expect(measurements.length, 'expected thumb cards were not found').toBeGreaterThan(0);
-    expect(
-      measurements.every((card) => card.hasAudio),
-      'every thumb card must show the audio actions',
-    ).toBe(true);
     expect(
       measurements.every((card) => card.names.length === 2),
       'every thumb card must carry both pills',

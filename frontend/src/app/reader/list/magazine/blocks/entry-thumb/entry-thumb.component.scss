@@ -33,9 +33,8 @@
 }
 
 .img {
-  /* Fixed 88×66, both dimensions explicit, not width + aspect-ratio: a flex
-     row stretches an aspect-ratio-only image, and a not-yet-loaded lazy image
-     has no intrinsic size to hold the ratio. object-fit crops either way. */
+  /* Fixed 88×66, both dimensions explicit, not width + aspect-ratio: a
+     not-yet-loaded lazy image has no intrinsic size to hold the ratio. */
   /* stylelint-disable declaration-property-unit-allowed-list --
      tuned thumbnail box, not spacing values. */
   width: 88px;
