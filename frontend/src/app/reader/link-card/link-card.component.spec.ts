@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { aLinkCard } from '../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { LinkCardComponent, LinkCardLayout } from './link-card.component';
+import { LinkReaderNavigation } from '../shell/link-reader-navigation.service';
+import { LinkCardComponent, LinkCardLayout, LinkCardReaderOpening } from './link-card.component';
 
 const card = aLinkCard({
   description: 'What it is about.',
@@ -38,31 +39,54 @@ describe('LinkCardComponent', () => {
   });
 
   describe('open in reader', () => {
-    function mountOpenable(openableInReader: boolean) {
+    const navigation = { layer: jest.fn(), openAlone: jest.fn() };
+
+    function mountOpenable(
+      opensInReader: LinkCardReaderOpening | null,
+      providers = [{ provide: LinkReaderNavigation, useValue: navigation }],
+    ) {
+      navigation.layer.mockReset();
+      navigation.openAlone.mockReset();
       TestBed.configureTestingModule({
         imports: [LinkCardComponent, provideTranslocoTesting()],
+        providers,
       });
       const fixture = TestBed.createComponent(LinkCardComponent);
       fixture.componentRef.setInput('card', card);
       fixture.componentRef.setInput('layout', 'article');
-      fixture.componentRef.setInput('openableInReader', openableInReader);
-      const opened = jest.fn();
-      fixture.componentInstance.openInReader.subscribe(opened);
+      fixture.componentRef.setInput('opensInReader', opensInReader);
       fixture.detectChanges();
       const element = fixture.nativeElement as HTMLElement;
       return {
         element,
-        opened,
         button: element.querySelector<HTMLButtonElement>('button.open-in-reader'),
       };
     }
 
-    it('has no button unless the card is openable', () => {
-      expect(mountOpenable(false).button).toBeNull();
+    it('has no button unless the card opens in the reader', () => {
+      expect(mountOpenable(null).button).toBeNull();
+    });
+
+    it('has no button outside the reader shell, where nothing can open it', () => {
+      expect(mountOpenable('layer', []).button).toBeNull();
+    });
+
+    it('layers the card over the open post', () => {
+      mountOpenable('layer').button!.click();
+
+      expect(navigation.layer).toHaveBeenCalledWith(card);
+      expect(navigation.openAlone).not.toHaveBeenCalled();
+    });
+
+    it('opens the card alone in place of the list', () => {
+      mountOpenable('alone').button!.click();
+
+      expect(navigation.openAlone).toHaveBeenCalledWith(card);
+      expect(navigation.layer).not.toHaveBeenCalled();
     });
 
     it('puts a labelled button beside the link, not inside it', () => {
-      const { button } = mountOpenable(true);
+      const { button } = mountOpenable('layer');
 
       expect(button).not.toBeNull();
       expect(button!.getAttribute('aria-label')).toBe('Open in reader');
@@ -70,19 +94,19 @@ describe('LinkCardComponent', () => {
       expect(button!.closest('a')).toBeNull();
     });
 
-    it('emits once on click and lets no ancestor see the click', () => {
-      const { element, button, opened } = mountOpenable(true);
+    it('opens once on click and lets no ancestor see the click', () => {
+      const { element, button } = mountOpenable('layer');
       const ancestorClick = jest.fn();
       element.addEventListener('click', ancestorClick);
 
       button!.click();
 
-      expect(opened).toHaveBeenCalledTimes(1);
+      expect(navigation.layer).toHaveBeenCalledTimes(1);
       expect(ancestorClick).not.toHaveBeenCalled();
     });
 
     it.each(['Enter', ' '])('keeps the %j key inside the button', (key) => {
-      const { element, button } = mountOpenable(true);
+      const { element, button } = mountOpenable('layer');
       const ancestorKeydown = jest.fn();
       element.addEventListener('keydown', ancestorKeydown);
 

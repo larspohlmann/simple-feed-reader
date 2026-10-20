@@ -26,6 +26,7 @@ final readonly class EntrySearchController
         private EntrySearchRequestFactory $requestFactory,
         private EntryListRowEnricher $enricher,
         private SearchMarkReadService $searchMarkRead,
+        private SearchPage $searchPage,
     ) {
     }
 
@@ -36,7 +37,7 @@ final readonly class EntrySearchController
         $result = $this->search->search($query);
         $rows = $this->enricher->enrich($result->rows, $user->requireId());
 
-        return new JsonResponse(SearchPage::of($result->withRows($rows), $query->limit));
+        return new JsonResponse($this->searchPage->of($result->withRows($rows), $query->limit));
     }
 
     #[Route('/mark-read', name: 'api_entries_search_mark_read', methods: ['POST'])]

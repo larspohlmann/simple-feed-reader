@@ -7,10 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
-use App\Entity\Subscription;
 use App\Entity\ThreadPost;
-use App\Repository\Exception\RecordNotFoundException;
-use App\Service\LinkCard\Model\PlacedLinkCardModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -44,55 +41,38 @@ final class LinkCardRepository extends ServiceEntityRepository
      */
     public function contentsByEntryIds(array $entryIds): array
     {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /**
+         * @var list<array{
+         *   entryId: int|string, url: string, title: string, description: ?string,
+         *   imageUrl: ?string, siteName: string
+         * }> $rows
+         */
+        $rows = $this->createQueryBuilder('card')
+            ->select(
+                'IDENTITY(card.entry) AS entryId',
+                'card.url',
+                'card.title',
+                'card.description',
+                'card.imageUrl',
+                'card.siteName',
+            )
+            ->andWhere('card.entry IN (:entryIds)')
+            ->andWhere('card.threadPost IS NULL')
+            ->setParameter('entryIds', $entryIds)
+            ->orderBy('card.position', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
         $grouped = [];
-        foreach ($this->rootCardRows($entryIds) as $row) {
+        foreach ($rows as $row) {
             $grouped[(int) $row['entryId']][] = LinkCardContent::fromRow($row);
         }
 
         return $grouped;
-    }
-
-    /**
-     * @param list<int> $entryIds
-     *
-     * @return array<int, list<PlacedLinkCardModel>> the root cards in post order, by entry id
-     */
-    public function placedByEntryIds(array $entryIds): array
-    {
-        $grouped = [];
-        foreach ($this->rootCardRows($entryIds) as $row) {
-            $grouped[(int) $row['entryId']][] = new PlacedLinkCardModel(
-                (int) $row['position'],
-                LinkCardContent::fromRow($row),
-            );
-        }
-
-        return $grouped;
-    }
-
-    public function contentAt(int $userId, int $entryId, int $position): LinkCardContent
-    {
-        /** @var array{url: string, title: string, description: ?string, imageUrl: ?string, siteName: string}|null $row */
-        $row = $this->createQueryBuilder('card')
-            ->select('card.url', 'card.title', 'card.description', 'card.imageUrl', 'card.siteName')
-            ->join('card.entry', 'entry')
-            ->join(
-                Subscription::class,
-                'subscription',
-                'ON',
-                'subscription.feed = entry.feed AND subscription.user = :user',
-            )
-            ->andWhere('entry.id = :entryId')
-            ->andWhere('card.position = :position')
-            ->setParameter('user', $userId)
-            ->setParameter('entryId', $entryId)
-            ->setParameter('position', $position)
-            ->getQuery()
-            ->getOneOrNullResult();
-
-        return $row === null
-            ? throw new RecordNotFoundException('No such entry.')
-            : LinkCardContent::fromRow($row);
     }
 
     /** An entry's root and reply cards share one numbering, cards still waiting for the flush included. */
@@ -115,45 +95,5 @@ final class LinkCardRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
 
         return max($highest, $stored === null ? -1 : (int) $stored) + 1;
-    }
-
-    /**
-     * @param list<int> $entryIds
-     *
-     * @return list<array{
-     *   entryId: int|string, position: int|string, url: string, title: string, description: ?string,
-     *   imageUrl: ?string, siteName: string
-     * }>
-     */
-    private function rootCardRows(array $entryIds): array
-    {
-        if ($entryIds === []) {
-            return [];
-        }
-
-        /**
-         * @var list<array{
-         *   entryId: int|string, position: int|string, url: string, title: string, description: ?string,
-         *   imageUrl: ?string, siteName: string
-         * }> $rows
-         */
-        $rows = $this->createQueryBuilder('card')
-            ->select(
-                'IDENTITY(card.entry) AS entryId',
-                'card.position',
-                'card.url',
-                'card.title',
-                'card.description',
-                'card.imageUrl',
-                'card.siteName',
-            )
-            ->andWhere('card.entry IN (:entryIds)')
-            ->andWhere('card.threadPost IS NULL')
-            ->setParameter('entryIds', $entryIds)
-            ->orderBy('card.position', 'ASC')
-            ->getQuery()
-            ->getArrayResult();
-
-        return $rows;
     }
 }

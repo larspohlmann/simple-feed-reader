@@ -13,6 +13,7 @@ use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Service\Search\Model\EntrySearchResultModel;
 use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -25,7 +26,7 @@ final class SearchPageTest extends TestCase
 
     public function testAnEmptyResultCarriesNoEntriesAndNoMatchedWords(): void
     {
-        $page = SearchPage::of(EntrySearchResultModel::rowsOnly([]), 50);
+        $page = JsonMappers::searchPage()->of(EntrySearchResultModel::rowsOnly([]), 50);
 
         self::assertSame([], $page['entries']);
         self::assertNull($page['nextCursor']);
@@ -36,7 +37,7 @@ final class SearchPageTest extends TestCase
     {
         $result = new EntrySearchResultModel([$this->row(7)], ['Angular', 'signals']);
 
-        $page = SearchPage::of($result, 50);
+        $page = JsonMappers::searchPage()->of($result, 50);
 
         self::assertSame(['Angular', 'signals'], $page['matchedWords']);
         self::assertCount(1, $page['entries']);
@@ -49,7 +50,7 @@ final class SearchPageTest extends TestCase
      */
     public function testAResultWithoutMatchedWordsStillCarriesTheKey(): void
     {
-        $page = SearchPage::of(EntrySearchResultModel::rowsOnly([$this->row(7)]), 50);
+        $page = JsonMappers::searchPage()->of(EntrySearchResultModel::rowsOnly([$this->row(7)]), 50);
 
         self::assertArrayHasKey('matchedWords', $page);
         self::assertSame([], $page['matchedWords']);
@@ -63,7 +64,7 @@ final class SearchPageTest extends TestCase
     {
         $result = new EntrySearchResultModel([$this->row(7)], ['angular'], matchCount: 2);
 
-        $page = SearchPage::of($result, 2);
+        $page = JsonMappers::searchPage()->of($result, 2);
 
         self::assertNotNull(
             $page['nextCursor'],
@@ -76,7 +77,7 @@ final class SearchPageTest extends TestCase
     {
         $result = new EntrySearchResultModel([$this->row(7)], ['angular'], matchCount: 1);
 
-        $page = SearchPage::of($result, 2);
+        $page = JsonMappers::searchPage()->of($result, 2);
 
         self::assertNull($page['nextCursor']);
     }
@@ -89,7 +90,7 @@ final class SearchPageTest extends TestCase
     {
         $result = EntrySearchResultModel::rowsOnly([$this->row(7)]);
 
-        $page = SearchPage::of($result, 1);
+        $page = JsonMappers::searchPage()->of($result, 1);
 
         self::assertNotNull($page['nextCursor']);
     }
@@ -102,7 +103,7 @@ final class SearchPageTest extends TestCase
     {
         $result = new EntrySearchResultModel([], ['angular'], matchCount: 1, continuationRow: $this->row(4));
 
-        $page = SearchPage::of($result, 1);
+        $page = JsonMappers::searchPage()->of($result, 1);
 
         self::assertSame([], $page['entries']);
         self::assertNotNull($page['nextCursor'], 'A fully-read page must still advance the cursor.');

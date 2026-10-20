@@ -14,14 +14,15 @@ use App\Service\Search\Model\EntrySearchResultModel;
  */
 final readonly class SearchPage
 {
-    private function __construct()
-    {
+    public function __construct(
+        private EntryPage $entryPage,
+    ) {
     }
 
     /** @return array{entries: list<array<string, mixed>>, nextCursor: string|null, matchedWords: list<string>} */
-    public static function of(EntrySearchResultModel $result, int $limit): array
+    public function of(EntrySearchResultModel $result, int $limit): array
     {
-        $page = EntryPage::withMatchCount(
+        $page = $this->entryPage->withMatchCount(
             $result->rows,
             $limit,
             $result->matchCount,

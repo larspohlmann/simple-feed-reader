@@ -1,18 +1,25 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { LinkCardRef, linkParam } from '../query/link-param';
+import { LinkCardDto } from '../link-card/link-card';
+import { linkParam, refOf } from '../query/link-param';
 
 @Injectable()
 export class LinkReaderNavigation {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly openedCard = signal<LinkCardDto | null>(null);
 
-  layer(ref: LinkCardRef): void {
-    this.navigate({ link: linkParam(ref) });
+  /** A comment's card is in no store, so its title and image are known only from the click. */
+  readonly opened = this.openedCard.asReadonly();
+
+  layer(card: LinkCardDto): void {
+    this.openedCard.set(card);
+    this.navigate({ link: linkParam(refOf(card)) });
   }
 
-  openAlone(ref: LinkCardRef): void {
-    this.navigate({ link: linkParam(ref), entry: null });
+  openAlone(card: LinkCardDto): void {
+    this.openedCard.set(card);
+    this.navigate({ link: linkParam(refOf(card)), entry: null });
   }
 
   close(): void {

@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { aLinkCard } from '../src/testing/entry-testing';
+import { A_READER_TOKEN, aLinkCard } from '../src/testing/entry-testing';
 import { entryWire, readerFailedJson, stubOneFeedReader } from './support/reader';
 
 const DESKTOP = { width: 1280, height: 900 };
@@ -26,7 +26,7 @@ const ENTRY = entryWire({
       html: '<p>Third post</p>',
       text: 'Third post',
       media: [],
-      linkCard: aLinkCard({ position: 0, title: CARD_TITLE }),
+      linkCard: aLinkCard({ title: CARD_TITLE }),
     },
   ],
 });
@@ -58,9 +58,7 @@ async function stubThreadEntry(page: Page): Promise<void> {
   await page.route('**/api/entries/*/reader', (route) =>
     route.fulfill({ json: readerFailedJson('unextractable') }),
   );
-  await page.route(`**/api/entries/${ENTRY.id}/link-cards/0/reader`, (route) =>
-    route.fulfill({ json: LINKED_PAGE }),
-  );
+  await page.route(/\/api\/reader\?/, (route) => route.fulfill({ json: LINKED_PAGE }));
   await page.route('**/api/entries/*/state', (route) => route.fulfill({ json: {} }));
 }
 
@@ -74,6 +72,8 @@ test('a self-reply thread draws on one line with counters and opens its card in 
   await expect(page.locator('app-thread-count').last()).toHaveText('3/3');
 
   await page.locator('app-thread-line-post app-link-card button.open-in-reader').click();
-  await expect(page).toHaveURL(new RegExp(`link=${ENTRY.id}\\.0`));
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('link'))
+    .toBe(`${A_READER_TOKEN}~${aLinkCard().url}`);
   await expect(page.locator('app-link-reader')).toContainText(CARD_TITLE);
 });

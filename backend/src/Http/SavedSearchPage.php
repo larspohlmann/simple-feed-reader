@@ -13,15 +13,16 @@ use App\Service\Search\Model\SavedSearchEntriesResultModel;
  */
 final readonly class SavedSearchPage
 {
-    private function __construct()
-    {
+    public function __construct(
+        private EntryPage $entryPage,
+    ) {
     }
 
     /**
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public static function of(SavedSearchEntriesResultModel $result, int $limit): array
+    public function of(SavedSearchEntriesResultModel $result, int $limit): array
     {
-        return EntryPage::of($result->rows, $limit, EntryListSort::PublishedDate);
+        return $this->entryPage->of($result->rows, $limit, EntryListSort::PublishedDate);
     }
 }

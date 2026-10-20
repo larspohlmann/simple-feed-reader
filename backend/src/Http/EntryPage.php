@@ -12,8 +12,9 @@ use App\Repository\EntryQuery;
 /** The `{entries, nextCursor}` shape of every keyset-paginated entry list; the one place the cursor is decided. */
 final readonly class EntryPage
 {
-    private function __construct()
-    {
+    public function __construct(
+        private EntryJson $entryJson,
+    ) {
     }
 
     /**
@@ -23,9 +24,9 @@ final readonly class EntryPage
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public static function of(array $rows, int $limit, EntryListSort $sort): array
+    public function of(array $rows, int $limit, EntryListSort $sort): array
     {
-        return self::withMatchCount($rows, $limit, \count($rows), $sort);
+        return $this->withMatchCount($rows, $limit, \count($rows), $sort);
     }
 
     /**
@@ -37,7 +38,7 @@ final readonly class EntryPage
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public static function withMatchCount(
+    public function withMatchCount(
         array $rows,
         int $limit,
         int $matchCount,
@@ -48,7 +49,7 @@ final readonly class EntryPage
         $nextCursor = $matchCount >= $limit ? self::cursorFromRow($resumeAfter, $sort) : null;
 
         return [
-            'entries' => array_map(static fn ($row) => EntryJson::listRow($row), $rows),
+            'entries' => array_map(fn ($row) => $this->entryJson->listRow($row), $rows),
             'nextCursor' => $nextCursor,
         ];
     }

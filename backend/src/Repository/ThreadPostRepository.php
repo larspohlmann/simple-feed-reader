@@ -10,7 +10,6 @@ use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\StoredList;
 use App\Entity\ThreadPost;
-use App\Service\LinkCard\Model\PlacedLinkCardModel;
 use App\Service\Social\Model\ThreadPostModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -109,7 +108,7 @@ final class ThreadPostRepository extends ServiceEntityRepository
     /**
      * @param list<int> $postIds
      *
-     * @return array<int, PlacedLinkCardModel> by thread post id
+     * @return array<int, LinkCardContent> by thread post id
      */
     private function cardsByPostId(array $postIds): array
     {
@@ -118,14 +117,13 @@ final class ThreadPostRepository extends ServiceEntityRepository
         }
         /**
          * @var list<array{
-         *   postId: int|string, position: int|string, url: string, title: string, description: ?string,
+         *   postId: int|string, url: string, title: string, description: ?string,
          *   imageUrl: ?string, siteName: string
          * }> $rows
          */
         $rows = $this->getEntityManager()->createQueryBuilder()
             ->select(
                 'IDENTITY(card.threadPost) AS postId',
-                'card.position',
                 'card.url',
                 'card.title',
                 'card.description',
@@ -139,14 +137,11 @@ final class ThreadPostRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
 
-        $placed = [];
+        $cards = [];
         foreach ($rows as $row) {
-            $placed[(int) $row['postId']] = new PlacedLinkCardModel(
-                (int) $row['position'],
-                LinkCardContent::fromRow($row),
-            );
+            $cards[(int) $row['postId']] = LinkCardContent::fromRow($row);
         }
 
-        return $placed;
+        return $cards;
     }
 }

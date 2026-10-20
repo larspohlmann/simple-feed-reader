@@ -41,8 +41,7 @@ final class ThreadPostRepositoryTest extends DbTestCase
         );
         $replyCard = $posts[1]->linkCard;
         self::assertNull($posts[0]->linkCard);
-        self::assertSame(0, $replyCard?->position);
-        self::assertSame('https://macrumors.example/a', $replyCard->content->url);
+        self::assertSame('https://macrumors.example/a', $replyCard?->url);
     }
 
     public function testPositionsComeBackByEntryAndUrl(): void
@@ -74,7 +73,7 @@ final class ThreadPostRepositoryTest extends DbTestCase
         self::assertSame('https://y/1', $posts[$second->requireId()][0]->url);
     }
 
-    public function testEachReplyComesBackWithItsOwnCardAndPosition(): void
+    public function testEachReplyComesBackWithItsOwnCard(): void
     {
         $entry = $this->entry();
         $first = new ThreadPost($entry, 1, new ThreadPostContent('https://x/1', null, '', []));
@@ -88,8 +87,8 @@ final class ThreadPostRepositoryTest extends DbTestCase
 
         $posts = $this->threadPosts()->byEntryIds([$entry->requireId()])[$entry->requireId()];
 
-        self::assertSame([0, 1], [$posts[0]->linkCard?->position, $posts[1]->linkCard?->position]);
-        self::assertSame('https://b.ex/', $posts[1]->linkCard?->content->url);
+        self::assertSame('https://a.example/', $posts[0]->linkCard?->url);
+        self::assertSame('https://b.ex/', $posts[1]->linkCard?->url);
     }
 
     public function testAnEntryWithoutThreadIsAbsent(): void

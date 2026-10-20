@@ -289,14 +289,13 @@ describe('EntryRowComponent', () => {
       expect(mountThread([]).querySelector('app-thread-line')).toBeNull();
     });
 
-    it('opens a reply’s card alone by that card’s stored position', () => {
-      const element = mountThread([
-        aThreadPost({ linkCard: aLinkCard({ url: 'https://reply.test/', position: 3 }) }),
-      ]);
+    it('opens a reply’s card alone', () => {
+      const replyCard = aLinkCard({ url: 'https://reply.test/' });
+      const element = mountThread([aThreadPost({ linkCard: replyCard })]);
 
       element.querySelector<HTMLButtonElement>('button.open-in-reader')!.click();
 
-      expect(navigation.openAlone).toHaveBeenCalledWith({ entryId: 9, position: 3 });
+      expect(navigation.openAlone).toHaveBeenCalledWith(replyCard);
     });
   });
 });

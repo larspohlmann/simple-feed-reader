@@ -7,6 +7,7 @@ import { CommentsLoad } from '../../models';
 import { EntrySocialDto } from '../../entry-social';
 import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { prefetchMargin } from '../../list/paging';
+import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { aLinkCard, anEntryComment, aQuotedPost } from '../../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
@@ -15,6 +16,8 @@ const DISCUSSION = 'https://www.reddit.com/r/x/comments/1/t/';
 const FETCHED_AT = '2026-09-24T12:00:00Z';
 
 const BLUESKY: EntrySocialDto = { network: 'bluesky', isLiked: false, canLike: true };
+
+const navigation = { layer: jest.fn() };
 
 describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
@@ -35,6 +38,7 @@ describe('EntryCommentsComponent', () => {
     };
     sightObservers = [];
     trigger = undefined;
+    navigation.layer.mockReset();
     scroller = document.createElement('div');
     Object.defineProperty(scroller, 'clientHeight', { value: 900 });
     globalThis.IntersectionObserver = jest.fn(
@@ -54,6 +58,7 @@ describe('EntryCommentsComponent', () => {
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
       providers: [
         { provide: CommentsService, useValue: service },
+        { provide: LinkReaderNavigation, useValue: navigation },
         { provide: ImageProxyService, useValue: { recover: () => Promise.resolve('failed') } },
       ],
     });
@@ -332,6 +337,16 @@ describe('EntryCommentsComponent', () => {
     expect(row.querySelector('app-post-media')).not.toBeNull();
     expect(row.querySelector('app-quoted-post')).not.toBeNull();
     expect(row.querySelector('app-link-card')).not.toBeNull();
+  });
+
+  it('opens a comment’s link card in the reader layer', () => {
+    show('auto');
+    const card = aLinkCard({ url: 'https://news.test/from-a-comment' });
+    const element = settleComments([anEntryComment({ linkCard: card })]);
+
+    element.querySelector<HTMLButtonElement>('app-link-card button.open-in-reader')!.click();
+
+    expect(navigation.layer).toHaveBeenCalledWith(card);
   });
 
   it('renders no embeds for a plain comment', () => {

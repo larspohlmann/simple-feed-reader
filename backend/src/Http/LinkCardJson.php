@@ -5,20 +5,22 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\LinkCardContent;
-use App\Service\LinkCard\Model\PlacedLinkCardModel;
+use App\Service\Reader\ReaderUrlSignature;
 
 /**
  * @phpstan-type LinkCardRow array{
- *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
- * }
- * @phpstan-type PlacedLinkCardRow array{
- *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string, position: int
+ *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string,
+ *   readerToken: string
  * }
  */
-final class LinkCardJson
+final readonly class LinkCardJson
 {
+    public function __construct(private ReaderUrlSignature $signature)
+    {
+    }
+
     /** @return LinkCardRow */
-    public static function of(LinkCardContent $card): array
+    public function of(LinkCardContent $card): array
     {
         return [
             'url' => $card->url,
@@ -26,18 +28,13 @@ final class LinkCardJson
             'description' => $card->description,
             'imageUrl' => $card->imageUrl,
             'siteName' => $card->siteName,
+            'readerToken' => $this->signature->tokenFor($card->url),
         ];
     }
 
-    /** @return PlacedLinkCardRow */
-    public static function placed(PlacedLinkCardModel $card): array
-    {
-        return self::of($card->content) + ['position' => $card->position];
-    }
-
     /** @return LinkCardRow|null */
-    public static function ofOrNull(?LinkCardContent $card): ?array
+    public function ofOrNull(?LinkCardContent $card): ?array
     {
-        return $card === null ? null : self::of($card);
+        return $card === null ? null : $this->of($card);
     }
 }

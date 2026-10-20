@@ -22,6 +22,7 @@ final readonly class EntryCompletionController
         private EntryCompletion $completion,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $entryCompletionLimiter,
+        private EntryJson $entryJson,
     ) {
     }
 
@@ -34,6 +35,6 @@ final readonly class EntryCompletionController
 
         $rows = $this->completion->complete($user->requireId(), $request->ids);
 
-        return new JsonResponse(['entries' => array_map(EntryJson::completed(...), $rows)]);
+        return new JsonResponse(['entries' => array_map($this->entryJson->completed(...), $rows)]);
     }
 }

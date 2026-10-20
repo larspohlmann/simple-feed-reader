@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { aLinkCard } from '../src/testing/entry-testing';
+import { A_READER_TOKEN, aLinkCard } from '../src/testing/entry-testing';
 import { entryDetailJson, entryWire, readerFailedJson, stubOneFeedReader } from './support/reader';
 
 const DESKTOP = { width: 1280, height: 900 };
@@ -44,9 +44,7 @@ async function stubLinkCardEntry(page: Page): Promise<void> {
   await page.route('**/api/entries/*/reader', (route) =>
     route.fulfill({ json: readerFailedJson('unextractable') }),
   );
-  await page.route('**/api/entries/*/link-cards/0/reader', (route) =>
-    route.fulfill({ json: LINKED_PAGE }),
-  );
+  await page.route(/\/api\/reader\?/, (route) => route.fulfill({ json: LINKED_PAGE }));
   await page.route('**/api/entries/*/state', (route) => route.fulfill({ json: {} }));
 }
 
@@ -59,7 +57,9 @@ test('a link card opens in the reader from the magazine and from the article', a
 
   await openInReader.click();
   await expect(linkReader).toContainText('Linked page body');
-  await expect(page).toHaveURL(new RegExp(`link=${ENTRY.id}\\.0`));
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('link'))
+    .toBe(`${A_READER_TOKEN}~${aLinkCard().url}`);
   expect(page.url()).not.toContain('entry=');
 
   await linkReader.getByRole('button', { name: 'Back to list', exact: true }).click();

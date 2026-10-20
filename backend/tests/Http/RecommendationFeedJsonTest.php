@@ -6,20 +6,20 @@ namespace App\Tests\Http;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Http\RecommendationFeedJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Repository\RecommendationFeedRow;
 use App\Service\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
 use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
+use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationFeedJsonTest extends TestCase
 {
     public function testShownIncludesTheReasonAndItsScoreTogether(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
+        $result = JsonMappers::recommendationFeedJson()->page(new ForYouFeedPageModel(
             [$this->row()],
             null,
             new FeedAnnotationVisibilityModel(showScoreAndReasons: true),
@@ -34,7 +34,7 @@ final class RecommendationFeedJsonTest extends TestCase
 
     public function testHiddenOmitsTheReasonAndItsScoreTogether(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
+        $result = JsonMappers::recommendationFeedJson()->page(new ForYouFeedPageModel(
             [$this->row()],
             null,
             new FeedAnnotationVisibilityModel(showScoreAndReasons: false),
@@ -46,7 +46,7 @@ final class RecommendationFeedJsonTest extends TestCase
 
     public function testPageAlwaysCarriesRunIdAndGeneratedAtRegardlessOfVisibility(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
+        $result = JsonMappers::recommendationFeedJson()->page(new ForYouFeedPageModel(
             [$this->row()],
             null,
             new FeedAnnotationVisibilityModel(showScoreAndReasons: false),
@@ -60,7 +60,7 @@ final class RecommendationFeedJsonTest extends TestCase
 
     public function testRunGeneratedAtIsNullWhenTheRowCarriesNoGenerationTime(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
+        $result = JsonMappers::recommendationFeedJson()->page(new ForYouFeedPageModel(
             [$this->rowWithoutGenerationTime()],
             null,
             new FeedAnnotationVisibilityModel(showScoreAndReasons: false),
@@ -74,7 +74,7 @@ final class RecommendationFeedJsonTest extends TestCase
 
     public function testScoreKeyIsNullForRowsWrittenBeforeTheColumnExisted(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
+        $result = JsonMappers::recommendationFeedJson()->page(new ForYouFeedPageModel(
             [$this->row(null)],
             null,
             new FeedAnnotationVisibilityModel(showScoreAndReasons: true),

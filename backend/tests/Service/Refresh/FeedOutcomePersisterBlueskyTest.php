@@ -144,7 +144,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
         self::assertCount(2, $posts);
         self::assertSame(
             'https://www.macrumors.com/2026/10/16/app-store-rules-deepfakes/',
-            $posts[1]->linkCard->content->url ?? null,
+            $posts[1]->linkCard->url ?? null,
         );
         self::assertSame(0, $this->pendingCount());
     }

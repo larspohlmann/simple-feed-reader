@@ -45,20 +45,18 @@ describe('ThreadRepliesComponent', () => {
     expect(counts).toEqual(['2/3', '3/3']);
   });
 
-  it('opens a reply’s card in the reader layer by that card’s stored position', () => {
+  it('opens a reply’s card in the reader layer', () => {
+    const replyCard = aLinkCard({ url: 'https://reply.test/' });
     const element = mount(
       anEntry({
         id: 77,
-        thread: [
-          aThreadPost({}),
-          aThreadPost({ linkCard: aLinkCard({ url: 'https://reply.test/', position: 4 }) }),
-        ],
+        thread: [aThreadPost({}), aThreadPost({ linkCard: replyCard })],
       }),
     );
 
     element.querySelector<HTMLButtonElement>('button.open-in-reader')!.click();
 
-    expect(navigation.layer).toHaveBeenCalledWith({ entryId: 77, position: 4 });
+    expect(navigation.layer).toHaveBeenCalledWith(replyCard);
   });
 
   it('renders a reply’s media', () => {

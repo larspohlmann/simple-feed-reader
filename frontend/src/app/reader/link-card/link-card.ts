@@ -4,9 +4,6 @@ export interface LinkCardDto {
   description: string | null;
   imageUrl: string | null;
   siteName: string;
-}
-
-/** A card stored on an entry, root or reply; `position` is what the reader endpoint and `?link=` name (#1668). */
-export interface PlacedLinkCardDto extends LinkCardDto {
-  position: number;
+  /** The server's signature of `url`: what the reader endpoint and `?link=` require (#1725). */
+  readerToken: string;
 }

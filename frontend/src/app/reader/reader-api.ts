@@ -183,9 +183,9 @@ export class ReaderApi {
   }
 
   linkCardReaderContent(ref: LinkCardRef): Observable<ReaderContent> {
-    return this.http.get<ReaderContent>(
-      `${this.base}/api/entries/${ref.entryId}/link-cards/${ref.position}/reader`,
-    );
+    return this.http.get<ReaderContent>(`${this.base}/api/reader`, {
+      params: { url: ref.url, token: ref.token },
+    });
   }
 
   comments(entryId: number, refresh = false): Observable<CommentsResponse> {

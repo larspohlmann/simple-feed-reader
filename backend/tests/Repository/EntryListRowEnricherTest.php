@@ -31,7 +31,6 @@ use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Repository\LinkCardRepository;
-use App\Service\LinkCard\Model\PlacedLinkCardModel;
 use App\Service\SavedPosts\Support\SavedFeedUrl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
@@ -94,8 +93,7 @@ final class EntryListRowEnricherTest extends DbTestCase
 
         self::assertSame(['https://root.test/'], $this->urlsOf($enrichment->linkCards));
         self::assertCount(1, $enrichment->threadPosts);
-        self::assertSame('https://reply.test/', $enrichment->threadPosts[0]->linkCard?->content->url);
-        self::assertSame(1, $enrichment->threadPosts[0]->linkCard->position);
+        self::assertSame('https://reply.test/', $enrichment->threadPosts[0]->linkCard?->url);
     }
 
     private function linkCards(): LinkCardRepository
@@ -107,13 +105,13 @@ final class EntryListRowEnricherTest extends DbTestCase
     }
 
     /**
-     * @param list<PlacedLinkCardModel> $cards
+     * @param list<LinkCardContent> $cards
      *
      * @return list<string>
      */
     private function urlsOf(array $cards): array
     {
-        return array_map(static fn (PlacedLinkCardModel $card): string => $card->content->url, $cards);
+        return array_map(static fn (LinkCardContent $card): string => $card->url, $cards);
     }
 
     public function testEachRowAndEachDuplicateGainsOnlyItsOwnEnrichment(): void

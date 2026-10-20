@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\Entry;
-use App\Entity\Feed;
 use App\Entity\EntryMedium;
+use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
@@ -37,7 +37,7 @@ final class SelfThreadFolderTest extends DbTestCase
             ['<p>The rule extends…</p>', ''],
             array_map(static fn (ThreadPostModel $post): string => $post->html, $posts),
         );
-        self::assertSame($cardUrl, $posts[1]->linkCard?->content->url);
+        self::assertSame($cardUrl, $posts[1]->linkCard?->url);
         self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
@@ -56,7 +56,7 @@ final class SelfThreadFolderTest extends DbTestCase
             array_map(static fn (ThreadPostModel $post): string => $post->html, $posts),
         );
         self::assertNull($posts[0]->linkCard);
-        self::assertSame('https://two.example/', $posts[1]->linkCard?->content->url);
+        self::assertSame('https://two.example/', $posts[1]->linkCard?->url);
         self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 

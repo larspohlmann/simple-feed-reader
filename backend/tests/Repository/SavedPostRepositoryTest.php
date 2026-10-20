@@ -16,9 +16,9 @@ use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SocialLike;
+use App\Entity\Subscription;
 use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
-use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Repository\EntryRepository;
@@ -269,8 +269,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         self::assertSame('<p>more</p>', $thread[0]->html);
         $replyCard = $thread[0]->linkCard;
         self::assertNotNull($replyCard);
-        self::assertSame(1, $replyCard->position);
-        self::assertSame('https://reply.example/', $replyCard->content->url);
+        self::assertSame('https://reply.example/', $replyCard->url);
     }
 
     public function testALikeIsCopiedOnceAndNeverOverAnExistingOne(): void

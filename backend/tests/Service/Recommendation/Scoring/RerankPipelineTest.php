@@ -9,13 +9,13 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallVerdict;
-use App\Http\RecommendationFeedJson;
 use App\Repository\ForYouFeedQuery;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Feed\ForYouFeed;
 use App\Service\Recommendation\Scoring\Factory\RerankQueryFactory;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DrivesRecommendationRuns;
+use App\Tests\Support\JsonMappers;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubRerankClient;
@@ -131,7 +131,7 @@ final class RerankPipelineTest extends DbTestCase
 
         /** @var ForYouFeed $feed */
         $feed = self::getContainer()->get(ForYouFeed::class);
-        $page = RecommendationFeedJson::page($feed->page(new ForYouFeedQuery($this->owner)));
+        $page = JsonMappers::recommendationFeedJson()->page($feed->page(new ForYouFeedQuery($this->owner)));
 
         self::assertSame($ids[2], $page['entries'][0]['id']);
         self::assertSame(874, $page['entries'][0]['recommendationScore']);

@@ -1,25 +1,28 @@
-/** The `?link=` value: the card's entry id and its position among that entry's cards. */
+import { LinkCardDto } from '../link-card/link-card';
+
+/** The `?link=` value: a card's URL and the server's signature of it. */
 export interface LinkCardRef {
-  readonly entryId: number;
-  readonly position: number;
+  readonly url: string;
+  readonly token: string;
+}
+
+const PARAM = /^([A-Za-z0-9_-]+)~(https?:\/\/.+)$/i;
+
+export function refOf(card: LinkCardDto): LinkCardRef {
+  return { url: card.url, token: card.readerToken };
 }
 
 export function linkParam(ref: LinkCardRef): string {
-  return `${ref.entryId}.${ref.position}`;
+  return `${ref.token}~${ref.url}`;
 }
 
 export function linkCardFromParam(value: string | null): LinkCardRef | null {
-  const match = /^(\d+)\.(\d+)$/.exec(value ?? '');
-  if (match === null) return null;
-  const entryId = Number(match[1]);
-  const position = Number(match[2]);
-  return entryId > 0 && Number.isSafeInteger(entryId) && Number.isSafeInteger(position)
-    ? { entryId, position }
-    : null;
+  const match = PARAM.exec(value ?? '');
+  return match === null ? null : { token: match[1], url: match[2] };
 }
 
 export function sameLinkCard(left: LinkCardRef | null, right: LinkCardRef | null): boolean {
-  return left?.entryId === right?.entryId && left?.position === right?.position;
+  return left?.url === right?.url && left?.token === right?.token;
 }
 
 /** Opening or closing an entry drops the link layer above it. */

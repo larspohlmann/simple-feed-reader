@@ -31,6 +31,8 @@ import { ListScrollMemory } from '../scroll/list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire, UnreadTotalsDto } from '../models';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
+import { LinkReaderNavigation } from './link-reader-navigation.service';
+import { linkParam, refOf } from '../query/link-param';
 import { ReaderRouteState } from './reader-route-state.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
@@ -55,7 +57,7 @@ import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../../testing/refresh-report';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
 import { LinkReaderComponent } from '../article/link-reader/link-reader.component';
-import { aLinkCard, anEntry } from '../../../testing/entry-testing';
+import { A_READER_TOKEN, aLinkCard, anEntry } from '../../../testing/entry-testing';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -4614,6 +4616,9 @@ describe('ReaderShellComponent', () => {
     });
   });
   describe('link reader (#1664)', () => {
+    const LINK = `${A_READER_TOKEN}~https://news.test/story`;
+    const UNKNOWN_LINK = `${A_READER_TOKEN}~https://news.test/unknown`;
+
     function openWide(fixture: ReturnType<typeof boot>): void {
       screen.isWide.set(true);
       fixture.componentInstance.layout.set('pane');
@@ -4634,7 +4639,7 @@ describe('ReaderShellComponent', () => {
     it('layers the link reader inside the reader pane over the open entry in split view', () => {
       const fixture = boot({ linkCards: [aLinkCard()] });
       openWide(fixture);
-      openLink(fixture, { entry: '1', link: '1.0' });
+      openLink(fixture, { entry: '1', link: LINK });
 
       const host: HTMLElement = fixture.nativeElement;
       expect(host.querySelector('section.reader app-reader-view')).not.toBeNull();
@@ -4644,7 +4649,7 @@ describe('ReaderShellComponent', () => {
 
     it('opens a standalone link card as an overlay over the list on the narrow layout', () => {
       const fixture = boot({ linkCards: [aLinkCard()] });
-      openLink(fixture, { link: '1.0' });
+      openLink(fixture, { link: LINK });
 
       const host: HTMLElement = fixture.nativeElement;
       expect(host.querySelector('.article-overlay app-link-reader')).not.toBeNull();
@@ -4658,7 +4663,7 @@ describe('ReaderShellComponent', () => {
 
     it('layers a link over the open entry on the narrow layout, returning to the article', () => {
       const fixture = boot({ linkCards: [aLinkCard()] });
-      openLink(fixture, { entry: '1', link: '1.0' });
+      openLink(fixture, { entry: '1', link: LINK });
 
       const overlays = (fixture.nativeElement as HTMLElement).querySelectorAll('.article-overlay');
       expect(overlays).toHaveLength(2);
@@ -4669,7 +4674,7 @@ describe('ReaderShellComponent', () => {
 
     it('returns to the article while the route names an entry that has not loaded', () => {
       const fixture = boot({ linkCards: [aLinkCard()] });
-      openLink(fixture, { entry: '99', link: '99.0' });
+      openLink(fixture, { entry: '99', link: UNKNOWN_LINK });
 
       expect(fixture.componentInstance.openEntry()).toBeNull();
       expect(fixture.componentInstance.linkReturnsTo()).toBe('article');
@@ -4678,7 +4683,7 @@ describe('ReaderShellComponent', () => {
     it('closes the link reader by dropping the link and keeping the entry', () => {
       const fixture = boot({ linkCards: [aLinkCard()] });
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      openLink(fixture, { entry: '1', link: '1.0' });
+      openLink(fixture, { entry: '1', link: LINK });
 
       linkReaderOf(fixture).close.emit();
 
@@ -4691,19 +4696,31 @@ describe('ReaderShellComponent', () => {
     it('is full screen for a standalone link on the narrow layout, which disables the swipe', () => {
       const fixture = boot({ linkCards: [aLinkCard()] });
       expect(fixture.componentInstance.articleFullscreen()).toBe(false);
-      openLink(fixture, { link: '1.0' });
+      openLink(fixture, { link: LINK });
 
       expect(fixture.componentInstance.articleFullscreen()).toBe(true);
     });
 
-    it('resolves the open link card from the store entry, or null when it is not stored', () => {
+    it('resolves the open link card from a listed entry by its url, or null when none carries it', () => {
       const fixture = boot({ linkCards: [aLinkCard({ title: 'Stored card' })] });
-      openLink(fixture, { link: '1.0' });
+      openLink(fixture, { link: LINK });
       const routeState = fixture.debugElement.injector.get(ReaderRouteState);
       expect(routeState.openLinkCard()?.title).toBe('Stored card');
 
-      openLink(fixture, { link: '99.0' });
+      openLink(fixture, { link: UNKNOWN_LINK });
       expect(routeState.openLinkCard()).toBeNull();
+    });
+
+    it('prefers the card just opened over listed ones, even when no listed entry carries it', () => {
+      const fixture = boot({ linkCards: [aLinkCard({ title: 'Stored card' })] });
+      jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const opened = aLinkCard({ url: 'https://news.test/clicked', title: 'Clicked card' });
+      fixture.debugElement.injector.get(LinkReaderNavigation).layer(opened);
+
+      openLink(fixture, { link: linkParam(refOf(opened)) });
+
+      const routeState = fixture.debugElement.injector.get(ReaderRouteState);
+      expect(routeState.openLinkCard()?.title).toBe('Clicked card');
     });
   });
 });

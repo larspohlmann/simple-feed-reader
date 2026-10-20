@@ -17,6 +17,7 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
+use App\Tests\Support\SignsReaderUrls;
 use App\Tests\Support\StubFeedFetcher;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
@@ -26,6 +27,7 @@ use Symfony\Component\HttpFoundation\Response;
 final class EntryCommentsControllerTest extends ApiTestCase
 {
     use RoutesSocialApis;
+    use SignsReaderUrls;
 
     private const string THREAD = 'https://www.reddit.com/r/PHP/comments/1woq4he/what_is_your_php_stack_2026/';
     private const string FEED = self::THREAD . '.rss';
@@ -272,6 +274,12 @@ final class EntryCommentsControllerTest extends ApiTestCase
             static fn (mixed $media): int => \is_array($media) ? \count($media) : -1,
             array_column($body['comments'], 'media'),
         ));
+        $annsComment = $body['comments'][1];
+        self::assertIsArray($annsComment);
+        $card = $annsComment['linkCard'] ?? null;
+        self::assertIsArray($card);
+        self::assertSame('https://example.org/review', $card['url']);
+        self::assertSame($this->readerTokenFor('https://example.org/review'), $card['readerToken']);
         self::assertSame([self::PUBLIC_CONTEXT], $this->http->requestLines());
     }
 

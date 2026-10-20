@@ -3,6 +3,7 @@ import { NEVER, TimeoutError, firstValueFrom, of } from 'rxjs';
 import { ReaderContentService } from './reader-content.service';
 import { ReaderCacheService } from './reader-cache.service';
 import { ReaderApi } from '../../reader-api';
+import { A_READER_TOKEN } from '../../../../testing/entry-testing';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 
 const ARTICLE = aReaderArticle({ url: 'https://x/1' });
@@ -102,13 +103,13 @@ describe('ReaderContentService', () => {
   });
 
   describe('link cards', () => {
-    const CARD = { entryId: 7, position: 1 };
+    const CARD = { url: 'https://x/card', token: A_READER_TOKEN };
 
     it('serves a cached card without calling the API', async () => {
       cacheGet.mockResolvedValue(ARTICLE);
       const result = await firstValueFrom(TestBed.inject(ReaderContentService).load(CARD));
       expect(result).toEqual(ARTICLE);
-      expect(cacheGet).toHaveBeenCalledWith('card:7.1');
+      expect(cacheGet).toHaveBeenCalledWith('card:https://x/card');
       expect(cardApiGet).not.toHaveBeenCalled();
     });
 
@@ -118,7 +119,7 @@ describe('ReaderContentService', () => {
       const result = await firstValueFrom(TestBed.inject(ReaderContentService).load(CARD));
       expect(result).toEqual(ARTICLE);
       expect(cardApiGet).toHaveBeenCalledWith(CARD);
-      expect(cachePut).toHaveBeenCalledWith('card:7.1', ARTICLE);
+      expect(cachePut).toHaveBeenCalledWith('card:https://x/card', ARTICLE);
     });
 
     it('does not cache a failed card', async () => {
@@ -131,9 +132,9 @@ describe('ReaderContentService', () => {
     it('reload deletes the card key, then fetches and re-caches', async () => {
       cardApiGet.mockReturnValue(of(ARTICLE));
       const result = await firstValueFrom(TestBed.inject(ReaderContentService).reload(CARD));
-      expect(cacheDelete).toHaveBeenCalledWith('card:7.1');
+      expect(cacheDelete).toHaveBeenCalledWith('card:https://x/card');
       expect(result).toEqual(ARTICLE);
-      expect(cachePut).toHaveBeenCalledWith('card:7.1', ARTICLE);
+      expect(cachePut).toHaveBeenCalledWith('card:https://x/card', ARTICLE);
     });
   });
 });

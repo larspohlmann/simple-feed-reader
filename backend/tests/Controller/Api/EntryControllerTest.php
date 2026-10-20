@@ -24,6 +24,7 @@ use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SignsReaderUrls;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -34,6 +35,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class EntryControllerTest extends WebTestCase
 {
+    use SignsReaderUrls;
+
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
@@ -232,7 +235,7 @@ final class EntryControllerTest extends WebTestCase
                 'description' => 'About it',
                 'imageUrl' => 'https://a.test/i.jpg',
                 'siteName' => 'A',
-                'position' => 0,
+                'readerToken' => $this->readerTokenFor('https://a.test/1'),
             ],
             [
                 'url' => 'https://b.test/2',
@@ -240,7 +243,7 @@ final class EntryControllerTest extends WebTestCase
                 'description' => null,
                 'imageUrl' => null,
                 'siteName' => 'B',
-                'position' => 1,
+                'readerToken' => $this->readerTokenFor('https://b.test/2'),
             ],
         ];
     }
