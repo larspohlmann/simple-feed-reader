@@ -122,7 +122,10 @@ describe('ShareButtonComponent', () => {
         label: 'Copy link',
         symbol: 'link',
       });
-      expect(action('Bluesky').logo).toEqual({ url: 'share-targets/bluesky.svg', color: '#1185fe' });
+      expect(action('Bluesky').logo).toEqual({
+        url: 'share-targets/bluesky.svg',
+        color: '#1185fe',
+      });
       expect(sheetData().actions.some((entry) => 'divider' in entry)).toBe(true);
     });
 
