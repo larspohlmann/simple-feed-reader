@@ -15,6 +15,7 @@ use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Reader\ReaderUrlSignature;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RoutesSocialApis;
 use App\Tests\Support\StubFeedFetcher;
@@ -272,7 +273,21 @@ final class EntryCommentsControllerTest extends ApiTestCase
             static fn (mixed $media): int => \is_array($media) ? \count($media) : -1,
             array_column($body['comments'], 'media'),
         ));
+        $annsComment = $body['comments'][1];
+        self::assertIsArray($annsComment);
+        $card = $annsComment['linkCard'] ?? null;
+        self::assertIsArray($card);
+        self::assertSame('https://example.org/review', $card['url']);
+        self::assertSame($this->readerTokenFor('https://example.org/review'), $card['readerToken']);
         self::assertSame([self::PUBLIC_CONTEXT], $this->http->requestLines());
+    }
+
+    private function readerTokenFor(string $url): string
+    {
+        $signature = self::getContainer()->get(ReaderUrlSignature::class);
+        self::assertInstanceOf(ReaderUrlSignature::class, $signature);
+
+        return $signature->tokenFor($url);
     }
 
     public function testASocialPostsRepliesAreCachedAndRefreshable(): void

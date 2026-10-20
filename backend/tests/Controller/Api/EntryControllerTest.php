@@ -23,6 +23,7 @@ use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Reader\ReaderUrlSignature;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -232,7 +233,7 @@ final class EntryControllerTest extends WebTestCase
                 'description' => 'About it',
                 'imageUrl' => 'https://a.test/i.jpg',
                 'siteName' => 'A',
-                'position' => 0,
+                'readerToken' => $this->readerTokenFor('https://a.test/1'),
             ],
             [
                 'url' => 'https://b.test/2',
@@ -240,9 +241,17 @@ final class EntryControllerTest extends WebTestCase
                 'description' => null,
                 'imageUrl' => null,
                 'siteName' => 'B',
-                'position' => 1,
+                'readerToken' => $this->readerTokenFor('https://b.test/2'),
             ],
         ];
+    }
+
+    private function readerTokenFor(string $url): string
+    {
+        $signature = self::getContainer()->get(ReaderUrlSignature::class);
+        self::assertInstanceOf(ReaderUrlSignature::class, $signature);
+
+        return $signature->tokenFor($url);
     }
 
     public function testEntryListCarriesLinkCardsInPositionOrderAndEmptyOtherwise(): void

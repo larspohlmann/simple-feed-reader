@@ -11,7 +11,6 @@ use App\Entity\LinkCardContent;
 use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
 use App\Repository\LinkCardRepository;
-use App\Service\LinkCard\Model\PlacedLinkCardModel;
 use App\Tests\DbTestCase;
 
 final class LinkCardRepositoryTest extends DbTestCase
@@ -127,13 +126,7 @@ final class LinkCardRepositoryTest extends DbTestCase
         $cards->append($entry, [$this->content('a'), $this->content('b')]);
         $this->entityManager->flush();
 
-        self::assertSame(
-            [1, 2],
-            array_map(
-                static fn (PlacedLinkCardModel $card): int => $card->position,
-                $cards->placedByEntryIds([$entry->requireId()])[$entry->requireId()],
-            ),
-        );
+        self::assertSame([1, 2], $this->rootPositionsOf($entry));
     }
 
     public function testUnflushedCardsCountWhenNumberingTheNext(): void
@@ -144,10 +137,16 @@ final class LinkCardRepositoryTest extends DbTestCase
         $cards->append($entry, [$this->content('b')]);
         $this->entityManager->flush();
 
-        self::assertSame([0, 1], array_map(
-            static fn (PlacedLinkCardModel $card): int => $card->position,
-            $cards->placedByEntryIds([$entry->requireId()])[$entry->requireId()],
-        ));
+        self::assertSame([0, 1], $this->rootPositionsOf($entry));
+    }
+
+    /** @return list<int> */
+    private function rootPositionsOf(Entry $entry): array
+    {
+        $cards = $this->entityManager->getRepository(LinkCard::class)
+            ->findBy(['entry' => $entry, 'threadPost' => null], ['position' => 'ASC']);
+
+        return array_map(static fn (LinkCard $card): int => $card->getPosition(), $cards);
     }
 
     /**

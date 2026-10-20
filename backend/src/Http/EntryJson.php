@@ -21,7 +21,7 @@ use App\Service\Url\Support\YouTubeUrl;
  * completed() holds only what completing a pending entry can change (#1551).
  *
  * @phpstan-import-type QuoteRow from QuotedPostJson
- * @phpstan-import-type PlacedLinkCardRow from LinkCardJson
+ * @phpstan-import-type LinkCardRow from LinkCardJson
  * @phpstan-import-type ThreadPostRow from ThreadPostJson
  * @phpstan-type EntryRow array{
  *   id: int|null, title: string, url: string|null, author: string|null,
@@ -31,7 +31,7 @@ use App\Service\Url\Support\YouTubeUrl;
  *   media: list<array<string, string|int|true>>,
  *   attachments: list<array<string, string|int|true>>,
  *   categories: list<string>,
- *   linkCards: list<PlacedLinkCardRow>,
+ *   linkCards: list<LinkCardRow>,
  *   thread: list<ThreadPostRow>,
  *   publishedAt: string|null,
  *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
@@ -49,7 +49,7 @@ use App\Service\Url\Support\YouTubeUrl;
  *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
  *   imageRenditions: list<array{url: string, width: int}>,
  *   media: list<array<string, string|int|true>>,
- *   linkCards: list<PlacedLinkCardRow>,
+ *   linkCards: list<LinkCardRow>,
  *   thread: list<ThreadPostRow>,
  *   share: 'link'|'media'|'quote'|null,
  *   quote: QuoteRow|null,
@@ -120,7 +120,7 @@ final readonly class EntryJson
             'imageHeight' => $entry->getImageHeight(),
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
-            'linkCards' => array_map($this->linkCardJson->placed(...), $row->enrichment->linkCards),
+            'linkCards' => array_map($this->linkCardJson->of(...), $row->enrichment->linkCards),
             'thread' => array_map($this->threadPostJson->of(...), $row->enrichment->threadPosts),
             'share' => $entry->getShareKind()?->value,
             'quote' => QuotedPostJson::ofOrNull($entry->getQuotedPost()),

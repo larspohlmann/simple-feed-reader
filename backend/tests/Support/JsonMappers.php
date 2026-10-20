@@ -12,12 +12,15 @@ use App\Http\RecommendationFeedJson;
 use App\Http\SavedSearchPage;
 use App\Http\SearchPage;
 use App\Http\ThreadPostJson;
+use App\Service\Reader\ReaderUrlSignature;
 
 final class JsonMappers
 {
+    public const string SECRET = 'test-link-card-secret';
+
     public static function linkCardJson(): LinkCardJson
     {
-        return new LinkCardJson();
+        return new LinkCardJson(new ReaderUrlSignature(self::SECRET));
     }
 
     public static function threadPostJson(): ThreadPostJson

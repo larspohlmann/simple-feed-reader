@@ -269,8 +269,7 @@ final class SavedPostRepositoryTest extends DbTestCase
         self::assertSame('<p>more</p>', $thread[0]->html);
         $replyCard = $thread[0]->linkCard;
         self::assertNotNull($replyCard);
-        self::assertSame(1, $replyCard->position);
-        self::assertSame('https://reply.example/', $replyCard->content->url);
+        self::assertSame('https://reply.example/', $replyCard->url);
     }
 
     public function testALikeIsCopiedOnceAndNeverOverAnExistingOne(): void

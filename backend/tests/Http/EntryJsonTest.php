@@ -25,7 +25,7 @@ use App\Repository\EntryListRowEnrichment;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
-use App\Service\LinkCard\Model\PlacedLinkCardModel;
+use App\Service\Reader\ReaderUrlSignature;
 use App\Service\Social\Model\ThreadPostModel;
 use PHPUnit\Framework\TestCase;
 use App\Tests\Support\JsonMappers;
@@ -195,18 +195,25 @@ final class EntryJsonTest extends TestCase
         self::assertNull(JsonMappers::entryJson()->listRow($this->row($this->entryTitled('Ordinary')))['quote']);
     }
 
-    public function testACardCarriesItsStoredPosition(): void
+    public function testACardCarriesTheTokenThatOpensItInTheReader(): void
     {
         $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
-        $row = $this->row(
-            $this->entryTitled('Carded'),
-            new EntryListRowEnrichment(linkCards: [new PlacedLinkCardModel(2, $card)]),
-        );
+        $row = $this->row($this->entryTitled('Carded'), new EntryListRowEnrichment(linkCards: [$card]));
 
-        self::assertSame(2, JsonMappers::entryJson()->listRow($row)['linkCards'][0]['position']);
+        self::assertSame(
+            [
+                'url' => 'https://i.example/chart',
+                'title' => 'Chart',
+                'description' => null,
+                'imageUrl' => null,
+                'siteName' => 'i.example',
+                'readerToken' => (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://i.example/chart'),
+            ],
+            JsonMappers::entryJson()->listRow($row)['linkCards'][0],
+        );
     }
 
-    public function testARowCarriesItsThreadWithEachRepliesCardPosition(): void
+    public function testARowCarriesItsThreadWithEachRepliesSignedCard(): void
     {
         $card = new LinkCardContent('https://m.example/a', 'A', null, null, 'm.example');
         $post = new ThreadPostModel(
@@ -214,7 +221,7 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-10-17T08:15:31Z'),
             '<p>Second &amp; last</p>',
             [],
-            new PlacedLinkCardModel(3, $card),
+            $card,
         );
         $row = $this->row($this->entryTitled('Root'), new EntryListRowEnrichment(threadPosts: [$post]));
 
@@ -227,7 +234,10 @@ final class EntryJsonTest extends TestCase
         self::assertSame('https://x/2', $thread[0]['url']);
         self::assertSame('2026-10-17T08:15:31+00:00', $thread[0]['publishedAt']);
         self::assertSame('Second & last', $thread[0]['text']);
-        self::assertSame(3, $thread[0]['linkCard']['position'] ?? null);
+        self::assertSame(
+            (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://m.example/a'),
+            $thread[0]['linkCard']['readerToken'] ?? null,
+        );
         self::assertSame($thread, JsonMappers::entryJson()->completed($row)['thread']);
     }
 
@@ -242,7 +252,7 @@ final class EntryJsonTest extends TestCase
         $shared->setShareKind(ShareKind::Media);
 
         $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
-        $row = $this->row($shared, new EntryListRowEnrichment(linkCards: [new PlacedLinkCardModel(0, $card)]));
+        $row = $this->row($shared, new EntryListRowEnrichment(linkCards: [$card]));
 
         $json = JsonMappers::entryJson()->completed($row);
 
@@ -261,7 +271,7 @@ final class EntryJsonTest extends TestCase
                 'description' => null,
                 'imageUrl' => null,
                 'siteName' => 'i.example',
-                'position' => 0,
+                'readerToken' => (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://i.example/chart'),
             ]],
             $json['linkCards'],
         );
@@ -409,7 +419,7 @@ final class EntryJsonTest extends TestCase
             enrichment: new EntryListRowEnrichment(
                 ['Politics'],
                 [$savedSearch],
-                [new PlacedLinkCardModel(0, $card)],
+                [$card],
                 true,
             ),
         );

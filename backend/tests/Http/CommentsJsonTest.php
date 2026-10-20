@@ -17,6 +17,7 @@ use App\Service\Comments\Model\CommentsPageModel;
 use App\Service\Comments\Model\CommentsResultModel;
 use App\Service\Comments\Model\EntryCommentModel;
 use PHPUnit\Framework\TestCase;
+use App\Service\Reader\ReaderUrlSignature;
 use App\Tests\Support\JsonMappers;
 
 final class CommentsJsonTest extends TestCase
@@ -71,6 +72,7 @@ final class CommentsJsonTest extends TestCase
                 'description' => null,
                 'imageUrl' => null,
                 'siteName' => 'site.test',
+                'readerToken' => (new ReaderUrlSignature(JsonMappers::SECRET))->tokenFor('https://site.test/a'),
             ],
             'quote' => QuotedPostJson::ofOrNull($quote),
             'post' => [

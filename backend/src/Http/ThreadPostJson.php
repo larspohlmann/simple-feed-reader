@@ -9,10 +9,10 @@ use App\Service\Ingest\Support\EntrySnippet;
 use App\Service\Social\Model\ThreadPostModel;
 
 /**
- * @phpstan-import-type PlacedLinkCardRow from LinkCardJson
+ * @phpstan-import-type LinkCardRow from LinkCardJson
  * @phpstan-type ThreadPostRow array{
  *   url: string|null, publishedAt: string|null, html: string, text: string,
- *   media: list<array<string, string|int|true>>, linkCard: PlacedLinkCardRow|null
+ *   media: list<array<string, string|int|true>>, linkCard: LinkCardRow|null
  * }
  */
 final readonly class ThreadPostJson
@@ -31,7 +31,7 @@ final readonly class ThreadPostJson
             'html' => $post->html,
             'text' => EntrySnippet::from($post->html) ?? '',
             'media' => EntryMedia::toJsonList($post->media),
-            'linkCard' => $post->linkCard === null ? null : $this->linkCardJson->placed($post->linkCard),
+            'linkCard' => $this->linkCardJson->ofOrNull($post->linkCard),
         ];
     }
 }
