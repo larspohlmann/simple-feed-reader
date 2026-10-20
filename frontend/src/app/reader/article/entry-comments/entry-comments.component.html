@@ -86,8 +86,13 @@
               @if (c.quote) {
                 <app-quoted-post [quote]="c.quote" layout="article" />
               }
-              @if (c.linkCard) {
-                <app-link-card [card]="c.linkCard" layout="article" />
+              @if (c.linkCard; as card) {
+                <app-link-card
+                  [card]="card"
+                  layout="article"
+                  [openableInReader]="true"
+                  (openInReader)="navigation.layer(card)"
+                />
               }
               @if (social && c.post; as post) {
                 <app-social-counts-row
