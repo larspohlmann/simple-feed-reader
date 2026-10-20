@@ -10,6 +10,21 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.5.1] - 2026-10-20
+
+## What's Changed
+* fix(#1715): recognise the labrador bot challenge; always offer Retry in the reader fallback by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1717
+* fix(#1716): the share menu opens the action sheet on coarse pointers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1721
+* fix(#1720): the thumb card's meta row spans the card by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1722
+* fix(#1718): show the list's wait overlay while a search is being saved by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1719
+* fix(#1723): a subtle keyboard-only focus ring by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1724
+* Open comment link cards in the reader; one signed reader endpoint (#1725) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1726
+* refactor(#1728): generic names for the frontend's signed-URL reader layer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1729
+* fix(#1727): a timeline post with replies is queued for its self-thread by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1730
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.5.0...v1.5.1
+
 ## [v1.5.0] - 2026-10-19
 
 ### Highlights
