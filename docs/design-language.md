@@ -54,6 +54,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--control-h` | `40px` | the height of a button, input or select |
 | `--bar-h` | `56px` | **fallback** for the floating app bar's height |
 | `--tap-target` | `44px` | the documented minimum touch target |
+| `--focus-ring` | `1px solid` accent at 60%; `none` on a coarse pointer | the `outline` of every `:focus-visible` rule (#1723) |
 | `--list-bar-h` | `0px` | the entry list's own bar; overwritten on its host once measured |
 | `--reader-bar-h` | `0px` | the article's toolbar; overwritten on the reader view's host once measured |
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
@@ -1881,7 +1882,11 @@ for an accent border. The unscoped
 outranks `_base.scss`'s `:focus-visible { outline: … }` at (0,1,0) — which left
 checkboxes, radios and colour swatches, none of which have a border to tint, with
 no visible keyboard focus at all. That is a WCAG 2.4.7 failure, not a cosmetic
-one.
+one. Since #1723 every ring is `outline: var(--focus-ring)`, the global rule and
+the component ones alike: a 1px accent at 60% that reads as a hint, and `none` on
+a coarse pointer (outside forced colours), where focus arrives by tap or by
+script, not by keyboard. `cdk-dialog-container` has no ring at all: it is a
+wrapper that takes a dialog's initial focus when nothing else can, not a control.
 
 **`accent-color: var(--accent)` is set once on `:root` (#1624).** It is inherited,
 so every native checkbox, radio, range and progress takes the theme accent; no

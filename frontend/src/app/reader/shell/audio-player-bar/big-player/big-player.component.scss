@@ -192,7 +192,7 @@
 }
 
 .scrubber:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: var(--focus-ring);
   outline-offset: var(--space-0);
   border-radius: var(--radius-pill);
 }

@@ -18,8 +18,7 @@ h3 {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring);
 }
 
 /* Pixel media dims at every dark step and on light's dimming steps (#832, #1691);

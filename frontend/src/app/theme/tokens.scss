@@ -109,6 +109,7 @@
   --control-h: 40px;
   --bar-h: 56px;
   --tap-target: 44px;
+  --focus-ring: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
   --magazine-measure: 680px;
   --media-share-max-h: 480px;
   --feed-logo-max-h: 28px;
@@ -172,5 +173,13 @@
   :root {
     --panel-inset-y: var(--space-4);
     --panel-inset-x: var(--space-4);
+  }
+}
+
+// A coarse pointer focuses by tap or by script, so a ring would only ever mark
+// a button the user did not reach by keyboard; forced colours keep the system ring.
+@media (pointer: coarse) and (forced-colors: none) {
+  :root {
+    --focus-ring: none;
   }
 }
