@@ -48,16 +48,15 @@ final readonly class ShareEnrichmentQueue
 
     private function queueOne(Entry $entry, KnownSharesModel $knownShares, \DateTimeImmutable $queuedAt): void
     {
-        $awaited = $this->awaitedKindOf($entry, $knownShares);
-        if ($knownShares->hasRepliesFor($entry->getGuid())) {
-            $awaited = ShareEnrichmentKind::SelfThread;
-        }
-        if ($awaited !== null) {
-            $this->entityManager->persist(new ShareEnrichment($entry, $awaited, $queuedAt));
+        $awaited = $this->settle($entry, $knownShares);
+        $queued = $knownShares->hasRepliesFor($entry->getGuid()) ? ShareEnrichmentKind::SelfThread : $awaited;
+        if ($queued !== null) {
+            $this->entityManager->persist(new ShareEnrichment($entry, $queued, $queuedAt));
         }
     }
 
-    private function awaitedKindOf(Entry $entry, KnownSharesModel $knownShares): ?ShareEnrichmentKind
+    /** @return ShareEnrichmentKind|null what the entry still waits for once its known shares are written */
+    private function settle(Entry $entry, KnownSharesModel $knownShares): ?ShareEnrichmentKind
     {
         $post = $knownShares->blueskyPostFor($entry->getGuid());
         if ($post !== null) {

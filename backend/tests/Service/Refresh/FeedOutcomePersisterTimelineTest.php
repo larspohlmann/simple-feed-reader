@@ -23,7 +23,6 @@ use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Social\Model\ThreadPostModel;
-use App\Service\Social\SelfThreadEnricher;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\BlueskyTimelinePage;
 use App\Tests\DbTestCase;
@@ -59,6 +58,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
 
     private MockClock $clock;
     private FakeAppView $appView;
+    private FakeReplyThreadSource $threadSource;
 
     protected function setUp(): void
     {
@@ -67,6 +67,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         $this->appView = new FakeAppView();
         $this->appView->knowsFixture('external');
         $this->appView->knowsFixture('video');
+        $this->threadSource = new FakeReplyThreadSource();
     }
 
     public function testATimelinePostEndsAsTheSameRssPostDoesOnceTheAppViewFilledIt(): void
@@ -127,15 +128,31 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
     {
         $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
         $root = JsonNodeModel::of(self::itemFields(self::ROOT, null, null, 1));
-        $source = new FakeReplyThreadSource();
-        $selfThreads = SelfThreadEnrichers::build($this->entityManager, $this->clock, $source, new NullLogger());
 
-        $this->persister($selfThreads)->storeTimeline($feed, self::page([$root]), $this->clock->now());
+        $this->persister()->storeTimeline($feed, self::page([$root]), $this->clock->now());
 
-        self::assertNotSame([], $source->calls);
-        foreach ($source->calls as $call) {
+        self::assertNotSame([], $this->threadSource->calls);
+        foreach ($this->threadSource->calls as $call) {
             self::assertStringContainsString(self::ROOT, $call);
         }
+    }
+
+    public function testARootWhoseRepliesFoldFromThePageIsNotReadAgain(): void
+    {
+        $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
+
+        $this->persister()->storeTimeline($feed, self::page([
+            self::item(self::REPLY_TWO, self::ROOT, self::REPLY_ONE),
+            self::item(self::REPLY_ONE, self::ROOT, self::ROOT),
+            JsonNodeModel::of(self::itemFields(self::ROOT, null, null, 2)),
+        ]), $this->clock->now());
+
+        self::assertSame([], $this->threadSource->calls);
+        self::assertSame(0, $this->entityManager->getRepository(ShareEnrichment::class)->count());
+        self::assertSame(
+            [self::webUrl(self::REPLY_ONE) => 1, self::webUrl(self::REPLY_TWO) => 2],
+            $this->positionsOf($feed),
+        );
     }
 
     public function testRepliesInALaterRefreshFoldIntoTheStoredRoot(): void
@@ -233,13 +250,18 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         self::assertSame('2026-10-10 17:10:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
     }
 
-    private function persister(?SelfThreadEnricher $selfThreads = null): FeedOutcomePersister
+    private function persister(): FeedOutcomePersister
     {
         $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
+        $selfThreads = SelfThreadEnrichers::build(
+            $this->entityManager,
+            $this->clock,
+            $this->threadSource,
+            new NullLogger(),
+        );
 
-        $persisters = FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock);
-
-        return ($selfThreads === null ? $persisters : $persisters->foldingWith($selfThreads))
+        return FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->foldingWith($selfThreads)
             ->enrichingWith(PostEnrichers::build(
                 $this->entityManager,
                 $this->clock,

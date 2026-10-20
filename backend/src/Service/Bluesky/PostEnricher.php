@@ -13,6 +13,7 @@ use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\FillOutcome;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Bluesky\Support\BlueskyPostView;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Search\EntryIndexer;
@@ -182,7 +183,7 @@ final readonly class PostEnricher
             if ($outcome === FillOutcome::Unfilled) {
                 $entry->setShareKind(null);
             }
-            if ($post !== null && self::hasReplies($post)) {
+            if ($post !== null && BlueskyPostView::hasReplies($post)) {
                 $pending->awaitSelfThread();
                 continue;
             }
@@ -194,11 +195,6 @@ final readonly class PostEnricher
         }
 
         return $filled;
-    }
-
-    private static function hasReplies(JsonNodeModel $post): bool
-    {
-        return ($post->int('replyCount') ?? 0) > 0;
     }
 
     private function filled(Entry $entry, JsonNodeModel $post): FillOutcome

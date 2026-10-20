@@ -7,6 +7,7 @@ namespace App\Service\Completion\Model;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Bluesky\Support\BlueskyPostView;
 
 /** What a network's own answer already says about a new entry's share, keyed by the entry's guid. */
 final readonly class KnownSharesModel
@@ -33,10 +34,7 @@ final readonly class KnownSharesModel
     /** @param array<string, JsonNodeModel> $postsByGuid the post views a timeline answered with */
     public static function ofBlueskyPosts(array $postsByGuid): self
     {
-        $replied = array_filter(
-            $postsByGuid,
-            static fn (JsonNodeModel $post): bool => ($post->int('replyCount') ?? 0) > 0,
-        );
+        $replied = array_filter($postsByGuid, BlueskyPostView::hasReplies(...));
 
         return new self($postsByGuid, [], [], array_fill_keys(array_keys($replied), true));
     }

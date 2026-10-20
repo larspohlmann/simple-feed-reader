@@ -157,7 +157,11 @@ final readonly class SelfThreadEnricher implements SelfThreadPassInterface
     private function settle(ShareEnrichment $row, \DateTimeImmutable $claimedAt): bool
     {
         $address = SocialPostAddress::of($row->getEntry());
-        if ($address === null || $row->isQueuedBefore(ShareEnrichment::giveUpCutoff($claimedAt))) {
+        if (
+            $address === null
+            || $row->isQueuedBefore(ShareEnrichment::giveUpCutoff($claimedAt))
+            || $this->threadPosts->hasAnyFor($row->getEntry())
+        ) {
             $this->handOnOrDrop($row);
 
             return true;
