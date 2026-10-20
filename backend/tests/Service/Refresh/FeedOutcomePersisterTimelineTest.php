@@ -23,14 +23,17 @@ use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Social\Model\ThreadPostModel;
+use App\Service\Social\SelfThreadEnricher;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\BlueskyTimelinePage;
 use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FakeAppView;
+use App\Tests\Support\FakeReplyThreadSource;
 use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ReadsFixtures;
+use App\Tests\Support\SelfThreadEnrichers;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -118,6 +121,21 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
             [self::webUrl(self::REPLY_ONE) => 1, self::webUrl(self::REPLY_TWO) => 2],
             $this->positionsOf($feed),
         );
+    }
+
+    public function testARootWhoseRepliesAreNotOnThePageIsHandedToTheSelfThreadPass(): void
+    {
+        $feed = $this->feed(self::HOME, SourceFormat::BLUESKY_API);
+        $root = JsonNodeModel::of(self::itemFields(self::ROOT, null, null, 1));
+        $source = new FakeReplyThreadSource();
+        $selfThreads = SelfThreadEnrichers::build($this->entityManager, $this->clock, $source, new NullLogger());
+
+        $this->persister($selfThreads)->storeTimeline($feed, self::page([$root]), $this->clock->now());
+
+        self::assertNotSame([], $source->calls);
+        foreach ($source->calls as $call) {
+            self::assertStringContainsString(self::ROOT, $call);
+        }
     }
 
     public function testRepliesInALaterRefreshFoldIntoTheStoredRoot(): void
@@ -215,11 +233,13 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
         self::assertSame('2026-10-10 17:10:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
     }
 
-    private function persister(): FeedOutcomePersister
+    private function persister(?SelfThreadEnricher $selfThreads = null): FeedOutcomePersister
     {
         $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
 
-        return FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+        $persisters = FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock);
+
+        return ($selfThreads === null ? $persisters : $persisters->foldingWith($selfThreads))
             ->enrichingWith(PostEnrichers::build(
                 $this->entityManager,
                 $this->clock,
@@ -249,8 +269,12 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
     }
 
     /** @return array<string, mixed> */
-    private static function itemFields(string $uri, ?string $replyRoot = null, ?string $replyParent = null): array
-    {
+    private static function itemFields(
+        string $uri,
+        ?string $replyRoot = null,
+        ?string $replyParent = null,
+        ?int $replyCount = null,
+    ): array {
         $author = ['did' => self::BOB, 'viewer' => ['following' => 'at://did:plc:alice/app.bsky.graph.follow/1']];
         $reply = $replyRoot === null || $replyParent === null ? [] : ['reply' => [
             'root' => ['uri' => $replyRoot, 'author' => $author],
@@ -267,7 +291,7 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
                     'createdAt' => self::POSTED_AT[$uri],
                 ],
                 'indexedAt' => self::POSTED_AT[$uri],
-            ],
+            ] + ($replyCount === null ? [] : ['replyCount' => $replyCount]),
         ];
     }
 

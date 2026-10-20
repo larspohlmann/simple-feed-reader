@@ -7,7 +7,6 @@ namespace App\Service\Completion;
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
-use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\Model\FillOutcome;
@@ -18,14 +17,12 @@ use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\Model\QuotedTargetModel;
 use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\Share\Support\ShareTargets;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /** Settles a new entry whose network already answered its embed or its card, as the later passes would have. */
 final readonly class KnownShareSettler
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
         private EntryEmbedWriterInterface $embedWriter,
         private EntryCardWriter $cardWriter,
         private LoggerInterface $logger,
@@ -33,26 +30,24 @@ final readonly class KnownShareSettler
     }
 
     /** Ends where PostEnricher::settle() leaves an RSS Bluesky post: one without an embed or a link shares nothing. */
-    public function settleEmbedded(Entry $entry, JsonNodeModel $post, \DateTimeImmutable $queuedAt): void
+    public function settleEmbedded(Entry $entry, JsonNodeModel $post): ?ShareEnrichmentKind
     {
         $outcome = $this->filled($entry, $post);
         if ($outcome === FillOutcome::Unfilled) {
             $entry->setShareKind(null);
 
-            return;
+            return null;
         }
-        if ($outcome === FillOutcome::AwaitingLinkCards) {
-            $this->awaitLinkCards($entry, $queuedAt);
-        }
+
+        return $outcome === FillOutcome::AwaitingLinkCards ? ShareEnrichmentKind::LinkCards : null;
     }
 
     /** Takes a classified link share and its card under a posted link: only the other links still wait for a page. */
-    public function settleCarded(Entry $entry, LinkCardContent $card, \DateTimeImmutable $queuedAt): void
+    public function settleCarded(Entry $entry, LinkCardContent $card): ?ShareEnrichmentKind
     {
         $this->cardWriter->write($entry, new EntryCardsModel([], [new PageCardModel($card, null)]));
-        if (ShareTargets::uncardedOf($entry, [$card->url]) !== []) {
-            $this->awaitLinkCards($entry, $queuedAt);
-        }
+
+        return ShareTargets::uncardedOf($entry, [$card->url]) !== [] ? ShareEnrichmentKind::LinkCards : null;
     }
 
     /** A quoted status the instance already answered: its RE: line leaves the body, and no other link waits for a card. */
@@ -74,10 +69,5 @@ final readonly class KnownShareSettler
 
             return FillOutcome::Unfilled;
         }
-    }
-
-    private function awaitLinkCards(Entry $entry, \DateTimeImmutable $queuedAt): void
-    {
-        $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::LinkCards, $queuedAt));
     }
 }
