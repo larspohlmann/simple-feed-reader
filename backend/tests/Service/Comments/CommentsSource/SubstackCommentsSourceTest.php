@@ -228,6 +228,15 @@ final class SubstackCommentsSourceTest extends KernelTestCase
         self::assertSame([[self::POST . '/comment/2', 0]], self::urlsAndDepths($comments));
     }
 
+    public function testAnEntryOfAnotherFeedIsUnavailable(): void
+    {
+        $entry = self::entry();
+        $entry->getFeed()->recordPlatform(null);
+        $this->expectException(CommentsUnavailableException::class);
+
+        $this->source->fetch(new CommentsRequest($this->source, $this->user, $entry));
+    }
+
     public function testAnUnreachableCommentListIsUnavailable(): void
     {
         $this->fetcher->willReturnBody(self::POST_API, (string) file_get_contents(self::FIXTURES . '/post.json'));
