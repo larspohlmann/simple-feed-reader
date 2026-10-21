@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Subscription;
 use App\Enum\FeedGroup;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -37,16 +38,25 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
     /** @return list<Subscription> */
     public function findForUserInFeedGroup(int $userId, FeedGroup $group): array
     {
-        $qb = $this->createQueryBuilder('s')
-            ->join('s.feed', 'f')->addSelect('f')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->orderBy('s.id', 'ASC');
-        FeedGroupDql::restrict($qb, 's', 'f', $group);
-
         /** @var list<Subscription> $rows */
-        $rows = $qb->getQuery()->getResult();
+        $rows = $this->inFeedGroupQueryBuilder($userId, $group)
+            ->addSelect('f')
+            ->getQuery()
+            ->getResult();
 
         return $rows;
+    }
+
+    /** @return list<int> */
+    public function idsForUserInFeedGroup(int $userId, FeedGroup $group): array
+    {
+        /** @var list<int|string> $ids */
+        $ids = $this->inFeedGroupQueryBuilder($userId, $group)
+            ->select('s.id')
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        return array_map(intval(...), $ids);
     }
 
     /** @return list<Subscription> */
@@ -76,5 +86,16 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
         $rows = $qb->getQuery()->getResult();
 
         return $rows;
+    }
+
+    private function inFeedGroupQueryBuilder(int $userId, FeedGroup $group): QueryBuilder
+    {
+        $qb = $this->createQueryBuilder('s')
+            ->join('s.feed', 'f')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->orderBy('s.id', 'ASC');
+        FeedGroupDql::restrict($qb, 's', 'f', $group);
+
+        return $qb;
     }
 }

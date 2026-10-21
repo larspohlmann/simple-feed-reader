@@ -128,6 +128,14 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
             [$untagged->requireId()],
             $this->idsOf($this->subscriptions()->findForUserInFeedGroup($userId, FeedGroup::Feeds)),
         );
+        self::assertSame(
+            [$tagged->requireId()],
+            $this->subscriptions()->idsForUserInFeedGroup($userId, FeedGroup::Tags),
+        );
+        self::assertSame(
+            [$untagged->requireId()],
+            $this->subscriptions()->idsForUserInFeedGroup($userId, FeedGroup::Feeds),
+        );
     }
 
     /**
