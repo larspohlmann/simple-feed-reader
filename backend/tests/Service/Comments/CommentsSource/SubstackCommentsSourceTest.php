@@ -12,6 +12,7 @@ use App\Enum\FeedPlatform;
 use App\Service\Comments\CommentsSource\SubstackCommentsSource;
 use App\Service\Comments\Exception\CommentsThrottledException;
 use App\Service\Comments\Exception\CommentsUnavailableException;
+use App\Service\Comments\Model\CommentsAnswerModel;
 use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Comments\Pass\CommentsRequest;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -20,6 +21,7 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\HostThrottle;
 use App\Service\RateLimit\Exception\RateLimitedException;
 use App\Tests\Support\StubFeedFetcher;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -70,9 +72,14 @@ final class SubstackCommentsSourceTest extends KernelTestCase
         return $entry;
     }
 
-    private function servePost(): void
+    private function servePostId(): void
     {
         $this->fetcher->willReturnBody(self::POST_API, (string) file_get_contents(self::FIXTURES . '/post.json'));
+    }
+
+    private function servePost(): void
+    {
+        $this->servePostId();
         $this->fetcher->willReturnBody(
             self::COMMENTS_API,
             (string) file_get_contents(self::FIXTURES . '/post-comments.json'),
@@ -84,9 +91,13 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     {
         $this->servePost();
         $entry = self::entry();
-        $answer = $this->source->fetch(new CommentsRequest($this->source, $this->user, $entry));
 
-        return $this->source->read($entry, $answer->body)->comments;
+        return $this->source->read($entry, $this->fetch($entry)->body)->comments;
+    }
+
+    private function fetch(Entry $entry): CommentsAnswerModel
+    {
+        return $this->source->fetch(new CommentsRequest($this->source, $this->user, $entry));
     }
 
     public function testServesAPostOfASubstack(): void
@@ -114,10 +125,7 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     {
         self::assertSame(
             [[self::POST . '/comment/11', 0], [self::POST . '/comment/12', 1], [self::POST . '/comment/14', 0]],
-            array_map(
-                static fn (EntryCommentModel $comment): array => [$comment->url, $comment->depth],
-                $this->comments(),
-            ),
+            self::urlsAndDepths($this->comments()),
         );
     }
 
@@ -167,7 +175,7 @@ final class SubstackCommentsSourceTest extends KernelTestCase
         $this->fetcher->willReturnBody(self::POST_API, '{"slug": "one-post"}');
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+        $this->fetch(self::entry());
     }
 
     public function testAnUnreachablePostIsUnavailable(): void
@@ -175,14 +183,14 @@ final class SubstackCommentsSourceTest extends KernelTestCase
         $this->fetcher->willThrow(self::POST_API, new FeedUnreachableException('gone'));
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+        $this->fetch(self::entry());
     }
 
     public function testAThrottledHostIsThrottledAndNotAskedAgain(): void
     {
         $this->fetcher->willThrow(self::POST_API, new FeedThrottledException('slow down', 120));
         try {
-            $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+            $this->fetch(self::entry());
             self::fail('The fetch was not throttled.');
         } catch (CommentsThrottledException $exception) {
             self::assertSame(120, $exception->retryAfterSeconds);
@@ -190,7 +198,7 @@ final class SubstackCommentsSourceTest extends KernelTestCase
         $this->fetcher->fetchedUrls = [];
 
         try {
-            $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+            $this->fetch(self::entry());
         } catch (CommentsThrottledException) {
         }
 
@@ -201,28 +209,29 @@ final class SubstackCommentsSourceTest extends KernelTestCase
     {
         $this->servePost();
         for ($fetch = 0; $fetch < self::COMMENTS_BUDGET; ++$fetch) {
-            $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+            $this->fetch(self::entry());
         }
         $this->expectException(RateLimitedException::class);
 
-        $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+        $this->fetch(self::entry());
     }
 
-    public function testADeletedCommentIsDroppedEvenWithABodyAndItsReplyIsKept(): void
+    /** @return iterable<string, array{string}> */
+    public static function droppedCommentsWithAReply(): iterable
     {
-        $answer = '{"comments": [{"id": 1, "deleted": true, "body": "Still has text.", "date": null, "children": ['
-            . '{"id": 2, "name": "Bo Second", "body": "A reply.", "children": []}]}]}';
+        $reply = '{"id": 2, "name": "Bo Second", "body": "A reply.", "children": []}';
 
-        $comments = $this->source->read(self::entry(), $answer)->comments;
-
-        self::assertSame([[self::POST . '/comment/2', 0]], self::urlsAndDepths($comments));
+        yield 'deleted, though it has a body' => [
+            '{"comments": [{"id": 1, "deleted": true, "body": "Still has text.", "children": [' . $reply . ']}]}',
+        ];
+        yield 'without an id' => [
+            '{"comments": [{"name": "Ada Reader", "body": "No id.", "children": [' . $reply . ']}]}',
+        ];
     }
 
-    public function testACommentWithoutAnIdIsDroppedAndItsReplyIsKept(): void
+    #[DataProvider('droppedCommentsWithAReply')]
+    public function testADroppedCommentKeepsItsReply(string $answer): void
     {
-        $answer = '{"comments": [{"name": "Ada Reader", "body": "No id.", "children": ['
-            . '{"id": 2, "name": "Bo Second", "body": "A reply.", "children": []}]}]}';
-
         $comments = $this->source->read(self::entry(), $answer)->comments;
 
         self::assertSame([[self::POST . '/comment/2', 0]], self::urlsAndDepths($comments));
@@ -234,25 +243,25 @@ final class SubstackCommentsSourceTest extends KernelTestCase
         $entry->getFeed()->recordPlatform(null);
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source->fetch(new CommentsRequest($this->source, $this->user, $entry));
+        $this->fetch($entry);
     }
 
     public function testAnUnreachableCommentListIsUnavailable(): void
     {
-        $this->fetcher->willReturnBody(self::POST_API, (string) file_get_contents(self::FIXTURES . '/post.json'));
+        $this->servePostId();
         $this->fetcher->willThrow(self::COMMENTS_API, new FeedUnreachableException('gone'));
         $this->expectException(CommentsUnavailableException::class);
 
-        $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+        $this->fetch(self::entry());
     }
 
     public function testAThrottledCommentListIsThrottled(): void
     {
-        $this->fetcher->willReturnBody(self::POST_API, (string) file_get_contents(self::FIXTURES . '/post.json'));
+        $this->servePostId();
         $this->fetcher->willThrow(self::COMMENTS_API, new FeedThrottledException('slow down', 120));
         $this->expectException(CommentsThrottledException::class);
 
-        $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+        $this->fetch(self::entry());
     }
 
     /**

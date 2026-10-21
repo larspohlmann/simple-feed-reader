@@ -25,7 +25,17 @@ final readonly class SubstackThread
      *
      * @return list<EntryCommentModel>
      */
-    public function comments(array $nodes, int $depth = 0): array
+    public function comments(array $nodes): array
+    {
+        return $this->flattened($nodes, 0);
+    }
+
+    /**
+     * @param list<JsonNodeModel> $nodes
+     *
+     * @return list<EntryCommentModel>
+     */
+    private function flattened(array $nodes, int $depth): array
     {
         $comments = [];
         foreach ($nodes as $node) {
@@ -34,7 +44,7 @@ final readonly class SubstackThread
                 $comments[] = $comment;
             }
             $replyDepth = null === $comment ? $depth : $depth + 1;
-            array_push($comments, ...$this->comments($node->nodes('children'), $replyDepth));
+            array_push($comments, ...$this->flattened($node->nodes('children'), $replyDepth));
         }
 
         return $comments;

@@ -66,7 +66,7 @@ final readonly class EntryListRowEnricher
                 $linkCards[$entryId] ?? [],
                 isset($pendingIds[$entryId]),
                 $socialStates[$entryId] ?? null,
-                self::discussionOf($entries[$entryId], $socialStates),
+                self::discussionOf($entries[$entryId], $socialStates[$entryId] ?? null),
                 $origins[$entryId] ?? null,
                 $threads[$entryId] ?? [],
             );
@@ -136,10 +136,9 @@ final readonly class EntryListRowEnricher
         ));
     }
 
-    /** @param array<int, EntryListRowSocial> $socialStates */
-    private static function discussionOf(Entry $entry, array $socialStates): ?EntryListRowDiscussion
+    private static function discussionOf(Entry $entry, ?EntryListRowSocial $social): ?EntryListRowDiscussion
     {
-        $isPlatformThread = isset($socialStates[$entry->requireId()]) || null !== SubstackPostAddress::of($entry);
+        $isPlatformThread = null !== $social || null !== SubstackPostAddress::of($entry);
 
         return $isPlatformThread ? new EntryListRowDiscussion($entry->getUrl(), CommentsLoad::Auto) : null;
     }

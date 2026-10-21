@@ -18,15 +18,15 @@ final class SubstackPostAddress
         if (null === $url || FeedPlatform::Substack !== $entry->getFeed()->getPlatform()) {
             return null;
         }
-        $host = parse_url($url, \PHP_URL_HOST);
-        if ('https' !== parse_url($url, \PHP_URL_SCHEME) || !\is_string($host)) {
+        $parts = parse_url($url);
+        if (!\is_array($parts) || 'https' !== ($parts['scheme'] ?? null) || !isset($parts['host'])) {
             return null;
         }
-        if (1 !== preg_match(self::POST_PATH, (string) parse_url($url, \PHP_URL_PATH), $slug)) {
+        if (1 !== preg_match(self::POST_PATH, $parts['path'] ?? '', $slug)) {
             return null;
         }
 
-        return new SubstackPostModel('https://' . strtolower($host), $slug[1]);
+        return new SubstackPostModel('https://' . strtolower($parts['host']), $slug[1]);
     }
 
     private function __construct()
