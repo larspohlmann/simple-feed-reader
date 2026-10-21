@@ -14,6 +14,7 @@ import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.componen
 import { TagNode } from '../../state/subscription-derivations';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { Selection } from '../../query/query';
+import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
@@ -107,6 +108,7 @@ function inputDefaults() {
     totalUnread: 0,
     favoritesCount: 0,
     keptCount: 0,
+    groupUnread: { tags: 0, feeds: 0 },
     selection: { kind: 'all', id: null, unread: true } as Selection,
     loading: false,
     searchLoading: false,
@@ -126,6 +128,7 @@ function mount(
     totalUnread: number;
     favoritesCount: number;
     keptCount: number;
+    groupUnread: Readonly<Record<FeedGroupName, number>>;
     selection: Selection;
     user: CurrentUser | null;
     coarse: boolean;
@@ -165,6 +168,13 @@ function mount(
   fixture.detectChanges();
   return fixture;
 }
+
+const tagNodeFixture: TagNode = {
+  tag: { id: 40, name: 'Tech', color: null, icon: null, position: 0 },
+  subscriptions: [sub(1, 3)],
+  unreadCount: 3,
+  entryCount: 0,
+};
 
 describe('SidebarComponent', () => {
   it('shows the all-items total and marks it active', () => {
@@ -1381,12 +1391,7 @@ describe('SidebarComponent', () => {
   });
 
   describe('collapsible tag list', () => {
-    const tagNode: TagNode = {
-      tag: { id: 40, name: 'Tech', color: null, icon: null, position: 0 },
-      subscriptions: [sub(1, 3)],
-      unreadCount: 3,
-      entryCount: 0,
-    };
+    const tagNode = tagNodeFixture;
 
     // The collapsed state persists in localStorage, so each test starts and
     // ends from a clean slate to keep the default-expanded assumption honest.
@@ -1402,20 +1407,20 @@ describe('SidebarComponent', () => {
       const element = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
       const head = element.querySelector('.tags-head')!;
       expect(head.textContent).toContain('Tags');
-      expect(head.querySelector('.section-toggle')!.getAttribute('aria-expanded')).toBe('true');
+      expect(head.querySelector('.section-chevron')!.getAttribute('aria-expanded')).toBe('true');
       expect(headChevronIcon(element)).toBe('expand_more');
       expect(head.querySelector('.chevzone')).toBeNull();
       expect(element.querySelector('.tags .taghead')).not.toBeNull();
     });
 
-    it('collapses the list and points the chevron right when the title is clicked', () => {
+    it('collapses the list and points the chevron right when the chevron is clicked', () => {
       const fixture = mount({ tagTree: [tagNode] });
       const element = fixture.nativeElement as HTMLElement;
-      (element.querySelector('.tags-head .section-toggle') as HTMLButtonElement).click();
+      (element.querySelector('.tags-head .section-chevron') as HTMLButtonElement).click();
       fixture.detectChanges();
 
       expect(
-        element.querySelector('.tags-head .section-toggle')!.getAttribute('aria-expanded'),
+        element.querySelector('.tags-head .section-chevron')!.getAttribute('aria-expanded'),
       ).toBe('false');
       expect(headChevronIcon(element)).toBe('chevron_right');
       expect(element.querySelector('.tags .taghead')).toBeNull();
@@ -1439,9 +1444,45 @@ describe('SidebarComponent', () => {
       TestBed.resetTestingModule();
       const element = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
       expect(
-        element.querySelector('.tags-head .section-toggle')!.getAttribute('aria-expanded'),
+        element.querySelector('.tags-head .section-chevron')!.getAttribute('aria-expanded'),
       ).toBe('false');
       expect(element.querySelector('.tags .taghead')).toBeNull();
+    });
+  });
+
+  describe('section header links', () => {
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
+
+    it('links the Tags title to the combined tags list and shows its count', () => {
+      const element = mount({ tagTree: [tagNodeFixture], groupUnread: { tags: 4, feeds: 0 } })
+        .nativeElement as HTMLElement;
+      const link = element.querySelector('.tags-head a.section-link') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toContain('group=tags');
+      expect(link.querySelector('.section-count')?.textContent?.trim()).toBe('4');
+    });
+
+    it('links the Feeds title to the combined feeds list and hides a zero count', () => {
+      const element = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
+      const link = element.querySelector('.feeds-head a.section-link') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toContain('group=feeds');
+      expect(link.querySelector('.section-count')).toBeNull();
+    });
+
+    it('opens the list from the title without collapsing the section', () => {
+      const fixture = mount({ untagged: [sub(1, 2)] });
+      const element = fixture.nativeElement as HTMLElement;
+      (element.querySelector('.feeds-head a.section-link') as HTMLAnchorElement).click();
+      fixture.detectChanges();
+      expect(element.querySelector('.feedlist .feedrow')).not.toBeNull();
+    });
+
+    it("marks only the open group's title active", () => {
+      const selection: Selection = { kind: 'group', id: null, unread: true, group: 'feeds' };
+      const element = mount({ tagTree: [tagNodeFixture], untagged: [sub(1, 2)], selection })
+        .nativeElement as HTMLElement;
+      expect(element.querySelector('.feeds-head .section-link.active')).not.toBeNull();
+      expect(element.querySelector('.tags-head .section-link.active')).toBeNull();
     });
   });
 
@@ -1456,15 +1497,15 @@ describe('SidebarComponent', () => {
       const element = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
       const head = element.querySelector('.feeds-head')!;
       expect(head.textContent).toContain('Feeds');
-      expect(head.querySelector('.section-toggle')!.getAttribute('aria-expanded')).toBe('true');
+      expect(head.querySelector('.section-chevron')!.getAttribute('aria-expanded')).toBe('true');
       expect(headChevronIcon(element)).toBe('expand_more');
       expect(element.querySelector('.feedlist .feedrow')).not.toBeNull();
     });
 
-    it('collapses the untagged feeds and points the chevron right when clicked', () => {
+    it('collapses the untagged feeds and points the chevron right when the chevron is clicked', () => {
       const fixture = mount({ untagged: [sub(1, 2)] });
       const element = fixture.nativeElement as HTMLElement;
-      (element.querySelector('.feeds-head .section-toggle') as HTMLButtonElement).click();
+      (element.querySelector('.feeds-head .section-chevron') as HTMLButtonElement).click();
       fixture.detectChanges();
 
       expect(headChevronIcon(element)).toBe('chevron_right');
@@ -1501,7 +1542,7 @@ describe('SidebarComponent', () => {
       TestBed.resetTestingModule();
       const element = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
       expect(
-        element.querySelector('.feeds-head .section-toggle')!.getAttribute('aria-expanded'),
+        element.querySelector('.feeds-head .section-chevron')!.getAttribute('aria-expanded'),
       ).toBe('false');
       expect(element.querySelector('.feedlist .feedrow')).toBeNull();
     });
