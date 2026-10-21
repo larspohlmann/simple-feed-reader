@@ -6,7 +6,6 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { CommentsLoad } from '../../models';
 import { EntrySocialDto } from '../../entry-social';
 import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
-import { prefetchMargin } from '../../list/paging';
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { aLinkCard, anEntryComment, aQuotedPost } from '../../../../testing/entry-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -23,10 +22,6 @@ describe('EntryCommentsComponent', () => {
   let fixture: ComponentFixture<EntryCommentsComponent>;
   let states: Map<number, WritableSignal<CommentsState>>;
   let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock; toggleLike: jest.Mock };
-  let sightObservers: { init: IntersectionObserverInit | undefined; disconnect: jest.Mock }[];
-  let trigger: ((visible: boolean) => void) | undefined;
-  let scroller: HTMLElement;
-  const realIntersectionObserver = globalThis.IntersectionObserver;
 
   beforeEach(() => {
     states = new Map();
@@ -36,24 +31,7 @@ describe('EntryCommentsComponent', () => {
       reload: jest.fn(),
       toggleLike: jest.fn(),
     };
-    sightObservers = [];
-    trigger = undefined;
     navigation.layer.mockReset();
-    scroller = document.createElement('div');
-    Object.defineProperty(scroller, 'clientHeight', { value: 900 });
-    globalThis.IntersectionObserver = jest.fn(
-      (callback: IntersectionObserverCallback, init?: IntersectionObserverInit) => {
-        const observer = { observe: jest.fn(), unobserve: jest.fn(), disconnect: jest.fn() };
-        if (init?.root !== scroller) return observer;
-        sightObservers.push({ init, disconnect: observer.disconnect });
-        trigger = (visible) =>
-          callback(
-            [{ isIntersecting: visible } as IntersectionObserverEntry],
-            observer as unknown as IntersectionObserver,
-          );
-        return observer;
-      },
-    ) as unknown as typeof IntersectionObserver;
     TestBed.configureTestingModule({
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
       providers: [
@@ -63,10 +41,6 @@ describe('EntryCommentsComponent', () => {
       ],
     });
     fixture = TestBed.createComponent(EntryCommentsComponent);
-  });
-
-  afterEach(() => {
-    globalThis.IntersectionObserver = realIntersectionObserver;
   });
 
   function stateOf(id: number): WritableSignal<CommentsState> {
@@ -87,7 +61,6 @@ describe('EntryCommentsComponent', () => {
     discussionUrl: string | null;
     social: EntrySocialDto | null;
   }): void {
-    fixture.componentRef.setInput('scroller', scroller);
     fixture.componentRef.setInput('entry', entry);
     fixture.detectChanges();
   }
@@ -142,45 +115,20 @@ describe('EntryCommentsComponent', () => {
     });
   });
 
-  it('auto-loads only once the section nears the viewport', () => {
+  it('auto-loads as soon as it shows, so the header can count the comments (#1740)', () => {
     show('auto');
-    expect(service.load).not.toHaveBeenCalled();
-    trigger!(false);
-    expect(service.load).not.toHaveBeenCalled();
-    trigger!(true);
     expect(service.load).toHaveBeenCalledWith(5);
   });
 
-  it('stops watching once the section was seen', () => {
-    show('auto');
-    trigger!(true);
-    expect(sightObservers[0].disconnect).toHaveBeenCalled();
-  });
-
-  it('looks ahead within the reader scroller', () => {
-    show('auto');
-    expect(sightObservers[0].init).toEqual({ root: scroller, rootMargin: prefetchMargin(900) });
-  });
-
-  it('watches afresh for the next entry, loading it only once it is seen', () => {
+  it('loads the next entry when the reader moves on', () => {
     show('auto');
     show('auto', 6);
-    expect(sightObservers.length).toBe(2);
-    expect(sightObservers[0].disconnect).toHaveBeenCalled();
-    trigger!(true);
-    expect(service.load).toHaveBeenCalledTimes(1);
-    expect(service.load).toHaveBeenCalledWith(6);
+    expect(service.load).toHaveBeenLastCalledWith(6);
   });
 
-  it('stops watching once destroyed', () => {
-    show('auto');
-    fixture.destroy();
-    expect(sightObservers[0].disconnect).toHaveBeenCalled();
-  });
-
-  it('never watches a manual source; the button loads it', () => {
+  it('never auto-loads a manual source; the button loads it', () => {
     show('manual');
-    expect(sightObservers.length).toBe(0);
+    expect(service.load).not.toHaveBeenCalled();
     fixture.nativeElement.querySelector('button.load').click();
     expect(service.load).toHaveBeenCalledWith(5);
   });

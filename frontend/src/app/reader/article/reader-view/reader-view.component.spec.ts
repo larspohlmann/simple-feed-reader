@@ -1767,6 +1767,72 @@ describe('ReaderViewComponent', () => {
       expect(commentsSection(mount(entry({ comments: null })))).toBeNull();
     });
 
+    describe('header Discussion link (#1740)', () => {
+      const postUrl = 'https://joe.substack.com/p/one-post';
+
+      function discussionLink(fixture: { nativeElement: HTMLElement }): HTMLAnchorElement | null {
+        return fixture.nativeElement.querySelector('a.discussion-link');
+      }
+
+      it('jumps to the comments when they load in the reader, even where it repeats the original', () => {
+        const fixture = mount(entry({ url: postUrl, discussionUrl: postUrl, comments: 'auto' }));
+        const scroller = scrollerOf(fixture);
+        commentsSection(fixture)!.getBoundingClientRect = () => ({ top: 900 }) as DOMRect;
+        scroller.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
+        const computedStyle = jest
+          .spyOn(window, 'getComputedStyle')
+          .mockReturnValue({ scrollPaddingTop: '120px' } as CSSStyleDeclaration);
+        const scrollTo = jest.fn();
+        scroller.scrollTo = scrollTo as unknown as typeof scroller.scrollTo;
+
+        const link = discussionLink(fixture)!;
+        const click = new MouseEvent('click', { cancelable: true });
+        link.dispatchEvent(click);
+        computedStyle.mockRestore();
+
+        expect(link.getAttribute('href')).toBe('#comments');
+        expect(click.defaultPrevented).toBe(true);
+        expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 780 }));
+      });
+
+      it('counts every comment once they are in, the omitted ones too', () => {
+        commentsState.set({
+          status: 'ok',
+          comments: [anEntryComment(), anEntryComment()],
+          omitted: 3,
+          fetchedAt: '2026-10-21T12:00:00+00:00',
+          loadedAt: Date.now(),
+        });
+        const fixture = mount(entry({ comments: 'auto' }));
+
+        expect(discussionLink(fixture)?.textContent).toContain('(5)');
+      });
+
+      it('shows a thread without comments as (0)', () => {
+        commentsState.set(loadedReplies([]));
+        const fixture = mount(entry({ comments: 'auto' }));
+
+        expect(discussionLink(fixture)?.textContent).toContain('(0)');
+      });
+
+      it('shows no count before the comments are in', () => {
+        commentsState.set({ status: 'loading' });
+        const fixture = mount(entry({ comments: 'auto' }));
+
+        expect(discussionLink(fixture)?.textContent).not.toContain('(');
+      });
+
+      it('still opens the discussion page when its comments do not load in the reader', () => {
+        const fixture = mount(
+          entry({ discussionUrl: 'https://news.ycombinator.com/item?id=1', comments: null }),
+        );
+
+        expect(discussionLink(fixture)?.getAttribute('href')).toBe(
+          'https://news.ycombinator.com/item?id=1',
+        );
+      });
+    });
+
     it('waits for the article to finish loading', () => {
       loadMock.mockReturnValue(new Subject<ReaderContent>());
 
