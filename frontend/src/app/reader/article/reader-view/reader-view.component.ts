@@ -153,7 +153,7 @@ export class ReaderViewComponent {
   ];
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly layer = viewChild(ArticleLayerComponent);
-  protected readonly scroller = computed(() => this.layer()?.scroller());
+  private readonly scroller = computed(() => this.layer()?.scroller());
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   private readonly screen = inject(LayoutService);
@@ -255,7 +255,7 @@ export class ReaderViewComponent {
     );
   }
 
-  scrollToComments(): void {
+  protected scrollToComments(): void {
     this.scrollToElement(this.commentsSection()?.nativeElement);
   }
 

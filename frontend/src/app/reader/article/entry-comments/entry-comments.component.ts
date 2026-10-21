@@ -8,6 +8,7 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -86,7 +87,8 @@ export class EntryCommentsComponent {
 
   constructor() {
     effect(() => {
-      if (this.loadsOnOpen()) this.service.load(this.entryId());
+      const id = this.entryId();
+      if (this.loadsOnOpen()) untracked(() => this.service.load(id));
     });
     effect((onCleanup) => {
       const until = this.throttledUntil();

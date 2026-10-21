@@ -1795,24 +1795,18 @@ describe('ReaderViewComponent', () => {
         expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 780 }));
       });
 
-      it('counts every comment once they are in, the omitted ones too', () => {
-        commentsState.set({
-          status: 'ok',
-          comments: [anEntryComment(), anEntryComment()],
-          omitted: 3,
-          fetchedAt: '2026-10-21T12:00:00+00:00',
-          loadedAt: Date.now(),
-        });
+      it.each([
+        [
+          'every comment, the omitted ones too',
+          { ...loadedReplies([anEntryComment(), anEntryComment()]), omitted: 3 },
+          '(5)',
+        ],
+        ['a thread without comments as zero', loadedReplies([]), '(0)'],
+      ])('counts %s', (_case: string, state: CommentsState, count: string) => {
+        commentsState.set(state);
         const fixture = mount(entry({ comments: 'auto' }));
 
-        expect(discussionLink(fixture)?.textContent).toContain('(5)');
-      });
-
-      it('shows a thread without comments as (0)', () => {
-        commentsState.set(loadedReplies([]));
-        const fixture = mount(entry({ comments: 'auto' }));
-
-        expect(discussionLink(fixture)?.textContent).toContain('(0)');
+        expect(discussionLink(fixture)?.textContent).toContain(count);
       });
 
       it('shows no count before the comments are in', () => {
