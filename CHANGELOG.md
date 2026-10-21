@@ -10,6 +10,18 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.5.2] - 2026-10-21
+
+## What's Changed
+* fix(#1731): an opened post shows the like its network reports by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1732
+* test(#1733): brightness e2e expects the #1691 dark media factor by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1734
+* feat(#1735): Tags and Feeds headers open a combined list with a count by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1738
+* feat(#1737): show Substack comments in the article view by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1739
+* feat(#1740): jump to the in-app comments from the article header, with their count by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1741
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.5.1...v1.5.2
+
 ## [v1.5.1] - 2026-10-20
 
 ## What's Changed
