@@ -207,7 +207,8 @@ export class ReaderApi {
 
   /** Omit the scope (or pass an empty one) to refresh all the caller's due
    *  feeds; scope by feedId for a single feed (e.g. a just-added one) or by
-   *  tagId for every feed carrying that tag, by network for that network's feeds, or by group for a sidebar section's feeds. */
+   *  tagId for every feed carrying that tag, by network for that network's feeds, or by
+   *  group for a sidebar section's feeds. */
   refresh(scope?: RefreshScope): Observable<RefreshReport> {
     let params = new HttpParams();
     if (scope?.feedId != null) params = params.set('feedId', scope.feedId);

@@ -123,7 +123,8 @@ export function searchWords(term: string): string[] {
 }
 
 /** How a scoped refresh is keyed. Empty = all the user's due feeds; feedId =
- *  one feed; tagId = every feed carrying that tag; network = that network's feeds, group = that sidebar section's feeds. */
+ *  one feed; tagId = every feed carrying that tag; network = that network's feeds;
+ *  group = that sidebar section's feeds. */
 export interface RefreshScope {
   feedId?: number;
   tagId?: number;

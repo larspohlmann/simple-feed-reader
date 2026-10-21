@@ -131,6 +131,18 @@ describe('MarkReadActions recounting after a mark-read', () => {
     expect(unreadCounts()).toEqual([4, 6, 8]);
   });
 
+  it('marks a feed group read through the mark-read endpoint', () => {
+    const markRead = jest.spyOn(TestBed.inject(ReaderApi), 'markRead');
+    currentSelection.set({ kind: 'group', id: null, unread: true, group: 'tags' });
+
+    actions.confirmMarkAllRead();
+
+    expect(markRead).toHaveBeenCalledWith(
+      { scope: 'group', group: 'tags' },
+      '2026-10-16T10:00:00Z',
+    );
+  });
+
   it('recounts from the server after marking the entries above read', () => {
     currentSelection.set({ kind: 'all', id: null, unread: false });
 
