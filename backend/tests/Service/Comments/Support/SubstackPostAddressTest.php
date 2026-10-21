@@ -37,6 +37,13 @@ final class SubstackPostAddressTest extends TestCase
         self::assertSame('one-post', $post?->slug);
     }
 
+    public function testTheOriginIsLowercased(): void
+    {
+        $post = SubstackPostAddress::of(self::entry('https://JOE.Substack.com/p/one-post'));
+
+        self::assertSame('https://joe.substack.com', $post?->origin);
+    }
+
     /** @return iterable<string, array{string|null}> */
     public static function notPosts(): iterable
     {
