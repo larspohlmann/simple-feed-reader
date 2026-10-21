@@ -58,23 +58,27 @@ final readonly class UnreadCountRepository
         return $this->countsByNetwork($this->countedBy($qb, $aliases->networkKey()));
     }
 
-    /** @return array<string, int> feed group => unread entries, every group present */
+    /** @return array{tags: int, feeds: int} */
     public function perFeedGroup(int $userId): array
     {
-        $counts = [];
-        foreach (FeedGroup::cases() as $group) {
-            $qb = $this->unreadEntries($userId)->select('COUNT(e.id)');
-            $this->scope->inFeedGroup($qb, EntryAliases::primary(), $group);
-            $counts[$group->value] = (int) $qb->getQuery()->getSingleScalarResult();
-        }
-
-        return $counts;
+        return [
+            'tags' => $this->unreadInFeedGroup($userId, FeedGroup::Tags),
+            'feeds' => $this->unreadInFeedGroup($userId, FeedGroup::Feeds),
+        ];
     }
 
     public function allItems(int $userId): int
     {
         $qb = $this->unreadEntries($userId)->select('COUNT(e.id)');
         $this->scope->inAllItems($qb, EntryAliases::primary());
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    private function unreadInFeedGroup(int $userId, FeedGroup $group): int
+    {
+        $qb = $this->unreadEntries($userId)->select('COUNT(e.id)');
+        $this->scope->inFeedGroup($qb, EntryAliases::primary(), $group);
 
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
