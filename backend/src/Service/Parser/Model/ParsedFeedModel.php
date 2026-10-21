@@ -17,6 +17,7 @@ final readonly class ParsedFeedModel
         public ?string $description,
         public ?string $imageUrl,
         public array $entries,
+        public ?string $generator = null,
     ) {
     }
 
@@ -27,7 +28,7 @@ final readonly class ParsedFeedModel
      */
     public function withEntries(array $entries): self
     {
-        return new self($this->title, $this->siteUrl, $this->description, $this->imageUrl, $entries);
+        return new self($this->title, $this->siteUrl, $this->description, $this->imageUrl, $entries, $this->generator);
     }
 
     public function withShowArtwork(?DeclaredImageModel $showArtwork): self
