@@ -206,6 +206,29 @@ final class RefreshControllerTest extends WebTestCase
         self::assertSame(0, $body['remaining'], 'the plain feed outside the network is never due');
     }
 
+    public function testFeedGroupRefreshIsAccepted(): void
+    {
+        $client = self::createClient();
+        $headers = $this->auth('group-refresh@example.com');
+
+        $client->request('POST', '/api/refresh?group=feeds', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('completed', $body['status']);
+    }
+
+    public function testRefreshOfAnUnknownFeedGroupIsAValidationError(): void
+    {
+        $client = self::createClient();
+        $headers = $this->auth('unknown-group-refresh@example.com');
+
+        $client->request('POST', '/api/refresh?group=folders', server: $headers);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
     public function testRefreshOfAnUnknownNetworkIsAValidationError(): void
     {
         $client = self::createClient();

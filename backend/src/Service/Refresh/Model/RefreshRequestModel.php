@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh\Model;
 
+use App\Enum\FeedGroup;
 use App\Repository\NetworkScope;
 
 final readonly class RefreshRequestModel
@@ -19,6 +20,7 @@ final readonly class RefreshRequestModel
         public bool $prune,
         public int $batchLimit = self::DEFAULT_BATCH_LIMIT,
         public ?NetworkScope $networkScope = null,
+        public ?FeedGroup $feedGroup = null,
     ) {
     }
 
@@ -42,6 +44,11 @@ final readonly class RefreshRequestModel
         return new self($userId, null, null, true, $budgetSeconds, false, networkScope: $networkScope);
     }
 
+    public static function forUserFeedGroup(int $userId, FeedGroup $feedGroup, int $budgetSeconds): self
+    {
+        return new self($userId, null, null, true, $budgetSeconds, false, feedGroup: $feedGroup);
+    }
+
     public static function forFeed(int $feedId, int $budgetSeconds): self
     {
         return new self(null, $feedId, null, true, $budgetSeconds, false);
@@ -63,6 +70,7 @@ final readonly class RefreshRequestModel
             false,
             $this->batchLimit,
             $this->networkScope,
+            $this->feedGroup,
         );
     }
 
@@ -77,6 +85,7 @@ final readonly class RefreshRequestModel
             $this->prune,
             $this->batchLimit,
             $this->networkScope,
+            $this->feedGroup,
         );
     }
 
@@ -91,6 +100,7 @@ final readonly class RefreshRequestModel
             $this->prune,
             $batchLimit,
             $this->networkScope,
+            $this->feedGroup,
         );
     }
 }
