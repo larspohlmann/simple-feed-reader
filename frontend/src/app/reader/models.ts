@@ -3,6 +3,7 @@ import { LinkCardDto } from './link-card/link-card';
 import { ThreadPostDto } from './thread-post';
 import { QuotedPostDto } from './quoted-post/quoted-post';
 import { SocialAccountRefDto, SocialFeedRefDto } from './social-feed';
+import { FeedGroupName } from '../core/feed-group';
 import { NetworkFeedKind, SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
 
@@ -157,6 +158,7 @@ export interface UnreadTotalsDto {
   forYou: number;
   tags: { id: number; unreadCount: number }[];
   networks: { network: SocialNetworkName; unreadCount: number; profilesUnreadCount: number }[];
+  groups: Record<FeedGroupName, number>;
 }
 
 /** One playable or downloadable enclosure the feed declared (#906). */
@@ -368,6 +370,8 @@ export interface EntryQuery {
   /** A network's combined view: every feed of that network, private and profile alike. */
   network?: SocialNetworkName;
   feedKind?: NetworkFeedKind;
+  /** A sidebar section's combined view: every tagged feed, or every untagged non-social one. */
+  group?: FeedGroupName;
   /** Views that cannot express "only unread" through `view=unread` carry the
    *  refinement as a flag beside their own view or search term. */
   unread?: boolean;
@@ -382,7 +386,7 @@ export interface EntryQuery {
 /** The scopes `POST /api/entries/mark-read` accepts. A search is deliberately NOT one of them: it has its own
  *  endpoint, and widening this union would let `markRead` type-check a search against a request the backend
  *  rejects. See `MarkReadTarget` in query.ts. */
-export type MarkReadScope = 'all' | 'feed' | 'tag' | 'network';
+export type MarkReadScope = 'all' | 'feed' | 'tag' | 'network' | 'group';
 
 export interface EntryStatePatch {
   isHidden?: boolean;

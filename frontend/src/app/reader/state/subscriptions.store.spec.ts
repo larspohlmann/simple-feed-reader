@@ -60,6 +60,7 @@ const unreadTotalsDto = (over: Partial<UnreadTotalsDto> = {}): UnreadTotalsDto =
   forYou: 0,
   tags: [],
   networks: [],
+  groups: { tags: 0, feeds: 0 },
   ...over,
 });
 
@@ -484,6 +485,7 @@ describe('SubscriptionsStore', () => {
             unreadTotals: {
               allItems: 25,
               tags: [{ id: 20, unreadCount: 3 }],
+              groups: { tags: 3, feeds: 16 },
               networks: [
                 { network: 'bluesky', unreadCount: 6, profilesUnreadCount: 0 },
                 { network: 'mastodon', unreadCount: 8, profilesUnreadCount: 8 },
@@ -506,6 +508,11 @@ describe('SubscriptionsStore', () => {
 
     it('never lists a social feed in the untagged feeds', () => {
       expect(store.untagged().map((subscription) => subscription.id)).toEqual([2]);
+    });
+
+    it("counts each sidebar section's own unread, once", () => {
+      expect(store.feedGroupCounts().tags.unreadCount).toBe(3);
+      expect(store.feedGroupCounts().feeds.unreadCount).toBe(16);
     });
 
     it('keeps a private feed out of the All items total but counts a profile feed', () => {

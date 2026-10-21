@@ -43,9 +43,18 @@ export function buildTagTree(
       tag,
       subscriptions: feeds,
       unreadCount: tagUnread.get(tag.id) ?? 0,
-      entryCount: feeds.reduce((total, subscription) => total + subscription.entryCount, 0),
+      entryCount: totalEntryCount(feeds),
     };
   });
+}
+
+export function totalEntryCount(subscriptions: SubscriptionDto[]): number {
+  return subscriptions.reduce((total, subscription) => total + subscription.entryCount, 0);
+}
+
+export interface FeedGroupCounts {
+  readonly unreadCount: number;
+  readonly entryCount: number;
 }
 
 /** Fallback tag set derived from subscriptions (only non-empty tags), by name. */

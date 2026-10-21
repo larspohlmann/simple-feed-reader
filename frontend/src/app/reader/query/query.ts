@@ -1,5 +1,6 @@
 import { ParamMap, Params, convertToParamMap } from '@angular/router';
 import { EntryQuery, ListOrder, MarkReadScope } from '../models';
+import { FeedGroupName, isFeedGroupName } from '../../core/feed-group';
 import { entryIdFromParam } from './slug';
 import {
   NetworkFeedKind,
@@ -13,6 +14,7 @@ export interface Selection {
     | 'all'
     | 'tag'
     | 'network'
+    | 'group'
     | 'subscription'
     | 'favorites'
     | 'kept'
@@ -30,6 +32,8 @@ export interface Selection {
   network?: SocialNetworkName;
   /** Only a network's Feeds row carries one. */
   feedKind?: NetworkFeedKind;
+  /** Only a feed group's combined view carries one. */
+  group?: FeedGroupName;
   /** Absent means newest first; only a list `hasListOrder` accepts ever carries one. */
   order?: ListOrder;
 }
@@ -119,12 +123,13 @@ export function searchWords(term: string): string[] {
 }
 
 /** How a scoped refresh is keyed. Empty = all the user's due feeds; feedId =
- *  one feed; tagId = every feed carrying that tag; network = that network's feeds. */
+ *  one feed; tagId = every feed carrying that tag; network = that network's feeds, group = that sidebar section's feeds. */
 export interface RefreshScope {
   feedId?: number;
   tagId?: number;
   network?: SocialNetworkName;
   feedKind?: NetworkFeedKind;
+  group?: FeedGroupName;
 }
 
 /** Whether two selections name the same list. Selections are rebuilt from the
@@ -137,6 +142,7 @@ export function sameSelection(left: Selection, right: Selection): boolean {
     left.term === right.term &&
     left.network === right.network &&
     left.feedKind === right.feedKind &&
+    left.group === right.group &&
     listOrderOf(left) === listOrderOf(right)
   );
 }
@@ -193,6 +199,7 @@ export function listOrderKey(selection: Selection): string | null {
   if (!hasListOrder(selection)) return null;
   if (selection.kind === 'search') return 'search';
   if (selection.network) return `network:${networkKey(selection)}`;
+  if (selection.group) return `group:${selection.group}`;
   return selection.id === null ? selection.kind : `${selection.kind}:${selection.id}`;
 }
 
@@ -203,6 +210,7 @@ export function canScopedRefresh(selection: Selection): boolean {
     selection.kind === 'all' ||
     selection.kind === 'tag' ||
     selection.kind === 'network' ||
+    selection.kind === 'group' ||
     selection.kind === 'subscription'
   );
 }
@@ -222,6 +230,7 @@ const SELECTION_PARAM_NAMES = [
   'tag',
   'network',
   'feedKind',
+  'group',
   'subscription',
   'entry',
   'link',
@@ -303,7 +312,7 @@ export function selectionFromParams(paramMap: ParamMap): {
   return { selection, entryId };
 }
 
-/** The lists drawn from feeds: one subscription, a tag, a network's feeds, or all of them. */
+/** The lists drawn from feeds: one subscription, a tag, a network's feeds, a feed group, or all of them. */
 function feedScopedSelection(paramMap: ParamMap): Selection {
   const subscription = posInt(selectionParam(paramMap, 'subscription'));
   if (subscription != null) return { kind: 'subscription', id: subscription, unread: false };
@@ -312,6 +321,8 @@ function feedScopedSelection(paramMap: ParamMap): Selection {
   const network = selectionParam(paramMap, 'network');
   if (isSocialNetworkName(network))
     return networkSelection(network, selectionParam(paramMap, 'feedKind'));
+  const group = selectionParam(paramMap, 'group');
+  if (isFeedGroupName(group)) return { kind: 'group', id: null, unread: false, group };
   return { kind: 'all', id: null, unread: false };
 }
 
@@ -358,6 +369,7 @@ const VIEW_QUERY: Record<SelectionKind, (selection: Selection) => EntryQuery> = 
     network: selection.network,
     feedKind: selection.feedKind,
   }),
+  group: (selection) => ({ view: listView(selection), group: selection.group }),
   subscription: (selection) => ({
     view: listView(selection),
     subscription: selection.id ?? undefined,
@@ -390,6 +402,7 @@ export type MarkReadTarget =
       network: SocialNetworkName;
       feedKind?: NetworkFeedKind;
     }
+  | { scope: Extract<MarkReadScope, 'group'>; group: FeedGroupName }
   | { scope: 'search'; term: string }
   | { scope: 'for-you' }
   | { scope: 'saved-searches' }
@@ -411,6 +424,7 @@ const MARK_READ_TARGET: Partial<
     selection.network
       ? { scope: 'network', network: selection.network, feedKind: selection.feedKind }
       : null,
+  group: (selection) => (selection.group ? { scope: 'group', group: selection.group } : null),
   subscription: idScoped('feed'),
   search: (selection) => (selection.term ? { scope: 'search', term: selection.term } : null),
   // No id and no term: the list is the reader's own ranked feed, so the

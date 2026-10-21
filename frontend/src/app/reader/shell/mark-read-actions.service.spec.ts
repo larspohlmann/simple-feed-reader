@@ -99,7 +99,13 @@ describe('MarkReadActions recounting after a mark-read', () => {
         favoritesCount: 0,
         keptCount: 0,
         viewedCount: 0,
-        unreadTotals: { allItems: 0, forYou: 0, tags: [{ id: 5, unreadCount: 4 }], networks: [] },
+        unreadTotals: {
+          allItems: 0,
+          forYou: 0,
+          tags: [{ id: 5, unreadCount: 4 }],
+          networks: [],
+          groups: { tags: 0, feeds: 0 },
+        },
       });
     reloadCountsQuietly = jest.spyOn(subscriptions, 'reloadCountsQuietly').mockImplementation();
     fullLoad = jest.spyOn(subscriptions, 'load');
@@ -112,6 +118,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
     { kind: 'subscription', id: 1, unread: true },
     { kind: 'network', id: null, unread: true, network: 'bluesky' },
     { kind: 'network', id: null, unread: true, network: 'bluesky', feedKind: 'profile' },
+    { kind: 'group', id: null, unread: true, group: 'tags' },
     { kind: 'search', id: null, unread: true, term: 'news' },
     { kind: 'for-you', id: null, unread: true },
     { kind: 'saved-searches', id: null, unread: true },

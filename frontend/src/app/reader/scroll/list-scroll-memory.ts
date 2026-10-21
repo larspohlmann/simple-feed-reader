@@ -6,7 +6,7 @@ import { Selection, listOrderOf, networkKey } from '../query/query';
  * unread-vs-all, and the list order so every list remembers its own place independently.
  */
 export function scrollKey(selection: Selection): string {
-  return `feed-reader:list-scroll:${selection.kind}:${selection.id ?? ''}:${selection.unread ? 'u' : 'a'}:${selection.term ?? ''}:${networkKey(selection)}:${listOrderOf(selection)}`;
+  return `feed-reader:list-scroll:${selection.kind}:${selection.id ?? ''}:${selection.unread ? 'u' : 'a'}:${selection.term ?? ''}:${networkKey(selection)}:${selection.group ?? ''}:${listOrderOf(selection)}`;
 }
 
 /** Storage key for an open article's own scroll offset, keyed by entry id. */

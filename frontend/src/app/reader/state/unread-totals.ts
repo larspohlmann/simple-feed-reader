@@ -1,3 +1,4 @@
+import { FeedGroupName } from '../../core/feed-group';
 import { SocialNetworkName } from '../../core/social-network';
 import { UnreadTotalsDto } from '../models';
 
@@ -7,6 +8,7 @@ export interface UnreadTotals {
   readonly tags: ReadonlyMap<number, number>;
   readonly networks: ReadonlyMap<SocialNetworkName, number>;
   readonly networkProfiles: ReadonlyMap<SocialNetworkName, number>;
+  readonly groups: Readonly<Record<FeedGroupName, number>>;
 }
 
 export const NO_UNREAD_TOTALS: UnreadTotals = {
@@ -15,6 +17,7 @@ export const NO_UNREAD_TOTALS: UnreadTotals = {
   tags: new Map(),
   networks: new Map(),
   networkProfiles: new Map(),
+  groups: { tags: 0, feeds: 0 },
 };
 
 export function unreadTotalsFrom(dto: UnreadTotalsDto): UnreadTotals {
@@ -26,6 +29,7 @@ export function unreadTotalsFrom(dto: UnreadTotalsDto): UnreadTotals {
     networkProfiles: new Map(
       dto.networks.map((network) => [network.network, network.profilesUnreadCount]),
     ),
+    groups: { tags: dto.groups.tags, feeds: dto.groups.feeds },
   };
 }
 
@@ -35,7 +39,9 @@ export function sameUnreadTotals(left: UnreadTotals, right: UnreadTotals): boole
     left.forYou === right.forYou &&
     sameCounts(left.tags, right.tags) &&
     sameCounts(left.networks, right.networks) &&
-    sameCounts(left.networkProfiles, right.networkProfiles)
+    sameCounts(left.networkProfiles, right.networkProfiles) &&
+    left.groups.tags === right.groups.tags &&
+    left.groups.feeds === right.groups.feeds
   );
 }
 
