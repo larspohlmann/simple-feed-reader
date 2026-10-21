@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
+use App\Enum\FeedGroup;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
@@ -55,6 +56,19 @@ final readonly class UnreadCountRepository
         NetworkScopeDql::restrictToProfiles($qb, $aliases->networkFeed);
 
         return $this->countsByNetwork($this->countedBy($qb, $aliases->networkKey()));
+    }
+
+    /** @return array<string, int> feed group => unread entries, every group present */
+    public function perFeedGroup(int $userId): array
+    {
+        $counts = [];
+        foreach (FeedGroup::cases() as $group) {
+            $qb = $this->unreadEntries($userId)->select('COUNT(e.id)');
+            $this->scope->inFeedGroup($qb, EntryAliases::primary(), $group);
+            $counts[$group->value] = (int) $qb->getQuery()->getSingleScalarResult();
+        }
+
+        return $counts;
     }
 
     public function allItems(int $userId): int

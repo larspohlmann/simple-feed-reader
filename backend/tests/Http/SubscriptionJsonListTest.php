@@ -26,7 +26,7 @@ final class SubscriptionJsonListTest extends DbTestCase
             [$counted->requireId() => 3],
             [$counted->requireId() => 40],
             ['favorites' => 8, 'kept' => 2, 'viewed' => 41],
-            new UnreadTotalsModel(7, [], [], [], 0),
+            new UnreadTotalsModel(7, [], [], [], 0, []),
         );
 
         $payload = SubscriptionJson::list([$counted, $silent], $tallies, []);
@@ -62,7 +62,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 [],
                 [],
                 ['favorites' => 0, 'kept' => 0, 'viewed' => 0],
-                new UnreadTotalsModel(0, [], [], [], 0),
+                new UnreadTotalsModel(0, [], [], [], 0, []),
             ),
             [$bluesky, $mastodon],
         );
@@ -102,7 +102,7 @@ final class SubscriptionJsonListTest extends DbTestCase
                 [],
                 [],
                 ['favorites' => 0, 'kept' => 0, 'viewed' => 0],
-                new UnreadTotalsModel(0, [], [], [], 0),
+                new UnreadTotalsModel(0, [], [], [], 0, []),
             ),
             [$bluesky],
         );

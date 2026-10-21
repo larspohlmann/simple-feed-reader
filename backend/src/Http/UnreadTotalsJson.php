@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Enum\FeedGroup;
 use App\Service\Subscription\Model\UnreadTotalsModel;
 
 final class UnreadTotalsJson
@@ -13,7 +14,8 @@ final class UnreadTotalsJson
      *   allItems: int,
      *   forYou: int,
      *   tags: list<array{id: int, unreadCount: int}>,
-     *   networks: list<array{network: string, unreadCount: int, profilesUnreadCount: int}>
+     *   networks: list<array{network: string, unreadCount: int, profilesUnreadCount: int}>,
+     *   groups: array<string, int>
      * }
      */
     public static function from(UnreadTotalsModel $totals): array
@@ -31,6 +33,17 @@ final class UnreadTotalsJson
             ];
         }
 
-        return ['allItems' => $totals->allItems, 'forYou' => $totals->forYou, 'tags' => $tags, 'networks' => $networks];
+        $groups = [];
+        foreach (FeedGroup::cases() as $group) {
+            $groups[$group->value] = $totals->feedGroups[$group->value] ?? 0;
+        }
+
+        return [
+            'allItems' => $totals->allItems,
+            'forYou' => $totals->forYou,
+            'tags' => $tags,
+            'networks' => $networks,
+            'groups' => $groups,
+        ];
     }
 }
