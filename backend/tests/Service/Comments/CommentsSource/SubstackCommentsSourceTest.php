@@ -207,4 +207,55 @@ final class SubstackCommentsSourceTest extends KernelTestCase
 
         $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
     }
+
+    public function testADeletedCommentIsDroppedEvenWithABodyAndItsReplyIsKept(): void
+    {
+        $answer = '{"comments": [{"id": 1, "deleted": true, "body": "Still has text.", "date": null, "children": ['
+            . '{"id": 2, "name": "Bo Second", "body": "A reply.", "children": []}]}]}';
+
+        $comments = $this->source->read(self::entry(), $answer)->comments;
+
+        self::assertSame([[self::POST . '/comment/2', 0]], self::urlsAndDepths($comments));
+    }
+
+    public function testACommentWithoutAnIdIsDroppedAndItsReplyIsKept(): void
+    {
+        $answer = '{"comments": [{"name": "Ada Reader", "body": "No id.", "children": ['
+            . '{"id": 2, "name": "Bo Second", "body": "A reply.", "children": []}]}]}';
+
+        $comments = $this->source->read(self::entry(), $answer)->comments;
+
+        self::assertSame([[self::POST . '/comment/2', 0]], self::urlsAndDepths($comments));
+    }
+
+    public function testAnUnreachableCommentListIsUnavailable(): void
+    {
+        $this->fetcher->willReturnBody(self::POST_API, (string) file_get_contents(self::FIXTURES . '/post.json'));
+        $this->fetcher->willThrow(self::COMMENTS_API, new FeedUnreachableException('gone'));
+        $this->expectException(CommentsUnavailableException::class);
+
+        $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+    }
+
+    public function testAThrottledCommentListIsThrottled(): void
+    {
+        $this->fetcher->willReturnBody(self::POST_API, (string) file_get_contents(self::FIXTURES . '/post.json'));
+        $this->fetcher->willThrow(self::COMMENTS_API, new FeedThrottledException('slow down', 120));
+        $this->expectException(CommentsThrottledException::class);
+
+        $this->source->fetch(new CommentsRequest($this->source, $this->user, self::entry()));
+    }
+
+    /**
+     * @param list<EntryCommentModel> $comments
+     *
+     * @return list<array{string|null, int}>
+     */
+    private static function urlsAndDepths(array $comments): array
+    {
+        return array_map(
+            static fn (EntryCommentModel $comment): array => [$comment->url, $comment->depth],
+            $comments,
+        );
+    }
 }
