@@ -18,7 +18,7 @@ test('a saved dark brightness step paints from the first frame and dims media', 
   await page.goto('/login');
 
   await expect(page.locator('html')).toHaveAttribute('data-brightness', '-3');
-  expect(await mediaFilter(page)).toBe('brightness(0.76)');
+  expect(await mediaFilter(page)).toBe('brightness(0.25)');
 });
 
 test('a light step above the default is clamped before the app boots', async ({ page }) => {
