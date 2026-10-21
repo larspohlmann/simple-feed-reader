@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   NgZone,
   computed,
   effect,
@@ -9,6 +8,7 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -26,7 +26,6 @@ import { EntryDto } from '../../models';
 import { EntryCommentDto, EntryCommentPostDto } from '../../entry-comment';
 import { likeableSocial } from '../../entry-social';
 import { mediumRatio } from '../../entry-medium';
-import { observeOnSight } from '../../list/paging';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { QuotedPostComponent } from '../../quoted-post/quoted-post.component';
 import { LinkCardComponent } from '../../link-card/link-card.component';
@@ -60,18 +59,15 @@ const DEEPEST_INDENT = 5;
 })
 export class EntryCommentsComponent {
   readonly entry = input.required<CommentsEntry>();
-  /** The pane whose viewport the section loads on sight of. */
-  readonly scroller = input.required<HTMLElement>();
   readonly refreshed = output<void>();
 
   private readonly service = inject(CommentsService);
   private readonly toast = inject(ToastService);
   private readonly language = inject(LanguageService);
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly zone = inject(NgZone);
   private readonly now = signal(Date.now());
   private readonly entryId = computed(() => this.entry().id);
-  private readonly loadsOnSight = computed(() => this.entry().comments === 'auto');
+  private readonly loadsOnOpen = computed(() => this.entry().comments === 'auto');
 
   readonly state = computed(() => this.service.state(this.entryId())());
   protected readonly likeable = computed(() => likeableSocial(this.entry()) !== null);
@@ -90,14 +86,9 @@ export class EntryCommentsComponent {
   });
 
   constructor() {
-    effect((onCleanup) => {
-      if (!this.loadsOnSight()) return;
+    effect(() => {
       const id = this.entryId();
-      const stopWatching = observeOnSight(this.host.nativeElement, this.scroller(), () => {
-        stopWatching();
-        this.service.load(id);
-      });
-      onCleanup(stopWatching);
+      if (this.loadsOnOpen()) untracked(() => this.service.load(id));
     });
     effect((onCleanup) => {
       const until = this.throttledUntil();

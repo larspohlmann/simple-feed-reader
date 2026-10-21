@@ -127,11 +127,18 @@ export class ReaderViewComponent {
   });
   private readonly socialCountsRow = viewChild(SocialCountsComponent);
   private readonly socialCounts = computed(() => this.socialCountsRow()?.host);
+  private readonly comments = inject(CommentsService);
   private readonly commentsForecast = new CommentsForecast(
     this.entry,
-    inject(CommentsService),
+    this.comments,
     inject(SocialCountsService),
   );
+  protected readonly commentCount = computed(() => {
+    const entry = this.entry();
+    if (!entry?.comments) return null;
+    const state = this.comments.state(entry.id)();
+    return state.status === 'ok' ? state.comments.length + state.omitted : null;
+  });
   private readonly trailingParts: readonly TrailingPart[] = [
     { query: this.postMedia, joinsFocus: false },
     { query: this.quotedPost, joinsFocus: false },
@@ -146,7 +153,7 @@ export class ReaderViewComponent {
   ];
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly layer = viewChild(ArticleLayerComponent);
-  protected readonly scroller = computed(() => this.layer()?.scroller());
+  private readonly scroller = computed(() => this.layer()?.scroller());
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   private readonly screen = inject(LayoutService);
@@ -242,14 +249,23 @@ export class ReaderViewComponent {
     this.layer()?.scrollToTop(this.titleHeading()?.nativeElement);
   }
 
-  /** Scroll the reading pane to a heading, clearing the chrome that covers the scroller. */
   scrollToHeading(id: string): void {
+    this.scrollToElement(
+      this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`),
+    );
+  }
+
+  protected scrollToComments(): void {
+    this.scrollToElement(this.commentsSection()?.nativeElement);
+  }
+
+  /** Scroll the reading pane to an element, clearing the chrome that covers the scroller. */
+  private scrollToElement(target: HTMLElement | null | undefined): void {
     const scroller = this.scroller();
-    const heading = this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
-    if (!scroller || !heading) return;
+    if (!scroller || !target) return;
     this.restore.abort(); // a jump takes over from any in-flight restore
     const top =
-      heading.getBoundingClientRect().top -
+      target.getBoundingClientRect().top -
       scroller.getBoundingClientRect().top +
       scroller.scrollTop;
     const covered = parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0;

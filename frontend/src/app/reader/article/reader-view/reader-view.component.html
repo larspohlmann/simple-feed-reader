@@ -101,7 +101,19 @@
             >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
           /></a>
         }
-        @if (e.discussionUrl && e.discussionUrl !== e.url) {
+        @if (e.comments) {
+          ·
+          <a
+            class="discussion-link"
+            href="#comments"
+            (click)="$event.preventDefault(); scrollToComments()"
+            >{{ 'reader.discussion' | transloco }}
+            @if (commentCount() !== null) {
+              ({{ commentCount() }})
+            }
+            <app-icon name="forum" size="text"
+          /></a>
+        } @else if (e.discussionUrl && e.discussionUrl !== e.url) {
           ·
           <a
             class="discussion-link"
@@ -210,8 +222,8 @@
       @if (e.categories.length) {
         <p class="categories">{{ e.categories.join(', ') }}</p>
       }
-      @if (!source.loading() && e.comments && scroller(); as pane) {
-        <app-entry-comments [entry]="e" [scroller]="pane" (refreshed)="reloadSocialCounts()" />
+      @if (!source.loading() && e.comments) {
+        <app-entry-comments [entry]="e" (refreshed)="reloadSocialCounts()" />
       }
     </article>
     <!-- Laid over the whole pane while an article loads or refetches, in place
