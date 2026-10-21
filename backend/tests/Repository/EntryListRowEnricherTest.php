@@ -21,6 +21,7 @@ use App\Entity\ThreadPost;
 use App\Entity\ThreadPostContent;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Enum\FeedPlatform;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
@@ -263,6 +264,23 @@ final class EntryListRowEnricherTest extends DbTestCase
 
         self::assertEquals(
             new EntryListRowDiscussion(self::POST . '4', CommentsLoad::Auto),
+            $rows[0]->enrichment->discussion,
+        );
+        self::assertNull($rows[1]->enrichment->discussion);
+    }
+
+    public function testASubstackPostsCommentsAreItsDiscussion(): void
+    {
+        $feed = new Feed('https://joe.substack.com/feed');
+        $feed->recordPlatform(FeedPlatform::Substack);
+        $this->entityManager->persist($feed);
+        $post = $this->postOn($feed, 'https://joe.substack.com/p/one-post');
+        $page = $this->postOn($feed, 'https://joe.substack.com/podcast');
+
+        $rows = $this->enrich([$this->row($post), $this->row($page)]);
+
+        self::assertEquals(
+            new EntryListRowDiscussion('https://joe.substack.com/p/one-post', CommentsLoad::Auto),
             $rows[0]->enrichment->discussion,
         );
         self::assertNull($rows[1]->enrichment->discussion);

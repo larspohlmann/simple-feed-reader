@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Enum\CommentsLoad;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
+use App\Service\Comments\Support\SubstackPostAddress;
 use App\Service\Social\Support\SocialPostAddress;
 
 /**
@@ -65,7 +66,7 @@ final readonly class EntryListRowEnricher
                 $linkCards[$entryId] ?? [],
                 isset($pendingIds[$entryId]),
                 $socialStates[$entryId] ?? null,
-                isset($socialStates[$entryId]) ? self::repliesDiscussionOf($entries[$entryId]) : null,
+                self::discussionOf($entries[$entryId], $socialStates),
                 $origins[$entryId] ?? null,
                 $threads[$entryId] ?? [],
             );
@@ -135,9 +136,12 @@ final readonly class EntryListRowEnricher
         ));
     }
 
-    private static function repliesDiscussionOf(Entry $post): EntryListRowDiscussion
+    /** @param array<int, EntryListRowSocial> $socialStates */
+    private static function discussionOf(Entry $entry, array $socialStates): ?EntryListRowDiscussion
     {
-        return new EntryListRowDiscussion($post->getUrl(), CommentsLoad::Auto);
+        $isPlatformThread = isset($socialStates[$entry->requireId()]) || null !== SubstackPostAddress::of($entry);
+
+        return $isPlatformThread ? new EntryListRowDiscussion($entry->getUrl(), CommentsLoad::Auto) : null;
     }
 
     /**
