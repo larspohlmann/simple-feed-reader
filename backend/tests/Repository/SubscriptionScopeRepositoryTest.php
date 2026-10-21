@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\NetworkScope;
@@ -104,6 +105,28 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
         self::assertSame(
             [$first->requireId(), $second->requireId()],
             $this->idsOf($this->subscriptions()->findForUserByTagId($user->requireId(), $tag->requireId())),
+        );
+    }
+
+    public function testAFeedGroupHoldsExactlyItsSidebarSection(): void
+    {
+        $user = $this->user('feed-group-owner@example.com');
+        $tag = new Tag($user, 'Group');
+        $this->entityManager->persist($tag);
+        $tagged = $this->fixtures()->subscribe($user, 'https://tagged.example/feed.xml');
+        $tagged->addTag($tag, 0);
+        $untagged = $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::PLAIN);
+        $this->fixtures()->subscribe($user, NetworkFeedSubscriptions::blueskyHome(1), SourceFormat::BLUESKY_API);
+        $this->entityManager->flush();
+
+        $userId = $user->requireId();
+        self::assertSame(
+            [$tagged->requireId()],
+            $this->idsOf($this->subscriptions()->findForUserInFeedGroup($userId, FeedGroup::Tags)),
+        );
+        self::assertSame(
+            [$untagged->requireId()],
+            $this->idsOf($this->subscriptions()->findForUserInFeedGroup($userId, FeedGroup::Feeds)),
         );
     }
 

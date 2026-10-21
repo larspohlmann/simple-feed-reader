@@ -70,6 +70,57 @@ final class EntryFeedGroupScopeTest extends WebTestCase
         self::assertSame(['group' => ['Unknown group. Use one of: tags, feeds.']], $this->body()['errors']);
     }
 
+    public function testMarkingTheFeedsGroupReadLeavesTaggedFeedsUnread(): void
+    {
+        [$headers, $user] = $this->auth('group-mark@example.com');
+        $this->seedGroups($user);
+
+        $this->markRead($headers, ['scope' => 'group', 'group' => 'feeds']);
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+
+        $this->client->request('GET', '/api/entries?group=feeds&view=unread', server: $headers);
+        self::assertSame([], $this->guidsOfResponse());
+        $this->client->request('GET', '/api/entries?group=tags&view=unread', server: $headers);
+        self::assertSame(['tagged-social-post', 'hidden-tagged-post', 'twice-tagged-post'], $this->guidsOfResponse());
+    }
+
+    public function testMarkingTheTagsGroupReadReachesFeedsHiddenFromAllItems(): void
+    {
+        [$headers, $user] = $this->auth('group-mark-tags@example.com');
+        $this->seedGroups($user);
+
+        $this->markRead($headers, ['scope' => 'group', 'group' => 'tags']);
+
+        $this->client->request('GET', '/api/entries?group=tags&view=unread', server: $headers);
+        self::assertSame([], $this->guidsOfResponse());
+        $this->client->request('GET', '/api/entries?group=feeds&view=unread', server: $headers);
+        self::assertSame(['plain-post'], $this->guidsOfResponse());
+    }
+
+    public function testMarkingAGroupReadWithoutAGroupIsAValidationError(): void
+    {
+        [$headers] = $this->auth('group-mark-missing@example.com');
+
+        $this->markRead($headers, ['scope' => 'group']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame(['group' => ['A group is required when scope is "group".']], $this->body()['errors']);
+    }
+
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, string> $scope
+     */
+    private function markRead(array $headers, array $scope): void
+    {
+        $this->client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode($scope + ['until' => '2026-10-12T00:00:00Z'], \JSON_THROW_ON_ERROR),
+        );
+    }
+
     /**
      * Tagged: a feed with two tags (listed once), one hidden from All items (still listed), a tagged Bluesky profile.
      * Untagged: a plain feed (the Feeds group) and a Bluesky home timeline (social, so in neither group).

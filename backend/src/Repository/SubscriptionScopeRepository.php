@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Subscription;
+use App\Enum\FeedGroup;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -29,6 +30,21 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
             ->andWhere('t.id = :tagId')->setParameter('tagId', $tagId)
             ->getQuery()
             ->getResult();
+
+        return $rows;
+    }
+
+    /** @return list<Subscription> */
+    public function findForUserInFeedGroup(int $userId, FeedGroup $group): array
+    {
+        $qb = $this->createQueryBuilder('s')
+            ->join('s.feed', 'f')->addSelect('f')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->orderBy('s.id', 'ASC');
+        FeedGroupDql::restrict($qb, 's', 'f', $group);
+
+        /** @var list<Subscription> $rows */
+        $rows = $qb->getQuery()->getResult();
 
         return $rows;
     }

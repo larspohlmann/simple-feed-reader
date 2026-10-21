@@ -10,4 +10,5 @@ enum ReadScopeKind: string
     case Feed = 'feed';
     case Tag = 'tag';
     case Network = 'network';
+    case Group = 'group';
 }
