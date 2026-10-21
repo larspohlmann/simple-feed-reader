@@ -22,6 +22,7 @@ import {
   FeedGroupCounts,
   buildTagTree,
   sumEntries,
+  taggedSubscriptions,
   totalEntryCount,
   untaggedSubscriptions,
 } from './subscription-derivations';
@@ -73,9 +74,11 @@ export class SubscriptionsStore {
   /** Each sidebar section's own list: what its header counts and its combined view holds. */
   readonly feedGroupCounts = computed<Record<FeedGroupName, FeedGroupCounts>>(() => {
     const unread = this.unreadTotals().groups;
-    const tagged = this.subscriptions().filter((subscription) => subscription.tags.length > 0);
     return {
-      tags: { unreadCount: unread.tags, entryCount: totalEntryCount(tagged) },
+      tags: {
+        unreadCount: unread.tags,
+        entryCount: totalEntryCount(taggedSubscriptions(this.subscriptions())),
+      },
       feeds: { unreadCount: unread.feeds, entryCount: totalEntryCount(this.untagged()) },
     };
   });

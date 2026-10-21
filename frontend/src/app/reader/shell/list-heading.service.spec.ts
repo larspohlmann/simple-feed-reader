@@ -146,26 +146,10 @@ describe("ListHeading for a network's combined view", () => {
       network: 'bluesky',
       ...selected,
     };
-    TestBed.configureTestingModule({
-      imports: [provideTranslocoTesting()],
-      providers: [
-        ListHeading,
-        { provide: ReaderRouteState, useValue: { selection: signal(selection) } },
-        {
-          provide: SubscriptionsStore,
-          useValue: {
-            subscriptions: signal(subscriptions),
-            socialSections: signal(buildSocialSections(subscriptions, [], NETWORK_TOTALS)),
-          },
-        },
-        { provide: LanguageService, useValue: { lang: signal('en') } },
-        { provide: EntriesStore, useValue: {} },
-        { provide: RecommendationsService, useValue: {} },
-        { provide: SavedSearchesStore, useValue: {} },
-        { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
-      ],
+    return headingWith(selection, {
+      subscriptions: signal(subscriptions),
+      socialSections: signal(buildSocialSections(subscriptions, [], NETWORK_TOTALS)),
     });
-    return TestBed.inject(ListHeading);
   }
 
   it('is titled by the network', () => {
@@ -211,33 +195,16 @@ describe("ListHeading for a feed group's combined view", () => {
   const GROUP_TOTALS: UnreadTotals = { ...NO_UNREAD_TOTALS, groups: { tags: 4, feeds: 9 } };
 
   function groupHeading(unread: boolean, group: 'tags' | 'feeds'): ListHeading {
-    const rows = subscriptions;
-    TestBed.configureTestingModule({
-      imports: [provideTranslocoTesting()],
-      providers: [
-        ListHeading,
-        {
-          provide: ReaderRouteState,
-          useValue: { selection: signal<Selection>({ kind: 'group', id: null, unread, group }) },
-        },
-        {
-          provide: SubscriptionsStore,
-          useValue: {
-            subscriptions: signal(rows),
-            feedGroupCounts: signal({
-              tags: { unreadCount: GROUP_TOTALS.groups.tags, entryCount: 30 },
-              feeds: { unreadCount: GROUP_TOTALS.groups.feeds, entryCount: 300 },
-            }),
-          },
-        },
-        { provide: LanguageService, useValue: { lang: signal('en') } },
-        { provide: EntriesStore, useValue: {} },
-        { provide: RecommendationsService, useValue: {} },
-        { provide: SavedSearchesStore, useValue: {} },
-        { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
-      ],
-    });
-    return TestBed.inject(ListHeading);
+    return headingWith(
+      { kind: 'group', id: null, unread, group },
+      {
+        subscriptions: signal(subscriptions),
+        feedGroupCounts: signal({
+          tags: { unreadCount: GROUP_TOTALS.groups.tags, entryCount: 30 },
+          feeds: { unreadCount: GROUP_TOTALS.groups.feeds, entryCount: 300 },
+        }),
+      },
+    );
   }
 
   it('is titled by the section', () => {
@@ -252,3 +219,21 @@ describe("ListHeading for a feed group's combined view", () => {
     expect(groupHeading(false, 'tags').titleCount()).toEqual({ value: 30, counts: 'items' });
   });
 });
+
+/** A ListHeading over one combined view: only the selection and the store stub differ between views. */
+function headingWith(selection: Selection, subscriptionsStore: object): ListHeading {
+  TestBed.configureTestingModule({
+    imports: [provideTranslocoTesting()],
+    providers: [
+      ListHeading,
+      { provide: ReaderRouteState, useValue: { selection: signal(selection) } },
+      { provide: SubscriptionsStore, useValue: subscriptionsStore },
+      { provide: LanguageService, useValue: { lang: signal('en') } },
+      { provide: EntriesStore, useValue: {} },
+      { provide: RecommendationsService, useValue: {} },
+      { provide: SavedSearchesStore, useValue: {} },
+      { provide: ReadingLayoutService, useValue: { mode: signal('magazine') } },
+    ],
+  });
+  return TestBed.inject(ListHeading);
+}

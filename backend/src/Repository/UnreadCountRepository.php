@@ -17,6 +17,7 @@ final readonly class UnreadCountRepository
     public function __construct(
         private EntityManagerInterface $entityManager,
         private EntryScopePredicates $scope,
+        private SubscriptionScopeRepository $subscriptionScopes,
     ) {
     }
 
@@ -77,8 +78,13 @@ final readonly class UnreadCountRepository
 
     private function unreadInFeedGroup(int $userId, FeedGroup $group): int
     {
+        $subscriptionIds = $this->subscriptionScopes->idsForUserInFeedGroup($userId, $group);
+        if ($subscriptionIds === []) {
+            return 0;
+        }
+
         $qb = $this->unreadEntries($userId)->select('COUNT(e.id)');
-        $this->scope->inFeedGroup($qb, EntryAliases::primary(), $group);
+        $this->scope->inSubscriptions($qb, EntryAliases::primary(), $subscriptionIds);
 
         return (int) $qb->getQuery()->getSingleScalarResult();
     }

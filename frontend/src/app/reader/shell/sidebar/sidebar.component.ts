@@ -124,9 +124,7 @@ export class SidebarComponent {
    *  restoring plain nav-row height/padding when absent (#636). */
   protected readonly showDigestToggles = computed(() => this.mailEnabled() && this.digestEnabled());
   readonly selection = input.required<Selection>();
-  protected readonly activeGroup = computed(() =>
-    this.selection().kind === 'group' ? (this.selection().group ?? null) : null,
-  );
+  protected readonly activeGroup = computed(() => this.selection().group ?? null);
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is
    *  the subscriptions store's own loading flag; conflating the two would show

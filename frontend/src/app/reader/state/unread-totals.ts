@@ -29,7 +29,7 @@ export function unreadTotalsFrom(dto: UnreadTotalsDto): UnreadTotals {
     networkProfiles: new Map(
       dto.networks.map((network) => [network.network, network.profilesUnreadCount]),
     ),
-    groups: { tags: dto.groups.tags, feeds: dto.groups.feeds },
+    groups: { ...dto.groups },
   };
 }
 

@@ -7,16 +7,13 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class EntryFeedGroupScopeTest extends WebTestCase
+final class EntryFeedGroupScopeTest extends ApiTestCase
 {
     private KernelBrowser $client;
 
@@ -67,7 +64,10 @@ final class EntryFeedGroupScopeTest extends WebTestCase
         $this->client->request('GET', '/api/entries?group=folders', server: $headers);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertSame(['group' => ['Unknown group. Use one of: tags, feeds.']], $this->body()['errors']);
+        self::assertSame(
+            ['group' => ['Unknown group. Use one of: tags, feeds.']],
+            $this->payload($this->client)['errors'],
+        );
     }
 
     public function testMarkingTheFeedsGroupReadLeavesTaggedFeedsUnread(): void
@@ -104,7 +104,10 @@ final class EntryFeedGroupScopeTest extends WebTestCase
         $this->markRead($headers, ['scope' => 'group']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertSame(['group' => ['A group is required when scope is "group".']], $this->body()['errors']);
+        self::assertSame(
+            ['group' => ['A group is required when scope is "group".']],
+            $this->payload($this->client)['errors'],
+        );
     }
 
     /**
@@ -165,7 +168,7 @@ final class EntryFeedGroupScopeTest extends WebTestCase
     /** @return list<string> */
     private function guidsOfResponse(): array
     {
-        $entries = $this->body()['entries'];
+        $entries = $this->payload($this->client)['entries'];
         self::assertIsArray($entries);
 
         return array_map(static function (mixed $entry): string {
@@ -176,21 +179,10 @@ final class EntryFeedGroupScopeTest extends WebTestCase
         }, array_values($entries));
     }
 
-    /** @return array<array-key, mixed> */
-    private function body(): array
-    {
-        $body = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-
-        return $body;
-    }
-
     /** @return array{0: array<string, string>, 1: User} */
     private function auth(string $email): array
     {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($this->entityManager(), $hasher))->create($email);
+        $user = $this->factory()->create($email);
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
 
@@ -200,13 +192,5 @@ final class EntryFeedGroupScopeTest extends WebTestCase
     private function fixtures(): NetworkFeedSubscriptions
     {
         return new NetworkFeedSubscriptions($this->entityManager());
-    }
-
-    private function entityManager(): EntityManagerInterface
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        return $entityManager;
     }
 }

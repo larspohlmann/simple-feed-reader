@@ -76,6 +76,10 @@ function embeddedTagsByName(subscriptions: SubscriptionDto[]): TagDto[] {
   return [...byId.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
+export function taggedSubscriptions(subscriptions: SubscriptionDto[]): SubscriptionDto[] {
+  return subscriptions.filter((subscription) => subscription.tags.length > 0);
+}
+
 export function untaggedSubscriptions(subscriptions: SubscriptionDto[]): SubscriptionDto[] {
   return subscriptions
     .filter((subscription) => subscription.tags.length === 0)
