@@ -1,0 +1,15 @@
+{"comments": [
+  {"id": 11, "name": "Ada Reader", "handle": "adareader", "photo_url": "https://substackcdn.com/image/fetch/ada.png",
+   "date": "2026-10-20T20:44:53.893Z", "deleted": false,
+   "body": "First paragraph.\n\nSee https://example.org/study for more.",
+   "children": [
+     {"id": 12, "name": "Joe Writer", "handle": "joewriter", "photo_url": null,
+      "date": "2026-10-20T21:00:00.000Z", "deleted": false, "body": "Thanks <b>Ada</b>.", "children": []}
+   ]},
+  {"id": 13, "name": null, "handle": null, "photo_url": null, "date": "2026-10-20T22:00:00.000Z",
+   "deleted": true, "body": null,
+   "children": [
+     {"id": 14, "name": "Bo Second", "handle": "bosecond", "photo_url": null,
+      "date": "2026-10-20T22:30:00.000Z", "deleted": false, "body": "Still here.", "children": []}
+   ]}
+]}

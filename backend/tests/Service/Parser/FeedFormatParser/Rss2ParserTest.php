@@ -251,6 +251,37 @@ final class Rss2ParserTest extends TestCase
         self::assertSame('https://example.com', FeedFormatParsers::feed($xml)->siteUrl);
     }
 
+    public function testReadsTheChannelGenerator(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rss version="2.0">
+                <channel>
+                    <title>Example</title>
+                    <generator>Substack</generator>
+                    <item><title>One</title><link>https://example.com/p/one</link></item>
+                </channel>
+            </rss>
+            XML;
+
+        self::assertSame('Substack', FeedFormatParsers::feed($xml)->generator);
+    }
+
+    public function testAChannelWithoutAGeneratorParsesToNull(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rss version="2.0">
+                <channel>
+                    <title>Example</title>
+                    <item><title>One</title><link>https://example.com/1</link></item>
+                </channel>
+            </rss>
+            XML;
+
+        self::assertNull(FeedFormatParsers::feed($xml)->generator);
+    }
+
     public function testReadsTheChannelImage(): void
     {
         $xml = /** @lang TEXT */ <<<'XML'

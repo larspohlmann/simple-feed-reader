@@ -63,6 +63,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             $channel->text('description'),
             FeedImageExtractor::fromRss2Channel($channel),
             $entries,
+            $channel->text('generator'),
         ))->withShowArtwork(PodcastArtwork::of($channelElement));
     }
 

@@ -7,6 +7,7 @@ namespace App\Service\Ingest;
 use App\Entity\Entry;
 use App\Entity\EntryGuid;
 use App\Entity\Feed;
+use App\Enum\FeedPlatform;
 use App\Repository\EntryRepository;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingest\FeedTitle\FeedTitleInterface;
@@ -113,6 +114,7 @@ final readonly class EntryIngestor
 
     private function updateFeedMetadata(Feed $feed, ParsedFeedModel $parsed): void
     {
+        $feed->recordPlatform(FeedPlatform::fromGenerator($parsed->generator));
         if ($parsed->title !== null) {
             $title = $this->feedTitle->of($feed->getUrl(), $parsed->title);
             $feed->setTitle(mb_substr($title, 0, self::FEED_TITLE_MAX));
