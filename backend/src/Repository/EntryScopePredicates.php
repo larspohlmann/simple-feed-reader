@@ -19,6 +19,7 @@ final readonly class EntryScopePredicates
     {
     }
 
+    /** Leaves out the feed group: the list resolves it to subscription ids first, see inSubscriptions(). */
     public function applyList(QueryBuilder $qb, EntryAliases $aliases, EntryQuery $query): void
     {
         if ($query->subscriptionId !== null) {
@@ -48,6 +49,15 @@ final readonly class EntryScopePredicates
     {
         $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed)
             ->andWhere($aliases->networkKey() . ' IS NOT NULL');
+    }
+
+    /**
+     * @param non-empty-list<int> $subscriptionIds
+     */
+    public function inSubscriptions(QueryBuilder $qb, EntryAliases $aliases, array $subscriptionIds): void
+    {
+        $qb->andWhere($aliases->subscriptionKey() . ' IN (:subscriptionIds)')
+            ->setParameter('subscriptionIds', $subscriptionIds);
     }
 
     public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void

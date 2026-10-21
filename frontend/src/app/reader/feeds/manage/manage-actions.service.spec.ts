@@ -471,7 +471,13 @@ describe('ManageActions', () => {
     const emptyResponse = () => ({
       subscriptions: [],
       favoritesCount: 0,
-      unreadTotals: { allItems: 0, forYou: 0, tags: [], networks: [] },
+      unreadTotals: {
+        allItems: 0,
+        forYou: 0,
+        tags: [],
+        networks: [],
+        groups: { tags: 0, feeds: 0 },
+      },
       keptCount: 0,
       viewedCount: 0,
     });

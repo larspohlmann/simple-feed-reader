@@ -49,6 +49,35 @@ describe('selectionFromParams', () => {
       network: 'mastodon',
     });
   });
+  it("reads a feed group's combined view", () => {
+    expect(selectionFromParams(pm({ group: 'tags' })).selection).toEqual({
+      kind: 'group',
+      id: null,
+      unread: false,
+      group: 'tags',
+    });
+  });
+  it('ignores a feed group it does not know', () => {
+    expect(selectionFromParams(pm({ group: 'folders' })).selection.kind).toBe('all');
+  });
+  it("maps a feed group's view through the unread toggle", () => {
+    expect(queryFromSelection({ kind: 'group', id: null, unread: true, group: 'feeds' })).toEqual({
+      view: 'unread',
+      group: 'feeds',
+    });
+  });
+  it('marks a feed group read by its name', () => {
+    expect(markReadTarget({ kind: 'group', id: null, unread: false, group: 'tags' })).toEqual({
+      scope: 'group',
+      group: 'tags',
+    });
+  });
+  it('tells the two feed groups apart', () => {
+    const tags: Selection = { kind: 'group', id: null, unread: false, group: 'tags' };
+    expect(sameSelection(tags, { ...tags, group: 'feeds' })).toBe(false);
+    expect(listOrderKey(tags)).toBe('group:tags');
+    expect(canScopedRefresh(tags)).toBe(true);
+  });
   it('ignores a network it does not know', () => {
     expect(selectionFromParams(pm({ network: 'myspace' })).selection.kind).toBe('all');
   });
@@ -156,7 +185,7 @@ describe('listSelectionFrom (#579)', () => {
 describe('selectionQueryParams', () => {
   it('pins the selection vocabulary — this must not shrink silently', () => {
     expect(Object.keys(selectionQueryParams({})).sort()).toEqual(
-      ['entry', 'feedKind', 'link', 'network', 'q', 'subscription', 'tag', 'view'].sort(),
+      ['entry', 'feedKind', 'group', 'link', 'network', 'q', 'subscription', 'tag', 'view'].sort(),
     );
   });
   it('nulls every selection parameter the caller did not set', () => {
@@ -165,6 +194,7 @@ describe('selectionQueryParams', () => {
       tag: null,
       network: null,
       feedKind: null,
+      group: null,
       subscription: null,
       entry: null,
       link: null,
@@ -177,6 +207,7 @@ describe('selectionQueryParams', () => {
       tag: 3,
       network: null,
       feedKind: null,
+      group: null,
       subscription: null,
       entry: null,
       link: null,
@@ -187,6 +218,7 @@ describe('selectionQueryParams', () => {
       tag: null,
       network: null,
       feedKind: null,
+      group: null,
       subscription: 7,
       entry: null,
       link: null,
@@ -197,6 +229,7 @@ describe('selectionQueryParams', () => {
       tag: null,
       network: null,
       feedKind: null,
+      group: null,
       subscription: null,
       entry: null,
       link: null,
@@ -209,6 +242,7 @@ describe('selectionQueryParams', () => {
       tag: null,
       network: null,
       feedKind: null,
+      group: null,
       subscription: null,
       entry: null,
       link: null,
@@ -247,6 +281,7 @@ describe('selectionQueryParams', () => {
         tag: 9,
         network: null,
         feedKind: null,
+        group: null,
         subscription: null,
         entry: null,
         link: null,
@@ -261,6 +296,7 @@ describe('selectionQueryParams', () => {
       tag: null,
       network: null,
       feedKind: null,
+      group: null,
       subscription: null,
       entry: null,
       link: null,

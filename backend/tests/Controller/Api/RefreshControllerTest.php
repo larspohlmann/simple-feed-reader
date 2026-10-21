@@ -206,6 +206,49 @@ final class RefreshControllerTest extends WebTestCase
         self::assertSame(0, $body['remaining'], 'the plain feed outside the network is never due');
     }
 
+    public function testFeedGroupRefreshSweepsOnlyThatGroupsFeeds(): void
+    {
+        $client = self::createClient();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
+        $user = $factory->create('group-refresh@example.com');
+        $fixtures = new NetworkFeedSubscriptions($entityManager);
+        $tag = new Tag($user, 'news');
+        $entityManager->persist($tag);
+        $fixtures->subscribe($user, 'https://example.com/tagged.xml')->addTag($tag);
+        $fixtures->subscribe($user, NetworkFeedSubscriptions::PLAIN);
+        $entityManager->flush();
+
+        $passes = new StubPassFetcher();
+        foreach ([NetworkFeedSubscriptions::PLAIN, 'https://example.com/tagged.xml'] as $feedUrl) {
+            $passes->willReturn($feedUrl, FetchResponseModel::notModified($feedUrl, false, null, null));
+        }
+        RefreshFetchers::install(self::getContainer(), $passes, 'https://example.com');
+
+        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
+        $client->request(
+            'POST',
+            '/api/refresh?group=feeds',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        $this->assertReportsARunOfOneFeed($body);
+        self::assertIsArray($body);
+        self::assertSame(0, $body['remaining'], 'the tagged feed outside the group is never due');
+    }
+
+    public function testRefreshOfAnUnknownFeedGroupIsAValidationError(): void
+    {
+        $client = self::createClient();
+        $headers = $this->auth('unknown-group-refresh@example.com');
+
+        $client->request('POST', '/api/refresh?group=folders', server: $headers);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
     public function testRefreshOfAnUnknownNetworkIsAValidationError(): void
     {
         $client = self::createClient();
@@ -230,7 +273,7 @@ final class RefreshControllerTest extends WebTestCase
     }
 
     /**
-     * Both scopes sweep one feed, so both must claim a run of one: asserted as an invariant because either may answer
+     * Each scope sweeps one feed, so each must claim a run of one: asserted as an invariant because either may answer
      * `completed` or `partial`, and a partial slice leaves feeds in `remaining`.
      */
     private function assertReportsARunOfOneFeed(mixed $body): void

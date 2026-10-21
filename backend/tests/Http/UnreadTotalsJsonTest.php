@@ -18,6 +18,7 @@ final class UnreadTotalsJsonTest extends TestCase
             networks: ['bluesky' => 5, 'mastodon' => 1],
             networkProfiles: ['bluesky' => 2],
             forYou: 4,
+            feedGroups: ['tags' => 3, 'feeds' => 1],
         ));
 
         self::assertSame([
@@ -28,6 +29,7 @@ final class UnreadTotalsJsonTest extends TestCase
                 ['network' => 'bluesky', 'unreadCount' => 5, 'profilesUnreadCount' => 2],
                 ['network' => 'mastodon', 'unreadCount' => 1, 'profilesUnreadCount' => 0],
             ],
+            'groups' => ['tags' => 3, 'feeds' => 1],
         ], $payload);
     }
 }

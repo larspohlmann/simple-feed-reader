@@ -17,7 +17,7 @@ final class SubscriptionCountsJsonTest extends TestCase
             [12 => 3],
             [12 => 40, 8 => 5],
             ['favorites' => 8, 'kept' => 2, 'viewed' => 41],
-            new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3),
+            new UnreadTotalsModel(7, [3 => 2], ['bluesky' => 5], ['bluesky' => 2], 3, ['tags' => 0, 'feeds' => 0]),
         ));
 
         self::assertSame([
@@ -33,6 +33,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 'forYou' => 3,
                 'tags' => [['id' => 3, 'unreadCount' => 2]],
                 'networks' => [['network' => 'bluesky', 'unreadCount' => 5, 'profilesUnreadCount' => 2]],
+                'groups' => ['tags' => 0, 'feeds' => 0],
             ],
         ], $payload);
     }
@@ -44,7 +45,7 @@ final class SubscriptionCountsJsonTest extends TestCase
                 [],
                 [],
                 ['favorites' => 0, 'kept' => 0, 'viewed' => 0],
-                new UnreadTotalsModel(0, [], [], [], 0),
+                new UnreadTotalsModel(0, [], [], [], 0, ['tags' => 0, 'feeds' => 0]),
             ),
         );
 

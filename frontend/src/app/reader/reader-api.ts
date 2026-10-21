@@ -104,6 +104,7 @@ export class ReaderApi {
     if (query.tag != null) listParams = listParams.set('tag', query.tag);
     if (query.network != null) listParams = listParams.set('network', query.network);
     if (query.feedKind != null) listParams = listParams.set('feedKind', query.feedKind);
+    if (query.group != null) listParams = listParams.set('group', query.group);
     return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams, context });
   }
 
@@ -206,7 +207,8 @@ export class ReaderApi {
 
   /** Omit the scope (or pass an empty one) to refresh all the caller's due
    *  feeds; scope by feedId for a single feed (e.g. a just-added one) or by
-   *  tagId for every feed carrying that tag, or by network for that network's feeds. */
+   *  tagId for every feed carrying that tag, by network for that network's feeds, or by
+   *  group for a sidebar section's feeds. */
   refresh(scope?: RefreshScope): Observable<RefreshReport> {
     let params = new HttpParams();
     if (scope?.feedId != null) params = params.set('feedId', scope.feedId);
@@ -214,7 +216,7 @@ export class ReaderApi {
     else if (scope?.network != null) {
       params = params.set('network', scope.network);
       if (scope.feedKind != null) params = params.set('feedKind', scope.feedKind);
-    }
+    } else if (scope?.group != null) params = params.set('group', scope.group);
     return this.http.post<RefreshReport>(`${this.base}/api/refresh`, {}, { params });
   }
 

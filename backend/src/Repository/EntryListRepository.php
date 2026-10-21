@@ -29,6 +29,7 @@ final class EntryListRepository extends ServiceEntityRepository
         private readonly DuplicateCollapseDql $collapse,
         private readonly DateOrderedPage $dateOrderedPage,
         private readonly EntryProjection $projection,
+        private readonly SubscriptionScopeRepository $subscriptionScopes,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -41,9 +42,17 @@ final class EntryListRepository extends ServiceEntityRepository
      */
     public function listForUser(EntryQuery $query): array
     {
+        $groupSubscriptionIds = $this->feedGroupSubscriptionIds($query);
+        if ($groupSubscriptionIds === []) {
+            return [];
+        }
+
         $ordering = $query->ordering();
-        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
+        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query, $groupSubscriptionIds): void {
             $this->scope->applyList($qb, $aliases, $query);
+            if ($groupSubscriptionIds !== null) {
+                $this->scope->inSubscriptions($qb, $aliases, $groupSubscriptionIds);
+            }
         };
 
         $pageQuery = function () use ($query, $ordering, $applyScope): QueryBuilder {
@@ -196,6 +205,21 @@ final class EntryListRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
 
         return $entry ?? throw new RecordNotFoundException('No such entry.');
+    }
+
+    /**
+     * The feed group as the caller's subscription ids, or null when the list is not a group. A constant id list lets
+     * MySQL drive the page from `subscription`; the tag predicate itself forces a walk of every entry (#1735).
+     *
+     * @return list<int>|null
+     */
+    private function feedGroupSubscriptionIds(EntryQuery $query): ?array
+    {
+        if ($query->feedGroup === null) {
+            return null;
+        }
+
+        return $this->subscriptionScopes->idsForUserInFeedGroup($query->userId, $query->feedGroup);
     }
 
     private function unreadMatchQueryBuilder(EntrySearchQuery $query): QueryBuilder

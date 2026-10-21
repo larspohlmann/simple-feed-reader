@@ -79,6 +79,7 @@ export class MarkReadActions {
       case 'saved-search':
         return this.api.markSingleSavedSearchRead(target.id, until);
       case 'network':
+      case 'group':
       case 'all':
       case 'tag':
       case 'feed':

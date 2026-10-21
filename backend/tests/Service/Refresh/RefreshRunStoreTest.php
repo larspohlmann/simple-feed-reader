@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
+use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Repository\NetworkScope;
 use App\Service\Refresh\Model\RefreshRequestModel;
@@ -92,6 +93,19 @@ final class RefreshRunStoreTest extends TestCase
         self::assertSame(0, $this->store->open($mastodon)->done);
         self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(1, self::BUDGET))->done);
         self::assertSame(1, $this->store->open($bluesky)->done);
+    }
+
+    public function testFeedGroupRunsAreKeptApartFromEachOtherAndFromTheSweep(): void
+    {
+        $tags = RefreshRequestModel::forUserFeedGroup(1, FeedGroup::Tags, self::BUDGET);
+        $this->store->save($tags, RefreshRunProgressModel::start()->advancedBy(1, 2));
+
+        self::assertSame(
+            0,
+            $this->store->open(RefreshRequestModel::forUserFeedGroup(1, FeedGroup::Feeds, self::BUDGET))->done,
+        );
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(1, self::BUDGET))->done);
+        self::assertSame(1, $this->store->open($tags)->done);
     }
 
     private function networkRequest(SocialNetwork $network): RefreshRequestModel

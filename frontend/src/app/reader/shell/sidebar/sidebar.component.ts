@@ -36,6 +36,7 @@ import { IconButtonDirective } from '../../../shared/icon-button/icon-button.dir
 import { TagNode } from '../../state/subscription-derivations';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
+import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
 import { isSubscriptionDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
@@ -102,6 +103,7 @@ export class SidebarComponent {
   readonly keptCount = input(0);
   readonly viewedCount = input(0);
   readonly forYouUnread = input(0);
+  readonly groupUnread = input<Readonly<Record<FeedGroupName, number>>>({ tags: 0, feeds: 0 });
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell
    *  decides it — re-encoding the term to string-compare made a subtly
@@ -122,6 +124,7 @@ export class SidebarComponent {
    *  restoring plain nav-row height/padding when absent (#636). */
   protected readonly showDigestToggles = computed(() => this.mailEnabled() && this.digestEnabled());
   readonly selection = input.required<Selection>();
+  protected readonly activeGroup = computed(() => this.selection().group ?? null);
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is
    *  the subscriptions store's own loading flag; conflating the two would show

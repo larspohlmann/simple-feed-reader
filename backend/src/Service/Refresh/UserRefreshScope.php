@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh;
 
+use App\Enum\FeedGroup;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
 use App\Repository\SubscriptionRepository;
@@ -40,6 +41,11 @@ final readonly class UserRefreshScope
     public function requestForNetwork(int $userId, NetworkScope $networkScope): RefreshRequestModel
     {
         return RefreshRequestModel::forUserNetwork($userId, $networkScope, self::BUDGET_SECONDS);
+    }
+
+    public function requestForFeedGroup(int $userId, FeedGroup $feedGroup): RefreshRequestModel
+    {
+        return RefreshRequestModel::forUserFeedGroup($userId, $feedGroup, self::BUDGET_SECONDS);
     }
 
     private function forFeed(int $userId, int $feedId): RefreshRequestModel

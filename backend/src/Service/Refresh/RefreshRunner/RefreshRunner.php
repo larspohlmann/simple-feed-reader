@@ -96,6 +96,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
             $request->force,
             $cooldownCutoff,
             networkScope: $request->networkScope,
+            feedGroup: $request->feedGroup,
         );
     }
 

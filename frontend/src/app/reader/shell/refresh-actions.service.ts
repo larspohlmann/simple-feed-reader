@@ -10,7 +10,7 @@ import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { RefreshScope, queryFromSelection, selectionQueryParams } from '../query/query';
+import { RefreshScope, Selection, queryFromSelection, selectionQueryParams } from '../query/query';
 import { SubscriptionDto } from '../models';
 import { AddFeedDialogComponent } from '../feeds/add-feed/add-feed-dialog.component';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -57,9 +57,8 @@ export class RefreshActions {
       case 'tag':
         return selection.id != null ? { tagId: selection.id } : null;
       case 'network':
-        return selection.network
-          ? { network: selection.network, feedKind: selection.feedKind }
-          : null;
+      case 'group':
+        return this.sectionScope(selection);
       case 'subscription': {
         const feedId = this.heading.selectedSubscription()?.feedId;
         return feedId != null ? { feedId } : null;
@@ -67,6 +66,11 @@ export class RefreshActions {
       default:
         return null;
     }
+  }
+
+  private sectionScope(selection: Selection): RefreshScope | null {
+    if (selection.network) return { network: selection.network, feedKind: selection.feedKind };
+    return selection.group ? { group: selection.group } : null;
   }
 
   /** The list-scoped refresh (header button + mobile pull): sweep only the feeds

@@ -99,7 +99,13 @@ describe('MarkReadActions recounting after a mark-read', () => {
         favoritesCount: 0,
         keptCount: 0,
         viewedCount: 0,
-        unreadTotals: { allItems: 0, forYou: 0, tags: [{ id: 5, unreadCount: 4 }], networks: [] },
+        unreadTotals: {
+          allItems: 0,
+          forYou: 0,
+          tags: [{ id: 5, unreadCount: 4 }],
+          networks: [],
+          groups: { tags: 0, feeds: 0 },
+        },
       });
     reloadCountsQuietly = jest.spyOn(subscriptions, 'reloadCountsQuietly').mockImplementation();
     fullLoad = jest.spyOn(subscriptions, 'load');
@@ -112,6 +118,7 @@ describe('MarkReadActions recounting after a mark-read', () => {
     { kind: 'subscription', id: 1, unread: true },
     { kind: 'network', id: null, unread: true, network: 'bluesky' },
     { kind: 'network', id: null, unread: true, network: 'bluesky', feedKind: 'profile' },
+    { kind: 'group', id: null, unread: true, group: 'tags' },
     { kind: 'search', id: null, unread: true, term: 'news' },
     { kind: 'for-you', id: null, unread: true },
     { kind: 'saved-searches', id: null, unread: true },
@@ -122,6 +129,18 @@ describe('MarkReadActions recounting after a mark-read', () => {
     expect(reloadCountsQuietly).toHaveBeenCalledTimes(1);
     expect(fullLoad).not.toHaveBeenCalled();
     expect(unreadCounts()).toEqual([4, 6, 8]);
+  });
+
+  it('marks a feed group read through the mark-read endpoint', () => {
+    const markRead = jest.spyOn(TestBed.inject(ReaderApi), 'markRead');
+    currentSelection.set({ kind: 'group', id: null, unread: true, group: 'tags' });
+
+    actions.confirmMarkAllRead();
+
+    expect(markRead).toHaveBeenCalledWith(
+      { scope: 'group', group: 'tags' },
+      '2026-10-16T10:00:00Z',
+    );
   });
 
   it('recounts from the server after marking the entries above read', () => {

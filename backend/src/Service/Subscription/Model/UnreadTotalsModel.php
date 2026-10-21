@@ -10,6 +10,7 @@ final readonly class UnreadTotalsModel
      * @param array<int, int>    $tags            tag id => unread entries, 0 absent
      * @param array<string, int> $networks        network => unread entries, 0 absent
      * @param array<string, int> $networkProfiles network => unread entries of its profile feeds, 0 absent
+     * @param array{tags: int, feeds: int} $feedGroups feed group => unread entries
      */
     public function __construct(
         public int $allItems,
@@ -17,6 +18,7 @@ final readonly class UnreadTotalsModel
         public array $networks,
         public array $networkProfiles,
         public int $forYou,
+        public array $feedGroups,
     ) {
     }
 }

@@ -246,6 +246,17 @@ describe('ReaderApi', () => {
     testRequest.flush(null);
   });
 
+  it('POSTs a group mark-read with scope/group/until', () => {
+    api.markRead({ scope: 'group', group: 'tags' }, '2026-01-01T00:00:00Z').subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/mark-read');
+    expect(testRequest.request.body).toEqual({
+      scope: 'group',
+      group: 'tags',
+      until: '2026-01-01T00:00:00Z',
+    });
+    testRequest.flush(null);
+  });
+
   it('POSTs search mark-read with q/until', () => {
     api.markSearchRead('climate ', '2026-01-01T00:00:00Z').subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/entries/search/mark-read');
@@ -365,6 +376,13 @@ describe('ReaderApi', () => {
     api.refresh({ network: 'mastodon' }).subscribe();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.params.get('network')).toBe('mastodon');
+    testRequest.flush(refreshReport());
+  });
+
+  it("scopes refresh to a sidebar section's feeds when given a group", () => {
+    api.refresh({ group: 'feeds' }).subscribe();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+    expect(testRequest.request.params.get('group')).toBe('feeds');
     testRequest.flush(refreshReport());
   });
 

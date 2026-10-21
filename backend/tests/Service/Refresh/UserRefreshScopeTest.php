@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
@@ -107,6 +108,19 @@ final class UserRefreshScopeTest extends DbTestCase
 
         self::assertSame($this->user->requireId(), $request->userId);
         self::assertEquals(NetworkScope::whole(SocialNetwork::Bluesky), $request->networkScope);
+        self::assertNull($request->feedId);
+        self::assertNull($request->tagId);
+        self::assertTrue($request->force);
+        self::assertSame(25, $request->budgetSeconds);
+    }
+
+    public function testAFeedGroupRefreshIsAForcedRunOverThatGroupsFeeds(): void
+    {
+        $request = $this->scope()->requestForFeedGroup($this->user->requireId(), FeedGroup::Feeds);
+
+        self::assertSame($this->user->requireId(), $request->userId);
+        self::assertSame(FeedGroup::Feeds, $request->feedGroup);
+        self::assertNull($request->networkScope);
         self::assertNull($request->feedId);
         self::assertNull($request->tagId);
         self::assertTrue($request->force);

@@ -114,18 +114,22 @@
   />
 
   @if (tagTree().length) {
-    <!-- The whole "Tags" section collapses (#612): a full-width toggle plus a
-         borderless `.section-chevron` that lines up with the tag chevrons below.
+    <!-- The title opens the combined tags list (#1735); the borderless `.section-chevron`
+         collapses the section (#612) and lines up with the tag chevrons below.
          State persists (`tagsExpanded`), default expanded. -->
     <div class="section-head tags-head">
-      <button
-        class="section-toggle"
-        type="button"
-        [attr.aria-expanded]="tagsExpanded()"
-        (click)="toggleTags()"
+      <a
+        class="section-link"
+        [class.active]="activeGroup() === 'tags'"
+        [routerLink]="['/']"
+        [queryParams]="selectionQueryParams({ group: 'tags' })"
+        queryParamsHandling="merge"
       >
         <span class="label">{{ 'reader.tags' | transloco }}</span>
-      </button>
+        @if (groupUnread().tags > 0) {
+          <span class="section-count">{{ groupUnread().tags }}</span>
+        }
+      </a>
       <button
         class="section-chevron"
         type="button"
@@ -259,16 +263,20 @@
   }
 
   @if (untagged().length || dragging() || organising()) {
-    <!-- Same collapsible section pattern as Tags (#612). -->
+    <!-- Same pattern as Tags: the title opens the combined feeds list, the chevron collapses (#612, #1735). -->
     <div class="section-head feeds-head">
-      <button
-        class="section-toggle"
-        type="button"
-        [attr.aria-expanded]="feedsExpanded()"
-        (click)="toggleFeeds()"
+      <a
+        class="section-link"
+        [class.active]="activeGroup() === 'feeds'"
+        [routerLink]="['/']"
+        [queryParams]="selectionQueryParams({ group: 'feeds' })"
+        queryParamsHandling="merge"
       >
         <span class="label">{{ 'reader.feeds' | transloco }}</span>
-      </button>
+        @if (groupUnread().feeds > 0) {
+          <span class="section-count">{{ groupUnread().feeds }}</span>
+        }
+      </a>
       <button
         class="section-chevron"
         type="button"
