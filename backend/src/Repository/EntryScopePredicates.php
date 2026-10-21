@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\EntryView;
+use App\Enum\FeedGroup;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
@@ -32,6 +33,9 @@ final readonly class EntryScopePredicates
             $this->joinNetworkFeeds($qb, $aliases);
             NetworkScopeDql::restrict($qb, $aliases->networkFeed, $query->networkScope);
         }
+        if ($query->feedGroup !== null) {
+            $this->inFeedGroup($qb, $aliases, $query->feedGroup);
+        }
         if ($query->hidesExcludedFeeds()) {
             $this->inAllItems($qb, $aliases);
         }
@@ -48,6 +52,12 @@ final readonly class EntryScopePredicates
     {
         $qb->innerJoin(\sprintf('%s.feed', $aliases->entry), $aliases->networkFeed)
             ->andWhere($aliases->networkKey() . ' IS NOT NULL');
+    }
+
+    public function inFeedGroup(QueryBuilder $qb, EntryAliases $aliases, FeedGroup $group): void
+    {
+        $qb->innerJoin(\sprintf('%s.feed', $aliases->subscription), $aliases->groupFeed);
+        FeedGroupDql::restrict($qb, $aliases->subscription, $aliases->groupFeed, $group);
     }
 
     public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void

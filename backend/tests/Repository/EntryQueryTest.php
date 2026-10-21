@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Enum\EntryView;
+use App\Enum\FeedGroup;
 use App\Enum\ListOrder;
 use App\Enum\SocialNetwork;
 use App\Repository\EntryListSort;
@@ -30,6 +31,12 @@ final class EntryQueryTest extends TestCase
     {
         self::assertFalse((new EntryQuery(1, EntryView::All, tagId: 3))->hidesExcludedFeeds());
         self::assertFalse((new EntryQuery(1, EntryView::Unread, tagId: 3))->hidesExcludedFeeds());
+    }
+
+    public function testAFeedGroupViewNeverHides(): void
+    {
+        self::assertFalse((new EntryQuery(1, EntryView::All, feedGroup: FeedGroup::Tags))->hidesExcludedFeeds());
+        self::assertFalse((new EntryQuery(1, EntryView::Unread, feedGroup: FeedGroup::Feeds))->hidesExcludedFeeds());
     }
 
     public function testANetworkScopedViewNeverHides(): void

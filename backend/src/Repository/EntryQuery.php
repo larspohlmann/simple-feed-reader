@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\EntryView;
+use App\Enum\FeedGroup;
 use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
 
@@ -34,6 +35,7 @@ final readonly class EntryQuery
         int $limit = self::DEFAULT_LIMIT,
         public ListOrder $order = ListOrder::NewestFirst,
         public ?NetworkScope $networkScope = null,
+        public ?FeedGroup $feedGroup = null,
     ) {
         if ($view === EntryView::ForYou) {
             throw new \LogicException('The for-you feed pages through ForYouFeedQuery, never an EntryQuery.');
@@ -70,7 +72,7 @@ final readonly class EntryQuery
     }
 
     /**
-     * A fan-in list narrowed to one tag or a network — the shape that can be sparse enough
+     * A fan-in list narrowed to one tag, a network or a feed group — the shape that can be sparse enough
      * to make the join-order hint a loss rather than a win (#1099).
      */
     public function isNarrowedFanIn(): bool
@@ -80,6 +82,6 @@ final readonly class EntryQuery
 
     private function isNarrowed(): bool
     {
-        return $this->tagId !== null || $this->networkScope !== null;
+        return $this->tagId !== null || $this->networkScope !== null || $this->feedGroup !== null;
     }
 }
