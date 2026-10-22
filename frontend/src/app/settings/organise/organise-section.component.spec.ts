@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { computed, signal, WritableSignal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -15,6 +15,7 @@ import { UnhealthyFeedRowComponent } from './health/unhealthy-feed-row.component
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { unhealthyFeeds } from '../../reader/feeds/feed-health';
 import { TagsStore } from '../../reader/state/tags.store';
+import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
@@ -128,6 +129,16 @@ describe('OrganiseSectionComponent', () => {
 
     return store;
   }
+
+  it('loads the saved-search networks, so a social feed is not marked hidden on a fresh load', async () => {
+    await render();
+
+    TestBed.inject(HttpTestingController)
+      .expectOne('https://api.test/api/saved-searches')
+      .flush({ savedSearches: [], includedNetworks: ['bluesky'] });
+
+    expect([...TestBed.inject(SavedSearchesStore).includedNetworks()]).toEqual(['bluesky']);
+  });
 
   it('hides the bulk bar at zero selection', async () => {
     await render();

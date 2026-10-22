@@ -36,6 +36,7 @@ import {
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
+import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
 import { SubscriptionDto, TagDto } from '../../reader/models';
@@ -89,6 +90,7 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly manage = inject(ManageActions);
   protected readonly subs = inject(SubscriptionsStore);
   protected readonly tags = inject(TagsStore);
+  private readonly savedSearches = inject(SavedSearchesStore);
   private readonly dialog = inject(Dialog);
   protected readonly tagGap = inject(TagDragGap);
   private readonly tree = viewChild<ElementRef<HTMLElement>>('tree');
@@ -136,6 +138,7 @@ export class OrganiseSectionComponent implements OnInit {
   ngOnInit(): void {
     this.tags.load();
     this.subs.load();
+    this.savedSearches.load();
   }
 
   /** Retry one unhealthy feed. `ManageActions` does the refresh, the quiet
