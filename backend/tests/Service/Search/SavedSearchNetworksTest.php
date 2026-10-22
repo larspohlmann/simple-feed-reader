@@ -42,6 +42,21 @@ final class SavedSearchNetworksTest extends DbTestCase
         self::assertSame([], $this->inclusions()->includedNetworksFor($this->user->requireId()));
     }
 
+    public function testAnotherUsersInclusionIsNeitherListedNorFound(): void
+    {
+        $other = new User('other-networks@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($other);
+        $this->entityManager->flush();
+        $this->networks()->include($other, SocialNetwork::Bluesky);
+        $this->networks()->include($this->user, SocialNetwork::Mastodon);
+
+        $userId = $this->user->requireId();
+
+        self::assertSame([SocialNetwork::Mastodon], $this->inclusions()->includedNetworksFor($userId));
+        self::assertNull($this->inclusions()->findOneFor($userId, SocialNetwork::Bluesky));
+        self::assertNotNull($this->inclusions()->findOneFor($userId, SocialNetwork::Mastodon));
+    }
+
     private function networks(): SavedSearchNetworks
     {
         $service = self::getContainer()->get(SavedSearchNetworks::class);
