@@ -67,7 +67,7 @@ final readonly class EntryScopePredicates
         $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
     }
 
-    /** The subscription's own switch, and the feed's network when it has one; binds only the shared :user. */
+    /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
     public function inSavedSearches(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $feed = 'searchFeed' . ucfirst($aliases->entry);
