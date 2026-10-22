@@ -64,6 +64,7 @@ final class RestoredFoundationFactoryTest extends TestCase
                 tags: [],
                 includeInAllItems: false,
                 includeInForYou: false,
+                includeInSavedSearches: false,
             ),
         );
 
@@ -73,6 +74,7 @@ final class RestoredFoundationFactoryTest extends TestCase
         self::assertSame($createdAt, $subscription->getCreatedAt());
         self::assertFalse($subscription->isIncludeInAllItems());
         self::assertFalse($subscription->isIncludeInForYou());
+        self::assertFalse($subscription->isIncludeInSavedSearches());
     }
 
     private function factory(): RestoredFoundationFactory

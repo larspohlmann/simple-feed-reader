@@ -164,6 +164,7 @@ final class BackupReaderTest extends TestCase
         // so both must default to true, as in a backup older than those fields.
         self::assertTrue($subscription->includeInAllItems);
         self::assertTrue($subscription->includeInForYou);
+        self::assertTrue($subscription->includeInSavedSearches);
     }
 
     public function testReadsAnEntryPartInOrder(): void

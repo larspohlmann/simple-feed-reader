@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\Feed;
+use App\Entity\SavedSearchNetworkInclusion;
 use App\Enum\EntryView;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
@@ -63,6 +65,25 @@ final readonly class EntryScopePredicates
     public function inAllItems(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
+    }
+
+    /** Binds only the shared :user, which the duplicate-collapse subquery relies on. */
+    public function inSavedSearches(QueryBuilder $qb, EntryAliases $aliases): void
+    {
+        $feed = 'searchFeed' . ucfirst($aliases->entry);
+        $inclusion = 'networkInclusion' . ucfirst($aliases->entry);
+
+        $qb->andWhere(\sprintf(
+            '%1$s.includeInSavedSearches = true AND EXISTS (SELECT 1 FROM %2$s %3$s WHERE %3$s = %4$s.feed AND '
+            . '(%3$s.network IS NULL OR EXISTS (SELECT 1 FROM %5$s %6$s WHERE %6$s.user = :user '
+            . 'AND %6$s.network = %3$s.network)))',
+            $aliases->subscription,
+            Feed::class,
+            $feed,
+            $aliases->entry,
+            SavedSearchNetworkInclusion::class,
+            $inclusion,
+        ));
     }
 
     public function applySearch(QueryBuilder $qb, EntryAliases $aliases, EntrySearchQuery $query): void

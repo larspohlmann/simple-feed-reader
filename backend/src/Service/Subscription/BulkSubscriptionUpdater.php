@@ -21,6 +21,7 @@ final readonly class BulkSubscriptionUpdater
         private OwnedSubscriptions $ownedSubscriptions,
         private TagRepository $tags,
         private SubscriptionTagSync $tagSync,
+        private SubscriptionInclusions $inclusions,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -42,7 +43,7 @@ final readonly class BulkSubscriptionUpdater
             $subscription = $byId[$subscriptionId];
             $tagIds = $this->resultingTagIds($subscription, $addTagIds, $removeTagIds);
             $this->tagSync->sync($subscription, $tagIds, $userId);
-            $this->applyFlags($subscription, $change);
+            $this->inclusions->apply($subscription, $change->inclusions);
             $changed[] = $subscription;
         }
 
@@ -101,15 +102,5 @@ final readonly class BulkSubscriptionUpdater
         );
 
         return array_values(array_diff(array_unique([...$current, ...$addTagIds]), $removeTagIds));
-    }
-
-    private function applyFlags(Subscription $subscription, BulkSubscriptionChangeModel $change): void
-    {
-        if (null !== $change->includeInAllItems) {
-            $subscription->setIncludeInAllItems($change->includeInAllItems);
-        }
-        if (null !== $change->includeInForYou) {
-            $subscription->setIncludeInForYou($change->includeInForYou);
-        }
     }
 }

@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Exception\InvalidSelectionException;
 use App\Service\Subscription\BulkSubscriptionUpdater;
 use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
+use App\Service\Subscription\Model\InclusionChangeModel;
 use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -165,7 +166,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
                 subscriptionIds: [$subscription->requireId()],
-                includeInAllItems: false,
+                inclusions: new InclusionChangeModel(includeInAllItems: false),
             ),
             $user->requireId(),
         );
@@ -189,8 +190,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
                 subscriptionIds: [$subscription->requireId()],
-                includeInAllItems: true,
-                includeInForYou: false,
+                inclusions: new InclusionChangeModel(includeInAllItems: true, includeInForYou: false),
             ),
             $user->requireId(),
         );
@@ -203,6 +203,25 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
             $subscription->isIncludeInForYou(),
             'includeInForYou must take the includeInForYou value, not includeInAllItems.',
         );
+    }
+
+    public function testBulkUpdateSetsTheSavedSearchFlagOnEveryListedFeed(): void
+    {
+        $user = $this->user('bulk-saved-searches@example.com');
+        $first = $this->subscription($user, 'https://saved-searches-a.example/feed.xml');
+        $second = $this->subscription($user, 'https://saved-searches-b.example/feed.xml');
+        $this->entityManager->flush();
+
+        $this->updater->apply(
+            new BulkSubscriptionChangeModel(
+                subscriptionIds: [$first->requireId(), $second->requireId()],
+                inclusions: new InclusionChangeModel(includeInSavedSearches: false),
+            ),
+            $user->requireId(),
+        );
+
+        self::assertFalse($first->isIncludeInSavedSearches());
+        self::assertFalse($second->isIncludeInSavedSearches());
     }
 
     public function testRejectsATagNamedInBothAddAndRemove(): void

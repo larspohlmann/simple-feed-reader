@@ -727,6 +727,8 @@
       "hideFromAllItems": "Aus Alle Einträge ausblenden",
       "showInForYou": "In Für dich anzeigen",
       "hideFromForYou": "Aus Für dich ausblenden",
+      "showInSavedSearches": "In gespeicherten Suchen anzeigen",
+      "hideFromSavedSearches": "Aus gespeicherten Suchen ausblenden",
       "clear": "Zurücksetzen"
     },
     "health": {
@@ -851,6 +853,7 @@
       "noTags": "Noch keine Tags – erstelle einen unter Einstellungen › Tags.",
       "showInAllItems": "In Alle Einträge anzeigen",
       "showInForYou": "In Für dich anzeigen",
+      "showInSavedSearches": "In gespeicherten Suchen anzeigen",
       "saving": "Wird gespeichert…",
       "save": "Speichern"
     }
@@ -1202,9 +1205,11 @@
     "includeInAllItems": "In Alle Einträge anzeigen",
     "excludeFromForYou": "Aus Für dich ausschließen",
     "includeInForYou": "In Für dich anzeigen",
-    "excludedFromAllItems": "Ausgeblendet aus Alle Einträge",
-    "excludedFromForYou": "Ausgeblendet aus Für dich",
-    "excludedFromBoth": "Ausgeblendet aus Alle Einträge und Für dich",
+    "excludeFromSavedSearches": "Aus gespeicherten Suchen ausschließen",
+    "includeNetworkInSavedSearches": "In gespeicherte Suchen aufnehmen",
+    "excludeNetworkFromSavedSearches": "Aus gespeicherten Suchen ausschließen",
+    "includeInSavedSearches": "In gespeicherten Suchen anzeigen",
+    "excludedFrom": "Ausgeblendet aus {{surfaces}}",
     "dropToRemoveTags": "Hier ablegen, um Tags zu entfernen",
     "unread": "nur ungelesene",
     "all": "Alle Beiträge",

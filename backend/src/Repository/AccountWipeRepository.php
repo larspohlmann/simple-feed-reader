@@ -13,6 +13,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -48,6 +49,7 @@ final readonly class AccountWipeRepository
         $this->deleteByUser(Subscription::class, $user);
         $this->deleteByUser(Tag::class, $user);
         $this->deleteByUser(SavedSearch::class, $user);
+        $this->deleteByUser(SavedSearchNetworkInclusion::class, $user);
     }
 
     /** Leaves each account's sync stamp: only a kind not yet synced takes a baseline, which adds nothing back. */

@@ -125,6 +125,8 @@ export interface SubscriptionDto {
   includeInAllItems: boolean;
   /** False excludes this feed's entries from For-you recommendations. */
   includeInForYou: boolean;
+  /** False excludes this feed's entries from saved-search matches and counts. */
+  includeInSavedSearches: boolean;
   /** Set for a private timeline, list or custom feed of a connected account (#1599); null for any other feed. */
   social: SocialFeedRefDto | null;
 }
@@ -409,6 +411,7 @@ export interface SubscriptionUpdate {
   tagIds: number[];
   includeInAllItems?: boolean;
   includeInForYou?: boolean;
+  includeInSavedSearches?: boolean;
 }
 
 /** A drag of one feed between the sidebar's lists: out of `fromTagId` and into

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup;
 
 use App\Entity\User;
+use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
@@ -28,6 +29,7 @@ final readonly class AccountBackupExporter
         private UserRepository $users,
         private TagRepository $tags,
         private SavedSearchRepository $savedSearches,
+        private SavedSearchNetworkInclusionRepository $includedNetworks,
         private SubscriptionRepository $subscriptions,
         private BackupLines $lines,
         private BackupPartWalkFactory $walkFactory,
@@ -65,7 +67,10 @@ final readonly class AccountBackupExporter
         $feedsById = self::feedsById($subscriptions);
 
         return new FoundationSnapshotModel(
-            $this->lines->accountLine($this->users->getById($userId)),
+            $this->lines->accountLine(
+                $this->users->getById($userId),
+                $this->includedNetworks->includedNetworksFor($userId),
+            ),
             array_map($this->lines->tagLine(...), $this->tags->findForUser($userId)),
             array_map($this->lines->savedSearchLine(...), $this->savedSearches->findForUser($userId)),
             array_map($this->lines->feedLine(...), array_values($feedsById)),

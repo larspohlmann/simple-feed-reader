@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Enum\MagazineStyle;
+use App\Enum\SocialNetwork;
 use App\Service\Backup\Support\LineField;
 use App\Service\Backup\Support\LineFieldWithDefault;
 
@@ -13,10 +14,14 @@ use App\Service\Backup\Support\LineFieldWithDefault;
  */
 final readonly class AccountLine
 {
+    /**
+     * @param list<SocialNetwork> $savedSearchIncludedNetworks
+     */
     public function __construct(
         public string $locale,
         public bool $scrapeFallbackEnabled,
         public MagazineStyle $magazineStyle,
+        public array $savedSearchIncludedNetworks,
     ) {
     }
 
@@ -32,6 +37,10 @@ final readonly class AccountLine
             magazineStyle: MagazineStyle::tryFrom(
                 LineFieldWithDefault::string($line, 'magazineStyle', MagazineStyle::Boxed->value),
             ) ?? MagazineStyle::Boxed,
+            savedSearchIncludedNetworks: array_values(array_filter(array_map(
+                SocialNetwork::tryFrom(...),
+                array_unique(LineFieldWithDefault::stringList($line, 'savedSearchIncludedNetworks')),
+            ))),
         );
     }
 }

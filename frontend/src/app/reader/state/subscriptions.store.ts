@@ -9,6 +9,7 @@ import { ReaderApi } from '../reader-api';
 import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
 import { SocialAccountRefDto } from '../social-feed';
+import { SubscriptionFlags } from '../subscription-bulk';
 import { SubscriptionRows } from './subscription-rows';
 import { buildSocialSections, isEmptySavedFeed, isSocialFeed } from './social-sections';
 import {
@@ -343,12 +344,9 @@ export class SubscriptionsStore {
     );
   }
 
-  /** Optimistically apply an exclusion-flag toggle (All items / For you) so the
+  /** Optimistically apply an exclusion-flag toggle (All items / For you / saved searches) so the
    *  UI reflects it immediately; the caller reconciles with the server. */
-  patchLocal(
-    id: number,
-    flags: Partial<Pick<SubscriptionDto, 'includeInAllItems' | 'includeInForYou'>>,
-  ): void {
+  patchLocal(id: number, flags: SubscriptionFlags): void {
     this.patchSubscriptions((subscription) =>
       subscription.id === id ? { ...subscription, ...flags } : subscription,
     );

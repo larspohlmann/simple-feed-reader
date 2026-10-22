@@ -1,7 +1,9 @@
+import { API_BASE_URL } from '../../core/api';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { computed, signal, WritableSignal } from '@angular/core';
 import { By } from '@angular/platform-browser';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -13,6 +15,7 @@ import { UnhealthyFeedRowComponent } from './health/unhealthy-feed-row.component
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { unhealthyFeeds } from '../../reader/feeds/feed-health';
 import { TagsStore } from '../../reader/state/tags.store';
+import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
@@ -76,6 +79,7 @@ describe('OrganiseSectionComponent', () => {
     editSubscription: jest.fn(),
     setIncludeInAllItems: jest.fn(),
     setIncludeInForYou: jest.fn(),
+    setIncludeInSavedSearches: jest.fn(),
     unsubscribe: jest.fn(),
     retryFeed: jest.fn(),
     moveFeedToTag: jest.fn(),
@@ -99,6 +103,9 @@ describe('OrganiseSectionComponent', () => {
         imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
           provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
@@ -122,6 +129,16 @@ describe('OrganiseSectionComponent', () => {
 
     return store;
   }
+
+  it('loads the saved-search networks, so a social feed is not marked hidden on a fresh load', async () => {
+    await render();
+
+    TestBed.inject(HttpTestingController)
+      .expectOne('https://api.test/api/saved-searches')
+      .flush({ savedSearches: [], includedNetworks: ['bluesky'] });
+
+    expect([...TestBed.inject(SavedSearchesStore).includedNetworks()]).toEqual(['bluesky']);
+  });
 
   it('hides the bulk bar at zero selection', async () => {
     await render();
@@ -310,6 +327,32 @@ describe('OrganiseSectionComponent', () => {
     expect(manage.bulkSetFlags).toHaveBeenCalledWith([10, 11], { includeInAllItems: false });
   });
 
+  it('offers six visibility commands, the saved-search ones setting their own flag', async () => {
+    const { component, manage } = await renderWithMocks();
+    component.store.toggleFeed(10);
+    fixture.detectChanges();
+    const root = fixture.debugElement;
+    root.query(By.css('[data-test="visibility"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    const items = root.queryAll(By.css('.pop [role="menuitem"]'));
+    expect(items.map((item) => item.nativeElement.textContent.trim())).toEqual([
+      'Show in All items',
+      'Hide from All items',
+      'Show in For you',
+      'Hide from For you',
+      'Show in saved searches',
+      'Hide from saved searches',
+    ]);
+
+    items[5].nativeElement.click();
+    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: false });
+    root.query(By.css('[data-test="visibility"]')).nativeElement.click();
+    fixture.detectChanges();
+    root.queryAll(By.css('.pop [role="menuitem"]'))[4].nativeElement.click();
+    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: true });
+  });
+
   // The tree view's tag headers reorder tags themselves via the up/down arrows
   // on OrganiseTagGroupComponent (moveTagUp/moveTagDown), which this component
   // turns into a full reordered id list for ManageActions.reorderTags.
@@ -324,6 +367,9 @@ describe('OrganiseSectionComponent', () => {
         imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
           provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
@@ -361,6 +407,9 @@ describe('OrganiseSectionComponent', () => {
         imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
           provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },

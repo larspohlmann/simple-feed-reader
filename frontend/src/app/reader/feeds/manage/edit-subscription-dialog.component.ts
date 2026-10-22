@@ -49,6 +49,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly checked = signal<Set<number>>(new Set(this.data.tags.map((tag) => tag.id)));
   readonly includeInAllItems = signal<boolean>(this.data.includeInAllItems);
   readonly includeInForYou = signal<boolean>(this.data.includeInForYou);
+  readonly includeInSavedSearches = signal<boolean>(this.data.includeInSavedSearches);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -88,6 +89,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
       tagIds: [...this.checked()],
       includeInAllItems: this.includeInAllItems(),
       includeInForYou: this.includeInForYou(),
+      includeInSavedSearches: this.includeInSavedSearches(),
     };
     this.loading.set(true);
     this.error.set(null);

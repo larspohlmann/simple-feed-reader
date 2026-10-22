@@ -45,6 +45,7 @@ const sub = (
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  includeInSavedSearches: true,
   social: null,
 });
 

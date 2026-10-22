@@ -218,6 +218,17 @@ final class SubscriptionJsonTest extends TestCase
 
         self::assertFalse($shape['includeInAllItems']);
         self::assertTrue($shape['includeInForYou']);
+        self::assertTrue($shape['includeInSavedSearches']);
+    }
+
+    public function testSerialisesASubscriptionExcludedFromSavedSearches(): void
+    {
+        $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
+        $user = new User('u@example.com', $now);
+        $subscription = new Subscription($user, new Feed('https://example.com/feed.xml'), $now);
+        $subscription->setIncludeInSavedSearches(false);
+
+        self::assertFalse(SubscriptionJson::one($subscription)['includeInSavedSearches']);
     }
 
     public function testCustomTitleWinsAndFallsBackToUrl(): void

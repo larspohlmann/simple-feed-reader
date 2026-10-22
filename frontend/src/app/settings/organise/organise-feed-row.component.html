@@ -31,7 +31,7 @@
       }
     </span>
 
-    @if (!subscription().includeInAllItems || !subscription().includeInForYou) {
+    @if (excluded()) {
       <app-icon class="excluded" name="visibility_off" size="xs" data-test="excluded" />
     }
 
@@ -95,30 +95,15 @@
           </button>
           @if (menuOpen()) {
             <div class="pop" role="menu">
-              <button
-                role="menuitem"
-                data-test="toggle-all-items"
-                (click)="toggleAllItems.emit(); closeMenu()"
-              >
-                {{
-                  (subscription().includeInAllItems
-                    ? 'reader.excludeFromAllItems'
-                    : 'reader.includeInAllItems'
-                  ) | transloco
-                }}
-              </button>
-              <button
-                role="menuitem"
-                data-test="toggle-for-you"
-                (click)="toggleForYou.emit(); closeMenu()"
-              >
-                {{
-                  (subscription().includeInForYou
-                    ? 'reader.excludeFromForYou'
-                    : 'reader.includeInForYou'
-                  ) | transloco
-                }}
-              </button>
+              @for (flag of feedFlags; track flag.surface) {
+                <button
+                  role="menuitem"
+                  [attr.data-test]="flag.dataTest"
+                  (click)="toggleFlag(flag); closeMenu()"
+                >
+                  {{ feedFlagLabelKey(flag, subscription()) | transloco }}
+                </button>
+              }
               <button
                 role="menuitem"
                 class="danger"

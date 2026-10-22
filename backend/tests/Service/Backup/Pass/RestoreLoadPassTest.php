@@ -95,6 +95,7 @@ final class RestoreLoadPassTest extends TestCase
             tags: [],
             includeInAllItems: true,
             includeInForYou: true,
+            includeInSavedSearches: true,
         );
     }
 

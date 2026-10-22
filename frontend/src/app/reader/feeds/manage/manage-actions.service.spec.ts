@@ -7,6 +7,7 @@ import { ReplaySubject, of } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api';
 import { ManageActions } from './manage-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
 import { RefreshReport, SubscriptionDto, TagDto } from '../../models';
 import { makeSubscription } from '../../testing/subscription.factory';
@@ -31,6 +32,7 @@ describe('ManageActions', () => {
   let service: ManageActions;
   let ctrl: HttpTestingController;
   let closed: unknown;
+  let savedSearchesLoad: jest.SpyInstance;
   const open = jest.fn(() => ({ closed: of(closed) }));
 
   beforeEach(() => {
@@ -45,6 +47,9 @@ describe('ManageActions', () => {
     });
     service = TestBed.inject(ManageActions);
     ctrl = TestBed.inject(HttpTestingController);
+    savedSearchesLoad = jest
+      .spyOn(TestBed.inject(SavedSearchesStore), 'load')
+      .mockImplementation(() => undefined);
     open.mockClear();
   });
   afterEach(() => ctrl.verify());
@@ -56,6 +61,14 @@ describe('ManageActions', () => {
       .mockImplementation(() => undefined);
     service.editSubscription(sub);
     expect(spy).toHaveBeenCalled();
+    expect(savedSearchesLoad).not.toHaveBeenCalled();
+  });
+
+  it('reloads saved searches after an edit that switched the saved-search flag', () => {
+    closed = { ...sub, includeInSavedSearches: !sub.includeInSavedSearches };
+    jest.spyOn(TestBed.inject(SubscriptionsStore), 'load').mockImplementation(() => undefined);
+    service.editSubscription(sub);
+    expect(savedSearchesLoad).toHaveBeenCalled();
   });
 
   it('unsubscribe: on confirm, DELETEs then reloads', () => {
@@ -170,10 +183,10 @@ describe('ManageActions', () => {
       customTitle: tagged.customTitle,
       tagIds: [3],
       includeInAllItems: false,
-      includeInForYou: true,
     });
     testRequest.flush({ subscription: { ...tagged, includeInAllItems: false } });
     expect(spy).toHaveBeenCalled();
+    expect(savedSearchesLoad).not.toHaveBeenCalled();
   });
 
   it('setIncludeInForYou: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
@@ -188,11 +201,30 @@ describe('ManageActions', () => {
     expect(testRequest.request.body).toEqual({
       customTitle: tagged.customTitle,
       tagIds: [3],
-      includeInAllItems: true,
       includeInForYou: false,
     });
     testRequest.flush({ subscription: { ...tagged, includeInForYou: false } });
     expect(spy).toHaveBeenCalled();
+    expect(savedSearchesLoad).not.toHaveBeenCalled();
+  });
+
+  it('setIncludeInSavedSearches: PATCHes the flag, then reloads subscriptions and saved searches', () => {
+    const tagged: SubscriptionDto = { ...sub, tags: [tag] };
+    const store = TestBed.inject(SubscriptionsStore);
+    store.storedSubscriptions.set([tagged]);
+    const subscriptionsLoad = jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    service.setIncludeInSavedSearches(tagged, false);
+    expect(store.subscriptions().find((x) => x.id === 5)!.includeInSavedSearches).toBe(false);
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({
+      customTitle: tagged.customTitle,
+      tagIds: [3],
+      includeInSavedSearches: false,
+    });
+    testRequest.flush({ subscription: { ...tagged, includeInSavedSearches: false } });
+    expect(subscriptionsLoad).toHaveBeenCalled();
+    expect(savedSearchesLoad).toHaveBeenCalled();
   });
 
   it('reorderTags: PATCHes /api/tags/reorder then reloads tags', () => {
@@ -280,10 +312,13 @@ describe('ManageActions', () => {
       const subLoad = jest
         .spyOn(TestBed.inject(SubscriptionsStore), 'load')
         .mockImplementation(() => undefined);
+      const savedSearchesLoad = jest
+        .spyOn(TestBed.inject(SavedSearchesStore), 'load')
+        .mockImplementation(() => undefined);
 
       if (options.confirmAnswer !== undefined) closed.next(options.confirmAnswer);
 
-      return { actions, http, dialogOpen, subLoad, closed };
+      return { actions, http, dialogOpen, subLoad, savedSearchesLoad, closed };
     }
 
     it('posts one bulk patch when a tag is added to several feeds', () => {
@@ -343,12 +378,25 @@ describe('ManageActions', () => {
     });
 
     it('reloads the subscriptions store after a successful bulk patch', () => {
-      const { actions, http, subLoad } = setup();
+      const { actions, http, subLoad, savedSearchesLoad } = setup();
 
       actions.bulkAddTag([1], TAG).subscribe();
       http.expectOne(`${BASE}/api/subscriptions/bulk`).flush({ subscriptions: [] });
 
       expect(subLoad).toHaveBeenCalled();
+      expect(savedSearchesLoad).not.toHaveBeenCalled();
+    });
+
+    it('reloads saved searches after a bulk patch of the saved-search flag only', () => {
+      const { actions, http, savedSearchesLoad } = setup();
+
+      actions.bulkSetFlags([1], { includeInForYou: false }).subscribe();
+      http.expectOne(`${BASE}/api/subscriptions/bulk`).flush({ subscriptions: [] });
+      expect(savedSearchesLoad).not.toHaveBeenCalled();
+
+      actions.bulkSetFlags([1], { includeInSavedSearches: false }).subscribe();
+      http.expectOne(`${BASE}/api/subscriptions/bulk`).flush({ subscriptions: [] });
+      expect(savedSearchesLoad).toHaveBeenCalledTimes(1);
     });
 
     it('asks the user to type the count from five feeds up', () => {

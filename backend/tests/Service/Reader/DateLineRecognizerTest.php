@@ -52,6 +52,11 @@ final class DateLineRecognizerTest extends TestCase
         self::assertFalse($this->recognizer->isDateLine('07.09.2026 Hamburg'));
     }
 
+    public function testANonAsciiMonthFollowedByOneMoreCharacterIsNotADateLine(): void
+    {
+        self::assertFalse($this->recognizer->isDateLine('1. März 2026x'));
+    }
+
     public function testDateLineRejectsADateThatOnlyALenientParserWouldRollOver(): void
     {
         self::assertFalse($this->recognizer->isDateLine('31.02.2026'));
