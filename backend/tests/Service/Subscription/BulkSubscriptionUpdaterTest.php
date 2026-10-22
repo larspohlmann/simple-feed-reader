@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Exception\InvalidSelectionException;
 use App\Service\Subscription\BulkSubscriptionUpdater;
 use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
+use App\Service\Subscription\Model\InclusionChangeModel;
 use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -165,7 +166,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
                 subscriptionIds: [$subscription->requireId()],
-                includeInAllItems: false,
+                inclusions: new InclusionChangeModel(includeInAllItems: false),
             ),
             $user->requireId(),
         );
@@ -189,8 +190,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
                 subscriptionIds: [$subscription->requireId()],
-                includeInAllItems: true,
-                includeInForYou: false,
+                inclusions: new InclusionChangeModel(includeInAllItems: true, includeInForYou: false),
             ),
             $user->requireId(),
         );
@@ -215,7 +215,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
                 subscriptionIds: [$first->requireId(), $second->requireId()],
-                includeInSavedSearches: false,
+                inclusions: new InclusionChangeModel(includeInSavedSearches: false),
             ),
             $user->requireId(),
         );

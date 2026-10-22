@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Subscription;
 
 use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
+use App\Service\Subscription\Model\InclusionChangeModel;
 use App\Service\Subscription\SubscriptionService;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -39,9 +40,11 @@ final readonly class BulkUpdateSubscriptionsRequest
             subscriptionIds: $this->subscriptionIds,
             addTagIds: $this->addTagIds,
             removeTagIds: $this->removeTagIds,
-            includeInAllItems: $this->includeInAllItems,
-            includeInForYou: $this->includeInForYou,
-            includeInSavedSearches: $this->includeInSavedSearches,
+            inclusions: new InclusionChangeModel(
+                includeInAllItems: $this->includeInAllItems,
+                includeInForYou: $this->includeInForYou,
+                includeInSavedSearches: $this->includeInSavedSearches,
+            ),
         );
     }
 }

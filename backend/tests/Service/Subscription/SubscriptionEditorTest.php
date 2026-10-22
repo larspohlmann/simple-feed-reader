@@ -9,6 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\Model\FeedMoveModel;
+use App\Service\Subscription\Model\InclusionChangeModel;
 use App\Service\Subscription\Model\SubscriptionChangeModel;
 use App\Service\Subscription\SubscriptionEditor;
 use App\Tests\DbTestCase;
@@ -65,7 +66,10 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->setIncludeInForYou(true);
         $this->entityManager->flush();
 
-        $this->editor()->update($subscription, new SubscriptionChangeModel(null, [], false, false));
+        $this->editor()->update(
+            $subscription,
+            new SubscriptionChangeModel(null, [], new InclusionChangeModel(false, false)),
+        );
 
         $reloaded = $this->reload($subscription);
         self::assertFalse($reloaded->isIncludeInAllItems());
@@ -77,7 +81,10 @@ final class SubscriptionEditorTest extends DbTestCase
         $user = $this->user('saved-searches-flag@example.com');
         $subscription = $this->subscription($user, 'https://saved-searches.editor.example.com/rss');
 
-        $this->editor()->update($subscription, new SubscriptionChangeModel(includeInSavedSearches: false));
+        $this->editor()->update(
+            $subscription,
+            new SubscriptionChangeModel(inclusions: new InclusionChangeModel(includeInSavedSearches: false)),
+        );
         self::assertFalse($this->reload($subscription)->isIncludeInSavedSearches());
 
         $this->editor()->update($subscription, new SubscriptionChangeModel());
