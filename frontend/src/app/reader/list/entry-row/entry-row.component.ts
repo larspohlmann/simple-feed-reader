@@ -10,12 +10,11 @@ import {
 } from '@angular/core';
 import { EntrySourceComponent } from '../../entry/entry-source/entry-source.component';
 import { MarkedTextComponent } from '../../../shared/marked-text/marked-text.component';
-import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
-import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
+import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../magazine/entry-duplicates.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { EntryDto, SubscriptionTagDto } from '../../models';
-import { entryImage, portraitCoverRatio, showsShortPill } from '../preview-image';
+import { entryImage, portraitCoverRatio } from '../preview-image';
 import { entryDek, entryHeadline, isPost } from '../../entry/entry-text';
 import { relativeTime } from '../../format';
 import { RenditionsDirective } from '../renditions.directive';
@@ -39,8 +38,7 @@ import { threadTotal } from '../../thread-post';
     OpensEntryDirective,
     EntrySourceComponent,
     MarkedTextComponent,
-    EntryPillsComponent,
-    EntryActionsComponent,
+    EntryMetaComponent,
     forwardRef(() => EntryDuplicatesComponent),
     RenditionsDirective,
     ShortBadgeComponent,
@@ -74,7 +72,6 @@ export class EntryRowComponent {
   readonly image = computed(() => entryImage(this.entry())?.url ?? null);
   readonly showImage = computed(() => !!this.image() && !this.imgError());
   readonly portraitRatio = computed(() => portraitCoverRatio(this.entry()));
-  readonly shortPill = computed(() => showsShortPill(this.entry(), this.showImage()));
   readonly isPost = computed(() => isPost(this.entry()));
   readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entryDek(this.entry()));
