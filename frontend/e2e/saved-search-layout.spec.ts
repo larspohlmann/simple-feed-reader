@@ -85,7 +85,7 @@ async function stubReader(page: Page): Promise<void> {
 test.describe('saved-search reading layout', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
-  test('sidebar links keep magazine while direct search uses the split pane', async ({ page }) => {
+  test('saved and direct searches both keep magazine (#1747)', async ({ page }) => {
     await stubReader(page);
     await page.goto('/reader?view=saved-searches');
     await expect(page.locator('.rows.magazine article')).toHaveCount(1);
@@ -110,7 +110,8 @@ test.describe('saved-search reading layout', () => {
     await field.fill('climate');
     await expect(page).toHaveURL(/q=climate/);
     await expect(page).not.toHaveURL(/searchOrigin=/);
-    await expect(page.locator('.main.split app-entry-row')).toHaveCount(1);
+    await expect(page.locator('.rows.magazine article')).toHaveCount(1);
+    await expect(page.locator('.main.split')).toHaveCount(0);
     await expect(field).toHaveValue('climate');
 
     await page.locator('.savedsearch-head .chevzone').click();
@@ -120,7 +121,7 @@ test.describe('saved-search reading layout', () => {
     await expect(page.locator('.rows.magazine article')).toHaveCount(1);
     await expect(page.locator('.main.split')).toHaveCount(0);
     await page.goBack();
-    await expect(page.locator('.main.split app-entry-row')).toHaveCount(1);
+    await expect(page.locator('.rows.magazine article')).toHaveCount(1);
     await expect(field).toHaveValue('climate');
     await page.goForward();
     await expect(page.locator('.rows.magazine article')).toHaveCount(1);
@@ -131,9 +132,7 @@ test.describe('saved-search reading layout', () => {
 test.describe('saved-search reading layout on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('uses magazine for saved searches and keeps direct search in the narrow layout', async ({
-    page,
-  }) => {
+  test('uses magazine for saved and direct searches', async ({ page }) => {
     await stubReader(page);
     await page.goto('/searches/saved/501-climate');
     await expect(page.locator('.rows.magazine article')).toHaveCount(1);
@@ -143,8 +142,7 @@ test.describe('saved-search reading layout on a phone', () => {
     await expect(page.locator('app-reader-header input')).toHaveValue('');
     await page.locator('app-reader-header input').fill('climate');
     await expect(page).not.toHaveURL(/searchOrigin=/);
-    await expect(page.locator('.rows app-entry-row')).toHaveCount(1);
-    await expect(page.locator('.rows.magazine')).toHaveCount(0);
+    await expect(page.locator('.rows.magazine article')).toHaveCount(1);
     await expect(page.locator('.main.split')).toHaveCount(0);
   });
 });

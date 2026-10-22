@@ -1427,10 +1427,19 @@ describe('EntryListComponent', () => {
     });
   });
 
-  describe('search forces the list layout (#408)', () => {
-    it('renders rows, not magazine blocks, for a search selection even when layout is magazine', () => {
+  describe('a search follows the selected layout (#1747)', () => {
+    it('renders magazine blocks for a search selection under the magazine layout', () => {
       const element = mount({
         layout: 'magazine',
+        selection: { kind: 'search', id: null, unread: false, term: 'fox' },
+      }).nativeElement as HTMLElement;
+      expect(element.querySelector('.rows.magazine')).not.toBeNull();
+      expect(element.querySelectorAll('app-entry-row').length).toBe(0);
+    });
+
+    it('renders rows for a search selection under the list layout', () => {
+      const element = mount({
+        layout: 'list',
         selection: { kind: 'search', id: null, unread: false, term: 'fox' },
       }).nativeElement as HTMLElement;
       expect(element.querySelectorAll('app-entry-row').length).toBe(2);
