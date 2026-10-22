@@ -61,10 +61,10 @@ final class AccountLineTest extends TestCase
         $line = AccountLine::fromLine([
             'locale' => 'de',
             'scrapeFallbackEnabled' => true,
-            'savedSearchIncludedNetworks' => ['mastodon', 'bluesky', 'mastodon'],
+            'savedSearchIncludedNetworks' => ['bluesky', 'bluesky', 'mastodon'],
         ]);
 
-        self::assertSame([SocialNetwork::Mastodon, SocialNetwork::Bluesky], $line->savedSearchIncludedNetworks);
+        self::assertSame([SocialNetwork::Bluesky, SocialNetwork::Mastodon], $line->savedSearchIncludedNetworks);
     }
 
     public function testANonStringMagazineStyleIsRefused(): void
