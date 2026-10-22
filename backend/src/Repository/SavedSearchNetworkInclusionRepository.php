@@ -20,15 +20,16 @@ final class SavedSearchNetworkInclusionRepository extends ServiceEntityRepositor
     /** @return list<SocialNetwork> */
     public function includedNetworksFor(int $userId): array
     {
-        $included = array_map(
-            static fn (SavedSearchNetworkInclusion $inclusion): SocialNetwork => $inclusion->getNetwork(),
-            $this->findBy(['user' => $userId]),
-        );
+        /** @var list<string> $networks */
+        $networks = $this->createQueryBuilder('inclusion')
+            ->select('inclusion.network')
+            ->andWhere('inclusion.user = :user')
+            ->setParameter('user', $userId)
+            ->orderBy('inclusion.network', 'ASC')
+            ->getQuery()
+            ->getSingleColumnResult();
 
-        return array_values(array_filter(
-            SocialNetwork::cases(),
-            static fn (SocialNetwork $network): bool => \in_array($network, $included, true),
-        ));
+        return array_map(SocialNetwork::from(...), $networks);
     }
 
     public function findOneFor(int $userId, SocialNetwork $network): ?SavedSearchNetworkInclusion

@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
-use App\Entity\Feed;
 use App\Entity\SavedSearchEntry;
-use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
@@ -26,6 +24,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
         private readonly EntryListRowHydrator $rowHydrator,
         private readonly DuplicateCollapseDql $collapse,
         private readonly EntryProjection $projection,
+        private readonly EntryScopePredicates $scopes,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -82,10 +81,10 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             ->join('sse.savedSearch', 'ss')
             ->andWhere('ss.id IN (:searchIds)')
             ->andWhere('ss.user = :user')
-            ->andWhere(self::countsInSavedSearches(EntryAliases::primary()))
             ->setParameter('searchIds', $savedSearchIds)
             ->orderBy('e.id', 'ASC');
-        $this->collapse->apply($qb, self::applyMembership(...), $userId);
+        $this->scopes->inSavedSearches($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $this->applyMembership(...), $userId);
 
         /** @var list<array{id: int, searchId: int}> $rows */
         $rows = $qb->getQuery()->getScalarResult();
@@ -111,21 +110,21 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             return $countsBySearch;
         }
 
-        /** @var list<array{searchId: int, memberCount: int}> $rows */
-        $rows = $this->getEntityManager()->createQueryBuilder()
+        $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('ss.id AS searchId', 'COUNT(e.id) AS memberCount')
             ->from(SavedSearchEntry::class, 'sse')
             ->join('sse.savedSearch', 'ss')
             ->join('sse.entry', 'e')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = ss.user')
-            ->andWhere(self::countsInSavedSearches(EntryAliases::primary()))
             ->andWhere('ss.id IN (:searchIds)')
             ->andWhere('ss.user = :user')
             ->groupBy('ss.id')
             ->setParameter('searchIds', $savedSearchIds)
-            ->setParameter('user', $userId)
-            ->getQuery()
-            ->getScalarResult();
+            ->setParameter('user', $userId);
+        $this->scopes->inSavedSearches($qb, EntryAliases::primary());
+
+        /** @var list<array{searchId: int, memberCount: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
         foreach ($rows as $row) {
             $countsBySearch[$row['searchId']] = (int) $row['memberCount'];
         }
@@ -187,21 +186,21 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             return [];
         }
 
-        /** @var list<array{entryId: int, id: int, slug: string, term: string}> $rows */
-        $rows = $this->getEntityManager()->createQueryBuilder()
+        $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('IDENTITY(sse.entry) AS entryId', 'ss.id AS id', 'ss.slug AS slug', 'ss.term AS term')
             ->from(SavedSearchEntry::class, 'sse')
             ->join('sse.savedSearch', 'ss')
             ->join('sse.entry', 'e')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = ss.user')
-            ->andWhere(self::countsInSavedSearches(EntryAliases::primary()))
             ->andWhere('sse.entry IN (:entryIds)')
             ->andWhere('ss.user = :user')
             ->setParameter('entryIds', $entryIds)
             ->setParameter('user', $userId)
-            ->orderBy('ss.id', 'DESC')
-            ->getQuery()
-            ->getScalarResult();
+            ->orderBy('ss.id', 'DESC');
+        $this->scopes->inSavedSearches($qb, EntryAliases::primary());
+
+        /** @var list<array{entryId: int, id: int, slug: string, term: string}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
 
         $byEntry = [];
         foreach ($rows as $row) {
@@ -225,33 +224,14 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
     private function restrictToMembers(QueryBuilder $qb, array $savedSearchIds, int $userId): void
     {
         $qb->setParameter('searchIds', $savedSearchIds);
-        self::applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, self::applyMembership(...), $userId);
+        $this->applyMembership($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $this->applyMembership(...), $userId);
     }
 
-    private static function applyMembership(QueryBuilder $qb, EntryAliases $aliases): void
+    private function applyMembership(QueryBuilder $qb, EntryAliases $aliases): void
     {
-        $qb->andWhere(self::memberOfAnySearch($aliases))
-            ->andWhere(self::countsInSavedSearches($aliases));
-    }
-
-    /** The subscription's own switch, and the feed's network when it has one; both bind only the shared :user. */
-    private static function countsInSavedSearches(EntryAliases $aliases): string
-    {
-        $feed = 'searchFeed' . ucfirst($aliases->entry);
-        $inclusion = 'networkInclusion' . ucfirst($aliases->entry);
-
-        return \sprintf(
-            '%1$s.includeInSavedSearches = true AND EXISTS (SELECT 1 FROM %2$s %3$s WHERE %3$s = %4$s.feed AND '
-            . '(%3$s.network IS NULL OR EXISTS (SELECT 1 FROM %5$s %6$s WHERE %6$s.user = :user '
-            . 'AND %6$s.network = %3$s.network)))',
-            $aliases->subscription,
-            Feed::class,
-            $feed,
-            $aliases->entry,
-            SavedSearchNetworkInclusion::class,
-            $inclusion,
-        );
+        $qb->andWhere(self::memberOfAnySearch($aliases));
+        $this->scopes->inSavedSearches($qb, $aliases);
     }
 
     /**
