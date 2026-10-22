@@ -1367,7 +1367,8 @@ edge stays the reference. And every image-beside-text block (`split`, `thumb`)
 places the row as a sibling *below* its image+text row rather than inside the
 text column: beside an image the column cannot hold the audio action cluster
 and the pills' names together (#1720), and the row's actions should align to
-the card's edge, not the column's (#486).
+the card's edge, not the column's (#486). The rows layout's `entry-row` keeps
+its own pills+actions line below its image+text row for the same reason (#1745).
 
 **Not for:** `entry-compact`, which projects `app-entry-actions` directly onto
 its kicker line instead of using this row — see the exception in

@@ -169,6 +169,14 @@ describe('EntryRowComponent', () => {
     expect(imageProxy.attempts).toEqual([]);
   });
 
+  it('lays its pills and actions below the image and text, not inside the text column', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+    const tagline = element.querySelector('.tagline')!;
+    expect(tagline.closest('.body')).toBeNull();
+    expect(tagline.previousElementSibling?.classList.contains('top')).toBe(true);
+    expect(tagline.previousElementSibling?.querySelector('img.thumb')).not.toBeNull();
+  });
+
   it('moves the thumbnail to the left when imageSide is left', () => {
     const fixture = mount(entry());
     fixture.componentRef.setInput('imageSide', 'left');

@@ -3,7 +3,8 @@
 
 .row {
   display: flex;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-1);
   padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -30,6 +31,11 @@
   --rim-base: var(--accent);
 
   background: var(--accent);
+}
+
+.top {
+  display: flex;
+  gap: var(--space-3);
 }
 
 .body {

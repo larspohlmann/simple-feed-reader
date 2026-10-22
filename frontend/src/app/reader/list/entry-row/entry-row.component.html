@@ -1,84 +1,88 @@
 <article class="row" [appOpensEntry]="entry()" [class.img-left]="imageSide() === 'left'">
-  <div class="body">
-    @if (headline()) {
-      <h3 class="title" [class.post]="isPost()">
-        @if (marking()) {
-          <app-marked-text [text]="headline()" [terms]="terms()" />
-        } @else {
-          {{ headline() }}
-        }
-      </h3>
-    }
-    <p class="meta">
-      <app-entry-source [entry]="entry()" layout="row" [size]="14" />
-      · {{ when() }}
-      <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
-    </p>
-    @if (snippet()) {
-      <p class="snippet">
-        @if (marking()) {
-          <app-marked-text [text]="snippet()" [terms]="terms()" />
-        } @else {
-          {{ snippet() }}
-        }
+  <div class="top">
+    <div class="body">
+      @if (headline()) {
+        <h3 class="title" [class.post]="isPost()">
+          @if (marking()) {
+            <app-marked-text [text]="headline()" [terms]="terms()" />
+          } @else {
+            {{ headline() }}
+          }
+        </h3>
+      }
+      <p class="meta">
+        <app-entry-source [entry]="entry()" layout="row" [size]="14" />
+        · {{ when() }}
+        <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
       </p>
-    }
-    @if (entry().thread.length) {
-      <app-thread-line>
-        @for (reply of entry().thread; track $index; let index = $index) {
-          <app-thread-line-post>
-            @if (reply.text) {
-              <p class="reply">
-                {{ reply.text }}
+      @if (snippet()) {
+        <p class="snippet">
+          @if (marking()) {
+            <app-marked-text [text]="snippet()" [terms]="terms()" />
+          } @else {
+            {{ snippet() }}
+          }
+        </p>
+      }
+      @if (entry().thread.length) {
+        <app-thread-line>
+          @for (reply of entry().thread; track $index; let index = $index) {
+            <app-thread-line-post>
+              @if (reply.text) {
+                <p class="reply">
+                  {{ reply.text }}
+                  <app-thread-count [position]="index + 2" [total]="total()" />
+                </p>
+              } @else {
                 <app-thread-count [position]="index + 2" [total]="total()" />
-              </p>
-            } @else {
-              <app-thread-count [position]="index + 2" [total]="total()" />
-            }
-            @if (reply.linkCard; as card) {
-              <app-link-card
-                [card]="card"
-                layout="block"
-                class="reply-card"
-                opensInReader="alone"
-                (click)="$event.stopPropagation()"
-                (keydown.enter)="$event.stopPropagation()"
-                (keydown.space)="$event.stopPropagation()"
-              />
-            }
-          </app-thread-line-post>
-        }
-      </app-thread-line>
-    }
-    <div class="tagline">
-      <app-entry-pills
-        [tags]="tags()"
-        [subscriptionId]="entry().subscriptionId"
-        [savedSearches]="entry().savedSearches ?? []"
-        [short]="shortPill()"
-      />
-      <app-entry-actions [entry]="entry()" size="md" />
-    </div>
-    <app-entry-duplicates [entry]="entry()" />
-  </div>
-  @if (showImage()) {
-    <div class="img-frame" [class.portrait]="portraitRatio() !== null">
-      <img
-        class="thumb"
-        [src]="image()!"
-        #renditions="appRenditions"
-        [appRenditions]="entry().imageRenditions"
-        [style.aspect-ratio]="portraitRatio()"
-        [renditionSizes]="coverBoxSizes"
-        alt=""
-        loading="lazy"
-        decoding="async"
-        referrerpolicy="no-referrer"
-        (error)="renditions.fallBackToSrc() || imgError.set(true)"
-      />
-      @if (entry().shortPlayerUrl) {
-        <app-short-badge />
+              }
+              @if (reply.linkCard; as card) {
+                <app-link-card
+                  [card]="card"
+                  layout="block"
+                  class="reply-card"
+                  opensInReader="alone"
+                  (click)="$event.stopPropagation()"
+                  (keydown.enter)="$event.stopPropagation()"
+                  (keydown.space)="$event.stopPropagation()"
+                />
+              }
+            </app-thread-line-post>
+          }
+        </app-thread-line>
       }
     </div>
-  }
+    @if (showImage()) {
+      <div class="img-frame" [class.portrait]="portraitRatio() !== null">
+        <img
+          class="thumb"
+          [src]="image()!"
+          #renditions="appRenditions"
+          [appRenditions]="entry().imageRenditions"
+          [style.aspect-ratio]="portraitRatio()"
+          [renditionSizes]="coverBoxSizes"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
+          (error)="renditions.fallBackToSrc() || imgError.set(true)"
+        />
+        @if (entry().shortPlayerUrl) {
+          <app-short-badge />
+        }
+      </div>
+    }
+  </div>
+  <!-- Full-width row under the image+text: beside the image, the text column
+       could not hold the audio actions and the pills' names together (#1745). -->
+  <div class="tagline">
+    <app-entry-pills
+      [tags]="tags()"
+      [subscriptionId]="entry().subscriptionId"
+      [savedSearches]="entry().savedSearches ?? []"
+      [short]="shortPill()"
+    />
+    <app-entry-actions [entry]="entry()" size="md" />
+  </div>
+  <app-entry-duplicates [entry]="entry()" />
 </article>
