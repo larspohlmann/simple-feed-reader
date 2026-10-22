@@ -53,7 +53,9 @@ export class ManageActions {
       panelClass: 'app-dialog',
     });
     ref.closed.subscribe((updated) => {
-      if (updated) this.reloadFeedsAndSearches();
+      if (!updated) return;
+      this.subs.load();
+      if (updated.includeInSavedSearches !== sub.includeInSavedSearches) this.savedSearches.load();
     });
   }
 
@@ -133,14 +135,14 @@ export class ManageActions {
         tagIds: sub.tags.map((tag) => tag.id),
         ...flags,
       }),
-      () => this.reloadFeedsAndSearches(),
+      () => this.reloadFeedsAfter(flags),
     );
   }
 
-  /** A feed's flags move saved-search badges and counts, which only a reload re-learns. */
-  private reloadFeedsAndSearches(): void {
+  /** The saved-search flag moves saved-search badges and counts, which only a reload re-learns. */
+  private reloadFeedsAfter(flags: SubscriptionFlags): void {
     this.subs.load();
-    this.savedSearches.load();
+    if (flags.includeInSavedSearches !== undefined) this.savedSearches.load();
   }
 
   /** Persist a new sidebar tag order (drag-and-drop); tag order lives in
@@ -341,7 +343,7 @@ export class ManageActions {
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
     return this.api.bulkUpdateSubscriptions(body).pipe(
       tap(() => {
-        this.reloadFeedsAndSearches();
+        this.reloadFeedsAfter(body);
         this.toast.show({ message: confirmation, durationMs: CONFIRMATION_DURATION_MS });
       }),
       map(() => undefined),
