@@ -35,6 +35,21 @@ final class LineFieldWithDefault
         return LineField::string($line, $key);
     }
 
+    /**
+     * @param array<string, mixed> $line
+     *
+     * @return list<string>
+     */
+    public static function stringList(array $line, string $key): array
+    {
+        $value = $line[$key] ?? [];
+        if (!\is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter($value, \is_string(...)));
+    }
+
     private function __construct()
     {
     }

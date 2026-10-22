@@ -29,6 +29,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\RetentionSetting;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\SavedSearchEntry;
 use App\Entity\ShareEnrichment;
 use App\Entity\SocialAccount;
@@ -222,6 +223,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'slug' => 'Derived: deterministically "<id>-<slug of term>" (SavedSearchSlug). A restored '
                 . 'search gets a new id, so a carried-over slug would be stale; RestoreLoadPass '
                 . 'regenerates it from the new id once the flush that assigns that id has run.',
+        ],
+        SavedSearchNetworkInclusion::class => [
+            'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],
         Feed::class => [
             'status' => 'Live fetch state, not the user\'s data. A restored feed starts clean.',

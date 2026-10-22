@@ -20,11 +20,13 @@ use App\Entity\QuotedPostContent;
 use App\Entity\QuotedPostReference;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\MagazineStyle;
+use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -52,6 +54,7 @@ final readonly class FullyPopulatedAccount
         $this->entityManager->persist($tag);
 
         $this->entityManager->persist($this->savedSearchFor($user));
+        $this->entityManager->persist(new SavedSearchNetworkInclusion($user, SocialNetwork::Mastodon));
 
         $feed = $this->feedFor($email);
         $this->entityManager->persist($feed);
