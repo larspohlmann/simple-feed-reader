@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\Feed;
 use App\Entity\SavedSearchEntry;
+use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
@@ -80,6 +82,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             ->join('sse.savedSearch', 'ss')
             ->andWhere('ss.id IN (:searchIds)')
             ->andWhere('ss.user = :user')
+            ->andWhere(self::countsInSavedSearches(EntryAliases::primary()))
             ->setParameter('searchIds', $savedSearchIds)
             ->orderBy('e.id', 'ASC');
         $this->collapse->apply($qb, self::applyMembership(...), $userId);
@@ -115,6 +118,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             ->join('sse.savedSearch', 'ss')
             ->join('sse.entry', 'e')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = ss.user')
+            ->andWhere(self::countsInSavedSearches(EntryAliases::primary()))
             ->andWhere('ss.id IN (:searchIds)')
             ->andWhere('ss.user = :user')
             ->groupBy('ss.id')
@@ -188,6 +192,9 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             ->select('IDENTITY(sse.entry) AS entryId', 'ss.id AS id', 'ss.slug AS slug', 'ss.term AS term')
             ->from(SavedSearchEntry::class, 'sse')
             ->join('sse.savedSearch', 'ss')
+            ->join('sse.entry', 'e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = ss.user')
+            ->andWhere(self::countsInSavedSearches(EntryAliases::primary()))
             ->andWhere('sse.entry IN (:entryIds)')
             ->andWhere('ss.user = :user')
             ->setParameter('entryIds', $entryIds)
@@ -224,7 +231,27 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
 
     private static function applyMembership(QueryBuilder $qb, EntryAliases $aliases): void
     {
-        $qb->andWhere(self::memberOfAnySearch($aliases));
+        $qb->andWhere(self::memberOfAnySearch($aliases))
+            ->andWhere(self::countsInSavedSearches($aliases));
+    }
+
+    /** The subscription's own switch, and the feed's network when it has one; both bind only the shared :user. */
+    private static function countsInSavedSearches(EntryAliases $aliases): string
+    {
+        $feed = 'searchFeed' . ucfirst($aliases->entry);
+        $inclusion = 'networkInclusion' . ucfirst($aliases->entry);
+
+        return \sprintf(
+            '%1$s.includeInSavedSearches = true AND EXISTS (SELECT 1 FROM %2$s %3$s WHERE %3$s = %4$s.feed AND '
+            . '(%3$s.network IS NULL OR EXISTS (SELECT 1 FROM %5$s %6$s WHERE %6$s.user = :user '
+            . 'AND %6$s.network = %3$s.network)))',
+            $aliases->subscription,
+            Feed::class,
+            $feed,
+            $aliases->entry,
+            SavedSearchNetworkInclusion::class,
+            $inclusion,
+        );
     }
 
     /**
