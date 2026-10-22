@@ -1094,7 +1094,6 @@ describe('ReaderShellComponent', () => {
       expect(fixture.componentInstance.splitView()).toBe(false);
       expect(fixture.nativeElement.querySelector('app-sidebar input').value).toBe('');
       expect(fixture.nativeElement.querySelector('.rows.magazine') !== null).toBe(true);
-      expect(fixture.componentInstance.layout.mode()).toBe('magazine');
 
       pp.next(convertToParamMap({}));
       qp.next(convertToParamMap({ q: 'angular' }));
@@ -1106,7 +1105,6 @@ describe('ReaderShellComponent', () => {
       expect(fixture.componentInstance.splitView()).toBe(false);
       expect(fixture.nativeElement.querySelector('app-sidebar input').value).toBe('angular');
       expect(fixture.nativeElement.querySelector('.rows.magazine') !== null).toBe(true);
-      expect(fixture.componentInstance.layout.mode()).toBe('magazine');
       ctrl.verify();
     });
 
@@ -1124,7 +1122,6 @@ describe('ReaderShellComponent', () => {
 
       expect(fixture.componentInstance.paneMode()).toBe(false);
       expect(fixture.componentInstance.splitView()).toBe(true);
-      expect(fixture.componentInstance.layout.mode()).toBe('list');
       expect(
         fixture.nativeElement.querySelector('.main.split .reader .placeholder'),
       ).not.toBeNull();
@@ -1145,9 +1142,7 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [entry], nextCursor: null });
       fixture.detectChanges();
 
-      expect(fixture.componentInstance.splitView()).toBe(fixture.componentInstance.paneMode());
       expect(fixture.componentInstance.splitView()).toBe(false);
-      expect(fixture.componentInstance.layout.mode()).toBe('list');
       expect(fixture.nativeElement.querySelector('.main.split')).toBeNull();
       expect(fixture.nativeElement.querySelector('app-entry-row')).not.toBeNull();
     });

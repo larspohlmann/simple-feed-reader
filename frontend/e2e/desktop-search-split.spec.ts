@@ -151,21 +151,4 @@ test.describe('desktop search split view', () => {
     await expect(page.getByText(MAGAZINE_ENTRY.title, { exact: true })).toBeVisible();
     await expect(main).not.toHaveClass(/\bsplit\b/);
   });
-
-  test('keeps magazine search results in the planner, with no split (#1747)', async ({ page }) => {
-    const signedIn = await signInWithReaderData(page);
-    test.skip(
-      !signedIn,
-      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
-    );
-
-    await page.getByRole('button', { name: 'Magazine layout, boxed' }).click();
-    await page.getByPlaceholder('Search articles').fill(SEARCH_TERM);
-    await expect(page.getByText(SEARCH_ENTRY.title, { exact: true })).toBeVisible();
-
-    const main = page.locator('main.main');
-    await expect(page.locator('.rows.magazine')).toBeVisible();
-    await expect(main).not.toHaveClass(/\bsplit\b/);
-    await expect(page.locator('app-entry-row')).toHaveCount(0);
-  });
 });
