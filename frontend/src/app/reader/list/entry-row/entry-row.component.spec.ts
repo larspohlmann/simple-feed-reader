@@ -169,12 +169,11 @@ describe('EntryRowComponent', () => {
     expect(imageProxy.attempts).toEqual([]);
   });
 
-  it('lays its pills and actions below the image and text, not inside the text column', () => {
+  it('ends on the shared meta line below the image and text, with md actions', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
-    const tagline = element.querySelector('.tagline')!;
-    expect(tagline.closest('.body')).toBeNull();
-    expect(tagline.previousElementSibling?.classList.contains('top')).toBe(true);
-    expect(tagline.previousElementSibling?.querySelector('img.thumb')).not.toBeNull();
+    const meta = element.querySelector('app-entry-meta')!;
+    expect(meta.previousElementSibling?.querySelector('img.thumb')).not.toBeNull();
+    expect(meta.querySelector('app-entry-actions')!.classList).toContain('glyph-md');
   });
 
   it('moves the thumbnail to the left when imageSide is left', () => {

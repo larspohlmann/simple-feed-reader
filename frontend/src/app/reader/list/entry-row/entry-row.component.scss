@@ -77,15 +77,6 @@
   color: var(--text-muted);
 }
 
-/* Tag pills and action icons share one line, icons just right of the pills
-   (not pushed to the row's far edge). `min-width: 0` keeps the truncation
-   chain so a long tag name shrinks rather than shoving the icons off. */
-.tagline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
 .img-frame {
   position: relative;
   flex: 0 0 auto;

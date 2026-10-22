@@ -1335,40 +1335,38 @@ behaves.
 
 ### `<app-entry-meta>`
 
-The line a magazine card ends on: `app-entry-pills` on the left,
+The line a magazine card or a list row ends on: `app-entry-pills` on the left,
 `app-entry-actions` right-aligned against them. Six of the seven magazine
-blocks use it — hero, wide, split, thumb, kicker, quote.
+blocks use it — hero, wide, split, thumb, kicker, quote — and so does the list
+layout's `entry-row`.
 
 | Input | Type | Default |
 |---|---|---|
 | `entry` | `EntryDto` (required) | — |
 | `tags` | `SubscriptionTagDto[]` | `[]` |
-
-| Output | Type | Fires |
-|---|---|---|
-| `favorite` | `output<EntryDto>` | the favorite button is pressed |
-| `keep` | `output<EntryDto>` | the keep button is pressed |
-| `read` | `output<EntryDto>` | the mark-read button is pressed |
+| `imageShown` | `boolean` | `false` — whether the host draws the entry's image, which decides the Short pill |
+| `size` | `'sm' \| 'md'` | `'sm'` — passed to `app-entry-actions`; the list row uses `md` |
 
 ```html
 <app-entry-meta
   [entry]="entry()"
   [tags]="tags()"
-  (favorite)="favorite.emit($event)"
-  (keep)="keep.emit($event)"
-  (read)="read.emit($event)"
+  [imageShown]="showImage()"
 />
 ```
 
-Two pieces of its geometry are load-bearing, and are why this is a component
-rather than a row assembled per block. `align-items: flex-end` keeps the icons
+Three pieces of its geometry are load-bearing, and are why this is a component
+rather than a row assembled per host. `align-items: flex-end` keeps the icons
 level with the **last** line of a wrapping pill list, so the card's bottom
 edge stays the reference. And every image-beside-text block (`split`, `thumb`)
 places the row as a sibling *below* its image+text row rather than inside the
 text column: beside an image the column cannot hold the audio action cluster
 and the pills' names together (#1720), and the row's actions should align to
-the card's edge, not the column's (#486). The rows layout's `entry-row` keeps
-its own pills+actions line below its image+text row for the same reason (#1745).
+the card's edge, not the column's (#486). The list layout's `entry-row` ends on
+the same component, below its image+text row, with `size="md"` actions (#1745).
+The pills carry a floor of `min(100%, 8rem)` and the row wraps: when the action
+cluster leaves less than that, the actions drop to their own line, right-aligned,
+rather than shrinking the pill names away. An empty pill list has no floor.
 
 **Not for:** `entry-compact`, which projects `app-entry-actions` directly onto
 its kicker line instead of using this row — see the exception in
