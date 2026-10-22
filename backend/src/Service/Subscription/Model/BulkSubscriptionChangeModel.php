@@ -18,6 +18,7 @@ final readonly class BulkSubscriptionChangeModel
         public array $removeTagIds = [],
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
+        public ?bool $includeInSavedSearches = null,
     ) {
     }
 }

@@ -56,6 +56,7 @@ final class BackupFieldDeclarations
             'subscriptionTags' => 'tags',
             'includeInAllItems' => 'includeInAllItems',
             'includeInForYou' => 'includeInForYou',
+            'includeInSavedSearches' => 'includeInSavedSearches',
         ],
         SubscriptionTag::class => [
             'tag' => 'tags.name',

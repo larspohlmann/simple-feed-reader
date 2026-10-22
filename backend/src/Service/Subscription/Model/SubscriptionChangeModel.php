@@ -13,6 +13,7 @@ final readonly class SubscriptionChangeModel
         public array $tagIds = [],
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
+        public ?bool $includeInSavedSearches = null,
     ) {
     }
 }

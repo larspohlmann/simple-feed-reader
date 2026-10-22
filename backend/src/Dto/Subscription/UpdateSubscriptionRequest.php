@@ -17,6 +17,7 @@ final readonly class UpdateSubscriptionRequest
         public array $tagIds = [],
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
+        public ?bool $includeInSavedSearches = null,
     ) {
     }
 
@@ -27,6 +28,7 @@ final readonly class UpdateSubscriptionRequest
             tagIds: $this->tagIds,
             includeInAllItems: $this->includeInAllItems,
             includeInForYou: $this->includeInForYou,
+            includeInSavedSearches: $this->includeInSavedSearches,
         );
     }
 }

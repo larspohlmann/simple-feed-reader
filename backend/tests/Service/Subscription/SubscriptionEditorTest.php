@@ -72,6 +72,18 @@ final class SubscriptionEditorTest extends DbTestCase
         self::assertFalse($reloaded->isIncludeInForYou());
     }
 
+    public function testUpdateExcludesTheFeedFromSavedSearchesAndANullFlagLeavesItAlone(): void
+    {
+        $user = $this->user('saved-searches-flag@example.com');
+        $subscription = $this->subscription($user, 'https://saved-searches.editor.example.com/rss');
+
+        $this->editor()->update($subscription, new SubscriptionChangeModel(includeInSavedSearches: false));
+        self::assertFalse($this->reload($subscription)->isIncludeInSavedSearches());
+
+        $this->editor()->update($subscription, new SubscriptionChangeModel());
+        self::assertFalse($this->reload($subscription)->isIncludeInSavedSearches());
+    }
+
     public function testUpdateSyncsTheRequestedTags(): void
     {
         $user = $this->user('tags-sync@example.com');

@@ -115,6 +115,7 @@ final readonly class FullyPopulatedAccount
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-15T10:00:00Z'));
         $subscription->setIncludeInAllItems(false);
         $subscription->setIncludeInForYou(false);
+        $subscription->setIncludeInSavedSearches(false);
         $subscription->addTag($tag, 5);
 
         return $subscription;

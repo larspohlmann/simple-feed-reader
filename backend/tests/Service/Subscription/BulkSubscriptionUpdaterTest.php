@@ -205,6 +205,25 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         );
     }
 
+    public function testBulkUpdateSetsTheSavedSearchFlagOnEveryListedFeed(): void
+    {
+        $user = $this->user('bulk-saved-searches@example.com');
+        $first = $this->subscription($user, 'https://saved-searches-a.example/feed.xml');
+        $second = $this->subscription($user, 'https://saved-searches-b.example/feed.xml');
+        $this->entityManager->flush();
+
+        $this->updater->apply(
+            new BulkSubscriptionChangeModel(
+                subscriptionIds: [$first->requireId(), $second->requireId()],
+                includeInSavedSearches: false,
+            ),
+            $user->requireId(),
+        );
+
+        self::assertFalse($first->isIncludeInSavedSearches());
+        self::assertFalse($second->isIncludeInSavedSearches());
+    }
+
     public function testRejectsATagNamedInBothAddAndRemove(): void
     {
         $user = $this->user('bulk-contradiction@example.com');

@@ -116,6 +116,7 @@ final readonly class BackupLines
             'tags' => $this->subscriptionTagRefs($subscription),
             'includeInAllItems' => $subscription->isIncludeInAllItems(),
             'includeInForYou' => $subscription->isIncludeInForYou(),
+            'includeInSavedSearches' => $subscription->isIncludeInSavedSearches(),
         ]);
     }
 

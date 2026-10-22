@@ -49,6 +49,7 @@ final readonly class RestoredFoundationFactory
         $subscription->setMarkedReadUntil($line->markedReadUntil);
         $subscription->setIncludeInAllItems($line->includeInAllItems);
         $subscription->setIncludeInForYou($line->includeInForYou);
+        $subscription->setIncludeInSavedSearches($line->includeInSavedSearches);
 
         return $subscription;
     }

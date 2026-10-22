@@ -9,7 +9,7 @@ use App\Service\Subscription\SubscriptionService;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * One bulk change across many feeds: at most one tag added, one removed, and either inclusion flag, where null
+ * One bulk change across many feeds: at most one tag added, one removed, and any inclusion flag, where null
  * leaves the stored value unchanged.
  */
 final readonly class BulkUpdateSubscriptionsRequest
@@ -29,6 +29,7 @@ final readonly class BulkUpdateSubscriptionsRequest
         public array $removeTagIds = [],
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
+        public ?bool $includeInSavedSearches = null,
     ) {
     }
 
@@ -40,6 +41,7 @@ final readonly class BulkUpdateSubscriptionsRequest
             removeTagIds: $this->removeTagIds,
             includeInAllItems: $this->includeInAllItems,
             includeInForYou: $this->includeInForYou,
+            includeInSavedSearches: $this->includeInSavedSearches,
         );
     }
 }

@@ -66,6 +66,7 @@ final class SubscriptionJson
      *   position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
      *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
+     *   includeInSavedSearches: bool,
      *   social: array{network: string, accountId: int|null, kind: string}|null
      * }
      */
@@ -105,6 +106,7 @@ final class SubscriptionJson
             'entryCount' => $entryCount,
             'includeInAllItems' => $subscription->isIncludeInAllItems(),
             'includeInForYou' => $subscription->isIncludeInForYou(),
+            'includeInSavedSearches' => $subscription->isIncludeInSavedSearches(),
             'social' => self::social($feed),
         ];
     }

@@ -11,7 +11,7 @@ final class BulkUpdateSubscriptionsRequestTest extends TestCase
 {
     public function testToChangeCarriesTheSelectionTheTagChangesAndTheFlags(): void
     {
-        $change = (new BulkUpdateSubscriptionsRequest([1, 2], [3], [4], true, false))->toChange();
+        $change = (new BulkUpdateSubscriptionsRequest([1, 2], [3], [4], true, false, false))->toChange();
 
         self::assertSame(
             [
@@ -20,6 +20,7 @@ final class BulkUpdateSubscriptionsRequestTest extends TestCase
                 'removeTagIds' => [4],
                 'includeInAllItems' => true,
                 'includeInForYou' => false,
+                'includeInSavedSearches' => false,
             ],
             get_object_vars($change),
         );

@@ -11,10 +11,16 @@ final class UpdateSubscriptionRequestTest extends TestCase
 {
     public function testToChangeCarriesTheTitleTheTagsAndBothFlags(): void
     {
-        $change = (new UpdateSubscriptionRequest('Mine', [7, 8], false, true))->toChange();
+        $change = (new UpdateSubscriptionRequest('Mine', [7, 8], false, true, false))->toChange();
 
         self::assertSame(
-            ['customTitle' => 'Mine', 'tagIds' => [7, 8], 'includeInAllItems' => false, 'includeInForYou' => true],
+            [
+                'customTitle' => 'Mine',
+                'tagIds' => [7, 8],
+                'includeInAllItems' => false,
+                'includeInForYou' => true,
+                'includeInSavedSearches' => false,
+            ],
             get_object_vars($change),
         );
     }

@@ -24,6 +24,7 @@ final readonly class SubscriptionLine
         public array $tags,
         public bool $includeInAllItems,
         public bool $includeInForYou,
+        public bool $includeInSavedSearches,
     ) {
     }
 
@@ -41,6 +42,7 @@ final readonly class SubscriptionLine
             tags: self::tagsFromLine($line),
             includeInAllItems: LineFieldWithDefault::bool($line, 'includeInAllItems', true),
             includeInForYou: LineFieldWithDefault::bool($line, 'includeInForYou', true),
+            includeInSavedSearches: LineFieldWithDefault::bool($line, 'includeInSavedSearches', true),
         );
     }
 

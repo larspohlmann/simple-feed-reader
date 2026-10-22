@@ -111,5 +111,8 @@ final readonly class BulkSubscriptionUpdater
         if (null !== $change->includeInForYou) {
             $subscription->setIncludeInForYou($change->includeInForYou);
         }
+        if (null !== $change->includeInSavedSearches) {
+            $subscription->setIncludeInSavedSearches($change->includeInSavedSearches);
+        }
     }
 }

@@ -53,5 +53,8 @@ final readonly class SubscriptionEditor
         if (null !== $change->includeInForYou) {
             $subscription->setIncludeInForYou($change->includeInForYou);
         }
+        if (null !== $change->includeInSavedSearches) {
+            $subscription->setIncludeInSavedSearches($change->includeInSavedSearches);
+        }
     }
 }
