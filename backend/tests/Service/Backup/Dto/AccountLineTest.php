@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup\Dto;
 
 use App\Enum\MagazineStyle;
+use App\Enum\SocialNetwork;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 use PHPUnit\Framework\TestCase;
@@ -53,6 +54,17 @@ final class AccountLineTest extends TestCase
         self::assertSame('de', $line->locale);
         self::assertFalse($line->scrapeFallbackEnabled);
         self::assertSame(MagazineStyle::Airy, $line->magazineStyle);
+    }
+
+    public function testANetworkListedTwiceIsIncludedOnce(): void
+    {
+        $line = AccountLine::fromLine([
+            'locale' => 'de',
+            'scrapeFallbackEnabled' => true,
+            'savedSearchIncludedNetworks' => ['mastodon', 'bluesky', 'mastodon'],
+        ]);
+
+        self::assertSame([SocialNetwork::Mastodon, SocialNetwork::Bluesky], $line->savedSearchIncludedNetworks);
     }
 
     public function testANonStringMagazineStyleIsRefused(): void

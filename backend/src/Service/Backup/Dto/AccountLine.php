@@ -39,7 +39,7 @@ final readonly class AccountLine
             ) ?? MagazineStyle::Boxed,
             savedSearchIncludedNetworks: array_values(array_filter(array_map(
                 SocialNetwork::tryFrom(...),
-                LineFieldWithDefault::stringList($line, 'savedSearchIncludedNetworks'),
+                array_unique(LineFieldWithDefault::stringList($line, 'savedSearchIncludedNetworks')),
             ))),
         );
     }

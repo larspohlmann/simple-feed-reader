@@ -425,6 +425,23 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame([SocialNetwork::Bluesky], $this->includedNetworksOf($user));
     }
 
+    public function testANetworkListedTwiceInTheFileRestoresAsOneInclusion(): void
+    {
+        $user = $this->userFactory->create('networks-twice@example.com');
+        $foundation = $this->gzipOf([
+            $this->headerLine(part: 0, parts: 1, totals: ['entries' => 0, 'entryStates' => 0]),
+            ['kind' => 'account', 'locale' => 'en', 'scrapeFallbackEnabled' => false, 'magazineStyle' => 'boxed',
+                'savedSearchIncludedNetworks' => ['bluesky', 'bluesky']],
+            ['kind' => 'footer', 'counts' => [
+                'tag' => 0, 'savedSearch' => 0, 'feed' => 0, 'subscription' => 0, 'entry' => 0, 'entryState' => 0,
+            ]],
+        ]);
+
+        $this->restorer()->start($this->reload($user), $foundation, 'REPLACE');
+
+        self::assertSame([SocialNetwork::Bluesky], $this->includedNetworksOf($user));
+    }
+
     /** @return list<SocialNetwork> */
     private function includedNetworksOf(User $user): array
     {
