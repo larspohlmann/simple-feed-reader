@@ -23,6 +23,7 @@ import { LayoutService } from '../../reader/layout.service';
 import { selectionQueryParams } from '../../reader/query/query';
 import { SubscriptionDto } from '../../reader/models';
 import { excludedSurfaces } from '../../reader/feed-exclusions';
+import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 
 /**
  * One feed row on the Organise page. Presentational on purpose: the tree and
@@ -77,12 +78,13 @@ export class OrganiseFeedRowComponent {
   protected readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
+  private readonly savedSearches = inject(SavedSearchesStore);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly menuOpen = signal(false);
 
   protected readonly excluded = computed(
-    () => excludedSurfaces(this.subscription(), new Set()).length > 0,
+    () => excludedSurfaces(this.subscription(), this.savedSearches.includedNetworks()).length > 0,
   );
 
   protected readonly visibleTags = computed(() =>

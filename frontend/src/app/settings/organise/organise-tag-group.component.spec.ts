@@ -1,3 +1,6 @@
+import { API_BASE_URL } from '../../core/api';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
@@ -88,6 +91,9 @@ describe('OrganiseTagGroupComponent', () => {
         imports: [OrganiseTagGroupComponent, provideTranslocoTesting()],
         providers: [
           provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
           OrganiseStore,
           { provide: ManageActions, useValue: manage },
           { provide: LayoutService, useValue: { isCoarse: signal(options.coarse ?? false) } },

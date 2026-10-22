@@ -1206,6 +1206,8 @@
     "excludeFromForYou": "Aus Für dich ausschließen",
     "includeInForYou": "In Für dich anzeigen",
     "excludeFromSavedSearches": "Aus gespeicherten Suchen ausschließen",
+    "includeNetworkInSavedSearches": "In gespeicherte Suchen aufnehmen",
+    "excludeNetworkFromSavedSearches": "Aus gespeicherten Suchen ausschließen",
     "includeInSavedSearches": "In gespeicherten Suchen anzeigen",
     "excludedFrom": "Ausgeblendet aus {{surfaces}}",
     "dropToRemoveTags": "Hier ablegen, um Tags zu entfernen",

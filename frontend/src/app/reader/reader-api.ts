@@ -1,3 +1,5 @@
+import { SocialNetworkName } from '../core/social-network';
+import { SavedSearchDraft, SavedSearchesResponse } from './saved-search-api-shapes';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
@@ -29,12 +31,6 @@ import {
   TagInput,
 } from './models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
-
-export interface SavedSearchDraft {
-  term: string;
-  wholeWord: boolean;
-  phrase: boolean;
-}
 
 export interface SubscribeRequest {
   url: string;
@@ -290,10 +286,21 @@ export class ReaderApi {
     return this.http.patch<void>(`${this.base}/api/tags/${tagId}/feed-order`, { subscriptionIds });
   }
 
-  savedSearches(): Observable<{ savedSearches: SavedSearchWire[] }> {
-    return this.http.get<{ savedSearches: SavedSearchWire[] }>(`${this.base}/api/saved-searches`, {
+  savedSearches(): Observable<SavedSearchesResponse> {
+    return this.http.get<SavedSearchesResponse>(`${this.base}/api/saved-searches`, {
       context: retryingTransientGatewayErrors(),
     });
+  }
+
+  includeNetworkInSavedSearches(network: SocialNetworkName): Observable<void> {
+    return this.http.put<void>(
+      `${this.base}/api/saved-searches/included-networks/${network}`,
+      null,
+    );
+  }
+
+  excludeNetworkFromSavedSearches(network: SocialNetworkName): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/saved-searches/included-networks/${network}`);
   }
 
   createSavedSearch(body: SavedSearchDraft): Observable<{ savedSearch: SavedSearchWire }> {

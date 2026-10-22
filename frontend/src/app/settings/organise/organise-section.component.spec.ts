@@ -1,7 +1,9 @@
+import { API_BASE_URL } from '../../core/api';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { computed, signal, WritableSignal } from '@angular/core';
 import { By } from '@angular/platform-browser';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -100,6 +102,9 @@ describe('OrganiseSectionComponent', () => {
         imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
           provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
@@ -351,6 +356,9 @@ describe('OrganiseSectionComponent', () => {
         imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
           provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
@@ -388,6 +396,9 @@ describe('OrganiseSectionComponent', () => {
         imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
           provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
           { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },

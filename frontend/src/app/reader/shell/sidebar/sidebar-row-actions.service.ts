@@ -7,7 +7,10 @@ import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { SubscriptionDto, TagDto } from '../../models';
 import { SocialAccountRefDto } from '../../social-feed';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
+
+const SAVED_SEARCHES_CHOICE = 'savedSearches';
 
 /** The row menus and action sheets of the sidebar's tag and feed rows. Provided
  *  on the sidebar, so all rows share one open menu and a late sheet choice dies
@@ -18,6 +21,7 @@ export class SidebarRowActions {
   private readonly sheet = inject(ActionSheet);
   private readonly transloco = inject(TranslocoService);
   private readonly picker = inject(SocialFeedsPicker);
+  private readonly savedSearches = inject(SavedSearchesStore);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly menuFor = signal<string | null>(null);
@@ -107,13 +111,37 @@ export class SidebarRowActions {
     this.sheet
       .open({
         title: this.transloco.translate(`settings.social.${section.network}`),
-        actions: this.socialAccountActions(section),
+        actions: [...this.socialAccountActions(section), this.savedSearchesAction(section)],
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
+        if (choice === SAVED_SEARCHES_CHOICE) {
+          this.toggleNetworkInSavedSearches(section);
+          return;
+        }
         const account = section.networkAccounts.find(({ id }) => String(id) === choice);
         if (account) this.manageSocialFeeds(account);
       });
+  }
+
+  private savedSearchesAction(section: SocialSection): ActionSheetAction {
+    const included = this.savedSearches.includedNetworks().has(section.network);
+    return {
+      id: SAVED_SEARCHES_CHOICE,
+      label: this.toggleLabel(
+        included,
+        'reader.excludeNetworkFromSavedSearches',
+        'reader.includeNetworkInSavedSearches',
+      ),
+    };
+  }
+
+  private toggleNetworkInSavedSearches(section: SocialSection): void {
+    if (this.savedSearches.includedNetworks().has(section.network)) {
+      this.savedSearches.excludeNetwork(section.network);
+    } else {
+      this.savedSearches.includeNetwork(section.network);
+    }
   }
 
   socialAccountActions(section: SocialSection): ActionSheetAction[] {

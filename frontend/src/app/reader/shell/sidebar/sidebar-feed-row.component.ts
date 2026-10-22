@@ -7,6 +7,7 @@ import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
 import { excludedSurfaces, exclusionTitle } from '../../feed-exclusions';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
@@ -45,10 +46,11 @@ export class SidebarFeedRowComponent {
   protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));
 
   private readonly i18n = inject(TranslocoService);
+  private readonly savedSearches = inject(SavedSearchesStore);
 
   /** A private feed is out of All items and For you by design, so only its saved-search state is news. */
   protected readonly markerSurfaces = computed(() => {
-    const surfaces = excludedSurfaces(this.subscription(), new Set());
+    const surfaces = excludedSurfaces(this.subscription(), this.savedSearches.includedNetworks());
     return this.isPrivate() ? surfaces.filter((surface) => surface === 'savedSearches') : surfaces;
   });
   protected readonly markerTitle = computed(() => exclusionTitle(this.i18n, this.markerSurfaces()));

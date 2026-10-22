@@ -10,6 +10,8 @@ import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { LayoutService } from '../../layout.service';
 import { SubscriptionDto } from '../../models';
 import { Selection } from '../../query/query';
+import { SocialNetworkName } from '../../../core/social-network';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -72,6 +74,12 @@ const rowActions = {
   manageSocialFeeds: jest.fn(),
 };
 
+const savedSearchesStore = {
+  includedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set()),
+  includeNetwork: jest.fn(),
+  excludeNetwork: jest.fn(),
+};
+
 function mount(
   section: SocialSection,
   selection: Selection = ALL,
@@ -88,6 +96,7 @@ function mount(
       { provide: LayoutService, useValue: { isCoarse: signal(coarse), isNarrow: signal(false) } },
       { provide: ManageActions, useValue: {} },
       { provide: SidebarRowActions, useValue: rowActions },
+      { provide: SavedSearchesStore, useValue: savedSearchesStore },
     ],
   });
   const fixture = TestBed.createComponent(SidebarSocialSectionComponent);
@@ -104,6 +113,7 @@ describe('SidebarSocialSectionComponent', () => {
   beforeEach(() => {
     localStorage.clear();
     rowActions.menuFor.set(null);
+    savedSearchesStore.includedNetworks.set(new Set());
     socialActions = LONE_ACCOUNT_ACTIONS;
     jest.clearAllMocks();
   });
@@ -441,13 +451,64 @@ describe('SidebarSocialSectionComponent', () => {
       expect(itemsOf(fixture).map((item) => [item.textContent?.trim(), item.disabled])).toEqual([
         ['Manage feeds of @alice.bsky.social', false],
         ['Reconnect @bob.bsky.social in settings', true],
+        ['Include in saved searches', false],
       ]);
     });
 
-    it('shows no menu for a network without accounts', () => {
+    it('still offers the saved-search switch for a network without accounts', () => {
+      socialActions = [];
       const fixture = mount({ ...ONE_ACCOUNT, networkAccounts: [] });
+      rowActions.menuFor.set('social-bluesky');
+      fixture.detectChanges();
 
-      expect(element(fixture).querySelector('.section-head .dots')).toBeNull();
+      expect(itemsOf(fixture).map((item) => item.textContent?.trim())).toEqual([
+        'Include in saved searches',
+      ]);
+    });
+
+    it('offers to include the network while it is left out, and includes it on click', () => {
+      const fixture = mount(ONE_ACCOUNT);
+      rowActions.menuFor.set('social-bluesky');
+      fixture.detectChanges();
+
+      const item = itemsOf(fixture).at(-1) as HTMLButtonElement;
+      expect(item.textContent?.trim()).toBe('Include in saved searches');
+      item.click();
+
+      expect(savedSearchesStore.includeNetwork).toHaveBeenCalledWith('bluesky');
+      expect(savedSearchesStore.excludeNetwork).not.toHaveBeenCalled();
+      expect(rowActions.closeMenu).toHaveBeenCalled();
+    });
+
+    it('offers to exclude the network once it is included, and excludes it on click', () => {
+      savedSearchesStore.includedNetworks.set(new Set(['bluesky']));
+      const fixture = mount(ONE_ACCOUNT);
+      rowActions.menuFor.set('social-bluesky');
+      fixture.detectChanges();
+
+      const item = itemsOf(fixture).at(-1) as HTMLButtonElement;
+      expect(item.textContent?.trim()).toBe('Exclude from saved searches');
+      item.click();
+
+      expect(savedSearchesStore.excludeNetwork).toHaveBeenCalledWith('bluesky');
+      expect(savedSearchesStore.includeNetwork).not.toHaveBeenCalled();
+    });
+
+    it('marks a profile row as hidden until the network is included', () => {
+      const section: SocialSection = {
+        ...ONE_ACCOUNT,
+        networkAccounts: [],
+        accounts: [],
+        profiles: socialProfiles([person(7, 'Amy')], 0),
+      };
+      expandProfiles('bluesky');
+      const fixture = mount(section);
+      expect(element(fixture).querySelector('.feed-exclusion-marker')).not.toBeNull();
+
+      savedSearchesStore.includedNetworks.set(new Set(['bluesky']));
+      fixture.detectChanges();
+
+      expect(element(fixture).querySelector('.feed-exclusion-marker')).toBeNull();
     });
 
     it('opens the sheet on a coarse pointer', () => {

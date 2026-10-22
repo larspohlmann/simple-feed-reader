@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { ReaderApi } from '../reader-api';
+import { SavedSearchesResponse } from '../saved-search-api-shapes';
 import { SavedSearchDto, SavedSearchWire } from '../models';
+import { SocialNetworkName } from '../../core/social-network';
 import { SavedSearchesStore } from './saved-searches.store';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 
@@ -55,21 +57,21 @@ describe('SavedSearchesStore', () => {
   }
 
   it('load() fills the view from the API, server order preserved, counts derived', () => {
-    const store = setup({ savedSearches: () => of({ savedSearches: rows }) });
+    const store = setup({ savedSearches: () => of({ savedSearches: rows, includedNetworks: [] }) });
     store.load();
     expect(store.savedSearches()).toEqual([view(rows[0]), view(rows[1])]);
     expect(store.savedSearches().map((savedSearch) => savedSearch.unreadCount)).toEqual([4, 0]);
   });
 
   it('memberCount passes through from the wire', () => {
-    const store = setup({ savedSearches: () => of({ savedSearches: rows }) });
+    const store = setup({ savedSearches: () => of({ savedSearches: rows, includedNetworks: [] }) });
     store.load();
     expect(store.savedSearches()[0].memberCount).toBe(9);
   });
 
   it('createSavedSearch() adopts the posted row without a reload', () => {
     const createSavedSearch = jest.fn(() => of({ savedSearch: rows[0] }));
-    const savedSearches = jest.fn(() => of({ savedSearches: rows }));
+    const savedSearches = jest.fn(() => of({ savedSearches: rows, includedNetworks: [] }));
     const store = setup({ createSavedSearch, savedSearches });
 
     store.createSavedSearch({ term: 'rust lang', wholeWord: true, phrase: false });
@@ -99,7 +101,10 @@ describe('SavedSearchesStore', () => {
   it('createSavedSearch() replaces rather than duplicates a term already saved', () => {
     const adopted: SavedSearchWire = { ...rows[1], unreadEntryIds: [1, 2, 3, 4, 5, 6, 7, 8, 9] };
     const createSavedSearch = jest.fn(() => of({ savedSearch: adopted }));
-    const store = setup({ createSavedSearch, savedSearches: () => of({ savedSearches: rows }) });
+    const store = setup({
+      createSavedSearch,
+      savedSearches: () => of({ savedSearches: rows, includedNetworks: [] }),
+    });
     store.load();
 
     // Saving a saved term is idempotent server-side (200, the existing row).
@@ -141,7 +146,7 @@ describe('SavedSearchesStore', () => {
 
   it('removeSavedSearch() drops the row locally without a reload', () => {
     const deleteSavedSearch = jest.fn(() => of(undefined));
-    const savedSearches = jest.fn(() => of({ savedSearches: rows }));
+    const savedSearches = jest.fn(() => of({ savedSearches: rows, includedNetworks: [] }));
     const store = setup({ deleteSavedSearch, savedSearches });
     store.load();
     savedSearches.mockClear();
@@ -156,7 +161,7 @@ describe('SavedSearchesStore', () => {
 
   it('removeSavedSearch() runs the success callback once the delete resolves', () => {
     const deleteSavedSearch = jest.fn(() => of(undefined));
-    const savedSearches = jest.fn(() => of({ savedSearches: rows }));
+    const savedSearches = jest.fn(() => of({ savedSearches: rows, includedNetworks: [] }));
     const store = setup({ deleteSavedSearch, savedSearches });
     store.load();
     const onSuccess = jest.fn();
@@ -167,7 +172,7 @@ describe('SavedSearchesStore', () => {
   });
 
   it('markEntryRead() drops a matching entry from its count and is a no-op otherwise', () => {
-    const store = setup({ savedSearches: () => of({ savedSearches: rows }) });
+    const store = setup({ savedSearches: () => of({ savedSearches: rows, includedNetworks: [] }) });
     store.load();
 
     store.markEntryRead(11); // matches the "rust lang" set
@@ -178,7 +183,7 @@ describe('SavedSearchesStore', () => {
   });
 
   it('markEntryRead() is idempotent for the same entry', () => {
-    const store = setup({ savedSearches: () => of({ savedSearches: rows }) });
+    const store = setup({ savedSearches: () => of({ savedSearches: rows, includedNetworks: [] }) });
     store.load();
 
     store.markEntryRead(11);
@@ -188,7 +193,7 @@ describe('SavedSearchesStore', () => {
   });
 
   it('markEntryUnread() restores a count when a read PATCH is reverted', () => {
-    const store = setup({ savedSearches: () => of({ savedSearches: rows }) });
+    const store = setup({ savedSearches: () => of({ savedSearches: rows, includedNetworks: [] }) });
     store.load();
 
     store.markEntryRead(11);
@@ -198,7 +203,7 @@ describe('SavedSearchesStore', () => {
   });
 
   it('load() re-learns the real set, clearing entries read since the last load', () => {
-    const savedSearches = jest.fn(() => of({ savedSearches: rows }));
+    const savedSearches = jest.fn(() => of({ savedSearches: rows, includedNetworks: [] }));
     const store = setup({ savedSearches });
     store.load();
     store.markEntryRead(11);
@@ -213,7 +218,10 @@ describe('SavedSearchesStore', () => {
     const updateSavedSearch = jest.fn(() =>
       of({ savedSearch: { ...rows[1], includeInDigest: true } }),
     );
-    const store = setup({ savedSearches: () => of({ savedSearches: rows }), updateSavedSearch });
+    const store = setup({
+      savedSearches: () => of({ savedSearches: rows, includedNetworks: [] }),
+      updateSavedSearch,
+    });
     store.load();
 
     store.setIncludeInDigest(1, true);
@@ -226,7 +234,10 @@ describe('SavedSearchesStore', () => {
 
   it('setIncludeInDigest() reverts the flag when the PATCH fails', () => {
     const updateSavedSearch = jest.fn(() => throwError(() => new Error('boom')));
-    const store = setup({ savedSearches: () => of({ savedSearches: rows }), updateSavedSearch });
+    const store = setup({
+      savedSearches: () => of({ savedSearches: rows, includedNetworks: [] }),
+      updateSavedSearch,
+    });
     store.load();
 
     store.setIncludeInDigest(1, true);
@@ -241,7 +252,7 @@ describe('SavedSearchesStore', () => {
     afterEach(() => jest.useRealTimers());
 
     it('reloads the badges only once the freshness window has elapsed', () => {
-      const savedSearches = jest.fn(() => of({ savedSearches: rows }));
+      const savedSearches = jest.fn(() => of({ savedSearches: rows, includedNetworks: [] }));
       const store = setup({ savedSearches });
       store.load();
       expect(savedSearches).toHaveBeenCalledTimes(1);
@@ -257,23 +268,23 @@ describe('SavedSearchesStore', () => {
     });
 
     it('keeps a badge that fell while the reload was on the wire', () => {
-      const responses = new Subject<{ savedSearches: SavedSearchWire[] }>();
+      const responses = new Subject<SavedSearchesResponse>();
       const store = setup({ savedSearches: () => responses });
       store.load();
-      responses.next({ savedSearches: rows });
+      responses.next({ savedSearches: rows, includedNetworks: [] });
       jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
 
       store.reloadIfStale();
       // The user reads a matching entry while the reload is on the wire. The
       // server counted before that, so its four would put the badge back up.
       store.markEntryRead(10);
-      responses.next({ savedSearches: rows });
+      responses.next({ savedSearches: rows, includedNetworks: [] });
 
       expect(store.savedSearches()[0].unreadCount).toBe(3);
     });
 
     it('does not stack a second request on a reload already in flight', () => {
-      const responses = new Subject<{ savedSearches: SavedSearchWire[] }>();
+      const responses = new Subject<SavedSearchesResponse>();
       const savedSearches = jest.fn(() => responses);
       const store = setup({ savedSearches });
       store.load();
@@ -285,7 +296,7 @@ describe('SavedSearchesStore', () => {
     });
 
     it('asks again once the window has elapsed after a load failed (#1423)', () => {
-      const responses = new Subject<{ savedSearches: SavedSearchWire[] }>();
+      const responses = new Subject<SavedSearchesResponse>();
       const savedSearches = jest.fn(() => responses);
       const store = setup({ savedSearches });
       store.load();
@@ -298,15 +309,77 @@ describe('SavedSearchesStore', () => {
     });
 
     it('keeps the last known badges when a reload fails (#1423)', () => {
-      const responses = new Subject<{ savedSearches: SavedSearchWire[] }>();
+      const responses = new Subject<SavedSearchesResponse>();
       const store = setup({ savedSearches: () => responses });
       store.load();
-      responses.next({ savedSearches: rows });
+      responses.next({ savedSearches: rows, includedNetworks: [] });
 
       store.load();
       responses.error(new Error('504'));
 
       expect(store.savedSearches()).toEqual(rows.map((wire) => view(wire)));
+    });
+  });
+  describe('included networks', () => {
+    const response = (includedNetworks: SocialNetworkName[]) => ({
+      savedSearches: rows,
+      includedNetworks,
+    });
+
+    it('starts with no network included and learns them from load()', () => {
+      const store = setup({ savedSearches: () => of(response(['mastodon'])) });
+      expect(store.includedNetworks().size).toBe(0);
+
+      store.load();
+
+      expect([...store.includedNetworks()]).toEqual(['mastodon']);
+    });
+
+    it('includeNetwork() adds the network at once, writes it, then reloads', () => {
+      const write = new Subject<void>();
+      const includeNetworkInSavedSearches = jest.fn(() => write);
+      const savedSearches = jest.fn(() => of(response(['bluesky'])));
+      const store = setup({ savedSearches, includeNetworkInSavedSearches });
+
+      store.includeNetwork('bluesky');
+
+      expect(store.includedNetworks().has('bluesky')).toBe(true);
+      expect(includeNetworkInSavedSearches).toHaveBeenCalledWith('bluesky');
+      expect(savedSearches).not.toHaveBeenCalled();
+      write.next();
+      expect(savedSearches).toHaveBeenCalledTimes(1);
+    });
+
+    it('excludeNetwork() drops the network at once, writes it, then reloads', () => {
+      const write = new Subject<void>();
+      const excludeNetworkFromSavedSearches = jest.fn(() => write);
+      const savedSearches = jest
+        .fn()
+        .mockReturnValueOnce(of(response(['mastodon', 'bluesky'])))
+        .mockReturnValue(of(response(['mastodon'])));
+      const store = setup({ savedSearches, excludeNetworkFromSavedSearches });
+      store.load();
+
+      store.excludeNetwork('bluesky');
+
+      expect([...store.includedNetworks()]).toEqual(['mastodon']);
+      expect(excludeNetworkFromSavedSearches).toHaveBeenCalledWith('bluesky');
+      expect(savedSearches).toHaveBeenCalledTimes(1);
+      write.next();
+      expect(savedSearches).toHaveBeenCalledTimes(2);
+    });
+
+    it('reloads after a failed write so the switch snaps back', () => {
+      const savedSearches = jest.fn(() => of(response([])));
+      const store = setup({
+        savedSearches,
+        includeNetworkInSavedSearches: () => throwError(() => new Error('500')),
+      });
+
+      store.includeNetwork('bluesky');
+
+      expect(savedSearches).toHaveBeenCalledTimes(1);
+      expect(store.includedNetworks().has('bluesky')).toBe(false);
     });
   });
 });

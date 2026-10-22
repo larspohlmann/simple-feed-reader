@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { signal } from '@angular/core';
+import { SocialNetworkName } from '../../../core/social-network';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
@@ -17,6 +20,7 @@ describe('SidebarRowActions', () => {
         SidebarRowActions,
         { provide: ActionSheet, useValue: { open } },
         { provide: ManageActions, useValue: {} },
+        { provide: SavedSearchesStore, useValue: {} },
       ],
     });
     TestBed.inject(SidebarRowActions).openFeedSheet(heldUnrenamedHome(1));
@@ -49,10 +53,16 @@ describe('SidebarRowActions', () => {
     });
     const sheetOpen = jest.fn(() => of('9'));
     const pickerOpen = jest.fn(() => of(undefined));
+    const includedNetworks = signal<ReadonlySet<SocialNetworkName>>(new Set());
+    const includeNetwork = jest.fn();
+    const excludeNetwork = jest.fn();
 
     beforeEach(() => {
       sheetOpen.mockClear();
       pickerOpen.mockClear();
+      includeNetwork.mockClear();
+      excludeNetwork.mockClear();
+      includedNetworks.set(new Set());
       TestBed.configureTestingModule({
         imports: [provideTranslocoTesting()],
         providers: [
@@ -60,6 +70,10 @@ describe('SidebarRowActions', () => {
           { provide: ActionSheet, useValue: { open: sheetOpen } },
           { provide: ManageActions, useValue: {} },
           { provide: SocialFeedsPicker, useValue: { open: pickerOpen } },
+          {
+            provide: SavedSearchesStore,
+            useValue: { includedNetworks, includeNetwork, excludeNetwork },
+          },
         ],
       });
     });
@@ -87,9 +101,33 @@ describe('SidebarRowActions', () => {
         actions: [
           { id: '9', label: 'Manage feeds of @bob.bsky.social', disabled: false },
           { id: '4', label: 'Reconnect @old.bsky.social in settings', disabled: true },
+          { id: 'savedSearches', label: 'Include in saved searches' },
         ],
       });
       expect(pickerOpen).toHaveBeenCalledWith(bob);
+    });
+
+    it('includes the network in saved searches from the sheet while it is left out', () => {
+      sheetOpen.mockReturnValueOnce(of('savedSearches'));
+
+      TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([]));
+
+      expect(includeNetwork).toHaveBeenCalledWith('bluesky');
+      expect(pickerOpen).not.toHaveBeenCalled();
+    });
+
+    it('offers to exclude an included network and excludes it on that choice', () => {
+      includedNetworks.set(new Set(['bluesky']));
+      sheetOpen.mockReturnValueOnce(of('savedSearches'));
+
+      TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([]));
+
+      expect(sheetOpen).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actions: [{ id: 'savedSearches', label: 'Exclude from saved searches' }],
+        }),
+      );
+      expect(excludeNetwork).toHaveBeenCalledWith('bluesky');
     });
 
     it('closes the open menu when it opens the picker', () => {
