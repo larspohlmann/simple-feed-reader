@@ -36,13 +36,8 @@
             {{ action.label }}
           </button>
         }
-        <button role="menuitem" (click)="toggleNetworkInSavedSearches()">
-          {{
-            (networkIncluded()
-              ? 'reader.excludeNetworkFromSavedSearches'
-              : 'reader.includeNetworkInSavedSearches'
-            ) | transloco
-          }}
+        <button role="menuitem" (click)="rows.toggleNetworkInSavedSearches(current)">
+          {{ rows.networkSavedSearchesAction(current).label }}
         </button>
       </ng-template>
     </app-sidebar-row-menu>

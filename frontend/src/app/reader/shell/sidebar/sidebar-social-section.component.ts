@@ -6,7 +6,6 @@ import { SocialNetworkName } from '../../../core/social-network';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { LayoutService } from '../../layout.service';
-import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
@@ -38,7 +37,6 @@ export class SidebarSocialSectionComponent {
 
   protected readonly rows = inject(SidebarRowActions);
   protected readonly screen = inject(LayoutService);
-  private readonly savedSearches = inject(SavedSearchesStore);
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
   protected readonly expanded = this.collapsible.expanded;
@@ -58,17 +56,6 @@ export class SidebarSocialSectionComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
 
   protected readonly menuKey = computed(() => `social-${this.section().network}`);
-
-  protected readonly networkIncluded = computed(() =>
-    this.savedSearches.includedNetworks().has(this.section().network),
-  );
-
-  protected toggleNetworkInSavedSearches(): void {
-    const network = this.section().network;
-    if (this.networkIncluded()) this.savedSearches.excludeNetwork(network);
-    else this.savedSearches.includeNetwork(network);
-    this.rows.closeMenu();
-  }
 
   protected toggle(): void {
     this.collapsible.toggle();

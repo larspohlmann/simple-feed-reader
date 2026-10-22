@@ -1,3 +1,4 @@
+import { computed } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { ReaderApi } from '../reader-api';
@@ -367,6 +368,55 @@ describe('SavedSearchesStore', () => {
       expect(savedSearches).toHaveBeenCalledTimes(1);
       write.next();
       expect(savedSearches).toHaveBeenCalledTimes(2);
+    });
+
+    it('a reload with the same networks leaves the set unchanged', () => {
+      const store = setup({ savedSearches: () => of(response(['mastodon', 'bluesky'])) });
+      store.load();
+      const first = store.includedNetworks();
+      let recomputes = 0;
+      const watched = computed(() => {
+        recomputes += 1;
+        return store.includedNetworks().size;
+      });
+      watched();
+
+      store.load();
+      watched();
+
+      expect(store.includedNetworks()).toBe(first);
+      expect(recomputes).toBe(1);
+    });
+
+    it('a reload with other networks replaces the set', () => {
+      const savedSearches = jest
+        .fn()
+        .mockReturnValueOnce(of(response(['mastodon'])))
+        .mockReturnValue(of(response(['bluesky'])));
+      const store = setup({ savedSearches });
+      store.load();
+
+      store.load();
+
+      expect([...store.includedNetworks()]).toEqual(['bluesky']);
+    });
+
+    it('toggleNetwork() includes a left-out network and excludes an included one', () => {
+      const includeNetworkInSavedSearches = jest.fn(() => new Subject<void>());
+      const excludeNetworkFromSavedSearches = jest.fn(() => new Subject<void>());
+      const store = setup({
+        savedSearches: () => of(response(['mastodon'])),
+        includeNetworkInSavedSearches,
+        excludeNetworkFromSavedSearches,
+      });
+      store.load();
+
+      store.toggleNetwork('bluesky');
+      store.toggleNetwork('mastodon');
+
+      expect(includeNetworkInSavedSearches).toHaveBeenCalledWith('bluesky');
+      expect(excludeNetworkFromSavedSearches).toHaveBeenCalledWith('mastodon');
+      expect([...store.includedNetworks()]).toEqual(['bluesky']);
     });
 
     it('reloads after a failed write so the switch snaps back', () => {

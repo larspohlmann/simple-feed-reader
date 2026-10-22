@@ -1,10 +1,15 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { Observable, Subscription, finalize } from 'rxjs';
+import { Observable, Subscription, catchError, finalize, of } from 'rxjs';
 import { ReaderApi } from '../reader-api';
 import { SavedSearchDraft } from '../saved-search-api-shapes';
 import { countsAreStale } from './sidebar-freshness';
 import { SavedSearchDto, SavedSearchWire } from '../models';
 import { SocialNetworkName } from '../../core/social-network';
+
+const sameMembers = (
+  left: ReadonlySet<SocialNetworkName>,
+  right: ReadonlySet<SocialNetworkName>,
+): boolean => left.size === right.size && [...left].every((network) => right.has(network));
 
 /** The user's saved searches, newest first, each with a live unread-match
  *  count. load() re-syncs the whole set -- the hook the shell calls after every
@@ -23,7 +28,9 @@ export class SavedSearchesStore {
    *  when the backend re-counts from scratch. */
   private readonly readSinceLoad = signal<ReadonlySet<number>>(new Set());
 
-  private readonly storedIncludedNetworks = signal<ReadonlySet<SocialNetworkName>>(new Set());
+  private readonly storedIncludedNetworks = signal<ReadonlySet<SocialNetworkName>>(new Set(), {
+    equal: sameMembers,
+  });
   /** The social networks whose feeds count in saved searches; every other network's are left out. */
   readonly includedNetworks = this.storedIncludedNetworks.asReadonly();
 
@@ -134,23 +141,32 @@ export class SavedSearchesStore {
     });
   }
 
+  toggleNetwork(network: SocialNetworkName): void {
+    if (this.includedNetworks().has(network)) this.excludeNetwork(network);
+    else this.includeNetwork(network);
+  }
+
   includeNetwork(network: SocialNetworkName): void {
-    this.storedIncludedNetworks.update((current) => new Set(current).add(network));
-    this.writeNetworkSwitch(this.api.includeNetworkInSavedSearches(network));
+    this.updateIncluded((included) => included.add(network));
+    this.reloadAfter(this.api.includeNetworkInSavedSearches(network));
   }
 
   excludeNetwork(network: SocialNetworkName): void {
-    this.storedIncludedNetworks.update((current) => {
-      const next = new Set(current);
-      next.delete(network);
-      return next;
-    });
-    this.writeNetworkSwitch(this.api.excludeNetworkFromSavedSearches(network));
+    this.updateIncluded((included) => included.delete(network));
+    this.reloadAfter(this.api.excludeNetworkFromSavedSearches(network));
   }
 
-  /** The reload re-learns the badges the switch moved, or snaps the switch back if the write failed. */
-  private writeNetworkSwitch(write: Observable<void>): void {
-    write.subscribe({ next: () => this.load(), error: () => this.load() });
+  private updateIncluded(mutate: (included: Set<SocialNetworkName>) => void): void {
+    this.storedIncludedNetworks.update((current) => {
+      const next = new Set(current);
+      mutate(next);
+      return next;
+    });
+  }
+
+  /** A failed write reloads too: that is what snaps the optimistic switch back. */
+  private reloadAfter(write: Observable<void>): void {
+    write.pipe(catchError(() => of(undefined))).subscribe(() => this.load());
   }
 
   /** Optimistic patch of one saved search's digest flag; reverts on a failed PATCH. */

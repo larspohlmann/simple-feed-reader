@@ -52,37 +52,11 @@
         <button role="menuitem" (click)="manage.editSubscription(feed); rows.closeMenu()">
           {{ 'reader.editFeed' | transloco }}
         </button>
-        <button
-          role="menuitem"
-          (click)="manage.setIncludeInAllItems(feed, !feed.includeInAllItems); rows.closeMenu()"
-        >
-          {{
-            (feed.includeInAllItems ? 'reader.excludeFromAllItems' : 'reader.includeInAllItems')
-              | transloco
-          }}
-        </button>
-        <button
-          role="menuitem"
-          (click)="manage.setIncludeInForYou(feed, !feed.includeInForYou); rows.closeMenu()"
-        >
-          {{
-            (feed.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou')
-              | transloco
-          }}
-        </button>
-        <button
-          role="menuitem"
-          (click)="
-            manage.setIncludeInSavedSearches(feed, !feed.includeInSavedSearches); rows.closeMenu()
-          "
-        >
-          {{
-            (feed.includeInSavedSearches
-              ? 'reader.excludeFromSavedSearches'
-              : 'reader.includeInSavedSearches'
-            ) | transloco
-          }}
-        </button>
+        @for (flag of feedFlags; track flag.surface) {
+          <button role="menuitem" (click)="rows.toggleFeedFlag(flag, feed)">
+            {{ feedFlagLabelKey(flag, feed) | transloco }}
+          </button>
+        }
         <button role="menuitem" (click)="manage.unsubscribe(feed); rows.closeMenu()">
           {{ 'reader.unsubscribe' | transloco }}
         </button>

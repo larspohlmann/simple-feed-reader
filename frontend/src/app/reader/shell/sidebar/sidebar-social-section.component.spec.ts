@@ -64,6 +64,11 @@ const LONE_ACCOUNT_ACTIONS: ActionSheetAction[] = [
   { id: '3', label: 'Manage feeds…', disabled: false },
 ];
 let socialActions = LONE_ACCOUNT_ACTIONS;
+const INCLUDE_NETWORK_ACTION: ActionSheetAction = {
+  id: 'savedSearches',
+  label: 'Include in saved searches',
+};
+let networkAction = INCLUDE_NETWORK_ACTION;
 const rowActions = {
   menuFor: signal<string | null>(null),
   toggleMenu: jest.fn(),
@@ -72,12 +77,12 @@ const rowActions = {
   openSocialSheet: jest.fn(),
   socialAccountActions: jest.fn(() => socialActions),
   manageSocialFeeds: jest.fn(),
+  networkSavedSearchesAction: jest.fn(() => networkAction),
+  toggleNetworkInSavedSearches: jest.fn(),
 };
 
 const savedSearchesStore = {
   includedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set()),
-  includeNetwork: jest.fn(),
-  excludeNetwork: jest.fn(),
 };
 
 function mount(
@@ -115,6 +120,7 @@ describe('SidebarSocialSectionComponent', () => {
     rowActions.menuFor.set(null);
     savedSearchesStore.includedNetworks.set(new Set());
     socialActions = LONE_ACCOUNT_ACTIONS;
+    networkAction = INCLUDE_NETWORK_ACTION;
     jest.clearAllMocks();
   });
   afterEach(() => localStorage.clear());
@@ -466,7 +472,7 @@ describe('SidebarSocialSectionComponent', () => {
       ]);
     });
 
-    it('offers to include the network while it is left out, and includes it on click', () => {
+    it('labels the saved-search item for its network and switches that network on click', () => {
       const fixture = mount(ONE_ACCOUNT);
       rowActions.menuFor.set('social-bluesky');
       fixture.detectChanges();
@@ -475,23 +481,19 @@ describe('SidebarSocialSectionComponent', () => {
       expect(item.textContent?.trim()).toBe('Include in saved searches');
       item.click();
 
-      expect(savedSearchesStore.includeNetwork).toHaveBeenCalledWith('bluesky');
-      expect(savedSearchesStore.excludeNetwork).not.toHaveBeenCalled();
-      expect(rowActions.closeMenu).toHaveBeenCalled();
+      expect(rowActions.networkSavedSearchesAction).toHaveBeenCalledWith(ONE_ACCOUNT);
+      expect(rowActions.toggleNetworkInSavedSearches).toHaveBeenCalledWith(ONE_ACCOUNT);
     });
 
-    it('offers to exclude the network once it is included, and excludes it on click', () => {
-      savedSearchesStore.includedNetworks.set(new Set(['bluesky']));
+    it('shows the exclude label the row actions give an included network', () => {
+      networkAction = { id: 'savedSearches', label: 'Exclude from saved searches' };
       const fixture = mount(ONE_ACCOUNT);
       rowActions.menuFor.set('social-bluesky');
       fixture.detectChanges();
 
-      const item = itemsOf(fixture).at(-1) as HTMLButtonElement;
-      expect(item.textContent?.trim()).toBe('Exclude from saved searches');
-      item.click();
-
-      expect(savedSearchesStore.excludeNetwork).toHaveBeenCalledWith('bluesky');
-      expect(savedSearchesStore.includeNetwork).not.toHaveBeenCalled();
+      expect((itemsOf(fixture).at(-1) as HTMLElement).textContent?.trim()).toBe(
+        'Exclude from saved searches',
+      );
     });
 
     it('marks a profile row as hidden until the network is included', () => {

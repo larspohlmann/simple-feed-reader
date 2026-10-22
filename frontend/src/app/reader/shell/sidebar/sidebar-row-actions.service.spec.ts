@@ -54,14 +54,12 @@ describe('SidebarRowActions', () => {
     const sheetOpen = jest.fn(() => of('9'));
     const pickerOpen = jest.fn(() => of(undefined));
     const includedNetworks = signal<ReadonlySet<SocialNetworkName>>(new Set());
-    const includeNetwork = jest.fn();
-    const excludeNetwork = jest.fn();
+    const toggleNetwork = jest.fn();
 
     beforeEach(() => {
       sheetOpen.mockClear();
       pickerOpen.mockClear();
-      includeNetwork.mockClear();
-      excludeNetwork.mockClear();
+      toggleNetwork.mockClear();
       includedNetworks.set(new Set());
       TestBed.configureTestingModule({
         imports: [provideTranslocoTesting()],
@@ -72,7 +70,7 @@ describe('SidebarRowActions', () => {
           { provide: SocialFeedsPicker, useValue: { open: pickerOpen } },
           {
             provide: SavedSearchesStore,
-            useValue: { includedNetworks, includeNetwork, excludeNetwork },
+            useValue: { includedNetworks, toggleNetwork },
           },
         ],
       });
@@ -107,13 +105,37 @@ describe('SidebarRowActions', () => {
       expect(pickerOpen).toHaveBeenCalledWith(bob);
     });
 
-    it('includes the network in saved searches from the sheet while it is left out', () => {
+    it('switches the network in saved searches from the sheet', () => {
       sheetOpen.mockReturnValueOnce(of('savedSearches'));
 
       TestBed.inject(SidebarRowActions).openSocialSheet(sectionOf([]));
 
-      expect(includeNetwork).toHaveBeenCalledWith('bluesky');
+      expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
       expect(pickerOpen).not.toHaveBeenCalled();
+    });
+
+    it('switches the network from its menu item and closes the menu', () => {
+      const rows = TestBed.inject(SidebarRowActions);
+      rows.menuFor.set('social-bluesky');
+
+      rows.toggleNetworkInSavedSearches(sectionOf([]));
+
+      expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
+      expect(rows.menuFor()).toBeNull();
+    });
+
+    it('labels the network item by whether the network is included', () => {
+      const rows = TestBed.inject(SidebarRowActions);
+      expect(rows.networkSavedSearchesAction(sectionOf([]))).toEqual({
+        id: 'savedSearches',
+        label: 'Include in saved searches',
+      });
+
+      includedNetworks.set(new Set(['bluesky']));
+
+      expect(rows.networkSavedSearchesAction(sectionOf([])).label).toBe(
+        'Exclude from saved searches',
+      );
     });
 
     it('offers to exclude an included network and excludes it on that choice', () => {
@@ -127,7 +149,7 @@ describe('SidebarRowActions', () => {
           actions: [{ id: 'savedSearches', label: 'Exclude from saved searches' }],
         }),
       );
-      expect(excludeNetwork).toHaveBeenCalledWith('bluesky');
+      expect(toggleNetwork).toHaveBeenCalledWith('bluesky');
     });
 
     it('closes the open menu when it opens the picker', () => {

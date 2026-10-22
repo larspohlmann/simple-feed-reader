@@ -6,6 +6,12 @@ import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { SubscriptionDto, TagDto } from '../../models';
+import {
+  FEED_FLAG_TOGGLES,
+  FeedFlagToggle,
+  feedFlagLabelKey,
+  flipFeedFlag,
+} from '../../feed-exclusions';
 import { SocialAccountRefDto } from '../../social-feed';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
@@ -62,30 +68,10 @@ export class SidebarRowActions {
         title: subscription.title,
         actions: [
           { id: 'edit', label: this.transloco.translate('reader.editFeed') },
-          {
-            id: 'toggleAllItems',
-            label: this.toggleLabel(
-              subscription.includeInAllItems,
-              'reader.excludeFromAllItems',
-              'reader.includeInAllItems',
-            ),
-          },
-          {
-            id: 'toggleForYou',
-            label: this.toggleLabel(
-              subscription.includeInForYou,
-              'reader.excludeFromForYou',
-              'reader.includeInForYou',
-            ),
-          },
-          {
-            id: 'toggleSavedSearches',
-            label: this.toggleLabel(
-              subscription.includeInSavedSearches,
-              'reader.excludeFromSavedSearches',
-              'reader.includeInSavedSearches',
-            ),
-          },
+          ...FEED_FLAG_TOGGLES.map((toggle) => ({
+            id: toggle.surface,
+            label: this.transloco.translate(feedFlagLabelKey(toggle, subscription)),
+          })),
           {
             id: 'unsubscribe',
             label: this.transloco.translate('reader.unsubscribe'),
@@ -96,12 +82,8 @@ export class SidebarRowActions {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.manage.editSubscription(subscription);
-        if (choice === 'toggleAllItems')
-          this.manage.setIncludeInAllItems(subscription, !subscription.includeInAllItems);
-        if (choice === 'toggleForYou')
-          this.manage.setIncludeInForYou(subscription, !subscription.includeInForYou);
-        if (choice === 'toggleSavedSearches')
-          this.manage.setIncludeInSavedSearches(subscription, !subscription.includeInSavedSearches);
+        const toggle = FEED_FLAG_TOGGLES.find(({ surface }) => surface === choice);
+        if (toggle) flipFeedFlag(this.manage, toggle, subscription);
         if (choice === 'unsubscribe') this.manage.unsubscribe(subscription);
       });
   }
@@ -111,7 +93,7 @@ export class SidebarRowActions {
     this.sheet
       .open({
         title: this.transloco.translate(`settings.social.${section.network}`),
-        actions: [...this.socialAccountActions(section), this.savedSearchesAction(section)],
+        actions: [...this.socialAccountActions(section), this.networkSavedSearchesAction(section)],
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
@@ -124,24 +106,27 @@ export class SidebarRowActions {
       });
   }
 
-  private savedSearchesAction(section: SocialSection): ActionSheetAction {
+  /** The network head's saved-searches item, for its sheet and its menu alike. */
+  networkSavedSearchesAction(section: SocialSection): ActionSheetAction {
     const included = this.savedSearches.includedNetworks().has(section.network);
     return {
       id: SAVED_SEARCHES_CHOICE,
-      label: this.toggleLabel(
-        included,
-        'reader.excludeNetworkFromSavedSearches',
-        'reader.includeNetworkInSavedSearches',
+      label: this.transloco.translate(
+        included
+          ? 'reader.excludeNetworkFromSavedSearches'
+          : 'reader.includeNetworkInSavedSearches',
       ),
     };
   }
 
-  private toggleNetworkInSavedSearches(section: SocialSection): void {
-    if (this.savedSearches.includedNetworks().has(section.network)) {
-      this.savedSearches.excludeNetwork(section.network);
-    } else {
-      this.savedSearches.includeNetwork(section.network);
-    }
+  toggleNetworkInSavedSearches(section: SocialSection): void {
+    this.savedSearches.toggleNetwork(section.network);
+    this.closeMenu();
+  }
+
+  toggleFeedFlag(toggle: FeedFlagToggle, subscription: SubscriptionDto): void {
+    flipFeedFlag(this.manage, toggle, subscription);
+    this.closeMenu();
   }
 
   socialAccountActions(section: SocialSection): ActionSheetAction[] {
@@ -164,11 +149,5 @@ export class SidebarRowActions {
     return section.networkAccounts.length === 1
       ? this.transloco.translate('reader.manageSocialFeeds')
       : this.transloco.translate('reader.manageSocialFeedsOf', { handle: account.handle });
-  }
-
-  /** Label for a feed exclusion toggle, state-dependent: when the feed is
-   *  currently included it offers to exclude, and vice versa. */
-  private toggleLabel(included: boolean, excludeKey: string, includeKey: string): string {
-    return this.transloco.translate(included ? excludeKey : includeKey);
   }
 }

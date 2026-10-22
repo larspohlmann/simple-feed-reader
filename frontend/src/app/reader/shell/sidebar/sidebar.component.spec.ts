@@ -1768,9 +1768,9 @@ describe('organise mode', () => {
       title: 's9',
       actions: [
         { id: 'edit', label: 'Edit feed' },
-        { id: 'toggleAllItems', label: 'Exclude from All items' },
-        { id: 'toggleForYou', label: 'Exclude from For You' },
-        { id: 'toggleSavedSearches', label: 'Exclude from saved searches' },
+        { id: 'allItems', label: 'Exclude from All items' },
+        { id: 'forYou', label: 'Exclude from For You' },
+        { id: 'savedSearches', label: 'Exclude from saved searches' },
         { id: 'unsubscribe', label: 'Unsubscribe', danger: true },
       ],
     });
@@ -1782,7 +1782,7 @@ describe('organise mode', () => {
       coarse: true,
       organising: true,
       untagged: [sub(9)],
-      sheetChoice: 'toggleAllItems',
+      sheetChoice: 'allItems',
     });
     const toggleAllItems = jest.fn();
     const toggleForYou = jest.fn();
@@ -1805,7 +1805,7 @@ describe('organise mode', () => {
       coarse: true,
       organising: true,
       untagged: [sub(9)],
-      sheetChoice: 'toggleSavedSearches',
+      sheetChoice: 'savedSearches',
     });
     const toggled = jest.fn();
     manageActions.setIncludeInSavedSearches.mockImplementation((sub: SubscriptionDto) =>

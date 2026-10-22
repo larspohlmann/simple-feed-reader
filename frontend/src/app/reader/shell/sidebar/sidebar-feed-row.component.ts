@@ -6,7 +6,12 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
-import { excludedSurfaces, exclusionTitle } from '../../feed-exclusions';
+import {
+  FEED_FLAG_TOGGLES,
+  excludedSurfaces,
+  exclusionTitle,
+  feedFlagLabelKey,
+} from '../../feed-exclusions';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
@@ -31,6 +36,8 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 })
 export class SidebarFeedRowComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
+  protected readonly feedFlags = FEED_FLAG_TOGGLES;
+  protected readonly feedFlagLabelKey = feedFlagLabelKey;
   protected readonly manage = inject(ManageActions);
   protected readonly screen = inject(LayoutService);
   protected readonly rows = inject(SidebarRowActions);
