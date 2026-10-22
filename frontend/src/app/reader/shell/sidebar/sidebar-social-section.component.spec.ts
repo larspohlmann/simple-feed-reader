@@ -70,7 +70,6 @@ const rowActions = {
   openSocialSheet: jest.fn(),
   socialAccountActions: jest.fn(() => socialActions),
   manageSocialFeeds: jest.fn(),
-  exclusionTitle: () => 'Not in All items',
 };
 
 function mount(
@@ -220,7 +219,7 @@ describe('SidebarSocialSectionComponent', () => {
     expect(handles).toEqual(['@work.bsky.social']);
   });
 
-  it('marks no private feed as excluded, since the section already says what they are', () => {
+  it('marks a private feed only for saved searches, not for the surfaces it is out of by design', () => {
     const excluded = (id: number) =>
       feed(id, 'list', { includeInAllItems: false, includeInForYou: false });
     const section: SocialSection = {
@@ -234,7 +233,8 @@ describe('SidebarSocialSectionComponent', () => {
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
 
-    expect(element(mount(section)).querySelector('.feed-exclusion-marker')).toBeNull();
+    const marker = element(mount(section)).querySelector('.feed-exclusion-marker');
+    expect(marker?.getAttribute('title')).toBe('Hidden from Saved searches');
   });
 
   it('lists the saved feed as a row of its own after the accounts', () => {

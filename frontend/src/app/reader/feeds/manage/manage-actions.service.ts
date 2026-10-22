@@ -5,6 +5,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../../reader-api';
 import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
 import {
   MoveFeedToTag,
@@ -41,6 +42,7 @@ export class ManageActions {
   private readonly confirm = inject(ConfirmService);
   private readonly api = inject(ReaderApi);
   private readonly subs = inject(SubscriptionsStore);
+  private readonly savedSearches = inject(SavedSearchesStore);
   private readonly tags = inject(TagsStore);
   private readonly i18n = inject(TranslocoService);
   private readonly toast = inject(ToastService);
@@ -51,7 +53,7 @@ export class ManageActions {
       panelClass: 'app-dialog',
     });
     ref.closed.subscribe((updated) => {
-      if (updated) this.subs.load();
+      if (updated) this.reloadFeedsAndSearches();
     });
   }
 
@@ -107,22 +109,23 @@ export class ManageActions {
   /** Flip whether this feed contributes to the "All items" list. Optimistic:
    *  update the sidebar immediately, reconcile with the server. */
   setIncludeInAllItems(sub: SubscriptionDto, value: boolean): void {
-    this.patchFlags(sub, { includeInAllItems: value, includeInForYou: sub.includeInForYou });
+    this.patchFlags(sub, { includeInAllItems: value });
   }
 
   /** Flip whether this feed contributes to "For you". Optimistic: update the
    *  sidebar immediately, reconcile with the server. */
   setIncludeInForYou(sub: SubscriptionDto, value: boolean): void {
-    this.patchFlags(sub, { includeInAllItems: sub.includeInAllItems, includeInForYou: value });
+    this.patchFlags(sub, { includeInForYou: value });
+  }
+
+  /** Flip whether this feed's entries count in saved searches. Optimistic like the others. */
+  setIncludeInSavedSearches(sub: SubscriptionDto, value: boolean): void {
+    this.patchFlags(sub, { includeInSavedSearches: value });
   }
 
   /** The backend PATCH clears customTitle/tagIds when they are omitted, so
-   *  every flag toggle sends the full mutable body — not just the flag that
-   *  changed. */
-  private patchFlags(
-    sub: SubscriptionDto,
-    flags: { includeInAllItems: boolean; includeInForYou: boolean },
-  ): void {
+   *  every flag toggle resends them; an omitted flag stays as it is. */
+  private patchFlags(sub: SubscriptionDto, flags: SubscriptionFlags): void {
     this.subs.patchLocal(sub.id, flags);
     this.reloadAfter(
       this.api.updateSubscription(sub.id, {
@@ -130,8 +133,14 @@ export class ManageActions {
         tagIds: sub.tags.map((tag) => tag.id),
         ...flags,
       }),
-      () => this.subs.load(),
+      () => this.reloadFeedsAndSearches(),
     );
+  }
+
+  /** A feed's flags move saved-search badges and counts, which only a reload re-learns. */
+  private reloadFeedsAndSearches(): void {
+    this.subs.load();
+    this.savedSearches.load();
   }
 
   /** Persist a new sidebar tag order (drag-and-drop); tag order lives in
@@ -332,7 +341,7 @@ export class ManageActions {
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
     return this.api.bulkUpdateSubscriptions(body).pipe(
       tap(() => {
-        this.subs.load();
+        this.reloadFeedsAndSearches();
         this.toast.show({ message: confirmation, durationMs: CONFIRMATION_DURATION_MS });
       }),
       map(() => undefined),

@@ -31,7 +31,7 @@
       }
     </span>
 
-    @if (!subscription().includeInAllItems || !subscription().includeInForYou) {
+    @if (excluded()) {
       <app-icon class="excluded" name="visibility_off" size="xs" data-test="excluded" />
     }
 
@@ -116,6 +116,18 @@
                   (subscription().includeInForYou
                     ? 'reader.excludeFromForYou'
                     : 'reader.includeInForYou'
+                  ) | transloco
+                }}
+              </button>
+              <button
+                role="menuitem"
+                data-test="toggle-saved-searches"
+                (click)="toggleSavedSearches.emit(); closeMenu()"
+              >
+                {{
+                  (subscription().includeInSavedSearches
+                    ? 'reader.excludeFromSavedSearches'
+                    : 'reader.includeInSavedSearches'
                   ) | transloco
                 }}
               </button>

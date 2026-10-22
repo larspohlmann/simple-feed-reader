@@ -1,11 +1,12 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
+import { excludedSurfaces, exclusionTitle } from '../../feed-exclusions';
 import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
@@ -42,6 +43,15 @@ export class SidebarFeedRowComponent {
 
   /** A private feed's exclusion is its inherent state, so it carries no marker; a profile feed is ordinary RSS. */
   protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));
+
+  private readonly i18n = inject(TranslocoService);
+
+  /** A private feed is out of All items and For you by design, so only its saved-search state is news. */
+  protected readonly markerSurfaces = computed(() => {
+    const surfaces = excludedSurfaces(this.subscription(), new Set());
+    return this.isPrivate() ? surfaces.filter((surface) => surface === 'savedSearches') : surfaces;
+  });
+  protected readonly markerTitle = computed(() => exclusionTitle(this.i18n, this.markerSurfaces()));
 
   protected readonly avatarUrl = computed(() => feedAvatarUrl(this.subscription()));
 

@@ -206,6 +206,18 @@ describe('OrganiseFeedRowComponent', () => {
     expect(toggled).toHaveBeenCalled();
   });
 
+  it('emits toggleSavedSearches from the fine-pointer popover', async () => {
+    await render();
+    const toggled = jest.fn();
+    fixture.componentInstance.toggleSavedSearches.subscribe(toggled);
+
+    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
+    fixture.detectChanges();
+    fixture.debugElement.query(By.css('[data-test="toggle-saved-searches"]')).nativeElement.click();
+
+    expect(toggled).toHaveBeenCalled();
+  });
+
   it('emits unsubscribe from the fine-pointer popover', async () => {
     await render();
     const unsubscribed = jest.fn();

@@ -727,6 +727,8 @@
       "hideFromAllItems": "Hide from All items",
       "showInForYou": "Show in For you",
       "hideFromForYou": "Hide from For you",
+      "showInSavedSearches": "Show in saved searches",
+      "hideFromSavedSearches": "Hide from saved searches",
       "clear": "Clear"
     },
     "health": {
@@ -851,6 +853,7 @@
       "noTags": "No tags yet — create one from Settings › Tags.",
       "showInAllItems": "Show in All items",
       "showInForYou": "Show in For You",
+      "showInSavedSearches": "Show in saved searches",
       "saving": "Saving…",
       "save": "Save"
     }
@@ -1202,9 +1205,9 @@
     "includeInAllItems": "Show in All items",
     "excludeFromForYou": "Exclude from For You",
     "includeInForYou": "Show in For You",
-    "excludedFromAllItems": "Hidden from All items",
-    "excludedFromForYou": "Hidden from For You",
-    "excludedFromBoth": "Hidden from All items and For You",
+    "excludeFromSavedSearches": "Exclude from saved searches",
+    "includeInSavedSearches": "Show in saved searches",
+    "excludedFrom": "Hidden from {{surfaces}}",
     "dropToRemoveTags": "Drop here to remove tags",
     "unread": "only unread",
     "all": "All posts",

@@ -118,6 +118,7 @@ describe('ReaderShellComponent', () => {
         entryCount: 9,
         includeInAllItems: true,
         includeInForYou: true,
+        includeInSavedSearches: true,
       },
     ],
     socialAccounts: [],

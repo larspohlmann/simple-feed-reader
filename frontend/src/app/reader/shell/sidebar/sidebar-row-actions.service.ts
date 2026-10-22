@@ -75,6 +75,14 @@ export class SidebarRowActions {
             ),
           },
           {
+            id: 'toggleSavedSearches',
+            label: this.toggleLabel(
+              subscription.includeInSavedSearches,
+              'reader.excludeFromSavedSearches',
+              'reader.includeInSavedSearches',
+            ),
+          },
+          {
             id: 'unsubscribe',
             label: this.transloco.translate('reader.unsubscribe'),
             danger: true,
@@ -88,6 +96,8 @@ export class SidebarRowActions {
           this.manage.setIncludeInAllItems(subscription, !subscription.includeInAllItems);
         if (choice === 'toggleForYou')
           this.manage.setIncludeInForYou(subscription, !subscription.includeInForYou);
+        if (choice === 'toggleSavedSearches')
+          this.manage.setIncludeInSavedSearches(subscription, !subscription.includeInSavedSearches);
         if (choice === 'unsubscribe') this.manage.unsubscribe(subscription);
       });
   }
@@ -132,17 +142,5 @@ export class SidebarRowActions {
    *  currently included it offers to exclude, and vice versa. */
   private toggleLabel(included: boolean, excludeKey: string, includeKey: string): string {
     return this.transloco.translate(included ? excludeKey : includeKey);
-  }
-
-  /** Tooltip for the row's exclusion marker: names exactly which surface(s)
-   *  the feed is hidden from. */
-  exclusionTitle(subscription: SubscriptionDto): string {
-    if (!subscription.includeInAllItems && !subscription.includeInForYou) {
-      return this.transloco.translate('reader.excludedFromBoth');
-    }
-    if (!subscription.includeInAllItems) {
-      return this.transloco.translate('reader.excludedFromAllItems');
-    }
-    return this.transloco.translate('reader.excludedFromForYou');
   }
 }

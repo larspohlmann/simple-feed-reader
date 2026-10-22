@@ -72,6 +72,7 @@ describe('OrganiseTagGroupComponent', () => {
     editSubscription: jest.fn(),
     setIncludeInAllItems: jest.fn(),
     setIncludeInForYou: jest.fn(),
+    setIncludeInSavedSearches: jest.fn(),
     unsubscribe: jest.fn(),
   };
 

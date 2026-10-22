@@ -55,6 +55,17 @@
           (toggled)="includeInForYou.set($event)"
         />
       </div>
+      <div class="switch-row">
+        <label class="switch-label" for="edit-feed-saved-searches">
+          {{ 'dialog.editFeed.showInSavedSearches' | transloco }}
+        </label>
+        <app-toggle
+          inputId="edit-feed-saved-searches"
+          [checked]="includeInSavedSearches()"
+          [label]="'dialog.editFeed.showInSavedSearches' | transloco"
+          (toggled)="includeInSavedSearches.set($event)"
+        />
+      </div>
 
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>

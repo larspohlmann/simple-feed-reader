@@ -22,6 +22,7 @@ import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LayoutService } from '../../reader/layout.service';
 import { selectionQueryParams } from '../../reader/query/query';
 import { SubscriptionDto } from '../../reader/models';
+import { excludedSurfaces } from '../../reader/feed-exclusions';
 
 /**
  * One feed row on the Organise page. Presentational on purpose: the tree and
@@ -70,6 +71,7 @@ export class OrganiseFeedRowComponent {
   readonly edit = output<void>();
   readonly toggleAllItems = output<void>();
   readonly toggleForYou = output<void>();
+  readonly toggleSavedSearches = output<void>();
   readonly unsubscribe = output<void>();
 
   protected readonly screen = inject(LayoutService);
@@ -78,6 +80,10 @@ export class OrganiseFeedRowComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly menuOpen = signal(false);
+
+  protected readonly excluded = computed(
+    () => excludedSurfaces(this.subscription(), new Set()).length > 0,
+  );
 
   protected readonly visibleTags = computed(() =>
     this.subscription().tags.filter((tag) => tag.id !== this.hideTagId()),
@@ -118,6 +124,14 @@ export class OrganiseFeedRowComponent {
               sub.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou',
             ),
           },
+          {
+            id: 'savedSearches',
+            label: this.i18n.translate(
+              sub.includeInSavedSearches
+                ? 'reader.excludeFromSavedSearches'
+                : 'reader.includeInSavedSearches',
+            ),
+          },
           { id: 'unsubscribe', label: this.i18n.translate('reader.unsubscribe'), danger: true },
         ],
       })
@@ -128,6 +142,7 @@ export class OrganiseFeedRowComponent {
         if (choice === 'edit') this.edit.emit();
         if (choice === 'allItems') this.toggleAllItems.emit();
         if (choice === 'forYou') this.toggleForYou.emit();
+        if (choice === 'savedSearches') this.toggleSavedSearches.emit();
         if (choice === 'unsubscribe') this.unsubscribe.emit();
       });
   }

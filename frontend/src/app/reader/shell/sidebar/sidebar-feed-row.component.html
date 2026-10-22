@@ -31,12 +31,12 @@
       [avatarUrl]="avatarUrl()"
       [class.has-avatar]="avatarUrl() !== null"
     /><span>{{ name }}</span>
-    @if (!isPrivate() && (!feed.includeInAllItems || !feed.includeInForYou)) {
+    @if (markerSurfaces().length > 0) {
       <app-icon
         class="feed-exclusion-marker"
         name="visibility_off"
         size="xs"
-        [title]="rows.exclusionTitle(feed)"
+        [title]="markerTitle()"
       />
     }
     @if (feed.unreadCount > 0) {
@@ -68,6 +68,19 @@
           {{
             (feed.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou')
               | transloco
+          }}
+        </button>
+        <button
+          role="menuitem"
+          (click)="
+            manage.setIncludeInSavedSearches(feed, !feed.includeInSavedSearches); rows.closeMenu()
+          "
+        >
+          {{
+            (feed.includeInSavedSearches
+              ? 'reader.excludeFromSavedSearches'
+              : 'reader.includeInSavedSearches'
+            ) | transloco
           }}
         </button>
         <button role="menuitem" (click)="manage.unsubscribe(feed); rows.closeMenu()">

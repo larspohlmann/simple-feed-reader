@@ -76,6 +76,7 @@ describe('OrganiseSectionComponent', () => {
     editSubscription: jest.fn(),
     setIncludeInAllItems: jest.fn(),
     setIncludeInForYou: jest.fn(),
+    setIncludeInSavedSearches: jest.fn(),
     unsubscribe: jest.fn(),
     retryFeed: jest.fn(),
     moveFeedToTag: jest.fn(),
@@ -308,6 +309,32 @@ describe('OrganiseSectionComponent', () => {
     component.setFlags({ includeInAllItems: false });
 
     expect(manage.bulkSetFlags).toHaveBeenCalledWith([10, 11], { includeInAllItems: false });
+  });
+
+  it('offers six visibility commands, the saved-search ones setting their own flag', async () => {
+    const { component, manage } = await renderWithMocks();
+    component.store.toggleFeed(10);
+    fixture.detectChanges();
+    const root = fixture.debugElement;
+    root.query(By.css('[data-test="visibility"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    const items = root.queryAll(By.css('.pop [role="menuitem"]'));
+    expect(items.map((item) => item.nativeElement.textContent.trim())).toEqual([
+      'Show in All items',
+      'Hide from All items',
+      'Show in For you',
+      'Hide from For you',
+      'Show in saved searches',
+      'Hide from saved searches',
+    ]);
+
+    items[5].nativeElement.click();
+    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: false });
+    root.query(By.css('[data-test="visibility"]')).nativeElement.click();
+    fixture.detectChanges();
+    root.queryAll(By.css('.pop [role="menuitem"]'))[4].nativeElement.click();
+    expect(manage.bulkSetFlags).toHaveBeenCalledWith([10], { includeInSavedSearches: true });
   });
 
   // The tree view's tag headers reorder tags themselves via the up/down arrows

@@ -109,7 +109,7 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly tagFilterOpen = signal(false);
   protected readonly visibilityOpen = signal(false);
 
-  /** Four commands, not two toggles: a toggle over a mixed selection has no
+  /** Commands, not toggles: a toggle over a mixed selection has no
    *  correct starting position (see the bulk bar's own comment in the
    *  template). */
   protected readonly visibilityMenuItems: readonly VisibilityMenuItem[] = [
@@ -117,6 +117,16 @@ export class OrganiseSectionComponent implements OnInit {
     { flag: 'includeInAllItems', value: false, labelKey: 'settings.organise.hideFromAllItems' },
     { flag: 'includeInForYou', value: true, labelKey: 'settings.organise.showInForYou' },
     { flag: 'includeInForYou', value: false, labelKey: 'settings.organise.hideFromForYou' },
+    {
+      flag: 'includeInSavedSearches',
+      value: true,
+      labelKey: 'settings.organise.showInSavedSearches',
+    },
+    {
+      flag: 'includeInSavedSearches',
+      value: false,
+      labelKey: 'settings.organise.hideFromSavedSearches',
+    },
   ];
 
   protected toggleTagFilter(key: GroupKey): void {

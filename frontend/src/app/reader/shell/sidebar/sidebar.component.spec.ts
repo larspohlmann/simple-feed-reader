@@ -31,6 +31,7 @@ const manageActions = {
   unsubscribe: jest.fn(),
   setIncludeInAllItems: jest.fn(),
   setIncludeInForYou: jest.fn(),
+  setIncludeInSavedSearches: jest.fn(),
   moveFeedToTag: jest.fn(),
   reorderTags: jest.fn(),
   reorderUntagged: jest.fn(),
@@ -92,6 +93,7 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  includeInSavedSearches: true,
   social: null,
 });
 
@@ -576,6 +578,7 @@ describe('SidebarComponent', () => {
       'Edit feed',
       'Exclude from All items',
       'Exclude from For You',
+      'Exclude from saved searches',
       'Unsubscribe',
     ]);
 
@@ -625,6 +628,7 @@ describe('SidebarComponent', () => {
       'Edit feed',
       'Exclude from All items',
       'Exclude from For You',
+      'Exclude from saved searches',
       'Unsubscribe',
     ]);
 
@@ -663,7 +667,15 @@ describe('SidebarComponent', () => {
     expect(row.querySelector('.count')?.textContent).toContain('4');
   });
 
-  it('renders no exclusion marker when both flags are true', () => {
+  it('renders the exclusion marker when only includeInSavedSearches is false', () => {
+    const fixture = mount({ untagged: [{ ...sub(2, 4), includeInSavedSearches: false }] });
+    const marker = (fixture.nativeElement as HTMLElement).querySelector(
+      '.feedrow .feed-exclusion-marker',
+    );
+    expect(marker?.getAttribute('title')).toBe('Hidden from Saved searches');
+  });
+
+  it('renders no exclusion marker when every switch is on', () => {
     const fixture = mount({ untagged: [sub(2, 4)] });
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('.feedrow .feed-exclusion-marker')).toBeNull();
@@ -1758,6 +1770,7 @@ describe('organise mode', () => {
         { id: 'edit', label: 'Edit feed' },
         { id: 'toggleAllItems', label: 'Exclude from All items' },
         { id: 'toggleForYou', label: 'Exclude from For You' },
+        { id: 'toggleSavedSearches', label: 'Exclude from saved searches' },
         { id: 'unsubscribe', label: 'Unsubscribe', danger: true },
       ],
     });
@@ -1785,6 +1798,22 @@ describe('organise mode', () => {
     expect(toggleAllItems).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
     expect(toggleForYou).not.toHaveBeenCalled();
     expect(unsubscribed).not.toHaveBeenCalled();
+  });
+
+  it('routes the saved-searches sheet choice to setIncludeInSavedSearches', () => {
+    const fixture = mount({
+      coarse: true,
+      organising: true,
+      untagged: [sub(9)],
+      sheetChoice: 'toggleSavedSearches',
+    });
+    const toggled = jest.fn();
+    manageActions.setIncludeInSavedSearches.mockImplementation((sub: SubscriptionDto) =>
+      toggled(sub),
+    );
+    fixture.nativeElement.querySelector('.feedrow .dots').click();
+    expect(toggled).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
+    expect(manageActions.setIncludeInAllItems).not.toHaveBeenCalled();
   });
 
   it('routes the tag edit choice to editTag and only that', () => {

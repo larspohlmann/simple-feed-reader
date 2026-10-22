@@ -34,6 +34,7 @@ const sub: SubscriptionDto = {
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  includeInSavedSearches: true,
   social: null,
 };
 
@@ -151,6 +152,7 @@ describe('EditSubscriptionDialogComponent', () => {
       tagIds: [2],
       includeInAllItems: true,
       includeInForYou: true,
+      includeInSavedSearches: true,
     });
     testRequest.flush({ subscription: { ...sub, customTitle: 'My Heise' } });
     expect(close).toHaveBeenCalled();
@@ -166,12 +168,17 @@ describe('EditSubscriptionDialogComponent', () => {
       tagIds: [1],
       includeInAllItems: true,
       includeInForYou: true,
+      includeInSavedSearches: true,
     });
     testRequest.flush({ subscription: sub });
   });
 
   it('reflects stored exclusion state and sends the toggled values', () => {
-    const excludedFromAllItems: SubscriptionDto = { ...sub, includeInAllItems: false };
+    const excludedFromAllItems: SubscriptionDto = {
+      ...sub,
+      includeInAllItems: false,
+      includeInSavedSearches: false,
+    };
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -191,10 +198,15 @@ describe('EditSubscriptionDialogComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     const allItemsSwitch = element.querySelector<HTMLInputElement>('#edit-feed-all-items');
     const forYouSwitch = element.querySelector<HTMLInputElement>('#edit-feed-for-you');
+    const savedSearchesSwitch = element.querySelector<HTMLInputElement>(
+      '#edit-feed-saved-searches',
+    );
     expect(allItemsSwitch!.checked).toBe(false);
     expect(forYouSwitch!.checked).toBe(true);
+    expect(savedSearchesSwitch!.checked).toBe(false);
 
     forYouSwitch!.click();
+    savedSearchesSwitch!.click();
     fixture.detectChanges();
     fixture.componentInstance.submit();
 
@@ -204,6 +216,7 @@ describe('EditSubscriptionDialogComponent', () => {
       tagIds: [1],
       includeInAllItems: false,
       includeInForYou: false,
+      includeInSavedSearches: true,
     });
     testRequest.flush({ subscription: excludedFromAllItems });
   });
