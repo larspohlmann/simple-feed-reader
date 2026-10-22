@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.5.3] - 2026-10-22
+
+## What's Changed
+* Exclude feeds and social networks from saved searches by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1743
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.5.2...v1.5.3
+
 ## [v1.5.2] - 2026-10-21
 
 ## What's Changed
