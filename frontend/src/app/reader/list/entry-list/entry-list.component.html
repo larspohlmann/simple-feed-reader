@@ -80,7 +80,7 @@
     }
   </div>
 } @else if (content.visibleEntryCount() === 0) {
-  <div class="empty-wrap text-scaled" [class.magazine]="effectiveLayout() === 'magazine'">
+  <div class="empty-wrap text-scaled" [class.magazine]="layout() === 'magazine'">
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so it can apply the active
            layout's measure to projected content. -->
@@ -90,7 +90,7 @@
     }
     <app-list-empty-state [selection]="selection()" [savedSearchCount]="savedSearchCount()" />
   </div>
-} @else if (effectiveLayout() === 'magazine') {
+} @else if (layout() === 'magazine') {
   <div
     class="rows magazine text-scaled"
     [class.airy]="isAiryMagazine()"

@@ -1081,7 +1081,7 @@ describe('ReaderShellComponent', () => {
       },
     );
 
-    it('switches between a saved search and a direct search of the same term', () => {
+    it('keeps a direct search in the magazine planner, switching from a saved search of the same term', () => {
       const fixture = boot();
       screen.isWide.set(true);
       fixture.componentInstance.layout.set('magazine');
@@ -1103,17 +1103,17 @@ describe('ReaderShellComponent', () => {
         .match((request) => request.url === 'https://api.test/api/entries/search')
         .forEach((testRequest) => testRequest.flush({ entries: [entry], nextCursor: null }));
       fixture.detectChanges();
-      expect(fixture.componentInstance.splitView()).toBe(true);
+      expect(fixture.componentInstance.splitView()).toBe(false);
       expect(fixture.nativeElement.querySelector('app-sidebar input').value).toBe('angular');
-      expect(fixture.nativeElement.querySelector('.rows.magazine') !== null).toBe(false);
+      expect(fixture.nativeElement.querySelector('.rows.magazine') !== null).toBe(true);
       expect(fixture.componentInstance.layout.mode()).toBe('magazine');
       ctrl.verify();
     });
 
-    it('uses the split reader and restores the selected magazine layout when search clears', () => {
+    it('uses the split reader under the list layout and leaves it when search clears', () => {
       const fixture = boot();
       screen.isWide.set(true);
-      fixture.componentInstance.layout.set('magazine');
+      fixture.componentInstance.layout.set('list');
 
       qp.next(convertToParamMap({ q: 'angular' }));
       fixture.detectChanges();
@@ -1124,7 +1124,7 @@ describe('ReaderShellComponent', () => {
 
       expect(fixture.componentInstance.paneMode()).toBe(false);
       expect(fixture.componentInstance.splitView()).toBe(true);
-      expect(fixture.componentInstance.layout.mode()).toBe('magazine');
+      expect(fixture.componentInstance.layout.mode()).toBe('list');
       expect(
         fixture.nativeElement.querySelector('.main.split .reader .placeholder'),
       ).not.toBeNull();
@@ -1147,9 +1147,9 @@ describe('ReaderShellComponent', () => {
 
       expect(fixture.componentInstance.splitView()).toBe(fixture.componentInstance.paneMode());
       expect(fixture.componentInstance.splitView()).toBe(false);
-      expect(fixture.componentInstance.layout.mode()).toBe('magazine');
+      expect(fixture.componentInstance.layout.mode()).toBe('list');
       expect(fixture.nativeElement.querySelector('.main.split')).toBeNull();
-      expect(fixture.nativeElement.querySelector('.rows.magazine')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('app-entry-row')).not.toBeNull();
     });
   });
 

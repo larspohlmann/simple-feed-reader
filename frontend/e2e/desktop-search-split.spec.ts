@@ -124,7 +124,7 @@ async function signInWithReaderData(page: Page): Promise<boolean> {
 test.describe('desktop search split view', () => {
   test.use({ viewport: DESKTOP });
 
-  test('opens search results beside the reader and restores magazine on clear', async ({
+  test('opens list-layout search results beside the reader and leaves the split on clear', async ({
     page,
   }) => {
     const signedIn = await signInWithReaderData(page);
@@ -133,9 +133,7 @@ test.describe('desktop search split view', () => {
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
     );
 
-    await page.getByRole('button', { name: 'Magazine layout, boxed' }).click();
-    await expect(page.locator('.rows.magazine')).toBeVisible();
-
+    await page.getByRole('button', { name: 'List layout' }).click();
     await page.getByPlaceholder('Search articles').fill(SEARCH_TERM);
     await expect(page.getByText(SEARCH_ENTRY.title, { exact: true })).toBeVisible();
 
@@ -152,6 +150,22 @@ test.describe('desktop search split view', () => {
 
     await expect(page.getByText(MAGAZINE_ENTRY.title, { exact: true })).toBeVisible();
     await expect(main).not.toHaveClass(/\bsplit\b/);
+  });
+
+  test('keeps magazine search results in the planner, with no split (#1747)', async ({ page }) => {
+    const signedIn = await signInWithReaderData(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+
+    await page.getByRole('button', { name: 'Magazine layout, boxed' }).click();
+    await page.getByPlaceholder('Search articles').fill(SEARCH_TERM);
+    await expect(page.getByText(SEARCH_ENTRY.title, { exact: true })).toBeVisible();
+
+    const main = page.locator('main.main');
     await expect(page.locator('.rows.magazine')).toBeVisible();
+    await expect(main).not.toHaveClass(/\bsplit\b/);
+    await expect(page.locator('app-entry-row')).toHaveCount(0);
   });
 });
