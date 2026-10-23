@@ -25,8 +25,8 @@ final class BackupTally
     /** @var array<string, true> declared tag names, as a set */
     private array $tagNames = [];
 
-    /** @var array<string, true> declared tag names that have a parent, as a set */
-    private array $childTagNames = [];
+    /** @var array<string, string> each declared child tag's parent, by the child's name */
+    private array $parentsByChildName = [];
 
     /** @var array<string, true> declared feed urls, as a set */
     private array $feedUrls = [];
@@ -87,7 +87,7 @@ final class BackupTally
 
         if ($line->parent !== null) {
             $this->acceptParent($line->parent);
-            $this->childTagNames[$line->name] = true;
+            $this->parentsByChildName[$line->name] = $line->parent;
         }
 
         $this->tagNames[$line->name] = true;
@@ -100,7 +100,7 @@ final class BackupTally
             throw new InvalidBackupException(sprintf('The backup names parent tag "%s" before declaring it.', $parent));
         }
 
-        if (isset($this->childTagNames[$parent])) {
+        if (isset($this->parentsByChildName[$parent])) {
             throw new InvalidBackupException(
                 sprintf('The backup names parent tag "%s", which has a parent itself.', $parent),
             );

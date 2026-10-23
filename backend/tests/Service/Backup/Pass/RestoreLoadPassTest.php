@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\User;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SubscriptionLine;
+use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Factory\RestoredFoundationFactory;
 use App\Service\Backup\Pass\RestoreLoadPass;
@@ -114,6 +115,28 @@ final class RestoreLoadPassTest extends TestCase
         $pass->run(new User('flush-fails@example.com', new \DateTimeImmutable('2026-08-01')), (function () {
             yield from [];
         })());
+    }
+
+    public function testAParentTagTheFileNeverDeclaresIsADanglingReference(): void
+    {
+        $pass = new RestoreLoadPass(
+            $this->createStub(EntityManagerInterface::class),
+            $this->createStub(RestoreFeedsInterface::class),
+            $this->savedSearchSlug(),
+            self::rows(),
+        );
+
+        try {
+            $pass->run(new User('dangling-parent@example.com', new \DateTimeImmutable('2026-08-01')), (function () {
+                yield new TagLine('Long reads', null, null, 0, 'Reading');
+            })());
+            self::fail('The restore accepted a parent tag the file never declares.');
+        } catch (BackupLoadFailedException $exception) {
+            self::assertSame(
+                'The backup refers to tag "Reading", which it never declares.',
+                $exception->getPrevious()?->getMessage(),
+            );
+        }
     }
 
     private function dbalException(): DbalException
