@@ -55,6 +55,13 @@ $corner-clear: calc(3 * (var(--space-5) + var(--tap-target) + var(--space-3)));
 
 /* Narrow layout: scrolled down, the header collapses to a slim bar; the
    heading and tools inside step down with it (list-header). */
+@media (width >= bp.$bp-lg) {
+  .list-header {
+    block-size: var(--bar-h);
+    padding-block: 0;
+  }
+}
+
 @media (width < bp.$bp-lg) {
   .list-header.collapsed {
     padding-top: var(--space-1);

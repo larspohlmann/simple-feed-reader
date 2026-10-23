@@ -58,17 +58,14 @@ app-reader-header.hidden {
 }
 
 .sidebar {
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned sidebar measure, not a spacing value. */
-  width: 288px;
+  width: calc(var(--sidebar-nav-w) + 2 * var(--space-2));
   flex: 0 0 auto;
-  border-right: 1px solid var(--border);
-  background: var(--surface-1);
+  background: var(--surface-0);
 
   /* A column, not a scroller — it can't pass under the bar, so it starts below
      it. This offset lives here, not on `.body`, because it's keyed to the
      element that needs it, not to a breakpoint (they diverge 721–899px). */
-  padding-top: var(--app-bar-h, var(--bar-h));
+  padding: calc(var(--app-bar-h, var(--bar-h)) + var(--space-2)) var(--space-2) var(--space-2);
 }
 
 /* The user hid the sidebar on a wide layout. Class-driven like the narrow
@@ -292,23 +289,24 @@ app-reader-header.hidden {
 
 /* The drawer presentation. Keyed to the `is-narrow` class from
    LayoutService.isNarrow(), not a media query, so the 720px boundary is
-   declared once (#185). `top` is the pre-measurement fallback for the bar. */
+   declared once (#185). A full-height sheet over the app bar (#1749). */
 .body.is-narrow .sidebar {
   /* Anchored to the shell host (in document flow), not the viewport: a
      `fixed` drawer stays pinned while iOS rubber-bands the page on
      pull-to-refresh, so it drifts against the header and list. */
   position: absolute;
-  top: var(--bar-h);
-  bottom: 0;
-  padding-top: 0; /* the fixed `top` above places it; see the column rule */
+  inset-block: 0;
   left: 0;
   z-index: 20;
+  box-sizing: content-box;
+  width: var(--sidebar-drawer-nav-w);
+  max-width: calc(100% - var(--space-7));
+  padding: var(--space-3) var(--space-3) var(--space-3) calc(var(--space-2) + var(--space-0));
+  border-right: 1px solid var(--border);
+  box-shadow: var(--drawer-shadow);
 
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned drawer measure, not a spacing value. */
-  width: 288px;
-  max-width: 82vw;
-  transform: translateX(-100%);
+  /* The extra step parks the shadow off-screen with the sheet. */
+  transform: translateX(calc(-100% - var(--space-6)));
   transition: transform 0.2s ease;
 }
 
@@ -319,7 +317,7 @@ app-reader-header.hidden {
 .body.is-narrow .backdrop {
   display: block;
   position: absolute;
-  inset: var(--bar-h) 0 0;
+  inset: 0;
   z-index: 15;
-  background: rgb(0 0 0 / 40%);
+  background: var(--drawer-scrim);
 }

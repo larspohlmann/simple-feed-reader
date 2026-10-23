@@ -61,16 +61,10 @@
       class="backdrop"
       type="button"
       aria-label="Close menu"
-      [style.top.px]="headerHeight() || null"
       (click)="setSidebarOpen(false)"
     ></button>
   }
-  <aside
-    class="sidebar"
-    data-drawer-panel
-    [class.open]="sidebarOpen()"
-    [style.top.px]="headerHeight() || null"
-  >
+  <aside class="sidebar" data-drawer-panel [class.open]="sidebarOpen()">
     <app-sidebar
       [(organising)]="sidebarOrganising"
       [tagTree]="subs.tagTree()"

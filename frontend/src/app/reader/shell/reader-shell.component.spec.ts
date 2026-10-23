@@ -426,8 +426,7 @@ describe('ReaderShellComponent', () => {
     });
 
     it('shows the header again when the mobile drawer opens', () => {
-      // The drawer hangs below the bar, so opening it under a retracted header
-      // would leave a strip of backdrop where the bar belongs.
+      // An open drawer holds the bar shown, whatever the list's scroll.
       const fixture = boot();
       const rows = listScroller(fixture);
       rows.scrollTo(100);
