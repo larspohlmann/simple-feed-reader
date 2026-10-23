@@ -154,6 +154,34 @@ final class TagEditorTest extends DbTestCase
         self::assertNull($this->reload($tag)->getParent());
     }
 
+    public function testReparentingAppendsTheTagAfterItsNewSiblings(): void
+    {
+        $user = $this->user('tag-reparent-position@example.com');
+        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $child = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $parent->requireId()));
+        $root = $this->editor()->create($user, new TagDetailsModel('Other'));
+        $mover = $this->editor()->create($user, new TagDetailsModel('Poems'));
+
+        $this->editor()->update($child, new TagDetailsModel('Essays'));
+        $this->editor()->update($mover, new TagDetailsModel('Poems', parentId: $parent->requireId()));
+
+        self::assertGreaterThan($root->getPosition(), $this->reload($child)->getPosition());
+        self::assertGreaterThan($this->reload($child)->getPosition(), $this->reload($mover)->getPosition());
+    }
+
+    public function testAnEditThatKeepsTheParentKeepsThePosition(): void
+    {
+        $user = $this->user('tag-keep-position@example.com');
+        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $child = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $parent->requireId()));
+        $this->editor()->create($user, new TagDetailsModel('Other'));
+        $position = $child->getPosition();
+
+        $this->editor()->update($child, new TagDetailsModel('Long essays', parentId: $parent->requireId()));
+
+        self::assertSame($position, $this->reload($child)->getPosition());
+    }
+
     public function testDeleteDetachesTheTagFromItsFeedsAndRemovesIt(): void
     {
         $user = $this->user('tag-deleter@example.com');

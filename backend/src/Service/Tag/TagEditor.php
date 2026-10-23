@@ -44,7 +44,7 @@ final readonly class TagEditor
             throw new TagNameTakenException();
         }
 
-        $tag->setParent($this->parentFor($tag, $details->parentId));
+        $this->moveUnder($tag, $this->parentFor($tag, $details->parentId));
         $tag->setName($details->name);
         $tag->setColor($details->color);
         $tag->setIcon($details->icon);
@@ -60,6 +60,15 @@ final readonly class TagEditor
         }
         $this->entityManager->remove($tag);
         $this->entityManager->flush();
+    }
+
+    private function moveUnder(Tag $tag, ?Tag $parent): void
+    {
+        if ($parent === $tag->getParent()) {
+            return;
+        }
+        $tag->setParent($parent);
+        $tag->setPosition($this->tags->nextPositionForUser($tag->getUser()->requireId()));
     }
 
     private function releaseChildren(Tag $parent): void

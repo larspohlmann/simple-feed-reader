@@ -10,6 +10,7 @@ use App\Dto\Tag\TagFeedOrderRequest;
 use App\Dto\Tag\UpdateTagRequest;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Http\FullReplacePayload;
 use App\Http\TagJson;
 use App\Repository\TagRepository;
 use App\Service\Tag\TagEditor;
@@ -88,7 +89,7 @@ final readonly class TagController
     public function update(
         int $id,
         #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdateTagRequest $request,
+        #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] UpdateTagRequest $request,
     ): JsonResponse {
         $tag = $this->tags->getOneForUser($user->requireId(), $id);
 

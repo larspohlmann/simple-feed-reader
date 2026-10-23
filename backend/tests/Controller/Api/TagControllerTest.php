@@ -262,6 +262,32 @@ final class TagControllerTest extends WebTestCase
         self::assertSame(['parentId' => ['A parent tag cannot itself have a parent.']], $problem['errors']);
     }
 
+    public function testAnUpdateWithoutParentIdIsRefusedAndKeepsTheParent(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('tag-partial-patch@example.com');
+        $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
+        $childId = $this->createTag($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
+
+        $client->request(
+            'PATCH',
+            '/api/tags/' . $childId,
+            server: $headers,
+            content: json_encode(['name' => 'Long reads', 'color' => null, 'icon' => null], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $problem = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($problem);
+        self::assertIsArray($problem['errors']);
+        self::assertSame(['parentId'], array_keys($problem['errors']));
+        $client->request('GET', '/api/tags', server: $headers);
+        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($list);
+        self::assertIsArray($list['tags']);
+        self::assertSame([null, $parentId], array_column($list['tags'], 'parentId'));
+    }
+
     /**
      * @param array<string, string> $headers
      * @param array<string, mixed>  $body
