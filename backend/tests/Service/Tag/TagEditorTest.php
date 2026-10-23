@@ -182,6 +182,17 @@ final class TagEditorTest extends DbTestCase
         self::assertSame($position, $this->reload($child)->getPosition());
     }
 
+    public function testAParentMayBeRenamedWhileItStaysARoot(): void
+    {
+        $user = $this->user('tag-parent-rename@example.com');
+        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $parent->requireId()));
+
+        $this->editor()->update($parent, new TagDetailsModel('Books'));
+
+        self::assertSame('Books', $this->reload($parent)->getName());
+    }
+
     public function testDeleteDetachesTheTagFromItsFeedsAndRemovesIt(): void
     {
         $user = $this->user('tag-deleter@example.com');
