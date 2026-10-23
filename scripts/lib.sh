@@ -160,7 +160,12 @@ check_ports_free() {
 # tags become reachable from main too, and must never be chosen as a release.
 # Prints nothing (and still succeeds) when no release tag exists yet.
 latest_release_tag() {
-  git -C "${REPO_ROOT}" tag --merged origin/main --list 'v*' 2>/dev/null \
+  newest_release_tag --merged origin/main --list 'v*'
+}
+
+# The highest plain vX.Y.Z among the tags `git tag "$@"` selects.
+newest_release_tag() {
+  git -C "${REPO_ROOT}" tag "$@" 2>/dev/null \
     | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
     | sort -V \
     | tail -n 1 \
@@ -316,6 +321,26 @@ refresh_images() {
   "${compose_command}" pull --ignore-buildable --quiet || status=$?
   "${compose_command}" build --pull || status=$?
   return "${status}"
+}
+
+# A release checkout pulls the php and web images published to GHCR (#1752);
+# anything else, or a failed pull, refreshes the bases and leaves the build to
+# `up`. Exports APP_IMAGE_TAG for compose, sets PROD_BUILD_OPTION for `up`.
+prepare_prod_images() {
+  APP_IMAGE_TAG=$(newest_release_tag --points-at HEAD)
+  export APP_IMAGE_TAG
+  if [ -n "${APP_IMAGE_TAG}" ]; then
+    if run_step "Pulling the ${APP_IMAGE_TAG} images" prod_compose pull --quiet; then
+      PROD_BUILD_OPTION=--no-build
+      export PROD_BUILD_OPTION
+      return 0
+    fi
+    warn "Could not pull the ${APP_IMAGE_TAG} images; building them here instead."
+  fi
+  PROD_BUILD_OPTION=--build
+  export PROD_BUILD_OPTION
+  run_step 'Pulling updated base images' refresh_images prod_compose \
+    || warn 'Could not pull updated base images; building on the cached ones.'
 }
 
 # Start every service and bring the backend to a ready state: dependencies

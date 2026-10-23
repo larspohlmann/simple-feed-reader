@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build and start the PRODUCTION stack (docker-compose.prod.yml): MySQL, the
-# prod PHP image, and nginx serving the built SPA with /api same-origin.
+# Pull or build and start the PRODUCTION stack (docker-compose.prod.yml): MySQL,
+# the prod PHP image, and nginx serving the built SPA with /api same-origin.
 # Configuration comes from .env.prod -- see .env.prod.example and
 # docs/docker-production.md.
 #
@@ -19,12 +19,12 @@ usage() {
   cat <<'EOF'
 Usage: prod-start.sh
 
-Build and start the PRODUCTION stack (docker-compose.prod.yml): MySQL, the
-production PHP image, and nginx serving the built app. Reads configuration from
-.env.prod. Idempotent and safe to re-run: it rebuilds what changed, re-applies
-migrations, and never deletes data. Re-running it is the update step after a new
-release, and the way to switch to TLS after dropping certificates into
-docker/certs-prod/.
+Pull or build and start the PRODUCTION stack (docker-compose.prod.yml): MySQL,
+the production PHP image, and nginx serving the built app. Reads configuration
+from .env.prod. Idempotent and safe to re-run: it rebuilds what changed,
+re-applies migrations, and never deletes data. Re-running it is the update step
+after a new release, and the way to switch to TLS after dropping certificates
+into docker/certs-prod/.
 
 Options:
   -h, --help              Show this help and exit.
@@ -83,14 +83,12 @@ fi
 # Stamp the real release version into the images this build produces, so the
 # sidebar and /api/version report it instead of the 'dev' placeholder (#500).
 export_build_version_args
-
-run_step 'Pulling updated base images' refresh_images prod_compose \
-  || warn 'Could not pull updated base images; building on the cached ones.'
+prepare_prod_images
 
 # --remove-orphans drops containers of services this file no longer defines;
 # a service only switched off by profile is kept.
-run_step 'Building and starting the production stack (the first build takes a few minutes)' \
-  up_holding_worker prod_compose --build --remove-orphans
+run_step 'Starting the production stack (a build takes a few minutes)' \
+  up_holding_worker prod_compose "${PROD_BUILD_OPTION}" --remove-orphans
 
 # `up` only starts what is in the active profiles; it never stops the search
 # engine's container when the operator has just declined it, so this runs on
@@ -102,7 +100,7 @@ stop_disabled_grafana_containers
 # The web entrypoint picks HTTP or TLS mode by checking docker/certs-prod/
 # once, at container start. That directory is a bind mount, so dropping
 # certificates in (or removing them) changes the host files but not the
-# compose service definition -- `up -d --build` above sees nothing to
+# compose service definition -- `up -d` above sees nothing to
 # recreate and leaves the container serving whatever mode it already picked.
 # A restart re-runs /docker-entrypoint.d/ (including the mode-selection
 # script) exactly like a recreate would, without destroying and rebuilding
@@ -132,7 +130,7 @@ run_step 'Verifying the database schema is up to date' \
   prod_compose exec -T -u www-data php bin/console doctrine:migrations:up-to-date \
   || die 'The database schema is behind the running code -- a migration did not apply. Re-run ./scripts/prod-start.sh (safe, idempotent). If it recurs, check:  docker compose -p simple-feed-reader-prod logs php'
 
-run_step 'Starting the worker' start_worker prod_compose --build
+run_step 'Starting the worker' start_worker prod_compose "${PROD_BUILD_OPTION}"
 
 if ! wait_for_health "$(prod_base_url)/api/health"; then
   warn 'The API did not report healthy in time. It may still be starting.'
