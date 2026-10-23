@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { TagDto } from '../../models';
+import { tagLabel, tagsInTreeOrder } from '../../state/subscription-derivations';
 
 /**
  * The tag picker shared by the add-feed and edit-feed dialogs: a wrapping row
@@ -19,4 +20,11 @@ export class TagPickerComponent {
   readonly tags = input.required<TagDto[]>();
   readonly selected = input.required<ReadonlySet<number>>();
   readonly toggled = output<number>();
+
+  /** Each root followed by its children, whatever order the caller passes. */
+  protected readonly ordered = computed(() => tagsInTreeOrder(this.tags()));
+
+  protected labelOf(tag: TagDto): string {
+    return tagLabel(tag, this.tags());
+  }
 }

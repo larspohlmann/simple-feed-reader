@@ -61,6 +61,12 @@ export function tagsInTreeOrder(tags: TagDto[]): TagDto[] {
     .flatMap((root) => [root, ...tags.filter((tag) => tag.parentId === root.id)]);
 }
 
+/** A child reads with its parent, so a pill never shows a bare child out of context. */
+export function tagLabel(tag: TagDto, tags: readonly TagDto[]): string {
+  const parent = tags.find((candidate) => candidate.id === tag.parentId);
+  return parent ? `${parent.name} / ${tag.name}` : tag.name;
+}
+
 interface TaggedFeed {
   sub: SubscriptionDto;
   pos: number;

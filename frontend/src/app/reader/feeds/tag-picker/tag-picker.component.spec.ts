@@ -7,7 +7,8 @@ describe('TagPickerComponent', () => {
 
   const tags: TagDto[] = [
     { id: 1, name: 'Tech', color: null, icon: 'memory', position: 0, parentId: null },
-    { id: 2, name: 'News', color: '#0a0', icon: null, position: 1, parentId: null },
+    { id: 3, name: 'Long reads', color: null, icon: null, position: 2, parentId: 2 },
+    { id: 2, name: 'Reading', color: '#0a0', icon: null, position: 1, parentId: null },
   ];
 
   const pills = (): HTMLButtonElement[] => [
@@ -23,15 +24,27 @@ describe('TagPickerComponent', () => {
   });
 
   it('renders one pill per tag', () => {
-    expect(pills().length).toBe(2);
+    expect(pills().length).toBe(3);
+  });
+
+  it('lists each root followed by its children, naming a child with its parent', () => {
+    const labels = pills().map((pill) =>
+      [...pill.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent)
+        .join('')
+        .trim(),
+    );
+
+    expect(labels).toEqual(['Tech', 'Reading', 'Reading / Long reads']);
   });
 
   it('marks selected tags pressed and the rest not', () => {
-    const [tech, news] = pills();
+    const [tech, reading] = pills();
     expect(tech.getAttribute('aria-pressed')).toBe('true');
     expect(tech.classList.contains('on')).toBe(true);
-    expect(news.getAttribute('aria-pressed')).toBe('false');
-    expect(news.classList.contains('on')).toBe(false);
+    expect(reading.getAttribute('aria-pressed')).toBe('false');
+    expect(reading.classList.contains('on')).toBe(false);
   });
 
   it('emits the tag id when a pill is clicked', () => {

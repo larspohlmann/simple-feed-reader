@@ -1,16 +1,16 @@
-@for (t of tags(); track t.id) {
+@for (tag of ordered(); track tag.id) {
   <button
     type="button"
     class="tag-pill"
-    [class.on]="selected().has(t.id)"
-    [attr.aria-pressed]="selected().has(t.id)"
-    (click)="toggled.emit(t.id)"
+    [class.on]="selected().has(tag.id)"
+    [attr.aria-pressed]="selected().has(tag.id)"
+    (click)="toggled.emit(tag.id)"
   >
     <app-tag-glyph
-      [name]="t.icon"
-      [color]="selected().has(t.id) ? 'var(--on-accent)' : t.color"
+      [name]="tag.icon"
+      [color]="selected().has(tag.id) ? 'var(--on-accent)' : tag.color"
       size="sm"
     />
-    {{ t.name }}
+    {{ labelOf(tag) }}
   </button>
 }

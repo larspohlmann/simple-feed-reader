@@ -16,6 +16,23 @@ const NEWS: TagDto = {
   parentId: null,
 };
 
+const READING: TagDto = {
+  id: 5,
+  name: 'Reading',
+  color: null,
+  icon: null,
+  position: 2,
+  parentId: null,
+};
+const LONG_READS: TagDto = {
+  id: 6,
+  name: 'Long reads',
+  color: null,
+  icon: null,
+  position: 0,
+  parentId: 5,
+};
+
 const feed = (id: number, tagIds: number[]): SubscriptionDto =>
   makeSubscription({
     id,
@@ -55,6 +72,35 @@ describe('BulkTagDialogComponent', () => {
 
     return { close };
   }
+
+  const pillLabels = (): string[] =>
+    fixture.debugElement
+      .queryAll(By.css('[data-test="tag-pill"] > span:not(.n)'))
+      .map((label) => (label.nativeElement as HTMLElement).textContent?.trim() ?? '');
+
+  it('offers every tag in tree order in add mode, naming a child with its parent', async () => {
+    await render({
+      mode: 'add',
+      subscriptions: [SUB_WITHOUT],
+      tags: [TECH, LONG_READS, NEWS, READING],
+    });
+
+    expect(pillLabels()).toEqual(['Tech', 'Nachrichten', 'Reading', 'Reading / Long reads']);
+  });
+
+  it('keeps the parent in the label of a child offered for removal', async () => {
+    const carrier = makeSubscription({
+      id: 14,
+      feedId: 14,
+      title: 'Feed 14',
+      feedUrl: 'https://feed-14.example/rss',
+      position: 14,
+      tags: [{ id: LONG_READS.id, name: LONG_READS.name, color: null, icon: null, position: 0 }],
+    });
+    await render({ mode: 'remove', subscriptions: [carrier], tags: [LONG_READS, READING] });
+
+    expect(pillLabels()).toEqual(['Reading / Long reads']);
+  });
 
   it('counts how many of the selection already carry each tag', async () => {
     await render({ mode: 'add', subscriptions: [SUB_WITH_TECH, SUB_WITHOUT], tags: [TECH, NEWS] });
