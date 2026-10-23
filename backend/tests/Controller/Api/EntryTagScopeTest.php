@@ -47,6 +47,7 @@ final class EntryTagScopeTest extends ApiTestCase
         $tagIds = $this->seedHierarchy($user, 'own.example');
         [, $stranger] = $this->auth('tag-stranger@example.com');
         $this->seedHierarchy($stranger, 'stranger.example');
+        $this->seedStrangerChildOf($stranger, $tagIds['reading']);
 
         $this->client->request('GET', '/api/entries?tag=' . $tagIds['reading'], server: $headers);
 
@@ -76,6 +77,16 @@ final class EntryTagScopeTest extends ApiTestCase
             'long reads' => $longReads->requireId(),
             'tech' => $tech->requireId(),
         ];
+    }
+
+    /** The API refuses a parent owned by another user, so only a direct write can build this. */
+    private function seedStrangerChildOf(User $stranger, int $parentTagId): void
+    {
+        $parent = $this->entityManager()->find(Tag::class, $parentTagId);
+        self::assertInstanceOf(Tag::class, $parent);
+        $adopted = $this->tag($stranger, 'adopted', $parent);
+        $this->taggedFeed($stranger, 'stranger.example', 'adopted', [$adopted], '2026-10-08T00:00:00Z');
+        $this->entityManager()->flush();
     }
 
     /** @param list<Tag> $tags */
