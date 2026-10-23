@@ -84,6 +84,9 @@ fi
 # sidebar and /api/version report it instead of the 'dev' placeholder (#500).
 export_build_version_args
 
+run_step 'Pulling updated base images' refresh_images prod_compose \
+  || warn 'Could not pull updated base images; building on the cached ones.'
+
 # --remove-orphans drops containers of services this file no longer defines;
 # a service only switched off by profile is kept.
 run_step 'Building and starting the production stack (the first build takes a few minutes)' \

@@ -10,6 +10,16 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.5.4] - 2026-10-23
+
+## What's Changed
+* fix(#1745): pill names survive the audio actions in every entry layout by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1746
+* feat(#1747): typed searches follow the selected reading layout by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1748
+* fix(#1750): updates pull patched base images before rebuilding by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1751
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.5.3...v1.5.4
+
 ## [v1.5.3] - 2026-10-22
 
 ## What's Changed

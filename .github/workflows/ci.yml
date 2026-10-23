@@ -361,6 +361,11 @@ jobs:
       - name: worker-waits-for-migrations
         run: scripts/test/worker-waits-for-migrations.test.sh
 
+      # `up --build` alone reuses the cached base images, so a PHP security
+      # release never reached an installed stack (#1750).
+      - name: update-pulls-base-images
+        run: scripts/test/update-pulls-base-images.test.sh
+
       # What the installers put on the screen, and the options they accept
       # (#430). The default port each topology offers becomes a published
       # container port and the port in every account-mail link; --ref is parsed
