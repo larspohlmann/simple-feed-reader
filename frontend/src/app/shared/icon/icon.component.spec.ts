@@ -13,6 +13,12 @@ class SizedHost {}
 
 @Component({
   imports: [IconComponent],
+  template: `<app-icon name="expand_more" size="dense" />`,
+})
+class DenseHost {}
+
+@Component({
+  imports: [IconComponent],
   template: `<app-icon name="circle" [fill]="filled" />`,
 })
 class FillHost {
@@ -41,6 +47,15 @@ describe('IconComponent', () => {
 
     const span: HTMLElement = fixture.nativeElement.querySelector('span.material-symbols-outlined');
     expect(span.style.fontSize).toBe('inherit');
+  });
+
+  it('sizes the dense step from its own token', async () => {
+    await TestBed.configureTestingModule({ imports: [DenseHost] }).compileComponents();
+    const fixture = TestBed.createComponent(DenseHost);
+    fixture.detectChanges();
+
+    const host: HTMLElement = fixture.nativeElement.querySelector('app-icon');
+    expect(host.style.fontSize).toBe('var(--icon-dense)');
   });
 
   /* The `fill` input drives the FILL axis through a host class, so the SCSS can

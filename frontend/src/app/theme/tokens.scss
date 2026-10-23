@@ -18,6 +18,8 @@
      UI needs only a hair of shadow, a dark one a deeper cast to lift the
      surface off its near-black ground. */
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 6px 20px rgb(0 0 0 / 5%);
+  --drawer-scrim: rgb(0 0 0 / 32%);
+  --hidden-favicon-opacity: 0.35;
 
   /* Reader code syntax palette (#473): GitHub light. Deliberately outside the
      graphite map and the #832 brightness lists — syntax colours are fixed and
@@ -46,6 +48,8 @@
   @include brightness.media-at-rest(dark);
 
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 30%);
+  --drawer-scrim: rgb(0 0 0 / 55%);
+  --hidden-favicon-opacity: 0.55;
 
   /* Reader code syntax palette (#473): Nord dark. */
   --code-fg: #e5e9f0;
@@ -119,10 +123,25 @@
      content state that could disagree with this offset. */
   --reader-mini-h: 28px;
 
-  /* Icon sizes. Four steps because the same tag glyph is rendered from a
-     12px pill up to a 20px sidebar lead; three steps would inflate the pill. */
+  /* The grouped-card sidebar's measures (#1749). On :root because the drag
+     preview leaves the sidebar for <body> and still reads them. */
+  --sidebar-nav-w: 316px;
+  --sidebar-drawer-nav-w: 336px;
+  --sidebar-row-h: 36px;
+  --sidebar-sub-row-h: 32px;
+  --sidebar-leaf-row-h: 30px;
+  --sidebar-slot: 28px;
+  --sidebar-frame-h: 36px;
+  --sidebar-card-pad: calc(var(--space-1) + var(--space-0));
+  --sidebar-row-inset: calc(var(--space-2) + var(--space-0));
+  --sidebar-row-deep-inset: calc(var(--sidebar-row-inset) + var(--icon-md) + var(--space-3));
+  --drawer-shadow: 6px 0 24px rgb(0 0 0 / 18%);
+
+  /* Icon sizes. The same tag glyph runs from a 12px pill to a 20px sidebar
+     lead; `dense` is the glyph of the sidebar's 28px buttons (#1749). */
   --icon-xs: 12px;
   --icon-sm: 16px;
+  --icon-dense: 18px;
   --icon-md: 20px;
   --icon-lg: 24px;
 

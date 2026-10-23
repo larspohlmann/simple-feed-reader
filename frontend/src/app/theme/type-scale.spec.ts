@@ -5,6 +5,7 @@ const SIZES = {
   '2xs': '10px',
   xs: '11px',
   sm: '13px',
+  dense: '14px',
   base: '15px',
   read: '16px',
   lg: '18px',
