@@ -62,6 +62,7 @@ const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
       color: null,
       icon: null,
       position: index,
+      parentId: null,
     })),
   });
 
@@ -581,6 +582,17 @@ describe('OrganiseSectionComponent', () => {
       drag(0, 400);
       store.titleFilter.set('taz');
 
+      panels()[0].triggerEventHandler('tagDragEnded');
+
+      expect(manage.reorderTags).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when the dragged tag is gone from the groups', async () => {
+      const { manage } = await renderTags();
+      const tags = TestBed.inject(TagsStore).tags as WritableSignal<TagDto[]>;
+      tags.set([WORLD, ART]);
+
+      drag(0, 400);
       panels()[0].triggerEventHandler('tagDragEnded');
 
       expect(manage.reorderTags).not.toHaveBeenCalled();

@@ -276,11 +276,13 @@ export class OrganiseSectionComponent implements OnInit {
     const groupIndexes = groups.flatMap((shown, index) =>
       shown.tag !== null && shown.tag.parentId === tag.parentId ? [index] : [],
     );
+    const from = groupIndexes.indexOf(groups.findIndex((shown) => shown.key === group.key));
+    if (from < 0) return;
     const afterLast = groupAfter(groups, groupIndexes[groupIndexes.length - 1]);
     this.draggedTag.set(tag);
     this.dragSiblings.set({ groupIndexes, afterLast });
     this.tagGap.start(
-      groupIndexes.indexOf(groups.indexOf(group)),
+      from,
       groupIndexes.map((index) => verticalMiddle(panels[index].nativeElement) - treeTop),
       tag.parentId === null ? null : this.spanOf(groupIndexes[0], afterLast - 1),
     );
