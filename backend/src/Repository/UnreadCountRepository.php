@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
+use App\Enum\FeedGroup;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
@@ -16,6 +17,7 @@ final readonly class UnreadCountRepository
     public function __construct(
         private EntityManagerInterface $entityManager,
         private EntryScopePredicates $scope,
+        private SubscriptionScopeRepository $subscriptionScopes,
     ) {
     }
 
@@ -57,10 +59,32 @@ final readonly class UnreadCountRepository
         return $this->countsByNetwork($this->countedBy($qb, $aliases->networkKey()));
     }
 
+    /** @return array{tags: int, feeds: int} */
+    public function perFeedGroup(int $userId): array
+    {
+        return [
+            'tags' => $this->unreadInFeedGroup($userId, FeedGroup::Tags),
+            'feeds' => $this->unreadInFeedGroup($userId, FeedGroup::Feeds),
+        ];
+    }
+
     public function allItems(int $userId): int
     {
         $qb = $this->unreadEntries($userId)->select('COUNT(e.id)');
         $this->scope->inAllItems($qb, EntryAliases::primary());
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    private function unreadInFeedGroup(int $userId, FeedGroup $group): int
+    {
+        $subscriptionIds = $this->subscriptionScopes->idsForUserInFeedGroup($userId, $group);
+        if ($subscriptionIds === []) {
+            return 0;
+        }
+
+        $qb = $this->unreadEntries($userId)->select('COUNT(e.id)');
+        $this->scope->inSubscriptions($qb, EntryAliases::primary(), $subscriptionIds);
 
         return (int) $qb->getQuery()->getSingleScalarResult();
     }

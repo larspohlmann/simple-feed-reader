@@ -6,7 +6,7 @@
 @include row.tag-feeds;
 @include row.row-dots;
 @include row.section-head;
-@include row.section-toggle;
+@include row.section-link;
 
 .sidebar {
   padding: var(--space-3) var(--space-2);

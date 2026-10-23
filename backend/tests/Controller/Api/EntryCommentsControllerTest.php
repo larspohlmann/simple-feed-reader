@@ -11,6 +11,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Enum\FeedPlatform;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
@@ -61,10 +62,6 @@ final class EntryCommentsControllerTest extends ApiTestCase
     private function seedEntry(User $user, Discussion $discussion): Entry
     {
         $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
-        $feed->setTitle('Seeded');
-        $this->entityManager()->persist($feed);
-        $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-
         $entry = new Entry(
             $feed,
             't3_1woq4he',
@@ -75,6 +72,32 @@ final class EntryCommentsControllerTest extends ApiTestCase
         );
         $entry->setAuthor(new EntryAuthor('/u/Background_Lie11'));
         $entry->setDiscussion($discussion);
+
+        return $this->subscribedEntry($user, $feed, $entry);
+    }
+
+    private function seedSubstackPost(User $user): Entry
+    {
+        $url = 'https://joe.substack.com/p/one-post';
+        $feed = new Feed('https://joe.substack.com/feed');
+        $feed->recordPlatform(FeedPlatform::Substack);
+        $entry = new Entry(
+            $feed,
+            $url,
+            $url,
+            'One post',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+
+        return $this->subscribedEntry($user, $feed, $entry);
+    }
+
+    private function subscribedEntry(User $user, Feed $feed, Entry $entry): Entry
+    {
+        $feed->setTitle('Seeded');
+        $this->entityManager()->persist($feed);
+        $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $this->entityManager()->persist($entry);
         $this->entityManager()->flush();
 
@@ -281,6 +304,31 @@ final class EntryCommentsControllerTest extends ApiTestCase
         self::assertSame('https://example.org/review', $card['url']);
         self::assertSame($this->readerTokenFor('https://example.org/review'), $card['readerToken']);
         self::assertSame([self::PUBLIC_CONTEXT], $this->http->requestLines());
+    }
+
+    public function testASubstackPostsCommentsComeFromSubstack(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('comments-substack@example.com');
+        $fetcher = $this->installFetcher();
+        $fixtures = __DIR__ . '/../../Fixtures/substack';
+        $fetcher->willReturnBody(
+            'https://joe.substack.com/api/v1/posts/one-post',
+            (string) file_get_contents($fixtures . '/post.json'),
+        );
+        $fetcher->willReturnBody(
+            'https://joe.substack.com/api/v1/post/4242/comments?all_comments=true&sort=best_first',
+            (string) file_get_contents($fixtures . '/post-comments.json'),
+        );
+        $entry = $this->seedSubstackPost($user);
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertSame('ok', $body['status']);
+        self::assertIsArray($body['comments']);
+        self::assertSame([0, 1, 0], array_column($body['comments'], 'depth'));
     }
 
     public function testASocialPostsRepliesAreCachedAndRefreshable(): void

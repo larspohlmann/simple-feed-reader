@@ -1,3 +1,6 @@
+import { API_BASE_URL } from '../../core/api';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { heldUnrenamedHome } from '../../../testing/unrenamed-home-testing';
 import { signal } from '@angular/core';
@@ -30,6 +33,9 @@ describe('OrganiseFeedRowComponent', () => {
       imports: [OrganiseFeedRowComponent, provideTranslocoTesting()],
       providers: [
         provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: LayoutService, useValue: { isCoarse: signal(false) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
         { provide: LanguageService, useValue: { lang: () => 'en' } },
@@ -206,6 +212,18 @@ describe('OrganiseFeedRowComponent', () => {
     expect(toggled).toHaveBeenCalled();
   });
 
+  it('emits toggleSavedSearches from the fine-pointer popover', async () => {
+    await render();
+    const toggled = jest.fn();
+    fixture.componentInstance.toggleSavedSearches.subscribe(toggled);
+
+    fixture.debugElement.query(By.css('[data-test="more"]')).nativeElement.click();
+    fixture.detectChanges();
+    fixture.debugElement.query(By.css('[data-test="toggle-saved-searches"]')).nativeElement.click();
+
+    expect(toggled).toHaveBeenCalled();
+  });
+
   it('emits unsubscribe from the fine-pointer popover', async () => {
     await render();
     const unsubscribed = jest.fn();
@@ -225,6 +243,9 @@ describe('OrganiseFeedRowComponent', () => {
       imports: [OrganiseFeedRowComponent, provideTranslocoTesting()],
       providers: [
         provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: LayoutService, useValue: { isCoarse: signal(true) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
         { provide: LanguageService, useValue: { lang: () => 'en' } },

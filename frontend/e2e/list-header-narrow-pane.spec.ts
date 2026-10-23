@@ -17,7 +17,7 @@ const FEED: SplitList = { name: 'a feed', url: '/?subscription=1', layout: 'pane
 const DIRECT_SEARCH: SplitList = {
   name: 'a direct search',
   url: '/?q=hamburg',
-  layout: 'magazine',
+  layout: 'list',
 };
 
 // The `.heading` flex basis in list-header.component.scss: 6rem at the 16px root.

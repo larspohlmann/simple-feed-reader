@@ -6,8 +6,9 @@ namespace App\Service\Reader;
 
 use App\DependencyInjection\ProcessLifetimeState;
 use App\Service\Reader\Factory\DateFormatterFactoryInterface;
+use App\Service\Reader\Model\ParseOffsetUnit;
 
-#[ProcessLifetimeState('Formatters are immutable per locale and format')]
+#[ProcessLifetimeState('Formatters are immutable per locale and format, and the offset unit per PHP build')]
 final class DateLineRecognizer
 {
     private const int DATE_LINE_MAX_CHARS = 48;
@@ -20,6 +21,8 @@ final class DateLineRecognizer
 
     /** @var array<string, array<int, \IntlDateFormatter>> */
     private array $dateFormatters = [];
+
+    private ?ParseOffsetUnit $offsetUnit = null;
 
     public function __construct(private readonly DateFormatterFactoryInterface $formatterFactory)
     {
@@ -50,13 +53,19 @@ final class DateLineRecognizer
 
     private function consumesWholeStringAsDate(string $text, string $locale, int $style): bool
     {
-        $formatter = $this->dateFormatters[$locale][$style] ??= $this->formatterFactory->build($locale, $style);
-
         $position = 0;
-        $timestamp = $formatter->parse($text, $position);
+        $timestamp = $this->formatter($locale, $style)->parse($text, $position);
 
-        // parse() reports the stop position in code points, so compare with
-        // mb_strlen: a byte length rejects any date with a non-ASCII month (März).
-        return $timestamp !== false && $position === mb_strlen($text);
+        return $timestamp !== false && $position === $this->offsetUnit()->lengthOf($text);
+    }
+
+    private function offsetUnit(): ParseOffsetUnit
+    {
+        return $this->offsetUnit ??= ParseOffsetUnit::reportedBy($this->formatter('de', \IntlDateFormatter::LONG));
+    }
+
+    private function formatter(string $locale, int $style): \IntlDateFormatter
+    {
+        return $this->dateFormatters[$locale][$style] ??= $this->formatterFactory->build($locale, $style);
     }
 }

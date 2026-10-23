@@ -18,6 +18,7 @@ final readonly class SubscriptionEditor
         private FeedTagMove $feedTagMove,
         private OwnedSubscriptions $ownedSubscriptions,
         private PositionReorderer $reorderer,
+        private SubscriptionInclusions $inclusions,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -26,7 +27,7 @@ final readonly class SubscriptionEditor
     {
         $subscription->setCustomTitle('' === $change->customTitle ? null : $change->customTitle);
         $this->tagSync->sync($subscription, $change->tagIds, $subscription->getUser()->requireId());
-        $this->applyFlags($subscription, $change);
+        $this->inclusions->apply($subscription, $change->inclusions);
         $this->entityManager->flush();
     }
 
@@ -43,15 +44,5 @@ final readonly class SubscriptionEditor
             $orderedSubscriptionIds,
             $this->ownedSubscriptions->resolve($user->requireId(), $orderedSubscriptionIds),
         );
-    }
-
-    private function applyFlags(Subscription $subscription, SubscriptionChangeModel $change): void
-    {
-        if (null !== $change->includeInAllItems) {
-            $subscription->setIncludeInAllItems($change->includeInAllItems);
-        }
-        if (null !== $change->includeInForYou) {
-            $subscription->setIncludeInForYou($change->includeInForYou);
-        }
     }
 }

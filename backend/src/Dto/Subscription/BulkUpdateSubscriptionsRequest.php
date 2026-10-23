@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Dto\Subscription;
 
 use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
+use App\Service\Subscription\Model\InclusionChangeModel;
 use App\Service\Subscription\SubscriptionService;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * One bulk change across many feeds: at most one tag added, one removed, and either inclusion flag, where null
+ * One bulk change across many feeds: at most one tag added, one removed, and any inclusion flag, where null
  * leaves the stored value unchanged.
  */
 final readonly class BulkUpdateSubscriptionsRequest
@@ -29,6 +30,7 @@ final readonly class BulkUpdateSubscriptionsRequest
         public array $removeTagIds = [],
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
+        public ?bool $includeInSavedSearches = null,
     ) {
     }
 
@@ -38,8 +40,11 @@ final readonly class BulkUpdateSubscriptionsRequest
             subscriptionIds: $this->subscriptionIds,
             addTagIds: $this->addTagIds,
             removeTagIds: $this->removeTagIds,
-            includeInAllItems: $this->includeInAllItems,
-            includeInForYou: $this->includeInForYou,
+            inclusions: new InclusionChangeModel(
+                includeInAllItems: $this->includeInAllItems,
+                includeInForYou: $this->includeInForYou,
+                includeInSavedSearches: $this->includeInSavedSearches,
+            ),
         );
     }
 }

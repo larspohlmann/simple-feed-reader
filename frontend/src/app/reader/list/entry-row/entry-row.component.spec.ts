@@ -169,6 +169,13 @@ describe('EntryRowComponent', () => {
     expect(imageProxy.attempts).toEqual([]);
   });
 
+  it('ends on the shared meta line below the image and text, with md actions', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+    const meta = element.querySelector('app-entry-meta')!;
+    expect(meta.previousElementSibling?.querySelector('img.thumb')).not.toBeNull();
+    expect(meta.querySelector('app-entry-actions')!.classList).toContain('glyph-md');
+  });
+
   it('moves the thumbnail to the left when imageSide is left', () => {
     const fixture = mount(entry());
     fixture.componentRef.setInput('imageSide', 'left');

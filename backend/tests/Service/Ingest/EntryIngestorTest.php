@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Enum\CommentsLoad;
+use App\Enum\FeedPlatform;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Pass\FeedIngestContext;
@@ -858,6 +859,27 @@ final class EntryIngestorTest extends DbTestCase
 
         self::assertSame('Existing Title', $feed->getTitle());
         self::assertSame('https://existing.example.com/', $feed->getSiteUrl());
+    }
+
+    public function testAFeedGeneratedBySubstackIsASubstack(): void
+    {
+        $feed = $this->feed();
+
+        $parsed = new ParsedFeedModel('Example', null, null, null, [], 'Substack');
+
+        $this->ingestor->ingest($feed, $parsed, self::context());
+
+        self::assertSame(FeedPlatform::Substack, $feed->getPlatform());
+    }
+
+    public function testAFeedThatStopsNamingSubstackIsNoLongerOne(): void
+    {
+        $feed = $this->feed();
+        $feed->recordPlatform(FeedPlatform::Substack);
+
+        $this->ingestor->ingest($feed, new ParsedFeedModel('Example', null, null, null, []), self::context());
+
+        self::assertNull($feed->getPlatform());
     }
 
     public function testAFetchStoresTheFeedImage(): void

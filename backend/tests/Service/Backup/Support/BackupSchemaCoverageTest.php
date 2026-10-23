@@ -29,6 +29,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\RetentionSetting;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\SavedSearchEntry;
 use App\Entity\ShareEnrichment;
 use App\Entity\SocialAccount;
@@ -223,11 +224,16 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'search gets a new id, so a carried-over slug would be stale; RestoreLoadPass '
                 . 'regenerates it from the new id once the flush that assigns that id has run.',
         ],
+        SavedSearchNetworkInclusion::class => [
+            'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
+        ],
         Feed::class => [
             'status' => 'Live fetch state, not the user\'s data. A restored feed starts clean.',
             'imageCheckedAt' => 'Sweep bookkeeping: unset, a restored profile feed is asked for its picture at once.',
             'network' => 'Derived from url and sourceFormat by SocialFeedClassifier; the restore\'s flush '
                 . 'recomputes it through FeedNetworkListener.',
+            'platform' => 'Read from the feed\'s <generator> on every fetch; '
+                . 'a restored feed learns it on its first refresh.',
             'etag' => 'The HTTP validator for the last body this instance fetched. A restore has '
                 . 'no such body, and a carried-over validator would make the first refresh take a '
                 . '304 over an empty feed.',

@@ -13,7 +13,8 @@ final class UnreadTotalsJson
      *   allItems: int,
      *   forYou: int,
      *   tags: list<array{id: int, unreadCount: int}>,
-     *   networks: list<array{network: string, unreadCount: int, profilesUnreadCount: int}>
+     *   networks: list<array{network: string, unreadCount: int, profilesUnreadCount: int}>,
+     *   groups: array{tags: int, feeds: int}
      * }
      */
     public static function from(UnreadTotalsModel $totals): array
@@ -31,6 +32,12 @@ final class UnreadTotalsJson
             ];
         }
 
-        return ['allItems' => $totals->allItems, 'forYou' => $totals->forYou, 'tags' => $tags, 'networks' => $networks];
+        return [
+            'allItems' => $totals->allItems,
+            'forYou' => $totals->forYou,
+            'tags' => $tags,
+            'networks' => $networks,
+            'groups' => $totals->feedGroups,
+        ];
     }
 }

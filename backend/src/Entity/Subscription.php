@@ -62,6 +62,9 @@ final class Subscription implements PositionedInterface
     #[ORM\Column(name: 'include_in_for_you', options: ['default' => true])]
     private bool $includeInForYou = true;
 
+    #[ORM\Column(name: 'include_in_saved_searches', options: ['default' => true])]
+    private bool $includeInSavedSearches = true;
+
     public function __construct(User $user, Feed $feed, \DateTimeImmutable $createdAt)
     {
         $this->user = $user;
@@ -140,6 +143,16 @@ final class Subscription implements PositionedInterface
         $this->includeInForYou = $includeInForYou;
     }
 
+    public function isIncludeInSavedSearches(): bool
+    {
+        return $this->includeInSavedSearches;
+    }
+
+    public function setIncludeInSavedSearches(bool $includeInSavedSearches): void
+    {
+        $this->includeInSavedSearches = $includeInSavedSearches;
+    }
+
     /**
      * The tags on this subscription, ordered by their per-tag position.
      *
@@ -184,6 +197,7 @@ final class Subscription implements PositionedInterface
         $this->position = $previous->position;
         $this->includeInAllItems = $previous->includeInAllItems;
         $this->includeInForYou = $previous->includeInForYou;
+        $this->includeInSavedSearches = $previous->includeInSavedSearches;
         $this->markedReadUntil = $previous->markedReadUntil;
         foreach ($previous->getSubscriptionTags() as $subscriptionTag) {
             $this->addTag($subscriptionTag->getTag(), $subscriptionTag->getPosition());

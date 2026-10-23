@@ -207,6 +207,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         $this->restrictToSchedule($qb, $criteria);
         $this->restrictToOwnership($qb, $criteria);
         $this->restrictToNetwork($qb, $criteria);
+        $this->restrictToFeedGroup($qb, $criteria);
         $this->restrictToUnhandled($qb, $criteria);
         $this->restrictToConnectedAccounts($qb);
 
@@ -289,6 +290,22 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
         }
 
         NetworkScopeDql::restrict($qb, 'f', $criteria->networkScope);
+    }
+
+    private function restrictToFeedGroup(QueryBuilder $qb, DueFeedCriteria $criteria): void
+    {
+        if ($criteria->feedGroup === null) {
+            return;
+        }
+
+        $subscriptions = $this->getEntityManager()->createQueryBuilder()
+            ->select('gs.id')
+            ->from(Subscription::class, 'gs')
+            ->andWhere('gs.feed = f')
+            ->andWhere('gs.user = :userId');
+        FeedGroupDql::restrict($subscriptions, 'gs', 'f', $criteria->feedGroup);
+
+        $qb->andWhere(sprintf('EXISTS (%s)', $subscriptions->getDQL()))->setParameter('userId', $criteria->userId);
     }
 
     private function restrictToUnhandled(QueryBuilder $qb, DueFeedCriteria $criteria): void

@@ -30,7 +30,7 @@ import { ListEmptyStateComponent } from '../list-empty-state/list-empty-state.co
 import { ScrollOutsideZoneDirective } from '../../scroll/scroll-outside-zone.directive';
 import { ReadingLayout } from '../../reading-layout.service';
 import { EntryDto, ListOrder, SubscriptionTagDto, TagDto } from '../../models';
-import { Selection, canScopedRefresh, isDirectSearch, searchWords } from '../../query/query';
+import { Selection, canScopedRefresh, searchWords } from '../../query/query';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
 import { prefetchMargin } from '../paging';
@@ -181,11 +181,6 @@ export class EntryListComponent implements OnDestroy {
   /** The refresh pull gesture is off in the cross-feed saved views. */
   private readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
 
-  /** A direct (unsaved) search is the one selection that keeps its short header
-   *  labels and list layout; every other list, saved-search results included,
-   *  drops to icon-only actions. */
-  readonly directSearch = computed(() => isDirectSearch(this.selection()));
-
   /** The current search's words, passed to every row for marking. Prefers what
    *  the engine actually matched, since it tolerates typos ("recieve" finds
    *  "receive"); falls back to the typed term's words when the page carries
@@ -194,8 +189,6 @@ export class EntryListComponent implements OnDestroy {
     const matched = this.matchedWords();
     return matched.length > 0 ? matched : searchWords(this.selection().term ?? '');
   });
-
-  readonly effectiveLayout = computed(() => (this.directSearch() ? 'list' : this.layout()));
 
   /** Search rows dim their excerpt a shade — the marked term stays the row's
    *  focus, and the surrounding prose recedes behind it. */
@@ -361,7 +354,7 @@ export class EntryListComponent implements OnDestroy {
   protected readonly isAiryMagazine = computed(
     () =>
       this.magazineStyle.style() === 'airy' &&
-      this.effectiveLayout() === 'magazine' &&
+      this.layout() === 'magazine' &&
       !(this.loading() && this.entries().length === 0) &&
       this.content.visibleEntryCount() !== 0,
   );

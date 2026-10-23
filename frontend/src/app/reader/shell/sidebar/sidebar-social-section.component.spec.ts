@@ -10,6 +10,8 @@ import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { LayoutService } from '../../layout.service';
 import { SubscriptionDto } from '../../models';
 import { Selection } from '../../query/query';
+import { SocialNetworkName } from '../../../core/social-network';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -62,6 +64,11 @@ const LONE_ACCOUNT_ACTIONS: ActionSheetAction[] = [
   { id: '3', label: 'Manage feeds…', disabled: false },
 ];
 let socialActions = LONE_ACCOUNT_ACTIONS;
+const INCLUDE_NETWORK_ACTION: ActionSheetAction = {
+  id: 'savedSearches',
+  label: 'Include in saved searches',
+};
+let networkAction = INCLUDE_NETWORK_ACTION;
 const rowActions = {
   menuFor: signal<string | null>(null),
   toggleMenu: jest.fn(),
@@ -70,7 +77,12 @@ const rowActions = {
   openSocialSheet: jest.fn(),
   socialAccountActions: jest.fn(() => socialActions),
   manageSocialFeeds: jest.fn(),
-  exclusionTitle: () => 'Not in All items',
+  networkSavedSearchesAction: jest.fn(() => networkAction),
+  toggleNetworkInSavedSearches: jest.fn(),
+};
+
+const savedSearchesStore = {
+  includedNetworks: signal<ReadonlySet<SocialNetworkName>>(new Set()),
 };
 
 function mount(
@@ -89,6 +101,7 @@ function mount(
       { provide: LayoutService, useValue: { isCoarse: signal(coarse), isNarrow: signal(false) } },
       { provide: ManageActions, useValue: {} },
       { provide: SidebarRowActions, useValue: rowActions },
+      { provide: SavedSearchesStore, useValue: savedSearchesStore },
     ],
   });
   const fixture = TestBed.createComponent(SidebarSocialSectionComponent);
@@ -105,7 +118,9 @@ describe('SidebarSocialSectionComponent', () => {
   beforeEach(() => {
     localStorage.clear();
     rowActions.menuFor.set(null);
+    savedSearchesStore.includedNetworks.set(new Set());
     socialActions = LONE_ACCOUNT_ACTIONS;
+    networkAction = INCLUDE_NETWORK_ACTION;
     jest.clearAllMocks();
   });
   afterEach(() => localStorage.clear());
@@ -220,7 +235,7 @@ describe('SidebarSocialSectionComponent', () => {
     expect(handles).toEqual(['@work.bsky.social']);
   });
 
-  it('marks no private feed as excluded, since the section already says what they are', () => {
+  it('marks a private feed only for saved searches, not for the surfaces it is out of by design', () => {
     const excluded = (id: number) =>
       feed(id, 'list', { includeInAllItems: false, includeInForYou: false });
     const section: SocialSection = {
@@ -234,7 +249,8 @@ describe('SidebarSocialSectionComponent', () => {
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
 
-    expect(element(mount(section)).querySelector('.feed-exclusion-marker')).toBeNull();
+    const marker = element(mount(section)).querySelector('.feed-exclusion-marker');
+    expect(marker?.getAttribute('title')).toBe('Hidden from Saved searches');
   });
 
   it('lists the saved feed as a row of its own after the accounts', () => {
@@ -441,13 +457,60 @@ describe('SidebarSocialSectionComponent', () => {
       expect(itemsOf(fixture).map((item) => [item.textContent?.trim(), item.disabled])).toEqual([
         ['Manage feeds of @alice.bsky.social', false],
         ['Reconnect @bob.bsky.social in settings', true],
+        ['Include in saved searches', false],
       ]);
     });
 
-    it('shows no menu for a network without accounts', () => {
+    it('still offers the saved-search switch for a network without accounts', () => {
+      socialActions = [];
       const fixture = mount({ ...ONE_ACCOUNT, networkAccounts: [] });
+      rowActions.menuFor.set('social-bluesky');
+      fixture.detectChanges();
 
-      expect(element(fixture).querySelector('.section-head .dots')).toBeNull();
+      expect(itemsOf(fixture).map((item) => item.textContent?.trim())).toEqual([
+        'Include in saved searches',
+      ]);
+    });
+
+    it('labels the saved-search item for its network and switches that network on click', () => {
+      const fixture = mount(ONE_ACCOUNT);
+      rowActions.menuFor.set('social-bluesky');
+      fixture.detectChanges();
+
+      const item = itemsOf(fixture).at(-1) as HTMLButtonElement;
+      expect(item.textContent?.trim()).toBe('Include in saved searches');
+      item.click();
+
+      expect(rowActions.networkSavedSearchesAction).toHaveBeenCalledWith(ONE_ACCOUNT);
+      expect(rowActions.toggleNetworkInSavedSearches).toHaveBeenCalledWith(ONE_ACCOUNT);
+    });
+
+    it('shows the exclude label the row actions give an included network', () => {
+      networkAction = { id: 'savedSearches', label: 'Exclude from saved searches' };
+      const fixture = mount(ONE_ACCOUNT);
+      rowActions.menuFor.set('social-bluesky');
+      fixture.detectChanges();
+
+      expect((itemsOf(fixture).at(-1) as HTMLElement).textContent?.trim()).toBe(
+        'Exclude from saved searches',
+      );
+    });
+
+    it('marks a profile row as hidden until the network is included', () => {
+      const section: SocialSection = {
+        ...ONE_ACCOUNT,
+        networkAccounts: [],
+        accounts: [],
+        profiles: socialProfiles([person(7, 'Amy')], 0),
+      };
+      expandProfiles('bluesky');
+      const fixture = mount(section);
+      expect(element(fixture).querySelector('.feed-exclusion-marker')).not.toBeNull();
+
+      savedSearchesStore.includedNetworks.set(new Set(['bluesky']));
+      fixture.detectChanges();
+
+      expect(element(fixture).querySelector('.feed-exclusion-marker')).toBeNull();
     });
 
     it('opens the sheet on a coarse pointer', () => {

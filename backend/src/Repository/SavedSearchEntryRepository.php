@@ -24,6 +24,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
         private readonly EntryListRowHydrator $rowHydrator,
         private readonly DuplicateCollapseDql $collapse,
         private readonly EntryProjection $projection,
+        private readonly EntryScopePredicates $scopes,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -82,7 +83,8 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             ->andWhere('ss.user = :user')
             ->setParameter('searchIds', $savedSearchIds)
             ->orderBy('e.id', 'ASC');
-        $this->collapse->apply($qb, self::applyMembership(...), $userId);
+        $this->scopes->inSavedSearches($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $this->applyMembership(...), $userId);
 
         /** @var list<array{id: int, searchId: int}> $rows */
         $rows = $qb->getQuery()->getScalarResult();
@@ -108,8 +110,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             return $countsBySearch;
         }
 
-        /** @var list<array{searchId: int, memberCount: int}> $rows */
-        $rows = $this->getEntityManager()->createQueryBuilder()
+        $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('ss.id AS searchId', 'COUNT(e.id) AS memberCount')
             ->from(SavedSearchEntry::class, 'sse')
             ->join('sse.savedSearch', 'ss')
@@ -119,9 +120,11 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             ->andWhere('ss.user = :user')
             ->groupBy('ss.id')
             ->setParameter('searchIds', $savedSearchIds)
-            ->setParameter('user', $userId)
-            ->getQuery()
-            ->getScalarResult();
+            ->setParameter('user', $userId);
+        $this->scopes->inSavedSearches($qb, EntryAliases::primary());
+
+        /** @var list<array{searchId: int, memberCount: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
         foreach ($rows as $row) {
             $countsBySearch[$row['searchId']] = (int) $row['memberCount'];
         }
@@ -183,18 +186,21 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
             return [];
         }
 
-        /** @var list<array{entryId: int, id: int, slug: string, term: string}> $rows */
-        $rows = $this->getEntityManager()->createQueryBuilder()
+        $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('IDENTITY(sse.entry) AS entryId', 'ss.id AS id', 'ss.slug AS slug', 'ss.term AS term')
             ->from(SavedSearchEntry::class, 'sse')
             ->join('sse.savedSearch', 'ss')
+            ->join('sse.entry', 'e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = ss.user')
             ->andWhere('sse.entry IN (:entryIds)')
             ->andWhere('ss.user = :user')
             ->setParameter('entryIds', $entryIds)
             ->setParameter('user', $userId)
-            ->orderBy('ss.id', 'DESC')
-            ->getQuery()
-            ->getScalarResult();
+            ->orderBy('ss.id', 'DESC');
+        $this->scopes->inSavedSearches($qb, EntryAliases::primary());
+
+        /** @var list<array{entryId: int, id: int, slug: string, term: string}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
 
         $byEntry = [];
         foreach ($rows as $row) {
@@ -218,13 +224,14 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
     private function restrictToMembers(QueryBuilder $qb, array $savedSearchIds, int $userId): void
     {
         $qb->setParameter('searchIds', $savedSearchIds);
-        self::applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, self::applyMembership(...), $userId);
+        $this->applyMembership($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $this->applyMembership(...), $userId);
     }
 
-    private static function applyMembership(QueryBuilder $qb, EntryAliases $aliases): void
+    private function applyMembership(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->andWhere(self::memberOfAnySearch($aliases));
+        $this->scopes->inSavedSearches($qb, $aliases);
     }
 
     /**

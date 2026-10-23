@@ -167,6 +167,19 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         ], $ids);
     }
 
+    public function testBadgeIdsCollapseDuplicateCopiesToTheLowestId(): void
+    {
+        $climate = $this->search('climate');
+        $original = $this->entry('a', '2026-07-10T00:00:00Z', urlHash: 'same');
+        $copy = $this->entry('b', '2026-07-10T00:00:00Z', urlHash: 'same');
+        $this->member($climate, $original);
+        $this->member($climate, $copy);
+
+        $ids = $this->repository()->unreadMemberIdsBySavedSearch($this->user->requireId(), [$climate->requireId()]);
+
+        self::assertSame([$climate->requireId() => [$original->getId()]], $ids);
+    }
+
     public function testBadgeIdsEqualTheUnreadListForTheSameFixture(): void
     {
         $climate = $this->search('climate');

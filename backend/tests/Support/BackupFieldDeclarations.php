@@ -11,6 +11,7 @@ use App\Entity\LinkCard;
 use App\Entity\Preferences;
 use App\Entity\SavedEntryOrigin;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -41,6 +42,7 @@ final class BackupFieldDeclarations
         SavedSearch::class => [
             'term' => 'term', 'wholeWord' => 'wholeWord', 'phrase' => 'phrase', 'position' => 'position',
         ],
+        SavedSearchNetworkInclusion::class => ['network' => 'savedSearchIncludedNetworks'],
         Feed::class => [
             'url' => 'url', 'siteUrl' => 'siteUrl', 'title' => 'title',
             'description' => 'description', 'faviconUrl' => 'faviconUrl',
@@ -56,6 +58,7 @@ final class BackupFieldDeclarations
             'subscriptionTags' => 'tags',
             'includeInAllItems' => 'includeInAllItems',
             'includeInForYou' => 'includeInForYou',
+            'includeInSavedSearches' => 'includeInSavedSearches',
         ],
         SubscriptionTag::class => [
             'tag' => 'tags.name',
@@ -112,6 +115,7 @@ final class BackupFieldDeclarations
         Preferences::class => BackupSchema::KIND_ACCOUNT,
         Tag::class => BackupSchema::KIND_TAG,
         SavedSearch::class => BackupSchema::KIND_SAVED_SEARCH,
+        SavedSearchNetworkInclusion::class => BackupSchema::KIND_ACCOUNT,
         Feed::class => BackupSchema::KIND_FEED,
         Subscription::class => BackupSchema::KIND_SUBSCRIPTION,
         SubscriptionTag::class => BackupSchema::KIND_SUBSCRIPTION,

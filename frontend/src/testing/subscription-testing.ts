@@ -28,6 +28,7 @@ export function aSubscription(overrides: Partial<SubscriptionDto> = {}): Subscri
     entryCount: 0,
     includeInAllItems: true,
     includeInForYou: true,
+    includeInSavedSearches: true,
     social: null,
     ...overrides,
   };

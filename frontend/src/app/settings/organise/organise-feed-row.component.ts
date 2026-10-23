@@ -6,6 +6,7 @@ import {
   inject,
   input,
   output,
+  OutputEmitterRef,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -22,6 +23,14 @@ import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LayoutService } from '../../reader/layout.service';
 import { selectionQueryParams } from '../../reader/query/query';
 import { SubscriptionDto } from '../../reader/models';
+import {
+  ExclusionSurface,
+  FEED_FLAG_TOGGLES,
+  FeedFlagToggle,
+  excludedSurfaces,
+  feedFlagLabelKey,
+} from '../../reader/feed-exclusions';
+import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 
 /**
  * One feed row on the Organise page. Presentational on purpose: the tree and
@@ -70,14 +79,28 @@ export class OrganiseFeedRowComponent {
   readonly edit = output<void>();
   readonly toggleAllItems = output<void>();
   readonly toggleForYou = output<void>();
+  readonly toggleSavedSearches = output<void>();
   readonly unsubscribe = output<void>();
+
+  private readonly flagToggled: Readonly<Record<ExclusionSurface, OutputEmitterRef<void>>> = {
+    allItems: this.toggleAllItems,
+    forYou: this.toggleForYou,
+    savedSearches: this.toggleSavedSearches,
+  };
+  protected readonly feedFlags = FEED_FLAG_TOGGLES;
+  protected readonly feedFlagLabelKey = feedFlagLabelKey;
 
   protected readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
+  private readonly savedSearches = inject(SavedSearchesStore);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly menuOpen = signal(false);
+
+  protected readonly excluded = computed(
+    () => excludedSurfaces(this.subscription(), this.savedSearches.includedNetworks()).length > 0,
+  );
 
   protected readonly visibleTags = computed(() =>
     this.subscription().tags.filter((tag) => tag.id !== this.hideTagId()),
@@ -88,6 +111,10 @@ export class OrganiseFeedRowComponent {
   protected readonly listParams = computed(() =>
     selectionQueryParams({ subscription: this.subscription().id }),
   );
+
+  protected toggleFlag(toggle: FeedFlagToggle): void {
+    this.flagToggled[toggle.surface].emit();
+  }
 
   protected toggleMenu(): void {
     this.menuOpen.update((open) => !open);
@@ -106,18 +133,10 @@ export class OrganiseFeedRowComponent {
         title: this.subscription().title,
         actions: [
           { id: 'edit', label: this.i18n.translate('reader.editFeed') },
-          {
-            id: 'allItems',
-            label: this.i18n.translate(
-              sub.includeInAllItems ? 'reader.excludeFromAllItems' : 'reader.includeInAllItems',
-            ),
-          },
-          {
-            id: 'forYou',
-            label: this.i18n.translate(
-              sub.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou',
-            ),
-          },
+          ...FEED_FLAG_TOGGLES.map((toggle) => ({
+            id: toggle.surface,
+            label: this.i18n.translate(feedFlagLabelKey(toggle, sub)),
+          })),
           { id: 'unsubscribe', label: this.i18n.translate('reader.unsubscribe'), danger: true },
         ],
       })
@@ -126,8 +145,8 @@ export class OrganiseFeedRowComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.edit.emit();
-        if (choice === 'allItems') this.toggleAllItems.emit();
-        if (choice === 'forYou') this.toggleForYou.emit();
+        const toggle = FEED_FLAG_TOGGLES.find(({ surface }) => surface === choice);
+        if (toggle) this.toggleFlag(toggle);
         if (choice === 'unsubscribe') this.unsubscribe.emit();
       });
   }

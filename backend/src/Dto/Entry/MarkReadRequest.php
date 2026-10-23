@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Entry;
 
+use App\Enum\FeedGroup;
 use App\Exception\ValidationException;
 use App\Repository\NetworkScope;
 use App\Service\Reading\Model\ReadScopeKind;
@@ -18,6 +19,7 @@ final readonly class MarkReadRequest
             ReadScopeKind::Feed->value,
             ReadScopeKind::Tag->value,
             ReadScopeKind::Network->value,
+            ReadScopeKind::Group->value,
         ])]
         public string $scope,
         public \DateTimeImmutable $until,
@@ -25,6 +27,7 @@ final readonly class MarkReadRequest
         public ?int $id = null,
         public ?string $network = null,
         public ?string $feedKind = null,
+        public ?string $group = null,
     ) {
     }
 
@@ -38,7 +41,15 @@ final readonly class MarkReadRequest
             ReadScopeKind::Feed => ReadScopeModel::feed($this->requiredIdFor($kind)),
             ReadScopeKind::Tag => ReadScopeModel::tag($this->requiredIdFor($kind)),
             ReadScopeKind::Network => ReadScopeModel::network($this->requiredNetworkFor($kind)),
+            ReadScopeKind::Group => ReadScopeModel::group($this->requiredGroupFor($kind)),
         };
+    }
+
+    private function requiredGroupFor(ReadScopeKind $kind): FeedGroup
+    {
+        return FeedGroup::fromRequestValue($this->group) ?? throw new ValidationException([
+            'group' => [sprintf('A group is required when scope is "%s".', $kind->value)],
+        ]);
     }
 
     private function requiredNetworkFor(ReadScopeKind $kind): NetworkScope

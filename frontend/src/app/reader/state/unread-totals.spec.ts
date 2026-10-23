@@ -20,6 +20,7 @@ const totals: UnreadTotals = {
     ['bluesky', 3],
     ['mastodon', 0],
   ]),
+  groups: { tags: 0, feeds: 0 },
 };
 
 describe('unreadTotalsFrom', () => {
@@ -32,8 +33,10 @@ describe('unreadTotalsFrom', () => {
         { network: 'bluesky', unreadCount: 6, profilesUnreadCount: 2 },
         { network: 'mastodon', unreadCount: 1, profilesUnreadCount: 0 },
       ],
+      groups: { tags: 2, feeds: 5 },
     });
 
+    expect(result.groups).toEqual({ tags: 2, feeds: 5 });
     expect(result.allItems).toBe(7);
     expect(result.forYou).toBe(5);
     expect([...result.tags]).toEqual([[3, 4]]);
@@ -54,7 +57,13 @@ describe('sameUnreadTotals', () => {
     expect(
       sameUnreadTotals(
         NO_UNREAD_TOTALS,
-        unreadTotalsFrom({ allItems: 0, forYou: 0, tags: [], networks: [] }),
+        unreadTotalsFrom({
+          allItems: 0,
+          forYou: 0,
+          tags: [],
+          networks: [],
+          groups: { tags: 0, feeds: 0 },
+        }),
       ),
     ).toBe(true);
   });
@@ -71,5 +80,6 @@ describe('sameUnreadTotals', () => {
     ).toBe(false);
     expect(sameUnreadTotals(totals, { ...totals, allItems: 9 })).toBe(false);
     expect(sameUnreadTotals(totals, { ...totals, forYou: 2 })).toBe(false);
+    expect(sameUnreadTotals(totals, { ...totals, groups: { tags: 0, feeds: 1 } })).toBe(false);
   });
 });

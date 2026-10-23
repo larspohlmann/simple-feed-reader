@@ -12,34 +12,35 @@
       <span class="section-count">{{ current.unreadCount }}</span>
     }
   </a>
-  @if (current.networkAccounts.length > 0) {
-    @let manageLabel =
-      'reader.manageSocialSection'
-        | transloco: { network: ('settings.social.' + current.network | transloco) };
-    @if (screen.isCoarse()) {
-      <button
-        class="dots"
-        type="button"
-        [attr.aria-label]="manageLabel"
-        (click)="rows.openSocialSheet(current)"
-      >
-        <app-icon name="more_horiz" size="sm" />
-      </button>
-    } @else {
-      <app-sidebar-row-menu [menuKey]="menuKey()" [label]="manageLabel">
-        <ng-template>
-          @for (action of rows.socialAccountActions(current); track action.id; let index = $index) {
-            <button
-              role="menuitem"
-              [disabled]="action.disabled"
-              (click)="rows.manageSocialFeeds(current.networkAccounts[index])"
-            >
-              {{ action.label }}
-            </button>
-          }
-        </ng-template>
-      </app-sidebar-row-menu>
-    }
+  @let manageLabel =
+    'reader.manageSocialSection'
+      | transloco: { network: ('settings.social.' + current.network | transloco) };
+  @if (screen.isCoarse()) {
+    <button
+      class="dots"
+      type="button"
+      [attr.aria-label]="manageLabel"
+      (click)="rows.openSocialSheet(current)"
+    >
+      <app-icon name="more_horiz" size="sm" />
+    </button>
+  } @else {
+    <app-sidebar-row-menu [menuKey]="menuKey()" [label]="manageLabel">
+      <ng-template>
+        @for (action of rows.socialAccountActions(current); track action.id; let index = $index) {
+          <button
+            role="menuitem"
+            [disabled]="action.disabled"
+            (click)="rows.manageSocialFeeds(current.networkAccounts[index])"
+          >
+            {{ action.label }}
+          </button>
+        }
+        <button role="menuitem" (click)="rows.toggleNetworkInSavedSearches(current)">
+          {{ rows.networkSavedSearchesAction(current).label }}
+        </button>
+      </ng-template>
+    </app-sidebar-row-menu>
   }
   <button
     class="section-chevron"

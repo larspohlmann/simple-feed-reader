@@ -6,6 +6,7 @@ namespace App\Service\Backup\Pass;
 
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Backup\Dto\AccountLine;
@@ -91,6 +92,9 @@ final class RestoreLoadPass
         $this->user->setLocale($line->locale);
         $this->user->getPreferences()->setScrapeFallbackEnabled($line->scrapeFallbackEnabled);
         $this->user->getPreferences()->setMagazineStyle($line->magazineStyle);
+        foreach ($line->savedSearchIncludedNetworks as $network) {
+            $this->entityManager->persist(new SavedSearchNetworkInclusion($this->user, $network));
+        }
     }
 
     private function loadTag(TagLine $line): void

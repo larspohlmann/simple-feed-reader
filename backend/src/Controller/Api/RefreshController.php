@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Enum\FeedGroup;
 use App\Http\RefreshJson;
 use App\Repository\NetworkScope;
 use App\Service\RateLimit\RateLimitGuard;
@@ -17,8 +18,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * One budgeted refresh slice over the caller's feeds, narrowed by `?feedId=`, `?tag=` or `?network=` with an
- * optional `?feedKind=`. The client loops on `status` (busy: wait and retry; partial: call again; completed: done;
+ * One budgeted refresh slice over the caller's feeds, narrowed by `?feedId=`, `?tag=`, `?group=` or `?network=` with
+ * an optional `?feedKind=`. The client loops on `status` (busy: wait and retry; partial: call again; completed: done;
  * aborted: stop) until `remaining` is 0.
  */
 final readonly class RefreshController
@@ -38,13 +39,17 @@ final readonly class RefreshController
         #[MapQueryParameter] ?int $tag = null,
         #[MapQueryParameter] ?string $network = null,
         #[MapQueryParameter] ?string $feedKind = null,
+        #[MapQueryParameter] ?string $group = null,
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->refreshLimiter, $user);
 
         $networkScope = NetworkScope::fromRequestValues($network, $feedKind);
-        $request = null === $networkScope
-            ? $this->scope->requestFor($user->requireId(), $feedId, $tag)
-            : $this->scope->requestForNetwork($user->requireId(), $networkScope);
+        $feedGroup = FeedGroup::fromRequestValue($group);
+        $request = match (true) {
+            null !== $networkScope => $this->scope->requestForNetwork($user->requireId(), $networkScope),
+            null !== $feedGroup => $this->scope->requestForFeedGroup($user->requireId(), $feedGroup),
+            default => $this->scope->requestFor($user->requireId(), $feedId, $tag),
+        };
 
         return new JsonResponse(RefreshJson::slice($this->trackedRefreshRunner->run($request)));
     }

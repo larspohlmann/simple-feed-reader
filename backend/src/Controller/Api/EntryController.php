@@ -11,6 +11,7 @@ use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\User;
 use App\Enum\EntryView;
+use App\Enum\FeedGroup;
 use App\Enum\ListOrder;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
@@ -59,6 +60,7 @@ final readonly class EntryController
         #[MapQueryParameter] ?int $tag = null,
         #[MapQueryParameter] ?string $network = null,
         #[MapQueryParameter] ?string $feedKind = null,
+        #[MapQueryParameter] ?string $group = null,
         #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
         EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
@@ -84,6 +86,7 @@ final readonly class EntryController
             limit: $page->limit,
             order: $listOrder,
             networkScope: $networkScope,
+            feedGroup: FeedGroup::fromRequestValue($group),
         );
 
         $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());

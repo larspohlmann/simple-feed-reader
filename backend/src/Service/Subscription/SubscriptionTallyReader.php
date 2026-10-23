@@ -33,6 +33,7 @@ final readonly class SubscriptionTallyReader
                 $this->unreadCounts->perNetwork($userId),
                 $this->unreadCounts->perNetworkProfiles($userId),
                 $this->recommendationItems->countForYou($userId),
+                $this->unreadCounts->perFeedGroup($userId),
             ),
         );
     }

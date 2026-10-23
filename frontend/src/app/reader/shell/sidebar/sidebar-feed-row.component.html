@@ -31,12 +31,12 @@
       [avatarUrl]="avatarUrl()"
       [class.has-avatar]="avatarUrl() !== null"
     /><span>{{ name }}</span>
-    @if (!isPrivate() && (!feed.includeInAllItems || !feed.includeInForYou)) {
+    @if (markerSurfaces().length > 0) {
       <app-icon
         class="feed-exclusion-marker"
         name="visibility_off"
         size="xs"
-        [title]="rows.exclusionTitle(feed)"
+        [title]="markerTitle()"
       />
     }
     @if (feed.unreadCount > 0) {
@@ -52,24 +52,11 @@
         <button role="menuitem" (click)="manage.editSubscription(feed); rows.closeMenu()">
           {{ 'reader.editFeed' | transloco }}
         </button>
-        <button
-          role="menuitem"
-          (click)="manage.setIncludeInAllItems(feed, !feed.includeInAllItems); rows.closeMenu()"
-        >
-          {{
-            (feed.includeInAllItems ? 'reader.excludeFromAllItems' : 'reader.includeInAllItems')
-              | transloco
-          }}
-        </button>
-        <button
-          role="menuitem"
-          (click)="manage.setIncludeInForYou(feed, !feed.includeInForYou); rows.closeMenu()"
-        >
-          {{
-            (feed.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou')
-              | transloco
-          }}
-        </button>
+        @for (flag of feedFlags; track flag.surface) {
+          <button role="menuitem" (click)="rows.toggleFeedFlag(flag, feed)">
+            {{ feedFlagLabelKey(flag, feed) | transloco }}
+          </button>
+        }
         <button role="menuitem" (click)="manage.unsubscribe(feed); rows.closeMenu()">
           {{ 'reader.unsubscribe' | transloco }}
         </button>

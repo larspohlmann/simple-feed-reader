@@ -45,6 +45,7 @@ const sub = (
   entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+  includeInSavedSearches: true,
   social: null,
 });
 
@@ -60,6 +61,7 @@ const unreadTotalsDto = (over: Partial<UnreadTotalsDto> = {}): UnreadTotalsDto =
   forYou: 0,
   tags: [],
   networks: [],
+  groups: { tags: 0, feeds: 0 },
   ...over,
 });
 
@@ -462,16 +464,19 @@ describe('SubscriptionsStore', () => {
   describe('with social feeds', () => {
     const taggedList: SubscriptionDto = {
       ...sub(5, 2, [tag(20, 'Tech')]),
+      entryCount: 40,
       includeInAllItems: false,
       social: { network: 'bluesky', accountId: 3, kind: 'list' },
     };
     const untaggedHome: SubscriptionDto = {
       ...sub(6, 4),
+      entryCount: 80,
       includeInAllItems: false,
       social: { network: 'bluesky', accountId: 3, kind: 'home' },
     };
     const untaggedProfile: SubscriptionDto = {
       ...sub(7, 8),
+      entryCount: 160,
       social: { network: 'mastodon', accountId: null, kind: 'profile' },
     };
 
@@ -479,11 +484,18 @@ describe('SubscriptionsStore', () => {
       store.load();
       ctrl.expectOne('https://api.test/api/subscriptions').flush({
         ...counts(
-          [sub(1, 1, [tag(20, 'Tech')]), sub(2, 16, []), taggedList, untaggedHome, untaggedProfile],
+          [
+            { ...sub(1, 1, [tag(20, 'Tech')]), entryCount: 10 },
+            { ...sub(2, 16, []), entryCount: 20 },
+            taggedList,
+            untaggedHome,
+            untaggedProfile,
+          ],
           {
             unreadTotals: {
               allItems: 25,
               tags: [{ id: 20, unreadCount: 3 }],
+              groups: { tags: 3, feeds: 16 },
               networks: [
                 { network: 'bluesky', unreadCount: 6, profilesUnreadCount: 0 },
                 { network: 'mastodon', unreadCount: 8, profilesUnreadCount: 8 },
@@ -508,6 +520,16 @@ describe('SubscriptionsStore', () => {
       expect(store.untagged().map((subscription) => subscription.id)).toEqual([2]);
     });
 
+    it("counts each sidebar section's own unread, once", () => {
+      expect(store.feedGroupCounts().tags.unreadCount).toBe(3);
+      expect(store.feedGroupCounts().feeds.unreadCount).toBe(16);
+    });
+
+    it("sums each sidebar section's own posts, social feeds only where tagged", () => {
+      expect(store.feedGroupCounts().tags.entryCount).toBe(10 + 40);
+      expect(store.feedGroupCounts().feeds.entryCount).toBe(20);
+    });
+
     it('keeps a private feed out of the All items total but counts a profile feed', () => {
       expect(store.totalUnread()).toBe(1 + 16 + 8);
     });
@@ -528,7 +550,7 @@ describe('SubscriptionsStore', () => {
           ],
           profiles: socialProfiles([], 0),
           unreadCount: 6,
-          entryCount: 0,
+          entryCount: 120,
           saved: null,
           showsHandles: false,
         },
@@ -538,7 +560,7 @@ describe('SubscriptionsStore', () => {
           accounts: [],
           profiles: socialProfiles([untaggedProfile], 8),
           unreadCount: 8,
-          entryCount: 0,
+          entryCount: 160,
           saved: null,
           showsHandles: false,
         },

@@ -3,7 +3,8 @@
 
 .row {
   display: flex;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-1);
   padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -30,6 +31,11 @@
   --rim-base: var(--accent);
 
   background: var(--accent);
+}
+
+.top {
+  display: flex;
+  gap: var(--space-3);
 }
 
 .body {
@@ -69,15 +75,6 @@
    excerpt a shade so it recedes behind the highlight. */
 :host(.in-search) .snippet {
   color: var(--text-muted);
-}
-
-/* Tag pills and action icons share one line, icons just right of the pills
-   (not pushed to the row's far edge). `min-width: 0` keeps the truncation
-   chain so a long tag name shrinks rather than shoving the icons off. */
-.tagline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
 }
 
 .img-frame {

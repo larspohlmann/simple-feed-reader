@@ -8,9 +8,12 @@ use App\Dto\SavedSearch\CreateSavedSearchRequest;
 use App\Dto\SavedSearch\UpdateSavedSearchRequest;
 use App\Entity\SavedSearch;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Http\SavedSearchJson;
+use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\SavedSearchEditor;
+use App\Service\Search\SavedSearchNetworks;
 use App\Service\Search\SavedSearchTallies;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,6 +28,8 @@ final readonly class SavedSearchController
         private SavedSearchRepository $savedSearches,
         private SavedSearchTallies $tallies,
         private SavedSearchEditor $editor,
+        private SavedSearchNetworkInclusionRepository $includedNetworks,
+        private SavedSearchNetworks $networks,
     ) {
     }
 
@@ -43,6 +48,7 @@ final readonly class SavedSearchController
                 ),
                 $rows,
             ),
+            'includedNetworks' => SavedSearchJson::networks($this->includedNetworks->includedNetworksFor($userId)),
         ]);
     }
 
@@ -59,6 +65,22 @@ final readonly class SavedSearchController
             ['savedSearch' => SavedSearchJson::one($savedSearch, $this->tallies->forOne($savedSearch, $userId))],
             $outcome->isNew ? Response::HTTP_CREATED : Response::HTTP_OK,
         );
+    }
+
+    #[Route('/included-networks/{network}', name: 'api_saved_searches_include_network', methods: ['PUT'])]
+    public function includeNetwork(SocialNetwork $network, #[CurrentUser] User $user): JsonResponse
+    {
+        $this->networks->include($user, $network);
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/included-networks/{network}', name: 'api_saved_searches_exclude_network', methods: ['DELETE'])]
+    public function excludeNetwork(SocialNetwork $network, #[CurrentUser] User $user): JsonResponse
+    {
+        $this->networks->exclude($user, $network);
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/{id}', name: 'api_saved_searches_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\FeedPlatform;
 use App\Enum\FeedStatus;
 use App\Enum\SocialNetwork;
 use App\Repository\FeedRepository;
@@ -62,6 +63,9 @@ final class Feed
 
     #[ORM\Column(length: 16, nullable: true, enumType: SocialNetwork::class)]
     private ?SocialNetwork $network = null;
+
+    #[ORM\Column(length: 16, nullable: true, enumType: FeedPlatform::class)]
+    private ?FeedPlatform $platform = null;
 
     #[ORM\Embedded(class: FetchSchedule::class, columnPrefix: false)]
     private FetchSchedule $fetchSchedule;
@@ -177,6 +181,16 @@ final class Feed
     public function classifyAs(?SocialNetwork $network): void
     {
         $this->network = $network;
+    }
+
+    public function getPlatform(): ?FeedPlatform
+    {
+        return $this->platform;
+    }
+
+    public function recordPlatform(?FeedPlatform $platform): void
+    {
+        $this->platform = $platform;
     }
 
     public function getLastFetchedAt(): ?\DateTimeImmutable

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Subscription;
 
 use App\Service\Subscription\Model\SubscriptionChangeModel;
+use App\Service\Subscription\Model\InclusionChangeModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class UpdateSubscriptionRequest
@@ -17,6 +18,7 @@ final readonly class UpdateSubscriptionRequest
         public array $tagIds = [],
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
+        public ?bool $includeInSavedSearches = null,
     ) {
     }
 
@@ -25,8 +27,11 @@ final readonly class UpdateSubscriptionRequest
         return new SubscriptionChangeModel(
             customTitle: $this->customTitle,
             tagIds: $this->tagIds,
-            includeInAllItems: $this->includeInAllItems,
-            includeInForYou: $this->includeInForYou,
+            inclusions: new InclusionChangeModel(
+                includeInAllItems: $this->includeInAllItems,
+                includeInForYou: $this->includeInForYou,
+                includeInSavedSearches: $this->includeInSavedSearches,
+            ),
         );
     }
 }

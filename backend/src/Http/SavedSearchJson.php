@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\SavedSearch;
+use App\Enum\SocialNetwork;
 use App\Service\Search\Model\SavedSearchTallyModel;
 
 final class SavedSearchJson
@@ -35,5 +36,15 @@ final class SavedSearchJson
             'memberCount' => $tally->memberCount,
             'includeInDigest' => $savedSearch->isIncludeInDigest(),
         ];
+    }
+
+    /**
+     * @param list<SocialNetwork> $networks
+     *
+     * @return list<string>
+     */
+    public static function networks(array $networks): array
+    {
+        return array_map(static fn (SocialNetwork $network): string => $network->value, $networks);
     }
 }

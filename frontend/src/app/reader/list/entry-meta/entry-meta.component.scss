@@ -2,15 +2,27 @@
    `align-items: flex-end` levels actions with a wrapping pill list's last line. */
 :host {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
-  gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
   width: 100%;
   min-width: 0;
 }
 
-/* The pills are the row's only elastic item; the actions never shrink. The
-   min-width:0 chain into the pill list is what stops an unbreakable tag name
-   from widening the card. */
+/* The pills are the row's only elastic item, floored so a wide action cluster
+   wraps onto its own line instead of shrinking the names away (#1720, #1745).
+   The floor stays within 100%, keeping the min-width: 0 chain that stops an
+   unbreakable tag name from widening the card. */
 app-entry-pills {
   flex: 1 1 auto;
+  min-width: min(100%, 8rem);
+}
+
+/* No pills: no floor, or the actions would wrap below an empty line. */
+app-entry-pills:empty {
+  min-width: 0;
+}
+
+app-entry-actions {
+  margin-inline-start: auto;
 }

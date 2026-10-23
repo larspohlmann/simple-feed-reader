@@ -84,6 +84,10 @@ final readonly class RefreshRunStore
             return 'set-network-' . $request->networkScope->toRunKey();
         }
 
+        if (null !== $request->feedGroup) {
+            return 'group-' . $request->feedGroup->value;
+        }
+
         return 'all';
     }
 }

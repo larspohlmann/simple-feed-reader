@@ -44,6 +44,12 @@ describe('scrollKey', () => {
     ]);
     expect(keys.size).toBe(3);
   });
+
+  it('keeps the two feed groups apart', () => {
+    expect(scrollKey(sel({ kind: 'group', group: 'tags' }))).not.toBe(
+      scrollKey(sel({ kind: 'group', group: 'feeds' })),
+    );
+  });
 });
 
 describe('ListScrollMemory', () => {

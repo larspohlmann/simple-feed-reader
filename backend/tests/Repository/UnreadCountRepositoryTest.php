@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\FeedGroup;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\UnreadCountRepository;
@@ -219,6 +220,39 @@ final class UnreadCountRepositoryTest extends DbTestCase
 
         self::assertSame(1, $counts[SocialNetwork::Bluesky->value] ?? 0);
         self::assertSame(1, $counts[SocialNetwork::Mastodon->value] ?? 0);
+    }
+
+    public function testTheTagsGroupCountsATwiceTaggedFeedOnce(): void
+    {
+        $user = $this->user();
+        $news = $this->tag($user, 'news');
+        $tech = $this->tag($user, 'tech');
+        [$subscription, $feed] = $this->subscribedFeed($user, 'https://example.com/a.xml');
+        $subscription->addTag($news);
+        $subscription->addTag($tech);
+        [, $untaggedFeed] = $this->subscribedFeed($user, 'https://example.com/untagged.xml');
+        $this->unreadEntry($feed, 'tagged', null);
+        $this->unreadEntry($untaggedFeed, 'untagged', null);
+
+        self::assertSame(
+            [FeedGroup::Tags->value => 1, FeedGroup::Feeds->value => 1],
+            $this->repository()->perFeedGroup($user->requireId()),
+        );
+    }
+
+    public function testTheFeedsGroupSkipsSocialFeedsAndCountsFeedsHiddenFromAllItems(): void
+    {
+        $user = $this->user();
+        [$hidden, $hiddenFeed] = $this->subscribedFeed($user, 'https://example.com/hidden.xml');
+        $hidden->setIncludeInAllItems(false);
+        [, $homeFeed] = $this->subscribedFeed($user, 'social:bluesky:1:home', SourceFormat::BLUESKY_API);
+        $this->unreadEntry($hiddenFeed, 'hidden', null);
+        $this->unreadEntry($homeFeed, 'home', null);
+
+        self::assertSame(
+            [FeedGroup::Tags->value => 0, FeedGroup::Feeds->value => 1],
+            $this->repository()->perFeedGroup($user->requireId()),
+        );
     }
 
     private function repository(): UnreadCountRepository

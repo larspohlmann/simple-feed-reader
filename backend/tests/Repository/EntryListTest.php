@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\EntryView;
+use App\Enum\FeedGroup;
 use App\Enum\ListOrder;
 use App\Enum\SocialNetwork;
 use App\Pagination\EntryCursor;
@@ -25,6 +26,7 @@ use App\Repository\EntryScopePredicates;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\NetworkScope;
 use App\Repository\SearchTermsPredicateBuilder;
+use App\Repository\SubscriptionScopeRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\QueryRecorder;
@@ -123,6 +125,8 @@ final class EntryListTest extends DbTestCase
         $collapse = $container->get(DuplicateCollapseDql::class);
         /** @var EntryProjection $projection */
         $projection = $container->get(EntryProjection::class);
+        /** @var SubscriptionScopeRepository $subscriptionScopes */
+        $subscriptionScopes = $container->get(SubscriptionScopeRepository::class);
 
         return new EntryListRepository(
             $registry,
@@ -132,6 +136,7 @@ final class EntryListTest extends DbTestCase
             $collapse,
             new DateOrderedPage($windowSize),
             $projection,
+            $subscriptionScopes,
         );
     }
 
@@ -1168,6 +1173,47 @@ final class EntryListTest extends DbTestCase
         $this->expectExceptionMessage('No such entry.');
 
         $this->repository()->getOneSubscribedForUser($this->user->requireId(), $entry->requireId());
+    }
+
+    public function testAnEmptyFeedGroupIsAnEmptyPageWithoutAnEntryQuery(): void
+    {
+        $this->entry('untagged-post', '2026-07-02T00:00:00Z');
+
+        $recorded = $this->recordedList(
+            $this->repository(),
+            new EntryQuery($this->user->requireId(), feedGroup: FeedGroup::Tags),
+        );
+
+        self::assertSame([], $recorded['rows']);
+        self::assertCount(1, $recorded['queries']);
+        self::assertStringNotContainsString('FROM entry', $recorded['queries'][0]);
+    }
+
+    public function testAFeedGroupCopyIsNotCollapsedUnderACopyOutsideTheGroup(): void
+    {
+        [$taggedFeed] = $this->taggedFeedAndSubscription();
+        $this->entityManager->persist($this->sharedUrlCopy($taggedFeed, 'tagged-copy'));
+        $this->entityManager->persist($this->sharedUrlCopy($this->feed, 'plain-copy'));
+        $this->entityManager->flush();
+
+        $rows = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), feedGroup: FeedGroup::Feeds),
+        );
+
+        self::assertSame(['plain-copy'], $this->guids($rows));
+    }
+
+    private function sharedUrlCopy(Feed $feed, string $guid): Entry
+    {
+        return new Entry(
+            $feed,
+            $guid,
+            'https://example.com/shared-article',
+            'Shared article',
+            new \DateTimeImmutable('2026-07-05T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-05T00:00:00Z'),
+            'shared-article-hash',
+        );
     }
 
     private function entryOfAnUnsubscribedFeed(string $guid): Entry

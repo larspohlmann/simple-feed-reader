@@ -1,8 +1,9 @@
-/** The two per-feed inclusion switches, as a bulk change. An omitted field
+/** The per-feed inclusion switches, as a bulk change. An omitted field
  *  leaves the stored value alone — the API's null-means-unchanged convention. */
 export interface SubscriptionFlags {
   includeInAllItems?: boolean;
   includeInForYou?: boolean;
+  includeInSavedSearches?: boolean;
 }
 
 /** One bulk change across many feeds. At most one tag is added and at most one

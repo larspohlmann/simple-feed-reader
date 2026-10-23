@@ -1,8 +1,15 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { Subscription, finalize } from 'rxjs';
-import { ReaderApi, SavedSearchDraft } from '../reader-api';
+import { Observable, Subscription, catchError, finalize, of } from 'rxjs';
+import { ReaderApi } from '../reader-api';
+import { SavedSearchDraft } from '../saved-search-api-shapes';
 import { countsAreStale } from './sidebar-freshness';
 import { SavedSearchDto, SavedSearchWire } from '../models';
+import { SocialNetworkName } from '../../core/social-network';
+
+const sameMembers = (
+  left: ReadonlySet<SocialNetworkName>,
+  right: ReadonlySet<SocialNetworkName>,
+): boolean => left.size === right.size && [...left].every((network) => right.has(network));
 
 /** The user's saved searches, newest first, each with a live unread-match
  *  count. load() re-syncs the whole set -- the hook the shell calls after every
@@ -20,6 +27,12 @@ export class SavedSearchesStore {
    *  so a badge falls the instant a matching entry is read. Cleared on load(),
    *  when the backend re-counts from scratch. */
   private readonly readSinceLoad = signal<ReadonlySet<number>>(new Set());
+
+  private readonly storedIncludedNetworks = signal<ReadonlySet<SocialNetworkName>>(new Set(), {
+    equal: sameMembers,
+  });
+  /** The social networks whose feeds count in saved searches; every other network's are left out. */
+  readonly includedNetworks = this.storedIncludedNetworks.asReadonly();
 
   /** When the badges were last asked for, and the request still out for them —
    *  the two things the counts poll needs to know before it spends a tick. */
@@ -55,6 +68,7 @@ export class SavedSearchesStore {
       next: (response) => {
         this.inFlight = null;
         this.loaded.set(response.savedSearches);
+        this.storedIncludedNetworks.set(new Set(response.includedNetworks));
         // The server re-counted, so reads it already saw are spent. Ones that
         // arrived while this request was in flight are NOT in its tally, and
         // dropping them would put a knocked-down badge right back up (#708).
@@ -125,6 +139,34 @@ export class SavedSearchesStore {
         onSuccess?.();
       },
     });
+  }
+
+  toggleNetwork(network: SocialNetworkName): void {
+    if (this.includedNetworks().has(network)) this.excludeNetwork(network);
+    else this.includeNetwork(network);
+  }
+
+  includeNetwork(network: SocialNetworkName): void {
+    this.updateIncluded((included) => included.add(network));
+    this.reloadAfter(this.api.includeNetworkInSavedSearches(network));
+  }
+
+  excludeNetwork(network: SocialNetworkName): void {
+    this.updateIncluded((included) => included.delete(network));
+    this.reloadAfter(this.api.excludeNetworkFromSavedSearches(network));
+  }
+
+  private updateIncluded(mutate: (included: Set<SocialNetworkName>) => void): void {
+    this.storedIncludedNetworks.update((current) => {
+      const next = new Set(current);
+      mutate(next);
+      return next;
+    });
+  }
+
+  /** A failed write reloads too: that is what snaps the optimistic switch back. */
+  private reloadAfter(write: Observable<void>): void {
+    write.pipe(catchError(() => of(undefined))).subscribe(() => this.load());
   }
 
   /** Optimistic patch of one saved search's digest flag; reverts on a failed PATCH. */

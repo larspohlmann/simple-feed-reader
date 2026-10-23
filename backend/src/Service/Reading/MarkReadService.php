@@ -43,6 +43,10 @@ final readonly class MarkReadService
                 $userId,
                 $scope->targetNetworkScope(),
             ),
+            ReadScopeKind::Group => $this->subscriptionScope->findForUserInFeedGroup(
+                $userId,
+                $scope->targetFeedGroup(),
+            ),
         };
     }
 }

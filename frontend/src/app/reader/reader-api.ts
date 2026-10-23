@@ -1,3 +1,5 @@
+import { SocialNetworkName } from '../core/social-network';
+import { SavedSearchDraft, SavedSearchesResponse } from './saved-search-api-shapes';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
@@ -29,12 +31,6 @@ import {
   TagInput,
 } from './models';
 import { BulkSubscriptionUpdate } from './subscription-bulk';
-
-export interface SavedSearchDraft {
-  term: string;
-  wholeWord: boolean;
-  phrase: boolean;
-}
 
 export interface SubscribeRequest {
   url: string;
@@ -104,6 +100,7 @@ export class ReaderApi {
     if (query.tag != null) listParams = listParams.set('tag', query.tag);
     if (query.network != null) listParams = listParams.set('network', query.network);
     if (query.feedKind != null) listParams = listParams.set('feedKind', query.feedKind);
+    if (query.group != null) listParams = listParams.set('group', query.group);
     return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams, context });
   }
 
@@ -206,7 +203,8 @@ export class ReaderApi {
 
   /** Omit the scope (or pass an empty one) to refresh all the caller's due
    *  feeds; scope by feedId for a single feed (e.g. a just-added one) or by
-   *  tagId for every feed carrying that tag, or by network for that network's feeds. */
+   *  tagId for every feed carrying that tag, by network for that network's feeds, or by
+   *  group for a sidebar section's feeds. */
   refresh(scope?: RefreshScope): Observable<RefreshReport> {
     let params = new HttpParams();
     if (scope?.feedId != null) params = params.set('feedId', scope.feedId);
@@ -214,7 +212,7 @@ export class ReaderApi {
     else if (scope?.network != null) {
       params = params.set('network', scope.network);
       if (scope.feedKind != null) params = params.set('feedKind', scope.feedKind);
-    }
+    } else if (scope?.group != null) params = params.set('group', scope.group);
     return this.http.post<RefreshReport>(`${this.base}/api/refresh`, {}, { params });
   }
 
@@ -288,10 +286,21 @@ export class ReaderApi {
     return this.http.patch<void>(`${this.base}/api/tags/${tagId}/feed-order`, { subscriptionIds });
   }
 
-  savedSearches(): Observable<{ savedSearches: SavedSearchWire[] }> {
-    return this.http.get<{ savedSearches: SavedSearchWire[] }>(`${this.base}/api/saved-searches`, {
+  savedSearches(): Observable<SavedSearchesResponse> {
+    return this.http.get<SavedSearchesResponse>(`${this.base}/api/saved-searches`, {
       context: retryingTransientGatewayErrors(),
     });
+  }
+
+  includeNetworkInSavedSearches(network: SocialNetworkName): Observable<void> {
+    return this.http.put<void>(
+      `${this.base}/api/saved-searches/included-networks/${network}`,
+      null,
+    );
+  }
+
+  excludeNetworkFromSavedSearches(network: SocialNetworkName): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/saved-searches/included-networks/${network}`);
   }
 
   createSavedSearch(body: SavedSearchDraft): Observable<{ savedSearch: SavedSearchWire }> {

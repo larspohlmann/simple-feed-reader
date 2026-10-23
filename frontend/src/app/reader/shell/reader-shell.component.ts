@@ -174,7 +174,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return entry ? (this.feedTags().get(entry.subscriptionId) ?? []) : [];
   });
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
-  readonly searchPane = computed(() => this.screen.isWide() && isDirectSearch(this.selection()));
+  readonly searchPane = computed(
+    () => this.screen.isWide() && isDirectSearch(this.selection()) && this.layout.mode() === 'list',
+  );
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
   /** An article or link card filling the whole main area (not the split pane). */
   readonly articleFullscreen = computed(

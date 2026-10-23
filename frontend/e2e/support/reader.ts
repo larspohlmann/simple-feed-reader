@@ -149,6 +149,14 @@ function unreadTotalsOf(subscriptions: SubscriptionDto[]): UnreadTotalsDto {
     forYou: 0,
     tags: [...tagTotals].map(([id, unreadCount]) => ({ id, unreadCount })),
     networks: [],
+    groups: {
+      tags: subscriptions
+        .filter((subscription) => subscription.tags.length > 0)
+        .reduce((total, subscription) => total + subscription.unreadCount, 0),
+      feeds: subscriptions
+        .filter((subscription) => subscription.tags.length === 0 && !subscription.social)
+        .reduce((total, subscription) => total + subscription.unreadCount, 0),
+    },
   };
 }
 

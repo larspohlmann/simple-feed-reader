@@ -10,6 +10,7 @@ import { Selection, visibleSearchTerm } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
 import { isUnrenamedHome } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
+import { FeedGroupName } from '../../core/feed-group';
 import { SocialNetworkName } from '../../core/social-network';
 import { ReaderRouteState } from './reader-route-state.service';
 import { SocialSection, feedAvatarUrl } from '../state/social-sections';
@@ -113,6 +114,10 @@ export class ListHeading {
     all: () => this.i18n.translate('reader.allItems'),
     tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
     network: () => this.networkTitle(this.routeState.selection()),
+    group: () => {
+      const group = this.routeState.selection().group;
+      return group ? this.i18n.translate(GROUP_TITLE_KEY[group]) : '';
+    },
     search: () => `${this.searchTitlePrefix()} ${this.searchTitleBody()}`,
     subscription: () => {
       const subscription = this.selectedSubscription();
@@ -159,6 +164,10 @@ export class ListHeading {
     network: (selection) => {
       const counts = this.selectedNetworkCounts();
       return bySwitch(selection, counts.unreadCount, counts.entryCount);
+    },
+    group: (selection) => {
+      const counts = selection.group ? this.subscriptions.feedGroupCounts()[selection.group] : null;
+      return bySwitch(selection, counts?.unreadCount ?? 0, counts?.entryCount ?? 0);
     },
     subscription: (selection) => {
       const subscription = this.selectedSubscription();
@@ -229,6 +238,11 @@ export class ListHeading {
     this.savedSearches.savedSearches().reduce((sum, saved) => sum + saved.memberCount, 0),
   );
 }
+
+const GROUP_TITLE_KEY: Record<FeedGroupName, string> = {
+  tags: 'reader.tags',
+  feeds: 'reader.feeds',
+};
 
 function unread(value: number): TitleCount {
   return { value, counts: 'unread' };

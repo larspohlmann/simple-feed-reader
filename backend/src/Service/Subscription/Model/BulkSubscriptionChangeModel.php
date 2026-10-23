@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Subscription\Model;
 
-/** One tag and flag change across many feeds. A null flag stays as it is. */
+/** One tag and flag change across many feeds. */
 final readonly class BulkSubscriptionChangeModel
 {
     /**
@@ -16,8 +16,7 @@ final readonly class BulkSubscriptionChangeModel
         public array $subscriptionIds = [],
         public array $addTagIds = [],
         public array $removeTagIds = [],
-        public ?bool $includeInAllItems = null,
-        public ?bool $includeInForYou = null,
+        public InclusionChangeModel $inclusions = new InclusionChangeModel(),
     ) {
     }
 }

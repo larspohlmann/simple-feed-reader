@@ -1,11 +1,18 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
+import {
+  FEED_FLAG_TOGGLES,
+  excludedSurfaces,
+  exclusionTitle,
+  feedFlagLabelKey,
+} from '../../feed-exclusions';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
@@ -29,6 +36,8 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 })
 export class SidebarFeedRowComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
+  protected readonly feedFlags = FEED_FLAG_TOGGLES;
+  protected readonly feedFlagLabelKey = feedFlagLabelKey;
   protected readonly manage = inject(ManageActions);
   protected readonly screen = inject(LayoutService);
   protected readonly rows = inject(SidebarRowActions);
@@ -42,6 +51,16 @@ export class SidebarFeedRowComponent {
 
   /** A private feed's exclusion is its inherent state, so it carries no marker; a profile feed is ordinary RSS. */
   protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));
+
+  private readonly i18n = inject(TranslocoService);
+  private readonly savedSearches = inject(SavedSearchesStore);
+
+  /** A private feed is out of All items and For you by design, so only its saved-search state is news. */
+  protected readonly markerSurfaces = computed(() => {
+    const surfaces = excludedSurfaces(this.subscription(), this.savedSearches.includedNetworks());
+    return this.isPrivate() ? surfaces.filter((surface) => surface === 'savedSearches') : surfaces;
+  });
+  protected readonly markerTitle = computed(() => exclusionTitle(this.i18n, this.markerSurfaces()));
 
   protected readonly avatarUrl = computed(() => feedAvatarUrl(this.subscription()));
 

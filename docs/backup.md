@@ -168,11 +168,11 @@ file.
 | Line | What the line holds |
 |---|---|
 | `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. See the header field table below. |
-| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), and the magazine style (`magazineStyle`). |
+| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), the magazine style (`magazineStyle`), and the social networks whose feeds count in your saved searches (`savedSearchIncludedNetworks`; a network not listed is left out). |
 | `tag` | Each tag: `name`, `color`, `icon` and `position`. |
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. Your Saved from … feeds are included and come back as your own. |
-| `subscription` | Each subscription, with the address of its feed: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), whether its articles show in All items (`includeInAllItems`) and in "For you" (`includeInForYou`), and the tags on the subscription with their order. |
+| `subscription` | Each subscription, with the address of its feed: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), whether its articles show in All items (`includeInAllItems`), in "For you" (`includeInForYou`) and in saved searches (`includeInSavedSearches`), and the tags on the subscription with their order. |
 | `entry` | Each article, with the address of the feed it came from: `guid`, `guidHash`, `url`, `title`, `titleDerived` (the title was taken from the text, the feed gave none), `author`, the author's profile and picture (`authorUrl`, `authorAvatarUrl`; a restore drops one that is not an http(s) address or is longer than 2048 characters), `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`, and its renditions at other widths, `imageRenditions`), its embedded media and attachments (`media`, `attachments`), the preview cards of the links a post shares, in order (`linkCards`: each with `url`, `title`, `description`, `imageUrl` and `siteName`), its origin when it is an article saved from a feed you left (`origin`: `title`, `faviconUrl`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`), and what it shares (`shareKind`, `link`, `media` or `quote`, and `shareUrl`, its target; for a quote the post it quotes as one `quote` object: `url`, `authorName`, `authorHandle`, `authorAvatarUrl`, `postedAt`, `text`, `media` and `nestedQuote`, the post that one quotes in turn, with its `url` and `handle`; a restore drops a quote whose address is not an http(s) address or is longer than 2048 characters, and a quote share left without one comes back as a `link`). |
 | `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
 | `footer` | The number of lines of each kind, counting the lines of that part only. The restore uses these numbers to show you what the part holds. |
@@ -266,8 +266,8 @@ picker.
 | `digestLastSentAt` | The date the digest last sent. The next send writes it again, so a restored value would only delay that send. |
 | `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey. It records that the app showed you the offer, not a setting you chose. A restore into a fresh account should let that account see the offer. |
 
-**On each row you own.** The preferences, each tag, each subscription and each
-article mark all hold one pointer to their owner.
+**On each row you own.** The preferences, each tag, each subscription, each
+article mark and each included social network all hold one pointer to their owner.
 
 | Field | Why the file leaves it out |
 |---|---|
@@ -285,6 +285,7 @@ article mark all hold one pointer to their owner.
 | `lastModified` | The second half of the same pair of conditional-request values as `etag`. It is left out for the same reason. |
 | `imageCheckedAt` | When this instance last asked a Bluesky profile for its picture. Left unset, the new instance asks at once. |
 | `network` | Which social network the feed belongs to. It follows from the feed's address and format, and the new instance works it out again when it saves the restored feed. |
+| `platform` | Which publishing platform the feed runs on. The feed's own `<generator>` names it on every fetch, so the new instance learns it again on the first refresh. |
 | `fetchSchedule.lastFetchedAt` | Fetch bookkeeping of the instance. A restored feed has never been fetched by the new instance. |
 | `fetchSchedule.lastSuccessfulFetchAt` | The same bookkeeping. If it were carried, the new instance would report the feed as healthy before it had reached the feed once. |
 | `fetchSchedule.lastNewEntryAt` | The same bookkeeping: when the instance last saw new entries. A restored feed has seen none yet, so it stays empty. |

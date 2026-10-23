@@ -8,8 +8,10 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
+use App\Entity\SavedSearchNetworkInclusion;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Repository\EntryListRepository;
 use App\Repository\SavedSearchEntryRepository;
 use App\Service\Mail\Digest\DigestComposer;
@@ -126,6 +128,70 @@ final class DigestComposerTest extends DbTestCase
         self::assertEquals(new \DateTimeImmutable('2026-08-15T09:48:00Z'), $entryModel->publishedAt);
     }
 
+    public function testAnExcludedFeedLeavesTheDigestAndTheCount(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $this->member($rust, 'Kept', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
+        $dropped = $this->member($rust, 'Dropped', 'Feed B', new \DateTimeImmutable('2026-08-15T01:00:00Z'));
+        $this->subscriptionOf($dropped)->setIncludeInSavedSearches(false);
+        $this->entityManager->flush();
+
+        $model = $this->composer()->compose($this->user, $this->since);
+
+        self::assertNotNull($model);
+        self::assertSame(1, $model->totalCount);
+        self::assertSame(
+            ['Kept'],
+            array_map(static fn ($entry): string => $entry->title, $model->groups[0]->entries),
+        );
+    }
+
+    public function testADigestWhoseOnlyMatchesAreExcludedIsNotComposed(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $dropped = $this->member($rust, 'Dropped', 'Feed B', new \DateTimeImmutable('2026-08-15T01:00:00Z'));
+        $this->subscriptionOf($dropped)->setIncludeInSavedSearches(false);
+        $this->entityManager->flush();
+
+        self::assertNull($this->composer()->compose($this->user, $this->since));
+    }
+
+    public function testASocialPostStaysOutOfTheDigestUntilItsNetworkIsIncluded(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $post = $this->member(
+            $rust,
+            'Post',
+            'Bluesky',
+            new \DateTimeImmutable('2026-08-15T01:00:00Z'),
+            'https://bsky.app/profile/someone.bsky.social/rss',
+        );
+        self::assertSame(
+            SocialNetwork::Bluesky,
+            $post->getFeed()->getNetwork(),
+            'the URL classifies the feed on flush',
+        );
+
+        self::assertNull($this->composer()->compose($this->user, $this->since));
+
+        $this->entityManager->persist(new SavedSearchNetworkInclusion($this->user, SocialNetwork::Bluesky));
+        $this->entityManager->flush();
+
+        self::assertNotNull($this->composer()->compose($this->user, $this->since));
+    }
+
+    private function subscriptionOf(Entry $entry): Subscription
+    {
+        $subscription = $this->entityManager->getRepository(Subscription::class)
+            ->findOneBy(['feed' => $entry->getFeed(), 'user' => $this->user]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+
+        return $subscription;
+    }
+
     private function search(string $term): SavedSearch
     {
         $search = new SavedSearch($this->user, $term, false);
@@ -140,8 +206,9 @@ final class DigestComposerTest extends DbTestCase
         string $title,
         string $feedTitle,
         \DateTimeImmutable $effectiveDate,
+        ?string $feedUrl = null,
     ): Entry {
-        $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
+        $feed = new Feed($feedUrl ?? 'https://example.com/feed-' . uniqid('', true) . '.xml');
         $feed->setTitle($feedTitle);
         $this->entityManager->persist($feed);
         $this->entityManager->persist(

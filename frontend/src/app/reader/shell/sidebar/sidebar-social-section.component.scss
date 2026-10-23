@@ -2,34 +2,11 @@
 @include row.section-head;
 @include row.tag-head;
 @include row.tag-feeds;
-@include row.nav-states('.section-link', '.section-count');
+@include row.section-link;
 @include row.row-dots;
 
 :host {
   display: contents;
-}
-
-/* The title opens the network's combined view, so it reads as a nav row: hover, active and a tag-row count. */
-.section-link {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  padding-block: var(--space-1);
-  border-radius: var(--radius);
-  text-decoration: none;
-}
-
-.section-link .label {
-  margin-block: 0;
-}
-
-.section-count {
-  margin-inline: auto var(--space-2);
-}
-
-.section-link.active .label {
-  color: var(--accent);
 }
 
 .feedrow {

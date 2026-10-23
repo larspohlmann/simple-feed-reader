@@ -133,6 +133,7 @@ describe('RecommendationsService', () => {
         tag: null,
         network: null,
         feedKind: null,
+        group: null,
         subscription: null,
         entry: null,
         link: null,

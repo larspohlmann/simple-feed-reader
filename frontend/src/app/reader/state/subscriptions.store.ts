@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
+import { FeedGroupName } from '../../core/feed-group';
 import { Problem, parseProblem } from '../../core/problem';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { unhealthyFeeds } from '../feeds/feed-health';
@@ -8,6 +9,7 @@ import { ReaderApi } from '../reader-api';
 import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
 import { SocialAccountRefDto } from '../social-feed';
+import { SubscriptionFlags } from '../subscription-bulk';
 import { SubscriptionRows } from './subscription-rows';
 import { buildSocialSections, isEmptySavedFeed, isSocialFeed } from './social-sections';
 import {
@@ -17,7 +19,14 @@ import {
   SubscriptionDto,
   SubscriptionsResponse,
 } from '../models';
-import { buildTagTree, sumEntries, untaggedSubscriptions } from './subscription-derivations';
+import {
+  FeedGroupCounts,
+  buildTagTree,
+  sumEntries,
+  taggedSubscriptions,
+  totalEntryCount,
+  untaggedSubscriptions,
+} from './subscription-derivations';
 import {
   NO_UNREAD_TOTALS,
   UnreadTotals,
@@ -63,6 +72,17 @@ export class SubscriptionsStore {
       ),
     ),
   );
+  /** Each sidebar section's own list: what its header counts and its combined view holds. */
+  readonly feedGroupCounts = computed<Record<FeedGroupName, FeedGroupCounts>>(() => {
+    const unread = this.unreadTotals().groups;
+    return {
+      tags: {
+        unreadCount: unread.tags,
+        entryCount: totalEntryCount(taggedSubscriptions(this.subscriptions())),
+      },
+      feeds: { unreadCount: unread.feeds, entryCount: totalEntryCount(this.untagged()) },
+    };
+  });
   readonly socialSections = computed(() =>
     buildSocialSections(this.subscriptions(), this.socialAccounts(), this.unreadTotals()),
   );
@@ -324,12 +344,9 @@ export class SubscriptionsStore {
     );
   }
 
-  /** Optimistically apply an exclusion-flag toggle (All items / For you) so the
+  /** Optimistically apply an exclusion-flag toggle (All items / For you / saved searches) so the
    *  UI reflects it immediately; the caller reconciles with the server. */
-  patchLocal(
-    id: number,
-    flags: Partial<Pick<SubscriptionDto, 'includeInAllItems' | 'includeInForYou'>>,
-  ): void {
+  patchLocal(id: number, flags: SubscriptionFlags): void {
     this.patchSubscriptions((subscription) =>
       subscription.id === id ? { ...subscription, ...flags } : subscription,
     );
