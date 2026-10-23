@@ -1513,7 +1513,7 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 ### Hidden-feed favicon
 
-A feed hidden from All items, For you or saved searches (#688) shows it on its favicon, not with a trailing glyph. Only the feed's own exclusions mark it: a network-level saved-search exclusion is not repeated on each of the network's rows. The favicon greys and fades (`--hidden-favicon-opacity`, `grayscale(1)`), and a small eye badge sits on its bottom-right corner:
+A feed hidden from All items, For you or saved searches (#688) shows it on its favicon, not with a trailing glyph. Only the feed's own exclusions mark it: a network-level saved-search exclusion is not repeated on each of the network's rows. It marks the network (Bluesky, Mastodon) head's logo instead, with the same treatment and title (`row.hidden-feed-mark` in `_sidebar-row.scss` styles both). The favicon greys and fades (`--hidden-favicon-opacity`, `grayscale(1)`), and a small eye badge sits on its bottom-right corner:
 
 ```html
 <span class="favicon-slot" [class.hidden-feed]="excluded()">

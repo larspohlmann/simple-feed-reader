@@ -1,12 +1,15 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { SocialNetworkName } from '../../../core/social-network';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { LayoutService } from '../../layout.service';
+import { exclusionTitle } from '../../feed-exclusions';
+import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
@@ -21,6 +24,7 @@ const profilesCollapsedKey = (network: SocialNetworkName): string =>
 @Component({
   selector: 'app-sidebar-social-section',
   imports: [
+    NgTemplateOutlet,
     RouterLink,
     TranslocoPipe,
     IconComponent,
@@ -39,6 +43,8 @@ export class SidebarSocialSectionComponent {
 
   protected readonly rows = inject(SidebarRowActions);
   protected readonly screen = inject(LayoutService);
+  private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly i18n = inject(TranslocoService);
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
   protected readonly expanded = this.collapsible.expanded;
@@ -56,6 +62,13 @@ export class SidebarSocialSectionComponent {
     () => this.onThisNetwork() && this.selection().feedKind === 'profile',
   );
   protected readonly selectionQueryParams = selectionQueryParams;
+
+  protected readonly networkExcluded = computed(
+    () => !this.savedSearches.includedNetworks().has(this.section().network),
+  );
+  protected readonly networkExclusionTitle = computed(() =>
+    exclusionTitle(this.i18n, ['savedSearches']),
+  );
 
   protected readonly menuKey = computed(() => `social-${this.section().network}`);
 

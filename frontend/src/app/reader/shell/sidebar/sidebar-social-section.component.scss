@@ -5,6 +5,8 @@
 @include row.chevron('.section-chevron');
 @include row.dots;
 @include row.group;
+@include row.drag-handle;
+@include row.hidden-feed-mark('app-network-logo');
 
 :host {
   display: contents;
@@ -67,4 +69,17 @@
 .organising .rows {
   --row-fs: var(--fs-base);
   --row-inset: 0;
+}
+
+.organising .tagfeeds {
+  --row-inset: var(--space-5);
+}
+
+.organising .tag {
+  display: flex;
+}
+
+.organising .tag app-sidebar-group-row {
+  flex: 1;
+  min-width: 0;
 }

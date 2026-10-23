@@ -253,7 +253,9 @@ describe('SidebarSocialSectionComponent', () => {
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
 
-    const marker = element(mount(section)).querySelector('.feed-exclusion-marker');
+    const marker = element(mount(section)).querySelector(
+      'app-sidebar-feed-row .feed-exclusion-marker',
+    );
     expect(marker?.getAttribute('title')).toBe('Hidden from Saved searches');
   });
 
@@ -286,6 +288,16 @@ describe('SidebarSocialSectionComponent', () => {
   };
   const feedsRow = (root: HTMLElement) =>
     root.querySelector('[data-testid="sidebar-social-feeds"]') as HTMLElement | null;
+
+  it('leads the Feeds row with the handle gap only while organising, as the feed rows do', () => {
+    const fixture = mount(WITH_PROFILES);
+    expect(feedsRow(element(fixture))!.querySelector(':scope > .handle-gap')).toBeNull();
+
+    fixture.componentRef.setInput('organising', true);
+    fixture.detectChanges();
+
+    expect(feedsRow(element(fixture))!.querySelector(':scope > .handle-gap')).not.toBeNull();
+  });
 
   it('shows the profile feeds as a collapsed Feeds row with their summed count', () => {
     const root = element(mount(WITH_PROFILES));
@@ -376,7 +388,42 @@ describe('SidebarSocialSectionComponent', () => {
 
     expandProfiles('bluesky');
 
-    expect(element(mount(section)).querySelector('.feed-exclusion-marker')).not.toBeNull();
+    expect(
+      element(mount(section)).querySelector('app-sidebar-feed-row .feed-exclusion-marker'),
+    ).not.toBeNull();
+  });
+
+  describe("the head's saved-search mark", () => {
+    const headSlot = (fixture: ComponentFixture<SidebarSocialSectionComponent>) =>
+      element(fixture).querySelector('.section-head .favicon-slot')!;
+
+    it('leaves the logo of an included network unmarked', () => {
+      savedSearchesStore.includedNetworks.set(new Set(['bluesky']));
+      const slot = headSlot(mount(ONE_ACCOUNT));
+
+      expect(slot.querySelector('app-network-logo')).not.toBeNull();
+      expect(slot.classList).not.toContain('hidden-feed');
+      expect(slot.querySelector('.feed-exclusion-marker')).toBeNull();
+    });
+
+    it('fades the logo of an excluded network and badges it with the exact condition', () => {
+      const slot = headSlot(mount(ONE_ACCOUNT));
+      const marker = slot.querySelector('.feed-exclusion-marker')!;
+
+      expect(slot.classList).toContain('hidden-feed');
+      expect(marker.getAttribute('role')).toBe('img');
+      expect(marker.getAttribute('title')).toBe('Hidden from Saved searches');
+      expect(marker.getAttribute('aria-label')).toBe('Hidden from Saved searches');
+      expect(marker.textContent).toContain('visibility_off');
+    });
+
+    it('keeps the mark while organising', () => {
+      const fixture = mount(ONE_ACCOUNT);
+      fixture.componentRef.setInput('organising', true);
+      fixture.detectChanges();
+
+      expect(headSlot(fixture).querySelector('.feed-exclusion-marker')).not.toBeNull();
+    });
   });
 
   it("links the title to the network's combined view", () => {
@@ -518,15 +565,17 @@ describe('SidebarSocialSectionComponent', () => {
       expandProfiles('bluesky');
       const root = element(mount(profileSection(person(7, 'Amy'))));
 
-      expect(root.querySelector('.favicon-slot.hidden-feed')).toBeNull();
-      expect(root.querySelector('.feed-exclusion-marker')).toBeNull();
+      expect(root.querySelector('app-sidebar-feed-row .favicon-slot.hidden-feed')).toBeNull();
+      expect(root.querySelector('app-sidebar-feed-row .feed-exclusion-marker')).toBeNull();
     });
 
     it('marks a profile row whose own saved-search switch is off, network included or not', () => {
       expandProfiles('bluesky');
       const fixture = mount(profileSection({ ...person(7, 'Amy'), includeInSavedSearches: false }));
       const title = () =>
-        element(fixture).querySelector('.feed-exclusion-marker')?.getAttribute('title');
+        element(fixture)
+          .querySelector('app-sidebar-feed-row .feed-exclusion-marker')
+          ?.getAttribute('title');
 
       expect(title()).toBe('Hidden from Saved searches');
 

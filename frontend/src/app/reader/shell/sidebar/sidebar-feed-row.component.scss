@@ -4,44 +4,18 @@
 @include row.row-states(':host', ':host(.current)');
 @include row.drag-handle;
 @include row.dots;
+@include row.hidden-feed-mark('app-favicon');
 
 :host {
   @include row.row-geometry;
 }
 
 .favicon-slot {
-  position: relative;
-  flex: none;
-  display: inline-flex;
   margin-inline: var(--space-0);
 }
 
 .favicon-slot app-favicon {
   margin-inline-end: 0;
-}
-
-.hidden-feed > app-favicon {
-  opacity: var(--hidden-favicon-opacity);
-  filter: grayscale(1);
-}
-
-.feed-exclusion-marker {
-  position: absolute;
-  right: calc(var(--space-1) * -1.25);
-  bottom: calc(var(--space-1) * -1.25);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned badge measure, not a spacing value. */
-  width: 13px;
-  aspect-ratio: 1;
-  border-radius: var(--radius-pill);
-  background: var(--surface-1);
-  box-shadow: 0 0 0 1px var(--border);
-  color: var(--text-primary);
-  font-size: var(--icon-xs);
 }
 
 .feedname {

@@ -362,3 +362,36 @@
     background: var(--surface-sunken);
   }
 }
+
+/* A lead hidden from a surface — a feed's favicon, a network's logo: faded, with an eye badge on its corner. */
+@mixin hidden-feed-mark($lead) {
+  .favicon-slot {
+    position: relative;
+    flex: none;
+    display: inline-flex;
+  }
+
+  .hidden-feed > #{$lead} {
+    opacity: var(--hidden-favicon-opacity);
+    filter: grayscale(1);
+  }
+
+  .feed-exclusion-marker {
+    position: absolute;
+    right: calc(var(--space-1) * -1.25);
+    bottom: calc(var(--space-1) * -1.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+       tuned badge measure, not a spacing value. */
+    width: 13px;
+    aspect-ratio: 1;
+    border-radius: var(--radius-pill);
+    background: var(--surface-1);
+    box-shadow: 0 0 0 1px var(--border);
+    color: var(--text-primary);
+    font-size: var(--icon-xs);
+  }
+}

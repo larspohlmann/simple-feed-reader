@@ -6,7 +6,7 @@
     [attr.data-testid]="'sidebar-social-' + current.network"
   >
     @if (organising()) {
-      <app-network-logo [network]="current.network" />
+      <ng-container *ngTemplateOutlet="networkLogo" />
       <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
     } @else {
       <a
@@ -15,7 +15,7 @@
         [queryParams]="selectionQueryParams({ network: current.network })"
         queryParamsHandling="merge"
       >
-        <app-network-logo [network]="current.network" />
+        <ng-container *ngTemplateOutlet="networkLogo" />
         <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
         @if (current.unreadCount > 0) {
           <span class="section-count">{{ current.unreadCount }}</span>
@@ -92,6 +92,9 @@
         }
         <div class="group" [class.open]="profilesExpanded()">
           <div class="tag" data-testid="sidebar-social-feeds">
+            @if (organising()) {
+              <span class="handle-gap" aria-hidden="true"></span>
+            }
             <app-sidebar-group-row
               [link]="selectionQueryParams({ network: current.network, feedKind: 'profile' })"
               [label]="'reader.socialFeeds' | transloco"
@@ -135,3 +138,19 @@
     </div>
   }
 </div>
+
+<ng-template #networkLogo>
+  <span class="favicon-slot" [class.hidden-feed]="networkExcluded()">
+    <app-network-logo [network]="current.network" />
+    @if (networkExcluded()) {
+      <span
+        class="feed-exclusion-marker"
+        role="img"
+        [attr.aria-label]="networkExclusionTitle()"
+        [title]="networkExclusionTitle()"
+      >
+        <app-icon name="visibility_off" size="text" />
+      </span>
+    }
+  </span>
+</ng-template>
