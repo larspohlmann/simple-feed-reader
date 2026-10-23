@@ -98,6 +98,8 @@ fi
 # install. Both stacks can exist on a developer machine; update both.
 if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
   say 'Updating the development stack ...'
+  run_step 'Pulling updated base images' refresh_images compose \
+    || warn 'Could not pull updated base images; building on the cached ones.'
   run_step 'Rebuilding images where their definitions changed' \
     up_holding_worker compose --build --remove-orphans
 

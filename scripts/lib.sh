@@ -309,6 +309,15 @@ start_worker() {
   "${compose_command}" up -d "$@" worker
 }
 
+# `up --build` alone reuses the cached base images, so a patched PHP or MySQL
+# never reaches an installed stack (#1750). Takes the compose function.
+refresh_images() {
+  local compose_command=$1 status=0
+  "${compose_command}" pull --ignore-buildable --quiet || status=$?
+  "${compose_command}" build --pull || status=$?
+  return "${status}"
+}
+
 # Start every service and bring the backend to a ready state: dependencies
 # installed and the database migrated. Safe to re-run.
 bring_up_stack() {
