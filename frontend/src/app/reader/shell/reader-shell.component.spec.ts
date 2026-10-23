@@ -426,8 +426,7 @@ describe('ReaderShellComponent', () => {
     });
 
     it('shows the header again when the mobile drawer opens', () => {
-      // The drawer hangs below the bar, so opening it under a retracted header
-      // would leave a strip of backdrop where the bar belongs.
+      // An open drawer holds the bar shown, whatever the list's scroll.
       const fixture = boot();
       const rows = listScroller(fixture);
       rows.scrollTo(100);
@@ -3105,7 +3104,7 @@ describe('ReaderShellComponent', () => {
       });
     });
 
-    it('pauses the drawer swipe while organising', () => {
+    function bootDrawerShell(): ComponentFixture<ReaderShellComponent> {
       const controller = TestBed.inject(HttpTestingController);
       const fixture = TestBed.createComponent(ReaderShellComponent);
       fixture.detectChanges();
@@ -3125,6 +3124,11 @@ describe('ReaderShellComponent', () => {
           }),
         );
       fixture.detectChanges();
+      return fixture;
+    }
+
+    it('pauses the drawer swipe while organising', () => {
+      const fixture = bootDrawerShell();
 
       const swipe = fixture.debugElement
         .query(By.directive(DrawerSwipeDirective))
@@ -3137,28 +3141,24 @@ describe('ReaderShellComponent', () => {
     });
 
     it('resets organising when the drawer closes', () => {
-      const controller = TestBed.inject(HttpTestingController);
-      const fixture = TestBed.createComponent(ReaderShellComponent);
-      fixture.detectChanges();
-      controller
-        .match(() => true)
-        .forEach((testRequest) =>
-          testRequest.flush({
-            subscriptions: [],
-            tags: [],
-            entries: [],
-            savedSearches: [],
-            favoritesCount: 0,
-            unreadTotals: NO_UNREAD_TOTALS_DTO,
-            socialAccounts: [],
-            keptCount: 0,
-            nextCursor: null,
-          }),
-        );
+      const fixture = bootDrawerShell();
       fixture.componentInstance.setSidebarOpen(true);
       fixture.componentInstance.sidebarOrganising.set(true);
       fixture.componentInstance.setSidebarOpen(false);
       expect(fixture.componentInstance.sidebarOrganising()).toBe(false);
+    });
+
+    it('closes the drawer from the sidebar close button', () => {
+      const fixture = bootDrawerShell();
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
+
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('app-sidebar .close-drawer')!
+        .click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.sidebarOpen()).toBe(false);
     });
   });
 

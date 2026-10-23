@@ -94,4 +94,18 @@ describe('SidebarGroupRowComponent', () => {
     expect(chevron.getAttribute('aria-expanded')).toBe('true');
     expect(chevron.textContent).toContain('expand_more');
   });
+
+  it('marks its host current while active and open while expanded', () => {
+    const fixture = mount();
+    const row = root(fixture).querySelector('app-sidebar-group-row') as HTMLElement;
+    expect(row.classList).not.toContain('current');
+    expect(row.classList).not.toContain('open');
+
+    fixture.componentInstance.active.set(true);
+    fixture.componentInstance.expanded.set(true);
+    fixture.detectChanges();
+
+    expect(row.classList).toContain('current');
+    expect(row.classList).toContain('open');
+  });
 });

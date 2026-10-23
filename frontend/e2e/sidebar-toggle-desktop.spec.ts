@@ -33,6 +33,8 @@ test('hides the sidebar, keeps it hidden across a reload, then shows it again', 
   const body = page.locator('app-reader-shell > .body');
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
   await expect(sidebar).toBeVisible();
+  // 316px of cards in an 8px gutter each side (#1749).
+  expect((await page.locator('aside.sidebar').boundingBox())!.width).toBe(332);
 
   await page.getByRole('button', { name: 'Hide sidebar' }).click();
   await expect(body).toHaveClass(/sidebar-hidden/);

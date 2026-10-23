@@ -74,3 +74,29 @@
   color: var(--text-muted);
   font-size: var(--fs-xs);
 }
+
+// The sidebar's search card holds the field as an inset well: the card draws the rim.
+:host(.inset) .search-field {
+  margin-bottom: 0;
+}
+
+:host(.inset) .row {
+  height: calc(var(--control-h) - var(--space-0));
+  padding: 0 var(--sidebar-row-inset);
+  border-radius: calc(var(--radius-lg) - var(--space-0) / 2) var(--radius) var(--radius)
+    calc(var(--radius-lg) - var(--space-0) / 2);
+  background: var(--surface-0);
+}
+
+:host(.inset) .row:focus-within {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+:host(.inset) .input {
+  font-size: var(--fs-base);
+}
+
+:host(.inset) .hint {
+  margin-inline-start: var(--sidebar-row-inset);
+}

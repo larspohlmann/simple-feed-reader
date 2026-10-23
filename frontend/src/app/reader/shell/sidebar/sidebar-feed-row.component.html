@@ -3,42 +3,35 @@
 @if (organising()) {
   @if (draggable) {
     <span class="handle" cdkDragHandle aria-hidden="true">
-      <app-icon name="drag_indicator" size="sm" />
+      <app-icon name="drag_indicator" size="md" />
     </span>
+  } @else {
+    <span class="handle-gap" aria-hidden="true"></span>
   }
-  <span class="feedname"
-    ><app-favicon [url]="feed.faviconUrl" [avatarUrl]="avatarUrl()" /><span>{{ name }}</span></span
-  >
+  <span class="feedname">
+    <ng-container *ngTemplateOutlet="favicon" />
+    <span class="name">{{ name }}</span>
+  </span>
   <button
     class="dots"
     type="button"
+    aria-haspopup="dialog"
     [attr.aria-label]="'reader.manage' | transloco: { name: name }"
     (click)="rows.openFeedSheet(feed)"
   >
-    <app-icon name="more_horiz" size="sm" />
+    <app-icon name="more_horiz" size="md" />
   </button>
+  <span class="trail" aria-hidden="true"></span>
 } @else {
   <a
     class="nav"
-    [class.tag-sub]="tagId() !== null"
     [class.active]="active()"
     [routerLink]="['/']"
     [queryParams]="selectionQueryParams({ subscription: feed.id })"
     queryParamsHandling="merge"
   >
-    <app-favicon
-      [url]="feed.faviconUrl"
-      [avatarUrl]="avatarUrl()"
-      [class.has-avatar]="avatarUrl() !== null"
-    /><span>{{ name }}</span>
-    @if (markerSurfaces().length > 0) {
-      <app-icon
-        class="feed-exclusion-marker"
-        name="visibility_off"
-        size="xs"
-        [title]="markerTitle()"
-      />
-    }
+    <ng-container *ngTemplateOutlet="favicon" />
+    <span class="name">{{ name }}</span>
     @if (feed.unreadCount > 0) {
       <span class="count">{{ feed.unreadCount }}</span>
     }
@@ -52,15 +45,34 @@
         <button role="menuitem" (click)="manage.editSubscription(feed); rows.closeMenu()">
           {{ 'reader.editFeed' | transloco }}
         </button>
+        <hr />
         @for (flag of feedFlags; track flag.surface) {
           <button role="menuitem" (click)="rows.toggleFeedFlag(flag, feed)">
             {{ feedFlagLabelKey(flag, feed) | transloco }}
           </button>
         }
-        <button role="menuitem" (click)="manage.unsubscribe(feed); rows.closeMenu()">
+        <hr />
+        <button role="menuitem" class="danger" (click)="manage.unsubscribe(feed); rows.closeMenu()">
           {{ 'reader.unsubscribe' | transloco }}
         </button>
       </ng-template>
     </app-sidebar-row-menu>
   }
+  <span class="trail" aria-hidden="true"></span>
 }
+
+<ng-template #favicon>
+  <span class="favicon-slot" [class.hidden-feed]="excluded()">
+    <app-favicon [url]="subscription().faviconUrl" [avatarUrl]="avatarUrl()" />
+    @if (excluded()) {
+      <span
+        class="feed-exclusion-marker"
+        role="img"
+        [attr.aria-label]="markerTitle()"
+        [title]="markerTitle()"
+      >
+        <app-icon name="visibility_off" size="text" />
+      </span>
+    }
+  </span>
+</ng-template>

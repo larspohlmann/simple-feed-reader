@@ -4,16 +4,16 @@ import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import {
   FEED_FLAG_TOGGLES,
   exclusionTitle,
-  excludedSurfaces,
+  ownExcludedSurfaces,
   feedFlagLabelKey,
   flipFeedFlag,
 } from './feed-exclusions';
 import { ManageActions } from './feeds/manage/manage-actions.service';
 import { makeSubscription } from './testing/subscription.factory';
 
-describe('excludedSurfaces', () => {
+describe('ownExcludedSurfaces', () => {
   it('is empty for a plain feed with every switch on', () => {
-    expect(excludedSurfaces(makeSubscription(), new Set())).toEqual([]);
+    expect(ownExcludedSurfaces(makeSubscription())).toEqual([]);
   });
 
   it('lists every surface whose switch is off, in sidebar order', () => {
@@ -23,16 +23,15 @@ describe('excludedSurfaces', () => {
       includeInSavedSearches: false,
     });
 
-    expect(excludedSurfaces(feed, new Set())).toEqual(['allItems', 'forYou', 'savedSearches']);
+    expect(ownExcludedSurfaces(feed)).toEqual(['allItems', 'forYou', 'savedSearches']);
   });
 
-  it('counts a social feed of an unincluded network as out of saved searches', () => {
+  it('ignores the network a social feed belongs to', () => {
     const feed = makeSubscription({
       social: { network: 'bluesky', kind: 'profile', accountId: null },
     });
 
-    expect(excludedSurfaces(feed, new Set())).toEqual(['savedSearches']);
-    expect(excludedSurfaces(feed, new Set(['bluesky']))).toEqual([]);
+    expect(ownExcludedSurfaces(feed)).toEqual([]);
   });
 });
 

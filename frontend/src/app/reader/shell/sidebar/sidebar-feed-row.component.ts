@@ -1,4 +1,5 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -8,15 +9,15 @@ import { Selection, selectionQueryParams } from '../../query/query';
 import { SubscriptionDto } from '../../models';
 import {
   FEED_FLAG_TOGGLES,
-  excludedSurfaces,
+  ownExcludedSurfaces,
   exclusionTitle,
   feedFlagLabelKey,
 } from '../../feed-exclusions';
-import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
+import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 
 /** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
@@ -24,6 +25,7 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 @Component({
   selector: 'app-sidebar-feed-row',
   imports: [
+    NgTemplateOutlet,
     RouterLink,
     CdkDragHandle,
     TranslocoPipe,
@@ -33,6 +35,8 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
   ],
   templateUrl: './sidebar-feed-row.component.html',
   styleUrl: './sidebar-feed-row.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.current]': 'active()', '[class.organising]': 'organising()' },
 })
 export class SidebarFeedRowComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
@@ -53,14 +57,18 @@ export class SidebarFeedRowComponent {
   protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));
 
   private readonly i18n = inject(TranslocoService);
-  private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly dictionary = inject(ActiveDictionary);
 
   /** A private feed is out of All items and For you by design, so only its saved-search state is news. */
   protected readonly markerSurfaces = computed(() => {
-    const surfaces = excludedSurfaces(this.subscription(), this.savedSearches.includedNetworks());
+    const surfaces = ownExcludedSurfaces(this.subscription());
     return this.isPrivate() ? surfaces.filter((surface) => surface === 'savedSearches') : surfaces;
   });
-  protected readonly markerTitle = computed(() => exclusionTitle(this.i18n, this.markerSurfaces()));
+  protected readonly markerTitle = computed(() => {
+    this.dictionary.loaded();
+    return exclusionTitle(this.i18n, this.markerSurfaces());
+  });
+  protected readonly excluded = computed(() => this.markerSurfaces().length > 0);
 
   protected readonly avatarUrl = computed(() => feedAvatarUrl(this.subscription()));
 

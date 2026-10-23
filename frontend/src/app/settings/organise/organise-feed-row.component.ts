@@ -27,10 +27,9 @@ import {
   ExclusionSurface,
   FEED_FLAG_TOGGLES,
   FeedFlagToggle,
-  excludedSurfaces,
   feedFlagLabelKey,
+  ownExcludedSurfaces,
 } from '../../reader/feed-exclusions';
-import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 
 /**
  * One feed row on the Organise page. Presentational on purpose: the tree and
@@ -93,14 +92,11 @@ export class OrganiseFeedRowComponent {
   protected readonly screen = inject(LayoutService);
   private readonly sheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
-  private readonly savedSearches = inject(SavedSearchesStore);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly menuOpen = signal(false);
 
-  protected readonly excluded = computed(
-    () => excludedSurfaces(this.subscription(), this.savedSearches.includedNetworks()).length > 0,
-  );
+  protected readonly excluded = computed(() => ownExcludedSurfaces(this.subscription()).length > 0);
 
   protected readonly visibleTags = computed(() =>
     this.subscription().tags.filter((tag) => tag.id !== this.hideTagId()),

@@ -1,27 +1,78 @@
 @use 'sidebar-row' as row;
+@include row.card;
+@include row.row-parts;
 @include row.section-head;
-@include row.tag-head;
-@include row.tag-feeds;
-@include row.section-link;
-@include row.row-dots;
+@include row.chevron('.section-chevron');
+@include row.dots;
+@include row.group;
+@include row.drag-handle;
+@include row.hidden-feed-mark('app-network-logo');
 
 :host {
   display: contents;
 }
 
-.feedrow {
+.section-head app-network-logo {
+  width: var(--icon-dense);
+  height: var(--icon-dense);
+}
+
+.rows {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: var(--space-0);
+}
+
+.tagfeeds {
+  --row-inset: var(--sidebar-row-deep-inset);
+
+  display: flex;
+  flex-direction: column;
+}
+
+.divider {
+  flex: none;
+  margin: var(--space-1) var(--space-3) var(--space-1) var(--sidebar-row-deep-inset);
+  border-top: 1px solid var(--border);
 }
 
 .account-handle {
   /* The sidebar is a scrolling flex column, and `overflow: hidden` drops the auto min-height: without this the
      line shrinks to nothing once the sidebar overflows. */
   flex: none;
-  margin: var(--space-2) var(--space-2) var(--space-1);
+  margin: var(--space-2) var(--space-2) var(--space-1) var(--sidebar-row-inset);
   overflow: hidden;
   color: var(--text-muted);
   font-size: var(--fs-xs);
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.organising .section-head {
+  gap: calc(var(--space-2) + var(--space-0));
+}
+
+.organising .section-head app-network-logo {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.organising .rows {
+  --row-fs: var(--fs-base);
+}
+
+.organising .tagfeeds {
+  --row-inset: var(--space-5);
+}
+
+.organising .tag {
+  display: flex;
+}
+
+.organising .tag app-sidebar-group-row {
+  flex: 1;
+  min-width: 0;
 }

@@ -174,6 +174,17 @@ describe('OrganiseFeedRowComponent', () => {
     expect(fixture.debugElement.query(By.css('[data-test="excluded"]'))).toBeNull();
   });
 
+  it('leaves a social feed unmarked when only its network is left out of saved searches', async () => {
+    await render({
+      subscription: {
+        ...SUBSCRIPTION,
+        social: { network: 'bluesky', kind: 'profile', accountId: null },
+      },
+    });
+
+    expect(fixture.debugElement.query(By.css('[data-test="excluded"]'))).toBeNull();
+  });
+
   it('opens a popover menu on a fine pointer instead of the action sheet', async () => {
     await render();
 

@@ -203,9 +203,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  child rather than owned here, since the bar's open/closed state (trigger,
    *  close button, Escape, outside click) is entirely the header's business. */
   private readonly headerSearchOpen = computed(() => this.header()?.searchOpen() ?? false);
-  /** Either overlay hanging off the header -- drawer or search bar -- force-
-   *  shows it. A single derived signal, read from the one place that applies
-   *  the rule, so the two overlays can never disagree the way two writers once did. */
+  /** The open drawer (a full-height sheet over the bar) or search bar keeps the header shown. */
   private readonly headerOverlayOpen = computed(
     () => this.sidebarOpen() || this.headerSearchOpen(),
   );
@@ -276,9 +274,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       );
       this.resizeObs.observe(headerElement);
     }
-    // This height drives the content area's top padding and the mobile
-    // drawer's offset too, not just the header's slide. Until the observer's
-    // first callback lands, the stylesheet's own 56px holds -- hence `headerHeight() || null`.
+    // This height drives the content area's top padding, not just the header's
+    // slide. Until the observer's first callback lands, the stylesheet's own 56px holds.
   }
 
   ngOnDestroy(): void {
@@ -316,17 +313,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly tabTitle = inject(ReaderTabTitle);
 
-  /**
-   * The mobile drawer hangs below the header, so it must never open under a
-   * retracted one -- that would leave a strip of backdrop where the bar
-   * should be. On close, the header returns to what the *list's* scroll
-   * position implies (unless the search bar is still open -- see the
-   * constructor's `headerOverlayOpen` effect), asked of the list itself since
-   * the last scroller to fire may have been an article's (#128). Leaving the
-   * bar expanded over a scrolled-down list dead-zones touch-scroll in the
-   * strip it overlays, reading as the list refusing to scroll until the swipe
-   * starts below the bar.
-   */
   setSidebarOpen(open: boolean): void {
     if (!open) this.sidebarOrganising.set(false);
     this.sidebarOpen.set(open);

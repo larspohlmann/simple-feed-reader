@@ -1,7 +1,11 @@
+import { moveItemInArray } from '@angular/cdk/drag-drop';
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
-import { ActionSheetAction } from '../../../shared/action-sheet/action-sheet.component';
+import {
+  ACTION_SHEET_DIVIDER,
+  ActionSheetAction,
+} from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
@@ -15,6 +19,8 @@ import {
 import { SocialAccountRefDto } from '../../social-feed';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
+import { siblingIdsOf } from '../../state/subscription-derivations';
+import { TagsStore } from '../../state/tags.store';
 
 const SAVED_SEARCHES_CHOICE = 'savedSearches';
 
@@ -28,6 +34,7 @@ export class SidebarRowActions {
   private readonly transloco = inject(TranslocoService);
   private readonly picker = inject(SocialFeedsPicker);
   private readonly savedSearches = inject(SavedSearchesStore);
+  private readonly tags = inject(TagsStore);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly menuFor = signal<string | null>(null);
@@ -42,14 +49,34 @@ export class SidebarRowActions {
     this.menuFor.set(null);
   }
 
-  /** ⋯ on a tag row (coarse): sheet with the tag's actions. */
+  /** ⋯ on a tag row (coarse): the tag's actions; the moves stay within its sibling set, like a drag. */
   openTagSheet(tag: TagDto): void {
+    const siblingIds = siblingIdsOf(this.tags.tags(), tag);
+    const index = siblingIds.indexOf(tag.id);
     this.sheet
       .open({
         title: tag.name,
         actions: [
-          { id: 'edit', label: this.transloco.translate('reader.editTag') },
-          { id: 'delete', label: this.transloco.translate('reader.deleteTag'), danger: true },
+          { id: 'edit', label: this.transloco.translate('reader.editTag'), symbol: 'edit' },
+          {
+            id: 'moveUp',
+            label: this.transloco.translate('reader.moveTagUp'),
+            symbol: 'arrow_upward',
+            disabled: index <= 0,
+          },
+          {
+            id: 'moveDown',
+            label: this.transloco.translate('reader.moveTagDown'),
+            symbol: 'arrow_downward',
+            disabled: index < 0 || index === siblingIds.length - 1,
+          },
+          ACTION_SHEET_DIVIDER,
+          {
+            id: 'delete',
+            label: this.transloco.translate('reader.deleteTag'),
+            symbol: 'delete',
+            danger: true,
+          },
         ],
       })
       // A sheet can outlive the sidebar (e.g. the shell unmounts); a late
@@ -57,8 +84,20 @@ export class SidebarRowActions {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.manage.editTag(tag);
+        if (choice === 'moveUp') this.moveTag(tag, -1);
+        if (choice === 'moveDown') this.moveTag(tag, 1);
         if (choice === 'delete') this.manage.deleteTag(tag);
       });
+  }
+
+  /** Reads the siblings afresh: the order the sheet opened on may have changed while it was up. */
+  private moveTag(tag: TagDto, step: -1 | 1): void {
+    const siblingIds = siblingIdsOf(this.tags.tags(), tag);
+    const from = siblingIds.indexOf(tag.id);
+    const to = from + step;
+    if (from < 0 || to < 0 || to >= siblingIds.length) return;
+    moveItemInArray(siblingIds, from, to);
+    this.manage.reorderTags(siblingIds);
   }
 
   /** ⋯ on a feed row (coarse): sheet with the subscription's actions. */

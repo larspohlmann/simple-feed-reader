@@ -1074,6 +1074,7 @@
     "toggleSidebar": "Seitenleiste umschalten",
     "hideSidebar": "Seitenleiste ausblenden",
     "showSidebar": "Seitenleiste einblenden",
+    "closeSidebar": "Seitenleiste schließen",
     "mediaVideo": "Video",
     "media": {
       "gif": "GIF"
@@ -1189,6 +1190,8 @@
       "mastodon": "mastodon"
     },
     "organise": "Organisieren",
+    "organiseDone": "Fertig",
+    "organiseHint": "Zieh einen Griff, um innerhalb seiner Ebene umzusortieren, oder tippe auf ⋯ für die Optionen einer Zeile. Leg einen Feed auf einen Tag, um ihn zu taggen.",
     "account": "Konto",
     "settings": "Einstellungen",
     "admin": "Admin",
@@ -1202,6 +1205,8 @@
     "manage": "{{name}} verwalten",
     "editTag": "Tag bearbeiten",
     "deleteTag": "Tag löschen",
+    "moveTagUp": "Nach oben",
+    "moveTagDown": "Nach unten",
     "editFeed": "Feed bearbeiten",
     "unsubscribe": "Abbestellen",
     "excludeFromAllItems": "Aus Alle Einträge ausschließen",

@@ -1,7 +1,7 @@
 <div class="seg" role="group" [attr.aria-label]="'reader.brightness.aria' | transloco">
   <button
     type="button"
-    class="darker"
+    class="end darker"
     [title]="'reader.brightness.darker' | transloco"
     [attr.aria-label]="'reader.brightness.darker' | transloco"
     [disabled]="brightness.step() === brightness.min()"
@@ -20,7 +20,7 @@
   </button>
   <button
     type="button"
-    class="brighter"
+    class="end brighter"
     [title]="'reader.brightness.brighter' | transloco"
     [attr.aria-label]="'reader.brightness.brighter' | transloco"
     [disabled]="brightness.step() === brightness.max()"

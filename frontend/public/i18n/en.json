@@ -1074,6 +1074,7 @@
     "toggleSidebar": "Toggle sidebar",
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
+    "closeSidebar": "Close sidebar",
     "mediaVideo": "Video",
     "media": {
       "gif": "GIF"
@@ -1189,6 +1190,8 @@
       "mastodon": "mastodon"
     },
     "organise": "Organise",
+    "organiseDone": "Done",
+    "organiseHint": "Drag a handle to reorder within its level, or tap ⋯ for a row’s options. Drop a feed on a tag to tag it.",
     "account": "Account",
     "settings": "Settings",
     "admin": "Admin",
@@ -1202,6 +1205,8 @@
     "manage": "Manage {{name}}",
     "editTag": "Edit tag",
     "deleteTag": "Delete tag",
+    "moveTagUp": "Move up",
+    "moveTagDown": "Move down",
     "editFeed": "Edit feed",
     "unsubscribe": "Unsubscribe",
     "excludeFromAllItems": "Exclude from All items",

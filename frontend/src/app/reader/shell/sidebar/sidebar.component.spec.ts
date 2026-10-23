@@ -20,6 +20,7 @@ import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../mo
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
+import { ACTION_SHEET_DIVIDER } from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
@@ -123,6 +124,15 @@ function inputDefaults() {
   };
 }
 
+function clickSectionChevron(
+  fixture: ComponentFixture<SidebarComponent>,
+  head: '.tags-head' | '.feeds-head',
+): void {
+  (fixture.nativeElement as HTMLElement)
+    .querySelector<HTMLButtonElement>(`${head} .section-chevron`)!
+    .click();
+}
+
 function mount(
   over: Partial<{
     tagTree: TagNode[];
@@ -205,8 +215,8 @@ describe('SidebarComponent', () => {
     const addFeed = jest.fn();
     fixture.componentInstance.refresh.subscribe(refresh);
     fixture.componentInstance.addFeed.subscribe(addFeed);
-    (element.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).click();
-    (element.querySelector('.act[aria-label="Add feed"]') as HTMLButtonElement).click();
+    (element.querySelector('.tool[aria-label="Refresh"]') as HTMLButtonElement).click();
+    (element.querySelector('.tool[aria-label="Add feed"]') as HTMLButtonElement).click();
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(addFeed).toHaveBeenCalledTimes(1);
   });
@@ -217,7 +227,7 @@ describe('SidebarComponent', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     expect(
-      (element.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).disabled,
+      (element.querySelector('.tool[aria-label="Refresh"]') as HTMLButtonElement).disabled,
     ).toBe(true);
     // The refresh has exactly one bar and it belongs to the app bar. A second one
     // here was narrower than the first, sat directly under it on desktop, and drew
@@ -237,10 +247,10 @@ describe('SidebarComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('.tag')!.textContent).toContain('Tech');
     expect(element.querySelector('.tag')!.textContent).toContain('9');
-    expect(element.querySelectorAll('.tag-sub').length).toBe(0);
+    expect(element.querySelectorAll('.tagfeeds app-sidebar-feed-row').length).toBe(0);
     (element.querySelector('.tag .chevzone') as HTMLButtonElement).click();
     fixture.detectChanges();
-    expect(element.querySelectorAll('.tag-sub').length).toBe(2);
+    expect(element.querySelectorAll('.tagfeeds app-sidebar-feed-row').length).toBe(2);
   });
 
   it('renders the tag icon (tinted with its colour) when set, else the colour dot', () => {
@@ -561,10 +571,15 @@ describe('SidebarComponent', () => {
       const heads = (fixture: ReturnType<typeof mount>) =>
         [...(fixture.nativeElement as HTMLElement).querySelectorAll('.taghead')].map((head) => ({
           name: head.textContent?.match(/t\d+/)?.[0],
-          child: head.classList.contains('child'),
+          child: head.closest('.tag-child') !== null,
         }));
 
-      it('shows children indented, and only while their parent is expanded', () => {
+      const blockKinds = (parent: Element) =>
+        [...parent.children].map((block) =>
+          ['taghead', 'tag-child', 'tagfeeds'].find((kind) => block.classList.contains(kind)),
+        );
+
+      it('nests children in a box, only while their parent is open', () => {
         const fixture = mount({ tagTree: tree() });
         expect(heads(fixture).map((head) => head.name)).toEqual(['t10', 't20']);
 
@@ -579,34 +594,50 @@ describe('SidebarComponent', () => {
         ]);
       });
 
-      it("lists an expanded parent's children before the parent's own feeds", () => {
+      it('nests an open root as a group: its head, a box per child, then its own feeds', () => {
         const fixture = mount({
-          tagTree: [
-            {
-              ...parentNode(10, [tagNode(11, [sub(2)], 10)]),
-              subscriptions: [sub(1)],
-            },
-          ],
+          tagTree: [{ ...parentNode(10, [tagNode(11, [sub(2)], 10)]), subscriptions: [sub(1)] }],
         });
         fixture.componentInstance.toggle(10);
         fixture.componentInstance.toggle(11);
         fixture.detectChanges();
 
-        const blocks = [
-          ...(fixture.nativeElement as HTMLElement).querySelectorAll(
-            '.tags > .taghead, .tags > .tagfeeds',
-          ),
-        ].map((block) => ({
-          kind: block.classList.contains('taghead') ? 'head' : 'feeds',
-          child: block.classList.contains('child'),
-        }));
+        const group = (fixture.nativeElement as HTMLElement).querySelector('.tags > .tag-group')!;
+        expect(group.classList).toContain('open');
+        expect(blockKinds(group)).toEqual(['taghead', 'tag-child', 'tagfeeds']);
+        const box = group.querySelector('.tag-child')!;
+        expect(blockKinds(box)).toEqual(['taghead', 'tagfeeds']);
+        expect(box.querySelector('.taghead')!.closest('.tag-child')).toBe(box);
+      });
 
-        expect(blocks).toEqual([
-          { kind: 'head', child: false },
-          { kind: 'head', child: true },
-          { kind: 'feeds', child: true },
-          { kind: 'feeds', child: false },
-        ]);
+      it('shows a closed child as a box with its head only', () => {
+        const fixture = mount({ tagTree: [parentNode(10, [tagNode(11, [sub(2)], 10)])] });
+        fixture.componentInstance.toggle(10);
+        fixture.detectChanges();
+
+        const box = (fixture.nativeElement as HTMLElement).querySelector('.tag-child')!;
+        expect(blockKinds(box)).toEqual(['taghead']);
+      });
+
+      it('leaves a closed root a plain group with only its head', () => {
+        const fixture = mount({ tagTree: tree() });
+
+        const group = (fixture.nativeElement as HTMLElement).querySelector('.tags > .tag-group')!;
+        expect(group.classList).not.toContain('open');
+        expect(blockKinds(group)).toEqual(['taghead']);
+      });
+
+      it('keeps every drop list a sibling, never nested in another', () => {
+        const fixture = mount({
+          tagTree: [{ ...parentNode(10, [tagNode(11, [sub(2)], 10)]), subscriptions: [sub(1)] }],
+        });
+        fixture.componentInstance.toggle(10);
+        fixture.componentInstance.toggle(11);
+        fixture.detectChanges();
+        const element = fixture.nativeElement as HTMLElement;
+
+        expect(element.querySelectorAll('.tags .cdk-drop-list')).toHaveLength(4);
+        expect(element.querySelectorAll('.cdk-drop-list .cdk-drop-list')).toHaveLength(0);
       });
 
       it('lets a tag head accept a feed from anywhere but a tag only from its own sibling set', () => {
@@ -716,7 +747,7 @@ describe('SidebarComponent', () => {
     ]);
 
     (
-      element.querySelector('.feedrow .pop [role="menuitem"]:nth-child(2)') as HTMLButtonElement
+      element.querySelector('.feedrow .pop [role="menuitem"]:nth-of-type(2)') as HTMLButtonElement
     ).click();
     fixture.detectChanges();
     expect(toggleAllItems).toHaveBeenCalledWith(subscription);
@@ -725,7 +756,7 @@ describe('SidebarComponent', () => {
     (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
     (
-      element.querySelector('.feedrow .pop [role="menuitem"]:nth-child(3)') as HTMLButtonElement
+      element.querySelector('.feedrow .pop [role="menuitem"]:nth-of-type(3)') as HTMLButtonElement
     ).click();
     expect(toggleForYou).toHaveBeenCalledWith(subscription);
   });
@@ -753,11 +784,11 @@ describe('SidebarComponent', () => {
       toggleForYou(sub),
     );
 
-    (element.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
+    (element.querySelector('.tagfeeds .nav + .rowmenu .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
-    const labels = [...element.querySelectorAll('.tag-sub + .rowmenu .pop [role="menuitem"]')].map(
-      (item) => item.textContent?.trim(),
-    );
+    const labels = [
+      ...element.querySelectorAll('.tagfeeds .nav + .rowmenu .pop [role="menuitem"]'),
+    ].map((item) => item.textContent?.trim());
     expect(labels).toEqual([
       'Edit feed',
       'Exclude from All items',
@@ -768,28 +799,51 @@ describe('SidebarComponent', () => {
 
     (
       element.querySelector(
-        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-child(2)',
+        '.tagfeeds .nav + .rowmenu .pop [role="menuitem"]:nth-of-type(2)',
       ) as HTMLButtonElement
     ).click();
     expect(toggleAllItems).toHaveBeenCalledWith(subscription);
 
-    (element.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
+    (element.querySelector('.tagfeeds .nav + .rowmenu .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
     (
       element.querySelector(
-        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-child(3)',
+        '.tagfeeds .nav + .rowmenu .pop [role="menuitem"]:nth-of-type(3)',
       ) as HTMLButtonElement
     ).click();
     expect(toggleForYou).toHaveBeenCalledWith(subscription);
   });
 
-  it('renders the exclusion marker without displacing the unread count', () => {
-    const excludedForYou = { ...sub(2, 4), includeInForYou: false };
-    const fixture = mount({ untagged: [excludedForYou] });
-    const element = fixture.nativeElement as HTMLElement;
-    const row = element.querySelector('.feedrow')!;
-    expect(row.querySelector('.feed-exclusion-marker')).not.toBeNull();
+  it('marks the selected subscription’s row host current', () => {
+    const selection: Selection = { kind: 'subscription', id: 2, unread: true };
+    const element = mount({ untagged: [sub(1, 0), sub(2, 0)], selection })
+      .nativeElement as HTMLElement;
+    const hosts = [...element.querySelectorAll('.feedlist app-sidebar-feed-row')];
+
+    expect(hosts.map((host) => host.classList.contains('current'))).toEqual([false, true]);
+  });
+
+  it('greys a hidden feed’s favicon and badges it with the eye, keeping the count', () => {
+    const fixture = mount({ untagged: [{ ...sub(2, 4), includeInForYou: false }] });
+    const row = (fixture.nativeElement as HTMLElement).querySelector('.feedrow')!;
+    const slot = row.querySelector('.favicon-slot')!;
+    const marker = slot.querySelector('.feed-exclusion-marker')!;
+
+    expect(slot.classList).toContain('hidden-feed');
+    expect(slot.querySelector('app-favicon')).not.toBeNull();
+    expect(marker.textContent).toContain('visibility_off');
+    expect(marker.getAttribute('role')).toBe('img');
+    expect(marker.getAttribute('title')).toBe('Hidden from For you');
+    expect(marker.getAttribute('aria-label')).toBe('Hidden from For you');
     expect(row.querySelector('.count')?.textContent).toContain('4');
+  });
+
+  it('leaves a visible feed’s favicon unmarked', () => {
+    const fixture = mount({ untagged: [sub(2, 4)] });
+    const slot = (fixture.nativeElement as HTMLElement).querySelector('.feedrow .favicon-slot')!;
+
+    expect(slot.classList).not.toContain('hidden-feed');
+    expect(slot.querySelector('.feed-exclusion-marker')).toBeNull();
   });
 
   it('renders the exclusion marker when only includeInAllItems is false', () => {
@@ -847,6 +901,40 @@ describe('SidebarComponent', () => {
       )?.componentInstance;
 
       expect(searchField.loading()).toBe(true);
+    });
+  });
+
+  describe('sidebar head', () => {
+    it('puts the search field, refresh, add feed and hide sidebar into one card on a wide layout', () => {
+      const element = mount({ narrow: false }).nativeElement as HTMLElement;
+      const card = element.querySelector('.search-card')!;
+      expect(card.querySelector('app-search-field.inset')).not.toBeNull();
+      expect(
+        [...card.querySelectorAll('.tool')].map((tool) => tool.getAttribute('aria-label')),
+      ).toEqual(['Refresh', 'Add feed', 'Hide sidebar']);
+      expect(element.querySelector('.drawer-head')).toBeNull();
+    });
+
+    it('titles the drawer Feeds and offers refresh, add feed and close on a narrow layout', () => {
+      const element = mount({ narrow: true }).nativeElement as HTMLElement;
+      const head = element.querySelector('.drawer-head')!;
+      expect(head.querySelector('.drawer-title')!.textContent?.trim()).toBe('Feeds');
+      expect(
+        [...head.querySelectorAll('.tool')].map((tool) => tool.getAttribute('aria-label')),
+      ).toEqual(['Refresh', 'Add feed', 'Close sidebar']);
+      expect(element.querySelector('.search-card')).toBeNull();
+    });
+
+    it('emits closeDrawer from the close button', () => {
+      const fixture = mount({ narrow: true });
+      const closed = jest.fn();
+      fixture.componentInstance.closeDrawer.subscribe(closed);
+
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('.close-drawer')!
+        .click();
+
+      expect(closed).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1013,8 +1101,8 @@ describe('SidebarComponent', () => {
         selection: { kind: 'saved-searches', id: null, unread: false },
       });
 
-      expect(fixture.nativeElement.querySelector('.savedsearch-toggle')!.classList).toContain(
-        'active',
+      expect(fixture.nativeElement.querySelector('.savedsearch-head')!.classList).toContain(
+        'current',
       );
     });
 
@@ -1584,9 +1672,23 @@ describe('SidebarComponent', () => {
       expect(element.querySelector('.tags .taghead')).toBeNull();
     });
 
+    it('leaves the untag list mounted but empty when every feed is tagged, so the card gap stays single', () => {
+      const fixture = mount({ tagTree: [tagNodeFixture], untagged: [] });
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(element.querySelector('.feeds-card')!.classList).not.toContain('card');
+      expect(element.querySelector('.feeds-card > .feedlist')!.matches(':empty')).toBe(true);
+
+      fixture.componentInstance.dragging.set(true);
+      fixture.detectChanges();
+
+      expect(element.querySelector('.feeds-card')!.classList).toContain('card');
+      expect(element.querySelector('.feeds-card > .feedlist')!.matches(':empty')).toBe(false);
+    });
+
     it('restores the collapsed state on a fresh mount (persisted)', () => {
       const first = mount({ tagTree: [tagNode] });
-      first.componentInstance.toggleTags();
+      clickSectionChevron(first, '.tags-head');
 
       TestBed.resetTestingModule();
       const element = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
@@ -1624,12 +1726,12 @@ describe('SidebarComponent', () => {
       expect(element.querySelector('.feedlist .feedrow')).not.toBeNull();
     });
 
-    it("marks only the open group's title active", () => {
+    it("marks only the open group's head row current", () => {
       const selection: Selection = { kind: 'group', id: null, unread: true, group: 'feeds' };
       const element = mount({ tagTree: [tagNodeFixture], untagged: [sub(1, 2)], selection })
         .nativeElement as HTMLElement;
-      expect(element.querySelector('.feeds-head .section-link.active')).not.toBeNull();
-      expect(element.querySelector('.tags-head .section-link.active')).toBeNull();
+      expect(element.querySelector('.feeds-head.current')).not.toBeNull();
+      expect(element.querySelector('.tags-head.current')).toBeNull();
     });
   });
 
@@ -1673,7 +1775,7 @@ describe('SidebarComponent', () => {
     it('reveals the feeds while a drag is in progress, even when collapsed', () => {
       const fixture = mount({ untagged: [sub(1, 2)] });
       const element = fixture.nativeElement as HTMLElement;
-      fixture.componentInstance.toggleFeeds();
+      clickSectionChevron(fixture, '.feeds-head');
       fixture.detectChanges();
       expect(element.querySelector('.feedlist .feedrow')).toBeNull();
 
@@ -1684,7 +1786,7 @@ describe('SidebarComponent', () => {
 
     it('restores the collapsed state on a fresh mount (persisted)', () => {
       const first = mount({ untagged: [sub(1, 2)] });
-      first.componentInstance.toggleFeeds();
+      clickSectionChevron(first, '.feeds-head');
 
       TestBed.resetTestingModule();
       const element = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
@@ -1763,6 +1865,18 @@ describe('organise mode', () => {
     { tag, subscriptions: [sub(5)], children: [], unreadCount: 3, entryCount: 0 },
   ];
 
+  it('badges a hidden feed while organising too', () => {
+    const element = mount({
+      coarse: true,
+      organising: true,
+      untagged: [{ ...sub(9), includeInAllItems: false }],
+    }).nativeElement as HTMLElement;
+
+    expect(
+      element.querySelector('.feedrow .favicon-slot.hidden-feed .feed-exclusion-marker'),
+    ).not.toBeNull();
+  });
+
   it('offers the Organise switch on coarse pointers only', () => {
     const isCoarse = signal(false);
     TestBed.configureTestingModule({
@@ -1815,7 +1929,7 @@ describe('organise mode', () => {
       tagTree: tree,
       user: account(inDays(5)),
     }).nativeElement as HTMLElement;
-    expect(element.querySelector('.actions')).toBeNull();
+    expect(element.querySelector('.tool')).toBeNull();
     expect(element.querySelector('.nav.all')).toBeNull();
     expect(element.querySelector('app-view-controls')).toBeNull();
     expect(element.querySelector('.trial')).toBeNull();
@@ -1829,7 +1943,7 @@ describe('organise mode', () => {
       tagTree: tree,
       user: account(inDays(5)),
     }).nativeElement as HTMLElement;
-    expect(element.querySelector('.actions')).not.toBeNull();
+    expect(element.querySelector('.tool[aria-label="Refresh"]')).not.toBeNull();
     expect(element.querySelector('.nav.all')).not.toBeNull();
     expect(element.querySelector('app-view-controls')).not.toBeNull();
     expect(element.querySelector('.trial')).not.toBeNull();
@@ -1860,18 +1974,84 @@ describe('organise mode', () => {
     expect(TestBed.inject(Router).url).toBe('/'); // expand must not select the tag
   });
 
-  it('organise rows carry a drag handle and expand via the row body', () => {
+  it('organise tag rows carry a handle, an inert body, ⋯ and a chevron that expands', () => {
     const fixture = mount({ coarse: true, organising: true, tagTree: tree });
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('.tag .handle')).not.toBeNull();
-    expect(element.querySelector('.tag .nav.grow')).toBeNull();
-    expect(element.querySelector('.tag .chevzone')).toBeNull();
-    expect(element.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('false');
-    element.querySelector<HTMLElement>('.tag .rowbody')!.click();
+    const row = element.querySelector('.tag')!;
+
+    const ownClass = (child: Element) =>
+      [...child.classList].find((name) => !name.startsWith('cdk-'));
+
+    expect([...row.children].map(ownClass)).toEqual(['handle', 'rowbody', 'dots', 'chevzone']);
+    expect(row.querySelector('.rowbody')!.tagName).toBe('SPAN');
+    expect(row.querySelector('.nav.grow')).toBeNull();
+    expect(row.querySelector('.chevzone')!.getAttribute('aria-expanded')).toBe('false');
+
+    row.querySelector<HTMLButtonElement>('.chevzone')!.click();
     fixture.detectChanges();
-    expect(element.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('true');
-    expect(element.querySelector('.tagfeeds')).not.toBeNull();
+
+    expect(element.querySelector('.tag .chevzone')!.getAttribute('aria-expanded')).toBe('true');
     expect(element.querySelector('.tagfeeds .handle')).not.toBeNull();
+  });
+
+  it('swaps the drawer head for Organise and Done, and Done ends organising', () => {
+    const fixture = mount({ coarse: true, organising: true, narrow: true });
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('.drawer-head')).toBeNull();
+    expect(element.querySelector('.organise-head .drawer-title')!.textContent?.trim()).toBe(
+      'Organise',
+    );
+    expect(element.querySelector('.organise-hint')).not.toBeNull();
+
+    element.querySelector<HTMLButtonElement>('.organise-done')!.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.organising()).toBe(false);
+    expect(element.querySelector('.drawer-head')).not.toBeNull();
+  });
+
+  describe('organise layout', () => {
+    afterEach(() => localStorage.clear());
+
+    it('leaves out saved searches and keeps the tags open under a plain head', () => {
+      const fixture = mount({
+        coarse: true,
+        tagTree: tree,
+        savedSearches: [
+          {
+            id: 1,
+            slug: '1-climate',
+            term: 'climate',
+            wholeWord: false,
+            phrase: false,
+            position: 0,
+            unreadCount: 3,
+            memberCount: 3,
+            includeInDigest: false,
+          },
+        ],
+      });
+      clickSectionChevron(fixture, '.tags-head');
+      fixture.componentRef.setInput('organising', true);
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(element.querySelector('app-sidebar-saved-searches')).toBeNull();
+      expect(element.querySelector('.tags .taghead')).not.toBeNull();
+      expect(element.querySelector('.tags-head .section-link')).toBeNull();
+      expect(element.querySelector('.tags-head .section-chevron')).toBeNull();
+      expect(element.querySelector('.tags-head .label')!.textContent?.trim()).toBe('Tags');
+    });
+
+    it('keeps the section heads neutral while organising, even for the open group', () => {
+      const selection: Selection = { kind: 'group', id: null, unread: true, group: 'tags' };
+      const element = mount({ coarse: true, organising: true, tagTree: tree, selection })
+        .nativeElement as HTMLElement;
+
+      expect(element.querySelector('.tags-head')).not.toBeNull();
+      expect(element.querySelector('.section-head.current')).toBeNull();
+    });
   });
 
   it('the tag dots open the action sheet and route the choice', () => {
@@ -1883,8 +2063,11 @@ describe('organise mode', () => {
     expect(sheet.open).toHaveBeenCalledWith({
       title: 'News',
       actions: [
-        { id: 'edit', label: 'Edit tag' },
-        { id: 'delete', label: 'Delete tag', danger: true },
+        { id: 'edit', label: 'Edit tag', symbol: 'edit' },
+        { id: 'moveUp', label: 'Move up', symbol: 'arrow_upward', disabled: true },
+        { id: 'moveDown', label: 'Move down', symbol: 'arrow_downward', disabled: true },
+        ACTION_SHEET_DIVIDER,
+        { id: 'delete', label: 'Delete tag', symbol: 'delete', danger: true },
       ],
     });
     expect(deleted).toHaveBeenCalledWith(tag);

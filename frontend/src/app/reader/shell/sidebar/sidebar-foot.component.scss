@@ -1,49 +1,50 @@
 @use '../../../theme/glass-rim';
 
-/* The foot rides at the bottom of the sidebar's flex column: the host takes the
-   old `.foot` margin-top: auto and stacks the Organise switch, view controls,
-   trial line and meta row. */
 :host {
-  margin-top: auto;
+  @include glass-rim.filled(var(--surface-1), var(--border));
+
   display: flex;
+  flex: none;
   flex-direction: column;
+  gap: calc(var(--space-1) + var(--space-0));
+  margin-top: auto;
+  padding: var(--space-2) calc(var(--space-2) + var(--space-0)) var(--space-2) var(--space-2);
+  border-radius: var(--radius-lg);
 }
 
-.text-size {
-  padding-top: var(--space-3);
-}
-
-.brightness {
-  padding-top: var(--space-2);
-}
-
-.controls {
-  padding-top: var(--space-2);
+@media (pointer: coarse) {
+  :host {
+    gap: var(--space-2);
+    padding: calc(var(--space-2) + var(--space-0));
+  }
 }
 
 .organise {
-  @include glass-rim.filled(var(--surface-2), var(--border), control);
-
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
+  gap: calc(var(--space-2) + var(--space-0));
+  height: var(--tap-target);
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border: 0;
+  background: none;
   color: var(--text-primary);
-  font-size: var(--fs-sm);
+  font: inherit;
+  font-size: var(--fs-base);
   cursor: pointer;
 }
 
+.organise-label {
+  flex: 1;
+  text-align: left;
+}
+
+/* stylelint-disable declaration-property-unit-allowed-list --
+   tuned switch measures, not spacing values. */
 .organise .track {
   position: relative;
-  display: inline-block;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned switch-track measure, not a spacing value. */
-  width: 32px;
-  height: var(--space-4);
+  flex: none;
+  width: 40px;
+  height: 24px;
   border-radius: var(--radius-pill);
   background: var(--border-strong);
   transition: background 0.15s;
@@ -51,29 +52,23 @@
 
 .organise .knob {
   position: absolute;
-  top: var(--space-0);
-  left: var(--space-0);
-  width: var(--space-3);
-  height: var(--space-3);
+  top: calc(var(--space-0) * 1.5);
+  left: calc(var(--space-0) * 1.5);
+  width: 18px;
+  height: 18px;
   border-radius: var(--radius-pill);
-  background: var(--surface-2);
+  background: var(--surface-1);
   transition: transform 0.15s;
 }
-
-.organise[aria-checked='true'] {
-  --rim-base: var(--accent);
-
-  color: var(--accent);
-}
+/* stylelint-enable declaration-property-unit-allowed-list */
 
 .organise[aria-checked='true'] .track {
   background: var(--accent);
 }
 
+/* Travel: the 40px track less the 18px knob and both 3px insets. */
 .organise[aria-checked='true'] .knob {
-  /* Travel = track (32px) minus knob (12px) minus both 2px insets = 16px.
-     `100%` would move the knob only its own 12px width and park it 4px short
-     of the right edge, reading as a half-on switch. */
+  background: var(--on-accent);
   transform: translateX(var(--space-4));
 }
 
@@ -84,12 +79,12 @@
   }
 }
 
-/* Rides along under the controls, which already carry the margin-top: auto. */
 .trial {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-2) 0;
+  margin: 0;
+  padding: 0 var(--space-1);
   color: var(--text-muted);
   font-size: var(--fs-sm);
 }
@@ -98,32 +93,17 @@
   color: var(--danger);
 }
 
-/* Version and Feedback share the foot's final row. */
 .meta {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-2);
-}
-
-.version,
-.feedback {
-  padding: var(--space-1) var(--space-2) 0;
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.version:hover,
-.feedback:hover {
+  min-height: calc(var(--space-5) + var(--space-1));
   color: var(--text-secondary);
+  font-size: var(--fs-sm);
 }
 
 .update-badge {
-  align-self: flex-start;
-  margin: var(--space-2) var(--space-2) 0;
-  padding: var(--space-1) var(--space-2);
+  padding: calc(var(--space-0) * 1.5) calc(var(--space-2) + var(--space-0));
   border-radius: var(--radius-pill);
   background: var(--accent-soft);
   color: var(--accent);
@@ -133,7 +113,41 @@
   white-space: nowrap;
 }
 
-.update-badge:hover {
-  background: var(--accent);
-  color: var(--on-accent);
+.version {
+  margin-inline-start: auto;
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.feedback {
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .update-badge:hover {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .version:hover {
+    color: var(--text-primary);
+  }
+}
+
+:host(.organising) {
+  gap: var(--space-0);
+  padding: 0 var(--space-1) calc(var(--space-1) + var(--space-0)) 0;
+}
+
+:host(.organising) .organise {
+  height: calc(var(--tap-target) + var(--space-2));
+  padding: 0 var(--space-1) 0 var(--space-3);
+}
+
+:host(.organising) .meta {
+  min-height: var(--space-6);
+  padding: 0 var(--space-1) 0 var(--space-3);
 }

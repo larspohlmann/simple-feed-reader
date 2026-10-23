@@ -12,6 +12,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
   CdkDrag,
@@ -24,6 +25,7 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
+import { SectionHeadTemplateDirective, SectionHeadView } from './section-head-template.directive';
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
@@ -32,7 +34,6 @@ import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.componen
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
-import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { TagNode, siblingIdsOf, tagNodesById } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
 import { SocialSection } from '../../state/social-sections';
@@ -52,10 +53,15 @@ import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
-export interface TagRow {
-  readonly kind: 'head' | 'feeds';
+export interface TagChildView {
   readonly node: TagNode;
-  readonly depth: 0 | 1;
+  readonly open: boolean;
+}
+
+export interface TagGroupView {
+  readonly node: TagNode;
+  readonly open: boolean;
+  readonly children: readonly TagChildView[];
 }
 
 const tagIdOf = (data: DropData): number | null => (data.kind === 'tag' ? data.tag.id : null);
@@ -79,6 +85,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     RouterLink,
     IconComponent,
     TagGlyphComponent,
+    SectionHeadTemplateDirective,
     SearchFieldComponent,
     SidebarFootComponent,
     SidebarFeedRowComponent,
@@ -91,7 +98,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     CdkDrag,
     CdkDragHandle,
     SidebarRowMenuComponent,
-    IconButtonDirective,
+    NgTemplateOutlet,
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
@@ -142,6 +149,7 @@ export class SidebarComponent {
 
   readonly refresh = output<void>();
   readonly addFeed = output<void>();
+  readonly closeDrawer = output<void>();
   /** The settled search term from the field, or '' when it is cleared. */
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native
@@ -198,43 +206,43 @@ export class SidebarComponent {
   });
   readonly expanded = signal<Set<number>>(new Set());
 
-  readonly tagRows = computed<TagRow[]>(() =>
-    this.tagTree().flatMap((root): TagRow[] => [
-      { kind: 'head', node: root, depth: 0 },
-      ...(this.expanded().has(root.tag.id)
-        ? root.children.flatMap((child): TagRow[] => this.headAndFeeds(child, 1))
-        : []),
-      ...this.feedsRow(root, 0),
-    ]),
-  );
-
-  private headAndFeeds(node: TagNode, depth: 0 | 1): TagRow[] {
-    return [{ kind: 'head', node, depth }, ...this.feedsRow(node, depth)];
-  }
-
-  private feedsRow(node: TagNode, depth: 0 | 1): TagRow[] {
-    return this.expanded().has(node.tag.id) ? [{ kind: 'feeds', node, depth }] : [];
-  }
+  readonly tagGroups = computed<TagGroupView[]>(() => {
+    const expanded = this.expanded();
+    return this.tagTree().map((root) => {
+      const open = expanded.has(root.tag.id);
+      const children = open
+        ? root.children.map((child) => ({ node: child, open: expanded.has(child.tag.id) }))
+        : [];
+      return { node: root, open, children };
+    });
+  });
 
   /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */
   private readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
   readonly tagsExpanded = this.tagsSection.expanded;
-
-  toggleTags(): void {
-    this.tagsSection.toggle();
-  }
+  protected readonly tagsHead: SectionHeadView = {
+    group: 'tags',
+    section: this.tagsSection,
+    label: 'reader.tags',
+    toggleLabel: 'reader.toggleTags',
+  };
 
   /** The drop list the Feeds section heads stays mounted while collapsed (see the template), so a feed drag out of
    *  a tag still lands. */
   private readonly feedsSection = persistedToggle(() => FEEDS_COLLAPSED_KEY);
   readonly feedsExpanded = this.feedsSection.expanded;
-
-  toggleFeeds(): void {
-    this.feedsSection.toggle();
-  }
+  protected readonly feedsHead: SectionHeadView = {
+    group: 'feeds',
+    section: this.feedsSection,
+    label: 'reader.feeds',
+    toggleLabel: 'reader.toggleFeeds',
+  };
 
   /** True while a feed row is being dragged (reveals the empty Feeds drop zone). */
   readonly dragging = signal(false);
+  protected readonly feedsSectionShown = computed(
+    () => this.untagged().length > 0 || this.dragging() || this.organising(),
+  );
   /** What is being dragged, so a tag-reorder hover shows an insertion line while
    *  a feed-onto-tag hover shows a container highlight. */
   readonly dragKind = signal<'tag' | 'feed' | null>(null);

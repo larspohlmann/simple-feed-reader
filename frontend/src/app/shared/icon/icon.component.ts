@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type IconSize = 'text' | 'xs' | 'sm' | 'md' | 'lg';
+export type IconSize = 'text' | 'xs' | 'sm' | 'dense' | 'md' | 'lg';
 
 /**
  * Maps the named size onto its token. Kept here so no consumer writes a px.
@@ -20,6 +20,7 @@ export const ICON_SIZE_TOKEN: Record<IconSize, string> = {
   text: '0.85em',
   xs: 'var(--icon-xs)',
   sm: 'var(--icon-sm)',
+  dense: 'var(--icon-dense)',
   md: 'var(--icon-md)',
   lg: 'var(--icon-lg)',
 };

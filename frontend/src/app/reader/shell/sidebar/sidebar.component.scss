@@ -1,72 +1,99 @@
 @use '../../../theme/glass-rim';
 @use 'sidebar-row' as row;
-@include row.nav-row;
-@include row.tag-head;
-@include row.drag-handle;
-@include row.tag-feeds;
-@include row.row-dots;
+@include row.card;
+@include row.row-parts;
 @include row.section-head;
-@include row.section-link;
+@include row.chevron('.section-chevron, .chevzone');
+@include row.dots;
+@include row.drag-handle;
+@include row.group;
 
 .sidebar {
-  padding: var(--space-3) var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: var(--space-0);
-  overflow: auto;
-  height: 100%;
-}
-
-/* Top-aligned, not centred: the search field carries a bottom margin below its
-   input row, so centring would drop the button below the input it sits beside.
-   Both boxes are `--control-h` tall and start together at the top. */
-.search-row {
-  display: flex;
-  align-items: flex-start;
   gap: var(--space-2);
+  height: 100%;
+  overflow: auto;
 }
 
-.search-row app-search-field {
+@media (pointer: coarse) {
+  .sidebar {
+    gap: var(--space-3);
+  }
+}
+
+.search-card {
+  @include glass-rim.filled(var(--surface-1), var(--border));
+
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: var(--space-0);
+  padding-right: var(--space-1);
+  border-radius: var(--radius-lg);
+}
+
+.search-card app-search-field {
   flex: 1;
   min-width: 0;
 }
 
-.actions {
+.drawer-head {
   display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
+  flex: none;
+  align-items: center;
+  gap: var(--space-0);
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .nav app-icon.pulse {
-    animation: none;
-  }
-}
-
-.act {
-  @include glass-rim.filled(var(--surface-2), var(--border), control);
-
+.drawer-title {
   flex: 1;
+  min-width: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.tool {
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  padding: var(--space-2);
+  width: var(--control-h);
+  height: calc(var(--control-h) - var(--space-0));
+  padding: 0;
+  border: 0;
   border-radius: var(--radius);
-  color: var(--text-primary);
+  background: none;
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: var(--fs-sm);
+}
+
+.tool:disabled {
+  color: var(--text-muted);
+  cursor: default;
 }
 
 @media (hover: hover) {
-  .act:hover:not(:disabled) {
-    --rim-fill: var(--surface-0);
+  .tool:hover:not(:disabled) {
+    background: var(--surface-0);
   }
 }
 
-.act:disabled {
+@media (pointer: coarse) {
+  .tool {
+    width: var(--tap-target);
+    height: var(--tap-target);
+  }
+}
+
+.nav {
+  @include row.row-geometry;
+}
+
+@include row.row-states('.nav', '.nav.active');
+
+.nav:not(.active) > app-icon {
   color: var(--text-muted);
-  cursor: default;
 }
 
 .nav app-icon.pulse {
@@ -84,52 +111,60 @@
   }
 }
 
-.feedrow {
+@media (prefers-reduced-motion: reduce) {
+  .nav app-icon.pulse {
+    animation: none;
+  }
+}
+
+.feeds-card:not(.card) {
+  display: contents;
+}
+
+.feeds-card:not(.card) > .feedlist:empty {
+  display: none;
+}
+
+.tags,
+.feedlist,
+.tagfeeds {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: var(--space-0);
 }
 
-/* Organise-mode row body: the expand/collapse target across its whole width. */
-.rowbody {
-  flex: 1;
-  min-width: 0;
+.feedlist {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+}
+
+.tag-group > .tagfeeds {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+  --row-inset: var(--sidebar-row-deep-inset);
+
+  gap: 0;
+}
+
+/* The child's own surface: its rows start at the box's edge again, so each chevron keeps its gap to it. */
+.tag-child {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+  --row-inset: var(--sidebar-row-inset);
+
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--row-pad-y) 0;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  flex-direction: column;
+  gap: var(--space-0);
+  margin: var(--space-0) var(--sidebar-card-pad) var(--sidebar-card-pad)
+    calc(var(--sidebar-row-inset) + var(--icon-md));
+  padding: var(--space-0) 0;
+  border-radius: var(--radius);
+  background: var(--surface-1);
 }
 
-.rowbody .name {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Organise-mode tagged feeds indent to sit under the tag name, visualising
-   the hierarchy (#185). Navigation mode uses .tag-sub for the same indent. */
-.tagfeeds.organising {
-  padding-left: var(--space-6);
-}
-
-/* A child tag sits one step in from its parent, and its feeds one step further (#1736). */
-.taghead.child {
-  padding-left: var(--space-5);
-}
-
-.tagfeeds.child {
-  padding-left: calc(var(--space-2) + var(--space-5));
-}
-
-.tagfeeds.child.organising {
-  padding-left: calc(var(--space-6) + var(--space-5));
+.tag-child .tagfeeds {
+  --row-h: var(--sidebar-leaf-row-h);
+  --row-inset: var(--sidebar-row-deep-inset);
 }
 
 .feedrow.cdk-drag,
@@ -137,7 +172,6 @@
   cursor: grab;
 }
 
-/* Drop targets */
 .taghead,
 .feedlist {
   border-radius: var(--radius);
@@ -178,21 +212,27 @@
 }
 
 /* Drag visuals — the clone is appended to <body>, but Angular emulated
-         styles still match it via its retained content attribute. */
+   styles still match it via its retained content attribute. */
 .cdk-drag-preview {
-  @include glass-rim.filled(var(--surface-2), var(--border), control);
+  @include glass-rim.filled(var(--surface-1), var(--border));
 
   border-radius: var(--radius);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 35%);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 28%);
 }
 
-.cdk-drag-preview .rowmenu {
+.cdk-drag-preview .handle {
+  color: var(--accent);
+}
+
+.cdk-drag-preview .rowmenu,
+.cdk-drag-preview .dots,
+.cdk-drag-preview .chevzone {
   display: none;
 }
 
 /* Feed reorder insertion point: a straight signal-coloured line where the
-         dragged feed will land (it takes the row's slot). Square edges — a
-         rounded pill read as stray corners. */
+   dragged feed will land (it takes the row's slot). Square edges — a
+   rounded pill read as stray corners. */
 .feedrow.cdk-drag-placeholder {
   height: var(--space-0);
   min-height: var(--space-0);
@@ -222,8 +262,7 @@
 }
 
 /* A tag reorder reloads from the server on drop, so skip CDK's settle
-         animation for tags — otherwise the row slides across for no reason.
-         (Feed reordering keeps its animation.) */
+   animation for tags — otherwise the row slides across for no reason. */
 .tag.cdk-drag-animating {
   transition: none;
 }
@@ -232,13 +271,83 @@
   transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
 }
 
-/* Touch density: 44px targets for coarse pointers only (#185). Scoped here
-   deliberately — the compact row tokens are shared with discover/admin and
-   must not grow (design-language §1). Keyed on pointer, not width. */
-@media (pointer: coarse) {
-  .rowbody,
-  .act,
-  .organise {
-    min-height: var(--tap-target);
-  }
+.sidebar.organising {
+  --row-inset: 0;
+  --row-fs: var(--fs-base);
+
+  gap: var(--space-2);
+}
+
+.organise-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-1) 0 var(--space-3);
+}
+
+.organise-done {
+  height: var(--tap-target);
+  padding: 0 calc(var(--space-4) + var(--space-0));
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.organise-hint {
+  flex: none;
+  margin: calc(var(--space-2) + var(--space-0)) var(--space-3) var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+
+.organising .feedlist,
+.organising .tagfeeds,
+.organising .tag-child {
+  --row-fs: var(--fs-base);
+  --row-inset: 0;
+}
+
+.organising .tag-group > .tagfeeds,
+.organising .tag-child .tagfeeds {
+  --row-inset: var(--space-5);
+}
+
+.organising .tag-group.open {
+  margin: 0 var(--space-1);
+  padding-bottom: var(--space-1);
+}
+
+.organising .tag-child {
+  margin-bottom: var(--space-1);
+}
+
+.organising .tag {
+  display: flex;
+  align-items: center;
+  height: var(--tap-target);
+  padding-left: var(--row-inset, 0);
+  border-radius: var(--radius);
+  font-size: var(--row-fs, var(--fs-base));
+}
+
+.rowbody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-right: var(--space-1);
+  color: var(--text-primary);
+}
+
+.organising .feedrow.cdk-drag-placeholder {
+  margin: calc(var(--space-0) / 2) var(--space-3) calc(var(--space-0) / 2)
+    calc(var(--space-7) + var(--space-4));
 }

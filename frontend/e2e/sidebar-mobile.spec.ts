@@ -62,6 +62,9 @@ test.describe('Sidebar on a phone', () => {
     await page.getByRole('button', { name: 'Toggle sidebar' }).click();
     const sidebar = page.getByRole('navigation', { name: 'Feeds' });
     await expect(sidebar).toBeVisible();
+    // A full-height sheet over the app bar (#1749).
+    const drawer = page.locator('aside.sidebar');
+    expect((await drawer.boundingBox())!.y).toBe(0);
 
     // Navigation mode: 44px rows, and the chevron zone expands without navigating.
     const newsRow = sidebar.getByRole('link', { name: /News/ });
@@ -93,11 +96,17 @@ test.describe('Sidebar on a phone', () => {
     expect(box.x + box.width).toBeLessThanOrEqual(375 + 1);
     expect(box.y + box.height).toBeLessThanOrEqual(667 + 1);
     await expect(sheet.getByRole('menuitem', { name: 'Delete tag' })).toBeVisible();
+    await expect(sheet.getByRole('menuitem', { name: 'Move up' })).toBeDisabled();
+    await expect(sheet.getByRole('menuitem', { name: 'Move down' })).toBeDisabled();
 
     // Backdrop dismisses the sheet; toggling Organise off restores navigation.
     await page.locator('.cdk-overlay-backdrop').click();
     await expect(sheet).toBeHidden();
     await sidebar.getByRole('switch', { name: 'Organise' }).click();
     await expect(sidebar.getByRole('link', { name: /All items/ })).toBeVisible();
+
+    // The sheet's own close button dismisses it.
+    await sidebar.getByRole('button', { name: 'Close sidebar' }).click();
+    await expect(drawer).not.toHaveClass(/\bopen\b/);
   });
 });
