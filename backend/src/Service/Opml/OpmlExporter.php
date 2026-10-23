@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Opml;
 
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
+use App\Service\Opml\Pass\OpmlTagTree;
 use App\Service\Social\Model\ExportedSubscriptionModel;
 use App\Service\Social\Support\ExportedFeed;
 
 /**
- * Serialises a user's subscriptions to OPML 2.0, grouped by tag. A feed with
- * several tags appears under each group (OPML is a tree); untagged feeds sit at
+ * Serialises a user's subscriptions to OPML 2.0, grouped by tag, a child tag nested in its
+ * parent. A feed with several tags appears under each group (OPML is a tree); untagged feeds sit at
  * the body root. DOMDocument handles all escaping.
  */
 final readonly class OpmlExporter
@@ -44,19 +46,11 @@ final readonly class OpmlExporter
         $body = $document->createElement('body');
         $opml->appendChild($body);
 
-        [$byTag, $untagged] = $this->group($subscriptions);
-
-        foreach ($byTag as $tagName => $group) {
-            $outline = $document->createElement('outline');
-            $outline->setAttribute('text', $tagName);
-            $outline->setAttribute('title', $tagName);
-            foreach ($group as $exported) {
-                $outline->appendChild($this->feedOutline($document, $exported));
-            }
-            $body->appendChild($outline);
+        $tree = new OpmlTagTree($subscriptions);
+        foreach ($tree->roots() as $root) {
+            $body->appendChild($this->tagOutline($document, $tree, $root));
         }
-
-        foreach ($untagged as $exported) {
+        foreach ($tree->untagged() as $exported) {
             $body->appendChild($this->feedOutline($document, $exported));
         }
 
@@ -64,26 +58,21 @@ final readonly class OpmlExporter
     }
 
     /**
-     * @param list<ExportedSubscriptionModel> $subscriptions
-     *
-     * @return array{0: array<string, list<ExportedSubscriptionModel>>, 1: list<ExportedSubscriptionModel>}
+     * @throws \DOMException
      */
-    private function group(array $subscriptions): array
+    private function tagOutline(\DOMDocument $document, OpmlTagTree $tree, Tag $tag): \DOMElement
     {
-        $byTag = [];
-        $untagged = [];
-        foreach ($subscriptions as $exported) {
-            $tags = $exported->subscription->getTags();
-            if ($tags->isEmpty()) {
-                $untagged[] = $exported;
-                continue;
-            }
-            foreach ($tags as $tag) {
-                $byTag[$tag->getName()][] = $exported;
-            }
+        $outline = $document->createElement('outline');
+        $outline->setAttribute('text', $tag->getName());
+        $outline->setAttribute('title', $tag->getName());
+        foreach ($tree->feedsOf($tag) as $exported) {
+            $outline->appendChild($this->feedOutline($document, $exported));
+        }
+        foreach ($tree->childrenOf($tag) as $child) {
+            $outline->appendChild($this->tagOutline($document, $tree, $child));
         }
 
-        return [$byTag, $untagged];
+        return $outline;
     }
 
     /**
