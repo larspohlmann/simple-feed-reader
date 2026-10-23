@@ -365,6 +365,20 @@ final class OpmlImporterTest extends DbTestCase
         ]));
     }
 
+    public function testAGroupNameIsTrimmedAndABlankTextFallsBackToTheTitle(): void
+    {
+        $user = $this->user('opml-trim@example.com');
+        $opml = $this->opml(
+            '<outline text="  Reading  "><outline text="   " title="Long reads">'
+            . '<outline type="rss" text="F" xmlUrl="https://trim.example.com/feed.xml"/>'
+            . '</outline></outline>',
+        );
+
+        $this->importer()->import($user, $opml);
+
+        self::assertSame('Reading', $this->tagNamed($user, 'Long reads')->getParent()?->getName());
+    }
+
     private function tagNamed(User $user, string $name): Tag
     {
         $tag = $this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => $name]);

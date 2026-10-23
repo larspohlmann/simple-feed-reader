@@ -233,6 +233,60 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertSame('L' . str_repeat('t', 99), $result->tagsCreated[0]->getName());
     }
 
+    public function testAMultibyteTagNameIsCutToTheColumnByCharacters(): void
+    {
+        $user = $this->user('multibyte-tag@example.com');
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://umlaut.example.com/rss.xml', 'Umlaut', str_repeat('ä', 120)),
+        ]);
+
+        self::assertSame(str_repeat('ä', 100), $result->tagsCreated[0]->getName());
+    }
+
+    public function testANewParentTagIsCreatedWithItsChildAndReportedWithIt(): void
+    {
+        $user = $this->user('new-parent@example.com');
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel(
+                'https://nest.example.com/rss.xml',
+                'Nest',
+                'Child',
+                parentTagName: 'Parent',
+            ),
+        ]);
+
+        self::assertSame(['Child', 'Parent'], array_map(
+            static fn (Tag $tag): string => $tag->getName(),
+            $result->tagsCreated,
+        ));
+        self::assertSame('Parent', $result->tagsCreated[0]->getParent()?->getName());
+    }
+
+    public function testAnExistingParentTagIsReusedAndNotReportedAsCreated(): void
+    {
+        $user = $this->user('existing-parent@example.com');
+        $existingParent = new Tag($user, 'Parent');
+        $this->entityManager->persist($existingParent);
+        $this->entityManager->flush();
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel(
+                'https://reuse.example.com/rss.xml',
+                'Reuse',
+                'Child',
+                parentTagName: 'Parent',
+            ),
+        ]);
+
+        self::assertSame(['Child'], array_map(
+            static fn (Tag $tag): string => $tag->getName(),
+            $result->tagsCreated,
+        ));
+        self::assertSame($existingParent, $result->tagsCreated[0]->getParent());
+    }
+
     public function testATagTheBatchAlreadyKnowsIsNotLookedUpAgain(): void
     {
         $user = $this->user('lookup@example.com');
