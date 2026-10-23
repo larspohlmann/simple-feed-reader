@@ -81,7 +81,7 @@ final readonly class TagEditor
         if ($parentId === null) {
             return null;
         }
-        if ($tag->getId() === $parentId) {
+        if ($tag->requireId() === $parentId) {
             throw InvalidTagParentException::itself();
         }
         if ($this->tags->hasChildren($tag)) {

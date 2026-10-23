@@ -7,7 +7,10 @@ namespace App\Repository;
 use App\Entity\SubscriptionTag;
 use Doctrine\ORM\QueryBuilder;
 
-/** A subscription is in a tag's scope when it carries the tag or a child of it; a semi-join, so a feed carrying both appears once. */
+/**
+ * A subscription is in a tag's scope when it carries the tag or a child of it; a semi-join, so a feed
+ * carrying both appears once.
+ */
 final class TagScopeDql
 {
     /** The caller binds `:tagId`. */

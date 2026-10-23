@@ -273,8 +273,8 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
             return;
         }
 
-        // Scope to feeds the user has tagged with $tagId. Pinning the
-        // subscription to :userId means another user's identically-named tag
+        // Scope to feeds the user has tagged with $tagId or a child of it. Pinning
+        // the subscription to :userId means another user's identically-named tag
         // can never widen the scope.
         $qb->andWhere(sprintf(
             'EXISTS (SELECT ts.id FROM %s ts WHERE ts.feed = f AND ts.user = :userId AND %s)',

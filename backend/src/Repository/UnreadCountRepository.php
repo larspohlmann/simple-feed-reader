@@ -29,7 +29,10 @@ final readonly class UnreadCountRepository
         );
     }
 
-    /** @return array<int, int> tag id => unread entries, a parent's spanning its children's feeds; a tag with none is absent */
+    /**
+     * @return array<int, int> tag id => unread entries, a parent's spanning its children's feeds; a tag with
+     *                         none is absent
+     */
     public function perTag(int $userId): array
     {
         return $this->perChildTag($userId) + $this->perRootTag($userId);
