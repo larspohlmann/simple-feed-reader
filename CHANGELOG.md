@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.5.5] - 2026-10-23
+
+## What's Changed
+* feat(#1752): publish prebuilt release images to GHCR and pull them on install/update by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1754
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.5.4...v1.5.5
+
 ## [v1.5.4] - 2026-10-23
 
 ## What's Changed
