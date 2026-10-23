@@ -52,6 +52,7 @@ import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
 export interface TagRow {
+  readonly kind: 'head' | 'feeds';
   readonly node: TagNode;
   readonly depth: 0 | 1;
 }
@@ -196,12 +197,21 @@ export class SidebarComponent {
 
   readonly tagRows = computed<TagRow[]>(() =>
     this.tagTree().flatMap((root): TagRow[] => [
-      { node: root, depth: 0 },
+      { kind: 'head', node: root, depth: 0 },
       ...(this.expanded().has(root.tag.id)
-        ? root.children.map((child): TagRow => ({ node: child, depth: 1 }))
+        ? root.children.flatMap((child): TagRow[] => this.headAndFeeds(child, 1))
         : []),
+      ...this.feedsRow(root, 0),
     ]),
   );
+
+  private headAndFeeds(node: TagNode, depth: 0 | 1): TagRow[] {
+    return [{ kind: 'head', node, depth }, ...this.feedsRow(node, depth)];
+  }
+
+  private feedsRow(node: TagNode, depth: 0 | 1): TagRow[] {
+    return this.expanded().has(node.tag.id) ? [{ kind: 'feeds', node, depth }] : [];
+  }
 
   /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */
   private readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);

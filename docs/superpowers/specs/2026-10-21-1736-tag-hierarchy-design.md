@@ -183,9 +183,11 @@ Rendering, inside the existing `.tags` container, all drop lists as top-level
 siblings:
 
 1. root tag head (as today);
-2. if the root is expanded: its own feed list (`.tagfeeds`), then per child a tag
-   head with the `child` modifier, then, if that child is expanded, its feed list
-   with the `child` modifier, indented one step further.
+2. if the root is expanded: per child a tag head with the `child` modifier, then, if
+   that child is expanded, its feed list with the `child` modifier, indented one step
+   further;
+3. the root's own feed list (`.tagfeeds`), last, so the children sit directly under
+   the parent's head.
 
 The parent's chevron hides both its feeds and its children. `expanded` keeps tag ids
 and works for children unchanged. The feed row inside a child list gets the child's

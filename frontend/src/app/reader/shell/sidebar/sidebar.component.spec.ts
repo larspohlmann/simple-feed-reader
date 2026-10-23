@@ -577,6 +577,36 @@ describe('SidebarComponent', () => {
         ]);
       });
 
+      it("lists an expanded parent's children before the parent's own feeds", () => {
+        const fixture = mount({
+          tagTree: [
+            {
+              ...parentNode(10, [tagNode(11, [sub(2)], 10)]),
+              subscriptions: [sub(1)],
+            },
+          ],
+        });
+        fixture.componentInstance.toggle(10);
+        fixture.componentInstance.toggle(11);
+        fixture.detectChanges();
+
+        const blocks = [
+          ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+            '.tags > .taghead, .tags > .tagfeeds',
+          ),
+        ].map((block) => ({
+          kind: block.classList.contains('taghead') ? 'head' : 'feeds',
+          child: block.classList.contains('child'),
+        }));
+
+        expect(blocks).toEqual([
+          { kind: 'head', child: false },
+          { kind: 'head', child: true },
+          { kind: 'feeds', child: true },
+          { kind: 'feeds', child: false },
+        ]);
+      });
+
       it('lets a tag head accept a feed from anywhere but a tag only from its own sibling set', () => {
         const accept = mount({ tagTree: tree() }).componentInstance.acceptOnTagHead;
         const [child, sibling, parent, root] = [
