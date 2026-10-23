@@ -5,6 +5,7 @@ import { By } from '@angular/platform-browser';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Dialog } from '@angular/cdk/dialog';
+import { CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -523,6 +524,23 @@ describe('OrganiseSectionComponent', () => {
       );
 
       expect(order).toEqual(['News', 'Local', 'local-feed', 'news-feed', 'Untagged']);
+    });
+
+    it("connects every panel's drop lists through the tree's drop-list group", async () => {
+      await renderWithMocks(TREE_SUBS, [NEWS, LOCAL]);
+      fixture.componentInstance.store.expandAll();
+      fixture.detectChanges();
+
+      const group = fixture.debugElement
+        .query(By.css('.tree'))
+        .injector.get(CdkDropListGroup<CdkDropList>);
+      const lists = fixture.debugElement
+        .queryAll(By.directive(CdkDropList))
+        .map((list) => list.injector.get(CdkDropList));
+
+      expect(lists).toHaveLength(6);
+      expect([...group._items]).toEqual(expect.arrayContaining(lists));
+      expect(group._items.size).toBe(lists.length);
     });
 
     it('lists a child tag directly under its parent in the tag filter', async () => {
