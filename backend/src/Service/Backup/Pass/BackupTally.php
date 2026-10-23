@@ -82,6 +82,12 @@ final class BackupTally
             throw new InvalidBackupException(sprintf('The backup declares tag "%s" twice.', $line->name));
         }
 
+        if ($line->parent !== null && !isset($this->tagNames[$line->parent])) {
+            throw new InvalidBackupException(
+                sprintf('The backup names parent tag "%s" before declaring it.', $line->parent),
+            );
+        }
+
         $this->tagNames[$line->name] = true;
         ++$this->counts['tags'];
     }

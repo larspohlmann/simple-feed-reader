@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
+use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SavedSearchNetworkInclusionRepository;
 use App\Repository\SavedSearchRepository;
@@ -71,7 +72,7 @@ final readonly class AccountBackupExporter
                 $this->users->getById($userId),
                 $this->includedNetworks->includedNetworksFor($userId),
             ),
-            array_map($this->lines->tagLine(...), $this->tags->findForUser($userId)),
+            array_map($this->lines->tagLine(...), self::rootsFirst($this->tags->findForUser($userId))),
             array_map($this->lines->savedSearchLine(...), $this->savedSearches->findForUser($userId)),
             array_map($this->lines->feedLine(...), array_values($feedsById)),
             array_map($this->lines->subscriptionLine(...), $subscriptions),
@@ -105,5 +106,20 @@ final readonly class AccountBackupExporter
         }
 
         return $feeds;
+    }
+
+    /**
+     * A child names its parent, and the restore resolves names in file order.
+     *
+     * @param list<Tag> $tags
+     *
+     * @return list<Tag>
+     */
+    private static function rootsFirst(array $tags): array
+    {
+        $roots = array_filter($tags, static fn (Tag $tag): bool => $tag->getParent() === null);
+        $children = array_filter($tags, static fn (Tag $tag): bool => $tag->getParent() !== null);
+
+        return [...array_values($roots), ...array_values($children)];
     }
 }

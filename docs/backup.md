@@ -169,7 +169,7 @@ file.
 |---|---|
 | `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. See the header field table below. |
 | `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), the magazine style (`magazineStyle`), and the social networks whose feeds count in your saved searches (`savedSearchIncludedNetworks`; a network not listed is left out). |
-| `tag` | Each tag: `name`, `color`, `icon` and `position`. |
+| `tag` | Each tag: `name`, `color`, `icon`, `position` and `parent` (the parent tag's name, or null for a root). Roots are written before their children. |
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. Your Saved from … feeds are included and come back as your own. |
 | `subscription` | Each subscription, with the address of its feed: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), whether its articles show in All items (`includeInAllItems`), in "For you" (`includeInForYou`) and in saved searches (`includeInSavedSearches`), and the tags on the subscription with their order. |

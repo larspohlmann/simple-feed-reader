@@ -79,6 +79,14 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private const array EVERY_LINE = ['kind'];
 
     /**
+     * Keys null on some lines by nature; the populated account must still export at least one non-null value for
+     * each, so the key is proven without excusing it.
+     */
+    private const array NULL_ON_SOME_LINES = [
+        BackupSchema::KIND_TAG => ['parent' => 'A root tag has no parent; the child tag proves the key.'],
+    ];
+
+    /**
      * The keys no entity declaration claims, per kind, so the header's `createdAt` does not license a `createdAt` on
      * another line.
      */
@@ -402,7 +410,16 @@ final class BackupSchemaCoverageTest extends DbTestCase
             ),
         );
 
-        foreach ($valuesByKind[$kind][$exportedKey] as $value) {
+        $values = $valuesByKind[$kind][$exportedKey];
+        if (isset(self::NULL_ON_SOME_LINES[$kind][$exportedKey])) {
+            self::assertNotEmpty(
+                array_filter($values, static fn (mixed $value): bool => $value !== null),
+                sprintf('%s::$%s is null on every %s line of a fully populated account.', $entityClass, $field, $kind),
+            );
+
+            return;
+        }
+        foreach ($values as $value) {
             self::assertNotNull(
                 $value,
                 sprintf(

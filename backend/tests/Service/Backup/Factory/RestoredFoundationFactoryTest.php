@@ -18,12 +18,22 @@ final class RestoredFoundationFactoryTest extends TestCase
 {
     public function testATagIsRestoredAsTheFileStatesIt(): void
     {
-        $tag = $this->factory()->tag($this->user(), new TagLine('Science', '#123456', 'flask', 4));
+        $tag = $this->factory()->tag($this->user(), new TagLine('Science', '#123456', 'flask', 4), null);
 
         self::assertSame('Science', $tag->getName());
         self::assertSame('#123456', $tag->getColor());
         self::assertSame('flask', $tag->getIcon());
         self::assertSame(4, $tag->getPosition());
+    }
+
+    public function testATagIsRestoredUnderTheParentItNames(): void
+    {
+        $user = $this->user();
+        $parent = $this->factory()->tag($user, new TagLine('Reading', null, null, 1), null);
+
+        $child = $this->factory()->tag($user, new TagLine('Long reads', null, null, 2, 'Reading'), $parent);
+
+        self::assertSame($parent, $child->getParent());
     }
 
     public function testAFeedIsRestoredWithEveryFieldTheFileCarries(): void

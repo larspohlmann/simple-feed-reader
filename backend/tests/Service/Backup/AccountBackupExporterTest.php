@@ -388,6 +388,29 @@ final class AccountBackupExporterTest extends DbTestCase
         self::assertSame(['entries' => 2001, 'entryStates' => 0], $headers[2]['totals']);
     }
 
+    public function testAParentTagIsWrittenBeforeAChildOrderedAheadOfIt(): void
+    {
+        $user = $this->makeUser('export-roots-first@example.com');
+        $parent = new Tag($user, 'Reading');
+        $parent->setPosition(5);
+        $child = new Tag($user, 'Long reads');
+        $child->setPosition(1);
+        $child->setParent($parent);
+        $this->entityManager->persist($parent);
+        $this->entityManager->persist($child);
+        $this->entityManager->flush();
+
+        [$foundationPart] = $this->decodedParts($user);
+        $tagLines = array_values(
+            array_filter($foundationPart, static fn (array $line): bool => $line['kind'] === 'tag'),
+        );
+
+        self::assertSame(
+            [['Reading', null], ['Long reads', 'Reading']],
+            array_map(static fn (array $line): array => [$line['name'], $line['parent']], $tagLines),
+        );
+    }
+
     public function testAnAccountWithNoEntriesYieldsOnlyTheFoundation(): void
     {
         $user = $this->makeUser('export-no-entries@example.com');

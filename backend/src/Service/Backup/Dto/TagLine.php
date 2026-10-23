@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Service\Backup\Support\LineField;
+use App\Service\Backup\Support\LineFieldWithDefault;
 
 /**
  * One of the account's tags.
@@ -16,6 +17,7 @@ final readonly class TagLine
         public ?string $color,
         public ?string $icon,
         public int $position,
+        public ?string $parent = null,
     ) {
     }
 
@@ -29,6 +31,7 @@ final readonly class TagLine
             color: LineField::stringOrNull($line, 'color'),
             icon: LineField::stringOrNull($line, 'icon'),
             position: LineField::int($line, 'position'),
+            parent: LineFieldWithDefault::stringOrNull($line, 'parent'),
         );
     }
 }

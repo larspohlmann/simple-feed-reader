@@ -99,7 +99,8 @@ final class RestoreLoadPass
 
     private function loadTag(TagLine $line): void
     {
-        $tag = $this->foundationFactory->tag($this->user, $line);
+        $parent = $line->parent === null ? null : $this->tagNamed($line->parent);
+        $tag = $this->foundationFactory->tag($this->user, $line, $parent);
         $this->entityManager->persist($tag);
         $this->tagsByName[$line->name] = $tag;
         ++$this->counts['tags'];
@@ -178,14 +179,15 @@ final class RestoreLoadPass
     }
 
     /**
-     * A backstop: BackupInspector refuses an undeclared tag reference in pass
-     * 1, while the account is still whole. Reaching this means the wipe has
-     * already run, so the user must be told the account is empty.
+     * A backstop: BackupInspector refuses an undeclared tag reference, a
+     * subscription's or a child's parent, in pass 1, while the account is
+     * still whole. Reaching this means the wipe has already run, so the user
+     * must be told the account is empty.
      */
     private function tagNamed(string $name): Tag
     {
         return $this->tagsByName[$name] ?? throw BackupLoadFailedException::danglingReference(sprintf(
-            'A subscription names tag "%s", which the backup never declares.',
+            'The backup refers to tag "%s", which it never declares.',
             $name,
         ));
     }
