@@ -170,7 +170,10 @@ services:
     ports:
       - "${WEB_BIND_ADDRESS:-0.0.0.0}:${GRAFANA_PORT:-3000}:3000"
 
+  # A release pulls the php and web images from GHCR (#1752); `build:` serves
+  # an install from a --ref and a release whose images could not be pulled.
   php:
+    image: ghcr.io/larspohlmann/simple-feed-reader-php:${APP_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: docker/php/Dockerfile
@@ -199,6 +202,7 @@ services:
   # (see backend/src/Service/Worker/WorkerSchedule.php). If it dies, the app
   # degrades to #308's poll-driven behaviour automatically -- no config.
   worker:
+    image: ghcr.io/larspohlmann/simple-feed-reader-php:${APP_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: docker/php/Dockerfile
@@ -233,6 +237,7 @@ services:
         condition: service_started
 
   web:
+    image: ghcr.io/larspohlmann/simple-feed-reader-web:${APP_IMAGE_TAG:-local}
     build:
       context: .
       dockerfile: docker/web/Dockerfile
