@@ -120,6 +120,6 @@ final readonly class AccountBackupExporter
         $roots = array_filter($tags, static fn (Tag $tag): bool => $tag->getParent() === null);
         $children = array_filter($tags, static fn (Tag $tag): bool => $tag->getParent() !== null);
 
-        return [...array_values($roots), ...array_values($children)];
+        return [...$roots, ...$children];
     }
 }

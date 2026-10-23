@@ -25,6 +25,9 @@ final class BackupTally
     /** @var array<string, true> declared tag names, as a set */
     private array $tagNames = [];
 
+    /** @var array<string, true> declared tag names that have a parent, as a set */
+    private array $childTagNames = [];
+
     /** @var array<string, true> declared feed urls, as a set */
     private array $feedUrls = [];
 
@@ -82,14 +85,26 @@ final class BackupTally
             throw new InvalidBackupException(sprintf('The backup declares tag "%s" twice.', $line->name));
         }
 
-        if ($line->parent !== null && !isset($this->tagNames[$line->parent])) {
-            throw new InvalidBackupException(
-                sprintf('The backup names parent tag "%s" before declaring it.', $line->parent),
-            );
+        if ($line->parent !== null) {
+            $this->acceptParent($line->parent);
+            $this->childTagNames[$line->name] = true;
         }
 
         $this->tagNames[$line->name] = true;
         ++$this->counts['tags'];
+    }
+
+    private function acceptParent(string $parent): void
+    {
+        if (!isset($this->tagNames[$parent])) {
+            throw new InvalidBackupException(sprintf('The backup names parent tag "%s" before declaring it.', $parent));
+        }
+
+        if (isset($this->childTagNames[$parent])) {
+            throw new InvalidBackupException(
+                sprintf('The backup names parent tag "%s", which has a parent itself.', $parent),
+            );
+        }
     }
 
     /**

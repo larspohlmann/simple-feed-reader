@@ -179,10 +179,8 @@ final class RestoreLoadPass
     }
 
     /**
-     * A backstop: BackupInspector refuses an undeclared tag reference, a
-     * subscription's or a child's parent, in pass 1, while the account is
-     * still whole. Reaching this means the wipe has already run, so the user
-     * must be told the account is empty.
+     * A backstop: BackupInspector already refused an undeclared tag in pass 1.
+     * Reaching this means the wipe has run, so the user must learn the account is empty.
      */
     private function tagNamed(string $name): Tag
     {

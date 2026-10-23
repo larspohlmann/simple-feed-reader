@@ -37,18 +37,6 @@ final class LineFieldWithDefault
 
     /**
      * @param array<string, mixed> $line
-     */
-    public static function stringOrNull(array $line, string $key): ?string
-    {
-        if (!\array_key_exists($key, $line)) {
-            return null;
-        }
-
-        return LineField::stringOrNull($line, $key);
-    }
-
-    /**
-     * @param array<string, mixed> $line
      *
      * @return list<string>
      */

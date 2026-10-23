@@ -267,6 +267,20 @@ final class BackupInspectorTest extends TestCase
         self::inspector()->inspect($gzip);
     }
 
+    public function testAParentThatHasAParentItselfIsRefusedByName(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('Reading'), self::tag('Long reads', 'Reading'), self::tag('Essays', 'Long reads'),
+            self::footer(['tag' => 3]),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The backup names parent tag "Long reads", which has a parent itself.');
+
+        self::inspector()->inspect($gzip);
+    }
+
     public function testAFoundationReportsItsClaimedTotalsAsEntryCounts(): void
     {
         $gzip = self::gzipOf([
