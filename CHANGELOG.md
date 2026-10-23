@@ -10,6 +10,21 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**A redesigned sidebar.** Every section of the sidebar is now its own card:
+search and the main actions sit in a card at the top, your smart views, tags,
+feeds and social networks follow in their own groups, and the reading settings
+(text size, brightness, layout, theme) live in a footer card. Counts line up
+along the right edge, feeds you have left out of saved searches are marked
+with an eye badge, and on a phone the sidebar opens as a full-height sheet
+with roomier rows and Move up / Move down for tags in organise mode.
+
+**Parent tags.** A tag can now sit inside another tag, one level deep.
+Selecting the parent lists, counts, marks read and refreshes the feeds of the
+parent and of all its children; the sidebar shows the child tags nested
+inside their parent, and OPML export and import keep the nesting.
+
 ## [v1.5.5] - 2026-10-23
 
 ## What's Changed
