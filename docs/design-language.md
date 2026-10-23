@@ -52,7 +52,7 @@ discover panel and the auth card each arrived at 12px independently.
 | Token | Value | For |
 |---|---|---|
 | `--control-h` | `40px` | the height of a button, input or select |
-| `--bar-h` | `56px` | **fallback** for the floating app bar's height |
+| `--bar-h` | `56px` | **fallback** for the floating app bar's height; also the wide list toolbar band's height (#1749) |
 | `--tap-target` | `44px` | the documented minimum touch target |
 | `--focus-ring` | `1px solid` accent at 60%; `none` on a coarse pointer | the `outline` of every `:focus-visible` rule (#1723) |
 | `--list-bar-h` | `0px` | the entry list's own bar; overwritten on its host once measured |
@@ -72,15 +72,37 @@ top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 `--list-bar-h` is declared at `:root` with a `0px` default rather than written as
 a `var()` fallback at each use site, so the `calc()` above reads as arithmetic.
 
+### Sidebar geometry (#1749)
+
+The grouped-card sidebar's own measures. They sit on `:root`, not in the sidebar's stylesheet, because the CDK drag preview leaves the sidebar for `<body>` and still reads them.
+
+| Token | Value | For |
+|---|---|---|
+| `--sidebar-nav-w` | `316px` | the desktop card column; the column adds an 8px gutter each side (332px) |
+| `--sidebar-drawer-nav-w` | `336px` | the phone sheet's card column; with its 12/12/12/10 padding and right border the sheet is 359px, inside a 390pt iPhone |
+| `--sidebar-row-h` | `36px` | a row straight on a card: the smart views, a root tag |
+| `--sidebar-sub-row-h` | `32px` | a section head, a row in a section (feeds, saved searches, a network's feeds), a child tag, a group's own feeds |
+| `--sidebar-leaf-row-h` | `30px` | a child tag's feeds, inside its box; the saved-search "Show more" |
+| `--sidebar-slot` | `28px` | the ⋯ and chevron columns |
+| `--sidebar-frame-h` | `36px` | the foot's stepper and segmented frames |
+| `--sidebar-card-pad` | `calc(var(--space-1) + var(--space-0))` | a card's padding, a group's bottom padding, the inner box's right and bottom margin |
+| `--sidebar-row-inset` | `calc(var(--space-2) + var(--space-0))` | a row's left padding on its own surface |
+| `--sidebar-row-deep-inset` | inset + `--icon-md` + `--space-3` | a row stepped in under a lead: it starts where its parent's label starts |
+| `--drawer-shadow` | `6px 0 24px rgb(0 0 0 / 18%)` | the phone sheet's cast |
+| `--drawer-scrim` | `rgb(0 0 0 / 32%)` light, `55%` dark | the backdrop behind the phone sheet |
+| `--hidden-favicon-opacity` | `0.35` light, `0.55` dark | a hidden feed's greyed favicon |
+
+Every row height is `--tap-target` on a coarse pointer.
+
 ### Icon sizes
 
-Four steps, because the same tag glyph is rendered from a 12px pill up to a 20px
-sidebar lead; three steps would inflate the pill.
+Five steps. The same tag glyph runs from a 12px pill to a 20px sidebar lead, and the sidebar's 28px buttons, its segmented controls and a child tag's lead carry an 18px glyph (#1749).
 
 | Token | Value | Named size |
 |---|---|---|
 | `--icon-xs` | `12px` | `xs` |
 | `--icon-sm` | `16px` | `sm` |
+| `--icon-dense` | `18px` | `dense` |
 | `--icon-md` | `20px` | `md` (default) |
 | `--icon-lg` | `24px` | `lg` |
 | — | `0.85em` | `text` |
@@ -123,7 +145,8 @@ again.
 **Compact** — navigation rails, chip strips, row menus, sidebar entries:
 surfaces where scanning many items at once matters more than breathing room.
 In use by `discover/category-rail`, `discover/category-chips`,
-`reader/sidebar`, `admin/admin-catalog`.
+the `reader/sidebar` row menu, `admin/admin-catalog`. The sidebar's rows
+themselves are fixed heights since #1749 (see §3 *Sidebar cards*).
 
 **Comfortable** — the primary content lists a reader actually reads, and the
 settings/admin rows that carry a control per line. In use by
@@ -138,6 +161,7 @@ one that must never get tighter.
 | `--font-sans` | `system-ui, -apple-system, 'Segoe UI', roboto, sans-serif` | the only family |
 | `--fs-xs` | `11px` | badges, counts |
 | `--fs-sm` | `13px` | secondary text, dense rows, `size="sm"` buttons |
+| `--fs-dense` | `14px` | the sidebar's nested rows and its row menu (#1749) |
 | `--fs-base` | `15px` | UI chrome — the `body` size |
 | `--fs-read` | `16px` | **article body** |
 | `--fs-lg` | `18px` | panel and section headings |
@@ -334,7 +358,7 @@ overlays inset by `--select-inset`, so it tunes that and `--field-rim-base`.
 `<app-button>`'s `primary`, `danger` and `ghost`, add-feed's `.subscribe`,
 tag-picker's `.on`, discover's active category chip (their own `background` and
 `border-color` replace the rim); the sidebar dropzone's dashed hint;
-`.section-chevron app-icon` (a transparent alignment border); the colour field's
+the colour field's
 `.swatch` and the about chart's `.chart-marker` (2px rings).
 
 **Magazine.** Blocks and source groups share `magazine-card.chrome`
@@ -1275,6 +1299,8 @@ The field emits; it never navigates. The shell owns the navigation, so both
 mount points — the desktop sidebar and the mobile header bar — drive one code
 path.
 
+In the desktop sidebar the field sits in the search card as `<app-search-field class="inset">`: the card draws the rim, and the field becomes a `--surface-0` well 38px tall with its left corners following the card's (#1749).
+
 `search` emits the settled term after the debounce, but a **clear** emits `''`
 at once: waiting 300 ms to leave a search makes the view feel stuck. The
 component tracks the term already in effect and moves it from both directions —
@@ -1466,49 +1492,47 @@ not a third pair invented in a component stylesheet.
 
 **Touch density is a pointer decision, applied locally.** The reader sidebar
 raises its rows and hit zones to `--tap-target` (44px) under
-`@media (pointer: coarse)` in its own stylesheet (#185). The compact density
+`@media (pointer: coarse)` in `_sidebar-row.scss` (#185, #1749). The compact density
 tokens themselves never grow — they are shared by the discover rails and the
 admin catalog, which stay compact. A new touch surface repeats the pattern
 locally: key on `pointer: coarse` (capability), never on viewport width
 (presentation), and size hit areas with `--tap-target`.
 
-### Sidebar row markers
+### Sidebar cards (#1749)
 
-A single-line sidebar row (a feed under a tag, or in the untagged bucket) can
-carry a small status marker ahead of its trailing unread count, without
-growing the row or pushing the count around. The feed-exclusion marker (#688)
-is the first of these and sets the pattern:
+The sidebar is a column of cards on `--surface-0`: the search card (desktop) or the "Feeds" header with refresh, add feed and close (phone), then smart views, Saved searches, Tags, Feeds, one per network, and the footer. A card is `glass-rim.filled(var(--surface-1), var(--border))`, `--radius-lg`, `--sidebar-card-pad`; cards stand `--space-2` apart (`--space-3` on a coarse pointer). The footer card rides at the end of the column (`margin-top: auto`) and scrolls with it; its layout and theme row wraps when 44px touch targets do not fit on one line. The mixins live in `reader/shell/sidebar/_sidebar-row.scss`.
+
+**A row** is `row-geometry`: a fixed-height flex line, `0 var(--space-2) 0 var(--row-inset)`, hover `--surface-0`, active `--accent-soft` with accent text, glyph and count. Its height, left inset and type size come from the surface it sits on, through the inherited `--row-h`, `--row-inset` and `--row-fs`, so a row component never reaches into its parent and a parent never pierces a row.
+
+**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one.
+
+**Heads** (`section-head`) are 13px/600 `--text-secondary`, sentence case, and their title still opens the combined list (#1735). When that list is showing, the whole head row is `.current`: the full-row `--accent-soft` fill with accent title and count. While organising the heads stay neutral.
+
+**Nesting** (one level, #1736). An open tag is a grey group (`.group.open`, `--surface-sunken`). Each child tag sits in its own `--surface-1` box; the parent's own feeds follow the boxes. Rows inside a box start at the box's edge again, so every chevron keeps the same gap to its own surface. The drop lists stay top-level siblings: the group and the box are plain divs, and the heads and feed lists are rendered through `#tagHead` / `#tagFeeds` templates.
+
+**Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
+
+### Hidden-feed favicon
+
+A feed hidden from All items, For you or saved searches (#688) shows it on its favicon, not with a trailing glyph. Only the feed's own exclusions mark it: a network-level saved-search exclusion is not repeated on each of the network's rows. The favicon greys and fades (`--hidden-favicon-opacity`, `grayscale(1)`), and a small eye badge sits on its bottom-right corner:
 
 ```html
-@if (!s.includeInAllItems || !s.includeInForYou) {
-  <app-icon class="feed-exclusion-marker" name="visibility_off" size="xs" [title]="exclusionTitle(s)" />
-}
+<span class="favicon-slot" [class.hidden-feed]="excluded()">
+  <app-favicon [url]="subscription().faviconUrl" [avatarUrl]="avatarUrl()" />
+  @if (excluded()) {
+    <span class="feed-exclusion-marker" role="img" [attr.aria-label]="markerTitle()" [title]="markerTitle()">
+      <app-icon name="visibility_off" size="text" />
+    </span>
+  }
+</span>
 ```
 
-```scss
-.feed-exclusion-marker {
-  color: var(--text-muted);
-  margin-right: var(--space-1);
-}
-```
+The rules a future marker should reuse:
 
-`visibility_off` is a Material Symbol, rendered through `<app-icon>` like every
-other glyph in this app — not a Tabler icon. The rules a future marker should
-reuse:
-
-- **`size="xs"`, `color: var(--text-muted)`.** A row marker reports state; it
-  must not compete with the row's own content or the accent colour reserved
-  for the active row.
-- **`margin-right: var(--space-1)` on the marker, not spacing on the count.**
-  The gap belongs to the element that is conditionally there, so the count's
-  position stays stable whether or not the marker renders.
-- **It sits immediately left of the unread count and never displaces it.**
-  Both render together when a row is both marked and unread — the marker does
-  not hide or move the count, and the count does not push the marker off.
-- **A `title` names the exact condition**, not a generic label — the
-  exclusion marker's tooltip (`exclusionTitle()`) says which surface(s) the
-  feed is hidden from, so a reader never has to guess what an icon-only glyph
-  means.
+- **It marks the lead, not the line.** The badge rides the favicon, so the label and the count keep their places whether or not it shows.
+- **The badge is a chip of its own surface:** `--surface-1` with a 1px `--border` ring, so it reads on the card, the grey group and the inner box alike.
+- **Every other favicon renders at full strength.** Only the hidden state fades.
+- **A `title` and an `aria-label` name the exact condition** (`exclusionTitle()`), never a generic "hidden".
 
 ### Text-size control
 
