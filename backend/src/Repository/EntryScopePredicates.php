@@ -28,8 +28,7 @@ final readonly class EntryScopePredicates
             $qb->andWhere($aliases->subscriptionKey() . ' = :sid')->setParameter('sid', $query->subscriptionId);
         }
         if ($query->tagId !== null) {
-            $this->joinTags($qb, $aliases);
-            $qb->andWhere($aliases->tagKey() . ' = :tagId')->setParameter('tagId', $query->tagId);
+            TagScopeDql::restrict($qb, $aliases->subscription, $query->tagId);
         }
         if ($query->networkScope !== null) {
             $this->joinNetworkFeeds($qb, $aliases);
@@ -41,7 +40,7 @@ final readonly class EntryScopePredicates
         $this->applyView($qb, $aliases, $query->view);
     }
 
-    /** One row per tag a subscription carries: filter it to one tag, or group by the tag. */
+    /** One row per tag a subscription carries, to group by the tag. */
     public function joinTags(QueryBuilder $qb, EntryAliases $aliases): void
     {
         $qb->innerJoin(\sprintf('%s.subscriptionTags', $aliases->subscription), $aliases->tag);
