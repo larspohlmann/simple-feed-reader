@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Entity\User;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
@@ -91,5 +92,49 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
         self::assertSame(0, $repository->countDue(
             new DueFeedCriteria($now, $owner->requireId(), tagId: $ownerTag->requireId(), force: true),
         ));
+    }
+
+    public function testAParentScopeIncludesItsChildrensFeedsAndAChildScopeOnlyItsOwn(): void
+    {
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $owner = (new UserFactory($this->entityManager, $hasher))->create('owner@example.com');
+        $reading = new Tag($owner, 'reading');
+        $this->entityManager->persist($reading);
+        $longReads = new Tag($owner, 'long reads');
+        $longReads->setParent($reading);
+        $this->entityManager->persist($longReads);
+        $parentFeed = $this->taggedFeed($owner, 'https://example.com/parent.xml', $reading);
+        $childFeed = $this->taggedFeed($owner, 'https://example.com/child.xml', $longReads);
+        $this->entityManager->flush();
+
+        $repository = $this->entityManager->getRepository(Feed::class);
+        self::assertInstanceOf(FeedRepository::class, $repository);
+        $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
+        $ownerId = $owner->requireId();
+
+        $parentScope = new DueFeedCriteria($now, $ownerId, tagId: $reading->requireId(), force: true);
+        self::assertEqualsCanonicalizing(
+            [$parentFeed->getId(), $childFeed->getId()],
+            array_map(static fn (Feed $feed): ?int => $feed->getId(), $repository->findDue($parentScope, 50)),
+        );
+        self::assertSame(2, $repository->countDue($parentScope));
+
+        $childScope = new DueFeedCriteria($now, $ownerId, tagId: $longReads->requireId(), force: true);
+        self::assertSame(
+            [$childFeed->getId()],
+            array_map(static fn (Feed $feed): ?int => $feed->getId(), $repository->findDue($childScope, 50)),
+        );
+    }
+
+    private function taggedFeed(User $owner, string $url, Tag $tag): Feed
+    {
+        $feed = new Feed($url);
+        $this->entityManager->persist($feed);
+        $subscription = new Subscription($owner, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $subscription->addTag($tag);
+        $this->entityManager->persist($subscription);
+
+        return $feed;
     }
 }
