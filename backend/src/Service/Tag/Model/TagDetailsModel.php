@@ -10,6 +10,7 @@ final readonly class TagDetailsModel
         public string $name,
         public ?string $color = null,
         public ?string $icon = null,
+        public ?int $parentId = null,
     ) {
     }
 }

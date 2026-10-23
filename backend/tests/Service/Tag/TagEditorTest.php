@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Tag\Exception\InvalidTagParentException;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Model\TagDetailsModel;
 use App\Service\Tag\TagEditor;
@@ -73,6 +74,83 @@ final class TagEditorTest extends DbTestCase
 
         $this->expectException(TagNameTakenException::class);
         $this->editor()->update($tech, new TagDetailsModel('news'));
+    }
+
+    public function testCreateUnderAParentStoresTheParent(): void
+    {
+        $user = $this->user('tag-child-creator@example.com');
+        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
+
+        $child = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $parent->requireId()));
+
+        self::assertSame($parent->requireId(), $this->reload($child)->getParent()?->getId());
+    }
+
+    public function testCreateRefusesAnUnknownParent(): void
+    {
+        $user = $this->user('tag-unknown-parent@example.com');
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('The parent tag does not exist.');
+        $this->editor()->create($user, new TagDetailsModel('Orphan', parentId: 999999));
+    }
+
+    public function testCreateRefusesAnotherUsersTagAsParent(): void
+    {
+        $foreign = $this->editor()->create($this->user('tag-foreign-owner@example.com'), new TagDetailsModel('Theirs'));
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('The parent tag does not exist.');
+        $this->editor()->create(
+            $this->user('tag-foreign-child@example.com'),
+            new TagDetailsModel('Mine', parentId: $foreign->requireId()),
+        );
+    }
+
+    public function testCreateRefusesAChildAsParent(): void
+    {
+        $user = $this->user('tag-grandchild@example.com');
+        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $child = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $parent->requireId()));
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A parent tag cannot itself have a parent.');
+        $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $child->requireId()));
+    }
+
+    public function testUpdateRefusesAParentForATagThatHasChildren(): void
+    {
+        $user = $this->user('tag-parent-demotion@example.com');
+        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $parent->requireId()));
+        $other = $this->editor()->create($user, new TagDetailsModel('Other'));
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag with child tags cannot have a parent.');
+        $this->editor()->update($parent, new TagDetailsModel('Reading', parentId: $other->requireId()));
+    }
+
+    public function testUpdateRefusesTheTagItselfAsParent(): void
+    {
+        $user = $this->user('tag-self-parent@example.com');
+        $tag = $this->editor()->create($user, new TagDetailsModel('Loop'));
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag cannot be its own parent.');
+        $this->editor()->update($tag, new TagDetailsModel('Loop', parentId: $tag->requireId()));
+    }
+
+    public function testUpdateMovesATagUnderAParentAndBackToRoot(): void
+    {
+        $user = $this->user('tag-reparent@example.com');
+        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $tag = $this->editor()->create($user, new TagDetailsModel('Essays'));
+
+        $this->editor()->update($tag, new TagDetailsModel('Essays', parentId: $parent->requireId()));
+        self::assertSame($parent->requireId(), $this->reload($tag)->getParent()?->getId());
+
+        $this->editor()->update($this->reload($tag), new TagDetailsModel('Essays'));
+        self::assertNull($this->reload($tag)->getParent());
     }
 
     public function testDeleteDetachesTheTagFromItsFeedsAndRemovesIt(): void

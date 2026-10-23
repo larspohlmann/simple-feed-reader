@@ -64,7 +64,9 @@ final class SubscriptionJson
      *   nextFetchAt: string|null,
      *   consecutiveFailures: int, lastErrorMessage: string|null,
      *   position: int,
-     *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
+     *   tags: list<array{
+     *     id: int|null, name: string, color: string|null, icon: string|null, position: int, parentId: int|null
+     *   }>,
      *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool,
      *   includeInSavedSearches: bool,
      *   social: array{network: string, accountId: int|null, kind: string}|null

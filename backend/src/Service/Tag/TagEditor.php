@@ -8,6 +8,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionScopeRepository;
 use App\Repository\TagRepository;
+use App\Service\Tag\Exception\InvalidTagParentException;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Factory\TagFactory;
 use App\Service\Tag\Model\TagDetailsModel;
@@ -30,6 +31,7 @@ final readonly class TagEditor
         }
 
         $tag = $this->tagFactory->create($user, $details, $this->tags->nextPositionForUser($user->requireId()));
+        $tag->setParent($this->parentForNew($user, $details->parentId));
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
 
@@ -42,6 +44,7 @@ final readonly class TagEditor
             throw new TagNameTakenException();
         }
 
+        $tag->setParent($this->parentFor($tag, $details->parentId));
         $tag->setName($details->name);
         $tag->setColor($details->color);
         $tag->setIcon($details->icon);
@@ -56,5 +59,36 @@ final readonly class TagEditor
         }
         $this->entityManager->remove($tag);
         $this->entityManager->flush();
+    }
+
+    private function parentForNew(User $user, ?int $parentId): ?Tag
+    {
+        return $parentId === null ? null : $this->resolveParent($user, $parentId);
+    }
+
+    private function parentFor(Tag $tag, ?int $parentId): ?Tag
+    {
+        if ($parentId === null) {
+            return null;
+        }
+        if ($tag->getId() === $parentId) {
+            throw InvalidTagParentException::itself();
+        }
+        if ($this->tags->hasChildren($tag)) {
+            throw InvalidTagParentException::tagHasChildren();
+        }
+
+        return $this->resolveParent($tag->getUser(), $parentId);
+    }
+
+    private function resolveParent(User $user, int $parentId): Tag
+    {
+        $parent = $this->tags->findOneForUser($user->requireId(), $parentId)
+            ?? throw InvalidTagParentException::unknown();
+        if ($parent->getParent() !== null) {
+            throw InvalidTagParentException::parentIsAChild();
+        }
+
+        return $parent;
     }
 }

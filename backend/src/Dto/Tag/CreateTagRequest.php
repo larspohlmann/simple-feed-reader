@@ -19,11 +19,18 @@ final readonly class CreateTagRequest
         #[Assert\Length(max: 64)]
         #[Assert\Regex(pattern: '/^[a-z0-9_]+$/', message: 'Icon must be a Material Symbol name.')]
         public ?string $icon = null,
+        #[Assert\Positive]
+        public ?int $parentId = null,
     ) {
     }
 
     public function toDetails(): TagDetailsModel
     {
-        return new TagDetailsModel(name: $this->name, color: $this->color, icon: $this->icon);
+        return new TagDetailsModel(
+            name: $this->name,
+            color: $this->color,
+            icon: $this->icon,
+            parentId: $this->parentId,
+        );
     }
 }
