@@ -172,6 +172,28 @@ describe('TagFormDialogComponent', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
+  it('clears the parent error once another parent is chosen', () => {
+    const fixture = mount(null, [tagOf(1, 'Reading', null)]);
+    const component = fixture.componentInstance;
+    component.form.controls.name.setValue('Essays');
+    component.parentId.set(1);
+    component.submit();
+    ctrl.expectOne('https://api.test/api/tags').flush(
+      {
+        type: 'invalid_tag_parent',
+        title: 'Invalid parent tag',
+        status: 422,
+        errors: { parentId: ['A parent tag cannot itself have a parent.'] },
+      },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    expect(component.parentError()).not.toBeNull();
+
+    component.onParentChange({ target: { value: '' } } as unknown as Event);
+
+    expect(component.parentError()).toBeNull();
+  });
+
   it('surfaces a 409 name-taken error inline and stays open', () => {
     const fixture = mount(null);
     const component = fixture.componentInstance;

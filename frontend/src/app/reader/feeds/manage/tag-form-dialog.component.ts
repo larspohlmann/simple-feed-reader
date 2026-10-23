@@ -62,6 +62,7 @@ export class TagFormDialogComponent {
   onParentChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.parentId.set(value === '' ? null : Number(value));
+    this.parentError.set(null);
   }
 
   submit(): void {
