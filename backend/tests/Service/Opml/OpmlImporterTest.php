@@ -244,4 +244,78 @@ final class OpmlImporterTest extends DbTestCase
 
         $this->importer()->import($this->user('limit-opml@example.com'), str_repeat('a', 1_048_576));
     }
+
+    public function testANestedGroupBecomesAChildOfTheTopLevelGroup(): void
+    {
+        $user = $this->user('opml-nested@example.com');
+        $opml = $this->opml(
+            '<outline text="Reading"><outline text="Long reads">'
+            . '<outline type="rss" text="F" xmlUrl="https://nested.example.com/feed.xml"/>'
+            . '</outline></outline>',
+        );
+
+        $result = $this->importer()->import($user, $opml);
+
+        self::assertSame(1, $result->imported);
+        self::assertSame('Reading', $this->tagNamed($user, 'Long reads')->getParent()?->getName());
+        self::assertNull($this->tagNamed($user, 'Reading')->getParent());
+        self::assertSame(['Long reads'], $this->tagNamesOf($this->subscriptionsOf($user)[0]));
+    }
+
+    public function testADeeperGroupKeepsTheInnermostTagUnderTheOutermostGroup(): void
+    {
+        $user = $this->user('opml-deep@example.com');
+        $opml = $this->opml(
+            '<outline text="A"><outline text="B"><outline text="C">'
+            . '<outline type="rss" text="F" xmlUrl="https://deep.example.com/feed.xml"/>'
+            . '</outline></outline></outline>',
+        );
+
+        $this->importer()->import($user, $opml);
+
+        self::assertSame('A', $this->tagNamed($user, 'C')->getParent()?->getName());
+        self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'B']));
+    }
+
+    public function testAnExistingParentTagKeepsItsPlaceWhenAFileWouldNestIt(): void
+    {
+        $user = $this->user('opml-conflict@example.com');
+        $longReads = new Tag($user, 'Long reads');
+        $this->entityManager->persist($longReads);
+        $essays = new Tag($user, 'Essays');
+        $essays->setParent($longReads);
+        $this->entityManager->persist($essays);
+        $this->entityManager->flush();
+        $opml = $this->opml(
+            '<outline text="Reading"><outline text="Long reads">'
+            . '<outline type="rss" text="F" xmlUrl="https://conflict.example.com/feed.xml"/>'
+            . '</outline></outline>',
+        );
+
+        $result = $this->importer()->import($user, $opml);
+
+        self::assertSame(1, $result->imported);
+        self::assertNull($this->tagNamed($user, 'Long reads')->getParent());
+        self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy([
+            'user' => $user,
+            'name' => 'Reading',
+        ]));
+    }
+
+    private function tagNamed(User $user, string $name): Tag
+    {
+        $tag = $this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => $name]);
+        self::assertInstanceOf(Tag::class, $tag);
+
+        return $tag;
+    }
+
+    /** @return list<string> */
+    private function tagNamesOf(Subscription $subscription): array
+    {
+        return array_values(array_map(
+            static fn (Tag $tag): string => $tag->getName(),
+            $subscription->getTags()->toArray(),
+        ));
+    }
 }

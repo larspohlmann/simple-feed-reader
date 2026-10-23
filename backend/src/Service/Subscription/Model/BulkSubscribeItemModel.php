@@ -19,6 +19,7 @@ final readonly class BulkSubscribeItemModel
         public ?string $tagName = null,
         public ?TagStyleModel $tagStyle = null,
         public string $sourceFormat = SourceFormat::XML,
+        public ?string $parentTagName = null,
     ) {
     }
 }

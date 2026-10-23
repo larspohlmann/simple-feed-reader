@@ -6,6 +6,7 @@ namespace App\Service\Opml;
 
 use App\Entity\User;
 use App\Service\Opml\Exception\InvalidOpmlException;
+use App\Service\Opml\Model\OpmlFeedPlacementModel;
 use App\Service\Opml\Model\OpmlImportResultModel;
 use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
@@ -30,11 +31,12 @@ final readonly class OpmlImporter
         $body = $this->bodyReader->read($opml);
 
         $items = [];
-        // Depth-first: each feed outline inherits the nearest ancestor group's
-        // title as its tag. `null` tag = body root (untagged). OPML carries no
-        // styling, so imported tags get the app's default colour and icon.
-        foreach ($this->collectFeeds($body, null) as [$xmlUrl, $tagName]) {
-            $items[] = new BulkSubscribeItemModel(feedUrl: $xmlUrl, tagName: $tagName);
+        foreach ($this->collectFeeds($body, null, null) as $placement) {
+            $items[] = new BulkSubscribeItemModel(
+                feedUrl: $placement->feedUrl,
+                tagName: $placement->tagName,
+                parentTagName: $placement->parentTagName,
+            );
         }
 
         $result = $this->subscriber->subscribeAll($user, $items);
@@ -48,11 +50,14 @@ final readonly class OpmlImporter
     }
 
     /**
-     * @return list<array{0: string, 1: string|null}> [xmlUrl, tagName]
+     * Depth-first. A feed takes the innermost group as its tag and the outermost as that tag's parent, so a
+     * one-level file imports as it always did and a deeper one keeps its innermost grouping.
+     *
+     * @return list<OpmlFeedPlacementModel>
      */
-    private function collectFeeds(\DOMElement $node, ?string $inheritedTag): array
+    private function collectFeeds(\DOMElement $node, ?string $inheritedTag, ?string $outermostTag): array
     {
-        $out = [];
+        $placements = [];
         foreach ($node->childNodes as $child) {
             if (!$child instanceof \DOMElement || $child->localName !== 'outline') {
                 continue;
@@ -60,21 +65,27 @@ final readonly class OpmlImporter
 
             $xmlUrl = trim($child->getAttribute('xmlUrl'));
             if ($xmlUrl !== '') {
-                $out[] = [$xmlUrl, $inheritedTag];
+                $parent = $inheritedTag === $outermostTag ? null : $outermostTag;
+                $placements[] = new OpmlFeedPlacementModel($xmlUrl, $inheritedTag, $parent);
                 continue;
             }
 
-            // A group outline: its text/title becomes the tag for descendants.
-            $groupName = trim($child->getAttribute('text'));
-            if ($groupName === '') {
-                $groupName = trim($child->getAttribute('title'));
-            }
-            $childTag = $groupName !== '' ? $groupName : $inheritedTag;
-            foreach ($this->collectFeeds($child, $childTag) as $descendant) {
-                $out[] = $descendant;
+            $groupTag = $this->groupName($child) ?? $inheritedTag;
+            foreach ($this->collectFeeds($child, $groupTag, $outermostTag ?? $groupTag) as $placement) {
+                $placements[] = $placement;
             }
         }
 
-        return $out;
+        return $placements;
+    }
+
+    private function groupName(\DOMElement $outline): ?string
+    {
+        $name = trim($outline->getAttribute('text'));
+        if ($name === '') {
+            $name = trim($outline->getAttribute('title'));
+        }
+
+        return $name === '' ? null : $name;
     }
 }
