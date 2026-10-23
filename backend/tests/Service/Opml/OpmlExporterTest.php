@@ -26,6 +26,138 @@ final class OpmlExporterTest extends DbTestCase
         return $exporter;
     }
 
+    public function testAChildTagNestsInsideItsParentsOutline(): void
+    {
+        $user = new User('opml-nested@example.com', new \DateTimeImmutable('2026-10-21T00:00:00Z'));
+        $this->entityManager->persist($user);
+        [$reading, $longReads] = $this->parentAndChild($user);
+        $this->taggedSubscription($user, 'https://parent.example.com/feed.xml', $reading);
+        $this->taggedSubscription($user, 'https://child.example.com/feed.xml', $longReads);
+        $this->entityManager->flush();
+
+        $xml = $this->exporter()->export($user);
+
+        self::assertMatchesRegularExpression(
+            '#<outline text="Reading" title="Reading">\s*'
+            . '<outline type="rss" text="[^"]*" title="[^"]*" xmlUrl="https://parent.example.com/feed.xml"/>\s*'
+            . '<outline text="Long reads" title="Long reads">\s*'
+            . '<outline type="rss" text="[^"]*" title="[^"]*" xmlUrl="https://child.example.com/feed.xml"/>\s*'
+            . '</outline>\s*</outline>#',
+            $xml,
+        );
+    }
+
+    public function testAParentWithoutFeedsOfItsOwnStillWrapsItsChild(): void
+    {
+        $user = new User('opml-empty-parent@example.com', new \DateTimeImmutable('2026-10-21T00:00:00Z'));
+        $this->entityManager->persist($user);
+        [, $longReads] = $this->parentAndChild($user);
+        $this->taggedSubscription($user, 'https://child.example.com/feed.xml', $longReads);
+        $this->entityManager->flush();
+
+        $xml = $this->exporter()->export($user);
+
+        self::assertMatchesRegularExpression(
+            '#<outline text="Reading" title="Reading">\s*<outline text="Long reads" title="Long reads">#',
+            $xml,
+        );
+    }
+
+    public function testSiblingTagsExportByPositionThenName(): void
+    {
+        $user = new User('opml-sibling-order@example.com', new \DateTimeImmutable('2026-10-21T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $alpha = $this->tagAt($user, 'Alpha', 1);
+        $gamma = $this->tagAt($user, 'Gamma', 0);
+        $beta = $this->tagAt($user, 'Beta', 0);
+        $essays = $this->tagAt($user, 'Essays', 1, $beta);
+        $reviews = $this->tagAt($user, 'Reviews', 0, $beta);
+        $longReads = $this->tagAt($user, 'Long reads', 0, $beta);
+        foreach ([$alpha, $gamma, $essays, $reviews, $longReads] as $index => $tag) {
+            $this->taggedSubscription($user, sprintf('https://feed-%d.example.com/feed.xml', $index), $tag);
+        }
+        $this->entityManager->flush();
+
+        $outlines = new \DOMXPath($this->exportedDocument($user));
+
+        self::assertSame(['Beta', 'Gamma', 'Alpha'], $this->texts($outlines, '/opml/body/outline[not(@type)]'));
+        self::assertSame(
+            ['Long reads', 'Reviews', 'Essays'],
+            $this->texts($outlines, '/opml/body/outline[@text="Beta"]/outline[not(@type)]'),
+        );
+    }
+
+    public function testAnUntaggedFeedListedBeforeATaggedOneLeavesBothInTheExport(): void
+    {
+        $user = new User('opml-untagged-first@example.com', new \DateTimeImmutable('2026-10-21T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $untagged = new Feed('https://untagged.example.com/feed.xml');
+        $this->entityManager->persist($untagged);
+        $this->entityManager->persist(
+            new Subscription($user, $untagged, new \DateTimeImmutable('2026-10-21T00:00:00Z')),
+        );
+        $this->taggedSubscription($user, 'https://tagged.example.com/feed.xml', $this->tagAt($user, 'Daily', 0));
+        $this->entityManager->flush();
+
+        $xml = $this->exporter()->export($user);
+
+        self::assertStringContainsString('xmlUrl="https://untagged.example.com/feed.xml"', $xml);
+        self::assertStringContainsString('xmlUrl="https://tagged.example.com/feed.xml"', $xml);
+    }
+
+    private function tagAt(User $user, string $name, int $position, ?Tag $parent = null): Tag
+    {
+        $tag = new Tag($user, $name);
+        $tag->setPosition($position);
+        $tag->setParent($parent);
+        $this->entityManager->persist($tag);
+
+        return $tag;
+    }
+
+    private function exportedDocument(User $user): \DOMDocument
+    {
+        $document = new \DOMDocument();
+        self::assertTrue($document->loadXML($this->exporter()->export($user)));
+
+        return $document;
+    }
+
+    /** @return list<string> */
+    private function texts(\DOMXPath $outlines, string $query): array
+    {
+        $texts = [];
+        foreach ($outlines->query($query) ?: [] as $outline) {
+            self::assertInstanceOf(\DOMElement::class, $outline);
+            $texts[] = $outline->getAttribute('text');
+        }
+
+        return $texts;
+    }
+
+    /** @return array{0: Tag, 1: Tag} */
+    private function parentAndChild(User $user): array
+    {
+        $reading = new Tag($user, 'Reading');
+        $reading->setPosition(0);
+        $this->entityManager->persist($reading);
+        $longReads = new Tag($user, 'Long reads');
+        $longReads->setPosition(1);
+        $longReads->setParent($reading);
+        $this->entityManager->persist($longReads);
+
+        return [$reading, $longReads];
+    }
+
+    private function taggedSubscription(User $user, string $url, Tag $tag): void
+    {
+        $feed = new Feed($url);
+        $this->entityManager->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-10-21T00:00:00Z'));
+        $subscription->addTag($tag);
+        $this->entityManager->persist($subscription);
+    }
+
     public function testExportsTaggedAndUntaggedFeeds(): void
     {
         $user = new User('x@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));

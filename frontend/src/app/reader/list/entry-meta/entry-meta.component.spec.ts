@@ -26,6 +26,7 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   color: null,
   icon: null,
   position: 0,
+  parentId: null,
 });
 
 function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imageShown?: boolean) {

@@ -119,6 +119,19 @@
   padding-left: var(--space-6);
 }
 
+/* A child tag sits one step in from its parent, and its feeds one step further (#1736). */
+.taghead.child {
+  padding-left: var(--space-5);
+}
+
+.tagfeeds.child {
+  padding-left: calc(var(--space-2) + var(--space-5));
+}
+
+.tagfeeds.child.organising {
+  padding-left: calc(var(--space-6) + var(--space-5));
+}
+
 .feedrow.cdk-drag,
 .tag.cdk-drag {
   cursor: grab;

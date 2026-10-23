@@ -33,12 +33,13 @@ import { SidebarSocialSectionComponent } from './sidebar-social-section.componen
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
-import { TagNode } from '../../state/subscription-derivations';
+import { TagNode, siblingIdsOf, tagNodesById } from '../../state/subscription-derivations';
+import { TagsStore } from '../../state/tags.store';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
-import { isSubscriptionDrag } from '../../drag-payload';
+import { isSubscriptionDrag, isTagDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
@@ -50,6 +51,12 @@ import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
+
+export interface TagRow {
+  readonly kind: 'head' | 'feeds';
+  readonly node: TagNode;
+  readonly depth: 0 | 1;
+}
 
 const tagIdOf = (data: DropData): number | null => (data.kind === 'tag' ? data.tag.id : null);
 
@@ -94,8 +101,10 @@ export class SidebarComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
   protected readonly manage = inject(ManageActions);
   protected readonly rows = inject(SidebarRowActions);
+  private readonly tagsStore = inject(TagsStore);
 
   readonly tagTree = input.required<TagNode[]>();
+  private readonly tagNodeById = computed(() => tagNodesById(this.tagTree()));
   readonly untagged = input.required<SubscriptionDto[]>();
   readonly socialSections = input<SocialSection[]>([]);
   readonly totalUnread = input.required<number>();
@@ -143,8 +152,14 @@ export class SidebarComponent {
 
   /** Feed lists accept only feed drags. */
   readonly isFeedDrag = (drag: CdkDrag): boolean => isSubscriptionDrag(drag.data);
-  /** A tag header accepts a tag (to reorder) and a feed (to add the tag). */
-  readonly acceptOnTagHead = (): boolean => true;
+  /** A tag head takes a feed from anywhere, and a tag only from its own sibling set, so no other head highlights. */
+  readonly acceptOnTagHead = (drag: CdkDrag, list: CdkDropList<DropData>): boolean => {
+    if (isSubscriptionDrag(drag.data)) return true;
+    const target = list.data;
+    return (
+      target.kind === 'tag' && isTagDrag(drag.data) && drag.data.parentId === target.tag.parentId
+    );
+  };
 
   readonly refreshSvc = inject(RefreshService);
   readonly ai = inject(AiAvailabilityService);
@@ -182,6 +197,24 @@ export class SidebarComponent {
     if (!this.screen.isCoarse()) untracked(() => this.organising.set(false));
   });
   readonly expanded = signal<Set<number>>(new Set());
+
+  readonly tagRows = computed<TagRow[]>(() =>
+    this.tagTree().flatMap((root): TagRow[] => [
+      { kind: 'head', node: root, depth: 0 },
+      ...(this.expanded().has(root.tag.id)
+        ? root.children.flatMap((child): TagRow[] => this.headAndFeeds(child, 1))
+        : []),
+      ...this.feedsRow(root, 0),
+    ]),
+  );
+
+  private headAndFeeds(node: TagNode, depth: 0 | 1): TagRow[] {
+    return [{ kind: 'head', node, depth }, ...this.feedsRow(node, depth)];
+  }
+
+  private feedsRow(node: TagNode, depth: 0 | 1): TagRow[] {
+    return this.expanded().has(node.tag.id) ? [{ kind: 'feeds', node, depth }] : [];
+  }
 
   /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */
   private readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
@@ -251,7 +284,7 @@ export class SidebarComponent {
     if (target.kind !== 'tag') return;
 
     const dragged = event.item.data as TagDto;
-    const ids = this.tagTree().map((node) => node.tag.id);
+    const ids = siblingIdsOf(this.tagsStore.tags(), target.tag);
     const from = ids.indexOf(dragged.id);
     const to = ids.indexOf(target.tag.id);
     if (from < 0 || to < 0 || from === to) return;
@@ -268,9 +301,9 @@ export class SidebarComponent {
     if (event.previousContainer === event.container) {
       if (event.previousIndex === event.currentIndex) return;
       if (target.kind === 'tag') {
-        const ids = (
-          this.tagTree().find((node) => node.tag.id === target.tag.id)?.subscriptions ?? []
-        ).map((subscription) => subscription.id);
+        const ids = (this.tagNodeById().get(target.tag.id)?.subscriptions ?? []).map(
+          (subscription) => subscription.id,
+        );
         moveItemInArray(ids, event.previousIndex, event.currentIndex);
         this.manage.reorderTagFeeds(target.tag.id, ids);
       } else {

@@ -1,8 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
+import { rootsOf } from './subscription-derivations';
+
+/** Position order, name as a stable tiebreak; a position orders a tag among its siblings only. */
+export function compareTagPositions(left: TagDto, right: TagDto): number {
+  return left.position - right.position || left.name.localeCompare(right.name);
+}
 
 /** The complete tag list from GET /api/tags — including tags with zero feeds,
  *  which the sidebar's subscription-derived tree never shows. Management reads
@@ -12,6 +18,8 @@ export class TagsStore {
   private readonly api = inject(ReaderApi);
 
   readonly tags = signal<TagDto[]>([]);
+  /** The tags that may be a parent: only a root can take children (#1736). */
+  readonly rootTags = computed(() => rootsOf(this.tags()));
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
@@ -20,11 +28,7 @@ export class TagsStore {
     this.error.set(null);
     this.api.tags().subscribe({
       next: (response) => {
-        this.tags.set(
-          [...response.tags].sort(
-            (left, right) => left.position - right.position || left.name.localeCompare(right.name),
-          ),
-        );
+        this.tags.set([...response.tags].sort(compareTagPositions));
         this.loading.set(false);
       },
       error: (error: HttpErrorResponse) => {

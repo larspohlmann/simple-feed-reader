@@ -37,7 +37,7 @@ final class BackupFieldDeclarations
             'magazineStyle' => 'magazineStyle',
         ],
         Tag::class => [
-            'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position',
+            'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position', 'parent' => 'parent',
         ],
         SavedSearch::class => [
             'term' => 'term', 'wholeWord' => 'wholeWord', 'phrase' => 'phrase', 'position' => 'position',

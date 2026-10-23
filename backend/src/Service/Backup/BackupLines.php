@@ -80,6 +80,7 @@ final readonly class BackupLines
             'color' => $tag->getColor(),
             'icon' => $tag->getIcon(),
             'position' => $tag->getPosition(),
+            'parent' => $tag->getParent()?->getName(),
         ]);
     }
 

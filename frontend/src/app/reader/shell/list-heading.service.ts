@@ -39,8 +39,8 @@ export class ListHeading {
 
   private readonly selectedTagNode = computed(() => {
     const selection = this.routeState.selection();
-    if (selection.kind !== 'tag') return null;
-    return this.subscriptions.tagTree().find((node) => node.tag.id === selection.id) ?? null;
+    if (selection.kind !== 'tag' || selection.id === null) return null;
+    return this.subscriptions.tagNodeById().get(selection.id) ?? null;
   });
 
   readonly selectedTag = computed(() => this.selectedTagNode()?.tag ?? null);

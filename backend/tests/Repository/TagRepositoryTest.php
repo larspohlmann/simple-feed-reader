@@ -33,6 +33,19 @@ final class TagRepositoryTest extends DbTestCase
         $this->repository()->getOneForUser($stranger->requireId(), $tag->requireId());
     }
 
+    public function testFindChildrenListsATagsChildrenInPositionOrder(): void
+    {
+        $owner = $this->userFactory()->create('tag-parent@example.com');
+        $parent = $this->tag($owner);
+        $second = $this->childOf($owner, $parent, 'Second', 2);
+        $first = $this->childOf($owner, $parent, 'First', 1);
+        $this->tag($owner, 'Unrelated');
+
+        self::assertSame([$first, $second], $this->repository()->findChildren($parent));
+        self::assertTrue($this->repository()->hasChildren($parent));
+        self::assertFalse($this->repository()->hasChildren($first));
+    }
+
     private function repository(): TagRepository
     {
         $repository = $this->entityManager->getRepository(Tag::class);
@@ -49,12 +62,23 @@ final class TagRepositoryTest extends DbTestCase
         return new UserFactory($this->entityManager, $hasher);
     }
 
-    private function tag(User $owner): Tag
+    private function tag(User $owner, string $name = 'News'): Tag
     {
-        $tag = new Tag($owner, 'News');
+        $tag = new Tag($owner, $name);
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
 
         return $tag;
+    }
+
+    private function childOf(User $owner, Tag $parent, string $name, int $position): Tag
+    {
+        $child = new Tag($owner, $name);
+        $child->setParent($parent);
+        $child->setPosition($position);
+        $this->entityManager->persist($child);
+        $this->entityManager->flush();
+
+        return $child;
     }
 }

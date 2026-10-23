@@ -21,8 +21,10 @@ export interface TagDto {
   name: string;
   color: string | null;
   icon: string | null;
-  /** The tag's order in the sidebar list (ascending). */
+  /** The tag's order among its siblings: roots among roots, children within their parent. */
   position: number;
+  /** The parent tag's id, or null for a root. One level deep (#1736). */
+  parentId: number | null;
 }
 
 /** The sidebar's view of a saved search: the badge reads `unreadCount`. The
@@ -69,13 +71,7 @@ export interface SavedSearchWire {
 /** A tag as embedded on a subscription: same shape as TagDto, but `position` is
  *  THIS feed's order within that tag (the join position), not the tag's own
  *  sidebar order. */
-export interface SubscriptionTagDto {
-  id: number;
-  name: string;
-  color: string | null;
-  icon: string | null;
-  position: number;
-}
+export type SubscriptionTagDto = TagDto;
 
 export interface SubscriptionDto {
   id: number;
@@ -402,6 +398,7 @@ export interface TagInput {
   name: string;
   color: string | null;
   icon: string | null;
+  parentId: number | null;
 }
 
 /** Body for PATCH /api/subscriptions/{id}. Replaces the whole tag set. Omitted

@@ -6,6 +6,7 @@ import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.
 import { ButtonComponent } from '../../shared/button/button.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { SubscriptionDto, TagDto } from '../../reader/models';
+import { tagLabel, tagsInTreeOrder } from '../../reader/state/subscription-derivations';
 import { pluralKey } from '../../core/i18n/plural-key';
 
 export interface BulkTagDialogData {
@@ -52,10 +53,15 @@ export class BulkTagDialogComponent {
   /** Add mode offers every tag; remove mode offers only what the selection
    *  actually carries — a tag nobody has is not a tag anybody can lose. */
   readonly offered = computed<TagDto[]>(() => {
-    if (this.data.mode === 'add') return this.data.tags;
+    const ordered = tagsInTreeOrder(this.data.tags);
+    if (this.data.mode === 'add') return ordered;
 
-    return this.data.tags.filter((tag) => this.carriedBy(tag) > 0);
+    return ordered.filter((tag) => this.carriedBy(tag) > 0);
   });
+
+  protected labelOf(tag: TagDto): string {
+    return tagLabel(tag, this.data.tags);
+  }
 
   /** How many selected feeds carry each tag id, built once rather than
    *  rescanned per tag: `carriedBy` is read in a template loop over every

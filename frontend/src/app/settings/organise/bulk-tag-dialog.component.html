@@ -15,7 +15,7 @@
           (click)="choose(tag)"
         >
           <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="sm" />
-          <span>{{ tag.name }}</span>
+          <span>{{ labelOf(tag) }}</span>
           <span class="n">{{ carriedBy(tag) }}/{{ total }}</span>
         </button>
       }

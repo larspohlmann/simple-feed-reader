@@ -50,7 +50,9 @@ final readonly class FullyPopulatedAccount
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $user->getPreferences()->setMagazineStyle(MagazineStyle::Airy);
 
-        $tag = $this->tagFor($user);
+        $parentTag = $this->parentTagFor($user);
+        $this->entityManager->persist($parentTag);
+        $tag = $this->tagFor($user, $parentTag);
         $this->entityManager->persist($tag);
 
         $this->entityManager->persist($this->savedSearchFor($user));
@@ -87,12 +89,23 @@ final readonly class FullyPopulatedAccount
         return $savedSearch;
     }
 
-    private function tagFor(User $user): Tag
+    private function parentTagFor(User $user): Tag
+    {
+        $tag = new Tag($user, 'Reading');
+        $tag->setColor('#112233');
+        $tag->setIcon('menu_book');
+        $tag->setPosition(1);
+
+        return $tag;
+    }
+
+    private function tagFor(User $user, Tag $parent): Tag
     {
         $tag = new Tag($user, 'Long reads');
         $tag->setColor('#3355ff');
         $tag->setIcon('bookmark');
         $tag->setPosition(2);
+        $tag->setParent($parent);
 
         return $tag;
     }

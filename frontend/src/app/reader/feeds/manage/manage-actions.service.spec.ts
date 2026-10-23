@@ -24,7 +24,7 @@ const sub: SubscriptionDto = makeSubscription({
   feedUrl: 'u',
   createdAt: 'x',
 });
-const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0 };
+const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
 const TAG = tag;
 const SUBSCRIPTION = sub;
 
@@ -148,7 +148,14 @@ describe('ManageActions', () => {
   it('moveFeedToTag: optimistically drops the source tag and adds the target', () => {
     const store = TestBed.inject(SubscriptionsStore);
     const tags = TestBed.inject(TagsStore);
-    const news: TagDto = { id: 7, name: 'News', color: null, icon: null, position: 1 };
+    const news: TagDto = {
+      id: 7,
+      name: 'News',
+      color: null,
+      icon: null,
+      position: 1,
+      parentId: null,
+    };
     tags.tags.set([tag, news]);
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     store.storedSubscriptions.set([tagged]);
@@ -235,6 +242,45 @@ describe('ManageActions', () => {
     expect(testRequest.request.body).toEqual({ tagIds: [3, 1, 2] });
     testRequest.flush({ tags: [] });
     expect(spy).toHaveBeenCalled();
+  });
+
+  it('reorderTags: repositions only the listed siblings and keeps every other tag', () => {
+    jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
+    const tags = TestBed.inject(TagsStore);
+    const reading: TagDto = {
+      id: 1,
+      name: 'Reading',
+      color: null,
+      icon: null,
+      position: 0,
+      parentId: null,
+    };
+    const longReads: TagDto = {
+      id: 2,
+      name: 'Long reads',
+      color: null,
+      icon: null,
+      position: 0,
+      parentId: 1,
+    };
+    const tech: TagDto = {
+      id: 4,
+      name: 'Tech',
+      color: null,
+      icon: null,
+      position: 1,
+      parentId: null,
+    };
+    tags.tags.set([reading, longReads, tech]);
+
+    service.reorderTags([4, 1]);
+
+    expect(tags.tags().map((tag) => [tag.id, tag.position])).toEqual([
+      [2, 0],
+      [4, 0],
+      [1, 1],
+    ]);
+    ctrl.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
   });
 
   it('reorderUntagged: PATCHes /api/subscriptions/reorder then reloads subs', () => {

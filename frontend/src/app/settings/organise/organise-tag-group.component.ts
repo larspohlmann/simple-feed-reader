@@ -12,7 +12,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto } from '../../reader/models';
 import { isSubscriptionDrag } from '../../reader/drag-payload';
 
-/** One tag panel: a header row, and -- when open -- its feeds.
+/** One tag panel: a header row, its child panels (projected), and -- when open -- its feeds.
  *
  *  Two sibling drop lists, never nested: CDK doesn't connect a list inside
  *  another (see sidebar.component.html for the same fix).

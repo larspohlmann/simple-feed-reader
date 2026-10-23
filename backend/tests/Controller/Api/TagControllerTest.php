@@ -11,7 +11,9 @@ use App\Entity\User;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class TagControllerTest extends WebTestCase
@@ -56,7 +58,7 @@ final class TagControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->request('GET', '/api/tags');
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testCreateListAndRejectDuplicateName(): void
@@ -73,7 +75,7 @@ final class TagControllerTest extends WebTestCase
                 \JSON_THROW_ON_ERROR,
             ),
         );
-        self::assertResponseStatusCodeSame(201);
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         $created = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($created);
         self::assertIsArray($created['tag']);
@@ -88,7 +90,7 @@ final class TagControllerTest extends WebTestCase
             server: $headers,
             content: json_encode(['name' => 'news'], \JSON_THROW_ON_ERROR),
         );
-        self::assertResponseStatusCodeSame(409);
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
         $conflict = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($conflict);
         self::assertSame('tag_name_taken', $conflict['type']);
@@ -113,7 +115,7 @@ final class TagControllerTest extends WebTestCase
             server: $headers,
             content: json_encode(['name' => 'First'], \JSON_THROW_ON_ERROR),
         );
-        self::assertResponseStatusCodeSame(201);
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         $first = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($first);
         self::assertIsArray($first['tag']);
@@ -125,7 +127,7 @@ final class TagControllerTest extends WebTestCase
             server: $headers,
             content: json_encode(['name' => 'Second'], \JSON_THROW_ON_ERROR),
         );
-        self::assertResponseStatusCodeSame(201);
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         $second = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($second);
         self::assertIsArray($second['tag']);
@@ -143,7 +145,7 @@ final class TagControllerTest extends WebTestCase
             server: $headers,
             content: json_encode(['name' => 'X', 'color' => 'red'], \JSON_THROW_ON_ERROR),
         );
-        self::assertResponseStatusCodeSame(422);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('validation_error', $body['type']);
@@ -163,7 +165,7 @@ final class TagControllerTest extends WebTestCase
 
         $headers = $this->authHeader('intruder@example.com');
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $headers);
-        self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND); // not 403 — do not reveal existence
         self::assertStringContainsString('"detail":"No such tag."', (string) $client->getResponse()->getContent());
     }
 
@@ -182,7 +184,7 @@ final class TagControllerTest extends WebTestCase
 
         $client->request('DELETE', '/api/tags/' . $tagId, server: $this->headersFor($user));
 
-        self::assertResponseStatusCodeSame(204);
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
         $entityManager->clear();
         self::assertNull(
             $entityManager->getRepository(Tag::class)->find($tagId),
@@ -210,7 +212,7 @@ final class TagControllerTest extends WebTestCase
 
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $this->headersFor($user));
 
-        self::assertResponseStatusCodeSame(204);
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
         $entityManager->clear();
         $reloaded = $entityManager->getRepository(Subscription::class)->find($subscriptionId);
         self::assertInstanceOf(Subscription::class, $reloaded);
@@ -219,5 +221,99 @@ final class TagControllerTest extends WebTestCase
             $reloaded->getTags(),
             'Deleting a tag must detach it from every subscription that carried it.',
         );
+    }
+
+    public function testACreatedChildEchoesItsParentAndTheListCarriesParentIds(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('tag-parent-wire@example.com');
+
+        $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
+        $child = $this->createTagBody($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
+        self::assertSame($parentId, $child['parentId']);
+
+        $client->request('GET', '/api/tags', server: $headers);
+        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($list);
+        self::assertIsArray($list['tags']);
+        self::assertSame([null, $parentId], array_column($list['tags'], 'parentId'));
+    }
+
+    public function testAChildOfAChildIsAnInvalidParentProblem(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('tag-depth-wire@example.com');
+        $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
+        $childId = $this->createTag($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
+
+        $client->request(
+            'POST',
+            '/api/tags',
+            server: $headers,
+            content: json_encode(['name' => 'Essays', 'parentId' => $childId], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $problem = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($problem);
+        self::assertSame('invalid_tag_parent', $problem['type']);
+        self::assertSame('Invalid parent tag', $problem['title']);
+        self::assertSame('A parent tag cannot itself have a parent.', $problem['detail']);
+        self::assertSame(['parentId' => ['A parent tag cannot itself have a parent.']], $problem['errors']);
+    }
+
+    public function testAnUpdateWithoutParentIdIsRefusedAndKeepsTheParent(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('tag-partial-patch@example.com');
+        $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
+        $childId = $this->createTag($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
+
+        $client->request(
+            'PATCH',
+            '/api/tags/' . $childId,
+            server: $headers,
+            content: json_encode(['name' => 'Long reads', 'color' => null, 'icon' => null], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $problem = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($problem);
+        self::assertIsArray($problem['errors']);
+        self::assertSame(['parentId'], array_keys($problem['errors']));
+        $client->request('GET', '/api/tags', server: $headers);
+        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($list);
+        self::assertIsArray($list['tags']);
+        self::assertSame([null, $parentId], array_column($list['tags'], 'parentId'));
+    }
+
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, mixed>  $body
+     */
+    private function createTag(KernelBrowser $client, array $headers, array $body): int
+    {
+        $created = $this->createTagBody($client, $headers, $body);
+        self::assertIsInt($created['id']);
+
+        return $created['id'];
+    }
+
+    /**
+     * @param array<string, string> $headers
+     * @param array<string, mixed>  $body
+     *
+     * @return array<mixed>
+     */
+    private function createTagBody(KernelBrowser $client, array $headers, array $body): array
+    {
+        $client->request('POST', '/api/tags', server: $headers, content: json_encode($body, \JSON_THROW_ON_ERROR));
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $decoded = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertIsArray($decoded['tag']);
+
+        return $decoded['tag'];
     }
 }

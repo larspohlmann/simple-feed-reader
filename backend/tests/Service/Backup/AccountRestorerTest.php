@@ -500,7 +500,8 @@ final class AccountRestorerTest extends DbTestCase
 
         $this->assertFieldsRoundTripped(User::class, $sourceRows['user'], $targetRows['user']);
         $this->assertFieldsRoundTripped(Preferences::class, $sourceRows['preferences'], $targetRows['preferences']);
-        $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag']);
+        $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag'], ['parent']);
+        self::assertSame('Reading', $targetRows['tag']->getParent()?->getName());
         $this->assertFieldsRoundTripped(SavedSearch::class, $sourceRows['savedSearch'], $targetRows['savedSearch']);
         $this->assertFieldsRoundTripped(Feed::class, $sourceRows['feed'], $targetRows['feed']);
 
@@ -614,7 +615,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertInstanceOf(Entry::class, $entry);
         $entryState = $this->entityManager->getRepository(EntryState::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(EntryState::class, $entryState);
-        $tag = $this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $userId]);
+        $tag = $this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $userId, 'name' => 'Long reads']);
         self::assertInstanceOf(Tag::class, $tag);
         $savedSearch = $this->entityManager->getRepository(SavedSearch::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(SavedSearch::class, $savedSearch);

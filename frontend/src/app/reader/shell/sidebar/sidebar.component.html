@@ -143,98 +143,103 @@
     @if (tagsExpanded()) {
       <!-- Each tag contributes two TOP-LEVEL drop lists, never nested: a header
              list that reorders tags/accepts a feed, and an expanded feed list that
-             reorders/receives feeds. CDK breaks cross-list drops if nested. -->
+             reorders/receives feeds. CDK breaks cross-list drops if nested.
+             A parent's head comes first, then each child's head and feed list, then the parent's own feeds. -->
       <div class="tags">
-        @for (node of tagTree(); track node.tag.id) {
-          <div
-            class="taghead"
-            cdkDropList
-            [cdkDropListData]="tagDrop(node.tag)"
-            [cdkDropListEnterPredicate]="acceptOnTagHead"
-            [cdkDropListSortingDisabled]="true"
-            [class.drop-line]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'tag'"
-            [class.drop-active]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'feed'"
-            (cdkDropListDropped)="onTagHeadDrop($event)"
-            (cdkDropListEntered)="dropHover.set('tag-' + node.tag.id)"
-            (cdkDropListExited)="dropHover.set(null)"
-          >
+        @for (row of tagRows(); track row.kind + '-' + row.node.tag.id) {
+          @let node = row.node;
+          @if (row.kind === 'head') {
             <div
-              class="tag"
-              cdkDrag
-              [cdkDragData]="node.tag"
-              [cdkDragDisabled]="dragLocked()"
-              [cdkDragStartDelay]="dragDelay()"
-              (cdkDragStarted)="onDragStart('tag')"
-              (cdkDragEnded)="onDragEnd()"
+              class="taghead"
+              cdkDropList
+              [cdkDropListData]="tagDrop(node.tag)"
+              [cdkDropListEnterPredicate]="acceptOnTagHead"
+              [cdkDropListSortingDisabled]="true"
+              [class.child]="row.depth === 1"
+              [class.drop-line]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'tag'"
+              [class.drop-active]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'feed'"
+              (cdkDropListDropped)="onTagHeadDrop($event)"
+              (cdkDropListEntered)="dropHover.set('tag-' + node.tag.id)"
+              (cdkDropListExited)="dropHover.set(null)"
             >
-              @if (organising()) {
-                <span class="handle" cdkDragHandle aria-hidden="true">
-                  <app-icon name="drag_indicator" size="sm" />
-                </span>
-                <button
-                  class="rowbody"
-                  type="button"
-                  [attr.aria-expanded]="expanded().has(node.tag.id)"
-                  [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
-                  (click)="toggle(node.tag.id)"
-                >
-                  <span class="lead">
-                    <app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="sm" />
+              <div
+                class="tag"
+                cdkDrag
+                [cdkDragData]="node.tag"
+                [cdkDragDisabled]="dragLocked()"
+                [cdkDragStartDelay]="dragDelay()"
+                (cdkDragStarted)="onDragStart('tag')"
+                (cdkDragEnded)="onDragEnd()"
+              >
+                @if (organising()) {
+                  <span class="handle" cdkDragHandle aria-hidden="true">
+                    <app-icon name="drag_indicator" size="sm" />
                   </span>
-                  <span class="name">{{ node.tag.name }}</span>
-                </button>
-                <button
-                  class="dots"
-                  type="button"
-                  [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
-                  (click)="rows.openTagSheet(node.tag)"
-                >
-                  <app-icon name="more_horiz" size="sm" />
-                </button>
-              } @else {
-                <app-sidebar-group-row
-                  [link]="selectionQueryParams({ tag: node.tag.id })"
-                  [label]="node.tag.name"
-                  [glyph]="node.tag.icon"
-                  [glyphColor]="node.tag.color"
-                  [count]="node.unreadCount"
-                  [active]="selection().kind === 'tag' && selection().id === node.tag.id"
-                  [expanded]="expanded().has(node.tag.id)"
-                  [toggleLabel]="'reader.toggleTag' | transloco: { name: node.tag.name }"
-                  (toggled)="toggle(node.tag.id)"
-                >
-                  @if (!screen.isCoarse()) {
-                    <app-sidebar-row-menu
-                      [menuKey]="'tag-' + node.tag.id"
-                      [label]="'reader.manage' | transloco: { name: node.tag.name }"
-                    >
-                      <ng-template>
-                        <button
-                          role="menuitem"
-                          (click)="manage.editTag(node.tag); rows.closeMenu()"
-                        >
-                          {{ 'reader.editTag' | transloco }}
-                        </button>
-                        <button
-                          role="menuitem"
-                          (click)="manage.deleteTag(node.tag); rows.closeMenu()"
-                        >
-                          {{ 'reader.deleteTag' | transloco }}
-                        </button>
-                      </ng-template>
-                    </app-sidebar-row-menu>
-                  }
-                </app-sidebar-group-row>
-              }
+                  <button
+                    class="rowbody"
+                    type="button"
+                    [attr.aria-expanded]="expanded().has(node.tag.id)"
+                    [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
+                    (click)="toggle(node.tag.id)"
+                  >
+                    <span class="lead">
+                      <app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="sm" />
+                    </span>
+                    <span class="name">{{ node.tag.name }}</span>
+                  </button>
+                  <button
+                    class="dots"
+                    type="button"
+                    [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
+                    (click)="rows.openTagSheet(node.tag)"
+                  >
+                    <app-icon name="more_horiz" size="sm" />
+                  </button>
+                } @else {
+                  <app-sidebar-group-row
+                    [link]="selectionQueryParams({ tag: node.tag.id })"
+                    [label]="node.tag.name"
+                    [glyph]="node.tag.icon"
+                    [glyphColor]="node.tag.color"
+                    [count]="node.unreadCount"
+                    [active]="selection().kind === 'tag' && selection().id === node.tag.id"
+                    [expanded]="expanded().has(node.tag.id)"
+                    [toggleLabel]="'reader.toggleTag' | transloco: { name: node.tag.name }"
+                    (toggled)="toggle(node.tag.id)"
+                  >
+                    @if (!screen.isCoarse()) {
+                      <app-sidebar-row-menu
+                        [menuKey]="'tag-' + node.tag.id"
+                        [label]="'reader.manage' | transloco: { name: node.tag.name }"
+                      >
+                        <ng-template>
+                          <button
+                            role="menuitem"
+                            (click)="manage.editTag(node.tag); rows.closeMenu()"
+                          >
+                            {{ 'reader.editTag' | transloco }}
+                          </button>
+                          <button
+                            role="menuitem"
+                            (click)="manage.deleteTag(node.tag); rows.closeMenu()"
+                          >
+                            {{ 'reader.deleteTag' | transloco }}
+                          </button>
+                        </ng-template>
+                      </app-sidebar-row-menu>
+                    }
+                  </app-sidebar-group-row>
+                }
+              </div>
             </div>
-          </div>
-          @if (expanded().has(node.tag.id)) {
+          } @else {
             <div
               class="tagfeeds"
               cdkDropList
               [cdkDropListData]="tagDrop(node.tag)"
               [cdkDropListEnterPredicate]="isFeedDrag"
               [class.organising]="organising()"
+              [class.child]="row.depth === 1"
               (cdkDropListDropped)="onDrop($event)"
             >
               @for (subscription of node.subscriptions; track subscription.id) {

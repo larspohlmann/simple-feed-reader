@@ -3,7 +3,7 @@ import { aSubscription } from '../src/testing/subscription-testing';
 import { signInAsAdmin } from './support/auth';
 import { subscriptionsJson } from './support/reader';
 
-const NEWS_TAG = { id: 1, name: 'News', color: null, icon: null, position: 0 };
+const NEWS_TAG = { id: 1, name: 'News', color: null, icon: null, position: 0, parentId: null };
 
 /** A stubbed sidebar: one tagged feed under News, one untagged. Stubbed rather
  *  than seeded because this measures geometry and interaction, and a fixed

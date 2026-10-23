@@ -1,6 +1,10 @@
 import { Injectable, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
-import { untaggedSubscriptions } from '../../reader/state/subscription-derivations';
+import {
+  isRootTag,
+  tagsInTreeOrder,
+  untaggedSubscriptions,
+} from '../../reader/state/subscription-derivations';
 import { TagsStore } from '../../reader/state/tags.store';
 import { toggled } from '../../core/toggled-set';
 import { SubscriptionDto, TagDto } from '../../reader/models';
@@ -18,10 +22,18 @@ export interface OrganiseGroup {
   readonly key: GroupKey;
   /** null for the untagged group. */
   readonly tag: TagDto | null;
+  /** 1 for a child shown under its parent, else 0. */
+  readonly depth: 0 | 1;
   /** The feeds this group shows, already filtered and in their stored order. */
   readonly subscriptions: SubscriptionDto[];
   /** How many feeds the group holds before the filter — the header's count. */
   readonly totalCount: number;
+}
+
+/** A group shown at the top of the tree, with the child groups that render inside its panel. */
+export interface OrganiseGroupNode {
+  readonly group: OrganiseGroup;
+  readonly children: readonly OrganiseGroup[];
 }
 
 /** Its own key, deliberately not the sidebar's `sfr.tags.collapsed`: collapsing
@@ -132,9 +144,12 @@ export class OrganiseStore {
     const visible = this.filteredSubscriptions();
     const totalCounts = this.totalCounts();
 
-    const tagGroups: OrganiseGroup[] = this.tags().map((tag) => ({
+    const orderedTags = tagsInTreeOrder(this.tags());
+    const knownIds = new Set(orderedTags.map((tag) => tag.id));
+    const tagGroups: OrganiseGroup[] = orderedTags.map((tag) => ({
       key: tag.id,
       tag,
+      depth: isRootTag(tag, knownIds) ? 0 : 1,
       subscriptions: feedsInTag(visible, tag.id),
       totalCount: totalCounts.get(tag.id) ?? 0,
     }));
@@ -144,6 +159,7 @@ export class OrganiseStore {
       {
         key: 'untagged',
         tag: null,
+        depth: 0,
         subscriptions: untaggedSubscriptions(visible),
         totalCount: totalCounts.get('untagged') ?? 0,
       },
@@ -152,6 +168,23 @@ export class OrganiseStore {
     // With no filter every tag shows, empty ones included — that IS the
     // arrangement. With a filter, a group that matches nothing is noise.
     return this.filterActive() ? groups.filter((group) => group.subscriptions.length > 0) : groups;
+  });
+
+  /** `groups()` nested one level: a child sits under its parent unless a filter hides that parent. */
+  readonly groupTree = computed<OrganiseGroupNode[]>(() => {
+    const groups = this.groups();
+    const shownKeys = new Set(groups.map((group) => group.key));
+    const shownParentOf = (group: OrganiseGroup): GroupKey | null => {
+      const parentId = group.tag?.parentId ?? null;
+      return parentId !== null && shownKeys.has(parentId) ? parentId : null;
+    };
+
+    return groups
+      .filter((group) => shownParentOf(group) === null)
+      .map((group) => ({
+        group,
+        children: groups.filter((child) => shownParentOf(child) === group.key),
+      }));
   });
 
   /** The flat view's rows: every filtered feed once, in the chosen sort. */

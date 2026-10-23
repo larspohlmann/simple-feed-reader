@@ -233,36 +233,72 @@
 // `margin-top` lives on `.tree-region` itself now (above), not here: it
 // applies once, whichever view is showing, instead of being duplicated on
 // both `.tree` and `.list`.
-.tree {
+.tree,
+.children {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--group-gap);
+}
+
+.tree {
+  --group-gap: var(--space-4);
+}
+
+// A root's child panels, inside its card between its heading and its own feeds.
+.children {
+  --group-gap: var(--space-3);
+
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border);
 }
 
 // The slot a dragged tag will land in, drawn in the stepped-down panel's margin.
-.tree > app-organise-tag-group {
+.tree app-organise-tag-group {
   --tag-gap: var(--tap-target);
 
   position: relative;
 }
 
-.tree > .gap-before {
-  margin-top: calc(var(--tag-gap) + var(--space-4));
+.tree .gap-before {
+  margin-top: calc(var(--tag-gap) + var(--group-gap));
 }
 
-.tree > .gap-before::before {
+.tree .gap-after {
+  margin-bottom: calc(var(--tag-gap) + var(--group-gap));
+}
+
+.tree .gap-before::before,
+.tree .gap-after::after {
   content: '';
   position: absolute;
   inset-inline: 0;
-  bottom: calc(100% + var(--space-4));
   height: var(--tag-gap);
   border: 2px dashed var(--accent);
   border-radius: var(--radius-lg);
 }
 
+.tree .gap-before::before {
+  bottom: calc(100% + var(--group-gap));
+}
+
+.tree .gap-after::after {
+  top: calc(100% + var(--group-gap));
+}
+
+// A child whose parent a filter hides stands at the top level, still indented.
+.tree > app-organise-tag-group.child {
+  margin-left: var(--space-5);
+}
+
+.menu .pop label.child {
+  padding-left: var(--space-4);
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .tree > app-organise-tag-group {
-    transition: margin-top 0.12s ease;
+  .tree app-organise-tag-group {
+    transition:
+      margin-top 0.12s ease,
+      margin-bottom 0.12s ease;
   }
 }
 

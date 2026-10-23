@@ -6,7 +6,7 @@ import { ReaderApi } from '../../reader-api';
 import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
-import { TagsStore } from '../../state/tags.store';
+import { TagsStore, compareTagPositions } from '../../state/tags.store';
 import {
   MoveFeedToTag,
   RefreshReport,
@@ -105,6 +105,7 @@ export class ManageActions {
       color: tag?.color ?? null,
       icon: tag?.icon ?? null,
       position: 0,
+      parentId: tag?.parentId ?? null,
     };
   }
 
@@ -145,17 +146,19 @@ export class ManageActions {
     if (flags.includeInSavedSearches !== undefined) this.savedSearches.load();
   }
 
-  /** Persist a new sidebar tag order (drag-and-drop); tag order lives in
-   *  TagsStore. Optimistic: reorder immediately, reconcile on response. */
+  /** Persist a new order for one sibling set. Optimistic: reposition the listed tags, keep the
+   *  rest, reconcile on response. */
   reorderTags(tagIds: number[]): void {
     this.tags.tags.update((current) => {
+      const listed = new Set(tagIds);
       const byId = new Map(current.map((tag) => [tag.id, tag]));
-      return tagIds.map((id, index) => {
-        const tag = byId.get(id);
-        return tag
-          ? { ...tag, position: index }
-          : { id, name: '', color: null, icon: null, position: index };
-      });
+      const repositioned = tagIds.map((id, index): TagDto => ({
+        ...(byId.get(id) ?? { id, name: '', color: null, icon: null, parentId: null }),
+        position: index,
+      }));
+      return [...current.filter((tag) => !listed.has(tag.id)), ...repositioned].sort(
+        compareTagPositions,
+      );
     });
     this.reloadAfter(this.api.reorderTags(tagIds), () => this.tags.load());
   }

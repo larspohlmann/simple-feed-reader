@@ -19,9 +19,23 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 
-const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
-const OTHER_TAG: TagDto = { id: 4, name: 'Nachrichten', color: null, icon: null, position: 1 };
-const THIRD_TAG: TagDto = { id: 6, name: 'Kultur', color: null, icon: null, position: 2 };
+const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const OTHER_TAG: TagDto = {
+  id: 4,
+  name: 'Nachrichten',
+  color: null,
+  icon: null,
+  position: 1,
+  parentId: null,
+};
+const THIRD_TAG: TagDto = {
+  id: 6,
+  name: 'Kultur',
+  color: null,
+  icon: null,
+  position: 2,
+  parentId: null,
+};
 
 const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
   makeSubscription({
@@ -36,6 +50,7 @@ const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
       color: null,
       icon: null,
       position: index,
+      parentId: null,
     })),
   });
 
@@ -46,18 +61,21 @@ const SUB_WITH_TWO_TAGS = feed(12, 'netzpolitik', [TECH.id, OTHER_TAG.id]);
 const GROUP: OrganiseGroup = {
   key: TECH.id,
   tag: TECH,
+  depth: 0,
   subscriptions: [SUB_A, SUB_B],
   totalCount: 2,
 };
 const UNTAGGED_GROUP: OrganiseGroup = {
   key: 'untagged',
   tag: null,
+  depth: 0,
   subscriptions: [SUB_A, SUB_B],
   totalCount: 2,
 };
 const THIRD_GROUP: OrganiseGroup = {
   key: THIRD_TAG.id,
   tag: THIRD_TAG,
+  depth: 0,
   subscriptions: [],
   totalCount: 0,
 };

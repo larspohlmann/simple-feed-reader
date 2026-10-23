@@ -20,7 +20,7 @@ const SUBSCRIPTION = makeSubscription({
   feedId: 7,
   title: 'heise online',
   feedUrl: 'https://heise.example/rss',
-  tags: [{ id: 2, name: 'Tech', color: null, icon: null, position: 0 }],
+  tags: [{ id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null }],
 });
 
 describe('OrganiseFeedRowComponent', () => {

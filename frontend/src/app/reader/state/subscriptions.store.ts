@@ -22,6 +22,7 @@ import {
 import {
   FeedGroupCounts,
   buildTagTree,
+  tagNodesById,
   sumEntries,
   taggedSubscriptions,
   totalEntryCount,
@@ -64,6 +65,7 @@ export class SubscriptionsStore {
   readonly tagTree = computed(() =>
     buildTagTree(this.subscriptions(), this.tags.tags(), this.unreadTotals().tags),
   );
+  readonly tagNodeById = computed(() => tagNodesById(this.tagTree()));
   /** Social feeds live in their network's section, and an empty saved feed shows nowhere. */
   readonly untagged = computed(() =>
     untaggedSubscriptions(

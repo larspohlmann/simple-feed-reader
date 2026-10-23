@@ -28,6 +28,7 @@ import { ReaderTabTitle } from './reader-tab-title.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
+import { flattenTagTree } from '../state/subscription-derivations';
 import { TagsStore } from '../state/tags.store';
 import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
@@ -184,7 +185,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   /** The user's tags for the mobile swipe row (the sidebar covers wider screens). */
-  readonly headerTags = computed<TagDto[]>(() => this.subs.tagTree().map((node) => node.tag));
+  readonly headerTags = computed<TagDto[]>(() =>
+    flattenTagTree(this.subs.tagTree()).map((node) => node.tag),
+  );
   readonly activeTagId = computed(() => {
     const selection = this.selection();
     return selection.kind === 'tag' ? (selection.id ?? null) : null;

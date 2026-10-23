@@ -19,6 +19,9 @@ final class BulkSubscribeBatch
     /** @var array<string, Tag> keyed by lowercased name: items naming one tag share one unflushed row */
     private array $tagsByName = [];
 
+    /** @var array<int, bool> by spl_object_id, as a tag given a child here has no id yet: whether it has children */
+    private array $parentVerdicts = [];
+
     public function __construct(
         /** @noinspection AutowireWrongClass Built with new, never autowired */
         public readonly User $user,
@@ -51,6 +54,17 @@ final class BulkSubscribeBatch
     public function rememberTag(string $name, Tag $tag): void
     {
         $this->tagsByName[mb_strtolower($name)] = $tag;
+    }
+
+    public function rememberParent(Tag $parent): void
+    {
+        $this->parentVerdicts[spl_object_id($parent)] = true;
+    }
+
+    /** @param \Closure(): bool $hasStoredChildren asked once per tag */
+    public function isParent(Tag $tag, \Closure $hasStoredChildren): bool
+    {
+        return $this->parentVerdicts[spl_object_id($tag)] ??= $hasStoredChildren();
     }
 
     public function countInvalid(): void

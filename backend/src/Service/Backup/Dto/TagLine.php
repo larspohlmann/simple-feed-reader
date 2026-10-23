@@ -16,6 +16,7 @@ final readonly class TagLine
         public ?string $color,
         public ?string $icon,
         public int $position,
+        public ?string $parent = null,
     ) {
     }
 
@@ -29,6 +30,7 @@ final readonly class TagLine
             color: LineField::stringOrNull($line, 'color'),
             icon: LineField::stringOrNull($line, 'icon'),
             position: LineField::int($line, 'position'),
+            parent: LineField::stringOrNull($line, 'parent'),
         );
     }
 }

@@ -11,16 +11,28 @@ import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { socialProfiles } from './social-sections';
 import { SubscriptionsStore } from './subscriptions.store';
 import { SubscriptionRows } from './subscription-rows';
-import { buildTagTree, sumEntries, untaggedSubscriptions } from './subscription-derivations';
-import { SubscriptionDto, UnreadTotalsDto } from '../models';
+import {
+  buildTagTree,
+  flattenTagTree,
+  rootsOf,
+  siblingIdsOf,
+  sumEntries,
+  tagNodesById,
+  tagsInTreeOrder,
+  untaggedSubscriptions,
+} from './subscription-derivations';
+import { SubscriptionDto, SubscriptionTagDto, TagDto, UnreadTotalsDto } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
 
-const tag = (id: number, name: string) => ({ id, name, color: null, icon: null, position: 0 });
-const sub = (
-  id: number,
-  unread: number,
-  tags = [] as ReturnType<typeof tag>[],
-): SubscriptionDto => ({
+const tag = (id: number, name: string): TagDto => ({
+  id,
+  name,
+  color: null,
+  icon: null,
+  position: 0,
+  parentId: null,
+});
+const sub = (id: number, unread: number, tags = [] as SubscriptionTagDto[]): SubscriptionDto => ({
   id,
   feedId: id * 10,
   title: `s${id}`,
@@ -130,14 +142,16 @@ describe('subscription derivations', () => {
 });
 
 describe('buildTagTree with an explicit tag order', () => {
-  const orderedTags = [
-    { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
-    { id: 10, name: 'News', color: null, icon: null, position: 1 },
-    { id: 30, name: 'Empty', color: null, icon: null, position: 2 },
+  const orderedTags: TagDto[] = [
+    { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
+    { id: 10, name: 'News', color: null, icon: null, position: 1, parentId: null },
+    { id: 30, name: 'Empty', color: null, icon: null, position: 2, parentId: null },
   ];
   // A sub carrying one tag, with an explicit per-tag (feed) position.
   const inTag = (id: number, tagId: number, feedPos: number): SubscriptionDto =>
-    sub(id, 1, [{ id: tagId, name: 'x', color: null, icon: null, position: feedPos }]);
+    sub(id, 1, [
+      { id: tagId, name: 'x', color: null, icon: null, position: feedPos, parentId: null },
+    ]);
 
   it('orders nodes by tag.position, includes empty tags, and orders feeds per-tag', () => {
     const subscriptions = [inTag(1, 20, 1), inTag(2, 20, 0), inTag(3, 10, 0)];
@@ -147,6 +161,105 @@ describe('buildTagTree with an explicit tag order', () => {
     // Feeds within Tech follow their per-tag position: sub 2 (0) before sub 1 (1).
     expect(tree[0].subscriptions.map((subscription) => subscription.id)).toEqual([2, 1]);
     expect(tree[2].subscriptions).toEqual([]);
+  });
+
+  const reading = { ...tag(1, 'Reading'), position: 0 };
+  const longReads = { ...tag(2, 'Long reads'), position: 1, parentId: 1 };
+  const essays = { ...tag(3, 'Essays'), position: 2, parentId: 1 };
+  const tech = { ...tag(4, 'Tech'), position: 3 };
+
+  it('nests children under their parent in position order and lists only roots at the top', () => {
+    const tree = buildTagTree([], [reading, longReads, essays, tech]);
+    expect(tree.map((node) => node.tag.name)).toEqual(['Reading', 'Tech']);
+    expect(tree[0].children.map((node) => node.tag.name)).toEqual(['Long reads', 'Essays']);
+    expect(tree[1].children).toEqual([]);
+  });
+
+  it('keeps a child under its parent before the tag list has loaded', () => {
+    const subscriptions = [
+      sub(1, 0, [{ ...reading, position: 0 }]),
+      sub(2, 0, [{ ...longReads, position: 0 }]),
+    ];
+    const tree = buildTagTree(subscriptions);
+    expect(tree.map((node) => node.tag.name)).toEqual(['Reading']);
+    expect(tree[0].children.map((node) => node.tag.parentId)).toEqual([1]);
+  });
+
+  it('shows a child whose parent is not in the list as a root', () => {
+    const tree = buildTagTree([], [{ ...tag(9, 'Orphan'), parentId: 99 }]);
+    expect(tree.map((node) => node.tag.name)).toEqual(['Orphan']);
+  });
+
+  it("counts a feed carrying both the parent and its child once in the parent's entry total", () => {
+    const both = {
+      ...sub(1, 0, [
+        { ...reading, position: 0 },
+        { ...longReads, position: 0 },
+      ]),
+      entryCount: 5,
+    };
+    const childOnly = { ...sub(2, 0, [{ ...longReads, position: 1 }]), entryCount: 3 };
+    const tree = buildTagTree([both, childOnly], [reading, longReads]);
+    expect(tree[0].entryCount).toBe(8);
+    expect(tree[0].children[0].entryCount).toBe(8);
+  });
+
+  it("reads a parent's unread from the totals instead of summing its children", () => {
+    const tree = buildTagTree(
+      [],
+      [reading, longReads],
+      new Map([
+        [1, 7],
+        [2, 4],
+      ]),
+    );
+    expect(tree[0].unreadCount).toBe(7);
+    expect(tree[0].children[0].unreadCount).toBe(4);
+  });
+
+  it('flattens roots and children in display order', () => {
+    const tree = buildTagTree([], [reading, longReads, tech]);
+    expect(flattenTagTree(tree).map((node) => node.tag.name)).toEqual([
+      'Reading',
+      'Long reads',
+      'Tech',
+    ]);
+  });
+
+  it('orders tags as the tree shows them: each root followed by its children', () => {
+    expect(
+      tagsInTreeOrder([reading, tech, essays, longReads]).map((listed) => listed.name),
+    ).toEqual(['Reading', 'Essays', 'Long reads', 'Tech']);
+  });
+
+  it('counts a tag whose parent is unknown among the roots', () => {
+    const orphan = { ...tag(5, 'Orphan'), parentId: 99 };
+    expect(rootsOf([reading, longReads, orphan, tech]).map((root) => root.name)).toEqual([
+      'Reading',
+      'Orphan',
+      'Tech',
+    ]);
+  });
+
+  it("orders a root among the roots and a child among its parent's children", () => {
+    const tags = [reading, longReads, essays, tech];
+    expect(siblingIdsOf(tags, tech)).toEqual([1, 4]);
+    expect(siblingIdsOf(tags, essays)).toEqual([2, 3]);
+  });
+
+  it('finds no siblings for a tag missing from the list', () => {
+    expect(siblingIdsOf([reading, tech], longReads)).toEqual([]);
+  });
+
+  it('hands out a sibling list the caller may reorder without touching the next one', () => {
+    const tags = [reading, tech];
+    siblingIdsOf(tags, reading).reverse();
+    expect(siblingIdsOf(tags, reading)).toEqual([1, 4]);
+  });
+
+  it('looks up a child node by its id', () => {
+    const byId = tagNodesById(buildTagTree([], [reading, longReads, tech]));
+    expect(byId.get(2)?.tag.name).toBe('Long reads');
   });
 });
 

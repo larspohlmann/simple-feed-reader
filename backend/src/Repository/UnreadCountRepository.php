@@ -29,14 +29,13 @@ final readonly class UnreadCountRepository
         );
     }
 
-    /** @return array<int, int> tag id => unread entries; a tag with none is absent */
+    /**
+     * @return array<int, int> tag id => unread entries, a parent's spanning its children's feeds; a tag with
+     *                         none is absent
+     */
     public function perTag(int $userId): array
     {
-        $aliases = EntryAliases::primary();
-        $qb = $this->unreadEntries($userId);
-        $this->scope->joinTags($qb, $aliases);
-
-        return $this->countsByIntegerKey($this->countedBy($qb, $aliases->tagKey()));
+        return $this->perChildTag($userId) + $this->perRootTag($userId);
     }
 
     /** @return array<string, int> network => unread entries; a network with none is absent */
@@ -89,6 +88,31 @@ final readonly class UnreadCountRepository
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
+    /** @return array<int, int> */
+    private function perChildTag(int $userId): array
+    {
+        $qb = $this->taggedUnreadEntries($userId)->andWhere('t.parent IS NOT NULL');
+
+        return $this->countsByIntegerKey($this->countedBy($qb, EntryAliases::primary()->tagKey()));
+    }
+
+    /** @return array<int, int> */
+    private function perRootTag(int $userId): array
+    {
+        $qb = $this->taggedUnreadEntries($userId)->leftJoin('t.parent', 'p');
+
+        return $this->countsByIntegerKey($this->countedDistinctBy($qb, 'COALESCE(p.id, t.id)'));
+    }
+
+    private function taggedUnreadEntries(int $userId): QueryBuilder
+    {
+        $aliases = EntryAliases::primary();
+        $qb = $this->unreadEntries($userId);
+        $this->scope->joinTags($qb, $aliases);
+
+        return $qb->innerJoin($aliases->tag . '.tag', 't');
+    }
+
     private function networkEntries(int $userId, EntryAliases $aliases): QueryBuilder
     {
         $qb = $this->unreadEntries($userId);
@@ -113,6 +137,12 @@ final readonly class UnreadCountRepository
     private function countedBy(QueryBuilder $qb, string $scopeKey): QueryBuilder
     {
         return $qb->select($scopeKey . ' AS scopeKey', 'COUNT(e.id) AS unreadCount')->groupBy('scopeKey');
+    }
+
+    /** A feed carrying a parent and its child yields two rows per entry; DISTINCT folds them. */
+    private function countedDistinctBy(QueryBuilder $qb, string $scopeKey): QueryBuilder
+    {
+        return $qb->select($scopeKey . ' AS scopeKey', 'COUNT(DISTINCT e.id) AS unreadCount')->groupBy('scopeKey');
     }
 
     /** @return array<int, int> */

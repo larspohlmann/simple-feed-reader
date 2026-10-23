@@ -29,7 +29,7 @@ const sub: SubscriptionDto = {
   consecutiveFailures: 0,
   lastErrorMessage: null,
   position: 0,
-  tags: [{ id: 1, name: 'Tech', color: null, icon: null, position: 0 }],
+  tags: [{ id: 1, name: 'Tech', color: null, icon: null, position: 0, parentId: null }],
   unreadCount: 3,
   entryCount: 0,
   includeInAllItems: true,

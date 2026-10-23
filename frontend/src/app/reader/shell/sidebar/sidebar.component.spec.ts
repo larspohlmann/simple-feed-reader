@@ -8,10 +8,11 @@ import { AuthService, CurrentUser } from '../../../core/auth/auth.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
-import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
-import { TagNode } from '../../state/subscription-derivations';
+import { TagNode, flattenTagTree } from '../../state/subscription-derivations';
+import { TagsStore } from '../../state/tags.store';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
@@ -163,6 +164,7 @@ function mount(
       { provide: ActionSheet, useValue: { open: jest.fn(() => of(over.sheetChoice)) } },
     ],
   });
+  TestBed.inject(TagsStore).tags.set(flattenTagTree(over.tagTree ?? []).map((node) => node.tag));
   const fixture = TestBed.createComponent(SidebarComponent);
   for (const [name, fallback] of Object.entries(inputDefaults())) {
     fixture.componentRef.setInput(name, over[name as keyof typeof over] ?? fallback);
@@ -172,8 +174,9 @@ function mount(
 }
 
 const tagNodeFixture: TagNode = {
-  tag: { id: 40, name: 'Tech', color: null, icon: null, position: 0 },
+  tag: { id: 40, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
   subscriptions: [sub(1, 3)],
+  children: [],
   unreadCount: 3,
   entryCount: 0,
 };
@@ -224,8 +227,9 @@ describe('SidebarComponent', () => {
 
   it('renders tags with summed counts and reveals subs when expanded', () => {
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
       subscriptions: [sub(1, 3), sub(2, 6)],
+      children: [],
       unreadCount: 9,
       entryCount: 0,
     };
@@ -241,14 +245,16 @@ describe('SidebarComponent', () => {
 
   it('renders the tag icon (tinted with its colour) when set, else the colour dot', () => {
     const withIcon: TagNode = {
-      tag: { id: 20, name: 'World', color: '#c08a3e', icon: 'public', position: 0 },
+      tag: { id: 20, name: 'World', color: '#c08a3e', icon: 'public', position: 0, parentId: null },
       subscriptions: [],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };
     const withoutIcon: TagNode = {
-      tag: { id: 21, name: 'Plain', color: null, icon: null, position: 1 },
+      tag: { id: 21, name: 'Plain', color: null, icon: null, position: 1, parentId: null },
       subscriptions: [],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };
@@ -267,8 +273,9 @@ describe('SidebarComponent', () => {
 
   it('calls editTag / deleteTag when a tag row menu action is used', () => {
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
       subscriptions: [],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };
@@ -298,8 +305,9 @@ describe('SidebarComponent', () => {
     const fixture = mount({
       tagTree: [
         {
-          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
           subscriptions: [],
+          children: [],
           unreadCount: 0,
           entryCount: 0,
         },
@@ -321,14 +329,16 @@ describe('SidebarComponent', () => {
     const fixture = mount({
       tagTree: [
         {
-          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
           subscriptions: [shared],
+          children: [],
           unreadCount: 0,
           entryCount: 0,
         },
         {
-          tag: { id: 21, name: 'News', color: null, icon: null, position: 0 },
+          tag: { id: 21, name: 'News', color: null, icon: null, position: 0, parentId: null },
           subscriptions: [shared],
+          children: [],
           unreadCount: 0,
           entryCount: 0,
         },
@@ -356,6 +366,7 @@ describe('SidebarComponent', () => {
       color: null,
       icon: null,
       position: 0,
+      parentId: null,
     });
     const withTags = (subscription: SubscriptionDto, tags: TagDto[]): SubscriptionDto => ({
       ...subscription,
@@ -434,12 +445,18 @@ describe('SidebarComponent', () => {
   });
 
   describe('drag-and-drop reordering', () => {
-    const tagNode = (id: number, subscriptions: SubscriptionDto[] = []): TagNode => ({
-      tag: { id, name: `t${id}`, color: null, icon: null, position: 0 },
-      subscriptions: subscriptions,
+    const tagNode = (
+      id: number,
+      subscriptions: SubscriptionDto[] = [],
+      parentId: number | null = null,
+    ): TagNode => ({
+      tag: { id, name: `t${id}`, color: null, icon: null, position: 0, parentId },
+      subscriptions,
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     });
+    const parentNode = (id: number, children: TagNode[]): TagNode => ({ ...tagNode(id), children });
 
     function reorder(
       target: DropData,
@@ -532,6 +549,122 @@ describe('SidebarComponent', () => {
       fixture.componentInstance.onDrop(reorder({ kind: 'untagged' }, 1, 1));
       expect(spy).not.toHaveBeenCalled();
     });
+
+    describe('child tags (#1736)', () => {
+      const tree = (): TagNode[] => [
+        parentNode(10, [tagNode(11, [], 10), tagNode(12, [], 10)]),
+        tagNode(20),
+      ];
+      const onHead = (node: TagNode) =>
+        ({ data: { kind: 'tag', tag: node.tag } }) as unknown as CdkDropList<DropData>;
+      const dragOf = (data: unknown) => ({ data }) as unknown as CdkDrag;
+      const heads = (fixture: ReturnType<typeof mount>) =>
+        [...(fixture.nativeElement as HTMLElement).querySelectorAll('.taghead')].map((head) => ({
+          name: head.textContent?.match(/t\d+/)?.[0],
+          child: head.classList.contains('child'),
+        }));
+
+      it('shows children indented, and only while their parent is expanded', () => {
+        const fixture = mount({ tagTree: tree() });
+        expect(heads(fixture).map((head) => head.name)).toEqual(['t10', 't20']);
+
+        fixture.componentInstance.toggle(10);
+        fixture.detectChanges();
+
+        expect(heads(fixture)).toEqual([
+          { name: 't10', child: false },
+          { name: 't11', child: true },
+          { name: 't12', child: true },
+          { name: 't20', child: false },
+        ]);
+      });
+
+      it("lists an expanded parent's children before the parent's own feeds", () => {
+        const fixture = mount({
+          tagTree: [
+            {
+              ...parentNode(10, [tagNode(11, [sub(2)], 10)]),
+              subscriptions: [sub(1)],
+            },
+          ],
+        });
+        fixture.componentInstance.toggle(10);
+        fixture.componentInstance.toggle(11);
+        fixture.detectChanges();
+
+        const blocks = [
+          ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+            '.tags > .taghead, .tags > .tagfeeds',
+          ),
+        ].map((block) => ({
+          kind: block.classList.contains('taghead') ? 'head' : 'feeds',
+          child: block.classList.contains('child'),
+        }));
+
+        expect(blocks).toEqual([
+          { kind: 'head', child: false },
+          { kind: 'head', child: true },
+          { kind: 'feeds', child: true },
+          { kind: 'feeds', child: false },
+        ]);
+      });
+
+      it('lets a tag head accept a feed from anywhere but a tag only from its own sibling set', () => {
+        const accept = mount({ tagTree: tree() }).componentInstance.acceptOnTagHead;
+        const [child, sibling, parent, root] = [
+          tagNode(11, [], 10),
+          tagNode(12, [], 10),
+          tagNode(10),
+          tagNode(20),
+        ];
+        expect(accept(dragOf(sub(1)), onHead(child))).toBe(true);
+        expect(accept(dragOf(child.tag), onHead(sibling))).toBe(true);
+        expect(accept(dragOf(child.tag), onHead(root))).toBe(false);
+        expect(accept(dragOf(root.tag), onHead(child))).toBe(false);
+        expect(accept(dragOf(child.tag), onHead(parent))).toBe(false);
+      });
+
+      it('reorders a child among its siblings only', () => {
+        const fixture = mount({ tagTree: tree() });
+
+        fixture.componentInstance.onTagHeadDrop(
+          tagHeadDrop(tagNode(12, [], 10).tag, { kind: 'tag', tag: tagNode(11, [], 10).tag }),
+        );
+
+        expect(manageActions.reorderTags).toHaveBeenCalledWith([12, 11]);
+      });
+
+      it('reorders the roots without touching the children', () => {
+        const fixture = mount({ tagTree: tree() });
+
+        fixture.componentInstance.onTagHeadDrop(
+          tagHeadDrop(tagNode(20).tag, { kind: 'tag', tag: tagNode(10).tag }),
+        );
+
+        expect(manageActions.reorderTags).toHaveBeenCalledWith([20, 10]);
+      });
+
+      it('ignores a tag dropped on a head outside its sibling set', () => {
+        const fixture = mount({ tagTree: tree() });
+
+        fixture.componentInstance.onTagHeadDrop(
+          tagHeadDrop(tagNode(11, [], 10).tag, { kind: 'tag', tag: tagNode(20).tag }),
+        );
+
+        expect(manageActions.reorderTags).not.toHaveBeenCalled();
+      });
+
+      it("reorders feeds inside a child's own list", () => {
+        const feeds = [sub(1), sub(2)];
+        const fixture = mount({ tagTree: [parentNode(10, [tagNode(11, feeds, 10)])] });
+
+        fixture.componentInstance.onDrop(
+          reorder({ kind: 'tag', tag: tagNode(11, [], 10).tag }, 0, 1),
+        );
+
+        expect(manageActions.reorderTagFeeds).toHaveBeenCalledWith(11, [2, 1]);
+      });
+    });
   });
 
   it('calls editFeed / unsubscribe for an untagged feed row', () => {
@@ -600,8 +733,9 @@ describe('SidebarComponent', () => {
   it('shows both exclusion toggles in the tagged feed row menu', () => {
     const subscription = sub(1, 0);
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
       subscriptions: [subscription],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };
@@ -911,8 +1045,9 @@ describe('SidebarComponent', () => {
 
     it('places the chevron in the same right-edge column as a tag chevron', () => {
       const node: TagNode = {
-        tag: { id: 30, name: 'Tech', color: null, icon: null, position: 0 },
+        tag: { id: 30, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
         subscriptions: [],
+        children: [],
         unreadCount: 0,
         entryCount: 0,
       };
@@ -1623,8 +1758,10 @@ describe('for-you row', () => {
 });
 
 describe('organise mode', () => {
-  const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0 };
-  const tree: TagNode[] = [{ tag, subscriptions: [sub(5)], unreadCount: 3, entryCount: 0 }];
+  const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0, parentId: null };
+  const tree: TagNode[] = [
+    { tag, subscriptions: [sub(5)], children: [], unreadCount: 3, entryCount: 0 },
+  ];
 
   it('offers the Organise switch on coarse pointers only', () => {
     const isCoarse = signal(false);
@@ -1994,8 +2131,9 @@ describe('organise mode', () => {
       ],
     };
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
       subscriptions: [],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };

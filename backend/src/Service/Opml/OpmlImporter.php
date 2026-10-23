@@ -29,15 +29,7 @@ final readonly class OpmlImporter
 
         $body = $this->bodyReader->read($opml);
 
-        $items = [];
-        // Depth-first: each feed outline inherits the nearest ancestor group's
-        // title as its tag. `null` tag = body root (untagged). OPML carries no
-        // styling, so imported tags get the app's default colour and icon.
-        foreach ($this->collectFeeds($body, null) as [$xmlUrl, $tagName]) {
-            $items[] = new BulkSubscribeItemModel(feedUrl: $xmlUrl, tagName: $tagName);
-        }
-
-        $result = $this->subscriber->subscribeAll($user, $items);
+        $result = $this->subscriber->subscribeAll($user, $this->collectFeeds($body, null, null));
 
         return new OpmlImportResultModel(
             imported: $result->imported,
@@ -48,11 +40,14 @@ final readonly class OpmlImporter
     }
 
     /**
-     * @return list<array{0: string, 1: string|null}> [xmlUrl, tagName]
+     * Depth-first. A feed takes the innermost group as its tag and the outermost as that tag's parent, so a
+     * one-level file imports as it always did and a deeper one keeps its innermost grouping.
+     *
+     * @return list<BulkSubscribeItemModel>
      */
-    private function collectFeeds(\DOMElement $node, ?string $inheritedTag): array
+    private function collectFeeds(\DOMElement $node, ?string $inheritedTag, ?string $outermostTag): array
     {
-        $out = [];
+        $items = [];
         foreach ($node->childNodes as $child) {
             if (!$child instanceof \DOMElement || $child->localName !== 'outline') {
                 continue;
@@ -60,21 +55,27 @@ final readonly class OpmlImporter
 
             $xmlUrl = trim($child->getAttribute('xmlUrl'));
             if ($xmlUrl !== '') {
-                $out[] = [$xmlUrl, $inheritedTag];
+                $parent = $inheritedTag === $outermostTag ? null : $outermostTag;
+                $items[] = new BulkSubscribeItemModel(feedUrl: $xmlUrl, tagName: $inheritedTag, parentTagName: $parent);
                 continue;
             }
 
-            // A group outline: its text/title becomes the tag for descendants.
-            $groupName = trim($child->getAttribute('text'));
-            if ($groupName === '') {
-                $groupName = trim($child->getAttribute('title'));
-            }
-            $childTag = $groupName !== '' ? $groupName : $inheritedTag;
-            foreach ($this->collectFeeds($child, $childTag) as $descendant) {
-                $out[] = $descendant;
+            $groupTag = $this->groupName($child) ?? $inheritedTag;
+            foreach ($this->collectFeeds($child, $groupTag, $outermostTag ?? $groupTag) as $item) {
+                $items[] = $item;
             }
         }
 
-        return $out;
+        return $items;
+    }
+
+    private function groupName(\DOMElement $outline): ?string
+    {
+        $name = trim($outline->getAttribute('text'));
+        if ($name === '') {
+            $name = trim($outline->getAttribute('title'));
+        }
+
+        return $name === '' ? null : $name;
     }
 }

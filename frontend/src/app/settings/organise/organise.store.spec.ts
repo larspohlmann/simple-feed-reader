@@ -14,6 +14,7 @@ const tag = (id: number, name: string, position: number): TagDto => ({
   color: null,
   icon: null,
   position,
+  parentId: null,
 });
 
 const sub = (
@@ -33,6 +34,7 @@ const sub = (
       color: null,
       icon: null,
       position: index,
+      parentId: null,
     })),
   });
 
@@ -96,6 +98,48 @@ describe('OrganiseStore', () => {
       10, 12,
     ]);
     expect(store.groups()[2].subscriptions.map((subscription) => subscription.id)).toEqual([13]);
+  });
+
+  it('lists each root followed by its children, children one level deep', () => {
+    const store = make(
+      [],
+      [tag(1, 'Reading', 0), { ...tag(2, 'Long reads', 1), parentId: 1 }, tag(3, 'Tech', 2)],
+    );
+
+    expect(store.groups().map((group) => [group.tag?.name ?? 'untagged', group.depth])).toEqual([
+      ['Reading', 0],
+      ['Long reads', 1],
+      ['Tech', 0],
+      ['untagged', 0],
+    ]);
+  });
+
+  it('nests each child group under its parent in the group tree', () => {
+    const store = make(
+      [],
+      [tag(1, 'Reading', 0), { ...tag(2, 'Long reads', 1), parentId: 1 }, tag(3, 'Tech', 2)],
+    );
+
+    expect(
+      store.groupTree().map((node) => [node.group.key, node.children.map((child) => child.key)]),
+    ).toEqual([
+      [1, [2]],
+      [3, []],
+      ['untagged', []],
+    ]);
+  });
+
+  it('lifts a child to the top of the group tree when a filter hides its parent', () => {
+    const store = make(
+      [sub(10, 'essay', { tagIds: [2] })],
+      [tag(1, 'Reading', 0), { ...tag(2, 'Long reads', 1), parentId: 1 }],
+    );
+
+    store.titleFilter.set('essay');
+
+    expect(
+      store.groupTree().map((node) => [node.group.key, node.children.map((child) => child.key)]),
+    ).toEqual([[2, []]]);
   });
 
   it('lists an empty saved feed, though the sidebar hides it', () => {

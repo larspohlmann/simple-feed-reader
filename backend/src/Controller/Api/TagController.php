@@ -10,6 +10,7 @@ use App\Dto\Tag\TagFeedOrderRequest;
 use App\Dto\Tag\UpdateTagRequest;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Http\FullReplacePayload;
 use App\Http\TagJson;
 use App\Repository\TagRepository;
 use App\Service\Tag\TagEditor;
@@ -50,8 +51,8 @@ final readonly class TagController
     }
 
     /**
-     * Persist the sidebar tag order. The body must list exactly the user's tags;
-     * each tag's position becomes its index.
+     * Persist a sibling order. The body must list exactly one sibling set, all roots or
+     * all children of one parent; each tag's position becomes its index.
      */
     #[Route('/reorder', name: 'api_tags_reorder', methods: ['PATCH'])]
     public function reorder(
@@ -88,7 +89,7 @@ final readonly class TagController
     public function update(
         int $id,
         #[CurrentUser] User $user,
-        #[MapRequestPayload] UpdateTagRequest $request,
+        #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] UpdateTagRequest $request,
     ): JsonResponse {
         $tag = $this->tags->getOneForUser($user->requireId(), $id);
 

@@ -11,6 +11,7 @@ const tag = (id: number, name: string): TagDto => ({
   color: null,
   icon: null,
   position: 0,
+  parentId: null,
 });
 
 describe('TagsStore', () => {
@@ -35,6 +36,14 @@ describe('TagsStore', () => {
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [tag(1, 'Zeta'), tag(2, 'Alpha')] });
     expect(store.loading()).toBe(false);
     expect(store.tags().map((listedTag) => listedTag.name)).toEqual(['Alpha', 'Zeta']);
+  });
+
+  it('exposes the roots on their own', () => {
+    store.load();
+    ctrl
+      .expectOne('https://api.test/api/tags')
+      .flush({ tags: [tag(1, 'Reading'), { ...tag(2, 'Long reads'), parentId: 1 }] });
+    expect(store.rootTags().map((root) => root.name)).toEqual(['Reading']);
   });
 
   it('records a Problem on error', () => {

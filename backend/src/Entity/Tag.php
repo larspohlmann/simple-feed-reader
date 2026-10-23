@@ -36,6 +36,10 @@ final class Tag implements PositionedInterface
     #[ORM\Column(options: ['default' => 0])]
     private int $position = 0;
 
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(name: 'parent_id', nullable: true, onDelete: 'SET NULL')]
+    private ?Tag $parent = null;
+
     public function __construct(User $user, string $name)
     {
         $this->user = $user;
@@ -90,5 +94,15 @@ final class Tag implements PositionedInterface
     public function setPosition(int $position): void
     {
         $this->position = $position;
+    }
+
+    public function getParent(): ?Tag
+    {
+        return $this->parent;
+    }
+
+    public function setParent(?Tag $parent): void
+    {
+        $this->parent = $parent;
     }
 }

@@ -22,11 +22,13 @@ final readonly class RestoredFoundationFactory
     {
     }
 
-    public function tag(User $user, TagLine $line): Tag
+    public function tag(User $user, TagLine $line, ?Tag $parent): Tag
     {
         $details = new TagDetailsModel($line->name, $line->color, $line->icon);
+        $tag = $this->tagFactory->create($user, $details, $line->position);
+        $tag->setParent($parent);
 
-        return $this->tagFactory->create($user, $details, $line->position);
+        return $tag;
     }
 
     public function feed(FeedLine $line): Feed

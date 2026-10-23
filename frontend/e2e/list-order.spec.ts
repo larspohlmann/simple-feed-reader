@@ -2,7 +2,14 @@ import { expect, Page, Request, test } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
 import { entryWire, oneFeedJson } from './support/reader';
 
-const TAG = { id: 7101, name: 'Order fixture', color: null, icon: null, position: 0 };
+const TAG = {
+  id: 7101,
+  name: 'Order fixture',
+  color: null,
+  icon: null,
+  position: 0,
+  parentId: null,
+};
 const ENTRY_COUNT = 40;
 
 /** Entry n is published on day n, so ascending id is ascending date. */

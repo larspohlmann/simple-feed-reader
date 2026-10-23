@@ -200,6 +200,7 @@ final class SubscriptionJsonTest extends TestCase
                 'color' => '#ff8800',
                 'icon' => null,
                 'position' => 0,
+                'parentId' => null,
             ]],
             $shape['tags'],
         );

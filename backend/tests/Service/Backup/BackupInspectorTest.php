@@ -73,9 +73,11 @@ final class BackupInspectorTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function tag(string $name): array
+    private static function tag(string $name, ?string $parent = null): array
     {
-        return ['kind' => 'tag', 'name' => $name, 'color' => null, 'icon' => null, 'position' => 0];
+        return [
+            'kind' => 'tag', 'name' => $name, 'color' => null, 'icon' => null, 'position' => 0, 'parent' => $parent,
+        ];
     }
 
     /** @return array<string, mixed> */
@@ -189,6 +191,11 @@ final class BackupInspectorTest extends TestCase
             ['tag' => 2],
         ];
 
+        yield 'a tag naming a parent the file declares only later' => [
+            [self::tag('Long reads', 'Reading'), self::tag('Reading')],
+            ['tag' => 2],
+        ];
+
         yield 'the same feed url twice' => [
             [self::feed(self::FEED_URL), self::feed(self::FEED_URL)],
             ['feed' => 2],
@@ -233,6 +240,45 @@ final class BackupInspectorTest extends TestCase
         self::assertSame(1, $inventory->tags);
         self::assertSame(1, $inventory->feeds);
         self::assertSame(1, $inventory->subscriptions);
+    }
+
+    public function testAChildDeclaredAfterItsParentCounts(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('Reading'), self::tag('Long reads', 'Reading'),
+            self::footer(['tag' => 2]),
+        ]);
+
+        self::assertSame(2, self::inspector()->inspect($gzip)->tags);
+    }
+
+    public function testAParentNamedBeforeItIsDeclaredIsRefusedByName(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('Long reads', 'Reading'), self::tag('Reading'),
+            self::footer(['tag' => 2]),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The backup names parent tag "Reading" before declaring it.');
+
+        self::inspector()->inspect($gzip);
+    }
+
+    public function testAParentThatHasAParentItselfIsRefusedByName(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('Reading'), self::tag('Long reads', 'Reading'), self::tag('Essays', 'Long reads'),
+            self::footer(['tag' => 3]),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The backup names parent tag "Long reads", which has a parent itself.');
+
+        self::inspector()->inspect($gzip);
     }
 
     public function testAFoundationReportsItsClaimedTotalsAsEntryCounts(): void

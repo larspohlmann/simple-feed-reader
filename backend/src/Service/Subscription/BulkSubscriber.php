@@ -132,7 +132,7 @@ final readonly class BulkSubscriber
     }
 
     /**
-     * @return list<Tag> the tag if this call brought it into being, else empty
+     * @return list<Tag> the tags this call brought into being
      */
     private function attachTag(
         BulkSubscribeBatch $batch,
@@ -143,13 +143,52 @@ final readonly class BulkSubscriber
             return [];
         }
 
-        $name = mb_substr($item->tagName, 0, self::MAX_TAG_NAME);
-        $existing = $batch->tagNamed($name) ?? $this->tags->findOneByNameForUser($batch->user->requireId(), $name);
+        $name = $this->clippedTagName($item->tagName);
+        $existing = $this->existingTag($batch, $name);
         $tag = $existing ?? $this->persistNewTag($batch, $name, $item->tagStyle);
         $batch->rememberTag($name, $tag);
         $this->joinTag($batch->positions, $subscription, $tag);
+        $created = null === $existing ? [$tag] : [];
 
-        return null === $existing ? [$tag] : [];
+        return [...$created, ...$this->nestUnder($batch, $tag, $item->parentTagName)];
+    }
+
+    /**
+     * The one-level rule decides silently, so an import never fails on a tag the user already arranged.
+     *
+     * @return list<Tag> the parent, when this call brought it into being
+     */
+    private function nestUnder(BulkSubscribeBatch $batch, Tag $tag, ?string $parentName): array
+    {
+        if (null === $parentName || null !== $tag->getParent() || $this->isParent($batch, $tag)) {
+            return [];
+        }
+        $name = $this->clippedTagName($parentName);
+        $existing = $this->existingTag($batch, $name);
+        if (null !== $existing && ($existing === $tag || null !== $existing->getParent())) {
+            return [];
+        }
+        $parent = $existing ?? $this->persistNewTag($batch, $name, null);
+        $batch->rememberTag($name, $parent);
+        $tag->setParent($parent);
+        $batch->rememberParent($parent);
+
+        return null === $existing ? [$parent] : [];
+    }
+
+    private function existingTag(BulkSubscribeBatch $batch, string $name): ?Tag
+    {
+        return $batch->tagNamed($name) ?? $this->tags->findOneByNameForUser($batch->user->requireId(), $name);
+    }
+
+    private function clippedTagName(string $requestedName): string
+    {
+        return mb_substr($requestedName, 0, self::MAX_TAG_NAME);
+    }
+
+    private function isParent(BulkSubscribeBatch $batch, Tag $tag): bool
+    {
+        return $batch->isParent($tag, fn (): bool => null !== $tag->getId() && $this->tags->hasChildren($tag));
     }
 
     private function persistNewTag(BulkSubscribeBatch $batch, string $name, ?TagStyleModel $style): Tag

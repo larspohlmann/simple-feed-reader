@@ -1628,7 +1628,7 @@ describe('ReaderShellComponent', () => {
     // The header's glyph and its edit action both read the tag out of the
     // tree, so the tag has to exist there for either to appear.
     TestBed.inject(TagsStore).tags.set([
-      { id: 3, name: 'Tech', color: null, icon: null, position: 0 },
+      { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
     ]);
     qp.next(convertToParamMap({ tag: '3' }));
     fixture.detectChanges();
@@ -1808,7 +1808,7 @@ describe('ReaderShellComponent', () => {
     const fixture = bootWith([
       {
         ...subscriptionsBody.subscriptions[0],
-        tags: [{ id: 3, name: 'Tech', color: null, icon: null, position: 0 }],
+        tags: [{ id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null }],
       },
     ]);
     qp.next(convertToParamMap({ tag: '3' }));
@@ -2545,7 +2545,14 @@ describe('ReaderShellComponent', () => {
   // the same pair the sidebar row shows. Both come from one lookup, so the two
   // can never describe different tags.
   it('hands the list the selected tag, and nothing for any other selection', () => {
-    const science = { id: 7, name: 'Wissenschaft', color: '#c2410c', icon: 'science', position: 0 };
+    const science = {
+      id: 7,
+      name: 'Wissenschaft',
+      color: '#c2410c',
+      icon: 'science',
+      position: 0,
+      parentId: null,
+    };
     const fixture = TestBed.createComponent(ReaderShellComponent);
     fixture.detectChanges();
     ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
