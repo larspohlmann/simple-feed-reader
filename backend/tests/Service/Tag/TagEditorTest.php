@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Repository\TagRepository;
 use App\Service\Tag\Exception\InvalidTagParentException;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Model\TagDetailsModel;
@@ -169,6 +170,29 @@ final class TagEditorTest extends DbTestCase
         $reloaded = $this->entityManager->find(Subscription::class, $subscriptionId);
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertTrue($reloaded->getTags()->isEmpty());
+    }
+
+    public function testDeletingAParentMovesItsChildrenToRootAfterTheLastRoot(): void
+    {
+        $user = $this->user('tag-parent-deleter@example.com');
+        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $first = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $parent->requireId()));
+        $other = $this->editor()->create($user, new TagDetailsModel('Other'));
+        $second = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $parent->requireId()));
+
+        $this->editor()->delete($parent);
+
+        $this->entityManager->clear();
+        $reloadedFirst = $this->entityManager->find(Tag::class, $first->requireId());
+        $reloadedSecond = $this->entityManager->find(Tag::class, $second->requireId());
+        self::assertInstanceOf(Tag::class, $reloadedFirst);
+        self::assertInstanceOf(Tag::class, $reloadedSecond);
+        self::assertNull($reloadedFirst->getParent());
+        self::assertNull($reloadedSecond->getParent());
+        self::assertSame([$other->requireId(), $first->requireId(), $second->requireId()], array_map(
+            static fn (Tag $tag): int => $tag->requireId(),
+            self::getContainer()->get(TagRepository::class)->findForUser($user->requireId()),
+        ));
     }
 
     private function editor(): TagEditor

@@ -53,12 +53,22 @@ final readonly class TagEditor
 
     public function delete(Tag $tag): void
     {
+        $this->releaseChildren($tag);
         $carriers = $this->subscriptionScope->findForUserByTagId($tag->getUser()->requireId(), $tag->requireId());
         foreach ($carriers as $subscription) {
             $subscription->removeTag($tag);
         }
         $this->entityManager->remove($tag);
         $this->entityManager->flush();
+    }
+
+    private function releaseChildren(Tag $parent): void
+    {
+        $nextPosition = $this->tags->nextPositionForUser($parent->getUser()->requireId());
+        foreach ($this->tags->findChildren($parent) as $child) {
+            $child->setParent(null);
+            $child->setPosition($nextPosition++);
+        }
     }
 
     private function parentForNew(User $user, ?int $parentId): ?Tag
