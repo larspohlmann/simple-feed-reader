@@ -89,10 +89,8 @@ GitHub Release is published; an install that starts before they finish, or
 finds no images, builds on the host and warns, so a failed image job never
 breaks an install.
 
-**One-time step after the first release that publishes images:** GHCR creates
-both packages private. On each package's page (the repository's **Packages**
-sidebar) open **Package settings → Change visibility** and make it **Public**.
-Until then anonymous pulls are denied and every install builds on the host.
+The packages are public, as the repository is, so installs pull them without
+a login.
 
 ## Highlights
 
