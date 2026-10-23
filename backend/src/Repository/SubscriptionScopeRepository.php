@@ -35,6 +35,21 @@ final class SubscriptionScopeRepository extends ServiceEntityRepository
         return $rows;
     }
 
+    /** @return list<Subscription> the tag's carriers and its children's, each once */
+    public function findForUserInTagScope(int $userId, int $tagId): array
+    {
+        $qb = $this->createQueryBuilder('s')
+            ->leftJoin('s.feed', 'f')->addSelect('f')
+            ->andWhere('s.user = :user')->setParameter('user', $userId)
+            ->orderBy('s.id', 'ASC');
+        TagScopeDql::restrict($qb, 's', $tagId);
+
+        /** @var list<Subscription> $rows */
+        $rows = $qb->getQuery()->getResult();
+
+        return $rows;
+    }
+
     /** @return list<Subscription> */
     public function findForUserInFeedGroup(int $userId, FeedGroup $group): array
     {

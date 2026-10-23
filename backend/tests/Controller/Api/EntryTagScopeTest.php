@@ -10,6 +10,7 @@ use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Component\HttpFoundation\Response;
 
 final class EntryTagScopeTest extends ApiTestCase
 {
@@ -52,6 +53,45 @@ final class EntryTagScopeTest extends ApiTestCase
         $this->client->request('GET', '/api/entries?tag=' . $tagIds['reading'], server: $headers);
 
         self::assertSame(['own.example both', 'own.example child', 'own.example parent'], $this->titlesOfResponse());
+    }
+
+    public function testMarkingAParentReadReachesItsChildrensFeeds(): void
+    {
+        [$headers, $user] = $this->auth('tag-mark-parent@example.com');
+        $tagIds = $this->seedHierarchy($user, 'own.example');
+
+        $this->markRead($headers, $tagIds['reading']);
+        self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
+
+        $this->client->request('GET', '/api/entries?tag=' . $tagIds['reading'] . '&view=unread', server: $headers);
+        self::assertSame([], $this->titlesOfResponse());
+        $this->client->request('GET', '/api/entries?tag=' . $tagIds['tech'] . '&view=unread', server: $headers);
+        self::assertSame(['own.example tech'], $this->titlesOfResponse());
+    }
+
+    public function testMarkingAChildReadLeavesTheParentsOwnFeedUnread(): void
+    {
+        [$headers, $user] = $this->auth('tag-mark-child@example.com');
+        $tagIds = $this->seedHierarchy($user, 'own.example');
+
+        $this->markRead($headers, $tagIds['long reads']);
+
+        $this->client->request('GET', '/api/entries?tag=' . $tagIds['reading'] . '&view=unread', server: $headers);
+        self::assertSame(['own.example parent'], $this->titlesOfResponse());
+    }
+
+    /** @param array<string, string> $headers */
+    private function markRead(array $headers, int $tagId): void
+    {
+        $this->client->request(
+            'POST',
+            '/api/entries/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                ['scope' => 'tag', 'id' => $tagId, 'until' => '2026-10-12T00:00:00Z'],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
     }
 
     /**

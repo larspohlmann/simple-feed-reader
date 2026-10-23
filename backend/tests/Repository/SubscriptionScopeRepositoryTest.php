@@ -108,6 +108,39 @@ final class SubscriptionScopeRepositoryTest extends DbTestCase
         );
     }
 
+    public function testATagScopeHoldsTheTagsCarriersAndItsChildrensEachOnce(): void
+    {
+        $user = $this->user('tag-scope-owner@example.com');
+        $reading = new Tag($user, 'Reading');
+        $this->entityManager->persist($reading);
+        $longReads = new Tag($user, 'Long reads');
+        $longReads->setParent($reading);
+        $this->entityManager->persist($longReads);
+        $parentOnly = $this->fixtures()->subscribe($user, 'https://parent.example/feed.xml');
+        $parentOnly->addTag($reading, 0);
+        $childOnly = $this->fixtures()->subscribe($user, 'https://child.example/feed.xml');
+        $childOnly->addTag($longReads, 0);
+        $both = $this->fixtures()->subscribe($user, 'https://both.example/feed.xml');
+        $both->addTag($reading, 1);
+        $both->addTag($longReads, 1);
+        $this->fixtures()->subscribe($user, 'https://untagged.example/feed.xml');
+        $this->entityManager->flush();
+
+        $userId = $user->requireId();
+        self::assertSame(
+            [$parentOnly->requireId(), $childOnly->requireId(), $both->requireId()],
+            $this->idsOf($this->subscriptions()->findForUserInTagScope($userId, $reading->requireId())),
+        );
+        self::assertSame(
+            [$childOnly->requireId(), $both->requireId()],
+            $this->idsOf($this->subscriptions()->findForUserInTagScope($userId, $longReads->requireId())),
+        );
+        self::assertEqualsCanonicalizing(
+            [$parentOnly->requireId(), $both->requireId()],
+            $this->idsOf($this->subscriptions()->findForUserByTagId($userId, $reading->requireId())),
+        );
+    }
+
     public function testAFeedGroupHoldsExactlyItsSidebarSection(): void
     {
         $user = $this->user('feed-group-owner@example.com');

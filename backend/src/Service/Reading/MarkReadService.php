@@ -35,7 +35,7 @@ final readonly class MarkReadService
         return match ($scope->kind) {
             ReadScopeKind::All => $this->subscriptionScope->findIncludedInAllItemsForUser($userId),
             ReadScopeKind::Feed => [$this->subscriptions->getOneForUser($userId, $scope->targetId())],
-            ReadScopeKind::Tag => $this->subscriptionScope->findForUserByTagId(
+            ReadScopeKind::Tag => $this->subscriptionScope->findForUserInTagScope(
                 $userId,
                 $this->tags->getOneForUser($userId, $scope->targetId())->requireId(),
             ),
