@@ -33,12 +33,12 @@ import { SidebarSocialSectionComponent } from './sidebar-social-section.componen
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
-import { TagNode } from '../../state/subscription-derivations';
+import { TagNode, flattenTagTree } from '../../state/subscription-derivations';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
-import { isSubscriptionDrag } from '../../drag-payload';
+import { isSubscriptionDrag, isTagDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
@@ -50,6 +50,12 @@ import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
+
+/** One rendered tag row: a root, or a child shown while its parent is expanded. */
+export interface TagRow {
+  readonly node: TagNode;
+  readonly depth: 0 | 1;
+}
 
 const tagIdOf = (data: DropData): number | null => (data.kind === 'tag' ? data.tag.id : null);
 
@@ -143,8 +149,14 @@ export class SidebarComponent {
 
   /** Feed lists accept only feed drags. */
   readonly isFeedDrag = (drag: CdkDrag): boolean => isSubscriptionDrag(drag.data);
-  /** A tag header accepts a tag (to reorder) and a feed (to add the tag). */
-  readonly acceptOnTagHead = (): boolean => true;
+  /** A tag head takes a feed from anywhere, and a tag only from its own sibling set, so no other head highlights. */
+  readonly acceptOnTagHead = (drag: CdkDrag, list: CdkDropList<DropData>): boolean => {
+    if (isSubscriptionDrag(drag.data)) return true;
+    const target = list.data;
+    return (
+      target.kind === 'tag' && isTagDrag(drag.data) && drag.data.parentId === target.tag.parentId
+    );
+  };
 
   readonly refreshSvc = inject(RefreshService);
   readonly ai = inject(AiAvailabilityService);
@@ -182,6 +194,16 @@ export class SidebarComponent {
     if (!this.screen.isCoarse()) untracked(() => this.organising.set(false));
   });
   readonly expanded = signal<Set<number>>(new Set());
+
+  /** Roots in order, each followed by its children while it is expanded; the template renders this flat list. */
+  readonly tagRows = computed<TagRow[]>(() =>
+    this.tagTree().flatMap((root): TagRow[] => [
+      { node: root, depth: 0 },
+      ...(this.expanded().has(root.tag.id)
+        ? root.children.map((child): TagRow => ({ node: child, depth: 1 }))
+        : []),
+    ]),
+  );
 
   /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */
   private readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
@@ -251,7 +273,8 @@ export class SidebarComponent {
     if (target.kind !== 'tag') return;
 
     const dragged = event.item.data as TagDto;
-    const ids = this.tagTree().map((node) => node.tag.id);
+    if (dragged.parentId !== target.tag.parentId) return;
+    const ids = this.siblingIds(target.tag);
     const from = ids.indexOf(dragged.id);
     const to = ids.indexOf(target.tag.id);
     if (from < 0 || to < 0 || from === to) return;
@@ -269,7 +292,8 @@ export class SidebarComponent {
       if (event.previousIndex === event.currentIndex) return;
       if (target.kind === 'tag') {
         const ids = (
-          this.tagTree().find((node) => node.tag.id === target.tag.id)?.subscriptions ?? []
+          flattenTagTree(this.tagTree()).find((node) => node.tag.id === target.tag.id)
+            ?.subscriptions ?? []
         ).map((subscription) => subscription.id);
         moveItemInArray(ids, event.previousIndex, event.currentIndex);
         this.manage.reorderTagFeeds(target.tag.id, ids);
@@ -287,6 +311,15 @@ export class SidebarComponent {
         feedMove(event.previousContainer.data, target, event.currentIndex),
       );
     }
+  }
+
+  /** The ids a tag may be ordered among: the roots, or its parent's children. */
+  private siblingIds(tag: TagDto): number[] {
+    const siblings =
+      tag.parentId === null
+        ? this.tagTree()
+        : (this.tagTree().find((root) => root.tag.id === tag.parentId)?.children ?? []);
+    return siblings.map((node) => node.tag.id);
   }
 
   toggle(tagId: number): void {

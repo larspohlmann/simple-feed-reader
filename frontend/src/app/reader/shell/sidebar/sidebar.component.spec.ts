@@ -8,7 +8,7 @@ import { AuthService, CurrentUser } from '../../../core/auth/auth.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
-import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { TagNode } from '../../state/subscription-derivations';
@@ -443,13 +443,18 @@ describe('SidebarComponent', () => {
   });
 
   describe('drag-and-drop reordering', () => {
-    const tagNode = (id: number, subscriptions: SubscriptionDto[] = []): TagNode => ({
-      tag: { id, name: `t${id}`, color: null, icon: null, position: 0, parentId: null },
-      subscriptions: subscriptions,
+    const tagNode = (
+      id: number,
+      subscriptions: SubscriptionDto[] = [],
+      parentId: number | null = null,
+    ): TagNode => ({
+      tag: { id, name: `t${id}`, color: null, icon: null, position: 0, parentId },
+      subscriptions,
       children: [],
       unreadCount: 0,
       entryCount: 0,
     });
+    const parentNode = (id: number, children: TagNode[]): TagNode => ({ ...tagNode(id), children });
 
     function reorder(
       target: DropData,
@@ -541,6 +546,92 @@ describe('SidebarComponent', () => {
       manageActions.reorderUntagged.mockImplementation(spy);
       fixture.componentInstance.onDrop(reorder({ kind: 'untagged' }, 1, 1));
       expect(spy).not.toHaveBeenCalled();
+    });
+
+    describe('child tags (#1736)', () => {
+      const tree = (): TagNode[] => [
+        parentNode(10, [tagNode(11, [], 10), tagNode(12, [], 10)]),
+        tagNode(20),
+      ];
+      const onHead = (node: TagNode) =>
+        ({ data: { kind: 'tag', tag: node.tag } }) as unknown as CdkDropList<DropData>;
+      const dragOf = (data: unknown) => ({ data }) as unknown as CdkDrag;
+      const heads = (fixture: ReturnType<typeof mount>) =>
+        [...(fixture.nativeElement as HTMLElement).querySelectorAll('.taghead')].map((head) => ({
+          name: head.textContent?.match(/t\d+/)?.[0],
+          child: head.classList.contains('child'),
+        }));
+
+      it('shows children indented, and only while their parent is expanded', () => {
+        const fixture = mount({ tagTree: tree() });
+        expect(heads(fixture).map((head) => head.name)).toEqual(['t10', 't20']);
+
+        fixture.componentInstance.toggle(10);
+        fixture.detectChanges();
+
+        expect(heads(fixture)).toEqual([
+          { name: 't10', child: false },
+          { name: 't11', child: true },
+          { name: 't12', child: true },
+          { name: 't20', child: false },
+        ]);
+      });
+
+      it('lets a tag head accept a feed from anywhere but a tag only from its own sibling set', () => {
+        const accept = mount({ tagTree: tree() }).componentInstance.acceptOnTagHead;
+        const [child, sibling, parent, root] = [
+          tagNode(11, [], 10),
+          tagNode(12, [], 10),
+          tagNode(10),
+          tagNode(20),
+        ];
+        expect(accept(dragOf(sub(1)), onHead(child))).toBe(true);
+        expect(accept(dragOf(child.tag), onHead(sibling))).toBe(true);
+        expect(accept(dragOf(child.tag), onHead(root))).toBe(false);
+        expect(accept(dragOf(root.tag), onHead(child))).toBe(false);
+        expect(accept(dragOf(child.tag), onHead(parent))).toBe(false);
+      });
+
+      it('reorders a child among its siblings only', () => {
+        const fixture = mount({ tagTree: tree() });
+
+        fixture.componentInstance.onTagHeadDrop(
+          tagHeadDrop(tagNode(12, [], 10).tag, { kind: 'tag', tag: tagNode(11, [], 10).tag }),
+        );
+
+        expect(manageActions.reorderTags).toHaveBeenCalledWith([12, 11]);
+      });
+
+      it('reorders the roots without touching the children', () => {
+        const fixture = mount({ tagTree: tree() });
+
+        fixture.componentInstance.onTagHeadDrop(
+          tagHeadDrop(tagNode(20).tag, { kind: 'tag', tag: tagNode(10).tag }),
+        );
+
+        expect(manageActions.reorderTags).toHaveBeenCalledWith([20, 10]);
+      });
+
+      it('ignores a tag dropped on a head outside its sibling set', () => {
+        const fixture = mount({ tagTree: tree() });
+
+        fixture.componentInstance.onTagHeadDrop(
+          tagHeadDrop(tagNode(11, [], 10).tag, { kind: 'tag', tag: tagNode(20).tag }),
+        );
+
+        expect(manageActions.reorderTags).not.toHaveBeenCalled();
+      });
+
+      it("reorders feeds inside a child's own list", () => {
+        const feeds = [sub(1), sub(2)];
+        const fixture = mount({ tagTree: [parentNode(10, [tagNode(11, feeds, 10)])] });
+
+        fixture.componentInstance.onDrop(
+          reorder({ kind: 'tag', tag: tagNode(11, [], 10).tag }, 0, 1),
+        );
+
+        expect(manageActions.reorderTagFeeds).toHaveBeenCalledWith(11, [2, 1]);
+      });
     });
   });
 

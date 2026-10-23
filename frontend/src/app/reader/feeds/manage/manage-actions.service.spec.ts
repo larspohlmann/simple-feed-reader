@@ -244,6 +244,45 @@ describe('ManageActions', () => {
     expect(spy).toHaveBeenCalled();
   });
 
+  it('reorderTags: repositions only the listed siblings and keeps every other tag', () => {
+    jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
+    const tags = TestBed.inject(TagsStore);
+    const reading: TagDto = {
+      id: 1,
+      name: 'Reading',
+      color: null,
+      icon: null,
+      position: 0,
+      parentId: null,
+    };
+    const longReads: TagDto = {
+      id: 2,
+      name: 'Long reads',
+      color: null,
+      icon: null,
+      position: 0,
+      parentId: 1,
+    };
+    const tech: TagDto = {
+      id: 4,
+      name: 'Tech',
+      color: null,
+      icon: null,
+      position: 1,
+      parentId: null,
+    };
+    tags.tags.set([reading, longReads, tech]);
+
+    service.reorderTags([4, 1]);
+
+    expect(tags.tags().map((tag) => [tag.id, tag.position])).toEqual([
+      [2, 0],
+      [4, 0],
+      [1, 1],
+    ]);
+    ctrl.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
+  });
+
   it('reorderUntagged: PATCHes /api/subscriptions/reorder then reloads subs', () => {
     const spy = jest
       .spyOn(TestBed.inject(SubscriptionsStore), 'load')

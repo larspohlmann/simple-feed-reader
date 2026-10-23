@@ -143,15 +143,18 @@
     @if (tagsExpanded()) {
       <!-- Each tag contributes two TOP-LEVEL drop lists, never nested: a header
              list that reorders tags/accepts a feed, and an expanded feed list that
-             reorders/receives feeds. CDK breaks cross-list drops if nested. -->
+             reorders/receives feeds. CDK breaks cross-list drops if nested.
+             A child's head and feed list are siblings here too, after its parent's. -->
       <div class="tags">
-        @for (node of tagTree(); track node.tag.id) {
+        @for (row of tagRows(); track row.node.tag.id) {
+          @let node = row.node;
           <div
             class="taghead"
             cdkDropList
             [cdkDropListData]="tagDrop(node.tag)"
             [cdkDropListEnterPredicate]="acceptOnTagHead"
             [cdkDropListSortingDisabled]="true"
+            [class.child]="row.depth === 1"
             [class.drop-line]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'tag'"
             [class.drop-active]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'feed'"
             (cdkDropListDropped)="onTagHeadDrop($event)"
@@ -235,6 +238,7 @@
               [cdkDropListData]="tagDrop(node.tag)"
               [cdkDropListEnterPredicate]="isFeedDrag"
               [class.organising]="organising()"
+              [class.child]="row.depth === 1"
               (cdkDropListDropped)="onDrop($event)"
             >
               @for (subscription of node.subscriptions; track subscription.id) {

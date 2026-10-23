@@ -4,6 +4,11 @@ import { Problem, parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
 
+/** Position order, name as a stable tiebreak; a position orders a tag among its siblings only. */
+export function compareTagPositions(left: TagDto, right: TagDto): number {
+  return left.position - right.position || left.name.localeCompare(right.name);
+}
+
 /** The complete tag list from GET /api/tags — including tags with zero feeds,
  *  which the sidebar's subscription-derived tree never shows. Management reads
  *  this; mutations happen through ReaderApi and callers call load() to re-sync. */
@@ -22,11 +27,7 @@ export class TagsStore {
     this.error.set(null);
     this.api.tags().subscribe({
       next: (response) => {
-        this.tags.set(
-          [...response.tags].sort(
-            (left, right) => left.position - right.position || left.name.localeCompare(right.name),
-          ),
-        );
+        this.tags.set([...response.tags].sort(compareTagPositions));
         this.loading.set(false);
       },
       error: (error: HttpErrorResponse) => {
