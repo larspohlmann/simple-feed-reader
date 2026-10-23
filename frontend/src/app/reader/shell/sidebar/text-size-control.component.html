@@ -1,7 +1,7 @@
 <div class="seg" role="group" [attr.aria-label]="'reader.textSize.aria' | transloco">
   <button
     type="button"
-    class="smaller"
+    class="end smaller"
     [title]="'reader.textSize.smaller' | transloco"
     [attr.aria-label]="'reader.textSize.smaller' | transloco"
     [disabled]="!textSize.canDecrease()"
@@ -25,7 +25,7 @@
   </button>
   <button
     type="button"
-    class="larger"
+    class="end larger"
     [title]="'reader.textSize.larger' | transloco"
     [attr.aria-label]="'reader.textSize.larger' | transloco"
     [disabled]="!textSize.canIncrease()"

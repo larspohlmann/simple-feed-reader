@@ -1,14 +1,13 @@
 @use 'glass-rim';
 
-// The sidebar's segmented-control frame: the view-controls groups and the
-// brightness stepper share it so the foot reads as one family. Each consumer
-// adds its own button sizing and active/disabled states.
+// The sidebar foot's frames (#1749): the view-controls groups and the two steppers.
 @mixin frame {
   .seg {
-    @include glass-rim.filled(var(--surface-2), var(--border), control);
+    @include glass-rim.filled(var(--surface-2), var(--border-strong), control);
 
     display: inline-flex;
     flex: 1 1 auto;
+    height: var(--sidebar-frame-h);
     border-radius: var(--radius);
     overflow: hidden;
   }
@@ -17,18 +16,27 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--surface-2);
+    padding: 0;
     border: none;
+    background: var(--surface-2);
     color: var(--text-secondary);
     cursor: pointer;
   }
 
-  .seg button:hover:not(:disabled) {
-    background: var(--surface-0);
+  @media (hover: hover) {
+    .seg button:hover:not(:disabled) {
+      background: var(--surface-0);
+    }
+  }
+
+  @media (pointer: coarse) {
+    .seg {
+      height: var(--tap-target);
+    }
   }
 }
 
-// The sidebar steppers (brightness, text size): glyph buttons either side of a
+// The steppers (brightness, text size): glyph buttons either side of a
 // full-height accent fill that resets on click.
 @mixin stepper-bar {
   .seg {
@@ -40,9 +48,13 @@
     cursor: default;
   }
 
+  .seg .end {
+    flex: none;
+    width: var(--sidebar-frame-h);
+  }
+
   .seg .bar {
     flex: 1 1 auto;
-    padding: 0;
     border-inline: 1px solid var(--border);
   }
 
@@ -58,5 +70,11 @@
     block-size: 100%;
     background: var(--accent-soft);
     transition: inline-size 0.12s ease;
+  }
+
+  @media (pointer: coarse) {
+    .seg .end {
+      width: var(--tap-target);
+    }
   }
 }

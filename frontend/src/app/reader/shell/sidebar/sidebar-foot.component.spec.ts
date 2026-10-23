@@ -85,7 +85,7 @@ describe('SidebarFootComponent', () => {
     expect(badge?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
-  it('keeps the update badge out of the version and feedback row', () => {
+  it('leads the version and feedback row with the update badge', () => {
     const fixture = mount();
     const versions = TestBed.inject(VersionService);
     versions.latest.set({ version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' });
@@ -93,12 +93,12 @@ describe('SidebarFootComponent', () => {
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
-    const badge = host.querySelector('.update-badge');
     const meta = host.querySelector('.meta');
-    expect(badge?.parentElement).toBe(host);
-    expect(badge?.nextElementSibling).toBe(meta);
-    expect(Array.from(meta?.children ?? []).map((link) => link.className)).toEqual([
+    expect(host.querySelector('.update-badge')?.parentElement).toBe(meta);
+    expect(Array.from(meta?.children ?? []).map((child) => child.className)).toEqual([
+      'update-badge',
       'version',
+      'separator',
       'feedback',
     ]);
   });

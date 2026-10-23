@@ -7,7 +7,7 @@
       [attr.aria-label]="s.label | transloco"
       (click)="showMagazine(s.id)"
     >
-      <app-icon [name]="s.icon" size="md" />
+      <app-icon [name]="s.icon" size="dense" />
     </button>
   }
   <button
@@ -17,7 +17,7 @@
     [class.active]="layout.mode() === 'list'"
     (click)="layout.set('list')"
   >
-    <app-icon name="view_agenda" size="md" />
+    <app-icon name="view_agenda" size="dense" />
   </button>
   <button
     class="pane"
@@ -27,7 +27,7 @@
     [class.active]="layout.mode() === 'pane'"
     (click)="layout.set('pane')"
   >
-    <app-icon name="view_column_2" size="md" />
+    <app-icon name="view_column_2" size="dense" />
   </button>
 </div>
 
@@ -39,7 +39,7 @@
       [title]="'reader.theme.' + m.id | transloco"
       (click)="theme.setMode(m.id)"
     >
-      <app-icon [name]="m.icon" size="md" />
+      <app-icon [name]="m.icon" size="dense" />
     </button>
   }
 </div>
