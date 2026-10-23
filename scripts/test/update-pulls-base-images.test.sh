@@ -14,7 +14,7 @@ fail() { printf 'FAIL: %s\n' "$1" >&2; exit 1; }
 calls=$(mktemp)
 trap 'rm -f "${calls}"' EXIT
 
-# shellcheck disable=SC2329 # refresh_images calls it by name
+# shellcheck disable=SC2317,SC2329 # refresh_images calls it by name
 compose() { printf '%s\n' "$*" >> "${calls}"; }
 
 refresh_images compose \
