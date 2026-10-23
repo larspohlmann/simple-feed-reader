@@ -311,7 +311,8 @@ cd simple-feed-reader && ./scripts/update.sh
 ```
 
 This checks out the newest release and re-runs the production bring-up
-(rebuild, migrate, health check). Data is kept. `prod-start.sh` is
+(pull updated base images, rebuild, migrate, health check), so a PHP or MySQL
+security release reaches the install with the next update. Data is kept. `prod-start.sh` is
 idempotent — running it again is always safe.
 
 `./scripts/update.sh --ref <branch-or-tag>` moves the install to that ref
