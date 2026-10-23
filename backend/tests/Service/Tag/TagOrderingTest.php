@@ -115,6 +115,17 @@ final class TagOrderingTest extends DbTestCase
         $this->ordering()->reorder($user, [$child->requireId(), $parent->requireId()]);
     }
 
+    public function testReorderRefusesAListLedByAnotherUsersTag(): void
+    {
+        $user = $this->user('tag-owner-orderer@example.com');
+        $own = $this->tag($user, 'A', 0);
+        $stranger = $this->tag($this->user('tag-stranger-orderer@example.com'), 'B', 0);
+
+        $this->expectException(InvalidSelectionException::class);
+        $this->expectExceptionMessage('tagIds must list exactly one tag and all of its siblings.');
+        $this->ordering()->reorder($user, [$stranger->requireId(), $own->requireId()]);
+    }
+
     private function childTag(User $user, string $name, int $position, Tag $parent): Tag
     {
         $child = $this->tag($user, $name, $position);

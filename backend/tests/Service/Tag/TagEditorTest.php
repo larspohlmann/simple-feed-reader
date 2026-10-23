@@ -182,6 +182,7 @@ final class TagEditorTest extends DbTestCase
 
         $this->editor()->delete($parent);
 
+        self::assertNull($first->getParent());
         $this->entityManager->clear();
         $reloadedFirst = $this->entityManager->find(Tag::class, $first->requireId());
         $reloadedSecond = $this->entityManager->find(Tag::class, $second->requireId());

@@ -257,6 +257,8 @@ final class TagControllerTest extends WebTestCase
         $problem = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($problem);
         self::assertSame('invalid_tag_parent', $problem['type']);
+        self::assertSame('Invalid parent tag', $problem['title']);
+        self::assertSame('A parent tag cannot itself have a parent.', $problem['detail']);
         self::assertSame(['parentId' => ['A parent tag cannot itself have a parent.']], $problem['errors']);
     }
 
