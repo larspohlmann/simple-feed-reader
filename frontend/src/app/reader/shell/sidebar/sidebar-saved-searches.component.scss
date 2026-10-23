@@ -23,7 +23,7 @@
 
 @include row.row-states('.savedsearch-item', '.savedsearch-item.active');
 
-.savedsearch-item > app-icon {
+.savedsearch-item:not(.active) > app-icon {
   color: var(--text-muted);
 }
 
@@ -50,9 +50,9 @@
   font-size: var(--fs-2xs);
 }
 
-/* The mail button takes the ⋯ column, so the count lines up with the rows that have none. */
 @include row.slot-button('.digest-toggle', var(--text-secondary));
 
+/* The mail button takes the ⋯ column, so the count lines up with the rows that have none. */
 .digest-toggle {
   margin-right: calc(var(--space-3) * -1);
 }

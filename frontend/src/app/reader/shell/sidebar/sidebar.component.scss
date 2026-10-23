@@ -3,8 +3,7 @@
 @include row.card;
 @include row.row-parts;
 @include row.section-head;
-@include row.chevron('.section-chevron');
-@include row.chevron('.chevzone');
+@include row.chevron('.section-chevron, .chevzone');
 @include row.dots;
 @include row.drag-handle;
 @include row.group;
@@ -93,7 +92,7 @@
 
 @include row.row-states('.nav', '.nav.active');
 
-.nav > app-icon {
+.nav:not(.active) > app-icon {
   color: var(--text-muted);
 }
 
@@ -120,6 +119,10 @@
 
 .feeds-card:not(.card) {
   display: contents;
+}
+
+.feeds-card:not(.card) > .feedlist:empty {
+  display: none;
 }
 
 .tags,

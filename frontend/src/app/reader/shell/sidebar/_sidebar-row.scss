@@ -141,41 +141,39 @@
     background: none;
     color: $color;
     cursor: pointer;
-  }
 
-  @media (hover: hover) {
-    #{$button}:hover {
-      background: var(--border-strong);
+    @media (hover: hover) {
+      &:hover {
+        background: var(--border-strong);
+      }
     }
-  }
 
-  @media (pointer: coarse) {
-    #{$button} {
+    @media (pointer: coarse) {
       width: var(--tap-target);
       height: var(--tap-target);
     }
+
+    @content;
   }
 }
 
 @mixin chevron($button) {
-  @include slot-button($button, var(--text-secondary));
-
-  @media (pointer: coarse) {
-    #{$button} {
+  @include slot-button($button, var(--text-secondary)) {
+    @media (pointer: coarse) {
       position: relative;
       border-radius: var(--radius-pill);
-    }
 
-    #{$button}::before {
-      content: '';
-      position: absolute;
-      inset: calc(var(--space-2) - var(--space-0) / 2);
-      border-radius: var(--radius-pill);
-      background: color-mix(in srgb, var(--text-primary) 7%, transparent);
-    }
+      &::before {
+        content: '';
+        position: absolute;
+        inset: calc(var(--space-2) - var(--space-0) / 2);
+        border-radius: var(--radius-pill);
+        background: color-mix(in srgb, var(--text-primary) 7%, transparent);
+      }
 
-    #{$button} app-icon {
-      position: relative;
+      app-icon {
+        position: relative;
+      }
     }
   }
 }
