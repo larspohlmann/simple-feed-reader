@@ -1941,18 +1941,75 @@ describe('organise mode', () => {
     expect(TestBed.inject(Router).url).toBe('/'); // expand must not select the tag
   });
 
-  it('organise rows carry a drag handle and expand via the row body', () => {
+  it('organise tag rows carry a handle, an inert body, ⋯ and a chevron that expands', () => {
     const fixture = mount({ coarse: true, organising: true, tagTree: tree });
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('.tag .handle')).not.toBeNull();
-    expect(element.querySelector('.tag .nav.grow')).toBeNull();
-    expect(element.querySelector('.tag .chevzone')).toBeNull();
-    expect(element.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('false');
-    element.querySelector<HTMLElement>('.tag .rowbody')!.click();
+    const row = element.querySelector('.tag')!;
+
+    const ownClass = (child: Element) =>
+      [...child.classList].find((name) => !name.startsWith('cdk-'));
+
+    expect([...row.children].map(ownClass)).toEqual(['handle', 'rowbody', 'dots', 'chevzone']);
+    expect(row.querySelector('.rowbody')!.tagName).toBe('SPAN');
+    expect(row.querySelector('.nav.grow')).toBeNull();
+    expect(row.querySelector('.chevzone')!.getAttribute('aria-expanded')).toBe('false');
+
+    row.querySelector<HTMLButtonElement>('.chevzone')!.click();
     fixture.detectChanges();
-    expect(element.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('true');
-    expect(element.querySelector('.tagfeeds')).not.toBeNull();
+
+    expect(element.querySelector('.tag .chevzone')!.getAttribute('aria-expanded')).toBe('true');
     expect(element.querySelector('.tagfeeds .handle')).not.toBeNull();
+  });
+
+  it('swaps the drawer head for Organise and Done, and Done ends organising', () => {
+    const fixture = mount({ coarse: true, organising: true, narrow: true });
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelector('.drawer-head')).toBeNull();
+    expect(element.querySelector('.organise-head .drawer-title')!.textContent?.trim()).toBe(
+      'Organise',
+    );
+    expect(element.querySelector('.organise-hint')).not.toBeNull();
+
+    element.querySelector<HTMLButtonElement>('.organise-done')!.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.organising()).toBe(false);
+    expect(element.querySelector('.drawer-head')).not.toBeNull();
+  });
+
+  describe('organise layout', () => {
+    afterEach(() => localStorage.clear());
+
+    it('leaves out saved searches and keeps the tags open under a plain head', () => {
+      const fixture = mount({
+        coarse: true,
+        tagTree: tree,
+        savedSearches: [
+          {
+            id: 1,
+            slug: '1-climate',
+            term: 'climate',
+            wholeWord: false,
+            phrase: false,
+            position: 0,
+            unreadCount: 3,
+            memberCount: 3,
+            includeInDigest: false,
+          },
+        ],
+      });
+      fixture.componentInstance.toggleTags();
+      fixture.componentRef.setInput('organising', true);
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(element.querySelector('app-sidebar-saved-searches')).toBeNull();
+      expect(element.querySelector('.tags .taghead')).not.toBeNull();
+      expect(element.querySelector('.tags-head .section-link')).toBeNull();
+      expect(element.querySelector('.tags-head .section-chevron')).toBeNull();
+      expect(element.querySelector('.tags-head .label')!.textContent?.trim()).toBe('Tags');
+    });
   });
 
   it('the tag dots open the action sheet and route the choice', () => {

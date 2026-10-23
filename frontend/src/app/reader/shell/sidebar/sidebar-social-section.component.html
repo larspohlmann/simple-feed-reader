@@ -1,67 +1,76 @@
 @let current = section();
-<div class="card">
+<div class="card" [class.organising]="organising()">
   <div
     class="section-head"
     [class.current]="active()"
     [attr.data-testid]="'sidebar-social-' + current.network"
   >
-    <a
-      class="section-link"
-      [routerLink]="['/']"
-      [queryParams]="selectionQueryParams({ network: current.network })"
-      queryParamsHandling="merge"
-    >
+    @if (organising()) {
       <app-network-logo [network]="current.network" />
       <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
-      @if (current.unreadCount > 0) {
-        <span class="section-count">{{ current.unreadCount }}</span>
-      }
-    </a>
-    @let manageLabel =
-      'reader.manageSocialSection'
-        | transloco: { network: ('settings.social.' + current.network | transloco) };
-    @if (screen.isCoarse()) {
-      <button
-        class="dots"
-        type="button"
-        aria-haspopup="dialog"
-        [attr.aria-label]="manageLabel"
-        (click)="rows.openSocialSheet(current)"
-      >
-        <app-icon name="more_horiz" size="dense" />
-      </button>
     } @else {
-      <app-sidebar-row-menu [menuKey]="menuKey()" [label]="manageLabel">
-        <ng-template>
-          @for (action of rows.socialAccountActions(current); track action.id; let index = $index) {
-            <button
-              role="menuitem"
-              [disabled]="action.disabled"
-              (click)="rows.manageSocialFeeds(current.networkAccounts[index])"
-            >
-              {{ action.label }}
+      <a
+        class="section-link"
+        [routerLink]="['/']"
+        [queryParams]="selectionQueryParams({ network: current.network })"
+        queryParamsHandling="merge"
+      >
+        <app-network-logo [network]="current.network" />
+        <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
+        @if (current.unreadCount > 0) {
+          <span class="section-count">{{ current.unreadCount }}</span>
+        }
+      </a>
+      @let manageLabel =
+        'reader.manageSocialSection'
+          | transloco: { network: ('settings.social.' + current.network | transloco) };
+      @if (screen.isCoarse()) {
+        <button
+          class="dots"
+          type="button"
+          aria-haspopup="dialog"
+          [attr.aria-label]="manageLabel"
+          (click)="rows.openSocialSheet(current)"
+        >
+          <app-icon name="more_horiz" size="dense" />
+        </button>
+      } @else {
+        <app-sidebar-row-menu [menuKey]="menuKey()" [label]="manageLabel">
+          <ng-template>
+            @for (
+              action of rows.socialAccountActions(current);
+              track action.id;
+              let index = $index
+            ) {
+              <button
+                role="menuitem"
+                [disabled]="action.disabled"
+                (click)="rows.manageSocialFeeds(current.networkAccounts[index])"
+              >
+                {{ action.label }}
+              </button>
+            }
+            <button role="menuitem" (click)="rows.toggleNetworkInSavedSearches(current)">
+              {{ rows.networkSavedSearchesAction(current).label }}
             </button>
-          }
-          <button role="menuitem" (click)="rows.toggleNetworkInSavedSearches(current)">
-            {{ rows.networkSavedSearchesAction(current).label }}
-          </button>
-        </ng-template>
-      </app-sidebar-row-menu>
+          </ng-template>
+        </app-sidebar-row-menu>
+      }
+      <button
+        class="section-chevron"
+        type="button"
+        [attr.aria-expanded]="expanded()"
+        [attr.aria-label]="
+          'reader.toggleSocialSection'
+            | transloco: { network: ('settings.social.' + current.network | transloco) }
+        "
+        (click)="toggle()"
+      >
+        <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
+      </button>
     }
-    <button
-      class="section-chevron"
-      type="button"
-      [attr.aria-expanded]="expanded()"
-      [attr.aria-label]="
-        'reader.toggleSocialSection'
-          | transloco: { network: ('settings.social.' + current.network | transloco) }
-      "
-      (click)="toggle()"
-    >
-      <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
-    </button>
   </div>
-  @if (expanded()) {
+  @if (expanded() || organising()) {
     <div class="rows">
       @for (group of current.accounts; track group.accountId) {
         @if (current.showsHandles && group.handle) {

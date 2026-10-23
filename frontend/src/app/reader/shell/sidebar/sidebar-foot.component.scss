@@ -136,3 +136,18 @@
     color: var(--text-primary);
   }
 }
+
+:host(.organising) {
+  gap: var(--space-0);
+  padding: 0 var(--space-1) calc(var(--space-1) + var(--space-0)) 0;
+}
+
+:host(.organising) .organise {
+  height: calc(var(--tap-target) + var(--space-2));
+  padding: 0 var(--space-1) 0 var(--space-3);
+}
+
+:host(.organising) .meta {
+  min-height: var(--space-6);
+  padding: 0 var(--space-1) 0 var(--space-3);
+}

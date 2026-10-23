@@ -332,15 +332,23 @@
 }
 
 /* Organise-mode drag handle: the ONLY drag origin there (cdkDragHandle), so a
-   plain touch on the row body scrolls or expands without competing. */
+   plain touch on the row body scrolls or expands without competing. A row that
+   cannot be dragged keeps the column empty, so the names stay in line. */
 @mixin drag-handle {
-  .handle {
+  .handle,
+  .handle-gap {
     flex: none;
+    align-self: stretch;
+
+    /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+       tuned handle measure, not a spacing value. */
+    width: 40px;
+  }
+
+  .handle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--tap-target);
-    align-self: stretch;
     color: var(--text-muted);
     cursor: grab;
   }

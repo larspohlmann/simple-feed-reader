@@ -29,6 +29,7 @@ import { trialDaysRemaining } from '../../format';
   ],
   templateUrl: './sidebar-foot.component.html',
   styleUrl: './sidebar-foot.component.scss',
+  host: { '[class.organising]': 'organising()' },
 })
 export class SidebarFootComponent {
   /** Baked in at build time, so it names the bundle actually running. */

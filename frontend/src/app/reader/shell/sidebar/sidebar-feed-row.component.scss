@@ -55,3 +55,22 @@
 :host-context(.cdk-drag-preview) .rowmenu {
   display: none;
 }
+
+:host(.organising) {
+  gap: 0;
+  padding-right: 0;
+}
+
+:host(.organising) .feedname {
+  padding-right: var(--space-1);
+}
+
+:host-context(.cdk-drag-preview) .handle {
+  color: var(--accent);
+}
+
+:host-context(.cdk-drag-preview) .dots,
+:host-context(.cdk-drag-preview) .trail,
+:host-context(.cdk-drag-preview) .count {
+  display: none;
+}

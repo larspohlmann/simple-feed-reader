@@ -1190,6 +1190,8 @@
       "mastodon": "mastodon"
     },
     "organise": "Organisieren",
+    "organiseDone": "Fertig",
+    "organiseHint": "Zieh einen Griff, um innerhalb seiner Ebene umzusortieren, oder tippe auf ⋯ für die Optionen einer Zeile. Leg einen Feed auf einen Tag, um ihn zu taggen.",
     "account": "Konto",
     "settings": "Einstellungen",
     "admin": "Admin",

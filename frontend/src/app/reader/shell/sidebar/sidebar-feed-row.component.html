@@ -3,8 +3,10 @@
 @if (organising()) {
   @if (draggable) {
     <span class="handle" cdkDragHandle aria-hidden="true">
-      <app-icon name="drag_indicator" size="sm" />
+      <app-icon name="drag_indicator" size="md" />
     </span>
+  } @else {
+    <span class="handle-gap" aria-hidden="true"></span>
   }
   <span class="feedname">
     <ng-container *ngTemplateOutlet="favicon" />

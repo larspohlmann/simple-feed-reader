@@ -4,7 +4,15 @@
   [attr.aria-label]="'reader.feeds' | transloco"
   cdkDropListGroup
 >
-  @if (!organising()) {
+  @if (organising()) {
+    <div class="organise-head">
+      <span class="drawer-title">{{ 'reader.organise' | transloco }}</span>
+      <button class="organise-done" type="button" (click)="organising.set(false)">
+        {{ 'reader.organiseDone' | transloco }}
+      </button>
+    </div>
+    <p class="organise-hint">{{ 'reader.organiseHint' | transloco }}</p>
+  } @else {
     @if (screen.isNarrow()) {
       <div class="drawer-head">
         <span class="drawer-title">{{ 'reader.feeds' | transloco }}</span>
@@ -117,40 +125,32 @@
     </div>
   }
 
-  <app-sidebar-saved-searches
-    [savedSearches]="savedSearches()"
-    [activeSavedSearchId]="activeSavedSearchId()"
-    [combinedActive]="selection().kind === 'saved-searches'"
-    [showDigestToggles]="showDigestToggles()"
-    (toggleDigest)="toggleDigest.emit($event)"
-  />
+  @if (!organising()) {
+    <app-sidebar-saved-searches
+      [savedSearches]="savedSearches()"
+      [activeSavedSearchId]="activeSavedSearchId()"
+      [combinedActive]="selection().kind === 'saved-searches'"
+      [showDigestToggles]="showDigestToggles()"
+      (toggleDigest)="toggleDigest.emit($event)"
+    />
+  }
 
   @if (tagTree().length) {
     <div class="card">
       <div class="section-head tags-head" [class.current]="activeGroup() === 'tags'">
-        <a
-          class="section-link"
-          [routerLink]="['/']"
-          [queryParams]="selectionQueryParams({ group: 'tags' })"
-          queryParamsHandling="merge"
-        >
-          <span class="label">{{ 'reader.tags' | transloco }}</span>
-          @if (groupUnread().tags > 0) {
-            <span class="section-count">{{ groupUnread().tags }}</span>
-          }
-        </a>
-        <span class="slot" aria-hidden="true"></span>
-        <button
-          class="section-chevron"
-          type="button"
-          [attr.aria-expanded]="tagsExpanded()"
-          [attr.aria-label]="'reader.toggleTags' | transloco"
-          (click)="toggleTags()"
-        >
-          <app-icon [name]="tagsExpanded() ? 'expand_more' : 'chevron_right'" size="dense" />
-        </button>
+        <ng-container
+          *ngTemplateOutlet="
+            sectionHead;
+            context: {
+              $implicit: 'tags',
+              section: tagsSection,
+              label: 'reader.tags',
+              toggleLabel: 'reader.toggleTags',
+            }
+          "
+        />
       </div>
-      @if (tagsExpanded()) {
+      @if (tagsExpanded() || organising()) {
         <!-- Every drop list stays a TOP-LEVEL sibling, wrapped by plain divs only: a head
              list reorders tags/accepts a feed, a feed list reorders/receives feeds.
              CDK breaks cross-list drops if nested. -->
@@ -193,27 +193,17 @@
   <div class="feeds-card" [class.card]="feedsSectionShown()">
     @if (feedsSectionShown()) {
       <div class="section-head feeds-head" [class.current]="activeGroup() === 'feeds'">
-        <a
-          class="section-link"
-          [routerLink]="['/']"
-          [queryParams]="selectionQueryParams({ group: 'feeds' })"
-          queryParamsHandling="merge"
-        >
-          <span class="label">{{ 'reader.feeds' | transloco }}</span>
-          @if (groupUnread().feeds > 0) {
-            <span class="section-count">{{ groupUnread().feeds }}</span>
-          }
-        </a>
-        <span class="slot" aria-hidden="true"></span>
-        <button
-          class="section-chevron"
-          type="button"
-          [attr.aria-expanded]="feedsExpanded()"
-          [attr.aria-label]="'reader.toggleFeeds' | transloco"
-          (click)="toggleFeeds()"
-        >
-          <app-icon [name]="feedsExpanded() ? 'expand_more' : 'chevron_right'" size="dense" />
-        </button>
+        <ng-container
+          *ngTemplateOutlet="
+            sectionHead;
+            context: {
+              $implicit: 'feeds',
+              section: feedsSection,
+              label: 'reader.feeds',
+              toggleLabel: 'reader.toggleFeeds',
+            }
+          "
+        />
       </div>
     }
     <!-- The drop list stays mounted even while collapsed: it is the untag target,
@@ -286,27 +276,35 @@
       >
         @if (organising()) {
           <span class="handle" cdkDragHandle aria-hidden="true">
-            <app-icon name="drag_indicator" size="sm" />
+            <app-icon name="drag_indicator" size="md" />
+          </span>
+          <span class="rowbody">
+            <span class="lead">
+              <app-tag-glyph
+                [name]="node.tag.icon"
+                [color]="node.tag.color"
+                [size]="depth === 1 ? 'dense' : 'md'"
+              />
+            </span>
+            <span class="name">{{ node.tag.name }}</span>
           </span>
           <button
-            class="rowbody"
+            class="dots"
+            type="button"
+            aria-haspopup="dialog"
+            [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
+            (click)="rows.openTagSheet(node.tag)"
+          >
+            <app-icon name="more_horiz" size="md" />
+          </button>
+          <button
+            class="chevzone"
             type="button"
             [attr.aria-expanded]="open"
             [attr.aria-label]="'reader.toggleTag' | transloco: { name: node.tag.name }"
             (click)="toggle(node.tag.id)"
           >
-            <span class="lead">
-              <app-tag-glyph [name]="node.tag.icon" [color]="node.tag.color" size="sm" />
-            </span>
-            <span class="name">{{ node.tag.name }}</span>
-          </button>
-          <button
-            class="dots"
-            type="button"
-            [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
-            (click)="rows.openTagSheet(node.tag)"
-          >
-            <app-icon name="more_horiz" size="sm" />
+            <app-icon [name]="open ? 'expand_more' : 'chevron_right'" size="dense" />
           </button>
         } @else {
           <app-sidebar-group-row
@@ -375,6 +373,40 @@
         </div>
       }
     </div>
+  </ng-template>
+
+  <ng-template
+    #sectionHead
+    let-group
+    let-section="section"
+    let-label="label"
+    let-toggleLabel="toggleLabel"
+  >
+    @if (organising()) {
+      <span class="label">{{ label | transloco }}</span>
+    } @else {
+      <a
+        class="section-link"
+        [routerLink]="['/']"
+        [queryParams]="selectionQueryParams({ group: group })"
+        queryParamsHandling="merge"
+      >
+        <span class="label">{{ label | transloco }}</span>
+        @if (groupUnread()[group] > 0) {
+          <span class="section-count">{{ groupUnread()[group] }}</span>
+        }
+      </a>
+      <span class="slot" aria-hidden="true"></span>
+      <button
+        class="section-chevron"
+        type="button"
+        [attr.aria-expanded]="section.expanded()"
+        [attr.aria-label]="toggleLabel | transloco"
+        (click)="section.toggle()"
+      >
+        <app-icon [name]="section.expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
+      </button>
+    }
   </ng-template>
 
   <ng-template #feedTools>

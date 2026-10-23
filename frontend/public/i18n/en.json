@@ -1190,6 +1190,8 @@
       "mastodon": "mastodon"
     },
     "organise": "Organise",
+    "organiseDone": "Done",
+    "organiseHint": "Drag a handle to reorder within its level, or tap ⋯ for a row’s options. Drop a feed on a tag to tag it.",
     "account": "Account",
     "settings": "Settings",
     "admin": "Admin",

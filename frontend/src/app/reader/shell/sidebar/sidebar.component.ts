@@ -216,7 +216,7 @@ export class SidebarComponent {
   });
 
   /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */
-  private readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
+  protected readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
   readonly tagsExpanded = this.tagsSection.expanded;
 
   toggleTags(): void {
@@ -225,7 +225,7 @@ export class SidebarComponent {
 
   /** The drop list the Feeds section heads stays mounted while collapsed (see the template), so a feed drag out of
    *  a tag still lands. */
-  private readonly feedsSection = persistedToggle(() => FEEDS_COLLAPSED_KEY);
+  protected readonly feedsSection = persistedToggle(() => FEEDS_COLLAPSED_KEY);
   readonly feedsExpanded = this.feedsSection.expanded;
 
   toggleFeeds(): void {
