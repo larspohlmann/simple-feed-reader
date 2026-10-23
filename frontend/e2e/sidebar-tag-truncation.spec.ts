@@ -3,11 +3,11 @@ import { aSubscription } from '../src/testing/subscription-testing';
 import { signInAsAdmin } from './support/auth';
 import { subscriptionsJson } from './support/reader';
 
-// Above the 720px breakpoint, so the sidebar is an in-flow 260px column rather
+// Above the 720px breakpoint, so the sidebar is an in-flow fixed-width column rather
 // than the mobile drawer — that fixed width is what the row has to fit into.
 const DESKTOP = { width: 1280, height: 900 };
 
-/** Comfortably wider than the 260px sidebar at any sane font size. */
+/** Comfortably wider than the sidebar column at any sane font size. */
 const LONG_TAG = 'Wissenschaft und Forschung International';
 const SHORT_TAG = 'Science';
 
@@ -59,7 +59,7 @@ test.describe('Sidebar tag rows', () => {
 
   // A tag row is a fixed leading slot, a growing name, an unread count and a
   // trailing `⋯` menu. The name is the only part allowed to give: if it does
-  // not truncate, the row grows past the 260px column and pushes the count and
+  // not truncate, the row grows past the column and pushes the count and
   // the menu out of the sidebar, which makes the tag unmanageable rather than
   // merely ugly (#131).
   test('a long tag name truncates instead of pushing the count and menu out', async ({ page }) => {
