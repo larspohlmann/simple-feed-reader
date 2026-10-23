@@ -804,13 +804,27 @@ describe('SidebarComponent', () => {
     expect(toggleForYou).toHaveBeenCalledWith(subscription);
   });
 
-  it('renders the exclusion marker without displacing the unread count', () => {
-    const excludedForYou = { ...sub(2, 4), includeInForYou: false };
-    const fixture = mount({ untagged: [excludedForYou] });
-    const element = fixture.nativeElement as HTMLElement;
-    const row = element.querySelector('.feedrow')!;
-    expect(row.querySelector('.feed-exclusion-marker')).not.toBeNull();
+  it('greys a hidden feed’s favicon and badges it with the eye, keeping the count', () => {
+    const fixture = mount({ untagged: [{ ...sub(2, 4), includeInForYou: false }] });
+    const row = (fixture.nativeElement as HTMLElement).querySelector('.feedrow')!;
+    const slot = row.querySelector('.favicon-slot')!;
+    const marker = slot.querySelector('.feed-exclusion-marker')!;
+
+    expect(slot.classList).toContain('hidden-feed');
+    expect(slot.querySelector('app-favicon')).not.toBeNull();
+    expect(marker.textContent).toContain('visibility_off');
+    expect(marker.getAttribute('role')).toBe('img');
+    expect(marker.getAttribute('title')).toBe('Hidden from For you');
+    expect(marker.getAttribute('aria-label')).toBe('Hidden from For you');
     expect(row.querySelector('.count')?.textContent).toContain('4');
+  });
+
+  it('leaves a visible feed’s favicon unmarked', () => {
+    const fixture = mount({ untagged: [sub(2, 4)] });
+    const slot = (fixture.nativeElement as HTMLElement).querySelector('.feedrow .favicon-slot')!;
+
+    expect(slot.classList).not.toContain('hidden-feed');
+    expect(slot.querySelector('.feed-exclusion-marker')).toBeNull();
   });
 
   it('renders the exclusion marker when only includeInAllItems is false', () => {
@@ -1817,6 +1831,18 @@ describe('organise mode', () => {
   const tree: TagNode[] = [
     { tag, subscriptions: [sub(5)], children: [], unreadCount: 3, entryCount: 0 },
   ];
+
+  it('badges a hidden feed while organising too', () => {
+    const element = mount({
+      coarse: true,
+      organising: true,
+      untagged: [{ ...sub(9), includeInAllItems: false }],
+    }).nativeElement as HTMLElement;
+
+    expect(
+      element.querySelector('.feedrow .favicon-slot.hidden-feed .feed-exclusion-marker'),
+    ).not.toBeNull();
+  });
 
   it('offers the Organise switch on coarse pointers only', () => {
     const isCoarse = signal(false);

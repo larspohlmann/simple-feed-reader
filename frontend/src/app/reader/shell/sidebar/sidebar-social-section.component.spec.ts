@@ -299,9 +299,7 @@ describe('SidebarSocialSectionComponent', () => {
     fixture.detectChanges();
 
     const names = [
-      ...element(fixture).querySelectorAll(
-        '.tagfeeds app-sidebar-feed-row .nav > span:not(.count)',
-      ),
+      ...element(fixture).querySelectorAll('.tagfeeds app-sidebar-feed-row .nav > .name'),
     ].map((name) => name.textContent);
     expect(names).toEqual(['Amy', 'Zed']);
     expect(localStorage.getItem('sfr.bluesky.profiles.collapsed')).toBe('false');

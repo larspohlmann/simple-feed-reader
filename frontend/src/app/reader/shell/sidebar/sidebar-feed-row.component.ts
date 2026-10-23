@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
@@ -24,6 +25,7 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 @Component({
   selector: 'app-sidebar-feed-row',
   imports: [
+    NgTemplateOutlet,
     RouterLink,
     CdkDragHandle,
     TranslocoPipe,
@@ -62,6 +64,7 @@ export class SidebarFeedRowComponent {
     return this.isPrivate() ? surfaces.filter((surface) => surface === 'savedSearches') : surfaces;
   });
   protected readonly markerTitle = computed(() => exclusionTitle(this.i18n, this.markerSurfaces()));
+  protected readonly excluded = computed(() => this.markerSurfaces().length > 0);
 
   protected readonly avatarUrl = computed(() => feedAvatarUrl(this.subscription()));
 

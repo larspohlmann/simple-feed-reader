@@ -7,7 +7,7 @@
     </span>
   }
   <span class="feedname">
-    <app-favicon [url]="feed.faviconUrl" [avatarUrl]="avatarUrl()" />
+    <ng-container *ngTemplateOutlet="favicon" />
     <span class="name">{{ name }}</span>
   </span>
   <button
@@ -29,20 +29,8 @@
     [queryParams]="selectionQueryParams({ subscription: feed.id })"
     queryParamsHandling="merge"
   >
-    <app-favicon
-      [url]="feed.faviconUrl"
-      [avatarUrl]="avatarUrl()"
-      [class.has-avatar]="avatarUrl() !== null"
-    />
+    <ng-container *ngTemplateOutlet="favicon" />
     <span class="name">{{ name }}</span>
-    @if (markerSurfaces().length > 0) {
-      <app-icon
-        class="feed-exclusion-marker"
-        name="visibility_off"
-        size="xs"
-        [title]="markerTitle()"
-      />
-    }
     @if (feed.unreadCount > 0) {
       <span class="count">{{ feed.unreadCount }}</span>
     }
@@ -71,3 +59,19 @@
   }
   <span class="trail" aria-hidden="true"></span>
 }
+
+<ng-template #favicon>
+  <span class="favicon-slot" [class.hidden-feed]="excluded()">
+    <app-favicon [url]="subscription().faviconUrl" [avatarUrl]="avatarUrl()" />
+    @if (excluded()) {
+      <span
+        class="feed-exclusion-marker"
+        role="img"
+        [attr.aria-label]="markerTitle()"
+        [title]="markerTitle()"
+      >
+        <app-icon name="visibility_off" size="text" />
+      </span>
+    }
+  </span>
+</ng-template>
