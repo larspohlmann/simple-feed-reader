@@ -334,7 +334,7 @@ describe('SidebarSocialSectionComponent', () => {
     const root = element(mount(WITH_PROFILES, profiles));
 
     expect(feedsRow(root)?.querySelector('a.nav.active')).not.toBeNull();
-    expect(root.querySelector('.section-link.active')).toBeNull();
+    expect(root.querySelector('.section-head.current')).toBeNull();
   });
 
   it('shows no Feeds row without profile feeds', () => {
@@ -395,14 +395,14 @@ describe('SidebarSocialSectionComponent', () => {
     expect(localStorage.getItem('sfr.bluesky.collapsed')).toBeNull();
   });
 
-  it("marks the title active while the network's view is open", () => {
+  it("marks the head row current while the network's view is open", () => {
     const bluesky: Selection = { kind: 'network', id: null, unread: true, network: 'bluesky' };
     const mastodon: Selection = { ...bluesky, network: 'mastodon' };
 
     expect(
-      element(mount(ONE_ACCOUNT, bluesky)).querySelector('.section-link.active'),
+      element(mount(ONE_ACCOUNT, bluesky)).querySelector('.section-head.current'),
     ).not.toBeNull();
-    expect(element(mount(ONE_ACCOUNT, mastodon)).querySelector('.section-link.active')).toBeNull();
+    expect(element(mount(ONE_ACCOUNT, mastodon)).querySelector('.section-head.current')).toBeNull();
   });
 
   it("shows the network's unread count between the title and the chevron", () => {

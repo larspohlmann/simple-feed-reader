@@ -1,9 +1,12 @@
 @let current = section();
 <div class="card">
-  <div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
+  <div
+    class="section-head"
+    [class.current]="active()"
+    [attr.data-testid]="'sidebar-social-' + current.network"
+  >
     <a
       class="section-link"
-      [class.active]="active()"
       [routerLink]="['/']"
       [queryParams]="selectionQueryParams({ network: current.network })"
       queryParamsHandling="merge"

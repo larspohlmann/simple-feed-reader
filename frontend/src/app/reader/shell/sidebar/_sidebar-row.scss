@@ -283,7 +283,10 @@
     gap: var(--space-3);
     height: var(--sidebar-sub-row-h);
     padding: 0 var(--space-2) 0 var(--sidebar-row-inset);
+    border-radius: var(--radius);
   }
+
+  @include row-states('.section-head', '.section-head.current');
 
   @media (pointer: coarse) {
     .section-head {
@@ -300,19 +303,8 @@
     min-width: 0;
     margin-left: calc(var(--sidebar-row-inset) * -1);
     padding-left: var(--sidebar-row-inset);
-    border-radius: var(--radius);
     color: inherit;
     text-decoration: none;
-  }
-
-  @media (hover: hover) {
-    .section-link:hover {
-      background: var(--surface-0);
-    }
-  }
-
-  .section-link.active {
-    background: var(--accent-soft);
   }
 
   .section-head .label {
@@ -333,8 +325,8 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .section-link.active .label,
-  .section-link.active .section-count {
+  .section-head.current .label,
+  .section-head.current .section-count {
     color: var(--accent);
   }
 }

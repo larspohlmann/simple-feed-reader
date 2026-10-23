@@ -1082,8 +1082,8 @@ describe('SidebarComponent', () => {
         selection: { kind: 'saved-searches', id: null, unread: false },
       });
 
-      expect(fixture.nativeElement.querySelector('.savedsearch-toggle')!.classList).toContain(
-        'active',
+      expect(fixture.nativeElement.querySelector('.savedsearch-head')!.classList).toContain(
+        'current',
       );
     });
 
@@ -1693,12 +1693,12 @@ describe('SidebarComponent', () => {
       expect(element.querySelector('.feedlist .feedrow')).not.toBeNull();
     });
 
-    it("marks only the open group's title active", () => {
+    it("marks only the open group's head row current", () => {
       const selection: Selection = { kind: 'group', id: null, unread: true, group: 'feeds' };
       const element = mount({ tagTree: [tagNodeFixture], untagged: [sub(1, 2)], selection })
         .nativeElement as HTMLElement;
-      expect(element.querySelector('.feeds-head .section-link.active')).not.toBeNull();
-      expect(element.querySelector('.tags-head .section-link.active')).toBeNull();
+      expect(element.querySelector('.feeds-head.current')).not.toBeNull();
+      expect(element.querySelector('.tags-head.current')).toBeNull();
     });
   });
 

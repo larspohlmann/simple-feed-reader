@@ -127,10 +127,9 @@
 
   @if (tagTree().length) {
     <div class="card">
-      <div class="section-head tags-head">
+      <div class="section-head tags-head" [class.current]="activeGroup() === 'tags'">
         <a
           class="section-link"
-          [class.active]="activeGroup() === 'tags'"
           [routerLink]="['/']"
           [queryParams]="selectionQueryParams({ group: 'tags' })"
           queryParamsHandling="merge"
@@ -193,10 +192,9 @@
 
   <div class="feeds-card" [class.card]="feedsSectionShown()">
     @if (feedsSectionShown()) {
-      <div class="section-head feeds-head">
+      <div class="section-head feeds-head" [class.current]="activeGroup() === 'feeds'">
         <a
           class="section-link"
-          [class.active]="activeGroup() === 'feeds'"
           [routerLink]="['/']"
           [queryParams]="selectionQueryParams({ group: 'feeds' })"
           queryParamsHandling="merge"

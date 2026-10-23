@@ -1,12 +1,8 @@
 @if (savedSearches().length) {
   <div class="card">
-    <div class="section-head savedsearch-head">
+    <div class="section-head savedsearch-head" [class.current]="combinedActive()">
       <!-- savedsearch-toggle carries no CSS; it is a test anchor for specs and e2e. Keep it. -->
-      <a
-        class="section-link savedsearch-toggle"
-        [class.active]="combinedActive()"
-        [routerLink]="['/searches/saved/all']"
-      >
+      <a class="section-link savedsearch-toggle" [routerLink]="['/searches/saved/all']">
         <span class="label">{{ 'reader.savedSearches' | transloco }}</span>
         @if (savedSearchesUnread() > 0) {
           <span class="count section-count">{{ savedSearchesUnread() }}</span>
