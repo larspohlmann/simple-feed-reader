@@ -60,18 +60,21 @@ const SUB_WITH_TWO_TAGS = feed(12, 'netzpolitik', [TECH.id, OTHER_TAG.id]);
 const GROUP: OrganiseGroup = {
   key: TECH.id,
   tag: TECH,
+  depth: 0,
   subscriptions: [SUB_A, SUB_B],
   totalCount: 2,
 };
 const UNTAGGED_GROUP: OrganiseGroup = {
   key: 'untagged',
   tag: null,
+  depth: 0,
   subscriptions: [SUB_A, SUB_B],
   totalCount: 2,
 };
 const THIRD_GROUP: OrganiseGroup = {
   key: THIRD_TAG.id,
   tag: THIRD_TAG,
+  depth: 0,
   subscriptions: [],
   totalCount: 0,
 };

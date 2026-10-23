@@ -36,12 +36,13 @@ import {
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
+import { tagsInTreeOrder } from '../../reader/state/subscription-derivations';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { SubscriptionFlags } from '../../reader/subscription-bulk';
-import { TagDragGap } from './tag-drag-gap.service';
+import { TagDragBounds, TagDragGap } from './tag-drag-gap.service';
 import { moveToGap, verticalMiddle } from './tag-drop-gap';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
@@ -52,6 +53,18 @@ interface VisibilityMenuItem {
   readonly flag: keyof SubscriptionFlags;
   readonly value: boolean;
   readonly labelKey: string;
+}
+
+/** The dragged tag's siblings as group indexes, and the group a gap after the last sibling draws before. */
+interface DragSiblings {
+  readonly groupIndexes: readonly number[];
+  readonly afterLast: number;
+}
+
+/** The group a gap after `lastSibling` draws before: past that sibling's own children. */
+function groupAfter(groups: readonly OrganiseGroup[], lastSibling: number): number {
+  const lastId = groups[lastSibling].tag?.id;
+  return lastSibling + 1 + groups.filter((shown) => shown.tag?.parentId === lastId).length;
 }
 
 /**
@@ -92,7 +105,7 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly tags = inject(TagsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly dialog = inject(Dialog);
-  protected readonly tagGap = inject(TagDragGap);
+  private readonly tagGap = inject(TagDragGap);
   private readonly tree = viewChild<ElementRef<HTMLElement>>('tree');
   private readonly panels = viewChildren<OrganiseTagGroupComponent, ElementRef<HTMLElement>>(
     OrganiseTagGroupComponent,
@@ -223,25 +236,54 @@ export class OrganiseSectionComponent implements OnInit {
     });
   }
 
+  protected readonly orderedTags = computed(() => tagsInTreeOrder(this.tags.tags()));
+
+  private readonly dragSiblings = signal<DragSiblings | null>(null);
+  private readonly draggedTag = signal<TagDto | null>(null);
+
+  /** The sibling gap, mapped onto the group it draws before. */
+  protected readonly gapGroupIndex = computed<number | null>(() => {
+    const gap = this.tagGap.gap();
+    const siblings = this.dragSiblings();
+    if (gap === null || siblings === null) return null;
+    return gap < siblings.groupIndexes.length ? siblings.groupIndexes[gap] : siblings.afterLast;
+  });
+
+  protected canMoveTag(group: OrganiseGroup, offset: number): boolean {
+    if (group.tag === null || this.store.filterActive()) return false;
+    const ids = this.siblingIds(group.tag);
+    const to = ids.indexOf(group.tag.id) + offset;
+    return to >= 0 && to < ids.length;
+  }
+
   protected moveTag(group: OrganiseGroup, offset: number): void {
-    const ids = this.tagIds();
-    const from = ids.indexOf(group.tag?.id ?? -1);
+    if (group.tag === null) return;
+    const ids = this.siblingIds(group.tag);
+    const from = ids.indexOf(group.tag.id);
     const to = from + offset;
     if (from < 0 || to < 0 || to >= ids.length) return;
     [ids[from], ids[to]] = [ids[to], ids[from]];
     this.persistTagOrder(ids);
   }
 
+  /** Only a child drag is bounded, to its sibling range; a root keeps the gaps above the first root and after the last (#1708). */
   protected startTagDrag(group: OrganiseGroup): void {
-    const from = this.tags.tags().findIndex((tag) => tag.id === group.tag?.id);
-    const treeTop = this.treeTop();
+    const tag = group.tag;
+    if (tag === null) return;
+    const groups = this.store.groups();
     const panels = this.panels();
-    const middles = this.store
-      .groups()
-      .flatMap((shown, index) =>
-        shown.tag === null ? [] : [verticalMiddle(panels[index].nativeElement) - treeTop],
-      );
-    this.tagGap.start(from, middles);
+    const treeTop = this.treeTop();
+    const groupIndexes = groups.flatMap((shown, index) =>
+      shown.tag !== null && shown.tag.parentId === tag.parentId ? [index] : [],
+    );
+    const afterLast = groupAfter(groups, groupIndexes[groupIndexes.length - 1]);
+    this.draggedTag.set(tag);
+    this.dragSiblings.set({ groupIndexes, afterLast });
+    this.tagGap.start(
+      groupIndexes.indexOf(groups.indexOf(group)),
+      groupIndexes.map((index) => verticalMiddle(panels[index].nativeElement) - treeTop),
+      tag.parentId === null ? null : this.spanOf(groupIndexes[0], afterLast - 1),
+    );
   }
 
   protected moveTagDrag(clientY: number): void {
@@ -250,11 +292,25 @@ export class OrganiseSectionComponent implements OnInit {
 
   protected endTagDrag(): void {
     const move = this.tagGap.end();
-    if (move !== null) this.persistTagOrder(moveToGap(this.tagIds(), move));
+    const tag = this.draggedTag();
+    this.draggedTag.set(null);
+    this.dragSiblings.set(null);
+    if (move !== null && tag !== null) this.persistTagOrder(moveToGap(this.siblingIds(tag), move));
   }
 
-  private tagIds(): number[] {
-    return this.tags.tags().map((tag) => tag.id);
+  private siblingIds(tag: TagDto): number[] {
+    return this.tags
+      .tags()
+      .filter((candidate) => candidate.parentId === tag.parentId)
+      .map((candidate) => candidate.id);
+  }
+
+  /** First panel's top to last panel's foot, relative to the tree; the foot is top + height, as the panels report it. */
+  private spanOf(first: number, last: number): TagDragBounds {
+    const treeTop = this.treeTop();
+    const firstRect = this.panels()[first].nativeElement.getBoundingClientRect();
+    const lastRect = this.panels()[last].nativeElement.getBoundingClientRect();
+    return { top: firstRect.top - treeTop, bottom: lastRect.top + lastRect.height - treeTop };
   }
 
   /** Under a filter `store.groups()` is a subset of the full tag order, so no position derived from it is written. */

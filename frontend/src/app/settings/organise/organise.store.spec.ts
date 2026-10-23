@@ -99,6 +99,20 @@ describe('OrganiseStore', () => {
     expect(store.groups()[2].subscriptions.map((subscription) => subscription.id)).toEqual([13]);
   });
 
+  it('lists each root followed by its children, children one level deep', () => {
+    const store = make(
+      [],
+      [tag(1, 'Reading', 0), { ...tag(2, 'Long reads', 1), parentId: 1 }, tag(3, 'Tech', 2)],
+    );
+
+    expect(store.groups().map((group) => [group.tag?.name ?? 'untagged', group.depth])).toEqual([
+      ['Reading', 0],
+      ['Long reads', 1],
+      ['Tech', 0],
+      ['untagged', 0],
+    ]);
+  });
+
   it('lists an empty saved feed, though the sidebar hides it', () => {
     const emptySaved = makeSubscription({
       id: 30,

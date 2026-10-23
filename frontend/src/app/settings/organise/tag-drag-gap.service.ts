@@ -1,9 +1,20 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { TagMove, gapIndexAt, isNoOpGap } from './tag-drop-gap';
 
+/** The pointer range, relative to the tree's top, inside which a gap may show. */
+export interface TagDragBounds {
+  readonly top: number;
+  readonly bottom: number;
+}
+
 interface TagDrag {
   readonly from: number;
   readonly middles: readonly number[];
+  readonly bounds: TagDragBounds | null;
+}
+
+function isOutside(offsetY: number, bounds: TagDragBounds | null): boolean {
+  return bounds !== null && (offsetY < bounds.top || offsetY > bounds.bottom);
 }
 
 @Injectable()
@@ -14,14 +25,14 @@ export class TagDragGap {
   readonly gap = computed(() => {
     const drag = this.drag();
     const offsetY = this.offsetY();
-    if (drag === null || offsetY === null) return null;
+    if (drag === null || offsetY === null || isOutside(offsetY, drag.bounds)) return null;
     const gap = gapIndexAt(offsetY, drag.middles);
     return isNoOpGap(drag.from, gap) ? null : gap;
   });
 
   /** `middles` are the tag panels' midpoints, measured once, relative to the tree's top. */
-  start(from: number, middles: readonly number[]): void {
-    this.drag.set({ from, middles });
+  start(from: number, middles: readonly number[], bounds: TagDragBounds | null = null): void {
+    this.drag.set({ from, middles, bounds });
     this.offsetY.set(null);
   }
 

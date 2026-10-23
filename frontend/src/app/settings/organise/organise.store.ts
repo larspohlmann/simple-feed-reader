@@ -1,6 +1,9 @@
 import { Injectable, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
-import { untaggedSubscriptions } from '../../reader/state/subscription-derivations';
+import {
+  tagsInTreeOrder,
+  untaggedSubscriptions,
+} from '../../reader/state/subscription-derivations';
 import { TagsStore } from '../../reader/state/tags.store';
 import { toggled } from '../../core/toggled-set';
 import { SubscriptionDto, TagDto } from '../../reader/models';
@@ -18,6 +21,8 @@ export interface OrganiseGroup {
   readonly key: GroupKey;
   /** null for the untagged group. */
   readonly tag: TagDto | null;
+  /** 1 for a child shown under its parent, else 0. */
+  readonly depth: 0 | 1;
   /** The feeds this group shows, already filtered and in their stored order. */
   readonly subscriptions: SubscriptionDto[];
   /** How many feeds the group holds before the filter — the header's count. */
@@ -132,9 +137,12 @@ export class OrganiseStore {
     const visible = this.filteredSubscriptions();
     const totalCounts = this.totalCounts();
 
-    const tagGroups: OrganiseGroup[] = this.tags().map((tag) => ({
+    const orderedTags = tagsInTreeOrder(this.tags());
+    const knownIds = new Set(orderedTags.map((tag) => tag.id));
+    const tagGroups: OrganiseGroup[] = orderedTags.map((tag) => ({
       key: tag.id,
       tag,
+      depth: tag.parentId !== null && knownIds.has(tag.parentId) ? 1 : 0,
       subscriptions: feedsInTag(visible, tag.id),
       totalCount: totalCounts.get(tag.id) ?? 0,
     }));
@@ -144,6 +152,7 @@ export class OrganiseStore {
       {
         key: 'untagged',
         tag: null,
+        depth: 0,
         subscriptions: untaggedSubscriptions(visible),
         totalCount: totalCounts.get('untagged') ?? 0,
       },

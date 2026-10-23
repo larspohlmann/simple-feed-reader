@@ -31,6 +31,16 @@ describe('TagDragGap', () => {
     expect(gap.gap()).toBeNull();
   });
 
+  it('shows no gap while the pointer is outside the sibling range', () => {
+    gap.start(0, MIDDLES, { top: 20, bottom: 280 });
+    gap.move(10);
+    expect(gap.gap()).toBeNull();
+    gap.move(300);
+    expect(gap.gap()).toBeNull();
+    gap.move(200);
+    expect(gap.gap()).toBe(2);
+  });
+
   it('ends with the move to the shown gap and clears it', () => {
     gap.start(0, MIDDLES);
     gap.move(400);

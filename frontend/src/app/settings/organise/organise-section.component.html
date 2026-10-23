@@ -126,8 +126,8 @@
                 />
                 {{ 'settings.organise.untagged' | transloco }}
               </label>
-              @for (t of tags.tags(); track t.id) {
-                <label>
+              @for (t of orderedTags(); track t.id) {
+                <label [class.child]="t.parentId !== null">
                   <input
                     type="checkbox"
                     [checked]="store.tagFilter().has(t.id)"
@@ -280,17 +280,13 @@
     <app-skeleton class="state" [label]="'settings.organise.loading' | transloco" [rows]="6" />
   } @else if (store.view() === 'tree') {
     <div class="tree" #tree [class.has-bulk-bar]="store.selectedCount() > 0" cdkDropListGroup>
-      @for (group of store.groups(); track group.key; let i = $index, last = $last) {
+      @for (group of store.groups(); track group.key; let i = $index) {
         <app-organise-tag-group
           [group]="group"
-          [class.gap-before]="tagGap.gap() === i"
-          [canMoveTagUp]="group.tag !== null && i > 0 && !store.filterActive()"
-          [canMoveTagDown]="
-            group.tag !== null &&
-            !last &&
-            store.groups()[i + 1].tag !== null &&
-            !store.filterActive()
-          "
+          [class.child]="group.depth === 1"
+          [class.gap-before]="gapGroupIndex() === i"
+          [canMoveTagUp]="canMoveTag(group, -1)"
+          [canMoveTagDown]="canMoveTag(group, 1)"
           (moveTagUp)="moveTag(group, -1)"
           (moveTagDown)="moveTag(group, 1)"
           (tagDragStarted)="startTagDrag(group)"

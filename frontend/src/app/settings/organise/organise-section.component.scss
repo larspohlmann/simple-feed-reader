@@ -260,6 +260,15 @@
   border-radius: var(--radius-lg);
 }
 
+// A child group sits one step in from its parent; the filter list indents its children the same way (#1736).
+.tree > app-organise-tag-group.child {
+  margin-left: var(--space-5);
+}
+
+.menu .pop label.child {
+  padding-left: var(--space-4);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .tree > app-organise-tag-group {
     transition: margin-top 0.12s ease;
