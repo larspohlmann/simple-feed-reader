@@ -124,6 +124,15 @@ function inputDefaults() {
   };
 }
 
+function clickSectionChevron(
+  fixture: ComponentFixture<SidebarComponent>,
+  head: '.tags-head' | '.feeds-head',
+): void {
+  (fixture.nativeElement as HTMLElement)
+    .querySelector<HTMLButtonElement>(`${head} .section-chevron`)!
+    .click();
+}
+
 function mount(
   over: Partial<{
     tagTree: TagNode[];
@@ -1656,7 +1665,7 @@ describe('SidebarComponent', () => {
 
     it('restores the collapsed state on a fresh mount (persisted)', () => {
       const first = mount({ tagTree: [tagNode] });
-      first.componentInstance.toggleTags();
+      clickSectionChevron(first, '.tags-head');
 
       TestBed.resetTestingModule();
       const element = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
@@ -1743,7 +1752,7 @@ describe('SidebarComponent', () => {
     it('reveals the feeds while a drag is in progress, even when collapsed', () => {
       const fixture = mount({ untagged: [sub(1, 2)] });
       const element = fixture.nativeElement as HTMLElement;
-      fixture.componentInstance.toggleFeeds();
+      clickSectionChevron(fixture, '.feeds-head');
       fixture.detectChanges();
       expect(element.querySelector('.feedlist .feedrow')).toBeNull();
 
@@ -1754,7 +1763,7 @@ describe('SidebarComponent', () => {
 
     it('restores the collapsed state on a fresh mount (persisted)', () => {
       const first = mount({ untagged: [sub(1, 2)] });
-      first.componentInstance.toggleFeeds();
+      clickSectionChevron(first, '.feeds-head');
 
       TestBed.resetTestingModule();
       const element = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
@@ -2000,7 +2009,7 @@ describe('organise mode', () => {
           },
         ],
       });
-      fixture.componentInstance.toggleTags();
+      clickSectionChevron(fixture, '.tags-head');
       fixture.componentRef.setInput('organising', true);
       fixture.detectChanges();
       const element = fixture.nativeElement as HTMLElement;
@@ -2010,6 +2019,15 @@ describe('organise mode', () => {
       expect(element.querySelector('.tags-head .section-link')).toBeNull();
       expect(element.querySelector('.tags-head .section-chevron')).toBeNull();
       expect(element.querySelector('.tags-head .label')!.textContent?.trim()).toBe('Tags');
+    });
+
+    it('keeps the section heads neutral while organising, even for the open group', () => {
+      const selection: Selection = { kind: 'group', id: null, unread: true, group: 'tags' };
+      const element = mount({ coarse: true, organising: true, tagTree: tree, selection })
+        .nativeElement as HTMLElement;
+
+      expect(element.querySelector('.tags-head')).not.toBeNull();
+      expect(element.querySelector('.section-head.current')).toBeNull();
     });
   });
 

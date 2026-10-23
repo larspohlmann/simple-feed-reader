@@ -2,7 +2,7 @@
 <div class="card" [class.organising]="organising()">
   <div
     class="section-head"
-    [class.current]="active()"
+    [class.current]="!organising() && active()"
     [attr.data-testid]="'sidebar-social-' + current.network"
   >
     @if (organising()) {

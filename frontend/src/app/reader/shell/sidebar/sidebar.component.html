@@ -137,18 +137,11 @@
 
   @if (tagTree().length) {
     <div class="card">
-      <div class="section-head tags-head" [class.current]="activeGroup() === 'tags'">
-        <ng-container
-          *ngTemplateOutlet="
-            sectionHead;
-            context: {
-              $implicit: 'tags',
-              section: tagsSection,
-              label: 'reader.tags',
-              toggleLabel: 'reader.toggleTags',
-            }
-          "
-        />
+      <div
+        class="section-head tags-head"
+        [class.current]="!organising() && activeGroup() === 'tags'"
+      >
+        <ng-container *ngTemplateOutlet="sectionHead; context: { $implicit: tagsHead }" />
       </div>
       @if (tagsExpanded() || organising()) {
         <!-- Every drop list stays a TOP-LEVEL sibling, wrapped by plain divs only: a head
@@ -192,18 +185,11 @@
 
   <div class="feeds-card" [class.card]="feedsSectionShown()">
     @if (feedsSectionShown()) {
-      <div class="section-head feeds-head" [class.current]="activeGroup() === 'feeds'">
-        <ng-container
-          *ngTemplateOutlet="
-            sectionHead;
-            context: {
-              $implicit: 'feeds',
-              section: feedsSection,
-              label: 'reader.feeds',
-              toggleLabel: 'reader.toggleFeeds',
-            }
-          "
-        />
+      <div
+        class="section-head feeds-head"
+        [class.current]="!organising() && activeGroup() === 'feeds'"
+      >
+        <ng-container *ngTemplateOutlet="sectionHead; context: { $implicit: feedsHead }" />
       </div>
     }
     <!-- The drop list stays mounted even while collapsed: it is the untag target,
@@ -375,36 +361,30 @@
     </div>
   </ng-template>
 
-  <ng-template
-    #sectionHead
-    let-group
-    let-section="section"
-    let-label="label"
-    let-toggleLabel="toggleLabel"
-  >
+  <ng-template #sectionHead appSectionHead let-head>
     @if (organising()) {
-      <span class="label">{{ label | transloco }}</span>
+      <span class="label">{{ head.label | transloco }}</span>
     } @else {
       <a
         class="section-link"
         [routerLink]="['/']"
-        [queryParams]="selectionQueryParams({ group: group })"
+        [queryParams]="selectionQueryParams({ group: head.group })"
         queryParamsHandling="merge"
       >
-        <span class="label">{{ label | transloco }}</span>
-        @if (groupUnread()[group] > 0) {
-          <span class="section-count">{{ groupUnread()[group] }}</span>
+        <span class="label">{{ head.label | transloco }}</span>
+        @if (groupUnread()[head.group] > 0) {
+          <span class="section-count">{{ groupUnread()[head.group] }}</span>
         }
       </a>
       <span class="slot" aria-hidden="true"></span>
       <button
         class="section-chevron"
         type="button"
-        [attr.aria-expanded]="section.expanded()"
-        [attr.aria-label]="toggleLabel | transloco"
-        (click)="section.toggle()"
+        [attr.aria-expanded]="head.section.expanded()"
+        [attr.aria-label]="head.toggleLabel | transloco"
+        (click)="head.section.toggle()"
       >
-        <app-icon [name]="section.expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
+        <app-icon [name]="head.section.expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
       </button>
     }
   </ng-template>

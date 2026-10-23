@@ -405,6 +405,15 @@ describe('SidebarSocialSectionComponent', () => {
     expect(element(mount(ONE_ACCOUNT, mastodon)).querySelector('.section-head.current')).toBeNull();
   });
 
+  it('keeps the head neutral while organising, even with its view open', () => {
+    const bluesky: Selection = { kind: 'network', id: null, unread: true, network: 'bluesky' };
+    const fixture = mount(ONE_ACCOUNT, bluesky, true);
+    fixture.componentRef.setInput('organising', true);
+    fixture.detectChanges();
+
+    expect(element(fixture).querySelector('.section-head.current')).toBeNull();
+  });
+
   it("shows the network's unread count between the title and the chevron", () => {
     const head = element(mount(ONE_ACCOUNT)).querySelector('.section-head') as HTMLElement;
 

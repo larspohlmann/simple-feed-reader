@@ -25,6 +25,7 @@ import {
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
+import { SectionHeadTemplateDirective, SectionHeadView } from './section-head-template.directive';
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
@@ -84,6 +85,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     RouterLink,
     IconComponent,
     TagGlyphComponent,
+    SectionHeadTemplateDirective,
     SearchFieldComponent,
     SidebarFootComponent,
     SidebarFeedRowComponent,
@@ -216,21 +218,25 @@ export class SidebarComponent {
   });
 
   /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */
-  protected readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
+  private readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
   readonly tagsExpanded = this.tagsSection.expanded;
-
-  toggleTags(): void {
-    this.tagsSection.toggle();
-  }
+  protected readonly tagsHead: SectionHeadView = {
+    group: 'tags',
+    section: this.tagsSection,
+    label: 'reader.tags',
+    toggleLabel: 'reader.toggleTags',
+  };
 
   /** The drop list the Feeds section heads stays mounted while collapsed (see the template), so a feed drag out of
    *  a tag still lands. */
-  protected readonly feedsSection = persistedToggle(() => FEEDS_COLLAPSED_KEY);
+  private readonly feedsSection = persistedToggle(() => FEEDS_COLLAPSED_KEY);
   readonly feedsExpanded = this.feedsSection.expanded;
-
-  toggleFeeds(): void {
-    this.feedsSection.toggle();
-  }
+  protected readonly feedsHead: SectionHeadView = {
+    group: 'feeds',
+    section: this.feedsSection,
+    label: 'reader.feeds',
+    toggleLabel: 'reader.toggleFeeds',
+  };
 
   /** True while a feed row is being dragged (reveals the empty Feeds drop zone). */
   readonly dragging = signal(false);
