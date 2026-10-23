@@ -1205,6 +1205,8 @@
     "manage": "Manage {{name}}",
     "editTag": "Edit tag",
     "deleteTag": "Delete tag",
+    "moveTagUp": "Move up",
+    "moveTagDown": "Move down",
     "editFeed": "Edit feed",
     "unsubscribe": "Unsubscribe",
     "excludeFromAllItems": "Exclude from All items",

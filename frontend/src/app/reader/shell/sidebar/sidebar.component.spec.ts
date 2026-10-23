@@ -20,6 +20,7 @@ import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../mo
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
+import { ACTION_SHEET_DIVIDER } from '../../../shared/action-sheet/action-sheet.component';
 import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
@@ -2021,8 +2022,11 @@ describe('organise mode', () => {
     expect(sheet.open).toHaveBeenCalledWith({
       title: 'News',
       actions: [
-        { id: 'edit', label: 'Edit tag' },
-        { id: 'delete', label: 'Delete tag', danger: true },
+        { id: 'edit', label: 'Edit tag', symbol: 'edit' },
+        { id: 'moveUp', label: 'Move up', symbol: 'arrow_upward', disabled: true },
+        { id: 'moveDown', label: 'Move down', symbol: 'arrow_downward', disabled: true },
+        ACTION_SHEET_DIVIDER,
+        { id: 'delete', label: 'Delete tag', symbol: 'delete', danger: true },
       ],
     });
     expect(deleted).toHaveBeenCalledWith(tag);

@@ -9,6 +9,9 @@ import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { socialProfiles, SocialSection } from '../../state/social-sections';
+import { TagsStore } from '../../state/tags.store';
+import { TagDto } from '../../models';
+import { ACTION_SHEET_DIVIDER } from '../../../shared/action-sheet/action-sheet.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 
 describe('SidebarRowActions', () => {
@@ -21,6 +24,7 @@ describe('SidebarRowActions', () => {
         { provide: ActionSheet, useValue: { open } },
         { provide: ManageActions, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
+        { provide: TagsStore, useValue: { tags: signal<TagDto[]>([]) } },
       ],
     });
     TestBed.inject(SidebarRowActions).openFeedSheet(heldUnrenamedHome(1));
@@ -72,6 +76,7 @@ describe('SidebarRowActions', () => {
             provide: SavedSearchesStore,
             useValue: { includedNetworks, toggleNetwork },
           },
+          { provide: TagsStore, useValue: { tags: signal<TagDto[]>([]) } },
         ],
       });
     });
@@ -160,6 +165,93 @@ describe('SidebarRowActions', () => {
 
       expect(rows.menuFor()).toBeNull();
       expect(pickerOpen).toHaveBeenCalledWith(bob);
+    });
+  });
+
+  describe('the tag sheet', () => {
+    const tag = (id: number, position: number, parentId: number | null = null): TagDto => ({
+      id,
+      name: `t${id}`,
+      color: null,
+      icon: null,
+      position,
+      parentId,
+    });
+    const sheetOpen = jest.fn();
+    const reorderTags = jest.fn();
+    const editTag = jest.fn();
+    const deleteTag = jest.fn();
+    const tags = signal<TagDto[]>([]);
+
+    beforeEach(() => {
+      [sheetOpen, reorderTags, editTag, deleteTag].forEach((spy) => spy.mockReset());
+      sheetOpen.mockReturnValue(of(undefined));
+      tags.set([tag(1, 0), tag(2, 1), tag(3, 2), tag(11, 0, 1), tag(12, 1, 1)]);
+      TestBed.configureTestingModule({
+        imports: [provideTranslocoTesting()],
+        providers: [
+          SidebarRowActions,
+          { provide: ActionSheet, useValue: { open: sheetOpen } },
+          { provide: ManageActions, useValue: { reorderTags, editTag, deleteTag } },
+          { provide: SavedSearchesStore, useValue: {} },
+          { provide: TagsStore, useValue: { tags } },
+        ],
+      });
+    });
+
+    const actionsFor = (target: TagDto) => {
+      TestBed.inject(SidebarRowActions).openTagSheet(target);
+      return sheetOpen.mock.calls[0][0].actions as { id?: string; disabled?: boolean }[];
+    };
+
+    it('offers edit, move up, move down and, after a divider, delete', () => {
+      TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
+
+      expect(sheetOpen).toHaveBeenCalledWith({
+        title: 't2',
+        actions: [
+          { id: 'edit', label: 'Edit tag', symbol: 'edit' },
+          { id: 'moveUp', label: 'Move up', symbol: 'arrow_upward', disabled: false },
+          { id: 'moveDown', label: 'Move down', symbol: 'arrow_downward', disabled: false },
+          ACTION_SHEET_DIVIDER,
+          { id: 'delete', label: 'Delete tag', symbol: 'delete', danger: true },
+        ],
+      });
+    });
+
+    it('disables Move up on the first sibling', () => {
+      const actions = actionsFor(tag(1, 0));
+      expect(actions.find((action) => action.id === 'moveUp')?.disabled).toBe(true);
+      expect(actions.find((action) => action.id === 'moveDown')?.disabled).toBe(false);
+    });
+
+    it('disables Move down on the last child of its parent, not of the roots', () => {
+      const actions = actionsFor(tag(12, 1, 1));
+      expect(actions.find((action) => action.id === 'moveUp')?.disabled).toBe(false);
+      expect(actions.find((action) => action.id === 'moveDown')?.disabled).toBe(true);
+    });
+
+    it('moves a root up among the roots', () => {
+      sheetOpen.mockReturnValue(of('moveUp'));
+      TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
+      expect(reorderTags).toHaveBeenCalledWith([2, 1, 3]);
+    });
+
+    it('moves a child down within its parent only', () => {
+      sheetOpen.mockReturnValue(of('moveDown'));
+      TestBed.inject(SidebarRowActions).openTagSheet(tag(11, 0, 1));
+      expect(reorderTags).toHaveBeenCalledWith([12, 11]);
+    });
+
+    it('still routes edit and delete', () => {
+      sheetOpen.mockReturnValueOnce(of('edit'));
+      TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
+      sheetOpen.mockReturnValueOnce(of('delete'));
+      TestBed.inject(SidebarRowActions).openTagSheet(tag(3, 2));
+
+      expect(editTag).toHaveBeenCalledWith(tag(2, 1));
+      expect(deleteTag).toHaveBeenCalledWith(tag(3, 2));
+      expect(reorderTags).not.toHaveBeenCalled();
     });
   });
 });

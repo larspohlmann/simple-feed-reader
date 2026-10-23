@@ -1205,6 +1205,8 @@
     "manage": "{{name}} verwalten",
     "editTag": "Tag bearbeiten",
     "deleteTag": "Tag löschen",
+    "moveTagUp": "Nach oben",
+    "moveTagDown": "Nach unten",
     "editFeed": "Feed bearbeiten",
     "unsubscribe": "Abbestellen",
     "excludeFromAllItems": "Aus Alle Einträge ausschließen",
