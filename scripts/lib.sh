@@ -318,6 +318,39 @@ refresh_images() {
   return "${status}"
 }
 
+# A release's php and web images are published to GHCR (#1752). Only a plain
+# vX.Y.Z tag names them: a deploy tag can sit on the same commit.
+release_image_tag() {
+  git -C "${REPO_ROOT}" tag --points-at HEAD 2>/dev/null \
+    | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+    | sort -V \
+    | tail -n 1 \
+    || true
+}
+
+export_prod_image_tag() {
+  APP_IMAGE_TAG=$(release_image_tag)
+  APP_IMAGE_TAG=${APP_IMAGE_TAG:-local}
+  export APP_IMAGE_TAG
+}
+
+# Pulls a release's images, or refreshes the bases and leaves the build to
+# `up`. Sets PROD_BUILD_OPTION for the `up` calls that follow.
+prepare_prod_images() {
+  PROD_BUILD_OPTION=--no-build
+  export PROD_BUILD_OPTION
+  if [ "${APP_IMAGE_TAG}" != local ] \
+    && run_step "Pulling the ${APP_IMAGE_TAG} images" prod_compose pull --quiet; then
+    return 0
+  fi
+  if [ "${APP_IMAGE_TAG}" != local ]; then
+    warn "Could not pull the ${APP_IMAGE_TAG} images; building them here instead."
+  fi
+  PROD_BUILD_OPTION=--build
+  run_step 'Pulling updated base images' refresh_images prod_compose \
+    || warn 'Could not pull updated base images; building on the cached ones.'
+}
+
 # Start every service and bring the backend to a ready state: dependencies
 # installed and the database migrated. Safe to re-run.
 bring_up_stack() {
