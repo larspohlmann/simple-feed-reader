@@ -17,6 +17,7 @@ import { feedAvatarUrl, isPrivateFeed } from '../../state/social-sections';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { SidebarRowActions } from './sidebar-row-actions.service';
+import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 
 /** The inside of one feed row: tagged, untagged or social. A tagged or untagged row's `cdkDrag` stays
@@ -55,13 +56,17 @@ export class SidebarFeedRowComponent {
   protected readonly isPrivate = computed(() => isPrivateFeed(this.subscription()));
 
   private readonly i18n = inject(TranslocoService);
+  private readonly dictionary = inject(ActiveDictionary);
 
   /** A private feed is out of All items and For you by design, so only its saved-search state is news. */
   protected readonly markerSurfaces = computed(() => {
     const surfaces = ownExcludedSurfaces(this.subscription());
     return this.isPrivate() ? surfaces.filter((surface) => surface === 'savedSearches') : surfaces;
   });
-  protected readonly markerTitle = computed(() => exclusionTitle(this.i18n, this.markerSurfaces()));
+  protected readonly markerTitle = computed(() => {
+    this.dictionary.loaded();
+    return exclusionTitle(this.i18n, this.markerSurfaces());
+  });
   protected readonly excluded = computed(() => this.markerSurfaces().length > 0);
 
   protected readonly avatarUrl = computed(() => feedAvatarUrl(this.subscription()));

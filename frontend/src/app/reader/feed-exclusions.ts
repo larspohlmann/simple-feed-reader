@@ -1,6 +1,5 @@
 import { TranslocoService } from '@jsverse/transloco';
 import { SubscriptionDto } from './models';
-import { SocialNetworkName } from '../core/social-network';
 import type { ManageActions } from './feeds/manage/manage-actions.service';
 
 export type ExclusionSurface = 'allItems' | 'forYou' | 'savedSearches';
@@ -68,18 +67,6 @@ export function ownExcludedSurfaces(subscription: SubscriptionDto): ExclusionSur
   if (!subscription.includeInAllItems) surfaces.push('allItems');
   if (!subscription.includeInForYou) surfaces.push('forYou');
   if (!subscription.includeInSavedSearches) surfaces.push('savedSearches');
-  return surfaces;
-}
-
-/** A feed of a network the user has not included counts as switched off for saved searches. */
-export function excludedSurfaces(
-  subscription: SubscriptionDto,
-  includedNetworks: ReadonlySet<SocialNetworkName>,
-): ExclusionSurface[] {
-  const network = subscription.social?.network ?? null;
-  const networkLeftOut = network !== null && !includedNetworks.has(network);
-  const surfaces = ownExcludedSurfaces(subscription);
-  if (networkLeftOut && !surfaces.includes('savedSearches')) surfaces.push('savedSearches');
   return surfaces;
 }
 

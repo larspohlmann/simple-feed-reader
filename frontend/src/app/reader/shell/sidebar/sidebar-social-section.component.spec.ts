@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { API_BASE_URL } from '../../../core/api';
 import { ActionSheetAction } from '../../../shared/action-sheet/action-sheet.component';
@@ -415,6 +416,16 @@ describe('SidebarSocialSectionComponent', () => {
       expect(marker.getAttribute('title')).toBe('Hidden from Saved searches');
       expect(marker.getAttribute('aria-label')).toBe('Hidden from Saved searches');
       expect(marker.textContent).toContain('visibility_off');
+    });
+
+    it('re-titles the mark when the language switches', () => {
+      const fixture = mount(ONE_ACCOUNT);
+      TestBed.inject(TranslocoService).setActiveLang('de');
+      fixture.detectChanges();
+
+      expect(headSlot(fixture).querySelector('.feed-exclusion-marker')!.getAttribute('title')).toBe(
+        'Ausgeblendet aus Gespeicherte Suchen',
+      );
     });
 
     it('keeps the mark while organising', () => {

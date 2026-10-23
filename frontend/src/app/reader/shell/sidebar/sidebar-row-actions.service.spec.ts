@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { signal } from '@angular/core';
 import { SocialNetworkName } from '../../../core/social-network';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
@@ -241,6 +241,26 @@ describe('SidebarRowActions', () => {
       sheetOpen.mockReturnValue(of('moveDown'));
       TestBed.inject(SidebarRowActions).openTagSheet(tag(11, 0, 1));
       expect(reorderTags).toHaveBeenCalledWith([12, 11]);
+    });
+
+    it('moves against the order current when the choice lands, not when the sheet opened', () => {
+      const choice = new Subject<string>();
+      sheetOpen.mockReturnValue(choice);
+      TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
+      tags.set([tag(4, 0), tag(1, 1), tag(2, 2), tag(3, 3)]);
+      choice.next('moveUp');
+
+      expect(reorderTags).toHaveBeenCalledWith([4, 2, 1, 3]);
+    });
+
+    it('drops a move the current order no longer allows', () => {
+      const choice = new Subject<string>();
+      sheetOpen.mockReturnValue(choice);
+      TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
+      tags.set([tag(2, 0), tag(1, 1), tag(3, 2)]);
+      choice.next('moveUp');
+
+      expect(reorderTags).not.toHaveBeenCalled();
     });
 
     it('still routes edit and delete', () => {

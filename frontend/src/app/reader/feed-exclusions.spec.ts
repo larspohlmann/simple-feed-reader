@@ -4,7 +4,6 @@ import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import {
   FEED_FLAG_TOGGLES,
   exclusionTitle,
-  excludedSurfaces,
   ownExcludedSurfaces,
   feedFlagLabelKey,
   flipFeedFlag,
@@ -33,17 +32,6 @@ describe('ownExcludedSurfaces', () => {
     });
 
     expect(ownExcludedSurfaces(feed)).toEqual([]);
-  });
-});
-
-describe('excludedSurfaces', () => {
-  it('adds saved searches for a feed of an unincluded network', () => {
-    const feed = makeSubscription({
-      social: { network: 'bluesky', kind: 'profile', accountId: null },
-    });
-
-    expect(excludedSurfaces(feed, new Set())).toEqual(['savedSearches']);
-    expect(excludedSurfaces(feed, new Set(['bluesky']))).toEqual([]);
   });
 });
 

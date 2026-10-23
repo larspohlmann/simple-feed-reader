@@ -11,6 +11,7 @@ import { LayoutService } from '../../layout.service';
 import { exclusionTitle } from '../../feed-exclusions';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
+import { ActiveDictionary } from '../../../core/i18n/active-dictionary';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
@@ -45,6 +46,7 @@ export class SidebarSocialSectionComponent {
   protected readonly screen = inject(LayoutService);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly i18n = inject(TranslocoService);
+  private readonly dictionary = inject(ActiveDictionary);
 
   private readonly collapsible = persistedToggle(() => collapsedKey(this.section().network));
   protected readonly expanded = this.collapsible.expanded;
@@ -66,9 +68,10 @@ export class SidebarSocialSectionComponent {
   protected readonly networkExcluded = computed(
     () => !this.savedSearches.includedNetworks().has(this.section().network),
   );
-  protected readonly networkExclusionTitle = computed(() =>
-    exclusionTitle(this.i18n, ['savedSearches']),
-  );
+  protected readonly networkExclusionTitle = computed(() => {
+    this.dictionary.loaded();
+    return exclusionTitle(this.i18n, ['savedSearches']);
+  });
 
   protected readonly menuKey = computed(() => `social-${this.section().network}`);
 

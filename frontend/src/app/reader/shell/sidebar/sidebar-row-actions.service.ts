@@ -84,13 +84,18 @@ export class SidebarRowActions {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.manage.editTag(tag);
-        if (choice === 'moveUp') this.moveTag(siblingIds, index, index - 1);
-        if (choice === 'moveDown') this.moveTag(siblingIds, index, index + 1);
+        if (choice === 'moveUp') this.moveTag(tag, -1);
+        if (choice === 'moveDown') this.moveTag(tag, 1);
         if (choice === 'delete') this.manage.deleteTag(tag);
       });
   }
 
-  private moveTag(siblingIds: number[], from: number, to: number): void {
+  /** Reads the siblings afresh: the order the sheet opened on may have changed while it was up. */
+  private moveTag(tag: TagDto, step: -1 | 1): void {
+    const siblingIds = siblingIdsOf(this.tags.tags(), tag);
+    const from = siblingIds.indexOf(tag.id);
+    const to = from + step;
+    if (from < 0 || to < 0 || to >= siblingIds.length) return;
     moveItemInArray(siblingIds, from, to);
     this.manage.reorderTags(siblingIds);
   }
