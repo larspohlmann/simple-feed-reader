@@ -4,8 +4,8 @@ import { signInAsAdmin } from './support/auth';
 import { subscriptionsJson } from './support/reader';
 
 const TAGS = [
-  { id: 1, name: 'Nachrichten', color: null, icon: null, position: 0 },
-  { id: 2, name: 'Tech', color: null, icon: null, position: 1 },
+  { id: 1, name: 'Nachrichten', color: null, icon: null, position: 0, parentId: null },
+  { id: 2, name: 'Tech', color: null, icon: null, position: 1, parentId: null },
 ];
 
 function feed(id: number, title: string, tagIds: number[]) {
@@ -19,6 +19,7 @@ function feed(id: number, title: string, tagIds: number[]) {
       color: null,
       icon: null,
       position: index,
+      parentId: null,
     })),
   });
 }

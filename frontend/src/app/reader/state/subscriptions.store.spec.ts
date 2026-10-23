@@ -146,7 +146,9 @@ describe('buildTagTree with an explicit tag order', () => {
   ];
   // A sub carrying one tag, with an explicit per-tag (feed) position.
   const inTag = (id: number, tagId: number, feedPos: number): SubscriptionDto =>
-    sub(id, 1, [{ id: tagId, name: 'x', color: null, icon: null, position: feedPos }]);
+    sub(id, 1, [
+      { id: tagId, name: 'x', color: null, icon: null, position: feedPos, parentId: null },
+    ]);
 
   it('orders nodes by tag.position, includes empty tags, and orders feeds per-tag', () => {
     const subscriptions = [inTag(1, 20, 1), inTag(2, 20, 0), inTag(3, 10, 0)];
@@ -168,6 +170,16 @@ describe('buildTagTree with an explicit tag order', () => {
     expect(tree.map((node) => node.tag.name)).toEqual(['Reading', 'Tech']);
     expect(tree[0].children.map((node) => node.tag.name)).toEqual(['Long reads', 'Essays']);
     expect(tree[1].children).toEqual([]);
+  });
+
+  it('keeps a child under its parent before the tag list has loaded', () => {
+    const subscriptions = [
+      sub(1, 0, [{ ...reading, position: 0 }]),
+      sub(2, 0, [{ ...longReads, position: 0 }]),
+    ];
+    const tree = buildTagTree(subscriptions);
+    expect(tree.map((node) => node.tag.name)).toEqual(['Reading']);
+    expect(tree[0].children.map((node) => node.tag.parentId)).toEqual([1]);
   });
 
   it('shows a child whose parent is not in the list as a root', () => {

@@ -5,7 +5,14 @@ import { entryWire, oneFeedJson } from './support/reader';
 /** How far down the list the spec scrolls before switching lists. */
 const SCROLLED_TO = 900;
 
-const TAG = { id: 7001, name: 'Scroll fixture', color: null, icon: null, position: 0 };
+const TAG = {
+  id: 7001,
+  name: 'Scroll fixture',
+  color: null,
+  icon: null,
+  position: 0,
+  parentId: null,
+};
 
 /** The two lists under test, each named by the sidebar link that opens it and by
  *  a row title only that list holds — the switch is only complete once the

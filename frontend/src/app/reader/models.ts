@@ -71,13 +71,7 @@ export interface SavedSearchWire {
 /** A tag as embedded on a subscription: same shape as TagDto, but `position` is
  *  THIS feed's order within that tag (the join position), not the tag's own
  *  sidebar order. */
-export interface SubscriptionTagDto {
-  id: number;
-  name: string;
-  color: string | null;
-  icon: string | null;
-  position: number;
-}
+export type SubscriptionTagDto = TagDto;
 
 export interface SubscriptionDto {
   id: number;

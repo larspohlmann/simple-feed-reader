@@ -12,8 +12,8 @@ const LONG_TAG = 'Wissenschaft und Forschung International';
 const SHORT_TAG = 'Science';
 
 const TAGS = [
-  { id: 1, name: LONG_TAG, color: null, icon: null, position: 0 },
-  { id: 2, name: SHORT_TAG, color: null, icon: null, position: 1 },
+  { id: 1, name: LONG_TAG, color: null, icon: null, position: 0, parentId: null },
+  { id: 2, name: SHORT_TAG, color: null, icon: null, position: 1, parentId: null },
 ];
 
 function subscription(id: number, title: string, tagId: number) {

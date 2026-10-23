@@ -46,6 +46,7 @@ const feed = (id: number, tagIds: number[]): SubscriptionDto =>
       color: null,
       icon: null,
       position: index,
+      parentId: null,
     })),
   });
 
@@ -95,7 +96,16 @@ describe('BulkTagDialogComponent', () => {
       title: 'Feed 14',
       feedUrl: 'https://feed-14.example/rss',
       position: 14,
-      tags: [{ id: LONG_READS.id, name: LONG_READS.name, color: null, icon: null, position: 0 }],
+      tags: [
+        {
+          id: LONG_READS.id,
+          name: LONG_READS.name,
+          color: null,
+          icon: null,
+          position: 0,
+          parentId: null,
+        },
+      ],
     });
     await render({ mode: 'remove', subscriptions: [carrier], tags: [LONG_READS, READING] });
 

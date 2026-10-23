@@ -124,7 +124,7 @@ function embeddedTagsByName(subscriptions: SubscriptionDto[]): TagDto[] {
           color: tag.color,
           icon: tag.icon,
           position: 0,
-          parentId: null,
+          parentId: tag.parentId,
         });
       }
     }

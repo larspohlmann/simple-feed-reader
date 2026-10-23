@@ -105,6 +105,7 @@ export class ManageActions {
       color: tag?.color ?? null,
       icon: tag?.icon ?? null,
       position: 0,
+      parentId: tag?.parentId ?? null,
     };
   }
 

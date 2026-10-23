@@ -34,6 +34,7 @@ const sub = (
       color: null,
       icon: null,
       position: index,
+      parentId: null,
     })),
   });
 

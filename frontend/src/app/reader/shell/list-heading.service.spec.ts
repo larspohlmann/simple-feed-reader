@@ -183,12 +183,12 @@ describe("ListHeading for a feed group's combined view", () => {
     makeSubscription({
       id: 1,
       entryCount: 10,
-      tags: [{ id: 5, name: 'News', color: null, icon: null, position: 0 }],
+      tags: [{ id: 5, name: 'News', color: null, icon: null, position: 0, parentId: null }],
     }),
     makeSubscription({
       id: 2,
       entryCount: 20,
-      tags: [{ id: 6, name: 'Tech', color: null, icon: null, position: 1 }],
+      tags: [{ id: 6, name: 'Tech', color: null, icon: null, position: 1, parentId: null }],
     }),
     makeSubscription({ id: 3, entryCount: 300 }),
   ];

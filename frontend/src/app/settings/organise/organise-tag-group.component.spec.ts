@@ -50,6 +50,7 @@ const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
       color: null,
       icon: null,
       position: index,
+      parentId: null,
     })),
   });
 
