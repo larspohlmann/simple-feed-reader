@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.0] - 2026-10-23
+
 ### Highlights
 
 **A redesigned sidebar.** Every section of the sidebar is now its own card:
@@ -24,6 +26,17 @@ with roomier rows and Move up / Move down for tags in organise mode.
 Selecting the parent lists, counts, marks read and refreshes the feeds of the
 parent and of all its children; the sidebar shows the child tags nested
 inside their parent, and OPML export and import keep the nesting.
+
+## What's Changed
+* docs(#1752): drop the one-time GHCR visibility step by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1757
+* feat(#1736): one level of parent tags by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1753
+* fix(#1755): prefix the source's layout class so the row card styles stop reaching it by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1756
+* feat(#1749): sidebar redesign — grouped cards (design B) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1758
+* docs: refresh the screenshots after the sidebar redesign; phones in a frame by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1759
+* docs: v1.6.0 highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1760
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.5.5...v1.6.0
 
 ## [v1.5.5] - 2026-10-23
 
