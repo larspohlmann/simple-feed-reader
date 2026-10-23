@@ -36,7 +36,7 @@ reordering.
 - `position` orders a tag among its siblings: roots among roots, children within
   one parent. Every existing row is a root; no data migration.
 
-One migration, `Version20261021120000`, MySQL and SQLite DDL like
+One migration, `Version20261023120000`, MySQL and SQLite DDL like
 `Version20261019130000`: add `parent_id INT DEFAULT NULL`, foreign key to `tag(id)`
 `ON DELETE SET NULL`, index on `parent_id`. SQLite adds the column with an inline
 `REFERENCES` clause. `down` drops the index, the constraint and the column. The
@@ -94,22 +94,23 @@ in `SubscriptionJson` inherit the field through the spread; the frontend
 New `App\Repository\TagScopeDql`, final class with a private constructor like
 `FeedGroupDql`:
 
-- `predicate(string $subscriptionAlias, string $joinAlias, string $tagAlias): string`
-  returns
-  `EXISTS (SELECT IDENTITY(<join>.tag) FROM App\Entity\SubscriptionTag <join>
+- `predicate(string $subscriptionAlias): string` derives its two inner aliases from the
+  subscription alias (`<subscription>TagJoin`, `<subscription>ScopedTag`) and returns
+  `EXISTS (SELECT 1 FROM App\Entity\SubscriptionTag <join>
   JOIN <join>.tag <tag> WHERE <join>.subscription = <subscription>
-  AND (<tag>.id = :tagId OR <tag>.parent = :tagId))`.
-- `restrict(QueryBuilder $qb, string $subscriptionAlias, string $joinAlias,
-  string $tagAlias, int $tagId): void` applies `andWhere(predicate)` and binds `:tagId`.
+  AND (<tag>.id = :tagId OR <tag>.parent = :tagId))`; the caller binds `:tagId`.
+  `SELECT 1` in a DQL subquery is already in use (`EntryScopePredicates::inSavedSearches`).
+- `restrict(QueryBuilder $qb, string $subscriptionAlias, int $tagId): void` applies
+  `andWhere(predicate)` and binds `:tagId`.
 
 A semi-join, not a join: a feed carrying both a parent and its child must appear once.
 
 Applied at the four sites:
 
 1. `EntryScopePredicates::applyList`: replace the `joinTags` + tag-key equality with
-   `TagScopeDql::restrict`. `EntryAliases` gains the two inner aliases the predicate
-   needs (`primary()` and `collapse()` each supply distinct ones, so the collapse
-   semi-join nests without alias clashes). `joinTags` stays for the counts.
+   `TagScopeDql::restrict`. `EntryAliases` does not change: the primary (`s`) and
+   collapse (`s2`) subscription aliases already differ, so the derived inner aliases
+   (`sTagJoin`, `s2TagJoin`, …) nest without clashes. `joinTags` stays for the counts.
 2. `SubscriptionScopeRepository`: new `findForUserInTagScope(int $userId, int $tagId)`
    using `restrict`. `findForUserByTagId` stays exact and keeps serving
    `TagEditor::delete`. `MarkReadService` switches `ReadScopeKind::Tag` to the new
@@ -200,6 +201,9 @@ Drag:
 - A feed dropped on a child head appends the child tag, as on a root today.
 - `.drop-line` and `.drop-active` keep their meaning; only accepting lists can show
   them.
+- `ManageActions.reorderTags` receives one sibling set, so its optimistic update
+  repositions only the listed tags, keeps every other tag, and re-sorts by position
+  then name (the order `TagsStore` loads in).
 
 Indentation uses the existing spacing tokens through a `child` modifier on
 `.taghead` and `.tagfeeds` in `sidebar.component.scss`. `_sidebar-row.scss` keeps the
@@ -218,16 +222,19 @@ disabled and a hint says why. The body sends `parentId`. A 422 with
 ### Tag picker
 
 Pills in tree order: each root followed by its children. A child pill reads
-"Parent / Child". Used unchanged by add-feed, edit-subscription and the bulk tag
-dialog, which pass tree-ordered tags.
+"Parent / Child". Add-feed and edit-subscription use `app-tag-picker` unchanged. The
+bulk tag dialog renders its own pills; it orders them the same way in both modes and
+labels them through the same helper (`tagLabel` in `subscription-derivations.ts`).
 
 ### Organise page
 
 `OrganiseStore.groups` lists groups in tree order; a child group carries its parent
 and renders indented (`child` modifier on `app-organise-tag-group`). `canMoveTagUp`
 and `canMoveTagDown` are true only within the sibling set. The gap drag computes gaps
-over the sibling set only: `gapIndexAt` runs on the sibling range and a pointer
-outside it yields no gap, so no indicator renders there and the drop is a no-op.
+over the sibling set only: `gapIndexAt` runs on the siblings' midpoints. A child drag is
+bounded to its siblings' panels (top + height of each), so a pointer outside them
+yields no gap, no indicator renders and the drop is a no-op. A root drag is unbounded:
+it keeps the gap above the first root and the gap after the last (#1708).
 `reorderTags` receives the sibling set. The tag filter list follows tree order with
 the same indent.
 
@@ -246,14 +253,15 @@ carrying parent and child appears once; a child lists only its own),
 `SubscriptionScopeRepositoryTest`, `FeedRepositoryTagScopeTest` (due feeds),
 `MarkReadService` functional, OPML export nests / import two levels / three levels
 keep the innermost tag / conflicting existing tag keeps its state, backup round trip
-with a parent, inspector refusal of an undeclared parent, a schema-3 line restores a
-root. `composer check`, `composer md` on touched files, `composer infection:diff`.
+with a parent, inspector refusal of an undeclared parent (with its message), a
+schema-3 line without `parent` restores a root (`TagLineTest`). `composer check`, `composer md` on touched files, `composer infection:diff`.
 Both suite legs (SQLite, MySQL).
 
 Frontend: `subscription-derivations.spec` (tree, orphan child, entry roll-up,
 flatten), `sidebar.component.spec` (children indented, predicate per drag kind,
-sibling id list, no highlight on a rejected head), `tag-form-dialog.spec` (options,
-locked with children, body, 422 under the field), `tag-picker.spec` (order, labels),
+sibling id list, no highlight on a rejected head), `manage-actions.service.spec` (a sibling reorder keeps the other tags),
+`tag-form-dialog.spec` (options, locked with children, body, 422 under the field),
+`tag-picker.spec` (order, labels), `bulk-tag-dialog.spec` (order and labels, both modes),
 `organise.store.spec` (order, gap range, move buttons), `list-heading.service.spec`
 (child found). `npm run check` in the frontend container.
 
