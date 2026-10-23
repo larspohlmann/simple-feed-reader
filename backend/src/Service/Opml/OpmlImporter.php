@@ -6,7 +6,6 @@ namespace App\Service\Opml;
 
 use App\Entity\User;
 use App\Service\Opml\Exception\InvalidOpmlException;
-use App\Service\Opml\Model\OpmlFeedPlacementModel;
 use App\Service\Opml\Model\OpmlImportResultModel;
 use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
@@ -30,16 +29,7 @@ final readonly class OpmlImporter
 
         $body = $this->bodyReader->read($opml);
 
-        $items = [];
-        foreach ($this->collectFeeds($body, null, null) as $placement) {
-            $items[] = new BulkSubscribeItemModel(
-                feedUrl: $placement->feedUrl,
-                tagName: $placement->tagName,
-                parentTagName: $placement->parentTagName,
-            );
-        }
-
-        $result = $this->subscriber->subscribeAll($user, $items);
+        $result = $this->subscriber->subscribeAll($user, $this->collectFeeds($body, null, null));
 
         return new OpmlImportResultModel(
             imported: $result->imported,
@@ -53,11 +43,11 @@ final readonly class OpmlImporter
      * Depth-first. A feed takes the innermost group as its tag and the outermost as that tag's parent, so a
      * one-level file imports as it always did and a deeper one keeps its innermost grouping.
      *
-     * @return list<OpmlFeedPlacementModel>
+     * @return list<BulkSubscribeItemModel>
      */
     private function collectFeeds(\DOMElement $node, ?string $inheritedTag, ?string $outermostTag): array
     {
-        $placements = [];
+        $items = [];
         foreach ($node->childNodes as $child) {
             if (!$child instanceof \DOMElement || $child->localName !== 'outline') {
                 continue;
@@ -66,17 +56,17 @@ final readonly class OpmlImporter
             $xmlUrl = trim($child->getAttribute('xmlUrl'));
             if ($xmlUrl !== '') {
                 $parent = $inheritedTag === $outermostTag ? null : $outermostTag;
-                $placements[] = new OpmlFeedPlacementModel($xmlUrl, $inheritedTag, $parent);
+                $items[] = new BulkSubscribeItemModel(feedUrl: $xmlUrl, tagName: $inheritedTag, parentTagName: $parent);
                 continue;
             }
 
             $groupTag = $this->groupName($child) ?? $inheritedTag;
-            foreach ($this->collectFeeds($child, $groupTag, $outermostTag ?? $groupTag) as $placement) {
-                $placements[] = $placement;
+            foreach ($this->collectFeeds($child, $groupTag, $outermostTag ?? $groupTag) as $item) {
+                $items[] = $item;
             }
         }
 
-        return $placements;
+        return $items;
     }
 
     private function groupName(\DOMElement $outline): ?string

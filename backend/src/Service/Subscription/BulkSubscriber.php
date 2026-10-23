@@ -188,7 +188,7 @@ final readonly class BulkSubscriber
 
     private function isParent(BulkSubscribeBatch $batch, Tag $tag): bool
     {
-        return $batch->isParentInBatch($tag) || (null !== $tag->getId() && $this->tags->hasChildren($tag));
+        return $batch->isParent($tag, fn (): bool => null !== $tag->getId() && $this->tags->hasChildren($tag));
     }
 
     private function persistNewTag(BulkSubscribeBatch $batch, string $name, ?TagStyleModel $style): Tag

@@ -31,7 +31,7 @@ final readonly class TagEditor
         }
 
         $tag = $this->tagFactory->create($user, $details, $this->tags->nextPositionForUser($user->requireId()));
-        $tag->setParent($this->parentForNew($user, $details->parentId));
+        $tag->setParent($this->resolveParent($user, $details->parentId));
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
 
@@ -73,16 +73,15 @@ final readonly class TagEditor
 
     private function releaseChildren(Tag $parent): void
     {
+        $children = $this->tags->findChildren($parent);
+        if ($children === []) {
+            return;
+        }
         $nextPosition = $this->tags->nextPositionForUser($parent->getUser()->requireId());
-        foreach ($this->tags->findChildren($parent) as $child) {
+        foreach ($children as $child) {
             $child->setParent(null);
             $child->setPosition($nextPosition++);
         }
-    }
-
-    private function parentForNew(User $user, ?int $parentId): ?Tag
-    {
-        return $parentId === null ? null : $this->resolveParent($user, $parentId);
     }
 
     private function parentFor(Tag $tag, ?int $parentId): ?Tag
@@ -100,8 +99,11 @@ final readonly class TagEditor
         return $this->resolveParent($tag->getUser(), $parentId);
     }
 
-    private function resolveParent(User $user, int $parentId): Tag
+    private function resolveParent(User $user, ?int $parentId): ?Tag
     {
+        if ($parentId === null) {
+            return null;
+        }
         $parent = $this->tags->findOneForUser($user->requireId(), $parentId)
             ?? throw InvalidTagParentException::unknown();
         if ($parent->getParent() !== null) {
