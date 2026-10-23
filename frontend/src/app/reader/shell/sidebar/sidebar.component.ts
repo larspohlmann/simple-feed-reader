@@ -51,7 +51,6 @@ import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
-/** One rendered tag row: a root, or a child shown while its parent is expanded. */
 export interface TagRow {
   readonly node: TagNode;
   readonly depth: 0 | 1;
@@ -195,7 +194,6 @@ export class SidebarComponent {
   });
   readonly expanded = signal<Set<number>>(new Set());
 
-  /** Roots in order, each followed by its children while it is expanded; the template renders this flat list. */
   readonly tagRows = computed<TagRow[]>(() =>
     this.tagTree().flatMap((root): TagRow[] => [
       { node: root, depth: 0 },
@@ -273,7 +271,6 @@ export class SidebarComponent {
     if (target.kind !== 'tag') return;
 
     const dragged = event.item.data as TagDto;
-    if (dragged.parentId !== target.tag.parentId) return;
     const ids = this.siblingIds(target.tag);
     const from = ids.indexOf(dragged.id);
     const to = ids.indexOf(target.tag.id);

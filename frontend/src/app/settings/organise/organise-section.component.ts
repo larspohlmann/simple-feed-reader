@@ -307,7 +307,7 @@ export class OrganiseSectionComponent implements OnInit {
       .map((candidate) => candidate.id);
   }
 
-  /** First panel's top to last panel's foot, relative to the tree; the foot is top + height, as the panels report it. */
+  /** First panel's top to last panel's foot, relative to the tree. */
   private spanOf(first: number, last: number): TagDragBounds {
     const treeTop = this.treeTop();
     const firstRect = this.panels()[first].nativeElement.getBoundingClientRect();

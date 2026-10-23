@@ -146,7 +146,8 @@ export class ManageActions {
     if (flags.includeInSavedSearches !== undefined) this.savedSearches.load();
   }
 
-  /** Persist a new order for one sibling set (drag-and-drop); tag order lives in TagsStore. Optimistic: reposition the listed tags, keep the rest, reconcile on response. */
+  /** Persist a new order for one sibling set. Optimistic: reposition the listed tags, keep the
+   *  rest, reconcile on response. */
   reorderTags(tagIds: number[]): void {
     this.tags.tags.update((current) => {
       const listed = new Set(tagIds);
