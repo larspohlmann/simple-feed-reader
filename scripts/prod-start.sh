@@ -20,11 +20,11 @@ usage() {
 Usage: prod-start.sh
 
 Pull or build and start the PRODUCTION stack (docker-compose.prod.yml): MySQL,
-the production PHP image, and nginx serving the built app. Reads configuration from
-.env.prod. Idempotent and safe to re-run: it rebuilds what changed, re-applies
-migrations, and never deletes data. Re-running it is the update step after a new
-release, and the way to switch to TLS after dropping certificates into
-docker/certs-prod/.
+the production PHP image, and nginx serving the built app. Reads configuration
+from .env.prod. Idempotent and safe to re-run: it rebuilds what changed,
+re-applies migrations, and never deletes data. Re-running it is the update step
+after a new release, and the way to switch to TLS after dropping certificates
+into docker/certs-prod/.
 
 Options:
   -h, --help              Show this help and exit.
