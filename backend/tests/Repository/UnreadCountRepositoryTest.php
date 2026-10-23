@@ -163,6 +163,43 @@ final class UnreadCountRepositoryTest extends DbTestCase
         self::assertSame([$news->requireId() => 1, $tech->requireId() => 1], $counts);
     }
 
+    public function testAParentCountsItsOwnAndItsChildrensFeedsEachEntryOnce(): void
+    {
+        $user = $this->user();
+        $reading = $this->tag($user, 'reading');
+        $longReads = $this->childTag($user, 'long reads', $reading);
+        [$parentOnly, $parentFeed] = $this->subscribedFeed($user, 'https://example.com/parent.xml');
+        $parentOnly->addTag($reading);
+        [$childOnly, $childFeed] = $this->subscribedFeed($user, 'https://example.com/child.xml');
+        $childOnly->addTag($longReads);
+        [$both, $bothFeed] = $this->subscribedFeed($user, 'https://example.com/both.xml');
+        $both->addTag($reading);
+        $both->addTag($longReads);
+        $this->unreadEntry($parentFeed, 'parent-entry', null);
+        $this->unreadEntry($childFeed, 'child-entry', null);
+        $this->unreadEntry($bothFeed, 'both-entry', null);
+
+        $counts = $this->repository()->perTag($user->requireId());
+
+        self::assertSame(3, $counts[$reading->requireId()] ?? 0);
+        self::assertSame(2, $counts[$longReads->requireId()] ?? 0);
+    }
+
+    public function testAParentWithNoFeedsOfItsOwnStillCountsItsChildrens(): void
+    {
+        $user = $this->user();
+        $reading = $this->tag($user, 'reading');
+        $longReads = $this->childTag($user, 'long reads', $reading);
+        [$childOnly, $childFeed] = $this->subscribedFeed($user, 'https://example.com/child.xml');
+        $childOnly->addTag($longReads);
+        $this->unreadEntry($childFeed, 'child-entry', null);
+
+        $counts = $this->repository()->perTag($user->requireId());
+
+        self::assertSame(1, $counts[$reading->requireId()] ?? 0);
+        self::assertSame(1, $counts[$longReads->requireId()] ?? 0);
+    }
+
     public function testANetworkCountsEveryCopyAcrossItsFeeds(): void
     {
         $user = $this->user();
@@ -279,6 +316,16 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         return $tag;
+    }
+
+    private function childTag(User $user, string $name, Tag $parent): Tag
+    {
+        $child = new Tag($user, $name);
+        $child->setParent($parent);
+        $this->entityManager->persist($child);
+        $this->entityManager->flush();
+
+        return $child;
     }
 
     /** @return array{0: Subscription, 1: Feed} */
