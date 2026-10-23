@@ -62,6 +62,15 @@ export function flipFeedFlag(
   toggle.set(manage, subscription, !toggle.isIncluded(subscription));
 }
 
+/** The surfaces the feed's own switches leave it out of. */
+export function ownExcludedSurfaces(subscription: SubscriptionDto): ExclusionSurface[] {
+  const surfaces: ExclusionSurface[] = [];
+  if (!subscription.includeInAllItems) surfaces.push('allItems');
+  if (!subscription.includeInForYou) surfaces.push('forYou');
+  if (!subscription.includeInSavedSearches) surfaces.push('savedSearches');
+  return surfaces;
+}
+
 /** A feed of a network the user has not included counts as switched off for saved searches. */
 export function excludedSurfaces(
   subscription: SubscriptionDto,
@@ -69,10 +78,8 @@ export function excludedSurfaces(
 ): ExclusionSurface[] {
   const network = subscription.social?.network ?? null;
   const networkLeftOut = network !== null && !includedNetworks.has(network);
-  const surfaces: ExclusionSurface[] = [];
-  if (!subscription.includeInAllItems) surfaces.push('allItems');
-  if (!subscription.includeInForYou) surfaces.push('forYou');
-  if (!subscription.includeInSavedSearches || networkLeftOut) surfaces.push('savedSearches');
+  const surfaces = ownExcludedSurfaces(subscription);
+  if (networkLeftOut && !surfaces.includes('savedSearches')) surfaces.push('savedSearches');
   return surfaces;
 }
 

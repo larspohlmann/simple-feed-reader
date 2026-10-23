@@ -237,7 +237,11 @@ describe('SidebarSocialSectionComponent', () => {
 
   it('marks a private feed only for saved searches, not for the surfaces it is out of by design', () => {
     const excluded = (id: number) =>
-      feed(id, 'list', { includeInAllItems: false, includeInForYou: false });
+      feed(id, 'list', {
+        includeInAllItems: false,
+        includeInForYou: false,
+        includeInSavedSearches: false,
+      });
     const section: SocialSection = {
       network: 'bluesky',
       unreadCount: 0,
@@ -494,21 +498,33 @@ describe('SidebarSocialSectionComponent', () => {
       );
     });
 
-    it('marks a profile row as hidden until the network is included', () => {
-      const section: SocialSection = {
-        ...ONE_ACCOUNT,
-        networkAccounts: [],
-        accounts: [],
-        profiles: socialProfiles([person(7, 'Amy')], 0),
-      };
+    const profileSection = (subscription: SubscriptionDto): SocialSection => ({
+      ...ONE_ACCOUNT,
+      networkAccounts: [],
+      accounts: [],
+      profiles: socialProfiles([subscription], 0),
+    });
+
+    it('leaves a profile row of an unincluded network unmarked while its own flags are on', () => {
       expandProfiles('bluesky');
-      const fixture = mount(section);
-      expect(element(fixture).querySelector('.feed-exclusion-marker')).not.toBeNull();
+      const root = element(mount(profileSection(person(7, 'Amy'))));
+
+      expect(root.querySelector('.favicon-slot.hidden-feed')).toBeNull();
+      expect(root.querySelector('.feed-exclusion-marker')).toBeNull();
+    });
+
+    it('marks a profile row whose own saved-search switch is off, network included or not', () => {
+      expandProfiles('bluesky');
+      const fixture = mount(profileSection({ ...person(7, 'Amy'), includeInSavedSearches: false }));
+      const title = () =>
+        element(fixture).querySelector('.feed-exclusion-marker')?.getAttribute('title');
+
+      expect(title()).toBe('Hidden from Saved searches');
 
       savedSearchesStore.includedNetworks.set(new Set(['bluesky']));
       fixture.detectChanges();
 
-      expect(element(fixture).querySelector('.feed-exclusion-marker')).toBeNull();
+      expect(title()).toBe('Hidden from Saved searches');
     });
 
     it('opens the sheet on a coarse pointer', () => {
