@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CDK_DRAG_PARENT, CdkDragHandle } from '@angular/cdk/drag-drop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -35,6 +35,7 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
   ],
   templateUrl: './sidebar-feed-row.component.html',
   styleUrl: './sidebar-feed-row.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.current]': 'active()', '[class.organising]': 'organising()' },
 })
 export class SidebarFeedRowComponent {

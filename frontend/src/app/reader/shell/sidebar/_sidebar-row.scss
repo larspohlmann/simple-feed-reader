@@ -20,6 +20,11 @@
       padding: var(--space-2) var(--sidebar-card-pad);
     }
   }
+
+  .organising .card,
+  .card.organising {
+    padding: var(--space-1) 0;
+  }
 }
 
 @mixin row-geometry($color: var(--text-primary)) {
@@ -290,6 +295,11 @@
     .section-head {
       height: var(--tap-target);
     }
+  }
+
+  .organising .section-head {
+    height: var(--control-h);
+    padding-left: var(--space-3);
   }
 
   .section-link {

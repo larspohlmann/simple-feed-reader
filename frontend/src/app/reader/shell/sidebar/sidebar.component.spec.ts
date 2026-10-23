@@ -247,10 +247,10 @@ describe('SidebarComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('.tag')!.textContent).toContain('Tech');
     expect(element.querySelector('.tag')!.textContent).toContain('9');
-    expect(element.querySelectorAll('.tag-sub').length).toBe(0);
+    expect(element.querySelectorAll('.tagfeeds app-sidebar-feed-row').length).toBe(0);
     (element.querySelector('.tag .chevzone') as HTMLButtonElement).click();
     fixture.detectChanges();
-    expect(element.querySelectorAll('.tag-sub').length).toBe(2);
+    expect(element.querySelectorAll('.tagfeeds app-sidebar-feed-row').length).toBe(2);
   });
 
   it('renders the tag icon (tinted with its colour) when set, else the colour dot', () => {
@@ -784,11 +784,11 @@ describe('SidebarComponent', () => {
       toggleForYou(sub),
     );
 
-    (element.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
+    (element.querySelector('.tagfeeds .nav + .rowmenu .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
-    const labels = [...element.querySelectorAll('.tag-sub + .rowmenu .pop [role="menuitem"]')].map(
-      (item) => item.textContent?.trim(),
-    );
+    const labels = [
+      ...element.querySelectorAll('.tagfeeds .nav + .rowmenu .pop [role="menuitem"]'),
+    ].map((item) => item.textContent?.trim());
     expect(labels).toEqual([
       'Edit feed',
       'Exclude from All items',
@@ -799,16 +799,16 @@ describe('SidebarComponent', () => {
 
     (
       element.querySelector(
-        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-of-type(2)',
+        '.tagfeeds .nav + .rowmenu .pop [role="menuitem"]:nth-of-type(2)',
       ) as HTMLButtonElement
     ).click();
     expect(toggleAllItems).toHaveBeenCalledWith(subscription);
 
-    (element.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
+    (element.querySelector('.tagfeeds .nav + .rowmenu .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
     (
       element.querySelector(
-        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-of-type(3)',
+        '.tagfeeds .nav + .rowmenu .pop [role="menuitem"]:nth-of-type(3)',
       ) as HTMLButtonElement
     ).click();
     expect(toggleForYou).toHaveBeenCalledWith(subscription);

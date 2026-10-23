@@ -51,14 +51,8 @@
   text-overflow: ellipsis;
 }
 
-.card.organising {
-  padding: var(--space-1) 0;
-}
-
 .organising .section-head {
   gap: calc(var(--space-2) + var(--space-0));
-  height: var(--control-h);
-  padding-left: var(--space-3);
 }
 
 .organising .section-head app-network-logo {
@@ -68,7 +62,6 @@
 
 .organising .rows {
   --row-fs: var(--fs-base);
-  --row-inset: 0;
 }
 
 .organising .tagfeeds {

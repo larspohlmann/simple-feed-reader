@@ -25,7 +25,6 @@
 } @else {
   <a
     class="nav"
-    [class.tag-sub]="tagId() !== null"
     [class.active]="active()"
     [routerLink]="['/']"
     [queryParams]="selectionQueryParams({ subscription: feed.id })"
