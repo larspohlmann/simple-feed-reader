@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
@@ -10,7 +10,8 @@ import { IconPickerComponent } from '../../../shared/icon-picker/icon-picker.com
 import { FieldComponent } from '../../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { ReaderApi } from '../../reader-api';
-import { TagDto } from '../../models';
+import { TagDto, TagInput } from '../../models';
+import { TagsStore } from '../../state/tags.store';
 import { ButtonComponent } from '../../../shared/button/button.component';
 
 @Component({
@@ -33,6 +34,7 @@ export class TagFormDialogComponent {
   readonly data = inject<TagDto | null>(DIALOG_DATA);
   private readonly api = inject(ReaderApi);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly tagsStore = inject(TagsStore);
 
   readonly isEdit = this.data !== null;
   readonly titleKey = this.isEdit ? 'dialog.tagForm.editTitle' : 'dialog.tagForm.newTitle';
@@ -44,17 +46,35 @@ export class TagFormDialogComponent {
   readonly icon = signal<string | null>(this.data?.icon ?? null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly parentId = signal<number | null>(this.data?.parentId ?? null);
+  readonly parentError = signal<string | null>(null);
+  readonly parentOptions = computed(() =>
+    this.tagsStore.rootTags().filter((tag) => tag.id !== this.data?.id),
+  );
+  readonly hasChildren = computed(
+    () => this.data !== null && this.tagsStore.tags().some((tag) => tag.parentId === this.data?.id),
+  );
+
+  constructor() {
+    this.tagsStore.load();
+  }
+
+  onParentChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.parentId.set(value === '' ? null : Number(value));
+  }
 
   submit(): void {
     if (this.form.invalid) return;
-    const body = {
+    const body: TagInput = {
       name: this.form.getRawValue().name.trim(),
       color: this.color(),
       icon: this.icon(),
-      parentId: this.data?.parentId ?? null,
+      parentId: this.hasChildren() ? null : this.parentId(),
     };
     this.loading.set(true);
     this.error.set(null);
+    this.parentError.set(null);
     const request = this.isEdit
       ? this.api.updateTag(this.data!.id, body)
       : this.api.createTag(body);
@@ -63,6 +83,11 @@ export class TagFormDialogComponent {
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
         const problem = parseProblem(error);
+        const parentMessage = problem.errors?.['parentId']?.[0] ?? null;
+        if (parentMessage !== null) {
+          this.parentError.set(parentMessage);
+          return;
+        }
         this.error.set(problem.errors?.['name']?.[0] ?? problem.detail ?? problem.title);
       },
     });

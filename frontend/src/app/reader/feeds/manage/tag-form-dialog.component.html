@@ -8,6 +8,21 @@
         <input id="tag-name" formControlName="name" maxlength="100" cdkFocusInitial />
       </app-field>
 
+      <app-field
+        [label]="'dialog.tagForm.parent' | transloco"
+        [hint]="hasChildren() ? ('dialog.tagForm.parentLockedHasChildren' | transloco) : null"
+        [error]="parentError()"
+      >
+        <select id="tag-parent" [disabled]="hasChildren()" (change)="onParentChange($event)">
+          <option value="" [selected]="parentId() === null">
+            {{ 'dialog.tagForm.noParent' | transloco }}
+          </option>
+          @for (tag of parentOptions(); track tag.id) {
+            <option [value]="tag.id" [selected]="parentId() === tag.id">{{ tag.name }}</option>
+          }
+        </select>
+      </app-field>
+
       <p class="lbl">{{ 'dialog.tagForm.colour' | transloco }}</p>
       <app-color-field [value]="color()" (valueChange)="color.set($event)">
         {{ 'dialog.tagForm.none' | transloco }}

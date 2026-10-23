@@ -11,7 +11,16 @@ describe('TagFormDialogComponent', () => {
   const close = jest.fn();
   let ctrl: HttpTestingController;
 
-  function mount(data: TagDto | null) {
+  const tagOf = (id: number, name: string, parentId: number | null): TagDto => ({
+    id,
+    name,
+    color: null,
+    icon: null,
+    position: 0,
+    parentId,
+  });
+
+  function mount(data: TagDto | null, tags: TagDto[] = []) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -23,8 +32,10 @@ describe('TagFormDialogComponent', () => {
       ],
     });
     const fixture = TestBed.createComponent(TagFormDialogComponent);
-    fixture.detectChanges();
     ctrl = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags });
+    fixture.detectChanges();
     return fixture;
   }
 
@@ -68,6 +79,97 @@ describe('TagFormDialogComponent', () => {
     expect(testRequest.request.method).toBe('PATCH');
     testRequest.flush({ tag: { id: 4, name: 'New', color: '#4f7cac', icon: 'label' } });
     expect(close).toHaveBeenCalled();
+  });
+
+  it('keeps the existing parent when a child is edited without touching the select', () => {
+    const fixture = mount(tagOf(2, 'Long reads', 1), [
+      tagOf(1, 'Reading', null),
+      tagOf(2, 'Long reads', 1),
+    ]);
+    fixture.componentInstance.form.controls.name.setValue('Essays');
+    fixture.componentInstance.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/tags/2');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({
+      name: 'Essays',
+      color: null,
+      icon: null,
+      parentId: 1,
+    });
+    testRequest.flush({ tag: tagOf(2, 'Essays', 1) });
+  });
+
+  it('offers the root tags except itself as parents', () => {
+    const fixture = mount(tagOf(4, 'Old', null), [
+      tagOf(4, 'Old', null),
+      tagOf(1, 'Reading', null),
+      tagOf(2, 'Long reads', 1),
+    ]);
+    const values = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('select#tag-parent option'),
+    ].map((option) => (option as HTMLOptionElement).value);
+    expect(values).toEqual(['', '1']);
+  });
+
+  it('sends the chosen parent', () => {
+    const fixture = mount(null, [tagOf(1, 'Reading', null)]);
+    fixture.componentInstance.form.controls.name.setValue('Long reads');
+    fixture.componentInstance.parentId.set(1);
+    fixture.componentInstance.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/tags');
+    expect(testRequest.request.body).toEqual({
+      name: 'Long reads',
+      color: null,
+      icon: null,
+      parentId: 1,
+    });
+    testRequest.flush({ tag: tagOf(9, 'Long reads', 1) });
+  });
+
+  it('locks the parent for a tag that has children and sends null', () => {
+    const fixture = mount(tagOf(1, 'Reading', null), [
+      tagOf(1, 'Reading', null),
+      tagOf(2, 'Long reads', 1),
+    ]);
+    const select = (fixture.nativeElement as HTMLElement).querySelector(
+      'select#tag-parent',
+    ) as HTMLSelectElement;
+    expect(select.disabled).toBe(true);
+    fixture.componentInstance.parentId.set(3);
+    fixture.componentInstance.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/tags/1');
+    expect(testRequest.request.body).toEqual({
+      name: 'Reading',
+      color: null,
+      icon: null,
+      parentId: null,
+    });
+    testRequest.flush({ tag: tagOf(1, 'Reading', null) });
+  });
+
+  it('surfaces a 422 on the parent under the parent field and stays open', () => {
+    const fixture = mount(null, [tagOf(1, 'Reading', null)]);
+    const component = fixture.componentInstance;
+    component.form.controls.name.setValue('Essays');
+    component.parentId.set(1);
+    component.submit();
+    ctrl.expectOne('https://api.test/api/tags').flush(
+      {
+        type: 'invalid_tag_parent',
+        title: 'Invalid parent tag',
+        status: 422,
+        detail: 'A parent tag cannot itself have a parent.',
+        errors: { parentId: ['A parent tag cannot itself have a parent.'] },
+      },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    expect(component.parentError()).toBe('A parent tag cannot itself have a parent.');
+    expect(component.error()).toBeNull();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'A parent tag cannot itself have a parent.',
+    );
+    expect(close).not.toHaveBeenCalled();
   });
 
   it('surfaces a 409 name-taken error inline and stays open', () => {

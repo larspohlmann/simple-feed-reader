@@ -841,7 +841,10 @@
       "none": "Keine",
       "icon": "Symbol",
       "saving": "Wird gespeichert…",
-      "save": "Speichern"
+      "save": "Speichern",
+      "parent": "Übergeordneter Tag",
+      "noParent": "Keiner",
+      "parentLockedHasChildren": "Ein Tag mit untergeordneten Tags kann keinen übergeordneten Tag haben."
     },
     "editFeed": {
       "title": "Feed bearbeiten",
