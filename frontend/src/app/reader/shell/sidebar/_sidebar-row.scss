@@ -353,3 +353,14 @@
     cursor: grab;
   }
 }
+
+/* An open group — a tag, or a network's people — on the recessed surface; its rows step in with it. */
+@mixin group {
+  .group.open {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: var(--sidebar-card-pad);
+    border-radius: var(--radius);
+    background: var(--surface-sunken);
+  }
+}

@@ -564,6 +564,11 @@ describe('SidebarComponent', () => {
           child: head.classList.contains('child'),
         }));
 
+      const blockKinds = (parent: Element) =>
+        [...parent.children].map((block) =>
+          ['taghead', 'tag-child', 'tagfeeds'].find((kind) => block.classList.contains(kind)),
+        );
+
       it('shows children indented, and only while their parent is expanded', () => {
         const fixture = mount({ tagTree: tree() });
         expect(heads(fixture).map((head) => head.name)).toEqual(['t10', 't20']);
@@ -579,34 +584,50 @@ describe('SidebarComponent', () => {
         ]);
       });
 
-      it("lists an expanded parent's children before the parent's own feeds", () => {
+      it('nests an open root as a group: its head, a box per child, then its own feeds', () => {
         const fixture = mount({
-          tagTree: [
-            {
-              ...parentNode(10, [tagNode(11, [sub(2)], 10)]),
-              subscriptions: [sub(1)],
-            },
-          ],
+          tagTree: [{ ...parentNode(10, [tagNode(11, [sub(2)], 10)]), subscriptions: [sub(1)] }],
         });
         fixture.componentInstance.toggle(10);
         fixture.componentInstance.toggle(11);
         fixture.detectChanges();
 
-        const blocks = [
-          ...(fixture.nativeElement as HTMLElement).querySelectorAll(
-            '.tags > .taghead, .tags > .tagfeeds',
-          ),
-        ].map((block) => ({
-          kind: block.classList.contains('taghead') ? 'head' : 'feeds',
-          child: block.classList.contains('child'),
-        }));
+        const group = (fixture.nativeElement as HTMLElement).querySelector('.tags > .tag-group')!;
+        expect(group.classList).toContain('open');
+        expect(blockKinds(group)).toEqual(['taghead', 'tag-child', 'tagfeeds']);
+        const box = group.querySelector('.tag-child')!;
+        expect(blockKinds(box)).toEqual(['taghead', 'tagfeeds']);
+        expect(box.querySelector('.taghead')!.classList).toContain('child');
+      });
 
-        expect(blocks).toEqual([
-          { kind: 'head', child: false },
-          { kind: 'head', child: true },
-          { kind: 'feeds', child: true },
-          { kind: 'feeds', child: false },
-        ]);
+      it('shows a closed child as a box with its head only', () => {
+        const fixture = mount({ tagTree: [parentNode(10, [tagNode(11, [sub(2)], 10)])] });
+        fixture.componentInstance.toggle(10);
+        fixture.detectChanges();
+
+        const box = (fixture.nativeElement as HTMLElement).querySelector('.tag-child')!;
+        expect(blockKinds(box)).toEqual(['taghead']);
+      });
+
+      it('leaves a closed root a plain group with only its head', () => {
+        const fixture = mount({ tagTree: tree() });
+
+        const group = (fixture.nativeElement as HTMLElement).querySelector('.tags > .tag-group')!;
+        expect(group.classList).not.toContain('open');
+        expect(blockKinds(group)).toEqual(['taghead']);
+      });
+
+      it('keeps every drop list a sibling, never nested in another', () => {
+        const fixture = mount({
+          tagTree: [{ ...parentNode(10, [tagNode(11, [sub(2)], 10)]), subscriptions: [sub(1)] }],
+        });
+        fixture.componentInstance.toggle(10);
+        fixture.componentInstance.toggle(11);
+        fixture.detectChanges();
+        const element = fixture.nativeElement as HTMLElement;
+
+        expect(element.querySelectorAll('.tags .cdk-drop-list')).toHaveLength(4);
+        expect(element.querySelectorAll('.cdk-drop-list .cdk-drop-list')).toHaveLength(0);
       });
 
       it('lets a tag head accept a feed from anywhere but a tag only from its own sibling set', () => {

@@ -4,6 +4,7 @@
 @include row.section-head;
 @include row.chevron('.section-chevron');
 @include row.dots;
+@include row.group;
 
 :host {
   display: contents;
@@ -24,7 +25,6 @@
 }
 
 .tagfeeds {
-  --row-h: var(--sidebar-leaf-row-h);
   --row-inset: var(--sidebar-row-deep-inset);
 
   display: flex;

@@ -6,6 +6,7 @@
 @include row.chevron('.section-chevron');
 @include row.dots;
 @include row.drag-handle;
+@include row.group;
 
 .sidebar {
   display: flex;
@@ -128,21 +129,38 @@
   gap: var(--space-0);
 }
 
-.feedlist,
-.tagfeeds,
-.taghead.child {
+.feedlist {
   --row-h: var(--sidebar-sub-row-h);
   --row-fs: var(--fs-dense);
 }
 
-.tagfeeds,
-.taghead.child {
+.tag-group > .tagfeeds {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
   --row-inset: var(--sidebar-row-deep-inset);
+
+  gap: 0;
 }
 
-.tagfeeds.child {
+/* The child's own surface: its rows start at the box's edge again, so each chevron keeps its gap to it. */
+.tag-child {
+  --row-h: var(--sidebar-sub-row-h);
+  --row-fs: var(--fs-dense);
+  --row-inset: var(--sidebar-row-inset);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0);
+  margin: var(--space-0) var(--sidebar-card-pad) var(--sidebar-card-pad)
+    calc(var(--sidebar-row-inset) + var(--icon-md));
+  padding: var(--space-0) 0;
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+.tag-child .tagfeeds {
   --row-h: var(--sidebar-leaf-row-h);
-  --row-inset: calc(var(--sidebar-row-deep-inset) + var(--icon-md) + var(--space-3));
+  --row-inset: var(--sidebar-row-deep-inset);
 }
 
 .organising .tag {

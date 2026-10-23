@@ -78,36 +78,38 @@
         @if (current.accounts.length) {
           <div class="divider" aria-hidden="true"></div>
         }
-        <div class="tag" data-testid="sidebar-social-feeds">
-          <app-sidebar-group-row
-            [link]="selectionQueryParams({ network: current.network, feedKind: 'profile' })"
-            [label]="'reader.socialFeeds' | transloco"
-            glyph="group"
-            [count]="current.profiles.unreadCount"
-            [active]="profilesActive()"
-            [expanded]="profilesExpanded()"
-            [toggleLabel]="
-              'reader.toggleSocialFeeds'
-                | transloco: { network: ('settings.social.' + current.network | transloco) }
-            "
-            (toggled)="toggleProfiles()"
-          >
-            <span class="slot" aria-hidden="true"></span>
-          </app-sidebar-group-row>
-        </div>
-        @if (profilesExpanded()) {
-          <div class="tagfeeds">
-            @for (subscription of current.profiles.subscriptions; track subscription.id) {
-              <div class="feedrow">
-                <app-sidebar-feed-row
-                  [subscription]="subscription"
-                  [selection]="selection()"
-                  [organising]="organising()"
-                />
-              </div>
-            }
+        <div class="group" [class.open]="profilesExpanded()">
+          <div class="tag" data-testid="sidebar-social-feeds">
+            <app-sidebar-group-row
+              [link]="selectionQueryParams({ network: current.network, feedKind: 'profile' })"
+              [label]="'reader.socialFeeds' | transloco"
+              glyph="group"
+              [count]="current.profiles.unreadCount"
+              [active]="profilesActive()"
+              [expanded]="profilesExpanded()"
+              [toggleLabel]="
+                'reader.toggleSocialFeeds'
+                  | transloco: { network: ('settings.social.' + current.network | transloco) }
+              "
+              (toggled)="toggleProfiles()"
+            >
+              <span class="slot" aria-hidden="true"></span>
+            </app-sidebar-group-row>
           </div>
-        }
+          @if (profilesExpanded()) {
+            <div class="tagfeeds">
+              @for (subscription of current.profiles.subscriptions; track subscription.id) {
+                <div class="feedrow">
+                  <app-sidebar-feed-row
+                    [subscription]="subscription"
+                    [selection]="selection()"
+                    [organising]="organising()"
+                  />
+                </div>
+              }
+            </div>
+          }
+        </div>
       }
       @if (current.saved; as saved) {
         <div class="feedrow" data-testid="sidebar-social-saved">

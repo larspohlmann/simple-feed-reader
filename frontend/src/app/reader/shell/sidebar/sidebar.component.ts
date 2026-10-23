@@ -52,10 +52,15 @@ import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
-export interface TagRow {
-  readonly kind: 'head' | 'feeds';
+export interface TagChildView {
   readonly node: TagNode;
-  readonly depth: 0 | 1;
+  readonly open: boolean;
+}
+
+export interface TagGroupView {
+  readonly node: TagNode;
+  readonly open: boolean;
+  readonly children: readonly TagChildView[];
 }
 
 const tagIdOf = (data: DropData): number | null => (data.kind === 'tag' ? data.tag.id : null);
@@ -199,23 +204,16 @@ export class SidebarComponent {
   });
   readonly expanded = signal<Set<number>>(new Set());
 
-  readonly tagRows = computed<TagRow[]>(() =>
-    this.tagTree().flatMap((root): TagRow[] => [
-      { kind: 'head', node: root, depth: 0 },
-      ...(this.expanded().has(root.tag.id)
-        ? root.children.flatMap((child): TagRow[] => this.headAndFeeds(child, 1))
-        : []),
-      ...this.feedsRow(root, 0),
-    ]),
-  );
-
-  private headAndFeeds(node: TagNode, depth: 0 | 1): TagRow[] {
-    return [{ kind: 'head', node, depth }, ...this.feedsRow(node, depth)];
-  }
-
-  private feedsRow(node: TagNode, depth: 0 | 1): TagRow[] {
-    return this.expanded().has(node.tag.id) ? [{ kind: 'feeds', node, depth }] : [];
-  }
+  readonly tagGroups = computed<TagGroupView[]>(() => {
+    const expanded = this.expanded();
+    return this.tagTree().map((root) => {
+      const open = expanded.has(root.tag.id);
+      const children = open
+        ? root.children.map((child) => ({ node: child, open: expanded.has(child.tag.id) }))
+        : [];
+      return { node: root, open, children };
+    });
+  });
 
   /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */
   private readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
