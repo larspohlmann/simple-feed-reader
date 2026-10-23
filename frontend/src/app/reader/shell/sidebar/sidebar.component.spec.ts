@@ -11,7 +11,8 @@ import { RecommendationsService } from '../../state/recommendations.service';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
-import { TagNode } from '../../state/subscription-derivations';
+import { TagNode, flattenTagTree } from '../../state/subscription-derivations';
+import { TagsStore } from '../../state/tags.store';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { Selection } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
@@ -163,6 +164,7 @@ function mount(
       { provide: ActionSheet, useValue: { open: jest.fn(() => of(over.sheetChoice)) } },
     ],
   });
+  TestBed.inject(TagsStore).tags.set(flattenTagTree(over.tagTree ?? []).map((node) => node.tag));
   const fixture = TestBed.createComponent(SidebarComponent);
   for (const [name, fallback] of Object.entries(inputDefaults())) {
     fixture.componentRef.setInput(name, over[name as keyof typeof over] ?? fallback);

@@ -33,7 +33,8 @@ import { SidebarSocialSectionComponent } from './sidebar-social-section.componen
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
-import { TagNode, flattenTagTree } from '../../state/subscription-derivations';
+import { TagNode, siblingIdsOf, tagNodesById } from '../../state/subscription-derivations';
+import { TagsStore } from '../../state/tags.store';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
@@ -100,8 +101,10 @@ export class SidebarComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
   protected readonly manage = inject(ManageActions);
   protected readonly rows = inject(SidebarRowActions);
+  private readonly tagsStore = inject(TagsStore);
 
   readonly tagTree = input.required<TagNode[]>();
+  private readonly tagNodeById = computed(() => tagNodesById(this.tagTree()));
   readonly untagged = input.required<SubscriptionDto[]>();
   readonly socialSections = input<SocialSection[]>([]);
   readonly totalUnread = input.required<number>();
@@ -281,7 +284,7 @@ export class SidebarComponent {
     if (target.kind !== 'tag') return;
 
     const dragged = event.item.data as TagDto;
-    const ids = this.siblingIds(target.tag);
+    const ids = siblingIdsOf(this.tagsStore.tags(), target.tag);
     const from = ids.indexOf(dragged.id);
     const to = ids.indexOf(target.tag.id);
     if (from < 0 || to < 0 || from === to) return;
@@ -298,10 +301,9 @@ export class SidebarComponent {
     if (event.previousContainer === event.container) {
       if (event.previousIndex === event.currentIndex) return;
       if (target.kind === 'tag') {
-        const ids = (
-          flattenTagTree(this.tagTree()).find((node) => node.tag.id === target.tag.id)
-            ?.subscriptions ?? []
-        ).map((subscription) => subscription.id);
+        const ids = (this.tagNodeById().get(target.tag.id)?.subscriptions ?? []).map(
+          (subscription) => subscription.id,
+        );
         moveItemInArray(ids, event.previousIndex, event.currentIndex);
         this.manage.reorderTagFeeds(target.tag.id, ids);
       } else {
@@ -318,15 +320,6 @@ export class SidebarComponent {
         feedMove(event.previousContainer.data, target, event.currentIndex),
       );
     }
-  }
-
-  /** The ids a tag may be ordered among: the roots, or its parent's children. */
-  private siblingIds(tag: TagDto): number[] {
-    const siblings =
-      tag.parentId === null
-        ? this.tagTree()
-        : (this.tagTree().find((root) => root.tag.id === tag.parentId)?.children ?? []);
-    return siblings.map((node) => node.tag.id);
   }
 
   toggle(tagId: number): void {

@@ -13,7 +13,6 @@ import { SubscriptionDto } from '../models';
 import { FeedGroupName } from '../../core/feed-group';
 import { SocialNetworkName } from '../../core/social-network';
 import { ReaderRouteState } from './reader-route-state.service';
-import { flattenTagTree } from '../state/subscription-derivations';
 import { SocialSection, feedAvatarUrl } from '../state/social-sections';
 
 @Injectable()
@@ -40,11 +39,8 @@ export class ListHeading {
 
   private readonly selectedTagNode = computed(() => {
     const selection = this.routeState.selection();
-    if (selection.kind !== 'tag') return null;
-    return (
-      flattenTagTree(this.subscriptions.tagTree()).find((node) => node.tag.id === selection.id) ??
-      null
-    );
+    if (selection.kind !== 'tag' || selection.id === null) return null;
+    return this.subscriptions.tagNodeById().get(selection.id) ?? null;
   });
 
   readonly selectedTag = computed(() => this.selectedTagNode()?.tag ?? null);

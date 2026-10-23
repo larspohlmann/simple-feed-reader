@@ -14,7 +14,10 @@ import { SubscriptionRows } from './subscription-rows';
 import {
   buildTagTree,
   flattenTagTree,
+  rootsOf,
+  siblingIdsOf,
   sumEntries,
+  tagNodesById,
   tagsInTreeOrder,
   untaggedSubscriptions,
 } from './subscription-derivations';
@@ -227,6 +230,36 @@ describe('buildTagTree with an explicit tag order', () => {
     expect(
       tagsInTreeOrder([reading, tech, essays, longReads]).map((listed) => listed.name),
     ).toEqual(['Reading', 'Essays', 'Long reads', 'Tech']);
+  });
+
+  it('counts a tag whose parent is unknown among the roots', () => {
+    const orphan = { ...tag(5, 'Orphan'), parentId: 99 };
+    expect(rootsOf([reading, longReads, orphan, tech]).map((root) => root.name)).toEqual([
+      'Reading',
+      'Orphan',
+      'Tech',
+    ]);
+  });
+
+  it("orders a root among the roots and a child among its parent's children", () => {
+    const tags = [reading, longReads, essays, tech];
+    expect(siblingIdsOf(tags, tech)).toEqual([1, 4]);
+    expect(siblingIdsOf(tags, essays)).toEqual([2, 3]);
+  });
+
+  it('finds no siblings for a tag missing from the list', () => {
+    expect(siblingIdsOf([reading, tech], longReads)).toEqual([]);
+  });
+
+  it('hands out a sibling list the caller may reorder without touching the next one', () => {
+    const tags = [reading, tech];
+    siblingIdsOf(tags, reading).reverse();
+    expect(siblingIdsOf(tags, reading)).toEqual([1, 4]);
+  });
+
+  it('looks up a child node by its id', () => {
+    const byId = tagNodesById(buildTagTree([], [reading, longReads, tech]));
+    expect(byId.get(2)?.tag.name).toBe('Long reads');
   });
 });
 

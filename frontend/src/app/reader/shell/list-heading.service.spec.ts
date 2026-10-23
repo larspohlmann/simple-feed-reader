@@ -11,7 +11,7 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SocialSection, buildSocialSections, socialProfiles } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
-import { TagNode } from '../state/subscription-derivations';
+import { TagNode, tagNodesById } from '../state/subscription-derivations';
 import { NO_UNREAD_TOTALS, UnreadTotals } from '../state/unread-totals';
 import { makeSubscription } from '../testing/subscription.factory';
 import { ListHeading } from './list-heading.service';
@@ -260,7 +260,7 @@ describe('ListHeading for a child tag (#1736)', () => {
     const tree = [nodeOf(tagOf(1, 'Reading', null), [nodeOf(tagOf(2, 'Long reads', 1))])];
     const selection: Selection = { kind: 'tag', id: 2, unread: true };
 
-    const heading = headingWith(selection, { tagTree: signal(tree) });
+    const heading = headingWith(selection, { tagNodeById: signal(tagNodesById(tree)) });
 
     expect(heading.selectedTag()?.name).toBe('Long reads');
   });

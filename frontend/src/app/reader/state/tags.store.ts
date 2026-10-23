@@ -3,6 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
+import { rootsOf } from './subscription-derivations';
 
 /** Position order, name as a stable tiebreak; a position orders a tag among its siblings only. */
 export function compareTagPositions(left: TagDto, right: TagDto): number {
@@ -18,7 +19,7 @@ export class TagsStore {
 
   readonly tags = signal<TagDto[]>([]);
   /** The tags that may be a parent: only a root can take children (#1736). */
-  readonly rootTags = computed(() => this.tags().filter((tag) => tag.parentId === null));
+  readonly rootTags = computed(() => rootsOf(this.tags()));
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 

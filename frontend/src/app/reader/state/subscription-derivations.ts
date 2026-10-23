@@ -25,7 +25,6 @@ export function buildTagTree(
 ): TagNode[] {
   const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subscriptions);
   const byTagId = bucketByTag(subscriptions);
-  const knownIds = new Set(tags.map((tag) => tag.id));
 
   const leaf = (tag: TagDto): TagNode => {
     const feeds = feedsOf(byTagId, tag.id);
@@ -38,11 +37,11 @@ export function buildTagTree(
     };
   };
 
-  const roots = tags.filter((tag) => isRootTag(tag, knownIds));
-  return roots.map((root) => {
+  const children = childrenByParentId(tags);
+  return rootsOf(tags).map((root) => {
     const node = {
       ...leaf(root),
-      children: tags.filter((tag) => tag.parentId === root.id).map(leaf),
+      children: (children.get(root.id) ?? []).map(leaf),
     };
     return { ...node, entryCount: totalEntryCount(distinctFeedsOf(node)) };
   });
@@ -53,16 +52,52 @@ export function flattenTagTree(nodes: TagNode[]): TagNode[] {
   return nodes.flatMap((node) => [node, ...node.children]);
 }
 
+export function tagNodesById(nodes: TagNode[]): Map<number, TagNode> {
+  return new Map(flattenTagTree(nodes).map((node) => [node.tag.id, node]));
+}
+
+/** A tag whose parent is not among the known ids counts as a root: the fallback tree can lack a feedless parent. */
 export function isRootTag(tag: TagDto, knownIds: ReadonlySet<number>): boolean {
   return tag.parentId === null || !knownIds.has(tag.parentId);
 }
 
+export function rootsOf(tags: readonly TagDto[]): TagDto[] {
+  const knownIds = new Set(tags.map((tag) => tag.id));
+  return tags.filter((tag) => isRootTag(tag, knownIds));
+}
+
+/** Each parent's children, in the order given. */
+export function childrenByParentId(tags: readonly TagDto[]): Map<number, TagDto[]> {
+  const byParentId = new Map<number, TagDto[]>();
+  for (const tag of tags) {
+    if (tag.parentId === null) continue;
+    byParentId.set(tag.parentId, [...(byParentId.get(tag.parentId) ?? []), tag]);
+  }
+  return byParentId;
+}
+
+/** Each tag's sibling set — the roots, or its parent's children — as ids in the order given. */
+export function siblingIdsByTagId(tags: readonly TagDto[]): Map<number, readonly number[]> {
+  const roots = rootsOf(tags);
+  const children = childrenByParentId(tags);
+  const siblingSets = [roots, ...roots.map((root) => children.get(root.id) ?? [])];
+  const byTagId = new Map<number, readonly number[]>();
+  for (const siblings of siblingSets) {
+    const ids = siblings.map((sibling) => sibling.id);
+    for (const id of ids) byTagId.set(id, ids);
+  }
+  return byTagId;
+}
+
+/** A fresh, mutable copy of the ids `tag` may be ordered among; empty when `tags` lacks it. */
+export function siblingIdsOf(tags: readonly TagDto[], tag: TagDto): number[] {
+  return [...(siblingIdsByTagId(tags).get(tag.id) ?? [])];
+}
+
 /** Each root followed by its children, whatever order the caller holds them in. */
 export function tagsInTreeOrder(tags: TagDto[]): TagDto[] {
-  const knownIds = new Set(tags.map((tag) => tag.id));
-  return tags
-    .filter((tag) => isRootTag(tag, knownIds))
-    .flatMap((root) => [root, ...tags.filter((tag) => tag.parentId === root.id)]);
+  const children = childrenByParentId(tags);
+  return rootsOf(tags).flatMap((root) => [root, ...(children.get(root.id) ?? [])]);
 }
 
 /** A child reads with its parent, so a pill never shows a bare child out of context. */

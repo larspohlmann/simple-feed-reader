@@ -37,7 +37,7 @@ import {
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
-import { tagsInTreeOrder } from '../../reader/state/subscription-derivations';
+import { siblingIdsByTagId, tagsInTreeOrder } from '../../reader/state/subscription-derivations';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
@@ -235,6 +235,7 @@ export class OrganiseSectionComponent implements OnInit {
   }
 
   protected readonly orderedTags = computed(() => tagsInTreeOrder(this.tags.tags()));
+  private readonly siblingIdsByTag = computed(() => siblingIdsByTagId(this.tags.tags()));
 
   private readonly dragSiblingKeys = signal<readonly GroupKey[] | null>(null);
   private readonly draggedTag = signal<TagDto | null>(null);
@@ -256,7 +257,7 @@ export class OrganiseSectionComponent implements OnInit {
 
   protected canMoveTag(group: OrganiseGroup, offset: number): boolean {
     if (group.tag === null || this.store.filterActive()) return false;
-    const ids = this.siblingIds(group.tag);
+    const ids = this.siblingIdsByTag().get(group.tag.id) ?? [];
     const to = ids.indexOf(group.tag.id) + offset;
     return to >= 0 && to < ids.length;
   }
@@ -305,10 +306,7 @@ export class OrganiseSectionComponent implements OnInit {
   }
 
   private siblingIds(tag: TagDto): number[] {
-    return this.tags
-      .tags()
-      .filter((candidate) => candidate.parentId === tag.parentId)
-      .map((candidate) => candidate.id);
+    return [...(this.siblingIdsByTag().get(tag.id) ?? [])];
   }
 
   /** First panel's top to last panel's foot, relative to the tree. */
