@@ -358,8 +358,7 @@ overlays inset by `--select-inset`, so it tunes that and `--field-rim-base`.
 `<app-button>`'s `primary`, `danger` and `ghost`, add-feed's `.subscribe`,
 tag-picker's `.on`, discover's active category chip (their own `background` and
 `border-color` replace the rim); the sidebar dropzone's dashed hint;
-the colour field's
-`.swatch` and the about chart's `.chart-marker` (2px rings).
+the colour field's `.swatch` and the about chart's `.chart-marker` (2px rings).
 
 **Magazine.** Blocks and source groups share `magazine-card.chrome`
 (`reader/list/magazine/_magazine-card.scss`). Airy stays borderless:
@@ -1504,7 +1503,7 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 **A row** is `row-geometry`: a fixed-height flex line, `0 var(--space-2) 0 var(--row-inset)`, hover `--surface-0`, active `--accent-soft` with accent text, glyph and count. Its height, left inset and type size come from the surface it sits on, through the inherited `--row-h`, `--row-inset` and `--row-fs`, so a row component never reaches into its parent and a parent never pierces a row.
 
-**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one.
+**The right edge is columns, per surface.** Every row and head ends count · ⋯ (28px) · chevron (28px) · 8px, except the smart views (All items, Favorites, Kept, Recently read, For you): they have no ⋯ or chevron, so their count sits at the card's right edge, behind only the row's 8px padding. A row without a ⋯ puts an empty `.slot` there, and `.slot` and the ⋯ host both carry `margin-right: calc(var(--space-3) * -1)`, so the count sits in the same place either way. A row without a chevron ends in an empty `.trail`. On a coarse pointer the desktop row ⋯ and `.slot` go and the chevron column is 44px. Two ⋯ stay: the network (Bluesky, Mastodon) head's, the only phone entry to account management, and organise mode's, whose rows all carry one.
 
 **Heads** (`section-head`) are 13px/600 `--text-secondary`, sentence case, and their title still opens the combined list (#1735). When that list is showing, the whole head row is `.current`: the full-row `--accent-soft` fill with accent title and count. While organising the heads stay neutral.
 

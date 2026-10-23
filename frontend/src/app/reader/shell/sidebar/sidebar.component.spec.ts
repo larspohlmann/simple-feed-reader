@@ -571,7 +571,7 @@ describe('SidebarComponent', () => {
       const heads = (fixture: ReturnType<typeof mount>) =>
         [...(fixture.nativeElement as HTMLElement).querySelectorAll('.taghead')].map((head) => ({
           name: head.textContent?.match(/t\d+/)?.[0],
-          child: head.classList.contains('child'),
+          child: head.closest('.tag-child') !== null,
         }));
 
       const blockKinds = (parent: Element) =>
@@ -579,7 +579,7 @@ describe('SidebarComponent', () => {
           ['taghead', 'tag-child', 'tagfeeds'].find((kind) => block.classList.contains(kind)),
         );
 
-      it('shows children indented, and only while their parent is expanded', () => {
+      it('nests children in a box, only while their parent is open', () => {
         const fixture = mount({ tagTree: tree() });
         expect(heads(fixture).map((head) => head.name)).toEqual(['t10', 't20']);
 
@@ -607,7 +607,7 @@ describe('SidebarComponent', () => {
         expect(blockKinds(group)).toEqual(['taghead', 'tag-child', 'tagfeeds']);
         const box = group.querySelector('.tag-child')!;
         expect(blockKinds(box)).toEqual(['taghead', 'tagfeeds']);
-        expect(box.querySelector('.taghead')!.classList).toContain('child');
+        expect(box.querySelector('.taghead')!.closest('.tag-child')).toBe(box);
       });
 
       it('shows a closed child as a box with its head only', () => {
@@ -812,6 +812,15 @@ describe('SidebarComponent', () => {
       ) as HTMLButtonElement
     ).click();
     expect(toggleForYou).toHaveBeenCalledWith(subscription);
+  });
+
+  it('marks the selected subscription’s row host current', () => {
+    const selection: Selection = { kind: 'subscription', id: 2, unread: true };
+    const element = mount({ untagged: [sub(1, 0), sub(2, 0)], selection })
+      .nativeElement as HTMLElement;
+    const hosts = [...element.querySelectorAll('.feedlist app-sidebar-feed-row')];
+
+    expect(hosts.map((host) => host.classList.contains('current'))).toEqual([false, true]);
   });
 
   it('greys a hidden feed’s favicon and badges it with the eye, keeping the count', () => {
@@ -1661,6 +1670,20 @@ describe('SidebarComponent', () => {
       fixture.detectChanges();
 
       expect(element.querySelector('.tags .taghead')).toBeNull();
+    });
+
+    it('leaves the untag list mounted but empty when every feed is tagged, so the card gap stays single', () => {
+      const fixture = mount({ tagTree: [tagNodeFixture], untagged: [] });
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(element.querySelector('.feeds-card')!.classList).not.toContain('card');
+      expect(element.querySelector('.feeds-card > .feedlist')!.matches(':empty')).toBe(true);
+
+      fixture.componentInstance.dragging.set(true);
+      fixture.detectChanges();
+
+      expect(element.querySelector('.feeds-card')!.classList).toContain('card');
+      expect(element.querySelector('.feeds-card > .feedlist')!.matches(':empty')).toBe(false);
     });
 
     it('restores the collapsed state on a fresh mount (persisted)', () => {

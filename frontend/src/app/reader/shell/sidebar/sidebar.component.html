@@ -62,7 +62,6 @@
         @if (totalUnread() > 0) {
           <span class="count">{{ totalUnread() }}</span>
         }
-        <ng-container *ngTemplateOutlet="rowColumns" />
       </a>
       <a
         class="nav"
@@ -76,7 +75,6 @@
         @if (favoritesCount() > 0) {
           <span class="count">{{ favoritesCount() }}</span>
         }
-        <ng-container *ngTemplateOutlet="rowColumns" />
       </a>
       <a
         class="nav"
@@ -90,7 +88,6 @@
         @if (keptCount() > 0) {
           <span class="count">{{ keptCount() }}</span>
         }
-        <ng-container *ngTemplateOutlet="rowColumns" />
       </a>
       <a
         class="nav"
@@ -104,7 +101,6 @@
         @if (viewedCount() > 0) {
           <span class="count">{{ viewedCount() }}</span>
         }
-        <ng-container *ngTemplateOutlet="rowColumns" />
       </a>
       @if (ai.ready()) {
         <a
@@ -119,7 +115,6 @@
           @if (forYouUnread() > 0) {
             <span class="count">{{ forYouUnread() }}</span>
           }
-          <ng-container *ngTemplateOutlet="rowColumns" />
         </a>
       }
     </div>
@@ -144,9 +139,7 @@
         <ng-container *ngTemplateOutlet="sectionHead; context: { $implicit: tagsHead }" />
       </div>
       @if (tagsExpanded() || organising()) {
-        <!-- Every drop list stays a TOP-LEVEL sibling, wrapped by plain divs only: a head
-             list reorders tags/accepts a feed, a feed list reorders/receives feeds.
-             CDK breaks cross-list drops if nested. -->
+        <!-- Drop lists stay top-level siblings, wrapped by plain divs: CDK breaks cross-list drops if nested. -->
         <div class="tags">
           @for (group of tagGroups(); track group.node.tag.id) {
             <div class="tag-group group" [class.open]="group.open">
@@ -166,15 +159,13 @@
                   />
                   @if (child.open) {
                     <ng-container
-                      *ngTemplateOutlet="tagFeeds; context: { $implicit: child.node, depth: 1 }"
+                      *ngTemplateOutlet="tagFeeds; context: { $implicit: child.node }"
                     />
                   }
                 </div>
               }
               @if (group.open) {
-                <ng-container
-                  *ngTemplateOutlet="tagFeeds; context: { $implicit: group.node, depth: 0 }"
-                />
+                <ng-container *ngTemplateOutlet="tagFeeds; context: { $implicit: group.node }" />
               }
             </div>
           }
@@ -244,7 +235,6 @@
       [cdkDropListData]="tagDrop(node.tag)"
       [cdkDropListEnterPredicate]="acceptOnTagHead"
       [cdkDropListSortingDisabled]="true"
-      [class.child]="depth === 1"
       [class.drop-line]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'tag'"
       [class.drop-active]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'feed'"
       (cdkDropListDropped)="onTagHeadDrop($event)"
@@ -331,13 +321,12 @@
     </div>
   </ng-template>
 
-  <ng-template #tagFeeds let-node let-depth="depth">
+  <ng-template #tagFeeds let-node>
     <div
       class="tagfeeds"
       cdkDropList
       [cdkDropListData]="tagDrop(node.tag)"
       [cdkDropListEnterPredicate]="isFeedDrag"
-      [class.child]="depth === 1"
       (cdkDropListDropped)="onDrop($event)"
     >
       @for (subscription of node.subscriptions; track subscription.id) {
@@ -409,10 +398,5 @@
     >
       <app-icon name="add" size="md" />
     </button>
-  </ng-template>
-
-  <ng-template #rowColumns>
-    <span class="slot" aria-hidden="true"></span>
-    <span class="trail" aria-hidden="true"></span>
   </ng-template>
 </nav>
