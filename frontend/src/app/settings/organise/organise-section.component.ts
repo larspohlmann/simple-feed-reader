@@ -9,6 +9,7 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
 import { CdkDropListGroup } from '@angular/cdk/drag-drop';
@@ -55,18 +56,6 @@ interface VisibilityMenuItem {
   readonly labelKey: string;
 }
 
-/** The dragged tag's siblings as group indexes, and the group a gap after the last sibling draws before. */
-interface DragSiblings {
-  readonly groupIndexes: readonly number[];
-  readonly afterLast: number;
-}
-
-/** The group a gap after `lastSibling` draws before: past that sibling's own children. */
-function groupAfter(groups: readonly OrganiseGroup[], lastSibling: number): number {
-  const lastId = groups[lastSibling].tag?.id;
-  return lastSibling + 1 + groups.filter((shown) => shown.tag?.parentId === lastId).length;
-}
-
 /**
  * The Organise page: every tag and every feed, in a tree or a flat list, with
  * multi-select and one bulk bar.
@@ -92,6 +81,7 @@ function groupAfter(groups: readonly OrganiseGroup[], lastSibling: number): numb
     DismissOnOutsideDirective,
     IconButtonDirective,
     CdkDropListGroup,
+    NgTemplateOutlet,
   ],
   providers: [OrganiseStore, TagDragGap],
   templateUrl: './organise-section.component.html',
@@ -107,10 +97,18 @@ export class OrganiseSectionComponent implements OnInit {
   private readonly dialog = inject(Dialog);
   private readonly tagGap = inject(TagDragGap);
   private readonly tree = viewChild<ElementRef<HTMLElement>>('tree');
-  private readonly panels = viewChildren<OrganiseTagGroupComponent, ElementRef<HTMLElement>>(
+  private readonly panelGroups = viewChildren(OrganiseTagGroupComponent);
+  private readonly panelElements = viewChildren<OrganiseTagGroupComponent, ElementRef<HTMLElement>>(
     OrganiseTagGroupComponent,
     { read: ElementRef },
   );
+  /** A root's panel holds its child panels, so each is looked up by key, not by its place in `store.groups()`. */
+  private readonly panelByKey = computed(() => {
+    const elements = this.panelElements();
+    return new Map(
+      this.panelGroups().map((panel, index) => [panel.group().key, elements[index].nativeElement]),
+    );
+  });
 
   /** The last refused bulk write, shown as a banner above the list. */
   readonly error = signal<Problem | null>(null);
@@ -238,15 +236,22 @@ export class OrganiseSectionComponent implements OnInit {
 
   protected readonly orderedTags = computed(() => tagsInTreeOrder(this.tags.tags()));
 
-  private readonly dragSiblings = signal<DragSiblings | null>(null);
+  private readonly dragSiblingKeys = signal<readonly GroupKey[] | null>(null);
   private readonly draggedTag = signal<TagDto | null>(null);
 
-  /** The sibling gap, mapped onto the group it draws before. */
-  protected readonly gapGroupIndex = computed<number | null>(() => {
+  /** The sibling a gap draws before; the gap after the last sibling draws after it instead. */
+  protected readonly gapBeforeKey = computed<GroupKey | null>(() => {
     const gap = this.tagGap.gap();
-    const siblings = this.dragSiblings();
-    if (gap === null || siblings === null) return null;
-    return gap < siblings.groupIndexes.length ? siblings.groupIndexes[gap] : siblings.afterLast;
+    const keys = this.dragSiblingKeys();
+    if (gap === null || keys === null || gap >= keys.length) return null;
+    return keys[gap];
+  });
+
+  protected readonly gapAfterKey = computed<GroupKey | null>(() => {
+    const gap = this.tagGap.gap();
+    const keys = this.dragSiblingKeys();
+    if (gap === null || keys === null || gap < keys.length) return null;
+    return keys[keys.length - 1];
   });
 
   protected canMoveTag(group: OrganiseGroup, offset: number): boolean {
@@ -270,21 +275,20 @@ export class OrganiseSectionComponent implements OnInit {
   protected startTagDrag(group: OrganiseGroup): void {
     const tag = group.tag;
     if (tag === null) return;
-    const groups = this.store.groups();
-    const panels = this.panels();
+    const siblings = this.store
+      .groups()
+      .filter((shown) => shown.tag !== null && shown.tag.parentId === tag.parentId)
+      .map((shown) => shown.key);
+    const elements = siblings.flatMap((key) => this.panelByKey().get(key) ?? []);
+    const from = siblings.indexOf(group.key);
+    if (from < 0 || elements.length !== siblings.length) return;
     const treeTop = this.treeTop();
-    const groupIndexes = groups.flatMap((shown, index) =>
-      shown.tag !== null && shown.tag.parentId === tag.parentId ? [index] : [],
-    );
-    const from = groupIndexes.indexOf(groups.findIndex((shown) => shown.key === group.key));
-    if (from < 0) return;
-    const afterLast = groupAfter(groups, groupIndexes[groupIndexes.length - 1]);
     this.draggedTag.set(tag);
-    this.dragSiblings.set({ groupIndexes, afterLast });
+    this.dragSiblingKeys.set(siblings);
     this.tagGap.start(
       from,
-      groupIndexes.map((index) => verticalMiddle(panels[index].nativeElement) - treeTop),
-      tag.parentId === null ? null : this.spanOf(groupIndexes[0], afterLast - 1),
+      elements.map((element) => verticalMiddle(element) - treeTop),
+      tag.parentId === null ? null : this.spanOf(elements[0], elements[elements.length - 1]),
     );
   }
 
@@ -296,7 +300,7 @@ export class OrganiseSectionComponent implements OnInit {
     const move = this.tagGap.end();
     const tag = this.draggedTag();
     this.draggedTag.set(null);
-    this.dragSiblings.set(null);
+    this.dragSiblingKeys.set(null);
     if (move !== null && tag !== null) this.persistTagOrder(moveToGap(this.siblingIds(tag), move));
   }
 
@@ -308,10 +312,10 @@ export class OrganiseSectionComponent implements OnInit {
   }
 
   /** First panel's top to last panel's foot, relative to the tree. */
-  private spanOf(first: number, last: number): TagDragBounds {
+  private spanOf(first: HTMLElement, last: HTMLElement): TagDragBounds {
     const treeTop = this.treeTop();
-    const firstRect = this.panels()[first].nativeElement.getBoundingClientRect();
-    const lastRect = this.panels()[last].nativeElement.getBoundingClientRect();
+    const firstRect = first.getBoundingClientRect();
+    const lastRect = last.getBoundingClientRect();
     return { top: firstRect.top - treeTop, bottom: lastRect.top + lastRect.height - treeTop };
   }
 

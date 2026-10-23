@@ -280,21 +280,38 @@
     <app-skeleton class="state" [label]="'settings.organise.loading' | transloco" [rows]="6" />
   } @else if (store.view() === 'tree') {
     <div class="tree" #tree [class.has-bulk-bar]="store.selectedCount() > 0" cdkDropListGroup>
-      @for (group of store.groups(); track group.key; let i = $index) {
-        <app-organise-tag-group
-          [group]="group"
-          [class.child]="group.depth === 1"
-          [class.gap-before]="gapGroupIndex() === i"
-          [canMoveTagUp]="canMoveTag(group, -1)"
-          [canMoveTagDown]="canMoveTag(group, 1)"
-          (moveTagUp)="moveTag(group, -1)"
-          (moveTagDown)="moveTag(group, 1)"
-          (tagDragStarted)="startTagDrag(group)"
-          (tagDragMoved)="moveTagDrag($event)"
-          (tagDragEnded)="endTagDrag()"
+      @for (node of store.groupTree(); track node.group.key) {
+        <ng-container
+          *ngTemplateOutlet="panel; context: { $implicit: node.group, children: node.children }"
         />
       }
     </div>
+
+    <ng-template #panel let-group let-children="children">
+      <app-organise-tag-group
+        [group]="group"
+        [class.child]="group.depth === 1"
+        [class.gap-before]="gapBeforeKey() === group.key"
+        [class.gap-after]="gapAfterKey() === group.key"
+        [canMoveTagUp]="canMoveTag(group, -1)"
+        [canMoveTagDown]="canMoveTag(group, 1)"
+        (moveTagUp)="moveTag(group, -1)"
+        (moveTagDown)="moveTag(group, 1)"
+        (tagDragStarted)="startTagDrag(group)"
+        (tagDragMoved)="moveTagDrag($event)"
+        (tagDragEnded)="endTagDrag()"
+      >
+        @if (children.length > 0) {
+          <div class="children">
+            @for (child of children; track child.key) {
+              <ng-container
+                *ngTemplateOutlet="panel; context: { $implicit: child, children: [] }"
+              />
+            }
+          </div>
+        }
+      </app-organise-tag-group>
+    </ng-template>
   } @else {
     <div class="list" [class.has-bulk-bar]="store.selectedCount() > 0">
       @for (s of store.listRows(); track s.id) {

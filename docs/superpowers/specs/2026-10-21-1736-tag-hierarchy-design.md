@@ -230,13 +230,20 @@ labels them through the same helper (`tagLabel` in `subscription-derivations.ts`
 
 ### Organise page
 
-`OrganiseStore.groups` lists groups in tree order; a child group carries its parent
-and renders indented (`child` modifier on `app-organise-tag-group`). `canMoveTagUp`
-and `canMoveTagDown` are true only within the sibling set. The gap drag computes gaps
-over the sibling set only: `gapIndexAt` runs on the siblings' midpoints. A child drag is
-bounded to its siblings' panels (top + height of each), so a pointer outside them
-yields no gap, no indicator renders and the drop is a no-op. A root drag is unbounded:
-it keeps the gap above the first root and the gap after the last (#1708).
+`OrganiseStore.groups` lists groups in tree order; `OrganiseStore.groupTree` nests
+them one level. A root's panel holds, in order: its heading, its child panels
+(indented, `child` modifier on `app-organise-tag-group`), then its own feeds, so the
+children sit directly under the parent's heading. The parent's chevron hides only its
+own feeds. A child whose parent a filter hides renders at the top level, still
+indented. `canMoveTagUp` and `canMoveTagDown` are true only within the sibling set. The
+gap drag computes gaps over the sibling set only: `gapIndexAt` runs on the siblings'
+panel midpoints, a root's panel spanning its children. A gap draws before the sibling
+it precedes; the gap after the last sibling draws after that sibling's panel, so after
+a root it lands past the whole block and after a child it stays inside the parent's
+panel, above the parent's feeds. A child drag is bounded to its siblings' panels
+(top + height of each), so a pointer outside them yields no gap, no indicator renders
+and the drop is a no-op. A root drag is unbounded: it keeps the gap above the first
+root and the gap after the last (#1708).
 `reorderTags` receives the sibling set. The tag filter list follows tree order with
 the same indent.
 

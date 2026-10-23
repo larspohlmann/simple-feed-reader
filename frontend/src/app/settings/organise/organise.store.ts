@@ -30,6 +30,12 @@ export interface OrganiseGroup {
   readonly totalCount: number;
 }
 
+/** A group shown at the top of the tree, with the child groups that render inside its panel. */
+export interface OrganiseGroupNode {
+  readonly group: OrganiseGroup;
+  readonly children: readonly OrganiseGroup[];
+}
+
 /** Its own key, deliberately not the sidebar's `sfr.tags.collapsed`: collapsing
  *  a group here must not collapse the sidebar the user navigates with. */
 const EXPANDED_KEY = 'sfr.organise.expanded';
@@ -162,6 +168,23 @@ export class OrganiseStore {
     // With no filter every tag shows, empty ones included — that IS the
     // arrangement. With a filter, a group that matches nothing is noise.
     return this.filterActive() ? groups.filter((group) => group.subscriptions.length > 0) : groups;
+  });
+
+  /** `groups()` nested one level: a child sits under its parent unless a filter hides that parent. */
+  readonly groupTree = computed<OrganiseGroupNode[]>(() => {
+    const groups = this.groups();
+    const shownKeys = new Set(groups.map((group) => group.key));
+    const shownParentOf = (group: OrganiseGroup): GroupKey | null => {
+      const parentId = group.tag?.parentId ?? null;
+      return parentId !== null && shownKeys.has(parentId) ? parentId : null;
+    };
+
+    return groups
+      .filter((group) => shownParentOf(group) === null)
+      .map((group) => ({
+        group,
+        children: groups.filter((child) => shownParentOf(child) === group.key),
+      }));
   });
 
   /** The flat view's rows: every filtered feed once, in the chosen sort. */
