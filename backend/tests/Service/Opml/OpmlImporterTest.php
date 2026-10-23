@@ -369,7 +369,7 @@ final class OpmlImporterTest extends DbTestCase
     {
         $user = $this->user('opml-trim@example.com');
         $opml = $this->opml(
-            '<outline text="  Reading  "><outline text="   " title="Long reads">'
+            '<outline text="  Reading  "><outline text="   " title=" Long reads ">'
             . '<outline type="rss" text="F" xmlUrl="https://trim.example.com/feed.xml"/>'
             . '</outline></outline>',
         );
