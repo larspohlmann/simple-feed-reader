@@ -1074,6 +1074,7 @@
     "toggleSidebar": "Toggle sidebar",
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
+    "closeSidebar": "Close sidebar",
     "mediaVideo": "Video",
     "media": {
       "gif": "GIF"

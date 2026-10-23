@@ -12,6 +12,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
   CdkDrag,
@@ -32,7 +33,6 @@ import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.componen
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
-import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { TagNode, siblingIdsOf, tagNodesById } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
 import { SocialSection } from '../../state/social-sections';
@@ -91,7 +91,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     CdkDrag,
     CdkDragHandle,
     SidebarRowMenuComponent,
-    IconButtonDirective,
+    NgTemplateOutlet,
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
@@ -142,6 +142,7 @@ export class SidebarComponent {
 
   readonly refresh = output<void>();
   readonly addFeed = output<void>();
+  readonly closeDrawer = output<void>();
   /** The settled search term from the field, or '' when it is cleared. */
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native

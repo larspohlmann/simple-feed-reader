@@ -85,6 +85,7 @@
       [searchLoading]="heading.searching()"
       (refresh)="refresh.refreshAll()"
       (addFeed)="refresh.addFeed()"
+      (closeDrawer)="setSidebarOpen(false)"
       (search)="onSearch($event)"
       (toggleDigest)="savedSearch.confirmToggleDigest($event)"
     />

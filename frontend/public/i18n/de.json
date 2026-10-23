@@ -1074,6 +1074,7 @@
     "toggleSidebar": "Seitenleiste umschalten",
     "hideSidebar": "Seitenleiste ausblenden",
     "showSidebar": "Seitenleiste einblenden",
+    "closeSidebar": "Seitenleiste schließen",
     "mediaVideo": "Video",
     "media": {
       "gif": "GIF"

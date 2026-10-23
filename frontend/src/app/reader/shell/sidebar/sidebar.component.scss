@@ -16,56 +16,74 @@
   height: 100%;
 }
 
-/* Top-aligned, not centred: the search field carries a bottom margin below its
-   input row, so centring would drop the button below the input it sits beside.
-   Both boxes are `--control-h` tall and start together at the top. */
-.search-row {
+.search-card {
+  @include glass-rim.filled(var(--surface-1), var(--border));
+
   display: flex;
+  flex: none;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-0);
+  padding-right: var(--space-1);
+  border-radius: var(--radius-lg);
 }
 
-.search-row app-search-field {
+.search-card app-search-field {
   flex: 1;
   min-width: 0;
 }
 
-.actions {
+.drawer-head {
   display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
+  flex: none;
+  align-items: center;
+  gap: var(--space-0);
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+}
+
+.drawer-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.tool {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h);
+  height: calc(var(--control-h) - var(--space-0));
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tool:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .tool:hover:not(:disabled) {
+    background: var(--surface-0);
+  }
+}
+
+@media (pointer: coarse) {
+  .tool {
+    width: var(--tap-target);
+    height: var(--tap-target);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .nav app-icon.pulse {
     animation: none;
   }
-}
-
-.act {
-  @include glass-rim.filled(var(--surface-2), var(--border), control);
-
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: var(--fs-sm);
-}
-
-@media (hover: hover) {
-  .act:hover:not(:disabled) {
-    --rim-fill: var(--surface-0);
-  }
-}
-
-.act:disabled {
-  color: var(--text-muted);
-  cursor: default;
 }
 
 .nav app-icon.pulse {
@@ -236,7 +254,6 @@
    must not grow (design-language §1). Keyed on pointer, not width. */
 @media (pointer: coarse) {
   .rowbody,
-  .act,
   .organise {
     min-height: var(--tap-target);
   }

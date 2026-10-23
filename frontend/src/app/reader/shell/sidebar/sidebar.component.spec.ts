@@ -205,8 +205,8 @@ describe('SidebarComponent', () => {
     const addFeed = jest.fn();
     fixture.componentInstance.refresh.subscribe(refresh);
     fixture.componentInstance.addFeed.subscribe(addFeed);
-    (element.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).click();
-    (element.querySelector('.act[aria-label="Add feed"]') as HTMLButtonElement).click();
+    (element.querySelector('.tool[aria-label="Refresh"]') as HTMLButtonElement).click();
+    (element.querySelector('.tool[aria-label="Add feed"]') as HTMLButtonElement).click();
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(addFeed).toHaveBeenCalledTimes(1);
   });
@@ -217,7 +217,7 @@ describe('SidebarComponent', () => {
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     expect(
-      (element.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).disabled,
+      (element.querySelector('.tool[aria-label="Refresh"]') as HTMLButtonElement).disabled,
     ).toBe(true);
     // The refresh has exactly one bar and it belongs to the app bar. A second one
     // here was narrower than the first, sat directly under it on desktop, and drew
@@ -847,6 +847,40 @@ describe('SidebarComponent', () => {
       )?.componentInstance;
 
       expect(searchField.loading()).toBe(true);
+    });
+  });
+
+  describe('sidebar head', () => {
+    it('puts the search field, refresh, add feed and hide sidebar into one card on a wide layout', () => {
+      const element = mount({ narrow: false }).nativeElement as HTMLElement;
+      const card = element.querySelector('.search-card')!;
+      expect(card.querySelector('app-search-field.inset')).not.toBeNull();
+      expect(
+        [...card.querySelectorAll('.tool')].map((tool) => tool.getAttribute('aria-label')),
+      ).toEqual(['Refresh', 'Add feed', 'Hide sidebar']);
+      expect(element.querySelector('.drawer-head')).toBeNull();
+    });
+
+    it('titles the drawer Feeds and offers refresh, add feed and close on a narrow layout', () => {
+      const element = mount({ narrow: true }).nativeElement as HTMLElement;
+      const head = element.querySelector('.drawer-head')!;
+      expect(head.querySelector('.drawer-title')!.textContent?.trim()).toBe('Feeds');
+      expect(
+        [...head.querySelectorAll('.tool')].map((tool) => tool.getAttribute('aria-label')),
+      ).toEqual(['Refresh', 'Add feed', 'Close sidebar']);
+      expect(element.querySelector('.search-card')).toBeNull();
+    });
+
+    it('emits closeDrawer from the close button', () => {
+      const fixture = mount({ narrow: true });
+      const closed = jest.fn();
+      fixture.componentInstance.closeDrawer.subscribe(closed);
+
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('.close-drawer')!
+        .click();
+
+      expect(closed).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1815,7 +1849,7 @@ describe('organise mode', () => {
       tagTree: tree,
       user: account(inDays(5)),
     }).nativeElement as HTMLElement;
-    expect(element.querySelector('.actions')).toBeNull();
+    expect(element.querySelector('.tool')).toBeNull();
     expect(element.querySelector('.nav.all')).toBeNull();
     expect(element.querySelector('app-view-controls')).toBeNull();
     expect(element.querySelector('.trial')).toBeNull();
@@ -1829,7 +1863,7 @@ describe('organise mode', () => {
       tagTree: tree,
       user: account(inDays(5)),
     }).nativeElement as HTMLElement;
-    expect(element.querySelector('.actions')).not.toBeNull();
+    expect(element.querySelector('.tool[aria-label="Refresh"]')).not.toBeNull();
     expect(element.querySelector('.nav.all')).not.toBeNull();
     expect(element.querySelector('app-view-controls')).not.toBeNull();
     expect(element.querySelector('.trial')).not.toBeNull();

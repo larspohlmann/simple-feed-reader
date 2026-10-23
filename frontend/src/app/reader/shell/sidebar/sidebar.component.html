@@ -1,17 +1,32 @@
 <nav class="sidebar" [attr.aria-label]="'reader.feeds' | transloco" cdkDropListGroup>
   @if (!organising()) {
-    @if (!screen.isNarrow()) {
-      <div class="search-row">
+    @if (screen.isNarrow()) {
+      <div class="drawer-head">
+        <span class="drawer-title">{{ 'reader.feeds' | transloco }}</span>
+        <ng-container *ngTemplateOutlet="feedTools" />
+        <button
+          class="tool close-drawer"
+          type="button"
+          [attr.aria-label]="'reader.closeSidebar' | transloco"
+          [attr.title]="'reader.closeSidebar' | transloco"
+          (click)="closeDrawer.emit()"
+        >
+          <app-icon name="close" size="md" />
+        </button>
+      </div>
+    } @else {
+      <div class="search-card">
         <app-search-field
+          class="inset"
           [term]="selection().term ?? ''"
           [populateTerm]="selection().kind !== 'saved-search'"
           [loading]="searchLoading()"
           (search)="search.emit($event)"
         />
+        <ng-container *ngTemplateOutlet="feedTools" />
         <button
           #collapseButton
-          appIconButton
-          class="collapse boxed"
+          class="tool collapse"
           type="button"
           [attr.aria-label]="'reader.hideSidebar' | transloco"
           [attr.title]="'reader.hideSidebar' | transloco"
@@ -21,25 +36,6 @@
         </button>
       </div>
     }
-    <div class="actions">
-      <button
-        class="act"
-        type="button"
-        [attr.aria-label]="'reader.refresh' | transloco"
-        [disabled]="refreshSvc.running()"
-        (click)="refresh.emit()"
-      >
-        <app-icon name="refresh" size="sm" /><span>{{ 'reader.refresh' | transloco }}</span>
-      </button>
-      <button
-        class="act"
-        type="button"
-        [attr.aria-label]="'reader.addFeed' | transloco"
-        (click)="addFeed.emit()"
-      >
-        <app-icon name="add" size="sm" /><span>{{ 'reader.addFeed' | transloco }}</span>
-      </button>
-    </div>
     <a
       class="nav all"
       [class.active]="selection().kind === 'all'"
@@ -336,4 +332,25 @@
   }
 
   <app-sidebar-foot [(organising)]="organising" />
+  <ng-template #feedTools>
+    <button
+      class="tool"
+      type="button"
+      [attr.aria-label]="'reader.refresh' | transloco"
+      [attr.title]="'reader.refresh' | transloco"
+      [disabled]="refreshSvc.running()"
+      (click)="refresh.emit()"
+    >
+      <app-icon name="refresh" size="md" />
+    </button>
+    <button
+      class="tool"
+      type="button"
+      [attr.aria-label]="'reader.addFeed' | transloco"
+      [attr.title]="'reader.addFeed' | transloco"
+      (click)="addFeed.emit()"
+    >
+      <app-icon name="add" size="md" />
+    </button>
+  </ng-template>
 </nav>
