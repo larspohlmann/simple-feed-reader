@@ -1,6 +1,7 @@
 import { Injectable, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import {
+  isRootTag,
   tagsInTreeOrder,
   untaggedSubscriptions,
 } from '../../reader/state/subscription-derivations';
@@ -142,7 +143,7 @@ export class OrganiseStore {
     const tagGroups: OrganiseGroup[] = orderedTags.map((tag) => ({
       key: tag.id,
       tag,
-      depth: tag.parentId !== null && knownIds.has(tag.parentId) ? 1 : 0,
+      depth: isRootTag(tag, knownIds) ? 0 : 1,
       subscriptions: feedsInTag(visible, tag.id),
       totalCount: totalCounts.get(tag.id) ?? 0,
     }));

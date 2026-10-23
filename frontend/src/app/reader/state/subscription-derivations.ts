@@ -26,7 +26,6 @@ export function buildTagTree(
   const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subscriptions);
   const byTagId = bucketByTag(subscriptions);
   const knownIds = new Set(tags.map((tag) => tag.id));
-  const isRoot = (tag: TagDto): boolean => tag.parentId === null || !knownIds.has(tag.parentId);
 
   const leaf = (tag: TagDto): TagNode => {
     const feeds = feedsOf(byTagId, tag.id);
@@ -39,7 +38,8 @@ export function buildTagTree(
     };
   };
 
-  return tags.filter(isRoot).map((root) => {
+  const roots = tags.filter((tag) => isRootTag(tag, knownIds));
+  return roots.map((root) => {
     const node = {
       ...leaf(root),
       children: tags.filter((tag) => tag.parentId === root.id).map(leaf),
@@ -53,11 +53,15 @@ export function flattenTagTree(nodes: TagNode[]): TagNode[] {
   return nodes.flatMap((node) => [node, ...node.children]);
 }
 
+export function isRootTag(tag: TagDto, knownIds: ReadonlySet<number>): boolean {
+  return tag.parentId === null || !knownIds.has(tag.parentId);
+}
+
 /** Each root followed by its children, whatever order the caller holds them in. */
 export function tagsInTreeOrder(tags: TagDto[]): TagDto[] {
   const knownIds = new Set(tags.map((tag) => tag.id));
   return tags
-    .filter((tag) => tag.parentId === null || !knownIds.has(tag.parentId))
+    .filter((tag) => isRootTag(tag, knownIds))
     .flatMap((root) => [root, ...tags.filter((tag) => tag.parentId === root.id)]);
 }
 
