@@ -302,6 +302,69 @@ final class OpmlImporterTest extends DbTestCase
         ]));
     }
 
+    public function testATagNestedEarlierInTheFileIsNotMadeAParentLater(): void
+    {
+        $user = $this->user('opml-child-as-parent@example.com');
+        $opml = $this->opml(
+            '<outline text="A"><outline text="B">'
+            . '<outline type="rss" text="F1" xmlUrl="https://child-parent-1.example.com/feed.xml"/>'
+            . '</outline></outline>'
+            . '<outline text="B"><outline text="C">'
+            . '<outline type="rss" text="F2" xmlUrl="https://child-parent-2.example.com/feed.xml"/>'
+            . '</outline></outline>',
+        );
+
+        $result = $this->importer()->import($user, $opml);
+
+        self::assertSame(2, $result->imported);
+        self::assertSame('A', $this->tagNamed($user, 'B')->getParent()?->getName());
+        self::assertNull($this->tagNamed($user, 'C')->getParent());
+    }
+
+    public function testATagGivenAChildEarlierInTheFileIsNotNestedLater(): void
+    {
+        $user = $this->user('opml-parent-as-child@example.com');
+        $opml = $this->opml(
+            '<outline text="X"><outline text="Y">'
+            . '<outline type="rss" text="F1" xmlUrl="https://parent-child-1.example.com/feed.xml"/>'
+            . '</outline></outline>'
+            . '<outline text="Y2"><outline text="X">'
+            . '<outline type="rss" text="F2" xmlUrl="https://parent-child-2.example.com/feed.xml"/>'
+            . '</outline></outline>',
+        );
+
+        $result = $this->importer()->import($user, $opml);
+
+        self::assertSame(2, $result->imported);
+        self::assertNull($this->tagNamed($user, 'X')->getParent());
+        self::assertSame('X', $this->tagNamed($user, 'Y')->getParent()?->getName());
+        self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy([
+            'user' => $user,
+            'name' => 'Y2',
+        ]));
+    }
+
+    public function testATagAlreadyNestedKeepsItsFirstParent(): void
+    {
+        $user = $this->user('opml-renested@example.com');
+        $opml = $this->opml(
+            '<outline text="A"><outline text="B">'
+            . '<outline type="rss" text="F1" xmlUrl="https://renest-1.example.com/feed.xml"/>'
+            . '</outline></outline>'
+            . '<outline text="C"><outline text="B">'
+            . '<outline type="rss" text="F2" xmlUrl="https://renest-2.example.com/feed.xml"/>'
+            . '</outline></outline>',
+        );
+
+        $this->importer()->import($user, $opml);
+
+        self::assertSame('A', $this->tagNamed($user, 'B')->getParent()?->getName());
+        self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy([
+            'user' => $user,
+            'name' => 'C',
+        ]));
+    }
+
     private function tagNamed(User $user, string $name): Tag
     {
         $tag = $this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => $name]);
