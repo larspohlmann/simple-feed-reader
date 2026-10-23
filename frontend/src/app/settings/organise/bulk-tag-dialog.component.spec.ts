@@ -6,8 +6,15 @@ import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.com
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 
-const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
-const NEWS: TagDto = { id: 3, name: 'Nachrichten', color: null, icon: null, position: 1 };
+const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const NEWS: TagDto = {
+  id: 3,
+  name: 'Nachrichten',
+  color: null,
+  icon: null,
+  position: 1,
+  parentId: null,
+};
 
 const feed = (id: number, tagIds: number[]): SubscriptionDto =>
   makeSubscription({

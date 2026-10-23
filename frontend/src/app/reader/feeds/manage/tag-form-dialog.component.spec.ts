@@ -40,13 +40,25 @@ describe('TagFormDialogComponent', () => {
     component.submit();
     const testRequest = ctrl.expectOne('https://api.test/api/tags');
     expect(testRequest.request.method).toBe('POST');
-    expect(testRequest.request.body).toEqual({ name: 'Tech', color: '#3f8676', icon: 'code' });
+    expect(testRequest.request.body).toEqual({
+      name: 'Tech',
+      color: '#3f8676',
+      icon: 'code',
+      parentId: null,
+    });
     testRequest.flush({ tag: { id: 9, name: 'Tech', color: '#3f8676', icon: 'code' } });
     expect(close).toHaveBeenCalledWith({ id: 9, name: 'Tech', color: '#3f8676', icon: 'code' });
   });
 
   it('edits a tag (PATCH) prefilled from data', () => {
-    const fixture = mount({ id: 4, name: 'Old', color: '#4f7cac', icon: 'label', position: 0 });
+    const fixture = mount({
+      id: 4,
+      name: 'Old',
+      color: '#4f7cac',
+      icon: 'label',
+      position: 0,
+      parentId: null,
+    });
     const component = fixture.componentInstance;
     expect(component.form.getRawValue().name).toBe('Old');
     expect(component.color()).toBe('#4f7cac');

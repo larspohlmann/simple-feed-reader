@@ -38,9 +38,16 @@ function makeSubscriptionsStoreMock(initialSubscriptions: SubscriptionDto[]) {
   };
 }
 
-const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
-const WORLD: TagDto = { id: 4, name: 'World', color: null, icon: null, position: 1 };
-const ART: TagDto = { id: 6, name: 'Art', color: null, icon: null, position: 2 };
+const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const WORLD: TagDto = {
+  id: 4,
+  name: 'World',
+  color: null,
+  icon: null,
+  position: 1,
+  parentId: null,
+};
+const ART: TagDto = { id: 6, name: 'Art', color: null, icon: null, position: 2, parentId: null };
 
 const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
   makeSubscription({
@@ -357,7 +364,14 @@ describe('OrganiseSectionComponent', () => {
   // on OrganiseTagGroupComponent (moveTagUp/moveTagDown), which this component
   // turns into a full reordered id list for ManageActions.reorderTags.
   it('swaps two adjacent tag ids when a header arrow moves a tag down', async () => {
-    const NEWS: TagDto = { id: 3, name: 'News', color: null, icon: null, position: 1 };
+    const NEWS: TagDto = {
+      id: 3,
+      name: 'News',
+      color: null,
+      icon: null,
+      position: 1,
+      parentId: null,
+    };
     localStorage.clear();
     for (const spy of Object.values(manage)) spy.mockReset();
     manage.addFeed.mockReturnValue(of(undefined));
@@ -396,7 +410,14 @@ describe('OrganiseSectionComponent', () => {
   // within the full tags() list -- that mismatch could silently swap with a
   // tag the user can't see, so both must refuse while a filter is active.
   it('disables tag reordering under an active filter, and writes nothing', async () => {
-    const NEWS: TagDto = { id: 3, name: 'News', color: null, icon: null, position: 1 };
+    const NEWS: TagDto = {
+      id: 3,
+      name: 'News',
+      color: null,
+      icon: null,
+      position: 1,
+      parentId: null,
+    };
     const subscriptionsWithNews = [...SUBS.slice(0, 1), feed(11, 'heise', [NEWS.id]), SUBS[2]];
     localStorage.clear();
     for (const spy of Object.values(manage)) spy.mockReset();

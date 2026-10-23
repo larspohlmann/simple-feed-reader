@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
@@ -12,6 +12,8 @@ export class TagsStore {
   private readonly api = inject(ReaderApi);
 
   readonly tags = signal<TagDto[]>([]);
+  /** The tags that may be a parent: only a root can take children (#1736). */
+  readonly rootTags = computed(() => this.tags().filter((tag) => tag.parentId === null));
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 

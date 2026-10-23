@@ -436,15 +436,20 @@ describe('ReaderApi', () => {
     });
 
     it('POSTs a new tag', () => {
-      api.createTag({ name: 'Tech', color: '#3f8676', icon: 'code' }).subscribe();
+      api.createTag({ name: 'Tech', color: '#3f8676', icon: 'code', parentId: null }).subscribe();
       const testRequest = ctrl.expectOne('https://api.test/api/tags');
       expect(testRequest.request.method).toBe('POST');
-      expect(testRequest.request.body).toEqual({ name: 'Tech', color: '#3f8676', icon: 'code' });
+      expect(testRequest.request.body).toEqual({
+        name: 'Tech',
+        color: '#3f8676',
+        icon: 'code',
+        parentId: null,
+      });
       testRequest.flush({ tag: {} });
     });
 
     it('PATCHes a tag', () => {
-      api.updateTag(3, { name: 'Tech', color: null, icon: null }).subscribe();
+      api.updateTag(3, { name: 'Tech', color: null, icon: null, parentId: null }).subscribe();
       const testRequest = ctrl.expectOne('https://api.test/api/tags/3');
       expect(testRequest.request.method).toBe('PATCH');
       testRequest.flush({ tag: {} });

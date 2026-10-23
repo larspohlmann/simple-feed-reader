@@ -6,8 +6,8 @@ describe('TagPickerComponent', () => {
   let fixture: ComponentFixture<TagPickerComponent>;
 
   const tags: TagDto[] = [
-    { id: 1, name: 'Tech', color: null, icon: 'memory', position: 0 },
-    { id: 2, name: 'News', color: '#0a0', icon: null, position: 1 },
+    { id: 1, name: 'Tech', color: null, icon: 'memory', position: 0, parentId: null },
+    { id: 2, name: 'News', color: '#0a0', icon: null, position: 1, parentId: null },
   ];
 
   const pills = (): HTMLButtonElement[] => [

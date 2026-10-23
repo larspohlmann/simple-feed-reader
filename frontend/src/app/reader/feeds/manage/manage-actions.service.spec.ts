@@ -24,7 +24,7 @@ const sub: SubscriptionDto = makeSubscription({
   feedUrl: 'u',
   createdAt: 'x',
 });
-const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0 };
+const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
 const TAG = tag;
 const SUBSCRIPTION = sub;
 
@@ -148,7 +148,14 @@ describe('ManageActions', () => {
   it('moveFeedToTag: optimistically drops the source tag and adds the target', () => {
     const store = TestBed.inject(SubscriptionsStore);
     const tags = TestBed.inject(TagsStore);
-    const news: TagDto = { id: 7, name: 'News', color: null, icon: null, position: 1 };
+    const news: TagDto = {
+      id: 7,
+      name: 'News',
+      color: null,
+      icon: null,
+      position: 1,
+      parentId: null,
+    };
     tags.tags.set([tag, news]);
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     store.storedSubscriptions.set([tagged]);

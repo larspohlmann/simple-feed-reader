@@ -14,6 +14,7 @@ const tag = (id: number, name: string, position: number): TagDto => ({
   color: null,
   icon: null,
   position,
+  parentId: null,
 });
 
 const sub = (

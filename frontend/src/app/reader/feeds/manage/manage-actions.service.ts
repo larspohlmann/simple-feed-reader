@@ -154,7 +154,7 @@ export class ManageActions {
         const tag = byId.get(id);
         return tag
           ? { ...tag, position: index }
-          : { id, name: '', color: null, icon: null, position: index };
+          : { id, name: '', color: null, icon: null, position: index, parentId: null };
       });
     });
     this.reloadAfter(this.api.reorderTags(tagIds), () => this.tags.load());

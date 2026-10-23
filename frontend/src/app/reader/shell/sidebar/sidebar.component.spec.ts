@@ -172,8 +172,9 @@ function mount(
 }
 
 const tagNodeFixture: TagNode = {
-  tag: { id: 40, name: 'Tech', color: null, icon: null, position: 0 },
+  tag: { id: 40, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
   subscriptions: [sub(1, 3)],
+  children: [],
   unreadCount: 3,
   entryCount: 0,
 };
@@ -224,8 +225,9 @@ describe('SidebarComponent', () => {
 
   it('renders tags with summed counts and reveals subs when expanded', () => {
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
       subscriptions: [sub(1, 3), sub(2, 6)],
+      children: [],
       unreadCount: 9,
       entryCount: 0,
     };
@@ -241,14 +243,16 @@ describe('SidebarComponent', () => {
 
   it('renders the tag icon (tinted with its colour) when set, else the colour dot', () => {
     const withIcon: TagNode = {
-      tag: { id: 20, name: 'World', color: '#c08a3e', icon: 'public', position: 0 },
+      tag: { id: 20, name: 'World', color: '#c08a3e', icon: 'public', position: 0, parentId: null },
       subscriptions: [],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };
     const withoutIcon: TagNode = {
-      tag: { id: 21, name: 'Plain', color: null, icon: null, position: 1 },
+      tag: { id: 21, name: 'Plain', color: null, icon: null, position: 1, parentId: null },
       subscriptions: [],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };
@@ -267,8 +271,9 @@ describe('SidebarComponent', () => {
 
   it('calls editTag / deleteTag when a tag row menu action is used', () => {
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
       subscriptions: [],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };
@@ -298,8 +303,9 @@ describe('SidebarComponent', () => {
     const fixture = mount({
       tagTree: [
         {
-          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
           subscriptions: [],
+          children: [],
           unreadCount: 0,
           entryCount: 0,
         },
@@ -321,14 +327,16 @@ describe('SidebarComponent', () => {
     const fixture = mount({
       tagTree: [
         {
-          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+          tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
           subscriptions: [shared],
+          children: [],
           unreadCount: 0,
           entryCount: 0,
         },
         {
-          tag: { id: 21, name: 'News', color: null, icon: null, position: 0 },
+          tag: { id: 21, name: 'News', color: null, icon: null, position: 0, parentId: null },
           subscriptions: [shared],
+          children: [],
           unreadCount: 0,
           entryCount: 0,
         },
@@ -356,6 +364,7 @@ describe('SidebarComponent', () => {
       color: null,
       icon: null,
       position: 0,
+      parentId: null,
     });
     const withTags = (subscription: SubscriptionDto, tags: TagDto[]): SubscriptionDto => ({
       ...subscription,
@@ -435,8 +444,9 @@ describe('SidebarComponent', () => {
 
   describe('drag-and-drop reordering', () => {
     const tagNode = (id: number, subscriptions: SubscriptionDto[] = []): TagNode => ({
-      tag: { id, name: `t${id}`, color: null, icon: null, position: 0 },
+      tag: { id, name: `t${id}`, color: null, icon: null, position: 0, parentId: null },
       subscriptions: subscriptions,
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     });
@@ -600,8 +610,9 @@ describe('SidebarComponent', () => {
   it('shows both exclusion toggles in the tagged feed row menu', () => {
     const subscription = sub(1, 0);
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
       subscriptions: [subscription],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };
@@ -911,8 +922,9 @@ describe('SidebarComponent', () => {
 
     it('places the chevron in the same right-edge column as a tag chevron', () => {
       const node: TagNode = {
-        tag: { id: 30, name: 'Tech', color: null, icon: null, position: 0 },
+        tag: { id: 30, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
         subscriptions: [],
+        children: [],
         unreadCount: 0,
         entryCount: 0,
       };
@@ -1623,8 +1635,10 @@ describe('for-you row', () => {
 });
 
 describe('organise mode', () => {
-  const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0 };
-  const tree: TagNode[] = [{ tag, subscriptions: [sub(5)], unreadCount: 3, entryCount: 0 }];
+  const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0, parentId: null };
+  const tree: TagNode[] = [
+    { tag, subscriptions: [sub(5)], children: [], unreadCount: 3, entryCount: 0 },
+  ];
 
   it('offers the Organise switch on coarse pointers only', () => {
     const isCoarse = signal(false);
@@ -1994,8 +2008,9 @@ describe('organise mode', () => {
       ],
     };
     const node: TagNode = {
-      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0, parentId: null },
       subscriptions: [],
+      children: [],
       unreadCount: 0,
       entryCount: 0,
     };

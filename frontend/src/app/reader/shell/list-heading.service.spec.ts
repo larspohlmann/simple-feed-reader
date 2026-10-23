@@ -2,7 +2,7 @@ import { inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LanguageService } from '../../core/i18n/language.service';
-import { SubscriptionDto } from '../models';
+import { SubscriptionDto, TagDto } from '../models';
 import { Selection } from '../query/query';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { EntriesStore } from '../state/entries.store';
@@ -11,6 +11,7 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SocialSection, buildSocialSections, socialProfiles } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
+import { TagNode } from '../state/subscription-derivations';
 import { NO_UNREAD_TOTALS, UnreadTotals } from '../state/unread-totals';
 import { makeSubscription } from '../testing/subscription.factory';
 import { ListHeading } from './list-heading.service';
@@ -237,3 +238,30 @@ function headingWith(selection: Selection, subscriptionsStore: object): ListHead
   });
   return TestBed.inject(ListHeading);
 }
+
+describe('ListHeading for a child tag (#1736)', () => {
+  const tagOf = (id: number, name: string, parentId: number | null): TagDto => ({
+    id,
+    name,
+    color: null,
+    icon: null,
+    position: 0,
+    parentId,
+  });
+  const nodeOf = (tag: TagDto, children: TagNode[] = []): TagNode => ({
+    tag,
+    subscriptions: [],
+    children,
+    unreadCount: 0,
+    entryCount: 0,
+  });
+
+  it('finds a child tag that only appears inside its parent node', () => {
+    const tree = [nodeOf(tagOf(1, 'Reading', null), [nodeOf(tagOf(2, 'Long reads', 1))])];
+    const selection: Selection = { kind: 'tag', id: 2, unread: true };
+
+    const heading = headingWith(selection, { tagTree: signal(tree) });
+
+    expect(heading.selectedTag()?.name).toBe('Long reads');
+  });
+});

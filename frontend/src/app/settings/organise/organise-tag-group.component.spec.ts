@@ -19,9 +19,23 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 
-const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
-const OTHER_TAG: TagDto = { id: 4, name: 'Nachrichten', color: null, icon: null, position: 1 };
-const THIRD_TAG: TagDto = { id: 6, name: 'Kultur', color: null, icon: null, position: 2 };
+const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0, parentId: null };
+const OTHER_TAG: TagDto = {
+  id: 4,
+  name: 'Nachrichten',
+  color: null,
+  icon: null,
+  position: 1,
+  parentId: null,
+};
+const THIRD_TAG: TagDto = {
+  id: 6,
+  name: 'Kultur',
+  color: null,
+  icon: null,
+  position: 2,
+  parentId: null,
+};
 
 const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
   makeSubscription({

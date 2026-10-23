@@ -51,6 +51,7 @@ export class TagFormDialogComponent {
       name: this.form.getRawValue().name.trim(),
       color: this.color(),
       icon: this.icon(),
+      parentId: this.data?.parentId ?? null,
     };
     this.loading.set(true);
     this.error.set(null);
