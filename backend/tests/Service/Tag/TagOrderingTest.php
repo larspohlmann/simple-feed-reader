@@ -35,14 +35,14 @@ final class TagOrderingTest extends DbTestCase
         self::assertSame(['C', 'A', 'B'], $this->tagNamesInOrder($user));
     }
 
-    public function testReorderRefusesAListThatIsNotExactlyTheUsersTags(): void
+    public function testReorderRefusesAListThatIsNotExactlyOneSiblingSet(): void
     {
         $user = $this->user('tag-partial@example.com');
         $first = $this->tag($user, 'A', 0);
         $this->tag($user, 'B', 1);
 
         $this->expectException(InvalidSelectionException::class);
-        $this->expectExceptionMessage('tagIds must list exactly your tags.');
+        $this->expectExceptionMessage('tagIds must list exactly one tag and all of its siblings.');
         $this->ordering()->reorder($user, [$first->requireId()]);
     }
 
@@ -72,6 +72,64 @@ final class TagOrderingTest extends DbTestCase
         $this->expectException(InvalidSelectionException::class);
         $this->expectExceptionMessage("subscriptionIds must list exactly this tag's feeds.");
         $this->ordering()->orderFeeds($tag, [999999]);
+    }
+
+    public function testReorderingTheRootsLeavesTheChildrenAlone(): void
+    {
+        $user = $this->user('tag-root-orderer@example.com');
+        $first = $this->tag($user, 'A', 0);
+        $second = $this->tag($user, 'B', 1);
+        $child = $this->childTag($user, 'A1', 2, $first);
+
+        $ordered = $this->ordering()->reorder($user, [$second->requireId(), $first->requireId()]);
+
+        self::assertSame([$second, $first], $ordered);
+        $this->entityManager->clear();
+        self::assertSame(['B', 'A', 'A1'], $this->tagNamesInOrder($user));
+        self::assertSame(2, $this->positionOf($child));
+    }
+
+    public function testReorderingAParentsChildrenTouchesOnlyThem(): void
+    {
+        $user = $this->user('tag-child-orderer@example.com');
+        $parent = $this->tag($user, 'A', 0);
+        $firstChild = $this->childTag($user, 'A1', 1, $parent);
+        $secondChild = $this->childTag($user, 'A2', 2, $parent);
+
+        $this->ordering()->reorder($user, [$secondChild->requireId(), $firstChild->requireId()]);
+
+        $this->entityManager->clear();
+        self::assertSame(0, $this->positionOf($parent));
+        self::assertSame(1, $this->positionOf($firstChild));
+        self::assertSame(0, $this->positionOf($secondChild));
+    }
+
+    public function testReorderRefusesAMixOfRootsAndChildren(): void
+    {
+        $user = $this->user('tag-mixed-orderer@example.com');
+        $parent = $this->tag($user, 'A', 0);
+        $child = $this->childTag($user, 'A1', 1, $parent);
+
+        $this->expectException(InvalidSelectionException::class);
+        $this->expectExceptionMessage('tagIds must list exactly one tag and all of its siblings.');
+        $this->ordering()->reorder($user, [$child->requireId(), $parent->requireId()]);
+    }
+
+    private function childTag(User $user, string $name, int $position, Tag $parent): Tag
+    {
+        $child = $this->tag($user, $name, $position);
+        $child->setParent($parent);
+        $this->entityManager->flush();
+
+        return $child;
+    }
+
+    private function positionOf(Tag $tag): int
+    {
+        $reloaded = $this->entityManager->find(Tag::class, $tag->requireId());
+        self::assertInstanceOf(Tag::class, $reloaded);
+
+        return $reloaded->getPosition();
     }
 
     private function ordering(): TagOrdering

@@ -50,8 +50,8 @@ final readonly class TagController
     }
 
     /**
-     * Persist the sidebar tag order. The body must list exactly the user's tags;
-     * each tag's position becomes its index.
+     * Persist a sibling order. The body must list exactly one sibling set, all roots or
+     * all children of one parent; each tag's position becomes its index.
      */
     #[Route('/reorder', name: 'api_tags_reorder', methods: ['PATCH'])]
     public function reorder(
