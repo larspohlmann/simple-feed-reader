@@ -28,6 +28,11 @@ concurrency:
 permissions:
   contents: write
 
+# ghcr.io/larspohlmann/simple-feed-reader-{php,web}, the names
+# docker-compose.prod.yml pulls.
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
 jobs:
   release:
     name: Publish release
@@ -261,7 +266,9 @@ jobs:
             APP_COMMIT=${{ steps.version.outputs.commit }}
             APP_BUILT_AT=${{ steps.version.outputs.built_at }}
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
-          outputs: type=image,name=ghcr.io/larspohlmann/simple-feed-reader-${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.IMAGE_PREFIX }}-${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ steps.version.outputs.artifact }}
+          cache-to: type=gha,mode=max,scope=${{ steps.version.outputs.artifact }}
 
       - name: Record the digest
         env:
@@ -302,12 +309,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - uses: docker/setup-buildx-action@v3
-
       - name: Tag the multi-arch image
         working-directory: ${{ runner.temp }}/digests
         env:
-          REPOSITORY: ghcr.io/larspohlmann/simple-feed-reader-${{ matrix.image }}
+          REPOSITORY: ${{ env.IMAGE_PREFIX }}-${{ matrix.image }}
         run: |
           set -euo pipefail
           sources=()

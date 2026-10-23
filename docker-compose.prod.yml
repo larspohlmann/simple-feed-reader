@@ -82,6 +82,17 @@ x-version-build-args: &version-build-args
   APP_COMMIT: ${APP_COMMIT:-}
   APP_BUILT_AT: ${APP_BUILT_AT:-}
 
+# A release pulls the php and web images from GHCR (#1752); `build:` serves an
+# install from a --ref and a release whose images could not be pulled. php and
+# the worker run the same image.
+x-php-image: &php-image
+  image: ghcr.io/larspohlmann/simple-feed-reader-php:${APP_IMAGE_TAG:-local}
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    target: prod
+    args: *version-build-args
+
 services:
   # The bundled database, behind a profile: a SQLite install runs two
   # containers instead of three and never starts this one. prod_compose in
@@ -170,15 +181,8 @@ services:
     ports:
       - "${WEB_BIND_ADDRESS:-0.0.0.0}:${GRAFANA_PORT:-3000}:3000"
 
-  # A release pulls the php and web images from GHCR (#1752); `build:` serves
-  # an install from a --ref and a release whose images could not be pulled.
   php:
-    image: ghcr.io/larspohlmann/simple-feed-reader-php:${APP_IMAGE_TAG:-local}
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-      target: prod
-      args: *version-build-args
+    <<: *php-image
     restart: unless-stopped
     environment: *app-environment
     extra_hosts:
@@ -202,12 +206,7 @@ services:
   # (see backend/src/Service/Worker/WorkerSchedule.php). If it dies, the app
   # degrades to #308's poll-driven behaviour automatically -- no config.
   worker:
-    image: ghcr.io/larspohlmann/simple-feed-reader-php:${APP_IMAGE_TAG:-local}
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-      target: prod
-      args: *version-build-args
+    <<: *php-image
     # --memory-limit raised from 128M in #437: one recommendation wave reads
     # several answer streams at once, and 128M cut a live run short at 201 MB.
     command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "--time-limit=3600", "--memory-limit=512M"]

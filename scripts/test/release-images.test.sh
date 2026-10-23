@@ -18,21 +18,23 @@ git init --quiet "${REPO_ROOT}"
 git -C "${REPO_ROOT}" -c user.name=test -c user.email=test@example.invalid \
   commit --quiet --allow-empty -m 'release'
 
-[ -z "$(release_image_tag)" ] || fail 'an untagged commit named a release image tag'
-export_prod_image_tag
-[ "${APP_IMAGE_TAG}" = local ] || fail "untagged: APP_IMAGE_TAG='${APP_IMAGE_TAG}', expected 'local'"
-
-git -C "${REPO_ROOT}" tag v1.2.3-dev.4
-git -C "${REPO_ROOT}" tag v1.2.3
-export_prod_image_tag
-[ "${APP_IMAGE_TAG}" = v1.2.3 ] || fail "a dev tag beside the release won: '${APP_IMAGE_TAG}'"
-
 calls="${work}/calls"
 # shellcheck disable=SC2317,SC2329 # prepare_prod_images calls it by name
 prod_compose() { printf '%s\n' "$*" >> "${calls}"; }
 
 : > "${calls}"
 prepare_prod_images >/dev/null 2>&1
+[ -z "${APP_IMAGE_TAG}" ] || fail "untagged: APP_IMAGE_TAG='${APP_IMAGE_TAG}', expected none"
+[ "${PROD_BUILD_OPTION}" = --build ] || fail "unreleased: option '${PROD_BUILD_OPTION}'"
+if grep -qx 'pull --quiet' "${calls}"; then fail 'an unreleased checkout pulled release images'; fi
+grep -q '^build --pull' "${calls}" || fail "an unreleased checkout was not built: $(cat "${calls}")"
+
+git -C "${REPO_ROOT}" tag v1.2.3-dev.4
+git -C "${REPO_ROOT}" tag v1.2.3
+
+: > "${calls}"
+prepare_prod_images >/dev/null 2>&1
+[ "${APP_IMAGE_TAG}" = v1.2.3 ] || fail "a dev tag beside the release won: '${APP_IMAGE_TAG}'"
 [ "${PROD_BUILD_OPTION}" = --no-build ] || fail "pulled release: option '${PROD_BUILD_OPTION}'"
 grep -qx 'pull --quiet' "${calls}" || fail "release images not pulled: $(cat "${calls}")"
 if grep -q '^build' "${calls}"; then fail "a pulled release was built: $(cat "${calls}")"; fi
@@ -46,12 +48,5 @@ prod_compose() {
 prepare_prod_images >/dev/null 2>&1
 [ "${PROD_BUILD_OPTION}" = --build ] || fail "failed pull: option '${PROD_BUILD_OPTION}'"
 grep -q '^build --pull' "${calls}" || fail "a failed pull skipped the build: $(cat "${calls}")"
-
-APP_IMAGE_TAG=local
-: > "${calls}"
-prepare_prod_images >/dev/null 2>&1
-[ "${PROD_BUILD_OPTION}" = --build ] || fail "unreleased: option '${PROD_BUILD_OPTION}'"
-if grep -qx 'pull --quiet' "${calls}"; then fail 'an unreleased checkout pulled release images'; fi
-grep -q '^build --pull' "${calls}" || fail "an unreleased checkout was not built: $(cat "${calls}")"
 
 echo 'release-images: OK'

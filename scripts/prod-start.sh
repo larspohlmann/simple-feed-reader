@@ -83,7 +83,6 @@ fi
 # Stamp the real release version into the images this build produces, so the
 # sidebar and /api/version report it instead of the 'dev' placeholder (#500).
 export_build_version_args
-export_prod_image_tag
 prepare_prod_images
 
 # --remove-orphans drops containers of services this file no longer defines;
