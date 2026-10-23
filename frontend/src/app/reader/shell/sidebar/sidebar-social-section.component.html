@@ -1,94 +1,70 @@
 @let current = section();
-<div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
-  <a
-    class="section-link"
-    [class.active]="active()"
-    [routerLink]="['/']"
-    [queryParams]="selectionQueryParams({ network: current.network })"
-    queryParamsHandling="merge"
-  >
-    <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
-    @if (current.unreadCount > 0) {
-      <span class="section-count">{{ current.unreadCount }}</span>
-    }
-  </a>
-  @let manageLabel =
-    'reader.manageSocialSection'
-      | transloco: { network: ('settings.social.' + current.network | transloco) };
-  @if (screen.isCoarse()) {
-    <button
-      class="dots"
-      type="button"
-      [attr.aria-label]="manageLabel"
-      (click)="rows.openSocialSheet(current)"
+<div class="card">
+  <div class="section-head" [attr.data-testid]="'sidebar-social-' + current.network">
+    <a
+      class="section-link"
+      [class.active]="active()"
+      [routerLink]="['/']"
+      [queryParams]="selectionQueryParams({ network: current.network })"
+      queryParamsHandling="merge"
     >
-      <app-icon name="more_horiz" size="sm" />
-    </button>
-  } @else {
-    <app-sidebar-row-menu [menuKey]="menuKey()" [label]="manageLabel">
-      <ng-template>
-        @for (action of rows.socialAccountActions(current); track action.id; let index = $index) {
-          <button
-            role="menuitem"
-            [disabled]="action.disabled"
-            (click)="rows.manageSocialFeeds(current.networkAccounts[index])"
-          >
-            {{ action.label }}
+      <app-network-logo [network]="current.network" />
+      <span class="label">{{ 'settings.social.' + current.network | transloco }}</span>
+      @if (current.unreadCount > 0) {
+        <span class="section-count">{{ current.unreadCount }}</span>
+      }
+    </a>
+    @let manageLabel =
+      'reader.manageSocialSection'
+        | transloco: { network: ('settings.social.' + current.network | transloco) };
+    @if (screen.isCoarse()) {
+      <button
+        class="dots"
+        type="button"
+        aria-haspopup="dialog"
+        [attr.aria-label]="manageLabel"
+        (click)="rows.openSocialSheet(current)"
+      >
+        <app-icon name="more_horiz" size="dense" />
+      </button>
+    } @else {
+      <app-sidebar-row-menu [menuKey]="menuKey()" [label]="manageLabel">
+        <ng-template>
+          @for (action of rows.socialAccountActions(current); track action.id; let index = $index) {
+            <button
+              role="menuitem"
+              [disabled]="action.disabled"
+              (click)="rows.manageSocialFeeds(current.networkAccounts[index])"
+            >
+              {{ action.label }}
+            </button>
+          }
+          <button role="menuitem" (click)="rows.toggleNetworkInSavedSearches(current)">
+            {{ rows.networkSavedSearchesAction(current).label }}
           </button>
+        </ng-template>
+      </app-sidebar-row-menu>
+    }
+    <button
+      class="section-chevron"
+      type="button"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-label]="
+        'reader.toggleSocialSection'
+          | transloco: { network: ('settings.social.' + current.network | transloco) }
+      "
+      (click)="toggle()"
+    >
+      <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
+    </button>
+  </div>
+  @if (expanded()) {
+    <div class="rows">
+      @for (group of current.accounts; track group.accountId) {
+        @if (current.showsHandles && group.handle) {
+          <p class="account-handle">{{ group.handle }}</p>
         }
-        <button role="menuitem" (click)="rows.toggleNetworkInSavedSearches(current)">
-          {{ rows.networkSavedSearchesAction(current).label }}
-        </button>
-      </ng-template>
-    </app-sidebar-row-menu>
-  }
-  <button
-    class="section-chevron"
-    type="button"
-    [attr.aria-expanded]="expanded()"
-    [attr.aria-label]="
-      'reader.toggleSocialSection'
-        | transloco: { network: ('settings.social.' + current.network | transloco) }
-    "
-    (click)="toggle()"
-  >
-    <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="sm" />
-  </button>
-</div>
-@if (expanded()) {
-  @for (group of current.accounts; track group.accountId) {
-    @if (current.showsHandles && group.handle) {
-      <p class="account-handle">{{ group.handle }}</p>
-    }
-    @for (subscription of group.subscriptions; track subscription.id) {
-      <div class="feedrow">
-        <app-sidebar-feed-row
-          [subscription]="subscription"
-          [selection]="selection()"
-          [organising]="organising()"
-        />
-      </div>
-    }
-  }
-  @if (current.profiles.subscriptions.length) {
-    <div class="tag" data-testid="sidebar-social-feeds">
-      <app-sidebar-group-row
-        [link]="selectionQueryParams({ network: current.network, feedKind: 'profile' })"
-        [label]="'reader.socialFeeds' | transloco"
-        glyph="group"
-        [count]="current.profiles.unreadCount"
-        [active]="profilesActive()"
-        [expanded]="profilesExpanded()"
-        [toggleLabel]="
-          'reader.toggleSocialFeeds'
-            | transloco: { network: ('settings.social.' + current.network | transloco) }
-        "
-        (toggled)="toggleProfiles()"
-      />
-    </div>
-    @if (profilesExpanded()) {
-      <div class="tagfeeds">
-        @for (subscription of current.profiles.subscriptions; track subscription.id) {
+        @for (subscription of group.subscriptions; track subscription.id) {
           <div class="feedrow">
             <app-sidebar-feed-row
               [subscription]="subscription"
@@ -97,16 +73,51 @@
             />
           </div>
         }
-      </div>
-    }
-  }
-  @if (current.saved; as saved) {
-    <div class="feedrow" data-testid="sidebar-social-saved">
-      <app-sidebar-feed-row
-        [subscription]="saved"
-        [selection]="selection()"
-        [organising]="organising()"
-      />
+      }
+      @if (current.profiles.subscriptions.length) {
+        @if (current.accounts.length) {
+          <div class="divider" aria-hidden="true"></div>
+        }
+        <div class="tag" data-testid="sidebar-social-feeds">
+          <app-sidebar-group-row
+            [link]="selectionQueryParams({ network: current.network, feedKind: 'profile' })"
+            [label]="'reader.socialFeeds' | transloco"
+            glyph="group"
+            [count]="current.profiles.unreadCount"
+            [active]="profilesActive()"
+            [expanded]="profilesExpanded()"
+            [toggleLabel]="
+              'reader.toggleSocialFeeds'
+                | transloco: { network: ('settings.social.' + current.network | transloco) }
+            "
+            (toggled)="toggleProfiles()"
+          >
+            <span class="slot" aria-hidden="true"></span>
+          </app-sidebar-group-row>
+        </div>
+        @if (profilesExpanded()) {
+          <div class="tagfeeds">
+            @for (subscription of current.profiles.subscriptions; track subscription.id) {
+              <div class="feedrow">
+                <app-sidebar-feed-row
+                  [subscription]="subscription"
+                  [selection]="selection()"
+                  [organising]="organising()"
+                />
+              </div>
+            }
+          </div>
+        }
+      }
+      @if (current.saved; as saved) {
+        <div class="feedrow" data-testid="sidebar-social-saved">
+          <app-sidebar-feed-row
+            [subscription]="saved"
+            [selection]="selection()"
+            [organising]="organising()"
+          />
+        </div>
+      }
     </div>
   }
-}
+</div>

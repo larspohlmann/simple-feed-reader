@@ -6,16 +6,14 @@
   queryParamsHandling="merge"
 >
   <span class="lead">
-    <app-tag-glyph [name]="glyph()" [color]="glyphColor()" size="sm" />
+    <app-tag-glyph [name]="glyph()" [color]="glyphColor()" [size]="glyphSize()" />
   </span>
-  <span>{{ label() }}</span>
+  <span class="name">{{ label() }}</span>
   @if (count() > 0) {
     <span class="count">{{ count() }}</span>
   }
 </a>
 <ng-content />
-<!-- One chevron for both pointer types: the coarse tap target and the border
-     geometry are handled entirely in SCSS. -->
 <button
   class="chevzone"
   type="button"
@@ -23,5 +21,5 @@
   [attr.aria-label]="toggleLabel()"
   (click)="toggled.emit()"
 >
-  <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="sm" />
+  <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
 </button>

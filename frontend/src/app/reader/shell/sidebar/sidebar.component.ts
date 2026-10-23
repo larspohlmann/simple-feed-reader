@@ -236,6 +236,9 @@ export class SidebarComponent {
 
   /** True while a feed row is being dragged (reveals the empty Feeds drop zone). */
   readonly dragging = signal(false);
+  protected readonly feedsSectionShown = computed(
+    () => this.untagged().length > 0 || this.dragging() || this.organising(),
+  );
   /** What is being dragged, so a tag-reorder hover shows an insertion line while
    *  a feed-onto-tag hover shows a container highlight. */
   readonly dragKind = signal<'tag' | 'feed' | null>(null);

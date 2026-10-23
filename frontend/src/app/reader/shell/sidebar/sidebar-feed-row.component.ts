@@ -33,6 +33,7 @@ import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
   ],
   templateUrl: './sidebar-feed-row.component.html',
   styleUrl: './sidebar-feed-row.component.scss',
+  host: { '[class.current]': 'active()' },
 })
 export class SidebarFeedRowComponent {
   protected readonly selectionQueryParams = selectionQueryParams;

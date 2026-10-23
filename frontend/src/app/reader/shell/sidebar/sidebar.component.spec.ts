@@ -716,7 +716,7 @@ describe('SidebarComponent', () => {
     ]);
 
     (
-      element.querySelector('.feedrow .pop [role="menuitem"]:nth-child(2)') as HTMLButtonElement
+      element.querySelector('.feedrow .pop [role="menuitem"]:nth-of-type(2)') as HTMLButtonElement
     ).click();
     fixture.detectChanges();
     expect(toggleAllItems).toHaveBeenCalledWith(subscription);
@@ -725,7 +725,7 @@ describe('SidebarComponent', () => {
     (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
     (
-      element.querySelector('.feedrow .pop [role="menuitem"]:nth-child(3)') as HTMLButtonElement
+      element.querySelector('.feedrow .pop [role="menuitem"]:nth-of-type(3)') as HTMLButtonElement
     ).click();
     expect(toggleForYou).toHaveBeenCalledWith(subscription);
   });
@@ -768,7 +768,7 @@ describe('SidebarComponent', () => {
 
     (
       element.querySelector(
-        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-child(2)',
+        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-of-type(2)',
       ) as HTMLButtonElement
     ).click();
     expect(toggleAllItems).toHaveBeenCalledWith(subscription);
@@ -777,7 +777,7 @@ describe('SidebarComponent', () => {
     fixture.detectChanges();
     (
       element.querySelector(
-        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-child(3)',
+        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-of-type(3)',
       ) as HTMLButtonElement
     ).click();
     expect(toggleForYou).toHaveBeenCalledWith(subscription);

@@ -6,17 +6,20 @@
       <app-icon name="drag_indicator" size="sm" />
     </span>
   }
-  <span class="feedname"
-    ><app-favicon [url]="feed.faviconUrl" [avatarUrl]="avatarUrl()" /><span>{{ name }}</span></span
-  >
+  <span class="feedname">
+    <app-favicon [url]="feed.faviconUrl" [avatarUrl]="avatarUrl()" />
+    <span class="name">{{ name }}</span>
+  </span>
   <button
     class="dots"
     type="button"
+    aria-haspopup="dialog"
     [attr.aria-label]="'reader.manage' | transloco: { name: name }"
     (click)="rows.openFeedSheet(feed)"
   >
-    <app-icon name="more_horiz" size="sm" />
+    <app-icon name="more_horiz" size="md" />
   </button>
+  <span class="trail" aria-hidden="true"></span>
 } @else {
   <a
     class="nav"
@@ -30,7 +33,8 @@
       [url]="feed.faviconUrl"
       [avatarUrl]="avatarUrl()"
       [class.has-avatar]="avatarUrl() !== null"
-    /><span>{{ name }}</span>
+    />
+    <span class="name">{{ name }}</span>
     @if (markerSurfaces().length > 0) {
       <app-icon
         class="feed-exclusion-marker"
@@ -52,15 +56,18 @@
         <button role="menuitem" (click)="manage.editSubscription(feed); rows.closeMenu()">
           {{ 'reader.editFeed' | transloco }}
         </button>
+        <hr />
         @for (flag of feedFlags; track flag.surface) {
           <button role="menuitem" (click)="rows.toggleFeedFlag(flag, feed)">
             {{ feedFlagLabelKey(flag, feed) | transloco }}
           </button>
         }
-        <button role="menuitem" (click)="manage.unsubscribe(feed); rows.closeMenu()">
+        <hr />
+        <button role="menuitem" class="danger" (click)="manage.unsubscribe(feed); rows.closeMenu()">
           {{ 'reader.unsubscribe' | transloco }}
         </button>
       </ng-template>
     </app-sidebar-row-menu>
   }
+  <span class="trail" aria-hidden="true"></span>
 }

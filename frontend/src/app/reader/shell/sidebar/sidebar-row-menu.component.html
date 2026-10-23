@@ -2,10 +2,13 @@
   <button
     class="dots"
     type="button"
+    aria-haspopup="menu"
+    [class.open]="open()"
+    [attr.aria-expanded]="open()"
     [attr.aria-label]="label()"
     (click)="rows.toggleMenu(menuKey(), $event)"
   >
-    <app-icon name="more_horiz" size="sm" />
+    <app-icon name="more_horiz" size="dense" />
   </button>
   @if (open()) {
     <div class="pop" role="menu">

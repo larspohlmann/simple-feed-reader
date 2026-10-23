@@ -1,9 +1,13 @@
 @use 'sidebar-row' as row;
-@include row.nav-row;
-@include row.tag-parts(':host');
-@include row.chevzone;
+@include row.row-parts;
+@include row.row-link('.nav');
+@include row.chevron('.chevzone');
+@include row.row-states(':host', ':host(.current)');
 
-/* The parent's `.tag` is the flex row, so link, menu and chevron lay out as its own items. */
 :host {
-  display: contents;
+  @include row.row-geometry;
+}
+
+:host(.open) .name {
+  font-weight: 600;
 }

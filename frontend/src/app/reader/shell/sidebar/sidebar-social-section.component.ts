@@ -2,6 +2,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.component';
 import { SocialNetworkName } from '../../../core/social-network';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { Selection, selectionQueryParams } from '../../query/query';
@@ -23,6 +24,7 @@ const profilesCollapsedKey = (network: SocialNetworkName): string =>
     RouterLink,
     TranslocoPipe,
     IconComponent,
+    NetworkLogoComponent,
     SidebarRowMenuComponent,
     SidebarFeedRowComponent,
     SidebarGroupRowComponent,

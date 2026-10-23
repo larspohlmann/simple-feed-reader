@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IconComponent } from '../../../shared/icon/icon.component';
+import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SelectionParams } from '../../query/query';
 
@@ -11,6 +11,7 @@ import { SelectionParams } from '../../query/query';
   templateUrl: './sidebar-group-row.component.html',
   styleUrl: './sidebar-group-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.current]': 'active()', '[class.open]': 'expanded()' },
 })
 export class SidebarGroupRowComponent {
   readonly link = input.required<SelectionParams>();
@@ -18,6 +19,7 @@ export class SidebarGroupRowComponent {
   readonly toggleLabel = input.required<string>();
   readonly glyph = input<string | null>(null);
   readonly glyphColor = input<string | null>(null);
+  readonly glyphSize = input<IconSize>('md');
   readonly count = input(0);
   readonly active = input(false);
   readonly expanded = input(false);
