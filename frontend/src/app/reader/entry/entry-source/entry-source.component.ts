@@ -18,7 +18,7 @@ export type EntrySourceLayout = 'row' | 'kicker' | 'article';
   imports: [FaviconComponent, RouterLink],
   templateUrl: './entry-source.component.html',
   styleUrl: './entry-source.component.scss',
-  host: { '[class]': 'layout()' },
+  host: { '[class]': '"source-" + layout()' },
 })
 export class EntrySourceComponent {
   protected readonly selectionQueryParams = selectionQueryParams;

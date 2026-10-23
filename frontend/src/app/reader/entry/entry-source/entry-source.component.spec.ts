@@ -9,7 +9,7 @@ import { EntrySourceComponent } from './entry-source.component';
 
 const BOB = { name: 'Bob', url: 'https://bsky.app/profile/bob', imageUrl: null };
 
-function sourceLine(entry: EntryDto, sourceFormat: 'xml' | 'saved'): string {
+function renderSource(entry: EntryDto, sourceFormat: 'xml' | 'saved'): HTMLElement {
   TestBed.configureTestingModule({
     imports: [EntrySourceComponent, provideTranslocoTesting()],
     providers: [provideRouter([])],
@@ -27,7 +27,11 @@ function sourceLine(entry: EntryDto, sourceFormat: 'xml' | 'saved'): string {
   fixture.componentRef.setInput('entry', entry);
   fixture.componentRef.setInput('layout', 'row');
   fixture.detectChanges();
-  const line = (fixture.nativeElement as HTMLElement).cloneNode(true) as HTMLElement;
+  return fixture.nativeElement as HTMLElement;
+}
+
+function sourceLine(entry: EntryDto, sourceFormat: 'xml' | 'saved'): string {
+  const line = renderSource(entry, sourceFormat).cloneNode(true) as HTMLElement;
   line.querySelector('app-favicon')?.remove();
   return (line.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
@@ -43,5 +47,9 @@ describe('EntrySourceComponent', () => {
 
   it('names the feed alone when nobody else posted', () => {
     expect(sourceLine(anEntry(), 'xml')).toBe('A feed');
+  });
+
+  it("prefixes its layout class, so the list row's own .row card styles never reach it", () => {
+    expect([...renderSource(anEntry(), 'xml').classList]).toEqual(['source-row']);
   });
 });
