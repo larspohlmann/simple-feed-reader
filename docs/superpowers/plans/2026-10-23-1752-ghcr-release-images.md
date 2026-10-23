@@ -322,11 +322,10 @@ run_step 'Starting the worker' start_worker prod_compose "${PROD_BUILD_OPTION}"
 **Files:**
 - Modify: `docs/docker-production.md` (§6 Update, and the intro if it says the host builds)
 - Modify: `docs/releasing.md` (what the tag push does; one-time package visibility)
-- Modify: `CHANGELOG.md` (`## [Unreleased]`)
 
 - [ ] **Step 1:** `docker-production.md` §6: a release update pulls the release's published images (and patched `image:` services); a `--ref` update or a failed pull builds on the host as before.
 - [ ] **Step 2:** `releasing.md`: the tag push also publishes `simple-feed-reader-php`/`-web:vX.Y.Z` (both architectures). One-time step after the first such release: set both GHCR packages to **Public** (Package settings → Change visibility); until then installs fall back to building.
-- [ ] **Step 3:** CHANGELOG Unreleased entry.
+- No CHANGELOG entry: the release notes are generated from the merged PRs.
 - [ ] **Step 4: Commit** — `docs(#1752): release images on GHCR`
 
 ### Task 5: Verify end to end

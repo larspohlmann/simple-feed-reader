@@ -311,12 +311,19 @@ cd simple-feed-reader && ./scripts/update.sh
 ```
 
 This checks out the newest release and re-runs the production bring-up
-(pull updated base images, rebuild, migrate, health check), so a PHP or MySQL
-security release reaches the install with the next update. Data is kept. `prod-start.sh` is
-idempotent — running it again is always safe.
+(pull the release's images, migrate, health check). Every release publishes
+its `php` and `web` images to GHCR for amd64 and arm64, so the host builds
+nothing; the MySQL, Meilisearch and Grafana images are pulled fresh at the same
+time, so a PHP or MySQL security release reaches the install with the next
+update. Data is kept. `prod-start.sh` is idempotent — running it again is
+always safe.
 
 `./scripts/update.sh --ref <branch-or-tag>` moves the install to that ref
 instead, for a test instance that has to run a change before it is released.
+A ref that is not a release has no published images, so the bring-up builds
+them on the host (pulling updated base images first), which takes a few
+minutes. A release whose images cannot be pulled — offline, or a registry
+outage — is built the same way, with a warning.
 
 The update that removed tracing and profiling (#1328) removes their containers
 but keeps their data. Free it with

@@ -9,6 +9,10 @@ which:
   exact SHA (a tag push proves neither on its own — the workflow's comments
   explain why),
 - publishes a GitHub Release for the tag, marked latest,
+- builds the production images and pushes them to GHCR as
+  `ghcr.io/larspohlmann/simple-feed-reader-php:vX.Y.Z` and
+  `…/simple-feed-reader-web:vX.Y.Z`, each for `linux/amd64` and `linux/arm64`
+  (see [Release images](#release-images)),
 - for every release after the first, writes the generated release notes into
   [CHANGELOG.md](../CHANGELOG.md) and commits that to `main` as
   `github-actions[bot]`, and
@@ -76,6 +80,19 @@ commit, publishes the GitHub Release, and (after the first release) commits
 the changelog section back to `main`. Within a minute the one-line installer
 also resolves to the new tag, and every existing install moves to it with
 `./scripts/update.sh`.
+
+## Release images
+
+Production installs on a release pull these images instead of building them
+(`prepare_prod_images` in `scripts/lib.sh`). The image jobs run after the
+GitHub Release is published; an install that starts before they finish, or
+finds no images, builds on the host and warns, so a failed image job never
+breaks an install.
+
+**One-time step after the first release that publishes images:** GHCR creates
+both packages private. On each package's page (the repository's **Packages**
+sidebar) open **Package settings → Change visibility** and make it **Public**.
+Until then anonymous pulls are denied and every install builds on the host.
 
 ## Highlights
 
