@@ -316,6 +316,33 @@ describe('ManageActions', () => {
     expect(tagSpy).toHaveBeenCalled();
   });
 
+  it('createTag: opens the dialog creating at the top level by default', () => {
+    closed = undefined;
+    service.createTag();
+    expect(open).toHaveBeenCalledWith(expect.anything(), {
+      data: { kind: 'create', parentId: null },
+      panelClass: 'app-dialog',
+    });
+  });
+
+  it('createTag: presets the given parent', () => {
+    closed = undefined;
+    service.createTag(7);
+    expect(open).toHaveBeenCalledWith(expect.anything(), {
+      data: { kind: 'create', parentId: 7 },
+      panelClass: 'app-dialog',
+    });
+  });
+
+  it('editTag: opens the dialog editing the tag', () => {
+    closed = undefined;
+    service.editTag(tag);
+    expect(open).toHaveBeenCalledWith(expect.anything(), {
+      data: { kind: 'edit', tag },
+      panelClass: 'app-dialog',
+    });
+  });
+
   describe('bulk actions', () => {
     const subscriptions = (count: number): SubscriptionDto[] =>
       Array.from({ length: count }, (_, index) => ({

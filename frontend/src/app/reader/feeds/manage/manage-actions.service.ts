@@ -19,7 +19,7 @@ import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.compo
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
 import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.component';
-import { TagFormDialogComponent } from './tag-form-dialog.component';
+import { TagFormData, TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { pluralKey } from '../../../core/i18n/plural-key';
 import { bulkSavedNote, unsubscribeMessage } from './unsubscribe-messages';
@@ -208,9 +208,10 @@ export class ManageActions {
     });
   }
 
-  createTag(): void {
+  createTag(parentId: number | null = null): void {
+    const data: TagFormData = { kind: 'create', parentId };
     const ref = this.dialog.open<TagDto>(TagFormDialogComponent, {
-      data: null,
+      data,
       panelClass: 'app-dialog',
     });
     ref.closed.subscribe((tag) => {
@@ -219,8 +220,9 @@ export class ManageActions {
   }
 
   editTag(tag: TagDto): void {
+    const data: TagFormData = { kind: 'edit', tag };
     const ref = this.dialog.open<TagDto>(TagFormDialogComponent, {
-      data: tag,
+      data,
       panelClass: 'app-dialog',
     });
     ref.closed.subscribe((updated) => {
