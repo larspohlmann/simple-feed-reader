@@ -26,6 +26,11 @@ export interface TagDrop {
   readonly mark: TagDropMark;
 }
 
+export interface TagDragSubject {
+  readonly tag: TagDto;
+  readonly layout: TagDropLayout;
+}
+
 interface Slot {
   readonly parentId: number | null;
   readonly beforeId: number | null;
@@ -41,16 +46,14 @@ interface DropContext {
 const NEST_FROM = 0.25;
 const NEST_TO = 0.75;
 
-// The spec fixes this four-argument call, so the max-params limit yields here.
-// eslint-disable-next-line @typescript-eslint/max-params
 export function resolveTagDrop(
-  dragged: TagDto,
+  drag: TagDragSubject,
   tags: readonly TagDto[],
-  layout: TagDropLayout,
   pointerY: number,
 ): TagDrop | null {
+  const dragged = drag.tag;
   const tree = new TagTree(tags);
-  const slot = slotAt({ dragged, tree, layout }, pointerY);
+  const slot = slotAt({ dragged, tree, layout: drag.layout }, pointerY);
   if (slot === null || !tree.mayLandUnder(dragged, slot.parentId)) return null;
   const order = tree.orderWith(dragged, slot);
   if (slot.parentId === dragged.parentId && sameOrder(order, tree.siblingIds(slot.parentId))) {
