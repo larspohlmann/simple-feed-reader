@@ -323,6 +323,13 @@
     &.current::before {
       background: var(--accent-soft);
     }
+
+    // The line box reserves descender room, so centred caps read high in the band; nudge them to its optical middle.
+    .label,
+    .section-count {
+      position: relative;
+      top: var(--space-0);
+    }
   }
 
   @media (pointer: coarse) {
