@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { MIN_LIST_PERCENT } from '../src/app/reader/shell/pane-split';
+import { MAX_LIST_PERCENT, MIN_LIST_PERCENT } from '../src/app/reader/shell/pane-split';
 import { presetLocalStorage } from './support/auth';
 import { stubOneFeedReader } from './support/reader';
 
@@ -76,7 +76,7 @@ test.describe('list header in a narrow split column (#1127)', () => {
     });
 
     test(`every action of ${list.name} is labelled in the wide form`, async ({ page }) => {
-      await openSplit(page, list, '60');
+      await openSplit(page, list, String(MAX_LIST_PERCENT));
       await expectEveryAction(page, { labelled: true });
     });
   }

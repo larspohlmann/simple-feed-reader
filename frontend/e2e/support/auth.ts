@@ -21,6 +21,8 @@ export async function stubAuthToken(page: Page): Promise<void> {
       json: { needsSetup: false, mailEnabled: true, passkeySignInAvailable: false },
     });
   });
+  // A broken foreign image retries through the proxy, whose 401 for the stub token signs the spec out.
+  await page.route('**/api/image-proxy**', (route) => route.fulfill({ status: 404 }));
   // Carries a `userId` claim: without one, the reader holds its first list load for `/api/me`.
   await page.addInitScript(() =>
     localStorage.setItem('sfr.jwt', 'eyJhbGciOiJub25lIn0.eyJ1c2VySWQiOjF9.stub-signature'),
