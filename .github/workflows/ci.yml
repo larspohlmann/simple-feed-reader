@@ -44,6 +44,25 @@ jobs:
       - name: PHPMD (codesize)
         run: composer md
 
+      # Symfony-aware diagnostics PHPStan cannot see: unknown routes, services,
+      # config keys, Messenger buses, firewalls (#1779). The standalone binary is
+      # pinned and verified; the Symfony CLI would pull the latest instead.
+      - name: Install symfony-lsp
+        env:
+          SYMFONY_LSP_VERSION: v0.24.2
+          SYMFONY_LSP_SHA256: d7e39420ad9058fb1edeaf13f0846c5e7c351467b90702336c12b8ce13f8a09f
+        run: |
+          archive="symfony-lsp-${SYMFONY_LSP_VERSION}-linux-x64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/symfony/language-tools/releases/download/${SYMFONY_LSP_VERSION}/${archive}"
+          echo "${SYMFONY_LSP_SHA256}  $RUNNER_TEMP/$archive" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/symfony-lsp"
+          tar xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP/symfony-lsp" --strip-components=1
+          echo "$RUNNER_TEMP/symfony-lsp" >> "$GITHUB_PATH"
+
+      - name: symfony-lsp check
+        run: symfony-lsp check --format=github
+
       # This repository doubles as phptramp's proving ground, so the gate runs
       # the tip of its develop branch rather than the commit in composer.lock —
       # a pin would report against stale code exactly while phptramp is being
