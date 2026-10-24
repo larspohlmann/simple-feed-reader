@@ -197,7 +197,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly headerHeight = signal(0);
   private readonly hdr = viewChild('hdr', { read: ElementRef });
   /** Only one of the two template branches renders a list at a time. */
-  private readonly list = viewChild(EntryListComponent);
+  protected readonly list = viewChild(EntryListComponent);
   private readonly header = viewChild(ReaderHeaderComponent);
   /** Whether the mobile header's own search bar covers it — read from the
    *  child rather than owned here, since the bar's open/closed state (trigger,

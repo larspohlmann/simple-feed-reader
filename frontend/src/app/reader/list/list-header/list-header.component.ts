@@ -82,7 +82,7 @@ export class ListHeaderComponent {
   readonly titleAvatarUrl = input<string | null>(null);
   readonly lastRefreshed = input<string | null>(null);
   readonly nextRefresh = input<string | null>(null);
-  readonly titleLeading = input<TemplateRef<unknown> | null>(null);
+  readonly headerLeading = input<TemplateRef<unknown> | null>(null);
   readonly leadingActions = input<TemplateRef<unknown> | null>(null);
   readonly headerActions = input<TemplateRef<unknown> | null>(null);
   readonly collapsed = input(false);

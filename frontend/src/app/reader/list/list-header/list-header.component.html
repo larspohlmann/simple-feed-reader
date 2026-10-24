@@ -1,11 +1,11 @@
+@if (headerLeading(); as leading) {
+  <ng-container [ngTemplateOutlet]="leading" />
+}
 <div class="heading">
   <!-- Title and badge share one row so the badge never adds a second one:
        the scroller reserves this bar's height, so a taller header moves the
        rows (#419). -->
   <div class="title-row">
-    @if (titleLeading(); as leading) {
-      <ng-container [ngTemplateOutlet]="leading" />
-    }
     <h2 #listTitle tabindex="-1" [class.search-title]="selection().kind === 'search'">
       @if (titleTag(); as tag) {
         <!-- A named step rather than `text`, so the glyph carries the weight of the
