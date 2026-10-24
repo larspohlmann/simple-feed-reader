@@ -69,7 +69,6 @@ describe('TagFormDialogComponent', () => {
       'select#tag-parent',
     ) as HTMLSelectElement;
     expect(select.value).toBe('1');
-    expect(fixture.componentInstance.isEdit).toBe(false);
     fixture.componentInstance.form.controls.name.setValue('Long reads');
     fixture.componentInstance.submit();
     const testRequest = ctrl.expectOne('https://api.test/api/tags');

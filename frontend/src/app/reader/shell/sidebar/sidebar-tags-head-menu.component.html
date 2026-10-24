@@ -1,8 +1,16 @@
-@if (!screen.isCoarse()) {
-  <app-sidebar-row-menu
-    menuKey="tags-head"
-    [label]="'reader.manage' | transloco: { name: ('reader.tags' | transloco) }"
+@let label = 'reader.manage' | transloco: { name: ('reader.tags' | transloco) };
+@if (organising()) {
+  <button
+    class="dots"
+    type="button"
+    aria-haspopup="dialog"
+    [attr.aria-label]="label"
+    (click)="rows.openTagsHeadSheet()"
   >
+    <app-icon name="more_horiz" size="md" />
+  </button>
+} @else if (!screen.isCoarse()) {
+  <app-sidebar-row-menu menuKey="tags-head" [label]="label">
     <ng-template>
       <button role="menuitem" (click)="manage.createTag(); rows.closeMenu()">
         {{ 'reader.newTag' | transloco }}

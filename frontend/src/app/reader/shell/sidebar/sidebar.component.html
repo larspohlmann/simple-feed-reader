@@ -139,7 +139,7 @@
         <ng-container
           *ngTemplateOutlet="
             sectionHead;
-            context: { $implicit: tagsHead, menu: tagsHeadMenu, sheet: tagsHeadSheet }
+            context: { $implicit: tagsHead, actions: tagsHeadActions }
           "
         />
       </div>
@@ -186,10 +186,7 @@
         [class.current]="!organising() && activeGroup() === 'feeds'"
       >
         <ng-container
-          *ngTemplateOutlet="
-            sectionHead;
-            context: { $implicit: feedsHead, menu: headSlot, sheet: null }
-          "
+          *ngTemplateOutlet="sectionHead; context: { $implicit: feedsHead, actions: headSlot }"
         />
       </div>
     }
@@ -341,10 +338,10 @@
     </div>
   </ng-template>
 
-  <ng-template #sectionHead appSectionHead let-head let-menu="menu" let-sheet="sheet">
+  <ng-template #sectionHead appSectionHead let-head let-actions="actions">
     @if (organising()) {
       <span class="label">{{ head.label | transloco }}</span>
-      <ng-container *ngTemplateOutlet="sheet" />
+      <ng-container *ngTemplateOutlet="actions" />
     } @else {
       <a
         class="section-link"
@@ -357,7 +354,7 @@
           <span class="section-count">{{ groupUnread()[head.group] }}</span>
         }
       </a>
-      <ng-container *ngTemplateOutlet="menu" />
+      <ng-container *ngTemplateOutlet="actions" />
       <button
         class="section-chevron"
         type="button"
@@ -372,20 +369,8 @@
 
   <ng-template #headSlot><span class="slot" aria-hidden="true"></span></ng-template>
 
-  <ng-template #tagsHeadSheet>
-    <button
-      class="dots"
-      type="button"
-      aria-haspopup="dialog"
-      [attr.aria-label]="'reader.manage' | transloco: { name: ('reader.tags' | transloco) }"
-      (click)="rows.openTagsHeadSheet()"
-    >
-      <app-icon name="more_horiz" size="md" />
-    </button>
-  </ng-template>
-
-  <ng-template #tagsHeadMenu>
-    <app-sidebar-tags-head-menu />
+  <ng-template #tagsHeadActions>
+    <app-sidebar-tags-head-menu [organising]="organising()" />
   </ng-template>
 
   <ng-template #feedTools>

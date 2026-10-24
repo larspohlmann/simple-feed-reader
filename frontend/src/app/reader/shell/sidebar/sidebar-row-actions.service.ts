@@ -58,15 +58,7 @@ export class SidebarRowActions {
         title: tag.name,
         actions: [
           { id: 'edit', label: this.transloco.translate('reader.editTag'), symbol: 'edit' },
-          ...(tag.parentId === null
-            ? [
-                {
-                  id: 'createHere',
-                  label: this.transloco.translate('reader.createTagHere'),
-                  symbol: 'add',
-                },
-              ]
-            : []),
+          ...this.createHereActions(tag),
           {
             id: 'moveUp',
             label: this.transloco.translate('reader.moveTagUp'),
@@ -111,6 +103,13 @@ export class SidebarRowActions {
       .subscribe((choice) => {
         if (choice === 'new') this.manage.createTag();
       });
+  }
+
+  private createHereActions(tag: TagDto): ActionSheetAction[] {
+    if (tag.parentId !== null) return [];
+    return [
+      { id: 'createHere', label: this.transloco.translate('reader.createTagHere'), symbol: 'add' },
+    ];
   }
 
   /** Reads the siblings afresh: the order the sheet opened on may have changed while it was up. */

@@ -312,7 +312,7 @@ describe('SidebarComponent', () => {
     expect(deleteTag).toHaveBeenCalledWith(node.tag);
   });
 
-  it('creates a tag under a root tag from its row menu, not under a child', () => {
+  describe('Create tag here', () => {
     const child: TagNode = {
       tag: { id: 21, name: 'Long reads', color: null, icon: null, position: 0, parentId: 20 },
       subscriptions: [],
@@ -327,31 +327,35 @@ describe('SidebarComponent', () => {
       unreadCount: 0,
       entryCount: 0,
     };
-    const fixture = mount({ tagTree: [root] });
-    const element = fixture.nativeElement as HTMLElement;
-    // Child rows render only once their root is expanded (`tagGroups`).
-    element.querySelector<HTMLButtonElement>('.tag .chevzone')!.click();
-    fixture.detectChanges();
-    const menuItems = (tagName: string) => {
+
+    function openRowMenu(tagName: string) {
+      const fixture = mount({ tagTree: [root] });
+      const element = fixture.nativeElement as HTMLElement;
+      // Child rows render only once their root is expanded (`tagGroups`).
+      element.querySelector<HTMLButtonElement>('.tag .chevzone')!.click();
+      fixture.detectChanges();
       const row = [...element.querySelectorAll('.tag')].find((candidate) =>
         candidate.textContent?.includes(tagName),
       )!;
       row.querySelector<HTMLButtonElement>('.dots')!.click();
       fixture.detectChanges();
-      return [...row.querySelectorAll<HTMLButtonElement>('.pop [role="menuitem"]')];
-    };
+      const items = [...row.querySelectorAll<HTMLButtonElement>('.pop [role="menuitem"]')];
+      return { fixture, element, items };
+    }
 
-    expect(menuItems('Long reads').map((item) => item.textContent?.trim())).not.toContain(
-      'Create tag here',
-    );
-    menuItems('Long reads'); // closes it again
-    menuItems('Reading')
-      .find((item) => item.textContent?.trim() === 'Create tag here')!
-      .click();
-    fixture.detectChanges();
+    it('is not offered on a child tag', () => {
+      const { items } = openRowMenu('Long reads');
+      expect(items.map((item) => item.textContent?.trim())).not.toContain('Create tag here');
+    });
 
-    expect(manageActions.createTag).toHaveBeenCalledWith(20);
-    expect(element.querySelector('.tag .pop')).toBeNull();
+    it('creates a tag under the root and closes the menu', () => {
+      const { fixture, element, items } = openRowMenu('Reading');
+      items.find((item) => item.textContent?.trim() === 'Create tag here')!.click();
+      fixture.detectChanges();
+
+      expect(manageActions.createTag).toHaveBeenCalledWith(20);
+      expect(element.querySelector('.tag .pop')).toBeNull();
+    });
   });
 
   it('creates a top-level tag from the Tags head menu', () => {

@@ -316,20 +316,14 @@ describe('ManageActions', () => {
     expect(tagSpy).toHaveBeenCalled();
   });
 
-  it('createTag: opens the dialog creating at the top level by default', () => {
+  it.each([
+    ['at the top level by default', undefined, null],
+    ['under the given parent', 7, 7],
+  ])('createTag: opens the dialog creating %s', (_case, parentId, expectedParentId) => {
     closed = undefined;
-    service.createTag();
+    service.createTag(parentId);
     expect(open).toHaveBeenCalledWith(expect.anything(), {
-      data: { kind: 'create', parentId: null },
-      panelClass: 'app-dialog',
-    });
-  });
-
-  it('createTag: presets the given parent', () => {
-    closed = undefined;
-    service.createTag(7);
-    expect(open).toHaveBeenCalledWith(expect.anything(), {
-      data: { kind: 'create', parentId: 7 },
+      data: { kind: 'create', parentId: expectedParentId },
       panelClass: 'app-dialog',
     });
   });

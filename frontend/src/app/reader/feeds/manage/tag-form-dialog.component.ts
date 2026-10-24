@@ -40,8 +40,8 @@ export class TagFormDialogComponent {
   private readonly tagsStore = inject(TagsStore);
 
   private readonly editedTag = this.data.kind === 'edit' ? this.data.tag : null;
-  readonly isEdit = this.editedTag !== null;
-  readonly titleKey = this.isEdit ? 'dialog.tagForm.editTitle' : 'dialog.tagForm.newTitle';
+  readonly titleKey =
+    this.editedTag !== null ? 'dialog.tagForm.editTitle' : 'dialog.tagForm.newTitle';
 
   readonly form = this.fb.group({
     name: [this.editedTag?.name ?? '', [Validators.required, Validators.maxLength(100)]],
@@ -57,10 +57,8 @@ export class TagFormDialogComponent {
   readonly parentOptions = computed(() =>
     this.tagsStore.rootTags().filter((tag) => tag.id !== this.editedTag?.id),
   );
-  readonly hasChildren = computed(
-    () =>
-      this.editedTag !== null &&
-      this.tagsStore.tags().some((tag) => tag.parentId === this.editedTag?.id),
+  readonly hasChildren = computed(() =>
+    this.tagsStore.tags().some((tag) => tag.parentId === this.editedTag?.id),
   );
 
   constructor() {
