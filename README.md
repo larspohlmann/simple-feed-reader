@@ -45,6 +45,15 @@ its share link from Apple Podcasts.
   <img src="docs/screenshots/mobile-podcast-playlist-light.webp" alt="The audio playlist panel on a phone, above the player bar" width="24%">
 </p>
 
+Connect a Bluesky or Mastodon account and its home timeline, lists, custom
+feeds and follows arrive as feeds; a post shows what it embeds, and its likes
+and replies stay in the reader.
+
+<p>
+  <img src="docs/screenshots/bluesky-light.webp" alt="The Bluesky section: home timeline, a custom feed and followed accounts, with posts in the magazine" width="74%">
+  <img src="docs/screenshots/mobile-bluesky-post-dark.webp" alt="A Bluesky post in the reader on a phone, dark theme" width="24%">
+</p>
+
 More in the [screenshot gallery](docs/screenshots.md).
 
 ## Features

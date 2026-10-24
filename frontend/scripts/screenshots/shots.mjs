@@ -1,6 +1,6 @@
 // Captures the docs/screenshots set against the dev stack. See README.md next to this file.
 //
-//   node --env-file=.env.screenshots shots.mjs [set|shot ...]   sets: public, admin, library, listening, all
+//   node --env-file=.env.screenshots shots.mjs [set|shot ...]   sets: public, admin, library, social, listening, all
 import { chromium } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -158,6 +158,25 @@ async function openArticle(page) {
   await page.locator('app-reader-view').waitFor();
   await settle(page, 2500);
 }
+// Opens the newest post of one followed account (BLUESKY_POST_ACCOUNT, a title substring) by its
+// title: a click on a post's middle lands on the embedded link card instead.
+async function openPost(page) {
+  const wanted = process.env.BLUESKY_POST_ACCOUNT ?? 'Lily Hay Newman';
+  const subscriptionId = await page.evaluate(async (title) => {
+    const token = localStorage.getItem('sfr.jwt');
+    const response = await fetch('/api/subscriptions', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const { subscriptions } = await response.json();
+    return subscriptions.find((subscription) => subscription.title?.includes(title))?.id ?? null;
+  }, wanted);
+  if (subscriptionId === null) throw new Error(`No subscription titled like "${wanted}"`);
+  await page.goto(`${BASE}/?subscription=${subscriptionId}`);
+  await settle(page, 2500);
+  await articles(page).first().locator('.title').first().click();
+  await page.locator('app-reader-view').waitFor();
+  await settle(page, 3000);
+}
 async function openArticleInPane(page) {
   await openArticle(page);
   await scrollEverythingToTop(page);
@@ -271,6 +290,21 @@ const SETS = {
     phone('mobile-for-you-light', '/?view=for-you', magazine),
     phone('mobile-search-dark', '/?q=climate', { ...magazine, theme: 'dark' }),
   ],
+  social: [
+    desktop('settings-social-light', '/settings/social'),
+    desktop('bluesky-light', '/?network=bluesky&feedKind=profile', magazine),
+    desktop('bluesky-post-dark', '/?network=bluesky&feedKind=profile', {
+      ...magazine,
+      theme: 'dark',
+      before: openPost,
+    }),
+    phone('mobile-bluesky-light', '/?network=bluesky&feedKind=profile', magazine),
+    phone('mobile-bluesky-post-dark', '/?network=bluesky&feedKind=profile', {
+      ...magazine,
+      theme: 'dark',
+      before: openPost,
+    }),
+  ],
   get listening() {
     return [
       desktop('podcast-playlist-light', podcastTag(), {
@@ -288,9 +322,9 @@ const SETS = {
 
 function selectShots(arguments_) {
   if (arguments_.length === 0 || arguments_.includes('all')) {
-    return [...SETS.public, ...SETS.admin, ...SETS.library, ...SETS.listening];
+    return [...SETS.public, ...SETS.admin, ...SETS.library, ...SETS.social, ...SETS.listening];
   }
-  const known = [...SETS.public, ...SETS.admin, ...SETS.library];
+  const known = [...SETS.public, ...SETS.admin, ...SETS.library, ...SETS.social];
   return arguments_.flatMap((key) => {
     if (key in SETS) return SETS[key];
     const shot = known.find((candidate) => candidate.name === key);
