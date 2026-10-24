@@ -47,7 +47,7 @@ import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { SubscriptionFlags } from '../../reader/subscription-bulk';
-import { TagDragSession, measureTagLayout } from '../../reader/tag-drag-session';
+import { TagDragSession } from '../../reader/tag-drag-session';
 import { TagDropMark } from '../../reader/tag-drop';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
@@ -265,16 +265,17 @@ export class OrganiseSectionComponent implements OnInit {
   }
 
   protected startTagDrag(group: OrganiseGroup): void {
-    if (group.tag === null) return;
+    const tree = this.tree()?.nativeElement;
+    if (group.tag === null || tree === undefined) return;
     const headers = this.panelGroups().flatMap((panel) => {
       const tag = panel.group().tag;
       return tag === null ? [] : [{ tagId: tag.id, element: panel.headDropElement().nativeElement }];
     });
-    this.tagSession.start(group.tag, measureTagLayout(headers, this.lastRootPanel(), this.treeTop()));
+    this.tagSession.start(group.tag, { headers, listEnd: this.lastRootPanel(), origin: tree });
   }
 
   protected moveTagDrag(clientY: number): void {
-    this.tagSession.move(clientY - this.treeTop());
+    this.tagSession.move(clientY);
   }
 
   protected endTagDrag(): void {
@@ -301,9 +302,5 @@ export class OrganiseSectionComponent implements OnInit {
   private persistTagOrder(ids: number[]): void {
     if (this.store.filterActive()) return;
     this.manage.reorderTags(ids);
-  }
-
-  private treeTop(): number {
-    return this.tree()?.nativeElement.getBoundingClientRect().top ?? 0;
   }
 }

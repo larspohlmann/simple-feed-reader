@@ -37,7 +37,7 @@ import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarTagRowMenuComponent } from './sidebar-tag-row-menu.component';
 import { SidebarTagsHeadMenuComponent } from './sidebar-tags-head-menu.component';
 import { TagNode, tagNodesById } from '../../state/subscription-derivations';
-import { TagDragSession, measureTagLayout } from '../../tag-drag-session';
+import { TagDragSession } from '../../tag-drag-session';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
@@ -273,16 +273,17 @@ export class SidebarComponent {
   }
 
   startTagDrag(tag: TagDto): void {
+    const list = this.tagList()?.nativeElement;
+    if (list === undefined) return;
     const headers = this.tagHeadRows().map(({ nativeElement }) => ({
       tagId: Number(nativeElement.dataset['tagId']),
       element: nativeElement,
     }));
-    const layout = measureTagLayout(headers, this.tagList()?.nativeElement, this.tagListTop());
-    this.tagSession.start(tag, layout);
+    this.tagSession.start(tag, { headers, listEnd: list, origin: list });
   }
 
   moveTagDrag(clientY: number): void {
-    this.tagSession.move(clientY - this.tagListTop());
+    this.tagSession.move(clientY);
   }
 
   endTagDrag(): void {
@@ -291,10 +292,6 @@ export class SidebarComponent {
     this.manage.moveTag(ended.tag, ended.drop);
     const parentId = ended.drop.parentId;
     if (parentId !== null) this.expanded.update((open) => new Set(open).add(parentId));
-  }
-
-  private tagListTop(): number {
-    return this.tagList()?.nativeElement.getBoundingClientRect().top ?? 0;
   }
 
   /** A drop on a tag's header moves a feed onto the tag. */
