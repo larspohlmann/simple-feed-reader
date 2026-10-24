@@ -47,6 +47,36 @@ describe('resolveTagDrop', () => {
     });
   });
 
+  it('starts the nest zone exactly a quarter down a top-level header', () => {
+    expect(resolveTagDrop({ tag: tagC, layout: layout() }, TAGS, 10)).toEqual({
+      parentId: 1,
+      order: [3],
+      mark: { kind: 'nest', tagId: 1 },
+    });
+  });
+
+  it('ends the nest zone exactly three quarters down, where the lower edge begins', () => {
+    expect(resolveTagDrop({ tag: tagC, layout: layout() }, TAGS, 30)).toEqual({
+      parentId: null,
+      order: [1, 3, 2],
+      mark: { kind: 'after', tagId: 1 },
+    });
+  });
+
+  it('counts the exact middle of a child header as its lower half', () => {
+    expect(resolveTagDrop({ tag: tagC, layout: layout() }, TAGS, 120)).toEqual({
+      parentId: 2,
+      order: [21, 3, 22],
+      mark: { kind: 'after', tagId: 21 },
+    });
+  });
+
+  it('resolves nothing over a list without headers', () => {
+    expect(
+      resolveTagDrop({ tag: tagC, layout: { headers: [], listBottom: 100 } }, TAGS, 50),
+    ).toBeNull();
+  });
+
   it('makes the bottom edge of a parent with shown children its first child', () => {
     expect(resolveTagDrop({ tag: tagA, layout: layout() }, TAGS, 88)).toEqual({
       parentId: 2,

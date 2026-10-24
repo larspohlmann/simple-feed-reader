@@ -313,10 +313,16 @@ describe('ManageActions', () => {
         .mockImplementation(() => undefined);
     });
 
-    it('only reorders when the parent stays', () => {
+    it('only reorders when the parent stays, showing the new positions at once', () => {
       service.moveTag(tagB, dropUnder(null, [2, 1]));
 
-      ctrl.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
+      expect(tagsStore.tags().map(({ id, position }) => [id, position])).toEqual([
+        [2, 0],
+        [1, 1],
+      ]);
+      const reorder = ctrl.expectOne('https://api.test/api/tags/reorder');
+      expect(reorder.request.body).toEqual({ tagIds: [2, 1] });
+      reorder.flush({ tags: [] });
       ctrl.expectNone('https://api.test/api/tags/2');
     });
 
