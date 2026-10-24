@@ -106,6 +106,23 @@ export function tagLabel(tag: TagDto, tags: readonly TagDto[]): string {
   return parent ? `${parent.name} / ${tag.name}` : tag.name;
 }
 
+export const SUGGESTED_TAG_LIMIT = 4;
+
+/** The tags of the most recently added subscriptions, newest first, minus the ones already picked. */
+export function suggestedTags(
+  subscriptions: readonly SubscriptionDto[],
+  selected: ReadonlySet<number>,
+  exceptSubscriptionId: number | null,
+): TagDto[] {
+  const seen = new Set<number>(selected);
+  return [...subscriptions]
+    .filter((subscription) => subscription.id !== exceptSubscriptionId)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .flatMap((subscription) => subscription.tags)
+    .filter((tag) => !seen.has(tag.id) && seen.add(tag.id))
+    .slice(0, SUGGESTED_TAG_LIMIT);
+}
+
 interface TaggedFeed {
   sub: SubscriptionDto;
   pos: number;

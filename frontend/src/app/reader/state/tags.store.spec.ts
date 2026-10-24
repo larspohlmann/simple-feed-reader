@@ -57,4 +57,12 @@ describe('TagsStore', () => {
     expect(store.error()?.title).toBe('Nope');
     expect(store.loading()).toBe(false);
   });
+
+  it('adds a tag in position order', () => {
+    store.tags.set([{ ...tag(1, 'Alpha'), position: 0 }, { ...tag(2, 'Gamma'), position: 2 }]);
+
+    store.add({ ...tag(3, 'Beta'), position: 1 });
+
+    expect(store.tags().map((listedTag) => listedTag.name)).toEqual(['Alpha', 'Beta', 'Gamma']);
+  });
 });
