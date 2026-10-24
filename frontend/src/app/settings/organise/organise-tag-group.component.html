@@ -1,6 +1,7 @@
 <section class="panel">
   <div
     class="head-drop"
+    [class.nest-target]="nestTarget()"
     cdkDropList
     [cdkDropListData]="group()"
     [cdkDropListSortingDisabled]="true"
@@ -8,6 +9,7 @@
     (cdkDropListDropped)="onHeaderDropped($event)"
   >
     <div
+      #head
       class="head"
       cdkDrag
       [cdkDragData]="group().tag"

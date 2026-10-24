@@ -293,6 +293,7 @@
           [class.child]="group.depth === 1"
           [class.gap-before]="gapBeforeKey() === group.key"
           [class.gap-after]="gapAfterKey() === group.key"
+          [nestTarget]="nestKey() === group.key"
           [canMoveTagUp]="canMoveTag(group, -1)"
           [canMoveTagDown]="canMoveTag(group, 1)"
           (moveTagUp)="moveTag(group, -1)"

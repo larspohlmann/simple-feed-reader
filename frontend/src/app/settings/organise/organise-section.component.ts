@@ -43,8 +43,8 @@ import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { SubscriptionFlags } from '../../reader/subscription-bulk';
-import { TagDragBounds, TagDragGap } from './tag-drag-gap.service';
-import { moveToGap, verticalMiddle } from './tag-drop-gap';
+import { TagDragSession, measureTagLayout } from '../../reader/tag-drag-session';
+import { TagDropMark } from '../../reader/tag-drop';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
  *  value, and the i18n key for its label. A readonly literal array so the
@@ -83,7 +83,7 @@ interface VisibilityMenuItem {
     CdkDropListGroup,
     NgTemplateOutlet,
   ],
-  providers: [OrganiseStore, TagDragGap],
+  providers: [OrganiseStore, TagDragSession],
   templateUrl: './organise-section.component.html',
   styleUrl: './organise-section.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -95,7 +95,7 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly tags = inject(TagsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly dialog = inject(Dialog);
-  private readonly tagGap = inject(TagDragGap);
+  private readonly tagSession = inject(TagDragSession);
   private readonly tree = viewChild<ElementRef<HTMLElement>>('tree');
   private readonly panelGroups = viewChildren(OrganiseTagGroupComponent);
   private readonly panelElements = viewChildren<OrganiseTagGroupComponent, ElementRef<HTMLElement>>(
@@ -237,23 +237,11 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly orderedTags = computed(() => tagsInTreeOrder(this.tags.tags()));
   private readonly siblingIdsByTag = computed(() => siblingIdsByTagId(this.tags.tags()));
 
-  private readonly dragSiblingKeys = signal<readonly GroupKey[] | null>(null);
-  private readonly draggedTag = signal<TagDto | null>(null);
+  private readonly dropMark = computed(() => this.tagSession.drop()?.mark ?? null);
 
-  /** The sibling a gap draws before; the gap after the last sibling draws after it instead. */
-  protected readonly gapBeforeKey = computed<GroupKey | null>(() => {
-    const gap = this.tagGap.gap();
-    const keys = this.dragSiblingKeys();
-    if (gap === null || keys === null || gap >= keys.length) return null;
-    return keys[gap];
-  });
-
-  protected readonly gapAfterKey = computed<GroupKey | null>(() => {
-    const gap = this.tagGap.gap();
-    const keys = this.dragSiblingKeys();
-    if (gap === null || keys === null || gap < keys.length) return null;
-    return keys[keys.length - 1];
-  });
+  protected readonly gapBeforeKey = computed(() => this.markedKey('before'));
+  protected readonly gapAfterKey = computed(() => this.markedKey('after'));
+  protected readonly nestKey = computed(() => this.markedKey('nest'));
 
   protected canMoveTag(group: OrganiseGroup, offset: number): boolean {
     if (group.tag === null || this.store.filterActive()) return false;
@@ -272,49 +260,39 @@ export class OrganiseSectionComponent implements OnInit {
     this.persistTagOrder(ids);
   }
 
-  /** Only a child drag is bounded, to its sibling range; a root keeps the gaps above the first root and after the last (#1708). */
   protected startTagDrag(group: OrganiseGroup): void {
-    const tag = group.tag;
-    if (tag === null) return;
-    const siblings = this.store
-      .groups()
-      .filter((shown) => shown.tag !== null && shown.tag.parentId === tag.parentId)
-      .map((shown) => shown.key);
-    const elements = siblings.flatMap((key) => this.panelByKey().get(key) ?? []);
-    const from = siblings.indexOf(group.key);
-    if (from < 0 || elements.length !== siblings.length) return;
-    const treeTop = this.treeTop();
-    this.draggedTag.set(tag);
-    this.dragSiblingKeys.set(siblings);
-    this.tagGap.start(
-      from,
-      elements.map((element) => verticalMiddle(element) - treeTop),
-      tag.parentId === null ? null : this.spanOf(elements[0], elements[elements.length - 1]),
-    );
+    if (group.tag === null) return;
+    const tagPanels = this.panelGroups().flatMap((panel) => {
+      const tag = panel.group().tag;
+      return tag === null ? [] : [{ panel, tag }];
+    });
+    const headers = tagPanels.map(({ panel, tag }) => ({
+      tagId: tag.id,
+      element: panel.headElement().nativeElement,
+    }));
+    const lastRoot = [...tagPanels].reverse().find(({ panel }) => panel.group().depth === 0);
+    const listEnd =
+      lastRoot === undefined ? undefined : this.panelByKey().get(lastRoot.panel.group().key);
+    this.tagSession.start(group.tag, measureTagLayout(headers, listEnd, this.treeTop()));
   }
 
   protected moveTagDrag(clientY: number): void {
-    this.tagGap.move(clientY - this.treeTop());
+    this.tagSession.move(clientY - this.treeTop());
   }
 
   protected endTagDrag(): void {
-    const move = this.tagGap.end();
-    const tag = this.draggedTag();
-    this.draggedTag.set(null);
-    this.dragSiblingKeys.set(null);
-    if (move !== null && tag !== null) this.persistTagOrder(moveToGap(this.siblingIds(tag), move));
+    const ended = this.tagSession.end();
+    if (ended === null || this.store.filterActive()) return;
+    this.manage.moveTag(ended.tag, ended.drop);
   }
 
   private siblingIds(tag: TagDto): number[] {
     return [...(this.siblingIdsByTag().get(tag.id) ?? [])];
   }
 
-  /** First panel's top to last panel's foot, relative to the tree. */
-  private spanOf(first: HTMLElement, last: HTMLElement): TagDragBounds {
-    const treeTop = this.treeTop();
-    const firstRect = first.getBoundingClientRect();
-    const lastRect = last.getBoundingClientRect();
-    return { top: firstRect.top - treeTop, bottom: lastRect.top + lastRect.height - treeTop };
+  private markedKey(kind: TagDropMark['kind']): GroupKey | null {
+    const mark = this.dropMark();
+    return mark !== null && mark.kind === kind ? mark.tagId : null;
   }
 
   /** Under a filter `store.groups()` is a subset of the full tag order, so no position derived from it is written. */

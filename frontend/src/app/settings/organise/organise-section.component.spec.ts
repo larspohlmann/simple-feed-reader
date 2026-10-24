@@ -93,6 +93,7 @@ describe('OrganiseSectionComponent', () => {
     retryFeed: jest.fn(),
     moveFeedToTag: jest.fn(),
     reorderTags: jest.fn(),
+    moveTag: jest.fn(),
     reorderTagFeeds: jest.fn(),
     reorderUntagged: jest.fn(),
   };
@@ -561,23 +562,31 @@ describe('OrganiseSectionComponent', () => {
     });
   });
 
-  describe('tag drag gap (#1708)', () => {
-    // Tree top at 100; panels 80 px tall, 20 px apart: middles at 140, 240, 340 (+ untagged at 440).
+  describe('tag drag (#1708, #1765)', () => {
+    // Tree top at 100; headers 40 tall at 100 + index * 100; the last root panel's foot is the list's end.
     const TREE_TOP = 100;
+    const panels = () => fixture.debugElement.queryAll(By.directive(OrganiseTagGroupComponent));
+    const heads = () => fixture.debugElement.queryAll(By.css('app-organise-tag-group .head'));
 
     async function renderTags(tags: TagDto[] = [TECH, WORLD, ART]) {
       const rendered = await renderWithMocks(SUBS, tags);
       const tree = fixture.debugElement.query(By.css('.tree')).nativeElement as HTMLElement;
       jest.spyOn(tree, 'getBoundingClientRect').mockReturnValue({ top: TREE_TOP } as DOMRect);
+      heads().forEach((head, index) =>
+        jest.spyOn(head.nativeElement as HTMLElement, 'getBoundingClientRect').mockReturnValue({
+          top: TREE_TOP + index * 100,
+          bottom: TREE_TOP + index * 100 + 40,
+        } as DOMRect),
+      );
       panels().forEach((panel, index) =>
-        jest
-          .spyOn(panel.nativeElement as HTMLElement, 'getBoundingClientRect')
-          .mockReturnValue({ top: TREE_TOP + index * 100, height: 80 } as DOMRect),
+        jest.spyOn(panel.nativeElement as HTMLElement, 'getBoundingClientRect').mockReturnValue({
+          top: TREE_TOP + index * 100,
+          bottom: TREE_TOP + index * 100 + 80,
+        } as DOMRect),
       );
       return rendered;
     }
 
-    const panels = () => fixture.debugElement.queryAll(By.directive(OrganiseTagGroupComponent));
     /** Per panel: the gap drawn before it, after it, or none. */
     const gapMarks = () =>
       panels().map((panel) => {
@@ -585,6 +594,14 @@ describe('OrganiseSectionComponent', () => {
         if (classes.contains('gap-before')) return 'before';
         return classes.contains('gap-after') ? 'after' : '-';
       });
+    const nestMarks = () =>
+      panels().map((panel) =>
+        (panel.nativeElement as HTMLElement).querySelector(
+          ':scope > .panel > .head-drop.nest-target',
+        )
+          ? 'nest'
+          : '-',
+      );
 
     function drag(fromPanel: number, clientY: number): void {
       panels()[fromPanel].triggerEventHandler('tagDragStarted');
@@ -595,7 +612,7 @@ describe('OrganiseSectionComponent', () => {
     it('opens the gap above the first tag', async () => {
       await renderTags();
 
-      drag(2, 110);
+      drag(2, 102);
 
       expect(gapMarks()).toEqual(['before', '-', '-', '-']);
     });
@@ -603,7 +620,7 @@ describe('OrganiseSectionComponent', () => {
     it('opens the gap below the last tag, above the untagged group', async () => {
       await renderTags();
 
-      drag(0, 400);
+      drag(0, 395);
 
       expect(gapMarks()).toEqual(['-', '-', 'after', '-']);
     });
@@ -611,7 +628,7 @@ describe('OrganiseSectionComponent', () => {
     it('opens no gap beside the dragged tag itself', async () => {
       await renderTags();
 
-      drag(1, 260);
+      drag(1, 202);
 
       expect(gapMarks()).toEqual(['-', '-', '-', '-']);
     });
@@ -622,75 +639,56 @@ describe('OrganiseSectionComponent', () => {
       const tree = fixture.debugElement.query(By.css('.tree')).nativeElement as HTMLElement;
       jest.spyOn(tree, 'getBoundingClientRect').mockReturnValue({ top: TREE_TOP - 300 } as DOMRect);
 
-      panels()[2].triggerEventHandler('tagDragMoved', 110 - 300);
+      panels()[2].triggerEventHandler('tagDragMoved', 102 - 300);
       fixture.detectChanges();
 
       expect(gapMarks()).toEqual(['before', '-', '-', '-']);
     });
 
-    it('moves the tag into the gap on drop and closes the gap', async () => {
-      const { manage } = await renderTags();
-      drag(0, 400);
+    it('highlights the header a tag will nest under', async () => {
+      await renderTags();
 
-      panels()[0].triggerEventHandler('tagDragEnded');
+      drag(2, 120);
+
+      expect(nestMarks()).toEqual(['nest', '-', '-', '-']);
+      expect(gapMarks()).toEqual(['-', '-', '-', '-']);
+    });
+
+    it('moves the tag on drop through moveTag and clears the cue', async () => {
+      const { manage } = await renderTags();
+      drag(2, 120);
+
+      panels()[2].triggerEventHandler('tagDragEnded');
       fixture.detectChanges();
 
-      expect(manage.reorderTags).toHaveBeenCalledWith([WORLD.id, ART.id, TECH.id]);
-      expect(gapMarks()).toEqual(['-', '-', '-', '-']);
+      expect(manage.moveTag).toHaveBeenCalledWith(ART, {
+        parentId: TECH.id,
+        order: [ART.id],
+        mark: { kind: 'nest', tagId: TECH.id },
+      });
+      expect(nestMarks()).toEqual(['-', '-', '-', '-']);
     });
 
     it('writes nothing when the tag is dropped where it was', async () => {
       const { manage } = await renderTags();
-      drag(1, 260);
+      drag(1, 202);
 
       panels()[1].triggerEventHandler('tagDragEnded');
 
-      expect(manage.reorderTags).not.toHaveBeenCalled();
+      expect(manage.moveTag).not.toHaveBeenCalled();
     });
 
     it('writes nothing under an active filter', async () => {
       const { manage, store } = await renderTags();
-      drag(0, 400);
+      drag(0, 395);
       store.titleFilter.set('taz');
 
       panels()[0].triggerEventHandler('tagDragEnded');
 
-      expect(manage.reorderTags).not.toHaveBeenCalled();
-    });
-
-    it('writes nothing when the dragged tag is gone from the groups', async () => {
-      const { manage } = await renderTags();
-      const tags = TestBed.inject(TagsStore).tags as WritableSignal<TagDto[]>;
-      tags.set([WORLD, ART]);
-
-      drag(0, 400);
-      panels()[0].triggerEventHandler('tagDragEnded');
-
-      expect(manage.reorderTags).not.toHaveBeenCalled();
-    });
-
-    it('writes nothing when a sibling has no panel yet', async () => {
-      const { manage } = await renderTags();
-      const tags = TestBed.inject(TagsStore).tags as WritableSignal<TagDto[]>;
-      tags.set([TECH, WORLD, ART, { ...ART, id: 99, name: 'Fresh', position: 3 }]);
-
-      drag(0, 400);
-      panels()[0].triggerEventHandler('tagDragEnded');
-
-      expect(manage.reorderTags).not.toHaveBeenCalled();
+      expect(manage.moveTag).not.toHaveBeenCalled();
     });
 
     describe('child tags (#1736)', () => {
-      /** Lays the panels out as they render: a root's panel holds its children's, above its own feeds. */
-      function layOut(rects: readonly { top: number; height: number }[]): void {
-        panels().forEach((panel, index) =>
-          jest.spyOn(panel.nativeElement as HTMLElement, 'getBoundingClientRect').mockReturnValue({
-            top: TREE_TOP + rects[index].top,
-            height: rects[index].height,
-          } as DOMRect),
-        );
-      }
-
       const READING: TagDto = {
         id: 7,
         name: 'Reading',
@@ -715,18 +713,8 @@ describe('OrganiseSectionComponent', () => {
         position: 1,
         parentId: 7,
       };
-      // 0 Reading (0–380, holding 1 Long reads 100–180 and 2 Essays 200–280), 3 Tech 400–480, 4 untagged 500–580.
-      async function renderTree() {
-        const rendered = await renderTags([READING, LONG_READS, ESSAYS, TECH]);
-        layOut([
-          { top: 0, height: 380 },
-          { top: 100, height: 80 },
-          { top: 200, height: 80 },
-          { top: 400, height: 80 },
-          { top: 500, height: 80 },
-        ]);
-        return rendered;
-      }
+      // Panels: 0 Reading, 1 Long reads, 2 Essays, 3 Tech, 4 untagged; headers at 0, 100, 200, 300 below the tree top.
+      const renderTree = () => renderTags([READING, LONG_READS, ESSAYS, TECH]);
       const groupAt = (index: number) =>
         panels()[index].componentInstance as OrganiseTagGroupComponent;
 
@@ -750,57 +738,29 @@ describe('OrganiseSectionComponent', () => {
         expect(manage.reorderTags).toHaveBeenCalledWith([TECH.id, READING.id]);
       });
 
-      it('draws the gap for a dragged child only within its sibling range', async () => {
-        await renderTree();
+      it("un-nests a child dropped on a top-level header's top edge", async () => {
+        const { manage } = await renderTree();
+        drag(2, TREE_TOP + 302);
 
-        drag(2, TREE_TOP + 120);
-        expect(gapMarks()).toEqual(['-', 'before', '-', '-', '-']);
+        panels()[2].triggerEventHandler('tagDragEnded');
 
-        drag(1, TREE_TOP + 340);
-        expect(gapMarks()).toEqual(['-', '-', '-', '-', '-']);
+        expect(manage.moveTag).toHaveBeenCalledWith(
+          ESSAYS,
+          expect.objectContaining({ parentId: null }),
+        );
       });
 
-      it("draws the gap after the last child inside its parent's panel, above the parent's feeds", async () => {
+      it("moves a child to another root dropped on that root's middle", async () => {
         const { manage } = await renderTree();
-
-        drag(1, TREE_TOP + 270);
-        expect(gapMarks()).toEqual(['-', '-', 'after', '-', '-']);
+        drag(1, TREE_TOP + 320);
+        expect(nestMarks()).toEqual(['-', '-', '-', 'nest', '-']);
 
         panels()[1].triggerEventHandler('tagDragEnded');
-        expect(manage.reorderTags).toHaveBeenCalledWith([ESSAYS.id, LONG_READS.id]);
-      });
 
-      it('keeps the gaps above the first root and after the last root for a root drag', async () => {
-        const { manage } = await renderTree();
-
-        drag(3, TREE_TOP + 10);
-        expect(gapMarks()).toEqual(['before', '-', '-', '-', '-']);
-
-        drag(0, TREE_TOP + 460);
-        expect(gapMarks()).toEqual(['-', '-', '-', 'after', '-']);
-
-        panels()[0].triggerEventHandler('tagDragEnded');
-        expect(manage.reorderTags).toHaveBeenCalledWith([TECH.id, READING.id]);
-      });
-
-      it('draws the gap after the last root past its children', async () => {
-        // 0 Tech 0–80, 1 Reading 100–480 (holding 2 Long reads 200–280 and 3 Essays 300–380), 4 untagged 500–580.
-        const { manage } = await renderTags([TECH, READING, LONG_READS, ESSAYS]);
-        layOut([
-          { top: 0, height: 80 },
-          { top: 100, height: 380 },
-          { top: 200, height: 80 },
-          { top: 300, height: 80 },
-          { top: 500, height: 80 },
-        ]);
-
-        drag(0, TREE_TOP + 400);
-        expect(gapMarks()).toEqual(['-', 'after', '-', '-', '-']);
-        const reading = panels()[1].nativeElement as HTMLElement;
-        expect(reading.contains(panels()[3].nativeElement as HTMLElement)).toBe(true);
-
-        panels()[0].triggerEventHandler('tagDragEnded');
-        expect(manage.reorderTags).toHaveBeenCalledWith([READING.id, TECH.id]);
+        expect(manage.moveTag).toHaveBeenCalledWith(
+          LONG_READS,
+          expect.objectContaining({ parentId: TECH.id }),
+        );
       });
     });
   });
