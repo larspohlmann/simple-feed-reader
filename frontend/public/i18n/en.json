@@ -1204,6 +1204,8 @@
     "toggleTag": "Toggle {{name}}",
     "manage": "Manage {{name}}",
     "editTag": "Edit tag",
+    "newTag": "New tag",
+    "createTagHere": "Create tag here",
     "deleteTag": "Delete tag",
     "moveTagUp": "Move up",
     "moveTagDown": "Move down",

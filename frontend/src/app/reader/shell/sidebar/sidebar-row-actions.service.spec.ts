@@ -181,10 +181,11 @@ describe('SidebarRowActions', () => {
     const reorderTags = jest.fn();
     const editTag = jest.fn();
     const deleteTag = jest.fn();
+    const createTag = jest.fn();
     const tags = signal<TagDto[]>([]);
 
     beforeEach(() => {
-      [sheetOpen, reorderTags, editTag, deleteTag].forEach((spy) => spy.mockReset());
+      [sheetOpen, reorderTags, editTag, deleteTag, createTag].forEach((spy) => spy.mockReset());
       sheetOpen.mockReturnValue(of(undefined));
       tags.set([tag(1, 0), tag(2, 1), tag(3, 2), tag(11, 0, 1), tag(12, 1, 1)]);
       TestBed.configureTestingModule({
@@ -192,7 +193,7 @@ describe('SidebarRowActions', () => {
         providers: [
           SidebarRowActions,
           { provide: ActionSheet, useValue: { open: sheetOpen } },
-          { provide: ManageActions, useValue: { reorderTags, editTag, deleteTag } },
+          { provide: ManageActions, useValue: { reorderTags, editTag, deleteTag, createTag } },
           { provide: SavedSearchesStore, useValue: {} },
           { provide: TagsStore, useValue: { tags } },
         ],
@@ -204,13 +205,14 @@ describe('SidebarRowActions', () => {
       return sheetOpen.mock.calls[0][0].actions as { id?: string; disabled?: boolean }[];
     };
 
-    it('offers edit, move up, move down and, after a divider, delete', () => {
+    it('offers edit, create here, move up, move down and, after a divider, delete', () => {
       TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
 
       expect(sheetOpen).toHaveBeenCalledWith({
         title: 't2',
         actions: [
           { id: 'edit', label: 'Edit tag', symbol: 'edit' },
+          { id: 'createHere', label: 'Create tag here', symbol: 'add' },
           { id: 'moveUp', label: 'Move up', symbol: 'arrow_upward', disabled: false },
           { id: 'moveDown', label: 'Move down', symbol: 'arrow_downward', disabled: false },
           ACTION_SHEET_DIVIDER,
@@ -261,6 +263,28 @@ describe('SidebarRowActions', () => {
       choice.next('moveUp');
 
       expect(reorderTags).not.toHaveBeenCalled();
+    });
+
+    it('offers no Create tag here on a child tag', () => {
+      const actions = actionsFor(tag(11, 0, 1));
+      expect(actions.find((action) => action.id === 'createHere')).toBeUndefined();
+    });
+
+    it('creates a tag under the root it was opened on', () => {
+      sheetOpen.mockReturnValue(of('createHere'));
+      TestBed.inject(SidebarRowActions).openTagSheet(tag(2, 1));
+      expect(createTag).toHaveBeenCalledWith(2);
+      expect(reorderTags).not.toHaveBeenCalled();
+    });
+
+    it('the Tags head sheet offers New tag and creates at the top level', () => {
+      sheetOpen.mockReturnValue(of('new'));
+      TestBed.inject(SidebarRowActions).openTagsHeadSheet();
+      expect(sheetOpen).toHaveBeenCalledWith({
+        title: 'Tags',
+        actions: [{ id: 'new', label: 'New tag', symbol: 'add' }],
+      });
+      expect(createTag).toHaveBeenCalledWith();
     });
 
     it('still routes edit and delete', () => {
