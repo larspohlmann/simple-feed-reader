@@ -6,6 +6,18 @@ import { DialogRef } from '@angular/cdk/dialog';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../../core/api';
 import { AddFeedDialogComponent } from './add-feed-dialog.component';
+import { TagDto } from '../../models';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { makeSubscription } from '../../testing/subscription.factory';
+
+const tag = (id: number, name: string): TagDto => ({
+  id,
+  name,
+  color: null,
+  icon: null,
+  position: id,
+  parentId: null,
+});
 
 describe('AddFeedDialogComponent', () => {
   let ctrl: HttpTestingController;
@@ -80,8 +92,7 @@ describe('AddFeedDialogComponent', () => {
 
   it('renders the tag picker and sends the checked tag ids on submit', () => {
     const fixture = create();
-    const pills = (fixture.nativeElement as HTMLElement).querySelectorAll('button.tag-pill');
-    expect(pills.length).toBe(2);
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-tag-picker')).not.toBeNull();
 
     fixture.componentInstance.toggleTag(2);
     fixture.componentInstance.form.setValue({ url: 'https://example.com/feed' });
@@ -588,5 +599,22 @@ describe('AddFeedDialogComponent', () => {
       (fixture.nativeElement as HTMLElement).querySelector('app-field .error')?.textContent,
     ).toContain('Connect a Bluesky account in Settings → Social Media');
     expect(close).not.toHaveBeenCalled();
+  });
+
+  it('suggests the tags of the newest subscription', () => {
+    TestBed.inject(SubscriptionRows).stored.set([
+      makeSubscription({ id: 3, createdAt: '2026-01-01T00:00:00Z', tags: [tag(1, 'Tech')] }),
+      makeSubscription({ id: 4, createdAt: '2026-05-01T00:00:00Z', tags: [tag(2, 'News')] }),
+    ]);
+    const fixture = create();
+
+    expect(fixture.componentInstance.suggestedTags().map((suggested) => suggested.name)).toEqual([
+      'News',
+      'Tech',
+    ]);
+    fixture.componentInstance.toggleTag(2);
+    expect(fixture.componentInstance.suggestedTags().map((suggested) => suggested.name)).toEqual([
+      'Tech',
+    ]);
   });
 });

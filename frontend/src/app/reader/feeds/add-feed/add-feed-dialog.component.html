@@ -11,14 +11,13 @@
       >
         <input formControlName="url" type="url" placeholder="https://example.com" cdkFocusInitial />
       </app-field>
-      @if (tagsStore.tags().length) {
-        <p class="lbl">{{ 'dialog.addFeed.tags' | transloco }}</p>
-        <app-tag-picker
-          [tags]="tagsStore.tags()"
-          [selected]="checked()"
-          (toggled)="toggleTag($event)"
-        />
-      }
+      <p class="lbl">{{ 'dialog.addFeed.tags' | transloco }}</p>
+      <app-tag-picker
+        [tags]="tagsStore.tags()"
+        [selected]="checked()"
+        [suggested]="suggestedTags()"
+        (toggled)="toggleTag($event)"
+      />
       <!-- Discovery reads the page then guesses feed addresses it never mentioned,
            so a search can run for seconds. This is the one live report of that —
            the footer button only disables, which reads as a stalled dialog. -->

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
@@ -12,6 +12,8 @@ import { ToggleComponent } from '../../../shared/toggle/toggle.component';
 import { parseProblem } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { suggestedTags } from '../../state/subscription-derivations';
 import { SubscriptionDto } from '../../models';
 import { isUnrenamedHome } from '../display-title';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -47,6 +49,10 @@ export class EditSubscriptionDialogComponent implements OnInit {
     customTitle: [this.prefilledTitle, [Validators.maxLength(512)]],
   });
   readonly checked = signal<Set<number>>(new Set(this.data.tags.map((tag) => tag.id)));
+  private readonly subscriptions = inject(SubscriptionRows);
+  readonly suggestedTags = computed(() =>
+    suggestedTags(this.subscriptions.stored(), this.checked(), this.data.id),
+  );
   readonly includeInAllItems = signal<boolean>(this.data.includeInAllItems);
   readonly includeInForYou = signal<boolean>(this.data.includeInForYou);
   readonly includeInSavedSearches = signal<boolean>(this.data.includeInSavedSearches);
