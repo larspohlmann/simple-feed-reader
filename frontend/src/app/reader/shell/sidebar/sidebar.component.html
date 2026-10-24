@@ -136,7 +136,12 @@
         class="section-head tags-head"
         [class.current]="!organising() && activeGroup() === 'tags'"
       >
-        <ng-container *ngTemplateOutlet="sectionHead; context: { $implicit: tagsHead }" />
+        <ng-container
+          *ngTemplateOutlet="
+            sectionHead;
+            context: { $implicit: tagsHead, menu: tagsHeadMenu, sheet: tagsHeadSheet }
+          "
+        />
       </div>
       @if (tagsExpanded() || organising()) {
         <!-- Drop lists stay top-level siblings, wrapped by plain divs: CDK breaks cross-list drops if nested. -->
@@ -180,7 +185,12 @@
         class="section-head feeds-head"
         [class.current]="!organising() && activeGroup() === 'feeds'"
       >
-        <ng-container *ngTemplateOutlet="sectionHead; context: { $implicit: feedsHead }" />
+        <ng-container
+          *ngTemplateOutlet="
+            sectionHead;
+            context: { $implicit: feedsHead, menu: headSlot, sheet: null }
+          "
+        />
       </div>
     }
     <!-- The drop list stays mounted even while collapsed: it is the untag target,
@@ -295,26 +305,7 @@
             [toggleLabel]="'reader.toggleTag' | transloco: { name: node.tag.name }"
             (toggled)="toggle(node.tag.id)"
           >
-            @if (!screen.isCoarse()) {
-              <app-sidebar-row-menu
-                [menuKey]="'tag-' + node.tag.id"
-                [label]="'reader.manage' | transloco: { name: node.tag.name }"
-              >
-                <ng-template>
-                  <button role="menuitem" (click)="manage.editTag(node.tag); rows.closeMenu()">
-                    {{ 'reader.editTag' | transloco }}
-                  </button>
-                  <hr />
-                  <button
-                    role="menuitem"
-                    class="danger"
-                    (click)="manage.deleteTag(node.tag); rows.closeMenu()"
-                  >
-                    {{ 'reader.deleteTag' | transloco }}
-                  </button>
-                </ng-template>
-              </app-sidebar-row-menu>
-            }
+            <app-sidebar-tag-menu [tag]="node.tag" />
           </app-sidebar-group-row>
         }
       </div>
@@ -350,9 +341,10 @@
     </div>
   </ng-template>
 
-  <ng-template #sectionHead appSectionHead let-head>
+  <ng-template #sectionHead appSectionHead let-head let-menu="menu" let-sheet="sheet">
     @if (organising()) {
       <span class="label">{{ head.label | transloco }}</span>
+      <ng-container *ngTemplateOutlet="sheet" />
     } @else {
       <a
         class="section-link"
@@ -365,7 +357,7 @@
           <span class="section-count">{{ groupUnread()[head.group] }}</span>
         }
       </a>
-      <span class="slot" aria-hidden="true"></span>
+      <ng-container *ngTemplateOutlet="menu" />
       <button
         class="section-chevron"
         type="button"
@@ -375,6 +367,28 @@
       >
         <app-icon [name]="head.section.expanded() ? 'expand_more' : 'chevron_right'" size="dense" />
       </button>
+    }
+  </ng-template>
+
+  <ng-template #headSlot><span class="slot" aria-hidden="true"></span></ng-template>
+
+  <ng-template #tagsHeadSheet>
+    <button
+      class="dots"
+      type="button"
+      aria-haspopup="dialog"
+      [attr.aria-label]="'reader.manage' | transloco: { name: ('reader.tags' | transloco) }"
+      (click)="rows.openTagsHeadSheet()"
+    >
+      <app-icon name="more_horiz" size="md" />
+    </button>
+  </ng-template>
+
+  <ng-template #tagsHeadMenu>
+    @if (screen.isCoarse()) {
+      <span class="slot" aria-hidden="true"></span>
+    } @else {
+      <app-sidebar-tag-menu />
     }
   </ng-template>
 

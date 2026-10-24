@@ -27,6 +27,7 @@ import { By } from '@angular/platform-browser';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 
 const manageActions = {
+  createTag: jest.fn(),
   editTag: jest.fn(),
   deleteTag: jest.fn(),
   editSubscription: jest.fn(),
@@ -307,8 +308,67 @@ describe('SidebarComponent', () => {
     (element.querySelector('.tag .dots') as HTMLButtonElement).click();
     fixture.detectChanges();
     const buttons2 = element.querySelectorAll('.tag .pop [role="menuitem"]');
-    (buttons2[1] as HTMLButtonElement).click();
+    (buttons2[2] as HTMLButtonElement).click();
     expect(deleteTag).toHaveBeenCalledWith(node.tag);
+  });
+
+  it('creates a tag under a root tag from its row menu, not under a child', () => {
+    const child: TagNode = {
+      tag: { id: 21, name: 'Long reads', color: null, icon: null, position: 0, parentId: 20 },
+      subscriptions: [],
+      children: [],
+      unreadCount: 0,
+      entryCount: 0,
+    };
+    const root: TagNode = {
+      tag: { id: 20, name: 'Reading', color: null, icon: null, position: 0, parentId: null },
+      subscriptions: [],
+      children: [child],
+      unreadCount: 0,
+      entryCount: 0,
+    };
+    const fixture = mount({ tagTree: [root] });
+    const element = fixture.nativeElement as HTMLElement;
+    // Child rows render only once their root is expanded (`tagGroups`).
+    element.querySelector<HTMLButtonElement>('.tag .chevzone')!.click();
+    fixture.detectChanges();
+    const menuItems = (tagName: string) => {
+      const row = [...element.querySelectorAll('.tag')].find((candidate) =>
+        candidate.textContent?.includes(tagName),
+      )!;
+      row.querySelector<HTMLButtonElement>('.dots')!.click();
+      fixture.detectChanges();
+      return [...row.querySelectorAll<HTMLButtonElement>('.pop [role="menuitem"]')];
+    };
+
+    expect(menuItems('Long reads').map((item) => item.textContent?.trim())).not.toContain(
+      'Create tag here',
+    );
+    menuItems('Long reads'); // closes it again
+    menuItems('Reading')
+      .find((item) => item.textContent?.trim() === 'Create tag here')!
+      .click();
+    fixture.detectChanges();
+
+    expect(manageActions.createTag).toHaveBeenCalledWith(20);
+    expect(element.querySelector('.tag .pop')).toBeNull();
+  });
+
+  it('creates a top-level tag from the Tags head menu', () => {
+    const fixture = mount({ tagTree: [tagNodeFixture] });
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.tags-head .slot')).toBeNull();
+    expect(element.querySelector('.feeds-head .dots')).toBeNull();
+
+    element.querySelector<HTMLButtonElement>('.tags-head .dots')!.click();
+    fixture.detectChanges();
+    const items = element.querySelectorAll<HTMLButtonElement>('.tags-head .pop [role="menuitem"]');
+    expect([...items].map((item) => item.textContent?.trim())).toEqual(['New tag']);
+    items[0].click();
+    fixture.detectChanges();
+
+    expect(manageActions.createTag).toHaveBeenCalledWith();
+    expect(element.querySelector('.tags-head .pop')).toBeNull();
   });
 
   it('closes an open row menu when the pointer goes down elsewhere', () => {
@@ -1860,6 +1920,19 @@ describe('for-you row', () => {
 });
 
 describe('organise mode', () => {
+  it('the Tags head carries a ⋯ that opens the Tags sheet while organising', () => {
+    const fixture = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'new' });
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.feeds-head .dots')).toBeNull();
+
+    element.querySelector<HTMLButtonElement>('.tags-head .dots')!.click();
+
+    expect(TestBed.inject(ActionSheet).open).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Tags' }),
+    );
+    expect(manageActions.createTag).toHaveBeenCalledWith();
+  });
+
   const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0, parentId: null };
   const tree: TagNode[] = [
     { tag, subscriptions: [sub(5)], children: [], unreadCount: 3, entryCount: 0 },
@@ -2064,6 +2137,7 @@ describe('organise mode', () => {
       title: 'News',
       actions: [
         { id: 'edit', label: 'Edit tag', symbol: 'edit' },
+        { id: 'createHere', label: 'Create tag here', symbol: 'add' },
         { id: 'moveUp', label: 'Move up', symbol: 'arrow_upward', disabled: true },
         { id: 'moveDown', label: 'Move down', symbol: 'arrow_downward', disabled: true },
         ACTION_SHEET_DIVIDER,
