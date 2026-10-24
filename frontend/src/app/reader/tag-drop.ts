@@ -45,6 +45,7 @@ interface DropContext {
 
 const NEST_FROM = 0.25;
 const NEST_TO = 0.75;
+const HALF = 0.5;
 
 export function resolveTagDrop(
   drag: TagDragSubject,
@@ -79,7 +80,7 @@ function slotAt({ dragged, tree, layout }: DropContext, pointerY: number): Slot 
   ) {
     return { parentId: anchor.id, beforeId: null, mark: { kind: 'nest', tagId: anchor.id } };
   }
-  if (share < 0.5) {
+  if (share < HALF) {
     return {
       parentId: anchor.parentId,
       beforeId: anchor.id,

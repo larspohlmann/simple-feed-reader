@@ -254,7 +254,7 @@ export class OrganiseSectionComponent implements OnInit {
     return to >= 0 && to < ids.length;
   }
 
-  protected moveTag(group: OrganiseGroup, offset: number): void {
+  protected stepTag(group: OrganiseGroup, offset: number): void {
     if (group.tag === null) return;
     const ids = this.siblingIds(group.tag);
     const from = ids.indexOf(group.tag.id);
@@ -269,7 +269,9 @@ export class OrganiseSectionComponent implements OnInit {
     if (group.tag === null || tree === undefined) return;
     const headers = this.panelGroups().flatMap((panel) => {
       const tag = panel.group().tag;
-      return tag === null ? [] : [{ tagId: tag.id, element: panel.headDropElement().nativeElement }];
+      return tag === null
+        ? []
+        : [{ tagId: tag.id, element: panel.headDropElement().nativeElement }];
     });
     this.tagSession.start(group.tag, { headers, listEnd: this.lastRootPanel(), origin: tree });
   }
@@ -280,7 +282,7 @@ export class OrganiseSectionComponent implements OnInit {
 
   protected endTagDrag(): void {
     const ended = this.tagSession.end();
-    if (ended === null || this.store.filterActive()) return;
+    if (ended === null) return;
     this.manage.moveTag(ended.tag, ended.drop);
   }
 

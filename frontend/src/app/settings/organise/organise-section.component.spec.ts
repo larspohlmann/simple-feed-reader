@@ -409,7 +409,7 @@ describe('OrganiseSectionComponent', () => {
     expect(manage.reorderTags).toHaveBeenCalledWith([3, 2]);
   });
 
-  // canMoveTagUp/Down indexes the FILTERED groups() while moveTag() swaps
+  // canMoveTagUp/Down indexes the FILTERED groups() while stepTag() swaps
   // within the full tags() list -- that mismatch could silently swap with a
   // tag the user can't see, so both must refuse while a filter is active.
   it('disables tag reordering under an active filter, and writes nothing', async () => {
@@ -642,7 +642,8 @@ describe('OrganiseSectionComponent', () => {
     describe('when the panel query order differs from the screen order', () => {
       const panelOf = (tag: TagDto) =>
         panels().find(
-          (panel) => (panel.componentInstance as OrganiseTagGroupComponent).group().tag?.id === tag.id,
+          (panel) =>
+            (panel.componentInstance as OrganiseTagGroupComponent).group().tag?.id === tag.id,
         )!;
 
       // Re-ordering moves the stamped panels on screen; the query keeps the order they were created in.
@@ -744,16 +745,6 @@ describe('OrganiseSectionComponent', () => {
       expect(manage.moveTag).not.toHaveBeenCalled();
     });
 
-    it('writes nothing under an active filter', async () => {
-      const { manage, store } = await renderTags();
-      drag(0, 395);
-      store.titleFilter.set('taz');
-
-      panels()[0].triggerEventHandler('tagDragEnded');
-
-      expect(manage.moveTag).not.toHaveBeenCalled();
-    });
-
     describe('child tags (#1736)', () => {
       const READING: TagDto = {
         id: 7,
@@ -779,8 +770,9 @@ describe('OrganiseSectionComponent', () => {
         position: 1,
         parentId: 7,
       };
+      const TECH_AFTER_READING: TagDto = { ...TECH, position: 1 };
       // Panels: 0 Reading, 1 Long reads, 2 Essays, 3 Tech, 4 untagged; headers at 0, 100, 200, 300 below the tree top.
-      const renderTree = () => renderTags([READING, LONG_READS, ESSAYS, TECH]);
+      const renderTree = () => renderTags([READING, LONG_READS, ESSAYS, TECH_AFTER_READING]);
       const groupAt = (index: number) =>
         panels()[index].componentInstance as OrganiseTagGroupComponent;
 
@@ -810,10 +802,11 @@ describe('OrganiseSectionComponent', () => {
 
         panels()[2].triggerEventHandler('tagDragEnded');
 
-        expect(manage.moveTag).toHaveBeenCalledWith(
-          ESSAYS,
-          expect.objectContaining({ parentId: null }),
-        );
+        expect(manage.moveTag).toHaveBeenCalledWith(ESSAYS, {
+          parentId: null,
+          order: [READING.id, ESSAYS.id, TECH.id],
+          mark: { kind: 'before', tagId: TECH.id },
+        });
       });
 
       it("moves a child to another root dropped on that root's middle", async () => {
@@ -823,10 +816,11 @@ describe('OrganiseSectionComponent', () => {
 
         panels()[1].triggerEventHandler('tagDragEnded');
 
-        expect(manage.moveTag).toHaveBeenCalledWith(
-          LONG_READS,
-          expect.objectContaining({ parentId: TECH.id }),
-        );
+        expect(manage.moveTag).toHaveBeenCalledWith(LONG_READS, {
+          parentId: TECH.id,
+          order: [LONG_READS.id],
+          mark: { kind: 'nest', tagId: TECH.id },
+        });
       });
     });
   });
