@@ -337,6 +337,10 @@
   font-size: var(--row-fs, var(--fs-base));
 }
 
+.organising .tags-head {
+  padding-right: 0;
+}
+
 .rowbody {
   flex: 1;
   min-width: 0;

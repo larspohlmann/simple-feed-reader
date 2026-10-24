@@ -1,0 +1,11 @@
+@use 'sidebar-row' as row;
+@include row.dots;
+
+:host {
+  display: contents;
+}
+
+// A head has no chevron column; this margin stands in for it so ⋯ lines up with the rows' ⋯.
+.dots {
+  margin-right: var(--tap-target);
+}

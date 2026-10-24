@@ -4,11 +4,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { API_BASE_URL } from '../../../core/api';
-import { TagFormDialogComponent } from './tag-form-dialog.component';
+import { TagFormDialogComponent, TagFormData } from './tag-form-dialog.component';
 import { TagDto } from '../../models';
 
 describe('TagFormDialogComponent', () => {
   const close = jest.fn();
+  const createAtTop: TagFormData = { kind: 'create', parentId: null };
+  const editing = (tag: TagDto): TagFormData => ({ kind: 'edit', tag });
   let ctrl: HttpTestingController;
 
   const tagOf = (id: number, name: string, parentId: number | null): TagDto => ({
@@ -20,7 +22,7 @@ describe('TagFormDialogComponent', () => {
     parentId,
   });
 
-  function mount(data: TagDto | null, tags: TagDto[] = []) {
+  function mount(data: TagFormData, tags: TagDto[] = []) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -43,7 +45,7 @@ describe('TagFormDialogComponent', () => {
   afterEach(() => ctrl.verify());
 
   it('creates a tag (POST) and closes with it', () => {
-    const fixture = mount(null);
+    const fixture = mount(createAtTop);
     const component = fixture.componentInstance;
     component.form.controls.name.setValue('Tech');
     component.icon.set('code');
@@ -61,15 +63,36 @@ describe('TagFormDialogComponent', () => {
     expect(close).toHaveBeenCalledWith({ id: 9, name: 'Tech', color: '#3f8676', icon: 'code' });
   });
 
-  it('edits a tag (PATCH) prefilled from data', () => {
-    const fixture = mount({
-      id: 4,
-      name: 'Old',
-      color: '#4f7cac',
-      icon: 'label',
-      position: 0,
-      parentId: null,
+  it('preselects the preset parent and sends it', () => {
+    const fixture = mount({ kind: 'create', parentId: 1 }, [tagOf(1, 'Reading', null)]);
+    const select = (fixture.nativeElement as HTMLElement).querySelector(
+      'select#tag-parent',
+    ) as HTMLSelectElement;
+    expect(select.value).toBe('1');
+    fixture.componentInstance.form.controls.name.setValue('Long reads');
+    fixture.componentInstance.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/tags');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toEqual({
+      name: 'Long reads',
+      color: null,
+      icon: null,
+      parentId: 1,
     });
+    testRequest.flush({ tag: tagOf(9, 'Long reads', 1) });
+  });
+
+  it('edits a tag (PATCH) prefilled from data', () => {
+    const fixture = mount(
+      editing({
+        id: 4,
+        name: 'Old',
+        color: '#4f7cac',
+        icon: 'label',
+        position: 0,
+        parentId: null,
+      }),
+    );
     const component = fixture.componentInstance;
     expect(component.form.getRawValue().name).toBe('Old');
     expect(component.color()).toBe('#4f7cac');
@@ -82,7 +105,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('keeps the existing parent when a child is edited without touching the select', () => {
-    const fixture = mount(tagOf(2, 'Long reads', 1), [
+    const fixture = mount(editing(tagOf(2, 'Long reads', 1)), [
       tagOf(1, 'Reading', null),
       tagOf(2, 'Long reads', 1),
     ]);
@@ -100,7 +123,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('offers the root tags except itself as parents', () => {
-    const fixture = mount(tagOf(4, 'Old', null), [
+    const fixture = mount(editing(tagOf(4, 'Old', null)), [
       tagOf(4, 'Old', null),
       tagOf(1, 'Reading', null),
       tagOf(2, 'Long reads', 1),
@@ -112,7 +135,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('sends the chosen parent', () => {
-    const fixture = mount(null, [tagOf(1, 'Reading', null)]);
+    const fixture = mount(createAtTop, [tagOf(1, 'Reading', null)]);
     fixture.componentInstance.form.controls.name.setValue('Long reads');
     fixture.componentInstance.parentId.set(1);
     fixture.componentInstance.submit();
@@ -127,7 +150,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('locks the parent for a tag that has children and sends null', () => {
-    const fixture = mount(tagOf(1, 'Reading', null), [
+    const fixture = mount(editing(tagOf(1, 'Reading', null)), [
       tagOf(1, 'Reading', null),
       tagOf(2, 'Long reads', 1),
     ]);
@@ -148,7 +171,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('surfaces a 422 on the parent under the parent field and stays open', () => {
-    const fixture = mount(null, [tagOf(1, 'Reading', null)]);
+    const fixture = mount(createAtTop, [tagOf(1, 'Reading', null)]);
     const component = fixture.componentInstance;
     component.form.controls.name.setValue('Essays');
     component.parentId.set(1);
@@ -173,7 +196,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('clears the parent error once another parent is chosen', () => {
-    const fixture = mount(null, [tagOf(1, 'Reading', null)]);
+    const fixture = mount(createAtTop, [tagOf(1, 'Reading', null)]);
     const component = fixture.componentInstance;
     component.form.controls.name.setValue('Essays');
     component.parentId.set(1);
@@ -195,7 +218,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('surfaces a 409 name-taken error inline and stays open', () => {
-    const fixture = mount(null);
+    const fixture = mount(createAtTop);
     const component = fixture.componentInstance;
     component.form.controls.name.setValue('Dup');
     component.submit();
@@ -210,7 +233,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('drives the colour and icon signals from the shared pickers', () => {
-    const fixture = mount(null);
+    const fixture = mount(createAtTop);
     const component = fixture.componentInstance;
     const host: HTMLElement = fixture.nativeElement;
 
@@ -231,7 +254,7 @@ describe('TagFormDialogComponent', () => {
   });
 
   it('does not submit an empty name', () => {
-    const component = mount(null).componentInstance;
+    const component = mount(createAtTop).componentInstance;
     component.submit();
     ctrl.expectNone('https://api.test/api/tags');
   });

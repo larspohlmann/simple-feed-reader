@@ -1,0 +1,22 @@
+@if (!screen.isCoarse()) {
+  @let current = tag();
+  <app-sidebar-row-menu
+    [menuKey]="'tag-' + current.id"
+    [label]="'reader.manage' | transloco: { name: current.name }"
+  >
+    <ng-template>
+      <button role="menuitem" (click)="manage.editTag(current); rows.closeMenu()">
+        {{ 'reader.editTag' | transloco }}
+      </button>
+      @if (current.parentId === null) {
+        <button role="menuitem" (click)="manage.createTag(current.id); rows.closeMenu()">
+          {{ 'reader.createTagHere' | transloco }}
+        </button>
+      }
+      <hr />
+      <button role="menuitem" class="danger" (click)="manage.deleteTag(current); rows.closeMenu()">
+        {{ 'reader.deleteTag' | transloco }}
+      </button>
+    </ng-template>
+  </app-sidebar-row-menu>
+}

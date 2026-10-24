@@ -14,6 +14,9 @@ import { TagDto, TagInput } from '../../models';
 import { TagsStore } from '../../state/tags.store';
 import { ButtonComponent } from '../../../shared/button/button.component';
 
+export type TagFormData =
+  { kind: 'edit'; tag: TagDto } | { kind: 'create'; parentId: number | null };
+
 @Component({
   selector: 'app-tag-form-dialog',
   imports: [
@@ -31,28 +34,31 @@ import { ButtonComponent } from '../../../shared/button/button.component';
 })
 export class TagFormDialogComponent {
   readonly ref = inject<DialogRef<TagDto>>(DialogRef);
-  readonly data = inject<TagDto | null>(DIALOG_DATA);
+  readonly data = inject<TagFormData>(DIALOG_DATA);
   private readonly api = inject(ReaderApi);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly tagsStore = inject(TagsStore);
 
-  readonly isEdit = this.data !== null;
-  readonly titleKey = this.isEdit ? 'dialog.tagForm.editTitle' : 'dialog.tagForm.newTitle';
+  private readonly editedTag = this.data.kind === 'edit' ? this.data.tag : null;
+  readonly titleKey =
+    this.editedTag !== null ? 'dialog.tagForm.editTitle' : 'dialog.tagForm.newTitle';
 
   readonly form = this.fb.group({
-    name: [this.data?.name ?? '', [Validators.required, Validators.maxLength(100)]],
+    name: [this.editedTag?.name ?? '', [Validators.required, Validators.maxLength(100)]],
   });
-  readonly color = signal<string | null>(this.data?.color ?? null);
-  readonly icon = signal<string | null>(this.data?.icon ?? null);
+  readonly color = signal<string | null>(this.editedTag?.color ?? null);
+  readonly icon = signal<string | null>(this.editedTag?.icon ?? null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly parentId = signal<number | null>(this.data?.parentId ?? null);
+  readonly parentId = signal<number | null>(
+    this.data.kind === 'edit' ? this.data.tag.parentId : this.data.parentId,
+  );
   readonly parentError = signal<string | null>(null);
   readonly parentOptions = computed(() =>
-    this.tagsStore.rootTags().filter((tag) => tag.id !== this.data?.id),
+    this.tagsStore.rootTags().filter((tag) => tag.id !== this.editedTag?.id),
   );
-  readonly hasChildren = computed(
-    () => this.data !== null && this.tagsStore.tags().some((tag) => tag.parentId === this.data?.id),
+  readonly hasChildren = computed(() =>
+    this.tagsStore.tags().some((tag) => tag.parentId === this.editedTag?.id),
   );
 
   constructor() {
@@ -76,9 +82,10 @@ export class TagFormDialogComponent {
     this.loading.set(true);
     this.error.set(null);
     this.parentError.set(null);
-    const request = this.isEdit
-      ? this.api.updateTag(this.data!.id, body)
-      : this.api.createTag(body);
+    const request =
+      this.editedTag !== null
+        ? this.api.updateTag(this.editedTag.id, body)
+        : this.api.createTag(body);
     request.subscribe({
       next: (response) => this.ref.close(response.tag),
       error: (error: HttpErrorResponse) => {

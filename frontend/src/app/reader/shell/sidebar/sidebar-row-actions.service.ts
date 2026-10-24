@@ -58,6 +58,7 @@ export class SidebarRowActions {
         title: tag.name,
         actions: [
           { id: 'edit', label: this.transloco.translate('reader.editTag'), symbol: 'edit' },
+          ...this.createHereActions(tag),
           {
             id: 'moveUp',
             label: this.transloco.translate('reader.moveTagUp'),
@@ -84,10 +85,31 @@ export class SidebarRowActions {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.manage.editTag(tag);
+        if (choice === 'createHere') this.manage.createTag(tag.id);
         if (choice === 'moveUp') this.moveTag(tag, -1);
         if (choice === 'moveDown') this.moveTag(tag, 1);
         if (choice === 'delete') this.manage.deleteTag(tag);
       });
+  }
+
+  /** ⋯ on the Tags head (Organise): create a top-level tag. */
+  openTagsHeadSheet(): void {
+    this.sheet
+      .open({
+        title: this.transloco.translate('reader.tags'),
+        actions: [{ id: 'new', label: this.transloco.translate('reader.newTag'), symbol: 'add' }],
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((choice) => {
+        if (choice === 'new') this.manage.createTag();
+      });
+  }
+
+  private createHereActions(tag: TagDto): ActionSheetAction[] {
+    if (tag.parentId !== null) return [];
+    return [
+      { id: 'createHere', label: this.transloco.translate('reader.createTagHere'), symbol: 'add' },
+    ];
   }
 
   /** Reads the siblings afresh: the order the sheet opened on may have changed while it was up. */

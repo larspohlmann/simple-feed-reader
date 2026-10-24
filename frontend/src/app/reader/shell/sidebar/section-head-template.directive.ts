@@ -1,4 +1,4 @@
-import { Directive } from '@angular/core';
+import { Directive, TemplateRef } from '@angular/core';
 import { PersistedToggle } from '../../../core/preferences/persisted-toggle';
 import { FeedGroupName } from '../../../core/feed-group';
 
@@ -11,6 +11,7 @@ export interface SectionHeadView {
 
 interface SectionHeadContext {
   readonly $implicit: SectionHeadView;
+  readonly actions: TemplateRef<unknown>;
 }
 
 /** Types the sidebar's `#sectionHead` template, so the Tags and Feeds heads share one strictly checked body. */
