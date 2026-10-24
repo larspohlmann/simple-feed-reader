@@ -1452,6 +1452,19 @@
     "filter": "Type to filter",
     "noMatch": "Nothing matches"
   },
+  "tagPicker": {
+    "placeholder": "Add a tag…",
+    "filter": "Find or create a tag…",
+    "suggested": "Suggested",
+    "allTags": "All tags",
+    "noMatch": "No matching tags",
+    "create": "Create tag “{{name}}”",
+    "creating": "Creating…",
+    "remove": "Remove {{name}}",
+    "openSheet": "Add or remove tags",
+    "sheetTitle": "Tags",
+    "done": "Done"
+  },
   "colorField": {
     "swatch": "Colour {{colour}}",
     "custom": "Custom colour"

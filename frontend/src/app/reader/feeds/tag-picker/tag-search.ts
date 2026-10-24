@@ -94,13 +94,11 @@ export class TagSearch {
   }
 
   private browseEntries(): TagEntry[] {
-    const suggested = this.source
-      .suggested()
-      .map((tag): TagEntry => ({
-        kind: 'option',
-        group: 'suggested',
-        option: this.optionOf(tag, false),
-      }));
+    const suggested = this.source.suggested().map((tag): TagEntry => ({
+      kind: 'option',
+      group: 'suggested',
+      option: this.optionOf(tag, false),
+    }));
     const all = tagsInTreeOrder(this.source.tags()).map((tag): TagEntry => ({
       kind: 'option',
       group: 'all',

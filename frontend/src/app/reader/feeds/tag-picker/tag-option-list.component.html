@@ -1,0 +1,56 @@
+<ul
+  class="list"
+  role="listbox"
+  [id]="listId()"
+  [attr.aria-label]="'tagPicker.sheetTitle' | transloco"
+>
+  @for (entry of entries(); track trackKey(entry); let index = $index) {
+    @if (headings()[index]; as heading) {
+      <li class="heading" role="presentation">{{ heading | transloco }}</li>
+    }
+    <!-- Mouse shortcut only: keyboard selection is the combobox pattern on the
+         host's search input (aria-activedescendant), as in searchable-select. -->
+    @if (entry.kind === 'option') {
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <li
+        class="option"
+        role="option"
+        [id]="optionId(index)"
+        [class.active]="index === activeIndex()"
+        [class.indented]="entry.option.indented"
+        [attr.aria-selected]="entry.option.selected"
+        (click)="picked.emit(entry.option.id)"
+      >
+        <app-tag-glyph [name]="entry.option.icon" [color]="entry.option.color" size="sm" />
+        <span class="name">
+          @if (entry.option.parentName && !entry.option.indented) {
+            <span class="parent">{{ entry.option.parentName }} / </span>
+          }
+          {{ entry.option.name }}
+        </span>
+        @if (entry.option.selected) {
+          <app-icon class="check" name="check" size="md" />
+        }
+      </li>
+    } @else {
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <li
+        class="option create"
+        role="option"
+        aria-selected="false"
+        [id]="optionId(index)"
+        [class.active]="index === activeIndex()"
+        (click)="createRequested.emit()"
+      >
+        <app-icon name="add" size="sm" />
+        @if (creating()) {
+          {{ 'tagPicker.creating' | transloco }}
+        } @else {
+          {{ 'tagPicker.create' | transloco: { name: entry.name } }}
+        }
+      </li>
+    }
+  } @empty {
+    <li class="empty" role="presentation">{{ 'tagPicker.noMatch' | transloco }}</li>
+  }
+</ul>
