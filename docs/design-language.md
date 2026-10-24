@@ -356,8 +356,9 @@ overlays inset by `--select-inset`, so it tunes that and `--field-rim-base`.
 
 **Stays flat:** single-side dividers; solid-filled buttons and pills —
 `<app-button>`'s `primary`, `danger` and `ghost`, add-feed's `.subscribe`,
-tag-picker's `.on`, discover's active category chip (their own `background` and
-`border-color` replace the rim); the sidebar dropzone's dashed hint;
+discover's active category chip (their own `background` and
+`border-color` replace the rim); the sidebar dropzone's dashed hint and the tag
+picker's dashed suggestion pills;
 the colour field's `.swatch` and the about chart's `.chart-marker` (2px rings).
 
 **Magazine.** Blocks and source groups share `magazine-card.chrome`

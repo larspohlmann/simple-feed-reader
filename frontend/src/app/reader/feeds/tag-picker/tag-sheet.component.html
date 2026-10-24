@@ -1,0 +1,34 @@
+<app-overlay-panel [heading]="'tagPicker.sheetTitle' | transloco" fillOnMobile>
+  <div subheader class="top">
+    <label class="search">
+      <app-icon name="search" size="md" />
+      <input
+        class="query"
+        type="text"
+        autocomplete="off"
+        enterkeyhint="done"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded="true"
+        cdkFocusInitial
+        [attr.aria-controls]="search.listId"
+        [attr.aria-activedescendant]="search.activeOptionId()"
+        [attr.aria-label]="'tagPicker.filter' | transloco"
+        [placeholder]="'tagPicker.filter' | transloco"
+        [value]="search.query()"
+        (input)="search.setQuery($any($event.target).value)"
+        (keydown)="search.handleKey($event)"
+      />
+    </label>
+    @if (search.chips().length) {
+      <div class="chips">
+        <app-tag-chips [chips]="search.chips()" (removed)="source.toggle($event)" />
+      </div>
+    }
+    <app-form-error [message]="search.error()" />
+  </div>
+  <app-tag-option-list [search]="search" />
+  <app-button footer variant="primary" (click)="ref.close()">
+    {{ 'tagPicker.done' | transloco }}
+  </app-button>
+</app-overlay-panel>

@@ -28,10 +28,12 @@
       }
 
       <p class="lbl">{{ 'dialog.editFeed.tags' | transloco }}</p>
-      @if (tagsStore.tags().length === 0) {
-        <p class="hint">{{ 'dialog.editFeed.noTags' | transloco }}</p>
-      }
-      <app-tag-picker [tags]="tagsStore.tags()" [selected]="checked()" (toggled)="toggle($event)" />
+      <app-tag-picker
+        [tags]="tagsStore.tags()"
+        [selected]="checked()"
+        [excludeSubscriptionId]="data.id"
+        (toggled)="toggle($event)"
+      />
 
       <div class="switch-row">
         <label class="switch-label" for="edit-feed-all-items">

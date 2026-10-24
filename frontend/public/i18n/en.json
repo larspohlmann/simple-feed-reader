@@ -853,7 +853,6 @@
       "feedUrl": "Feed URL",
       "siteUrl": "Website",
       "tags": "Tags",
-      "noTags": "No tags yet — create one from Settings › Tags.",
       "showInAllItems": "Show in All items",
       "showInForYou": "Show in For You",
       "showInSavedSearches": "Show in saved searches",
@@ -1451,6 +1450,19 @@
   "searchableSelect": {
     "filter": "Type to filter",
     "noMatch": "Nothing matches"
+  },
+  "tagPicker": {
+    "placeholder": "Add a tag…",
+    "filter": "Find or create a tag…",
+    "suggested": "Suggested",
+    "allTags": "All tags",
+    "noMatch": "No matching tags",
+    "create": "Create tag “{{name}}”",
+    "creating": "Creating…",
+    "remove": "Remove {{name}}",
+    "openSheet": "Add or remove tags",
+    "sheetTitle": "Tags",
+    "done": "Done"
   },
   "colorField": {
     "swatch": "Colour {{colour}}",

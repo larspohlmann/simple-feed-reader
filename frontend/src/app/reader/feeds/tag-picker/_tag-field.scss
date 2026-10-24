@@ -1,0 +1,17 @@
+@use '../../../theme/glass-rim';
+
+// The rimmed box both picker surfaces type into, accent-ringed while focused.
+@mixin frame {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
+  &:focus-within {
+    --rim-base: var(--accent);
+  }
+}
+
+// An input inside `frame`: the frame draws the rim, so the global field chrome comes off.
+@mixin bare-input {
+  min-width: 0;
+  border: 0;
+  background: none;
+}

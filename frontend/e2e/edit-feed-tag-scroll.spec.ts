@@ -3,20 +3,17 @@ import { aSubscription } from '../src/testing/subscription-testing';
 import { stubAuthToken } from './support/auth';
 import { subscriptionsJson } from './support/reader';
 
-// #561/#1034: with many tags defined, the last tag pill in the edit-feed dialog
-// must be reachable on a phone.
+// #561/#1034/#1771: with many tags defined, the last tag in the edit-feed
+// dialog must be reachable on a phone.
 //
-// #1034 removed the picker's own nested scroller, so the dialog body is now the
-// single scroller. The trap it replaced: the nested list carried
-// `overscroll-behavior: contain`, which stopped a gesture that reached the end
-// of the list from handing the remainder to the body. On a phone the picker
-// fills most of the dialog, so nearly every touch starts inside it — this drives
-// the wheel from inside the picker and checks the body still takes the gesture.
+// On a phone the picker opens a full-screen tag sheet (#1771) whose list is the
+// sheet body, the one scroller (#868: a nested scroll box is a touch trap). This
+// drives the wheel from inside the list and checks the last tag clears the edge.
 
-/** Comfortably past the 220px cap, where the dialog's geometry stops changing. */
+/** Far more rows than the sheet shows at once. */
 const TAG_COUNT = 18;
 
-/** Short enough that the dialog body itself must scroll — that is the trap. */
+/** Short enough that the sheet body must scroll. */
 const PHONE = { width: 390, height: 720 };
 
 const TAGS = Array.from({ length: TAG_COUNT }, (_, index) => ({
@@ -62,18 +59,22 @@ test('the last tag stays reachable when many tags are defined', async ({ page })
   await page.goto('/?subscription=1');
   await page.getByRole('button', { name: 'Edit feed' }).first().click();
 
-  const picker = page.locator('app-tag-picker');
-  const lastPill = picker.locator('.tag-pill').last();
+  await page.getByRole('button', { name: 'Add or remove tags' }).click();
 
-  // Drive it the way a thumb does: the gesture starts inside the picker and
-  // keeps going. With no nested scroller the dialog body must take the wheel,
-  // or the last row never clears the edge. Chromium latches a wheel sequence to
-  // the scroller it began on, so this must be repeated events rather than one
-  // large delta, and enough of them to reach the body's bottom.
-  await picker.hover();
+  const sheet = page.getByRole('dialog', { name: 'Tags' });
+  const list = sheet.getByRole('listbox');
+  const lastTag = list.getByRole('option').last();
+  await expect(lastTag).toHaveText(new RegExp(`Tag number ${TAG_COUNT}`));
+
+  // Drive it the way a thumb does: the gesture starts inside the list and keeps
+  // going. Chromium latches a wheel sequence to the scroller it began on, so
+  // this must be repeated events rather than one large delta.
+  await list.hover();
   for (let tick = 0; tick < 12; tick++) {
     await page.mouse.wheel(0, 200);
   }
 
-  await expect(lastPill).toBeInViewport({ ratio: 1 });
+  await expect(lastTag).toBeInViewport({ ratio: 1 });
+  await lastTag.click();
+  await expect(lastTag).toHaveAttribute('aria-selected', 'true');
 });

@@ -23,12 +23,6 @@ form {
   color: var(--text-secondary);
 }
 
-.hint {
-  margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-
 /* Trails the title field rather than sitting beside its label: clearing the
    override is a rare correction, not a peer of the field itself. */
 .reset-row {

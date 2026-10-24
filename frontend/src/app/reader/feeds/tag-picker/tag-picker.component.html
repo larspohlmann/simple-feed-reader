@@ -1,16 +1,51 @@
-@for (tag of ordered(); track tag.id) {
-  <button
-    type="button"
-    class="tag-pill"
-    [class.on]="selected().has(tag.id)"
-    [attr.aria-pressed]="selected().has(tag.id)"
-    (click)="toggled.emit(tag.id)"
-  >
-    <app-tag-glyph
-      [name]="tag.icon"
-      [color]="selected().has(tag.id) ? 'var(--on-accent)' : tag.color"
-      size="sm"
-    />
-    {{ labelOf(tag) }}
-  </button>
-}
+<div class="picker" [appDismissOnOutside]="open()" (dismiss)="close()">
+  <div class="field">
+    <app-tag-chips [chips]="search.chips()" (removed)="toggled.emit($event)" />
+    @if (sheetMode()) {
+      <button
+        type="button"
+        class="add"
+        aria-haspopup="dialog"
+        [attr.aria-label]="'tagPicker.openSheet' | transloco"
+        (click)="openSheet()"
+      >
+        <app-icon name="add" size="sm" />
+        {{ 'tagPicker.placeholder' | transloco }}
+      </button>
+    } @else {
+      <input
+        class="query"
+        type="text"
+        autocomplete="off"
+        role="combobox"
+        aria-autocomplete="list"
+        [attr.aria-expanded]="open()"
+        [attr.aria-controls]="open() ? search.listId : null"
+        [attr.aria-activedescendant]="open() ? search.activeOptionId() : null"
+        [attr.aria-label]="'tagPicker.filter' | transloco"
+        [placeholder]="'tagPicker.placeholder' | transloco"
+        [value]="search.query()"
+        (focus)="open.set(true)"
+        (input)="onInput($any($event.target).value)"
+        (keydown)="onKeydown($event)"
+      />
+    }
+  </div>
+
+  @if (open()) {
+    <div class="panel">
+      <app-tag-option-list [search]="search" />
+    </div>
+    <app-form-error [message]="search.error()" />
+  } @else if (search.suggestions().length) {
+    <div class="suggestions">
+      <span class="group-caption">{{ 'tagPicker.suggested' | transloco }}</span>
+      @for (suggestion of search.suggestions(); track suggestion.id) {
+        <button type="button" class="suggestion" (click)="toggled.emit(suggestion.id)">
+          <app-tag-glyph [name]="suggestion.icon" [color]="suggestion.color" size="sm" />
+          <span class="label">{{ suggestion.label }}</span>
+        </button>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,33 @@
+@use 'tag-field';
+
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.search {
+  @include tag-field.frame;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+}
+
+.query {
+  @include tag-field.bare-input;
+
+  flex: 1;
+  height: var(--tap-target);
+  padding: 0;
+  font-size: var(--fs-read);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}

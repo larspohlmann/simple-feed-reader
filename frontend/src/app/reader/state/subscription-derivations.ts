@@ -102,8 +102,33 @@ export function tagsInTreeOrder(tags: TagDto[]): TagDto[] {
 
 /** A child reads with its parent, so a pill never shows a bare child out of context. */
 export function tagLabel(tag: TagDto, tags: readonly TagDto[]): string {
-  const parent = tags.find((candidate) => candidate.id === tag.parentId);
-  return parent ? `${parent.name} / ${tag.name}` : tag.name;
+  return labelWithParent(tag.name, tags.find((candidate) => candidate.id === tag.parentId)?.name);
+}
+
+export function labelWithParent(name: string, parentName: string | null | undefined): string {
+  return parentName ? `${parentName} / ${name}` : name;
+}
+
+export const SUGGESTED_TAG_LIMIT = 4;
+
+/** The tags of the most recently added subscriptions, newest first, minus the ones already picked. */
+export function suggestedTags(
+  subscriptions: readonly SubscriptionDto[],
+  selected: ReadonlySet<number>,
+  exceptSubscriptionId: number | null,
+): TagDto[] {
+  const seen = new Set<number>(selected);
+  const suggested: TagDto[] = [];
+  const newestFirst = subscriptions
+    .filter((subscription) => subscription.id !== exceptSubscriptionId)
+    .sort((left, right) => (left.createdAt < right.createdAt ? 1 : -1));
+  for (const tag of newestFirst.flatMap((subscription) => subscription.tags)) {
+    if (suggested.length === SUGGESTED_TAG_LIMIT) break;
+    if (seen.has(tag.id)) continue;
+    seen.add(tag.id);
+    suggested.push(tag);
+  }
+  return suggested;
 }
 
 interface TaggedFeed {

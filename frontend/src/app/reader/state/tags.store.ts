@@ -23,6 +23,10 @@ export class TagsStore {
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
+  add(tag: TagDto): void {
+    this.tags.update((tags) => [...tags, tag].sort(compareTagPositions));
+  }
+
   load(): void {
     this.loading.set(true);
     this.error.set(null);

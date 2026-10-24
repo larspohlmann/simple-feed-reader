@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -94,49 +94,66 @@ describe('EditSubscriptionDialogComponent', () => {
     expect(component.checked().has(2)).toBe(false);
   });
 
-  it('renders each tag as a toggle pill with aria-pressed reflecting selection', () => {
-    const element = mount().nativeElement as HTMLElement;
-    const pills = element.querySelectorAll('button.tag-pill');
-    expect(pills.length).toBe(2);
-    // Tech (id 1) is a current tag → pressed; News (id 2) → not pressed.
-    const tech = [...pills].find((pill) => pill.textContent!.includes('Tech'))!;
-    const news = [...pills].find((pill) => pill.textContent!.includes('News'))!;
-    expect(tech.getAttribute('aria-pressed')).toBe('true');
-    expect(news.getAttribute('aria-pressed')).toBe('false');
+  const chipLabels = (element: HTMLElement): string[] =>
+    [...element.querySelectorAll('.chip .label')].map((label) => label.textContent!.trim());
+
+  function openList(fixture: ComponentFixture<EditSubscriptionDialogComponent>): HTMLElement[] {
+    const query = (fixture.nativeElement as HTMLElement).querySelector('input.query')!;
+    query.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+    return [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('[role="option"]'),
+    ];
+  }
+
+  it('shows the current tags as chips', () => {
+    expect(chipLabels(mount().nativeElement)).toEqual(['Tech']);
   });
 
   it("shows a tag's icon when it has one, and a colour dot otherwise", () => {
-    const element = mount().nativeElement as HTMLElement;
-    const pills = [...element.querySelectorAll('button.tag-pill')];
-    const tech = pills.find((pill) => pill.textContent!.includes('Tech'))!;
-    const news = pills.find((pill) => pill.textContent!.includes('News'))!;
-    // News carries an icon → renders app-icon, no dot; Tech has none → dot.
-    expect(news.querySelector('app-icon')).not.toBeNull();
+    const options = openList(mount());
+    const tech = options.find((option) => option.textContent!.includes('Tech'))!;
+    const news = options.find((option) => option.textContent!.includes('News'))!;
+    expect(news.querySelector('app-tag-glyph app-icon')).not.toBeNull();
     expect(news.querySelector('.dot')).toBeNull();
-    expect(tech.querySelector('app-icon')).toBeNull();
+    expect(tech.querySelector('app-tag-glyph app-icon')).toBeNull();
     expect(tech.querySelector('.dot')).not.toBeNull();
   });
 
-  it('colours an inactive tag icon with the tag colour', () => {
-    const element = mount().nativeElement as HTMLElement;
-    // News (id 2) is not one of the feed's tags → inactive → shows its own colour.
-    const news = [...element.querySelectorAll('button.tag-pill')].find((pill) =>
-      pill.textContent!.includes('News'),
-    )!;
-    const icon = news.querySelector('app-icon') as HTMLElement;
+  it('colours a tag icon with the tag colour', () => {
+    const news = openList(mount()).find((option) => option.textContent!.includes('News'))!;
+    const icon = news.querySelector('app-tag-glyph app-icon') as HTMLElement;
     expect(icon.style.color).toBe('rgb(34, 197, 94)');
   });
 
-  it('toggles a tag when its pill is clicked', () => {
+  it('toggles a tag when its option is clicked', () => {
     const fixture = mount();
-    const element = fixture.nativeElement as HTMLElement;
-    const news = [...element.querySelectorAll('button.tag-pill')].find((pill) =>
-      pill.textContent!.includes('News'),
-    ) as HTMLButtonElement;
-    news.click();
+    openList(fixture)
+      .find((option) => option.textContent!.includes('News'))!
+      .click();
     fixture.detectChanges();
     expect(fixture.componentInstance.checked().has(2)).toBe(true);
-    expect(news.getAttribute('aria-pressed')).toBe('true');
+    expect(chipLabels(fixture.nativeElement).sort()).toEqual(['News', 'Tech']);
+  });
+
+  it('suggests tags from other subscriptions, never from this one', () => {
+    const fixture = mount();
+    TestBed.inject(SubscriptionRows).stored.set([
+      { ...sub, createdAt: '2026-05-01T00:00:00Z' },
+      {
+        ...sub,
+        id: 6,
+        createdAt: '2026-01-01T00:00:00Z',
+        tags: [{ id: 2, name: 'News', color: null, icon: null, position: 1, parentId: null }],
+      },
+    ]);
+    fixture.componentInstance.toggle(1);
+    fixture.detectChanges();
+
+    const suggestions = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('.suggestion .label'),
+    ].map((suggestion) => suggestion.textContent!.trim());
+    expect(suggestions).toEqual(['News']);
   });
 
   it('PATCHes customTitle (empty → null) and the toggled tag set', () => {
