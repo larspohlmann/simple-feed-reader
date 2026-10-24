@@ -294,13 +294,13 @@
   // An expanded section's head bleeds to the card's edges as a band over its list. Hover and
   // current paint the inset pill (::before) instead, so they look as they do on a collapsed head.
   .section-head:has(> [aria-expanded='true']) {
-    --bleed-top: var(--sidebar-card-pad);
+    --band-pad: var(--sidebar-card-pad);
 
     position: relative;
     isolation: isolate;
     box-sizing: content-box;
-    margin: calc(var(--bleed-top) * -1) calc(var(--sidebar-card-pad) * -1) 0;
-    padding: var(--bleed-top) calc(var(--space-2) + var(--sidebar-card-pad)) 0
+    margin: calc(var(--band-pad) * -1) calc(var(--sidebar-card-pad) * -1) 0;
+    padding: var(--band-pad) calc(var(--space-2) + var(--sidebar-card-pad)) var(--band-pad)
       calc(var(--sidebar-row-inset) + var(--sidebar-card-pad));
     border-bottom: 1px solid var(--border);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -310,7 +310,7 @@
       content: '';
       position: absolute;
       z-index: -1;
-      inset: var(--bleed-top) var(--sidebar-card-pad) 0;
+      inset: var(--band-pad) var(--sidebar-card-pad);
       border-radius: var(--radius);
     }
 
@@ -331,7 +331,7 @@
     }
 
     .section-head:has(> [aria-expanded='true']) {
-      --bleed-top: var(--space-2);
+      --band-pad: var(--space-2);
     }
   }
 
