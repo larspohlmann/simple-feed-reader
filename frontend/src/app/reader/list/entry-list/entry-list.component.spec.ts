@@ -315,15 +315,16 @@ describe('EntryListComponent', () => {
     });
   });
 
-  describe('titleLeading', () => {
-    it('renders the projected content before the title', () => {
-      const element = mount({ titleLeading: topBlockTemplate() }).nativeElement as HTMLElement;
-      expect(element.querySelector('.title-row .top-marker')).not.toBeNull();
+  describe('headerLeading', () => {
+    it('renders the projected content before the whole heading, not inside its title row', () => {
+      const element = mount({ headerLeading: topBlockTemplate() }).nativeElement as HTMLElement;
+      const marker = element.querySelector('app-list-header > .top-marker');
+      expect(marker?.nextElementSibling?.classList.contains('heading')).toBe(true);
     });
 
-    it('renders nothing before the title when no titleLeading is provided', () => {
+    it('renders nothing before the title when no headerLeading is provided', () => {
       const element = mount().nativeElement as HTMLElement;
-      expect(element.querySelector('.title-row .top-marker')).toBeNull();
+      expect(element.querySelector('app-list-header .top-marker')).toBeNull();
     });
   });
 
