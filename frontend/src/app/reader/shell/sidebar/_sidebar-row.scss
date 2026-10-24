@@ -7,17 +7,19 @@
   .card {
     @include glass-rim.filled(var(--surface-1), var(--border));
 
+    --card-pad-y: var(--sidebar-card-pad);
+
     display: flex;
     flex-direction: column;
     flex: none;
     gap: var(--space-0);
-    padding: var(--sidebar-card-pad);
+    padding: var(--card-pad-y) var(--sidebar-card-pad);
     border-radius: var(--radius-lg);
   }
 
   @media (pointer: coarse) {
     .card {
-      padding: var(--space-2) var(--sidebar-card-pad);
+      --card-pad-y: var(--space-2);
     }
   }
 
@@ -291,16 +293,14 @@
 
   @include row-states('.section-head', '.section-head.current');
 
-  // An expanded section's head bleeds to the card's edges as a band over its list. Hover and
-  // current paint the inset pill (::before) instead, so they look as they do on a collapsed head.
+  // An expanded section's head bleeds to the card's edges as a band over its list. Hover and current paint
+  // the inset pill (::before) at a collapsed head's size; hover tints deeper, as surface-0 vanishes on the band.
   .section-head:has(> [aria-expanded='true']) {
-    --band-pad: var(--sidebar-card-pad);
-
     position: relative;
     isolation: isolate;
     box-sizing: content-box;
-    margin: calc(var(--band-pad) * -1) calc(var(--sidebar-card-pad) * -1) 0;
-    padding: var(--band-pad) calc(var(--space-2) + var(--sidebar-card-pad)) var(--band-pad)
+    margin: calc(var(--card-pad-y) * -1) calc(var(--sidebar-card-pad) * -1) 0;
+    padding: var(--card-pad-y) calc(var(--space-2) + var(--sidebar-card-pad)) var(--card-pad-y)
       calc(var(--sidebar-row-inset) + var(--sidebar-card-pad));
     border-bottom: 1px solid var(--border);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -310,7 +310,7 @@
       content: '';
       position: absolute;
       z-index: -1;
-      inset: var(--band-pad) var(--sidebar-card-pad);
+      inset: var(--card-pad-y) var(--sidebar-card-pad);
       border-radius: var(--radius);
     }
 
@@ -328,10 +328,6 @@
   @media (pointer: coarse) {
     .section-head {
       height: var(--tap-target);
-    }
-
-    .section-head:has(> [aria-expanded='true']) {
-      --band-pad: var(--space-2);
     }
   }
 
@@ -380,7 +376,7 @@
   .section-head .label,
   .section-head .section-count {
     position: relative;
-    top: var(--space-0);
+    top: 0.15em;
   }
 }
 
