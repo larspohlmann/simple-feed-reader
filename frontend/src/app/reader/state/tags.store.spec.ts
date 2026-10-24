@@ -59,7 +59,10 @@ describe('TagsStore', () => {
   });
 
   it('adds a tag in position order', () => {
-    store.tags.set([{ ...tag(1, 'Alpha'), position: 0 }, { ...tag(2, 'Gamma'), position: 2 }]);
+    store.tags.set([
+      { ...tag(1, 'Alpha'), position: 0 },
+      { ...tag(2, 'Gamma'), position: 2 },
+    ]);
 
     store.add({ ...tag(3, 'Beta'), position: 1 });
 
