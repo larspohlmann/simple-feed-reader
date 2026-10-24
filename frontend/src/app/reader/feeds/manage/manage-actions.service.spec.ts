@@ -9,6 +9,7 @@ import { ManageActions } from './manage-actions.service';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { TagsStore } from '../../state/tags.store';
+import { TagDrop } from '../../tag-drop';
 import { RefreshReport, SubscriptionDto, TagDto } from '../../models';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
@@ -281,6 +282,78 @@ describe('ManageActions', () => {
       [1, 1],
     ]);
     ctrl.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
+  });
+
+  describe('moveTag', () => {
+    const tagA: TagDto = { id: 1, name: 'A', color: null, icon: null, position: 0, parentId: null };
+    const tagB: TagDto = {
+      id: 2,
+      name: 'B',
+      color: '#fff',
+      icon: 'x',
+      position: 1,
+      parentId: null,
+    };
+    let tagsStore: TagsStore;
+    let tagsLoad: jest.SpyInstance;
+    let subscriptionsLoad: jest.SpyInstance;
+
+    const dropUnder = (parentId: number | null, order: number[]): TagDrop => ({
+      parentId,
+      order,
+      mark: { kind: 'before', tagId: order[0] },
+    });
+
+    beforeEach(() => {
+      tagsStore = TestBed.inject(TagsStore);
+      tagsStore.tags.set([tagA, tagB]);
+      tagsLoad = jest.spyOn(tagsStore, 'load').mockImplementation(() => undefined);
+      subscriptionsLoad = jest
+        .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+        .mockImplementation(() => undefined);
+    });
+
+    it('only reorders when the parent stays', () => {
+      service.moveTag(tagB, dropUnder(null, [2, 1]));
+
+      ctrl.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
+      ctrl.expectNone('https://api.test/api/tags/2');
+    });
+
+    it('re-parents, then writes the new sibling order, then reloads tags and feeds', () => {
+      service.moveTag(tagB, dropUnder(1, [2]));
+
+      const reparent = ctrl.expectOne('https://api.test/api/tags/2');
+      expect(reparent.request.body).toEqual({ name: 'B', color: '#fff', icon: 'x', parentId: 1 });
+      ctrl.expectNone('https://api.test/api/tags/reorder');
+      reparent.flush({ tag: tagB });
+      const reorder = ctrl.expectOne('https://api.test/api/tags/reorder');
+      expect(reorder.request.body).toEqual({ tagIds: [2] });
+      reorder.flush({ tags: [] });
+      expect(tagsLoad).toHaveBeenCalled();
+      expect(subscriptionsLoad).toHaveBeenCalled();
+    });
+
+    it('shows the new parent at once', () => {
+      service.moveTag(tagB, dropUnder(1, [2]));
+
+      expect(tagsStore.tags().find((tag) => tag.id === 2)).toEqual(
+        expect.objectContaining({ parentId: 1, position: 0 }),
+      );
+      ctrl.expectOne('https://api.test/api/tags/2').flush({ tag: tagB });
+      ctrl.expectOne('https://api.test/api/tags/reorder').flush({ tags: [] });
+    });
+
+    it('skips the reorder and still reloads when the re-parent is refused', () => {
+      service.moveTag(tagB, dropUnder(1, [2]));
+
+      ctrl
+        .expectOne('https://api.test/api/tags/2')
+        .flush(null, { status: 422, statusText: 'Unprocessable' });
+      ctrl.expectNone('https://api.test/api/tags/reorder');
+      expect(tagsLoad).toHaveBeenCalled();
+      expect(subscriptionsLoad).toHaveBeenCalled();
+    });
   });
 
   it('reorderUntagged: PATCHes /api/subscriptions/reorder then reloads subs', () => {

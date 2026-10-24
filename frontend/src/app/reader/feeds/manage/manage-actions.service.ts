@@ -6,7 +6,7 @@ import { ReaderApi } from '../../reader-api';
 import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
-import { TagsStore, compareTagPositions } from '../../state/tags.store';
+import { TagsStore } from '../../state/tags.store';
 import {
   MoveFeedToTag,
   RefreshReport,
@@ -14,6 +14,8 @@ import {
   SubscriptionTagDto,
   TagDto,
 } from '../../models';
+import { TagDrop } from '../../tag-drop';
+import { TagPlacement } from './tag-placement.service';
 import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bulk';
 import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
@@ -44,6 +46,7 @@ export class ManageActions {
   private readonly subs = inject(SubscriptionsStore);
   private readonly savedSearches = inject(SavedSearchesStore);
   private readonly tags = inject(TagsStore);
+  private readonly tagPlacement = inject(TagPlacement);
   private readonly i18n = inject(TranslocoService);
   private readonly toast = inject(ToastService);
 
@@ -146,21 +149,12 @@ export class ManageActions {
     if (flags.includeInSavedSearches !== undefined) this.savedSearches.load();
   }
 
-  /** Persist a new order for one sibling set. Optimistic: reposition the listed tags, keep the
-   *  rest, reconcile on response. */
   reorderTags(tagIds: number[]): void {
-    this.tags.tags.update((current) => {
-      const listed = new Set(tagIds);
-      const byId = new Map(current.map((tag) => [tag.id, tag]));
-      const repositioned = tagIds.map((id, index): TagDto => ({
-        ...(byId.get(id) ?? { id, name: '', color: null, icon: null, parentId: null }),
-        position: index,
-      }));
-      return [...current.filter((tag) => !listed.has(tag.id)), ...repositioned].sort(
-        compareTagPositions,
-      );
-    });
-    this.reloadAfter(this.api.reorderTags(tagIds), () => this.tags.load());
+    this.tagPlacement.reorder(tagIds);
+  }
+
+  moveTag(tag: TagDto, drop: TagDrop): void {
+    this.tagPlacement.move(tag, drop);
   }
 
   /** Persist a new order for the untagged "Feeds" list. Optimistic: update
