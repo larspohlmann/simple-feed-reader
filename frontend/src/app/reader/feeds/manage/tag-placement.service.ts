@@ -42,7 +42,7 @@ export class TagPlacement {
       this.api.updateTag(tag.id, body).pipe(switchMap(() => this.api.reorderTags(drop.order))),
       () => {
         this.tags.load();
-        this.subs.load();
+        this.subs.reloadQuietly();
       },
     );
   }

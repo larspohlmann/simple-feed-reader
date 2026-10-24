@@ -34,6 +34,7 @@ function makeSubscriptionsStoreMock(initialSubscriptions: SubscriptionDto[]) {
     subscriptions,
     loading: signal(false),
     load: jest.fn(),
+    reloadQuietly: jest.fn(),
     unhealthy,
     unhealthyCount: computed(() => unhealthy().length),
   };
