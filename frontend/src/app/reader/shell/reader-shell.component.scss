@@ -337,3 +337,10 @@ app-reader-header.hidden {
   border-radius: var(--radius-lg);
   color: var(--text-secondary);
 }
+
+// Follows the list header's slim collapsed padding, which applies below lg only.
+@media (width < bp.$bp-lg) {
+  .sidebar-show.boxed.collapsed {
+    top: var(--space-1);
+  }
+}

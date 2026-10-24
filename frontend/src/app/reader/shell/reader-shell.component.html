@@ -257,6 +257,7 @@
         #showSidebarButton
         appIconButton
         class="sidebar-show boxed"
+        [class.collapsed]="list()?.collapsed()"
         type="button"
         [attr.aria-label]="'reader.showSidebar' | transloco"
         [attr.title]="'reader.showSidebar' | transloco"
