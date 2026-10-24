@@ -198,9 +198,9 @@ export class SubscriptionsStore {
 
   /** Refresh the held list after a write the user made — a move, a reorder, an
    *  edit, a retry — WITHOUT the loading skeleton, so the surface stays put and
-   *  only the rows that changed move. No staleness gate: unlike a
-   *  poll tick, the caller knows the list moved. Takes over a quiet tick on the
-   *  wire, whose answer predates the change. */
+   *  only the rows that changed move. No staleness gate: unlike a poll tick, the
+   *  caller knows the list moved. Takes over a quiet tick on the wire, whose
+   *  answer predates the change. */
   reloadQuietly(): void {
     if (!this.resolved()) return;
     this.quietFetch(

@@ -79,12 +79,16 @@ export class ManageActions {
         subscription.id === sub.id ? this.afterMove(subscription, move) : subscription,
       ),
     );
-    reloadAfter(this.api.moveFeedToTag(sub.id, move), () => this.subs.reloadQuietly());
+    this.reloadSubsAfter(this.api.moveFeedToTag(sub.id, move));
   }
 
   /** The moved feed's optimistic shape: the source tag dropped, the target tag
    *  added at the drop position; dropped on Feeds, its untagged position is set
    *  only once it has no tags left. Sibling positions are left to the reload. */
+  private reloadSubsAfter(write$: Observable<unknown>): void {
+    reloadAfter(write$, () => this.subs.reloadQuietly());
+  }
+
   private afterMove(
     sub: SubscriptionDto,
     { fromTagId, toTagId, position }: MoveFeedToTag,
@@ -165,7 +169,7 @@ export class ManageActions {
         return subscription;
       }),
     );
-    reloadAfter(this.api.reorderSubscriptions(subscriptionIds), () => this.subs.reloadQuietly());
+    this.reloadSubsAfter(this.api.reorderSubscriptions(subscriptionIds));
   }
 
   /** Persist a new order for the feeds within one tag. Optimistic: update
@@ -185,7 +189,7 @@ export class ManageActions {
         };
       }),
     );
-    reloadAfter(this.api.setTagFeedOrder(tagId, subscriptionIds), () => this.subs.reloadQuietly());
+    this.reloadSubsAfter(this.api.setTagFeedOrder(tagId, subscriptionIds));
   }
 
   unsubscribe(sub: SubscriptionDto): void {
