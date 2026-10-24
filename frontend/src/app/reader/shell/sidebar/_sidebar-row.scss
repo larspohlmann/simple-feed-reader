@@ -323,13 +323,6 @@
     &.current::before {
       background: var(--accent-soft);
     }
-
-    // The line box reserves descender room, so centred caps read high in the band; nudge them to its optical middle.
-    .label,
-    .section-count {
-      position: relative;
-      top: var(--space-0);
-    }
   }
 
   @media (pointer: coarse) {
@@ -381,6 +374,13 @@
   .section-head.current .label,
   .section-head.current .section-count {
     color: var(--accent);
+  }
+
+  // The line box reserves descender room, so centred caps read high; nudge them to the optical middle.
+  .section-head .label,
+  .section-head .section-count {
+    position: relative;
+    top: var(--space-0);
   }
 }
 
