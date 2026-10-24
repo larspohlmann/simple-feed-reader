@@ -25,9 +25,15 @@
 .search-card {
   @include glass-rim.filled(var(--surface-1), var(--border));
 
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   flex: none;
   align-items: flex-start;
+
+  /* Masks the rows scrolling past its rounded corners and through the gap below. */
+  box-shadow: 0 0 0 var(--space-2) var(--surface-0);
   gap: var(--space-0);
   padding-right: var(--space-1);
   border-radius: var(--radius-lg);
