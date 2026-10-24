@@ -43,6 +43,16 @@ export class TagSearch {
   readonly creating = computed(() => this.creatingName() !== null);
   readonly error = signal<string | null>(null);
 
+  readonly chips = computed(() =>
+    tagsInTreeOrder(this.source.tags())
+      .filter((tag) => this.source.selected().has(tag.id))
+      .map((tag) => this.optionOf(tag, false)),
+  );
+
+  readonly suggestions = computed(() =>
+    this.source.suggested().map((tag) => this.optionOf(tag, false)),
+  );
+
   readonly entries = computed<TagEntry[]>(() => {
     const needle = this.query().trim().toLowerCase();
     return needle ? this.matchEntries(needle) : this.browseEntries();
@@ -57,6 +67,19 @@ export class TagSearch {
     this.query.set(text);
     this.activeIndex.set(0);
     this.error.set(null);
+  }
+
+  /** The list keys of the combobox pattern, plus Backspace on an empty query dropping the last chip. */
+  handleKey(event: KeyboardEvent): void {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.move(event.key === 'ArrowDown' ? 1 : -1);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      this.takeActive();
+    } else if (event.key === 'Backspace' && this.query() === '') {
+      this.removeLastChip();
+    }
   }
 
   move(step: 1 | -1): void {
@@ -93,11 +116,16 @@ export class TagSearch {
     });
   }
 
+  private removeLastChip(): void {
+    const last = this.chips().at(-1);
+    if (last) this.source.toggle(last.id);
+  }
+
   private browseEntries(): TagEntry[] {
-    const suggested = this.source.suggested().map((tag): TagEntry => ({
+    const suggested = this.suggestions().map((option): TagEntry => ({
       kind: 'option',
       group: 'suggested',
-      option: this.optionOf(tag, false),
+      option,
     }));
     const all = tagsInTreeOrder(this.source.tags()).map((tag): TagEntry => ({
       kind: 'option',

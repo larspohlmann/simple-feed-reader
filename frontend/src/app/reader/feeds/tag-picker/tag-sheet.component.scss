@@ -1,0 +1,38 @@
+@use '../../../theme/glass-rim';
+
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.search {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+}
+
+.search:focus-within {
+  --rim-base: var(--accent);
+}
+
+.query {
+  flex: 1;
+  min-width: 0;
+  height: var(--tap-target);
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--fs-read);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}

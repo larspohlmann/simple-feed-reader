@@ -1,35 +1,98 @@
 @use '../../../theme/glass-rim';
 
-// The host is the wrapping row itself, so the caller places it with its own
-// margin. No inner scroller: the dialog's overlay-panel body is the single
-// scroller, so a long tag list runs on and the panel's viewport cap stops it.
-// A nested scroll box was a mobile touch trap — hard to hit, and the outer body
-// stole the gesture (#868, #1034).
-:host {
+.picker {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--space-2);
 }
 
-.tag-pill {
+.field {
   @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
 
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-h);
+  padding: var(--space-1);
+  border-radius: var(--radius);
+}
+
+.field:focus-within {
+  --rim-base: var(--accent);
+}
+
+.query {
+  flex: 1 0 calc(var(--space-7) * 2);
+  min-width: 0;
+  height: calc(var(--control-h) - var(--space-3));
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+}
+
+.add {
+  display: inline-flex;
+  flex: 1 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: calc(var(--tap-target) - var(--space-3));
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-read);
+  text-align: start;
+  cursor: pointer;
+}
+
+// In flow, not absolute: the dialog grows to hold the list instead of clipping it.
+.panel {
+  @include glass-rim.filled(var(--surface-2));
+
+  max-height: calc(var(--control-h) * 7);
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--panel-shadow);
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.caption {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+// A dashed hint, not a glass rim: the rim paints a solid gradient a dash can't show.
+.suggestion {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius-pill);
+  background: none;
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   cursor: pointer;
 }
 
-.tag-pill:hover {
-  --rim-base: var(--accent);
+.suggestion:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
 }
 
-.tag-pill.on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+@media (pointer: coarse) {
+  .suggestion {
+    min-height: var(--tap-target);
+    font-size: var(--fs-base);
+  }
 }

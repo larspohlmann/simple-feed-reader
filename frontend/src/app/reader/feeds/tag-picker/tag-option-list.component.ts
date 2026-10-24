@@ -9,6 +9,10 @@ const GROUP_HEADINGS: Record<string, string> = {
   all: 'tagPicker.allTags',
 };
 
+export function tagOptionId(listId: string, index: number): string {
+  return `${listId}-option-${index}`;
+}
+
 /** The listbox both tag picker surfaces render; keyboard focus stays on their search input. */
 @Component({
   selector: 'app-tag-option-list',
@@ -35,7 +39,7 @@ export class TagOptionListComponent {
   );
 
   optionId(index: number): string {
-    return `${this.listId()}-option-${index}`;
+    return tagOptionId(this.listId(), index);
   }
 
   protected trackKey(entry: TagEntry): string {
