@@ -69,6 +69,25 @@ Play and Add to playlist sit on every audio entry.
   <img src="screenshots/mobile-podcast-playlist-light.webp" alt="The playlist panel on a phone" width="24%">
 </p>
 
+## Social
+
+Connect a Bluesky or Mastodon account in Settings → Social Media. Its home
+timeline, lists and custom feeds arrive as private feeds, followed accounts as
+feeds under the network's own section, and the sidebar counts them like any
+other feed.
+
+![The Bluesky section with the home timeline, a custom feed and followed accounts](screenshots/bluesky-light.webp)
+
+A post shows what it embeds — images, video, a link card or the post it
+quotes — with its likes and replies in the reader.
+
+![A Bluesky post in the reader, dark theme](screenshots/bluesky-post-dark.webp)
+
+<p>
+  <img src="screenshots/mobile-bluesky-light.webp" alt="The Bluesky section on a phone" width="24%">
+  <img src="screenshots/mobile-bluesky-post-dark.webp" alt="A Bluesky post in the reader on a phone, dark theme" width="24%">
+</p>
+
 ## "For you"
 
 An optional personal feed. A model of your choice ranks your unread entries
@@ -139,6 +158,13 @@ account and passkeys.
 <p>
   <img src="screenshots/mobile-settings-light.webp" alt="Settings on mobile" width="24%">
 </p>
+
+### Social Media
+
+Connected Bluesky and Mastodon accounts, and which of their follows, lists and
+feeds to bring in.
+
+![Social Media settings](screenshots/settings-social-light.webp)
 
 ### Import, export and backup
 
