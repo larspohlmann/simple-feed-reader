@@ -33,7 +33,8 @@ import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
-import { SidebarTagMenuComponent } from './sidebar-tag-menu.component';
+import { SidebarTagRowMenuComponent } from './sidebar-tag-row-menu.component';
+import { SidebarTagsHeadMenuComponent } from './sidebar-tags-head-menu.component';
 import { TagNode, siblingIdsOf, tagNodesById } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
 import { SocialSection } from '../../state/social-sections';
@@ -97,7 +98,8 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     CdkDropList,
     CdkDrag,
     CdkDragHandle,
-    SidebarTagMenuComponent,
+    SidebarTagRowMenuComponent,
+    SidebarTagsHeadMenuComponent,
     NgTemplateOutlet,
   ],
   templateUrl: './sidebar.component.html',

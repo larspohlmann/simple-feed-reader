@@ -337,14 +337,12 @@
   font-size: var(--row-fs, var(--fs-base));
 }
 
-@media (pointer: coarse) {
-  .organising .tags-head {
-    padding-right: 0;
-  }
+.organising .tags-head {
+  padding-right: 0;
+}
 
-  .organising .tags-head .dots {
-    margin-right: var(--tap-target);
-  }
+.organising .tags-head .dots {
+  margin-right: var(--tap-target);
 }
 
 .rowbody {

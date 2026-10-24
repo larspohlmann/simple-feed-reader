@@ -1920,6 +1920,11 @@ describe('for-you row', () => {
 });
 
 describe('organise mode', () => {
+  const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0, parentId: null };
+  const tree: TagNode[] = [
+    { tag, subscriptions: [sub(5)], children: [], unreadCount: 3, entryCount: 0 },
+  ];
+
   it('the Tags head carries a ⋯ that opens the Tags sheet while organising', () => {
     const fixture = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'new' });
     const element = fixture.nativeElement as HTMLElement;
@@ -1932,11 +1937,6 @@ describe('organise mode', () => {
     );
     expect(manageActions.createTag).toHaveBeenCalledWith();
   });
-
-  const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0, parentId: null };
-  const tree: TagNode[] = [
-    { tag, subscriptions: [sub(5)], children: [], unreadCount: 3, entryCount: 0 },
-  ];
 
   it('badges a hidden feed while organising too', () => {
     const element = mount({

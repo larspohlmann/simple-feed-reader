@@ -1,0 +1,12 @@
+@if (!screen.isCoarse()) {
+  <app-sidebar-row-menu
+    menuKey="tags-head"
+    [label]="'reader.manage' | transloco: { name: ('reader.tags' | transloco) }"
+  >
+    <ng-template>
+      <button role="menuitem" (click)="manage.createTag(); rows.closeMenu()">
+        {{ 'reader.newTag' | transloco }}
+      </button>
+    </ng-template>
+  </app-sidebar-row-menu>
+}

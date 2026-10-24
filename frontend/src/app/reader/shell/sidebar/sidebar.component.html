@@ -305,7 +305,7 @@
             [toggleLabel]="'reader.toggleTag' | transloco: { name: node.tag.name }"
             (toggled)="toggle(node.tag.id)"
           >
-            <app-sidebar-tag-menu [tag]="node.tag" />
+            <app-sidebar-tag-row-menu [tag]="node.tag" />
           </app-sidebar-group-row>
         }
       </div>
@@ -385,11 +385,7 @@
   </ng-template>
 
   <ng-template #tagsHeadMenu>
-    @if (screen.isCoarse()) {
-      <span class="slot" aria-hidden="true"></span>
-    } @else {
-      <app-sidebar-tag-menu />
-    }
+    <app-sidebar-tags-head-menu />
   </ng-template>
 
   <ng-template #feedTools>
