@@ -196,9 +196,9 @@ export class SubscriptionsStore {
     );
   }
 
-  /** Refresh the held list after a deliberate action that changed server state
-   *  — a manual feed retry — WITHOUT the loading skeleton, so the surface stays
-   *  put and only the row that recovered drops out. No staleness gate: unlike a
+  /** Refresh the held list after a write the user made — a move, a reorder, an
+   *  edit, a retry — WITHOUT the loading skeleton, so the surface stays put and
+   *  only the rows that changed move. No staleness gate: unlike a
    *  poll tick, the caller knows the list moved. Takes over a quiet tick on the
    *  wire, whose answer predates the change. */
   reloadQuietly(): void {

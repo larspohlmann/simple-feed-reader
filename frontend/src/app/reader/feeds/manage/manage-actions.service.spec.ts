@@ -58,7 +58,7 @@ describe('ManageActions', () => {
   it('reloads subscriptions after a successful edit', () => {
     closed = sub; // dialog closed with an updated subscription
     const spy = jest
-      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
       .mockImplementation(() => undefined);
     service.editSubscription(sub);
     expect(spy).toHaveBeenCalled();
@@ -67,7 +67,9 @@ describe('ManageActions', () => {
 
   it('reloads saved searches after an edit that switched the saved-search flag', () => {
     closed = { ...sub, includeInSavedSearches: !sub.includeInSavedSearches };
-    jest.spyOn(TestBed.inject(SubscriptionsStore), 'load').mockImplementation(() => undefined);
+    jest
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
+      .mockImplementation(() => undefined);
     service.editSubscription(sub);
     expect(savedSearchesLoad).toHaveBeenCalled();
   });
@@ -75,7 +77,7 @@ describe('ManageActions', () => {
   it('unsubscribe: on confirm, DELETEs then reloads', () => {
     closed = true; // confirm dialog returned true
     const spy = jest
-      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
       .mockImplementation(() => undefined);
     service.unsubscribe(sub);
     ctrl.expectOne('https://api.test/api/subscriptions/5').flush(null);
@@ -125,7 +127,7 @@ describe('ManageActions', () => {
       .spyOn(TestBed.inject(TagsStore), 'load')
       .mockImplementation(() => undefined);
     const subSpy = jest
-      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
       .mockImplementation(() => undefined);
     service.deleteTag(tag);
     ctrl.expectOne('https://api.test/api/tags/3').flush(null);
@@ -137,7 +139,7 @@ describe('ManageActions', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
     store.storedSubscriptions.set([tagged]);
-    const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    const spy = jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
     service.moveFeedToTag(tagged, { fromTagId: 3, toTagId: 7, position: 1 });
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5/move-to-tag');
     expect(testRequest.request.method).toBe('PATCH');
@@ -160,7 +162,7 @@ describe('ManageActions', () => {
     tags.tags.set([tag, news]);
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     store.storedSubscriptions.set([tagged]);
-    jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
     service.moveFeedToTag(tagged, { fromTagId: 3, toTagId: 7, position: 0 });
     expect(
       store
@@ -182,7 +184,7 @@ describe('ManageActions', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
     store.storedSubscriptions.set([tagged]);
-    const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    const spy = jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
     service.setIncludeInAllItems(tagged, false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInAllItems).toBe(false);
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
@@ -201,7 +203,7 @@ describe('ManageActions', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
     store.storedSubscriptions.set([tagged]);
-    const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    const spy = jest.spyOn(store, 'reloadQuietly').mockImplementation(() => undefined);
     service.setIncludeInForYou(tagged, false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInForYou).toBe(false);
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
@@ -220,7 +222,9 @@ describe('ManageActions', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
     store.storedSubscriptions.set([tagged]);
-    const subscriptionsLoad = jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    const subscriptionsLoad = jest
+      .spyOn(store, 'reloadQuietly')
+      .mockImplementation(() => undefined);
     service.setIncludeInSavedSearches(tagged, false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInSavedSearches).toBe(false);
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
@@ -309,7 +313,7 @@ describe('ManageActions', () => {
       tagsStore.tags.set([tagA, tagB]);
       tagsLoad = jest.spyOn(tagsStore, 'load').mockImplementation(() => undefined);
       subscriptionsLoad = jest
-        .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
         .mockImplementation(() => undefined);
     });
 
@@ -364,7 +368,7 @@ describe('ManageActions', () => {
 
   it('reorderUntagged: PATCHes /api/subscriptions/reorder then reloads subs', () => {
     const spy = jest
-      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
       .mockImplementation(() => undefined);
     service.reorderUntagged([9, 8, 7]);
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/reorder');
@@ -376,7 +380,7 @@ describe('ManageActions', () => {
 
   it('reorderTagFeeds: PATCHes /api/tags/{id}/feed-order then reloads subs', () => {
     const spy = jest
-      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+      .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
       .mockImplementation(() => undefined);
     service.reorderTagFeeds(4, [2, 1]);
     const testRequest = ctrl.expectOne('https://api.test/api/tags/4/feed-order');
@@ -456,7 +460,7 @@ describe('ManageActions', () => {
       const actions = TestBed.inject(ManageActions);
       http = TestBed.inject(HttpTestingController);
       const subLoad = jest
-        .spyOn(TestBed.inject(SubscriptionsStore), 'load')
+        .spyOn(TestBed.inject(SubscriptionsStore), 'reloadQuietly')
         .mockImplementation(() => undefined);
       const savedSearchesLoad = jest
         .spyOn(TestBed.inject(SavedSearchesStore), 'load')

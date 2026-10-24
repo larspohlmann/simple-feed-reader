@@ -491,7 +491,7 @@ describe('OrganiseStore', () => {
     store.toggleFeed(12);
     expect(store.selectedCount()).toBe(3);
 
-    // Simulate unsubscribing 11 (heise) from its own row menu: subs.load()
+    // Simulate unsubscribing 11 (heise) from its own row menu: subs.reloadQuietly()
     // reloads without it.
     subsSignal.set(SUBS.filter((subscription) => subscription.id !== 11));
     TestBed.tick();

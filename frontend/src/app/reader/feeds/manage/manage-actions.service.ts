@@ -58,7 +58,7 @@ export class ManageActions {
     });
     ref.closed.subscribe((updated) => {
       if (!updated) return;
-      this.subs.load();
+      this.subs.reloadQuietly();
       if (updated.includeInSavedSearches !== sub.includeInSavedSearches) this.savedSearches.load();
     });
   }
@@ -79,7 +79,7 @@ export class ManageActions {
         subscription.id === sub.id ? this.afterMove(subscription, move) : subscription,
       ),
     );
-    reloadAfter(this.api.moveFeedToTag(sub.id, move), () => this.subs.load());
+    reloadAfter(this.api.moveFeedToTag(sub.id, move), () => this.subs.reloadQuietly());
   }
 
   /** The moved feed's optimistic shape: the source tag dropped, the target tag
@@ -143,7 +143,7 @@ export class ManageActions {
 
   /** The saved-search flag moves saved-search badges and counts, which only a reload re-learns. */
   private reloadFeedsAfter(flags: SubscriptionFlags): void {
-    this.subs.load();
+    this.subs.reloadQuietly();
     if (flags.includeInSavedSearches !== undefined) this.savedSearches.load();
   }
 
@@ -165,7 +165,7 @@ export class ManageActions {
         return subscription;
       }),
     );
-    reloadAfter(this.api.reorderSubscriptions(subscriptionIds), () => this.subs.load());
+    reloadAfter(this.api.reorderSubscriptions(subscriptionIds), () => this.subs.reloadQuietly());
   }
 
   /** Persist a new order for the feeds within one tag. Optimistic: update
@@ -185,7 +185,7 @@ export class ManageActions {
         };
       }),
     );
-    reloadAfter(this.api.setTagFeedOrder(tagId, subscriptionIds), () => this.subs.load());
+    reloadAfter(this.api.setTagFeedOrder(tagId, subscriptionIds), () => this.subs.reloadQuietly());
   }
 
   unsubscribe(sub: SubscriptionDto): void {
@@ -196,7 +196,7 @@ export class ManageActions {
       danger: true,
     };
     this.confirm.confirmThen(data, () => {
-      this.api.deleteSubscription(sub.id).subscribe({ next: () => this.subs.load() });
+      this.api.deleteSubscription(sub.id).subscribe({ next: () => this.subs.reloadQuietly() });
     });
   }
 
@@ -220,7 +220,7 @@ export class ManageActions {
     ref.closed.subscribe((updated) => {
       if (!updated) return;
       this.tags.load();
-      this.subs.load(); // embedded tag colour/name on feeds changed too
+      this.subs.reloadQuietly(); // embedded tag colour/name on feeds changed too
     });
   }
 
@@ -235,7 +235,7 @@ export class ManageActions {
       this.api.deleteTag(tag.id).subscribe({
         next: () => {
           this.tags.load();
-          this.subs.load();
+          this.subs.reloadQuietly();
         },
       });
     });
@@ -283,7 +283,7 @@ export class ManageActions {
         if (!confirmed) return of(false);
         return this.api.bulkUnsubscribe(subscriptions.map((subscription) => subscription.id)).pipe(
           tap((result) => {
-            this.subs.load();
+            this.subs.reloadQuietly();
             this.toast.show({
               message: this.i18n.translate(pluralKey('manage.bulk.unsubscribed', result.removed), {
                 count: result.removed,
@@ -308,7 +308,7 @@ export class ManageActions {
 
     return ref.closed.pipe(
       tap((subscription) => {
-        if (subscription) this.subs.load();
+        if (subscription) this.subs.reloadQuietly();
       }),
     );
   }

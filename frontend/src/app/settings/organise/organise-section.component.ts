@@ -207,7 +207,7 @@ export class OrganiseSectionComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.store.busy.set(false);
         this.error.set(parseProblem(error));
-        this.subs.load();
+        this.subs.reloadQuietly();
       },
     });
   }
@@ -222,7 +222,7 @@ export class OrganiseSectionComponent implements OnInit {
         this.error.set(parseProblem(error));
         // Reload so the row that caused the 422 — a feed another tab already
         // deleted — disappears. The selection stays; the user decides.
-        this.subs.load();
+        this.subs.reloadQuietly();
       },
     });
   }
