@@ -289,11 +289,30 @@
     border-radius: var(--radius);
   }
 
+  // An expanded section's head bleeds to the card's edges as a band over its list.
+  .section-head:has(> [aria-expanded='true']) {
+    --bleed-top: var(--sidebar-card-pad);
+
+    height: calc(var(--sidebar-sub-row-h) + var(--bleed-top));
+    margin: calc(var(--bleed-top) * -1) calc(var(--sidebar-card-pad) * -1) var(--space-0);
+    padding: var(--bleed-top) calc(var(--space-2) + var(--sidebar-card-pad)) 0
+      calc(var(--sidebar-row-inset) + var(--sidebar-card-pad));
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: color-mix(in oklab, var(--text-primary) 5%, var(--surface-1));
+  }
+
   @include row-states('.section-head', '.section-head.current');
 
   @media (pointer: coarse) {
     .section-head {
       height: var(--tap-target);
+    }
+
+    .section-head:has(> [aria-expanded='true']) {
+      --bleed-top: var(--space-2);
+
+      height: calc(var(--tap-target) + var(--bleed-top));
     }
   }
 
