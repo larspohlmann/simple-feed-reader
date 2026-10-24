@@ -10,6 +10,22 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.1] - 2026-10-24
+
+## What's Changed
+* feat(#1762): create tags from the sidebar by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1763
+* docs: Bluesky in the screenshots; every sidebar shot retaken with a connected account by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1764
+* fix(#1766): the show-sidebar button takes the hidden search card's place by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1767
+* Drag a tag to nest, un-nest or move it between parents (sidebar + organise) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1768
+* test(#1769): fix the two rotted Playwright specs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1770
+* feat(sidebar): pin the search card while the sidebar scrolls by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1773
+* feat(#1771): tag picker as a combobox with suggestions and a touch sheet by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1774
+* fix(#1775): reload quietly after organise and sidebar writes by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1776
+* Mark an expanded sidebar card's head with a full-bleed band by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1778
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.0...v1.6.1
+
 ## [v1.6.0] - 2026-10-23
 
 ### Highlights
