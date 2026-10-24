@@ -37,7 +37,11 @@ import {
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
-import { siblingIdsByTagId, tagsInTreeOrder } from '../../reader/state/subscription-derivations';
+import {
+  rootsOf,
+  siblingIdsByTagId,
+  tagsInTreeOrder,
+} from '../../reader/state/subscription-derivations';
 import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { Problem, parseProblem } from '../../core/problem';
 import { isGone } from '../../reader/feeds/feed-health';
@@ -262,18 +266,11 @@ export class OrganiseSectionComponent implements OnInit {
 
   protected startTagDrag(group: OrganiseGroup): void {
     if (group.tag === null) return;
-    const tagPanels = this.panelGroups().flatMap((panel) => {
+    const headers = this.panelGroups().flatMap((panel) => {
       const tag = panel.group().tag;
-      return tag === null ? [] : [{ panel, tag }];
+      return tag === null ? [] : [{ tagId: tag.id, element: panel.headDropElement().nativeElement }];
     });
-    const headers = tagPanels.map(({ panel, tag }) => ({
-      tagId: tag.id,
-      element: panel.headElement().nativeElement,
-    }));
-    const lastRoot = [...tagPanels].reverse().find(({ panel }) => panel.group().depth === 0);
-    const listEnd =
-      lastRoot === undefined ? undefined : this.panelByKey().get(lastRoot.panel.group().key);
-    this.tagSession.start(group.tag, measureTagLayout(headers, listEnd, this.treeTop()));
+    this.tagSession.start(group.tag, measureTagLayout(headers, this.lastRootPanel(), this.treeTop()));
   }
 
   protected moveTagDrag(clientY: number): void {
@@ -288,6 +285,11 @@ export class OrganiseSectionComponent implements OnInit {
 
   private siblingIds(tag: TagDto): number[] {
     return [...(this.siblingIdsByTag().get(tag.id) ?? [])];
+  }
+
+  private lastRootPanel(): HTMLElement | undefined {
+    const lastRoot = rootsOf(this.tags.tags()).at(-1);
+    return lastRoot === undefined ? undefined : this.panelByKey().get(lastRoot.id);
   }
 
   private markedKey(kind: TagDropMark['kind']): GroupKey | null {

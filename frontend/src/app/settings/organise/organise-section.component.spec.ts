@@ -563,27 +563,33 @@ describe('OrganiseSectionComponent', () => {
   });
 
   describe('tag drag (#1708, #1765)', () => {
-    // Tree top at 100; headers 40 tall at 100 + index * 100; the last root panel's foot is the list's end.
+    // Tree top at 100; header rows 40 tall at 100 + index * 100 in screen order; a panel's foot 80 below its top.
     const TREE_TOP = 100;
     const panels = () => fixture.debugElement.queryAll(By.directive(OrganiseTagGroupComponent));
-    const heads = () => fixture.debugElement.queryAll(By.css('app-organise-tag-group .head'));
+
+    /** CDK lifts the dragged `.head` to the page top before `started`, so only its drop wrapper keeps the slot. */
+    function mockScreenLayout(): void {
+      const host = fixture.nativeElement as HTMLElement;
+      const tree = host.querySelector('.tree') as HTMLElement;
+      jest.spyOn(tree, 'getBoundingClientRect').mockReturnValue({ top: TREE_TOP } as DOMRect);
+      host.querySelectorAll<HTMLElement>('app-organise-tag-group').forEach((panel, index) => {
+        const top = TREE_TOP + index * 100;
+        jest
+          .spyOn(panel, 'getBoundingClientRect')
+          .mockReturnValue({ top, bottom: top + 80 } as DOMRect);
+        const headDrop = panel.querySelector(':scope > .panel > .head-drop') as HTMLElement;
+        jest
+          .spyOn(headDrop, 'getBoundingClientRect')
+          .mockReturnValue({ top, bottom: top + 40 } as DOMRect);
+        jest
+          .spyOn(headDrop.querySelector('.head') as HTMLElement, 'getBoundingClientRect')
+          .mockReturnValue({ top: 0, bottom: 40 } as DOMRect);
+      });
+    }
 
     async function renderTags(tags: TagDto[] = [TECH, WORLD, ART]) {
       const rendered = await renderWithMocks(SUBS, tags);
-      const tree = fixture.debugElement.query(By.css('.tree')).nativeElement as HTMLElement;
-      jest.spyOn(tree, 'getBoundingClientRect').mockReturnValue({ top: TREE_TOP } as DOMRect);
-      heads().forEach((head, index) =>
-        jest.spyOn(head.nativeElement as HTMLElement, 'getBoundingClientRect').mockReturnValue({
-          top: TREE_TOP + index * 100,
-          bottom: TREE_TOP + index * 100 + 40,
-        } as DOMRect),
-      );
-      panels().forEach((panel, index) =>
-        jest.spyOn(panel.nativeElement as HTMLElement, 'getBoundingClientRect').mockReturnValue({
-          top: TREE_TOP + index * 100,
-          bottom: TREE_TOP + index * 100 + 80,
-        } as DOMRect),
-      );
+      mockScreenLayout();
       return rendered;
     }
 
@@ -623,6 +629,66 @@ describe('OrganiseSectionComponent', () => {
       drag(0, 395);
 
       expect(gapMarks()).toEqual(['-', '-', 'after', '-']);
+    });
+
+    it('measures the header rows, not the dragged header CDK has lifted to the page top', async () => {
+      await renderTags();
+
+      drag(0, 302);
+
+      expect(gapMarks()).toEqual(['-', '-', 'before', '-']);
+    });
+
+    describe('when the panel query order differs from the screen order', () => {
+      const panelOf = (tag: TagDto) =>
+        panels().find(
+          (panel) => (panel.componentInstance as OrganiseTagGroupComponent).group().tag?.id === tag.id,
+        )!;
+
+      // Re-ordering moves the stamped panels on screen; the query keeps the order they were created in.
+      async function renderReordered() {
+        const rendered = await renderTags();
+        TestBed.inject(TagsStore).tags.set([
+          { ...ART, position: 0 },
+          { ...TECH, position: 1 },
+          { ...WORLD, position: 2 },
+        ]);
+        fixture.detectChanges();
+        mockScreenLayout();
+        return rendered;
+      }
+
+      function dragFrom(tag: TagDto, clientY: number): void {
+        panelOf(tag).triggerEventHandler('tagDragStarted');
+        panelOf(tag).triggerEventHandler('tagDragMoved', clientY);
+        fixture.detectChanges();
+      }
+
+      it('nests under the visually last root instead of reading it as the list end', async () => {
+        const { manage } = await renderReordered();
+
+        dragFrom(TECH, 320);
+        panelOf(TECH).triggerEventHandler('tagDragEnded');
+
+        expect(manage.moveTag).toHaveBeenCalledWith(expect.objectContaining({ id: TECH.id }), {
+          parentId: WORLD.id,
+          order: [TECH.id],
+          mark: { kind: 'nest', tagId: WORLD.id },
+        });
+      });
+
+      it('opens the gap below the visually last root', async () => {
+        const { manage } = await renderReordered();
+
+        dragFrom(TECH, 395);
+        panelOf(TECH).triggerEventHandler('tagDragEnded');
+
+        expect(manage.moveTag).toHaveBeenCalledWith(expect.objectContaining({ id: TECH.id }), {
+          parentId: null,
+          order: [ART.id, WORLD.id, TECH.id],
+          mark: { kind: 'after', tagId: WORLD.id },
+        });
+      });
     });
 
     it('opens no gap beside the dragged tag itself', async () => {
