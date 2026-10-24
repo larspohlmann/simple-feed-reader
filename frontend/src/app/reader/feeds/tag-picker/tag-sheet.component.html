@@ -11,8 +11,8 @@
         aria-autocomplete="list"
         aria-expanded="true"
         cdkFocusInitial
-        [attr.aria-controls]="listId"
-        [attr.aria-activedescendant]="activeId()"
+        [attr.aria-controls]="search.listId"
+        [attr.aria-activedescendant]="search.activeOptionId()"
         [attr.aria-label]="'tagPicker.filter' | transloco"
         [placeholder]="'tagPicker.filter' | transloco"
         [value]="search.query()"
@@ -27,14 +27,7 @@
     }
     <app-form-error [message]="search.error()" />
   </div>
-  <app-tag-option-list
-    [entries]="search.entries()"
-    [activeIndex]="search.activeIndex()"
-    [listId]="listId"
-    [creating]="search.creating()"
-    (picked)="search.pick($event)"
-    (createRequested)="search.create()"
-  />
+  <app-tag-option-list [search]="search" />
   <app-button footer variant="primary" (click)="ref.close()">
     {{ 'tagPicker.done' | transloco }}
   </app-button>

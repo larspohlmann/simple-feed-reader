@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Signal, computed, signal } from '@angular/core';
 import { parseProblem, problemMessage } from '../../../core/problem';
 import { TagDto } from '../../models';
-import { tagLabel, tagsInTreeOrder } from '../../state/subscription-derivations';
+import { labelWithParent, tagsInTreeOrder } from '../../state/subscription-derivations';
 import { TagCreator } from './tag-creator.service';
 
 export interface TagOption {
@@ -30,6 +30,13 @@ export interface TagSearchSource {
   readonly toggle: (id: number) => void;
 }
 
+interface IndexedTag {
+  readonly tag: TagDto;
+  readonly parentName: string | null;
+  readonly label: string;
+  readonly searchText: string;
+}
+
 /**
  * The query, the grouped option list, the keyboard cursor and the create flow
  * behind both tag picker surfaces — the inline combobox and the phone sheet.
@@ -39,18 +46,34 @@ export interface TagSearchSource {
 export class TagSearch {
   readonly query = signal('');
   readonly activeIndex = signal(0);
-  private readonly creatingName = signal<string | null>(null);
-  readonly creating = computed(() => this.creatingName() !== null);
+  readonly creating = signal(false);
   readonly error = signal<string | null>(null);
 
+  private readonly indexed = computed(() => {
+    const tags = this.source.tags();
+    const namesById = new Map(tags.map((tag) => [tag.id, tag.name]));
+    return tagsInTreeOrder(tags).map((tag): IndexedTag => {
+      const parentName = tag.parentId === null ? null : (namesById.get(tag.parentId) ?? null);
+      const label = labelWithParent(tag.name, parentName);
+      return { tag, parentName, label, searchText: label.toLowerCase() };
+    });
+  });
+
+  private readonly indexedById = computed(
+    () => new Map(this.indexed().map((indexed) => [indexed.tag.id, indexed])),
+  );
+
   readonly chips = computed(() =>
-    tagsInTreeOrder(this.source.tags())
-      .filter((tag) => this.source.selected().has(tag.id))
-      .map((tag) => this.optionOf(tag, false)),
+    this.indexed()
+      .filter((indexed) => this.source.selected().has(indexed.tag.id))
+      .map((indexed) => this.optionOf(indexed, false)),
   );
 
   readonly suggestions = computed(() =>
-    this.source.suggested().map((tag) => this.optionOf(tag, false)),
+    this.source
+      .suggested()
+      .flatMap((tag) => this.indexedById().get(tag.id) ?? [])
+      .map((indexed) => this.optionOf(indexed, false)),
   );
 
   readonly entries = computed<TagEntry[]>(() => {
@@ -58,10 +81,19 @@ export class TagSearch {
     return needle ? this.matchEntries(needle) : this.browseEntries();
   });
 
+  readonly activeOptionId = computed(() =>
+    this.entries().length ? this.optionId(this.activeIndex()) : null,
+  );
+
   constructor(
     private readonly source: TagSearchSource,
     private readonly creator: TagCreator,
+    readonly listId: string,
   ) {}
+
+  optionId(index: number): string {
+    return `${this.listId}-option-${index}`;
+  }
 
   setQuery(text: string): void {
     this.query.set(text);
@@ -103,14 +135,14 @@ export class TagSearch {
   create(): void {
     const name = this.query().trim();
     if (!name || this.creating()) return;
-    this.creatingName.set(name);
+    this.creating.set(true);
     this.creator.create(name).subscribe({
       next: (tag) => {
-        this.creatingName.set(null);
+        this.creating.set(false);
         this.pick(tag.id);
       },
       error: (error: HttpErrorResponse) => {
-        this.creatingName.set(null);
+        this.creating.set(false);
         this.error.set(problemMessage(parseProblem(error)));
       },
     });
@@ -127,34 +159,33 @@ export class TagSearch {
       group: 'suggested',
       option,
     }));
-    const all = tagsInTreeOrder(this.source.tags()).map((tag): TagEntry => ({
+    const all = this.indexed().map((indexed): TagEntry => ({
       kind: 'option',
       group: 'all',
-      option: this.optionOf(tag, tag.parentId !== null),
+      option: this.optionOf(indexed, indexed.tag.parentId !== null),
     }));
     return [...suggested, ...all];
   }
 
   private matchEntries(needle: string): TagEntry[] {
-    const tags = this.source.tags();
-    const matches = tagsInTreeOrder(tags)
-      .filter((tag) => tagLabel(tag, tags).toLowerCase().includes(needle))
-      .map((tag): TagEntry => ({
+    const matches = this.indexed()
+      .filter((indexed) => indexed.searchText.includes(needle))
+      .map((indexed): TagEntry => ({
         kind: 'option',
         group: 'matches',
-        option: this.optionOf(tag, false),
+        option: this.optionOf(indexed, false),
       }));
-    const taken = tags.some((tag) => tag.name.toLowerCase() === needle);
+    const taken = this.indexed().some((indexed) => indexed.tag.name.toLowerCase() === needle);
     return taken ? matches : [...matches, { kind: 'create', name: this.query().trim() }];
   }
 
-  private optionOf(tag: TagDto, indented: boolean): TagOption {
-    const tags = this.source.tags();
+  private optionOf(indexed: IndexedTag, indented: boolean): TagOption {
+    const { tag } = indexed;
     return {
       id: tag.id,
       name: tag.name,
-      parentName: tags.find((candidate) => candidate.id === tag.parentId)?.name ?? null,
-      label: tagLabel(tag, tags),
+      parentName: indexed.parentName,
+      label: indexed.label,
       icon: tag.icon,
       color: tag.color,
       selected: this.source.selected().has(tag.id),

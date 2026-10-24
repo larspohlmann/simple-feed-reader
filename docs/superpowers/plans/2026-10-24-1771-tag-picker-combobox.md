@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Session branch `claude/affectionate-gauss-rs99tu` (off `develop`); commits `feat(#1771): …`; no Claude attribution anywhere.
-- Picker API stays `tags` / `selected` / `toggled`; it owns no selection state (#1034). New input: `suggested: TagDto[]` (default `[]`).
+- Picker API stays `tags` / `selected` / `toggled`; it owns no selection state (#1034). New input: `excludeSubscriptionId: number | null` (default `null`); the picker derives its suggestions from `SubscriptionRows` itself.
 - Suggestions: tags of subscriptions ordered by `createdAt` descending, deduped, selected tags dropped, the edited subscription skipped, first 4. Computed by the dialogs with one shared helper.
 - Created tags are roots: `{ name, color: null, icon: null, parentId: null }`. The new tag is selected via `toggled`.
 - "Create tag" appears only when the trimmed query is non-empty and no tag's own name equals it (case-insensitive).

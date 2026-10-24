@@ -20,8 +20,8 @@
         role="combobox"
         aria-autocomplete="list"
         [attr.aria-expanded]="open()"
-        [attr.aria-controls]="open() ? listId : null"
-        [attr.aria-activedescendant]="activeId()"
+        [attr.aria-controls]="open() ? search.listId : null"
+        [attr.aria-activedescendant]="open() ? search.activeOptionId() : null"
         [attr.aria-label]="'tagPicker.filter' | transloco"
         [placeholder]="'tagPicker.placeholder' | transloco"
         [value]="search.query()"
@@ -34,23 +34,16 @@
 
   @if (open()) {
     <div class="panel">
-      <app-tag-option-list
-        [entries]="search.entries()"
-        [activeIndex]="search.activeIndex()"
-        [listId]="listId"
-        [creating]="search.creating()"
-        (picked)="search.pick($event)"
-        (createRequested)="search.create()"
-      />
+      <app-tag-option-list [search]="search" />
     </div>
     <app-form-error [message]="search.error()" />
   } @else if (search.suggestions().length) {
     <div class="suggestions">
-      <span class="caption">{{ 'tagPicker.suggested' | transloco }}</span>
+      <span class="group-caption">{{ 'tagPicker.suggested' | transloco }}</span>
       @for (suggestion of search.suggestions(); track suggestion.id) {
         <button type="button" class="suggestion" (click)="toggled.emit(suggestion.id)">
           <app-tag-glyph [name]="suggestion.icon" [color]="suggestion.color" size="sm" />
-          {{ suggestion.label }}
+          <span class="label">{{ suggestion.label }}</span>
         </button>
       }
     </div>

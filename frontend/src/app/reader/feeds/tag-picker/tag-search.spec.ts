@@ -3,26 +3,18 @@ import { signal } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { TagDto } from '../../models';
 import { TagCreator } from './tag-creator.service';
+import { makeTag } from '../../testing/tag.factory';
 import { TagEntry, TagSearch } from './tag-search';
-
-const tag = (id: number, name: string, parentId: number | null = null): TagDto => ({
-  id,
-  name,
-  color: null,
-  icon: null,
-  position: id,
-  parentId,
-});
 
 describe('TagSearch', () => {
   const tags = signal<TagDto[]>([
-    tag(1, 'News'),
-    tag(2, 'News en', 1),
-    tag(3, 'Politics'),
-    tag(4, 'Lokales'),
+    makeTag(1, 'News'),
+    makeTag(2, 'News en', { parentId: 1 }),
+    makeTag(3, 'Politics'),
+    makeTag(4, 'Lokales'),
   ]);
   const selected = signal<ReadonlySet<number>>(new Set([2]));
-  const suggested = signal<TagDto[]>([tag(3, 'Politics')]);
+  const suggested = signal<TagDto[]>([makeTag(3, 'Politics')]);
   let toggled: number[];
   let created: Subject<TagDto>;
   let createdNames: string[];
@@ -47,6 +39,7 @@ describe('TagSearch', () => {
     search = new TagSearch(
       { tags, selected, suggested, toggle: (id) => toggled.push(id) },
       creator,
+      'tags',
     );
   });
 
@@ -72,9 +65,10 @@ describe('TagSearch', () => {
     expect(listed()).toEqual(['matches:Politics']);
   });
 
-  it('wraps the cursor at both ends', () => {
+  it('wraps the cursor at both ends and names the active option', () => {
     search.move(-1);
     expect(search.activeIndex()).toBe(4);
+    expect(search.activeOptionId()).toBe('tags-option-4');
     search.move(1);
     expect(search.activeIndex()).toBe(0);
   });
@@ -94,7 +88,7 @@ describe('TagSearch', () => {
     expect(search.creating()).toBe(true);
 
     search.create();
-    created.next(tag(9, 'Science'));
+    created.next(makeTag(9, 'Science'));
 
     expect(createdNames).toEqual(['Science']);
     expect(toggled).toEqual([9]);

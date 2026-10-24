@@ -1,7 +1,7 @@
 @for (chip of chips(); track chip.id) {
   <span class="chip">
     <app-tag-glyph [name]="chip.icon" [color]="chip.color" size="sm" />
-    {{ chip.label }}
+    <span class="label">{{ chip.label }}</span>
     <button
       type="button"
       class="remove"

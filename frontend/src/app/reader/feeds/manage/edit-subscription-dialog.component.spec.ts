@@ -95,11 +95,7 @@ describe('EditSubscriptionDialogComponent', () => {
   });
 
   const chipLabels = (element: HTMLElement): string[] =>
-    [...element.querySelectorAll('.chip')].map((chip) => {
-      const copy = chip.cloneNode(true) as Element;
-      copy.querySelectorAll('app-icon').forEach((icon) => icon.remove());
-      return copy.textContent!.trim();
-    });
+    [...element.querySelectorAll('.chip .label')].map((label) => label.textContent!.trim());
 
   function openList(fixture: ComponentFixture<EditSubscriptionDialogComponent>): HTMLElement[] {
     const query = (fixture.nativeElement as HTMLElement).querySelector('input.query')!;
@@ -143,14 +139,21 @@ describe('EditSubscriptionDialogComponent', () => {
   it('suggests tags from other subscriptions, never from this one', () => {
     const fixture = mount();
     TestBed.inject(SubscriptionRows).stored.set([
-      sub,
+      { ...sub, createdAt: '2026-05-01T00:00:00Z' },
       {
         ...sub,
         id: 6,
+        createdAt: '2026-01-01T00:00:00Z',
         tags: [{ id: 2, name: 'News', color: null, icon: null, position: 1, parentId: null }],
       },
     ]);
-    expect(fixture.componentInstance.suggestedTags().map((tag) => tag.id)).toEqual([2]);
+    fixture.componentInstance.toggle(1);
+    fixture.detectChanges();
+
+    const suggestions = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('.suggestion .label'),
+    ].map((suggestion) => suggestion.textContent!.trim());
+    expect(suggestions).toEqual(['News']);
   });
 
   it('PATCHes customTitle (empty → null) and the toggled tag set', () => {

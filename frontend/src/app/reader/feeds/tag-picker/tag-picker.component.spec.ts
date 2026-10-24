@@ -7,17 +7,11 @@ import { API_BASE_URL } from '../../../core/api';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { TagDto } from '../../models';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { makeSubscription } from '../../testing/subscription.factory';
+import { makeTag } from '../../testing/tag.factory';
 import { TagPickerComponent } from './tag-picker.component';
 import { TagSheetComponent } from './tag-sheet.component';
-
-const tag = (id: number, name: string, parentId: number | null = null): TagDto => ({
-  id,
-  name,
-  color: null,
-  icon: null,
-  position: id,
-  parentId,
-});
 
 describe('TagPickerComponent', () => {
   let fixture: ComponentFixture<TagPickerComponent>;
@@ -26,7 +20,12 @@ describe('TagPickerComponent', () => {
   const isCoarse = signal(false);
   const dialog = { open: jest.fn() };
 
-  const tags = [tag(1, 'Tech'), tag(2, 'Reading'), tag(3, 'Long reads', 2), tag(4, 'Music')];
+  const tags = [
+    makeTag(1, 'Tech'),
+    makeTag(2, 'Reading'),
+    makeTag(3, 'Long reads', { parentId: 2 }),
+    makeTag(4, 'Music'),
+  ];
   const element = (): HTMLElement => fixture.nativeElement;
   const query = (): HTMLInputElement => element().querySelector('input.query') as HTMLInputElement;
   const textOf = (node: Element): string => {
@@ -34,7 +33,8 @@ describe('TagPickerComponent', () => {
     copy.querySelectorAll('app-icon').forEach((icon) => icon.remove());
     return copy.textContent?.replace(/\s+/g, ' ').trim() ?? '';
   };
-  const chipLabels = (): string[] => [...element().querySelectorAll('.chip')].map(textOf);
+  const chipLabels = (): string[] =>
+    [...element().querySelectorAll('.chip .label')].map((label) => label.textContent!.trim());
   const optionLabels = (): string[] =>
     [...element().querySelectorAll('[role="option"]')].map(textOf);
   const key = (name: string): void => {
@@ -51,7 +51,7 @@ describe('TagPickerComponent', () => {
     fixture = TestBed.createComponent(TagPickerComponent);
     fixture.componentRef.setInput('tags', tags);
     fixture.componentRef.setInput('selected', new Set(selected));
-    fixture.componentRef.setInput('suggested', suggested);
+    TestBed.inject(SubscriptionRows).stored.set([makeSubscription({ id: 7, tags: suggested })]);
     fixture.componentInstance.toggled.subscribe((id) => toggled.push(id));
     fixture.detectChanges();
   }
@@ -88,17 +88,17 @@ describe('TagPickerComponent', () => {
   });
 
   it('offers suggestions one tap away while the list is closed', () => {
-    mount([], [tag(4, 'Music')]);
+    mount([], [makeTag(4, 'Music')]);
 
     const suggestion = element().querySelector('button.suggestion') as HTMLButtonElement;
-    expect(suggestion.textContent?.trim()).toBe('Music');
+    expect(suggestion.querySelector('.label')?.textContent?.trim()).toBe('Music');
     suggestion.click();
 
     expect(toggled).toEqual([4]);
   });
 
   it('opens the list on focus with suggestions above every tag', () => {
-    mount([1], [tag(4, 'Music')]);
+    mount([1], [makeTag(4, 'Music')]);
 
     query().dispatchEvent(new Event('focus'));
     fixture.detectChanges();
@@ -143,7 +143,7 @@ describe('TagPickerComponent', () => {
       icon: null,
       parentId: null,
     });
-    request.flush({ tag: tag(9, 'Science') });
+    request.flush({ tag: makeTag(9, 'Science') });
 
     expect(toggled).toEqual([9]);
     http.verify();

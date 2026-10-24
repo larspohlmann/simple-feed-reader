@@ -1,21 +1,13 @@
 import { TagDto } from '../models';
 import { makeSubscription } from '../testing/subscription.factory';
+import { makeTag } from '../testing/tag.factory';
 import { suggestedTags } from './subscription-derivations';
 
-const tag = (id: number, name: string): TagDto => ({
-  id,
-  name,
-  color: null,
-  icon: null,
-  position: 0,
-  parentId: null,
-});
-
-const news = tag(1, 'News');
-const tech = tag(2, 'Tech');
-const music = tag(3, 'Music');
-const science = tag(4, 'Science');
-const culture = tag(5, 'Culture');
+const news = makeTag(1, 'News');
+const tech = makeTag(2, 'Tech');
+const music = makeTag(3, 'Music');
+const science = makeTag(4, 'Science');
+const culture = makeTag(5, 'Culture');
 
 describe('suggestedTags', () => {
   const subscriptions = [

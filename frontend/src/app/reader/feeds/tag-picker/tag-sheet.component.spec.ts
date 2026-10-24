@@ -5,18 +5,9 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { signal } from '@angular/core';
 import { API_BASE_URL } from '../../../core/api';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { TagDto } from '../../models';
 import { TagSearchSource } from './tag-search';
+import { makeTag } from '../../testing/tag.factory';
 import { TagSheetComponent } from './tag-sheet.component';
-
-const tag = (id: number, name: string): TagDto => ({
-  id,
-  name,
-  color: null,
-  icon: null,
-  position: id,
-  parentId: null,
-});
 
 describe('TagSheetComponent', () => {
   let fixture: ComponentFixture<TagSheetComponent>;
@@ -32,9 +23,9 @@ describe('TagSheetComponent', () => {
     toggled = [];
     ref.close.mockClear();
     const source: TagSearchSource = {
-      tags: signal([tag(1, 'Tech'), tag(2, 'Music')]),
+      tags: signal([makeTag(1, 'Tech'), makeTag(2, 'Music')]),
       selected: signal(new Set<number>()),
-      suggested: signal([tag(2, 'Music')]),
+      suggested: signal([makeTag(2, 'Music')]),
       toggle: (id) => toggled.push(id),
     };
     await TestBed.configureTestingModule({

@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use 'tag-field';
 
 .picker {
   display: flex;
@@ -7,7 +8,7 @@
 }
 
 .field {
-  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+  @include tag-field.frame;
 
   display: flex;
   flex-wrap: wrap;
@@ -18,17 +19,12 @@
   border-radius: var(--radius);
 }
 
-.field:focus-within {
-  --rim-base: var(--accent);
-}
-
 .query {
+  @include tag-field.bare-input;
+
   flex: 1 0 calc(var(--space-7) * 2);
-  min-width: 0;
   height: calc(var(--control-h) - var(--space-3));
   padding: 0 var(--space-2);
-  border: 0;
-  background: none;
 }
 
 .add {
@@ -62,13 +58,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-}
-
-.caption {
-  font-size: var(--fs-xs);
-  color: var(--text-secondary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 // A dashed hint, not a glass rim: the rim paints a solid gradient a dash can't show.

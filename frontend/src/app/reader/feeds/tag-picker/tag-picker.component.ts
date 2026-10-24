@@ -14,10 +14,12 @@ import { FormErrorComponent } from '../../../shared/form-error/form-error.compon
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { LayoutService } from '../../layout.service';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { suggestedTags } from '../../state/subscription-derivations';
 import { TagDto } from '../../models';
 import { TagChipsComponent } from './tag-chips.component';
 import { TagCreator } from './tag-creator.service';
-import { TagOptionListComponent, tagOptionId } from './tag-option-list.component';
+import { TagOptionListComponent } from './tag-option-list.component';
 import { TagSearch, TagSearchSource } from './tag-search';
 import { TagSheetComponent } from './tag-sheet.component';
 
@@ -48,26 +50,28 @@ let nextId = 0;
 export class TagPickerComponent {
   readonly tags = input.required<TagDto[]>();
   readonly selected = input.required<ReadonlySet<number>>();
-  readonly suggested = input<TagDto[]>([]);
+  /** The subscription being edited, whose own tags are never suggested back to it. */
+  readonly excludeSubscriptionId = input<number | null>(null);
   readonly toggled = output<number>();
 
   private readonly layout = inject(LayoutService);
   private readonly dialog = inject(Dialog);
+  private readonly subscriptions = inject(SubscriptionRows);
   private readonly source: TagSearchSource = {
     tags: this.tags,
     selected: this.selected,
-    suggested: this.suggested,
+    suggested: computed(() =>
+      suggestedTags(this.subscriptions.stored(), this.selected(), this.excludeSubscriptionId()),
+    ),
     toggle: (id) => this.toggled.emit(id),
   };
-  protected readonly search = new TagSearch(this.source, inject(TagCreator));
+  protected readonly search = new TagSearch(
+    this.source,
+    inject(TagCreator),
+    `tag-picker-list-${nextId++}`,
+  );
   protected readonly sheetMode = computed(() => this.layout.isPhone() || this.layout.isCoarse());
   protected readonly open = signal(false);
-  protected readonly listId = `tag-picker-list-${nextId++}`;
-  protected readonly activeId = computed(() =>
-    this.open() && this.search.entries().length
-      ? tagOptionId(this.listId, this.search.activeIndex())
-      : null,
-  );
 
   protected onKeydown(event: KeyboardEvent): void {
     if (!this.open()) {

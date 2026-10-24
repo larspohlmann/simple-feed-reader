@@ -15,7 +15,6 @@
       <app-tag-picker
         [tags]="tagsStore.tags()"
         [selected]="checked()"
-        [suggested]="suggestedTags()"
         (toggled)="toggleTag($event)"
       />
       <!-- Discovery reads the page then guesses feed addresses it never mentioned,

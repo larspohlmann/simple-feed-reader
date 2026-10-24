@@ -41,6 +41,14 @@
   white-space: nowrap;
 }
 
+/* The small upper-case label over a group of options, such as the tag picker's "Suggested". */
+.group-caption {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* A count beside a title: the search header's count and every list's own
    count are the same pill (#709). Border-only, the quietest register, since
    a count is read-only unlike the actionable `--accent-soft` badges above. */

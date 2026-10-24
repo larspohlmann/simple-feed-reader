@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
@@ -15,8 +15,6 @@ import { PreviewEntryRowComponent } from './preview-entry-row/preview-entry-row.
 import { parseProblem } from '../../../core/problem';
 import { ReaderApi } from '../../reader-api';
 import { TagsStore } from '../../state/tags.store';
-import { SubscriptionRows } from '../../state/subscription-rows';
-import { suggestedTags } from '../../state/subscription-derivations';
 import { FeedCandidate, FeedPreview, ScrapeFailureReason, SubscriptionDto } from '../../models';
 import { ButtonComponent } from '../../../shared/button/button.component';
 
@@ -68,10 +66,6 @@ export class AddFeedDialogComponent implements OnInit {
   /** Tags to apply to the new feed; they persist across a search so picking a
    *  discovered candidate carries the same selection through. */
   readonly checked = signal<Set<number>>(new Set());
-  private readonly subscriptions = inject(SubscriptionRows);
-  readonly suggestedTags = computed(() =>
-    suggestedTags(this.subscriptions.stored(), this.checked(), null),
-  );
   /** The one candidate card currently showing its preview rows, by URL. */
   readonly expanded = signal<string | null>(null);
 

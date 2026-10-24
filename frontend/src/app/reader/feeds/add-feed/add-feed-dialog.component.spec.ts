@@ -6,18 +6,9 @@ import { DialogRef } from '@angular/cdk/dialog';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../../core/api';
 import { AddFeedDialogComponent } from './add-feed-dialog.component';
-import { TagDto } from '../../models';
 import { SubscriptionRows } from '../../state/subscription-rows';
+import { makeTag } from '../../testing/tag.factory';
 import { makeSubscription } from '../../testing/subscription.factory';
-
-const tag = (id: number, name: string): TagDto => ({
-  id,
-  name,
-  color: null,
-  icon: null,
-  position: id,
-  parentId: null,
-});
 
 describe('AddFeedDialogComponent', () => {
   let ctrl: HttpTestingController;
@@ -603,18 +594,18 @@ describe('AddFeedDialogComponent', () => {
 
   it('suggests the tags of the newest subscription', () => {
     TestBed.inject(SubscriptionRows).stored.set([
-      makeSubscription({ id: 3, createdAt: '2026-01-01T00:00:00Z', tags: [tag(1, 'Tech')] }),
-      makeSubscription({ id: 4, createdAt: '2026-05-01T00:00:00Z', tags: [tag(2, 'News')] }),
+      makeSubscription({ id: 3, createdAt: '2026-01-01T00:00:00Z', tags: [makeTag(1, 'Tech')] }),
+      makeSubscription({ id: 4, createdAt: '2026-05-01T00:00:00Z', tags: [makeTag(2, 'News')] }),
     ]);
     const fixture = create();
+    const suggestions = (): string[] =>
+      [...(fixture.nativeElement as HTMLElement).querySelectorAll('.suggestion .label')].map(
+        (suggestion) => suggestion.textContent!.trim(),
+      );
 
-    expect(fixture.componentInstance.suggestedTags().map((suggested) => suggested.name)).toEqual([
-      'News',
-      'Tech',
-    ]);
+    expect(suggestions()).toEqual(['News', 'Tech']);
     fixture.componentInstance.toggleTag(2);
-    expect(fixture.componentInstance.suggestedTags().map((suggested) => suggested.name)).toEqual([
-      'Tech',
-    ]);
+    fixture.detectChanges();
+    expect(suggestions()).toEqual(['Tech']);
   });
 });
