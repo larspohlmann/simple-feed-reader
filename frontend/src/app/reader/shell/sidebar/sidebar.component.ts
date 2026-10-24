@@ -11,6 +11,7 @@ import {
   signal,
   untracked,
   viewChild,
+  viewChildren,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -35,13 +36,13 @@ import { SidebarSocialSectionComponent } from './sidebar-social-section.componen
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarTagRowMenuComponent } from './sidebar-tag-row-menu.component';
 import { SidebarTagsHeadMenuComponent } from './sidebar-tags-head-menu.component';
-import { TagNode, siblingIdsOf, tagNodesById } from '../../state/subscription-derivations';
-import { TagsStore } from '../../state/tags.store';
+import { TagNode, tagNodesById } from '../../state/subscription-derivations';
+import { TagDragSession } from '../../tag-drag-session';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
 import { FeedGroupName } from '../../../core/feed-group';
 import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
-import { isSubscriptionDrag, isTagDrag } from '../../drag-payload';
+import { isSubscriptionDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
@@ -104,13 +105,15 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
-  providers: [SidebarRowActions],
+  providers: [SidebarRowActions, TagDragSession],
 })
 export class SidebarComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
   protected readonly manage = inject(ManageActions);
   protected readonly rows = inject(SidebarRowActions);
-  private readonly tagsStore = inject(TagsStore);
+  protected readonly tagSession = inject(TagDragSession);
+  private readonly tagList = viewChild<ElementRef<HTMLElement>>('tagList');
+  private readonly tagHeadRows = viewChildren<ElementRef<HTMLElement>>('tagHeadRow');
 
   readonly tagTree = input.required<TagNode[]>();
   private readonly tagNodeById = computed(() => tagNodesById(this.tagTree()));
@@ -162,14 +165,6 @@ export class SidebarComponent {
 
   /** Feed lists accept only feed drags. */
   readonly isFeedDrag = (drag: CdkDrag): boolean => isSubscriptionDrag(drag.data);
-  /** A tag head takes a feed from anywhere, and a tag only from its own sibling set, so no other head highlights. */
-  readonly acceptOnTagHead = (drag: CdkDrag, list: CdkDropList<DropData>): boolean => {
-    if (isSubscriptionDrag(drag.data)) return true;
-    const target = list.data;
-    return (
-      target.kind === 'tag' && isTagDrag(drag.data) && drag.data.parentId === target.tag.parentId
-    );
-  };
 
   readonly refreshSvc = inject(RefreshService);
   readonly ai = inject(AiAvailabilityService);
@@ -245,9 +240,6 @@ export class SidebarComponent {
   protected readonly feedsSectionShown = computed(
     () => this.untagged().length > 0 || this.dragging() || this.organising(),
   );
-  /** What is being dragged, so a tag-reorder hover shows an insertion line while
-   *  a feed-onto-tag hover shows a container highlight. */
-  readonly dragKind = signal<'tag' | 'feed' | null>(null);
   /** Key of the drop target currently under the pointer, for the hover outline. */
   readonly dropHover = signal<string | null>(null);
   /** Hold-to-drag on touch so a normal swipe still scrolls the sidebar. Desktop
@@ -265,41 +257,45 @@ export class SidebarComponent {
     return { kind: 'tag', tag };
   }
 
-  onDragStart(kind: 'tag' | 'feed'): void {
-    this.dragKind.set(kind);
-    if (kind === 'feed') this.dragging.set(true);
+  onFeedDragStart(): void {
+    this.dragging.set(true);
   }
 
   onDragEnd(): void {
     this.dragging.set(false);
-    this.dragKind.set(null);
     this.dropHover.set(null);
   }
 
-  /** A drop on a tag's header: reorder the tags (tag drag) or move a feed onto
-   *  the tag (feed drag). Header lists are single-item, so a tag reorder is a
-   *  transfer between two header lists rather than an in-list sort. */
+  startTagDrag(tag: TagDto): void {
+    const list = this.tagList()?.nativeElement;
+    if (list === undefined) return;
+    const headers = this.tagHeadRows().map(({ nativeElement }) => ({
+      tagId: Number(nativeElement.dataset['tagId']),
+      element: nativeElement,
+    }));
+    this.tagSession.start(tag, { headers, listEnd: list, origin: list });
+  }
+
+  moveTagDrag(clientY: number): void {
+    this.tagSession.move(clientY);
+  }
+
+  endTagDrag(): void {
+    const ended = this.tagSession.end();
+    if (ended === null) return;
+    this.manage.moveTag(ended.tag, ended.drop);
+    const parentId = ended.drop.parentId;
+    if (parentId !== null) this.expanded.update((open) => new Set(open).add(parentId));
+  }
+
   onTagHeadDrop(event: CdkDragDrop<DropData>): void {
     this.dropHover.set(null);
-    const target = event.container.data;
-
-    if (isSubscriptionDrag(event.item.data)) {
-      // A tag header shows no feed list, so a feed dropped on it appends.
-      this.manage.moveFeedToTag(
-        event.item.data,
-        feedMove(event.previousContainer.data, target, null),
-      );
-      return;
-    }
-    if (target.kind !== 'tag') return;
-
-    const dragged = event.item.data as TagDto;
-    const ids = siblingIdsOf(this.tagsStore.tags(), target.tag);
-    const from = ids.indexOf(dragged.id);
-    const to = ids.indexOf(target.tag.id);
-    if (from < 0 || to < 0 || from === to) return;
-    moveItemInArray(ids, from, to);
-    this.manage.reorderTags(ids);
+    if (!isSubscriptionDrag(event.item.data)) return;
+    // A tag header shows no feed list, so a feed dropped on it appends.
+    this.manage.moveFeedToTag(
+      event.item.data,
+      feedMove(event.previousContainer.data, event.container.data, null),
+    );
   }
 
   /** A drop on a feed list: reorder within it (same list) or move the feed's

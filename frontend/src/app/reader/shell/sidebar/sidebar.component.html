@@ -145,9 +145,14 @@
       </div>
       @if (tagsExpanded() || organising()) {
         <!-- Drop lists stay top-level siblings, wrapped by plain divs: CDK breaks cross-list drops if nested. -->
-        <div class="tags">
+        <div class="tags" #tagList>
           @for (group of tagGroups(); track group.node.tag.id) {
-            <div class="tag-group group" [class.open]="group.open">
+            <div
+              class="tag-group group"
+              [class.open]="group.open"
+              [class.drop-before]="tagSession.cueFor(group.node.tag.id) === 'before'"
+              [class.drop-after]="tagSession.cueFor(group.node.tag.id) === 'after'"
+            >
               <ng-container
                 *ngTemplateOutlet="
                   tagHead;
@@ -155,7 +160,11 @@
                 "
               />
               @for (child of group.children; track child.node.tag.id) {
-                <div class="tag-child">
+                <div
+                  class="tag-child"
+                  [class.drop-before]="tagSession.cueFor(child.node.tag.id) === 'before'"
+                  [class.drop-after]="tagSession.cueFor(child.node.tag.id) === 'after'"
+                >
                   <ng-container
                     *ngTemplateOutlet="
                       tagHead;
@@ -208,7 +217,7 @@
             [cdkDragData]="subscription"
             [cdkDragDisabled]="dragLocked()"
             [cdkDragStartDelay]="dragDelay()"
-            (cdkDragStarted)="onDragStart('feed')"
+            (cdkDragStarted)="onFeedDragStart()"
             (cdkDragEnded)="onDragEnd()"
           >
             <app-sidebar-feed-row
@@ -238,12 +247,15 @@
   <ng-template #tagHead let-node let-depth="depth" let-open="open">
     <div
       class="taghead"
+      #tagHeadRow
+      [attr.data-tag-id]="node.tag.id"
       cdkDropList
       [cdkDropListData]="tagDrop(node.tag)"
-      [cdkDropListEnterPredicate]="acceptOnTagHead"
+      [cdkDropListEnterPredicate]="isFeedDrag"
       [cdkDropListSortingDisabled]="true"
-      [class.drop-line]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'tag'"
-      [class.drop-active]="dropHover() === 'tag-' + node.tag.id && dragKind() === 'feed'"
+      [class.drop-active]="
+        dropHover() === 'tag-' + node.tag.id || tagSession.cueFor(node.tag.id) === 'nest'
+      "
       (cdkDropListDropped)="onTagHeadDrop($event)"
       (cdkDropListEntered)="dropHover.set('tag-' + node.tag.id)"
       (cdkDropListExited)="dropHover.set(null)"
@@ -254,8 +266,9 @@
         [cdkDragData]="node.tag"
         [cdkDragDisabled]="dragLocked()"
         [cdkDragStartDelay]="dragDelay()"
-        (cdkDragStarted)="onDragStart('tag')"
-        (cdkDragEnded)="onDragEnd()"
+        (cdkDragStarted)="startTagDrag(node.tag)"
+        (cdkDragMoved)="moveTagDrag($event.pointerPosition.y)"
+        (cdkDragEnded)="endTagDrag()"
       >
         @if (organising()) {
           <span class="handle" cdkDragHandle aria-hidden="true">
@@ -324,7 +337,7 @@
           [cdkDragData]="subscription"
           [cdkDragDisabled]="dragLocked()"
           [cdkDragStartDelay]="dragDelay()"
-          (cdkDragStarted)="onDragStart('feed')"
+          (cdkDragStarted)="onFeedDragStart()"
           (cdkDragEnded)="onDragEnd()"
         >
           <app-sidebar-feed-row

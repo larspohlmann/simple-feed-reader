@@ -1,6 +1,8 @@
 <section class="panel">
   <div
+    #headDrop
     class="head-drop"
+    [class.nest-target]="nestTarget()"
     cdkDropList
     [cdkDropListData]="group()"
     [cdkDropListSortingDisabled]="true"

@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -40,6 +49,11 @@ export class OrganiseTagGroupComponent {
   readonly group = input.required<OrganiseGroup>();
   readonly canMoveTagUp = input(false);
   readonly canMoveTagDown = input(false);
+  readonly nestTarget = input(false);
+  readonly host: HTMLElement = inject(ElementRef).nativeElement;
+  readonly headDropElement = viewChild.required<string, ElementRef<HTMLElement>>('headDrop', {
+    read: ElementRef,
+  });
 
   readonly moveTagUp = output<void>();
   readonly moveTagDown = output<void>();
@@ -72,7 +86,6 @@ export class OrganiseTagGroupComponent {
     () => this.dragDisabled() || this.group().tag === null,
   );
 
-  /** A tag never drops into a header or a feed list: the section's gap places it between panels. */
   protected readonly acceptsFeeds = (drag: CdkDrag): boolean => isSubscriptionDrag(drag.data);
 
   protected readonly expanded = computed(() => this.store.isExpanded(this.group().key));
