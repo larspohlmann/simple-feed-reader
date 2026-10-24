@@ -941,6 +941,18 @@ describe('SidebarComponent', () => {
       );
     });
 
+    it('lands a tag as the first child of an open parent whose child header is queried later', () => {
+      const [parent, other, dragged] = [root(1, 0), root(3, 1), root(2, 2)];
+      const nested = child(11, 1, 0);
+      const fixture = mountTree([node(parent, [node(nested)]), node(other), node(dragged)], [1]);
+      dragTo(fixture, dragged, 38);
+      fixture.componentInstance.endTagDrag();
+      expect(manageActions.moveTag).toHaveBeenCalledWith(
+        dragged,
+        expect.objectContaining({ parentId: 1, order: [2, 11] }),
+      );
+    });
+
     it('writes nothing for a drop that changes nothing', () => {
       const [first, second] = [root(1, 0), root(2, 1)];
       const fixture = mountTree([node(first), node(second)]);

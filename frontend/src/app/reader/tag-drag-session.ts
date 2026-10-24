@@ -14,10 +14,12 @@ export function measureTagLayout(
   listEnd: Element | undefined,
   originTop: number,
 ): TagDropLayout {
-  const boxes: TagHeaderBox[] = headers.map(({ tagId, element }) => {
-    const rect = element.getBoundingClientRect();
-    return { tagId, top: rect.top - originTop, bottom: rect.bottom - originTop };
-  });
+  const boxes: TagHeaderBox[] = headers
+    .map(({ tagId, element }) => {
+      const rect = element.getBoundingClientRect();
+      return { tagId, top: rect.top - originTop, bottom: rect.bottom - originTop };
+    })
+    .sort((left, right) => left.top - right.top);
   const listBottom =
     listEnd === undefined
       ? (boxes[boxes.length - 1]?.bottom ?? 0)

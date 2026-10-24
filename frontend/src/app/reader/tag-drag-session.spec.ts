@@ -78,6 +78,20 @@ describe('measureTagLayout', () => {
     });
   });
 
+  it('returns the headers in screen order whatever order they were passed in', () => {
+    const layout = measureTagLayout(
+      [
+        { tagId: 3, element: box(200, 40) },
+        { tagId: 1, element: box(100, 40) },
+        { tagId: 2, element: box(150, 40) },
+      ],
+      undefined,
+      100,
+    );
+    expect(layout.headers.map((header) => header.tagId)).toEqual([1, 2, 3]);
+    expect(layout.listBottom).toBe(140);
+  });
+
   it('falls back to the last header when there is no list foot', () => {
     expect(measureTagLayout([{ tagId: 1, element: box(110, 40) }], undefined, 100).listBottom).toBe(
       50,
