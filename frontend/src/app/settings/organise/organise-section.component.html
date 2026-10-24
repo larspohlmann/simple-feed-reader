@@ -291,9 +291,9 @@
         <app-organise-tag-group
           [group]="group"
           [class.child]="group.depth === 1"
-          [class.gap-before]="gapBeforeKey() === group.key"
-          [class.gap-after]="gapAfterKey() === group.key"
-          [nestTarget]="nestKey() === group.key"
+          [class.gap-before]="cueOf(group) === 'before'"
+          [class.gap-after]="cueOf(group) === 'after'"
+          [nestTarget]="cueOf(group) === 'nest'"
           [canMoveTagUp]="canMoveTag(group, -1)"
           [canMoveTagDown]="canMoveTag(group, 1)"
           (moveTagUp)="stepTag(group, -1)"

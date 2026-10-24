@@ -150,8 +150,8 @@
             <div
               class="tag-group group"
               [class.open]="group.open"
-              [class.drop-before]="isMarked('before', group.node.tag.id)"
-              [class.drop-after]="isMarked('after', group.node.tag.id)"
+              [class.drop-before]="tagSession.cueFor(group.node.tag.id) === 'before'"
+              [class.drop-after]="tagSession.cueFor(group.node.tag.id) === 'after'"
             >
               <ng-container
                 *ngTemplateOutlet="
@@ -162,8 +162,8 @@
               @for (child of group.children; track child.node.tag.id) {
                 <div
                   class="tag-child"
-                  [class.drop-before]="isMarked('before', child.node.tag.id)"
-                  [class.drop-after]="isMarked('after', child.node.tag.id)"
+                  [class.drop-before]="tagSession.cueFor(child.node.tag.id) === 'before'"
+                  [class.drop-after]="tagSession.cueFor(child.node.tag.id) === 'after'"
                 >
                   <ng-container
                     *ngTemplateOutlet="
@@ -254,8 +254,7 @@
       [cdkDropListEnterPredicate]="isFeedDrag"
       [cdkDropListSortingDisabled]="true"
       [class.drop-active]="
-        dropHover() === 'tag-' + node.tag.id ||
-        (tagDropMark()?.kind === 'nest' && tagDropMark()?.tagId === node.tag.id)
+        dropHover() === 'tag-' + node.tag.id || tagSession.cueFor(node.tag.id) === 'nest'
       "
       (cdkDropListDropped)="onTagHeadDrop($event)"
       (cdkDropListEntered)="dropHover.set('tag-' + node.tag.id)"

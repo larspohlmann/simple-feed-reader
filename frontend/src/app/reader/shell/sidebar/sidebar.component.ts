@@ -111,10 +111,9 @@ export class SidebarComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
   protected readonly manage = inject(ManageActions);
   protected readonly rows = inject(SidebarRowActions);
-  private readonly tagSession = inject(TagDragSession);
+  protected readonly tagSession = inject(TagDragSession);
   private readonly tagList = viewChild<ElementRef<HTMLElement>>('tagList');
   private readonly tagHeadRows = viewChildren<ElementRef<HTMLElement>>('tagHeadRow');
-  protected readonly tagDropMark = computed(() => this.tagSession.drop()?.mark ?? null);
 
   readonly tagTree = input.required<TagNode[]>();
   private readonly tagNodeById = computed(() => tagNodesById(this.tagTree()));
@@ -267,11 +266,6 @@ export class SidebarComponent {
     this.dropHover.set(null);
   }
 
-  protected isMarked(kind: 'before' | 'after', tagId: number): boolean {
-    const mark = this.tagDropMark();
-    return mark !== null && mark.kind === kind && mark.tagId === tagId;
-  }
-
   startTagDrag(tag: TagDto): void {
     const list = this.tagList()?.nativeElement;
     if (list === undefined) return;
@@ -294,7 +288,6 @@ export class SidebarComponent {
     if (parentId !== null) this.expanded.update((open) => new Set(open).add(parentId));
   }
 
-  /** A drop on a tag's header moves a feed onto the tag. */
   onTagHeadDrop(event: CdkDragDrop<DropData>): void {
     this.dropHover.set(null);
     if (!isSubscriptionDrag(event.item.data)) return;

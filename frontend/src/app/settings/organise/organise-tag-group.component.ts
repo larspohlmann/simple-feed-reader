@@ -50,6 +50,7 @@ export class OrganiseTagGroupComponent {
   readonly canMoveTagUp = input(false);
   readonly canMoveTagDown = input(false);
   readonly nestTarget = input(false);
+  readonly host: HTMLElement = inject(ElementRef).nativeElement;
   readonly headDropElement = viewChild.required<string, ElementRef<HTMLElement>>('headDrop', {
     read: ElementRef,
   });

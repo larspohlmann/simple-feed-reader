@@ -1,7 +1,14 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { TagDto } from './models';
 import { TagsStore } from './state/tags.store';
-import { TagDragSubject, TagDrop, TagDropLayout, TagHeaderBox, resolveTagDrop } from './tag-drop';
+import {
+  TagDragSubject,
+  TagDrop,
+  TagDropLayout,
+  TagDropMark,
+  TagHeaderBox,
+  resolveTagDrop,
+} from './tag-drop';
 
 export interface TagHeaderElement {
   readonly tagId: number;
@@ -44,6 +51,11 @@ export class TagDragSession {
     if (drag === null || offsetY === null) return null;
     return resolveTagDrop(drag, this.tags.tags(), offsetY);
   });
+
+  cueFor(tagId: number): TagDropMark['kind'] | null {
+    const mark = this.drop()?.mark;
+    return mark?.tagId === tagId ? mark.kind : null;
+  }
 
   start(tag: TagDto, source: TagDragLayoutSource): void {
     this.origin = source.origin;

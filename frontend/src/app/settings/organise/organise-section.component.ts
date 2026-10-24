@@ -102,17 +102,6 @@ export class OrganiseSectionComponent implements OnInit {
   private readonly tagSession = inject(TagDragSession);
   private readonly tree = viewChild<ElementRef<HTMLElement>>('tree');
   private readonly panelGroups = viewChildren(OrganiseTagGroupComponent);
-  private readonly panelElements = viewChildren<OrganiseTagGroupComponent, ElementRef<HTMLElement>>(
-    OrganiseTagGroupComponent,
-    { read: ElementRef },
-  );
-  /** A root's panel holds its child panels, so each is looked up by key, not by its place in `store.groups()`. */
-  private readonly panelByKey = computed(() => {
-    const elements = this.panelElements();
-    return new Map(
-      this.panelGroups().map((panel, index) => [panel.group().key, elements[index].nativeElement]),
-    );
-  });
 
   /** The last refused bulk write, shown as a banner above the list. */
   readonly error = signal<Problem | null>(null);
@@ -241,11 +230,9 @@ export class OrganiseSectionComponent implements OnInit {
   protected readonly orderedTags = computed(() => tagsInTreeOrder(this.tags.tags()));
   private readonly siblingIdsByTag = computed(() => siblingIdsByTagId(this.tags.tags()));
 
-  private readonly dropMark = computed(() => this.tagSession.drop()?.mark ?? null);
-
-  protected readonly gapBeforeKey = computed(() => this.markedKey('before'));
-  protected readonly gapAfterKey = computed(() => this.markedKey('after'));
-  protected readonly nestKey = computed(() => this.markedKey('nest'));
+  protected cueOf(group: OrganiseGroup): TagDropMark['kind'] | null {
+    return group.tag === null ? null : this.tagSession.cueFor(group.tag.id);
+  }
 
   protected canMoveTag(group: OrganiseGroup, offset: number): boolean {
     if (group.tag === null || this.store.filterActive()) return false;
@@ -292,12 +279,8 @@ export class OrganiseSectionComponent implements OnInit {
 
   private lastRootPanel(): HTMLElement | undefined {
     const lastRoot = rootsOf(this.tags.tags()).at(-1);
-    return lastRoot === undefined ? undefined : this.panelByKey().get(lastRoot.id);
-  }
-
-  private markedKey(kind: TagDropMark['kind']): GroupKey | null {
-    const mark = this.dropMark();
-    return mark !== null && mark.kind === kind ? mark.tagId : null;
+    if (lastRoot === undefined) return undefined;
+    return this.panelGroups().find((panel) => panel.group().tag?.id === lastRoot.id)?.host;
   }
 
   /** Under a filter `store.groups()` is a subset of the full tag order, so no position derived from it is written. */

@@ -14,10 +14,10 @@ export interface TagDropLayout {
   readonly listBottom: number;
 }
 
-export type TagDropMark =
-  | { readonly kind: 'nest'; readonly tagId: number }
-  | { readonly kind: 'before'; readonly tagId: number }
-  | { readonly kind: 'after'; readonly tagId: number };
+export interface TagDropMark {
+  readonly kind: 'nest' | 'before' | 'after';
+  readonly tagId: number;
+}
 
 /** Where a dragged tag lands: its new parent, that parent's full new child order, and the cue to draw. */
 export interface TagDrop {

@@ -59,6 +59,16 @@ describe('TagDragSession', () => {
     });
   });
 
+  it('names the cue only for the tag the drop marks', () => {
+    session.start(tagB, source());
+    expect(session.cueFor(1)).toBeNull();
+
+    session.move(ORIGIN_TOP + 2);
+
+    expect(session.cueFor(1)).toBe('before');
+    expect(session.cueFor(2)).toBeNull();
+  });
+
   it('hands the tag and its drop over on end and clears itself', () => {
     session.start(tagB, source());
     session.move(ORIGIN_TOP + 2);

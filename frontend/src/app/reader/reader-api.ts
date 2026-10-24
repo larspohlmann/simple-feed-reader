@@ -277,7 +277,7 @@ export class ReaderApi {
   }
 
   /** Persist one sibling set's order: all roots, or all children of one parent. */
-  reorderTags(tagIds: number[]): Observable<{ tags: TagDto[] }> {
+  reorderTags(tagIds: readonly number[]): Observable<{ tags: TagDto[] }> {
     return this.http.patch<{ tags: TagDto[] }>(`${this.base}/api/tags/reorder`, { tagIds });
   }
 

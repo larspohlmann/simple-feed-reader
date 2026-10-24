@@ -16,6 +16,7 @@ import {
 } from '../../models';
 import { TagDrop } from '../../tag-drop';
 import { TagPlacement } from './tag-placement.service';
+import { reloadAfter } from './reload-after';
 import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bulk';
 import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
@@ -65,9 +66,6 @@ export class ManageActions {
   /** Fire a drag-and-drop write, then re-sync the affected store whether it
    *  succeeds OR fails: a rejected write (e.g. a concurrent change) is
    *  corrected from the server. */
-  private reloadAfter(write$: Observable<unknown>, reload: () => void): void {
-    write$.subscribe({ next: reload, error: reload });
-  }
 
   /** Move a feed between the sidebar's lists at the dropped position, the way a
    *  drag reads: out of `fromTagId`, into `toTagId` at `position` (a null tag
@@ -81,7 +79,7 @@ export class ManageActions {
         subscription.id === sub.id ? this.afterMove(subscription, move) : subscription,
       ),
     );
-    this.reloadAfter(this.api.moveFeedToTag(sub.id, move), () => this.subs.load());
+    reloadAfter(this.api.moveFeedToTag(sub.id, move), () => this.subs.load());
   }
 
   /** The moved feed's optimistic shape: the source tag dropped, the target tag
@@ -133,7 +131,7 @@ export class ManageActions {
    *  every flag toggle resends them; an omitted flag stays as it is. */
   private patchFlags(sub: SubscriptionDto, flags: SubscriptionFlags): void {
     this.subs.patchLocal(sub.id, flags);
-    this.reloadAfter(
+    reloadAfter(
       this.api.updateSubscription(sub.id, {
         customTitle: sub.customTitle,
         tagIds: sub.tags.map((tag) => tag.id),
@@ -149,7 +147,7 @@ export class ManageActions {
     if (flags.includeInSavedSearches !== undefined) this.savedSearches.load();
   }
 
-  reorderTags(tagIds: number[]): void {
+  reorderTags(tagIds: readonly number[]): void {
     this.tagPlacement.reorder(tagIds);
   }
 
@@ -167,7 +165,7 @@ export class ManageActions {
         return subscription;
       }),
     );
-    this.reloadAfter(this.api.reorderSubscriptions(subscriptionIds), () => this.subs.load());
+    reloadAfter(this.api.reorderSubscriptions(subscriptionIds), () => this.subs.load());
   }
 
   /** Persist a new order for the feeds within one tag. Optimistic: update
@@ -187,7 +185,7 @@ export class ManageActions {
         };
       }),
     );
-    this.reloadAfter(this.api.setTagFeedOrder(tagId, subscriptionIds), () => this.subs.load());
+    reloadAfter(this.api.setTagFeedOrder(tagId, subscriptionIds), () => this.subs.load());
   }
 
   unsubscribe(sub: SubscriptionDto): void {
