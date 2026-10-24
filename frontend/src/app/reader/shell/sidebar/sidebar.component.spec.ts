@@ -8,7 +8,7 @@ import { AuthService, CurrentUser } from '../../../core/auth/auth.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
-import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { TagNode, flattenTagTree } from '../../state/subscription-derivations';
@@ -37,6 +37,7 @@ const manageActions = {
   setIncludeInSavedSearches: jest.fn(),
   moveFeedToTag: jest.fn(),
   reorderTags: jest.fn(),
+  moveTag: jest.fn(),
   reorderUntagged: jest.fn(),
   reorderTagFeeds: jest.fn(),
 };
@@ -547,35 +548,6 @@ describe('SidebarComponent', () => {
       } as unknown as CdkDragDrop<DropData>;
     }
 
-    function tagHeadDrop(dragged: TagDto, target: DropData): CdkDragDrop<DropData> {
-      return {
-        previousContainer: { data: { kind: 'tag', tag: dragged } },
-        container: { data: target },
-        item: { data: dragged },
-      } as unknown as CdkDragDrop<DropData>;
-    }
-
-    it('calls reorderTags when a tag is dropped on another tag header', () => {
-      const fixture = mount({ tagTree: [tagNode(10), tagNode(20), tagNode(30)] });
-      const spy = jest.fn();
-      manageActions.reorderTags.mockImplementation(spy);
-      // Drop the last tag (30) onto the first tag's header → 30 moves to front.
-      fixture.componentInstance.onTagHeadDrop(
-        tagHeadDrop(tagNode(30).tag, { kind: 'tag', tag: tagNode(10).tag }),
-      );
-      expect(spy).toHaveBeenCalledWith([30, 10, 20]);
-    });
-
-    it('does not emit when a tag is dropped back on its own header', () => {
-      const fixture = mount({ tagTree: [tagNode(10), tagNode(20)] });
-      const spy = jest.fn();
-      manageActions.reorderTags.mockImplementation(spy);
-      fixture.componentInstance.onTagHeadDrop(
-        tagHeadDrop(tagNode(10).tag, { kind: 'tag', tag: tagNode(10).tag }),
-      );
-      expect(spy).not.toHaveBeenCalled();
-    });
-
     it('moves a feed onto the tag when it is dropped on the tag header', () => {
       const fixture = mount({ tagTree: [tagNode(10)] });
       const spy = jest.fn();
@@ -629,9 +601,6 @@ describe('SidebarComponent', () => {
         parentNode(10, [tagNode(11, [], 10), tagNode(12, [], 10)]),
         tagNode(20),
       ];
-      const onHead = (node: TagNode) =>
-        ({ data: { kind: 'tag', tag: node.tag } }) as unknown as CdkDropList<DropData>;
-      const dragOf = (data: unknown) => ({ data }) as unknown as CdkDrag;
       const heads = (fixture: ReturnType<typeof mount>) =>
         [...(fixture.nativeElement as HTMLElement).querySelectorAll('.taghead')].map((head) => ({
           name: head.textContent?.match(/t\d+/)?.[0],
@@ -702,51 +671,6 @@ describe('SidebarComponent', () => {
 
         expect(element.querySelectorAll('.tags .cdk-drop-list')).toHaveLength(4);
         expect(element.querySelectorAll('.cdk-drop-list .cdk-drop-list')).toHaveLength(0);
-      });
-
-      it('lets a tag head accept a feed from anywhere but a tag only from its own sibling set', () => {
-        const accept = mount({ tagTree: tree() }).componentInstance.acceptOnTagHead;
-        const [child, sibling, parent, root] = [
-          tagNode(11, [], 10),
-          tagNode(12, [], 10),
-          tagNode(10),
-          tagNode(20),
-        ];
-        expect(accept(dragOf(sub(1)), onHead(child))).toBe(true);
-        expect(accept(dragOf(child.tag), onHead(sibling))).toBe(true);
-        expect(accept(dragOf(child.tag), onHead(root))).toBe(false);
-        expect(accept(dragOf(root.tag), onHead(child))).toBe(false);
-        expect(accept(dragOf(child.tag), onHead(parent))).toBe(false);
-      });
-
-      it('reorders a child among its siblings only', () => {
-        const fixture = mount({ tagTree: tree() });
-
-        fixture.componentInstance.onTagHeadDrop(
-          tagHeadDrop(tagNode(12, [], 10).tag, { kind: 'tag', tag: tagNode(11, [], 10).tag }),
-        );
-
-        expect(manageActions.reorderTags).toHaveBeenCalledWith([12, 11]);
-      });
-
-      it('reorders the roots without touching the children', () => {
-        const fixture = mount({ tagTree: tree() });
-
-        fixture.componentInstance.onTagHeadDrop(
-          tagHeadDrop(tagNode(20).tag, { kind: 'tag', tag: tagNode(10).tag }),
-        );
-
-        expect(manageActions.reorderTags).toHaveBeenCalledWith([20, 10]);
-      });
-
-      it('ignores a tag dropped on a head outside its sibling set', () => {
-        const fixture = mount({ tagTree: tree() });
-
-        fixture.componentInstance.onTagHeadDrop(
-          tagHeadDrop(tagNode(11, [], 10).tag, { kind: 'tag', tag: tagNode(20).tag }),
-        );
-
-        expect(manageActions.reorderTags).not.toHaveBeenCalled();
       });
 
       it("reorders feeds inside a child's own list", () => {
@@ -931,6 +855,104 @@ describe('SidebarComponent', () => {
     const fixture = mount({ untagged: [sub(2, 4)] });
     const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('.feedrow .feed-exclusion-marker')).toBeNull();
+  });
+
+  describe('dragging tags (#1765)', () => {
+    const root = (id: number, position: number): TagDto => ({
+      id,
+      name: `t${id}`,
+      color: null,
+      icon: null,
+      position,
+      parentId: null,
+    });
+    const child = (id: number, parentId: number, position: number): TagDto => ({
+      ...root(id, position),
+      parentId,
+    });
+    const node = (tag: TagDto, children: TagNode[] = []): TagNode => ({
+      tag,
+      subscriptions: [],
+      children,
+      unreadCount: 0,
+      entryCount: 0,
+    });
+
+    /** Headers 40 tall at index * 50 inside a list whose top is 0. */
+    function mountTree(tree: TagNode[], expanded: number[] = []) {
+      const fixture = mount({ tagTree: tree });
+      fixture.componentInstance.expanded.set(new Set(expanded));
+      fixture.detectChanges();
+      const list = fixture.debugElement.query(By.css('.tags')).nativeElement as HTMLElement;
+      const heads = fixture.debugElement.queryAll(By.css('.taghead'));
+      jest
+        .spyOn(list, 'getBoundingClientRect')
+        .mockReturnValue({ top: 0, bottom: heads.length * 50 } as DOMRect);
+      heads.forEach((head, index) =>
+        jest
+          .spyOn(head.nativeElement as HTMLElement, 'getBoundingClientRect')
+          .mockReturnValue({ top: index * 50, bottom: index * 50 + 40, height: 40 } as DOMRect),
+      );
+      return fixture;
+    }
+
+    function dragTo(fixture: ComponentFixture<SidebarComponent>, dragged: TagDto, y: number): void {
+      fixture.componentInstance.startTagDrag(dragged);
+      fixture.componentInstance.moveTagDrag(y);
+      fixture.detectChanges();
+    }
+
+    it('nests a tag dropped on the middle of another top-level tag and opens the parent', () => {
+      const [first, second] = [root(1, 0), root(2, 1)];
+      const fixture = mountTree([node(first), node(second)]);
+      dragTo(fixture, second, 20);
+      expect(fixture.debugElement.query(By.css('.taghead.drop-active'))).not.toBeNull();
+
+      fixture.componentInstance.endTagDrag();
+
+      expect(manageActions.moveTag).toHaveBeenCalledWith(second, {
+        parentId: 1,
+        order: [2],
+        mark: { kind: 'nest', tagId: 1 },
+      });
+      expect(fixture.componentInstance.expanded().has(1)).toBe(true);
+    });
+
+    it('draws a line above the block a tag will land before', () => {
+      const [first, second] = [root(1, 0), root(2, 1)];
+      const fixture = mountTree([node(first), node(second)]);
+      dragTo(fixture, second, 2);
+      const groups = fixture.debugElement.queryAll(By.css('.tag-group'));
+      expect(groups.map((group) => group.nativeElement.classList.contains('drop-before'))).toEqual([
+        true,
+        false,
+      ]);
+    });
+
+    it('un-nests a child dropped on the top edge of a top-level tag', () => {
+      const [first, second] = [root(1, 0), root(2, 1)];
+      const nested = child(21, 2, 0);
+      const fixture = mountTree([node(first), node(second, [node(nested)])], [2]);
+      dragTo(fixture, nested, 2);
+      fixture.componentInstance.endTagDrag();
+      expect(manageActions.moveTag).toHaveBeenCalledWith(
+        nested,
+        expect.objectContaining({ parentId: null, order: [21, 1, 2] }),
+      );
+    });
+
+    it('writes nothing for a drop that changes nothing', () => {
+      const [first, second] = [root(1, 0), root(2, 1)];
+      const fixture = mountTree([node(first), node(second)]);
+      dragTo(fixture, first, 2);
+      fixture.componentInstance.endTagDrag();
+      expect(manageActions.moveTag).not.toHaveBeenCalled();
+    });
+
+    it('keeps tag drags out of the header drop lists', () => {
+      const fixture = mountTree([node(root(1, 0))]);
+      expect(fixture.componentInstance.isFeedDrag({ data: root(2, 1) } as CdkDrag)).toBe(false);
+    });
   });
 
   describe('search field', () => {

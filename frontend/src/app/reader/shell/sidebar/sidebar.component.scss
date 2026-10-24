@@ -181,17 +181,30 @@
   position: relative;
 }
 
-/* A tag dragged over a tag header: a signal-coloured insertion line on the
-   top edge. A pseudo-element, not an inset shadow, keeps it square against
-   the header's rounded corners, sitting in the gap above so nothing shifts. */
-.drop-line::before {
+.tag-group,
+.tag-child {
+  position: relative;
+}
+
+/* A dragged tag's landing spot: a signal-coloured line above or below the block.
+   A pseudo-element, not an inset shadow, keeps it square against the rounded
+   corners, sitting in the gap so nothing shifts. */
+.drop-before::before,
+.drop-after::after {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(var(--space-0) * -1);
   height: var(--space-0);
   background: var(--accent);
+}
+
+.drop-before::before {
+  top: calc(var(--space-0) * -1);
+}
+
+.drop-after::after {
+  bottom: calc(var(--space-0) * -1);
 }
 
 /* A feed dragged over a tag header: highlight the whole target container. */
@@ -249,16 +262,8 @@
   display: none;
 }
 
-/* A dragged tag's placeholder hops between header lists, reading as a second
-   stray line — hidden, since `.drop-line` is the only cue. Zero height, not
-   `display: none`: that reports a 0,0 rect and flies the tag to the corner. */
 .tag.cdk-drag-placeholder {
-  height: 0;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  overflow: hidden;
+  opacity: 0.4;
 }
 
 /* A tag reorder reloads from the server on drop, so skip CDK's settle
