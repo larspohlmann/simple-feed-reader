@@ -369,7 +369,7 @@ describe('ReaderShellComponent', () => {
       fixture.detectChanges();
 
       expect(element.querySelector('.body')!.classList).toContain('sidebar-hidden');
-      expect(element.querySelector('.title-row [aria-label="Show sidebar"]')).not.toBeNull();
+      expect(element.querySelector('.list-header [aria-label="Show sidebar"]')).not.toBeNull();
     });
 
     it('shows the sidebar again when the show button is clicked', () => {

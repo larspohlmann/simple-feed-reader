@@ -321,3 +321,19 @@ app-reader-header.hidden {
   z-index: 15;
   background: var(--drawer-scrim);
 }
+
+/* Holds the title clear of the button, which sits where the hidden sidebar's
+   search card did: pinned to the list header, not centred in its title row. */
+.sidebar-show-slot {
+  flex: none;
+  width: var(--control-h);
+  height: var(--control-h);
+}
+
+.sidebar-show.boxed {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+}
