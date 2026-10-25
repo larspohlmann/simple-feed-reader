@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Entity\EntryChapters;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
 use App\Entity\QuotedPostContent;
@@ -11,6 +12,7 @@ use App\Entity\QuotedPostReference;
 use App\Entity\EntryOrigin;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Exception\InvalidBackupException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class EntryLineTest extends TestCase
@@ -44,6 +46,48 @@ final class EntryLineTest extends TestCase
 
         self::assertSame([], $line->media);
         self::assertSame([], $line->attachments);
+    }
+
+    public function testAChaptersFileUrlIsKeptForAnEpisodeWithoutChapters(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['chaptersUrl' => 'https://cdn.example/ch.json']);
+
+        self::assertSame('https://cdn.example/ch.json', $line->chaptersUrl);
+    }
+
+    public function testAChaptersFileUrlIsDroppedOnceTheEpisodeHasChapters(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + [
+            'chapters' => [['startSeconds' => 0, 'title' => 'Intro']],
+            'chaptersUrl' => 'https://cdn.example/ch.json',
+        ]);
+
+        self::assertSame([['startSeconds' => 0, 'title' => 'Intro']], $line->chapters);
+        self::assertNull($line->chaptersUrl);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function unusableChaptersUrls(): iterable
+    {
+        yield 'not http' => ['javascript:alert(1)'];
+        yield 'relative' => ['/ch.json'];
+        yield 'too long' => ['https://cdn.example/' . str_repeat('a', EntryChapters::URL_MAX_LENGTH)];
+    }
+
+    #[DataProvider('unusableChaptersUrls')]
+    public function testAnUnusableChaptersFileUrlIsDropped(string $url): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['chaptersUrl' => $url]);
+
+        self::assertNull($line->chaptersUrl);
+    }
+
+    public function testAChaptersFileUrlAtTheLengthLimitIsKept(): void
+    {
+        $prefix = 'https://cdn.example/';
+        $url = $prefix . str_repeat('a', EntryChapters::URL_MAX_LENGTH - \strlen($prefix));
+
+        self::assertSame($url, EntryLine::fromLine($this->baseLine() + ['chaptersUrl' => $url])->chaptersUrl);
     }
 
     public function testReadsTheOriginOfASavedCopy(): void
