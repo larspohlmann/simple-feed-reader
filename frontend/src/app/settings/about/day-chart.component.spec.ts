@@ -15,23 +15,14 @@ describe('DayChartComponent', () => {
     return fixture;
   }
 
-  it('draws one hover column per day and names the busiest day at rest', () => {
-    const fixture = mount([
-      { date: '2026-09-01', count: 3 },
-      { date: '2026-09-02', count: 5 },
-    ]);
-
-    expect(fixture.nativeElement.querySelectorAll('.chart-col')).toHaveLength(2);
-    expect(fixture.nativeElement.querySelector('.chart-tip strong')?.textContent).toBe('5');
-  });
-
-  it('names the busiest known day at rest, passing over unknown days', () => {
+  it('draws one hover column per day and names the busiest known day at rest', () => {
     const fixture = mount([
       { date: '2026-09-01', count: null },
       { date: '2026-09-02', count: 2 },
       { date: '2026-09-03', count: 4 },
     ]);
 
+    expect(fixture.nativeElement.querySelectorAll('.chart-col')).toHaveLength(3);
     expect(fixture.nativeElement.querySelector('.chart-tip strong')?.textContent).toBe('4');
   });
 

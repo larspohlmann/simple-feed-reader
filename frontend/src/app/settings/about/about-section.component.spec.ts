@@ -38,6 +38,10 @@ const NO_ACTIVITY: ReadingActivity = {
   topFeedsByRead: [],
 };
 
+function activity(overrides: Partial<ReadingActivity>): ReadingActivity {
+  return { ...NO_ACTIVITY, ...overrides };
+}
+
 describe('AboutSectionComponent', () => {
   const bakedIn = { ...buildVersion };
   const load = jest.fn();
@@ -184,15 +188,12 @@ describe('AboutSectionComponent', () => {
   it('ranks the top read feeds from the activity payload', () => {
     const fixture = mount(null, {
       store: { subscriptions: [feed('Alpha', 0, 10), feed('Beta', 0, 20)] },
-      activity: {
-        days: [],
-        total: 0,
-        arrivedDailyAverage: null,
+      activity: activity({
         topFeedsByRead: [
           { feedId: 20, readCount: 50 },
           { feedId: 10, readCount: 5 },
         ],
-      },
+      }),
     });
     // Unread feeds are all zero, so every bar shown is a read bar.
     const names = [...fixture.nativeElement.querySelectorAll('.bar-name')].map(
@@ -211,12 +212,9 @@ describe('AboutSectionComponent', () => {
 
   it('shows an empty chart message when there is no reading history', () => {
     const fixture = mount(null, {
-      activity: {
+      activity: activity({
         days: [{ date: '2026-09-01', arrived: 0, read: 0 }],
-        total: 0,
-        arrivedDailyAverage: null,
-        topFeedsByRead: [],
-      },
+      }),
     });
 
     expect(fixture.nativeElement.querySelector('.reading .chart')).toBeNull();
@@ -225,45 +223,41 @@ describe('AboutSectionComponent', () => {
 
   it('draws the chart when there is reading history', () => {
     const fixture = mount(null, {
-      activity: {
+      activity: activity({
         days: [
           { date: '2026-09-01', arrived: 0, read: 3 },
           { date: '2026-09-02', arrived: 0, read: 5 },
         ],
         total: 8,
-        arrivedDailyAverage: null,
-        topFeedsByRead: [],
-      },
+      }),
     });
 
     expect(fixture.nativeElement.querySelector('.reading .chart-line')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.reading .chart-col')).toHaveLength(2);
   });
 
-  it('shows the seven-day average of new articles with one decimal', () => {
+  it.each([
+    [41.6, '41.6'],
+    [6, '6.0'],
+  ])('shows the seven-day average %s of new articles with one decimal as %s', (average, shown) => {
     const fixture = mount(null, {
-      activity: {
+      activity: activity({
         days: [{ date: '2026-09-01', arrived: 4, read: 0 }],
-        total: 0,
-        arrivedDailyAverage: 41.6,
-        topFeedsByRead: [],
-      },
+        arrivedDailyAverage: average,
+      }),
     });
 
     expect(fixture.nativeElement.querySelector('.arrivals .average-value')?.textContent).toContain(
-      '41.6',
+      shown,
     );
     expect(text(fixture)).toContain('per day over the last 7 days');
   });
 
   it('shows a dash when no day of the week is known', () => {
     const fixture = mount(null, {
-      activity: {
+      activity: activity({
         days: [{ date: '2026-09-01', arrived: null, read: null }],
-        total: 0,
-        arrivedDailyAverage: null,
-        topFeedsByRead: [],
-      },
+      }),
     });
 
     expect(fixture.nativeElement.querySelector('.arrivals .average-value')?.textContent).toContain(
@@ -273,44 +267,26 @@ describe('AboutSectionComponent', () => {
 
   it('draws the new-articles chart from the arrived counts', () => {
     const fixture = mount(null, {
-      activity: {
+      activity: activity({
         days: [
           { date: '2026-09-01', arrived: null, read: 0 },
           { date: '2026-09-02', arrived: 6, read: 0 },
         ],
-        total: 0,
         arrivedDailyAverage: 6,
-        topFeedsByRead: [],
-      },
+      }),
     });
 
     expect(fixture.nativeElement.querySelectorAll('.arrivals .chart-col')).toHaveLength(2);
     expect(fixture.nativeElement.querySelector('.reading .chart')).toBeNull();
   });
 
-  it('keeps one decimal on a whole-number average', () => {
-    const fixture = mount(null, {
-      activity: {
-        days: [{ date: '2026-09-01', arrived: 6, read: 0 }],
-        total: 0,
-        arrivedDailyAverage: 6,
-        topFeedsByRead: [],
-      },
-    });
-
-    expect(fixture.nativeElement.querySelector('.arrivals .average-value')?.textContent).toContain(
-      '6.0',
-    );
-  });
-
   it('names each chart after its block', () => {
     const fixture = mount(null, {
-      activity: {
+      activity: activity({
         days: [{ date: '2026-09-01', arrived: 6, read: 2 }],
         total: 2,
         arrivedDailyAverage: 6,
-        topFeedsByRead: [],
-      },
+      }),
     });
 
     const label = (block: string) =>
