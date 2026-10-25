@@ -13,7 +13,34 @@
       }
     </div>
 
-    <section class="block">
+    <section class="block arrivals">
+      <div class="block-head">
+        <span class="block-title">{{ 'settings.reading.arrivalsTitle' | transloco }}</span>
+        <span class="block-sub">{{ 'settings.reading.chartWindow' | transloco }}</span>
+      </div>
+
+      @if (readingPending()) {
+        <div class="block-empty"><app-spinner /></div>
+      } @else {
+        <p class="average">
+          <span class="average-value">
+            @if (arrivedAverage(); as average) {
+              ≈ {{ average }}
+            } @else {
+              —
+            }
+          </span>
+          <span class="average-label">{{ 'settings.reading.arrivalsAverage' | transloco }}</span>
+        </p>
+        @if (hasArrivals()) {
+          <app-day-chart [days]="arrivedDays()" />
+        } @else {
+          <p class="block-empty">{{ 'settings.reading.arrivalsEmpty' | transloco }}</p>
+        }
+      }
+    </section>
+
+    <section class="block reading">
       <div class="block-head">
         <span class="block-title">{{ 'settings.reading.chartTitle' | transloco }}</span>
         <span class="block-sub">{{ 'settings.reading.chartWindow' | transloco }}</span>
@@ -21,49 +48,10 @@
 
       @if (readingPending()) {
         <div class="block-empty"><app-spinner /></div>
-      } @else if (chart(); as c) {
-        @if (c.hasData) {
-          <figure class="chart" (pointerleave)="clearHover()">
-            <svg
-              class="chart-svg"
-              [attr.viewBox]="'0 0 ' + c.width + ' ' + c.height"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <path class="chart-area" [attr.d]="c.area" />
-              <path class="chart-line" [attr.d]="c.line" vector-effect="non-scaling-stroke" />
-            </svg>
-
-            @if (active(); as point) {
-              <span
-                class="chart-marker"
-                [style.left.%]="point.xPercent"
-                [style.top.%]="point.yPercent"
-              ></span>
-              <figcaption class="chart-tip" [style.left.%]="point.xPercent">
-                <strong>{{ point.count }}</strong> {{ activeDate(point.date) }}
-              </figcaption>
-            }
-
-            <div class="chart-cols">
-              @for (col of c.columns; track col.date; let i = $index) {
-                <button
-                  type="button"
-                  class="chart-col"
-                  [style.left.%]="col.leftPercent"
-                  [style.width.%]="col.widthPercent"
-                  [attr.aria-label]="col.count + ' · ' + activeDate(col.date)"
-                  (pointerenter)="hover(i)"
-                  (pointerdown)="hover(i)"
-                  (focus)="hover(i)"
-                  (blur)="clearHover()"
-                ></button>
-              }
-            </div>
-          </figure>
-        } @else {
-          <p class="block-empty">{{ 'settings.reading.chartEmpty' | transloco }}</p>
-        }
+      } @else if (hasReads()) {
+        <app-day-chart [days]="readDays()" />
+      } @else {
+        <p class="block-empty">{{ 'settings.reading.chartEmpty' | transloco }}</p>
       }
     </section>
 

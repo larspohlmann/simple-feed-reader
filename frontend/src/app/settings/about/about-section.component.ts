@@ -16,14 +16,15 @@ import { SettingsApi } from '../settings-api';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { ReadingActivity } from '../settings.models';
 import { selectionQueryParams } from '../../reader/query/query';
-import { formatDayInMonth, formatLongDate } from '../../reader/format';
+import { formatLongDate } from '../../reader/format';
 import { DEVELOPMENT_VERSION, buildVersion } from '../../../environments/version';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { ReadingColumn, buildReadingChart } from './reading-chart';
+import { ChartDay, hasActivity } from './day-chart';
+import { DayChartComponent } from './day-chart.component';
 
 /** One line of the version table: which half of the app, and what it reports. */
 interface VersionRow {
@@ -47,8 +48,6 @@ interface FeedBar {
 
 const REPOSITORY_URL = 'https://github.com/larspohlmann/simple-feed-reader';
 const TOP_FEEDS = 5;
-const CHART_WIDTH = 300;
-const CHART_HEIGHT = 96;
 
 @Component({
   selector: 'app-about-section',
@@ -58,6 +57,7 @@ const CHART_HEIGHT = 96;
     SettingsStackComponent,
     SpinnerComponent,
     IconComponent,
+    DayChartComponent,
     RouterLink,
     TranslocoPipe,
   ],
@@ -72,9 +72,7 @@ export class AboutSectionComponent implements OnInit {
   private readonly api = inject(SettingsApi);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   private readonly activity = signal<ReadingActivity | null>(null);
-  private readonly hovered = signal<number | null>(null);
 
   readonly author = 'Lars Pohlmann';
   readonly copyrightYear = new Date().getFullYear();
@@ -108,22 +106,24 @@ export class AboutSectionComponent implements OnInit {
     },
   ]);
 
-  readonly chart = computed(() => {
-    const activity = this.activity();
+  readonly arrivedDays = computed<ChartDay[]>(() =>
+    (this.activity()?.days ?? []).map((day) => ({ date: day.date, count: day.arrived })),
+  );
 
-    return activity ? buildReadingChart(activity.days, CHART_WIDTH, CHART_HEIGHT) : null;
-  });
+  readonly readDays = computed<ChartDay[]>(() =>
+    (this.activity()?.days ?? []).map((day) => ({ date: day.date, count: day.read })),
+  );
 
-  /** The datum the tooltip shows: the hovered day, or the busiest day at rest
-   *  so the chart always names one number instead of a bare curve. */
-  readonly active = computed(() => {
-    const chart = this.chart();
-    if (!chart || !chart.hasData) {
-      return null;
-    }
-    const index = this.hovered();
+  readonly hasArrivals = computed(() => hasActivity(this.arrivedDays()));
+  readonly hasReads = computed(() => hasActivity(this.readDays()));
 
-    return index === null ? this.busiestColumn(chart.columns) : (chart.columns[index] ?? null);
+  /** One decimal, in the page's language; null when no day of the last week is known. */
+  readonly arrivedAverage = computed(() => {
+    const average = this.activity()?.arrivedDailyAverage ?? null;
+
+    return average === null
+      ? null
+      : new Intl.NumberFormat(this.language.lang(), { maximumFractionDigits: 1 }).format(average);
   });
 
   readonly topUnreadFeeds = computed<FeedBar[]>(() => {
@@ -191,36 +191,23 @@ export class AboutSectionComponent implements OnInit {
 
   protected readonly feedLinkParams = selectionQueryParams;
 
-  hover(index: number): void {
-    this.hovered.set(index);
-  }
-
-  clearHover(): void {
-    this.hovered.set(null);
-  }
-
   /** Empty for a development build, which has no build date to show. */
   buildDate(iso: string): string {
     return formatLongDate(iso, this.language.lang());
-  }
-
-  activeDate(iso: string): string {
-    // The bucket date is a viewer-local calendar day; anchor it to local
-    // midnight so a negative-offset browser does not render the day before.
-    return formatDayInMonth(`${iso}T00:00:00`, this.language.lang());
   }
 
   ngOnInit(): void {
     this.versions.load();
     this.subscriptions.loadIfStale();
     this.api
-      .readingActivity(this.timeZone)
+      .readingActivity()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (activity) => this.activity.set(activity),
         // A snapshot, not a control: a failed fetch leaves the rest of the
         // page standing and the chart simply never appears.
-        error: () => this.activity.set({ days: [], total: 0, topFeedsByRead: [] }),
+        error: () =>
+          this.activity.set({ days: [], total: 0, arrivedDailyAverage: null, topFeedsByRead: [] }),
       });
   }
 
@@ -233,13 +220,6 @@ export class AboutSectionComponent implements OnInit {
       ...entry,
       widthPercent: Math.round((entry.value / busiest) * 100),
     }));
-  }
-
-  private busiestColumn(columns: ReadingColumn[]): ReadingColumn | null {
-    return columns.reduce<ReadingColumn | null>(
-      (best, column) => (best === null || column.count > best.count ? column : best),
-      null,
-    );
   }
 
   private count(value: number): string {

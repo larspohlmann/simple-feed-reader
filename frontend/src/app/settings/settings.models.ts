@@ -128,12 +128,11 @@ export interface RunHistoryOverview {
   latest: RunHistoryMonthPage | null;
 }
 
-/** One day of the reading-activity chart: the calendar day and how many
- *  articles the account opened on it. Quiet days are present with a count of
- *  zero, so the chart draws a continuous axis. */
+/** One UTC day of the About page's charts; null when the day can no longer be known. */
 export interface ReadingDay {
   date: string;
-  count: number;
+  arrived: number | null;
+  read: number | null;
 }
 
 /** One feed in the "top feeds by read" ranking: the shared feed's id (the
@@ -145,12 +144,13 @@ export interface FeedReadCount {
   readCount: number;
 }
 
-/** The reading-activity payload: one entry per day of the window in order
- *  (oldest first), the window's total opens, and the account's most-read feeds
- *  all-time. */
+/** The reading-activity payload: one entry per UTC day of the window in order
+ *  (oldest first), the window's total opens, the last week's average of new
+ *  articles, and the account's most-read feeds all-time. */
 export interface ReadingActivity {
   days: ReadingDay[];
   total: number;
+  arrivedDailyAverage: number | null;
   topFeedsByRead: FeedReadCount[];
 }
 

@@ -1,0 +1,38 @@
+import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { DayChartComponent } from './day-chart.component';
+import { ChartDay } from './day-chart';
+
+describe('DayChartComponent', () => {
+  function mount(days: ChartDay[]) {
+    TestBed.configureTestingModule({
+      imports: [DayChartComponent, provideTranslocoTesting()],
+    });
+    const fixture = TestBed.createComponent(DayChartComponent);
+    fixture.componentRef.setInput('days', days);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('draws one hover column per day and names the busiest day at rest', () => {
+    const fixture = mount([
+      { date: '2026-09-01', count: 3 },
+      { date: '2026-09-02', count: 5 },
+    ]);
+
+    expect(fixture.nativeElement.querySelectorAll('.chart-col')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelector('.chart-tip strong')?.textContent).toBe('5');
+  });
+
+  it('says a hovered unknown day has no data and draws no marker on it', () => {
+    const fixture = mount([
+      { date: '2026-09-01', count: null },
+      { date: '2026-09-02', count: 5 },
+    ]);
+    fixture.componentInstance.hover(0);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.chart-marker')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.chart-tip')?.textContent).toContain('No data');
+  });
+});
