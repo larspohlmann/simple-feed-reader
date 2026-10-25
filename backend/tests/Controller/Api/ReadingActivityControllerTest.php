@@ -94,7 +94,7 @@ final class ReadingActivityControllerTest extends WebTestCase
         self::assertEquals(0, $payload['arrivedDailyAverage']);
         self::assertSame([], $payload['topFeedsByRead']);
         self::assertSame([], $payload['topFeedsByArrivals']);
-        self::assertSame(0, $payload['readCount']);
+        self::assertSame(0, $payload['viewedCount']);
         self::assertSame(0, $payload['favoritesCount']);
     }
 
@@ -121,7 +121,7 @@ final class ReadingActivityControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client->getResponse());
-        self::assertSame(1, $payload['readCount']);
+        self::assertSame(1, $payload['viewedCount']);
         self::assertSame([['feedId' => $plain->getId(), 'readCount' => 1]], $payload['topFeedsByRead']);
     }
 

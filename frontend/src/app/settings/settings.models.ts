@@ -155,14 +155,14 @@ export interface FeedArrivalRate {
  *  out): one entry per UTC day of the window in order (oldest first), the
  *  window's total opens, the last week's average of new articles, the
  *  account's most-read feeds all-time, the feeds with the most new articles
- *  per day over the last week, and the account's read and favourite totals. */
+ *  per day over the last week, and the account's viewed and favourite totals. */
 export interface ReadingActivity {
   days: ReadingDay[];
   total: number;
   arrivedDailyAverage: number | null;
   topFeedsByRead: FeedReadCount[];
   topFeedsByArrivals: FeedArrivalRate[];
-  readCount: number;
+  viewedCount: number;
   favoritesCount: number;
 }
 

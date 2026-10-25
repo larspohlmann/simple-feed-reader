@@ -120,7 +120,7 @@ export class AboutSectionComponent implements OnInit {
       { labelKey: 'settings.reading.unread', value: this.count(unread) },
       {
         labelKey: 'settings.reading.read',
-        value: activity === null ? null : this.count(activity.readCount),
+        value: activity === null ? null : this.count(activity.viewedCount),
       },
       {
         labelKey: 'settings.reading.favorites',
@@ -195,7 +195,6 @@ export class AboutSectionComponent implements OnInit {
       this.subscriptions.subscriptions().map((subscription) => [subscription.id, subscription]),
     );
 
-    // Ranked by the backend; a subscription the store no longer holds has nothing to link to.
     const ranked = activity.topFeedsByArrivals.flatMap((rate) => {
       const subscription = byId.get(rate.subscriptionId);
 
@@ -249,7 +248,7 @@ export class AboutSectionComponent implements OnInit {
             arrivedDailyAverage: null,
             topFeedsByRead: [],
             topFeedsByArrivals: [],
-            readCount: 0,
+            viewedCount: 0,
             favoritesCount: 0,
           }),
       });

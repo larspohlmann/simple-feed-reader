@@ -9,13 +9,12 @@ use App\Service\SubscriptionHistory\Model\SubscriptionActivityModel;
 final readonly class ReadingActivityModel
 {
     /**
-     * @param list<array{feedId: int, readCount: int}>      $topFeedsByRead busiest feed first
-     * @param array{favorites: int, kept: int, viewed: int} $stateCounts
+     * @param list<array{feedId: int, readCount: int}> $topFeedsByRead busiest feed first
      */
     public function __construct(
         public SubscriptionActivityModel $daily,
         public array $topFeedsByRead,
-        public array $stateCounts,
+        public ReadingTotalsModel $totals,
     ) {
     }
 }

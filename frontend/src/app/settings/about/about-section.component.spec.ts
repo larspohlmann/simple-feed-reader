@@ -48,7 +48,7 @@ const NO_ACTIVITY: ReadingActivity = {
   arrivedDailyAverage: null,
   topFeedsByRead: [],
   topFeedsByArrivals: [],
-  readCount: 0,
+  viewedCount: 0,
   favoritesCount: 0,
 };
 
@@ -193,7 +193,7 @@ describe('AboutSectionComponent', () => {
         viewedCount: 9999,
         favoritesCount: 999,
       },
-      activity: activity({ readCount: 2814, favoritesCount: 96 }),
+      activity: activity({ viewedCount: 2814, favoritesCount: 96 }),
     });
     const tiles = fixture.nativeElement.querySelectorAll('.tile-value');
 

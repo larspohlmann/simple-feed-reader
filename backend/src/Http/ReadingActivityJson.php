@@ -19,7 +19,7 @@ use App\Service\SubscriptionHistory\Model\FeedArrivalRateModel;
  *     arrivedDailyAverage: float|null,
  *     topFeedsByRead: list<array{feedId: int, readCount: int}>,
  *     topFeedsByArrivals: list<array{subscriptionId: int, dailyAverage: float}>,
- *     readCount: int,
+ *     viewedCount: int,
  *     favoritesCount: int,
  * }
  */
@@ -49,8 +49,8 @@ final class ReadingActivityJson
                 ],
                 $activity->daily->topFeedsByArrivals,
             ),
-            'readCount' => $activity->stateCounts['viewed'],
-            'favoritesCount' => $activity->stateCounts['favorites'],
+            'viewedCount' => $activity->totals->viewedCount,
+            'favoritesCount' => $activity->totals->favoritesCount,
         ];
     }
 

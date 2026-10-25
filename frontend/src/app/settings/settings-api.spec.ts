@@ -164,6 +164,8 @@ describe('SettingsApi', () => {
       arrivedDailyAverage: null,
       topFeedsByRead: [],
       topFeedsByArrivals: [],
+      viewedCount: 0,
+      favoritesCount: 0,
     });
   });
 
