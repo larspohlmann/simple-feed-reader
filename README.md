@@ -42,6 +42,7 @@ next, and a panel to reorder the queue. A podcast can also be added by pasting
 its share link from Apple Podcasts.
 
 <p>
+  <img src="docs/screenshots/mobile-podcast-player-light.webp" alt="The full-size audio player on a phone" width="24%">
   <img src="docs/screenshots/mobile-podcast-playlist-light.webp" alt="The audio playlist panel on a phone, above the player bar" width="24%">
 </p>
 
