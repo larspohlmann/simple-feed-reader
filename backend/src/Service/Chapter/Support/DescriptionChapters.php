@@ -115,7 +115,7 @@ final class DescriptionChapters
         }
         $parent = $block->parentElement;
         $block->remove();
-        if ($parent !== null && \in_array($parent->localName, ['p', 'li'], true)) {
+        if ($parent !== null && \in_array($parent->localName, ['p', 'li', 'ul', 'ol'], true)) {
             self::dropIfEmpty($parent);
         }
     }

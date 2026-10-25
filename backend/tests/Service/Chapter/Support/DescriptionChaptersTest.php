@@ -120,7 +120,24 @@ final class DescriptionChaptersTest extends TestCase
         );
 
         self::assertCount(3, $described->chapters);
-        self::assertSame('<ul></ul>', $described->body);
+        self::assertSame('', $described->body);
+    }
+
+    public function testDropsAnOrderedListEmptiedOfItsItemsButKeepsTheTextAround(): void
+    {
+        $described = DescriptionChapters::in(
+            '<p>Before</p><ol><li>0:00 A</li><li>1:00 B</li><li>2:00 C</li></ol><p>After</p>',
+        );
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('<p>Before</p><p>After</p>', $described->body);
+    }
+
+    public function testKeepsAListThatStillHoldsAnotherItem(): void
+    {
+        $described = DescriptionChapters::in('<ul><li>0:00 A</li><li>1:00 B</li><li>2:00 C</li><li>Links</li></ul>');
+
+        self::assertSame('<ul><li>Links</li></ul>', $described->body);
     }
 
     public function testReadsChaptersFromANestedListWithoutTheOuterItemText(): void
@@ -130,7 +147,7 @@ final class DescriptionChaptersTest extends TestCase
         );
 
         self::assertCount(3, $described->chapters);
-        self::assertSame('<ul><li>Intro<ul></ul></li></ul>', $described->body);
+        self::assertSame('<ul><li>Intro</li></ul>', $described->body);
     }
 
     public function testReturnsTheBodyVerbatimWhenNothingIsRead(): void
