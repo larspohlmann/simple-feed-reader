@@ -15,6 +15,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\TagJoins;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 
@@ -47,6 +48,23 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertSame('Technology', $tag->getName());
         self::assertSame('#3b82f6', $tag->getColor());
         self::assertSame('memory', $tag->getIcon());
+    }
+
+    public function testABatchHoldsTheTagStructureLock(): void
+    {
+        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
+        }
+        $user = $this->user('batch-locks@example.com');
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://a.example.com/rss.xml', 'A Feed', ['A', 'B']),
+        ]);
+
+        self::assertCount(1, $recorder->queriesMatching('for update'));
     }
 
     public function testSeedsTheFeedTitleOnlyWhenTheSharedFeedRowIsNew(): void

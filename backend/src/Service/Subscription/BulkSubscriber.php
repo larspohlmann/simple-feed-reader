@@ -16,6 +16,7 @@ use App\Service\Subscription\Model\BulkSubscribeResultModel;
 use App\Service\Subscription\Pass\BulkSubscribeBatch;
 use App\Service\Subscription\Pass\BulkSubscribePositions;
 use App\Service\Subscription\Pass\BulkSubscribeTagTree;
+use App\Service\Tag\TagStructureLock;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -37,6 +38,7 @@ final readonly class BulkSubscriber
         private SubscriptionLimitResolver $subscriptionLimits,
         private BulkTagger $bulkTagger,
         private FeedFactory $feedFactory,
+        private TagStructureLock $tagStructureLock,
     ) {
     }
 
@@ -44,6 +46,15 @@ final readonly class BulkSubscriber
      * @param iterable<BulkSubscribeItemModel> $items
      */
     public function subscribeAll(User $user, iterable $items): BulkSubscribeResultModel
+    {
+        return $this->tagStructureLock->hold(
+            $user,
+            fn (): BulkSubscribeResultModel => $this->subscribeAllHeld($user, $items),
+        );
+    }
+
+    /** @param iterable<BulkSubscribeItemModel> $items */
+    private function subscribeAllHeld(User $user, iterable $items): BulkSubscribeResultModel
     {
         $batch = $this->open($user);
         foreach ($items as $item) {
