@@ -443,6 +443,21 @@ final class OpmlImporterTest extends DbTestCase
         ]));
     }
 
+    public function testANamelessGroupPassesItsPathThrough(): void
+    {
+        $user = $this->user('opml-nameless@example.com');
+        $opml = $this->opml(
+            '<outline text="A"><outline><outline text="B">'
+            . '<outline type="rss" text="F" xmlUrl="https://nameless.example.com/feed.xml"/>'
+            . '</outline></outline></outline>',
+        );
+
+        $this->importer()->import($user, $opml);
+
+        self::assertSame('A', $this->tagNamed($user, 'B')->getParent()?->getName());
+        self::assertSame(['B'], $this->tagNamesOf($this->subscriptionsOf($user)[0]));
+    }
+
     public function testAGroupNameIsTrimmedAndABlankTextFallsBackToTheTitle(): void
     {
         $user = $this->user('opml-trim@example.com');
