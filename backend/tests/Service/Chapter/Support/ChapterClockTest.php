@@ -24,6 +24,13 @@ final class ChapterClockTest extends TestCase
         yield 'four parts' => ['1:2:3:4', null];
         yield 'seconds past 59' => ['4:61', null];
         yield 'negative' => ['-1:00', null];
+        yield 'bare seconds above 59' => ['90', 90];
+        yield 'minutes at 59' => ['0:59', 59];
+        yield 'hours minutes seconds at 59' => ['1:59:59', 7199];
+        yield 'fraction floored' => ['0:10.9', 10];
+        yield 'fraction on a minute at 59' => ['0:59.9', 59];
+        yield 'bare seconds fraction floored' => ['45.5', 45];
+        yield 'overflowing hours' => ['9999999999999999:00:00', null];
     }
 
     #[DataProvider('clocks')]

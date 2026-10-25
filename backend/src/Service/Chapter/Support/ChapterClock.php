@@ -7,7 +7,7 @@ namespace App\Service\Chapter\Support;
 /** A chapter start as written in a description, a Podlove `start` or a clock: `S`, `M:SS`, `H:MM:SS`, any fraction floored. */
 final class ChapterClock
 {
-    private const string PATTERN = '/^\d+(?::\d+){0,2}(?:\.\d+)?$/';
+    private const string PATTERN = '/^\d{1,9}(?::\d{1,9}){0,2}(?:\.\d+)?$/';
 
     public static function seconds(string $clock): ?int
     {
@@ -16,7 +16,7 @@ final class ChapterClock
             return null;
         }
 
-        $parts = explode(':', explode('.', $trimmed, 2)[0]);
+        $parts = explode(':', $trimmed);
         $total = 0;
         foreach ($parts as $index => $part) {
             if ($index > 0 && (int) $part > 59) {
