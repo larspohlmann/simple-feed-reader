@@ -8,6 +8,7 @@ use App\Http\ReadingActivityJson;
 use App\Service\Reading\Model\ReadingActivityModel;
 use App\Service\SubscriptionHistory\Model\ActivityDayModel;
 use App\Service\SubscriptionHistory\Model\DayCountModel;
+use App\Service\SubscriptionHistory\Model\FeedArrivalRateModel;
 use App\Service\SubscriptionHistory\Model\SubscriptionActivityModel;
 use PHPUnit\Framework\TestCase;
 
@@ -20,7 +21,7 @@ final class ReadingActivityJsonTest extends TestCase
                 ActivityDayModel::known('2026-09-05', new DayCountModel(0, 0)),
                 ActivityDayModel::known('2026-09-06', new DayCountModel(5, 3)),
                 ActivityDayModel::known('2026-09-07', new DayCountModel(2, 1)),
-            ]),
+            ], []),
             [['feedId' => 7, 'readCount' => 42], ['feedId' => 3, 'readCount' => 10]],
         ));
 
@@ -47,7 +48,7 @@ final class ReadingActivityJsonTest extends TestCase
         }
         $days[] = ActivityDayModel::known('2026-09-09', new DayCountModel(9, 0));
 
-        $payload = ReadingActivityJson::of(new ReadingActivityModel(new SubscriptionActivityModel($days), []));
+        $payload = ReadingActivityJson::of(new ReadingActivityModel(new SubscriptionActivityModel($days, []), []));
 
         self::assertNull($payload['days'][0]['arrived']);
         self::assertNull($payload['days'][0]['read']);
@@ -57,12 +58,29 @@ final class ReadingActivityJsonTest extends TestCase
     public function testAnAccountWithNoKnownDaysHasNoAverage(): void
     {
         $payload = ReadingActivityJson::of(new ReadingActivityModel(
-            new SubscriptionActivityModel([ActivityDayModel::unknown('2026-09-06')]),
+            new SubscriptionActivityModel([ActivityDayModel::unknown('2026-09-06')], []),
             [],
         ));
 
         self::assertNull($payload['arrivedDailyAverage']);
         self::assertSame(0, $payload['total']);
         self::assertSame([], $payload['topFeedsByRead']);
+        self::assertSame([], $payload['topFeedsByArrivals']);
+    }
+
+    public function testCarriesTheArrivalRankingWithEachAverageRoundedToOneDecimal(): void
+    {
+        $payload = ReadingActivityJson::of(new ReadingActivityModel(
+            new SubscriptionActivityModel([], [
+                new FeedArrivalRateModel(12, 86 / 7),
+                new FeedArrivalRateModel(4, 2.0),
+            ]),
+            [],
+        ));
+
+        self::assertSame(
+            [['subscriptionId' => 12, 'dailyAverage' => 12.3], ['subscriptionId' => 4, 'dailyAverage' => 2.0]],
+            $payload['topFeedsByArrivals'],
+        );
     }
 }

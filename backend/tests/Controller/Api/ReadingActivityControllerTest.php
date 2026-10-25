@@ -92,6 +92,7 @@ final class ReadingActivityControllerTest extends WebTestCase
         self::assertSame([0], array_values(array_unique(array_column($days, 'arrived'))));
         self::assertEquals(0, $payload['arrivedDailyAverage']);
         self::assertSame([], $payload['topFeedsByRead']);
+        self::assertSame([], $payload['topFeedsByArrivals']);
     }
 
     public function testRanksTopFeedsByReadBusiestFirst(): void
@@ -168,7 +169,8 @@ final class ReadingActivityControllerTest extends WebTestCase
 
         $feed = new Feed('https://example.com/arrivals.xml');
         $this->entityManager()->persist($feed);
-        $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('-60 days')));
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('-60 days'));
+        $this->entityManager()->persist($subscription);
         $noonUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->setTime(12, 0);
         foreach ([1, 1, 3] as $index => $daysAgo) {
             $created = new \DateTimeImmutable($noonUtc->modify(sprintf('-%d days', $daysAgo))->format('Y-m-d H:i:s'));
@@ -187,5 +189,9 @@ final class ReadingActivityControllerTest extends WebTestCase
         self::assertSame(2, $arrivedByDate[$noonUtc->modify('-1 day')->format('Y-m-d')]);
         self::assertSame(1, $arrivedByDate[$noonUtc->modify('-3 days')->format('Y-m-d')]);
         self::assertEqualsWithDelta(3 / 7, $payload['arrivedDailyAverage'], 0.051);
+        self::assertSame(
+            [['subscriptionId' => $subscription->requireId(), 'dailyAverage' => 0.4]],
+            $payload['topFeedsByArrivals'],
+        );
     }
 }

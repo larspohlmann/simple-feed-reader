@@ -6,19 +6,17 @@ namespace App\Service\SubscriptionHistory\Model;
 
 final readonly class SubscriptionActivityModel
 {
-    private const int AVERAGE_DAYS = 7;
-
     /**
-     * @param list<ActivityDayModel> $days oldest first, today last
+     * @param list<ActivityDayModel>     $days               oldest first, today last
+     * @param list<FeedArrivalRateModel> $topFeedsByArrivals busiest first
      */
-    public function __construct(public array $days)
+    public function __construct(public array $days, public array $topFeedsByArrivals)
     {
     }
 
-    /** Today is partial, so the week is the seven days before it. */
     public function arrivedDailyAverage(): ?float
     {
-        $week = \array_slice($this->days, -(self::AVERAGE_DAYS + 1), self::AVERAGE_DAYS);
+        $week = DayWindowModel::averagedWeekOf($this->days);
         $known = array_filter(
             array_map(static fn (ActivityDayModel $day): ?int => $day->arrived(), $week),
             static fn (?int $arrived): bool => $arrived !== null,

@@ -9,6 +9,7 @@ use App\Service\SubscriptionHistory\Support\UtcDay;
 final readonly class DayWindowModel
 {
     private const int DAYS = 30;
+    private const int AVERAGE_DAYS = 7;
 
     /**
      * @param list<string> $dates oldest first, today last
@@ -41,5 +42,19 @@ final readonly class DayWindowModel
     public function completedDates(): array
     {
         return \array_slice($this->dates, 0, -1);
+    }
+
+    /**
+     * Today is partial, so an average covers the seven days before it.
+     *
+     * @template T
+     *
+     * @param list<T> $series one item per day, oldest first, today last
+     *
+     * @return list<T>
+     */
+    public static function averagedWeekOf(array $series): array
+    {
+        return \array_slice($series, -(self::AVERAGE_DAYS + 1), self::AVERAGE_DAYS);
     }
 }

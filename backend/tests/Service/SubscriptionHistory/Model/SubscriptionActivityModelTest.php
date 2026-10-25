@@ -22,7 +22,7 @@ final class SubscriptionActivityModelTest extends TestCase
                 : ActivityDayModel::known($date, new DayCountModel($arrived, 1));
         }
 
-        return new SubscriptionActivityModel($days);
+        return new SubscriptionActivityModel($days, []);
     }
 
     public function testAveragesTheSevenCompletedDaysAndLeavesTodayOut(): void
