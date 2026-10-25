@@ -10,6 +10,31 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.2] - 2026-10-25
+
+## What's Changed
+* ci(#1779): gate backend-static on symfony-lsp check by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1780
+* fix(#1781): send anthropic-version on the model listing by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1782
+* feat(#1784): show a tag's subtag count in a pill after its name by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1785
+* style(#1786): shorter sidebar section heads, collapsed matches expanded by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1787
+* docs: a project homepage in docs/homepage, deployed as a subfolder of lars-pohlmann.de by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1788
+* feat(#1783): daily new-article statistics on the About page by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1789
+* docs(homepage): lightbox, the app's favicon and brand, and a light/dark switch by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1791
+* docs: refresh the screenshots; add the full-size audio player on a phone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1792
+* docs(homepage): the full-size audio player in the phone strip by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1793
+* docs(homepage): an email digest section with the digest screenshots by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1794
+* feat(#1790): nest tags two levels deep by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1795
+* fix(#1796): stop iOS zooming the page when a text field is focused by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1797
+* feat(#1798): pin the organise head above the sidebar scroller, collapse it on scroll by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1799
+* fix(#1802): the sidebar subtag pill counts tags at every level below by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1803
+* fix(#1801): organise feed rows keep their names at narrow widths by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1804
+* fix(#1800): OPML import keeps up to three tag levels by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1806
+* fix(#1805): social import locks first; tag names compare accents, not case by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1807
+* Chapters for YouTube videos and podcast episodes (#1808, #1496) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1811
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.1...v1.6.2
+
 ## [v1.6.1] - 2026-10-24
 
 ## What's Changed
