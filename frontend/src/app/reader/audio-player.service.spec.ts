@@ -22,6 +22,7 @@ function ranges(...spans: [number, number][]): TimeRanges {
 class FakeAudio {
   error: { code: number; MEDIA_ERR_SRC_NOT_SUPPORTED: number } | null = null;
   currentTime = 0;
+  readyState = 0;
   defaultPlaybackRate = 1;
   playbackRate = 1;
   preload = '';
@@ -117,6 +118,7 @@ describe('AudioPlayerService', () => {
     const service = make();
     service.play(track());
     audio.duration = 600;
+    audio.readyState = HTMLMediaElement.HAVE_METADATA;
     audio.fire('loadedmetadata');
 
     service.playFrom(track(), 300);
@@ -124,6 +126,37 @@ describe('AudioPlayerService', () => {
     expect(audio.currentTime).toBe(300);
     expect(service.position()).toBe(300);
     expect(audio.play).toHaveBeenCalled();
+  });
+
+  it('starts a restored track at a chapter once its metadata tells its length', () => {
+    localStorage.setItem(
+      'sfr.audio',
+      JSON.stringify({ track: track({ durationInSeconds: null }), position: 0 }),
+    );
+    const service = make();
+
+    service.playFrom(track({ durationInSeconds: null }), 300);
+    expect(audio.currentTime).toBe(0);
+    audio.duration = 600;
+    audio.readyState = HTMLMediaElement.HAVE_METADATA;
+    audio.fire('loadedmetadata');
+
+    expect(audio.currentTime).toBe(300);
+    expect(service.position()).toBe(300);
+  });
+
+  it('drops a chapter start still waiting for metadata when another track takes over', () => {
+    const service = make();
+    service.play(track({ durationInSeconds: null }));
+    service.playFrom(track({ durationInSeconds: null }), 300);
+
+    service.play(track({ url: 'https://x.test/other.mp3', durationInSeconds: null }));
+    audio.duration = 600;
+    audio.readyState = HTMLMediaElement.HAVE_METADATA;
+    audio.fire('loadedmetadata');
+
+    expect(audio.currentTime).toBe(0);
+    expect(service.position()).toBe(0);
   });
 
   it('loads another track first and starts it at the chapter once its length is known', () => {
@@ -642,6 +675,19 @@ describe('AudioPlayerService', () => {
         audio.fire('loadedmetadata');
 
         expect(standby.src).toBe(second.url);
+      });
+
+      it('starts a cached track at a chapter at once, its metadata already read', () => {
+        const service = playing(first, second);
+        progressAt(3500);
+        standby.duration = 3600;
+        standby.readyState = HTMLMediaElement.HAVE_METADATA;
+
+        service.playFrom(second, 300);
+
+        expect(service.current()?.url).toBe(second.url);
+        expect(standby.currentTime).toBe(300);
+        expect(service.position()).toBe(300);
       });
 
       it('follows a reorder', () => {

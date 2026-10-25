@@ -112,13 +112,10 @@ export class AudioPlayerService {
     this.go(insertNext(this._playlist(), track));
   }
 
-  /** Plays `track` from `seconds`: a seek on the current track, else the track loads first (#1808). */
+  /** Plays `track` from `seconds`, seeking once its metadata is known; another track loads first (#1808). */
   playFrom(track: AudioTrack, seconds: number): void {
-    if (this.current()?.url === track.url) this.seek(seconds);
-    else {
-      this.apply(insertNext(this._playlist(), track));
-      this.seekOnceLoaded(seconds);
-    }
+    if (this.current()?.url !== track.url) this.apply(insertNext(this._playlist(), track));
+    this.seekOnceLoaded(seconds);
     this.resume();
   }
 
