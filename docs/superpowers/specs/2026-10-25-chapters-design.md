@@ -34,12 +34,13 @@ layout: a tappable chapter list under the player that jumps the video and follow
 
 ### Module `Service/Chapter`
 
-- `Model/ChapterModel(int $startSeconds, string $title)`.
-- `Model/ChaptersModel`: an ordered list, validated on construction — at least two chapters, strictly
-  ascending starts. A podcast list need not start at 0; before its first chapter nothing is highlighted.
-- Exceptions in `Exception/`; a source that finds nothing returns no model rather than throwing.
+A chapter is the entity value `App\Entity\EntryChapter(startSeconds, title)`: the entity stores it,
+so it lives with the entity. A chapter list is a plain `list<EntryChapter>`; `Support/ChapterSequence`
+orders it and keeps it only with at least two strictly ascending starts. A podcast list need not
+start at 0; before its first chapter nothing is highlighted. A source that finds nothing returns
+`[]` rather than throwing.
 
-### YouTube source: `YouTubeDescriptionChapters`
+### YouTube source: `Support/DescriptionChapters`
 
 Runs only when `YouTubeUrl::video($entry->getUrl())` is a video and not a Short.
 
@@ -48,89 +49,105 @@ line is an optional bracket, `H:MM:SS` or `M:SS`, an optional bracket, an option
 (`-` `–` `—` `:` `|`), then a title. The **first** run of consecutive chapter lines that starts at `0:00`,
 has at least three lines and strictly ascends is the chapter list. Anything else means no chapters.
 
-It returns the `ChaptersModel` and the body with exactly those lines (and their `<br>` separators)
-removed; a paragraph left empty is dropped. A later repeat of the block stays in the text.
+It returns a `DescribedChaptersModel`: the chapters and the body with exactly those lines (and their
+`<br>` separators) removed; a `p`, `li`, `ul` or `ol` left empty is dropped. A later repeat of the
+block stays in the text.
 
 ### Podcast source: stored on the entry
 
-Chapters belong to the item, and `App\Entity` may not import a Service model, so they live on
-`Entry` in an `EntryChapters` embeddable nested in `EntryMedia` (one migration) with two columns:
+Chapters belong to the item, so they live on `Entry` in an `EntryChapters` embeddable nested in
+`EntryMedia` (one migration) with two columns:
 
 - `chapters`: `list<{startSeconds, title}>` (JSON) — written at ingest from inline Podlove `psc:chapters`
   (versions 1.1 and 1.2, `start` as `HH:MM:SS(.mmm)`), or later by the lazy fill.
 - `chapters_url`: the `podcast:chapters` `url`, kept only when there are no inline chapters. It is a TEXT
   column (the entry table has no MySQL row width left for a VARCHAR(2048)); the embeddable bounds it.
+  A backup restore applies the same rule and reads it as an absolute http(s) URL.
 
-`ChapterFiller::fillOnOpen(Entry)` runs when an entry detail is served: for an entry with
-`chapters_url` and no chapters, it fetches through the SSRF-guarded fetcher (64 KB cap, short
-timeout), parses the Podcasting 2.0 JSON chapters format (`startTime`, `title`; entries with
-`toc: false` dropped) and stores the result. A malformed or empty file stores an empty list so it is
-not fetched again; a network failure stores nothing so the next open retries. The name says it writes:
-this is not a getter.
+`ChapterFiller::fillOnOpen(Entry)`: for an entry with `chapters_url`, it reads the file through
+`ChapterFileSourceInterface` (`GuardedChapterFileSource`), parses the Podcasting 2.0 JSON chapters
+format (`Support/JsonChapters`: `startTime`, `title`; entries with `toc: false` dropped) and stores
+the result, clearing the URL. The fetch runs inside the detail request, so it has its own budget on
+`GuardedApiClient::sendWithin`: 3 s timeout and max duration, a 64 kB cap
+(`ResponseSizeLimit::ChapterFile`), the SSRF guard, no redirects.
+
+- Final, stored as no chapters: a malformed or empty file, an over-cap body, a 4xx, a 3xx (redirects
+  are refused — a known limit for hosts that redirect their chapter files), a blocked host.
+- Retried on the next open, nothing stored: a network failure, a timeout, a 5xx
+  (`ChapterFileUnreachableException`, logged at info).
+
+The name says it writes: this is not a getter.
 
 ### Serving
 
-`EntryChapters` returns, for an entry, either the YouTube result or the entry's stored podcast chapters,
-plus the body to serve. The entry detail action calls it; a `ChaptersJson` mapper in `src/Http` adds:
+`ChaptersOnOpen::serve(Entry)` returns a `ServedChaptersModel`: the YouTube result for a video,
+else the entry's stored chapters after the lazy fill, plus the body to serve. The entry detail
+action calls it; the `ChaptersJson` mapper in `src/Http` adds:
 
 ```json
 "chapters": [{ "startSeconds": 0, "title": "Who invented Enigma?" }, …]
 ```
 
 or `null`. Detail only — list rows do not carry chapters. `contentHtml` is the trimmed body for a
-YouTube entry with chapters.
+YouTube entry with chapters. `EntryMedia::toJsonList` is the one place a chapter becomes an array,
+for storage, backup and the API alike.
 
 ### Frame allowlist
 
-The allowlist is unchanged: the SPA appends the constant `?enablejsapi=1&origin=…` to an already validated
-URL.
+The allowlist is unchanged: when the entry has chapters, the SPA appends the constant
+`?enablejsapi=1&origin=…` to an already validated URL.
 
 ## Frontend
 
-### `ChapterListComponent`
+### `addChapterList` and `ArticleChapters`
 
-A DOM decorator, `addChapterList`, because the body is `innerHTML`.
-Standalone, signals, styles in `chapter-list.component.scss` with design-language tokens. Inputs:
-`chapters` and a `ChapterPlayer`. Each row is a `<button>` with the start time and the title; the
-current one gets `aria-current="true"` and the accent mark. A tap calls `player.playFrom(startSeconds)`
-and highlights that row at once. The list never scrolls itself. Placed under the YouTube player
-(outside the cinema box, so widening the player leaves it alone) and at the top of the body for an
-episode.
+A DOM decorator, `addChapterList`, because the body is `innerHTML`: it draws a
+`<nav class="reader-chapters">` (styles in `article-content.component.scss`, design-language tokens)
+and replaces any earlier list in the host. Each row is a `<button>` with the start time and the
+title; the current one gets `aria-current="true"` and the accent mark. A tap calls
+`player.playFrom(startSeconds)` and highlights that row at once. The list never scrolls itself.
+
+`ArticleChapters` owns one rendered body's list and its player: `attach` picks the video's API
+player, else the episode, places the list under the YouTube player (outside the cinema box, so
+widening the player leaves it alone) or at the top of the body for an episode; `release` releases
+the player and removes the list. The article body service releases on every re-render and on
+destroy.
 
 ### `ChapterPlayer`
 
 ```ts
 interface ChapterPlayer {
-  position: Signal<number | null>;
   playFrom(seconds: number): void;
+  watch(onPosition: (seconds: number | null) => void): void;
+  release(): void;
 }
 ```
 
 The current chapter is a binary search over the starts (`currentChapterIndex(starts, position)`), a
 pure helper.
 
-**`YouTubeChapterPlayer`**: when the entry has chapters, the frame is built with
-`?enablejsapi=1&origin=<location.origin>`. After the frame loads it posts `{"event":"listening"}`;
-it accepts messages only from `https://www.youtube-nocookie.com` whose `source` is that frame's
-`contentWindow`, and reads `info.currentTime` into `position`. `playFrom` posts `seekTo(seconds, true)`
-then `playVideo`. The listener is removed when the article view is destroyed.
+**`YouTubeChapterPlayer`**: after the frame loads it posts `{"event":"listening"}`; it accepts
+messages only from `https://www.youtube-nocookie.com` whose `source` is that frame's
+`contentWindow`, and reports `info.currentTime` to the watcher. `playFrom` posts
+`seekTo(seconds, true)` then `playVideo`. `release` removes the listeners.
 
-**`AudioChapterPlayer`** wraps `AudioPlayerService`: `position` is the service's position while its
-current track is this entry's attachment, else `null`. `playFrom` seeks and plays when it is current;
-otherwise it queues the episode next, selects it and plays from `seconds` (a small start-at path on the
-service if `pendingSeek` does not already cover it).
+**`AudioChapterPlayer`** wraps `AudioPlayerService`: it reports the service's position while its
+current track is this entry's attachment, else `null`. `playFrom` goes through the service's
+`playFrom(track, seconds)`, which queues the episode next when it is not current and seeks once the
+element's metadata is known (at once when it already is, as for a cached track).
 
 ## Testing
 
 - **PHPUnit**: the description rule (the six real descriptions as fixtures, a missing `0:00`, fewer than
   three lines, out-of-order stamps, timestamps inside prose, a repeated block, a Short); body trimming;
   `psc` 1.1 and 1.2 parsing from the feeds measured in #1496; JSON chapters parsing (`toc: false`,
-  malformed, empty); a functional test of the detail endpoint covering YouTube, inline podcast chapters
-  and the lazy fill with a stubbed fetcher (success, malformed, network failure); the new frame pattern
-  accepts the exact form and rejects extra or reordered parameters.
-- **Jest**: `currentChapterIndex` boundaries; the component (rows, tap, `aria-current`);
-  `YouTubeChapterPlayer` with a fake `contentWindow` (handshake, origin and source checks, commands);
-  `AudioChapterPlayer` against the existing service stub.
+  malformed, empty); the chapter file source (budget, cap, 4xx/3xx final, 5xx and network failure
+  unreachable); a functional test of the detail endpoint covering YouTube, inline podcast chapters
+  and the lazy fill with a stubbed fetcher.
+- **Jest**: `currentChapterIndex` boundaries; `addChapterList` (rows, tap, `aria-current`,
+  replacement); `ArticleChapters` (placement, release, re-attach); `YouTubeChapterPlayer` with a fake
+  `contentWindow` (handshake, origin and source checks, commands); `AudioChapterPlayer` and the
+  service's `playFrom` against the existing element stub.
 - **Playwright smoke**: a stubbed entry with chapters; a tap highlights the row and posts the seek. The
   spec owns its data.
 - **Live check** on :4200 with a real YouTube entry and a Podlove episode, plus a real iPhone pass on the
