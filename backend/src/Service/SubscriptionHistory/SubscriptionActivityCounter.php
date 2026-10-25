@@ -8,14 +8,10 @@ use App\Entity\User;
 use App\Repository\SubscriptionActivityRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\SubscriptionHistory\Factory\DaySourcesFactory;
-use App\Service\SubscriptionHistory\Model\ActivityDayModel;
-use App\Service\SubscriptionHistory\Model\DayCountModel;
-use App\Service\SubscriptionHistory\Model\DayCountsModel;
 use App\Service\SubscriptionHistory\Model\DayWindowModel;
 use App\Service\SubscriptionHistory\Model\FeedArrivalRateModel;
 use App\Service\SubscriptionHistory\Model\SubscriptionActivityModel;
-use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
-use App\Service\SubscriptionHistory\Pass\DaySources;
+use App\Service\SubscriptionHistory\Pass\AccountDayCounts;
 use App\Service\SubscriptionHistory\Support\UtcDay;
 
 final readonly class SubscriptionActivityCounter
@@ -40,30 +36,24 @@ final readonly class SubscriptionActivityCounter
             $sources->oldestLiveDay($subscriptions, $window->dates) ?? $window->today(),
         );
 
+        $counts = new AccountDayCounts($subscriptions, $sources, $live);
+
         return new SubscriptionActivityModel(
-            array_map(
-                fn (string $date): ActivityDayModel => $this->dayOf($date, $subscriptions, $sources, $live),
-                $window->dates,
-            ),
-            $this->busiestByArrivals($subscriptions, DayWindowModel::averagedWeekOf($window->dates), $sources, $live),
+            array_map($counts->day(...), $window->dates),
+            $this->busiestByArrivals($counts, DayWindowModel::averagedWeekOf($window->dates)),
         );
     }
 
     /**
-     * @param list<TrackedSubscriptionModel> $subscriptions
-     * @param list<string>                   $week
+     * @param list<string> $week
      *
      * @return list<FeedArrivalRateModel> busiest first
      */
-    private function busiestByArrivals(
-        array $subscriptions,
-        array $week,
-        DaySources $sources,
-        DayCountsModel $live,
-    ): array {
+    private function busiestByArrivals(AccountDayCounts $counts, array $week): array
+    {
         $rates = [];
-        foreach ($subscriptions as $subscription) {
-            $average = $this->arrivedAverageOf($subscription, $week, $sources, $live);
+        foreach ($counts->subscriptions as $subscription) {
+            $average = $counts->arrivedAverage($subscription, $week);
             if ($average > 0) {
                 $rates[] = new FeedArrivalRateModel($subscription->subscriptionId, $average);
             }
@@ -71,53 +61,5 @@ final readonly class SubscriptionActivityCounter
         usort($rates, FeedArrivalRateModel::busierFirst(...));
 
         return \array_slice($rates, 0, self::TOP_FEEDS);
-    }
-
-    /**
-     * @param list<string> $week
-     */
-    private function arrivedAverageOf(
-        TrackedSubscriptionModel $subscription,
-        array $week,
-        DaySources $sources,
-        DayCountsModel $live,
-    ): float {
-        $knownDays = array_filter(
-            $week,
-            static fn (string $day): bool => $sources->contributes($subscription, $day)
-                && $sources->isKnown($subscription, $day),
-        );
-        if ($knownDays === []) {
-            return 0.0;
-        }
-        $arrivals = array_map(
-            static fn (string $day): int => $sources->countFor($subscription, $day, $live)->arrived,
-            $knownDays,
-        );
-
-        return array_sum($arrivals) / \count($knownDays);
-    }
-
-    /**
-     * @param list<TrackedSubscriptionModel> $subscriptions
-     */
-    private function dayOf(
-        string $date,
-        array $subscriptions,
-        DaySources $sources,
-        DayCountsModel $live,
-    ): ActivityDayModel {
-        $total = DayCountModel::none();
-        foreach ($subscriptions as $subscription) {
-            if (!$sources->contributes($subscription, $date)) {
-                continue;
-            }
-            if (!$sources->isKnown($subscription, $date)) {
-                return ActivityDayModel::unknown($date);
-            }
-            $total = $total->plus($sources->countFor($subscription, $date, $live));
-        }
-
-        return ActivityDayModel::known($date, $total);
     }
 }

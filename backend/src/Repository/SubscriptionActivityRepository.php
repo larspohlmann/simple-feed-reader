@@ -172,7 +172,8 @@ final readonly class SubscriptionActivityRepository
                 'CASE WHEN feed.network IS NULL THEN 0 ELSE 1 END AS isSocial',
             )
             ->from(Subscription::class, 'subscription')
-            ->join('subscription.feed', 'feed');
+            ->join('subscription.feed', 'feed')
+            ->orderBy('subscription.id');
         SavedFeedDql::exclude($qb, 'feed');
 
         return $qb;
