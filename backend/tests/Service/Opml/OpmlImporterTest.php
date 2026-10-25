@@ -330,6 +330,23 @@ final class OpmlImporterTest extends DbTestCase
         self::assertSame(['C'], $this->tagNamesOf($this->subscriptionsOf($user)[1]));
     }
 
+    public function testThePathGoesOnPastAParentThatAgreesWithTheFile(): void
+    {
+        $user = $this->user('opml-agreeing@example.com');
+        $tagB = $this->storedTag($user, 'B', null);
+        $this->storedTag($user, 'C', $tagB);
+        $opml = $this->opml(
+            '<outline text="A"><outline text="B"><outline text="C">'
+            . '<outline type="rss" text="F" xmlUrl="https://agreeing.example.com/feed.xml"/>'
+            . '</outline></outline></outline>',
+        );
+
+        $this->importer()->import($user, $opml);
+
+        self::assertSame('A', $this->tagNamed($user, 'B')->getParent()?->getName());
+        self::assertSame('B', $this->tagNamed($user, 'C')->getParent()?->getName());
+    }
+
     public function testATagWhoseSubtreeIsFullKeepsItsPlace(): void
     {
         $user = $this->user('opml-conflict@example.com');
