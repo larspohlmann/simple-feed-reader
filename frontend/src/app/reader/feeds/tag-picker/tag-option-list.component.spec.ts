@@ -66,6 +66,33 @@ describe('TagOptionListComponent', () => {
     );
   });
 
+  it('indents each row by its depth and names a grandchild match with its path', () => {
+    search = new TagSearch(
+      {
+        tags: signal([
+          makeTag(1, 'Reading'),
+          makeTag(2, 'Long reads', { parentId: 1 }),
+          makeTag(3, 'Essays', { parentId: 2 }),
+        ]),
+        selected: signal(new Set<number>()),
+        suggested: signal<TagDto[]>([]),
+        toggle: () => undefined,
+      },
+      { create: () => new Subject<TagDto>() } as unknown as TagCreator,
+      'nested',
+    );
+    fixture.componentRef.setInput('search', search);
+    fixture.detectChanges();
+    expect(rows().map((row) => row.style.getPropertyValue('--depth'))).toEqual(['0', '1', '2']);
+
+    search.setQuery('Essays');
+    fixture.detectChanges();
+
+    expect(rows()[0].querySelector('.name')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Reading / Long reads / Essays',
+    );
+  });
+
   it('marks the active row with its derived id', () => {
     search.move(1);
     fixture.detectChanges();

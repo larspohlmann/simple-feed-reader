@@ -15,14 +15,18 @@ import {
   buildTagTree,
   flattenTagTree,
   rootsOf,
+  siblingIdsByTagId,
   siblingIdsOf,
   sumEntries,
+  tagLabel,
   tagNodesById,
   tagsInTreeOrder,
   untaggedSubscriptions,
 } from './subscription-derivations';
 import { SubscriptionDto, SubscriptionTagDto, TagDto, UnreadTotalsDto } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
+import { makeSubscription } from '../testing/subscription.factory';
+import { makeTag } from '../testing/tag.factory';
 
 const tag = (id: number, name: string): TagDto => ({
   id,
@@ -167,6 +171,46 @@ describe('buildTagTree with an explicit tag order', () => {
   const longReads = { ...tag(2, 'Long reads'), position: 1, parentId: 1 };
   const essays = { ...tag(3, 'Essays'), position: 2, parentId: 1 };
   const tech = { ...tag(4, 'Tech'), position: 3 };
+
+  it('builds grandchildren under their parent and counts a top tag across its whole subtree', () => {
+    const grandReading = makeTag(1, 'Reading');
+    const grandLongReads = makeTag(2, 'Long reads', { parentId: 1 });
+    const grandEssays = makeTag(3, 'Essays', { parentId: 2 });
+    const essayFeed = makeSubscription({
+      id: 30,
+      entryCount: 4,
+      tags: [{ ...grandEssays, position: 0 }],
+    });
+
+    const [root] = buildTagTree([essayFeed], [grandReading, grandLongReads, grandEssays]);
+
+    expect(root.children.map((child) => child.tag.id)).toEqual([2]);
+    expect(root.children[0].children.map((grandchild) => grandchild.tag.id)).toEqual([3]);
+    expect(root.entryCount).toBe(4);
+    expect(flattenTagTree([root]).map((node) => node.tag.id)).toEqual([1, 2, 3]);
+  });
+
+  it('orders and groups siblings at every level', () => {
+    const nested = [
+      makeTag(1, 'Reading'),
+      makeTag(2, 'Long reads', { parentId: 1 }),
+      makeTag(3, 'Essays', { parentId: 2 }),
+      makeTag(4, 'Poems', { parentId: 2 }),
+    ];
+
+    expect(tagsInTreeOrder(nested).map((entry) => entry.id)).toEqual([1, 2, 3, 4]);
+    expect(siblingIdsByTagId(nested).get(3)).toEqual([3, 4]);
+  });
+
+  it('labels a grandchild with its whole path', () => {
+    const nested = [
+      makeTag(1, 'Reading'),
+      makeTag(2, 'Long reads', { parentId: 1 }),
+      makeTag(3, 'Essays', { parentId: 2 }),
+    ];
+
+    expect(tagLabel(nested[2], nested)).toBe('Reading / Long reads / Essays');
+  });
 
   it('nests children under their parent in position order and lists only roots at the top', () => {
     const tree = buildTagTree([], [reading, longReads, essays, tech]);
