@@ -14,8 +14,10 @@ use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Model\TagDetailsModel;
 use App\Service\Tag\TagEditor;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 final class TagEditorTest extends DbTestCase
 {
@@ -180,31 +182,35 @@ final class TagEditorTest extends DbTestCase
         $this->editor()->update($tech, new TagDetailsModel('Tech', parentId: $reading->requireId()));
     }
 
-    public function testAPlacementLeavesNoTransactionOpen(): void
+    public function testCreateUpdateAndDeleteEachHoldTheTagStructureLock(): void
     {
-        $user = $this->user('tag-transaction-closed@example.com');
-        $connection = $this->entityManager->getConnection();
-        $level = $connection->getTransactionNestingLevel();
+        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
+        }
+        $user = $this->user('tag-editor-locks@example.com');
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
 
         $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
-        $this->editor()->update($reading, new TagDetailsModel('Reading', parentId: null));
+        $this->editor()->update($reading, new TagDetailsModel('Read'));
+        $this->editor()->delete($reading);
 
-        self::assertSame($level, $connection->getTransactionNestingLevel());
+        self::assertCount(3, $recorder->queriesMatching('for update'));
     }
 
-    public function testARefusedPlacementRollsItsTransactionBack(): void
+    public function testAnEditThatKeepsTheParentReadsNoTagTree(): void
     {
-        $user = $this->user('tag-transaction-rolled-back@example.com');
+        $user = $this->user('tag-keep-parent-cheap@example.com');
         $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
-        $connection = $this->entityManager->getConnection();
-        $level = $connection->getTransactionNestingLevel();
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
 
-        try {
-            $this->editor()->update($reading, new TagDetailsModel('Reading', parentId: $reading->requireId()));
-            self::fail('A tag cannot sit under itself.');
-        } catch (InvalidTagParentException) {
-            self::assertSame($level, $connection->getTransactionNestingLevel());
-        }
+        $this->editor()->update($longReads, new TagDetailsModel('Longreads', parentId: $reading->requireId()));
+
+        self::assertSame([], $recorder->queriesMatching('parent_id as'));
     }
 
     public function testCreateChecksTheCommittedTreeForDepth(): void

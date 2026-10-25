@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Tag;
+use App\Entity\User;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -14,13 +15,24 @@ final readonly class TagTreeRepository
     {
     }
 
+    /** Locks the user's row until the transaction ends, so tag placements for one user run one at a time. */
+    public function lockTagsOf(int $userId): void
+    {
+        $this->entityManager->createQueryBuilder()
+            ->select('u.id')
+            ->from(User::class, 'u')
+            ->andWhere('u.id = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->getScalarResult();
+    }
+
     /**
-     * The user's tag tree as committed, read with a write lock: a concurrent placement waits for this
-     * transaction, and loaded entities cannot hide its changes. Call it inside a transaction.
+     * Read from the rows, not the loaded entities, which a placement committed meanwhile would leave stale.
      *
      * @return array<int, int|null> parent id by tag id
      */
-    public function lockParentIdsForUser(int $userId): array
+    public function parentIdsForUser(int $userId): array
     {
         /** @var list<array{id: int|string, parentId: int|string|null}> $rows */
         $rows = $this->entityManager->createQueryBuilder()
@@ -28,7 +40,6 @@ final readonly class TagTreeRepository
             ->from(Tag::class, 't')
             ->andWhere('t.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
-            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->getScalarResult();
 
         $parentIds = [];

@@ -16,33 +16,48 @@ final class TagTreeRepositoryTest extends DbTestCase
 {
     use SeedsUsers;
 
-    public function testLockParentIdsForUserMapsOnlyTheOwnersTagsToTheirParents(): void
+    public function testParentIdsForUserMapsOnlyTheOwnersTagsToTheirParents(): void
     {
-        $owner = $this->user('tag-lock-owner@example.com');
+        $owner = $this->user('tag-tree-owner@example.com');
         $parent = $this->tag($owner);
         $child = $this->childOf($owner, $parent, 'Child');
-        $this->tag($this->user('tag-lock-stranger@example.com'));
+        $this->tag($this->user('tag-tree-stranger@example.com'));
 
-        $parentIds = $this->entityManager->getConnection()->transactional(
-            fn (): array => $this->repository()->lockParentIdsForUser($owner->requireId()),
-        );
+        $parentIds = $this->repository()->parentIdsForUser($owner->requireId());
 
         ksort($parentIds);
         self::assertSame([$parent->requireId() => null, $child->requireId() => $parent->requireId()], $parentIds);
     }
 
-    public function testLockParentIdsForUserHoldsAWriteLockOnTheRows(): void
+    public function testParentIdsForUserReadsTheRowsNotTheLoadedEntities(): void
+    {
+        $owner = $this->user('tag-tree-fresh@example.com');
+        $parent = $this->tag($owner);
+        $loaded = $this->tag($owner, 'Loaded');
+        $this->entityManager->getConnection()->update(
+            'tag',
+            ['parent_id' => $parent->requireId()],
+            ['id' => $loaded->requireId()],
+        );
+
+        self::assertSame(
+            $parent->requireId(),
+            $this->repository()->parentIdsForUser($owner->requireId())[$loaded->requireId()],
+        );
+    }
+
+    public function testLockTagsOfHoldsAWriteLockOnTheUsersRow(): void
     {
         if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
             self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
         }
-        $owner = $this->user('tag-lock-rows@example.com');
+        $owner = $this->user('tag-tree-lock@example.com');
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);
         $recorder->reset();
 
         $this->entityManager->getConnection()->transactional(
-            fn (): array => $this->repository()->lockParentIdsForUser($owner->requireId()),
+            fn () => $this->repository()->lockTagsOf($owner->requireId()),
         );
 
         self::assertCount(1, $recorder->queriesMatching('for update'));
