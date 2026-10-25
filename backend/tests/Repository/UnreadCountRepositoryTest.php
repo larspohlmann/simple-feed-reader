@@ -62,14 +62,17 @@ final class UnreadCountRepositoryTest extends DbTestCase
         $deep->addTag($longReads);
         [$top, $topFeed] = $this->subscribedFeed($user, 'https://example.com/top.xml');
         $top->addTag($reading);
+        [$essayOnly, $essayOnlyFeed] = $this->subscribedFeed($user, 'https://example.com/essay-only.xml');
+        $essayOnly->addTag($essays);
         $this->unreadEntry($deepFeed, 'deep-entry', null);
         $this->unreadEntry($topFeed, 'top-entry', null);
+        $this->unreadEntry($essayOnlyFeed, 'essay-only-entry', null);
 
         $counts = $this->repository()->perTag($user->requireId());
         ksort($counts);
 
         self::assertSame(
-            [$reading->requireId() => 2, $longReads->requireId() => 1, $essays->requireId() => 1],
+            [$reading->requireId() => 3, $longReads->requireId() => 2, $essays->requireId() => 2],
             $counts,
         );
     }
