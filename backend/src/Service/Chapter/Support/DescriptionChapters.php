@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Chapter\Support;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\Model\DescribedChaptersModel;
+use App\Service\Chapter\Model\ServedChaptersModel;
 use App\Service\Chapter\Pass\DescriptionLine;
 use App\Service\Html\Support\HtmlDocumentParser;
 use Dom\Element;
@@ -17,12 +17,16 @@ final class DescriptionChapters
     private const string LINE = '/^\s*[(\[]?((?:\d{1,2}:)?\d{1,2}:\d{2})(?!\d)[)\]]?\s*[-–—:|]?\s*(\S.*?)\s*$/u';
     private const int MINIMUM = 3;
 
-    public static function in(string $html): DescribedChaptersModel
+    public static function in(string $html): ServedChaptersModel
     {
+        if (!str_contains($html, '0:00')) {
+            return new ServedChaptersModel([], $html);
+        }
+
         $document = HtmlDocumentParser::parseFragment($html);
         $run = self::firstRun(DescriptionLines::of($document));
         if ($run === []) {
-            return new DescribedChaptersModel([], $html);
+            return new ServedChaptersModel([], $html);
         }
 
         $chapters = array_map(static fn (array $pair): EntryChapter => $pair[1], $run);
@@ -33,7 +37,7 @@ final class DescriptionChapters
             self::tidy($block);
         }
 
-        return new DescribedChaptersModel($chapters, $document->body->innerHTML ?? $html);
+        return new ServedChaptersModel($chapters, $document->body->innerHTML ?? $html);
     }
 
     /**

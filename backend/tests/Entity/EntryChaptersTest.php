@@ -42,6 +42,16 @@ final class EntryChaptersTest extends TestCase
         self::assertSame($url, $chapters->getUrl());
     }
 
+    public function testTheMaximumLengthCountsCharactersNotBytes(): void
+    {
+        $url = 'https://cdn.test/' . str_repeat('ü', EntryChapters::URL_MAX_LENGTH - \strlen('https://cdn.test/'));
+        $chapters = new EntryChapters();
+
+        $chapters->declare([], $url);
+
+        self::assertSame($url, $chapters->getUrl());
+    }
+
     public function testAnOverlongUrlIsDropped(): void
     {
         $chapters = new EntryChapters();

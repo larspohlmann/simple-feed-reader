@@ -6,7 +6,7 @@ namespace App\Service\Fetch\Model;
 
 final readonly class ApiBudgetModel
 {
-    public const float STANDARD_TIMEOUT_SECONDS = 10.0;
+    private const float STANDARD_TIMEOUT_SECONDS = 10.0;
 
     public const float STANDARD_MAX_DURATION_SECONDS = self::STANDARD_TIMEOUT_SECONDS * 2;
 

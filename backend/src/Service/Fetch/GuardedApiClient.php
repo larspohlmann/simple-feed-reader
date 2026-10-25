@@ -14,8 +14,6 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 /** One JSON call to a public API, guarded and routed like a feed fetch. A redirect is an answer. */
 final readonly class GuardedApiClient
 {
-    public const float MAX_DURATION_SECONDS = ApiBudgetModel::STANDARD_MAX_DURATION_SECONDS;
-
     public function __construct(
         private FailoverRequestSender $requestSender,
         private UrlGuard $urlGuard,

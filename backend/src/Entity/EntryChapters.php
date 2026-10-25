@@ -24,7 +24,7 @@ final class EntryChapters
     public function declare(array $chapters, ?string $url): void
     {
         $this->chapters = self::stored($chapters);
-        $this->url = $chapters === [] && $url !== null && \strlen($url) <= self::URL_MAX_LENGTH ? $url : null;
+        $this->url = $chapters === [] && $url !== null && mb_strlen($url) <= self::URL_MAX_LENGTH ? $url : null;
     }
 
     /** @param list<EntryChapter> $chapters */

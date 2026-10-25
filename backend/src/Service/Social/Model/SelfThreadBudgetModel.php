@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Social\Model;
 
 use App\Entity\ShareEnrichment;
-use App\Service\Fetch\GuardedApiClient;
+use App\Service\Fetch\Model\ApiBudgetModel;
 
 /** How many self-reply threads one pass may read, each starting only while its longest call still ends inside the lease. */
 final readonly class SelfThreadBudgetModel
@@ -27,7 +27,7 @@ final readonly class SelfThreadBudgetModel
 
     public function fitsAfter(float $elapsedSeconds): bool
     {
-        return $elapsedSeconds + GuardedApiClient::MAX_DURATION_SECONDS + self::LEASE_MARGIN_SECONDS
+        return $elapsedSeconds + ApiBudgetModel::STANDARD_MAX_DURATION_SECONDS + self::LEASE_MARGIN_SECONDS
             <= ShareEnrichment::CLAIM_LEASE_SECONDS;
     }
 }

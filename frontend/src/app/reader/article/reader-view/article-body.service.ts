@@ -113,12 +113,11 @@ export class ArticleBody {
                 ? (url) => withPlayerApi(url, window.location.origin)
                 : undefined,
           });
-          this.chapters.attach(
-            host,
-            { chapters: chapterList, heading: this.i18n.translate('reader.chapters') },
-            track,
-          );
-          this.zone.runOutsideAngular(() => this.media.follow(host));
+          const heading = this.i18n.translate('reader.chapters');
+          this.zone.runOutsideAngular(() => {
+            this.chapters.attach(host, { chapters: chapterList, heading }, track);
+            this.media.follow(host);
+          });
           parts.decorated(host);
         });
       },

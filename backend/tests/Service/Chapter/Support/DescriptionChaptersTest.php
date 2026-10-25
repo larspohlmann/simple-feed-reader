@@ -33,21 +33,24 @@ final class DescriptionChaptersTest extends TestCase
     {
         $described = DescriptionChapters::in(self::VERITASIUM);
 
-        self::assertSame('<p>Head to https://brilliant.org</p><p>▀▀▀</p><p>▀▀▀<br>A huge thanks</p>', $described->body);
+        self::assertSame(
+            '<p>Head to https://brilliant.org</p><p>▀▀▀</p><p>▀▀▀<br>A huge thanks</p>',
+            $described->contentHtml,
+        );
     }
 
     public function testKeepsTheTextAroundABlockInsideOneParagraph(): void
     {
         $described = DescriptionChapters::in('<p>Intro<br>0:00 A<br>1:00 B<br>2:00 C<br>Outro</p>');
 
-        self::assertSame('<p>Intro<br>Outro</p>', $described->body);
+        self::assertSame('<p>Intro<br>Outro</p>', $described->contentHtml);
     }
 
     public function testDropsAParagraphThatHeldOnlyTheBlock(): void
     {
         $described = DescriptionChapters::in('<p>Intro</p><p>0:00 A<br>1:00 B<br>2:00 C</p><p>Outro</p>');
 
-        self::assertSame('<p>Intro</p><p>Outro</p>', $described->body);
+        self::assertSame('<p>Intro</p><p>Outro</p>', $described->contentHtml);
     }
 
     public function testReadsBracketsSeparatorsAndHours(): void
@@ -85,7 +88,7 @@ final class DescriptionChaptersTest extends TestCase
         $described = DescriptionChapters::in($html);
 
         self::assertSame([], $described->chapters);
-        self::assertSame($html, $described->body);
+        self::assertSame($html, $described->contentHtml);
     }
 
     public function testOnlyTheFirstBlockCountsAndARepeatStays(): void
@@ -95,7 +98,7 @@ final class DescriptionChaptersTest extends TestCase
         $described = DescriptionChapters::in($html);
 
         self::assertCount(3, $described->chapters);
-        self::assertSame('<p>Deutsch:</p><p>0:00 A<br>1:00 B<br>2:00 C</p>', $described->body);
+        self::assertSame('<p>Deutsch:</p><p>0:00 A<br>1:00 B<br>2:00 C</p>', $described->contentHtml);
     }
 
     public function testKeepsABlockThatStillHoldsAnElement(): void
@@ -103,14 +106,14 @@ final class DescriptionChaptersTest extends TestCase
         $described = DescriptionChapters::in('<p><img src="x"><br>0:00 A<br>1:00 B<br>2:00 C</p>');
 
         self::assertCount(3, $described->chapters);
-        self::assertSame('<p><img src="x"></p>', $described->body);
+        self::assertSame('<p><img src="x"></p>', $described->contentHtml);
     }
 
     public function testDropsATrailingBreakFollowedByWhitespace(): void
     {
         $described = DescriptionChapters::in("<p>Intro<br>0:00 A<br>1:00 B<br>2:00 C<br> </p>");
 
-        self::assertSame('<p>Intro </p>', $described->body);
+        self::assertSame('<p>Intro </p>', $described->contentHtml);
     }
 
     public function testReadsChaptersFromParagraphsNestedInListItems(): void
@@ -120,7 +123,7 @@ final class DescriptionChaptersTest extends TestCase
         );
 
         self::assertCount(3, $described->chapters);
-        self::assertSame('', $described->body);
+        self::assertSame('', $described->contentHtml);
     }
 
     public function testDropsAnOrderedListEmptiedOfItsItemsButKeepsTheTextAround(): void
@@ -130,14 +133,14 @@ final class DescriptionChaptersTest extends TestCase
         );
 
         self::assertCount(3, $described->chapters);
-        self::assertSame('<p>Before</p><p>After</p>', $described->body);
+        self::assertSame('<p>Before</p><p>After</p>', $described->contentHtml);
     }
 
     public function testKeepsAListThatStillHoldsAnotherItem(): void
     {
         $described = DescriptionChapters::in('<ul><li>0:00 A</li><li>1:00 B</li><li>2:00 C</li><li>Links</li></ul>');
 
-        self::assertSame('<ul><li>Links</li></ul>', $described->body);
+        self::assertSame('<ul><li>Links</li></ul>', $described->contentHtml);
     }
 
     public function testReadsChaptersFromANestedListWithoutTheOuterItemText(): void
@@ -147,20 +150,20 @@ final class DescriptionChaptersTest extends TestCase
         );
 
         self::assertCount(3, $described->chapters);
-        self::assertSame('<ul><li>Intro</li></ul>', $described->body);
+        self::assertSame('<ul><li>Intro</li></ul>', $described->contentHtml);
     }
 
     public function testReturnsTheBodyVerbatimWhenNothingIsRead(): void
     {
         $html = '<p>No chapters<br />here</p>';
 
-        self::assertSame($html, DescriptionChapters::in($html)->body);
+        self::assertSame($html, DescriptionChapters::in($html)->contentHtml);
     }
 
     public function testDropsABlockLeftHoldingOnlyWhitespace(): void
     {
         $described = DescriptionChapters::in('<p>0:00 A<br>1:00 B<br>2:00 C<br> </p>');
 
-        self::assertSame('', $described->body);
+        self::assertSame('', $described->contentHtml);
     }
 }

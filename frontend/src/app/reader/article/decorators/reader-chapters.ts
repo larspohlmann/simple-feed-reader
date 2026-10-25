@@ -28,11 +28,12 @@ export function addChapterList(
   host.querySelector(`.${LIST}`)?.remove();
   if (chapters.length === 0) return null;
   const rows = chapters.map((chapter) => chapterRow(chapter));
+  let marked = -1;
   const mark = (index: number): void => {
-    for (const [at, row] of rows.entries()) {
-      if (at === index) row.setAttribute('aria-current', 'true');
-      else row.removeAttribute('aria-current');
-    }
+    if (index === marked) return;
+    rows[marked]?.removeAttribute('aria-current');
+    rows[index]?.setAttribute('aria-current', 'true');
+    marked = index;
   };
   rows.forEach((row, index) =>
     row.addEventListener('click', () => {

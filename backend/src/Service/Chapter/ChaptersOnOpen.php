@@ -20,9 +20,7 @@ final readonly class ChaptersOnOpen
     {
         $body = $entry->getContentHtml();
         if ($body !== null && self::isYouTubeVideo($entry->getUrl())) {
-            $described = DescriptionChapters::in($body);
-
-            return new ServedChaptersModel($described->chapters, $described->body);
+            return DescriptionChapters::in($body);
         }
 
         $this->filler->fillOnOpen($entry);
