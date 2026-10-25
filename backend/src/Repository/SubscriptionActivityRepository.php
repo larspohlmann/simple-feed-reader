@@ -13,10 +13,26 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
-/** What the daily history counts: subscriptions, their feeds' arrivals, their owners' opens. */
+/**
+ * What the daily history counts: subscriptions, their feeds' arrivals, their owners' opens.
+ *
+ * @phpstan-type FeedDayCount array{feedId: int, day: string, count: int}
+ * @phpstan-type SubscriptionDayCount array{subscriptionId: int, day: string, count: int}
+ * @phpstan-type FeedDayRow array{feedId: int|string, day: string, total: int|string}
+ * @phpstan-type SubscriptionDayRow array{subscriptionId: int|string, day: string, total: int|string}
+ * @phpstan-type TrackedRow array{
+ *     subscriptionId: int|string,
+ *     feedId: int|string,
+ *     createdAt: \DateTimeImmutable,
+ *     isSocial: int|string,
+ * }
+ */
 final readonly class SubscriptionActivityRepository
 {
     private const int ID_CHUNK_SIZE = 500;
+
+    /** The first ten characters are the UTC day of both MySQL's DATETIME and SQLite's 'Y-m-d H:i:s' text. */
+    private const string UTC_DAY_OF = 'SUBSTRING(%s, 1, 10)';
 
     public function __construct(private EntityManagerInterface $entityManager)
     {
@@ -37,33 +53,78 @@ final readonly class SubscriptionActivityRepository
     }
 
     /**
-     * @param list<int> $subscriptionIds
+     * @param list<int> $feedIds
      *
-     * @return list<array{subscriptionId: int, happenedAt: \DateTimeImmutable}>
+     * @return list<FeedDayCount>
      */
-    public function arrivalsSince(array $subscriptionIds, \DateTimeImmutable $since): array
+    public function arrivalCountsSince(array $feedIds, \DateTimeImmutable $since): array
     {
-        return $this->inChunks($subscriptionIds, fn (array $chunk): QueryBuilder => $this->entityManager
-            ->createQueryBuilder()
-            ->select('subscription.id AS subscriptionId', 'entry.createdAt AS happenedAt')
-            ->from(Entry::class, 'entry')
-            ->join(Subscription::class, 'subscription', 'WITH', 'subscription.feed = entry.feed')
-            ->andWhere('subscription.id IN (:subscriptionIds)')
-            ->andWhere('entry.createdAt >= :since')
-            ->setParameter('subscriptionIds', $chunk)
-            ->setParameter('since', $since, Types::DATETIME_IMMUTABLE));
+        $counts = [];
+        foreach (array_chunk($feedIds, self::ID_CHUNK_SIZE) as $chunk) {
+            foreach ($this->arrivalCountsOf($chunk, $since) as $row) {
+                $counts[] = ['feedId' => (int) $row['feedId'], 'day' => $row['day'], 'count' => (int) $row['total']];
+            }
+        }
+
+        return $counts;
     }
 
     /**
      * @param list<int> $subscriptionIds
      *
-     * @return list<array{subscriptionId: int, happenedAt: \DateTimeImmutable}>
+     * @return list<SubscriptionDayCount>
      */
-    public function viewsSince(array $subscriptionIds, \DateTimeImmutable $since): array
+    public function readCountsSince(array $subscriptionIds, \DateTimeImmutable $since): array
     {
-        return $this->inChunks($subscriptionIds, fn (array $chunk): QueryBuilder => $this->entityManager
-            ->createQueryBuilder()
-            ->select('subscription.id AS subscriptionId', 'state.viewedAt AS happenedAt')
+        $counts = [];
+        foreach (array_chunk($subscriptionIds, self::ID_CHUNK_SIZE) as $chunk) {
+            foreach ($this->readCountsOf($chunk, $since) as $row) {
+                $counts[] = [
+                    'subscriptionId' => (int) $row['subscriptionId'],
+                    'day' => $row['day'],
+                    'count' => (int) $row['total'],
+                ];
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param list<int> $feedIds
+     *
+     * @return list<FeedDayRow>
+     */
+    private function arrivalCountsOf(array $feedIds, \DateTimeImmutable $since): array
+    {
+        /** @var list<FeedDayRow> $rows */
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('IDENTITY(entry.feed) AS feedId', \sprintf(self::UTC_DAY_OF, 'entry.createdAt') . ' AS day')
+            ->addSelect('COUNT(entry.id) AS total')
+            ->from(Entry::class, 'entry')
+            ->andWhere('IDENTITY(entry.feed) IN (:feedIds)')
+            ->andWhere('entry.createdAt >= :since')
+            ->groupBy('feedId')
+            ->addGroupBy('day')
+            ->setParameter('feedIds', $feedIds)
+            ->setParameter('since', $since, Types::DATETIME_IMMUTABLE)
+            ->getQuery()
+            ->getArrayResult();
+
+        return $rows;
+    }
+
+    /**
+     * @param list<int> $subscriptionIds
+     *
+     * @return list<SubscriptionDayRow>
+     */
+    private function readCountsOf(array $subscriptionIds, \DateTimeImmutable $since): array
+    {
+        /** @var list<SubscriptionDayRow> $rows */
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('subscription.id AS subscriptionId', \sprintf(self::UTC_DAY_OF, 'state.viewedAt') . ' AS day')
+            ->addSelect('COUNT(entry.id) AS total')
             ->from(EntryState::class, 'state')
             ->join('state.entry', 'entry')
             ->join(
@@ -74,55 +135,46 @@ final readonly class SubscriptionActivityRepository
             )
             ->andWhere('subscription.id IN (:subscriptionIds)')
             ->andWhere('state.viewedAt >= :since')
-            ->setParameter('subscriptionIds', $chunk)
-            ->setParameter('since', $since, Types::DATETIME_IMMUTABLE));
+            ->groupBy('subscriptionId')
+            ->addGroupBy('day')
+            ->setParameter('subscriptionIds', $subscriptionIds)
+            ->setParameter('since', $since, Types::DATETIME_IMMUTABLE)
+            ->getQuery()
+            ->getArrayResult();
+
+        return $rows;
     }
 
     private function trackedQuery(): QueryBuilder
     {
-        return $this->entityManager->createQueryBuilder()
+        $qb = $this->entityManager->createQueryBuilder()
             ->select(
                 'subscription.id AS subscriptionId',
+                'feed.id AS feedId',
                 'subscription.createdAt AS createdAt',
                 'CASE WHEN feed.network IS NULL THEN 0 ELSE 1 END AS isSocial',
             )
             ->from(Subscription::class, 'subscription')
             ->join('subscription.feed', 'feed');
+        SavedFeedDql::exclude($qb, 'feed');
+
+        return $qb;
     }
 
     /** @return list<TrackedSubscriptionModel> */
     private function tracked(QueryBuilder $query): array
     {
-        /** @var list<array{subscriptionId: int|string, createdAt: \DateTimeImmutable, isSocial: int|string}> $rows */
+        /** @var list<TrackedRow> $rows */
         $rows = $query->getQuery()->getArrayResult();
 
         return array_map(
             static fn (array $row): TrackedSubscriptionModel => new TrackedSubscriptionModel(
                 (int) $row['subscriptionId'],
+                (int) $row['feedId'],
                 UtcDay::of($row['createdAt']),
                 (int) $row['isSocial'] === 1,
             ),
             $rows,
         );
-    }
-
-    /**
-     * @param list<int>                         $subscriptionIds
-     * @param callable(list<int>): QueryBuilder $queryFor
-     *
-     * @return list<array{subscriptionId: int, happenedAt: \DateTimeImmutable}>
-     */
-    private function inChunks(array $subscriptionIds, callable $queryFor): array
-    {
-        $instants = [];
-        foreach (array_chunk($subscriptionIds, self::ID_CHUNK_SIZE) as $chunk) {
-            /** @var list<array{subscriptionId: int|string, happenedAt: \DateTimeImmutable}> $rows */
-            $rows = $queryFor($chunk)->getQuery()->getArrayResult();
-            foreach ($rows as $row) {
-                $instants[] = ['subscriptionId' => (int) $row['subscriptionId'], 'happenedAt' => $row['happenedAt']];
-            }
-        }
-
-        return $instants;
     }
 }

@@ -23,7 +23,7 @@ final class DaySourcesTest extends TestCase
 
     public function testASocialDayBeforeItsHorizonIsUnknownUnlessStored(): void
     {
-        $social = new TrackedSubscriptionModel(1, '2026-09-01', true);
+        $social = new TrackedSubscriptionModel(1, 1, '2026-09-01', true);
         $stored = new DayCountsModel([1 => ['2026-10-17' => new DayCountModel(5, 1)]]);
 
         self::assertTrue($this->sources($stored)->isKnown($social, '2026-10-17'));
@@ -33,14 +33,14 @@ final class DaySourcesTest extends TestCase
 
     public function testAPlainFeedUsesTheLongerHorizon(): void
     {
-        $plain = new TrackedSubscriptionModel(2, '2026-09-01', false);
+        $plain = new TrackedSubscriptionModel(2, 2, '2026-09-01', false);
 
         self::assertTrue($this->sources(new DayCountsModel([]))->isKnown($plain, '2026-10-01'));
     }
 
     public function testDaysBeforeTheSubscriptionDoNotContribute(): void
     {
-        $late = new TrackedSubscriptionModel(3, '2026-10-20', false);
+        $late = new TrackedSubscriptionModel(3, 3, '2026-10-20', false);
 
         self::assertFalse($this->sources(new DayCountsModel([]))->contributes($late, '2026-10-19'));
         self::assertTrue($this->sources(new DayCountsModel([]))->contributes($late, '2026-10-20'));
@@ -49,7 +49,7 @@ final class DaySourcesTest extends TestCase
 
     public function testAStoredDayNeedsNoLiveCountAndWins(): void
     {
-        $plain = new TrackedSubscriptionModel(4, '2026-09-01', false);
+        $plain = new TrackedSubscriptionModel(4, 4, '2026-09-01', false);
         $stored = new DayCountsModel([4 => ['2026-10-10' => new DayCountModel(7, 2)]]);
         $live = new DayCountsModel([4 => ['2026-10-10' => new DayCountModel(1, 1)]]);
 
@@ -61,8 +61,8 @@ final class DaySourcesTest extends TestCase
 
     public function testOldestLiveDayIsTheEarliestDayAnySubscriptionMustCountLive(): void
     {
-        $plain = new TrackedSubscriptionModel(5, '2026-10-12', false);
-        $social = new TrackedSubscriptionModel(6, '2026-09-01', true);
+        $plain = new TrackedSubscriptionModel(5, 5, '2026-10-12', false);
+        $social = new TrackedSubscriptionModel(6, 6, '2026-09-01', true);
         $stored = new DayCountsModel([5 => ['2026-10-12' => new DayCountModel(0, 0)]]);
         $dates = ['2026-10-11', '2026-10-12', '2026-10-13', '2026-10-19', '2026-10-20'];
 

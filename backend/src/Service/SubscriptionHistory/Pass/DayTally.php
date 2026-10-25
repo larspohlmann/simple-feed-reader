@@ -9,32 +9,17 @@ use App\Service\SubscriptionHistory\Model\DayCountsModel;
 
 final class DayTally
 {
-    /** @var array<int, array<string, array{arrived?: int, read?: int}>> */
+    /** @var array<int, array<string, DayCountModel>> */
     private array $tallies = [];
 
-    public function addArrival(int $subscriptionId, string $day): void
+    public function add(int $subscriptionId, string $day, DayCountModel $count): void
     {
-        $arrived = $this->tallies[$subscriptionId][$day]['arrived'] ?? 0;
-        $this->tallies[$subscriptionId][$day]['arrived'] = $arrived + 1;
-    }
-
-    public function addRead(int $subscriptionId, string $day): void
-    {
-        $read = $this->tallies[$subscriptionId][$day]['read'] ?? 0;
-        $this->tallies[$subscriptionId][$day]['read'] = $read + 1;
+        $current = $this->tallies[$subscriptionId][$day] ?? DayCountModel::none();
+        $this->tallies[$subscriptionId][$day] = $current->plus($count);
     }
 
     public function counts(): DayCountsModel
     {
-        return new DayCountsModel(array_map(
-            static fn (array $days): array => array_map(
-                static fn (array $tally): DayCountModel => new DayCountModel(
-                    $tally['arrived'] ?? 0,
-                    $tally['read'] ?? 0,
-                ),
-                $days,
-            ),
-            $this->tallies,
-        ));
+        return new DayCountsModel($this->tallies);
     }
 }

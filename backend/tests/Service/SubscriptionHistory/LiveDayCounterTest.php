@@ -31,7 +31,7 @@ final class LiveDayCounterTest extends DbTestCase
         $state->markViewed(new \DateTimeImmutable('2026-10-10 16:00:00'));
         $this->entityManager->persist($state);
         $this->entityManager->flush();
-        $tracked = new TrackedSubscriptionModel($subscription->requireId(), '2026-10-10', false);
+        $tracked = new TrackedSubscriptionModel($subscription->requireId(), $feed->requireId(), '2026-10-10', false);
 
         $counts = new LiveDayCounter(new SubscriptionActivityRepository($this->entityManager))
             ->since([$tracked], '2026-10-10');
@@ -43,11 +43,43 @@ final class LiveDayCounterTest extends DbTestCase
         self::assertSame(1, $counts->of($subscriptionId, '2026-10-12')->arrived);
     }
 
+    public function testEverySubscriberOfAFeedGetsItsArrivalsAfterTheirOwnSubscribeDay(): void
+    {
+        $feed = new Feed('https://example.com/shared.xml');
+        $this->entityManager->persist($feed);
+        $early = $this->subscriber('early@example.com', $feed, '2026-10-09 08:00:00');
+        $late = $this->subscriber('late@example.com', $feed, '2026-10-11 08:00:00');
+        $this->entry($feed, 'first', '2026-10-11 09:00:00');
+        $this->entry($feed, 'second', '2026-10-11 10:00:00');
+        $this->entry($feed, 'third', '2026-10-12 09:00:00');
+        $this->entityManager->flush();
+
+        $counts = new LiveDayCounter(new SubscriptionActivityRepository($this->entityManager))->since([
+            new TrackedSubscriptionModel($early->requireId(), $feed->requireId(), '2026-10-09', false),
+            new TrackedSubscriptionModel($late->requireId(), $feed->requireId(), '2026-10-11', false),
+        ], '2026-10-10');
+
+        self::assertSame(2, $counts->of($early->requireId(), '2026-10-11')->arrived);
+        self::assertSame(1, $counts->of($early->requireId(), '2026-10-12')->arrived);
+        self::assertFalse($counts->has($late->requireId(), '2026-10-11'));
+        self::assertSame(1, $counts->of($late->requireId(), '2026-10-12')->arrived);
+    }
+
     public function testNoSubscriptionsCountsNothing(): void
     {
         $counts = new LiveDayCounter(new SubscriptionActivityRepository($this->entityManager))->since([], '2026-10-10');
 
         self::assertFalse($counts->has(1, '2026-10-10'));
+    }
+
+    private function subscriber(string $email, Feed $feed, string $subscribedAt): Subscription
+    {
+        $user = new User($email, new \DateTimeImmutable('2026-09-01 00:00:00'));
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable($subscribedAt));
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($subscription);
+
+        return $subscription;
     }
 
     private function entry(Feed $feed, string $guid, string $createdAt): Entry

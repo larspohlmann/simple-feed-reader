@@ -20,7 +20,7 @@ final class RetentionHorizonTest extends TestCase
     public function testAPlainFeedKeepsItsLastEntryDaysWholeAndNoMore(): void
     {
         $horizon = $this->horizon(10, 3)->asOf(self::TODAY);
-        $plain = new TrackedSubscriptionModel(1, '2026-01-01', false);
+        $plain = new TrackedSubscriptionModel(1, 1, '2026-01-01', false);
 
         self::assertTrue($horizon->isCountable($plain, '2026-10-16'));
         self::assertFalse($horizon->isCountable($plain, '2026-10-15'));
@@ -29,7 +29,7 @@ final class RetentionHorizonTest extends TestCase
     public function testASocialFeedKeepsItsLastSocialDaysWholeAndNoMore(): void
     {
         $horizon = $this->horizon(10, 3)->asOf(self::TODAY);
-        $social = new TrackedSubscriptionModel(2, '2026-01-01', true);
+        $social = new TrackedSubscriptionModel(2, 2, '2026-01-01', true);
 
         self::assertTrue($horizon->isCountable($social, '2026-10-23'));
         self::assertFalse($horizon->isCountable($social, '2026-10-22'));

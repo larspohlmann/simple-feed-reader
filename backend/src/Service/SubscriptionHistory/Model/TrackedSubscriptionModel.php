@@ -8,6 +8,7 @@ final readonly class TrackedSubscriptionModel
 {
     public function __construct(
         public int $subscriptionId,
+        public int $feedId,
         public string $createdDay,
         public bool $isSocial,
     ) {

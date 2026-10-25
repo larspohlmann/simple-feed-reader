@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\SubscriptionHistory;
 
 use App\Repository\SubscriptionActivityRepository;
+use App\Service\SubscriptionHistory\Model\DayCountModel;
 use App\Service\SubscriptionHistory\Model\DayCountsModel;
 use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
 use App\Service\SubscriptionHistory\Pass\DayTally;
@@ -22,24 +23,34 @@ final readonly class LiveDayCounter
      */
     public function since(array $subscriptions, string $oldestDay): DayCountsModel
     {
-        $createdDays = [];
-        foreach ($subscriptions as $subscription) {
-            $createdDays[$subscription->subscriptionId] = $subscription->createdDay;
-        }
-        $subscriptionIds = array_keys($createdDays);
         $since = UtcDay::start($oldestDay);
         $tally = new DayTally();
-
-        foreach ($this->activity->arrivalsSince($subscriptionIds, $since) as $arrival) {
-            $day = UtcDay::of($arrival['happenedAt']);
-            if ($day > $createdDays[$arrival['subscriptionId']]) {
-                $tally->addArrival($arrival['subscriptionId'], $day);
-            }
-        }
-        foreach ($this->activity->viewsSince($subscriptionIds, $since) as $view) {
-            $tally->addRead($view['subscriptionId'], UtcDay::of($view['happenedAt']));
+        $this->tallyArrivals($tally, $subscriptions, $since);
+        foreach ($this->activity->readCountsSince(TrackedSubscriptionModel::idsOf($subscriptions), $since) as $reads) {
+            $tally->add($reads['subscriptionId'], $reads['day'], new DayCountModel(0, $reads['count']));
         }
 
         return $tally->counts();
+    }
+
+    /**
+     * @param list<TrackedSubscriptionModel> $subscriptions
+     */
+    private function tallyArrivals(DayTally $tally, array $subscriptions, \DateTimeImmutable $since): void
+    {
+        $subscribersByFeed = [];
+        foreach ($subscriptions as $subscription) {
+            $subscribersByFeed[$subscription->feedId][] = $subscription;
+        }
+
+        foreach ($this->activity->arrivalCountsSince(array_keys($subscribersByFeed), $since) as $arrivals) {
+            $subscribers = array_filter(
+                $subscribersByFeed[$arrivals['feedId']],
+                static fn (TrackedSubscriptionModel $subscriber): bool => $arrivals['day'] > $subscriber->createdDay,
+            );
+            foreach ($subscribers as $subscriber) {
+                $tally->add($subscriber->subscriptionId, $arrivals['day'], new DayCountModel($arrivals['count'], 0));
+            }
+        }
     }
 }
