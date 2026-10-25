@@ -28,6 +28,8 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     private const float TIMEOUT_SECONDS = 10.0;
     private const int MAXIMUM_RESPONSE_BYTES = 4 * 1024 * 1024;
     private const string TEXT_OUTPUT = 'text';
+    // Anthropic refuses its model listing without it; every other provider ignores the header.
+    private const string ANTHROPIC_VERSION = '2023-06-01';
     private const array SCORING_OUTPUTS = [
         'decisions' => ScoringProtocol::SystemOne,
         'rerank' => ScoringProtocol::Rerank,
@@ -85,6 +87,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
                 // No transparent compression, so the wire cap below also bounds the decompressed body.
                 'Accept-Encoding' => 'identity',
                 'User-Agent' => $this->userAgent,
+                'anthropic-version' => self::ANTHROPIC_VERSION,
                 ...$credentials->authorizationHeaders(),
             ],
             'timeout' => self::TIMEOUT_SECONDS,
@@ -178,7 +181,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     /** @param array<mixed> $entry */
     private static function reportedContextWindow(array $entry): ?int
     {
-        foreach (['context_length', 'max_context_length'] as $field) {
+        foreach (['context_length', 'max_context_length', 'max_input_tokens'] as $field) {
             if (isset($entry[$field]) && \is_int($entry[$field]) && $entry[$field] > 0) {
                 return $entry[$field];
             }

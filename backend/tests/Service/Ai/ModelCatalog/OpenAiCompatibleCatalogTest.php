@@ -87,6 +87,10 @@ final class OpenAiCompatibleCatalogTest extends TestCase
             ],
             new ModelDescriptor('acme/rerank-1', 4_096, ScoringProtocol::Rerank),
         ];
+        yield 'a model reporting max_input_tokens (Anthropic)' => [
+            ['id' => 'claude-haiku-5-5', 'max_input_tokens' => 1_000_000],
+            new ModelDescriptor('claude-haiku-5-5', 1_000_000),
+        ];
         yield 'an image model' => [self::entry('bytedance-seed/seedream-5-0-flash', 0, ['image']), null];
         yield 'an embedding model' => [self::entry('liquid/lfm-2.5-embedding-350m:free', 512, ['embeddings']), null];
         yield 'decisions beside another output' => [self::entry('acme/mixed-1', 32_000, ['decisions', 'rerank']), null];
@@ -193,19 +197,12 @@ final class OpenAiCompatibleCatalogTest extends TestCase
      */
     public function testAKeylessCredentialSendsNoAuthorizationHeader(): void
     {
-        $seen = [];
-        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
-            $seen = ['headers' => $options['headers'] ?? []];
+        $headers = $this->headersSentFor(
+            ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', ''),
+        );
 
-            return new MockResponse('{"data":[{"id":"gpt-4o"}]}');
-        });
-
-        $credentials = ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', '');
-        (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($credentials);
-
-        /** @var array{headers: array<int, string>} $seen */
         $authorizationHeaders = array_filter(
-            $seen['headers'],
+            $headers,
             static fn (string $header): bool => str_starts_with($header, 'Authorization:'),
         );
         self::assertSame([], $authorizationHeaders);
@@ -213,17 +210,30 @@ final class OpenAiCompatibleCatalogTest extends TestCase
 
     public function testItRefusesTransparentCompression(): void
     {
-        $seen = [];
-        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
-            $seen = ['headers' => $options['headers'] ?? []];
+        self::assertContains('Accept-Encoding: identity', $this->headersSentFor($this->credentials()));
+    }
 
-            return new MockResponse('{"data":[{"id":"gpt-4o"}]}');
-        });
+    public function testItSendsTheAnthropicVersionHeader(): void
+    {
+        self::assertContains('anthropic-version: 2023-06-01', $this->headersSentFor($this->credentials()));
+    }
 
-        (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
+    /** @return array<int, string> */
+    private function headersSentFor(ProviderCredentialsModel $credentials): array
+    {
+        $headers = [];
+        $client = new MockHttpClient(
+            static function (string $method, string $url, array $options) use (&$headers): MockResponse {
+                $headers = $options['headers'] ?? [];
 
-        /** @var array{headers: array<int, string>} $seen */
-        self::assertContains('Accept-Encoding: identity', $seen['headers']);
+                return new MockResponse('{"data":[{"id":"gpt-4o"}]}');
+            },
+        );
+
+        (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($credentials);
+
+        /** @var array<int, string> $headers */
+        return $headers;
     }
 
     public function testABodyPastTheOldOneMebibyteCapIsStillRead(): void
