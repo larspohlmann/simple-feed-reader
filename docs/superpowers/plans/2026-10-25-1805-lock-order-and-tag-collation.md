@@ -1,5 +1,7 @@
 # Social Import Lock Order and Tag-Name Collation — Implementation Plan
 
+> **Amended during execution:** the collation is `utf8mb4_0900_bin`, not `utf8mb4_bin` — `utf8mb4_bin` is PAD SPACE ('Tech' = 'Tech '), which would reopen the unique-violation crash for trailing-space twins.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Fix the two defects in issue #1805. The social import takes the tag lock before it writes anything. Tag names that differ only by an accent become two tags instead of crashing an import.
