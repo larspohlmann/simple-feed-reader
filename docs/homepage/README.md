@@ -16,39 +16,38 @@ site is a plain tree with nothing outside it.
 
 ## Deployment
 
-`.github/workflows/deploy-homepage.yml` mirrors this folder to a subfolder of
-lars-pohlmann.de over SFTP, on every push to `develop` that touches
-`docs/homepage/` or `docs/screenshots/`, and on demand from the Actions tab.
-It is the maintainer's personal deployment, like `deploy/strato/`; nothing
-else in the repository depends on it.
+`.github/workflows/deploy-homepage.yml` rsyncs this folder over SSH into
+`~/larspohlmann/simplefeedreader` on the Strato host, a subfolder of the
+portfolio docroot beside the app's own `reader` mount
+([`deploy/strato/README.md`](../../deploy/strato/README.md)). It runs on every
+push to `develop` that touches `docs/homepage/` or `docs/screenshots/`, and on
+demand from the Actions tab. It is the maintainer's personal deployment, like
+`deploy/strato/`; nothing else in the repository depends on it.
 
-It needs four repository secrets, named after the markdownobserver site's deploy
-so the same values can be pasted across:
-
-| Secret | Value |
-|---|---|
-| `WEB_FTP_SERVER` | the SFTP host |
-| `WEB_FTP_USERNAME` | the SFTP user |
-| `WEB_FTP_PASSWORD` | its password |
-| `WEB_FTP_SERVER_DIR` | **this page's own subfolder** of the docroot, e.g. `larspohlmann/simplefeedreader` |
+It reaches the host the way the app deploy does and needs no secrets of its
+own: `STRATO_SSH_HOST`, `STRATO_SSH_USER`, `STRATO_SSH_KEY` and
+`STRATO_KNOWN_HOSTS`, which already exist. The target folder is the
+`HOMEPAGE_PATH` value at the top of the workflow, not a secret: the docroot is
+public knowledge in the Strato README, and the name has to match the exclusion
+below.
 
 ### Why nothing overwrites anything
 
 Three deployments share one docroot on the host. Each stays in its lane by
 construction, not by timing:
 
-- **This workflow** mirrors with `--delete` into `WEB_FTP_SERVER_DIR` only.
-  lftp prunes inside the directory it is pointed at and nowhere else, so the
+- **This workflow** rsyncs with `--delete` into `HOMEPAGE_PATH` only. rsync
+  prunes inside the directory it is pointed at and nowhere else, so the
   portfolio homepage and the sibling project folders are out of reach. The
-  workflow refuses an empty or root `WEB_FTP_SERVER_DIR`, which would widen
-  that to the whole docroot.
+  workflow refuses a path that is not a subfolder of the docroot, which would
+  widen that to the docroot or to the home directory.
 - **The markdownobserver site** mirrors its `webpage/` into its own subfolder
   the same way, so it cannot reach this one.
 - **The portfolio homepage** (`larspohlmann/homepage`) mirrors its repository
   root into the docroot with `--delete`, and keeps the project folders alive
   only by excluding each one by name. **It must exclude this folder too**, or
   its next deploy removes the page. The one-line change in its
-  `.github/workflows/deploy.yml`, with the name matching `WEB_FTP_SERVER_DIR`:
+  `.github/workflows/deploy.yml`, with the name matching `HOMEPAGE_PATH`:
 
   ```diff
   -            printf 'mirror --reverse --delete --verbose -X ".git/" -X ".git*" -X ".github/" -X ".claude/" -X ".idea/" -X "CLAUDE.md" -X ".gitignore" -X "*.bck" -X "inseason/" -X "markdownobserver/" -X "simplesobertracker/" -X "smbwifianalyzer/" -X "reader" . %s\n' "$SFTP_SERVER_DIR"
