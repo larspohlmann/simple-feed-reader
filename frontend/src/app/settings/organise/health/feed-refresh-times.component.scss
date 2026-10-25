@@ -26,6 +26,11 @@
   white-space: nowrap;
 }
 
+// A long German age ("vor 365 Tagen") outgrows the cell; it truncates rather
+// than run into the next column, and the tooltip keeps the full timestamp.
 .value {
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-muted);
+  text-overflow: ellipsis;
 }
