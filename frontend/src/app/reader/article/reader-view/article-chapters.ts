@@ -7,7 +7,7 @@ import { ChapterList, addChapterList } from '../decorators/reader-chapters';
 
 const API_PLAYER = 'iframe[src*="enablejsapi=1"]';
 
-/** One rendered body's chapter list and the player it drives: the video's API player, else the episode (#1808). */
+/** One rendered body's chapter list and the player it drives: the episode, else the video's API player (#1808). */
 export class ArticleChapters {
   private player: ChapterPlayer | null = null;
   private list: HTMLElement | null = null;
@@ -20,12 +20,15 @@ export class ArticleChapters {
   attach(host: HTMLElement, list: ChapterList, track: AudioTrack | null): void {
     this.release();
     if (list.chapters.length === 0) return;
+    if (track) {
+      this.player = new AudioChapterPlayer(this.audio, track, this.injector);
+      this.list = addChapterList({ host, after: null }, list, this.player);
+      return;
+    }
     const frame = host.querySelector<HTMLIFrameElement>(API_PLAYER);
-    this.player = this.playerFor(frame, track);
-    if (!this.player) return;
-    const after = frame
-      ? (frame.closest('.reader-cinema') ?? frame.closest('.reader-embed'))
-      : null;
+    if (!frame) return;
+    this.player = new YouTubeChapterPlayer(frame);
+    const after = frame.closest('.reader-cinema') ?? frame.closest('.reader-embed');
     this.list = addChapterList({ host, after }, list, this.player);
   }
 
@@ -34,13 +37,5 @@ export class ArticleChapters {
     this.player = null;
     this.list?.remove();
     this.list = null;
-  }
-
-  private playerFor(
-    frame: HTMLIFrameElement | null,
-    track: AudioTrack | null,
-  ): ChapterPlayer | null {
-    if (frame) return new YouTubeChapterPlayer(frame);
-    return track ? new AudioChapterPlayer(this.audio, track, this.injector) : null;
   }
 }

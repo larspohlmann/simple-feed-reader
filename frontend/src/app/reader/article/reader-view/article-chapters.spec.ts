@@ -51,6 +51,20 @@ describe('ArticleChapters', () => {
     expect(host.firstElementChild?.classList.contains('reader-chapters')).toBe(true);
   });
 
+  it('drives the episode, not a video its notes embed', () => {
+    const audio = TestBed.inject(AudioPlayerService);
+    const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
+    const host = document.createElement('div');
+    host.innerHTML =
+      '<div class="reader-cinema"><div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x"></iframe></div></div><p>Notes</p>';
+
+    chapters().attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
+    host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+
+    expect(host.firstElementChild?.classList.contains('reader-chapters')).toBe(true);
+    expect(playFrom).toHaveBeenCalledWith(TRACK, 60);
+  });
+
   it('adds nothing without a player to drive', () => {
     const host = document.createElement('div');
     host.innerHTML = '<p>Notes</p>';

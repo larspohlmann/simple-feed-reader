@@ -105,16 +105,18 @@ export class ArticleBody {
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
           if (!host || this.destroyed) return;
+          const track = parts.audioTrack();
           decorateArticle(host, this.i18n, {
             enclosureUrl: parts.enclosureUrl(),
-            frameUrl: chapterList.length
-              ? (url) => withPlayerApi(url, window.location.origin)
-              : undefined,
+            frameUrl:
+              chapterList.length && !track
+                ? (url) => withPlayerApi(url, window.location.origin)
+                : undefined,
           });
           this.chapters.attach(
             host,
             { chapters: chapterList, heading: this.i18n.translate('reader.chapters') },
-            parts.audioTrack(),
+            track,
           );
           this.zone.runOutsideAngular(() => this.media.follow(host));
           parts.decorated(host);

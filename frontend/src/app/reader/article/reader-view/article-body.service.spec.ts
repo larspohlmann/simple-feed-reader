@@ -288,6 +288,18 @@ describe('ArticleBody', () => {
       expect(content.querySelector('.reader-chapters')).toBeNull();
     });
 
+    it("keeps an episode's chapters on the episode when its notes embed a video", async () => {
+      chapters.set(CHAPTERS);
+      audioTrack.set(EPISODE);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      expect(content.querySelector('iframe')!.getAttribute('src')).toBe(
+        'https://www.youtube-nocookie.com/embed/JsBZOcqZerk',
+      );
+      expect(content.firstElementChild!.classList).toContain('reader-chapters');
+    });
+
     it('decorates again when the chapters arrive after the body', async () => {
       audioTrack.set(EPISODE);
       connectBody('<p>Notes</p>');
