@@ -31,15 +31,14 @@ final readonly class BulkTagger
 
     public function tag(BulkSubscribeBatch $batch, Subscription $subscription, BulkSubscribeItemModel $item): void
     {
-        $outerNames = $this->keptPath($item->tagPath);
-        $innermostName = array_pop($outerNames);
+        $names = array_reverse($this->keptPath($item->tagPath));
+        $innermostName = array_shift($names);
         if ($innermostName === null) {
             return;
         }
         $tag = $this->existingTag($batch, $innermostName) ?? $this->newTag($batch, $innermostName, $item->tagStyle);
-        $batch->rememberTag($innermostName, $tag);
         $this->joinTag($batch->positions, $subscription, $tag);
-        $this->nestUnder($batch, $tag, array_reverse($outerNames));
+        $this->nestUnder($batch, $tag, $names);
     }
 
     /**
@@ -75,27 +74,34 @@ final readonly class BulkTagger
             return $tag->getParent() === $existing ? $existing : null;
         }
         if ($existing !== null) {
-            $batch->rememberTag($parentName, $existing);
-
-            return $batch->tagTree->fitsUnder($tag, $existing) ? $this->nest($batch, $tag, $existing) : null;
+            return $batch->tagTree->fitsUnder($tag, $existing) ? $this->nest($tag, $existing) : null;
         }
 
         return $batch->tagTree->fitsUnderANewTag($tag)
-            ? $this->nest($batch, $tag, $this->newTag($batch, $parentName, null))
+            ? $this->nest($tag, $this->newTag($batch, $parentName, null))
             : null;
     }
 
-    private function nest(BulkSubscribeBatch $batch, Tag $tag, Tag $parent): Tag
+    private function nest(Tag $tag, Tag $parent): Tag
     {
         $tag->setParent($parent);
-        $batch->tagTree->nest($tag, $parent);
 
         return $parent;
     }
 
     private function existingTag(BulkSubscribeBatch $batch, string $name): ?Tag
     {
-        return $batch->tagNamed($name) ?? $this->tags->findOneByNameForUser($batch->user->requireId(), $name);
+        return $batch->tagNamed($name) ?? $this->storedTag($batch, $name);
+    }
+
+    private function storedTag(BulkSubscribeBatch $batch, string $name): ?Tag
+    {
+        $tag = $this->tags->findOneByNameForUser($batch->user->requireId(), $name);
+        if ($tag !== null) {
+            $batch->rememberTag($name, $tag);
+        }
+
+        return $tag;
     }
 
     private function newTag(BulkSubscribeBatch $batch, string $name, ?TagStyleModel $style): Tag

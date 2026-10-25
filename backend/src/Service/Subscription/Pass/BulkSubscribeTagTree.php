@@ -10,25 +10,20 @@ use App\Service\Tag\Pass\TagTree;
 /** The user's tags as this batch leaves them, keyed by spl_object_id: a tag created here has no id until the flush. */
 final class BulkSubscribeTagTree
 {
-    /** @var array<int, int|null> parent key by tag key */
-    private array $parentKeys = [];
+    /** @var array<int, Tag> by spl_object_id */
+    private array $tags = [];
 
     /** @param list<Tag> $storedTags */
     public function __construct(array $storedTags)
     {
         foreach ($storedTags as $tag) {
-            $this->parentKeys[spl_object_id($tag)] = self::keyOf($tag->getParent());
+            $this->add($tag);
         }
     }
 
     public function add(Tag $tag): void
     {
-        $this->parentKeys[spl_object_id($tag)] = null;
-    }
-
-    public function nest(Tag $tag, Tag $parent): void
-    {
-        $this->parentKeys[spl_object_id($tag)] = spl_object_id($parent);
+        $this->tags[spl_object_id($tag)] = $tag;
     }
 
     public function fitsUnder(Tag $tag, Tag $parent): bool
@@ -43,11 +38,9 @@ final class BulkSubscribeTagTree
 
     private function tree(): TagTree
     {
-        return new TagTree($this->parentKeys);
-    }
-
-    private static function keyOf(?Tag $tag): ?int
-    {
-        return $tag === null ? null : spl_object_id($tag);
+        return new TagTree(array_map(
+            static fn (Tag $tag): ?int => $tag->getParent() === null ? null : spl_object_id($tag->getParent()),
+            $this->tags,
+        ));
     }
 }

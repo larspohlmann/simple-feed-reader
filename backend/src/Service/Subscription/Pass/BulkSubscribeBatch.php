@@ -19,9 +19,6 @@ final class BulkSubscribeBatch
     /** @var array<string, Tag> keyed by lowercased name: items naming one tag share one unflushed row */
     private array $tagsByName = [];
 
-    /** @var list<Tag> */
-    private array $tagsCreated = [];
-
     public function __construct(
         /** @noinspection AutowireWrongClass Built with new, never autowired */
         public readonly User $user,
@@ -34,7 +31,7 @@ final class BulkSubscribeBatch
 
     public function result(): BulkSubscribeResultModel
     {
-        return $this->result->with(tagsCreated: $this->tagsCreated);
+        return $this->result;
     }
 
     public function hasSubscribed(string $url): bool
@@ -61,7 +58,7 @@ final class BulkSubscribeBatch
     {
         $this->rememberTag($name, $tag);
         $this->tagTree->add($tag);
-        $this->tagsCreated[] = $tag;
+        $this->result = $this->result->with(tagsCreated: [$tag]);
     }
 
     public function countInvalid(): void

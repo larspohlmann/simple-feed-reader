@@ -319,6 +319,32 @@ final class BulkSubscriberTest extends DbTestCase
         );
     }
 
+    public function testAStoredTagFoundOnceIsNotLookedUpAgainAsAnOuterName(): void
+    {
+        $user = $this->user('stored-lookup@example.com');
+        $stored = new Tag($user, 'Tech');
+        $this->entityManager->persist($stored);
+        $this->entityManager->flush();
+        $subscriber = $this->subscriber();
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $result = $subscriber->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://tech.example.com/rss.xml', 'Tech Feed', ['Tech']),
+            new BulkSubscribeItemModel('https://web.example.com/rss.xml', 'Web Feed', ['Tech', 'Web']),
+        ]);
+
+        self::assertSame(['Web'], $this->namesOf($result->tagsCreated));
+        self::assertSame($stored, $result->tagsCreated[0]->getParent());
+        self::assertCount(
+            2,
+            $recorder->queriesMatching('lower('),
+            'one lookup for Tech, found as the first item\'s tag, and one for the new Web; Tech as Web\'s parent '
+            . 'is answered by the batch',
+        );
+    }
+
     public function testAThreeLevelPathNestsEachTagUnderTheNext(): void
     {
         $user = $this->user('three-levels@example.com');

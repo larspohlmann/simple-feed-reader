@@ -21,8 +21,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Subscribes a batch of feeds in one unit of work without fetching anything, for OPML import and the onboarding
- * catalog alike. Nothing flushes until the end, so a BulkSubscribeBatch stands in for the rows this batch created.
+ * Subscribes a batch of feeds in one unit of work without fetching anything. Nothing flushes until the end, so a
+ * BulkSubscribeBatch stands in for the rows this batch created.
  */
 final readonly class BulkSubscriber
 {
