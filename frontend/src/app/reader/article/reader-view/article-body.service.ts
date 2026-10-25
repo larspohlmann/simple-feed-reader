@@ -93,7 +93,7 @@ export class ArticleBody {
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
           if (!host || this.destroyed) return;
-          decorateArticle(host, this.i18n, parts.enclosureUrl());
+          decorateArticle(host, this.i18n, { enclosureUrl: parts.enclosureUrl() });
           this.zone.runOutsideAngular(() => this.media.follow(host));
           parts.decorated(host);
         });
