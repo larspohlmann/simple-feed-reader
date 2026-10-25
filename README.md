@@ -311,6 +311,8 @@ The manual walkthrough lives in [docs/local-docker.md](docs/local-docker.md).
   stack: MySQL or SQLite, real mail transport, TLS or reverse proxy, updates,
   backups.
 - **First-run setup:** creating the initial admin — see [docs/first-run-setup.md](docs/first-run-setup.md).
+- [The project homepage](docs/homepage/README.md) — the static page in
+  `docs/homepage/`, its screenshots shared with the gallery, and how it deploys.
 - [Cutting a release](docs/releasing.md) — how a `vX.Y.Z` tag on `main` becomes
   the version the install and update scripts hand to users.
 - [Design spec](docs/superpowers/specs/2026-07-21-simple-feed-reader-design.md)

@@ -1,0 +1,86 @@
+# Personal deployment of the project homepage (docs/homepage) to the maintainer's
+# Strato shared hosting, as a subfolder of lars-pohlmann.de. Not part of CI and
+# not needed by anyone else working on this project -- see docs/homepage/README.md.
+#
+# Deliberately shaped like the markdownobserver site's deploy: one lftp mirror of
+# one folder into one server directory. `mirror --delete` prunes only inside the
+# directory it is pointed at, so this workflow can never touch the portfolio
+# homepage or any sibling project folder on the same host. The reverse guarantee
+# -- the portfolio's root mirror leaving this folder alone -- is an exclusion in
+# that repository's workflow, listed in the README.
+#
+# The page references docs/screenshots through a symlink, so the screenshots
+# have one source in the repository. The staging copy below dereferences it;
+# the page goes out with whatever screenshots develop carries at that moment.
+name: Deploy homepage
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'docs/homepage/**'
+      - 'docs/screenshots/**'
+      - '.github/workflows/deploy-homepage.yml'
+  workflow_dispatch:
+
+# One deploy at a time, and never cancel a mirror in progress: a run killed
+# halfway leaves the site half old, half new until the next one completes.
+concurrency:
+  group: deploy-homepage
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.repository == 'larspohlmann/simple-feed-reader'
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
+
+      # `cp -RL` follows the screenshots symlink, so the staged folder is a plain
+      # tree lftp can mirror. The README documents the deployment; it is not part
+      # of the site.
+      - name: Stage the site
+        run: |
+          cp -RL docs/homepage site
+          rm -f site/README.md
+          test -f site/index.html
+          test -d site/screenshots
+          echo "Staged $(find site -type f | wc -l) files"
+
+      - name: Deploy via SFTP
+        env:
+          SFTP_SERVER: ${{ secrets.WEB_FTP_SERVER }}
+          SFTP_USERNAME: ${{ secrets.WEB_FTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.WEB_FTP_PASSWORD }}
+          SFTP_SERVER_DIR: ${{ secrets.WEB_FTP_SERVER_DIR }}
+        run: |
+          # The server directory is this page's own subfolder of the docroot and
+          # nothing wider: `mirror --delete` removes everything under it that the
+          # staged site does not contain. An empty value would make that the
+          # SFTP login directory, i.e. the whole docroot, so refuse it outright.
+          if [ -z "$SFTP_SERVER_DIR" ] || [ "$SFTP_SERVER_DIR" = "/" ] || [ "$SFTP_SERVER_DIR" = "." ]; then
+            echo "WEB_FTP_SERVER_DIR must name the homepage's own subfolder on the host" >&2
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SFTP_SERVER" >> ~/.ssh/known_hosts 2>/dev/null
+          {
+            echo 'set sftp:connect-program ""'
+            echo 'set sftp:auto-confirm yes'
+            echo 'set net:max-retries 3'
+            printf 'open -u "%s,%s" sftp://%s\n' "$SFTP_USERNAME" "$SFTP_PASSWORD" "$SFTP_SERVER"
+            printf 'mirror --reverse --delete --verbose site/ %s\n' "$SFTP_SERVER_DIR"
+            echo 'bye'
+          } > /tmp/deploy.lftp
+          lftp -f /tmp/deploy.lftp

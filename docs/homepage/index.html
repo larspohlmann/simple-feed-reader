@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>simple-feed-reader — your feeds, laid out like a magazine</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 20 20%27%3E%3Ccircle cx=%273%27 cy=%2717%27 r=%272%27 fill=%27%233f8676%27/%3E%3Cpath d=%27M3 10a7 7 0 0 1 7 7M3 3a14 14 0 0 1 14 14%27 fill=%27none%27 stroke=%27%233f8676%27 stroke-width=%272.4%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<meta name="description" content="A self-hosted RSS/Atom reader for you alone or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.">
+<style>
+:root{
+  --surface-0:#f5f5f4;--surface-1:#fff;--surface-2:#fff;--surface-sunken:#f2f2f0;
+  --border:#e4e4e2;--border-strong:#d4d4d1;
+  --text-primary:#2a2a2a;--text-secondary:#5f5f5c;--text-muted:#8f8f8b;
+  --accent:#3f8676;--accent-soft:#e9f1ef;--on-accent:#fff;
+  --radius:8px;--radius-lg:12px;--radius-pill:999px;
+  --space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;--space-8:72px;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --measure:1120px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --surface-0:#161616;--surface-1:#1c1c1c;--surface-2:#242424;--surface-sunken:#171717;
+  --border:#2a2a2a;--border-strong:#383836;
+  --text-primary:#c2c2c0;--text-secondary:#9a9a97;--text-muted:#6a6a67;
+  --accent:#5aa694;--accent-soft:#20302c;--on-accent:#0f1a17;
+}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--font);font-size:15px;line-height:1.5;color:var(--text-primary);background:var(--surface-0);overflow-wrap:anywhere}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+img{display:block;max-width:100%;height:auto}
+.wrap{max-width:var(--measure);margin:0 auto;padding:0 var(--space-4)}
+h1,h2,h3{line-height:1.25;margin:0;letter-spacing:-.01em}
+h2{font-size:24px}
+p{margin:0}
+.muted{color:var(--text-secondary)}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--surface-1) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;gap:var(--space-5);height:56px}
+.brand{display:flex;align-items:center;gap:var(--space-2);font-weight:600;color:var(--text-primary)}
+.brand svg{width:20px;height:20px}
+.nav nav{margin-left:auto;display:flex;gap:var(--space-5);font-size:13px}
+.nav nav a{color:var(--text-secondary)}
+.btn{display:inline-flex;align-items:center;gap:var(--space-2);height:40px;padding:0 var(--space-4);border-radius:var(--radius);font-weight:600;font-size:14px;border:1px solid var(--border-strong);color:var(--text-primary);background:var(--surface-1)}
+.btn:hover{text-decoration:none;border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.btn.sm{height:32px;padding:0 var(--space-3);font-size:13px}
+
+/* hero */
+.hero{padding:var(--space-8) 0 var(--space-6)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--space-7);align-items:center}
+.hero h1{font-size:44px;font-weight:700;letter-spacing:-.025em}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero .lede{font-size:18px;margin-top:var(--space-4);max-width:34ch}
+.hero .actions{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-5)}
+.hero .meta{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4);margin-top:var(--space-5);font-size:13px;color:var(--text-muted)}
+.shot{border-radius:var(--radius-lg);border:1px solid var(--border);box-shadow:0 20px 50px -20px rgb(0 0 0/.35);overflow:hidden;background:var(--surface-1)}
+.shot img{width:100%}
+.dark-only{display:none}@media (prefers-color-scheme:dark){.dark-only{display:block}.light-only{display:none}}
+
+/* sections */
+section{padding:var(--space-8) 0}
+section + section{border-top:1px solid var(--border)}
+.sect-head{max-width:60ch;margin-bottom:var(--space-6)}
+.sect-head h2{margin-top:var(--space-2)}
+.sect-head p{margin-top:var(--space-3);font-size:16px}
+
+.layouts{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5)}
+.layouts figure{margin:0}
+.layouts figcaption{margin-top:var(--space-3)}
+.layouts figcaption strong{display:block}
+.layouts figcaption span{color:var(--text-secondary);font-size:14px}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4)}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5)}
+.card .ic{width:36px;height:36px;border-radius:var(--radius);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin-bottom:var(--space-4)}
+.card .ic svg{width:20px;height:20px}
+.card h3{font-size:16px;margin-bottom:var(--space-2)}
+.card p{color:var(--text-secondary);font-size:14px}
+
+.phones{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4);margin-top:var(--space-6)}
+.phones .shot{border-radius:20px}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-7);align-items:center}
+.split ul{margin:var(--space-4) 0 0;padding:0;list-style:none;display:grid;gap:var(--space-3)}
+.split li{display:flex;gap:var(--space-3);color:var(--text-secondary)}
+.split li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:9px}
+.split li strong{color:var(--text-primary)}
+
+/* install */
+.install{background:var(--surface-1)}
+pre{margin:var(--space-5) 0 0;padding:var(--space-4) var(--space-5);background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--radius-lg);font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto;color:var(--text-primary)}
+pre .c{color:var(--text-muted)}
+.pkgs{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4);margin-top:var(--space-6)}
+.pkg{border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5);background:var(--surface-0)}
+.pkg .k{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:var(--radius);background:var(--accent);color:var(--on-accent);font-weight:700;font-size:16px}
+.pkg h3{margin:var(--space-3) 0 var(--space-2);font-size:16px}
+.pkg p{font-size:14px;color:var(--text-secondary)}
+.pkg .ram{margin-top:var(--space-3);font-size:13px;color:var(--text-muted)}
+.note{margin-top:var(--space-5);font-size:13px;color:var(--text-muted)}
+
+footer{border-top:1px solid var(--border);padding:var(--space-6) 0;font-size:13px;color:var(--text-muted)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:var(--space-4) var(--space-5);align-items:center}
+footer nav{display:flex;flex-wrap:wrap;gap:var(--space-4)}
+footer nav a{color:var(--text-secondary)}
+footer .copy{margin-left:auto}
+
+@media (max-width:900px){
+  .hero .wrap,.split{grid-template-columns:1fr}
+  .hero h1{font-size:36px}
+  .layouts,.grid,.pkgs{grid-template-columns:1fr 1fr}
+  .phones{grid-template-columns:repeat(4,1fr)}
+}
+@media (max-width:560px){
+  .nav nav{display:none}
+  .layouts,.grid,.pkgs{grid-template-columns:1fr}
+  .phones{grid-template-columns:1fr 1fr}
+  section{padding:var(--space-7) 0}
+  .hero{padding-top:var(--space-6)}
+  .hero h1{font-size:32px}
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="3" cy="17" r="2" fill="var(--accent)"/><path d="M3 10a7 7 0 0 1 7 7M3 3a14 14 0 0 1 14 14" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/></svg>
+      simple-feed-reader
+    </a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#mobile">Mobile</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/docs/screenshots.md">Screenshots</a>
+      <a href="https://github.com/larspohlmann/simple-feed-reader">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <p class="eyebrow">Self-hosted · multi-user · open source</p>
+      <h1 style="margin-top:12px">Your feeds, laid out <em>like a magazine.</em></h1>
+      <p class="lede muted">An RSS/Atom reader you run yourself — for you alone or for several users. Articles, podcasts, YouTube channels, Bluesky and Mastodon, in one calm reading column.</p>
+      <div class="actions">
+        <a class="btn primary" href="#install">Run it with Docker</a>
+        <a class="btn" href="https://github.com/larspohlmann/simple-feed-reader">View on GitHub</a>
+      </div>
+      <div class="meta"><span>MIT licensed</span><span>·</span><span>Light &amp; dark themes</span><span>·</span><span>English &amp; German</span><span>·</span><span>One command to install</span></div>
+    </div>
+    <div class="shot">
+      <img class="light-only" src="screenshots/magazine-light.webp" width="1920" height="1200" alt="The magazine layout: one reading column of varied cards, with the sidebar of feeds, tags and saved searches">
+      <img class="dark-only" src="screenshots/magazine-dark.webp" width="1920" height="1200" alt="The magazine layout, dark theme">
+    </div>
+  </div>
+</section>
+
+<section id="layouts">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="eyebrow">Three ways to read</p>
+      <h2>Magazine, two-pane, or compact list.</h2>
+      <p class="muted">Switch any time. The magazine gives the lead story the big image; the two-pane view keeps the article beside the list with a draggable split; the list is one line per entry for working through a lot fast.</p>
+    </div>
+    <div class="layouts">
+      <figure><div class="shot"><img src="screenshots/magazine-airy-dark.webp" alt="The airy magazine style, dark theme"></div><figcaption><strong>Magazine</strong><span>Varied cards in one reading column. An airy style drops the frames.</span></figcaption></figure>
+      <figure><div class="shot"><img src="screenshots/pane-light.webp" alt="Two-pane view with the reader pane"></div><figcaption><strong>Two-pane</strong><span>The article next to the entry list. Drag the divider.</span></figcaption></figure>
+      <figure><div class="shot"><img src="screenshots/list-light.webp" alt="The compact list"></div><figcaption><strong>Compact list</strong><span>One line per entry with a thumbnail.</span></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="eyebrow">Everything a reader should do</p>
+      <h2>Read, listen, watch — and keep up with the people you follow.</h2>
+    </div>
+    <div class="grid">
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg></div><h3>Reader view</h3><p>The extracted full text with images, audio and video inline. Reading-time estimates, a progress bar, and a focus mode that dims everything but the passage in front of you.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><h3>Search you can keep</h3><p>Full-text search with exact phrases. Save a search as a named view in the sidebar, each with its own unread count — and get a daily or weekly email digest of new matches.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V6l10 6z"/><path d="M4 6v12"/></svg></div><h3>Podcasts &amp; YouTube</h3><p>A persistent player with a reorderable playlist. Paste an Apple Podcasts, SoundCloud or YouTube link into “Add feed” and the reader subscribes to the show or channel.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c-3 4-9 5-9 10a9 9 0 0 0 18 0c0-5-6-6-9-10z"/></svg></div><h3>Bluesky &amp; Mastodon</h3><p>Connect an account and its home timeline, lists, custom feeds and follows arrive as feeds. Posts show what they embed; likes and replies stay in the reader.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m12 3 2.2 5.3L20 9l-4.3 4 1.3 5.8L12 15.8 7 18.8 8.3 13 4 9l5.8-.7z"/></svg></div><h3>“For you”, optional</h3><p>A model of your choice ranks your unread articles by what you favorite, keep and read. Any OpenAI-compatible API — including local models via Ollama or LM Studio — with a cost overview per run.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 15h3"/></svg></div><h3>Feeds, tidy</h3><p>Paste a site address and the app finds the feed. Preview before you subscribe, import and export OPML, tag with colours and icons, and see feed health in plain language.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="mobile">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="eyebrow">Built for the phone too</p>
+      <h2>The same reader, in your pocket.</h2>
+      <p class="muted">A collapsible sidebar with swipe gestures, pull-to-refresh, touch-friendly controls, and a player bar that follows you.</p>
+    </div>
+    <div class="phones">
+      <div class="shot"><img src="screenshots/mobile-magazine-light.webp" alt="The magazine on a phone"></div>
+      <div class="shot"><img src="screenshots/mobile-reader-dark.webp" alt="Reader view on a phone, dark theme"></div>
+      <div class="shot"><img src="screenshots/mobile-sidebar-light.webp" alt="The sidebar drawer on a phone"></div>
+      <div class="shot"><img src="screenshots/mobile-podcast-playlist-light.webp" alt="The audio playlist on a phone"></div>
+    </div>
+  </div>
+</section>
+
+<section id="yours">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">Your instance, your rules</p>
+      <h2 style="margin-top:8px">Private by construction.</h2>
+      <ul>
+        <li><span><strong>Sign in your way.</strong> Email and password, Google or Apple, or a passkey. Registration is protected by an invisible proof-of-work challenge — no CAPTCHA.</span></li>
+        <li><span><strong>You are the admin.</strong> Approve, suspend or delete users; optional trial periods and per-user feed limits; SMTP and outbound proxy settings with a built-in test.</span></li>
+        <li><span><strong>Your data leaves when you say.</strong> Export the whole account to a backup file and restore it on another instance, or delete it entirely.</span></li>
+        <li><span><strong>AI stays optional and local if you like.</strong> Recommendations run against the provider you pick — your own machine included.</span></li>
+      </ul>
+    </div>
+    <div class="shot"><img src="screenshots/for-you-light.webp" alt="The For you recommendations"></div>
+  </div>
+</section>
+
+<section id="install" class="install">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="eyebrow">Run it</p>
+      <h2>One command. Your own instance.</h2>
+      <p class="muted">You need Docker and git. The installer clones the project, checks out the latest release, generates the secrets it can, asks for the things only you know, and starts the stack.</p>
+    </div>
+<pre><span class="c"># read it first: scripts/install.sh — the installer never deletes data</span>
+curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/main/scripts/install.sh | bash</pre>
+    <div class="pkgs">
+      <div class="pkg"><span class="k">S</span><h3>Personal</h3><p>SQLite, title and summary search. Three containers.</p><p class="ram">About 250 MB RAM</p></div>
+      <div class="pkg"><span class="k">M</span><h3>Several users</h3><p>MySQL, title and summary search. Four containers.</p><p class="ram">About 1 GB RAM</p></div>
+      <div class="pkg"><span class="k">L</span><h3>Full-text search</h3><p>Like M, plus Meilisearch for the full text of every article.</p><p class="ram">About 2.5 GB RAM</p></div>
+    </div>
+    <p class="note">Every package runs the same application with every feature; they differ only in the containers beside it. The full guide — TLS, reverse proxies, mail, backups — is in <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/docs/docker-production.md">docs/docker-production.md</a>.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="brand">simple-feed-reader</span>
+    <nav>
+      <a href="https://github.com/larspohlmann/simple-feed-reader">GitHub</a>
+      <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/docs/screenshots.md">Screenshots</a>
+      <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/CONTRIBUTING.md">Contributing</a>
+      <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/SECURITY.md">Security</a>
+      <a href="https://lars-pohlmann.de/imprint.html">Imprint</a>
+    </nav>
+    <span class="copy">MIT license</span>
+  </div>
+</footer>
+</body>
+</html>
