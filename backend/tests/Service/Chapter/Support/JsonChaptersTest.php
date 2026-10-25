@@ -28,7 +28,10 @@ final class JsonChaptersTest extends TestCase
             ['startTime' => 60, 'title' => 'Talk'],
         ]]);
 
-        self::assertSame(['Intro', 'Talk'], array_map(static fn (EntryChapter $chapter): string => $chapter->title, $chapters));
+        self::assertSame(
+            ['Intro', 'Talk'],
+            array_map(static fn (EntryChapter $chapter): string => $chapter->title, $chapters),
+        );
     }
 
     public function testSkipsMalformedRowsAndMalformedFiles(): void
