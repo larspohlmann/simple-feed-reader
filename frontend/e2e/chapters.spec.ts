@@ -50,7 +50,7 @@ async function stubArticles(page: Page): Promise<void> {
   );
   await page.route(
     (url) => /^\/api\/entries\/\d+\/reader$/.test(url.pathname),
-    (route) => route.fulfill({ json: readerFailedJson('player_page') }),
+    (route) => route.fulfill({ json: readerFailedJson('unextractable') }),
   );
   await page.route(
     (url) => /^\/api\/entries\/\d+$/.test(url.pathname),
