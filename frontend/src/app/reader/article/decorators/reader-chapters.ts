@@ -16,13 +16,17 @@ export interface ChapterListPlace {
   readonly after: Element | null;
 }
 
-/** A chapter list whose rows start `player` at their chapter and follow its position (#1808). */
+/**
+ * A chapter list whose rows start `player` at their chapter and follow its position; it replaces
+ * any earlier list in `host` (#1808).
+ */
 export function addChapterList(
   { host, after }: ChapterListPlace,
   { chapters, heading }: ChapterList,
   player: ChapterPlayer,
-): void {
-  if (chapters.length === 0 || host.querySelector(`.${LIST}`)) return;
+): HTMLElement | null {
+  host.querySelector(`.${LIST}`)?.remove();
+  if (chapters.length === 0) return null;
   const rows = chapters.map((chapter) => chapterRow(chapter));
   const mark = (index: number): void => {
     for (const [at, row] of rows.entries()) {
@@ -52,6 +56,7 @@ export function addChapterList(
   list.append(items);
   if (after) after.after(list);
   else host.prepend(list);
+  return list;
 }
 
 function chapterRow(chapter: ChapterDto): HTMLButtonElement {

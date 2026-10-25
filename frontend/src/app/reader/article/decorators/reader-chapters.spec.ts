@@ -75,21 +75,30 @@ describe('addChapterList', () => {
     expect(rows(host).some((row) => row.hasAttribute('aria-current'))).toBe(false);
   });
 
-  it('adds nothing for no chapters, and only one list per body', () => {
+  it('adds nothing for no chapters', () => {
     const host = document.createElement('div');
-    addChapterList({ host, after: null }, { chapters: [], heading: 'Chapters' }, fakePlayer());
-    expect(host.querySelector('.reader-chapters')).toBeNull();
 
-    addChapterList(
+    expect(
+      addChapterList({ host, after: null }, { chapters: [], heading: 'Chapters' }, fakePlayer()),
+    ).toBeNull();
+    expect(host.querySelector('.reader-chapters')).toBeNull();
+  });
+
+  it('replaces an earlier list with one that drives its own player', () => {
+    const host = document.createElement('div');
+    const earlier = fakePlayer();
+    const later = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, earlier);
+
+    const list = addChapterList(
       { host, after: null },
-      { chapters: CHAPTERS, heading: 'Chapters' },
-      fakePlayer(),
+      { chapters: CHAPTERS.slice(0, 2), heading: 'Chapters' },
+      later,
     );
-    addChapterList(
-      { host, after: null },
-      { chapters: CHAPTERS, heading: 'Chapters' },
-      fakePlayer(),
-    );
-    expect(host.querySelectorAll('.reader-chapters')).toHaveLength(1);
+
+    expect(Array.from(host.querySelectorAll('.reader-chapters'))).toEqual([list]);
+    rows(host)[1].click();
+    expect(later.playFrom).toHaveBeenCalledWith(256);
+    expect(earlier.playFrom).not.toHaveBeenCalled();
   });
 });
