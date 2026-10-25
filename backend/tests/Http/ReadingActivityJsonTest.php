@@ -14,6 +14,8 @@ use PHPUnit\Framework\TestCase;
 
 final class ReadingActivityJsonTest extends TestCase
 {
+    private const array NO_STATES = ['favorites' => 0, 'kept' => 0, 'viewed' => 0];
+
     public function testShapesEachDayKeepsTheOrderTotalsReadsAndCarriesTheFeedRanking(): void
     {
         $payload = ReadingActivityJson::of(new ReadingActivityModel(
@@ -23,6 +25,7 @@ final class ReadingActivityJsonTest extends TestCase
                 ActivityDayModel::known('2026-09-07', new DayCountModel(2, 1)),
             ], []),
             [['feedId' => 7, 'readCount' => 42], ['feedId' => 3, 'readCount' => 10]],
+            ['favorites' => 6, 'kept' => 2, 'viewed' => 31],
         ));
 
         self::assertSame(
@@ -38,6 +41,8 @@ final class ReadingActivityJsonTest extends TestCase
             [['feedId' => 7, 'readCount' => 42], ['feedId' => 3, 'readCount' => 10]],
             $payload['topFeedsByRead'],
         );
+        self::assertSame(31, $payload['readCount']);
+        self::assertSame(6, $payload['favoritesCount']);
     }
 
     public function testUnknownDaysStayNullAndTheAverageIsRoundedToOneDecimal(): void
@@ -48,7 +53,9 @@ final class ReadingActivityJsonTest extends TestCase
         }
         $days[] = ActivityDayModel::known('2026-09-09', new DayCountModel(9, 0));
 
-        $payload = ReadingActivityJson::of(new ReadingActivityModel(new SubscriptionActivityModel($days, []), []));
+        $payload = ReadingActivityJson::of(
+            new ReadingActivityModel(new SubscriptionActivityModel($days, []), [], self::NO_STATES),
+        );
 
         self::assertNull($payload['days'][0]['arrived']);
         self::assertNull($payload['days'][0]['read']);
@@ -60,6 +67,7 @@ final class ReadingActivityJsonTest extends TestCase
         $payload = ReadingActivityJson::of(new ReadingActivityModel(
             new SubscriptionActivityModel([ActivityDayModel::unknown('2026-09-06')], []),
             [],
+            self::NO_STATES,
         ));
 
         self::assertNull($payload['arrivedDailyAverage']);
@@ -76,6 +84,7 @@ final class ReadingActivityJsonTest extends TestCase
                 new FeedArrivalRateModel(4, 2.0),
             ]),
             [],
+            self::NO_STATES,
         ));
 
         self::assertSame(

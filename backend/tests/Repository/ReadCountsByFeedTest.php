@@ -9,10 +9,11 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Repository\EntryStateRepository;
 use App\Tests\DbTestCase;
 
-/** The per-feed read ranking of the reading-activity chart: still-subscribed feeds only, busiest first. */
+/** The per-feed read ranking of the reading-activity chart: still-subscribed plain feeds only, busiest first. */
 final class ReadCountsByFeedTest extends DbTestCase
 {
     private function repository(): EntryStateRepository
@@ -88,5 +89,24 @@ final class ReadCountsByFeedTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertCount(2, $this->repository()->readCountsByFeed($user->requireId(), 2));
+    }
+
+    public function testReadCountsByFeedLeavesSocialFeedsOut(): void
+    {
+        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $user = new User('social-reader@example.com', $when);
+        $this->entityManager->persist($user);
+        $bluesky = $this->subscribedFeed($user, 'https://bsky.app/profile/busy.bsky.social/rss', $when);
+        $plain = $this->subscribedFeed($user, 'https://example.com/plain.xml', $when);
+        $this->openedAt($user, $bluesky, 'bluesky-1', $when);
+        $this->openedAt($user, $bluesky, 'bluesky-2', $when);
+        $this->openedAt($user, $plain, 'plain-1', $when);
+        $this->entityManager->flush();
+        self::assertSame(SocialNetwork::Bluesky, $bluesky->getNetwork());
+
+        self::assertSame(
+            [['feedId' => $plain->requireId(), 'readCount' => 1]],
+            $this->repository()->readCountsByFeed($user->requireId(), 5),
+        );
     }
 }

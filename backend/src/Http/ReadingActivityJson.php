@@ -9,8 +9,9 @@ use App\Service\SubscriptionHistory\Model\ActivityDayModel;
 use App\Service\SubscriptionHistory\Model\FeedArrivalRateModel;
 
 /**
- * The About page's two 30-day charts, one entry per UTC day, oldest first. `null` marks a day that can no longer be
- * known (history not yet recorded and the entries already pruned); the client draws it as a gap.
+ * The About page's statistics over plain feeds; social feeds are left out. The two 30-day charts have one entry per
+ * UTC day, oldest first. `null` marks a day that can no longer be known (history not yet recorded and the entries
+ * already pruned); the client draws it as a gap.
  *
  * @phpstan-type ReadingActivityPayload array{
  *     days: list<array{date: string, arrived: int|null, read: int|null}>,
@@ -18,6 +19,8 @@ use App\Service\SubscriptionHistory\Model\FeedArrivalRateModel;
  *     arrivedDailyAverage: float|null,
  *     topFeedsByRead: list<array{feedId: int, readCount: int}>,
  *     topFeedsByArrivals: list<array{subscriptionId: int, dailyAverage: float}>,
+ *     readCount: int,
+ *     favoritesCount: int,
  * }
  */
 final class ReadingActivityJson
@@ -46,6 +49,8 @@ final class ReadingActivityJson
                 ],
                 $activity->daily->topFeedsByArrivals,
             ),
+            'readCount' => $activity->stateCounts['viewed'],
+            'favoritesCount' => $activity->stateCounts['favorites'],
         ];
     }
 

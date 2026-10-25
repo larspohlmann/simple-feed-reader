@@ -59,7 +59,7 @@ final class SubscriptionActivityRepositoryTest extends DbTestCase
         return $counts;
     }
 
-    public function testTracksEachSubscriptionWithItsFeedCreatedDayAndWhetherItIsSocial(): void
+    public function testTracksEverySubscriptionButListsOnlyTheUsersPlainOnesForTheAboutPage(): void
     {
         $user = $this->user('tracked@example.com');
         $social = $this->feed('https://bsky.app/profile/alice.bsky.social/rss');
@@ -72,19 +72,18 @@ final class SubscriptionActivityRepositoryTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        $mine = $this->repository()->trackedSubscriptionsOf($user->requireId());
-        usort($mine, static fn ($left, $right): int => $left->subscriptionId <=> $right->subscriptionId);
+        $all = $this->repository()->trackedSubscriptions();
+        usort($all, static fn ($left, $right): int => $left->subscriptionId <=> $right->subscriptionId);
 
-        self::assertCount(2, $mine);
         self::assertEquals(
-            new TrackedSubscriptionModel($plain->requireId(), $plain->getFeed()->requireId(), '2026-10-03', false),
-            $mine[0],
+            [new TrackedSubscriptionModel($plain->requireId(), $plain->getFeed()->requireId(), '2026-10-03', false)],
+            $this->repository()->plainSubscriptionsOf($user->requireId()),
         );
+        self::assertCount(3, $all);
         self::assertEquals(
             new TrackedSubscriptionModel($timeline->requireId(), $social->requireId(), '2026-10-04', true),
-            $mine[1],
+            $all[1],
         );
-        self::assertCount(3, $this->repository()->trackedSubscriptions());
     }
 
     public function testASavedFeedIsNotTracked(): void
@@ -98,7 +97,7 @@ final class SubscriptionActivityRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$plain->requireId()],
-            TrackedSubscriptionModel::idsOf($this->repository()->trackedSubscriptionsOf($user->requireId())),
+            TrackedSubscriptionModel::idsOf($this->repository()->plainSubscriptionsOf($user->requireId())),
         );
         self::assertSame(
             [$plain->requireId()],

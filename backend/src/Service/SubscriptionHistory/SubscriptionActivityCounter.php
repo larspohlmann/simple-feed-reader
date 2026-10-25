@@ -33,7 +33,7 @@ final readonly class SubscriptionActivityCounter
     public function lastDays(User $user): SubscriptionActivityModel
     {
         $window = DayWindowModel::lastDays(UtcDay::of($this->clock->now()));
-        $subscriptions = $this->activity->trackedSubscriptionsOf($user->requireId());
+        $subscriptions = $this->activity->plainSubscriptionsOf($user->requireId());
         $sources = $this->daySourcesFactory->forWindow($subscriptions, $window);
         $live = $this->liveCounter->since(
             $subscriptions,
@@ -53,7 +53,7 @@ final readonly class SubscriptionActivityCounter
      * @param list<TrackedSubscriptionModel> $subscriptions
      * @param list<string>                   $week
      *
-     * @return list<FeedArrivalRateModel> busiest first, social feeds left out
+     * @return list<FeedArrivalRateModel> busiest first
      */
     private function busiestByArrivals(
         array $subscriptions,
@@ -62,11 +62,7 @@ final readonly class SubscriptionActivityCounter
         DayCountsModel $live,
     ): array {
         $rates = [];
-        $plainFeeds = array_filter(
-            $subscriptions,
-            static fn (TrackedSubscriptionModel $subscription): bool => !$subscription->isSocial,
-        );
-        foreach ($plainFeeds as $subscription) {
+        foreach ($subscriptions as $subscription) {
             $average = $this->arrivedAverageOf($subscription, $week, $sources, $live);
             if ($average > 0) {
                 $rates[] = new FeedArrivalRateModel($subscription->subscriptionId, $average);

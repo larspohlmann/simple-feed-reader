@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\SubscriptionHistory;
 
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RetentionWindows;
 use App\Entity\Subscription;
@@ -16,7 +17,7 @@ use App\Service\SubscriptionHistory\Support\UtcDay;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 
-/** Now is 2026-10-25 12:00 UTC: the window runs 2026-09-26 … 2026-10-25, social feeds are live back to 2026-10-19. */
+/** Now is 2026-10-25 12:00 UTC: the window runs 2026-09-26 … 2026-10-25. */
 final class SubscriptionActivityCounterTest extends DbTestCase
 {
     use SubscriptionHistoryFixtures;
@@ -105,28 +106,31 @@ final class SubscriptionActivityCounterTest extends DbTestCase
         self::assertSame(1, $days['2026-10-21']->arrived());
     }
 
-    public function testASocialSubscriptionMakesOlderUnstoredDaysUnknownForTheWholeAccount(): void
+    public function testASocialSubscriptionContributesNothingToTheDaysTheAverageOrTheRanking(): void
     {
         $plain = $this->subscribeTo('https://example.com/c.xml', '2026-09-01 00:00:00');
-        $this->subscribeToBluesky('home', '2026-09-01 00:00:00');
-        $this->arrival($plain->getFeed(), 'hidden', '2026-10-10 10:00:00');
+        $bluesky = $this->subscribeToBluesky('home', '2026-09-01 00:00:00');
+        $this->arrivalsOn($bluesky, '2026-10-24', 70);
+        $this->arrivalsOn($plain, '2026-10-10', 1);
+        $this->arrivalsOn($plain, '2026-10-24', 7);
+        $opened = new EntryState($this->user, $this->arrival($bluesky->getFeed(), 'opened', '2026-10-20 08:00:00'));
+        $opened->markViewed(new \DateTimeImmutable('2026-10-24 09:00:00'));
+        $this->entityManager->persist($opened);
         $this->entityManager->flush();
 
-        $days = $this->byDate();
+        $activity = $this->historyWiring('2026-10-25 12:00:00')->counter()->lastDays($this->user);
+        $days = array_column(array_map(
+            static fn (ActivityDayModel $day): array => [$day->date, $day->arrived(), $day->read()],
+            $activity->days,
+        ), null, 0);
 
-        self::assertNull($days['2026-10-10']->arrived());
-        self::assertNull($days['2026-10-18']->read());
-        self::assertSame(0, $days['2026-10-19']->arrived());
-    }
-
-    public function testASubscriptionCreatedMidWindowDoesNotMakeEarlierDaysUnknown(): void
-    {
-        $this->subscribeTo('https://example.com/d.xml', '2026-09-01 00:00:00');
-        $this->subscribeToBluesky('late', '2026-10-22 00:00:00');
-
-        $days = $this->byDate();
-
-        self::assertSame(0, $days['2026-10-05']->arrived());
+        self::assertSame(['2026-10-10', 1, 0], $days['2026-10-10']);
+        self::assertSame(['2026-10-24', 7, 0], $days['2026-10-24']);
+        self::assertSame(1.0, $activity->arrivedDailyAverage());
+        self::assertSame([$plain->requireId()], array_map(
+            static fn (FeedArrivalRateModel $rate): int => $rate->subscriptionId,
+            $activity->topFeedsByArrivals,
+        ));
     }
 
     public function testAnAccountWithoutSubscriptionsHasThirtyKnownZeroDays(): void
@@ -192,18 +196,6 @@ final class SubscriptionActivityCounterTest extends DbTestCase
             ],
             array_keys($rates),
         );
-    }
-
-    public function testLeavesSocialSubscriptionsOutOfTheRanking(): void
-    {
-        $bluesky = $this->subscribeToBluesky('busy', '2026-09-01 00:00:00');
-        $plain = $this->subscribeTo('https://example.com/quiet.xml', '2026-09-01 00:00:00');
-        $this->arrivalsOn($bluesky, '2026-10-24', 70);
-        $this->arrivalsOn($plain, '2026-10-24', 7);
-
-        $rates = $this->topFeedsByArrivals();
-
-        self::assertSame([$plain->requireId() => 1.0], $rates);
     }
 
     public function testAveragesOverTheKnownDaysOnlyOnceRetentionHasPrunedTheOlderOnes(): void

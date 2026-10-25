@@ -45,10 +45,13 @@ final readonly class SubscriptionActivityRepository
     }
 
     /** @return list<TrackedSubscriptionModel> */
-    public function trackedSubscriptionsOf(int $userId): array
+    public function plainSubscriptionsOf(int $userId): array
     {
         return $this->tracked(
-            $this->trackedQuery()->andWhere('IDENTITY(subscription.user) = :user')->setParameter('user', $userId),
+            $this->trackedQuery()
+                ->andWhere('IDENTITY(subscription.user) = :user')
+                ->andWhere('feed.network IS NULL')
+                ->setParameter('user', $userId),
         );
     }
 

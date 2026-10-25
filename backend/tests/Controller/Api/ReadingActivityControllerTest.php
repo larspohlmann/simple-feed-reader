@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -93,6 +94,35 @@ final class ReadingActivityControllerTest extends WebTestCase
         self::assertEquals(0, $payload['arrivedDailyAverage']);
         self::assertSame([], $payload['topFeedsByRead']);
         self::assertSame([], $payload['topFeedsByArrivals']);
+        self::assertSame(0, $payload['readCount']);
+        self::assertSame(0, $payload['favoritesCount']);
+    }
+
+    public function testLeavesSocialFeedsOutOfTheReadingTotalsAndRankings(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reading-activity-social@example.test');
+
+        $plain = new Feed('https://example.com/plain-totals.xml');
+        $bluesky = new Feed('https://bsky.app/profile/totals.bsky.social/rss');
+        $subscribedAt = new \DateTimeImmutable('2026-01-01T00:00:00Z');
+        foreach ([$plain, $bluesky] as $feed) {
+            $this->entityManager()->persist($feed);
+            $this->entityManager()->persist(new Subscription($user, $feed, $subscribedAt));
+        }
+        $when = new \DateTimeImmutable('2026-06-01T09:00:00Z');
+        $this->openArticle($user, $plain, 'plain-a', $when);
+        $this->openArticle($user, $bluesky, 'bluesky-a', $when);
+        $this->openArticle($user, $bluesky, 'bluesky-b', $when);
+        $this->entityManager()->flush();
+        self::assertSame(SocialNetwork::Bluesky, $bluesky->getNetwork());
+
+        $client->request('GET', self::ROUTE, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        self::assertSame(1, $payload['readCount']);
+        self::assertSame([['feedId' => $plain->getId(), 'readCount' => 1]], $payload['topFeedsByRead']);
     }
 
     public function testRanksTopFeedsByReadBusiestFirst(): void

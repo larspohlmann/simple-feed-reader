@@ -24,6 +24,7 @@ final readonly class ReadingActivityCounter
         return new ReadingActivityModel(
             $this->daily->lastDays($user),
             $this->states->readCountsByFeed($user->requireId(), self::TOP_FEEDS),
+            $this->states->plainFeedStateCountsForUser($user->requireId()),
         );
     }
 }
