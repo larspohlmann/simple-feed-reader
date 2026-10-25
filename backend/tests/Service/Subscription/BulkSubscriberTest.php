@@ -357,6 +357,18 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertSame(['Café', 'Cafe'], $this->namesOf($result->tagsCreated));
     }
 
+    public function testNamesThatDifferOnlyByATrailingSpaceAreTwoTags(): void
+    {
+        $user = $this->user('space-twins@example.com');
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://tech-plain.example.com/rss.xml', 'Plain', ['Tech']),
+            new BulkSubscribeItemModel('https://tech-spaced.example.com/rss.xml', 'Spaced', ['Tech ']),
+        ]);
+
+        self::assertSame(['Tech', 'Tech '], $this->namesOf($result->tagsCreated));
+    }
+
     public function testAStoredTagIsNotMatchedByItsNameWithoutTheAccent(): void
     {
         $user = $this->user('accent-stored@example.com');

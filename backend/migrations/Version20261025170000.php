@@ -13,7 +13,7 @@ final class Version20261025170000 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Compare tag names by bytes on MySQL (utf8mb4_bin): an accent makes a different name, '
+        return 'Compare tag names by bytes on MySQL (utf8mb4_0900_bin): an accent makes a different name, '
             . 'case still does not (#1805).';
     }
 
@@ -23,7 +23,7 @@ final class Version20261025170000 extends AbstractMigration
             return;
         }
 
-        $this->addSql('ALTER TABLE tag CHANGE name name VARCHAR(100) NOT NULL COLLATE `utf8mb4_bin`');
+        $this->addSql('ALTER TABLE tag CHANGE name name VARCHAR(100) NOT NULL COLLATE `utf8mb4_0900_bin`');
     }
 
     public function down(Schema $schema): void

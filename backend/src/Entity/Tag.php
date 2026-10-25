@@ -26,8 +26,8 @@ final class Tag implements PositionedInterface
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
-    /** `utf8mb4_bin` so an accent makes another name; the lookups' LOWER() keeps case out of it (#1805). */
-    #[ORM\Column(length: 100, options: ['collation' => 'utf8mb4_bin'])]
+    /** `utf8mb4_0900_bin` so an accent makes another name; the lookups' LOWER() keeps case out of it (#1805). */
+    #[ORM\Column(length: 100, options: ['collation' => 'utf8mb4_0900_bin'])]
     private string $name;
 
     #[ORM\Column(length: 20, nullable: true)]
