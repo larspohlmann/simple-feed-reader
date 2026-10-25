@@ -29,10 +29,12 @@ use App\Service\Social\Model\SocialImportModel;
 use App\Service\Social\SocialImporter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
 use App\Tests\Support\UserFactory;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -75,6 +77,50 @@ final class SocialImporterTest extends DbTestCase
         self::assertInstanceOf(SocialImporter::class, $importer);
 
         return $importer;
+    }
+
+    public function testTheTagLockIsTakenBeforeTheImportWritesAnything(): void
+    {
+        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
+        }
+        $goneId = $this->subscribedId($this->user, 'https://bsky.app/profile/did:plc:gone/rss');
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->importer()->import($account, new SocialImportModel([
+            new SocialImportFeedModel('did:plc:bob', 'Bob'),
+        ], [$goneId]));
+
+        $statements = $recorder->queries();
+        $firstLock = self::firstIndexOf(
+            $statements,
+            static fn (string $sql): bool => str_contains(strtolower($sql), 'for update'),
+        );
+        $firstWrite = self::firstIndexOf(
+            $statements,
+            static fn (string $sql): bool => 1 === preg_match('/^\s*(insert|update|delete)\b/i', $sql),
+        );
+        self::assertNotNull($firstLock);
+        self::assertNotNull($firstWrite);
+        self::assertLessThan($firstWrite, $firstLock, 'the user row is locked before the import writes');
+    }
+
+    /**
+     * @param list<string>           $statements
+     * @param \Closure(string): bool $matches
+     */
+    private static function firstIndexOf(array $statements, \Closure $matches): ?int
+    {
+        foreach ($statements as $index => $statement) {
+            if ($matches($statement)) {
+                return $index;
+            }
+        }
+
+        return null;
     }
 
     private function subscribedId(User $user, string $feedUrl): int
