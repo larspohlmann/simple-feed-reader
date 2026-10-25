@@ -159,7 +159,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         UserIdentity::class => 'OAuth identity links — see NEVER_BACKED_UP\'s reasoning.',
         ActionToken::class => 'Short-lived, single-use verification and reset tokens.',
         SubscriptionDay::class => 'Daily new-article and read counts of a subscription (#1783); statistics derived from '
-            . 'entries, not backed up; rebuilt for the last 30 days as far as the retained articles reach.',
+            . 'entries, not backed up; rebuilt for 30 days as far as retained articles reach.',
         RecommendationSettings::class => 'The "For you" settings — guidance prompt, learned profile, '
             . 'caps and limits, and batch size (#935). Quick to set again after a restore, and not '
             . 'worth carrying in a file the user handles and mails around.',

@@ -81,7 +81,8 @@ final class RefreshHousekeepingTest extends DbTestCase
 
         self::assertSame(5, $pruned);
         $subscriptionId = $subscription->requireId();
-        self::assertSame(25, $this->storedDays()->since([$subscriptionId], '2026-07-20')->of($subscriptionId, '2026-07-20')->arrived);
+        $stored = $this->storedDays()->since([$subscriptionId], '2026-07-20');
+        self::assertSame(25, $stored->of($subscriptionId, '2026-07-20')->arrived);
         self::assertCount(1, $this->logger->records);
         self::assertSame('info', $this->logger->records[0]['level']);
         self::assertSame('Recorded subscription history days', $this->logger->records[0]['message']);
@@ -102,7 +103,8 @@ final class RefreshHousekeepingTest extends DbTestCase
         self::assertSame(0, $this->housekeeping()->pruneEntries(RefreshRequestModel::forUser(1, 30)));
 
         self::assertSame([], $this->storedDays()->findAll());
-        self::assertCount(25, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $subscription->getFeed()]));
+        $entries = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $subscription->getFeed()]);
+        self::assertCount(25, $entries);
         self::assertSame([], $this->logger->records);
     }
 
