@@ -37,7 +37,7 @@ final readonly class UnreadCountRepository
     public function perTag(int $userId): array
     {
         $qb = $this->taggedUnreadEntries($userId)
-            ->innerJoin(Tag::class, 'scopeTag', 'WITH', TagLineageDql::reaches('lineage', 'scopeTag.id'));
+            ->innerJoin(Tag::class, 'scopeTag', 'ON', TagLineageDql::reaches('lineage', 'scopeTag.id'));
 
         return $this->countsByIntegerKey($this->countedDistinctBy($qb, 'scopeTag.id'));
     }
