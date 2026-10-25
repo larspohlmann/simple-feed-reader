@@ -75,6 +75,47 @@ final class RefreshHousekeepingTest extends DbTestCase
 
     public function testAPruningRequestRecordsTheDayBeforeTheCapPassPrunesIt(): void
     {
+        $subscription = $this->subscriptionOverTheCap();
+
+        $pruned = $this->housekeeping()->pruneEntries(RefreshRequestModel::allDue(30));
+
+        self::assertSame(5, $pruned);
+        $subscriptionId = $subscription->requireId();
+        self::assertSame(25, $this->storedDays()->since([$subscriptionId], '2026-07-20')->of($subscriptionId, '2026-07-20')->arrived);
+        self::assertCount(1, $this->logger->records);
+        self::assertSame('info', $this->logger->records[0]['level']);
+        self::assertSame('Recorded subscription history days', $this->logger->records[0]['message']);
+        self::assertSame(['count' => 6], $this->logger->records[0]['context']);
+    }
+
+    public function testAPruningRequestWithNothingToRecordLogsNothing(): void
+    {
+        self::assertSame(0, $this->housekeeping()->pruneEntries(RefreshRequestModel::allDue(30)));
+
+        self::assertSame([], $this->logger->records);
+    }
+
+    public function testAUserRequestRecordsAndPrunesNothing(): void
+    {
+        $subscription = $this->subscriptionOverTheCap();
+
+        self::assertSame(0, $this->housekeeping()->pruneEntries(RefreshRequestModel::forUser(1, 30)));
+
+        self::assertSame([], $this->storedDays()->findAll());
+        self::assertCount(25, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $subscription->getFeed()]));
+        self::assertSame([], $this->logger->records);
+    }
+
+    private function storedDays(): SubscriptionDayRepository
+    {
+        $repository = $this->entityManager->getRepository(SubscriptionDay::class);
+        self::assertInstanceOf(SubscriptionDayRepository::class, $repository);
+
+        return $repository;
+    }
+
+    private function subscriptionOverTheCap(): Subscription
+    {
         $user = new User('cap@example.com', new \DateTimeImmutable('2026-01-01 00:00:00'));
         $feed = new Feed('https://cap.example.com/rss');
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-15 00:00:00'));
@@ -87,19 +128,7 @@ final class RefreshHousekeepingTest extends DbTestCase
         }
         $this->entityManager->flush();
 
-        $pruned = $this->housekeeping()->pruneEntries(RefreshRequestModel::allDue(30));
-
-        self::assertSame(5, $pruned);
-        $repository = $this->entityManager->getRepository(SubscriptionDay::class);
-        self::assertInstanceOf(SubscriptionDayRepository::class, $repository);
-        $subscriptionId = $subscription->requireId();
-        self::assertSame(25, $repository->since([$subscriptionId], '2026-07-20')->of($subscriptionId, '2026-07-20')->arrived);
-    }
-
-    public function testAUserRequestRecordsNothing(): void
-    {
-        self::assertSame(0, $this->housekeeping()->pruneEntries(RefreshRequestModel::forUser(1, 30)));
-        self::assertSame([], $this->entityManager->getRepository(SubscriptionDay::class)->findAll());
+        return $subscription;
     }
 
     private function housekeeping(): RefreshHousekeeping
