@@ -13,6 +13,14 @@
   flex-direction: column;
   gap: var(--space-2);
   height: 100%;
+}
+
+.sidebar-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
   overflow: auto;
 }
 
@@ -25,15 +33,9 @@
 .search-card {
   @include glass-rim.filled(var(--surface-1), var(--border));
 
-  position: sticky;
-  top: 0;
-  z-index: 1;
   display: flex;
   flex: none;
   align-items: flex-start;
-
-  /* Masks the rows scrolling past its rounded corners and through the gap below. */
-  box-shadow: 0 0 0 var(--space-2) var(--surface-0);
   gap: var(--space-0);
   padding-right: var(--space-1);
   border-radius: var(--radius-lg);
@@ -313,6 +315,29 @@
   font-size: var(--fs-base);
   font-weight: 600;
   cursor: pointer;
+}
+
+.organise-head > * {
+  transition:
+    height 0.15s ease,
+    padding 0.15s ease,
+    font-size 0.15s ease;
+}
+
+.organise-head.collapsed .drawer-title {
+  font-size: var(--fs-base);
+}
+
+.organise-head.collapsed .organise-done {
+  height: var(--sidebar-sub-row-h);
+  padding: 0 var(--space-3);
+  font-size: var(--fs-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .organise-head > * {
+    transition: none;
+  }
 }
 
 .organise-hint {

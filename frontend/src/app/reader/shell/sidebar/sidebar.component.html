@@ -4,218 +4,224 @@
   [attr.aria-label]="'reader.feeds' | transloco"
   cdkDropListGroup
 >
+  <!-- Heads a tap must reach sit outside the scroller: iOS swallows a tap on a coasting one (#1332). -->
   @if (organising()) {
-    <div class="organise-head">
+    <div class="organise-head" [class.collapsed]="scrolled()">
       <span class="drawer-title">{{ 'reader.organise' | transloco }}</span>
       <button class="organise-done" type="button" (click)="organising.set(false)">
         {{ 'reader.organiseDone' | transloco }}
       </button>
     </div>
-    <p class="organise-hint">{{ 'reader.organiseHint' | transloco }}</p>
-  } @else {
-    @if (screen.isNarrow()) {
-      <div class="drawer-head">
-        <span class="drawer-title">{{ 'reader.feeds' | transloco }}</span>
-        <ng-container *ngTemplateOutlet="feedTools" />
-        <button
-          class="tool close-drawer"
-          type="button"
-          [attr.aria-label]="'reader.closeSidebar' | transloco"
-          [attr.title]="'reader.closeSidebar' | transloco"
-          (click)="closeDrawer.emit()"
-        >
-          <app-icon name="close" size="md" />
-        </button>
-      </div>
-    } @else {
-      <div class="search-card">
-        <app-search-field
-          class="inset"
-          [term]="selection().term ?? ''"
-          [populateTerm]="selection().kind !== 'saved-search'"
-          [loading]="searchLoading()"
-          (search)="search.emit($event)"
-        />
-        <ng-container *ngTemplateOutlet="feedTools" />
-        <button
-          #collapseButton
-          class="tool collapse"
-          type="button"
-          [attr.aria-label]="'reader.hideSidebar' | transloco"
-          [attr.title]="'reader.hideSidebar' | transloco"
-          (click)="visibility.hide()"
-        >
-          <app-icon name="left_panel_close" size="md" />
-        </button>
-      </div>
-    }
-    <div class="card">
-      <a
-        class="nav all"
-        [class.active]="selection().kind === 'all'"
-        [routerLink]="['/']"
-        [queryParams]="selectionQueryParams({})"
-        queryParamsHandling="merge"
+  } @else if (!screen.isNarrow()) {
+    <div class="search-card">
+      <app-search-field
+        class="inset"
+        [term]="selection().term ?? ''"
+        [populateTerm]="selection().kind !== 'saved-search'"
+        [loading]="searchLoading()"
+        (search)="search.emit($event)"
+      />
+      <ng-container *ngTemplateOutlet="feedTools" />
+      <button
+        #collapseButton
+        class="tool collapse"
+        type="button"
+        [attr.aria-label]="'reader.hideSidebar' | transloco"
+        [attr.title]="'reader.hideSidebar' | transloco"
+        (click)="visibility.hide()"
       >
-        <app-icon name="inbox" size="md" />
-        <span class="name">{{ 'reader.allItems' | transloco }}</span>
-        @if (totalUnread() > 0) {
-          <span class="count">{{ totalUnread() }}</span>
-        }
-      </a>
-      <a
-        class="nav"
-        [class.active]="selection().kind === 'favorites'"
-        [routerLink]="['/']"
-        [queryParams]="selectionQueryParams({ view: 'favorites' })"
-        queryParamsHandling="merge"
-      >
-        <app-icon name="star" size="md" />
-        <span class="name">{{ 'reader.favorites' | transloco }}</span>
-        @if (favoritesCount() > 0) {
-          <span class="count">{{ favoritesCount() }}</span>
-        }
-      </a>
-      <a
-        class="nav"
-        [class.active]="selection().kind === 'kept'"
-        [routerLink]="['/']"
-        [queryParams]="selectionQueryParams({ view: 'kept' })"
-        queryParamsHandling="merge"
-      >
-        <app-icon name="bookmark" size="md" />
-        <span class="name">{{ 'reader.kept' | transloco }}</span>
-        @if (keptCount() > 0) {
-          <span class="count">{{ keptCount() }}</span>
-        }
-      </a>
-      <a
-        class="nav"
-        [class.active]="selection().kind === 'viewed'"
-        [routerLink]="['/']"
-        [queryParams]="selectionQueryParams({ view: 'viewed' })"
-        queryParamsHandling="merge"
-      >
-        <app-icon name="history" size="md" />
-        <span class="name">{{ 'reader.viewed' | transloco }}</span>
-        @if (viewedCount() > 0) {
-          <span class="count">{{ viewedCount() }}</span>
-        }
-      </a>
-      @if (ai.ready()) {
-        <a
-          class="nav for-you"
-          [class.active]="selection().kind === 'for-you'"
-          [routerLink]="['/']"
-          [queryParams]="selectionQueryParams({ view: 'for-you' })"
-          queryParamsHandling="merge"
-        >
-          <app-icon name="auto_awesome" size="md" [class.pulse]="recs.running()" />
-          <span class="name">{{ 'reader.forYou' | transloco }}</span>
-          @if (forYouUnread() > 0) {
-            <span class="count">{{ forYouUnread() }}</span>
-          }
-        </a>
-      }
+        <app-icon name="left_panel_close" size="md" />
+      </button>
     </div>
   }
 
-  @if (!organising()) {
-    <app-sidebar-saved-searches
-      [savedSearches]="savedSearches()"
-      [activeSavedSearchId]="activeSavedSearchId()"
-      [combinedActive]="selection().kind === 'saved-searches'"
-      [showDigestToggles]="showDigestToggles()"
-      (toggleDigest)="toggleDigest.emit($event)"
-    />
-  }
-
-  @if (tagTree().length) {
-    <div class="card">
-      <div
-        class="section-head tags-head"
-        [class.current]="!organising() && activeGroup() === 'tags'"
-      >
-        <ng-container
-          *ngTemplateOutlet="
-            sectionHead;
-            context: { $implicit: tagsHead, actions: tagsHeadActions }
-          "
-        />
-      </div>
-      @if (tagsExpanded() || organising()) {
-        <!-- Drop lists stay top-level siblings, wrapped by plain divs: CDK breaks cross-list drops if nested. -->
-        <div class="tags" #tagList>
-          @for (group of tagGroups(); track group.node.tag.id) {
-            <div
-              class="tag-group group"
-              [class.open]="group.open"
-              [class.drop-before]="tagSession.cueFor(group.node.tag.id) === 'before'"
-              [class.drop-after]="tagSession.cueFor(group.node.tag.id) === 'after'"
-            >
-              <ng-container *ngTemplateOutlet="tagBranch; context: { $implicit: group }" />
-            </div>
-          }
+  <div class="sidebar-body" [appScrollOutsideZone]="onScroll">
+    @if (organising()) {
+      <p class="organise-hint">{{ 'reader.organiseHint' | transloco }}</p>
+    } @else {
+      @if (screen.isNarrow()) {
+        <div class="drawer-head">
+          <span class="drawer-title">{{ 'reader.feeds' | transloco }}</span>
+          <ng-container *ngTemplateOutlet="feedTools" />
+          <button
+            class="tool close-drawer"
+            type="button"
+            [attr.aria-label]="'reader.closeSidebar' | transloco"
+            [attr.title]="'reader.closeSidebar' | transloco"
+            (click)="closeDrawer.emit()"
+          >
+            <app-icon name="close" size="md" />
+          </button>
         </div>
       }
-    </div>
-  }
-
-  <div class="feeds-card" [class.card]="feedsSectionShown()">
-    @if (feedsSectionShown()) {
-      <div
-        class="section-head feeds-head"
-        [class.current]="!organising() && activeGroup() === 'feeds'"
-      >
-        <ng-container
-          *ngTemplateOutlet="sectionHead; context: { $implicit: feedsHead, actions: headSlot }"
-        />
+      <div class="card">
+        <a
+          class="nav all"
+          [class.active]="selection().kind === 'all'"
+          [routerLink]="['/']"
+          [queryParams]="selectionQueryParams({})"
+          queryParamsHandling="merge"
+        >
+          <app-icon name="inbox" size="md" />
+          <span class="name">{{ 'reader.allItems' | transloco }}</span>
+          @if (totalUnread() > 0) {
+            <span class="count">{{ totalUnread() }}</span>
+          }
+        </a>
+        <a
+          class="nav"
+          [class.active]="selection().kind === 'favorites'"
+          [routerLink]="['/']"
+          [queryParams]="selectionQueryParams({ view: 'favorites' })"
+          queryParamsHandling="merge"
+        >
+          <app-icon name="star" size="md" />
+          <span class="name">{{ 'reader.favorites' | transloco }}</span>
+          @if (favoritesCount() > 0) {
+            <span class="count">{{ favoritesCount() }}</span>
+          }
+        </a>
+        <a
+          class="nav"
+          [class.active]="selection().kind === 'kept'"
+          [routerLink]="['/']"
+          [queryParams]="selectionQueryParams({ view: 'kept' })"
+          queryParamsHandling="merge"
+        >
+          <app-icon name="bookmark" size="md" />
+          <span class="name">{{ 'reader.kept' | transloco }}</span>
+          @if (keptCount() > 0) {
+            <span class="count">{{ keptCount() }}</span>
+          }
+        </a>
+        <a
+          class="nav"
+          [class.active]="selection().kind === 'viewed'"
+          [routerLink]="['/']"
+          [queryParams]="selectionQueryParams({ view: 'viewed' })"
+          queryParamsHandling="merge"
+        >
+          <app-icon name="history" size="md" />
+          <span class="name">{{ 'reader.viewed' | transloco }}</span>
+          @if (viewedCount() > 0) {
+            <span class="count">{{ viewedCount() }}</span>
+          }
+        </a>
+        @if (ai.ready()) {
+          <a
+            class="nav for-you"
+            [class.active]="selection().kind === 'for-you'"
+            [routerLink]="['/']"
+            [queryParams]="selectionQueryParams({ view: 'for-you' })"
+            queryParamsHandling="merge"
+          >
+            <app-icon name="auto_awesome" size="md" [class.pulse]="recs.running()" />
+            <span class="name">{{ 'reader.forYou' | transloco }}</span>
+            @if (forYouUnread() > 0) {
+              <span class="count">{{ forYouUnread() }}</span>
+            }
+          </a>
+        }
       </div>
     }
-    <!-- The drop list stays mounted even while collapsed: it is the untag target,
-         so unmounting it would strand a feed drag out of a tag. Only its rows
-         collapse. A drag or Organise mode force-shows them so the target reads. -->
-    <div
-      class="feedlist"
-      cdkDropList
-      [cdkDropListData]="untaggedDrop"
-      [cdkDropListEnterPredicate]="isFeedDrag"
-      (cdkDropListDropped)="onDrop($event)"
-    >
-      @if (feedsExpanded() || dragging() || organising()) {
-        @for (subscription of untagged(); track subscription.id) {
-          <div
-            class="feedrow"
-            cdkDrag
-            [cdkDragData]="subscription"
-            [cdkDragDisabled]="dragLocked()"
-            [cdkDragStartDelay]="dragDelay()"
-            (cdkDragStarted)="onFeedDragStart()"
-            (cdkDragEnded)="onDragEnd()"
-          >
-            <app-sidebar-feed-row
-              [subscription]="subscription"
-              [selection]="selection()"
-              [organising]="organising()"
-            />
+
+    @if (!organising()) {
+      <app-sidebar-saved-searches
+        [savedSearches]="savedSearches()"
+        [activeSavedSearchId]="activeSavedSearchId()"
+        [combinedActive]="selection().kind === 'saved-searches'"
+        [showDigestToggles]="showDigestToggles()"
+        (toggleDigest)="toggleDigest.emit($event)"
+      />
+    }
+
+    @if (tagTree().length) {
+      <div class="card">
+        <div
+          class="section-head tags-head"
+          [class.current]="!organising() && activeGroup() === 'tags'"
+        >
+          <ng-container
+            *ngTemplateOutlet="
+              sectionHead;
+              context: { $implicit: tagsHead, actions: tagsHeadActions }
+            "
+          />
+        </div>
+        @if (tagsExpanded() || organising()) {
+          <!-- Drop lists stay top-level siblings, wrapped by plain divs: CDK breaks cross-list drops if nested. -->
+          <div class="tags" #tagList>
+            @for (group of tagGroups(); track group.node.tag.id) {
+              <div
+                class="tag-group group"
+                [class.open]="group.open"
+                [class.drop-before]="tagSession.cueFor(group.node.tag.id) === 'before'"
+                [class.drop-after]="tagSession.cueFor(group.node.tag.id) === 'after'"
+              >
+                <ng-container *ngTemplateOutlet="tagBranch; context: { $implicit: group }" />
+              </div>
+            }
           </div>
         }
+      </div>
+    }
+
+    <div class="feeds-card" [class.card]="feedsSectionShown()">
+      @if (feedsSectionShown()) {
+        <div
+          class="section-head feeds-head"
+          [class.current]="!organising() && activeGroup() === 'feeds'"
+        >
+          <ng-container
+            *ngTemplateOutlet="sectionHead; context: { $implicit: feedsHead, actions: headSlot }"
+          />
+        </div>
       }
-      @if (dragging() && untagged().length === 0) {
-        <p class="dropzone-hint">{{ 'reader.dropToRemoveTags' | transloco }}</p>
-      }
+      <!-- The drop list stays mounted even while collapsed: it is the untag target,
+         so unmounting it would strand a feed drag out of a tag. Only its rows
+         collapse. A drag or Organise mode force-shows them so the target reads. -->
+      <div
+        class="feedlist"
+        cdkDropList
+        [cdkDropListData]="untaggedDrop"
+        [cdkDropListEnterPredicate]="isFeedDrag"
+        (cdkDropListDropped)="onDrop($event)"
+      >
+        @if (feedsExpanded() || dragging() || organising()) {
+          @for (subscription of untagged(); track subscription.id) {
+            <div
+              class="feedrow"
+              cdkDrag
+              [cdkDragData]="subscription"
+              [cdkDragDisabled]="dragLocked()"
+              [cdkDragStartDelay]="dragDelay()"
+              (cdkDragStarted)="onFeedDragStart()"
+              (cdkDragEnded)="onDragEnd()"
+            >
+              <app-sidebar-feed-row
+                [subscription]="subscription"
+                [selection]="selection()"
+                [organising]="organising()"
+              />
+            </div>
+          }
+        }
+        @if (dragging() && untagged().length === 0) {
+          <p class="dropzone-hint">{{ 'reader.dropToRemoveTags' | transloco }}</p>
+        }
+      </div>
     </div>
+
+    @for (section of socialSections(); track section.network) {
+      <app-sidebar-social-section
+        [section]="section"
+        [selection]="selection()"
+        [organising]="organising()"
+      />
+    }
+
+    <app-sidebar-foot [(organising)]="organising" />
   </div>
-
-  @for (section of socialSections(); track section.network) {
-    <app-sidebar-social-section
-      [section]="section"
-      [selection]="selection()"
-      [organising]="organising()"
-    />
-  }
-
-  <app-sidebar-foot [(organising)]="organising" />
 
   <ng-template #tagBranch let-branch>
     <ng-container
