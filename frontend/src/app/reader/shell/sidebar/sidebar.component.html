@@ -153,34 +153,7 @@
               [class.drop-before]="tagSession.cueFor(group.node.tag.id) === 'before'"
               [class.drop-after]="tagSession.cueFor(group.node.tag.id) === 'after'"
             >
-              <ng-container
-                *ngTemplateOutlet="
-                  tagHead;
-                  context: { $implicit: group.node, depth: 0, open: group.open }
-                "
-              />
-              @for (child of group.children; track child.node.tag.id) {
-                <div
-                  class="tag-child"
-                  [class.drop-before]="tagSession.cueFor(child.node.tag.id) === 'before'"
-                  [class.drop-after]="tagSession.cueFor(child.node.tag.id) === 'after'"
-                >
-                  <ng-container
-                    *ngTemplateOutlet="
-                      tagHead;
-                      context: { $implicit: child.node, depth: 1, open: child.open }
-                    "
-                  />
-                  @if (child.open) {
-                    <ng-container
-                      *ngTemplateOutlet="tagFeeds; context: { $implicit: child.node }"
-                    />
-                  }
-                </div>
-              }
-              @if (group.open) {
-                <ng-container *ngTemplateOutlet="tagFeeds; context: { $implicit: group.node }" />
-              }
+              <ng-container *ngTemplateOutlet="tagBranch; context: { $implicit: group }" />
             </div>
           }
         </div>
@@ -244,6 +217,27 @@
 
   <app-sidebar-foot [(organising)]="organising" />
 
+  <ng-template #tagBranch let-branch>
+    <ng-container
+      *ngTemplateOutlet="
+        tagHead;
+        context: { $implicit: branch.node, depth: branch.depth, open: branch.open }
+      "
+    />
+    @for (child of branch.children; track child.node.tag.id) {
+      <div
+        class="tag-child"
+        [class.drop-before]="tagSession.cueFor(child.node.tag.id) === 'before'"
+        [class.drop-after]="tagSession.cueFor(child.node.tag.id) === 'after'"
+      >
+        <ng-container *ngTemplateOutlet="tagBranch; context: { $implicit: child }" />
+      </div>
+    }
+    @if (branch.open) {
+      <ng-container *ngTemplateOutlet="tagFeeds; context: { $implicit: branch.node }" />
+    }
+  </ng-template>
+
   <ng-template #tagHead let-node let-depth="depth" let-open="open">
     <div
       class="taghead"
@@ -279,7 +273,7 @@
               <app-tag-glyph
                 [name]="node.tag.icon"
                 [color]="node.tag.color"
-                [size]="depth === 1 ? 'dense' : 'md'"
+                [size]="depth > 0 ? 'dense' : 'md'"
               />
             </span>
             <span class="name">{{ node.tag.name }}</span>
@@ -309,7 +303,7 @@
             [label]="node.tag.name"
             [glyph]="node.tag.icon"
             [glyphColor]="node.tag.color"
-            [glyphSize]="depth === 1 ? 'dense' : 'md'"
+            [glyphSize]="depth > 0 ? 'dense' : 'md'"
             [count]="node.unreadCount"
             [active]="selection().kind === 'tag' && selection().id === node.tag.id"
             [expanded]="open"
