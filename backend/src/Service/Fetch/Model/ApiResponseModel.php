@@ -26,6 +26,11 @@ final readonly class ApiResponseModel
         return $this->status >= Response::HTTP_OK && $this->status < Response::HTTP_MULTIPLE_CHOICES;
     }
 
+    public function isServerError(): bool
+    {
+        return $this->status >= Response::HTTP_INTERNAL_SERVER_ERROR;
+    }
+
     /** @return array<mixed> */
     public function json(): array
     {

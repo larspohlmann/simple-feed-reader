@@ -45,15 +45,65 @@ final class GuardedChapterFileSourceTest extends TestCase
     public static function answersWithoutChapters(): iterable
     {
         yield 'not found' => [Response::HTTP_NOT_FOUND];
+        yield 'last client error' => [Response::HTTP_INTERNAL_SERVER_ERROR - 1];
         yield 'redirect' => [Response::HTTP_MOVED_PERMANENTLY];
     }
 
-    public function testAFileBeyondTheSizeLimitHasNoChapters(): void
+    #[DataProvider('serverErrors')]
+    public function testAServerErrorIsUnreachable(int $status): void
     {
-        $oversize = new MockResponse(str_repeat('a', ResponseSizeLimit::Api->bytes() + 1));
-        $source = new GuardedChapterFileSource($this->client(new MockHttpClient($oversize)));
+        $source = new GuardedChapterFileSource($this->client(new MockHttpClient(
+            new MockResponse('', ['http_code' => $status]),
+        )));
+
+        $this->expectException(ChapterFileUnreachableException::class);
+        $source->chaptersAt('https://cdn.test/ch.json');
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function serverErrors(): iterable
+    {
+        yield 'internal error' => [Response::HTTP_INTERNAL_SERVER_ERROR];
+        yield 'unavailable' => [Response::HTTP_SERVICE_UNAVAILABLE];
+    }
+
+    public function testTheFetchCarriesTheShortChapterBudget(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{"chapters":[]}');
+        });
+
+        (new GuardedChapterFileSource($this->client($http)))->chaptersAt('https://cdn.test/ch.json');
+
+        self::assertSame(3.0, $seenOptions['timeout']);
+        self::assertSame(3.0, $seenOptions['max_duration']);
+        self::assertSame(0, $seenOptions['max_redirects']);
+    }
+
+    public function testAFileAtTheChapterSizeLimitIsRead(): void
+    {
+        $source = new GuardedChapterFileSource($this->client(new MockHttpClient(
+            new MockResponse(self::chaptersPaddedTo(ResponseSizeLimit::ChapterFile->bytes())),
+        )));
+
+        self::assertCount(2, $source->chaptersAt('https://cdn.test/ch.json'));
+    }
+
+    public function testAFileBeyondTheChapterSizeLimitHasNoChapters(): void
+    {
+        $source = new GuardedChapterFileSource($this->client(new MockHttpClient(
+            new MockResponse(self::chaptersPaddedTo(ResponseSizeLimit::ChapterFile->bytes() + 1)),
+        )));
 
         self::assertSame([], $source->chaptersAt('https://cdn.test/ch.json'));
+    }
+
+    private static function chaptersPaddedTo(int $bytes): string
+    {
+        return str_pad('{"chapters":[{"startTime":0,"title":"A"},{"startTime":60,"title":"B"}]}', $bytes, ' ');
     }
 
     public function testABlockedHostHasNoChapters(): void

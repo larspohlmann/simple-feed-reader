@@ -10,6 +10,7 @@ use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Enum\ProxyType;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Model\ApiBudgetModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
@@ -85,6 +86,26 @@ final class GuardedApiClientTest extends TestCase
         self::assertContains('Accept: application/json', $seenOptions['headers']);
         self::assertArrayNotHasKey('extra', $seenOptions);
         self::assertArrayNotHasKey('json', $seenOptions);
+    }
+
+    public function testACallWithinABudgetCarriesItsTimeoutsAndItsSizeLimit(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse(str_repeat('a', ResponseSizeLimit::ChapterFile->bytes() + 1));
+        });
+        $budget = new ApiBudgetModel(1.5, 2.5, ResponseSizeLimit::ChapterFile);
+
+        try {
+            $this->client($http)->sendWithin(ApiRequestModel::get('https://api.example.test/x'), $budget);
+            self::fail('expected the answer to be refused');
+        } catch (ResponseTooLargeException) {
+            self::assertSame(1.5, $seenOptions['timeout']);
+            self::assertSame(2.5, $seenOptions['max_duration']);
+            self::assertSame(0, $seenOptions['max_redirects']);
+        }
     }
 
     public function testTheBodyIsRequestedUncompressedSoTheWireLimitBoundsIt(): void

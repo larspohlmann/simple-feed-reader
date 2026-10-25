@@ -13,4 +13,9 @@ final class ChapterFileUnreachableException extends \RuntimeException
     {
         return new self(sprintf('Chapters file %s did not answer.', $url), 0, $exception);
     }
+
+    public static function answered(string $url, int $status): self
+    {
+        return new self(sprintf('Chapters file %s answered %d.', $url, $status));
+    }
 }

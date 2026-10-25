@@ -535,7 +535,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
     {
         $chunksSent = 0;
         $body = (static function () use (&$chunksSent): \Generator {
-            while ($chunksSent < 2 * ResponseSizeLimit::Feed->value) {
+            while ($chunksSent < 2 * intdiv(ResponseSizeLimit::Feed->bytes(), 1_000_000)) {
                 ++$chunksSent;
                 yield str_repeat('x', 1_000_000);
             }
@@ -545,7 +545,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             ->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertInstanceOf(ResponseTooLargeException::class, $outcomes[1]->failure());
-        self::assertLessThan(2 * ResponseSizeLimit::Feed->value, $chunksSent);
+        self::assertLessThan(2 * intdiv(ResponseSizeLimit::Feed->bytes(), 1_000_000), $chunksSent);
     }
 
     public function testSendsConditionalGetHeaders(): void

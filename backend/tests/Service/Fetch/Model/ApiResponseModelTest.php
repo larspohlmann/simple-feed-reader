@@ -27,6 +27,20 @@ final class ApiResponseModelTest extends TestCase
         self::assertSame($expected, (new ApiResponseModel($status, ''))->isSuccessful());
     }
 
+    /** @return iterable<string, array{int, bool}> */
+    public static function serverErrorStatuses(): iterable
+    {
+        yield 'last 4xx' => [Response::HTTP_INTERNAL_SERVER_ERROR - 1, false];
+        yield 'first 5xx' => [Response::HTTP_INTERNAL_SERVER_ERROR, true];
+        yield 'unavailable' => [Response::HTTP_SERVICE_UNAVAILABLE, true];
+    }
+
+    #[DataProvider('serverErrorStatuses')]
+    public function testOnlyA5xxStatusIsAServerError(int $status, bool $expected): void
+    {
+        self::assertSame($expected, (new ApiResponseModel($status, ''))->isServerError());
+    }
+
     public function testAHeaderReadsItsFirstValueWhateverTheCaseOfItsName(): void
     {
         $response = new ApiResponseModel(

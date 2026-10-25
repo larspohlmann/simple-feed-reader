@@ -6,17 +6,15 @@ namespace App\Service\Fetch;
 
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Fetch\Model\ApiBudgetModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
-use App\Service\Fetch\Model\ResponseSizeLimit;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 /** One JSON call to a public API, guarded and routed like a feed fetch. A redirect is an answer. */
 final readonly class GuardedApiClient
 {
-    private const float TIMEOUT_SECONDS = 10.0;
-
-    public const float MAX_DURATION_SECONDS = self::TIMEOUT_SECONDS * 2;
+    public const float MAX_DURATION_SECONDS = ApiBudgetModel::STANDARD_MAX_DURATION_SECONDS;
 
     public function __construct(
         private FailoverRequestSender $requestSender,
@@ -28,6 +26,13 @@ final readonly class GuardedApiClient
     /** @throws FetchException */
     public function send(ApiRequestModel $request): ApiResponseModel
     {
+        return $this->sendWithin($request, ApiBudgetModel::standard());
+    }
+
+    /** @throws FetchException */
+    public function sendWithin(ApiRequestModel $request, ApiBudgetModel $budget): ApiResponseModel
+    {
+        $sizeLimit = $budget->sizeLimit;
         $guarded = $this->urlGuard->assertSafe($request->url);
 
         try {
@@ -39,10 +44,10 @@ final readonly class GuardedApiClient
                     ...$request->headers,
                 ],
                 'max_redirects' => 0,
-                'timeout' => self::TIMEOUT_SECONDS,
-                'max_duration' => self::MAX_DURATION_SECONDS,
-                'on_progress' => static function (int $downloaded): void {
-                    ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Api, $downloaded);
+                'timeout' => $budget->timeoutSeconds,
+                'max_duration' => $budget->maxDurationSeconds,
+                'on_progress' => static function (int $downloaded) use ($sizeLimit): void {
+                    ResponseTooLargeException::throwIfExceeded($sizeLimit, $downloaded);
                 },
                 ...(null === $request->json ? [] : ['json' => $request->json]),
             ]);
