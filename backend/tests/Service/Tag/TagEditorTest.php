@@ -187,6 +187,24 @@ final class TagEditorTest extends DbTestCase
         self::assertGreaterThan($reloadedPoems->getPosition(), $reloadedEssays->getPosition());
     }
 
+    public function testDeletingARootLiftsItsChildToRootAndKeepsItsGrandchildUnderIt(): void
+    {
+        $user = $this->user('tag-root-deleter@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $essays = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
+
+        $this->editor()->delete($reading);
+
+        $this->entityManager->clear();
+        $reloadedLongReads = $this->entityManager->find(Tag::class, $longReads->requireId());
+        $reloadedEssays = $this->entityManager->find(Tag::class, $essays->requireId());
+        self::assertInstanceOf(Tag::class, $reloadedLongReads);
+        self::assertInstanceOf(Tag::class, $reloadedEssays);
+        self::assertNull($reloadedLongReads->getParent());
+        self::assertSame($longReads->requireId(), $reloadedEssays->getParent()?->getId());
+    }
+
     public function testUpdateRefusesTheTagItselfAsParent(): void
     {
         $user = $this->user('tag-self-parent@example.com');

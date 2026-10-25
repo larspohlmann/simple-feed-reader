@@ -92,6 +92,7 @@ final class BackupTally
         if (!isset($this->tagDepths[$parent])) {
             throw new InvalidBackupException(sprintf('The backup names parent tag "%s" before declaring it.', $parent));
         }
+
         $depth = $this->tagDepths[$parent] + 1;
         if ($depth > Tag::MAX_DEPTH) {
             throw new InvalidBackupException(

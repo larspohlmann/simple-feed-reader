@@ -1,5 +1,5 @@
 import { moveItemInArray } from '@angular/cdk/drag-drop';
-import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
 import {
@@ -38,10 +38,12 @@ export class SidebarRowActions {
   private readonly tags = inject(TagsStore);
   private readonly destroyRef = inject(DestroyRef);
 
+  private readonly hierarchy = computed(() => new TagHierarchy(this.tags.tags()));
+
   readonly menuFor = signal<string | null>(null);
 
   canCreateTagUnder(tag: TagDto): boolean {
-    return new TagHierarchy(this.tags.tags()).mayPlaceUnder(null, tag.id);
+    return this.hierarchy().mayPlaceUnder(null, tag.id);
   }
 
   toggleMenu(key: string, event: Event): void {
