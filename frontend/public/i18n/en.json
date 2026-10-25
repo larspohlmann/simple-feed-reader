@@ -1201,6 +1201,8 @@
     "showReader": "Show reader view",
     "resizeSplit": "Resize the split between the list and the article",
     "toggleTag": "Toggle {{name}}",
+    "subtagCountOne": "1 subtag",
+    "subtagCountOther": "{{count}} subtags",
     "manage": "Manage {{name}}",
     "editTag": "Edit tag",
     "newTag": "New tag",

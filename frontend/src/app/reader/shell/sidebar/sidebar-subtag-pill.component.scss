@@ -1,0 +1,12 @@
+:host {
+  flex: none;
+  min-width: 1.6em;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--lh-normal);
+  text-align: center;
+}
