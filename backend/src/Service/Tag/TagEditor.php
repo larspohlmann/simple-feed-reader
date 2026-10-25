@@ -143,7 +143,7 @@ final readonly class TagEditor
 
     private function assertFitsUnder(TagTree $tree, Tag $parent, int $height): void
     {
-        if ($tree->depthOf($parent->requireId()) + 1 + $height > Tag::MAX_DEPTH) {
+        if (!TagTree::fits($tree->depthOf($parent->requireId()), $height)) {
             throw InvalidTagParentException::tooDeep();
         }
     }
