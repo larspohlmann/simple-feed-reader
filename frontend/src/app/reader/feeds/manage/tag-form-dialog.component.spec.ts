@@ -129,9 +129,9 @@ describe('TagFormDialogComponent', () => {
 
   it('offers every tag with room below it, in tree order, by path', () => {
     const fixture = mount(createAtTop, [
-      tagOf(1, 'Reading', null),
       tagOf(2, 'Long reads', 1),
       tagOf(3, 'Essays', 2),
+      tagOf(1, 'Reading', null),
     ]);
 
     expect(optionTexts(fixture)).toEqual(['None', 'Reading', 'Reading / Long reads']);
@@ -177,6 +177,25 @@ describe('TagFormDialogComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Its child tags already use every level, so this tag stays at the top.',
     );
+  });
+
+  it('does not lock a new tag while the store is empty and keeps its preselected parent', () => {
+    const fixture = mount({ kind: 'create', parentId: 7 });
+    const host = fixture.nativeElement as HTMLElement;
+    expect((host.querySelector('select#tag-parent') as HTMLSelectElement).disabled).toBe(false);
+    expect(host.textContent).not.toContain('already use every level');
+    fixture.componentInstance.form.controls.name.setValue('Essays');
+    fixture.componentInstance.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/tags');
+    expect(testRequest.request.body.parentId).toBe(7);
+    testRequest.flush({ tag: tagOf(9, 'Essays', 7) });
+  });
+
+  it('does not lock the only tag, a childless root', () => {
+    const fixture = mount(editing(tagOf(1, 'Reading', null)), [tagOf(1, 'Reading', null)]);
+    const host = fixture.nativeElement as HTMLElement;
+    expect((host.querySelector('select#tag-parent') as HTMLSelectElement).disabled).toBe(false);
+    expect(host.textContent).not.toContain('already use every level');
   });
 
   it('sends null as the parent while the parent is locked', () => {

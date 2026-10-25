@@ -3,8 +3,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TagDto } from '../../models';
-import { TagHierarchy } from '../../state/tag-hierarchy';
-import { TagsStore } from '../../state/tags.store';
 import { SidebarRowMenuComponent } from './sidebar-row-menu.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 
@@ -18,12 +16,8 @@ import { SidebarRowActions } from './sidebar-row-actions.service';
 export class SidebarTagRowMenuComponent {
   readonly tag = input.required<TagDto>();
 
-  private readonly tags = inject(TagsStore);
-  protected readonly roomBelow = computed(() =>
-    new TagHierarchy(this.tags.tags()).mayPlaceUnder(null, this.tag().id),
-  );
-
   protected readonly screen = inject(LayoutService);
   protected readonly manage = inject(ManageActions);
   protected readonly rows = inject(SidebarRowActions);
+  protected readonly roomBelow = computed(() => this.rows.canCreateTagUnder(this.tag()));
 }

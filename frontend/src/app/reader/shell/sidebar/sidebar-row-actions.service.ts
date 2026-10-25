@@ -40,6 +40,10 @@ export class SidebarRowActions {
 
   readonly menuFor = signal<string | null>(null);
 
+  canCreateTagUnder(tag: TagDto): boolean {
+    return new TagHierarchy(this.tags.tags()).mayPlaceUnder(null, tag.id);
+  }
+
   toggleMenu(key: string, event: Event): void {
     event.preventDefault();
     event.stopPropagation();
@@ -107,7 +111,7 @@ export class SidebarRowActions {
   }
 
   private createHereActions(tag: TagDto): ActionSheetAction[] {
-    if (!new TagHierarchy(this.tags.tags()).mayPlaceUnder(null, tag.id)) return [];
+    if (!this.canCreateTagUnder(tag)) return [];
     return [
       { id: 'createHere', label: this.transloco.translate('reader.createTagHere'), symbol: 'add' },
     ];

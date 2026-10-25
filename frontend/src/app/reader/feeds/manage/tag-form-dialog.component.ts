@@ -11,7 +11,7 @@ import { FieldComponent } from '../../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { ReaderApi } from '../../reader-api';
 import { TagDto, TagInput } from '../../models';
-import { TagHierarchy } from '../../state/tag-hierarchy';
+import { MAX_TAG_DEPTH, TagHierarchy } from '../../state/tag-hierarchy';
 import { tagLabel, tagsInTreeOrder } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -64,7 +64,9 @@ export class TagFormDialogComponent {
       .filter((tag) => hierarchy.mayPlaceUnder(this.editedTag?.id ?? null, tag.id))
       .map((tag) => ({ id: tag.id, label: tagLabel(tag, tags) }));
   });
-  readonly parentLocked = computed(() => this.parentOptions().length === 0);
+  readonly parentLocked = computed(
+    () => this.editedTag !== null && this.hierarchy().heightOf(this.editedTag.id) >= MAX_TAG_DEPTH,
+  );
 
   constructor() {
     this.tagsStore.load();
