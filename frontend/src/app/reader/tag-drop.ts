@@ -1,6 +1,7 @@
 import { moveItemInArray } from '@angular/cdk/drag-drop';
 import { TagDto } from './models';
 import { childrenByParentId, rootsOf } from './state/subscription-derivations';
+import { TagHierarchy } from './state/tag-hierarchy';
 
 export interface TagHeaderBox {
   readonly tagId: number;
@@ -72,12 +73,7 @@ function slotAt({ dragged, tree, layout }: DropContext, pointerY: number): Slot 
   if (anchor === undefined) return null;
   const share = (pointerY - header.top) / Math.max(header.bottom - header.top, 1);
 
-  if (
-    anchor.parentId === null &&
-    tree.mayNest(dragged, anchor) &&
-    share >= NEST_FROM &&
-    share < NEST_TO
-  ) {
+  if (tree.mayNest(dragged, anchor) && share >= NEST_FROM && share < NEST_TO) {
     return { parentId: anchor.id, beforeId: null, mark: { kind: 'nest', tagId: anchor.id } };
   }
   if (share < HALF) {
@@ -128,11 +124,13 @@ class TagTree {
   private readonly tagsById: ReadonlyMap<number, TagDto>;
   private readonly roots: readonly TagDto[];
   private readonly children: ReadonlyMap<number, TagDto[]>;
+  private readonly hierarchy: TagHierarchy;
 
   constructor(tags: readonly TagDto[]) {
     this.tagsById = new Map(tags.map((tag) => [tag.id, tag]));
     this.roots = rootsOf(tags);
     this.children = childrenByParentId(tags);
+    this.hierarchy = new TagHierarchy(tags);
   }
 
   byId(id: number): TagDto | undefined {
@@ -144,16 +142,12 @@ class TagTree {
     return siblings.map((sibling) => sibling.id);
   }
 
-  hasChildren(tag: TagDto): boolean {
-    return (this.children.get(tag.id) ?? []).length > 0;
-  }
-
   mayNest(dragged: TagDto, parent: TagDto): boolean {
-    return parent.id !== dragged.id && parent.id !== dragged.parentId && !this.hasChildren(dragged);
+    return parent.id !== dragged.parentId && this.hierarchy.mayPlaceUnder(dragged.id, parent.id);
   }
 
   mayLandUnder(dragged: TagDto, parentId: number | null): boolean {
-    return parentId === null || (parentId !== dragged.id && !this.hasChildren(dragged));
+    return this.hierarchy.mayPlaceUnder(dragged.id, parentId);
   }
 
   nextSiblingId(tag: TagDto): number | null {
