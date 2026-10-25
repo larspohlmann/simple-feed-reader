@@ -36,7 +36,7 @@ final readonly class GuardedChapterFileSource implements ChapterFileSourceInterf
             throw ChapterFileUnreachableException::from($url, $exception);
         }
 
-        if ($response->isServerError()) {
+        if ($response->isTransientFailure()) {
             throw ChapterFileUnreachableException::answered($url, $response->status);
         }
 

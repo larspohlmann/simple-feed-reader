@@ -71,9 +71,10 @@ the result, clearing the URL. The fetch runs inside the detail request, so it ha
 `GuardedApiClient::sendWithin`: 3 s timeout and max duration, a 64 kB cap
 (`ResponseSizeLimit::ChapterFile`), the SSRF guard, no redirects.
 
-- Final, stored as no chapters: a malformed or empty file, an over-cap body, a 4xx, a 3xx (redirects
-  are refused — a known limit for hosts that redirect their chapter files), a blocked host.
-- Retried on the next open, nothing stored: a network failure, a timeout, a 5xx
+- Final, stored as no chapters: a malformed or empty file, an over-cap body, a 4xx other than 408 and
+  429, a 3xx (redirects are refused — a known limit for hosts that redirect their chapter files), a
+  blocked host.
+- Retried on the next open, nothing stored: a network failure, a timeout, a 408, a 429, a 5xx
   (`ChapterFileUnreachableException`, logged at info).
 
 The name says it writes: this is not a getter.
@@ -141,8 +142,8 @@ element's metadata is known (at once when it already is, as for a cached track).
 - **PHPUnit**: the description rule (the six real descriptions as fixtures, a missing `0:00`, fewer than
   three lines, out-of-order stamps, timestamps inside prose, a repeated block, a Short); body trimming;
   `psc` 1.1 and 1.2 parsing from the feeds measured in #1496; JSON chapters parsing (`toc: false`,
-  malformed, empty); the chapter file source (budget, cap, 4xx/3xx final, 5xx and network failure
-  unreachable); a functional test of the detail endpoint covering YouTube, inline podcast chapters
+  malformed, empty); the chapter file source (budget, cap, 4xx/3xx final, 408/429/5xx and network
+  failure unreachable); a functional test of the detail endpoint covering YouTube, inline podcast chapters
   and the lazy fill with a stubbed fetcher.
 - **Jest**: `currentChapterIndex` boundaries; `addChapterList` (rows, tap, `aria-current`,
   replacement); `ArticleChapters` (placement, release, re-attach); `YouTubeChapterPlayer` with a fake

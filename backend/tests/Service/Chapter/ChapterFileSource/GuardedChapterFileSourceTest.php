@@ -49,8 +49,8 @@ final class GuardedChapterFileSourceTest extends TestCase
         yield 'redirect' => [Response::HTTP_MOVED_PERMANENTLY];
     }
 
-    #[DataProvider('serverErrors')]
-    public function testAServerErrorIsUnreachable(int $status): void
+    #[DataProvider('transientAnswers')]
+    public function testATransientAnswerIsUnreachable(int $status): void
     {
         $source = new GuardedChapterFileSource($this->client(new MockHttpClient(
             new MockResponse('', ['http_code' => $status]),
@@ -61,8 +61,10 @@ final class GuardedChapterFileSourceTest extends TestCase
     }
 
     /** @return iterable<string, array{int}> */
-    public static function serverErrors(): iterable
+    public static function transientAnswers(): iterable
     {
+        yield 'request timeout' => [Response::HTTP_REQUEST_TIMEOUT];
+        yield 'rate limited' => [Response::HTTP_TOO_MANY_REQUESTS];
         yield 'internal error' => [Response::HTTP_INTERNAL_SERVER_ERROR];
         yield 'unavailable' => [Response::HTTP_SERVICE_UNAVAILABLE];
     }
