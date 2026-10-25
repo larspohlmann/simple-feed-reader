@@ -15,7 +15,6 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\TagJoins;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 
@@ -52,9 +51,7 @@ final class BulkSubscriberTest extends DbTestCase
 
     public function testABatchHoldsTheTagStructureLock(): void
     {
-        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
-        }
+        $this->skipWithoutRowLocks();
         $user = $this->user('batch-locks@example.com');
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);

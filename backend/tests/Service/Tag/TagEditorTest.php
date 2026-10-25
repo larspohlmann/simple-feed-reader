@@ -206,9 +206,7 @@ final class TagEditorTest extends DbTestCase
 
     public function testCreateUpdateAndDeleteEachHoldTheTagStructureLock(): void
     {
-        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
-        }
+        $this->skipWithoutRowLocks();
         $user = $this->user('tag-editor-locks@example.com');
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);
