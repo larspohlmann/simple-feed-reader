@@ -59,14 +59,14 @@ final readonly class SubscriptionActivityRepository
      */
     public function arrivalCountsSince(array $feedIds, \DateTimeImmutable $since): array
     {
-        $counts = [];
-        foreach (array_chunk($feedIds, self::ID_CHUNK_SIZE) as $chunk) {
-            foreach ($this->arrivalCountsOf($chunk, $since) as $row) {
-                $counts[] = ['feedId' => (int) $row['feedId'], 'day' => $row['day'], 'count' => (int) $row['total']];
-            }
-        }
-
-        return $counts;
+        return array_map(
+            static fn (array $row): array => [
+                'feedId' => (int) $row['feedId'],
+                'day' => $row['day'],
+                'count' => (int) $row['total'],
+            ],
+            self::inChunks($feedIds, fn (array $chunk): array => $this->arrivalCountsOf($chunk, $since)),
+        );
     }
 
     /**
@@ -76,18 +76,32 @@ final readonly class SubscriptionActivityRepository
      */
     public function readCountsSince(array $subscriptionIds, \DateTimeImmutable $since): array
     {
-        $counts = [];
-        foreach (array_chunk($subscriptionIds, self::ID_CHUNK_SIZE) as $chunk) {
-            foreach ($this->readCountsOf($chunk, $since) as $row) {
-                $counts[] = [
-                    'subscriptionId' => (int) $row['subscriptionId'],
-                    'day' => $row['day'],
-                    'count' => (int) $row['total'],
-                ];
-            }
+        return array_map(
+            static fn (array $row): array => [
+                'subscriptionId' => (int) $row['subscriptionId'],
+                'day' => $row['day'],
+                'count' => (int) $row['total'],
+            ],
+            self::inChunks($subscriptionIds, fn (array $chunk): array => $this->readCountsOf($chunk, $since)),
+        );
+    }
+
+    /**
+     * @template Row of array<string, mixed>
+     *
+     * @param list<int>                    $ids
+     * @param callable(list<int>): list<Row> $rowsOf
+     *
+     * @return list<Row>
+     */
+    private static function inChunks(array $ids, callable $rowsOf): array
+    {
+        $rows = [];
+        foreach (array_chunk($ids, self::ID_CHUNK_SIZE) as $chunk) {
+            array_push($rows, ...$rowsOf($chunk));
         }
 
-        return $counts;
+        return $rows;
     }
 
     /**

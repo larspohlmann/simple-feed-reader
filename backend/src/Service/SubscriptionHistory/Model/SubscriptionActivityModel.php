@@ -18,13 +18,11 @@ final readonly class SubscriptionActivityModel
     /** Today is partial, so the week is the seven days before it. */
     public function arrivedDailyAverage(): ?float
     {
-        $known = array_values(array_filter(
-            array_map(
-                static fn (ActivityDayModel $day): ?int => $day->arrived(),
-                \array_slice($this->days, -(self::AVERAGE_DAYS + 1), self::AVERAGE_DAYS),
-            ),
+        $week = \array_slice($this->days, -(self::AVERAGE_DAYS + 1), self::AVERAGE_DAYS);
+        $known = array_filter(
+            array_map(static fn (ActivityDayModel $day): ?int => $day->arrived(), $week),
             static fn (?int $arrived): bool => $arrived !== null,
-        ));
+        );
 
         return $known === [] ? null : array_sum($known) / \count($known);
     }

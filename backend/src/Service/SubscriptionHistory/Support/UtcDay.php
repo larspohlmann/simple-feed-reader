@@ -20,7 +20,7 @@ final class UtcDay
 
     public static function shift(string $day, int $days): string
     {
-        return self::start($day)->modify(sprintf('%+d days', $days))->format('Y-m-d');
+        return self::of(self::start($day)->modify(\sprintf('%+d days', $days)));
     }
 
     private function __construct()
