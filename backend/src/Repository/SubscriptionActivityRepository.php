@@ -130,7 +130,7 @@ final readonly class SubscriptionActivityRepository
             ->join(
                 Subscription::class,
                 'subscription',
-                'WITH',
+                'ON',
                 'subscription.feed = entry.feed AND subscription.user = state.user',
             )
             ->andWhere('subscription.id IN (:subscriptionIds)')

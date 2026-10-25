@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;

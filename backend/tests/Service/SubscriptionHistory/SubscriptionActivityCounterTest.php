@@ -61,13 +61,11 @@ final class SubscriptionActivityCounterTest extends DbTestCase
         return $subscription;
     }
 
-    private function subscribeToBluesky(string $handle, string $at): Subscription
+    private function subscribeToBluesky(string $handle, string $at): void
     {
         $subscription = $this->subscribe(sprintf('https://bsky.app/profile/%s.bsky.social/rss', $handle), $at);
         $this->entityManager->flush();
         self::assertSame(SocialNetwork::Bluesky, $subscription->getFeed()->getNetwork());
-
-        return $subscription;
     }
 
     private function arrival(Subscription $subscription, string $guid, string $createdAt): void
