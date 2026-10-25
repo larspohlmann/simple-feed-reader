@@ -1,6 +1,7 @@
 // Shared reader-endpoint fixtures for the article e2e specs.
 import type { Page } from '@playwright/test';
 import type {
+  ChapterDto,
   EntryDto,
   SavedSearchWire,
   SubscriptionDto,
@@ -100,12 +101,16 @@ export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): 
 
 /** A `GET /api/entries/{id}` body: the list entry plus its full article (#1100), and what completing it
  *  filled in (#1551). */
-export function entryDetailJson(entry: EntryDto, contentHtml: string): EntryDetailResponse {
+export function entryDetailJson(
+  entry: EntryDto,
+  contentHtml: string,
+  chapters: ChapterDto[] | null = null,
+): EntryDetailResponse {
   const { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight } = entry;
   const { imageRenditions, media, linkCards, thread, share } = entry;
   const completed = { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight };
   return {
-    entry: { ...entry, contentHtml },
+    entry: { ...entry, contentHtml, chapters },
     completed: {
       ...completed,
       imageRenditions,

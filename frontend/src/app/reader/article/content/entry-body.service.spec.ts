@@ -42,7 +42,33 @@ describe('EntryBodyService', () => {
     await settle();
     ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: '<p>a</p>' } });
 
-    expect(state()).toEqual({ status: 'ok', html: '<p>a</p>' });
+    expect(state()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [] });
+  });
+
+  it('keeps the chapters the detail sends beside the body', async () => {
+    const chapters = [
+      { startSeconds: 0, title: 'A' },
+      { startSeconds: 60, title: 'B' },
+    ];
+    const state = store.body(1);
+
+    await settle();
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { contentHtml: '<p>x</p>', chapters } });
+
+    expect(state()).toEqual({ status: 'ok', html: '<p>x</p>', chapters });
+  });
+
+  it('reads no chapters as an empty list', async () => {
+    const state = store.body(1);
+
+    await settle();
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { contentHtml: '<p>x</p>', chapters: null } });
+
+    expect(state()).toEqual({ status: 'ok', html: '<p>x</p>', chapters: [] });
   });
 
   it('answers a cache hit without a second request', async () => {
@@ -53,7 +79,7 @@ describe('EntryBodyService', () => {
     const second = store.body(1);
     await settle();
 
-    expect(second()).toEqual({ status: 'ok', html: '<p>a</p>' });
+    expect(second()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [] });
     ctrl.expectNone('https://api.test/api/entries/1');
   });
 
@@ -80,11 +106,11 @@ describe('EntryBodyService', () => {
   });
 
   it('seeds a body directly, skipping a request', async () => {
-    store.seed(1, '<p>seeded</p>');
+    store.seed(1, '<p>seeded</p>', null);
     const state = store.body(1);
     await settle();
 
-    expect(state()).toEqual({ status: 'ok', html: '<p>seeded</p>' });
+    expect(state()).toEqual({ status: 'ok', html: '<p>seeded</p>', chapters: [] });
     ctrl.expectNone('https://api.test/api/entries/1');
   });
 
@@ -93,7 +119,7 @@ describe('EntryBodyService', () => {
     await settle();
     ctrl.expectOne('https://api.test/api/entries/7').flush({ entry: { contentHtml: '<p>x</p>' } });
 
-    expect(store.body(7)()).toEqual({ status: 'ok', html: '<p>x</p>' });
+    expect(store.body(7)()).toEqual({ status: 'ok', html: '<p>x</p>', chapters: [] });
   });
 
   it('retry refetches a failed body', async () => {
@@ -110,7 +136,7 @@ describe('EntryBodyService', () => {
     await settle();
     ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: '<p>b</p>' } });
 
-    expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
+    expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [] });
   });
 
   describe('refresh (#1502)', () => {
@@ -126,12 +152,12 @@ describe('EntryBodyService', () => {
 
       store.refresh(1);
       await settle();
-      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>' });
+      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [] });
       ctrl
         .expectOne('https://api.test/api/entries/1')
         .flush({ entry: { contentHtml: '<p>b</p>' } });
 
-      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
+      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [] });
     });
 
     it('keeps the shown body when the refetch fails', async () => {
@@ -144,7 +170,7 @@ describe('EntryBodyService', () => {
         statusText: 'Server Error',
       });
 
-      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>' });
+      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [] });
     });
 
     it('cancels the fetch still on the wire and ends on the new body', async () => {
@@ -159,7 +185,7 @@ describe('EntryBodyService', () => {
         .expectOne('https://api.test/api/entries/1')
         .flush({ entry: { contentHtml: '<p>new</p>' } });
 
-      expect(state()).toEqual({ status: 'ok', html: '<p>new</p>' });
+      expect(state()).toEqual({ status: 'ok', html: '<p>new</p>', chapters: [] });
     });
 
     it('forgets a body so the next request fetches it afresh', async () => {
@@ -172,7 +198,7 @@ describe('EntryBodyService', () => {
         .expectOne('https://api.test/api/entries/1')
         .flush({ entry: { contentHtml: '<p>b</p>' } });
 
-      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
+      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [] });
     });
 
     it('merges what completing a fetched entry filled in, and cancels a body forgotten meanwhile', async () => {
@@ -236,7 +262,7 @@ describe('EntryBodyService', () => {
       .match((request) => request.url.startsWith('https://api.test/api/entries/'))
       .forEach((request) => request.flush({ entry: { contentHtml: '' } }));
 
-    expect(evicted()).toEqual({ status: 'ok', html: '<p>1</p>' });
+    expect(evicted()).toEqual({ status: 'ok', html: '<p>1</p>', chapters: [] });
   });
 
   it("never shows one entry's body under another, whichever lands first", async () => {
@@ -247,8 +273,8 @@ describe('EntryBodyService', () => {
     ctrl.expectOne('https://api.test/api/entries/2').flush({ entry: { contentHtml: '<p>B</p>' } });
     ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: '<p>A</p>' } });
 
-    expect(second()).toEqual({ status: 'ok', html: '<p>B</p>' });
-    expect(first()).toEqual({ status: 'ok', html: '<p>A</p>' });
+    expect(second()).toEqual({ status: 'ok', html: '<p>B</p>', chapters: [] });
+    expect(first()).toEqual({ status: 'ok', html: '<p>A</p>', chapters: [] });
   });
 
   describe('when the signed-in identity changes', () => {
@@ -289,7 +315,7 @@ describe('EntryBodyService', () => {
       ctrl
         .expectOne('https://api.test/api/entries/1')
         .flush({ entry: { contentHtml: '<p>b</p>' } });
-      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
+      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [] });
     });
   });
 });

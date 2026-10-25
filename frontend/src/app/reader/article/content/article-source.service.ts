@@ -80,6 +80,12 @@ export class ArticleSource {
     return body?.status === 'ok' ? body.html : null;
   });
 
+  /** The open entry's chapters, which come with its feed body (#1808). */
+  readonly chapters = computed(() => {
+    const body = this.feedBody();
+    return body?.status === 'ok' ? body.chapters : [];
+  });
+
   readonly displayHtml = computed(() => {
     const entry = this.entry();
     if (!entry) return '';
