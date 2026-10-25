@@ -10,15 +10,17 @@
 
       <app-field
         [label]="'dialog.tagForm.parent' | transloco"
-        [hint]="hasChildren() ? ('dialog.tagForm.parentLockedHasChildren' | transloco) : null"
+        [hint]="parentLocked() ? ('dialog.tagForm.parentLockedByDepth' | transloco) : null"
         [error]="parentError()"
       >
-        <select id="tag-parent" [disabled]="hasChildren()" (change)="onParentChange($event)">
+        <select id="tag-parent" [disabled]="parentLocked()" (change)="onParentChange($event)">
           <option value="" [selected]="parentId() === null">
             {{ 'dialog.tagForm.noParent' | transloco }}
           </option>
-          @for (tag of parentOptions(); track tag.id) {
-            <option [value]="tag.id" [selected]="parentId() === tag.id">{{ tag.name }}</option>
+          @for (option of parentOptions(); track option.id) {
+            <option [value]="option.id" [selected]="parentId() === option.id">
+              {{ option.label }}
+            </option>
           }
         </select>
       </app-field>

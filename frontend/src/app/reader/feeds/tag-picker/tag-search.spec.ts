@@ -23,7 +23,7 @@ describe('TagSearch', () => {
   const describeEntry = (entry: TagEntry): string =>
     entry.kind === 'create'
       ? `create:${entry.name}`
-      : `${entry.group}:${entry.option.label}${entry.option.indented ? ' (indented)' : ''}${entry.option.selected ? ' ✓' : ''}`;
+      : `${entry.group}:${entry.option.label}${entry.option.depth > 0 ? ` (depth ${entry.option.depth})` : ''}${entry.option.selected ? ' ✓' : ''}`;
   const listed = (): string[] => search.entries().map(describeEntry);
 
   beforeEach(() => {
@@ -43,14 +43,41 @@ describe('TagSearch', () => {
     );
   });
 
-  it('browses suggestions first, then every tag in tree order with children indented', () => {
+  it('browses suggestions first, then every tag in tree order with each level indented', () => {
     expect(listed()).toEqual([
       'suggested:Politics',
       'all:News',
-      'all:News / News en (indented) ✓',
+      'all:News / News en (depth 1) ✓',
       'all:Politics',
       'all:Lokales',
     ]);
+  });
+
+  it('indents a grandchild two levels and keeps its whole path as the label', () => {
+    const nested = new TagSearch(
+      {
+        tags: signal([
+          makeTag(1, 'Reading'),
+          makeTag(2, 'Long reads', { parentId: 1 }),
+          makeTag(3, 'Essays', { parentId: 2 }),
+        ]),
+        selected: signal(new Set<number>()),
+        suggested: signal<TagDto[]>([]),
+        toggle: () => undefined,
+      },
+      { create: () => new Subject<TagDto>() } as unknown as TagCreator,
+      'nested',
+    );
+
+    expect(nested.entries().map(describeEntry)).toEqual([
+      'all:Reading',
+      'all:Reading / Long reads (depth 1)',
+      'all:Reading / Long reads / Essays (depth 2)',
+    ]);
+    const grandchild = nested.entries()[2];
+    expect(grandchild.kind === 'option' && grandchild.option.ancestorPath).toBe(
+      'Reading / Long reads',
+    );
   });
 
   it('matches the full label and offers to create a tag that does not exist', () => {

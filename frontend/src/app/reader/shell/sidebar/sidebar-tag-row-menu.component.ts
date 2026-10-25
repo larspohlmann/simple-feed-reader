@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LayoutService } from '../../layout.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
@@ -19,4 +19,5 @@ export class SidebarTagRowMenuComponent {
   protected readonly screen = inject(LayoutService);
   protected readonly manage = inject(ManageActions);
   protected readonly rows = inject(SidebarRowActions);
+  protected readonly roomBelow = computed(() => this.rows.canCreateTagUnder(this.tag()));
 }

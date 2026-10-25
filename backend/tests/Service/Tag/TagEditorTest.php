@@ -14,8 +14,10 @@ use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Model\TagDetailsModel;
 use App\Service\Tag\TagEditor;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 final class TagEditorTest extends DbTestCase
 {
@@ -108,27 +110,158 @@ final class TagEditorTest extends DbTestCase
         );
     }
 
-    public function testCreateRefusesAChildAsParent(): void
+    public function testCreateNestsATagTwoLevelsDown(): void
     {
-        $user = $this->user('tag-grandchild@example.com');
-        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
-        $child = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $parent->requireId()));
+        $user = $this->user('tag-grandchild-create@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
 
-        $this->expectException(InvalidTagParentException::class);
-        $this->expectExceptionMessage('A parent tag cannot itself have a parent.');
-        $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $child->requireId()));
+        $essays = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
+
+        self::assertSame($longReads->requireId(), $this->reload($essays)->getParent()?->getId());
     }
 
-    public function testUpdateRefusesAParentForATagThatHasChildren(): void
+    public function testCreateRefusesAThirdLevelBelowTheTop(): void
     {
-        $user = $this->user('tag-parent-demotion@example.com');
-        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
-        $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $parent->requireId()));
-        $other = $this->editor()->create($user, new TagDetailsModel('Other'));
+        $user = $this->user('tag-too-deep-create@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $essays = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
 
         $this->expectException(InvalidTagParentException::class);
-        $this->expectExceptionMessage('A tag with child tags cannot have a parent.');
-        $this->editor()->update($parent, new TagDetailsModel('Reading', parentId: $other->requireId()));
+        $this->expectExceptionMessage('A tag can sit at most 2 levels below the top.');
+        $this->editor()->create($user, new TagDetailsModel('Short essays', parentId: $essays->requireId()));
+    }
+
+    public function testUpdateMovesATagWithChildrenUnderARoot(): void
+    {
+        $user = $this->user('tag-move-subtree@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $books = $this->editor()->create($user, new TagDetailsModel('Books'));
+        $novels = $this->editor()->create($user, new TagDetailsModel('Novels', parentId: $books->requireId()));
+
+        $this->editor()->update($books, new TagDetailsModel('Books', parentId: $reading->requireId()));
+
+        self::assertSame($reading->requireId(), $this->reload($books)->getParent()?->getId());
+        self::assertSame($books->requireId(), $this->reload($novels)->getParent()?->getId());
+    }
+
+    public function testUpdateRefusesAMoveThatPushesAChildPastTheLimit(): void
+    {
+        $user = $this->user('tag-move-too-deep@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $books = $this->editor()->create($user, new TagDetailsModel('Books'));
+        $this->editor()->create($user, new TagDetailsModel('Novels', parentId: $books->requireId()));
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag can sit at most 2 levels below the top.');
+        $this->editor()->update($books, new TagDetailsModel('Books', parentId: $longReads->requireId()));
+    }
+
+    public function testUpdateRefusesAMoveUnderTheTagsOwnChild(): void
+    {
+        $user = $this->user('tag-move-under-child@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag cannot move under one of its own child tags.');
+        $this->editor()->update($reading, new TagDetailsModel('Reading', parentId: $longReads->requireId()));
+    }
+
+    public function testUpdateChecksTheCommittedTreeSoTwoCrossingMovesCannotLoop(): void
+    {
+        $user = $this->user('tag-move-crossing@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $tech = $this->editor()->create($user, new TagDetailsModel('Tech'));
+        $this->moveBehindTheEditor($reading, $tech);
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag cannot move under one of its own child tags.');
+        $this->editor()->update($tech, new TagDetailsModel('Tech', parentId: $reading->requireId()));
+    }
+
+    public function testCreateUpdateAndDeleteEachHoldTheTagStructureLock(): void
+    {
+        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
+        }
+        $user = $this->user('tag-editor-locks@example.com');
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $this->editor()->update($reading, new TagDetailsModel('Read'));
+        $this->editor()->delete($reading);
+
+        self::assertCount(3, $recorder->queriesMatching('for update'));
+    }
+
+    public function testAnEditThatKeepsTheParentReadsNoTagTree(): void
+    {
+        $user = $this->user('tag-keep-parent-cheap@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->editor()->update($longReads, new TagDetailsModel('Longreads', parentId: $reading->requireId()));
+
+        self::assertSame([], $recorder->queriesMatching('parent_id as'));
+    }
+
+    public function testCreateChecksTheCommittedTreeForDepth(): void
+    {
+        $user = $this->user('tag-create-crossing@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads'));
+        $tech = $this->editor()->create($user, new TagDetailsModel('Tech'));
+        $this->moveBehindTheEditor($longReads, $reading);
+        $this->moveBehindTheEditor($reading, $tech);
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag can sit at most 2 levels below the top.');
+        $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
+    }
+
+    public function testDeletingAMiddleTagMovesItsChildrenUpUnderItsParentAfterTheOthers(): void
+    {
+        $user = $this->user('tag-middle-deleter@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $essays = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
+        $poems = $this->editor()->create($user, new TagDetailsModel('Poems', parentId: $reading->requireId()));
+
+        $this->editor()->delete($longReads);
+
+        $this->entityManager->clear();
+        $reloadedEssays = $this->entityManager->find(Tag::class, $essays->requireId());
+        $reloadedPoems = $this->entityManager->find(Tag::class, $poems->requireId());
+        self::assertInstanceOf(Tag::class, $reloadedEssays);
+        self::assertInstanceOf(Tag::class, $reloadedPoems);
+        self::assertSame($reading->requireId(), $reloadedEssays->getParent()?->getId());
+        self::assertGreaterThan($reloadedPoems->getPosition(), $reloadedEssays->getPosition());
+    }
+
+    public function testDeletingARootLiftsItsChildToRootAndKeepsItsGrandchildUnderIt(): void
+    {
+        $user = $this->user('tag-root-deleter@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $essays = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
+
+        $this->editor()->delete($reading);
+
+        $this->entityManager->clear();
+        $reloadedLongReads = $this->entityManager->find(Tag::class, $longReads->requireId());
+        $reloadedEssays = $this->entityManager->find(Tag::class, $essays->requireId());
+        self::assertInstanceOf(Tag::class, $reloadedLongReads);
+        self::assertInstanceOf(Tag::class, $reloadedEssays);
+        self::assertNull($reloadedLongReads->getParent());
+        self::assertSame($longReads->requireId(), $reloadedEssays->getParent()?->getId());
     }
 
     public function testUpdateRefusesTheTagItselfAsParent(): void
@@ -241,6 +374,16 @@ final class TagEditorTest extends DbTestCase
         self::assertInstanceOf(TagEditor::class, $editor);
 
         return $editor;
+    }
+
+    /** A concurrent request that committed: the row changes, the entities this request holds do not. */
+    private function moveBehindTheEditor(Tag $tag, Tag $parent): void
+    {
+        $this->entityManager->getConnection()->update(
+            'tag',
+            ['parent_id' => $parent->requireId()],
+            ['id' => $tag->requireId()],
+        );
     }
 
     private function taggedSubscription(User $user, Tag $tag): Subscription

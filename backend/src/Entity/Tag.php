@@ -14,6 +14,9 @@ final class Tag implements PositionedInterface
 {
     use PersistedId;
 
+    /** Levels below the top a tag may sit; a root is at 0. */
+    public const int MAX_DEPTH = 2;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

@@ -63,11 +63,11 @@ describe('resolveTagDrop', () => {
     });
   });
 
-  it('counts the exact middle of a child header as its lower half', () => {
+  it('nests a childless tag under a child from its middle', () => {
     expect(resolveTagDrop({ tag: tagC, layout: layout() }, TAGS, 120)).toEqual({
-      parentId: 2,
-      order: [21, 3, 22],
-      mark: { kind: 'after', tagId: 21 },
+      parentId: 21,
+      order: [3],
+      mark: { kind: 'nest', tagId: 21 },
     });
   });
 
@@ -176,11 +176,11 @@ describe('resolveTagDrop', () => {
     });
   });
 
-  it('keeps a tag with children at the top level: no nest zone, no child slot', () => {
-    expect(resolveTagDrop({ tag: tagB, layout: layout() }, TAGS, 5)).toEqual({
-      parentId: null,
-      order: [2, 1, 3],
-      mark: { kind: 'before', tagId: 1 },
+  it('nests a tag with children under a root, but never inside its own subtree', () => {
+    expect(resolveTagDrop({ tag: tagB, layout: layout() }, TAGS, 20)).toEqual({
+      parentId: 1,
+      order: [2],
+      mark: { kind: 'nest', tagId: 1 },
     });
     expect(resolveTagDrop({ tag: tagB, layout: layout() }, TAGS, 155)).toBeNull();
   });
@@ -193,5 +193,43 @@ describe('resolveTagDrop', () => {
     expect(resolveTagDrop({ tag: tagA, layout: layout() }, TAGS, 2)).toBeNull();
     expect(resolveTagDrop({ tag: tagA, layout: layout() }, TAGS, 38)).toBeNull();
     expect(resolveTagDrop({ tag: B1, layout: layout() }, TAGS, 120)).toBeNull();
+  });
+
+  describe('a grandchild level', () => {
+    const B1a = tag(211, 21, 0);
+    const DEEP = [...TAGS, B1a];
+    /** A 0–40, B 50–90, B1 100–140, B1a 150–190, B2 200–240, C 250–290. */
+    const deep = () => layout([1, 2, 21, 211, 22, 3]);
+
+    it('splits a grandchild header into halves: nothing nests below it', () => {
+      expect(resolveTagDrop({ tag: tagC, layout: deep() }, DEEP, 170)).toEqual({
+        parentId: 21,
+        order: [211, 3],
+        mark: { kind: 'after', tagId: 211 },
+      });
+    });
+
+    it('makes the bottom edge of a child with shown children its first grandchild', () => {
+      expect(resolveTagDrop({ tag: tagC, layout: deep() }, DEEP, 138)).toEqual({
+        parentId: 21,
+        order: [3, 211],
+        mark: { kind: 'before', tagId: 211 },
+      });
+    });
+
+    it('keeps a tag with children out of the grandchild level', () => {
+      expect(resolveTagDrop({ tag: tagB, layout: deep() }, DEEP, 152)).toBeNull();
+      const tagD = tag(4, null, 3);
+      const D1 = tag(41, 4, 0);
+      expect(resolveTagDrop({ tag: tagD, layout: deep() }, [...DEEP, tagD, D1], 120)).toBeNull();
+    });
+
+    it('moves a child with children under another root', () => {
+      expect(resolveTagDrop({ tag: B1, layout: deep() }, DEEP, 20)).toEqual({
+        parentId: 1,
+        order: [21],
+        mark: { kind: 'nest', tagId: 1 },
+      });
+    });
   });
 });

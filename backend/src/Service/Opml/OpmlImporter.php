@@ -9,6 +9,8 @@ use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\Model\OpmlImportResultModel;
 use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Subscription\Model\BulkSubscribeResultModel;
+use App\Service\Tag\TagStructureLock;
 
 /** Imports OPML into subscriptions WITHOUT fetching anything, mapping its outline tree onto BulkSubscriber items. */
 final readonly class OpmlImporter
@@ -18,6 +20,7 @@ final readonly class OpmlImporter
     public function __construct(
         private OpmlBodyReader $bodyReader,
         private BulkSubscriber $subscriber,
+        private TagStructureLock $tagStructureLock,
     ) {
     }
 
@@ -29,7 +32,13 @@ final readonly class OpmlImporter
 
         $body = $this->bodyReader->read($opml);
 
-        $result = $this->subscriber->subscribeAll($user, $this->collectFeeds($body, null, null));
+        $result = $this->tagStructureLock->hold(
+            $user,
+            fn (): BulkSubscribeResultModel => $this->subscriber->subscribeAll(
+                $user,
+                $this->collectFeeds($body, null, null),
+            ),
+        );
 
         return new OpmlImportResultModel(
             imported: $result->imported,

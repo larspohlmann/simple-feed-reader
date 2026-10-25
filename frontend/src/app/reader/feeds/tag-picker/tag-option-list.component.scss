@@ -14,13 +14,10 @@
   gap: var(--space-2);
   min-height: var(--control-h);
   padding: 0 var(--space-2);
+  padding-inline-start: calc(var(--space-2) + var(--space-5) * var(--depth, 0));
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   cursor: pointer;
-}
-
-.option.indented {
-  padding-inline-start: calc(var(--space-2) + var(--space-5));
 }
 
 .option.active,

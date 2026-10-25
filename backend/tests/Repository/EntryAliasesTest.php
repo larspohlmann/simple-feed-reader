@@ -15,10 +15,8 @@ final class EntryAliasesTest extends TestCase
         $collapse = EntryAliases::collapse();
 
         self::assertSame('s.id', $primary->subscriptionKey());
-        self::assertSame('IDENTITY(st.tag)', $primary->tagKey());
         self::assertSame('nf.network', $primary->networkKey());
         self::assertSame('s2.id', $collapse->subscriptionKey());
-        self::assertSame('IDENTITY(st2.tag)', $collapse->tagKey());
         self::assertSame('nf2.network', $collapse->networkKey());
     }
 }

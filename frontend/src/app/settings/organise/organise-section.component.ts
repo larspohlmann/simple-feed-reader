@@ -37,6 +37,7 @@ import {
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
+import { TagHierarchy } from '../../reader/state/tag-hierarchy';
 import {
   rootsOf,
   siblingIdsByTagId,
@@ -229,6 +230,11 @@ export class OrganiseSectionComponent implements OnInit {
 
   protected readonly orderedTags = computed(() => tagsInTreeOrder(this.tags.tags()));
   private readonly siblingIdsByTag = computed(() => siblingIdsByTagId(this.tags.tags()));
+  private readonly hierarchy = computed(() => new TagHierarchy(this.tags.tags()));
+
+  protected depthOf(tag: TagDto): number {
+    return this.hierarchy().depthOf(tag.id);
+  }
 
   protected cueOf(group: OrganiseGroup): TagDropMark['kind'] | null {
     return group.tag === null ? null : this.tagSession.cueFor(group.tag.id);

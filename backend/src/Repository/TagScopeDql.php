@@ -8,8 +8,8 @@ use App\Entity\SubscriptionTag;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * A subscription is in a tag's scope when it carries the tag or a child of it; a semi-join, so a feed
- * carrying both appears once.
+ * A subscription is in a tag's scope when it carries the tag or any tag below it; a semi-join, so a feed
+ * carrying several of them appears once.
  */
 final class TagScopeDql
 {
@@ -17,15 +17,16 @@ final class TagScopeDql
     public static function predicate(string $subscriptionAlias): string
     {
         $join = $subscriptionAlias . 'TagJoin';
-        $tag = $subscriptionAlias . 'ScopedTag';
+        $lineage = $subscriptionAlias . 'ScopedTag';
 
         return \sprintf(
-            'EXISTS (SELECT 1 FROM %1$s %2$s JOIN %2$s.tag %3$s'
-            . ' WHERE %2$s.subscription = %4$s AND (%3$s.id = :tagId OR %3$s.parent = :tagId))',
+            'EXISTS (SELECT 1 FROM %1$s %2$s JOIN %2$s.tag %3$s%4$s WHERE %2$s.subscription = %5$s AND %6$s)',
             SubscriptionTag::class,
             $join,
-            $tag,
+            TagLineageDql::alias($lineage, 0),
+            TagLineageDql::ancestorJoins($lineage),
             $subscriptionAlias,
+            TagLineageDql::reaches($lineage, ':tagId'),
         );
     }
 

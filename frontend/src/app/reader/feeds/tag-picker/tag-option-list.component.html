@@ -17,14 +17,14 @@
         role="option"
         [id]="search().optionId(index)"
         [class.active]="index === search().activeIndex()"
-        [class.indented]="entry.option.indented"
+        [style.--depth]="entry.option.depth"
         [attr.aria-selected]="entry.option.selected"
         (click)="search().pick(entry.option.id)"
       >
         <app-tag-glyph [name]="entry.option.icon" [color]="entry.option.color" size="sm" />
         <span class="name">
-          @if (entry.option.parentName && !entry.option.indented) {
-            <span class="parent">{{ entry.option.parentName }} / </span>
+          @if (entry.option.ancestorPath && entry.option.depth === 0) {
+            <span class="parent">{{ entry.option.ancestorPath }} / </span>
           }
           {{ entry.option.name }}
         </span>

@@ -2,18 +2,18 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Signal, computed, signal } from '@angular/core';
 import { parseProblem, problemMessage } from '../../../core/problem';
 import { TagDto } from '../../models';
-import { labelWithParent, tagsInTreeOrder } from '../../state/subscription-derivations';
+import { tagPath, tagsInTreeOrder } from '../../state/subscription-derivations';
 import { TagCreator } from './tag-creator.service';
 
 export interface TagOption {
   readonly id: number;
   readonly name: string;
-  readonly parentName: string | null;
+  readonly ancestorPath: string | null;
   readonly label: string;
   readonly icon: string | null;
   readonly color: string | null;
   readonly selected: boolean;
-  readonly indented: boolean;
+  readonly depth: number;
 }
 
 export type TagGroup = 'suggested' | 'all' | 'matches';
@@ -32,7 +32,8 @@ export interface TagSearchSource {
 
 interface IndexedTag {
   readonly tag: TagDto;
-  readonly parentName: string | null;
+  readonly ancestorPath: string | null;
+  readonly depth: number;
   readonly label: string;
   readonly searchText: string;
 }
@@ -51,11 +52,12 @@ export class TagSearch {
 
   private readonly indexed = computed(() => {
     const tags = this.source.tags();
-    const namesById = new Map(tags.map((tag) => [tag.id, tag.name]));
+    const byId = new Map(tags.map((tag) => [tag.id, tag]));
     return tagsInTreeOrder(tags).map((tag): IndexedTag => {
-      const parentName = tag.parentId === null ? null : (namesById.get(tag.parentId) ?? null);
-      const label = labelWithParent(tag.name, parentName);
-      return { tag, parentName, label, searchText: label.toLowerCase() };
+      const path = tagPath(tag, byId);
+      const label = path.join(' / ');
+      const ancestorPath = path.length > 1 ? path.slice(0, -1).join(' / ') : null;
+      return { tag, ancestorPath, depth: path.length - 1, label, searchText: label.toLowerCase() };
     });
   });
 
@@ -162,7 +164,7 @@ export class TagSearch {
     const all = this.indexed().map((indexed): TagEntry => ({
       kind: 'option',
       group: 'all',
-      option: this.optionOf(indexed, indexed.tag.parentId !== null),
+      option: this.optionOf(indexed, true),
     }));
     return [...suggested, ...all];
   }
@@ -179,17 +181,17 @@ export class TagSearch {
     return taken ? matches : [...matches, { kind: 'create', name: this.query().trim() }];
   }
 
-  private optionOf(indexed: IndexedTag, indented: boolean): TagOption {
+  private optionOf(indexed: IndexedTag, nested: boolean): TagOption {
     const { tag } = indexed;
     return {
       id: tag.id,
       name: tag.name,
-      parentName: indexed.parentName,
+      ancestorPath: indexed.ancestorPath,
       label: indexed.label,
       icon: tag.icon,
       color: tag.color,
       selected: this.source.selected().has(tag.id),
-      indented,
+      depth: nested ? indexed.depth : 0,
     };
   }
 }

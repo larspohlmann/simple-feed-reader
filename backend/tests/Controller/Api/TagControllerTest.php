@@ -239,18 +239,19 @@ final class TagControllerTest extends WebTestCase
         self::assertSame([null, $parentId], array_column($list['tags'], 'parentId'));
     }
 
-    public function testAChildOfAChildIsAnInvalidParentProblem(): void
+    public function testAThirdLevelBelowTheTopIsAnInvalidParentProblem(): void
     {
         $client = self::createClient();
         $headers = $this->authHeader('tag-depth-wire@example.com');
         $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
         $childId = $this->createTag($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
+        $grandchildId = $this->createTag($client, $headers, ['name' => 'Essays', 'parentId' => $childId]);
 
         $client->request(
             'POST',
             '/api/tags',
             server: $headers,
-            content: json_encode(['name' => 'Essays', 'parentId' => $childId], \JSON_THROW_ON_ERROR),
+            content: json_encode(['name' => 'Short essays', 'parentId' => $grandchildId], \JSON_THROW_ON_ERROR),
         );
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -258,8 +259,8 @@ final class TagControllerTest extends WebTestCase
         self::assertIsArray($problem);
         self::assertSame('invalid_tag_parent', $problem['type']);
         self::assertSame('Invalid parent tag', $problem['title']);
-        self::assertSame('A parent tag cannot itself have a parent.', $problem['detail']);
-        self::assertSame(['parentId' => ['A parent tag cannot itself have a parent.']], $problem['errors']);
+        self::assertSame('A tag can sit at most 2 levels below the top.', $problem['detail']);
+        self::assertSame(['parentId' => ['A tag can sit at most 2 levels below the top.']], $problem['errors']);
     }
 
     public function testAnUpdateWithoutParentIdIsRefusedAndKeepsTheParent(): void

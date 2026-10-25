@@ -12,7 +12,9 @@ use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\OpmlImporter;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 final class OpmlImporterTest extends DbTestCase
 {
@@ -74,6 +76,21 @@ final class OpmlImporterTest extends DbTestCase
         // The "News" folder became a tag attached to its two feeds.
         $tag = $this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'News']);
         self::assertNotNull($tag);
+    }
+
+    public function testAnImportHoldsTheTagStructureLockWhileItNestsTags(): void
+    {
+        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
+        }
+        $user = $this->user('import-locks@example.com');
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->importer()->import($user, $this->fixture());
+
+        self::assertCount(1, $recorder->queriesMatching('for update'));
     }
 
     public function testReusesExistingFeedAndSkipsAlreadySubscribed(): void

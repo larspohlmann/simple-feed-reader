@@ -344,9 +344,9 @@ describe('SidebarComponent', () => {
       return { fixture, element, items };
     }
 
-    it('is not offered on a child tag', () => {
+    it('is offered on a child tag, which still has a level below it', () => {
       const { items } = openRowMenu('Long reads');
-      expect(items.map((item) => item.textContent?.trim())).not.toContain('Create tag here');
+      expect(items.map((item) => item.textContent?.trim())).toContain('Create tag here');
     });
 
     it('creates a tag under the root and closes the menu', () => {
@@ -641,6 +641,44 @@ describe('SidebarComponent', () => {
         const box = group.querySelector('.tag-child')!;
         expect(blockKinds(box)).toEqual(['taghead', 'tagfeeds']);
         expect(box.querySelector('.taghead')!.closest('.tag-child')).toBe(box);
+      });
+
+      it('nests a grandchild box inside its open parent box, before the parent feeds', () => {
+        const fixture = mount({
+          tagTree: [
+            parentNode(10, [
+              { ...parentNode(11, [tagNode(12, [sub(3)], 11)]), subscriptions: [sub(2)] },
+            ]),
+          ],
+        });
+        fixture.componentInstance.toggle(10);
+        fixture.componentInstance.toggle(11);
+        fixture.componentInstance.toggle(12);
+        fixture.detectChanges();
+
+        const childBox = (fixture.nativeElement as HTMLElement).querySelector(
+          '.tag-group > .tag-child',
+        )!;
+        expect(blockKinds(childBox)).toEqual(['taghead', 'tag-child', 'tagfeeds']);
+        const grandchildBox = childBox.querySelector(':scope > .tag-child')!;
+        expect(blockKinds(grandchildBox)).toEqual(['taghead', 'tagfeeds']);
+        const nestedDropLists = (fixture.nativeElement as HTMLElement).querySelectorAll(
+          '.cdk-drop-list .cdk-drop-list',
+        );
+        expect(nestedDropLists).toHaveLength(0);
+      });
+
+      it('shows grandchildren only while their parent is open', () => {
+        const fixture = mount({
+          tagTree: [parentNode(10, [parentNode(11, [tagNode(12, [], 11)])])],
+        });
+        fixture.componentInstance.toggle(10);
+        fixture.detectChanges();
+        expect(heads(fixture).map((head) => head.name)).toEqual(['t10', 't11']);
+
+        fixture.componentInstance.toggle(11);
+        fixture.detectChanges();
+        expect(heads(fixture).map((head) => head.name)).toEqual(['t10', 't11', 't12']);
       });
 
       it('shows a closed child as a box with its head only', () => {

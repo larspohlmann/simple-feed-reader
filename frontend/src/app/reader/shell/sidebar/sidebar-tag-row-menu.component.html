@@ -8,7 +8,7 @@
       <button role="menuitem" (click)="manage.editTag(current); rows.closeMenu()">
         {{ 'reader.editTag' | transloco }}
       </button>
-      @if (current.parentId === null) {
+      @if (roomBelow()) {
         <button role="menuitem" (click)="manage.createTag(current.id); rows.closeMenu()">
           {{ 'reader.createTagHere' | transloco }}
         </button>

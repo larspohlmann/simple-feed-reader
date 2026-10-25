@@ -7,7 +7,7 @@ namespace App\Service\Opml\Pass;
 use App\Entity\Tag;
 use App\Service\Social\Model\ExportedSubscriptionModel;
 
-/** One export's tags and their feeds, arranged for nesting: a parent appears even when only its child has feeds. */
+/** One export's tags and their feeds, arranged for nesting: an ancestor appears even when only a tag below it has feeds. */
 final class OpmlTagTree
 {
     /** @var array<int, Tag> by tag id */
@@ -61,10 +61,8 @@ final class OpmlTagTree
 
     private function remember(Tag $tag): void
     {
-        $this->tags[$tag->requireId()] = $tag;
-        $parent = $tag->getParent();
-        if ($parent !== null) {
-            $this->tags[$parent->requireId()] = $parent;
+        for ($known = $tag; $known !== null; $known = $known->getParent()) {
+            $this->tags[$known->requireId()] = $known;
         }
     }
 

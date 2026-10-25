@@ -3,18 +3,18 @@ import { SubscriptionDto, TagDto } from '../models';
 export interface TagNode {
   tag: TagDto;
   subscriptions: SubscriptionDto[];
-  /** A root's children in position order; always empty on a child (#1736). */
+  /** The tag's children in position order, each with its own. */
   children: TagNode[];
   unreadCount: number;
   entryCount: number;
 }
 
 /**
- * Build the sidebar tag tree, one level deep. Tag NODES and their order come
+ * Build the sidebar tag tree, at every level. Tag NODES and their order come
  * from `orderedTags` (already in `tag.position` order) so every tag shows,
  * including empty ones; each node's feeds come from `subs` carrying the tag.
  * A root's unread count is the API's roll-up; its entry count spans its own
- * feeds and its children's, a feed carrying both counted once. Falls back to
+ * feeds and every tag's below it, a feed carrying both counted once. Falls back to
  * the tags embedded on subscriptions, name-ordered, before the tag list has
  * loaded, so tagged feeds never briefly vanish.
  */
@@ -26,30 +26,23 @@ export function buildTagTree(
   const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subscriptions);
   const byTagId = bucketByTag(subscriptions);
 
-  const leaf = (tag: TagDto): TagNode => {
-    const feeds = feedsOf(byTagId, tag.id);
-    return {
-      tag,
-      subscriptions: feeds,
-      children: [],
-      unreadCount: tagUnread.get(tag.id) ?? 0,
-      entryCount: totalEntryCount(feeds),
-    };
-  };
-
   const children = childrenByParentId(tags);
-  return rootsOf(tags).map((root) => {
-    const node = {
-      ...leaf(root),
-      children: (children.get(root.id) ?? []).map(leaf),
+  const node = (tag: TagDto): TagNode => {
+    const branch: TagNode = {
+      tag,
+      subscriptions: feedsOf(byTagId, tag.id),
+      children: (children.get(tag.id) ?? []).map(node),
+      unreadCount: tagUnread.get(tag.id) ?? 0,
+      entryCount: 0,
     };
-    return { ...node, entryCount: totalEntryCount(distinctFeedsOf(node)) };
-  });
+    return { ...branch, entryCount: totalEntryCount(distinctFeedsOf(branch)) };
+  };
+  return rootsOf(tags).map(node);
 }
 
-/** Every node, each root followed by its children: the order the sidebar shows. */
+/** Every node, each followed by the tags below it: the order the sidebar shows. */
 export function flattenTagTree(nodes: TagNode[]): TagNode[] {
-  return nodes.flatMap((node) => [node, ...node.children]);
+  return nodes.flatMap((node) => [node, ...flattenTagTree(node.children)]);
 }
 
 export function tagNodesById(nodes: TagNode[]): Map<number, TagNode> {
@@ -76,11 +69,10 @@ export function childrenByParentId(tags: readonly TagDto[]): Map<number, TagDto[
   return byParentId;
 }
 
-/** Each tag's sibling set — the roots, or its parent's children — as ids in the order given. */
+/** Each tag's sibling set (the roots, or one parent's children) as ids in the order given. */
 export function siblingIdsByTagId(tags: readonly TagDto[]): Map<number, readonly number[]> {
-  const roots = rootsOf(tags);
   const children = childrenByParentId(tags);
-  const siblingSets = [roots, ...roots.map((root) => children.get(root.id) ?? [])];
+  const siblingSets = [rootsOf(tags), ...tags.map((tag) => children.get(tag.id) ?? [])];
   const byTagId = new Map<number, readonly number[]>();
   for (const siblings of siblingSets) {
     const ids = siblings.map((sibling) => sibling.id);
@@ -94,19 +86,22 @@ export function siblingIdsOf(tags: readonly TagDto[], tag: TagDto): number[] {
   return [...(siblingIdsByTagId(tags).get(tag.id) ?? [])];
 }
 
-/** Each root followed by its children, whatever order the caller holds them in. */
+/** Each tag followed by the tags below it, whatever order the caller holds them in. */
 export function tagsInTreeOrder(tags: TagDto[]): TagDto[] {
   const children = childrenByParentId(tags);
-  return rootsOf(tags).flatMap((root) => [root, ...(children.get(root.id) ?? [])]);
+  const branch = (tag: TagDto): TagDto[] => [tag, ...(children.get(tag.id) ?? []).flatMap(branch)];
+  return rootsOf(tags).flatMap(branch);
 }
 
-/** A child reads with its parent, so a pill never shows a bare child out of context. */
+/** A nested tag reads with its ancestors, so a pill never shows a bare child out of context. */
 export function tagLabel(tag: TagDto, tags: readonly TagDto[]): string {
-  return labelWithParent(tag.name, tags.find((candidate) => candidate.id === tag.parentId)?.name);
+  return tagPath(tag, new Map(tags.map((candidate) => [candidate.id, candidate]))).join(' / ');
 }
 
-export function labelWithParent(name: string, parentName: string | null | undefined): string {
-  return parentName ? `${parentName} / ${name}` : name;
+/** The names from the top-most known ancestor down to the tag. */
+export function tagPath(tag: TagDto, byId: ReadonlyMap<number, TagDto>): string[] {
+  const parent = tag.parentId === null ? undefined : byId.get(tag.parentId);
+  return parent === undefined ? [tag.name] : [...tagPath(parent, byId), tag.name];
 }
 
 export const SUGGESTED_TAG_LIMIT = 4;
@@ -160,11 +155,12 @@ function feedsOf(byTagId: Map<number, TaggedFeed[]>, tagId: number): Subscriptio
 
 function distinctFeedsOf(node: TagNode): SubscriptionDto[] {
   const byId = new Map<number, SubscriptionDto>();
-  const feeds = [...node.subscriptions, ...node.children.flatMap((child) => child.subscriptions)];
-  for (const feed of feeds) {
-    byId.set(feed.id, feed);
-  }
+  for (const feed of subtreeFeeds(node)) byId.set(feed.id, feed);
   return [...byId.values()];
+}
+
+function subtreeFeeds(node: TagNode): SubscriptionDto[] {
+  return [...node.subscriptions, ...node.children.flatMap(subtreeFeeds)];
 }
 
 export function totalEntryCount(subscriptions: SubscriptionDto[]): number {

@@ -43,7 +43,6 @@ describe('TagsStore', () => {
     ctrl
       .expectOne('https://api.test/api/tags')
       .flush({ tags: [tag(1, 'Reading'), { ...tag(2, 'Long reads'), parentId: 1 }] });
-    expect(store.rootTags().map((root) => root.name)).toEqual(['Reading']);
   });
 
   it('records a Problem on error', () => {

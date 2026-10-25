@@ -21,6 +21,25 @@ final class EntryTagScopeTest extends ApiTestCase
         $this->client = self::createClient();
     }
 
+    public function testATopTagListsAndMarksReadItsGrandchildsEntries(): void
+    {
+        [$headers, $user] = $this->auth('tag-grandchild@example.com');
+        $reading = $this->tag($user, 'reading', null);
+        $longReads = $this->tag($user, 'long reads', $reading);
+        $essays = $this->tag($user, 'essays', $longReads);
+        $this->taggedFeed($user, 'own.example', 'essay', [$essays], '2026-10-04T00:00:00Z');
+        $this->entityManager()->flush();
+
+        $this->client->request('GET', '/api/entries?tag=' . $reading->requireId(), server: $headers);
+        self::assertSame(['own.example essay'], $this->titlesOfResponse());
+        $this->client->request('GET', '/api/entries?tag=' . $longReads->requireId(), server: $headers);
+        self::assertSame(['own.example essay'], $this->titlesOfResponse());
+
+        $this->markRead($headers, $reading->requireId());
+        $this->client->request('GET', '/api/entries?tag=' . $essays->requireId() . '&view=unread', server: $headers);
+        self::assertSame([], $this->titlesOfResponse());
+    }
+
     public function testAParentListsItsOwnAndItsChildrensEntriesEachOnce(): void
     {
         [$headers, $user] = $this->auth('tag-parent@example.com');

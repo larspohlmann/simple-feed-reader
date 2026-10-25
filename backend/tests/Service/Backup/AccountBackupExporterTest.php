@@ -411,6 +411,33 @@ final class AccountBackupExporterTest extends DbTestCase
         );
     }
 
+    public function testEachTagIsWrittenAfterItsParentAtEveryDepth(): void
+    {
+        $user = $this->makeUser('export-depth-first@example.com');
+        $reading = new Tag($user, 'Reading');
+        $reading->setPosition(9);
+        $longReads = new Tag($user, 'Long reads');
+        $longReads->setPosition(5);
+        $longReads->setParent($reading);
+        $essays = new Tag($user, 'Essays');
+        $essays->setPosition(1);
+        $essays->setParent($longReads);
+        $this->entityManager->persist($reading);
+        $this->entityManager->persist($longReads);
+        $this->entityManager->persist($essays);
+        $this->entityManager->flush();
+
+        [$foundationPart] = $this->decodedParts($user);
+        $tagLines = array_values(
+            array_filter($foundationPart, static fn (array $line): bool => $line['kind'] === 'tag'),
+        );
+
+        self::assertSame(
+            [['Reading', null], ['Long reads', 'Reading'], ['Essays', 'Long reads']],
+            array_map(static fn (array $line): array => [$line['name'], $line['parent']], $tagLines),
+        );
+    }
+
     public function testAnAccountWithNoEntriesYieldsOnlyTheFoundation(): void
     {
         $user = $this->makeUser('export-no-entries@example.com');
