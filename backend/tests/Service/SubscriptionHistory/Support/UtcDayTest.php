@@ -14,7 +14,7 @@ final class UtcDayTest extends TestCase
         $previous = date_default_timezone_get();
         date_default_timezone_set('Pacific/Auckland');
         try {
-            self::assertSame('2026-10-24', UtcDay::of(new \DateTimeImmutable('2026-10-24 23:30:00')));
+            self::assertSame('2026-10-24', UtcDay::of(new \DateTimeImmutable('2026-10-24 05:00:00')));
         } finally {
             date_default_timezone_set($previous);
         }
