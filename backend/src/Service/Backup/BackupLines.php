@@ -171,6 +171,8 @@ final readonly class BackupLines
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->getRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
+            'chapters' => EntryMedia::toJsonList($entry->getChapters()),
+            'chaptersUrl' => $entry->getChaptersUrl(),
             'linkCards' => array_map(self::linkCardFields(...), $companions->linkCards),
             'origin' => null === $companions->origin ? null : [
                 'title' => $companions->origin->title,

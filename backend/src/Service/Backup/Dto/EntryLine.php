@@ -58,6 +58,9 @@ final readonly class EntryLine
         public ?string $authorAvatarUrl = null,
         public ?QuotedPostContent $quote = null,
         public ?EntryOrigin $origin = null,
+        /** @var list<array<string, mixed>> */
+        public array $chapters = [],
+        public ?string $chaptersUrl = null,
     ) {
     }
 
@@ -97,6 +100,8 @@ final readonly class EntryLine
             authorAvatarUrl: self::authorUrlOf($line, 'authorAvatarUrl'),
             quote: $quote,
             origin: self::originOf($line),
+            chapters: LineField::objectListOrEmpty($line, 'chapters'),
+            chaptersUrl: LineField::stringOrNull($line, 'chaptersUrl'),
         );
     }
 

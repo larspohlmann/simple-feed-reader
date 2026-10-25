@@ -32,6 +32,16 @@ final class EntryChaptersTest extends TestCase
         self::assertSame('https://cdn.test/ch.json', $linked->getUrl());
     }
 
+    public function testAUrlOfExactlyTheMaximumLengthIsKept(): void
+    {
+        $url = 'https://cdn.test/' . str_repeat('a', EntryChapters::URL_MAX_LENGTH - \strlen('https://cdn.test/'));
+        $chapters = new EntryChapters();
+
+        $chapters->declare([], $url);
+
+        self::assertSame($url, $chapters->getUrl());
+    }
+
     public function testAnOverlongUrlIsDropped(): void
     {
         $chapters = new EntryChapters();

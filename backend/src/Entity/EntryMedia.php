@@ -104,15 +104,18 @@ final class EntryMedia
 
     /**
      * Maps a media value-object list to the JSON arrays stored, exported, and
-     * served — the one place that turns EntryMedium/EntryAttachment into arrays,
+     * served — the one place that turns EntryMedium/EntryAttachment/EntryChapter into arrays,
      * shared by the entity, the API mapper, and the backup exporter.
      *
-     * @param list<EntryMedium>|list<EntryAttachment> $items
+     * @param list<EntryMedium>|list<EntryAttachment>|list<EntryChapter> $items
      *
      * @return list<array<string, string|int|true>>
      */
     public static function toJsonList(array $items): array
     {
-        return array_map(static fn (EntryMedium|EntryAttachment $item): array => $item->jsonSerialize(), $items);
+        return array_map(
+            static fn (EntryMedium|EntryAttachment|EntryChapter $item): array => $item->jsonSerialize(),
+            $items,
+        );
     }
 }

@@ -85,6 +85,7 @@ final class BackupFieldDeclarations
             'image.url' => 'imageUrl', 'image.width' => 'imageWidth',
             'image.height' => 'imageHeight', 'image.renditions' => 'imageRenditions',
             'mediaSet.media' => 'media', 'mediaSet.attachments' => 'attachments',
+            'mediaSet.chapters.chapters' => 'chapters', 'mediaSet.chapters.url' => 'chaptersUrl',
             'publishedAt' => 'publishedAt', 'createdAt' => 'createdAt',
             'effectiveDate' => 'effectiveDate',
             'discussion.url' => 'discussionUrl',

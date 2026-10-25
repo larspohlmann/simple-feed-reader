@@ -53,8 +53,8 @@ removed; a paragraph left empty is dropped. A later repeat of the block stays in
 
 ### Podcast source: stored on the entry
 
-Chapters belong to the item, and `App\Entity` may not import a Service model, so they live on `Entry` in an
-`EntryChapters` embeddable (one migration) with two columns:
+Chapters belong to the item, and `App\Entity` may not import a Service model, so they live on
+`Entry` in an `EntryChapters` embeddable nested in `EntryMedia` (one migration) with two columns:
 
 - `chapters`: `list<{startSeconds, title}>` (JSON) — written at ingest from inline Podlove `psc:chapters`
   (versions 1.1 and 1.2, `start` as `HH:MM:SS(.mmm)`), or later by the lazy fill.
@@ -89,7 +89,8 @@ URL.
 
 ### `ChapterListComponent`
 
-A DOM decorator, `addChapterList`, because the body is `innerHTML`. Standalone, signals, styles in `chapter-list.component.scss` with design-language tokens. Inputs:
+A DOM decorator, `addChapterList`, because the body is `innerHTML`.
+Standalone, signals, styles in `chapter-list.component.scss` with design-language tokens. Inputs:
 `chapters` and a `ChapterPlayer`. Each row is a `<button>` with the start time and the title; the
 current one gets `aria-current="true"` and the accent mark. A tap calls `player.playFrom(startSeconds)`
 and highlights that row at once. The list never scrolls itself. Placed under the YouTube player

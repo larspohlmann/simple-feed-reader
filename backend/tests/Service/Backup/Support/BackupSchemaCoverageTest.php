@@ -107,6 +107,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         BackupSchema::KIND_ENTRY => [
             'media' => ['url', 'kind', 'width', 'height', 'previewImageUrl'],
             'attachments' => ['url', 'mimeType', 'durationInSeconds', 'sizeInBytes', 'title'],
+            'chapters' => ['startSeconds', 'title'],
             'imageRenditions' => ['url', 'width'],
         ],
     ];
@@ -284,10 +285,6 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'image.verifyAttempts' => 'The queue marker and failure count of this instance\'s '
                 . 'check. A restored image is not put into the queue. The instance shows it as '
                 . 'the old instance did.',
-            'mediaSet.chapters.chapters' => 'Read from the feed on this instance (#1808); the next refresh '
-                . 'and the first open of an episode fill them again.',
-            'mediaSet.chapters.url' => 'The chapters file still to fetch, found in the feed on this instance (#1808). '
-                . 'A restored article has none pending; the next refresh finds it again.',
         ],
         LinkCard::class => [
             'threadPost' => 'A reply\'s card stays out of the file with its reply (#1668).',
