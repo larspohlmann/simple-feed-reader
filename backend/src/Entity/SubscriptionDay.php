@@ -40,8 +40,23 @@ final class SubscriptionDay
         $this->readCount = $readCount;
     }
 
+    public function getSubscription(): Subscription
+    {
+        return $this->subscription;
+    }
+
     public function getDay(): \DateTimeImmutable
     {
         return $this->day;
+    }
+
+    public function getArrived(): int
+    {
+        return $this->arrived;
+    }
+
+    public function getReadCount(): int
+    {
+        return $this->readCount;
     }
 }
