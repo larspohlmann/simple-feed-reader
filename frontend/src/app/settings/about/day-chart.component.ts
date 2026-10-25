@@ -20,6 +20,7 @@ export class DayChartComponent {
   private readonly hovered = signal<number | null>(null);
 
   readonly days = input.required<ChartDay[]>();
+  readonly label = input.required<string>();
 
   readonly chart = computed(() => buildDayChart(this.days(), CHART_WIDTH, CHART_HEIGHT));
 

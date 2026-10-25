@@ -10,6 +10,7 @@ describe('DayChartComponent', () => {
     });
     const fixture = TestBed.createComponent(DayChartComponent);
     fixture.componentRef.setInput('days', days);
+    fixture.componentRef.setInput('label', 'New articles');
     fixture.detectChanges();
     return fixture;
   }
@@ -22,6 +23,23 @@ describe('DayChartComponent', () => {
 
     expect(fixture.nativeElement.querySelectorAll('.chart-col')).toHaveLength(2);
     expect(fixture.nativeElement.querySelector('.chart-tip strong')?.textContent).toBe('5');
+  });
+
+  it('names the busiest known day at rest, passing over unknown days', () => {
+    const fixture = mount([
+      { date: '2026-09-01', count: null },
+      { date: '2026-09-02', count: 2 },
+      { date: '2026-09-03', count: 4 },
+    ]);
+
+    expect(fixture.nativeElement.querySelector('.chart-tip strong')?.textContent).toBe('4');
+  });
+
+  it('is a group named by its label', () => {
+    const figure = mount([{ date: '2026-09-01', count: 1 }]).nativeElement.querySelector('.chart');
+
+    expect(figure?.getAttribute('role')).toBe('group');
+    expect(figure?.getAttribute('aria-label')).toBe('New articles');
   });
 
   it('says a hovered unknown day has no data and draws no marker on it', () => {

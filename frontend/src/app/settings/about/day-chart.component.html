@@ -1,5 +1,5 @@
 @let plot = chart();
-<figure class="chart" (pointerleave)="clearHover()">
+<figure class="chart" role="group" [attr.aria-label]="label()" (pointerleave)="clearHover()">
   <svg
     class="chart-svg"
     [attr.viewBox]="'0 0 ' + plot.width + ' ' + plot.height"

@@ -33,7 +33,10 @@
           <span class="average-label">{{ 'settings.reading.arrivalsAverage' | transloco }}</span>
         </p>
         @if (hasArrivals()) {
-          <app-day-chart [days]="arrivedDays()" />
+          <app-day-chart
+            [days]="arrivedDays()"
+            [label]="'settings.reading.arrivalsTitle' | transloco"
+          />
         } @else {
           <p class="block-empty">{{ 'settings.reading.arrivalsEmpty' | transloco }}</p>
         }
@@ -49,7 +52,7 @@
       @if (readingPending()) {
         <div class="block-empty"><app-spinner /></div>
       } @else if (hasReads()) {
-        <app-day-chart [days]="readDays()" />
+        <app-day-chart [days]="readDays()" [label]="'settings.reading.chartTitle' | transloco" />
       } @else {
         <p class="block-empty">{{ 'settings.reading.chartEmpty' | transloco }}</p>
       }

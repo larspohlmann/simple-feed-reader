@@ -123,7 +123,10 @@ export class AboutSectionComponent implements OnInit {
 
     return average === null
       ? null
-      : new Intl.NumberFormat(this.language.lang(), { maximumFractionDigits: 1 }).format(average);
+      : new Intl.NumberFormat(this.language.lang(), {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        }).format(average);
   });
 
   readonly topUnreadFeeds = computed<FeedBar[]>(() => {

@@ -288,6 +288,37 @@ describe('AboutSectionComponent', () => {
     expect(fixture.nativeElement.querySelector('.reading .chart')).toBeNull();
   });
 
+  it('keeps one decimal on a whole-number average', () => {
+    const fixture = mount(null, {
+      activity: {
+        days: [{ date: '2026-09-01', arrived: 6, read: 0 }],
+        total: 0,
+        arrivedDailyAverage: 6,
+        topFeedsByRead: [],
+      },
+    });
+
+    expect(fixture.nativeElement.querySelector('.arrivals .average-value')?.textContent).toContain(
+      '6.0',
+    );
+  });
+
+  it('names each chart after its block', () => {
+    const fixture = mount(null, {
+      activity: {
+        days: [{ date: '2026-09-01', arrived: 6, read: 2 }],
+        total: 2,
+        arrivedDailyAverage: 6,
+        topFeedsByRead: [],
+      },
+    });
+
+    const label = (block: string) =>
+      fixture.nativeElement.querySelector(`.${block} .chart`)?.getAttribute('aria-label');
+    expect(label('arrivals')).toBe('New articles');
+    expect(label('reading')).toBe('Articles read');
+  });
+
   it('links the source code to the project repository', () => {
     const fixture = mount(null);
     const source = fixture.nativeElement.querySelector(
