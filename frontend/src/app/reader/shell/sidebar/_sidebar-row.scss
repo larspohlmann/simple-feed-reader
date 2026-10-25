@@ -23,9 +23,8 @@
     }
   }
 
-  // A collapsed section's card is as tall as an expanded section's head band.
-  .card:has(> .section-head:only-child) {
-    --card-pad-y: var(--space-0);
+  .card:has(> .section-head > [aria-expanded='false']) {
+    --card-pad-y: var(--sidebar-head-pad);
   }
 
   .organising .card,
@@ -306,8 +305,8 @@
     isolation: isolate;
     box-sizing: content-box;
     margin: calc(var(--card-pad-y) * -1) calc(var(--sidebar-card-pad) * -1) 0;
-    padding: var(--space-0) calc(var(--space-2) + var(--sidebar-card-pad)) var(--space-0)
-      calc(var(--sidebar-row-inset) + var(--sidebar-card-pad));
+    padding: var(--sidebar-head-pad) calc(var(--space-2) + var(--sidebar-card-pad))
+      var(--sidebar-head-pad) calc(var(--sidebar-row-inset) + var(--sidebar-card-pad));
     border-bottom: 1px solid var(--border);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: color-mix(in oklab, var(--text-primary) 5%, var(--surface-1));
@@ -316,7 +315,7 @@
       content: '';
       position: absolute;
       z-index: -1;
-      inset: var(--space-0) var(--sidebar-card-pad);
+      inset: var(--sidebar-head-pad) var(--sidebar-card-pad);
       border-radius: var(--radius);
     }
 

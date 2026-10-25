@@ -131,6 +131,11 @@
   display: none;
 }
 
+// The collapsed list stays mounted as the untag drop target; it must not add the card's gap under the head.
+.feeds-card.card > .feedlist:empty {
+  margin-top: calc(var(--space-0) * -1);
+}
+
 .tags,
 .feedlist,
 .tagfeeds {
