@@ -108,6 +108,10 @@ section + section{border-top:1px solid var(--border)}
 .phones .shot{border-radius:20px}
 
 .split{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-7);align-items:center}
+.digest{display:grid;grid-template-columns:3fr 1fr;gap:var(--space-4);align-items:start}
+.digest .phone{border-radius:20px}
+.shot.cropped{position:relative;max-height:560px}
+.shot.cropped::after{content:"";position:absolute;inset:auto 0 0 0;height:140px;background:linear-gradient(to bottom,transparent,var(--surface-1));pointer-events:none}
 .split ul{margin:var(--space-4) 0 0;padding:0;list-style:none;display:grid;gap:var(--space-3)}
 .split li{display:flex;gap:var(--space-3);color:var(--text-secondary)}
 .split li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:9px}
@@ -142,6 +146,9 @@ footer .copy{margin-left:auto}
   .nav .theme-switch{margin-left:auto}
   .layouts,.grid,.pkgs{grid-template-columns:1fr}
   .phones{grid-template-columns:1fr 1fr}
+  .digest{grid-template-columns:1fr}
+  .digest .wide{display:none}
+  .digest .phone{max-height:480px}
   section{padding:var(--space-7) 0}
   .hero{padding-top:var(--space-6)}
   .hero h1{font-size:32px}
@@ -267,6 +274,20 @@ footer .copy{margin-left:auto}
       </ul>
     </div>
     <div class="shot"><a class="zoom" href="screenshots/for-you-light.webp"><img src="screenshots/for-you-light.webp" alt="The For you recommendations"></a></div>
+  </div>
+</section>
+
+<section id="digest">
+  <div class="wrap">
+    <div class="sect-head">
+      <p class="eyebrow">Email digest</p>
+      <h2>New matches, delivered to your inbox.</h2>
+      <p class="muted">Pick the saved searches that matter and get a daily or weekly email of everything new that matched them, grouped by search, with the picture, source and summary of each entry. Cadence and format are yours to set; the reader sends it from your own instance.</p>
+    </div>
+    <div class="digest">
+      <div class="shot wide cropped"><a class="zoom" href="screenshots/digest-light.webp"><img src="screenshots/digest-light.webp" alt="An email digest: new entries matching the saved searches, grouped by search"></a></div>
+      <div class="shot phone cropped"><a class="zoom" href="screenshots/mobile-digest-dark.webp"><img src="screenshots/mobile-digest-dark.webp" alt="The email digest on a phone, dark theme"></a></div>
+    </div>
   </div>
 </section>
 
