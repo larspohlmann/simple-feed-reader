@@ -75,15 +75,6 @@ final class TagRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    public function hasChildren(Tag $tag): bool
-    {
-        return (int) $this->createQueryBuilder('t')
-            ->select('COUNT(t.id)')
-            ->andWhere('t.parent = :parent')->setParameter('parent', $tag)
-            ->getQuery()
-            ->getSingleScalarResult() > 0;
-    }
-
     public function nextPositionForUser(int $userId): int
     {
         return $this->nextPosition->in(

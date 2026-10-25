@@ -51,6 +51,16 @@ final readonly class TagTree
         return $height;
     }
 
+    public static function fits(int $parentDepth, int $height): bool
+    {
+        return $parentDepth + 1 + $height <= Tag::MAX_DEPTH;
+    }
+
+    public function canPlace(int $tagId, int $parentId): bool
+    {
+        return !$this->isWithin($parentId, $tagId) && self::fits($this->depthOf($parentId), $this->heightOf($tagId));
+    }
+
     /** Whether $tagId is $ancestorId itself or sits anywhere below it. */
     public function isWithin(int $tagId, int $ancestorId): bool
     {

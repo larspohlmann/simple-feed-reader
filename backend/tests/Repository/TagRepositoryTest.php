@@ -42,8 +42,6 @@ final class TagRepositoryTest extends DbTestCase
         $this->tag($owner, 'Unrelated');
 
         self::assertSame([$first, $second], $this->repository()->findChildren($parent));
-        self::assertTrue($this->repository()->hasChildren($parent));
-        self::assertFalse($this->repository()->hasChildren($first));
     }
 
     private function repository(): TagRepository

@@ -9,10 +9,39 @@ use App\Entity\User;
 use App\Service\Tag\Pass\TagTree;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class TagTreeTest extends DbTestCase
 {
     use SeedsUsers;
+
+    #[DataProvider('placements')]
+    public function testCanPlaceFollowsTheNestingRule(int $tagId, int $parentId, bool $expected): void
+    {
+        $tree = new TagTree([1 => null, 2 => 1, 3 => 2, 4 => null, 5 => 4]);
+
+        self::assertSame($expected, $tree->canPlace($tagId, $parentId));
+    }
+
+    /** @return iterable<string, array{int, int, bool}> */
+    public static function placements(): iterable
+    {
+        yield 'under itself' => [4, 4, false];
+        yield 'under its own child' => [4, 5, false];
+        yield 'under its own grandchild' => [1, 3, false];
+        yield 'a leaf under a grandchild is too deep' => [5, 3, false];
+        yield 'a leaf under a child fits' => [5, 2, true];
+        yield 'a parent under a root fits' => [4, 1, true];
+        yield 'a parent under a child is too deep' => [4, 2, false];
+    }
+
+    public function testFitsCountsTheParentsDepthPlusOnePlusTheHeight(): void
+    {
+        self::assertTrue(TagTree::fits(0, 1));
+        self::assertTrue(TagTree::fits(1, 0));
+        self::assertFalse(TagTree::fits(1, 1));
+        self::assertFalse(TagTree::fits(0, 2));
+    }
 
     public function testARootSitsAtDepthZeroAndEachLevelBelowAddsOne(): void
     {
