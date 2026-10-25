@@ -81,7 +81,7 @@
 
 @mixin row-parts {
   .name {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -97,6 +97,7 @@
 
   .count {
     flex: none;
+    margin-left: auto;
     color: var(--text-secondary);
     font-size: var(--fs-sm);
     font-variant-numeric: tabular-nums;

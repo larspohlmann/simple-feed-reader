@@ -603,7 +603,7 @@ describe('SidebarComponent', () => {
       ];
       const heads = (fixture: ReturnType<typeof mount>) =>
         [...(fixture.nativeElement as HTMLElement).querySelectorAll('.taghead')].map((head) => ({
-          name: head.textContent?.match(/t\d+/)?.[0],
+          name: head.querySelector('.name')?.textContent?.trim(),
           child: head.closest('.tag-child') !== null,
         }));
 

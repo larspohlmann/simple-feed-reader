@@ -1,11 +1,13 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { selectionQueryParams } from '../../query/query';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
+import { SidebarSubtagPillComponent } from './sidebar-subtag-pill.component';
 
 @Component({
-  imports: [SidebarGroupRowComponent],
+  imports: [SidebarGroupRowComponent, SidebarSubtagPillComponent],
   template: `
     <div class="tag">
       <app-sidebar-group-row
@@ -18,6 +20,7 @@ import { SidebarGroupRowComponent } from './sidebar-group-row.component';
         [expanded]="expanded()"
         (toggled)="toggles = toggles + 1"
       >
+        <app-sidebar-subtag-pill [count]="subtagCount()" />
         <button class="dots" type="button">menu</button>
       </app-sidebar-group-row>
     </div>
@@ -26,6 +29,7 @@ import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 class HostComponent {
   readonly link = selectionQueryParams({ tag: 4 });
   readonly count = signal(3);
+  readonly subtagCount = signal(0);
   readonly active = signal(false);
   readonly expanded = signal(false);
   toggles = 0;
@@ -33,7 +37,7 @@ class HostComponent {
 
 function mount(): ComponentFixture<HostComponent> {
   TestBed.configureTestingModule({
-    imports: [HostComponent],
+    imports: [HostComponent, provideTranslocoTesting()],
     providers: [provideRouter([{ path: '**', children: [] }])],
   });
   const fixture = TestBed.createComponent(HostComponent);
@@ -93,6 +97,17 @@ describe('SidebarGroupRowComponent', () => {
     expect(fixture.componentInstance.toggles).toBe(1);
     expect(chevron.getAttribute('aria-expanded')).toBe('true');
     expect(chevron.textContent).toContain('expand_more');
+  });
+
+  it('places a projected subtag pill after the name, keeping the chevron', () => {
+    const fixture = mount();
+
+    fixture.componentInstance.subtagCount.set(4);
+    fixture.detectChanges();
+
+    const pill = root(fixture).querySelector('.name + app-sidebar-subtag-pill');
+    expect(pill?.textContent).toContain('4');
+    expect(root(fixture).querySelector('.chevzone')?.textContent).toContain('chevron_right');
   });
 
   it('marks its host current while active and open while expanded', () => {

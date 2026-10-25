@@ -33,6 +33,7 @@ import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { SidebarSocialSectionComponent } from './sidebar-social-section.component';
+import { SidebarSubtagPillComponent } from './sidebar-subtag-pill.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarTagRowMenuComponent } from './sidebar-tag-row-menu.component';
 import { SidebarTagsHeadMenuComponent } from './sidebar-tags-head-menu.component';
@@ -94,6 +95,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     SidebarGroupRowComponent,
     SidebarSavedSearchesComponent,
     SidebarSocialSectionComponent,
+    SidebarSubtagPillComponent,
     TranslocoPipe,
     CdkDropListGroup,
     CdkDropList,
