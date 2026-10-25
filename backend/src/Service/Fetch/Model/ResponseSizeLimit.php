@@ -22,7 +22,7 @@ enum ResponseSizeLimit: int
     public function label(): string
     {
         if ($this->value % 1_000 === 0) {
-            return sprintf('%d MB', intdiv($this->value, 1_000));
+            return sprintf('%g MB', $this->value / 1_000);
         }
 
         return sprintf('%d kB', $this->value);
