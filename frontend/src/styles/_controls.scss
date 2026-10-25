@@ -12,6 +12,12 @@ textarea {
   border-radius: var(--radius);
   color: var(--text-primary);
   font: inherit;
+
+  // iOS zooms the page into a focused control under 16px. Important, because
+  // component styles size their controls smaller with a higher specificity.
+  @media (pointer: coarse) {
+    font-size: 16px !important;
+  }
 }
 
 input:not([type='checkbox'], [type='radio'], [type='color']),
