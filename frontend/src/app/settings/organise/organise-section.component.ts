@@ -229,12 +229,12 @@ export class OrganiseSectionComponent implements OnInit {
   }
 
   protected readonly orderedTags = computed(() => tagsInTreeOrder(this.tags.tags()));
+  private readonly siblingIdsByTag = computed(() => siblingIdsByTagId(this.tags.tags()));
   private readonly hierarchy = computed(() => new TagHierarchy(this.tags.tags()));
 
   protected depthOf(tag: TagDto): number {
     return this.hierarchy().depthOf(tag.id);
   }
-  private readonly siblingIdsByTag = computed(() => siblingIdsByTagId(this.tags.tags()));
 
   protected cueOf(group: OrganiseGroup): TagDropMark['kind'] | null {
     return group.tag === null ? null : this.tagSession.cueFor(group.tag.id);

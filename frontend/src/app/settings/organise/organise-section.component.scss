@@ -291,7 +291,7 @@
 }
 
 .menu .pop label {
-  padding-left: calc(var(--space-4) * var(--depth, 0));
+  padding-left: calc(var(--space-2) + var(--space-4) * var(--depth, 0));
 }
 
 @media (prefers-reduced-motion: no-preference) {
