@@ -48,4 +48,11 @@ final class ResponseTooLargeExceptionTest extends TestCase
 
         ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Download, 5_000_001);
     }
+
+    public function testASmallLimitIsNamedInKilobytes(): void
+    {
+        $this->expectExceptionMessageMatches('/^the response is larger than the 64 kB limit$/');
+
+        ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::ChapterFile, 64_001);
+    }
 }

@@ -15,7 +15,7 @@ final class ResponseTooLargeException extends FetchException
             return;
         }
 
-        $reason = sprintf('the response is larger than the %d MB limit', $limit->value);
+        $reason = sprintf('the response is larger than the %s limit', $limit->label());
 
         throw new self(null === $url ? $reason : sprintf('%s: %s', $url, $reason));
     }

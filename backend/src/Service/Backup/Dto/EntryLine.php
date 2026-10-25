@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Entity\EntryAuthor;
+use App\Entity\EntryChapters;
 use App\Entity\EntryMedium;
 use App\Entity\EntryOrigin;
 use App\Entity\LinkCardContent;
@@ -58,6 +59,9 @@ final readonly class EntryLine
         public ?string $authorAvatarUrl = null,
         public ?QuotedPostContent $quote = null,
         public ?EntryOrigin $origin = null,
+        /** @var list<array<string, mixed>> */
+        public array $chapters = [],
+        public ?string $chaptersUrl = null,
     ) {
     }
 
@@ -68,6 +72,7 @@ final readonly class EntryLine
     {
         $shareKind = LineField::stringOrNull($line, 'shareKind');
         $quote = $shareKind === ShareKind::Quote->value ? self::quoteOf($line) : null;
+        $chapters = LineField::objectListOrEmpty($line, 'chapters');
 
         return new self(
             feedUrl: LineField::string($line, 'feedUrl'),
@@ -97,6 +102,8 @@ final readonly class EntryLine
             authorAvatarUrl: self::authorUrlOf($line, 'authorAvatarUrl'),
             quote: $quote,
             origin: self::originOf($line),
+            chapters: $chapters,
+            chaptersUrl: $chapters === [] ? self::chaptersUrlOf($line) : null,
         );
     }
 
@@ -149,6 +156,14 @@ final readonly class EntryLine
     private static function authorUrlOf(array $line, string $key): ?string
     {
         return AbsoluteHttpUrl::orNullWithin(LineField::stringOrNull($line, $key), EntryAuthor::URL_MAX_LENGTH);
+    }
+
+    /** @param array<string, mixed> $line */
+    private static function chaptersUrlOf(array $line): ?string
+    {
+        $url = LineField::stringOrNull($line, 'chaptersUrl');
+
+        return AbsoluteHttpUrl::orNullWithin($url, EntryChapters::URL_MAX_LENGTH);
     }
 
     /** @param array<string, mixed> $line */

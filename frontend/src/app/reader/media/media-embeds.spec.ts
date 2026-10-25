@@ -1,5 +1,5 @@
 import { articleHost } from '../../../testing/article-host-testing';
-import { upgradeMediaEmbeds } from './media-embeds';
+import { upgradeMediaEmbeds, withPlayerApi } from './media-embeds';
 
 const host = (html: string): HTMLElement => articleHost(html, upgradeMediaEmbeds);
 
@@ -217,5 +217,35 @@ describe('upgradeMediaEmbeds', () => {
 
     expect(element.querySelector('.reader-embed')).not.toBeNull();
     expect(element.querySelector('.reader-embed--audio')).toBeNull();
+  });
+});
+describe('withPlayerApi', () => {
+  it('opens a YouTube video to the iframe API for this origin', () => {
+    expect(
+      withPlayerApi('https://www.youtube-nocookie.com/embed/JsBZOcqZerk', 'http://localhost:4200'),
+    ).toBe(
+      'https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=http%3A%2F%2Flocalhost%3A4200',
+    );
+  });
+
+  it('leaves a Short and any other player alone', () => {
+    const short = 'https://www.youtube-nocookie.com/embed/JsBZOcqZerk#shorts';
+    expect(withPlayerApi(short, 'http://localhost:4200')).toBe(short);
+    expect(withPlayerApi('https://player.vimeo.com/video/1', 'http://localhost:4200')).toBe(
+      'https://player.vimeo.com/video/1',
+    );
+  });
+});
+
+describe('upgradeMediaEmbeds with a frame URL', () => {
+  it('builds the frame from the URL the caller maps the link to', () => {
+    const host = document.createElement('div');
+    host.innerHTML = '<a href="https://www.youtube-nocookie.com/embed/JsBZOcqZerk">Watch</a>';
+
+    upgradeMediaEmbeds(host, (url) => `${url}?enablejsapi=1&origin=x`);
+
+    expect(host.querySelector('iframe')?.getAttribute('src')).toBe(
+      'https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x',
+    );
   });
 });

@@ -67,12 +67,12 @@ class FakeEntryBodyService {
   }
 
   seed(id: number, html: string | null): void {
-    this.stateFor(id).set({ status: 'ok', html });
+    this.stateFor(id).set({ status: 'ok', html, chapters: [] });
   }
 
   retry(id: number): void {
     this.retriedIds.push(id);
-    this.stateFor(id).set({ status: 'ok', html: 'RETRIED' });
+    this.stateFor(id).set({ status: 'ok', html: 'RETRIED', chapters: [] });
   }
 
   /** What `body(id)` answers before anything else sets it — the stand-in for
@@ -92,7 +92,11 @@ class FakeEntryBodyService {
   private stateFor(id: number): WritableSignal<EntryBodyState> {
     let state = this.states.get(id);
     if (!state) {
-      state = signal<EntryBodyState>({ status: 'ok', html: this.defaults.get(id) ?? null });
+      state = signal<EntryBodyState>({
+        status: 'ok',
+        html: this.defaults.get(id) ?? null,
+        chapters: [],
+      });
       this.states.set(id, state);
     }
     return state;

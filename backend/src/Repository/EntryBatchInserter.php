@@ -25,7 +25,7 @@ final readonly class EntryBatchInserter
     private const array COLUMNS = [
         'feed_id', 'guid', 'guid_hash', 'url', 'url_hash', 'title', 'author',
         'summary', 'content_html', 'image_url', 'image_width', 'image_height', 'image_renditions',
-        'media', 'attachments',
+        'media', 'attachments', 'chapters', 'chapters_url',
         'published_at', 'created_at', 'effective_date',
         'discussion_url', 'comments_feed_url', 'comments_load',
         'title_derived', 'share_kind', 'author_url', 'author_avatar_url',
@@ -130,6 +130,7 @@ final readonly class EntryBatchInserter
             $line->author, $line->summary, $line->contentHtml, $line->imageUrl,
             $line->imageWidth, $line->imageHeight, self::encodeList($line->imageRenditions),
             self::encodeList($line->media), self::encodeList($line->attachments),
+            self::encodeList($line->chapters), $line->chaptersUrl,
             self::storageDate($line->publishedAt),
             self::storageDate($line->createdAt),
             self::storageDate($line->effectiveDate),

@@ -107,6 +107,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         BackupSchema::KIND_ENTRY => [
             'media' => ['url', 'kind', 'width', 'height', 'previewImageUrl'],
             'attachments' => ['url', 'mimeType', 'durationInSeconds', 'sizeInBytes', 'title'],
+            'chapters' => ['startSeconds', 'title'],
             'imageRenditions' => ['url', 'width'],
         ],
     ];

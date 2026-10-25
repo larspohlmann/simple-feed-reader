@@ -1112,6 +1112,7 @@
     "slideshowPosition": "{{current}} of {{total}}",
     "cinema": "Cinema mode",
     "cinemaExit": "Exit cinema mode",
+    "chapters": "Chapters",
     "unplayableVideo": {
       "title": "This video can't play in your browser",
       "action": "Watch it on the original page"

@@ -533,7 +533,8 @@ final class AccountRestorerTest extends DbTestCase
             $sourceRows['entry'],
             $targetRows['entry'],
             [
-                'feed', 'guid.value', 'mediaSet.media', 'mediaSet.attachments', 'location.url', 'image.renditions',
+                'feed', 'guid.value', 'mediaSet.media', 'mediaSet.attachments', 'mediaSet.chapters.chapters',
+                'mediaSet.chapters.url', 'location.url', 'image.renditions',
                 'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
                 'headline.title', 'headline.derived', 'author.name', 'author.profileUrl', 'author.avatarUrl',
                 'share.quotedPost.url', 'share.quotedPost.authorName', 'share.quotedPost.authorHandle',
@@ -544,6 +545,8 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
         self::assertEquals($sourceRows['entry']->getMedia(), $targetRows['entry']->getMedia());
         self::assertEquals($sourceRows['entry']->getAttachments(), $targetRows['entry']->getAttachments());
+        self::assertNotNull($targetRows['entry']->getChaptersUrl());
+        self::assertSame($sourceRows['entry']->getChaptersUrl(), $targetRows['entry']->getChaptersUrl());
         self::assertEquals(
             $sourceRows['entry']->getImage()->getRenditions(),
             $targetRows['entry']->getImage()->getRenditions(),

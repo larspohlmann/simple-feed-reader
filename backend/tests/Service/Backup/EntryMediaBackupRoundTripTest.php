@@ -6,6 +6,7 @@ namespace App\Tests\Service\Backup;
 
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
+use App\Entity\EntryChapter;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
@@ -128,12 +129,81 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         );
     }
 
+    public function testChaptersAndAPendingChaptersUrlSurviveExportAndRestore(): void
+    {
+        $user = $this->makeUser('chapters-backup@example.com');
+        $feed = new Feed('https://chapters.example/feed.xml');
+        $this->entityManager->persist($feed);
+        $entry = new Entry(
+            $feed,
+            'guid-chapters',
+            'https://chapters.example/inline',
+            'Inline',
+            new \DateTimeImmutable('2026-10-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-10-01T00:00:00Z'),
+        );
+        $entry->declareChapters([new EntryChapter(0, 'Intro'), new EntryChapter(90, 'Main')], null);
+        $linked = new Entry(
+            $feed,
+            'guid-linked',
+            'https://chapters.example/linked',
+            'Linked',
+            new \DateTimeImmutable('2026-10-02T00:00:00Z'),
+            new \DateTimeImmutable('2026-10-02T00:00:00Z'),
+        );
+        $linked->declareChapters([], 'https://chapters.example/ch.json');
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist($linked);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
+
+        $lines = $this->exportedEntryLines($user);
+        self::assertSame(
+            [['startSeconds' => 0, 'title' => 'Intro'], ['startSeconds' => 90, 'title' => 'Main']],
+            $lines['guid-chapters']['chapters'],
+        );
+        self::assertNull($lines['guid-chapters']['chaptersUrl']);
+        self::assertSame([], $lines['guid-linked']['chapters']);
+        self::assertSame('https://chapters.example/ch.json', $lines['guid-linked']['chaptersUrl']);
+
+        $target = new Feed('https://restore-chapters.example/feed.xml');
+        $this->entityManager->persist($target);
+        $this->entityManager->flush();
+        $targetId = $target->requireId();
+
+        (new EntryBatchInserter($this->entityManager->getConnection(), new UrlNormalizer()))
+            ->insert($targetId, array_map(EntryLine::fromLine(...), array_values($lines)));
+
+        $this->entityManager->clear();
+        $restoredByGuid = [];
+        foreach ($this->entityManager->getRepository(Entry::class)->findBy(['feed' => $targetId]) as $restored) {
+            $restoredByGuid[$restored->getGuid()] = $restored;
+        }
+        self::assertEquals(
+            [new EntryChapter(0, 'Intro'), new EntryChapter(90, 'Main')],
+            $restoredByGuid['guid-chapters']->getChapters(),
+        );
+        self::assertNull($restoredByGuid['guid-chapters']->getChaptersUrl());
+        self::assertSame([], $restoredByGuid['guid-linked']->getChapters());
+        self::assertSame('https://chapters.example/ch.json', $restoredByGuid['guid-linked']->getChaptersUrl());
+    }
+
     /** @return array<string, mixed> */
     private function exportedEntryLine(User $user): array
+    {
+        $lines = $this->exportedEntryLines($user);
+        self::assertNotSame([], $lines, 'No entry line was exported.');
+
+        return $lines[array_key_first($lines)];
+    }
+
+    /** @return array<string, array<string, mixed>> entry lines by guid */
+    private function exportedEntryLines(User $user): array
     {
         $exporter = self::getContainer()->get(AccountBackupExporter::class);
         self::assertInstanceOf(AccountBackupExporter::class, $exporter);
 
+        $entryLines = [];
         foreach ($exporter->parts($user, 'https://source.example') as $part) {
             if ('000-foundation.ndjson.gz' === $part->memberName) {
                 continue;
@@ -146,12 +216,13 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
                 self::assertIsArray($decoded);
                 if (($decoded['kind'] ?? null) === 'entry') {
                     /** @var array<string, mixed> $decoded */
-                    return $decoded;
+                    self::assertIsString($decoded['guid']);
+                    $entryLines[$decoded['guid']] = $decoded;
                 }
             }
         }
 
-        self::fail('No entry line was exported.');
+        return $entryLines;
     }
 
     private function makeUser(string $email): User

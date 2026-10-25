@@ -14,11 +14,26 @@ import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testin
 import { ArticleBody } from './article-body.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { PlayingMedium } from '../../media/autoplay/autoplay-player';
+import { ChapterDto } from '../../models';
+import { AudioTrack } from '../../audio-player.service';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
 const VIDEO = '<video controls src="https://x.test/clip.mp4"></video>';
 const STREAM = '<video controls src="https://x.test/master.m3u8"></video>';
+const YOUTUBE =
+  '<a href="https://www.youtube-nocookie.com/embed/JsBZOcqZerk">Video</a><p>Notes</p>';
+const CHAPTERS: ChapterDto[] = [
+  { startSeconds: 0, title: 'Intro' },
+  { startSeconds: 256, title: 'How it works' },
+];
+const EPISODE: AudioTrack = {
+  url: 'https://x.test/ep.mp3',
+  title: 'Ep',
+  faviconUrl: null,
+  imageUrl: null,
+  durationInSeconds: 600,
+};
 
 describe('ArticleBody', () => {
   let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
@@ -27,6 +42,8 @@ describe('ArticleBody', () => {
   let content: HTMLElement;
   let autoplay: { nowPlaying: jest.Mock; stopped: jest.Mock };
   const html = signal('');
+  const chapters = signal<ChapterDto[]>([]);
+  const audioTrack = signal<AudioTrack | null>(null);
 
   function connectBody(body: string): void {
     content = articleHost(body);
@@ -37,6 +54,8 @@ describe('ArticleBody', () => {
       html,
       pageUrl: () => 'https://news.test/story',
       enclosureUrl: () => null,
+      chapters,
+      audioTrack,
       decorated,
     });
     TestBed.tick();
@@ -65,6 +84,8 @@ describe('ArticleBody', () => {
       .mockImplementation(() => undefined);
 
   beforeEach(() => {
+    chapters.set([]);
+    audioTrack.set(null);
     imageProxy = neverRecoveringImageProxy();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -224,6 +245,86 @@ describe('ArticleBody', () => {
 
       expect(autoplay.stopped).toHaveBeenCalledTimes(1);
       expect(autoplay.nowPlaying).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('its chapters', () => {
+    const chapterRows = (): string[] =>
+      Array.from(content.querySelectorAll('.reader-chapters__row')).map(
+        (row) => row.textContent ?? '',
+      );
+
+    it("lists an episode's chapters atop the body", async () => {
+      chapters.set(CHAPTERS);
+      audioTrack.set(EPISODE);
+      connectBody('<p>Notes</p>');
+      await Promise.resolve();
+
+      expect(content.firstElementChild!.getAttribute('aria-label')).toBe('Chapters');
+      expect(chapterRows()).toEqual(['0:00Intro', '4:16How it works']);
+    });
+
+    it('drives a video with chapters through its API player, listing them beneath it', async () => {
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      const frame = content.querySelector('iframe')!;
+      expect(frame.getAttribute('src')).toBe(
+        `https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`,
+      );
+      expect(frame.closest('.reader-cinema')!.nextElementSibling!.classList).toContain(
+        'reader-chapters',
+      );
+    });
+
+    it('leaves a video without chapters on its plain player', async () => {
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      expect(content.querySelector('iframe')!.getAttribute('src')).toBe(
+        'https://www.youtube-nocookie.com/embed/JsBZOcqZerk',
+      );
+      expect(content.querySelector('.reader-chapters')).toBeNull();
+    });
+
+    it("keeps an episode's chapters on the episode when its notes embed a video", async () => {
+      chapters.set(CHAPTERS);
+      audioTrack.set(EPISODE);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      expect(content.querySelector('iframe')!.getAttribute('src')).toBe(
+        'https://www.youtube-nocookie.com/embed/JsBZOcqZerk',
+      );
+      expect(content.firstElementChild!.classList).toContain('reader-chapters');
+    });
+
+    it('decorates again when the chapters arrive after the body', async () => {
+      audioTrack.set(EPISODE);
+      connectBody('<p>Notes</p>');
+      await Promise.resolve();
+
+      chapters.set(CHAPTERS);
+      TestBed.tick();
+      await Promise.resolve();
+
+      expect(decorated).toHaveBeenCalledTimes(2);
+      expect(chapterRows()).toHaveLength(2);
+    });
+
+    it('does not decorate again for an equal chapter list or a changed episode object', async () => {
+      chapters.set(CHAPTERS);
+      audioTrack.set(EPISODE);
+      connectBody('<p>Notes</p>');
+      await Promise.resolve();
+
+      chapters.set(CHAPTERS.map((chapter) => ({ ...chapter })));
+      audioTrack.set({ ...EPISODE });
+      TestBed.tick();
+      await Promise.resolve();
+
+      expect(decorated).toHaveBeenCalledTimes(1);
     });
   });
 });

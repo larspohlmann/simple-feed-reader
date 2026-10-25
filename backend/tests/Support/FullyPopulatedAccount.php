@@ -174,6 +174,7 @@ final readonly class FullyPopulatedAccount
             ],
             [new EntryAttachment('https://populated.example/episode.mp3', 'audio/mpeg', 3723, 4200000, 'Episode one')],
         );
+        $entry->declareChapters([], 'https://populated.example/episode/chapters.json');
         $entry->setPublishedAt(new \DateTimeImmutable('2026-08-01T10:00:00Z'));
         $entry->setDiscussion(Discussion::withCommentsFeed(
             'https://populated.example/article#comments',

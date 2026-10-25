@@ -44,12 +44,27 @@ export function isAllowedEmbed(url: string): boolean {
   return ALLOWED.some(({ pattern }) => pattern.test(url));
 }
 
-export function upgradeMediaEmbeds(host: HTMLElement): void {
+const YOUTUBE_VIDEO_FRAME = /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}$/;
+
+/** Maps an allow-listed player URL to the one the frame loads. */
+export type FrameUrl = (url: string) => string;
+
+/** The YouTube video player that answers the iframe API, for a page driving it with chapters (#1808). Only
+ *  ever applied to a URL the allow-list already accepted; the suffix is ours and constant. */
+export function withPlayerApi(url: string, origin: string): string {
+  return YOUTUBE_VIDEO_FRAME.test(url)
+    ? `${url}?enablejsapi=1&origin=${encodeURIComponent(origin)}`
+    : url;
+}
+
+export function upgradeMediaEmbeds(host: HTMLElement, frameUrl: FrameUrl = (url) => url): void {
   for (const anchor of Array.from(host.querySelectorAll('a'))) {
     const url = anchor.getAttribute('href') ?? '';
     const frame = ALLOWED.find(({ pattern }) => pattern.test(url));
     if (!frame) continue;
-    anchor.replaceWith(embedBox(url, frame, anchor.textContent?.trim() || 'Embedded media'));
+    anchor.replaceWith(
+      embedBox(frameUrl(url), frame, anchor.textContent?.trim() || 'Embedded media'),
+    );
   }
 }
 

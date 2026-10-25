@@ -1,5 +1,5 @@
 import { TranslocoService } from '@jsverse/transloco';
-import { upgradeMediaEmbeds } from '../../media/media-embeds';
+import { FrameUrl, upgradeMediaEmbeds } from '../../media/media-embeds';
 import { markLeadParagraph } from './lead-paragraph';
 import { markInsetCards } from './reader-cards';
 import { fitReaderImages } from './reader-image-fit';
@@ -12,19 +12,25 @@ import { hydrateSlideshows } from './reader-slideshow';
 import { removeEnclosurePlayers } from './enclosure-players';
 import { addCinemaToggles } from './reader-cinema';
 
+/** What one render's decorations depend on beyond the body itself. */
+export interface ArticleDecorations {
+  enclosureUrl: string | null;
+  frameUrl?: FrameUrl;
+}
+
 /** Every decoration the rendered article body gets, in order. */
 export function decorateArticle(
   host: HTMLElement,
   i18n: TranslocoService,
-  enclosureUrl: string | null,
+  decorations: ArticleDecorations,
 ): void {
   openExternalLinksInNewTab(host);
-  removeEnclosurePlayers(host, enclosureUrl);
+  removeEnclosurePlayers(host, decorations.enclosureUrl);
   markLeadParagraph(host);
   markInsetCards(host);
   fitReaderImages(host);
   void highlightCodeBlocks(host);
-  upgradeMediaEmbeds(host);
+  upgradeMediaEmbeds(host, decorations.frameUrl);
   addCinemaToggles(host, {
     enter: i18n.translate('reader.cinema'),
     exit: i18n.translate('reader.cinemaExit'),

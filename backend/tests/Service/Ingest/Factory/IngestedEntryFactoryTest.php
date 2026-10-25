@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingest\Factory;
 
 use App\Entity\Entry;
+use App\Entity\EntryChapter;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingest\Pass\FeedIngestContext;
+use App\Service\Parser\Model\ParsedChaptersModel;
+use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use PHPUnit\Framework\TestCase;
@@ -187,6 +191,50 @@ final class IngestedEntryFactoryTest extends TestCase
         return $this->factory()->create(
             new Feed('https://example.com/feed'),
             new IncomingEntryModel($parsed, hash('sha256', 'g-4'), 'url-hash'),
+            self::context(),
+        );
+    }
+
+    public function testStoresTheItemsDeclaredChapters(): void
+    {
+        $entry = $this->createWithChapters(new ParsedChaptersModel(
+            [new EntryChapter(0, 'Intro'), new EntryChapter(60, 'Talk')],
+        ));
+
+        self::assertEquals([new EntryChapter(0, 'Intro'), new EntryChapter(60, 'Talk')], $entry->getChapters());
+        self::assertNull($entry->getChaptersUrl());
+    }
+
+    public function testKeepsALinkedChaptersFileToFetchLater(): void
+    {
+        $entry = $this->createWithChapters(new ParsedChaptersModel([], 'https://cdn.test/ch.json'));
+
+        self::assertSame('https://cdn.test/ch.json', $entry->getChaptersUrl());
+    }
+
+    public function testDropsALinkedChaptersFileThatIsNotHttp(): void
+    {
+        $entry = $this->createWithChapters(new ParsedChaptersModel([], 'file:///etc/passwd'));
+
+        self::assertNull($entry->getChaptersUrl());
+    }
+
+    private function createWithChapters(ParsedChaptersModel $chapters): Entry
+    {
+        $parsed = new ParsedEntryModel(
+            guid: 'g-5',
+            url: 'https://example.com/a',
+            headline: Headline::fromFeed('Episode'),
+            author: null,
+            summary: null,
+            contentHtml: null,
+            publishedAt: null,
+            media: new ParsedEntryMediaModel(null, new ParsedMediaBundleModel([], [], $chapters)),
+        );
+
+        return $this->factory()->create(
+            new Feed('https://example.com/feed'),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-5'), 'url-hash'),
             self::context(),
         );
     }

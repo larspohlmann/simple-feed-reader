@@ -165,7 +165,7 @@ final class GuardedImageDownloaderTest extends TestCase
     {
         $chunksSent = 0;
         $body = (static function () use (&$chunksSent): \Generator {
-            while ($chunksSent < 2 * ResponseSizeLimit::Download->value) {
+            while ($chunksSent < 2 * intdiv(ResponseSizeLimit::Download->bytes(), 1_000_000)) {
                 ++$chunksSent;
                 yield str_repeat('x', 1_000_000);
             }
@@ -178,7 +178,7 @@ final class GuardedImageDownloaderTest extends TestCase
             $this->downloader($client)->download(self::IMAGE_URL);
             self::fail('expected the image to be rejected');
         } catch (GuardedImageRejectedException) {
-            self::assertLessThan(2 * ResponseSizeLimit::Download->value, $chunksSent);
+            self::assertLessThan(2 * intdiv(ResponseSizeLimit::Download->bytes(), 1_000_000), $chunksSent);
         }
     }
 

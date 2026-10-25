@@ -10,6 +10,7 @@ use App\Entity\ImageRendition;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowDiscussion;
+use App\Service\Chapter\Model\ServedChaptersModel;
 use App\Service\Text\Support\EntryExcerpt;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\FeedWebsite;
@@ -26,6 +27,7 @@ use App\Service\Url\Support\YouTubeUrl;
  * @phpstan-type EntryRow array{
  *   id: int|null, title: string, url: string|null, author: string|null,
  *   summary: string|null, excerpt: string, contentHtml?: string|null,
+ *   chapters?: list<array{startSeconds: int, title: string}>|null,
  *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
  *   imageRenditions: list<array{url: string, width: int}>,
  *   media: list<array<string, string|int|true>>,
@@ -130,9 +132,12 @@ final readonly class EntryJson
     /**
      * @return EntryRow
      */
-    public function detail(EntryListRow $row): array
+    public function detail(EntryListRow $row, ServedChaptersModel $served): array
     {
-        return $this->listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
+        return $this->listRow($row) + [
+            'contentHtml' => $served->contentHtml,
+            'chapters' => ChaptersJson::of($served->chapters),
+        ];
     }
 
     /** @return array{discussionUrl: string|null, comments: 'auto'|'manual'|null} */

@@ -16,5 +16,6 @@ enum FeedNamespace: string
     case MediaRss = 'http://search.yahoo.com/mrss/';
     case Itunes = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
     case Podcast = 'https://podcastindex.org/namespace/1.0';
+    case PodloveSimpleChapters = 'http://podlove.org/simple-chapters';
     case GooglePlay = 'http://www.google.com/schemas/play-podcasts/1.0';
 }

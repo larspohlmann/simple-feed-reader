@@ -22,6 +22,37 @@ final class EntryMedia
     #[ORM\Column(name: 'attachments', type: Types::JSON, nullable: true)]
     private ?array $attachments = null;
 
+    #[ORM\Embedded(class: EntryChapters::class, columnPrefix: false)]
+    private EntryChapters $chapters;
+
+    public function __construct()
+    {
+        $this->chapters = new EntryChapters();
+    }
+
+    /** @return list<EntryChapter> */
+    public function getChapters(): array
+    {
+        return $this->chapters->getChapters();
+    }
+
+    public function getChaptersUrl(): ?string
+    {
+        return $this->chapters->getUrl();
+    }
+
+    /** @param list<EntryChapter> $chapters */
+    public function declareChapters(array $chapters, ?string $url): void
+    {
+        $this->chapters->declare($chapters, $url);
+    }
+
+    /** @param list<EntryChapter> $chapters */
+    public function fillChapters(array $chapters): void
+    {
+        $this->chapters->fill($chapters);
+    }
+
     /**
      * @param list<EntryMedium>     $media
      * @param list<EntryAttachment> $attachments
@@ -73,15 +104,20 @@ final class EntryMedia
 
     /**
      * Maps a media value-object list to the JSON arrays stored, exported, and
-     * served — the one place that turns EntryMedium/EntryAttachment into arrays,
+     * served — the one place that turns EntryMedium/EntryAttachment/EntryChapter into arrays,
      * shared by the entity, the API mapper, and the backup exporter.
      *
-     * @param list<EntryMedium>|list<EntryAttachment> $items
+     * @param list<EntryMedium>|list<EntryAttachment>|list<EntryChapter> $items
      *
-     * @return list<array<string, string|int|true>>
+     * @return ($items is list<EntryChapter>
+     *     ? list<array{startSeconds: int, title: string}>
+     *     : list<array<string, string|int|true>>)
      */
     public static function toJsonList(array $items): array
     {
-        return array_map(static fn (EntryMedium|EntryAttachment $item): array => $item->jsonSerialize(), $items);
+        return array_map(
+            static fn (EntryMedium|EntryAttachment|EntryChapter $item): array => $item->jsonSerialize(),
+            $items,
+        );
     }
 }

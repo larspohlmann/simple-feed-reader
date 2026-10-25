@@ -8,7 +8,9 @@ import { decorateArticle } from './decorate-article';
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
 const decorated = (html: string): HTMLElement =>
-  articleHost(html, (host) => decorateArticle(host, TestBed.inject(TranslocoService), null));
+  articleHost(html, (host) =>
+    decorateArticle(host, TestBed.inject(TranslocoService), { enclosureUrl: null }),
+  );
 
 describe('decorateArticle', () => {
   beforeEach(() => {
@@ -51,7 +53,7 @@ describe('decorateArticle', () => {
   it('streams a playlist video through hls.js once the cinema box has wrapped it', async () => {
     resetFakeHls();
     const host = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
-    decorateArticle(host, TestBed.inject(TranslocoService), null);
+    decorateArticle(host, TestBed.inject(TranslocoService), { enclosureUrl: null });
     const video = host.querySelector<HTMLVideoElement>('.reader-cinema video')!;
 
     await firstPlay(video);

@@ -262,10 +262,17 @@ export interface EntryDto {
   duplicates?: EntryDto[];
 }
 
+/** One chapter of a video or an episode (#1808). */
+export interface ChapterDto {
+  startSeconds: number;
+  title: string;
+}
+
 /** The `/api/entries/{id}` detail shape: every list field plus the full body,
- *  which the list endpoints omit to keep pages small (#1100). */
+ *  which the list endpoints omit to keep pages small (#1100), and its chapters (#1808). */
 export interface EntryDetailDto extends EntryDto {
   contentHtml: string | null;
+  chapters: ChapterDto[] | null;
 }
 
 export interface EntriesPage {

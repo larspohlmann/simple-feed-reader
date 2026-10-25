@@ -196,6 +196,8 @@
           [html]="source.displayHtml()"
           [pageUrl]="e.url"
           [enclosureUrl]="audio.attachment()?.url ?? null"
+          [chapters]="source.chapters()"
+          [audioTrack]="audio.track()"
           (decorated)="onDecorated($event)"
         />
         @let media = source.postMedia();

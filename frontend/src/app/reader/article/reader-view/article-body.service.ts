@@ -5,6 +5,7 @@ import {
   Injector,
   NgZone,
   Signal,
+  computed,
   effect,
   inject,
   signal,
@@ -17,12 +18,18 @@ import { releaseHlsStreams } from '../../media/hls-streams';
 import { UnplayableVideoService } from '../../media/unplayable-video.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
+import { withPlayerApi } from '../../media/media-embeds';
+import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
+import { ChapterDto } from '../../models';
+import { ArticleChapters } from './article-chapters';
 
 export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
   readonly html: Signal<string>;
   readonly pageUrl: () => string | null;
   readonly enclosureUrl: () => string | null;
+  readonly chapters: () => ChapterDto[];
+  readonly audioTrack: () => AudioTrack | null;
   readonly decorated: (host: HTMLElement) => void;
 }
 
@@ -35,6 +42,7 @@ export class ArticleBody {
   private readonly unplayableVideos = inject(UnplayableVideoService);
   private readonly zone = inject(NgZone);
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
+  private readonly chapters = new ArticleChapters(inject(AudioPlayerService), inject(Injector));
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
   private destroyed = false;
 
@@ -44,6 +52,7 @@ export class ArticleBody {
     document.addEventListener('keydown', onKeydown);
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
+      this.chapters.release();
       document.removeEventListener('keydown', onKeydown);
     });
   }
@@ -78,9 +87,11 @@ export class ArticleBody {
   /** Re-decorate whenever the rendered HTML changes (new article, or Reader/Original toggle),
    *  releasing the swapped-out body's streams; the effect never re-runs under a playing video. */
   private decorateEachRender(parts: ArticleBodyParts): void {
+    const chapters = computed(parts.chapters, { equal: sameChapters });
     effect(
       (onCleanup) => {
         parts.html();
+        const chapterList = chapters();
         // Depend on the container too, not just the HTML: when extraction fails,
         // the HTML recomputes to the same string and never notifies, so the
         // container replacing the placeholder is the only render signal (#101).
@@ -89,16 +100,38 @@ export class ArticleBody {
         onCleanup(() => {
           releaseHlsStreams(content);
           this.media.forgetAll();
+          this.chapters.release();
         });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
           if (!host || this.destroyed) return;
-          decorateArticle(host, this.i18n, parts.enclosureUrl());
-          this.zone.runOutsideAngular(() => this.media.follow(host));
+          const track = parts.audioTrack();
+          decorateArticle(host, this.i18n, {
+            enclosureUrl: parts.enclosureUrl(),
+            frameUrl:
+              chapterList.length && !track
+                ? (url) => withPlayerApi(url, window.location.origin)
+                : undefined,
+          });
+          const heading = this.i18n.translate('reader.chapters');
+          this.zone.runOutsideAngular(() => {
+            this.chapters.attach(host, { chapters: chapterList, heading }, track);
+            this.media.follow(host);
+          });
           parts.decorated(host);
         });
       },
       { injector: this.injector },
     );
   }
+}
+
+function sameChapters(left: ChapterDto[], right: ChapterDto[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (chapter, index) =>
+        chapter.startSeconds === right[index].startSeconds && chapter.title === right[index].title,
+    )
+  );
 }

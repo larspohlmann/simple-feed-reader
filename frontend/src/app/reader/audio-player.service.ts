@@ -21,30 +21,11 @@ import {
 } from './audio/playlist';
 import { PlaylistStore } from './audio/playlist.store';
 import { AudioDeck } from './audio/audio-deck';
+import { AudioTrack } from './audio/audio-track';
 import { MediaSessionControls } from './audio/media-session-controls';
 import { PlaybackRate } from './audio/playback-rate';
 
-/** The entry a track was queued from: the big player's details and its link back (#1442).
- *  Absent on tracks saved before it existed. */
-export interface AudioTrackEntry {
-  id: number;
-  title: string;
-  feedTitle: string;
-  publishedAt: string;
-  excerpt: string;
-}
-
-/** Everything the player needs to render and resume a track without another API
- *  call — built by the caller from the entry and its audio attachment (#915). */
-export interface AudioTrack {
-  url: string;
-  title: string;
-  faviconUrl: string | null;
-  imageUrl: string | null;
-  /** As the feed declared it, so the scrubber renders before metadata loads. */
-  durationInSeconds: number | null;
-  entry?: AudioTrackEntry;
-}
+export type { AudioTrack, AudioTrackEntry } from './audio/audio-track';
 
 /** Injected so tests supply a stub: jsdom does not implement HTMLMediaElement. */
 export const AUDIO_ELEMENT_FACTORY = new InjectionToken<() => HTMLAudioElement>(
@@ -129,6 +110,13 @@ export class AudioPlayerService {
   play(track: AudioTrack): void {
     if (this.current()?.url === track.url) return this.resume();
     this.go(insertNext(this._playlist(), track));
+  }
+
+  /** Plays `track` from `seconds`, seeking once its metadata is known; another track loads first (#1808). */
+  playFrom(track: AudioTrack, seconds: number): void {
+    if (this.current()?.url !== track.url) this.apply(insertNext(this._playlist(), track));
+    this.seekOnceLoaded(seconds);
+    this.resume();
   }
 
   enqueue(track: AudioTrack): void {
@@ -321,8 +309,13 @@ export class AudioPlayerService {
     return !!error && error.code === error.MEDIA_ERR_SRC_NOT_SUPPORTED;
   }
 
+  private seekOnceLoaded(seconds: number): void {
+    if (this.element.readyState >= HTMLMediaElement.HAVE_METADATA) return this.seek(seconds);
+    this.pendingSeek = seconds;
+  }
+
   private reloadAtPosition(): void {
-    this.pendingSeek = this._position();
+    this.pendingSeek ??= this._position();
     this.element.load();
   }
 

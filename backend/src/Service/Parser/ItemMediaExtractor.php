@@ -9,6 +9,7 @@ use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Pass\FeedMediaNode;
+use App\Service\Parser\Support\DeclaredChapters;
 use App\Service\Parser\Support\MediaDuration;
 use App\Service\Parser\Support\MediaRssSlot;
 use App\Service\Parser\Support\XmlHelper;
@@ -34,7 +35,7 @@ final readonly class ItemMediaExtractor
             array_push($attachments, ...$bundle->attachments);
         }
 
-        return new ParsedMediaBundleModel($media, $attachments);
+        return new ParsedMediaBundleModel($media, $attachments, DeclaredChapters::of($item));
     }
 
     private static function fromChild(
