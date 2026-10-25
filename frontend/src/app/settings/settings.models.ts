@@ -151,16 +151,19 @@ export interface FeedArrivalRate {
   dailyAverage: number;
 }
 
-/** The reading-activity payload: one entry per UTC day of the window in order
- *  (oldest first), the window's total opens, the last week's average of new
- *  articles, the account's most-read feeds all-time, and the feeds with the
- *  most new articles per day over the last week. */
+/** The reading-activity payload, over plain feeds only (social feeds are left
+ *  out): one entry per UTC day of the window in order (oldest first), the
+ *  window's total opens, the last week's average of new articles, the
+ *  account's most-read feeds all-time, the feeds with the most new articles
+ *  per day over the last week, and the account's read and favourite totals. */
 export interface ReadingActivity {
   days: ReadingDay[];
   total: number;
   arrivedDailyAverage: number | null;
   topFeedsByRead: FeedReadCount[];
   topFeedsByArrivals: FeedArrivalRate[];
+  readCount: number;
+  favoritesCount: number;
 }
 
 export interface RestoreCounts {

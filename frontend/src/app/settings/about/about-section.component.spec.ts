@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { NEVER, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { AboutSectionComponent } from './about-section.component';
 import { ReleaseVersion, VersionService } from '../../core/version.service';
@@ -31,12 +31,25 @@ function feed(title: string, unreadCount: number, feedId = ++sequence): Subscrip
   } as unknown as SubscriptionDto;
 }
 
+function socialFeed(title: string, unreadCount: number): SubscriptionDto {
+  return {
+    ...feed(title, unreadCount),
+    social: { kind: 'timeline' },
+  } as unknown as SubscriptionDto;
+}
+
+function excludedFromAllItems(subscription: SubscriptionDto): SubscriptionDto {
+  return { ...subscription, includeInAllItems: false };
+}
+
 const NO_ACTIVITY: ReadingActivity = {
   days: [],
   total: 0,
   arrivedDailyAverage: null,
   topFeedsByRead: [],
   topFeedsByArrivals: [],
+  readCount: 0,
+  favoritesCount: 0,
 };
 
 function activity(overrides: Partial<ReadingActivity>): ReadingActivity {
@@ -50,7 +63,12 @@ describe('AboutSectionComponent', () => {
 
   function mount(
     api: ReleaseVersion | null,
-    options: { unavailable?: boolean; store?: StoreState; activity?: ReadingActivity } = {},
+    options: {
+      unavailable?: boolean;
+      store?: StoreState;
+      activity?: ReadingActivity;
+      activityPending?: boolean;
+    } = {},
   ) {
     const store = options.store ?? {};
     TestBed.resetTestingModule();
@@ -78,7 +96,10 @@ describe('AboutSectionComponent', () => {
         },
         {
           provide: SettingsApi,
-          useValue: { readingActivity: () => of(options.activity ?? NO_ACTIVITY) },
+          useValue: {
+            readingActivity: () =>
+              options.activityPending ? NEVER : of(options.activity ?? NO_ACTIVITY),
+          },
         },
       ],
     });
@@ -160,19 +181,56 @@ describe('AboutSectionComponent', () => {
     expect(element.querySelector('app-settings-group')).not.toBeNull();
   });
 
-  it('shows the four reading tiles with the store counts', () => {
+  it('shows the four reading tiles over plain feeds only', () => {
     const fixture = mount(null, {
       store: {
-        subscriptions: [feed('A', 1), feed('B', 2)],
-        totalUnread: 137,
-        viewedCount: 2814,
-        favoritesCount: 96,
+        subscriptions: [
+          feed('A', 100),
+          excludedFromAllItems(feed('B', 37)),
+          socialFeed('Timeline', 500),
+        ],
+        totalUnread: 637,
+        viewedCount: 9999,
+        favoritesCount: 999,
       },
+      activity: activity({ readCount: 2814, favoritesCount: 96 }),
     });
     const tiles = fixture.nativeElement.querySelectorAll('.tile-value');
 
     expect(tiles).toHaveLength(4);
-    expect([...tiles].map((tile) => tile.textContent?.trim())).toEqual(['2', '137', '2,814', '96']);
+    expect([...tiles].map((tile) => tile.textContent?.trim())).toEqual(['2', '100', '2,814', '96']);
+  });
+
+  it('shows a spinner on the read and favourite tiles until the activity arrives', () => {
+    const fixture = mount(null, {
+      store: { subscriptions: [feed('A', 1)], viewedCount: 9999 },
+      activityPending: true,
+    });
+    const tiles = [...fixture.nativeElement.querySelectorAll('.tile-value')] as HTMLElement[];
+
+    expect(tiles.map((tile) => tile.querySelector('app-spinner') !== null)).toEqual([
+      false,
+      false,
+      true,
+      true,
+    ]);
+  });
+
+  it('says that social networks are left out of the statistics', () => {
+    const fixture = mount(null);
+
+    expect(text(fixture)).toContain('social networks excluded');
+  });
+
+  it('leaves social feeds out of the top unread feeds', () => {
+    const fixture = mount(null, {
+      store: { subscriptions: [socialFeed('Timeline', 500), feed('Plain', 3)] },
+    });
+    const names = [...fixture.nativeElement.querySelectorAll('.bar-name')].map(
+      (node) => node.textContent,
+    );
+
+    expect(names).toEqual(['Plain']);
   });
 
   it('ranks the top unread feeds, busiest first, and drops zero-unread feeds', () => {

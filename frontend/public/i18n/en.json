@@ -489,7 +489,7 @@
     },
     "reading": {
       "title": "Your reading",
-      "caption": "A snapshot of this account",
+      "caption": "A snapshot of this account, social networks excluded",
       "feeds": "Feeds",
       "unread": "Unread",
       "read": "Read",

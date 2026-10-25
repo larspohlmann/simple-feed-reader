@@ -15,6 +15,7 @@ import { ReleaseVersion, VersionService } from '../../core/version.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SettingsApi } from '../settings-api';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { isSocialFeed } from '../../reader/state/social-sections';
 import { ReadingActivity, ReadingDay } from '../settings.models';
 import { selectionQueryParams } from '../../reader/query/query';
 import { formatLongDate } from '../../reader/format';
@@ -33,10 +34,10 @@ interface VersionRow {
   release: ReleaseVersion | null;
 }
 
-/** One quick-glance metric card. */
+/** One quick-glance metric card; a null value is still loading. */
 interface StatTile {
   labelKey: string;
-  value: string;
+  value: string | null;
 }
 
 /** One entry of a ranking: a subscription, its title, and its metric. */
@@ -102,18 +103,31 @@ export class AboutSectionComponent implements OnInit {
    *  rather than an empty state it cannot yet distinguish from "no reads". */
   readonly readingPending = computed(() => this.activity() === null);
 
-  readonly tiles = computed<StatTile[]>(() => [
-    {
-      labelKey: 'settings.reading.feeds',
-      value: this.count(this.subscriptions.subscriptions().length),
-    },
-    { labelKey: 'settings.reading.unread', value: this.count(this.subscriptions.totalUnread()) },
-    { labelKey: 'settings.reading.read', value: this.count(this.subscriptions.viewedCount()) },
-    {
-      labelKey: 'settings.reading.favorites',
-      value: this.count(this.subscriptions.favoritesCount()),
-    },
-  ]);
+  /** Social feeds are left out of every statistic on this page. */
+  private readonly plainFeeds = computed(() =>
+    this.subscriptions.subscriptions().filter((subscription) => !isSocialFeed(subscription)),
+  );
+
+  readonly tiles = computed<StatTile[]>(() => {
+    const activity = this.activity();
+    const plainFeeds = this.plainFeeds();
+    const unread = plainFeeds
+      .filter((subscription) => subscription.includeInAllItems)
+      .reduce((sum, subscription) => sum + subscription.unreadCount, 0);
+
+    return [
+      { labelKey: 'settings.reading.feeds', value: this.count(plainFeeds.length) },
+      { labelKey: 'settings.reading.unread', value: this.count(unread) },
+      {
+        labelKey: 'settings.reading.read',
+        value: activity === null ? null : this.count(activity.readCount),
+      },
+      {
+        labelKey: 'settings.reading.favorites',
+        value: activity === null ? null : this.count(activity.favoritesCount),
+      },
+    ];
+  });
 
   readonly arrivedDays = computed(() => this.chartDays((day) => day.arrived));
   readonly readDays = computed(() => this.chartDays((day) => day.read));
@@ -129,8 +143,7 @@ export class AboutSectionComponent implements OnInit {
   });
 
   readonly topUnreadFeeds = computed<FeedBar[]>(() => {
-    const ranked = this.subscriptions
-      .subscriptions()
+    const ranked = this.plainFeeds()
       .filter((subscription) => subscription.unreadCount > 0)
       .sort((left, right) => right.unreadCount - left.unreadCount)
       .slice(0, TOP_FEEDS);
@@ -236,6 +249,8 @@ export class AboutSectionComponent implements OnInit {
             arrivedDailyAverage: null,
             topFeedsByRead: [],
             topFeedsByArrivals: [],
+            readCount: 0,
+            favoritesCount: 0,
           }),
       });
   }
