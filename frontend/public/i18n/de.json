@@ -850,7 +850,7 @@
       "save": "Speichern",
       "parent": "Übergeordneter Tag",
       "noParent": "Keiner",
-      "parentLockedHasChildren": "Ein Tag mit untergeordneten Tags kann keinen übergeordneten Tag haben."
+      "parentLockedByDepth": "Seine untergeordneten Tags belegen schon alle Ebenen, darum bleibt dieser Tag oben."
     },
     "editFeed": {
       "title": "Feed bearbeiten",

@@ -20,6 +20,7 @@ import { SocialAccountRefDto } from '../../social-feed';
 import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { SocialSection } from '../../state/social-sections';
 import { siblingIdsOf } from '../../state/subscription-derivations';
+import { TagHierarchy } from '../../state/tag-hierarchy';
 import { TagsStore } from '../../state/tags.store';
 
 const SAVED_SEARCHES_CHOICE = 'savedSearches';
@@ -106,7 +107,7 @@ export class SidebarRowActions {
   }
 
   private createHereActions(tag: TagDto): ActionSheetAction[] {
-    if (tag.parentId !== null) return [];
+    if (!new TagHierarchy(this.tags.tags()).mayPlaceUnder(null, tag.id)) return [];
     return [
       { id: 'createHere', label: this.transloco.translate('reader.createTagHere'), symbol: 'add' },
     ];

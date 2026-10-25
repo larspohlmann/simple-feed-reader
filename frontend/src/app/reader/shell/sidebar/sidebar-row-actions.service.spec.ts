@@ -265,8 +265,14 @@ describe('SidebarRowActions', () => {
       expect(reorderTags).not.toHaveBeenCalled();
     });
 
-    it('offers no Create tag here on a child tag', () => {
+    it('offers Create tag here on a child tag, which still has a level below it', () => {
       const actions = actionsFor(tag(11, 0, 1));
+      expect(actions.find((action) => action.id === 'createHere')).toBeDefined();
+    });
+
+    it('offers no Create tag here on a grandchild tag', () => {
+      tags.update((current) => [...current, tag(111, 0, 11)]);
+      const actions = actionsFor(tag(111, 0, 11));
       expect(actions.find((action) => action.id === 'createHere')).toBeUndefined();
     });
 

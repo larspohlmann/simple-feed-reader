@@ -11,6 +11,8 @@ import { FieldComponent } from '../../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../../shared/overlay-panel/overlay-panel.component';
 import { ReaderApi } from '../../reader-api';
 import { TagDto, TagInput } from '../../models';
+import { TagHierarchy } from '../../state/tag-hierarchy';
+import { tagLabel, tagsInTreeOrder } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
 import { ButtonComponent } from '../../../shared/button/button.component';
 
@@ -54,12 +56,15 @@ export class TagFormDialogComponent {
     this.data.kind === 'edit' ? this.data.tag.parentId : this.data.parentId,
   );
   readonly parentError = signal<string | null>(null);
-  readonly parentOptions = computed(() =>
-    this.tagsStore.rootTags().filter((tag) => tag.id !== this.editedTag?.id),
-  );
-  readonly hasChildren = computed(() =>
-    this.tagsStore.tags().some((tag) => tag.parentId === this.editedTag?.id),
-  );
+  private readonly hierarchy = computed(() => new TagHierarchy(this.tagsStore.tags()));
+  readonly parentOptions = computed(() => {
+    const tags = this.tagsStore.tags();
+    const hierarchy = this.hierarchy();
+    return tagsInTreeOrder(tags)
+      .filter((tag) => hierarchy.mayPlaceUnder(this.editedTag?.id ?? null, tag.id))
+      .map((tag) => ({ id: tag.id, label: tagLabel(tag, tags) }));
+  });
+  readonly parentLocked = computed(() => this.parentOptions().length === 0);
 
   constructor() {
     this.tagsStore.load();
@@ -77,7 +82,7 @@ export class TagFormDialogComponent {
       name: this.form.getRawValue().name.trim(),
       color: this.color(),
       icon: this.icon(),
-      parentId: this.hasChildren() ? null : this.parentId(),
+      parentId: this.parentLocked() ? null : this.parentId(),
     };
     this.loading.set(true);
     this.error.set(null);

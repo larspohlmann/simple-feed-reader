@@ -850,7 +850,7 @@
       "save": "Save",
       "parent": "Parent tag",
       "noParent": "None",
-      "parentLockedHasChildren": "A tag with child tags cannot have a parent."
+      "parentLockedByDepth": "Its child tags already use every level, so this tag stays at the top."
     },
     "editFeed": {
       "title": "Edit feed",

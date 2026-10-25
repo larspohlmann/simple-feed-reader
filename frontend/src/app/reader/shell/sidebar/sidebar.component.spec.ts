@@ -344,9 +344,9 @@ describe('SidebarComponent', () => {
       return { fixture, element, items };
     }
 
-    it('is not offered on a child tag', () => {
+    it('is offered on a child tag, which still has a level below it', () => {
       const { items } = openRowMenu('Long reads');
-      expect(items.map((item) => item.textContent?.trim())).not.toContain('Create tag here');
+      expect(items.map((item) => item.textContent?.trim())).toContain('Create tag here');
     });
 
     it('creates a tag under the root and closes the menu', () => {
