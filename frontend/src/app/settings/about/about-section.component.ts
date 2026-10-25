@@ -14,7 +14,7 @@ import { ReleaseVersion, VersionService } from '../../core/version.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SettingsApi } from '../settings-api';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
-import { ReadingActivity } from '../settings.models';
+import { ReadingActivity, ReadingDay } from '../settings.models';
 import { selectionQueryParams } from '../../reader/query/query';
 import { formatLongDate } from '../../reader/format';
 import { DEVELOPMENT_VERSION, buildVersion } from '../../../environments/version';
@@ -106,13 +106,8 @@ export class AboutSectionComponent implements OnInit {
     },
   ]);
 
-  readonly arrivedDays = computed<ChartDay[]>(() =>
-    (this.activity()?.days ?? []).map((day) => ({ date: day.date, count: day.arrived })),
-  );
-
-  readonly readDays = computed<ChartDay[]>(() =>
-    (this.activity()?.days ?? []).map((day) => ({ date: day.date, count: day.read })),
-  );
+  readonly arrivedDays = computed(() => this.chartDays((day) => day.arrived));
+  readonly readDays = computed(() => this.chartDays((day) => day.read));
 
   readonly hasArrivals = computed(() => hasActivity(this.arrivedDays()));
   readonly hasReads = computed(() => hasActivity(this.readDays()));
@@ -207,11 +202,14 @@ export class AboutSectionComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (activity) => this.activity.set(activity),
-        // A snapshot, not a control: a failed fetch leaves the rest of the
-        // page standing and the chart simply never appears.
+        // A snapshot, not a control: a failed fetch shows the empty states.
         error: () =>
           this.activity.set({ days: [], total: 0, arrivedDailyAverage: null, topFeedsByRead: [] }),
       });
+  }
+
+  private chartDays(pick: (day: ReadingDay) => number | null): ChartDay[] {
+    return (this.activity()?.days ?? []).map((day) => ({ date: day.date, count: pick(day) }));
   }
 
   /** Scales a ranked list to bar widths against its own busiest entry, so the
