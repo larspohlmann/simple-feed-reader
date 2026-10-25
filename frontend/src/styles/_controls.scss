@@ -101,3 +101,13 @@ textarea:disabled {
   cursor: default;
   opacity: 0.7;
 }
+
+// iOS zooms the page into a focused control under 16px. Important, because
+// component styles size their controls smaller with a higher specificity.
+@media (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='color']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
