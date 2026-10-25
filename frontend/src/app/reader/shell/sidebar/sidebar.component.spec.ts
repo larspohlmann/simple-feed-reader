@@ -11,7 +11,7 @@ import { RecommendationsService } from '../../state/recommendations.service';
 import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
-import { TagNode, flattenTagTree } from '../../state/subscription-derivations';
+import { TagNode, countDescendants, flattenTagTree } from '../../state/subscription-derivations';
 import { TagsStore } from '../../state/tags.store';
 import { SocialSection, socialProfiles } from '../../state/social-sections';
 import { Selection } from '../../query/query';
@@ -191,6 +191,7 @@ const tagNodeFixture: TagNode = {
   children: [],
   unreadCount: 3,
   entryCount: 0,
+  descendantCount: 0,
 };
 
 describe('SidebarComponent', () => {
@@ -244,6 +245,7 @@ describe('SidebarComponent', () => {
       children: [],
       unreadCount: 9,
       entryCount: 0,
+      descendantCount: 0,
     };
     const fixture = mount({ tagTree: [node] });
     const element = fixture.nativeElement as HTMLElement;
@@ -262,6 +264,7 @@ describe('SidebarComponent', () => {
       children: [],
       unreadCount: 0,
       entryCount: 0,
+      descendantCount: 0,
     };
     const withoutIcon: TagNode = {
       tag: { id: 21, name: 'Plain', color: null, icon: null, position: 1, parentId: null },
@@ -269,6 +272,7 @@ describe('SidebarComponent', () => {
       children: [],
       unreadCount: 0,
       entryCount: 0,
+      descendantCount: 0,
     };
     const fixture = mount({ tagTree: [withIcon, withoutIcon] });
     const leads = (fixture.nativeElement as HTMLElement).querySelectorAll('.tag .lead');
@@ -290,6 +294,7 @@ describe('SidebarComponent', () => {
       children: [],
       unreadCount: 0,
       entryCount: 0,
+      descendantCount: 0,
     };
     const fixture = mount({ tagTree: [node] });
     const element = fixture.nativeElement as HTMLElement;
@@ -320,6 +325,7 @@ describe('SidebarComponent', () => {
       children: [],
       unreadCount: 0,
       entryCount: 0,
+      descendantCount: 0,
     };
     const root: TagNode = {
       tag: { id: 20, name: 'Reading', color: null, icon: null, position: 0, parentId: null },
@@ -327,6 +333,7 @@ describe('SidebarComponent', () => {
       children: [child],
       unreadCount: 0,
       entryCount: 0,
+      descendantCount: countDescendants([child]),
     };
 
     function openRowMenu(tagName: string) {
@@ -385,6 +392,7 @@ describe('SidebarComponent', () => {
           children: [],
           unreadCount: 0,
           entryCount: 0,
+          descendantCount: 0,
         },
       ],
     });
@@ -409,6 +417,7 @@ describe('SidebarComponent', () => {
           children: [],
           unreadCount: 0,
           entryCount: 0,
+          descendantCount: 0,
         },
         {
           tag: { id: 21, name: 'News', color: null, icon: null, position: 0, parentId: null },
@@ -416,6 +425,7 @@ describe('SidebarComponent', () => {
           children: [],
           unreadCount: 0,
           entryCount: 0,
+          descendantCount: 0,
         },
       ],
     });
@@ -530,8 +540,13 @@ describe('SidebarComponent', () => {
       children: [],
       unreadCount: 0,
       entryCount: 0,
+      descendantCount: 0,
     });
-    const parentNode = (id: number, children: TagNode[]): TagNode => ({ ...tagNode(id), children });
+    const parentNode = (id: number, children: TagNode[]): TagNode => ({
+      ...tagNode(id),
+      children,
+      descendantCount: countDescendants(children),
+    });
 
     function reorder(
       target: DropData,
@@ -815,6 +830,7 @@ describe('SidebarComponent', () => {
       children: [],
       unreadCount: 0,
       entryCount: 0,
+      descendantCount: 0,
     };
     const fixture = mount({ tagTree: [node] });
     const element = fixture.nativeElement as HTMLElement;
@@ -934,6 +950,7 @@ describe('SidebarComponent', () => {
       children,
       unreadCount: 0,
       entryCount: 0,
+      descendantCount: countDescendants(children),
     });
 
     /** Headers 40 tall at index * 50 inside a list whose top is 0. */
@@ -1294,6 +1311,7 @@ describe('SidebarComponent', () => {
         children: [],
         unreadCount: 0,
         entryCount: 0,
+        descendantCount: 0,
       };
       const fixture = mount({
         tagTree: [node],
@@ -2018,7 +2036,14 @@ describe('for-you row', () => {
 describe('organise mode', () => {
   const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0, parentId: null };
   const tree: TagNode[] = [
-    { tag, subscriptions: [sub(5)], children: [], unreadCount: 3, entryCount: 0 },
+    {
+      tag,
+      subscriptions: [sub(5)],
+      children: [],
+      unreadCount: 3,
+      entryCount: 0,
+      descendantCount: 0,
+    },
   ];
 
   it('the Tags head carries a ⋯ that opens the Tags sheet while organising', () => {
@@ -2515,6 +2540,7 @@ describe('organise mode', () => {
       children: [],
       unreadCount: 0,
       entryCount: 0,
+      descendantCount: 0,
     };
 
     beforeEach(() => localStorage.clear());

@@ -11,7 +11,7 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SocialSection, buildSocialSections, socialProfiles } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { SubscriptionRows } from '../state/subscription-rows';
-import { TagNode, tagNodesById } from '../state/subscription-derivations';
+import { TagNode, countDescendants, tagNodesById } from '../state/subscription-derivations';
 import { NO_UNREAD_TOTALS, UnreadTotals } from '../state/unread-totals';
 import { makeSubscription } from '../testing/subscription.factory';
 import { ListHeading } from './list-heading.service';
@@ -254,6 +254,7 @@ describe('ListHeading for a child tag (#1736)', () => {
     children,
     unreadCount: 0,
     entryCount: 0,
+    descendantCount: countDescendants(children),
   });
 
   it('finds a child tag that only appears inside its parent node', () => {

@@ -39,7 +39,7 @@ import { SidebarSubtagPillComponent } from './sidebar-subtag-pill.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarTagRowMenuComponent } from './sidebar-tag-row-menu.component';
 import { SidebarTagsHeadMenuComponent } from './sidebar-tags-head-menu.component';
-import { TagNode, flattenTagTree, tagNodesById } from '../../state/subscription-derivations';
+import { TagNode, tagNodesById } from '../../state/subscription-derivations';
 import { TagDragSession } from '../../tag-drag-session';
 import { SocialSection } from '../../state/social-sections';
 import { Selection, selectionQueryParams } from '../../query/query';
@@ -62,8 +62,6 @@ export interface TagBranchView {
   readonly node: TagNode;
   readonly open: boolean;
   readonly depth: number;
-  /** Every tag below this one, at any depth. */
-  readonly subtags: number;
   readonly children: readonly TagBranchView[];
 }
 
@@ -211,7 +209,7 @@ export class SidebarComponent {
     const branch = (node: TagNode, depth: number): TagBranchView => {
       const open = expanded.has(node.tag.id);
       const children = open ? node.children.map((child) => branch(child, depth + 1)) : [];
-      return { node, open, depth, subtags: flattenTagTree(node.children).length, children };
+      return { node, open, depth, children };
     };
     return this.tagTree().map((root) => branch(root, 0));
   });

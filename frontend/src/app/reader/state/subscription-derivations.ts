@@ -7,6 +7,7 @@ export interface TagNode {
   children: TagNode[];
   unreadCount: number;
   entryCount: number;
+  descendantCount: number;
 }
 
 /**
@@ -28,16 +29,23 @@ export function buildTagTree(
 
   const children = childrenByParentId(tags);
   const node = (tag: TagDto): TagNode => {
+    const below = (children.get(tag.id) ?? []).map(node);
     const branch: TagNode = {
       tag,
       subscriptions: feedsOf(byTagId, tag.id),
-      children: (children.get(tag.id) ?? []).map(node),
+      children: below,
       unreadCount: tagUnread.get(tag.id) ?? 0,
       entryCount: 0,
+      descendantCount: countDescendants(below),
     };
     return { ...branch, entryCount: totalEntryCount(distinctFeedsOf(branch)) };
   };
   return rootsOf(tags).map(node);
+}
+
+/** Every tag below these nodes, at any depth. */
+export function countDescendants(children: readonly TagNode[]): number {
+  return children.reduce((count, child) => count + 1 + child.descendantCount, 0);
 }
 
 /** Every node, each followed by the tags below it: the order the sidebar shows. */
