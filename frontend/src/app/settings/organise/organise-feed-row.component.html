@@ -34,88 +34,88 @@
     @if (excluded()) {
       <app-icon class="excluded" name="visibility_off" size="xs" data-test="excluded" />
     }
+  </div>
 
-    <app-feed-refresh-times class="meta" [subscription]="subscription()" />
+  <app-feed-refresh-times class="meta" [subscription]="subscription()" />
 
-    <span class="acts">
-      @if (reorderable()) {
-        <button
-          type="button"
-          appIconButton
-          data-test="move-up"
-          [disabled]="!canMoveUp()"
-          [attr.aria-label]="'settings.organise.moveUp' | transloco"
-          (click)="moveUp.emit()"
-        >
-          <app-icon name="arrow_upward" size="sm" />
-        </button>
-        <button
-          type="button"
-          appIconButton
-          data-test="move-down"
-          [disabled]="!canMoveDown()"
-          [attr.aria-label]="'settings.organise.moveDown' | transloco"
-          (click)="moveDown.emit()"
-        >
-          <app-icon name="arrow_downward" size="sm" />
-        </button>
-      }
-
+  <span class="acts">
+    @if (reorderable()) {
       <button
         type="button"
         appIconButton
-        class="edit"
-        data-test="edit"
-        [attr.aria-label]="'reader.editFeed' | transloco"
-        (click)="edit.emit()"
+        data-test="move-up"
+        [disabled]="!canMoveUp()"
+        [attr.aria-label]="'settings.organise.moveUp' | transloco"
+        (click)="moveUp.emit()"
       >
-        <app-icon name="edit" size="sm" />
+        <app-icon name="arrow_upward" size="sm" />
       </button>
+      <button
+        type="button"
+        appIconButton
+        data-test="move-down"
+        [disabled]="!canMoveDown()"
+        [attr.aria-label]="'settings.organise.moveDown' | transloco"
+        (click)="moveDown.emit()"
+      >
+        <app-icon name="arrow_downward" size="sm" />
+      </button>
+    }
 
-      @if (screen.isCoarse()) {
+    <button
+      type="button"
+      appIconButton
+      class="edit"
+      data-test="edit"
+      [attr.aria-label]="'reader.editFeed' | transloco"
+      (click)="edit.emit()"
+    >
+      <app-icon name="edit" size="sm" />
+    </button>
+
+    @if (screen.isCoarse()) {
+      <button
+        type="button"
+        appIconButton
+        data-test="more"
+        [attr.aria-label]="'reader.manage' | transloco: { name: subscription().title }"
+        (click)="openSheet()"
+      >
+        <app-icon name="more_horiz" size="sm" />
+      </button>
+    } @else {
+      <div class="menu" [appDismissOnOutside]="menuOpen()" (dismiss)="closeMenu()">
         <button
           type="button"
           appIconButton
           data-test="more"
           [attr.aria-label]="'reader.manage' | transloco: { name: subscription().title }"
-          (click)="openSheet()"
+          (click)="toggleMenu()"
         >
           <app-icon name="more_horiz" size="sm" />
         </button>
-      } @else {
-        <div class="menu" [appDismissOnOutside]="menuOpen()" (dismiss)="closeMenu()">
-          <button
-            type="button"
-            appIconButton
-            data-test="more"
-            [attr.aria-label]="'reader.manage' | transloco: { name: subscription().title }"
-            (click)="toggleMenu()"
-          >
-            <app-icon name="more_horiz" size="sm" />
-          </button>
-          @if (menuOpen()) {
-            <div class="pop" role="menu">
-              @for (flag of feedFlags; track flag.surface) {
-                <button
-                  role="menuitem"
-                  [attr.data-test]="flag.dataTest"
-                  (click)="toggleFlag(flag); closeMenu()"
-                >
-                  {{ feedFlagLabelKey(flag, subscription()) | transloco }}
-                </button>
-              }
+        @if (menuOpen()) {
+          <div class="pop" role="menu">
+            @for (flag of feedFlags; track flag.surface) {
               <button
                 role="menuitem"
-                class="danger"
-                data-test="unsubscribe"
-                (click)="unsubscribe.emit(); closeMenu()"
+                [attr.data-test]="flag.dataTest"
+                (click)="toggleFlag(flag); closeMenu()"
               >
-                {{ 'reader.unsubscribe' | transloco }}
+                {{ feedFlagLabelKey(flag, subscription()) | transloco }}
               </button>
-            </div>
-          }
-        </div>
-      }
-    </span>
-  </div>
+            }
+            <button
+              role="menuitem"
+              class="danger"
+              data-test="unsubscribe"
+              (click)="unsubscribe.emit(); closeMenu()"
+            >
+              {{ 'reader.unsubscribe' | transloco }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </span>
 </div>
