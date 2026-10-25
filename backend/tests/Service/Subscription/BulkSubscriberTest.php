@@ -345,6 +345,31 @@ final class BulkSubscriberTest extends DbTestCase
         );
     }
 
+    public function testNamesThatDifferOnlyByAnAccentAreTwoTags(): void
+    {
+        $user = $this->user('accent-twins@example.com');
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://cafe-accented.example.com/rss.xml', 'Accented', ['Café']),
+            new BulkSubscribeItemModel('https://cafe-plain.example.com/rss.xml', 'Plain', ['Cafe']),
+        ]);
+
+        self::assertSame(['Café', 'Cafe'], $this->namesOf($result->tagsCreated));
+    }
+
+    public function testAStoredTagIsNotMatchedByItsNameWithoutTheAccent(): void
+    {
+        $user = $this->user('accent-stored@example.com');
+        $this->entityManager->persist(new Tag($user, 'Café'));
+        $this->entityManager->flush();
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://cafe-later.example.com/rss.xml', 'Later', ['Cafe']),
+        ]);
+
+        self::assertSame(['Cafe'], $this->namesOf($result->tagsCreated));
+    }
+
     public function testAThreeLevelPathNestsEachTagUnderTheNext(): void
     {
         $user = $this->user('three-levels@example.com');
