@@ -156,8 +156,8 @@ final class ReadingActivityControllerTest extends WebTestCase
         /** @var list<array{date: string, arrived: int|null, read: int|null}> $days */
         $days = $payload['days'];
         $byDate = array_column($days, 'read', 'date');
-        self::assertSame(2, $byDate[gmdate('Y-m-d', $twoDaysAgo->getTimestamp())]);
-        self::assertSame(1, $byDate[gmdate('Y-m-d', $fiveDaysAgo->getTimestamp())]);
+        self::assertSame(2, $byDate[$twoDaysAgo->format('Y-m-d')]);
+        self::assertSame(1, $byDate[$fiveDaysAgo->format('Y-m-d')]);
         self::assertArrayNotHasKey($noonUtc->modify('-40 days')->format('Y-m-d'), $byDate);
     }
 
