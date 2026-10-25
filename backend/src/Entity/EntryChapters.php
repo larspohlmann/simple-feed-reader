@@ -52,9 +52,6 @@ final class EntryChapters
      */
     private static function stored(array $chapters): ?array
     {
-        return StoredList::orNull(array_map(
-            static fn (EntryChapter $chapter): array => $chapter->jsonSerialize(),
-            $chapters,
-        ));
+        return StoredList::orNull(EntryMedia::toJsonList($chapters));
     }
 }

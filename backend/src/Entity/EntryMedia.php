@@ -109,7 +109,9 @@ final class EntryMedia
      *
      * @param list<EntryMedium>|list<EntryAttachment>|list<EntryChapter> $items
      *
-     * @return list<array<string, string|int|true>>
+     * @return ($items is list<EntryChapter>
+     *     ? list<array{startSeconds: int, title: string}>
+     *     : list<array<string, string|int|true>>)
      */
     public static function toJsonList(array $items): array
     {
