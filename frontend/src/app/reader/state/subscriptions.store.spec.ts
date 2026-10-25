@@ -190,6 +190,25 @@ describe('buildTagTree with an explicit tag order', () => {
     expect(flattenTagTree([root]).map((node) => node.tag.id)).toEqual([1, 2, 3]);
   });
 
+  it('counts every tag below a node, at any depth', () => {
+    const [root] = buildTagTree(
+      [],
+      [
+        makeTag(1, 'Reading'),
+        makeTag(2, 'Long reads', { parentId: 1 }),
+        makeTag(3, 'Essays', { parentId: 2 }),
+        makeTag(4, 'Poems', { parentId: 1 }),
+      ],
+    );
+
+    expect(flattenTagTree([root]).map((node) => [node.tag.id, node.descendantCount])).toEqual([
+      [1, 3],
+      [2, 1],
+      [3, 0],
+      [4, 0],
+    ]);
+  });
+
   it('orders and groups siblings at every level', () => {
     const nested = [
       makeTag(1, 'Reading'),

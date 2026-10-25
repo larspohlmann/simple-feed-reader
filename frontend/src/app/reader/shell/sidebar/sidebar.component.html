@@ -280,7 +280,7 @@
               />
             </span>
             <span class="name">{{ node.tag.name }}</span>
-            <app-sidebar-subtag-pill [count]="node.children.length" />
+            <app-sidebar-subtag-pill [count]="node.descendantCount" />
           </span>
           <button
             class="dots"
@@ -313,7 +313,7 @@
             [toggleLabel]="'reader.toggleTag' | transloco: { name: node.tag.name }"
             (toggled)="toggle(node.tag.id)"
           >
-            <app-sidebar-subtag-pill [count]="node.children.length" />
+            <app-sidebar-subtag-pill [count]="node.descendantCount" />
             <app-sidebar-tag-row-menu [tag]="node.tag" />
           </app-sidebar-group-row>
         }
