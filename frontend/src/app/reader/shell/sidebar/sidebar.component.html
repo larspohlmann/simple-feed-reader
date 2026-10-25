@@ -4,7 +4,7 @@
   [attr.aria-label]="'reader.feeds' | transloco"
   cdkDropListGroup
 >
-  <!-- Heads a tap must reach sit outside the scroller: iOS swallows a tap on a coasting one (#1332). -->
+  <!-- These heads sit outside the scroller: iOS swallows a tap on a coasting one (#1332). -->
   @if (organising()) {
     <div class="organise-head" [class.collapsed]="scrolled()">
       <span class="drawer-title">{{ 'reader.organise' | transloco }}</span>
@@ -123,9 +123,6 @@
           </a>
         }
       </div>
-    }
-
-    @if (!organising()) {
       <app-sidebar-saved-searches
         [savedSearches]="savedSearches()"
         [activeSavedSearchId]="activeSavedSearchId()"

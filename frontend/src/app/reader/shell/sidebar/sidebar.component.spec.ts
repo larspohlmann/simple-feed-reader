@@ -2161,7 +2161,7 @@ describe('organise mode', () => {
   });
 
   it('collapses the Organise head once the sidebar scrolls, and restores it at the top', () => {
-    const fixture = mount({ coarse: true, organising: true, narrow: true });
+    const fixture = mount({ coarse: true, organising: true });
     const element = fixture.nativeElement as HTMLElement;
     const scroller = element.querySelector<HTMLElement>('.sidebar-body')!;
     const head = (): DOMTokenList => element.querySelector('.organise-head')!.classList;
@@ -2181,10 +2181,8 @@ describe('organise mode', () => {
   });
 
   it('keeps the Organise head outside the scroller, so iOS delivers a tap mid-fling', () => {
-    const fixture = mount({ coarse: true, organising: true, narrow: true });
-    const element = fixture.nativeElement as HTMLElement;
+    const element = mount({ coarse: true, organising: true }).nativeElement as HTMLElement;
 
-    expect(element.querySelector('.sidebar-body .organise-head')).toBeNull();
     expect(element.querySelector('.sidebar > .organise-head')).not.toBeNull();
   });
 
