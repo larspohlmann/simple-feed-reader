@@ -22,6 +22,37 @@ final class EntryMedia
     #[ORM\Column(name: 'attachments', type: Types::JSON, nullable: true)]
     private ?array $attachments = null;
 
+    #[ORM\Embedded(class: EntryChapters::class, columnPrefix: false)]
+    private EntryChapters $chapters;
+
+    public function __construct()
+    {
+        $this->chapters = new EntryChapters();
+    }
+
+    /** @return list<EntryChapter> */
+    public function getChapters(): array
+    {
+        return $this->chapters->getChapters();
+    }
+
+    public function getChaptersUrl(): ?string
+    {
+        return $this->chapters->getUrl();
+    }
+
+    /** @param list<EntryChapter> $chapters */
+    public function declareChapters(array $chapters, ?string $url): void
+    {
+        $this->chapters->declare($chapters, $url);
+    }
+
+    /** @param list<EntryChapter> $chapters */
+    public function fillChapters(array $chapters): void
+    {
+        $this->chapters->fill($chapters);
+    }
+
     /**
      * @param list<EntryMedium>     $media
      * @param list<EntryAttachment> $attachments

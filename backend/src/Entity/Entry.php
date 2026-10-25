@@ -238,6 +238,29 @@ final class Entry
         $this->mediaSet->putFirst($medium);
     }
 
+    /** @return list<EntryChapter> */
+    public function getChapters(): array
+    {
+        return $this->mediaSet->getChapters();
+    }
+
+    public function getChaptersUrl(): ?string
+    {
+        return $this->mediaSet->getChaptersUrl();
+    }
+
+    /** @param list<EntryChapter> $chapters */
+    public function declareChapters(array $chapters, ?string $url): void
+    {
+        $this->mediaSet->declareChapters($chapters, $url);
+    }
+
+    /** @param list<EntryChapter> $chapters */
+    public function fillChapters(array $chapters): void
+    {
+        $this->mediaSet->fillChapters($chapters);
+    }
+
     public function getPublishedAt(): ?\DateTimeImmutable
     {
         return $this->publishedAt;

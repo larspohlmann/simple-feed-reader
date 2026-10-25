@@ -51,16 +51,18 @@ has at least three lines and strictly ascends is the chapter list. Anything else
 It returns the `ChaptersModel` and the body with exactly those lines (and their `<br>` separators)
 removed; a paragraph left empty is dropped. A later repeat of the block stays in the text.
 
-### Podcast source: stored on the attachment
+### Podcast source: stored on the entry
 
-`EntryAttachment` (stored as JSON, so no migration) gains two optional keys:
+Chapters belong to the item, and `App\Entity` may not import a Service model, so they live on `Entry` in an
+`EntryChapters` embeddable (one migration) with two columns:
 
-- `chapters`: `list<{startSeconds, title}>` — written at ingest from inline Podlove `psc:chapters`
+- `chapters`: `list<{startSeconds, title}>` (JSON) — written at ingest from inline Podlove `psc:chapters`
   (versions 1.1 and 1.2, `start` as `HH:MM:SS(.mmm)`), or later by the lazy fill.
-- `chaptersUrl`: the `podcast:chapters` `url`, kept only when there are no inline chapters.
+- `chapters_url`: the `podcast:chapters` `url`, kept only when there are no inline chapters. It is a TEXT
+  column (the entry table has no MySQL row width left for a VARCHAR(2048)); the embeddable bounds it.
 
-`ChapterFiller::fillOnOpen(Entry)` runs when an entry detail is served: for an attachment with
-`chaptersUrl` and no `chapters`, it fetches through the SSRF-guarded fetcher (64 KB cap, short
+`ChapterFiller::fillOnOpen(Entry)` runs when an entry detail is served: for an entry with
+`chapters_url` and no chapters, it fetches through the SSRF-guarded fetcher (64 KB cap, short
 timeout), parses the Podcasting 2.0 JSON chapters format (`startTime`, `title`; entries with
 `toc: false` dropped) and stores the result. A malformed or empty file stores an empty list so it is
 not fetched again; a network failure stores nothing so the next open retries. The name says it writes:
@@ -68,7 +70,7 @@ this is not a getter.
 
 ### Serving
 
-`EntryChapters` returns, for an entry, either the YouTube result or the podcast attachment's chapters,
+`EntryChapters` returns, for an entry, either the YouTube result or the entry's stored podcast chapters,
 plus the body to serve. The entry detail action calls it; a `ChaptersJson` mapper in `src/Http` adds:
 
 ```json
@@ -80,16 +82,14 @@ YouTube entry with chapters.
 
 ### Frame allowlist
 
-`YouTubeEmbedProvider::frames()` gains a landscape pattern for
-`…/embed/<id>?enablejsapi=1&origin=<scheme://host[:port]>` — fixed parameter names and order, the origin
-restricted to a scheme, host and optional port. The allowlist JSON is regenerated with
-`app:embed:dump-frame-allowlist`. The plain pattern stays for every other embed.
+The allowlist is unchanged: the SPA appends the constant `?enablejsapi=1&origin=…` to an already validated
+URL.
 
 ## Frontend
 
 ### `ChapterListComponent`
 
-Standalone, signals, styles in `chapter-list.component.scss` with design-language tokens. Inputs:
+A DOM decorator, `addChapterList`, because the body is `innerHTML`. Standalone, signals, styles in `chapter-list.component.scss` with design-language tokens. Inputs:
 `chapters` and a `ChapterPlayer`. Each row is a `<button>` with the start time and the title; the
 current one gets `aria-current="true"` and the accent mark. A tap calls `player.playFrom(startSeconds)`
 and highlights that row at once. The list never scrolls itself. Placed under the YouTube player

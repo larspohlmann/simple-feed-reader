@@ -308,6 +308,8 @@ article mark and each included social network all hold one pointer to their owne
 | `location.urlHash` | A value the application calculates from the article address, which the file already carries. The restore calculates it again for each article. Therefore it is never old, and the format never has to drop it later. |
 | `image.checkedAt` | The time at which this instance judged the image. A restored image was not judged here, so the field stays empty. An empty field does not put the image into the check queue. |
 | `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
+| `mediaSet.chapters.chapters` | The chapters of a podcast episode. This instance reads them from the feed, and fetches a linked chapters file when you first open the episode, so the file need not carry them. |
+| `mediaSet.chapters.url` | The address of a chapters file this instance still has to fetch. It comes from the feed, so a restored article has none pending and the next refresh finds it again. |
 
 **On a link card.**
 
