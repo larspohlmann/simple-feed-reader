@@ -32,10 +32,10 @@ use App\Service\Retention\EntryPruner;
 use App\Service\Retention\RetentionSettings;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Search\EntryIndexer;
+use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\SubscriptionHistory\LiveDayCounter;
 use App\Service\SubscriptionHistory\RetentionHorizon;
 use App\Service\SubscriptionHistory\SubscriptionHistoryRecorder;
-use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
@@ -161,6 +161,10 @@ final readonly class RefreshRunners
         /** @var FeedRepository $feedRepository */
         $feedRepository = $this->entityManager->getRepository(Feed::class);
         $indexer = new EntryIndexer($this->indexWriter, new NullLogger());
+        $retentionSettings = new RetentionSettings(
+            $this->entityManager->getRepository(RetentionSetting::class),
+            $this->entityManager,
+        );
         $outcomePersister = $this->outcomePersisters
             ->flushingThrough($this->flushingEntityManager)
             ->indexingInto($this->indexWriter)
@@ -177,14 +181,11 @@ final readonly class RefreshRunners
                 new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
                 new EntryPruner(
                     new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
-                    new RetentionSettings(
-                        $this->entityManager->getRepository(RetentionSetting::class),
-                        $this->entityManager,
-                    ),
+                    $retentionSettings,
                     $this->clock,
                     $indexer,
                 ),
-                $this->historyRecorder(),
+                $this->historyRecorder($retentionSettings),
                 new NullLogger(),
             ),
             $this->lockFactory,
@@ -194,15 +195,13 @@ final readonly class RefreshRunners
         );
     }
 
-    private function historyRecorder(): SubscriptionHistoryRecorder
+    private function historyRecorder(RetentionSettings $settings): SubscriptionHistoryRecorder
     {
-        $settings = new RetentionSettings(
-            $this->entityManager->getRepository(RetentionSetting::class),
-            $this->entityManager,
-        );
         $activity = new SubscriptionActivityRepository($this->entityManager);
-        /** @var SubscriptionDayRepository $storedDays */
         $storedDays = $this->entityManager->getRepository(SubscriptionDay::class);
+        if (!$storedDays instanceof SubscriptionDayRepository) {
+            throw new \LogicException('SubscriptionDay is not mapped to its repository.');
+        }
 
         return new SubscriptionHistoryRecorder(
             $activity,

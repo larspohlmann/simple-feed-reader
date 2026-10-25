@@ -14,6 +14,13 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<SubscriptionDay>
+ *
+ * @phpstan-type StoredDayRow array{
+ *     subscriptionId: int|string,
+ *     day: \DateTimeImmutable,
+ *     arrived: int|string,
+ *     readCount: int|string,
+ * }
  */
 final class SubscriptionDayRepository extends ServiceEntityRepository
 {
@@ -43,11 +50,11 @@ final class SubscriptionDayRepository extends ServiceEntityRepository
     /**
      * @param list<int> $subscriptionIds
      *
-     * @return list<array{subscriptionId: int|string, day: \DateTimeImmutable, arrived: int|string, readCount: int|string}>
+     * @return list<StoredDayRow>
      */
     private function rowsSince(array $subscriptionIds, string $oldestDay): array
     {
-        /** @var list<array{subscriptionId: int|string, day: \DateTimeImmutable, arrived: int|string, readCount: int|string}> $rows */
+        /** @var list<StoredDayRow> $rows */
         $rows = $this->createQueryBuilder('history')
             ->select(
                 'IDENTITY(history.subscription) AS subscriptionId',
