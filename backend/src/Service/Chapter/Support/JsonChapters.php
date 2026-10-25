@@ -9,6 +9,8 @@ use App\Entity\EntryChapter;
 /** A Podcasting 2.0 JSON chapters file (`podcast:chapters`) as an ordered chapter list. */
 final class JsonChapters
 {
+    private const int LATEST_START_SECONDS = 999_999_999;
+
     /**
      * @param array<mixed> $file
      *
@@ -39,7 +41,11 @@ final class JsonChapters
         $title = \is_string($row['title'] ?? null) ? trim($row['title']) : '';
         $listed = ($row['toc'] ?? true) !== false;
 
-        return (\is_int($start) || \is_float($start)) && $start >= 0 && $title !== '' && $listed
+        $startsInRange = (\is_int($start) || \is_float($start))
+            && $start >= 0
+            && $start <= self::LATEST_START_SECONDS;
+
+        return $startsInRange && $title !== '' && $listed
             ? new EntryChapter((int) floor($start), $title)
             : null;
     }

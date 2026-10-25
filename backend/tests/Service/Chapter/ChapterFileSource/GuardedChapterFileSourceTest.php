@@ -8,9 +8,11 @@ use App\Service\Chapter\ChapterFileSource\GuardedChapterFileSource;
 use App\Service\Chapter\Exception\ChapterFileUnreachableException;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\StaticDnsResolver;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -28,16 +30,30 @@ final class GuardedChapterFileSourceTest extends TestCase
         self::assertCount(2, $source->chaptersAt('https://cdn.test/ch.json'));
     }
 
-    public function testAnErrorAnswerOrARedirectHasNoChapters(): void
+    #[DataProvider('answersWithoutChapters')]
+    public function testAnErrorAnswerOrARedirectHasNoChapters(int $status): void
     {
-        foreach ([Response::HTTP_NOT_FOUND, Response::HTTP_MOVED_PERMANENTLY] as $status) {
-            $source = new GuardedChapterFileSource($this->client(new MockHttpClient(new MockResponse('', [
-                'http_code' => $status,
-                'response_headers' => ['Location' => 'https://elsewhere.test/ch.json'],
-            ]))));
+        $source = new GuardedChapterFileSource($this->client(new MockHttpClient(new MockResponse('', [
+            'http_code' => $status,
+            'response_headers' => ['Location' => 'https://elsewhere.test/ch.json'],
+        ]))));
 
-            self::assertSame([], $source->chaptersAt('https://cdn.test/ch.json'));
-        }
+        self::assertSame([], $source->chaptersAt('https://cdn.test/ch.json'));
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function answersWithoutChapters(): iterable
+    {
+        yield 'not found' => [Response::HTTP_NOT_FOUND];
+        yield 'redirect' => [Response::HTTP_MOVED_PERMANENTLY];
+    }
+
+    public function testAFileBeyondTheSizeLimitHasNoChapters(): void
+    {
+        $oversize = new MockResponse(str_repeat('a', ResponseSizeLimit::Api->bytes() + 1));
+        $source = new GuardedChapterFileSource($this->client(new MockHttpClient($oversize)));
+
+        self::assertSame([], $source->chaptersAt('https://cdn.test/ch.json'));
     }
 
     public function testABlockedHostHasNoChapters(): void

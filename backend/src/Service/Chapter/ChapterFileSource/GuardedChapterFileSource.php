@@ -7,6 +7,7 @@ namespace App\Service\Chapter\ChapterFileSource;
 use App\Service\Chapter\Exception\ChapterFileUnreachableException;
 use App\Service\Chapter\Support\JsonChapters;
 use App\Service\Fetch\Exception\FetchException;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ApiRequestModel;
@@ -21,7 +22,7 @@ final readonly class GuardedChapterFileSource implements ChapterFileSourceInterf
     {
         try {
             $response = $this->api->send(ApiRequestModel::get($url));
-        } catch (SsrfBlockedException) {
+        } catch (SsrfBlockedException | ResponseTooLargeException) {
             return [];
         } catch (FetchException $exception) {
             throw ChapterFileUnreachableException::from($url, $exception);

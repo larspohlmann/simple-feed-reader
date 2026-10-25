@@ -42,7 +42,7 @@ final class JsonChaptersTest extends TestCase
             [new EntryChapter(0, 'A'), new EntryChapter(9, 'B')],
             JsonChapters::from(['chapters' => [
                 ['startTime' => 0, 'title' => 'A'], ['title' => 'no start'], ['startTime' => -4, 'title' => 'neg'],
-                ['startTime' => 5, 'title' => ''], 'row', ['startTime' => 9, 'title' => 'B'],
+                ['startTime' => 5, 'title' => ''], 'row', ['startTime' => 1e30, 'title' => 'huge'], ['startTime' => 9, 'title' => 'B'],
             ]]),
         );
     }
