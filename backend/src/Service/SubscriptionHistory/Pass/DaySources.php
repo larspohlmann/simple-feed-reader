@@ -35,6 +35,16 @@ final readonly class DaySources
     }
 
     /**
+     * @param list<string> $dates oldest first
+     *
+     * @return list<string>
+     */
+    public function liveDays(TrackedSubscriptionModel $subscription, array $dates): array
+    {
+        return array_values(array_filter($dates, fn (string $day): bool => $this->needsLive($subscription, $day)));
+    }
+
+    /**
      * @param list<TrackedSubscriptionModel> $subscriptions
      * @param list<string>                   $dates oldest first
      */

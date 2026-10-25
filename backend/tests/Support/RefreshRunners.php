@@ -6,13 +6,10 @@ namespace App\Tests\Support;
 
 use App\Entity\Feed;
 use App\Entity\RetentionSetting;
-use App\Entity\SubscriptionDay;
 use App\Repository\FeedRepository;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
-use App\Repository\SubscriptionActivityRepository;
-use App\Service\Clock\NaiveUtcClock;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
@@ -32,9 +29,6 @@ use App\Service\Retention\RetentionSettings;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
-use App\Service\SubscriptionHistory\LiveDayCounter;
-use App\Service\SubscriptionHistory\RetentionHorizon;
-use App\Service\SubscriptionHistory\SubscriptionHistoryRecorder;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
@@ -57,6 +51,7 @@ final readonly class RefreshRunners
         private ContentChangeMarkerInterface $changeMarker,
         private SearchIndexWriterInterface $indexWriter,
         private LoggerInterface $logger,
+        private ?int $maxEntriesPerFeed = null,
     ) {
     }
 
@@ -94,6 +89,7 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $this->logger,
+            $this->maxEntriesPerFeed,
         );
     }
 
@@ -108,6 +104,7 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $this->logger,
+            $this->maxEntriesPerFeed,
         );
     }
 
@@ -122,6 +119,7 @@ final readonly class RefreshRunners
             $changeMarker,
             $this->indexWriter,
             $this->logger,
+            $this->maxEntriesPerFeed,
         );
     }
 
@@ -136,6 +134,7 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $indexWriter,
             $this->logger,
+            $this->maxEntriesPerFeed,
         );
     }
 
@@ -150,6 +149,22 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $logger,
+            $this->maxEntriesPerFeed,
+        );
+    }
+
+    public function cappingFeedsAt(int $maxEntriesPerFeed): self
+    {
+        return new self(
+            $this->entityManager,
+            $this->clock,
+            $this->outcomePersisters,
+            $this->flushingEntityManager,
+            $this->lockFactory,
+            $this->changeMarker,
+            $this->indexWriter,
+            $this->logger,
+            $maxEntriesPerFeed,
         );
     }
 
@@ -178,13 +193,8 @@ final readonly class RefreshRunners
             ),
             new RefreshHousekeeping(
                 new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
-                new EntryPruner(
-                    new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
-                    $retentionSettings,
-                    $this->clock,
-                    $indexer,
-                ),
-                $this->historyRecorder($retentionSettings),
+                $this->pruner($retentionSettings, $indexer),
+                new SubscriptionHistoryWiring($this->entityManager, $retentionSettings, $this->clock)->recorder(),
                 new NullLogger(),
             ),
             $this->lockFactory,
@@ -194,18 +204,14 @@ final readonly class RefreshRunners
         );
     }
 
-    private function historyRecorder(RetentionSettings $settings): SubscriptionHistoryRecorder
+    private function pruner(RetentionSettings $settings, EntryIndexer $indexer): EntryPruner
     {
-        $activity = new SubscriptionActivityRepository($this->entityManager);
+        $retention = new RetentionRepository($this->entityManager, new RowIds($this->entityManager));
+        if ($this->maxEntriesPerFeed === null) {
+            return new EntryPruner($retention, $settings, $this->clock, $indexer);
+        }
 
-        return new SubscriptionHistoryRecorder(
-            $activity,
-            $this->entityManager->getRepository(SubscriptionDay::class),
-            new LiveDayCounter($activity),
-            new RetentionHorizon($settings),
-            new NaiveUtcClock($this->clock),
-            $this->entityManager,
-        );
+        return new EntryPruner($retention, $settings, $this->clock, $indexer, $this->maxEntriesPerFeed);
     }
 
     /** The keys the container's tagged locator carries; FeedBodyParserWiringTest proves the container routes alike. */

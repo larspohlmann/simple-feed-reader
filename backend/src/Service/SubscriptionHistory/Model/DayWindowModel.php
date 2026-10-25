@@ -8,6 +8,8 @@ use App\Service\SubscriptionHistory\Support\UtcDay;
 
 final readonly class DayWindowModel
 {
+    private const int DAYS = 30;
+
     /**
      * @param list<string> $dates oldest first, today last
      */
@@ -15,10 +17,10 @@ final readonly class DayWindowModel
     {
     }
 
-    public static function endingOn(string $today, int $dayCount): self
+    public static function lastDays(string $today): self
     {
         $dates = [];
-        for ($offset = $dayCount - 1; $offset >= 0; --$offset) {
+        for ($offset = self::DAYS - 1; $offset >= 0; --$offset) {
             $dates[] = UtcDay::shift($today, -$offset);
         }
 
@@ -39,11 +41,5 @@ final readonly class DayWindowModel
     public function completedDates(): array
     {
         return \array_slice($this->dates, 0, -1);
-    }
-
-    /** @return list<string> */
-    public function lastCompleted(int $count): array
-    {
-        return \array_slice($this->completedDates(), -$count);
     }
 }

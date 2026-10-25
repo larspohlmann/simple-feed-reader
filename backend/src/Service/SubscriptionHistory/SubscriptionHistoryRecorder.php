@@ -7,8 +7,8 @@ namespace App\Service\SubscriptionHistory;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Repository\SubscriptionActivityRepository;
-use App\Repository\SubscriptionDayRepository;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\SubscriptionHistory\Factory\DaySourcesFactory;
 use App\Service\SubscriptionHistory\Model\DayCountsModel;
 use App\Service\SubscriptionHistory\Model\DayWindowModel;
 use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
@@ -19,13 +19,12 @@ use Doctrine\ORM\EntityManagerInterface;
 /** Must run before the pruner in the same pass: a day is recorded while every entry it counts still exists. */
 final readonly class SubscriptionHistoryRecorder
 {
-    public const int WINDOW_DAYS = 30;
+    private const int FLUSH_CHUNK_SIZE = 500;
 
     public function __construct(
         private SubscriptionActivityRepository $activity,
-        private SubscriptionDayRepository $storedDays,
+        private DaySourcesFactory $daySourcesFactory,
         private LiveDayCounter $liveCounter,
-        private RetentionHorizon $horizon,
         private NaiveUtcClock $clock,
         private EntityManagerInterface $entityManager,
     ) {
@@ -33,50 +32,101 @@ final readonly class SubscriptionHistoryRecorder
 
     public function recordCompletedDays(): int
     {
-        $window = DayWindowModel::endingOn(UtcDay::of($this->clock->now()), self::WINDOW_DAYS);
+        $window = DayWindowModel::lastDays(UtcDay::of($this->clock->now()));
         $subscriptions = $this->activity->trackedSubscriptions();
-        $sources = new DaySources(
-            $this->storedDays->since(TrackedSubscriptionModel::idsOf($subscriptions), $window->oldest()),
-            $this->horizon->asOf($window->today()),
+        $missingDays = self::missingDaysOf(
+            $subscriptions,
+            $this->daySourcesFactory->forWindow($subscriptions, $window),
+            $window->completedDates(),
         );
-        $oldestLiveDay = $sources->oldestLiveDay($subscriptions, $window->completedDates());
-        if ($oldestLiveDay === null) {
+        if ($missingDays === []) {
             return 0;
         }
 
-        $live = $this->liveCounter->since($subscriptions, $oldestLiveDay);
-        $written = 0;
+        $pending = array_values(array_filter(
+            $subscriptions,
+            static fn (TrackedSubscriptionModel $tracked): bool => isset($missingDays[$tracked->subscriptionId]),
+        ));
+        $oldestMissingDay = min(array_map(static fn (array $days): string => $days[0], $missingDays));
+        $live = $this->liveCounter->since($pending, $oldestMissingDay);
+
+        return $this->saveInChunks($this->newDays($pending, $missingDays, $live));
+    }
+
+    /**
+     * @param list<TrackedSubscriptionModel> $subscriptions
+     * @param list<string>                   $dates
+     *
+     * @return array<int, non-empty-list<string>> subscription id => the days only a live count can still fill
+     */
+    private static function missingDaysOf(array $subscriptions, DaySources $sources, array $dates): array
+    {
+        $missingDays = [];
         foreach ($subscriptions as $subscription) {
-            $written += $this->recordSubscription($subscription, $window, $sources, $live);
+            $days = $sources->liveDays($subscription, $dates);
+            if ($days !== []) {
+                $missingDays[$subscription->subscriptionId] = $days;
+            }
         }
-        $this->entityManager->flush();
+
+        return $missingDays;
+    }
+
+    /**
+     * @param list<TrackedSubscriptionModel>     $pending
+     * @param array<int, non-empty-list<string>> $missingDays
+     *
+     * @return \Generator<SubscriptionDay>
+     */
+    private function newDays(array $pending, array $missingDays, DayCountsModel $live): \Generator
+    {
+        foreach ($pending as $subscription) {
+            $reference = $this->entityManager->getReference(Subscription::class, $subscription->subscriptionId)
+                ?? throw new \LogicException('A tracked subscription has no reference.');
+            foreach ($missingDays[$subscription->subscriptionId] as $day) {
+                $counts = $live->of($subscription->subscriptionId, $day);
+                yield new SubscriptionDay($reference, UtcDay::start($day), $counts->arrived, $counts->read);
+            }
+        }
+    }
+
+    /**
+     * @param iterable<SubscriptionDay> $days
+     */
+    private function saveInChunks(iterable $days): int
+    {
+        $written = 0;
+        foreach (self::chunksOf($days) as $chunk) {
+            foreach ($chunk as $day) {
+                $this->entityManager->persist($day);
+            }
+            $this->entityManager->flush();
+            foreach ($chunk as $day) {
+                $this->entityManager->detach($day);
+            }
+            $written += \count($chunk);
+        }
 
         return $written;
     }
 
-    private function recordSubscription(
-        TrackedSubscriptionModel $subscription,
-        DayWindowModel $window,
-        DaySources $sources,
-        DayCountsModel $live,
-    ): int {
-        $reference = $this->entityManager->getReference(Subscription::class, $subscription->subscriptionId)
-            ?? throw new \LogicException('A tracked subscription has no reference.');
-        $written = 0;
-        foreach ($window->completedDates() as $day) {
-            if (!$sources->needsLive($subscription, $day)) {
-                continue;
+    /**
+     * @param iterable<SubscriptionDay> $days
+     *
+     * @return \Generator<list<SubscriptionDay>>
+     */
+    private static function chunksOf(iterable $days): \Generator
+    {
+        $chunk = [];
+        foreach ($days as $day) {
+            $chunk[] = $day;
+            if (\count($chunk) === self::FLUSH_CHUNK_SIZE) {
+                yield $chunk;
+                $chunk = [];
             }
-            $counts = $live->of($subscription->subscriptionId, $day);
-            $this->entityManager->persist(new SubscriptionDay(
-                $reference,
-                UtcDay::start($day),
-                $counts->arrived,
-                $counts->read,
-            ));
-            ++$written;
         }
-
-        return $written;
+        if ($chunk !== []) {
+            yield $chunk;
+        }
     }
 }

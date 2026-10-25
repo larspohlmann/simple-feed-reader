@@ -33,17 +33,20 @@ final readonly class RefreshHousekeeping
         }
     }
 
-    public function pruneEntries(RefreshRequestModel $request): int
+    public function recordSubscriptionHistory(RefreshRequestModel $request): void
     {
         if (!$request->prune) {
-            return 0;
+            return;
         }
 
         $recorded = $this->history->recordCompletedDays();
         if ($recorded > 0) {
             $this->logger->info('Recorded subscription history days', ['count' => $recorded]);
         }
+    }
 
-        return $this->pruner->prune();
+    public function pruneEntries(RefreshRequestModel $request): int
+    {
+        return $request->prune ? $this->pruner->prune() : 0;
     }
 }

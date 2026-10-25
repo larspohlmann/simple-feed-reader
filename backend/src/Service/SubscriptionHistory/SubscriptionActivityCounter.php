@@ -6,8 +6,8 @@ namespace App\Service\SubscriptionHistory;
 
 use App\Entity\User;
 use App\Repository\SubscriptionActivityRepository;
-use App\Repository\SubscriptionDayRepository;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\SubscriptionHistory\Factory\DaySourcesFactory;
 use App\Service\SubscriptionHistory\Model\ActivityDayModel;
 use App\Service\SubscriptionHistory\Model\DayCountModel;
 use App\Service\SubscriptionHistory\Model\DayCountsModel;
@@ -21,21 +21,17 @@ final readonly class SubscriptionActivityCounter
 {
     public function __construct(
         private SubscriptionActivityRepository $activity,
-        private SubscriptionDayRepository $storedDays,
+        private DaySourcesFactory $daySourcesFactory,
         private LiveDayCounter $liveCounter,
-        private RetentionHorizon $horizon,
         private NaiveUtcClock $clock,
     ) {
     }
 
     public function lastDays(User $user): SubscriptionActivityModel
     {
-        $window = DayWindowModel::endingOn(UtcDay::of($this->clock->now()), SubscriptionHistoryRecorder::WINDOW_DAYS);
+        $window = DayWindowModel::lastDays(UtcDay::of($this->clock->now()));
         $subscriptions = $this->activity->trackedSubscriptionsOf($user->requireId());
-        $sources = new DaySources(
-            $this->storedDays->since(TrackedSubscriptionModel::idsOf($subscriptions), $window->oldest()),
-            $this->horizon->asOf($window->today()),
-        );
+        $sources = $this->daySourcesFactory->forWindow($subscriptions, $window);
         $live = $this->liveCounter->since(
             $subscriptions,
             $sources->oldestLiveDay($subscriptions, $window->dates) ?? $window->today(),

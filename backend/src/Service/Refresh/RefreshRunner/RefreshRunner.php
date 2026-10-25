@@ -116,6 +116,9 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
             return $pass->abortedAfterOutcomes();
         }
 
+        // Before the prune: a day is recorded while every entry it counts still exists.
+        $this->housekeeping->recordSubscriptionHistory($request);
+
         return $pass->finished(
             $this->countRemaining($criteria, $pass),
             $this->housekeeping->pruneEntries($request),

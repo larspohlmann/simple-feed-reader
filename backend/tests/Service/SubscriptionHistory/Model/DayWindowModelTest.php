@@ -9,14 +9,16 @@ use PHPUnit\Framework\TestCase;
 
 final class DayWindowModelTest extends TestCase
 {
-    public function testListsTheDaysEndingTodayOldestFirst(): void
+    public function testListsTheThirtyDaysEndingTodayOldestFirst(): void
     {
-        $window = DayWindowModel::endingOn('2026-10-02', 4);
+        $window = DayWindowModel::lastDays('2026-10-02');
 
-        self::assertSame(['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02'], $window->dates);
-        self::assertSame('2026-09-29', $window->oldest());
+        self::assertCount(30, $window->dates);
+        self::assertSame('2026-09-03', $window->dates[0]);
+        self::assertSame('2026-09-04', $window->dates[1]);
+        self::assertSame('2026-09-03', $window->oldest());
         self::assertSame('2026-10-02', $window->today());
-        self::assertSame(['2026-09-29', '2026-09-30', '2026-10-01'], $window->completedDates());
-        self::assertSame(['2026-09-30', '2026-10-01'], $window->lastCompleted(2));
+        self::assertCount(29, $window->completedDates());
+        self::assertSame('2026-10-01', $window->completedDates()[28]);
     }
 }

@@ -4,27 +4,21 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\SubscriptionHistory;
 
-use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Repository\SubscriptionActivityRepository;
-use App\Repository\SubscriptionDayRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Retention\RetentionSettings;
-use App\Service\SubscriptionHistory\LiveDayCounter;
 use App\Service\SubscriptionHistory\Model\ActivityDayModel;
-use App\Service\SubscriptionHistory\RetentionHorizon;
-use App\Service\SubscriptionHistory\SubscriptionActivityCounter;
 use App\Service\SubscriptionHistory\Support\UtcDay;
 use App\Tests\DbTestCase;
-use Symfony\Component\Clock\MockClock;
+use App\Tests\Support\SubscriptionHistoryFixtures;
 
 /** Now is 2026-10-25 12:00 UTC: the window runs 2026-09-26 … 2026-10-25, social feeds are live back to 2026-10-19. */
 final class SubscriptionActivityCounterTest extends DbTestCase
 {
+    use SubscriptionHistoryFixtures;
+
     private User $user;
 
     protected function setUp(): void
@@ -34,51 +28,23 @@ final class SubscriptionActivityCounterTest extends DbTestCase
         $this->entityManager->persist($this->user);
     }
 
-    private function counter(): SubscriptionActivityCounter
+    private function subscribeTo(string $url, string $at): Subscription
     {
-        $settings = self::getContainer()->get(RetentionSettings::class);
-        self::assertInstanceOf(RetentionSettings::class, $settings);
-        $storedDays = $this->entityManager->getRepository(SubscriptionDay::class);
-        self::assertInstanceOf(SubscriptionDayRepository::class, $storedDays);
-        $activity = new SubscriptionActivityRepository($this->entityManager);
-
-        return new SubscriptionActivityCounter(
-            $activity,
-            $storedDays,
-            new LiveDayCounter($activity),
-            new RetentionHorizon($settings),
-            new NaiveUtcClock(new MockClock('2026-10-25 12:00:00', 'UTC')),
-        );
-    }
-
-    private function subscribe(string $url, string $at): Subscription
-    {
-        $feed = new Feed($url);
-        $subscription = new Subscription($this->user, $feed, new \DateTimeImmutable($at));
-        $this->entityManager->persist($feed);
-        $this->entityManager->persist($subscription);
-
-        return $subscription;
+        return $this->subscribe($this->user, new Feed($url), $at);
     }
 
     private function subscribeToBluesky(string $handle, string $at): void
     {
-        $subscription = $this->subscribe(sprintf('https://bsky.app/profile/%s.bsky.social/rss', $handle), $at);
+        $subscription = $this->subscribeTo(\sprintf('https://bsky.app/profile/%s.bsky.social/rss', $handle), $at);
         $this->entityManager->flush();
         self::assertSame(SocialNetwork::Bluesky, $subscription->getFeed()->getNetwork());
-    }
-
-    private function arrival(Subscription $subscription, string $guid, string $createdAt): void
-    {
-        $created = new \DateTimeImmutable($createdAt);
-        $this->entityManager->persist(new Entry($subscription->getFeed(), $guid, null, $guid, $created, $created));
     }
 
     /** @return array<string, ActivityDayModel> */
     private function byDate(): array
     {
         $days = [];
-        foreach ($this->counter()->lastDays($this->user)->days as $day) {
+        foreach ($this->historyWiring('2026-10-25 12:00:00')->counter()->lastDays($this->user)->days as $day) {
             $days[$day->date] = $day;
         }
 
@@ -87,8 +53,8 @@ final class SubscriptionActivityCounterTest extends DbTestCase
 
     public function testThirtyDaysEndingTodayAndTodayIsLive(): void
     {
-        $plain = $this->subscribe('https://example.com/a.xml', '2026-09-01 00:00:00');
-        $this->arrival($plain, 'today', '2026-10-25 09:00:00');
+        $plain = $this->subscribeTo('https://example.com/a.xml', '2026-09-01 00:00:00');
+        $this->arrival($plain->getFeed(), 'today', '2026-10-25 09:00:00');
         $this->entityManager->flush();
 
         $days = $this->byDate();
@@ -100,10 +66,10 @@ final class SubscriptionActivityCounterTest extends DbTestCase
 
     public function testStoredRowsWinAndLiveFillsTheRest(): void
     {
-        $plain = $this->subscribe('https://example.com/b.xml', '2026-09-01 00:00:00');
+        $plain = $this->subscribeTo('https://example.com/b.xml', '2026-09-01 00:00:00');
         $this->entityManager->persist(new SubscriptionDay($plain, UtcDay::start('2026-10-20'), 40, 3));
-        $this->arrival($plain, 'pruned-later', '2026-10-20 10:00:00');
-        $this->arrival($plain, 'live', '2026-10-21 10:00:00');
+        $this->arrival($plain->getFeed(), 'pruned-later', '2026-10-20 10:00:00');
+        $this->arrival($plain->getFeed(), 'live', '2026-10-21 10:00:00');
         $this->entityManager->flush();
 
         $days = $this->byDate();
@@ -115,9 +81,9 @@ final class SubscriptionActivityCounterTest extends DbTestCase
 
     public function testASocialSubscriptionMakesOlderUnstoredDaysUnknownForTheWholeAccount(): void
     {
-        $plain = $this->subscribe('https://example.com/c.xml', '2026-09-01 00:00:00');
+        $plain = $this->subscribeTo('https://example.com/c.xml', '2026-09-01 00:00:00');
         $this->subscribeToBluesky('home', '2026-09-01 00:00:00');
-        $this->arrival($plain, 'hidden', '2026-10-10 10:00:00');
+        $this->arrival($plain->getFeed(), 'hidden', '2026-10-10 10:00:00');
         $this->entityManager->flush();
 
         $days = $this->byDate();
@@ -129,7 +95,7 @@ final class SubscriptionActivityCounterTest extends DbTestCase
 
     public function testASubscriptionCreatedMidWindowDoesNotMakeEarlierDaysUnknown(): void
     {
-        $this->subscribe('https://example.com/d.xml', '2026-09-01 00:00:00');
+        $this->subscribeTo('https://example.com/d.xml', '2026-09-01 00:00:00');
         $this->subscribeToBluesky('late', '2026-10-22 00:00:00');
 
         $days = $this->byDate();

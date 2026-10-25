@@ -7,15 +7,17 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Repository\SubscriptionActivityRepository;
 use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SubscriptionHistoryFixtures;
 
 final class SubscriptionActivityRepositoryTest extends DbTestCase
 {
+    use SubscriptionHistoryFixtures;
+
     private function repository(): SubscriptionActivityRepository
     {
         return new SubscriptionActivityRepository($this->entityManager);
@@ -35,23 +37,6 @@ final class SubscriptionActivityRepositoryTest extends DbTestCase
         $this->entityManager->persist($feed);
 
         return $feed;
-    }
-
-    private function subscribe(User $user, Feed $feed, string $at): Subscription
-    {
-        $subscription = new Subscription($user, $feed, new \DateTimeImmutable($at));
-        $this->entityManager->persist($subscription);
-
-        return $subscription;
-    }
-
-    private function entry(Feed $feed, string $guid, string $createdAt): Entry
-    {
-        $created = new \DateTimeImmutable($createdAt);
-        $entry = new Entry($feed, $guid, null, $guid, $created, $created);
-        $this->entityManager->persist($entry);
-
-        return $entry;
     }
 
     private function view(User $user, Entry $entry, string $viewedAt): void
@@ -127,11 +112,11 @@ final class SubscriptionActivityRepositoryTest extends DbTestCase
         $other = $this->feed('https://example.com/other.xml');
         $this->subscribe($this->user('one@example.com'), $feed, '2026-10-01 00:00:00');
         $this->subscribe($this->user('two@example.com'), $feed, '2026-10-01 00:00:00');
-        $this->entry($feed, 'before-bound', '2026-10-09 23:59:59');
-        $this->entry($feed, 'at-bound', '2026-10-10 00:00:00');
-        $this->entry($feed, 'late-evening', '2026-10-10 23:59:59');
-        $this->entry($feed, 'next-day', '2026-10-11 00:00:00');
-        $this->entry($other, 'elsewhere', '2026-10-10 12:00:00');
+        $this->arrival($feed, 'before-bound', '2026-10-09 23:59:59');
+        $this->arrival($feed, 'at-bound', '2026-10-10 00:00:00');
+        $this->arrival($feed, 'late-evening', '2026-10-10 23:59:59');
+        $this->arrival($feed, 'next-day', '2026-10-11 00:00:00');
+        $this->arrival($other, 'elsewhere', '2026-10-10 12:00:00');
         $this->entityManager->flush();
 
         $rows = $this->repository()->arrivalCountsSince(
@@ -150,11 +135,11 @@ final class SubscriptionActivityRepositoryTest extends DbTestCase
         $feed = $this->feed('https://example.com/read.xml');
         $mine = $this->subscribe($owner, $feed, '2026-10-01 00:00:00');
         $this->subscribe($stranger, $feed, '2026-10-01 00:00:00');
-        $this->view($owner, $this->entry($feed, 'before-bound', '2026-10-01 00:00:00'), '2026-10-09 23:59:59');
-        $this->view($owner, $this->entry($feed, 'morning', '2026-10-01 00:00:00'), '2026-10-11 09:00:00');
-        $this->view($owner, $this->entry($feed, 'evening', '2026-10-01 00:00:00'), '2026-10-11 23:59:59');
-        $this->view($owner, $this->entry($feed, 'next-day', '2026-10-01 00:00:00'), '2026-10-12 00:00:00');
-        $this->view($stranger, $this->entry($feed, 'theirs', '2026-10-01 00:00:00'), '2026-10-11 10:00:00');
+        $this->view($owner, $this->arrival($feed, 'before-bound', '2026-10-01 00:00:00'), '2026-10-09 23:59:59');
+        $this->view($owner, $this->arrival($feed, 'morning', '2026-10-01 00:00:00'), '2026-10-11 09:00:00');
+        $this->view($owner, $this->arrival($feed, 'evening', '2026-10-01 00:00:00'), '2026-10-11 23:59:59');
+        $this->view($owner, $this->arrival($feed, 'next-day', '2026-10-01 00:00:00'), '2026-10-12 00:00:00');
+        $this->view($stranger, $this->arrival($feed, 'theirs', '2026-10-01 00:00:00'), '2026-10-11 10:00:00');
         $this->entityManager->flush();
 
         $rows = $this->repository()->readCountsSince(

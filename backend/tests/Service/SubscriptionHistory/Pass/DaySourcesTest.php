@@ -69,4 +69,13 @@ final class DaySourcesTest extends TestCase
         self::assertSame('2026-10-13', $this->sources($stored)->oldestLiveDay([$plain, $social], $dates));
         self::assertNull($this->sources($stored)->oldestLiveDay([], $dates));
     }
+
+    public function testLiveDaysAreTheDaysOneSubscriptionMustCountLiveInOrder(): void
+    {
+        $plain = new TrackedSubscriptionModel(7, 7, '2026-10-12', false);
+        $stored = new DayCountsModel([7 => ['2026-10-13' => new DayCountModel(0, 0)]]);
+        $dates = ['2026-10-11', '2026-10-12', '2026-10-13', '2026-10-14'];
+
+        self::assertSame(['2026-10-12', '2026-10-14'], $this->sources($stored)->liveDays($plain, $dates));
+    }
 }
