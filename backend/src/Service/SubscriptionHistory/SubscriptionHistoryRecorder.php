@@ -36,7 +36,7 @@ final readonly class SubscriptionHistoryRecorder
         $window = DayWindowModel::endingOn(UtcDay::of($this->clock->now()), self::WINDOW_DAYS);
         $subscriptions = $this->activity->trackedSubscriptions();
         $sources = new DaySources(
-            $this->storedDays->since($this->idsOf($subscriptions), $window->oldest()),
+            $this->storedDays->since(TrackedSubscriptionModel::idsOf($subscriptions), $window->oldest()),
             $this->horizon->asOf($window->today()),
         );
         $oldestLiveDay = $sources->oldestLiveDay($subscriptions, $window->completedDates());
@@ -78,17 +78,5 @@ final readonly class SubscriptionHistoryRecorder
         }
 
         return $written;
-    }
-
-    /**
-     * @param list<TrackedSubscriptionModel> $subscriptions
-     * @return list<int>
-     */
-    private function idsOf(array $subscriptions): array
-    {
-        return array_map(
-            static fn (TrackedSubscriptionModel $subscription): int => $subscription->subscriptionId,
-            $subscriptions,
-        );
     }
 }

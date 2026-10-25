@@ -12,4 +12,13 @@ final readonly class TrackedSubscriptionModel
         public bool $isSocial,
     ) {
     }
+
+    /**
+     * @param list<self> $subscriptions
+     * @return list<int>
+     */
+    public static function idsOf(array $subscriptions): array
+    {
+        return array_map(static fn (self $subscription): int => $subscription->subscriptionId, $subscriptions);
+    }
 }
