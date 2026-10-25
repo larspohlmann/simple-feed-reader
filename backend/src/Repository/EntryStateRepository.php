@@ -144,30 +144,6 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
     }
 
     /**
-     * Every article open at or after $sinceUtc, gated like stateCountsForUser() so the chart counts what "Read"
-     * counts. The caller buckets by day: viewedAt is naive UTC, the buckets are the viewer's, and no portable DQL
-     * shifts zones.
-     *
-     * @return list<\DateTimeImmutable>
-     */
-    public function viewedAtSince(int $userId, \DateTimeImmutable $sinceUtc): array
-    {
-        /** @var list<array{viewedAt: \DateTimeImmutable}> $rows */
-        $rows = $this->createQueryBuilder('es')
-            ->select('es.viewedAt AS viewedAt')
-            ->join('es.entry', 'e')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->andWhere('IDENTITY(es.user) = :user')
-            ->andWhere('es.viewedAt >= :since')
-            ->setParameter('user', $userId)
-            ->setParameter('since', $sinceUtc)
-            ->getQuery()
-            ->getArrayResult();
-
-        return array_map(static fn (array $row): \DateTimeImmutable => $row['viewedAt'], $rows);
-    }
-
-    /**
      * Read totals per still-subscribed feed, busiest first, at most $limit. Ids only: the client names each feed from
      * its own subscription list, so the custom title shows.
      *
