@@ -127,7 +127,7 @@
                 {{ 'settings.organise.untagged' | transloco }}
               </label>
               @for (t of orderedTags(); track t.id) {
-                <label [class.child]="t.parentId !== null">
+                <label [style.--depth]="depthOf(t)">
                   <input
                     type="checkbox"
                     [checked]="store.tagFilter().has(t.id)"
@@ -281,33 +281,29 @@
   } @else if (store.view() === 'tree') {
     <div class="tree" #tree [class.has-bulk-bar]="store.selectedCount() > 0" cdkDropListGroup>
       @for (node of store.groupTree(); track node.group.key) {
-        <ng-container
-          *ngTemplateOutlet="panel; context: { $implicit: node.group, children: node.children }"
-        />
+        <ng-container *ngTemplateOutlet="panel; context: { $implicit: node }" />
       }
 
       <!-- Declared inside cdkDropListGroup: an embedded view injects from where it is declared. -->
-      <ng-template #panel let-group let-children="children">
+      <ng-template #panel let-node>
         <app-organise-tag-group
-          [group]="group"
-          [class.child]="group.depth === 1"
-          [class.gap-before]="cueOf(group) === 'before'"
-          [class.gap-after]="cueOf(group) === 'after'"
-          [nestTarget]="cueOf(group) === 'nest'"
-          [canMoveTagUp]="canMoveTag(group, -1)"
-          [canMoveTagDown]="canMoveTag(group, 1)"
-          (moveTagUp)="stepTag(group, -1)"
-          (moveTagDown)="stepTag(group, 1)"
-          (tagDragStarted)="startTagDrag(group)"
+          [group]="node.group"
+          [class.child]="node.group.depth > 0"
+          [class.gap-before]="cueOf(node.group) === 'before'"
+          [class.gap-after]="cueOf(node.group) === 'after'"
+          [nestTarget]="cueOf(node.group) === 'nest'"
+          [canMoveTagUp]="canMoveTag(node.group, -1)"
+          [canMoveTagDown]="canMoveTag(node.group, 1)"
+          (moveTagUp)="stepTag(node.group, -1)"
+          (moveTagDown)="stepTag(node.group, 1)"
+          (tagDragStarted)="startTagDrag(node.group)"
           (tagDragMoved)="moveTagDrag($event)"
           (tagDragEnded)="endTagDrag()"
         >
-          @if (children.length > 0) {
+          @if (node.children.length > 0) {
             <div class="children">
-              @for (child of children; track child.key) {
-                <ng-container
-                  *ngTemplateOutlet="panel; context: { $implicit: child, children: [] }"
-                />
+              @for (child of node.children; track child.group.key) {
+                <ng-container *ngTemplateOutlet="panel; context: { $implicit: child }" />
               }
             </div>
           }

@@ -1,10 +1,10 @@
 import { Injectable, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import {
-  isRootTag,
   tagsInTreeOrder,
   untaggedSubscriptions,
 } from '../../reader/state/subscription-derivations';
+import { TagHierarchy } from '../../reader/state/tag-hierarchy';
 import { TagsStore } from '../../reader/state/tags.store';
 import { toggled } from '../../core/toggled-set';
 import { SubscriptionDto, TagDto } from '../../reader/models';
@@ -22,18 +22,18 @@ export interface OrganiseGroup {
   readonly key: GroupKey;
   /** null for the untagged group. */
   readonly tag: TagDto | null;
-  /** 1 for a child shown under its parent, else 0. */
-  readonly depth: 0 | 1;
+  /** Levels below the top among all tags; 0 for a root and the untagged group. */
+  readonly depth: number;
   /** The feeds this group shows, already filtered and in their stored order. */
   readonly subscriptions: SubscriptionDto[];
   /** How many feeds the group holds before the filter — the header's count. */
   readonly totalCount: number;
 }
 
-/** A group shown at the top of the tree, with the child groups that render inside its panel. */
+/** A group with the groups shown below it. */
 export interface OrganiseGroupNode {
   readonly group: OrganiseGroup;
-  readonly children: readonly OrganiseGroup[];
+  readonly children: readonly OrganiseGroupNode[];
 }
 
 /** Its own key, deliberately not the sidebar's `sfr.tags.collapsed`: collapsing
@@ -145,11 +145,11 @@ export class OrganiseStore {
     const totalCounts = this.totalCounts();
 
     const orderedTags = tagsInTreeOrder(this.tags());
-    const knownIds = new Set(orderedTags.map((tag) => tag.id));
+    const hierarchy = new TagHierarchy(orderedTags);
     const tagGroups: OrganiseGroup[] = orderedTags.map((tag) => ({
       key: tag.id,
       tag,
-      depth: isRootTag(tag, knownIds) ? 0 : 1,
+      depth: hierarchy.depthOf(tag.id),
       subscriptions: feedsInTag(visible, tag.id),
       totalCount: totalCounts.get(tag.id) ?? 0,
     }));
@@ -170,21 +170,23 @@ export class OrganiseStore {
     return this.filterActive() ? groups.filter((group) => group.subscriptions.length > 0) : groups;
   });
 
-  /** `groups()` nested one level: a child sits under its parent unless a filter hides that parent. */
+  /** `groups()` as a tree: each group under its nearest ancestor the filter still shows. */
   readonly groupTree = computed<OrganiseGroupNode[]>(() => {
     const groups = this.groups();
     const shownKeys = new Set(groups.map((group) => group.key));
-    const shownParentOf = (group: OrganiseGroup): GroupKey | null => {
-      const parentId = group.tag?.parentId ?? null;
-      return parentId !== null && shownKeys.has(parentId) ? parentId : null;
+    const tagsById = new Map(this.tags().map((tag) => [tag.id, tag]));
+    const shownAncestorOf = (group: OrganiseGroup): GroupKey | null => {
+      let ancestorId = group.tag?.parentId ?? null;
+      while (ancestorId !== null && !shownKeys.has(ancestorId)) {
+        ancestorId = tagsById.get(ancestorId)?.parentId ?? null;
+      }
+      return ancestorId;
     };
-
-    return groups
-      .filter((group) => shownParentOf(group) === null)
-      .map((group) => ({
-        group,
-        children: groups.filter((child) => shownParentOf(child) === group.key),
-      }));
+    const nodesUnder = (key: GroupKey | null): OrganiseGroupNode[] =>
+      groups
+        .filter((group) => shownAncestorOf(group) === key)
+        .map((group) => ({ group, children: nodesUnder(group.key) }));
+    return nodesUnder(null);
   });
 
   /** The flat view's rows: every filtered feed once, in the chosen sort. */

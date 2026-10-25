@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { WritableSignal, inject, signal } from '@angular/core';
-import { OrganiseStore } from './organise.store';
+import { GroupKey, OrganiseGroupNode, OrganiseStore } from './organise.store';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { SubscriptionRows } from '../../reader/state/subscription-rows';
 import { TagsStore } from '../../reader/state/tags.store';
@@ -39,6 +39,9 @@ const sub = (
   });
 
 describe('OrganiseStore', () => {
+  type Shape = [GroupKey, Shape[]];
+  const shape = (node: OrganiseGroupNode): Shape => [node.group.key, node.children.map(shape)];
+
   const TAGS = [tag(1, 'Nachrichten', 0), tag(2, 'Tech', 1)];
   const SUBS = [
     sub(10, 'taz', { tagIds: [1] }),
@@ -100,15 +103,21 @@ describe('OrganiseStore', () => {
     expect(store.groups()[2].subscriptions.map((subscription) => subscription.id)).toEqual([13]);
   });
 
-  it('lists each root followed by its children, children one level deep', () => {
+  it('lists each tag followed by the tags below it, with their depth', () => {
     const store = make(
       [],
-      [tag(1, 'Reading', 0), { ...tag(2, 'Long reads', 1), parentId: 1 }, tag(3, 'Tech', 2)],
+      [
+        tag(1, 'Reading', 0),
+        { ...tag(2, 'Long reads', 1), parentId: 1 },
+        { ...tag(4, 'Essays', 3), parentId: 2 },
+        tag(3, 'Tech', 2),
+      ],
     );
 
     expect(store.groups().map((group) => [group.tag?.name ?? 'untagged', group.depth])).toEqual([
       ['Reading', 0],
       ['Long reads', 1],
+      ['Essays', 2],
       ['Tech', 0],
       ['untagged', 0],
     ]);
@@ -120,10 +129,8 @@ describe('OrganiseStore', () => {
       [tag(1, 'Reading', 0), { ...tag(2, 'Long reads', 1), parentId: 1 }, tag(3, 'Tech', 2)],
     );
 
-    expect(
-      store.groupTree().map((node) => [node.group.key, node.children.map((child) => child.key)]),
-    ).toEqual([
-      [1, [2]],
+    expect(store.groupTree().map(shape)).toEqual([
+      [1, [[2, []]]],
       [3, []],
       ['untagged', []],
     ]);
@@ -137,9 +144,27 @@ describe('OrganiseStore', () => {
 
     store.titleFilter.set('essay');
 
-    expect(
-      store.groupTree().map((node) => [node.group.key, node.children.map((child) => child.key)]),
-    ).toEqual([[2, []]]);
+    expect(store.groupTree().map(shape)).toEqual([[2, []]]);
+  });
+
+  it('nests a grandchild under its parent, and under its nearest shown ancestor when filtered', () => {
+    const tags = [
+      tag(1, 'Reading', 0),
+      { ...tag(2, 'Long reads', 1), parentId: 1 },
+      { ...tag(3, 'Essays', 2), parentId: 2 },
+    ];
+    const store = make(
+      [sub(10, 'essay', { tagIds: [3] }), sub(11, 'reading', { tagIds: [1] })],
+      tags,
+    );
+
+    expect(store.groupTree().map(shape)).toEqual([
+      [1, [[2, [[3, []]]]]],
+      ['untagged', []],
+    ]);
+
+    store.titleFilter.set('e');
+    expect(store.groupTree().map(shape)).toEqual([[1, [[3, []]]]]);
   });
 
   it('lists an empty saved feed, though the sidebar hides it', () => {

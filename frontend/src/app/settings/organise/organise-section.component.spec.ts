@@ -552,14 +552,25 @@ describe('OrganiseSectionComponent', () => {
 
       const labels = fixture.debugElement.queryAll(By.css('.pop label')).map((label) => ({
         name: (label.nativeElement as HTMLElement).textContent?.trim(),
-        child: (label.nativeElement as HTMLElement).classList.contains('child'),
+        depth: (label.nativeElement as HTMLElement).style.getPropertyValue('--depth'),
       }));
 
       expect(labels.slice(1)).toEqual([
-        { name: 'News', child: false },
-        { name: 'Local', child: true },
-        { name: 'Tech', child: false },
+        { name: 'News', depth: '0' },
+        { name: 'Local', depth: '1' },
+        { name: 'Tech', depth: '0' },
       ]);
+    });
+
+    it("renders a grandchild's panel inside its parent's children", async () => {
+      const BLOCKS: TagDto = { ...LOCAL, id: 22, name: 'Blocks', parentId: LOCAL.id };
+      await renderWithMocks([feed(32, 'block-feed', [BLOCKS.id])], [NEWS, LOCAL, BLOCKS]);
+
+      const nested = fixture.nativeElement.querySelector(
+        '.tree > app-organise-tag-group .children > app-organise-tag-group .children > app-organise-tag-group',
+      ) as HTMLElement | null;
+
+      expect(nested?.querySelector('.head .name')?.textContent?.trim()).toBe('Blocks');
     });
   });
 
