@@ -3,12 +3,27 @@
 
 :host {
   display: block;
+  container: organise-feed-row / inline-size;
 }
 
+// `.meta` holds three fixed-width columns, so it sits in a column of its own:
+// beside the title it would take the title's width rather than give up its own.
 .row {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-areas: 'primary meta acts';
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--space-2);
   padding: var(--row-pad-y) var(--row-pad-x);
+}
+
+@container organise-feed-row (width < #{bp.$container-organise-row-meta-below}) {
+  .row {
+    grid-template-areas:
+      'primary acts'
+      'meta meta';
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
 }
 
 .row.selected {
@@ -16,17 +31,15 @@
 }
 
 .primary {
+  grid-area: primary;
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-height: var(--tap-target);
 }
 
-// The refresh-times sit at the right of the row, just before the action icons.
-// `margin-left: auto` takes the free space, so their fixed-width columns line up
-// down the list like table cells regardless of how long each title is.
 .meta {
-  margin-left: auto;
+  grid-area: meta;
 }
 
 .handle {
@@ -87,10 +100,8 @@
   color: var(--text-muted);
 }
 
-// No `margin-left: auto` here: `.meta` already carries it, and a second auto
-// margin would split the free space between the two, letting the time columns
-// drift out of line from row to row. The icons pack directly after `.meta`.
 .acts {
+  grid-area: acts;
   display: flex;
   align-items: center;
   gap: var(--space-0);
@@ -101,10 +112,11 @@
 // — see that file's comment for why this cannot be a component style.
 
 // A phone row's title already loses half its space to four action controls
-// (▲▼✏⋯), and the ⋯ action sheet already lists Edit first, so the pencil is
-// redundant there. Arrows stay: drag-and-drop is off on a coarse pointer.
+// (▲▼✏⋯), so the refresh times drop; the ⋯ action sheet already lists Edit
+// first, so the pencil is redundant. Arrows stay: drag-and-drop is off on a coarse pointer.
 @media (width <= bp.$bp-sm) {
-  .edit {
+  .edit,
+  .meta {
     display: none;
   }
 }

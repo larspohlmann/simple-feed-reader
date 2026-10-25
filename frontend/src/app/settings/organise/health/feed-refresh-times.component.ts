@@ -4,12 +4,11 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { formatLongDateTime, relativeTime, relativeTimeUntil } from '../../../reader/format';
 import { SubscriptionDto } from '../../../reader/models';
 
-/** The one-line refresh-timing meta shown under a feed's title on the Organise
- *  page: when the feed was last checked, when it last delivered content, and
- *  when the scheduler will next fetch it. Relative labels for a glance, each
- *  carrying the full timestamp as a hover tooltip. Its own component, like the
- *  health facts grid, so the row template stays lean and this line is tested on
- *  its own. Hidden on a phone, where the row has no room for it. */
+/** The refresh-timing meta of an Organise feed row: when the feed was last
+ *  checked, when it last delivered content, and when the scheduler will next
+ *  fetch it. Relative labels for a glance, each carrying the full timestamp as
+ *  a hover tooltip. Its own component, like the health facts grid, so the row
+ *  template stays lean and this line is tested on its own. */
 @Component({
   selector: 'app-feed-refresh-times',
   imports: [TranslocoPipe],

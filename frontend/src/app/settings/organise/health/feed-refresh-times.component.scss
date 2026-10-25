@@ -1,5 +1,3 @@
-@use '../../../theme/breakpoints' as bp;
-
 :host {
   display: block;
 }
@@ -28,14 +26,11 @@
   white-space: nowrap;
 }
 
+// A long German age ("vor 365 Tagen") outgrows the cell; it truncates rather
+// than run into the next column, and the tooltip keeps the full timestamp.
 .value {
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-muted);
-}
-
-// A phone row already spends its width on the title and four action controls;
-// the meta line drops rather than wrap the row into three lines.
-@media (width <= bp.$bp-sm) {
-  :host {
-    display: none;
-  }
+  text-overflow: ellipsis;
 }
