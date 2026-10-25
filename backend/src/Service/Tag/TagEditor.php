@@ -12,6 +12,7 @@ use App\Service\Tag\Exception\InvalidTagParentException;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Factory\TagFactory;
 use App\Service\Tag\Model\TagDetailsModel;
+use App\Service\Tag\Pass\TagTree;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class TagEditor
@@ -31,7 +32,7 @@ final readonly class TagEditor
         }
 
         $tag = $this->tagFactory->create($user, $details, $this->tags->nextPositionForUser($user->requireId()));
-        $tag->setParent($this->resolveParent($user, $details->parentId));
+        $tag->setParent($this->parentForNewTag($user, $details->parentId));
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
 
@@ -53,7 +54,7 @@ final readonly class TagEditor
 
     public function delete(Tag $tag): void
     {
-        $this->releaseChildren($tag);
+        $this->liftChildren($tag);
         $carriers = $this->subscriptionScope->findForUserByTagId($tag->getUser()->requireId(), $tag->requireId());
         foreach ($carriers as $subscription) {
             $subscription->removeTag($tag);
@@ -71,17 +72,28 @@ final readonly class TagEditor
         $tag->setPosition($this->tags->nextPositionForUser($tag->getUser()->requireId()));
     }
 
-    private function releaseChildren(Tag $parent): void
+    private function liftChildren(Tag $tag): void
     {
-        $children = $this->tags->findChildren($parent);
+        $children = $this->tags->findChildren($tag);
         if ($children === []) {
             return;
         }
-        $nextPosition = $this->tags->nextPositionForUser($parent->getUser()->requireId());
+        $nextPosition = $this->tags->nextPositionForUser($tag->getUser()->requireId());
         foreach ($children as $child) {
-            $child->setParent(null);
+            $child->setParent($tag->getParent());
             $child->setPosition($nextPosition++);
         }
+    }
+
+    private function parentForNewTag(User $user, ?int $parentId): ?Tag
+    {
+        if ($parentId === null) {
+            return null;
+        }
+        $parent = $this->ownedParent($user, $parentId);
+        $this->assertFitsUnder($this->treeOf($user), $parent, 0);
+
+        return $parent;
     }
 
     private function parentFor(Tag $tag, ?int $parentId): ?Tag
@@ -92,24 +104,31 @@ final readonly class TagEditor
         if ($tag->requireId() === $parentId) {
             throw InvalidTagParentException::itself();
         }
-        if ($this->tags->hasChildren($tag)) {
-            throw InvalidTagParentException::tagHasChildren();
+        $parent = $this->ownedParent($tag->getUser(), $parentId);
+        $tree = $this->treeOf($tag->getUser());
+        if ($tree->isWithin($parent->requireId(), $tag->requireId())) {
+            throw InvalidTagParentException::underItsOwnChild();
         }
-
-        return $this->resolveParent($tag->getUser(), $parentId);
-    }
-
-    private function resolveParent(User $user, ?int $parentId): ?Tag
-    {
-        if ($parentId === null) {
-            return null;
-        }
-        $parent = $this->tags->findOneForUser($user->requireId(), $parentId)
-            ?? throw InvalidTagParentException::unknown();
-        if ($parent->getParent() !== null) {
-            throw InvalidTagParentException::parentIsAChild();
-        }
+        $this->assertFitsUnder($tree, $parent, $tree->heightOf($tag->requireId()));
 
         return $parent;
+    }
+
+    private function ownedParent(User $user, int $parentId): Tag
+    {
+        return $this->tags->findOneForUser($user->requireId(), $parentId)
+            ?? throw InvalidTagParentException::unknown();
+    }
+
+    private function assertFitsUnder(TagTree $tree, Tag $parent, int $height): void
+    {
+        if ($tree->depthOf($parent->requireId()) + 1 + $height > Tag::MAX_DEPTH) {
+            throw InvalidTagParentException::tooDeep();
+        }
+    }
+
+    private function treeOf(User $user): TagTree
+    {
+        return new TagTree($this->tags->findForUser($user->requireId()));
     }
 }

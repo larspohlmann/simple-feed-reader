@@ -108,27 +108,83 @@ final class TagEditorTest extends DbTestCase
         );
     }
 
-    public function testCreateRefusesAChildAsParent(): void
+    public function testCreateNestsATagTwoLevelsDown(): void
     {
-        $user = $this->user('tag-grandchild@example.com');
-        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
-        $child = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $parent->requireId()));
+        $user = $this->user('tag-grandchild-create@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
 
-        $this->expectException(InvalidTagParentException::class);
-        $this->expectExceptionMessage('A parent tag cannot itself have a parent.');
-        $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $child->requireId()));
+        $essays = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
+
+        self::assertSame($longReads->requireId(), $this->reload($essays)->getParent()?->getId());
     }
 
-    public function testUpdateRefusesAParentForATagThatHasChildren(): void
+    public function testCreateRefusesAThirdLevelBelowTheTop(): void
     {
-        $user = $this->user('tag-parent-demotion@example.com');
-        $parent = $this->editor()->create($user, new TagDetailsModel('Reading'));
-        $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $parent->requireId()));
-        $other = $this->editor()->create($user, new TagDetailsModel('Other'));
+        $user = $this->user('tag-too-deep-create@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $essays = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
 
         $this->expectException(InvalidTagParentException::class);
-        $this->expectExceptionMessage('A tag with child tags cannot have a parent.');
-        $this->editor()->update($parent, new TagDetailsModel('Reading', parentId: $other->requireId()));
+        $this->expectExceptionMessage('A tag can sit at most 2 levels below the top.');
+        $this->editor()->create($user, new TagDetailsModel('Short essays', parentId: $essays->requireId()));
+    }
+
+    public function testUpdateMovesATagWithChildrenUnderARoot(): void
+    {
+        $user = $this->user('tag-move-subtree@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $books = $this->editor()->create($user, new TagDetailsModel('Books'));
+        $novels = $this->editor()->create($user, new TagDetailsModel('Novels', parentId: $books->requireId()));
+
+        $this->editor()->update($books, new TagDetailsModel('Books', parentId: $reading->requireId()));
+
+        self::assertSame($reading->requireId(), $this->reload($books)->getParent()?->getId());
+        self::assertSame($books->requireId(), $this->reload($novels)->getParent()?->getId());
+    }
+
+    public function testUpdateRefusesAMoveThatPushesAChildPastTheLimit(): void
+    {
+        $user = $this->user('tag-move-too-deep@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $books = $this->editor()->create($user, new TagDetailsModel('Books'));
+        $this->editor()->create($user, new TagDetailsModel('Novels', parentId: $books->requireId()));
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag can sit at most 2 levels below the top.');
+        $this->editor()->update($books, new TagDetailsModel('Books', parentId: $longReads->requireId()));
+    }
+
+    public function testUpdateRefusesAMoveUnderTheTagsOwnChild(): void
+    {
+        $user = $this->user('tag-move-under-child@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag cannot move under one of its own child tags.');
+        $this->editor()->update($reading, new TagDetailsModel('Reading', parentId: $longReads->requireId()));
+    }
+
+    public function testDeletingAMiddleTagMovesItsChildrenUpUnderItsParentAfterTheOthers(): void
+    {
+        $user = $this->user('tag-middle-deleter@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads', parentId: $reading->requireId()));
+        $essays = $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
+        $poems = $this->editor()->create($user, new TagDetailsModel('Poems', parentId: $reading->requireId()));
+
+        $this->editor()->delete($longReads);
+
+        $this->entityManager->clear();
+        $reloadedEssays = $this->entityManager->find(Tag::class, $essays->requireId());
+        $reloadedPoems = $this->entityManager->find(Tag::class, $poems->requireId());
+        self::assertInstanceOf(Tag::class, $reloadedEssays);
+        self::assertInstanceOf(Tag::class, $reloadedPoems);
+        self::assertSame($reading->requireId(), $reloadedEssays->getParent()?->getId());
+        self::assertGreaterThan($reloadedPoems->getPosition(), $reloadedEssays->getPosition());
     }
 
     public function testUpdateRefusesTheTagItselfAsParent(): void
