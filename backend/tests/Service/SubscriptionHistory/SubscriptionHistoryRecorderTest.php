@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\SubscriptionHistory;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionDay;
@@ -60,10 +61,13 @@ final class SubscriptionHistoryRecorderTest extends DbTestCase
         return $subscription;
     }
 
-    private function arrival(Subscription $subscription, string $guid, string $createdAt): void
+    private function arrival(Subscription $subscription, string $guid, string $createdAt): Entry
     {
         $created = new \DateTimeImmutable($createdAt);
-        $this->entityManager->persist(new Entry($subscription->getFeed(), $guid, null, $guid, $created, $created));
+        $entry = new Entry($subscription->getFeed(), $guid, null, $guid, $created, $created);
+        $this->entityManager->persist($entry);
+
+        return $entry;
     }
 
     /** @return list<string> */
@@ -81,8 +85,11 @@ final class SubscriptionHistoryRecorderTest extends DbTestCase
     public function testRecordsEveryCompletedDayFromTheSubscribeDayWithTheSubscribeDayAtZeroArrivals(): void
     {
         $subscription = $this->subscription('fresh@example.com', '2026-10-22 08:00:00');
-        $this->arrival($subscription, 'backlog', '2026-10-22 08:00:01');
+        $backlog = $this->arrival($subscription, 'backlog', '2026-10-22 08:00:01');
         $this->arrival($subscription, 'first-real', '2026-10-23 10:00:00');
+        $state = new EntryState($subscription->getUser(), $backlog);
+        $state->markViewed(new \DateTimeImmutable('2026-10-23 11:00:00'));
+        $this->entityManager->persist($state);
         $this->entityManager->flush();
 
         $written = $this->recorder()->recordCompletedDays();
@@ -92,6 +99,8 @@ final class SubscriptionHistoryRecorderTest extends DbTestCase
         $stored = $this->storedDays()->since([$subscription->requireId()], '2026-10-22');
         self::assertSame(0, $stored->of($subscription->requireId(), '2026-10-22')->arrived);
         self::assertSame(1, $stored->of($subscription->requireId(), '2026-10-23')->arrived);
+        self::assertSame(0, $stored->of($subscription->requireId(), '2026-10-22')->read);
+        self::assertSame(1, $stored->of($subscription->requireId(), '2026-10-23')->read);
     }
 
     public function testBackfillsAtMostTheThirtyDayWindowForAnOldPlainFeed(): void
