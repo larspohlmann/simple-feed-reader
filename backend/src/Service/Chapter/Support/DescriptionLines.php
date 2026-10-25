@@ -29,7 +29,7 @@ final class DescriptionLines
     {
         $lines = [];
         $nodes = [];
-        foreach (iterator_to_array($block->childNodes, false) as $child) {
+        foreach ($block->childNodes as $child) {
             if (self::isBreak($child)) {
                 $lines[] = new DescriptionLine($block, $nodes, $child);
                 $nodes = [];

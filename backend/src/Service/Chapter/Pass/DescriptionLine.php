@@ -17,13 +17,13 @@ final readonly class DescriptionLine
 
     public function text(): string
     {
-        return implode('', array_map(static fn (Node $node): string => (string) $node->textContent, $this->nodes));
+        return implode('', array_map(static fn (Node $node): ?string => $node->textContent, $this->nodes));
     }
 
     public function remove(): void
     {
         foreach ($this->nodes as $node) {
-            $node->parentNode?->removeChild($node);
+            $this->block->removeChild($node);
         }
         $this->breakAfter?->remove();
     }
