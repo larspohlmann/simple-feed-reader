@@ -159,6 +159,23 @@ describe('AudioPlayerService', () => {
     expect(service.position()).toBe(0);
   });
 
+  it('starts at a chapter tapped after a dropped connection, not where it stopped', () => {
+    const service = make();
+    service.play(track());
+    audio.duration = 3600;
+    audio.fire('loadedmetadata');
+    audio.currentTime = 600;
+    audio.fire('timeupdate');
+    audio.fail(NETWORK);
+
+    service.playFrom(track(), 1500);
+    expect(audio.load).toHaveBeenCalled();
+    audio.fire('loadedmetadata');
+
+    expect(audio.currentTime).toBe(1500);
+    expect(service.position()).toBe(1500);
+  });
+
   it('loads another track first and starts it at the chapter once its length is known', () => {
     const service = make();
     service.play(track({ url: 'https://x.test/other.mp3' }));

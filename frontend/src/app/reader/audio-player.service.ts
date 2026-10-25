@@ -315,7 +315,7 @@ export class AudioPlayerService {
   }
 
   private reloadAtPosition(): void {
-    this.pendingSeek = this._position();
+    this.pendingSeek ??= this._position();
     this.element.load();
   }
 
