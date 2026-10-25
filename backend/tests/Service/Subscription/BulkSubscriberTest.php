@@ -403,6 +403,25 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'X']));
     }
 
+    public function testAPathStoppedAtItsFirstHopLeavesTheOuterNamesUntouched(): void
+    {
+        $user = $this->user('stopped-early@example.com');
+        $ownParent = new Tag($user, 'X');
+        $nested = new Tag($user, 'C');
+        $nested->setParent($ownParent);
+        $this->entityManager->persist($ownParent);
+        $this->entityManager->persist($nested);
+        $this->entityManager->flush();
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://stopped.example.com/rss.xml', 'Stopped', ['A', 'B', 'C']),
+        ]);
+
+        self::assertSame(1, $result->imported);
+        self::assertSame([], $result->tagsCreated);
+        self::assertSame($ownParent, $nested->getParent());
+    }
+
     public function testAPathThatWouldLoopStopsNesting(): void
     {
         $user = $this->user('loop@example.com');
