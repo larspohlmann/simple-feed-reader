@@ -8,19 +8,6 @@ function days(...counts: (number | null)[]): ChartDay[] {
 }
 
 describe('buildDayChart', () => {
-  it('reports no peak for an all-zero window', () => {
-    const chart = buildDayChart(days(0, 0, 0), 300, 100);
-
-    expect(chart.peak).toBeNull();
-  });
-
-  it('puts the peak on the busiest day', () => {
-    const chart = buildDayChart(days(1, 5, 2), 300, 100);
-
-    // Busiest day is index 1 of three, so at the horizontal midpoint.
-    expect(chart.peak?.xPercent).toBe(50);
-  });
-
   it('gives one hover column per day spanning the full width', () => {
     const chart = buildDayChart(days(1, 2), 300, 100);
 
@@ -61,10 +48,10 @@ describe('buildDayChart', () => {
     expect(chart.columns[0]).toMatchObject({ date: '2026-09-01', count: null });
   });
 
-  it('ignores unknown days for the scale and the peak', () => {
+  it('ignores unknown days for the scale', () => {
     const chart = buildDayChart(days(null, 2, 4), 300, 100);
 
-    expect(chart.peak?.xPercent).toBe(100);
+    expect(chart.columns[2].yPercent).toBe(8);
   });
 });
 

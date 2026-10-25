@@ -6,14 +6,12 @@ export interface ChartDay {
 
 /** The SVG geometry of a 30-day area chart (#896, #1783). `line` and `area` are paths in the
  *  viewBox coordinate space, one subpath per run of known days; markers and tooltips are placed
- *  by the percentage fields on `peak` and `columns`, so a round dot stays round however the SVG
- *  is stretched. */
+ *  by the percentage fields on `columns`, so a round dot stays round however the SVG is stretched. */
 export interface DayChart {
   width: number;
   height: number;
   line: string;
   area: string;
-  peak: ChartPoint | null;
   columns: ChartColumn[];
 }
 
@@ -64,7 +62,6 @@ export function buildDayChart(days: ChartDay[], width: number, height: number): 
     height,
     line: runs.map(linePath).join(' '),
     area: runs.map((run) => areaPath(run, baseline)).join(' '),
-    peak: hasActivity(days) ? peakOf(points) : null,
     columns: columnsFor(points, width),
   };
 }
@@ -98,14 +95,6 @@ function areaPath(run: PlottedDay[], baseline: number): string {
   const line = run.map((point) => `L${point.x} ${round(point.y)}`).join(' ');
 
   return `M${first.x} ${baseline} ${line} L${last.x} ${baseline} Z`;
-}
-
-function peakOf(points: PlottedDay[]): ChartPoint {
-  const peak = points.reduce((best, point) =>
-    (point.day.count ?? -1) > (best.day.count ?? -1) ? point : best,
-  );
-
-  return { xPercent: peak.xPercent, yPercent: peak.yPercent };
 }
 
 function xFor(index: number, count: number, width: number): number {
