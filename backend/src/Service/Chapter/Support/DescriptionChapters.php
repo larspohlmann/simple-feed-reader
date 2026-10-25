@@ -14,7 +14,7 @@ use Dom\Text;
 /** YouTube's chapter rule over a video description: the first `0:00`-led block of three or more ascending stamps. */
 final class DescriptionChapters
 {
-    private const string LINE = '/^\s*[(\[]?((?:\d{1,2}:)?\d{1,2}:\d{2})[)\]]?\s*[-–—:|]?\s*(\S.*?)\s*$/u';
+    private const string LINE = '/^\s*[(\[]?((?:\d{1,2}:)?\d{1,2}:\d{2})(?!\d)[)\]]?\s*[-–—:|]?\s*(\S.*?)\s*$/u';
     private const int MINIMUM = 3;
 
     public static function in(string $html): DescribedChaptersModel
@@ -28,7 +28,9 @@ final class DescriptionChapters
         $chapters = array_map(static fn (array $pair): EntryChapter => $pair[1], $run);
         foreach ($run as [$line]) {
             $line->remove();
-            self::tidy($line->block);
+        }
+        foreach (self::blocksOf($run) as $block) {
+            self::tidy($block);
         }
 
         return new DescribedChaptersModel($chapters, $document->body->innerHTML ?? $html);
@@ -55,6 +57,23 @@ final class DescriptionChapters
         }
 
         return [];
+    }
+
+    /**
+     * @param list<array{DescriptionLine, EntryChapter}> $run
+     *
+     * @return list<Element>
+     */
+    private static function blocksOf(array $run): array
+    {
+        $blocks = [];
+        foreach ($run as [$line]) {
+            if (!\in_array($line->block, $blocks, true)) {
+                $blocks[] = $line->block;
+            }
+        }
+
+        return $blocks;
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
@@ -86,8 +105,18 @@ final class DescriptionChapters
         if ($last instanceof Element && $last->localName === 'br') {
             $last->remove();
         }
-        if (trim((string) $block->textContent) === '' && $block->firstElementChild === null) {
-            $block->remove();
+        self::dropIfEmpty($block);
+    }
+
+    private static function dropIfEmpty(Element $block): void
+    {
+        if (trim((string) $block->textContent) !== '' || $block->firstElementChild !== null) {
+            return;
+        }
+        $parent = $block->parentElement;
+        $block->remove();
+        if ($parent !== null && \in_array($parent->localName, ['p', 'li'], true)) {
+            self::dropIfEmpty($parent);
         }
     }
 

@@ -60,7 +60,7 @@ final class DescriptionChaptersTest extends TestCase
         );
     }
 
-    public function testAChapterTitleKeepsItsLink(): void
+    public function testAChapterTitleIsThePlainTextOfItsLink(): void
     {
         $described = DescriptionChapters::in('<p>0:00 A<br>1:00 <a href="https://x.test">B</a><br>2:00 C</p>');
 
@@ -75,6 +75,7 @@ final class DescriptionChaptersTest extends TestCase
         yield 'out of order' => ['<p>0:00 A<br>2:00 B<br>1:00 C</p>'];
         yield 'a stamp inside prose' => ['<p>At 0:00 it starts, at 1:00 it builds and at 2:00 it ends.</p>'];
         yield 'broken by a plain line' => ['<p>0:00 A<br>1:00 B<br>Sponsor<br>2:00 C</p>'];
+        yield 'seconds with a third digit' => ['<p>0:123 A<br>1:123 B<br>2:123 C</p>'];
         yield 'empty' => [''];
     }
 
@@ -95,5 +96,40 @@ final class DescriptionChaptersTest extends TestCase
 
         self::assertCount(3, $described->chapters);
         self::assertSame('<p>Deutsch:</p><p>0:00 A<br>1:00 B<br>2:00 C</p>', $described->body);
+    }
+
+    public function testKeepsABlockThatStillHoldsAnElement(): void
+    {
+        $described = DescriptionChapters::in('<p><img src="x"><br>0:00 A<br>1:00 B<br>2:00 C</p>');
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('<p><img src="x"></p>', $described->body);
+    }
+
+    public function testDropsATrailingBreakFollowedByWhitespace(): void
+    {
+        $described = DescriptionChapters::in("<p>Intro<br>0:00 A<br>1:00 B<br>2:00 C<br> </p>");
+
+        self::assertSame('<p>Intro </p>', $described->body);
+    }
+
+    public function testReadsChaptersFromParagraphsNestedInListItems(): void
+    {
+        $described = DescriptionChapters::in(
+            '<ul><li><p>0:00 A</p></li><li><p>1:00 B</p></li><li><p>2:00 C</p></li></ul>',
+        );
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('<ul></ul>', $described->body);
+    }
+
+    public function testReadsChaptersFromANestedListWithoutTheOuterItemText(): void
+    {
+        $described = DescriptionChapters::in(
+            '<ul><li>Intro<ul><li>0:00 A</li><li>1:00 B</li><li>2:00 C</li></ul></li></ul>',
+        );
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('<ul><li>Intro<ul></ul></li></ul>', $described->body);
     }
 }

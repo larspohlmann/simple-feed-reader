@@ -16,7 +16,9 @@ final class DescriptionLines
     {
         $lines = [];
         foreach ($document->querySelectorAll('p, li') as $block) {
-            array_push($lines, ...self::inBlock($block));
+            if ($block->querySelector('p, li') === null) {
+                array_push($lines, ...self::inBlock($block));
+            }
         }
 
         return $lines;
