@@ -133,6 +133,7 @@
   --sidebar-slot: 28px;
   --sidebar-frame-h: 36px;
   --sidebar-card-pad: calc(var(--space-1) + var(--space-0));
+  --sidebar-head-pad: var(--space-0);
   --sidebar-row-inset: calc(var(--space-2) + var(--space-0));
   --sidebar-row-deep-inset: calc(var(--sidebar-row-inset) + var(--icon-md) + var(--space-3));
   --drawer-shadow: 6px 0 24px rgb(0 0 0 / 18%);

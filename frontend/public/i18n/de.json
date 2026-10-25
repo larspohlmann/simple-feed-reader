@@ -1207,6 +1207,8 @@
     "showReader": "Leseansicht anzeigen",
     "resizeSplit": "Teilung zwischen Liste und Artikel anpassen",
     "toggleTag": "{{name}} umschalten",
+    "subtagCountOne": "1 Untertag",
+    "subtagCountOther": "{{count}} Untertags",
     "manage": "{{name}} verwalten",
     "editTag": "Tag bearbeiten",
     "newTag": "Neuer Tag",

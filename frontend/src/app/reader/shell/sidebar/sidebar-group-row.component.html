@@ -9,6 +9,7 @@
     <app-tag-glyph [name]="glyph()" [color]="glyphColor()" [size]="glyphSize()" />
   </span>
   <span class="name">{{ label() }}</span>
+  <ng-content select="app-sidebar-subtag-pill" />
   @if (count() > 0) {
     <span class="count">{{ count() }}</span>
   }

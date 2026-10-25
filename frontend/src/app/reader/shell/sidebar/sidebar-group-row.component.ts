@@ -4,7 +4,7 @@ import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SelectionParams } from '../../query/query';
 
-/** A tag-style group header: a link to the group's combined list, an optional projected menu, and the expand chevron. */
+/** A tag-style group header: a link to the group's combined list, an optional projected subtag pill and menu, and the expand chevron. */
 @Component({
   selector: 'app-sidebar-group-row',
   imports: [RouterLink, IconComponent, TagGlyphComponent],

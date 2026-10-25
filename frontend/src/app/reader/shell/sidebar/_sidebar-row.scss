@@ -23,6 +23,10 @@
     }
   }
 
+  .card:has(> .section-head > [aria-expanded='false']) {
+    --card-pad-y: var(--sidebar-head-pad);
+  }
+
   .organising .card,
   .card.organising {
     padding: var(--space-1) 0;
@@ -76,7 +80,7 @@
 
 @mixin row-parts {
   .name {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -92,6 +96,7 @@
 
   .count {
     flex: none;
+    margin-left: auto;
     color: var(--text-secondary);
     font-size: var(--fs-sm);
     font-variant-numeric: tabular-nums;
@@ -300,8 +305,8 @@
     isolation: isolate;
     box-sizing: content-box;
     margin: calc(var(--card-pad-y) * -1) calc(var(--sidebar-card-pad) * -1) 0;
-    padding: var(--card-pad-y) calc(var(--space-2) + var(--sidebar-card-pad)) var(--card-pad-y)
-      calc(var(--sidebar-row-inset) + var(--sidebar-card-pad));
+    padding: var(--sidebar-head-pad) calc(var(--space-2) + var(--sidebar-card-pad))
+      var(--sidebar-head-pad) calc(var(--sidebar-row-inset) + var(--sidebar-card-pad));
     border-bottom: 1px solid var(--border);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: color-mix(in oklab, var(--text-primary) 5%, var(--surface-1));
@@ -310,7 +315,7 @@
       content: '';
       position: absolute;
       z-index: -1;
-      inset: var(--card-pad-y) var(--sidebar-card-pad);
+      inset: var(--sidebar-head-pad) var(--sidebar-card-pad);
       border-radius: var(--radius);
     }
 
