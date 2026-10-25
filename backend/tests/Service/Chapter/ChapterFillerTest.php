@@ -13,6 +13,7 @@ use App\Service\Chapter\Exception\ChapterFileUnreachableException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 final class ChapterFillerTest extends TestCase
@@ -55,6 +56,24 @@ final class ChapterFillerTest extends TestCase
         (new ChapterFiller($files, $entityManager, new NullLogger()))->fillOnOpen($entry);
 
         self::assertSame('https://cdn.test/ch.json', $entry->getChaptersUrl());
+    }
+
+    public function testAnUnreachableFileIsLoggedWithItsUrlAndCause(): void
+    {
+        $cause = ChapterFileUnreachableException::from(
+            'https://cdn.test/ch.json',
+            new FeedUnreachableException('reset'),
+        );
+        $files = $this->createStub(ChapterFileSourceInterface::class);
+        $files->method('chaptersAt')->willThrowException($cause);
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())->method('info')->with(
+            $this->anything(),
+            ['url' => 'https://cdn.test/ch.json', 'exception' => $cause],
+        );
+
+        (new ChapterFiller($files, $this->createStub(EntityManagerInterface::class), $logger))
+            ->fillOnOpen(self::episode('https://cdn.test/ch.json'));
     }
 
     private static function episode(?string $chaptersUrl): Entry

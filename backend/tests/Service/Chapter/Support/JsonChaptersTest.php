@@ -47,4 +47,25 @@ final class JsonChaptersTest extends TestCase
             ]]),
         );
     }
+
+    public function testTrimsTitlesAndDropsBlankOnes(): void
+    {
+        self::assertEquals(
+            [new EntryChapter(0, 'Intro'), new EntryChapter(9, 'Talk')],
+            JsonChapters::from(['chapters' => [
+                ['startTime' => 0, 'title' => "  Intro \n"], ['startTime' => 5, 'title' => '   '],
+                ['startTime' => 9, 'title' => 'Talk'],
+            ]]),
+        );
+    }
+
+    public function testKeepsAStartAtTheLatestAcceptedSecond(): void
+    {
+        self::assertEquals(
+            [new EntryChapter(0, 'First'), new EntryChapter(999_999_999, 'Last')],
+            JsonChapters::from(['chapters' => [
+                ['startTime' => 0, 'title' => 'First'], ['startTime' => 999_999_999, 'title' => 'Last'],
+            ]]),
+        );
+    }
 }
