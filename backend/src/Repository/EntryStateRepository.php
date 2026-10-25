@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<EntryState>
+ *
+ * @phpstan-type StateCounts array{favorites: int, kept: int, viewed: int}
  */
 final class EntryStateRepository extends ServiceEntityRepository implements RestoreEntryStatesInterface
 {
@@ -119,57 +121,24 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
      * Favourite, kept and viewed totals, gated to still-subscribed feeds like the lists themselves, so a badge never
      * counts a state an unsubscribe orphaned.
      *
-     * @return array{favorites: int, kept: int, viewed: int}
+     * @return StateCounts
      */
     public function stateCountsForUser(int $userId): array
     {
-        /** @var array{favorites: int|string, kept: int|string, viewed: int|string} $row */
-        $row = $this->createQueryBuilder('es')
-            ->select('SUM(CASE WHEN es.isFavorite = :true THEN 1 ELSE 0 END) AS favorites')
-            ->addSelect('SUM(CASE WHEN es.isKept = :true THEN 1 ELSE 0 END) AS kept')
-            ->addSelect('SUM(CASE WHEN es.isViewed = :true THEN 1 ELSE 0 END) AS viewed')
-            ->join('es.entry', 'e')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->andWhere('IDENTITY(es.user) = :user')
-            ->setParameter('user', $userId)
-            ->setParameter('true', true, Types::BOOLEAN)
-            ->getQuery()
-            ->getSingleResult();
-
-        return [
-            'favorites' => (int) $row['favorites'],
-            'kept' => (int) $row['kept'],
-            'viewed' => (int) $row['viewed'],
-        ];
+        return $this->stateCounts($this->stateCountsQuery($userId));
     }
 
-    /**
-     * Every article open at or after $sinceUtc, gated like stateCountsForUser() so the chart counts what "Read"
-     * counts. The caller buckets by day: viewedAt is naive UTC, the buckets are the viewer's, and no portable DQL
-     * shifts zones.
-     *
-     * @return list<\DateTimeImmutable>
-     */
-    public function viewedAtSince(int $userId, \DateTimeImmutable $sinceUtc): array
+    /** @return StateCounts */
+    public function plainFeedStateCountsForUser(int $userId): array
     {
-        /** @var list<array{viewedAt: \DateTimeImmutable}> $rows */
-        $rows = $this->createQueryBuilder('es')
-            ->select('es.viewedAt AS viewedAt')
-            ->join('es.entry', 'e')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->andWhere('IDENTITY(es.user) = :user')
-            ->andWhere('es.viewedAt >= :since')
-            ->setParameter('user', $userId)
-            ->setParameter('since', $sinceUtc)
-            ->getQuery()
-            ->getArrayResult();
-
-        return array_map(static fn (array $row): \DateTimeImmutable => $row['viewedAt'], $rows);
+        return $this->stateCounts(
+            $this->stateCountsQuery($userId)->join('e.feed', 'f')->andWhere('f.network IS NULL'),
+        );
     }
 
     /**
-     * Read totals per still-subscribed feed, busiest first, at most $limit. Ids only: the client names each feed from
-     * its own subscription list, so the custom title shows.
+     * Read totals per still-subscribed plain feed, busiest first, at most $limit. Ids only: the client names each feed
+     * from its own subscription list, so the custom title shows.
      *
      * @return list<array{feedId: int, readCount: int}>
      */
@@ -183,6 +152,7 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere('IDENTITY(es.user) = :user')
             ->andWhere('es.isViewed = :viewed')
+            ->andWhere('f.network IS NULL')
             ->setParameter('user', $userId)
             ->setParameter('viewed', true, Types::BOOLEAN)
             ->groupBy('f.id')
@@ -223,5 +193,31 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
             ->getScalarResult();
 
         return array_map(static fn (array $row): int => (int) $row['entryId'], $rows);
+    }
+
+    private function stateCountsQuery(int $userId): QueryBuilder
+    {
+        return $this->createQueryBuilder('es')
+            ->select('SUM(CASE WHEN es.isFavorite = :true THEN 1 ELSE 0 END) AS favorites')
+            ->addSelect('SUM(CASE WHEN es.isKept = :true THEN 1 ELSE 0 END) AS kept')
+            ->addSelect('SUM(CASE WHEN es.isViewed = :true THEN 1 ELSE 0 END) AS viewed')
+            ->join('es.entry', 'e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->andWhere('IDENTITY(es.user) = :user')
+            ->setParameter('user', $userId)
+            ->setParameter('true', true, Types::BOOLEAN);
+    }
+
+    /** @return StateCounts */
+    private function stateCounts(QueryBuilder $query): array
+    {
+        /** @var array{favorites: int|string|null, kept: int|string|null, viewed: int|string|null} $row */
+        $row = $query->getQuery()->getSingleResult();
+
+        return [
+            'favorites' => (int) $row['favorites'],
+            'kept' => (int) $row['kept'],
+            'viewed' => (int) $row['viewed'],
+        ];
     }
 }

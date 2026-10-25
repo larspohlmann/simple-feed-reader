@@ -1,0 +1,158 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Repository;
+
+use App\Entity\Entry;
+use App\Entity\EntryState;
+use App\Entity\Feed;
+use App\Entity\User;
+use App\Enum\SourceFormat;
+use App\Repository\SubscriptionActivityRepository;
+use App\Service\SubscriptionHistory\Model\TrackedSubscriptionModel;
+use App\Tests\DbTestCase;
+use App\Tests\Support\SubscriptionHistoryFixtures;
+
+final class SubscriptionActivityRepositoryTest extends DbTestCase
+{
+    use SubscriptionHistoryFixtures;
+
+    private function repository(): SubscriptionActivityRepository
+    {
+        return new SubscriptionActivityRepository($this->entityManager);
+    }
+
+    private function user(string $email): User
+    {
+        $user = new User($email, new \DateTimeImmutable('2026-09-01 00:00:00'));
+        $this->entityManager->persist($user);
+
+        return $user;
+    }
+
+    private function feed(string $url): Feed
+    {
+        $feed = new Feed($url);
+        $this->entityManager->persist($feed);
+
+        return $feed;
+    }
+
+    private function view(User $user, Entry $entry, string $viewedAt): void
+    {
+        $state = new EntryState($user, $entry);
+        $state->markViewed(new \DateTimeImmutable($viewedAt));
+        $this->entityManager->persist($state);
+    }
+
+    /**
+     * @param list<array{day: string, count: int}> $rows
+     *
+     * @return array<string, int>
+     */
+    private function byDay(array $rows): array
+    {
+        $counts = array_column($rows, 'count', 'day');
+        ksort($counts);
+
+        return $counts;
+    }
+
+    public function testTracksEverySubscriptionButListsOnlyTheUsersPlainOnesForTheAboutPage(): void
+    {
+        $user = $this->user('tracked@example.com');
+        $social = $this->feed('https://bsky.app/profile/alice.bsky.social/rss');
+        $plain = $this->subscribe($user, $this->feed('https://example.com/a.xml'), '2026-10-03 23:59:00');
+        $timeline = $this->subscribe($user, $social, '2026-10-04 00:00:00');
+        $this->subscribe(
+            $this->user('someone@example.com'),
+            $this->feed('https://example.com/b.xml'),
+            '2026-10-05 08:00:00',
+        );
+        $this->entityManager->flush();
+
+        $all = $this->repository()->trackedSubscriptions();
+        usort($all, static fn ($left, $right): int => $left->subscriptionId <=> $right->subscriptionId);
+
+        self::assertEquals(
+            [new TrackedSubscriptionModel($plain->requireId(), $plain->getFeed()->requireId(), '2026-10-03', false)],
+            $this->repository()->plainSubscriptionsOf($user->requireId()),
+        );
+        self::assertCount(3, $all);
+        self::assertEquals(
+            new TrackedSubscriptionModel($timeline->requireId(), $social->requireId(), '2026-10-04', true),
+            $all[1],
+        );
+    }
+
+    public function testASavedFeedIsNotTracked(): void
+    {
+        $user = $this->user('saver@example.com');
+        $saved = $this->feed('saved:1');
+        $saved->setSourceFormat(SourceFormat::SAVED);
+        $this->subscribe($user, $saved, '2026-10-03 00:00:00');
+        $plain = $this->subscribe($user, $this->feed('https://example.com/plain.xml'), '2026-10-03 00:00:00');
+        $this->entityManager->flush();
+
+        self::assertSame(
+            [$plain->requireId()],
+            TrackedSubscriptionModel::idsOf($this->repository()->plainSubscriptionsOf($user->requireId())),
+        );
+        self::assertSame(
+            [$plain->requireId()],
+            TrackedSubscriptionModel::idsOf($this->repository()->trackedSubscriptions()),
+        );
+    }
+
+    public function testArrivalsAreCountedPerFeedAndUtcDayFromTheBound(): void
+    {
+        $feed = $this->feed('https://example.com/shared.xml');
+        $other = $this->feed('https://example.com/other.xml');
+        $this->subscribe($this->user('one@example.com'), $feed, '2026-10-01 00:00:00');
+        $this->subscribe($this->user('two@example.com'), $feed, '2026-10-01 00:00:00');
+        $this->arrival($feed, 'before-bound', '2026-10-09 23:59:59');
+        $this->arrival($feed, 'at-bound', '2026-10-10 00:00:00');
+        $this->arrival($feed, 'late-evening', '2026-10-10 23:59:59');
+        $this->arrival($feed, 'next-day', '2026-10-11 00:00:00');
+        $this->arrival($other, 'elsewhere', '2026-10-10 12:00:00');
+        $this->entityManager->flush();
+
+        $rows = $this->repository()->arrivalCountsSince(
+            [$feed->requireId()],
+            new \DateTimeImmutable('2026-10-10 00:00:00'),
+        );
+
+        self::assertSame([$feed->requireId()], array_values(array_unique(array_column($rows, 'feedId'))));
+        self::assertSame(['2026-10-10' => 2, '2026-10-11' => 1], $this->byDay($rows));
+    }
+
+    public function testReadsAreTheOwnersOpensOfThatFeedPerUtcDayFromTheBound(): void
+    {
+        $owner = $this->user('owner@example.com');
+        $stranger = $this->user('stranger@example.com');
+        $feed = $this->feed('https://example.com/read.xml');
+        $mine = $this->subscribe($owner, $feed, '2026-10-01 00:00:00');
+        $this->subscribe($stranger, $feed, '2026-10-01 00:00:00');
+        $this->view($owner, $this->arrival($feed, 'before-bound', '2026-10-01 00:00:00'), '2026-10-09 23:59:59');
+        $this->view($owner, $this->arrival($feed, 'morning', '2026-10-01 00:00:00'), '2026-10-11 09:00:00');
+        $this->view($owner, $this->arrival($feed, 'evening', '2026-10-01 00:00:00'), '2026-10-11 23:59:59');
+        $this->view($owner, $this->arrival($feed, 'next-day', '2026-10-01 00:00:00'), '2026-10-12 00:00:00');
+        $this->view($stranger, $this->arrival($feed, 'theirs', '2026-10-01 00:00:00'), '2026-10-11 10:00:00');
+        $this->entityManager->flush();
+
+        $rows = $this->repository()->readCountsSince(
+            [$mine->requireId()],
+            new \DateTimeImmutable('2026-10-10 00:00:00'),
+        );
+
+        self::assertSame([$mine->requireId()], array_values(array_unique(array_column($rows, 'subscriptionId'))));
+        self::assertSame(['2026-10-11' => 2, '2026-10-12' => 1], $this->byDay($rows));
+    }
+
+    public function testNoIdsQueriesNothing(): void
+    {
+        self::assertSame([], $this->repository()->arrivalCountsSince([], new \DateTimeImmutable('2026-10-10')));
+        self::assertSame([], $this->repository()->readCountsSince([], new \DateTimeImmutable('2026-10-10')));
+    }
+}

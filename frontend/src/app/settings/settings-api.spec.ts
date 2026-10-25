@@ -152,6 +152,23 @@ describe('SettingsApi', () => {
     expect(filename).toBe('attachment; filename="account.json.gz"');
   });
 
+  it('GETs the reading activity without a time zone', () => {
+    api.readingActivity().subscribe();
+
+    const testRequest = ctrl.expectOne('https://api.test/api/reading/activity');
+    expect(testRequest.request.method).toBe('GET');
+    expect(testRequest.request.params.keys()).toEqual([]);
+    testRequest.flush({
+      days: [],
+      total: 0,
+      arrivedDailyAverage: null,
+      topFeedsByRead: [],
+      topFeedsByArrivals: [],
+      viewedCount: 0,
+      favoritesCount: 0,
+    });
+  });
+
   it('GETs the debug log', () => {
     api.debugLog().subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log');

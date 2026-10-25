@@ -9,14 +9,12 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Repository\EntryStateRepository;
 use App\Tests\DbTestCase;
 
-/**
- * The read side of the reading-activity chart: every article open at or after a lower bound, scoped to the user and
- * to feeds still subscribed to.
- */
-final class ViewedAtSinceTest extends DbTestCase
+/** The per-feed read ranking of the reading-activity chart: still-subscribed plain feeds only, busiest first. */
+final class ReadCountsByFeedTest extends DbTestCase
 {
     private function repository(): EntryStateRepository
     {
@@ -49,69 +47,6 @@ final class ViewedAtSinceTest extends DbTestCase
         $state = new EntryState($user, $this->entry($feed, $guid));
         $state->markViewed($when);
         $this->entityManager->persist($state);
-    }
-
-    public function testReturnsOpensAtOrAfterTheBoundAndDropsEarlierOnes(): void
-    {
-        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $user = new User('reader@example.com', $when);
-        $this->entityManager->persist($user);
-        $feed = $this->subscribedFeed($user, 'https://example.com/f.xml', $when);
-
-        $this->openedAt($user, $feed, 'before', new \DateTimeImmutable('2026-08-31T23:59:59Z'));
-        $this->openedAt($user, $feed, 'on', new \DateTimeImmutable('2026-09-01T00:00:00Z'));
-        $this->openedAt($user, $feed, 'after', new \DateTimeImmutable('2026-09-04T10:00:00Z'));
-        $this->entityManager->flush();
-
-        $opens = $this->repository()->viewedAtSince(
-            $user->requireId(),
-            new \DateTimeImmutable('2026-09-01T00:00:00Z'),
-        );
-
-        $formatted = array_map(static fn (\DateTimeImmutable $at): string => $at->format('Y-m-d H:i:s'), $opens);
-        sort($formatted);
-        self::assertSame(['2026-09-01 00:00:00', '2026-09-04 10:00:00'], $formatted);
-    }
-
-    public function testIgnoresOpensForFeedsTheUserNoLongerSubscribesTo(): void
-    {
-        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $user = new User('orphan@example.com', $when);
-        $this->entityManager->persist($user);
-
-        // A feed with no subscription: the open is orphaned and must not count.
-        $unsubscribed = new Feed('https://example.com/unsub.xml');
-        $this->entityManager->persist($unsubscribed);
-        $this->openedAt($user, $unsubscribed, 'orphan', new \DateTimeImmutable('2026-09-03T10:00:00Z'));
-        $this->entityManager->flush();
-
-        self::assertSame(
-            [],
-            $this->repository()->viewedAtSince($user->requireId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
-        );
-    }
-
-    public function testIsScopedToTheUser(): void
-    {
-        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $mine = new User('mine@example.com', $when);
-        $other = new User('other@example.com', $when);
-        $this->entityManager->persist($mine);
-        $this->entityManager->persist($other);
-        $feed = new Feed('https://example.com/shared.xml');
-        $this->entityManager->persist($feed);
-        $this->entityManager->persist(new Subscription($mine, $feed, $when));
-        $this->entityManager->persist(new Subscription($other, $feed, $when));
-
-        $theirs = new EntryState($other, $this->entry($feed, 'shared'));
-        $theirs->markViewed(new \DateTimeImmutable('2026-09-03T10:00:00Z'));
-        $this->entityManager->persist($theirs);
-        $this->entityManager->flush();
-
-        self::assertSame(
-            [],
-            $this->repository()->viewedAtSince($mine->requireId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
-        );
     }
 
     public function testReadCountsByFeedRanksSubscribedFeedsByOpensBusiestFirst(): void
@@ -154,5 +89,24 @@ final class ViewedAtSinceTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertCount(2, $this->repository()->readCountsByFeed($user->requireId(), 2));
+    }
+
+    public function testReadCountsByFeedLeavesSocialFeedsOut(): void
+    {
+        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $user = new User('social-reader@example.com', $when);
+        $this->entityManager->persist($user);
+        $bluesky = $this->subscribedFeed($user, 'https://bsky.app/profile/busy.bsky.social/rss', $when);
+        $plain = $this->subscribedFeed($user, 'https://example.com/plain.xml', $when);
+        $this->openedAt($user, $bluesky, 'bluesky-1', $when);
+        $this->openedAt($user, $bluesky, 'bluesky-2', $when);
+        $this->openedAt($user, $plain, 'plain-1', $when);
+        $this->entityManager->flush();
+        self::assertSame(SocialNetwork::Bluesky, $bluesky->getNetwork());
+
+        self::assertSame(
+            [['feedId' => $plain->requireId(), 'readCount' => 1]],
+            $this->repository()->readCountsByFeed($user->requireId(), 5),
+        );
     }
 }

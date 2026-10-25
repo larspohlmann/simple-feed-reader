@@ -51,6 +51,7 @@ final readonly class RefreshRunners
         private ContentChangeMarkerInterface $changeMarker,
         private SearchIndexWriterInterface $indexWriter,
         private LoggerInterface $logger,
+        private ?int $maxEntriesPerFeed = null,
     ) {
     }
 
@@ -88,6 +89,7 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $this->logger,
+            $this->maxEntriesPerFeed,
         );
     }
 
@@ -102,6 +104,7 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $this->logger,
+            $this->maxEntriesPerFeed,
         );
     }
 
@@ -116,6 +119,7 @@ final readonly class RefreshRunners
             $changeMarker,
             $this->indexWriter,
             $this->logger,
+            $this->maxEntriesPerFeed,
         );
     }
 
@@ -130,6 +134,7 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $indexWriter,
             $this->logger,
+            $this->maxEntriesPerFeed,
         );
     }
 
@@ -144,6 +149,22 @@ final readonly class RefreshRunners
             $this->changeMarker,
             $this->indexWriter,
             $logger,
+            $this->maxEntriesPerFeed,
+        );
+    }
+
+    public function cappingFeedsAt(int $maxEntriesPerFeed): self
+    {
+        return new self(
+            $this->entityManager,
+            $this->clock,
+            $this->outcomePersisters,
+            $this->flushingEntityManager,
+            $this->lockFactory,
+            $this->changeMarker,
+            $this->indexWriter,
+            $this->logger,
+            $maxEntriesPerFeed,
         );
     }
 
@@ -154,6 +175,10 @@ final readonly class RefreshRunners
         /** @var FeedRepository $feedRepository */
         $feedRepository = $this->entityManager->getRepository(Feed::class);
         $indexer = new EntryIndexer($this->indexWriter, new NullLogger());
+        $retentionSettings = new RetentionSettings(
+            $this->entityManager->getRepository(RetentionSetting::class),
+            $this->entityManager,
+        );
         $outcomePersister = $this->outcomePersisters
             ->flushingThrough($this->flushingEntityManager)
             ->indexingInto($this->indexWriter)
@@ -168,15 +193,8 @@ final readonly class RefreshRunners
             ),
             new RefreshHousekeeping(
                 new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
-                new EntryPruner(
-                    new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
-                    new RetentionSettings(
-                        $this->entityManager->getRepository(RetentionSetting::class),
-                        $this->entityManager,
-                    ),
-                    $this->clock,
-                    $indexer,
-                ),
+                $this->pruner($retentionSettings, $indexer),
+                new SubscriptionHistoryWiring($this->entityManager, $retentionSettings, $this->clock)->recorder(),
                 new NullLogger(),
             ),
             $this->lockFactory,
@@ -184,6 +202,16 @@ final readonly class RefreshRunners
             $this->logger,
             $this->changeMarker,
         );
+    }
+
+    private function pruner(RetentionSettings $settings, EntryIndexer $indexer): EntryPruner
+    {
+        $retention = new RetentionRepository($this->entityManager, new RowIds($this->entityManager));
+        if ($this->maxEntriesPerFeed === null) {
+            return new EntryPruner($retention, $settings, $this->clock, $indexer);
+        }
+
+        return new EntryPruner($retention, $settings, $this->clock, $indexer, $this->maxEntriesPerFeed);
     }
 
     /** The keys the container's tagged locator carries; FeedBodyParserWiringTest proves the container routes alike. */

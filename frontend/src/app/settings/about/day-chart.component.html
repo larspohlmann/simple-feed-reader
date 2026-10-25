@@ -1,0 +1,48 @@
+@let plot = chart();
+<figure class="chart" role="group" [attr.aria-label]="label()" (pointerleave)="clearHover()">
+  <svg
+    class="chart-svg"
+    [attr.viewBox]="'0 0 ' + plot.width + ' ' + plot.height"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+  >
+    <path class="chart-area" [attr.d]="plot.area" />
+    <path class="chart-line" [attr.d]="plot.line" vector-effect="non-scaling-stroke" />
+  </svg>
+
+  @if (active(); as point) {
+    @if (point.count !== null) {
+      <span
+        class="chart-marker"
+        [style.left.%]="point.xPercent"
+        [style.top.%]="point.yPercent"
+      ></span>
+    }
+    <figcaption class="chart-tip" [style.left.%]="point.xPercent">
+      @if (point.count === null) {
+        {{ 'settings.reading.chartUnknown' | transloco }}
+      } @else {
+        <strong>{{ point.count }}</strong>
+      }
+      {{ dayLabel(point.date) }}
+    </figcaption>
+  }
+
+  <div class="chart-cols">
+    @for (col of plot.columns; track col.date; let i = $index) {
+      <button
+        type="button"
+        class="chart-col"
+        [style.left.%]="col.leftPercent"
+        [style.width.%]="col.widthPercent"
+        [attr.aria-label]="
+          (col.count ?? ('settings.reading.chartUnknown' | transloco)) + ' · ' + dayLabel(col.date)
+        "
+        (pointerenter)="hover(i)"
+        (pointerdown)="hover(i)"
+        (focus)="hover(i)"
+        (blur)="clearHover()"
+      ></button>
+    }
+  </div>
+</figure>

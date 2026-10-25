@@ -36,6 +36,7 @@ use App\Entity\SocialAccount;
 use App\Entity\SocialFeed;
 use App\Entity\SocialLike;
 use App\Entity\Subscription;
+use App\Entity\SubscriptionDay;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\ThreadPost;
@@ -157,6 +158,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . '(#1666); account telemetry a backup drops.',
         UserIdentity::class => 'OAuth identity links — see NEVER_BACKED_UP\'s reasoning.',
         ActionToken::class => 'Short-lived, single-use verification and reset tokens.',
+        SubscriptionDay::class => 'Daily new-article and read counts of a subscription (#1783); statistics '
+            . 'derived from entries, not backed up; rebuilt for 30 days as far as retained articles reach.',
         RecommendationSettings::class => 'The "For you" settings — guidance prompt, learned profile, '
             . 'caps and limits, and batch size (#935). Quick to set again after a restore, and not '
             . 'worth carrying in a file the user handles and mails around.',

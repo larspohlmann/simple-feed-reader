@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Repository\EntryStateRepository;
 use App\Tests\DbTestCase;
 
@@ -141,5 +142,30 @@ final class StateCountsTest extends DbTestCase
         self::assertSame(0, $counts['favorites']);
         self::assertSame(0, $counts['kept']);
         self::assertSame(0, $counts['viewed']);
+    }
+
+    public function testThePlainFeedCountsLeaveSocialFeedsOut(): void
+    {
+        $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $user = new User('plain-counts@example.com', $when);
+        $this->entityManager->persist($user);
+        $plain = new Feed('https://example.com/plain.xml');
+        $bluesky = new Feed('https://bsky.app/profile/counted.bsky.social/rss');
+        foreach ([$plain, $bluesky] as $feed) {
+            $this->entityManager->persist($feed);
+            $this->entityManager->persist(new Subscription($user, $feed, $when));
+            $state = new EntryState($user, $this->entry($feed, 'opened-favorite-' . $feed->getUrl()));
+            $state->markViewed($when);
+            $state->markFavorite();
+            $this->entityManager->persist($state);
+        }
+        $this->entityManager->flush();
+        self::assertSame(SocialNetwork::Bluesky, $bluesky->getNetwork());
+
+        $plainCounts = $this->repository()->plainFeedStateCountsForUser($user->requireId());
+        $allCounts = $this->repository()->stateCountsForUser($user->requireId());
+
+        self::assertSame(['favorites' => 1, 'kept' => 0, 'viewed' => 1], $plainCounts);
+        self::assertSame(['favorites' => 2, 'kept' => 0, 'viewed' => 2], $allCounts);
     }
 }

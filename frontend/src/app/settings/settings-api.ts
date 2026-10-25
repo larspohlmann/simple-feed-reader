@@ -78,13 +78,9 @@ export class SettingsApi {
     return this.http.get<DebugLogDetail>(`${this.base}/api/recommendations/runs/debug-log/${id}`);
   }
 
-  /** How many articles the account opened on each of the last thirty days,
-   *  bucketed in `timeZone` (IANA; the server falls back to UTC on an
-   *  identifier its tzdata does not know) for the About page's reading chart. */
-  readingActivity(timeZone: string): Observable<ReadingActivity> {
-    return this.http.get<ReadingActivity>(`${this.base}/api/reading/activity`, {
-      params: { tz: timeZone },
-    });
+  /** The last thirty UTC days of new and read articles for the About page's charts. */
+  readingActivity(): Observable<ReadingActivity> {
+    return this.http.get<ReadingActivity>(`${this.base}/api/reading/activity`);
   }
 
   /** Every month this account has run in, with that month's own run count and

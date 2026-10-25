@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\SocialNetwork;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -72,7 +73,7 @@ final class ReadingActivityControllerTest extends WebTestCase
 
         $client->request('GET', self::ROUTE);
 
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
     public function testAnAccountWithNoReadsGetsThirtyZeroDays(): void
@@ -80,16 +81,48 @@ final class ReadingActivityControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers] = $this->auth('reading-activity-empty@example.test');
 
-        $client->request('GET', self::ROUTE . '?tz=UTC', server: $headers);
+        $client->request('GET', self::ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client->getResponse());
-        /** @var list<array{date: string, count: int}> $days */
+        /** @var list<array{date: string, arrived: int|null, read: int|null}> $days */
         $days = $payload['days'];
         self::assertCount(30, $days);
         self::assertSame(0, $payload['total']);
-        self::assertSame([0], array_values(array_unique(array_column($days, 'count'))));
+        self::assertSame([0], array_values(array_unique(array_column($days, 'read'))));
+        self::assertSame([0], array_values(array_unique(array_column($days, 'arrived'))));
+        self::assertEquals(0, $payload['arrivedDailyAverage']);
         self::assertSame([], $payload['topFeedsByRead']);
+        self::assertSame([], $payload['topFeedsByArrivals']);
+        self::assertSame(0, $payload['viewedCount']);
+        self::assertSame(0, $payload['favoritesCount']);
+    }
+
+    public function testLeavesSocialFeedsOutOfTheReadingTotalsAndRankings(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reading-activity-social@example.test');
+
+        $plain = new Feed('https://example.com/plain-totals.xml');
+        $bluesky = new Feed('https://bsky.app/profile/totals.bsky.social/rss');
+        $subscribedAt = new \DateTimeImmutable('2026-01-01T00:00:00Z');
+        foreach ([$plain, $bluesky] as $feed) {
+            $this->entityManager()->persist($feed);
+            $this->entityManager()->persist(new Subscription($user, $feed, $subscribedAt));
+        }
+        $when = new \DateTimeImmutable('2026-06-01T09:00:00Z');
+        $this->openArticle($user, $plain, 'plain-a', $when);
+        $this->openArticle($user, $bluesky, 'bluesky-a', $when);
+        $this->openArticle($user, $bluesky, 'bluesky-b', $when);
+        $this->entityManager()->flush();
+        self::assertSame(SocialNetwork::Bluesky, $bluesky->getNetwork());
+
+        $client->request('GET', self::ROUTE, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        self::assertSame(1, $payload['viewedCount']);
+        self::assertSame([['feedId' => $plain->getId(), 'readCount' => 1]], $payload['topFeedsByRead']);
     }
 
     public function testRanksTopFeedsByReadBusiestFirst(): void
@@ -111,7 +144,7 @@ final class ReadingActivityControllerTest extends WebTestCase
         $this->openArticle($user, $quiet, 'quiet-a', $when);
         $this->entityManager()->flush();
 
-        $client->request('GET', self::ROUTE . '?tz=UTC', server: $headers);
+        $client->request('GET', self::ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client->getResponse());
@@ -133,7 +166,7 @@ final class ReadingActivityControllerTest extends WebTestCase
         $this->entityManager()->persist($feed);
         $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
 
-        // Midday UTC keeps every open clear of a day boundary under tz=UTC.
+        // Midday UTC keeps every open clear of a day boundary in UTC.
         $noonUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->setTime(12, 0);
         $twoDaysAgo = $noonUtc->modify('-2 days');
         $fiveDaysAgo = $noonUtc->modify('-5 days');
@@ -145,17 +178,50 @@ final class ReadingActivityControllerTest extends WebTestCase
         $this->openArticle($user, $feed, 'ancient', $noonUtc->modify('-40 days'));
         $this->entityManager()->flush();
 
-        $client->request('GET', self::ROUTE . '?tz=UTC', server: $headers);
+        $client->request('GET', self::ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client->getResponse());
         self::assertSame(3, $payload['total']);
 
-        /** @var list<array{date: string, count: int}> $days */
+        /** @var list<array{date: string, arrived: int|null, read: int|null}> $days */
         $days = $payload['days'];
-        $byDate = array_column($days, 'count', 'date');
+        $byDate = array_column($days, 'read', 'date');
         self::assertSame(2, $byDate[$twoDaysAgo->format('Y-m-d')]);
         self::assertSame(1, $byDate[$fiveDaysAgo->format('Y-m-d')]);
         self::assertArrayNotHasKey($noonUtc->modify('-40 days')->format('Y-m-d'), $byDate);
+    }
+
+    public function testCountsNewArticlesPerUtcDayAndAveragesTheLastSevenCompletedDays(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reading-activity-arrivals@example.test');
+
+        $feed = new Feed('https://example.com/arrivals.xml');
+        $this->entityManager()->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('-60 days'));
+        $this->entityManager()->persist($subscription);
+        $noonUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->setTime(12, 0);
+        foreach ([1, 1, 3] as $index => $daysAgo) {
+            $created = new \DateTimeImmutable($noonUtc->modify(sprintf('-%d days', $daysAgo))->format('Y-m-d H:i:s'));
+            $guid = 'arrival-' . $index;
+            $this->entityManager()->persist(new Entry($feed, $guid, null, $guid, $created, $created));
+        }
+        $this->entityManager()->flush();
+
+        $client->request('GET', self::ROUTE, server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        /** @var list<array{date: string, arrived: int|null, read: int|null}> $days */
+        $days = $payload['days'];
+        $arrivedByDate = array_column($days, 'arrived', 'date');
+        self::assertSame(2, $arrivedByDate[$noonUtc->modify('-1 day')->format('Y-m-d')]);
+        self::assertSame(1, $arrivedByDate[$noonUtc->modify('-3 days')->format('Y-m-d')]);
+        self::assertEqualsWithDelta(3 / 7, $payload['arrivedDailyAverage'], 0.051);
+        self::assertSame(
+            [['subscriptionId' => $subscription->requireId(), 'dailyAverage' => 0.4]],
+            $payload['topFeedsByArrivals'],
+        );
     }
 }

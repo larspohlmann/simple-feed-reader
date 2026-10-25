@@ -7,6 +7,7 @@ namespace App\Tests\Service\Refresh\RefreshRunner;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Entity\SubscriptionDay;
 use App\Entity\User;
 use App\Enum\FeedStatus;
 use App\Service\Fetch\Exception\FeedGoneException;
@@ -67,13 +68,18 @@ final class RefreshRunnerTest extends DbTestCase
 
     private function runner(?EntityManagerInterface $runnerEntityManager = null): RefreshRunner
     {
-        return RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+        return $this->runners()
             ->flushingThrough($runnerEntityManager ?? $this->entityManager)
+            ->build($this->fetcher, $this->faviconFetcher);
+    }
+
+    private function runners(): RefreshRunners
+    {
+        return RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
             ->lockingWith($this->lockFactory)
             ->markingChangesOn($this->changeMarker)
             ->indexingInto($this->indexWriter)
-            ->loggingTo($this->logger)
-            ->build($this->fetcher, $this->faviconFetcher);
+            ->loggingTo($this->logger);
     }
 
     private function scrapedDueFeed(string $url): Feed
@@ -922,6 +928,34 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runner()->run(RefreshRequestModel::allDue(300));
 
         self::assertSame(1, $report->pruned);
+    }
+
+    public function testAMaintenanceRunRecordsTheDayBeforeTheCapPassPrunesIt(): void
+    {
+        $feed = $this->dueFeed('https://cap.example.com/feed');
+        $reader = new User('cap-reader@example.com', $this->clock->now());
+        $subscription = new Subscription($reader, $feed, new \DateTimeImmutable('2026-07-15 00:00:00'));
+        $this->entityManager->persist($reader);
+        $this->entityManager->persist($subscription);
+        $arrivedAt = new \DateTimeImmutable('2026-07-20 10:00:00');
+        for ($index = 0; $index < 25; ++$index) {
+            $this->entityManager->persist(new Entry($feed, 'cap-' . $index, null, 'Cap', $arrivedAt, $arrivedAt));
+        }
+        $this->entityManager->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
+
+        $report = $this->runners()
+            ->cappingFeedsAt(20)
+            ->build($this->fetcher, $this->faviconFetcher)
+            ->run(RefreshRequestModel::allDue(300));
+
+        self::assertSame(5, $report->pruned);
+        $subscriptionId = $subscription->requireId();
+        $stored = $this->entityManager->getRepository(SubscriptionDay::class)->since([$subscriptionId], '2026-07-20');
+        self::assertSame(25, $stored->of($subscriptionId, '2026-07-20')->arrived);
     }
 
     public function testUserScopedRunDoesNotPrune(): void
