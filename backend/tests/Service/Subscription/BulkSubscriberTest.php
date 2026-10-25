@@ -36,8 +36,8 @@ final class BulkSubscriberTest extends DbTestCase
 
         $style = new TagStyleModel('#3b82f6', 'memory');
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel('https://a.example.com/rss.xml', 'A Feed', 'Technology', $style),
-            new BulkSubscribeItemModel('https://b.example.com/rss.xml', 'B Feed', 'Technology', $style),
+            new BulkSubscribeItemModel('https://a.example.com/rss.xml', 'A Feed', ['Technology'], $style),
+            new BulkSubscribeItemModel('https://b.example.com/rss.xml', 'B Feed', ['Technology'], $style),
         ]);
 
         self::assertSame(2, $result->imported);
@@ -59,8 +59,8 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('titles@example.com');
 
         $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel('https://shared.example.com/rss.xml', 'Catalog Title', null, null),
-            new BulkSubscribeItemModel('https://fresh.example.com/rss.xml', 'Catalog Title', null, null),
+            new BulkSubscribeItemModel('https://shared.example.com/rss.xml', 'Catalog Title'),
+            new BulkSubscribeItemModel('https://fresh.example.com/rss.xml', 'Catalog Title'),
         ]);
 
         $shared = $this->entityManager
@@ -83,7 +83,7 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('due@example.com');
 
         $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel('https://due.example.com/rss.xml', 'Due Feed', null, null),
+            new BulkSubscribeItemModel('https://due.example.com/rss.xml', 'Due Feed'),
         ]);
 
         $feed = $this->entityManager
@@ -107,7 +107,7 @@ final class BulkSubscriberTest extends DbTestCase
             new BulkSubscribeItemModel(
                 'https://c.example.com/rss.xml',
                 'C Feed',
-                'Technology',
+                ['Technology'],
                 new TagStyleModel('#3b82f6', 'memory'),
             ),
         ]);
@@ -127,8 +127,8 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('dupe@example.com');
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel('https://d.example.com/rss.xml', 'D Feed', null, null),
-            new BulkSubscribeItemModel('https://d.example.com/rss.xml', 'D Feed', null, null),
+            new BulkSubscribeItemModel('https://d.example.com/rss.xml', 'D Feed'),
+            new BulkSubscribeItemModel('https://d.example.com/rss.xml', 'D Feed'),
         ]);
 
         self::assertSame(1, $result->imported);
@@ -141,8 +141,8 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('invalid@example.com');
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel('not-a-url', 'Bad', null, null),
-            new BulkSubscribeItemModel('https://e.example.com/rss.xml', 'E Feed', null, null),
+            new BulkSubscribeItemModel('not-a-url', 'Bad'),
+            new BulkSubscribeItemModel('https://e.example.com/rss.xml', 'E Feed'),
         ]);
 
         self::assertSame(1, $result->invalid);
@@ -164,9 +164,9 @@ final class BulkSubscriberTest extends DbTestCase
         $this->entityManager->flush();
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel('https://one.example.com/rss.xml', 'One', 'Existing', null),
-            new BulkSubscribeItemModel('https://two.example.com/rss.xml', 'Two', 'Fresh', null),
-            new BulkSubscribeItemModel('https://three.example.com/rss.xml', 'Three', 'fresh', null),
+            new BulkSubscribeItemModel('https://one.example.com/rss.xml', 'One', ['Existing']),
+            new BulkSubscribeItemModel('https://two.example.com/rss.xml', 'Two', ['Fresh']),
+            new BulkSubscribeItemModel('https://three.example.com/rss.xml', 'Three', ['fresh']),
         ]);
 
         self::assertSame(3, $result->imported);
@@ -196,8 +196,8 @@ final class BulkSubscriberTest extends DbTestCase
         $this->entityManager->flush();
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel('https://first.example.com/rss.xml', 'First', null, null),
-            new BulkSubscribeItemModel('https://second.example.com/rss.xml', 'Second', null, null),
+            new BulkSubscribeItemModel('https://first.example.com/rss.xml', 'First'),
+            new BulkSubscribeItemModel('https://second.example.com/rss.xml', 'Second'),
         ]);
 
         self::assertSame(1, $result->imported);
@@ -217,14 +217,12 @@ final class BulkSubscriberTest extends DbTestCase
             new BulkSubscribeItemModel(
                 'https://long.example.com/rss.xml',
                 'Long',
-                'L' . str_repeat('t', 119),
-                null,
+                ['L' . str_repeat('t', 119)],
             ),
             new BulkSubscribeItemModel(
                 'https://longer.example.com/rss.xml',
                 'Longer',
-                'l' . str_repeat('T', 119),
-                null,
+                ['l' . str_repeat('T', 119)],
             ),
         ]);
 
@@ -238,7 +236,7 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('multibyte-tag@example.com');
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel('https://umlaut.example.com/rss.xml', 'Umlaut', str_repeat('ä', 120)),
+            new BulkSubscribeItemModel('https://umlaut.example.com/rss.xml', 'Umlaut', [str_repeat('ä', 120)]),
         ]);
 
         self::assertSame(str_repeat('ä', 100), $result->tagsCreated[0]->getName());
@@ -249,18 +247,10 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('new-parent@example.com');
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel(
-                'https://nest.example.com/rss.xml',
-                'Nest',
-                'Child',
-                parentTagName: 'Parent',
-            ),
+            new BulkSubscribeItemModel('https://nest.example.com/rss.xml', 'Nest', ['Parent', 'Child']),
         ]);
 
-        self::assertSame(['Child', 'Parent'], array_map(
-            static fn (Tag $tag): string => $tag->getName(),
-            $result->tagsCreated,
-        ));
+        self::assertSame(['Child', 'Parent'], $this->namesOf($result->tagsCreated));
         self::assertSame('Parent', $result->tagsCreated[0]->getParent()?->getName());
     }
 
@@ -272,18 +262,10 @@ final class BulkSubscriberTest extends DbTestCase
         $this->entityManager->flush();
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItemModel(
-                'https://reuse.example.com/rss.xml',
-                'Reuse',
-                'Child',
-                parentTagName: 'Parent',
-            ),
+            new BulkSubscribeItemModel('https://reuse.example.com/rss.xml', 'Reuse', ['Parent', 'Child']),
         ]);
 
-        self::assertSame(['Child'], array_map(
-            static fn (Tag $tag): string => $tag->getName(),
-            $result->tagsCreated,
-        ));
+        self::assertSame(['Child'], $this->namesOf($result->tagsCreated));
         self::assertSame($existingParent, $result->tagsCreated[0]->getParent());
     }
 
@@ -296,9 +278,9 @@ final class BulkSubscriberTest extends DbTestCase
         $recorder->reset();
 
         $result = $subscriber->subscribeAll($user, [
-            new BulkSubscribeItemModel('https://a.example.com/rss.xml', 'A Feed', 'Technology', null),
-            new BulkSubscribeItemModel('https://b.example.com/rss.xml', 'B Feed', 'TECHNOLOGY', null),
-            new BulkSubscribeItemModel('https://c.example.com/rss.xml', 'C Feed', 'technology', null),
+            new BulkSubscribeItemModel('https://a.example.com/rss.xml', 'A Feed', ['Technology']),
+            new BulkSubscribeItemModel('https://b.example.com/rss.xml', 'B Feed', ['TECHNOLOGY']),
+            new BulkSubscribeItemModel('https://c.example.com/rss.xml', 'C Feed', ['technology']),
         ]);
 
         self::assertSame(3, $result->imported);
@@ -317,6 +299,95 @@ final class BulkSubscriberTest extends DbTestCase
             $recorder->queriesMatching('lower('),
             'one tag lookup for three items naming one tag: the batch answers the other two',
         );
+    }
+
+    public function testAThreeLevelPathNestsEachTagUnderTheNext(): void
+    {
+        $user = $this->user('three-levels@example.com');
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://three.example.com/rss.xml', 'Three', ['A', 'B', 'C']),
+        ]);
+
+        self::assertSame(['C', 'B', 'A'], $this->namesOf($result->tagsCreated));
+        $tagB = $result->tagsCreated[0]->getParent();
+        self::assertSame('B', $tagB?->getName());
+        self::assertSame('A', $tagB->getParent()?->getName());
+    }
+
+    public function testAPathDeeperThanTheLimitKeepsItsOutermostLevels(): void
+    {
+        $user = $this->user('clamped@example.com');
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://clamped.example.com/rss.xml', 'Clamped', ['A', 'B', 'C', 'D']),
+        ]);
+
+        $subscription = $this->subscriptionTo($user, 'https://clamped.example.com/rss.xml');
+        self::assertSame(['C', 'B', 'A'], $this->namesOf($result->tagsCreated));
+        self::assertSame(['C'], $this->namesOf($subscription->getTags()->toArray()));
+    }
+
+    public function testATagNestsUnderAnExistingChildTag(): void
+    {
+        $user = $this->user('under-child@example.com');
+        $tech = new Tag($user, 'Tech');
+        $web = new Tag($user, 'Web');
+        $web->setParent($tech);
+        $this->entityManager->persist($tech);
+        $this->entityManager->persist($web);
+        $this->entityManager->flush();
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://frontend.example.com/rss.xml', 'Frontend', ['Web', 'Frontend']),
+        ]);
+
+        self::assertSame(['Frontend'], $this->namesOf($result->tagsCreated));
+        self::assertSame($web, $result->tagsCreated[0]->getParent());
+    }
+
+    public function testTagsCreatedEarlierInTheBatchCountTowardsTheDepth(): void
+    {
+        $user = $this->user('batch-depth@example.com');
+
+        $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://first.example.com/rss.xml', 'First', ['A', 'B', 'C']),
+            new BulkSubscribeItemModel('https://second.example.com/rss.xml', 'Second', ['X', 'A']),
+        ]);
+
+        self::assertNull($this->storedTag($user, 'A')->getParent());
+        self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'X']));
+    }
+
+    public function testAPathThatWouldLoopStopsNesting(): void
+    {
+        $user = $this->user('loop@example.com');
+
+        $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://ab.example.com/rss.xml', 'AB', ['A', 'B']),
+            new BulkSubscribeItemModel('https://ba.example.com/rss.xml', 'BA', ['B', 'A']),
+        ]);
+
+        self::assertNull($this->storedTag($user, 'A')->getParent());
+        self::assertSame('A', $this->storedTag($user, 'B')->getParent()?->getName());
+    }
+
+    /**
+     * @param array<array-key, Tag> $tags
+     *
+     * @return list<string>
+     */
+    private function namesOf(array $tags): array
+    {
+        return array_values(array_map(static fn (Tag $tag): string => $tag->getName(), $tags));
+    }
+
+    private function storedTag(User $user, string $name): Tag
+    {
+        $tag = $this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => $name]);
+        self::assertInstanceOf(Tag::class, $tag);
+
+        return $tag;
     }
 
     private function subscriptionTo(User $user, string $feedUrl): Subscription

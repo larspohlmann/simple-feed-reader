@@ -36,7 +36,7 @@ final readonly class OpmlImporter
             $user,
             fn (): BulkSubscribeResultModel => $this->subscriber->subscribeAll(
                 $user,
-                $this->collectFeeds($body, null, null),
+                $this->collectFeeds($body, []),
             ),
         );
 
@@ -49,12 +49,13 @@ final readonly class OpmlImporter
     }
 
     /**
-     * Depth-first. A feed takes the innermost group as its tag and the outermost as that tag's parent, so a
-     * one-level file imports as it always did and a deeper one keeps its innermost grouping.
+     * Depth-first; a feed carries every named group above it, outermost first.
+     *
+     * @param list<string> $groupPath
      *
      * @return list<BulkSubscribeItemModel>
      */
-    private function collectFeeds(\DOMElement $node, ?string $inheritedTag, ?string $outermostTag): array
+    private function collectFeeds(\DOMElement $node, array $groupPath): array
     {
         $items = [];
         foreach ($node->childNodes as $child) {
@@ -64,13 +65,13 @@ final readonly class OpmlImporter
 
             $xmlUrl = trim($child->getAttribute('xmlUrl'));
             if ($xmlUrl !== '') {
-                $parent = $inheritedTag === $outermostTag ? null : $outermostTag;
-                $items[] = new BulkSubscribeItemModel(feedUrl: $xmlUrl, tagName: $inheritedTag, parentTagName: $parent);
+                $items[] = new BulkSubscribeItemModel(feedUrl: $xmlUrl, tagPath: $groupPath);
                 continue;
             }
 
-            $groupTag = $this->groupName($child) ?? $inheritedTag;
-            foreach ($this->collectFeeds($child, $groupTag, $outermostTag ?? $groupTag) as $item) {
+            $groupName = $this->groupName($child);
+            $childPath = $groupName === null ? $groupPath : [...$groupPath, $groupName];
+            foreach ($this->collectFeeds($child, $childPath) as $item) {
                 $items[] = $item;
             }
         }

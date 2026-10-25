@@ -279,7 +279,7 @@ final class OpmlImporterTest extends DbTestCase
         self::assertSame(['Long reads'], $this->tagNamesOf($this->subscriptionsOf($user)[0]));
     }
 
-    public function testADeeperGroupKeepsTheInnermostTagUnderTheOutermostGroup(): void
+    public function testAThreeLevelFileImportsEveryLevel(): void
     {
         $user = $this->user('opml-deep@example.com');
         $opml = $this->opml(
@@ -290,19 +290,51 @@ final class OpmlImporterTest extends DbTestCase
 
         $this->importer()->import($user, $opml);
 
-        self::assertSame('A', $this->tagNamed($user, 'C')->getParent()?->getName());
-        self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'B']));
+        self::assertSame('B', $this->tagNamed($user, 'C')->getParent()?->getName());
+        self::assertSame('A', $this->tagNamed($user, 'B')->getParent()?->getName());
+        self::assertSame(['C'], $this->tagNamesOf($this->subscriptionsOf($user)[0]));
     }
 
-    public function testAnExistingParentTagKeepsItsPlaceWhenAFileWouldNestIt(): void
+    public function testADeeperFileKeepsItsOutermostThreeLevels(): void
+    {
+        $user = $this->user('opml-clamped@example.com');
+        $opml = $this->opml(
+            '<outline text="A"><outline text="B"><outline text="C"><outline text="D">'
+            . '<outline type="rss" text="F" xmlUrl="https://clamped.example.com/feed.xml"/>'
+            . '</outline></outline></outline></outline>',
+        );
+
+        $this->importer()->import($user, $opml);
+
+        self::assertSame('B', $this->tagNamed($user, 'C')->getParent()?->getName());
+        self::assertSame(['C'], $this->tagNamesOf($this->subscriptionsOf($user)[0]));
+        self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'D']));
+    }
+
+    public function testReimportingIntoExistingTagsCreatesNoneAndKeepsTheTree(): void
+    {
+        $user = $this->user('opml-reimport@example.com');
+        $opml = fn (string $host): string => $this->opml(
+            '<outline text="A"><outline text="B"><outline text="C">'
+            . sprintf('<outline type="rss" text="F" xmlUrl="https://%s.example.com/feed.xml"/>', $host)
+            . '</outline></outline></outline>',
+        );
+        $this->importer()->import($user, $opml('first-import'));
+
+        $result = $this->importer()->import($user, $opml('second-import'));
+
+        self::assertSame(1, $result->imported);
+        self::assertCount(3, $this->entityManager->getRepository(Tag::class)->findBy(['user' => $user]));
+        self::assertSame('B', $this->tagNamed($user, 'C')->getParent()?->getName());
+        self::assertSame('A', $this->tagNamed($user, 'B')->getParent()?->getName());
+        self::assertSame(['C'], $this->tagNamesOf($this->subscriptionsOf($user)[1]));
+    }
+
+    public function testATagWhoseSubtreeIsFullKeepsItsPlace(): void
     {
         $user = $this->user('opml-conflict@example.com');
-        $longReads = new Tag($user, 'Long reads');
-        $this->entityManager->persist($longReads);
-        $essays = new Tag($user, 'Essays');
-        $essays->setParent($longReads);
-        $this->entityManager->persist($essays);
-        $this->entityManager->flush();
+        $longReads = $this->storedTag($user, 'Long reads', null);
+        $this->storedTag($user, 'Deep', $this->storedTag($user, 'Essays', $longReads));
         $opml = $this->opml(
             '<outline text="Reading"><outline text="Long reads">'
             . '<outline type="rss" text="F" xmlUrl="https://conflict.example.com/feed.xml"/>'
@@ -319,7 +351,7 @@ final class OpmlImporterTest extends DbTestCase
         ]));
     }
 
-    public function testATagNestedEarlierInTheFileIsNotMadeAParentLater(): void
+    public function testATagNestedEarlierInTheFileTakesAChildLater(): void
     {
         $user = $this->user('opml-child-as-parent@example.com');
         $opml = $this->opml(
@@ -335,17 +367,17 @@ final class OpmlImporterTest extends DbTestCase
 
         self::assertSame(2, $result->imported);
         self::assertSame('A', $this->tagNamed($user, 'B')->getParent()?->getName());
-        self::assertNull($this->tagNamed($user, 'C')->getParent());
+        self::assertSame('B', $this->tagNamed($user, 'C')->getParent()?->getName());
     }
 
-    public function testATagGivenAChildEarlierInTheFileIsNotNestedLater(): void
+    public function testATagWithAFullSubtreeEarlierInTheFileIsNotNestedLater(): void
     {
         $user = $this->user('opml-parent-as-child@example.com');
         $opml = $this->opml(
-            '<outline text="X"><outline text="Y">'
+            '<outline text="X"><outline text="Y"><outline text="Z">'
             . '<outline type="rss" text="F1" xmlUrl="https://parent-child-1.example.com/feed.xml"/>'
-            . '</outline></outline>'
-            . '<outline text="Y2"><outline text="X">'
+            . '</outline></outline></outline>'
+            . '<outline text="W"><outline text="X">'
             . '<outline type="rss" text="F2" xmlUrl="https://parent-child-2.example.com/feed.xml"/>'
             . '</outline></outline>',
         );
@@ -354,11 +386,23 @@ final class OpmlImporterTest extends DbTestCase
 
         self::assertSame(2, $result->imported);
         self::assertNull($this->tagNamed($user, 'X')->getParent());
-        self::assertSame('X', $this->tagNamed($user, 'Y')->getParent()?->getName());
-        self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy([
-            'user' => $user,
-            'name' => 'Y2',
-        ]));
+        self::assertNull($this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'W']));
+    }
+
+    public function testAFileNestsUnderAnExistingChildTag(): void
+    {
+        $user = $this->user('opml-under-child@example.com');
+        $this->storedTag($user, 'Web', $this->storedTag($user, 'Tech', null));
+        $opml = $this->opml(
+            '<outline text="Web"><outline text="Frontend">'
+            . '<outline type="rss" text="F" xmlUrl="https://frontend.example.com/feed.xml"/>'
+            . '</outline></outline>',
+        );
+
+        $this->importer()->import($user, $opml);
+
+        self::assertSame('Web', $this->tagNamed($user, 'Frontend')->getParent()?->getName());
+        self::assertSame('Tech', $this->tagNamed($user, 'Web')->getParent()?->getName());
     }
 
     public function testATagAlreadyNestedKeepsItsFirstParent(): void
@@ -394,6 +438,16 @@ final class OpmlImporterTest extends DbTestCase
         $this->importer()->import($user, $opml);
 
         self::assertSame('Reading', $this->tagNamed($user, 'Long reads')->getParent()?->getName());
+    }
+
+    private function storedTag(User $user, string $name, ?Tag $parent): Tag
+    {
+        $tag = new Tag($user, $name);
+        $tag->setParent($parent);
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
+
+        return $tag;
     }
 
     private function tagNamed(User $user, string $name): Tag

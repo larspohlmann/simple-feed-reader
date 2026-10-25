@@ -13,13 +13,15 @@ use App\Enum\SourceFormat;
  */
 final readonly class BulkSubscribeItemModel
 {
+    /**
+     * @param list<string> $tagPath group names, outermost first; the feed is tagged with the innermost
+     */
     public function __construct(
         public string $feedUrl,
         public ?string $feedTitle = null,
-        public ?string $tagName = null,
+        public array $tagPath = [],
         public ?TagStyleModel $tagStyle = null,
         public string $sourceFormat = SourceFormat::XML,
-        public ?string $parentTagName = null,
     ) {
     }
 }

@@ -35,7 +35,7 @@ final readonly class CatalogSubscriber
                 static fn (CatalogFeed $feed): BulkSubscribeItemModel => new BulkSubscribeItemModel(
                     feedUrl: $feed->getUrl(),
                     feedTitle: $feed->getTitle(),
-                    tagName: $feed->getCategory()->getName(),
+                    tagPath: [$feed->getCategory()->getName()],
                     tagStyle: new TagStyleModel(
                         $feed->getCategory()->getColor(),
                         $feed->getCategory()->getIcon(),

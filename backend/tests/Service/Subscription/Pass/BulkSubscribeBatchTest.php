@@ -10,6 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\Pass\BulkSubscribeBatch;
 use App\Service\Subscription\Pass\BulkSubscribePositions;
+use App\Service\Subscription\Pass\BulkSubscribeTagTree;
 use PHPUnit\Framework\TestCase;
 
 final class BulkSubscribeBatchTest extends TestCase
@@ -40,16 +41,25 @@ final class BulkSubscribeBatchTest extends TestCase
     public function testASubscriptionIsRememberedByUrlAndTakesRoom(): void
     {
         $batch = $this->batch(1);
-        $tag = new Tag($this->user, 'Tag');
         $url = 'https://a.example.com/rss.xml';
 
         self::assertFalse($batch->isFull());
-        $batch->recordSubscribed($url, $this->subscription($url), [$tag]);
+        $batch->recordSubscribed($url, $this->subscription($url));
 
         self::assertTrue($batch->hasSubscribed($url));
         self::assertFalse($batch->hasSubscribed('https://b.example.com/rss.xml'));
         self::assertTrue($batch->isFull());
         self::assertSame(1, $batch->result()->imported);
+    }
+
+    public function testATagCreatedHereIsReportedWithTheResult(): void
+    {
+        $batch = $this->batch(5);
+        $tag = new Tag($this->user, 'Tag');
+
+        $batch->rememberNewTag('Tag', $tag);
+
+        self::assertSame($tag, $batch->tagNamed('tag'));
         self::assertSame([$tag], $batch->result()->tagsCreated);
     }
 
@@ -82,7 +92,12 @@ final class BulkSubscribeBatchTest extends TestCase
 
     private function batch(int $room): BulkSubscribeBatch
     {
-        return new BulkSubscribeBatch($this->user, $room, new BulkSubscribePositions(0, 0));
+        return new BulkSubscribeBatch(
+            $this->user,
+            $room,
+            new BulkSubscribePositions(0, 0),
+            new BulkSubscribeTagTree([]),
+        );
     }
 
     private function subscription(string $url): Subscription

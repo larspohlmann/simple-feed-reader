@@ -19,21 +19,22 @@ final class BulkSubscribeBatch
     /** @var array<string, Tag> keyed by lowercased name: items naming one tag share one unflushed row */
     private array $tagsByName = [];
 
-    /** @var array<int, bool> by spl_object_id, as a tag given a child here has no id yet: whether it has children */
-    private array $parentVerdicts = [];
+    /** @var list<Tag> */
+    private array $tagsCreated = [];
 
     public function __construct(
         /** @noinspection AutowireWrongClass Built with new, never autowired */
         public readonly User $user,
         private int $room,
         public readonly BulkSubscribePositions $positions,
+        public readonly BulkSubscribeTagTree $tagTree,
     ) {
         $this->result = new BulkSubscribeResultModel();
     }
 
     public function result(): BulkSubscribeResultModel
     {
-        return $this->result;
+        return $this->result->with(tagsCreated: $this->tagsCreated);
     }
 
     public function hasSubscribed(string $url): bool
@@ -56,15 +57,11 @@ final class BulkSubscribeBatch
         $this->tagsByName[mb_strtolower($name)] = $tag;
     }
 
-    public function rememberParent(Tag $parent): void
+    public function rememberNewTag(string $name, Tag $tag): void
     {
-        $this->parentVerdicts[spl_object_id($parent)] = true;
-    }
-
-    /** @param \Closure(): bool $hasStoredChildren asked once per tag */
-    public function isParent(Tag $tag, \Closure $hasStoredChildren): bool
-    {
-        return $this->parentVerdicts[spl_object_id($tag)] ??= $hasStoredChildren();
+        $this->rememberTag($name, $tag);
+        $this->tagTree->add($tag);
+        $this->tagsCreated[] = $tag;
     }
 
     public function countInvalid(): void
@@ -82,13 +79,10 @@ final class BulkSubscribeBatch
         $this->result = $this->result->with(skippedOverLimit: 1);
     }
 
-    /**
-     * @param list<Tag> $tagsCreated
-     */
-    public function recordSubscribed(string $url, Subscription $subscription, array $tagsCreated): void
+    public function recordSubscribed(string $url, Subscription $subscription): void
     {
         $this->subscriptionsByUrl[$url] = $subscription;
         --$this->room;
-        $this->result = $this->result->with(imported: 1, tagsCreated: $tagsCreated);
+        $this->result = $this->result->with(imported: 1);
     }
 }
