@@ -132,4 +132,18 @@ final class DescriptionChaptersTest extends TestCase
         self::assertCount(3, $described->chapters);
         self::assertSame('<ul><li>Intro<ul></ul></li></ul>', $described->body);
     }
+
+    public function testReturnsTheBodyVerbatimWhenNothingIsRead(): void
+    {
+        $html = '<p>No chapters<br />here</p>';
+
+        self::assertSame($html, DescriptionChapters::in($html)->body);
+    }
+
+    public function testDropsABlockLeftHoldingOnlyWhitespace(): void
+    {
+        $described = DescriptionChapters::in('<p>0:00 A<br>1:00 B<br>2:00 C<br> </p>');
+
+        self::assertSame('', $described->body);
+    }
 }
