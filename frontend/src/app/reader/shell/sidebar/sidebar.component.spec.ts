@@ -2160,6 +2160,32 @@ describe('organise mode', () => {
     expect(element.querySelector('.drawer-head')).not.toBeNull();
   });
 
+  it('collapses the Organise head once the sidebar scrolls, and restores it at the top', () => {
+    const fixture = mount({ coarse: true, organising: true });
+    const element = fixture.nativeElement as HTMLElement;
+    const scroller = element.querySelector<HTMLElement>('.sidebar-body')!;
+    const head = (): DOMTokenList => element.querySelector('.organise-head')!.classList;
+    const scrollTo = (top: number): void => {
+      scroller.scrollTop = top;
+      scroller.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+    };
+
+    expect(head()).not.toContain('collapsed');
+
+    scrollTo(120);
+    expect(head()).toContain('collapsed');
+
+    scrollTo(0);
+    expect(head()).not.toContain('collapsed');
+  });
+
+  it('keeps the Organise head outside the scroller, so iOS delivers a tap mid-fling', () => {
+    const element = mount({ coarse: true, organising: true }).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.sidebar > .organise-head')).not.toBeNull();
+  });
+
   describe('organise layout', () => {
     afterEach(() => localStorage.clear());
 

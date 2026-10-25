@@ -28,6 +28,8 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SectionHeadTemplateDirective, SectionHeadView } from './section-head-template.directive';
 import { SearchFieldComponent } from '../search-field/search-field.component';
+import { ScrollOutsideZoneDirective } from '../../scroll/scroll-outside-zone.directive';
+import { atTop } from '../../reader-gestures';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
 import { SidebarGroupRowComponent } from './sidebar-group-row.component';
@@ -100,6 +102,7 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     SidebarTagRowMenuComponent,
     SidebarTagsHeadMenuComponent,
     NgTemplateOutlet,
+    ScrollOutsideZoneDirective,
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
@@ -234,6 +237,9 @@ export class SidebarComponent {
 
   /** True while a feed row is being dragged (reveals the empty Feeds drop zone). */
   readonly dragging = signal(false);
+  protected readonly scrolled = signal(false);
+  protected readonly onScroll = (event: Event): void =>
+    this.scrolled.set(!atTop((event.currentTarget as Element).scrollTop));
   protected readonly feedsSectionShown = computed(
     () => this.untagged().length > 0 || this.dragging() || this.organising(),
   );

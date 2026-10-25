@@ -1500,7 +1500,7 @@ locally: key on `pointer: coarse` (capability), never on viewport width
 
 ### Sidebar cards (#1749)
 
-The sidebar is a column of cards on `--surface-0`: the search card (desktop) or the "Feeds" header with refresh, add feed and close (phone), then smart views, Saved searches, Tags, Feeds, one per network, and the footer. A card is `glass-rim.filled(var(--surface-1), var(--border))`, `--radius-lg`, `--sidebar-card-pad`; cards stand `--space-2` apart (`--space-3` on a coarse pointer). The footer card rides at the end of the column (`margin-top: auto`) and scrolls with it; its layout and theme row wraps when 44px touch targets do not fit on one line. The mixins live in `reader/shell/sidebar/_sidebar-row.scss`.
+The sidebar is a column of cards on `--surface-0`: the search card (desktop) or the "Feeds" header with refresh, add feed and close (phone), then smart views, Saved searches, Tags, Feeds, one per network, and the footer. A card is `glass-rim.filled(var(--surface-1), var(--border))`, `--radius-lg`, `--sidebar-card-pad`; cards stand `--space-2` apart (`--space-3` on a coarse pointer). Only `.sidebar-body` scrolls: the search card and the Organise head sit above it, outside the scroller (#1332, #1798), while the phone's "Feeds" header scrolls away with the body. The footer card rides at the end of the body (`margin-top: auto`) and scrolls with it; its layout and theme row wraps when 44px touch targets do not fit on one line. The mixins live in `reader/shell/sidebar/_sidebar-row.scss`.
 
 **A row** is `row-geometry`: a fixed-height flex line, `0 var(--space-2) 0 var(--row-inset)`, hover `--surface-0`, active `--accent-soft` with accent text, glyph and count. Its height, left inset and type size come from the surface it sits on, through the inherited `--row-h`, `--row-inset` and `--row-fs`, so a row component never reaches into its parent and a parent never pierces a row.
 
@@ -1510,7 +1510,7 @@ The sidebar is a column of cards on `--surface-0`: the search card (desktop) or 
 
 **Nesting** (two levels below the top, #1736, #1790). An open tag is a grey group (`.group.open`, `--surface-sunken`). Each child tag sits in its own `--surface-1` box, and a grandchild's box is a `.tag-child` inside that one, on the same background and marked only by the compounded margin; the parent's own feeds follow the boxes. Rows inside a box start at the box's edge again, so every chevron keeps the same gap to its own surface. The drop lists stay top-level siblings: the group and the box are plain divs, and the heads and feed lists are rendered through `#tagHead` / `#tagFeeds` templates.
 
-**Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
+**Phone.** The drawer is a full-height sheet over the app bar, flush left, `--drawer-shadow` over `--drawer-scrim`. Organise mode swaps the header for "Organise" and **Done**, pinned above the body; once the body leaves the top the head takes `.collapsed` (base-size title, sub-row-height Done). It leaves Saved searches out, and lays every row out as handle (40px) · body · ⋯ · chevron, all 44px. Its tag sheet offers Edit tag, Move up, Move down and Delete tag; the moves reorder within the sibling set the drag uses and disable at its ends.
 
 ### Hidden-feed favicon
 
@@ -1664,7 +1664,8 @@ scroller that is still coasting only stops the scroll; no click fires. The list'
 header always sat beside `.rows`, so its icons worked mid-fling, while the
 article's toolbar, nameplate and back-to-top button sat inside the article's own
 scroller and swallowed the tap (#1332). Float such chrome over the scroller and
-reserve its height, as the list and the article both do now.
+reserve its height, as the list and the article both do now, or stack it as a
+`flex: none` sibling above an inner scroller, as the sidebar does (#1798).
 
 **Content beneath a floating bar offsets by the measured height plus `--bar-gap`,
 never by a literal:**
