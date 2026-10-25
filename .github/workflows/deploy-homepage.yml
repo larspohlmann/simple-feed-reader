@@ -1,0 +1,117 @@
+# Personal deployment of the project homepage (docs/homepage) to the maintainer's
+# Strato shared hosting, as a subfolder of the portfolio docroot. Not part of CI
+# and not needed by anyone else working on this project -- see
+# docs/homepage/README.md.
+#
+# Reaches the host exactly as deploy-strato.yml does, with the same four
+# STRATO_SSH_* secrets, and then does one thing: an rsync of the staged folder
+# into HOMEPAGE_PATH. `--delete` prunes only inside the directory it is pointed
+# at, so this workflow can never touch the portfolio homepage or a sibling
+# project folder on the same host. The reverse guarantee -- the portfolio's own
+# mirror leaving this folder alone -- is an exclusion in that repository's
+# workflow, listed in the README.
+#
+# The page references docs/screenshots through a symlink, so the screenshots
+# have one source in the repository. The staging copy below dereferences it;
+# the page goes out with whatever screenshots develop carries at that moment.
+name: Deploy homepage
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'docs/homepage/**'
+      - 'docs/screenshots/**'
+      - '.github/workflows/deploy-homepage.yml'
+  workflow_dispatch:
+
+# One deploy at a time, and never cancel an rsync in progress: a run killed
+# halfway leaves the site half old, half new until the next one completes.
+concurrency:
+  group: deploy-homepage
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Relative to the SSH user's home, where every remote command starts. The
+  # docroot and the app's own mount beside it (`larspohlmann/reader`) are
+  # documented in deploy/strato/README.md; this is one more folder in it, named
+  # like the sibling projects' folders. Must match the exclusion in the
+  # portfolio repository's deploy.
+  HOMEPAGE_PATH: larspohlmann/simplefeedreader
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.repository == 'larspohlmann/simple-feed-reader'
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # `cp -RL` follows the screenshots symlink, so the staged folder is a plain
+      # tree rsync can mirror. The README documents the deployment; it is not
+      # part of the site.
+      - name: Stage the site
+        run: |
+          set -euo pipefail
+          cp -RL docs/homepage site
+          rm -f site/README.md
+          test -f site/index.html
+          test -d site/screenshots
+          echo "==> staged $(find site -type f | wc -l) files"
+
+      # Same shape as deploy-strato.yml's step, under the same alias, so the
+      # secrets stay the four that already exist. printf rather than a heredoc:
+      # the values are secrets and must land in the file verbatim.
+      - name: Configure SSH
+        env:
+          SSH_HOST: ${{ secrets.STRATO_SSH_HOST }}
+          SSH_USER: ${{ secrets.STRATO_SSH_USER }}
+          SSH_KEY: ${{ secrets.STRATO_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STRATO_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/deploy_key
+          printf '%s\n' "${KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          {
+            printf 'Host strato\n'
+            printf '  HostName %s\n' "${SSH_HOST}"
+            printf '  User %s\n' "${SSH_USER}"
+            printf '  IdentityFile ~/.ssh/deploy_key\n'
+            printf '  UserKnownHostsFile ~/.ssh/known_hosts\n'
+            printf '  IdentitiesOnly yes\n'
+            printf '  StrictHostKeyChecking yes\n'
+            printf '  BatchMode yes\n'
+            printf '  ConnectTimeout 20\n'
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Check the SSH connection
+        run: ssh strato true
+
+      # `--delete` is what keeps the folder equal to the staged site, and also
+      # why the target is pinned: a path that is empty, absolute, or lacks the
+      # docroot's own subfolder would aim the prune at $HOME or at the docroot
+      # itself. rsync creates only the final path component, so the folder is
+      # made first; its parent, the docroot, exists on the host already.
+      - name: Deploy over SSH
+        run: |
+          set -euo pipefail
+          case "${HOMEPAGE_PATH}" in
+            larspohlmann/?*) ;;
+            *) echo "!!! HOMEPAGE_PATH must name a subfolder of the docroot" >&2; exit 1 ;;
+          esac
+          ssh strato "mkdir -p '${HOMEPAGE_PATH}'"
+          rsync -az --delete --info=stats1 site/ "strato:${HOMEPAGE_PATH}/"
+          ssh strato "test -f '${HOMEPAGE_PATH}/index.html'"
+          echo "==> deployed to ${HOMEPAGE_PATH}"
