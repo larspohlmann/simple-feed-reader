@@ -20,6 +20,8 @@ from them, so social reads stop vanishing after 7 days.
 | Reading chart | Switches from viewer-local days to UTC days and reads the same history; the `tz` query parameter goes away |
 | History lifetime | Kept until the subscription is deleted (cascade); no pruning of history rows |
 | Unsubscribing | Deletes that subscription's history; past totals drop accordingly |
+| Social networks on the page | Left out of every About-page statistic (series, average, rankings, tiles); the recorder still records them, and the group caption says so. Without them the 7-day social horizon no longer makes days unknown on the page |
+| Top feeds by articles per day | Per plain subscription, the mean of its known `arrived` over the same 7 completed days as the average, from its `createdAt` day on; only means > 0, busiest first, ties by subscription id, at most 5 |
 
 ## Storage
 
@@ -65,7 +67,7 @@ feed per day), bounded by the oldest missing day, never one query per subscripti
 `App\Service\History\SubscriptionActivityCounter::lastDays(User)` returns a `SubscriptionActivityModel`: the 30 UTC
 dates (oldest first, today last), and per date an `arrived` and a `read` that are each an int or `null`.
 
-For each of the user's subscriptions and each date `D` in the window:
+For each of the user's plain (non-social) subscriptions and each date `D` in the window:
 
 1. `D` before the subscription's `createdAt` day: the subscription contributes nothing (not unknown).
 2. A stored row for `D`: use it.
@@ -92,11 +94,16 @@ none of them is known. Today is excluded because it is partial.
   "days": [{ "date": "2026-10-25", "arrived": 12, "read": 4 }, { "date": "…", "arrived": null, "read": null }],
   "total": 118,
   "arrivedDailyAverage": 41.6,
-  "topFeedsByRead": [{ "feedId": 3, "readCount": 50 }]
+  "topFeedsByRead": [{ "feedId": 3, "readCount": 50 }],
+  "topFeedsByArrivals": [{ "subscriptionId": 7, "dailyAverage": 12.3 }],
+  "viewedCount": 2814,
+  "favoritesCount": 96
 }
 ```
 
-`total` is the sum of the known `read` values (as today: reads in the window). `topFeedsByRead` is unchanged. The
+`total` is the sum of the known `read` values (as today: reads in the window). `topFeedsByRead` now leaves social
+feeds out. `topFeedsByArrivals` is rounded to one decimal. `viewedCount` and `favoritesCount` are the account's
+viewed and favourite entries over still-subscribed plain feeds. The
 response is shaped by `App\Http\ReadingActivityJson`. Bearer auth, JSON only, no browser-only input: the
 architecture §6 checklist holds.
 
@@ -113,6 +120,11 @@ History module (`Reading → History`; History depends on neither Reading nor Re
   one non-zero known day.
 - A new "New articles" block above the reading chart: the average as a large figure (one decimal, e.g. "≈ 41.6 per
   day", "—" when `null`), then the 30-day chart built from `arrived`. The reading chart is built from `read`.
+- A "Top feeds by articles per day" block after "New articles", in the same bar-list markup as the other
+  rankings; titles come from the subscriptions store by id, values show one decimal.
+- The tiles and "Top feeds by unread" count plain subscriptions only (Unread: those included in All items); the
+  Read and Favorites tiles come from `viewedCount`/`favoritesCount`. The group caption says social networks are
+  excluded.
 - New keys in both Transloco files. Styles in the component's `.scss`, tokens only.
 
 ## Testing
