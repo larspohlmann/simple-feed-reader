@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Http\EntryJson;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRowEnricher;
+use App\Service\Chapter\ChaptersOnOpen;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -19,6 +20,7 @@ final readonly class EntryDetailController
         private EntryListRepository $entryList,
         private EntryListRowEnricher $enricher,
         private EntryJson $entryJson,
+        private ChaptersOnOpen $chapters,
     ) {
     }
 
@@ -29,7 +31,7 @@ final readonly class EntryDetailController
         $row = $this->enricher->enrich([$row], $user->requireId())[0];
 
         return new JsonResponse([
-            'entry' => $this->entryJson->detail($row),
+            'entry' => $this->entryJson->detail($row, $this->chapters->serve($row->entry)),
             'completed' => $this->entryJson->completed($row),
         ]);
     }

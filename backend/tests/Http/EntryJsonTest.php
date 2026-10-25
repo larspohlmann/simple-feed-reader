@@ -25,6 +25,7 @@ use App\Repository\EntryListRowEnrichment;
 use App\Repository\EntryListRowSocial;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
+use App\Service\Chapter\Model\ServedChaptersModel;
 use App\Service\Social\Model\ThreadPostModel;
 use App\Tests\Support\JsonMappers;
 use PHPUnit\Framework\TestCase;
@@ -342,7 +343,7 @@ final class EntryJsonTest extends TestCase
 
         self::assertSame(
             ['network' => 'bluesky', 'isLiked' => true, 'canLike' => true],
-            JsonMappers::entryJson()->detail($row)['social'],
+            JsonMappers::entryJson()->detail($row, new ServedChaptersModel([], null))['social'],
         );
     }
 
@@ -465,7 +466,7 @@ final class EntryJsonTest extends TestCase
         $entry->setContentHtml('<p>Full body.</p>');
         $row = $this->row($entry)->withDuplicates([$this->row($sibling)]);
 
-        $json = JsonMappers::entryJson()->detail($row);
+        $json = JsonMappers::entryJson()->detail($row, new ServedChaptersModel([], $row->entry->getContentHtml()));
 
         self::assertSame('<p>Full body.</p>', $json['contentHtml'] ?? null);
         self::assertArrayNotHasKey('contentHtml', $json['duplicates'][0]);
