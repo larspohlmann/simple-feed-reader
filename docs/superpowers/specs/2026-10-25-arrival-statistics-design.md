@@ -52,7 +52,7 @@ same pass and recording goes first, no entry is deleted before its day has been 
 For every subscription, it writes one row per UTC day `D` that has no row yet and satisfies all of:
 
 - `D ≤ yesterday` (completed),
-- `D ≥ today − 30` (the chart window; older history is not backfilled),
+- `D ≥ today − 29` (the 30-day chart window; older history is not backfilled),
 - `D ≥ the subscription's createdAt day`,
 - `D > today − horizon` (see above).
 
