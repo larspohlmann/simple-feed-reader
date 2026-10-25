@@ -113,6 +113,32 @@ function make(): AudioPlayerService {
 describe('AudioPlayerService', () => {
   beforeEach(() => localStorage.clear());
 
+  it('plays the current track from a chapter', () => {
+    const service = make();
+    service.play(track());
+    audio.duration = 600;
+    audio.fire('loadedmetadata');
+
+    service.playFrom(track(), 300);
+
+    expect(audio.currentTime).toBe(300);
+    expect(service.position()).toBe(300);
+    expect(audio.play).toHaveBeenCalled();
+  });
+
+  it('loads another track first and starts it at the chapter once its length is known', () => {
+    const service = make();
+    service.play(track({ url: 'https://x.test/other.mp3' }));
+
+    service.playFrom(track({ url: 'https://x.test/ep.mp3', durationInSeconds: 600 }), 300);
+    expect(service.current()?.url).toBe('https://x.test/ep.mp3');
+    audio.duration = 600;
+    audio.fire('loadedmetadata');
+
+    expect(audio.currentTime).toBe(300);
+    expect(service.playing()).toBe(true);
+  });
+
   it('plays a track: sets it current, seeds the duration, starts the element', () => {
     const service = make();
 
