@@ -133,6 +133,21 @@ final class SubscriptionActivityCounterTest extends DbTestCase
         ));
     }
 
+    public function testAPrunedDayWithoutAStoredRowIsUnknownAndALaterSubscriptionLeavesEarlierDaysKnown(): void
+    {
+        $this->retentionSettings()->update(new RetentionWindows(entryDays: 5, socialDays: 5));
+        $this->subscribeTo('https://example.com/late.xml', '2026-10-22 00:00:00');
+        $old = $this->subscribeTo('https://example.com/old.xml', '2026-09-01 00:00:00');
+        $this->entityManager->persist(new SubscriptionDay($old, UtcDay::start('2026-10-18'), 12, 0));
+        $this->arrival($old->getFeed(), 'pruned', '2026-10-10 10:00:00');
+        $this->entityManager->flush();
+
+        $days = $this->byDate();
+
+        self::assertNull($days['2026-10-10']->arrived());
+        self::assertSame(12, $days['2026-10-18']->arrived());
+    }
+
     public function testAnAccountWithoutSubscriptionsHasThirtyKnownZeroDays(): void
     {
         $this->entityManager->flush();
