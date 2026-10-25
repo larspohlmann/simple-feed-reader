@@ -67,6 +67,7 @@ Play and Add to playlist sit on every audio entry.
 <p>
   <img src="screenshots/mobile-podcast-light.webp" alt="The player bar on a phone" width="24%">
   <img src="screenshots/mobile-podcast-playlist-light.webp" alt="The playlist panel on a phone" width="24%">
+  <img src="screenshots/mobile-podcast-player-light.webp" alt="The full-size player on a phone" width="24%">
 </p>
 
 ## Social

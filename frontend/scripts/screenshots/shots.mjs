@@ -173,7 +173,7 @@ async function openPost(page) {
   if (subscriptionId === null) throw new Error(`No subscription titled like "${wanted}"`);
   await page.goto(`${BASE}/?subscription=${subscriptionId}`);
   await settle(page, 2500);
-  await articles(page).first().locator('.title').first().click();
+  await articles(page).first().locator('.title, .dek').first().click();
   await page.locator('app-reader-view').waitFor();
   await settle(page, 3000);
 }
@@ -215,6 +215,12 @@ async function queueEpisodesAndOpenPlaylist(page) {
     .getByRole('button', { name: /Playlist \(\d+\)/ })
     .click();
   await settle(page, 1500);
+}
+async function queueEpisodesAndOpenPlayer(page) {
+  await queueEpisodes(page);
+  await page.getByRole('button', { name: 'Open player', exact: true }).click();
+  await page.locator('app-big-player').waitFor();
+  await settle(page, 2000);
 }
 async function dismissPasskeyOffer(page) {
   const offer = page.getByRole('dialog', { name: 'Set up a passkey?' });
@@ -316,6 +322,10 @@ const SETS = {
         ...magazine,
         before: queueEpisodesAndOpenPlaylist,
       }),
+      phone('mobile-podcast-player-light', podcastTag(), {
+        ...magazine,
+        before: queueEpisodesAndOpenPlayer,
+      }),
     ];
   },
 };
@@ -325,6 +335,7 @@ function selectShots(arguments_) {
     return [...SETS.public, ...SETS.admin, ...SETS.library, ...SETS.social, ...SETS.listening];
   }
   const known = [...SETS.public, ...SETS.admin, ...SETS.library, ...SETS.social];
+  if (process.env.PODCAST_TAG) known.push(...SETS.listening);
   return arguments_.flatMap((key) => {
     if (key in SETS) return SETS[key];
     const shot = known.find((candidate) => candidate.name === key);
