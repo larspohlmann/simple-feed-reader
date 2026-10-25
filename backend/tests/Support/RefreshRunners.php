@@ -12,7 +12,6 @@ use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Repository\SubscriptionActivityRepository;
-use App\Repository\SubscriptionDayRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
@@ -198,14 +197,10 @@ final readonly class RefreshRunners
     private function historyRecorder(RetentionSettings $settings): SubscriptionHistoryRecorder
     {
         $activity = new SubscriptionActivityRepository($this->entityManager);
-        $storedDays = $this->entityManager->getRepository(SubscriptionDay::class);
-        if (!$storedDays instanceof SubscriptionDayRepository) {
-            throw new \LogicException('SubscriptionDay is not mapped to its repository.');
-        }
 
         return new SubscriptionHistoryRecorder(
             $activity,
-            $storedDays,
+            $this->entityManager->getRepository(SubscriptionDay::class),
             new LiveDayCounter($activity),
             new RetentionHorizon($settings),
             new NaiveUtcClock($this->clock),
