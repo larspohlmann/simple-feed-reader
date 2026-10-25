@@ -3,8 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>simple-feed-reader — your feeds, laid out like a magazine</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 20 20%27%3E%3Ccircle cx=%273%27 cy=%2717%27 r=%272%27 fill=%27%233f8676%27/%3E%3Cpath d=%27M3 10a7 7 0 0 1 7 7M3 3a14 14 0 0 1 14 14%27 fill=%27none%27 stroke=%27%233f8676%27 stroke-width=%272.4%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<title>simple feed reader — your feeds, laid out like a magazine</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta name="description" content="A self-hosted RSS/Atom reader for you alone or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.">
 <style>
 :root{
@@ -38,8 +40,8 @@ p{margin:0}
 /* nav */
 .nav{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--surface-1) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
 .nav .wrap{display:flex;align-items:center;gap:var(--space-5);height:56px}
-.brand{display:flex;align-items:center;gap:var(--space-2);font-weight:600;color:var(--text-primary)}
-.brand svg{width:20px;height:20px}
+.brand{display:inline-flex;align-items:center;gap:var(--space-2);font-weight:700;color:var(--text-primary);white-space:nowrap}
+.brand svg{width:22px;height:22px;color:var(--accent)}
 .nav nav{margin-left:auto;display:flex;gap:var(--space-5);font-size:13px}
 .nav nav a{color:var(--text-secondary)}
 .btn{display:inline-flex;align-items:center;gap:var(--space-2);height:40px;padding:0 var(--space-4);border-radius:var(--radius);font-weight:600;font-size:14px;border:1px solid var(--border-strong);color:var(--text-primary);background:var(--surface-1)}
@@ -142,8 +144,8 @@ footer .copy{margin-left:auto}
 <header class="nav">
   <div class="wrap">
     <a class="brand" href="#">
-      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="3" cy="17" r="2" fill="var(--accent)"/><path d="M3 10a7 7 0 0 1 7 7M3 3a14 14 0 0 1 14 14" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/></svg>
-      simple-feed-reader
+      <svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="M200-120q-33 0-56.5-23.5T120-200q0-33 23.5-56.5T200-280q33 0 56.5 23.5T280-200q0 33-23.5 56.5T200-120Zm480 0q0-117-44-218.5T516-516q-76-76-177.5-120T120-680v-120q142 0 265 53t216 146q93 93 146 216t53 265H680Zm-240 0q0-67-25-124.5T346-346q-44-44-101.5-69T120-440v-120q92 0 171.5 34.5T431-431q60 60 94.5 139.5T560-120H440Z"/></svg>
+      <span>simple feed reader</span>
     </a>
     <nav>
       <a href="#features">Features</a>
@@ -258,7 +260,7 @@ curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/mai
 
 <footer>
   <div class="wrap">
-    <span class="brand">simple-feed-reader</span>
+    <span class="brand"><svg viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="M200-120q-33 0-56.5-23.5T120-200q0-33 23.5-56.5T200-280q33 0 56.5 23.5T280-200q0 33-23.5 56.5T200-120Zm480 0q0-117-44-218.5T516-516q-76-76-177.5-120T120-680v-120q142 0 265 53t216 146q93 93 146 216t53 265H680Zm-240 0q0-67-25-124.5T346-346q-44-44-101.5-69T120-440v-120q92 0 171.5 34.5T431-431q60 60 94.5 139.5T560-120H440Z"/></svg><span>simple feed reader</span></span>
     <nav>
       <a href="https://github.com/larspohlmann/simple-feed-reader">GitHub</a>
       <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/docs/screenshots.md">Screenshots</a>
