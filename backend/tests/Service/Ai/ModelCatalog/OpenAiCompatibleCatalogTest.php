@@ -213,6 +213,11 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         self::assertContains('Accept-Encoding: identity', $this->headersSentFor($this->credentials()));
     }
 
+    public function testItAsksForJson(): void
+    {
+        self::assertContains('Accept: application/json', $this->headersSentFor($this->credentials()));
+    }
+
     public function testItSendsTheAnthropicVersionHeader(): void
     {
         self::assertContains('anthropic-version: 2023-06-01', $this->headersSentFor($this->credentials()));
