@@ -668,6 +668,26 @@ describe('SidebarComponent', () => {
         expect(nestedDropLists).toHaveLength(0);
       });
 
+      it('counts every tag below a row in its subtag pill, at any depth (#1802)', () => {
+        const fixture = mount({
+          tagTree: [parentNode(10, [parentNode(11, [tagNode(12, [], 11)]), tagNode(13, [], 10)])],
+        });
+        fixture.componentInstance.toggle(10);
+        fixture.detectChanges();
+
+        const pills = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.taghead')].map(
+          (head) => ({
+            name: head.querySelector('.name')?.textContent?.trim(),
+            pill: head.querySelector('app-sidebar-subtag-pill span')?.textContent?.trim(),
+          }),
+        );
+        expect(pills).toEqual([
+          { name: 't10', pill: '3' },
+          { name: 't11', pill: '1' },
+          { name: 't13', pill: '0' },
+        ]);
+      });
+
       it('shows grandchildren only while their parent is open', () => {
         const fixture = mount({
           tagTree: [parentNode(10, [parentNode(11, [tagNode(12, [], 11)])])],
