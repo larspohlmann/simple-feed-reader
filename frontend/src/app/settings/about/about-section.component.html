@@ -43,6 +43,20 @@
       }
     </section>
 
+    <section class="block arrival-rates">
+      <div class="block-head">
+        <span class="block-title">{{ 'settings.reading.topArrivals' | transloco }}</span>
+      </div>
+
+      @if (readingPending()) {
+        <div class="block-empty"><app-spinner /></div>
+      } @else if (topArrivalFeeds().length === 0) {
+        <p class="block-empty">{{ 'settings.reading.topArrivalsEmpty' | transloco }}</p>
+      } @else {
+        <ng-container *ngTemplateOutlet="bars; context: { $implicit: topArrivalFeeds() }" />
+      }
+    </section>
+
     <section class="block reading">
       <div class="block-head">
         <span class="block-title">{{ 'settings.reading.chartTitle' | transloco }}</span>
@@ -66,21 +80,7 @@
       @if (topUnreadFeeds().length === 0) {
         <p class="block-empty">{{ 'settings.reading.topUnreadEmpty' | transloco }}</p>
       } @else {
-        <div class="bars">
-          @for (feed of topUnreadFeeds(); track feed.subscriptionId) {
-            <a
-              class="bar-row"
-              [routerLink]="['/']"
-              [queryParams]="feedLinkParams({ subscription: feed.subscriptionId })"
-            >
-              <span class="bar-name">{{ feed.title }}</span>
-              <span class="bar-track">
-                <span class="bar-fill" [style.width.%]="feed.widthPercent"></span>
-              </span>
-              <span class="bar-value">{{ feed.value }}</span>
-            </a>
-          }
-        </div>
+        <ng-container *ngTemplateOutlet="bars; context: { $implicit: topUnreadFeeds() }" />
       }
     </section>
 
@@ -94,21 +94,7 @@
       } @else if (topReadFeeds().length === 0) {
         <p class="block-empty">{{ 'settings.reading.topReadEmpty' | transloco }}</p>
       } @else {
-        <div class="bars">
-          @for (feed of topReadFeeds(); track feed.subscriptionId) {
-            <a
-              class="bar-row"
-              [routerLink]="['/']"
-              [queryParams]="feedLinkParams({ subscription: feed.subscriptionId })"
-            >
-              <span class="bar-name">{{ feed.title }}</span>
-              <span class="bar-track">
-                <span class="bar-fill" [style.width.%]="feed.widthPercent"></span>
-              </span>
-              <span class="bar-value">{{ feed.value }}</span>
-            </a>
-          }
-        </div>
+        <ng-container *ngTemplateOutlet="bars; context: { $implicit: topReadFeeds() }" />
       }
     </section>
   </app-settings-group>
@@ -180,3 +166,21 @@
     <p class="copyright">© {{ copyrightYear }} {{ author }}</p>
   </app-settings-group>
 </app-settings-stack>
+
+<ng-template #bars let-feeds>
+  <div class="bars">
+    @for (feed of feeds; track feed.subscriptionId) {
+      <a
+        class="bar-row"
+        [routerLink]="['/']"
+        [queryParams]="feedLinkParams({ subscription: feed.subscriptionId })"
+      >
+        <span class="bar-name">{{ feed.title }}</span>
+        <span class="bar-track">
+          <span class="bar-fill" [style.width.%]="feed.widthPercent"></span>
+        </span>
+        <span class="bar-value">{{ feed.shownValue }}</span>
+      </a>
+    }
+  </div>
+</ng-template>

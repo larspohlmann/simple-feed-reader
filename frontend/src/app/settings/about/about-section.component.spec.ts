@@ -36,6 +36,7 @@ const NO_ACTIVITY: ReadingActivity = {
   total: 0,
   arrivedDailyAverage: null,
   topFeedsByRead: [],
+  topFeedsByArrivals: [],
 };
 
 function activity(overrides: Partial<ReadingActivity>): ReadingActivity {
@@ -201,6 +202,34 @@ describe('AboutSectionComponent', () => {
     );
 
     expect(names).toEqual(['Beta', 'Alpha']);
+  });
+
+  it('ranks the top feeds by new articles per day with titles from the store and one decimal', () => {
+    const fixture = mount(null, {
+      store: { subscriptions: [feed('Alpha', 0, 10), feed('Beta', 0, 20)] },
+      activity: activity({
+        topFeedsByArrivals: [
+          { subscriptionId: 20, dailyAverage: 12.3 },
+          { subscriptionId: 99, dailyAverage: 8 },
+          { subscriptionId: 10, dailyAverage: 2 },
+        ],
+      }),
+    });
+    const rates = fixture.nativeElement.querySelector('.arrival-rates');
+    const cells = (selector: string) =>
+      [...rates.querySelectorAll(selector)].map((node) => (node as HTMLElement).textContent);
+
+    expect(cells('.bar-name')).toEqual(['Beta', 'Alpha']);
+    expect(cells('.bar-value')).toEqual(['12.3', '2.0']);
+    expect(rates.querySelector('a.bar-row')?.getAttribute('href')).toContain('subscription=20');
+  });
+
+  it('says so when no feed brought new articles in the last week', () => {
+    const fixture = mount(null);
+
+    expect(fixture.nativeElement.querySelector('.arrival-rates')?.textContent).toContain(
+      'No new articles in the last 7 days',
+    );
   });
 
   it('links each top feed to its feed page', () => {

@@ -497,6 +497,8 @@
       "arrivalsTitle": "Neue Artikel",
       "arrivalsAverage": "pro Tag in den letzten 7 Tagen",
       "arrivalsEmpty": "Noch keine neuen Artikel",
+      "topArrivals": "Top-Feeds nach Artikeln pro Tag",
+      "topArrivalsEmpty": "Keine neuen Artikel in den letzten 7 Tagen",
       "chartUnknown": "Keine Daten",
       "chartTitle": "Gelesene Artikel",
       "chartWindow": "Letzte 30 Tage",

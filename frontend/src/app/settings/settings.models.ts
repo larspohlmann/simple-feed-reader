@@ -144,14 +144,23 @@ export interface FeedReadCount {
   readCount: number;
 }
 
+/** One subscription in the "top feeds by articles per day" ranking: its mean
+ *  of new articles per known day over the last seven completed days. */
+export interface FeedArrivalRate {
+  subscriptionId: number;
+  dailyAverage: number;
+}
+
 /** The reading-activity payload: one entry per UTC day of the window in order
  *  (oldest first), the window's total opens, the last week's average of new
- *  articles, and the account's most-read feeds all-time. */
+ *  articles, the account's most-read feeds all-time, and the feeds with the
+ *  most new articles per day over the last week. */
 export interface ReadingActivity {
   days: ReadingDay[];
   total: number;
   arrivedDailyAverage: number | null;
   topFeedsByRead: FeedReadCount[];
+  topFeedsByArrivals: FeedArrivalRate[];
 }
 
 export interface RestoreCounts {

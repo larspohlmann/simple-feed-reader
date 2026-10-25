@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ReleaseVersion, VersionService } from '../../core/version.service';
@@ -38,11 +39,18 @@ interface StatTile {
   value: string;
 }
 
-/** One bar of a top-feeds chart: a feed, its metric, and a link to its page. */
-interface FeedBar {
+/** One entry of a ranking: a subscription, its title, and its metric. */
+interface RankedFeed {
   subscriptionId: number;
   title: string;
   value: number;
+}
+
+/** One bar of a top-feeds chart: a feed, its metric as shown, and a link to its page. */
+interface FeedBar {
+  subscriptionId: number;
+  title: string;
+  shownValue: string;
   widthPercent: number;
 }
 
@@ -58,6 +66,7 @@ const TOP_FEEDS = 5;
     SpinnerComponent,
     IconComponent,
     DayChartComponent,
+    NgTemplateOutlet,
     RouterLink,
     TranslocoPipe,
   ],
@@ -116,12 +125,7 @@ export class AboutSectionComponent implements OnInit {
   readonly arrivedAverage = computed(() => {
     const average = this.activity()?.arrivedDailyAverage ?? null;
 
-    return average === null
-      ? null
-      : new Intl.NumberFormat(this.language.lang(), {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
-        }).format(average);
+    return average === null ? null : this.oneDecimal(average);
   });
 
   readonly topUnreadFeeds = computed<FeedBar[]>(() => {
@@ -137,6 +141,7 @@ export class AboutSectionComponent implements OnInit {
         title: subscription.title,
         value: subscription.unreadCount,
       })),
+      (value) => this.count(value),
     );
   });
 
@@ -165,7 +170,28 @@ export class AboutSectionComponent implements OnInit {
         : [];
     });
 
-    return this.toBars(ranked);
+    return this.toBars(ranked, (value) => this.count(value));
+  });
+
+  readonly topArrivalFeeds = computed<FeedBar[]>(() => {
+    const activity = this.activity();
+    if (activity === null) {
+      return [];
+    }
+    const byId = new Map(
+      this.subscriptions.subscriptions().map((subscription) => [subscription.id, subscription]),
+    );
+
+    // Ranked by the backend; a subscription the store no longer holds has nothing to link to.
+    const ranked = activity.topFeedsByArrivals.flatMap((rate) => {
+      const subscription = byId.get(rate.subscriptionId);
+
+      return subscription
+        ? [{ subscriptionId: subscription.id, title: subscription.title, value: rate.dailyAverage }]
+        : [];
+    });
+
+    return this.toBars(ranked, (value) => this.oneDecimal(value));
   });
 
   readonly rows = computed<VersionRow[]>(() => [
@@ -204,7 +230,13 @@ export class AboutSectionComponent implements OnInit {
         next: (activity) => this.activity.set(activity),
         // A snapshot, not a control: a failed fetch shows the empty states.
         error: () =>
-          this.activity.set({ days: [], total: 0, arrivedDailyAverage: null, topFeedsByRead: [] }),
+          this.activity.set({
+            days: [],
+            total: 0,
+            arrivedDailyAverage: null,
+            topFeedsByRead: [],
+            topFeedsByArrivals: [],
+          }),
       });
   }
 
@@ -214,13 +246,22 @@ export class AboutSectionComponent implements OnInit {
 
   /** Scales a ranked list to bar widths against its own busiest entry, so the
    *  leading feed fills the track and the rest read relative to it. */
-  private toBars(ranked: { subscriptionId: number; title: string; value: number }[]): FeedBar[] {
+  private toBars(ranked: RankedFeed[], show: (value: number) => string): FeedBar[] {
     const busiest = ranked[0]?.value ?? 1;
 
     return ranked.map((entry) => ({
-      ...entry,
+      subscriptionId: entry.subscriptionId,
+      title: entry.title,
+      shownValue: show(entry.value),
       widthPercent: Math.round((entry.value / busiest) * 100),
     }));
+  }
+
+  private oneDecimal(value: number): string {
+    return new Intl.NumberFormat(this.language.lang(), {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(value);
   }
 
   private count(value: number): string {

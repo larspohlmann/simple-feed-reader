@@ -158,7 +158,13 @@ describe('SettingsApi', () => {
     const testRequest = ctrl.expectOne('https://api.test/api/reading/activity');
     expect(testRequest.request.method).toBe('GET');
     expect(testRequest.request.params.keys()).toEqual([]);
-    testRequest.flush({ days: [], total: 0, arrivedDailyAverage: null, topFeedsByRead: [] });
+    testRequest.flush({
+      days: [],
+      total: 0,
+      arrivedDailyAverage: null,
+      topFeedsByRead: [],
+      topFeedsByArrivals: [],
+    });
   });
 
   it('GETs the debug log', () => {
