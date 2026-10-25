@@ -29,6 +29,7 @@ use App\Service\Social\Model\SocialImportModel;
 use App\Service\Social\SocialImporter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
@@ -256,6 +257,33 @@ final class SocialImporterTest extends DbTestCase
         self::assertSame(1, $result->imported);
         self::assertSame(0, $result->skippedOverLimit);
         self::assertSame(1, $result->removed);
+    }
+
+    public function testTheTagLockIsTakenBeforeTheImportWritesAnything(): void
+    {
+        $this->skipWithoutRowLocks();
+        $goneId = $this->subscribedId($this->user, 'https://bsky.app/profile/did:plc:gone/rss');
+        $account = $this->storedAccount(SocialAccounts::blueskyOf($this->user));
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->importer()->import($account, new SocialImportModel([
+            new SocialImportFeedModel('did:plc:bob', 'Bob'),
+        ], [$goneId]));
+
+        $statements = $recorder->queries();
+        $firstLock = array_find_key(
+            $statements,
+            static fn (string $sql): bool => str_contains(strtolower($sql), 'for update'),
+        );
+        $firstWrite = array_find_key(
+            $statements,
+            static fn (string $sql): bool => 1 === preg_match('/^\s*(insert|update|delete)\b/i', $sql),
+        );
+        self::assertNotNull($firstLock);
+        self::assertNotNull($firstWrite);
+        self::assertLessThan($firstWrite, $firstLock, 'the user row is locked before the import writes');
     }
 
     public function testChosenCollectionsBecomePrivateFeedsCountedAsImported(): void

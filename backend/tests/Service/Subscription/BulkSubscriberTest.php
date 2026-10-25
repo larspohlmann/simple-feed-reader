@@ -15,7 +15,6 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\TagJoins;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 
@@ -52,9 +51,7 @@ final class BulkSubscriberTest extends DbTestCase
 
     public function testABatchHoldsTheTagStructureLock(): void
     {
-        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
-        }
+        $this->skipWithoutRowLocks();
         $user = $this->user('batch-locks@example.com');
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);
@@ -343,6 +340,43 @@ final class BulkSubscriberTest extends DbTestCase
             'one lookup for Tech, found as the first item\'s tag, and one for the new Web; Tech as Web\'s parent '
             . 'is answered by the batch',
         );
+    }
+
+    public function testNamesThatDifferOnlyByAnAccentAreTwoTags(): void
+    {
+        $user = $this->user('accent-twins@example.com');
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://cafe-accented.example.com/rss.xml', 'Accented', ['Café']),
+            new BulkSubscribeItemModel('https://cafe-plain.example.com/rss.xml', 'Plain', ['Cafe']),
+        ]);
+
+        self::assertSame(['Café', 'Cafe'], $this->namesOf($result->tagsCreated));
+    }
+
+    public function testNamesThatDifferOnlyByATrailingSpaceAreTwoTags(): void
+    {
+        $user = $this->user('space-twins@example.com');
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://tech-plain.example.com/rss.xml', 'Plain', ['Tech']),
+            new BulkSubscribeItemModel('https://tech-spaced.example.com/rss.xml', 'Spaced', ['Tech ']),
+        ]);
+
+        self::assertSame(['Tech', 'Tech '], $this->namesOf($result->tagsCreated));
+    }
+
+    public function testAStoredTagIsNotMatchedByItsNameWithoutTheAccent(): void
+    {
+        $user = $this->user('accent-stored@example.com');
+        $this->entityManager->persist(new Tag($user, 'Café'));
+        $this->entityManager->flush();
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://cafe-later.example.com/rss.xml', 'Later', ['Cafe']),
+        ]);
+
+        self::assertSame(['Cafe'], $this->namesOf($result->tagsCreated));
     }
 
     public function testAThreeLevelPathNestsEachTagUnderTheNext(): void

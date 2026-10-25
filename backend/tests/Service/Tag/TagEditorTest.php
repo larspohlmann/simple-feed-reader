@@ -24,6 +24,28 @@ final class TagEditorTest extends DbTestCase
     use ReloadsEntities;
     use SeedsUsers;
 
+    public function testCreateAcceptsANameThatDiffersOnlyByAnAccent(): void
+    {
+        $user = $this->user('tag-accent@example.com');
+        $this->editor()->create($user, new TagDetailsModel('Bar'));
+
+        $tag = $this->editor()->create($user, new TagDetailsModel('Bär'));
+
+        self::assertSame('Bär', $tag->getName());
+    }
+
+    public function testCreateRefusesANonAsciiNameTheUserHasInAnotherCase(): void
+    {
+        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+            self::markTestSkipped('SQLite LOWER() folds ASCII only.');
+        }
+        $user = $this->user('tag-umlaut-case@example.com');
+        $this->editor()->create($user, new TagDetailsModel('Ärger'));
+
+        $this->expectException(TagNameTakenException::class);
+        $this->editor()->create($user, new TagDetailsModel('ÄRGER'));
+    }
+
     public function testCreateAppendsTheTagAfterTheUsersExistingOnes(): void
     {
         $user = $this->user('tag-creator@example.com');
@@ -184,9 +206,7 @@ final class TagEditorTest extends DbTestCase
 
     public function testCreateUpdateAndDeleteEachHoldTheTagStructureLock(): void
     {
-        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
-        }
+        $this->skipWithoutRowLocks();
         $user = $this->user('tag-editor-locks@example.com');
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);

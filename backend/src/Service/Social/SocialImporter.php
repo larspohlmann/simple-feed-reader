@@ -22,6 +22,7 @@ use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
 use App\Service\Subscription\OwnedSubscriptions;
 use App\Service\Subscription\SubscriptionService;
+use App\Service\Tag\TagStructureLock;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SocialImporter
@@ -34,6 +35,7 @@ final readonly class SocialImporter
         private PrivateFeeds $privateFeeds,
         private ImportedProfilePictures $importedPictures,
         private HiddenImportFollows $hiddenFollows,
+        private TagStructureLock $tagStructureLock,
     ) {
     }
 
@@ -51,7 +53,8 @@ final readonly class SocialImporter
         $toRemove = $this->ownedSubscriptions->resolve($account->getUser()->requireId(), $import->unsubscribe);
 
         // Removals first, so the slots they free count toward the subscription cap.
-        return $this->entityManager->wrapInTransaction(
+        return $this->tagStructureLock->hold(
+            $account->getUser(),
             function () use ($account, $items, $privateFeeds, $toRemove): SocialImportResultModel {
                 $removed = $this->subscriptionService->unsubscribeAll(array_values($toRemove));
                 $subscribed = $this->bulkSubscriber->subscribeAll($account->getUser(), $items);
@@ -59,12 +62,14 @@ final readonly class SocialImporter
                     $account,
                     array_map(static fn (BulkSubscribeItemModel $item): string => $item->feedUrl, $items),
                 );
-
-                return SocialImportResultModel::from(
+                $result = SocialImportResultModel::from(
                     $subscribed,
                     $this->addPrivateFeeds($account, $privateFeeds),
                     $removed,
                 );
+                $this->entityManager->flush();
+
+                return $result;
             },
         );
     }

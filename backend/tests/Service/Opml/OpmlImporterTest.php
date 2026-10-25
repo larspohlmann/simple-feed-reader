@@ -14,7 +14,6 @@ use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 final class OpmlImporterTest extends DbTestCase
 {
@@ -80,9 +79,7 @@ final class OpmlImporterTest extends DbTestCase
 
     public function testAnImportHoldsTheTagStructureLockWhileItNestsTags(): void
     {
-        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
-        }
+        $this->skipWithoutRowLocks();
         $user = $this->user('import-locks@example.com');
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);

@@ -10,7 +10,6 @@ use App\Repository\TagTreeRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 final class TagTreeRepositoryTest extends DbTestCase
 {
@@ -48,9 +47,7 @@ final class TagTreeRepositoryTest extends DbTestCase
 
     public function testLockTagsOfHoldsAWriteLockOnTheUsersRow(): void
     {
-        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
-        }
+        $this->skipWithoutRowLocks();
         $owner = $this->user('tag-tree-lock@example.com');
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);
