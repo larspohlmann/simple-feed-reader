@@ -40,6 +40,28 @@ describe('addChapterList', () => {
     ]);
   });
 
+  it('starts collapsed and opens from its toggle', () => {
+    const host = document.createElement('div');
+    addChapterList(
+      { host, after: null },
+      { chapters: CHAPTERS, heading: 'Chapters' },
+      fakePlayer(),
+    );
+    const toggle = host.querySelector<HTMLButtonElement>('.reader-chapters__toggle');
+    const list = host.querySelector<HTMLElement>('.reader-chapters__list');
+
+    expect(toggle?.textContent).toContain('Chapters');
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(list?.hidden).toBe(true);
+
+    toggle?.click();
+    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+    expect(list?.hidden).toBe(false);
+
+    toggle?.click();
+    expect(list?.hidden).toBe(true);
+  });
+
   it('goes first when there is nothing to follow', () => {
     const host = document.createElement('div');
     host.innerHTML = '<p>Notes</p>';

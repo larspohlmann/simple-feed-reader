@@ -17,8 +17,8 @@ export interface ChapterListPlace {
 }
 
 /**
- * A chapter list whose rows start `player` at their chapter and follow its position; it replaces
- * any earlier list in `host` (#1808).
+ * A collapsed chapter list whose rows start `player` at their chapter and follow its position; it
+ * replaces any earlier list in `host` (#1808).
  */
 export function addChapterList(
   { host, after }: ChapterListPlace,
@@ -48,15 +48,39 @@ export function addChapterList(
   list.setAttribute('aria-label', heading);
   const items = document.createElement('ol');
   items.className = `${LIST}__list`;
+  items.hidden = true;
   for (const row of rows) {
     const item = document.createElement('li');
     item.append(row);
     items.append(item);
   }
-  list.append(items);
+  list.append(toggle(items, heading), items);
   if (after) after.after(list);
   else host.prepend(list);
   return list;
+}
+
+function toggle(items: HTMLElement, heading: string): HTMLButtonElement {
+  const icon = document.createElement('span');
+  icon.className = 'material-symbols-outlined';
+  icon.setAttribute('aria-hidden', 'true');
+  const label = document.createElement('span');
+  label.textContent = heading;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `${LIST}__toggle`;
+  button.append(icon, label);
+
+  const render = (): void => {
+    button.setAttribute('aria-expanded', String(!items.hidden));
+    icon.textContent = items.hidden ? 'chevron_right' : 'expand_more';
+  };
+  button.addEventListener('click', () => {
+    items.hidden = !items.hidden;
+    render();
+  });
+  render();
+  return button;
 }
 
 function chapterRow(chapter: ChapterDto): HTMLButtonElement {

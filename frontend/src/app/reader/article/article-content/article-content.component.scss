@@ -446,10 +446,28 @@
   border-radius: var(--radius);
 }
 
+:host ::ng-deep .reader-chapters__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+:host ::ng-deep .reader-chapters__toggle .material-symbols-outlined {
+  font-size: var(--icon-md);
+}
+
 :host ::ng-deep .reader-chapters__list {
   list-style: none;
   margin: 0;
-  padding: var(--space-1) 0;
+  padding: 0 0 var(--space-1);
 }
 
 :host ::ng-deep .reader-chapters__row {

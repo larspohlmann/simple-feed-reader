@@ -77,6 +77,8 @@ test('a video lists its chapters under an API-enabled player', async ({ page }) 
 
   const article = page.locator('app-article-content');
   await expect(article.locator('iframe')).toHaveAttribute('src', /\?enablejsapi=1&origin=/);
+  await expect(article.locator('.reader-chapters__list')).toBeHidden();
+  await article.getByRole('button', { name: 'Chapters', exact: true }).click();
   await expect(article.locator('.reader-chapters__row')).toHaveText([
     '0:00Opening',
     '0:20Middle',
@@ -94,6 +96,10 @@ test('a video lists its chapters under an API-enabled player', async ({ page }) 
 test('an episode starts at a tapped chapter and the list follows it', async ({ page }) => {
   await page.locator('app-entry-list').getByText('An episode', { exact: true }).click();
 
+  await page
+    .locator('app-article-content')
+    .getByRole('button', { name: 'Chapters', exact: true })
+    .click();
   const rows = page.locator('app-article-content .reader-chapters__row');
   await expect(rows).toHaveCount(3);
   await rows.nth(1).click();
