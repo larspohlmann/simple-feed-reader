@@ -4,16 +4,26 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
+use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\SubscriptionDay;
+use App\Entity\User;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
+use App\Repository\SubscriptionActivityRepository;
+use App\Repository\SubscriptionDayRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshHousekeeping;
 use App\Service\Retention\EntryPruner;
 use App\Service\Retention\RetentionSettings;
 use App\Service\Search\EntryIndexer;
+use App\Service\SubscriptionHistory\LiveDayCounter;
+use App\Service\SubscriptionHistory\RetentionHorizon;
+use App\Service\SubscriptionHistory\SubscriptionHistoryRecorder;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\RecordingLogger;
@@ -63,15 +73,60 @@ final class RefreshHousekeepingTest extends DbTestCase
         self::assertSame([], $this->logger->records);
     }
 
+    public function testAPruningRequestRecordsTheDayBeforeTheCapPassPrunesIt(): void
+    {
+        $user = new User('cap@example.com', new \DateTimeImmutable('2026-01-01 00:00:00'));
+        $feed = new Feed('https://cap.example.com/rss');
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-15 00:00:00'));
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist($subscription);
+        for ($index = 0; $index < 25; ++$index) {
+            $created = new \DateTimeImmutable(sprintf('2026-07-20 10:%02d:00', $index));
+            $this->entityManager->persist(new Entry($feed, 'cap-' . $index, null, 'cap-' . $index, $created, $created));
+        }
+        $this->entityManager->flush();
+
+        $pruned = $this->housekeeping()->pruneEntries(RefreshRequestModel::allDue(30));
+
+        self::assertSame(5, $pruned);
+        $repository = $this->entityManager->getRepository(SubscriptionDay::class);
+        self::assertInstanceOf(SubscriptionDayRepository::class, $repository);
+        $subscriptionId = $subscription->requireId();
+        self::assertSame(25, $repository->since([$subscriptionId], '2026-07-20')->of($subscriptionId, '2026-07-20')->arrived);
+    }
+
+    public function testAUserRequestRecordsNothing(): void
+    {
+        self::assertSame(0, $this->housekeeping()->pruneEntries(RefreshRequestModel::forUser(1, 30)));
+        self::assertSame([], $this->entityManager->getRepository(SubscriptionDay::class)->findAll());
+    }
+
     private function housekeeping(): RefreshHousekeeping
     {
+        $settings = self::getContainer()->get(RetentionSettings::class);
+        self::assertInstanceOf(RetentionSettings::class, $settings);
+        $clock = new MockClock('2026-07-21 12:00:00', 'UTC');
+        $activity = new SubscriptionActivityRepository($this->entityManager);
+        $storedDays = $this->entityManager->getRepository(SubscriptionDay::class);
+        self::assertInstanceOf(SubscriptionDayRepository::class, $storedDays);
+
         return new RefreshHousekeeping(
             new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
             new EntryPruner(
                 new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
-                self::getContainer()->get(RetentionSettings::class),
-                new MockClock('2026-07-21 12:00:00', 'UTC'),
+                $settings,
+                $clock,
                 new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
+                20,
+            ),
+            new SubscriptionHistoryRecorder(
+                $activity,
+                $storedDays,
+                new LiveDayCounter($activity),
+                new RetentionHorizon($settings),
+                new NaiveUtcClock($clock),
+                $this->entityManager,
             ),
             $this->logger,
         );

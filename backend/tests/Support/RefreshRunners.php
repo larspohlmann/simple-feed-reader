@@ -6,10 +6,14 @@ namespace App\Tests\Support;
 
 use App\Entity\Feed;
 use App\Entity\RetentionSetting;
+use App\Entity\SubscriptionDay;
 use App\Repository\FeedRepository;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
+use App\Repository\SubscriptionActivityRepository;
+use App\Repository\SubscriptionDayRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
@@ -28,6 +32,9 @@ use App\Service\Retention\EntryPruner;
 use App\Service\Retention\RetentionSettings;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Search\EntryIndexer;
+use App\Service\SubscriptionHistory\LiveDayCounter;
+use App\Service\SubscriptionHistory\RetentionHorizon;
+use App\Service\SubscriptionHistory\SubscriptionHistoryRecorder;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -177,12 +184,33 @@ final readonly class RefreshRunners
                     $this->clock,
                     $indexer,
                 ),
+                $this->historyRecorder(),
                 new NullLogger(),
             ),
             $this->lockFactory,
             $this->clock,
             $this->logger,
             $this->changeMarker,
+        );
+    }
+
+    private function historyRecorder(): SubscriptionHistoryRecorder
+    {
+        $settings = new RetentionSettings(
+            $this->entityManager->getRepository(RetentionSetting::class),
+            $this->entityManager,
+        );
+        $activity = new SubscriptionActivityRepository($this->entityManager);
+        /** @var SubscriptionDayRepository $storedDays */
+        $storedDays = $this->entityManager->getRepository(SubscriptionDay::class);
+
+        return new SubscriptionHistoryRecorder(
+            $activity,
+            $storedDays,
+            new LiveDayCounter($activity),
+            new RetentionHorizon($settings),
+            new NaiveUtcClock($this->clock),
+            $this->entityManager,
         );
     }
 
