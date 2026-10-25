@@ -31,11 +31,6 @@ final readonly class EntryAliases
         return $this->subscription . '.id';
     }
 
-    public function tagKey(): string
-    {
-        return \sprintf('IDENTITY(%s.tag)', $this->tag);
-    }
-
     public function networkKey(): string
     {
         return $this->networkFeed . '.network';

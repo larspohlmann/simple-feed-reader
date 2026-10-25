@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
+use App\Entity\Tag;
 use App\Enum\FeedGroup;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -30,12 +31,15 @@ final readonly class UnreadCountRepository
     }
 
     /**
-     * @return array<int, int> tag id => unread entries, a parent's spanning its children's feeds; a tag with
+     * @return array<int, int> tag id => unread entries across the tag and every tag below it; a tag with
      *                         none is absent
      */
     public function perTag(int $userId): array
     {
-        return $this->perChildTag($userId) + $this->perRootTag($userId);
+        $qb = $this->taggedUnreadEntries($userId)
+            ->innerJoin(Tag::class, 'scopeTag', 'WITH', TagLineageDql::reaches('lineage', 'scopeTag.id'));
+
+        return $this->countsByIntegerKey($this->countedDistinctBy($qb, 'scopeTag.id'));
     }
 
     /** @return array<string, int> network => unread entries; a network with none is absent */
@@ -88,29 +92,15 @@ final readonly class UnreadCountRepository
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
-    /** @return array<int, int> */
-    private function perChildTag(int $userId): array
-    {
-        $qb = $this->taggedUnreadEntries($userId)->andWhere('t.parent IS NOT NULL');
-
-        return $this->countsByIntegerKey($this->countedBy($qb, EntryAliases::primary()->tagKey()));
-    }
-
-    /** @return array<int, int> */
-    private function perRootTag(int $userId): array
-    {
-        $qb = $this->taggedUnreadEntries($userId)->leftJoin('t.parent', 'p');
-
-        return $this->countsByIntegerKey($this->countedDistinctBy($qb, 'COALESCE(p.id, t.id)'));
-    }
-
     private function taggedUnreadEntries(int $userId): QueryBuilder
     {
         $aliases = EntryAliases::primary();
         $qb = $this->unreadEntries($userId);
         $this->scope->joinTags($qb, $aliases);
+        $qb->innerJoin($aliases->tag . '.tag', TagLineageDql::alias('lineage', 0));
+        TagLineageDql::joinAncestors($qb, 'lineage');
 
-        return $qb->innerJoin($aliases->tag . '.tag', 't');
+        return $qb;
     }
 
     private function networkEntries(int $userId, EntryAliases $aliases): QueryBuilder
@@ -139,7 +129,7 @@ final readonly class UnreadCountRepository
         return $qb->select($scopeKey . ' AS scopeKey', 'COUNT(e.id) AS unreadCount')->groupBy('scopeKey');
     }
 
-    /** A feed carrying a parent and its child yields two rows per entry; DISTINCT folds them. */
+    /** A feed carrying a tag and one below it yields a row per carried tag; DISTINCT folds them. */
     private function countedDistinctBy(QueryBuilder $qb, string $scopeKey): QueryBuilder
     {
         return $qb->select($scopeKey . ' AS scopeKey', 'COUNT(DISTINCT e.id) AS unreadCount')->groupBy('scopeKey');

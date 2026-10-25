@@ -137,4 +137,35 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
 
         return $feed;
     }
+
+    public function testATopScopeRefreshesItsGrandchildsFeed(): void
+    {
+        /** @var UserPasswordHasherInterface $hasher */
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        $owner = (new UserFactory($this->entityManager, $hasher))->create('owner@example.com');
+        $reading = new Tag($owner, 'reading');
+        $this->entityManager->persist($reading);
+        $longReads = new Tag($owner, 'long reads');
+        $longReads->setParent($reading);
+        $this->entityManager->persist($longReads);
+        $essays = new Tag($owner, 'essays');
+        $essays->setParent($longReads);
+        $this->entityManager->persist($essays);
+        $essayFeed = $this->taggedFeed($owner, 'https://example.com/essay.xml', $essays);
+        $this->entityManager->flush();
+
+        $repository = $this->entityManager->getRepository(Feed::class);
+        self::assertInstanceOf(FeedRepository::class, $repository);
+        $scope = new DueFeedCriteria(
+            new \DateTimeImmutable('2026-06-01T00:00:00Z'),
+            $owner->requireId(),
+            tagId: $reading->requireId(),
+            force: true,
+        );
+
+        self::assertSame(
+            [$essayFeed->getId()],
+            array_map(static fn (Feed $feed): ?int => $feed->getId(), $repository->findDue($scope, 50)),
+        );
+    }
 }
