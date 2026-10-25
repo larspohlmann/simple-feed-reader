@@ -8,6 +8,14 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta name="description" content="A self-hosted RSS/Atom reader for you alone or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.">
+<script>
+(function () {
+  try {
+    var choice = localStorage.getItem('sfr.homepage.theme');
+    if (choice === 'light' || choice === 'dark') document.documentElement.setAttribute('data-theme', choice);
+  } catch (error) {}
+})();
+</script>
 <style>
 :root{
   --surface-0:#f5f5f4;--surface-1:#fff;--surface-2:#fff;--surface-sunken:#f2f2f0;
@@ -19,12 +27,18 @@
   --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --measure:1120px;
 }
-@media (prefers-color-scheme:dark){:root{
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --surface-0:#161616;--surface-1:#1c1c1c;--surface-2:#242424;--surface-sunken:#171717;
   --border:#2a2a2a;--border-strong:#383836;
   --text-primary:#c2c2c0;--text-secondary:#9a9a97;--text-muted:#6a6a67;
   --accent:#5aa694;--accent-soft:#20302c;--on-accent:#0f1a17;
 }}
+:root[data-theme="dark"]{
+  --surface-0:#161616;--surface-1:#1c1c1c;--surface-2:#242424;--surface-sunken:#171717;
+  --border:#2a2a2a;--border-strong:#383836;
+  --text-primary:#c2c2c0;--text-secondary:#9a9a97;--text-muted:#6a6a67;
+  --accent:#5aa694;--accent-soft:#20302c;--on-accent:#0f1a17;
+}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;font-family:var(--font);font-size:15px;line-height:1.5;color:var(--text-primary);background:var(--surface-0);overflow-wrap:anywhere}
@@ -48,6 +62,13 @@ p{margin:0}
 .btn:hover{text-decoration:none;border-color:var(--accent)}
 .btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .btn.sm{height:32px;padding:0 var(--space-3);font-size:13px}
+.theme-switch{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--border-strong);background:var(--surface-1);color:var(--text-secondary);cursor:pointer;padding:0}
+.theme-switch:hover{border-color:var(--accent);color:var(--accent)}
+.theme-switch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.theme-switch svg{width:18px;height:18px}
+.theme-switch .sun{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .theme-switch .sun{display:block}:root:not([data-theme="light"]) .theme-switch .moon{display:none}}
+:root[data-theme="dark"] .theme-switch .sun{display:block}:root[data-theme="dark"] .theme-switch .moon{display:none}
 
 /* hero */
 .hero{padding:var(--space-8) 0 var(--space-6)}
@@ -59,7 +80,9 @@ p{margin:0}
 .hero .meta{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4);margin-top:var(--space-5);font-size:13px;color:var(--text-muted)}
 .shot{border-radius:var(--radius-lg);border:1px solid var(--border);box-shadow:0 20px 50px -20px rgb(0 0 0/.35);overflow:hidden;background:var(--surface-1)}
 .shot img{width:100%}
-.dark-only{display:none}@media (prefers-color-scheme:dark){.dark-only{display:block}.light-only{display:none}}
+.dark-only{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dark-only{display:block}:root:not([data-theme="light"]) .light-only{display:none}}
+:root[data-theme="dark"] .dark-only{display:block}:root[data-theme="dark"] .light-only{display:none}
 
 /* sections */
 section{padding:var(--space-8) 0}
@@ -116,6 +139,7 @@ footer .copy{margin-left:auto}
 }
 @media (max-width:560px){
   .nav nav{display:none}
+  .nav .theme-switch{margin-left:auto}
   .layouts,.grid,.pkgs{grid-template-columns:1fr}
   .phones{grid-template-columns:1fr 1fr}
   section{padding:var(--space-7) 0}
@@ -154,6 +178,10 @@ footer .copy{margin-left:auto}
       <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/docs/screenshots.md">Screenshots</a>
       <a href="https://github.com/larspohlmann/simple-feed-reader">GitHub</a>
     </nav>
+    <button class="theme-switch" type="button" aria-label="Switch to dark theme">
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
   </div>
 </header>
 
@@ -278,6 +306,21 @@ curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/mai
   <figure><img alt=""><figcaption></figcaption></figure>
 </dialog>
 <script>
+(() => {
+  const root = document.documentElement;
+  const systemDark = matchMedia('(prefers-color-scheme: dark)');
+  const isDark = () => root.dataset.theme === 'dark' || (!root.dataset.theme && systemDark.matches);
+  const button = document.querySelector('.theme-switch');
+  const label = () => { button.setAttribute('aria-label', isDark() ? 'Switch to light theme' : 'Switch to dark theme'); };
+  button.addEventListener('click', () => {
+    const next = isDark() ? 'light' : 'dark';
+    root.dataset.theme = next;
+    try { localStorage.setItem('sfr.homepage.theme', next); } catch (error) {}
+    label();
+  });
+  systemDark.addEventListener('change', label);
+  label();
+})();
 (() => {
   const lightbox = document.querySelector('.lightbox');
   if (!lightbox || typeof lightbox.showModal !== 'function') return;
