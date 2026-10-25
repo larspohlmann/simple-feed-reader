@@ -17,6 +17,7 @@ final readonly class ParsedMediaBundleModel
     public function __construct(
         public array $media = [],
         public array $attachments = [],
+        public ParsedChaptersModel $chapters = new ParsedChaptersModel(),
     ) {
     }
 

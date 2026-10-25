@@ -6,6 +6,7 @@ namespace App\Service\Ingest\Factory;
 
 use App\Entity\Entry;
 use App\Entity\EntryAuthor;
+use App\Entity\EntryChapters;
 use App\Entity\Feed;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\Model\IncomingEntryModel;
@@ -54,6 +55,7 @@ final readonly class IngestedEntryFactory
         $entry->setDiscussion($parsed->discussion);
         $this->imageWriter->writeOrMarkNone($entry, $parsed->media->image);
         self::attachMedia($entry, $parsed);
+        self::declareChapters($entry, $parsed);
 
         return $entry;
     }
@@ -68,5 +70,14 @@ final readonly class IngestedEntryFactory
         $bundle = $parsed->media->mediaBundle ?? new ParsedMediaBundleModel();
         $assembled = EntryMediaAssembler::assemble($parsed->media->image, $bundle->media, $bundle->attachments);
         $entry->setMedia($assembled->media, $assembled->attachments);
+    }
+
+    private static function declareChapters(Entry $entry, ParsedEntryModel $parsed): void
+    {
+        $chapters = ($parsed->media->mediaBundle ?? new ParsedMediaBundleModel())->chapters;
+        $entry->declareChapters(
+            $chapters->chapters,
+            AbsoluteHttpUrl::orNullWithin($chapters->url, EntryChapters::URL_MAX_LENGTH),
+        );
     }
 }

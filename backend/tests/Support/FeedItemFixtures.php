@@ -39,7 +39,9 @@ trait FeedItemFixtures
     private static function extensionNamespaces(): string
     {
         return ' xmlns:media="' . FeedNamespace::MediaRss->value . '"'
-            . ' xmlns:itunes="' . FeedNamespace::Itunes->value . '"';
+            . ' xmlns:itunes="' . FeedNamespace::Itunes->value . '"'
+            . ' xmlns:psc="' . FeedNamespace::PodloveSimpleChapters->value . '"'
+            . ' xmlns:podcast="' . FeedNamespace::Podcast->value . '"';
     }
 
     private static function onlyElement(string $xml, string $localName): CoreElement
