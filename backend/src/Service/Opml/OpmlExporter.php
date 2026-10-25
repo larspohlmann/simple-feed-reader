@@ -12,7 +12,7 @@ use App\Service\Social\Model\ExportedSubscriptionModel;
 use App\Service\Social\Support\ExportedFeed;
 
 /**
- * Serialises a user's subscriptions to OPML 2.0, grouped by tag, a child tag nested in its
+ * Serialises a user's subscriptions to OPML 2.0, grouped by tag, each tag nested in its
  * parent. A feed with several tags appears under each group (OPML is a tree); untagged feeds sit at
  * the body root. DOMDocument handles all escaping.
  */

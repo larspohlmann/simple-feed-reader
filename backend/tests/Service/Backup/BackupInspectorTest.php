@@ -267,7 +267,7 @@ final class BackupInspectorTest extends TestCase
         self::inspector()->inspect($gzip);
     }
 
-    public function testAParentThatHasAParentItselfIsRefusedByName(): void
+    public function testAGrandchildTagIsAccepted(): void
     {
         $gzip = self::gzipOf([
             self::foundationHeader(), self::account(),
@@ -275,8 +275,20 @@ final class BackupInspectorTest extends TestCase
             self::footer(['tag' => 3]),
         ]);
 
+        self::assertSame(3, self::inspector()->inspect($gzip)->tags);
+    }
+
+    public function testATagNestedPastTheLimitIsRefusedByName(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(), self::account(),
+            self::tag('Reading'), self::tag('Long reads', 'Reading'), self::tag('Essays', 'Long reads'),
+            self::tag('Short essays', 'Essays'),
+            self::footer(['tag' => 4]),
+        ]);
+
         $this->expectException(InvalidBackupException::class);
-        $this->expectExceptionMessage('The backup names parent tag "Long reads", which has a parent itself.');
+        $this->expectExceptionMessage('The backup nests tag "Short essays" more than 2 levels below the top.');
 
         self::inspector()->inspect($gzip);
     }

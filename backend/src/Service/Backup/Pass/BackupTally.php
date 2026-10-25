@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Pass;
 
+use App\Entity\Tag;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SavedSearchLine;
@@ -22,11 +23,8 @@ final class BackupTally
 {
     private ?BackupHeader $header = null;
 
-    /** @var array<string, true> declared tag names, as a set */
-    private array $tagNames = [];
-
-    /** @var array<string, string> each declared child tag's parent, by the child's name */
-    private array $parentsByChildName = [];
+    /** @var array<string, int> each declared tag's depth below the top, by name */
+    private array $tagDepths = [];
 
     /** @var array<string, true> declared feed urls, as a set */
     private array $feedUrls = [];
@@ -81,30 +79,27 @@ final class BackupTally
      */
     private function acceptTag(TagLine $line): void
     {
-        if (isset($this->tagNames[$line->name])) {
+        if (isset($this->tagDepths[$line->name])) {
             throw new InvalidBackupException(sprintf('The backup declares tag "%s" twice.', $line->name));
         }
 
-        if ($line->parent !== null) {
-            $this->acceptParent($line->parent);
-            $this->parentsByChildName[$line->name] = $line->parent;
-        }
-
-        $this->tagNames[$line->name] = true;
+        $this->tagDepths[$line->name] = $line->parent === null ? 0 : $this->depthUnder($line->parent, $line->name);
         ++$this->counts['tags'];
     }
 
-    private function acceptParent(string $parent): void
+    private function depthUnder(string $parent, string $child): int
     {
-        if (!isset($this->tagNames[$parent])) {
+        if (!isset($this->tagDepths[$parent])) {
             throw new InvalidBackupException(sprintf('The backup names parent tag "%s" before declaring it.', $parent));
         }
-
-        if (isset($this->parentsByChildName[$parent])) {
+        $depth = $this->tagDepths[$parent] + 1;
+        if ($depth > Tag::MAX_DEPTH) {
             throw new InvalidBackupException(
-                sprintf('The backup names parent tag "%s", which has a parent itself.', $parent),
+                sprintf('The backup nests tag "%s" more than %d levels below the top.', $child, Tag::MAX_DEPTH),
             );
         }
+
+        return $depth;
     }
 
     /**
@@ -142,7 +137,7 @@ final class BackupTally
         }
 
         foreach ($line->tags as $tagReference) {
-            if (!isset($this->tagNames[$tagReference->name])) {
+            if (!isset($this->tagDepths[$tagReference->name])) {
                 throw new InvalidBackupException(sprintf(
                     'A subscription names tag "%s", which the backup never declares.',
                     $tagReference->name,

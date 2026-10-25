@@ -105,6 +105,25 @@ final class OpmlExporterTest extends DbTestCase
         self::assertStringContainsString('xmlUrl="https://tagged.example.com/feed.xml"', $xml);
     }
 
+    public function testAGrandchildTagNestsTwoOutlinesDeepThoughItsAncestorsHaveNoFeeds(): void
+    {
+        $user = new User('opml-grandchild@example.com', new \DateTimeImmutable('2026-10-25T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $reading = $this->tagAt($user, 'Reading', 0);
+        $longReads = $this->tagAt($user, 'Long reads', 1, $reading);
+        $essays = $this->tagAt($user, 'Essays', 2, $longReads);
+        $this->taggedSubscription($user, 'https://essay.example.com/feed.xml', $essays);
+        $this->entityManager->flush();
+
+        self::assertMatchesRegularExpression(
+            '#<outline text="Reading" title="Reading">\s*'
+            . '<outline text="Long reads" title="Long reads">\s*'
+            . '<outline text="Essays" title="Essays">\s*'
+            . '<outline type="rss" text="[^"]*" title="[^"]*" xmlUrl="https://essay.example.com/feed.xml"/>#',
+            $this->exporter()->export($user),
+        );
+    }
+
     private function tagAt(User $user, string $name, int $position, ?Tag $parent = null): Tag
     {
         $tag = new Tag($user, $name);
