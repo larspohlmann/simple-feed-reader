@@ -8,6 +8,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionScopeRepository;
 use App\Repository\TagRepository;
+use App\Repository\TagTreeRepository;
 use App\Service\Tag\Exception\InvalidTagParentException;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Factory\TagFactory;
@@ -19,6 +20,7 @@ final readonly class TagEditor
 {
     public function __construct(
         private TagRepository $tags,
+        private TagTreeRepository $tagTrees,
         private SubscriptionScopeRepository $subscriptionScope,
         private EntityManagerInterface $entityManager,
         private TagFactory $tagFactory,
@@ -26,6 +28,49 @@ final readonly class TagEditor
     }
 
     public function create(User $user, TagDetailsModel $details): Tag
+    {
+        return $this->inTransaction(fn (): Tag => $this->createInTransaction($user, $details));
+    }
+
+    public function update(Tag $tag, TagDetailsModel $details): void
+    {
+        $this->inTransaction(fn () => $this->updateInTransaction($tag, $details));
+    }
+
+    public function delete(Tag $tag): void
+    {
+        $this->liftChildren($tag);
+        $carriers = $this->subscriptionScope->findForUserByTagId($tag->getUser()->requireId(), $tag->requireId());
+        foreach ($carriers as $subscription) {
+            $subscription->removeTag($tag);
+        }
+        $this->entityManager->remove($tag);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @template T
+     *
+     * @param \Closure(): T $work
+     *
+     * @return T
+     */
+    private function inTransaction(\Closure $work): mixed
+    {
+        $this->entityManager->beginTransaction();
+        try {
+            $result = $work();
+            $this->entityManager->commit();
+        } catch (\Throwable $exception) {
+            $this->entityManager->rollback();
+
+            throw $exception;
+        }
+
+        return $result;
+    }
+
+    private function createInTransaction(User $user, TagDetailsModel $details): Tag
     {
         if ($this->tags->existsForUserAndName($user->requireId(), $details->name)) {
             throw new TagNameTakenException();
@@ -39,7 +84,7 @@ final readonly class TagEditor
         return $tag;
     }
 
-    public function update(Tag $tag, TagDetailsModel $details): void
+    private function updateInTransaction(Tag $tag, TagDetailsModel $details): void
     {
         if ($this->tags->existsForUserAndName($tag->getUser()->requireId(), $details->name, $tag->requireId())) {
             throw new TagNameTakenException();
@@ -49,17 +94,6 @@ final readonly class TagEditor
         $tag->setName($details->name);
         $tag->setColor($details->color);
         $tag->setIcon($details->icon);
-        $this->entityManager->flush();
-    }
-
-    public function delete(Tag $tag): void
-    {
-        $this->liftChildren($tag);
-        $carriers = $this->subscriptionScope->findForUserByTagId($tag->getUser()->requireId(), $tag->requireId());
-        foreach ($carriers as $subscription) {
-            $subscription->removeTag($tag);
-        }
-        $this->entityManager->remove($tag);
         $this->entityManager->flush();
     }
 
@@ -129,6 +163,6 @@ final readonly class TagEditor
 
     private function treeOf(User $user): TagTree
     {
-        return new TagTree($this->tags->findForUser($user->requireId()));
+        return new TagTree($this->tagTrees->lockParentIdsForUser($user->requireId()));
     }
 }

@@ -168,6 +168,59 @@ final class TagEditorTest extends DbTestCase
         $this->editor()->update($reading, new TagDetailsModel('Reading', parentId: $longReads->requireId()));
     }
 
+    public function testUpdateChecksTheCommittedTreeSoTwoCrossingMovesCannotLoop(): void
+    {
+        $user = $this->user('tag-move-crossing@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $tech = $this->editor()->create($user, new TagDetailsModel('Tech'));
+        $this->moveBehindTheEditor($reading, $tech);
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag cannot move under one of its own child tags.');
+        $this->editor()->update($tech, new TagDetailsModel('Tech', parentId: $reading->requireId()));
+    }
+
+    public function testAPlacementLeavesNoTransactionOpen(): void
+    {
+        $user = $this->user('tag-transaction-closed@example.com');
+        $connection = $this->entityManager->getConnection();
+        $level = $connection->getTransactionNestingLevel();
+
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $this->editor()->update($reading, new TagDetailsModel('Reading', parentId: null));
+
+        self::assertSame($level, $connection->getTransactionNestingLevel());
+    }
+
+    public function testARefusedPlacementRollsItsTransactionBack(): void
+    {
+        $user = $this->user('tag-transaction-rolled-back@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $connection = $this->entityManager->getConnection();
+        $level = $connection->getTransactionNestingLevel();
+
+        try {
+            $this->editor()->update($reading, new TagDetailsModel('Reading', parentId: $reading->requireId()));
+            self::fail('A tag cannot sit under itself.');
+        } catch (InvalidTagParentException) {
+            self::assertSame($level, $connection->getTransactionNestingLevel());
+        }
+    }
+
+    public function testCreateChecksTheCommittedTreeForDepth(): void
+    {
+        $user = $this->user('tag-create-crossing@example.com');
+        $reading = $this->editor()->create($user, new TagDetailsModel('Reading'));
+        $longReads = $this->editor()->create($user, new TagDetailsModel('Long reads'));
+        $tech = $this->editor()->create($user, new TagDetailsModel('Tech'));
+        $this->moveBehindTheEditor($longReads, $reading);
+        $this->moveBehindTheEditor($reading, $tech);
+
+        $this->expectException(InvalidTagParentException::class);
+        $this->expectExceptionMessage('A tag can sit at most 2 levels below the top.');
+        $this->editor()->create($user, new TagDetailsModel('Essays', parentId: $longReads->requireId()));
+    }
+
     public function testDeletingAMiddleTagMovesItsChildrenUpUnderItsParentAfterTheOthers(): void
     {
         $user = $this->user('tag-middle-deleter@example.com');
@@ -315,6 +368,16 @@ final class TagEditorTest extends DbTestCase
         self::assertInstanceOf(TagEditor::class, $editor);
 
         return $editor;
+    }
+
+    /** A concurrent request that committed: the row changes, the entities this request holds do not. */
+    private function moveBehindTheEditor(Tag $tag, Tag $parent): void
+    {
+        $this->entityManager->getConnection()->update(
+            'tag',
+            ['parent_id' => $parent->requireId()],
+            ['id' => $tag->requireId()],
+        );
     }
 
     private function taggedSubscription(User $user, Tag $tag): Subscription

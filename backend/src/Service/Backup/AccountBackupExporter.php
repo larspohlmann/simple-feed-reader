@@ -118,7 +118,7 @@ final readonly class AccountBackupExporter
      */
     private static function parentsFirst(array $tags): array
     {
-        $tree = new TagTree($tags);
+        $tree = TagTree::fromTags($tags);
         usort($tags, static fn (Tag $left, Tag $right): int => $tree->depthOf($left->requireId())
             <=> $tree->depthOf($right->requireId()));
 

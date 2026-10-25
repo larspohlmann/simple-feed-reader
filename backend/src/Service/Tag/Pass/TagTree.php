@@ -8,26 +8,30 @@ use App\Entity\Tag;
 
 final readonly class TagTree
 {
-    /** @var array<int, int|null> parent id by tag id */
-    private array $parentIds;
-
     /** @var array<int, list<int>> child ids by parent id */
     private array $childIds;
 
-    /** @param list<Tag> $tags */
-    public function __construct(array $tags)
+    /** @param array<int, int|null> $parentIds parent id by tag id */
+    public function __construct(private array $parentIds)
     {
-        $parentIds = [];
         $childIds = [];
-        foreach ($tags as $tag) {
-            $parentId = $tag->getParent()?->requireId();
-            $parentIds[$tag->requireId()] = $parentId;
+        foreach ($parentIds as $tagId => $parentId) {
             if ($parentId !== null) {
-                $childIds[$parentId][] = $tag->requireId();
+                $childIds[$parentId][] = $tagId;
             }
         }
-        $this->parentIds = $parentIds;
         $this->childIds = $childIds;
+    }
+
+    /** @param list<Tag> $tags */
+    public static function fromTags(array $tags): self
+    {
+        $parentIds = [];
+        foreach ($tags as $tag) {
+            $parentIds[$tag->requireId()] = $tag->getParent()?->requireId();
+        }
+
+        return new self($parentIds);
     }
 
     public function depthOf(int $tagId): int

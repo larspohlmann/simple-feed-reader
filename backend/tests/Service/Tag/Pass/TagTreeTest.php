@@ -17,7 +17,7 @@ final class TagTreeTest extends DbTestCase
     public function testARootSitsAtDepthZeroAndEachLevelBelowAddsOne(): void
     {
         [$reading, $longReads, $essays] = $this->chain($this->user('tag-tree-depth@example.com'));
-        $tree = new TagTree([$reading, $longReads, $essays]);
+        $tree = TagTree::fromTags([$reading, $longReads, $essays]);
 
         self::assertSame(0, $tree->depthOf($reading->requireId()));
         self::assertSame(1, $tree->depthOf($longReads->requireId()));
@@ -29,7 +29,7 @@ final class TagTreeTest extends DbTestCase
         $user = $this->user('tag-tree-height@example.com');
         [$reading, $longReads, $essays] = $this->chain($user);
         $shallow = $this->tag($user, 'shallow', $reading);
-        $tree = new TagTree([$reading, $longReads, $essays, $shallow]);
+        $tree = TagTree::fromTags([$reading, $longReads, $essays, $shallow]);
 
         self::assertSame(2, $tree->heightOf($reading->requireId()));
         self::assertSame(1, $tree->heightOf($longReads->requireId()));
@@ -41,7 +41,7 @@ final class TagTreeTest extends DbTestCase
         $user = $this->user('tag-tree-within@example.com');
         [$reading, $longReads, $essays] = $this->chain($user);
         $sibling = $this->tag($user, 'sibling', $reading);
-        $tree = new TagTree([$reading, $longReads, $essays, $sibling]);
+        $tree = TagTree::fromTags([$reading, $longReads, $essays, $sibling]);
 
         self::assertTrue($tree->isWithin($essays->requireId(), $essays->requireId()));
         self::assertTrue($tree->isWithin($essays->requireId(), $reading->requireId()));
