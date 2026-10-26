@@ -1,18 +1,25 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { toggled } from '../../../../core/toggled-set';
 import { IconComponent } from '../../../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../../../shared/icon-button/icon-button.directive';
 import { TOUCH_DRAG_START_DELAY } from '../../../../shared/touch-drag-delay';
 import { AudioPlayerService, AudioTrack } from '../../../audio-player.service';
 import { formatDuration } from '../../../format';
 import { AudioArtworkComponent } from '../audio-artwork/audio-artwork.component';
+import { AudioChaptersComponent } from '../audio-chapters/audio-chapters.component';
 
 interface PlaylistRow {
   track: AudioTrack;
   current: boolean;
   played: boolean;
   durationInSeconds: number | null;
+}
+
+/** The playing track's chapters open with the queue; the others wait for a tap. */
+function openedAtFirst(current: AudioTrack | null): ReadonlySet<string> {
+  return new Set(current?.chapters?.length ? [current.url] : []);
 }
 
 /**
@@ -25,6 +32,7 @@ interface PlaylistRow {
     IconComponent,
     IconButtonDirective,
     AudioArtworkComponent,
+    AudioChaptersComponent,
     TranslocoPipe,
     CdkDropList,
     CdkDrag,
@@ -51,7 +59,13 @@ export class AudioPlaylistComponent {
     }));
   });
 
+  protected readonly expanded = signal<ReadonlySet<string>>(openedAtFirst(this.player.current()));
+
   protected onDrop(event: CdkDragDrop<readonly AudioTrack[]>): void {
     this.player.move(event.previousIndex, event.currentIndex);
+  }
+
+  protected toggleChapters(url: string): void {
+    this.expanded.update((urls) => toggled(urls, url));
   }
 }

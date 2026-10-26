@@ -1479,6 +1479,61 @@ Used by: the magazine thread block, rows, the article.
 **Not for:** replies by other people. Those are the comments panel, threaded by
 indent ([§5](#5-magazine-blocks)).
 
+### `<app-scrubber>`
+
+The seek bar the mini player bar and the big player share (#1810): a native
+`<input type="range">` for keyboard and screen-reader seeking, the played and
+cached fill drawn on its track (accent, `--text-muted`, `--border`), and a
+decorative `aria-hidden` layer of chapter marks over it. A mark is a notch:
+`--space-0` wide, the bar's height, in `--surface-1`, so it reads as a gap in the
+bar whatever fills it. The first chapter's mark at 0 is omitted.
+
+| Input / output | Type |
+|---|---|
+| `position`, `duration`, `buffered` | `number` (required), seconds |
+| `chapters` | `readonly ChapterDto[]` (default `[]`) |
+| `(seek)` | `number`, the chosen second |
+| `(dragging)` | `boolean`, while the pointer holds the bar |
+
+It labels itself (`reader.audioPlayer.seek`). Its size is the host's to set
+through custom properties, with the mini bar's values as defaults:
+`--scrubber-bar` (track height, `--space-1`), `--scrubber-thumb` (`--space-3`;
+`0` for none), `--scrubber-tap` (input height, `--space-4`) and
+`--scrubber-surface` (the notch colour, `--surface-1`: the surface the bar lies
+on). The big player sets a `--space-2` bar, no thumb and a `--tap-target` input,
+and thickens the bar while dragging.
+
+```html
+<app-scrubber
+  [position]="player.position()"
+  [duration]="player.duration()"
+  [buffered]="player.buffered()"
+  [chapters]="player.chapters()"
+  (seek)="player.seek($event)"
+/>
+```
+
+Used by: the audio player bar, the big player.
+
+### `<app-audio-chapters>`
+
+The chapter rows of the article's list (#1808, #1814) as a component (#1810). It
+reads nothing from the player: `chapters` (required) and `playhead`
+(`ChapterPlayhead | null`: the chapter playback is in and its progress, from
+`AudioPlayerService.chapterPlayhead`) come in, a tapped row's index goes out as
+`(pick)`. The current row carries `aria-current="true"`, fills to
+`--chapter-progress` in `--accent-soft` and ends in its time left behind a
+`schedule` icon. The row rules live in `reader/chapters/_chapter-rows.scss`, a
+mixin the article's `article-chapters.scss` and this component both include, so
+the two lists cannot drift apart; the rows inherit their font size from the list's
+host and take their inline inset from `--chapter-row-inset` (`--space-3`), which
+the queue zeroes for its nested rows and sets to `--fs-xs`.
+
+Used by: the big player's chapter list, the queue's expanded rows.
+
+**Not for:** the article body. Its list is decorated into the article's HTML
+by `decorators/reader-chapters.ts`, which drives a `ChapterPlayer`.
+
 ---
 
 ## 3. Conventions
@@ -1689,6 +1744,29 @@ The CDK's structural overlay CSS is imported by `src/styles.scss`, not by
 `angular.json`, so every build configuration gets it. Without it a dialog renders
 as a plain block appended after the 100vh reader shell — a full viewport below
 the fold (#85).
+
+### Audio player chapters (#1810)
+
+Chapters are view-less data on the track (`AudioTrack.chapters`), saved and
+restored with the playlist; every surface reads the current one from
+`AudioPlayerService`. Where they show:
+
+- **Mini bar:** the title line leads with the chapter, the track title after a
+  middle dot in `--text-muted`. Chevron buttons flank the transport while the
+  track has chapters; previous/next stay track steps, as they do on the lock
+  screen. Below `bp.$bp-sm` the bar is a grid of three rows beside the artwork
+  (`--space-7 + --space-5` square): title with the playlist and close buttons,
+  the full transport, the scrubber.
+- **Big player:** a chapter strip under the transport (previous chapter, the
+  current title over "Chapter n of N" and its time left, next chapter); the
+  chapter list under the extras, open by default, toggled by the strip's title
+  and its own heading.
+- **Queue:** a chaptered row shows its count after the duration and a chevron
+  that expands `<app-audio-chapters class="nested">` inside the same draggable
+  row; the playing track opens with the queue. The nested list is never a
+  `cdkDropList` ([Gotchas](../CLAUDE.md)).
+- **Lock screen:** Media Session metadata puts the chapter in the title, the
+  track as the artist and the feed as the album.
 
 ### Forms
 

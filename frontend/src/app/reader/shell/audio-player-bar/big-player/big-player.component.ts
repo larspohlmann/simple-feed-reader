@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   Injector,
+  Signal,
   WritableSignal,
   afterNextRender,
   computed,
@@ -18,14 +19,15 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../../shared/icon/icon.component';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { AudioPlayerService, AudioTrackEntry, SKIP_SECONDS } from '../../../audio-player.service';
-import { scrubFill } from '../../../audio/scrub-fill';
 import { formatDuration, relativeTime } from '../../../format';
 import { LayoutService } from '../../../layout.service';
 import { prefersReducedMotion } from '../../../../core/reduced-motion';
 import { entryParam } from '../../../query/slug';
 import { entryChangeParams } from '../../../query/link-param';
 import { AudioArtworkComponent } from '../audio-artwork/audio-artwork.component';
+import { AudioChaptersComponent } from '../audio-chapters/audio-chapters.component';
 import { AudioPlaylistComponent } from '../audio-playlist/audio-playlist.component';
+import { ScrubberComponent } from '../scrubber/scrubber.component';
 
 /** What closing the big player asks for next; closing without one just minimises it. */
 export type BigPlayerExit = 'playlist';
@@ -47,7 +49,14 @@ const SWIPE_DISMISS_DISTANCE = 60;
  */
 @Component({
   selector: 'app-big-player',
-  imports: [IconComponent, AudioArtworkComponent, AudioPlaylistComponent, TranslocoPipe],
+  imports: [
+    IconComponent,
+    AudioArtworkComponent,
+    AudioChaptersComponent,
+    AudioPlaylistComponent,
+    ScrubberComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './big-player.component.html',
   styleUrl: './big-player.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,6 +75,7 @@ export class BigPlayerComponent {
   private readonly data = inject<BigPlayerData>(DIALOG_DATA);
   private readonly injector = inject(Injector);
   private readonly extras = viewChild.required<ElementRef<HTMLElement>>('extras');
+  private readonly chapterSection = viewChild<ElementRef<HTMLElement>>('chapterSection');
 
   protected readonly titleId = BIG_PLAYER_TITLE_ID;
   protected readonly skipStep = SKIP_SECONDS;
@@ -73,10 +83,8 @@ export class BigPlayerComponent {
   protected readonly dragging = signal(false);
   protected readonly sheet = inject(LayoutService).isPhone;
   protected readonly playlistShown = computed(() => this.sheet() && this.data.playlistShown());
+  protected readonly chaptersShown = signal(true);
 
-  protected readonly fill = computed(() =>
-    scrubFill(this.player.position(), this.player.buffered(), this.player.duration()),
-  );
   protected readonly remaining = computed(() =>
     formatDuration(Math.max(0, this.player.duration() - this.player.position())),
   );
@@ -104,16 +112,24 @@ export class BigPlayerComponent {
       return;
     }
     this.data.playlistShown.update((shown) => !shown);
-    if (this.data.playlistShown()) {
-      afterNextRender(
-        () =>
-          this.extras().nativeElement.scrollIntoView({
-            block: 'start',
-            behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-          }),
-        { injector: this.injector },
-      );
-    }
+    if (this.data.playlistShown()) this.reveal(this.extras);
+  }
+
+  /** The list opens in place on the card, which already scrolls; the sheet brings it up. */
+  protected toggleChapters(): void {
+    this.chaptersShown.update((shown) => !shown);
+    if (this.sheet() && this.chaptersShown()) this.reveal(this.chapterSection);
+  }
+
+  private reveal(target: Signal<ElementRef<HTMLElement> | undefined>): void {
+    afterNextRender(
+      () =>
+        target()?.nativeElement.scrollIntoView({
+          block: 'start',
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        }),
+      { injector: this.injector },
+    );
   }
 
   protected openArticle(entry: AudioTrackEntry): void {
@@ -124,13 +140,9 @@ export class BigPlayerComponent {
     this.ref.close();
   }
 
-  protected onScrub(event: Event): void {
-    this.player.seek((event.target as HTMLInputElement).valueAsNumber);
-  }
-
   protected onTouchStart(event: TouchEvent): void {
     const exempt =
-      event.target instanceof Element && event.target.closest('.scrubber, app-audio-playlist');
+      event.target instanceof Element && event.target.closest('app-scrubber, app-audio-playlist');
     const scrolled = this.host.nativeElement.scrollTop > 0;
     this.swipeStart =
       event.touches.length === 1 && !exempt && !scrolled ? event.touches[0].clientY : null;

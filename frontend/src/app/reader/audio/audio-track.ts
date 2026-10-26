@@ -1,3 +1,5 @@
+import type { ChapterDto } from '../models';
+
 /** The entry a track was queued from: the big player's details and its link back (#1442).
  *  Absent on tracks saved before it existed. */
 export interface AudioTrackEntry {
@@ -18,4 +20,6 @@ export interface AudioTrack {
   /** As the feed declared it, so the scrubber renders before metadata loads. */
   durationInSeconds: number | null;
   entry?: AudioTrackEntry;
+  /** Ascending by start; absent on tracks saved before #1810 and on tracks queued where none were loaded. */
+  chapters?: ChapterDto[];
 }

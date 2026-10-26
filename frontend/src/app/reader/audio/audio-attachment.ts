@@ -1,5 +1,5 @@
-import { AudioTrack } from '../audio-player.service';
-import { EntryAttachmentDto, EntryDto } from '../models';
+import { AudioTrack, AudioTrackEntry } from '../audio-player.service';
+import { ChapterDto, EntryAttachmentDto, EntryDto } from '../models';
 import { entryDisplayTitle } from '../entry/entry-text';
 
 const AUDIO_EXTENSIONS = ['mp3', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'wav', 'flac'];
@@ -13,20 +13,29 @@ export function firstAudioAttachment(attachments: EntryAttachmentDto[]): EntryAt
 
 /** Everything the player needs to render and resume the enclosure, drawn from
  *  the entry (artwork, title fallback) and the attachment itself (#915). */
-export function toAudioTrack(entry: EntryDto, attachment: EntryAttachmentDto): AudioTrack {
-  return {
+export function toAudioTrack(
+  entry: EntryDto,
+  attachment: EntryAttachmentDto,
+  chapters: ChapterDto[] = [],
+): AudioTrack {
+  const track: AudioTrack = {
     url: attachment.url,
     title: attachment.title?.trim() || entryDisplayTitle(entry),
     faviconUrl: entry.faviconUrl,
     imageUrl: entry.imageUrl,
     durationInSeconds: attachment.durationInSeconds ?? null,
-    entry: {
-      id: entry.id,
-      title: entry.title,
-      feedTitle: entry.poster?.name ?? entry.source,
-      publishedAt: entry.publishedAt ?? entry.createdAt,
-      excerpt: entry.excerpt,
-    },
+    entry: audioTrackEntry(entry),
+  };
+  return chapters.length > 0 ? { ...track, chapters } : track;
+}
+
+export function audioTrackEntry(entry: EntryDto): AudioTrackEntry {
+  return {
+    id: entry.id,
+    title: entry.title,
+    feedTitle: entry.poster?.name ?? entry.source,
+    publishedAt: entry.publishedAt ?? entry.createdAt,
+    excerpt: entry.excerpt,
   };
 }
 

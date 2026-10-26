@@ -75,6 +75,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.transport,
+.tail {
+  display: contents;
+}
+
 .meta {
   display: flex;
   flex-direction: column;
@@ -91,6 +96,10 @@
   text-overflow: ellipsis;
 }
 
+.subtitle {
+  color: var(--text-muted);
+}
+
 .track {
   display: flex;
   align-items: center;
@@ -103,59 +112,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* A hand-drawn track, since a native range has no buffered segment: played in
-   the accent, cached-ahead muted, the rest a hairline. */
-.scrubber {
-  --track: linear-gradient(
-    to right,
-    var(--accent) var(--played, 0%),
-    var(--text-muted) var(--played, 0%) var(--cached, 0%),
-    var(--border) var(--cached, 0%)
-  );
-
+app-scrubber {
   flex: 1;
-  min-width: 0;
-  height: var(--space-4);
-  margin: 0;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
-}
-
-.scrubber::-webkit-slider-runnable-track {
-  height: var(--space-1);
-  border-radius: var(--radius-pill);
-  background: var(--track);
-}
-
-.scrubber::-moz-range-track {
-  height: var(--space-1);
-  border-radius: var(--radius-pill);
-  background: var(--track);
-}
-
-.scrubber::-webkit-slider-thumb {
-  appearance: none;
-  width: var(--space-3);
-  height: var(--space-3);
-  margin-top: calc((var(--space-1) - var(--space-3)) / 2);
-  border: 0;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.scrubber::-moz-range-thumb {
-  width: var(--space-3);
-  height: var(--space-3);
-  border: 0;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.scrubber:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: var(--space-0);
-  border-radius: var(--radius-pill);
+  min-inline-size: 0;
 }
 
 /* The drop list's scroller (cdkScrollable): a drag auto-scrolls past the visible rows. */
@@ -169,12 +128,55 @@
 
 @media (width < bp.$bp-sm) {
   .controls {
-    gap: var(--space-1);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-2);
     padding-inline: var(--space-2);
   }
 
-  .back,
-  .forward {
-    display: none;
+  .open-player {
+    grid-row: 1 / -1;
+    grid-column: 1;
+    border-radius: var(--radius);
+  }
+
+  .artwork {
+    --artwork-size: calc(var(--space-7) + var(--space-5));
+
+    border-radius: var(--radius);
+  }
+
+  .meta {
+    display: contents;
+  }
+
+  .title {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .tail {
+    display: flex;
+    grid-row: 1;
+    grid-column: 3;
+  }
+
+  .tail .ctrl {
+    padding-block: var(--space-0);
+  }
+
+  .transport {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-1);
+    grid-row: 2;
+    grid-column: 2 / -1;
+    margin-block-start: calc(-1 * var(--space-1));
+  }
+
+  .track {
+    grid-row: 3;
+    grid-column: 2 / -1;
+    min-width: 0;
   }
 }

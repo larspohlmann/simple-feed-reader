@@ -19,6 +19,22 @@ describe('PlaylistStore', () => {
     expect(store.load()).toEqual({ playlist: { tracks: [track], index: 0 }, position: 12 });
   });
 
+  it('round-trips a track with chapters (#1810)', () => {
+    const chaptered = { ...track, chapters: [{ startSeconds: 0, title: 'Intro' }] };
+    store.save({ playlist: { tracks: [chaptered], index: 0 }, position: 0 });
+
+    expect(store.load()?.playlist.tracks[0].chapters).toEqual([
+      { startSeconds: 0, title: 'Intro' },
+    ]);
+  });
+
+  it('loads a track saved without chapters', () => {
+    localStorage.setItem('sfr.audio', JSON.stringify({ tracks: [track], index: 0, position: 0 }));
+
+    expect(store.load()?.playlist.tracks[0]).toEqual(track);
+    expect(store.load()?.playlist.tracks[0]).not.toHaveProperty('chapters');
+  });
+
   it('clamps a stored index that outruns the tracks', () => {
     localStorage.setItem('sfr.audio', JSON.stringify({ tracks: [track], index: 4, position: 1 }));
 

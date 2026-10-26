@@ -1,5 +1,6 @@
+import { signal } from '@angular/core';
 import { StubAudioPlayer } from '../../../testing/stub-audio-player';
-import { EntryDto } from '../models';
+import { ChapterDto, EntryDto } from '../models';
 import { EntryAudio } from './entry-audio';
 
 const EPISODE = 'https://x.test/ep.mp3';
@@ -43,6 +44,32 @@ describe('EntryAudio', () => {
     });
     expect(setUp(declared).audio.duration()).toBe('2:05');
     expect(setUp().audio.duration()).toBeNull();
+  });
+
+  it('carries the chapters its source gives, once they load (#1810)', () => {
+    const chapters = signal<ChapterDto[]>([]);
+    const audio = new EntryAudio(() => entry(), new StubAudioPlayer().asService(), chapters);
+    expect(audio.track()).not.toHaveProperty('chapters');
+
+    chapters.set([{ startSeconds: 0, title: 'Intro' }]);
+
+    expect(audio.track()?.chapters).toEqual([{ startSeconds: 0, title: 'Intro' }]);
+  });
+
+  it('shares the chapters with the player only once the track has some (#1810)', () => {
+    const chapters = signal<ChapterDto[]>([]);
+    const player = new StubAudioPlayer();
+    const audio = new EntryAudio(() => entry(), player.asService(), chapters);
+
+    audio.shareChapters();
+    expect(player.described).toEqual([]);
+
+    chapters.set([{ startSeconds: 0, title: 'Intro' }]);
+    audio.shareChapters();
+
+    expect(player.described).toEqual([
+      { url: EPISODE, chapters: [{ startSeconds: 0, title: 'Intro' }] },
+    ]);
   });
 
   it('has no track while no entry is open', () => {

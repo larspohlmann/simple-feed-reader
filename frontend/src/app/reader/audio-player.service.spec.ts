@@ -6,18 +6,14 @@ import {
   RESTART_THRESHOLD_SECONDS,
 } from './audio-player.service';
 import { PRECACHE_LEAD_SECONDS } from './audio/audio-deck';
+import { PlaylistStore } from './audio/playlist.store';
 import { TokenStore } from '../core/auth/token.store';
+import { installFakeMediaSession } from '../../testing/fake-media-session';
+import { timeRanges } from '../../testing/time-ranges-testing';
+import type { ChapterDto } from './models';
 
 const SRC_NOT_SUPPORTED = 4;
 const NETWORK = 2;
-
-function ranges(...spans: [number, number][]): TimeRanges {
-  return {
-    length: spans.length,
-    start: (index: number) => spans[index][0],
-    end: (index: number) => spans[index][1],
-  };
-}
 
 class FakeAudio {
   error: { code: number; MEDIA_ERR_SRC_NOT_SUPPORTED: number } | null = null;
@@ -26,7 +22,7 @@ class FakeAudio {
   defaultPlaybackRate = 1;
   playbackRate = 1;
   preload = '';
-  buffered: TimeRanges = ranges();
+  buffered: TimeRanges = timeRanges();
   load = jest.fn();
   removeAttribute = jest.fn((name: string) => {
     if (name === 'src') this.source = '';
@@ -567,14 +563,7 @@ describe('AudioPlayerService', () => {
     });
 
     it('binds the OS track controls only while there is a track to step to, and plays nothing after close', () => {
-      const handlers: Record<string, (() => void) | null> = {};
-      Object.defineProperty(navigator, 'mediaSession', {
-        configurable: true,
-        value: {
-          setActionHandler: (action: string, handler: (() => void) | null) =>
-            (handlers[action] = handler),
-        },
-      });
+      const { handlers, restore } = installFakeMediaSession();
       try {
         const service = make();
         service.play(one);
@@ -584,20 +573,240 @@ describe('AudioPlayerService', () => {
 
         service.enqueue(two);
         TestBed.tick();
-        handlers['nexttrack']?.();
+        handlers['nexttrack']?.({});
         expect(service.current()).toBe(two);
         TestBed.tick();
         expect(handlers['nexttrack']).toBeNull();
-        handlers['previoustrack']?.();
+        handlers['previoustrack']?.({});
         expect(service.current()).toBe(one);
 
         service.stop();
         audio.play.mockClear();
-        handlers['play']?.();
+        handlers['play']?.({});
         expect(audio.play).not.toHaveBeenCalled();
       } finally {
-        delete (navigator as { mediaSession?: unknown }).mediaSession;
+        restore();
       }
+    });
+  });
+
+  describe('chapters', () => {
+    const chapters: ChapterDto[] = [
+      { startSeconds: 0, title: 'Intro' },
+      { startSeconds: 60, title: 'Main' },
+      { startSeconds: 180, title: 'Outro' },
+    ];
+    const chaptered = track({ chapters, durationInSeconds: 300 });
+
+    function at(seconds: number): void {
+      audio.currentTime = seconds;
+      audio.fire('timeupdate');
+    }
+
+    /** Playing the chaptered track with its metadata read, so a seek applies at once. */
+    function playingChaptered(): AudioPlayerService {
+      const service = make();
+      service.play(chaptered);
+      audio.duration = 300;
+      audio.readyState = HTMLMediaElement.HAVE_METADATA;
+      audio.fire('loadedmetadata');
+      return service;
+    }
+
+    it('knows no chapter on a track without them', () => {
+      const service = make();
+      service.play(track());
+      at(42);
+
+      expect(service.chapters()).toEqual([]);
+      expect(service.chapterIndex()).toBe(-1);
+      expect(service.currentChapter()).toBeNull();
+      expect(service.chapterProgress()).toBeNull();
+      expect(service.hasPreviousChapter()).toBe(false);
+      expect(service.hasNextChapter()).toBe(false);
+    });
+
+    it('follows the current chapter as playback moves', () => {
+      const service = playingChaptered();
+
+      at(30);
+      expect(service.chapterIndex()).toBe(0);
+      expect(service.currentChapter()?.title).toBe('Intro');
+
+      at(61);
+      expect(service.chapterIndex()).toBe(1);
+      expect(service.currentChapter()?.title).toBe('Main');
+    });
+
+    it('titles the OS metadata with the current chapter and clears it on stop', () => {
+      const { session, restore } = installFakeMediaSession();
+      try {
+        const service = playingChaptered();
+        at(30);
+        TestBed.tick();
+        expect(session.metadata?.init).toMatchObject({ title: 'Intro', artist: 'Episode 1' });
+
+        at(61);
+        TestBed.tick();
+        expect(session.metadata?.init.title).toBe('Main');
+
+        service.stop();
+        TestBed.tick();
+        expect(session.metadata).toBeNull();
+      } finally {
+        restore();
+      }
+    });
+
+    it('measures the progress through the current chapter', () => {
+      const service = playingChaptered();
+
+      at(90);
+
+      expect(service.chapterProgress()).toEqual({ fraction: 0.25, secondsLeft: 90 });
+    });
+
+    it('has no progress on the last chapter until the metadata tells the length', () => {
+      const service = make();
+      service.play(track({ chapters, durationInSeconds: null }));
+      at(240);
+      expect(service.chapterProgress()).toBeNull();
+
+      audio.duration = 300;
+      audio.fire('loadedmetadata');
+
+      expect(service.chapterProgress()).toEqual({ fraction: 0.5, secondsLeft: 60 });
+    });
+
+    it('steps to the next chapter until the last one', () => {
+      const service = playingChaptered();
+      at(30);
+      expect(service.hasNextChapter()).toBe(true);
+
+      service.nextChapter();
+      expect(audio.currentTime).toBe(60);
+      expect(service.position()).toBe(60);
+
+      service.nextChapter();
+      expect(service.position()).toBe(180);
+      expect(service.hasNextChapter()).toBe(false);
+
+      service.nextChapter();
+      expect(service.position()).toBe(180);
+    });
+
+    it('restarts the chapter on previous once past the threshold, and steps back within it', () => {
+      const service = playingChaptered();
+      at(60 + RESTART_THRESHOLD_SECONDS + 1);
+      expect(service.hasPreviousChapter()).toBe(true);
+
+      service.previousChapter();
+      expect(audio.currentTime).toBe(60);
+      expect(service.position()).toBe(60);
+
+      service.previousChapter();
+      expect(service.position()).toBe(0);
+      expect(service.hasPreviousChapter()).toBe(false);
+
+      service.previousChapter();
+      expect(service.position()).toBe(0);
+    });
+
+    it('plays a chapter: seeks to its start and resumes a paused player', () => {
+      const service = playingChaptered();
+      service.toggle();
+      expect(service.playing()).toBe(false);
+
+      service.playChapter(2);
+
+      expect(audio.currentTime).toBe(180);
+      expect(service.position()).toBe(180);
+      expect(service.playing()).toBe(true);
+    });
+
+    it('ignores a chapter the track does not have', () => {
+      const service = playingChaptered();
+      at(30);
+
+      service.playChapter(7);
+
+      expect(service.position()).toBe(30);
+    });
+
+    it('plays a chapter of another queued track once its length is known', () => {
+      const service = make();
+      service.play(track({ url: 'https://x.test/other.mp3', durationInSeconds: 3600 }));
+      service.enqueue(track({ chapters, durationInSeconds: null }));
+
+      service.playTrackChapter(1, 1);
+      expect(service.current()?.url).toBe('https://x.test/ep.mp3');
+      expect(audio.src).toBe('https://x.test/ep.mp3');
+      expect(audio.currentTime).toBe(0);
+      audio.duration = 300;
+      audio.fire('loadedmetadata');
+
+      expect(audio.currentTime).toBe(60);
+      expect(service.position()).toBe(60);
+      expect(service.playing()).toBe(true);
+    });
+
+    it('plays a chapter of the current track like playChapter', () => {
+      const service = playingChaptered();
+      service.toggle();
+      audio.load.mockClear();
+
+      service.playTrackChapter(0, 2);
+
+      expect(audio.load).not.toHaveBeenCalled();
+      expect(audio.currentTime).toBe(180);
+      expect(service.playing()).toBe(true);
+    });
+
+    it('describes a queued track with its chapters and saves them, without reloading it', () => {
+      const service = make();
+      service.enqueue(track());
+      audio.load.mockClear();
+
+      service.describeChapters('https://x.test/ep.mp3', chapters);
+
+      expect(service.current()?.chapters).toEqual(chapters);
+      expect(service.chapters()).toEqual(chapters);
+      expect(audio.src).toBe('https://x.test/ep.mp3');
+      expect(audio.load).not.toHaveBeenCalled();
+      const saved = JSON.parse(localStorage.getItem('sfr.audio') ?? '{}');
+      expect(saved.tracks[0].chapters).toEqual(chapters);
+    });
+
+    it('describes a track behind the current one', () => {
+      const service = make();
+      service.play(track({ url: 'https://x.test/other.mp3' }));
+      service.enqueue(track());
+
+      service.describeChapters('https://x.test/ep.mp3', chapters);
+
+      expect(service.tracks()[1].chapters).toEqual(chapters);
+      expect(service.chapters()).toEqual([]);
+    });
+
+    it('leaves the playlist alone for an url that is not queued', () => {
+      const service = make();
+      service.play(track());
+      const tracks = service.tracks();
+
+      service.describeChapters('https://x.test/none.mp3', chapters);
+
+      expect(service.tracks()).toBe(tracks);
+    });
+
+    it('leaves an empty player stopped for an url that is not queued', () => {
+      const service = make();
+      const store = TestBed.inject(PlaylistStore);
+      const clear = jest.spyOn(store, 'clear');
+
+      service.describeChapters('https://x.test/none.mp3', chapters);
+
+      expect(service.current()).toBeNull();
+      expect(clear).not.toHaveBeenCalled();
     });
   });
 
@@ -612,7 +821,7 @@ describe('AudioPlayerService', () => {
       const service = make();
       service.play(track());
       audio.currentTime = 30;
-      audio.buffered = ranges([0, 10], [20, 75], [90, 100]);
+      audio.buffered = timeRanges([0, 10], [20, 75], [90, 100]);
 
       audio.fire('progress');
 
@@ -623,7 +832,7 @@ describe('AudioPlayerService', () => {
       const service = make();
       service.play(track());
       audio.currentTime = 50;
-      audio.buffered = ranges([0, 10]);
+      audio.buffered = timeRanges([0, 10]);
 
       audio.fire('progress');
 
@@ -644,7 +853,7 @@ describe('AudioPlayerService', () => {
 
       function progressAt(seconds: number, cachedTo = seconds): void {
         audio.currentTime = seconds;
-        audio.buffered = ranges([0, cachedTo]);
+        audio.buffered = timeRanges([0, cachedTo]);
         audio.fire('progress');
       }
 
@@ -769,7 +978,7 @@ describe('AudioPlayerService', () => {
     it('starts a new track with nothing cached', () => {
       const service = make();
       service.play(track());
-      audio.buffered = ranges([0, 80]);
+      audio.buffered = timeRanges([0, 80]);
       audio.fire('progress');
 
       service.play(track({ url: 'https://x.test/other.mp3' }));

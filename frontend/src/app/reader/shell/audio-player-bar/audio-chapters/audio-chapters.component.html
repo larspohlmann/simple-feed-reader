@@ -1,0 +1,24 @@
+<ol class="reader-chapters__list">
+  @for (chapter of chapters(); track $index; let index = $index) {
+    @let current = index === playhead()?.index;
+    @let shown = current ? playhead()?.progress : null;
+    <li>
+      <button
+        type="button"
+        class="reader-chapters__row"
+        [attr.aria-current]="current ? 'true' : null"
+        [style.--chapter-progress]="shown?.fraction"
+        (click)="pick.emit(index)"
+      >
+        <span class="reader-chapters__time">{{ format(chapter.startSeconds) }}</span>
+        <span class="reader-chapters__title">{{ chapter.title }}</span>
+        <span class="reader-chapters__left" aria-hidden="true">
+          @if (shown) {
+            <app-icon name="schedule" size="sm" />
+            <span class="reader-chapters__remaining">{{ format(shown.secondsLeft) }}</span>
+          }
+        </span>
+      </button>
+    </li>
+  }
+</ol>

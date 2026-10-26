@@ -1,0 +1,8 @@
+@use '../../../chapters/chapter-rows';
+
+:host {
+  display: block;
+  font-size: var(--fs-sm);
+}
+
+@include chapter-rows.rows;

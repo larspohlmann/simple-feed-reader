@@ -1,28 +1,25 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AudioPlayerBarComponent } from './audio-player-bar.component';
 import { AudioPlayerService, AudioTrack, SKIP_SECONDS } from '../../audio-player.service';
+import type { ChapterDto } from '../../models';
 import { AudioSurface } from './audio-surface.service';
+import { bigPlayerAudioSignals } from '../../../../testing/big-player-audio-signals';
+import { scrubberInput } from '../../../../testing/scrubber-testing';
 
 function stub() {
   return {
-    current: signal<AudioTrack | null>(null),
-    tracks: signal<AudioTrack[]>([]),
-    index: signal(-1),
-    hasNext: signal(false),
-    playing: signal(false),
-    position: signal(0),
-    duration: signal(0),
-    buffered: signal(0),
+    ...bigPlayerAudioSignals(),
     toggle: jest.fn(),
     seek: jest.fn(),
     skip: jest.fn(),
     stop: jest.fn(),
     previous: jest.fn(),
     next: jest.fn(),
+    previousChapter: jest.fn(),
+    nextChapter: jest.fn(),
     playAt: jest.fn(),
     move: jest.fn(),
     dequeue: jest.fn(),
@@ -40,6 +37,11 @@ function render() {
   const fixture = TestBed.createComponent(AudioPlayerBarComponent);
   fixture.detectChanges();
   return fixture;
+}
+
+function titleLine(fixture: ReturnType<typeof render>): string {
+  const title: HTMLElement = fixture.debugElement.query(By.css('.title')).nativeElement;
+  return title.textContent.replace(/\s+/g, ' ').trim();
 }
 
 const track: AudioTrack = {
@@ -82,12 +84,8 @@ describe('AudioPlayerBarComponent', () => {
     service.position.set(30);
     fixture.detectChanges();
 
-    const scrubber: HTMLInputElement = fixture.debugElement.query(
-      By.css('.scrubber'),
-    ).nativeElement;
-
-    expect(scrubber.max).toBe('120');
-    expect(scrubber.value).toBe('30');
+    expect(scrubberInput(fixture).max).toBe('120');
+    expect(scrubberInput(fixture).value).toBe('30');
   });
 
   it('draws how much of the stream is cached ahead of the playhead', () => {
@@ -98,12 +96,22 @@ describe('AudioPlayerBarComponent', () => {
     service.buffered.set(120);
     fixture.detectChanges();
 
-    const scrubber: HTMLInputElement = fixture.debugElement.query(
-      By.css('.scrubber'),
-    ).nativeElement;
+    expect(scrubberInput(fixture).style.getPropertyValue('--played')).toBe('25%');
+    expect(scrubberInput(fixture).style.getPropertyValue('--cached')).toBe('60%');
+  });
 
-    expect(scrubber.style.getPropertyValue('--played')).toBe('25%');
-    expect(scrubber.style.getPropertyValue('--cached')).toBe('60%');
+  it('marks the chapters of the track on the scrubber', () => {
+    const fixture = render();
+    service.current.set(track);
+    service.duration.set(120);
+    service.chapters.set([
+      { startSeconds: 0, title: 'Intro' },
+      { startSeconds: 30, title: 'Main' },
+    ]);
+    fixture.detectChanges();
+
+    const marks = fixture.debugElement.queryAll(By.css('.mark')).map((mark) => mark.nativeElement);
+    expect(marks.map((mark: HTMLElement) => mark.style.left)).toEqual(['25%']);
   });
 
   it('seeks when the scrubber is moved', () => {
@@ -112,11 +120,8 @@ describe('AudioPlayerBarComponent', () => {
     service.duration.set(120);
     fixture.detectChanges();
 
-    const scrubber: HTMLInputElement = fixture.debugElement.query(
-      By.css('.scrubber'),
-    ).nativeElement;
-    scrubber.value = '75';
-    scrubber.dispatchEvent(new Event('input'));
+    scrubberInput(fixture).value = '75';
+    scrubberInput(fixture).dispatchEvent(new Event('input'));
 
     expect(service.seek).toHaveBeenCalledWith(75);
   });
@@ -156,6 +161,123 @@ describe('AudioPlayerBarComponent', () => {
 
     expect(button.getAttribute('aria-label')).toBe('Open player');
     expect(openPlayer).toHaveBeenCalled();
+  });
+
+  describe('the chapters', () => {
+    const intro: ChapterDto = { startSeconds: 0, title: 'Intro' };
+    const main: ChapterDto = { startSeconds: 30, title: 'Main' };
+
+    function chaptered(current: ChapterDto) {
+      const fixture = render();
+      service.current.set(track);
+      service.chapters.set([intro, main]);
+      service.currentChapter.set(current);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    function control(fixture: ReturnType<typeof render>, selector: string): HTMLButtonElement {
+      return fixture.debugElement.query(By.css(selector)).nativeElement;
+    }
+
+    it('names the current chapter before the track title, muted', () => {
+      const fixture = chaptered(main);
+
+      expect(titleLine(fixture)).toBe('Main · Episode 1');
+      expect(fixture.debugElement.query(By.css('.subtitle')).nativeElement.textContent.trim()).toBe(
+        '· Episode 1',
+      );
+    });
+
+    it('keeps the plain track title without a chapter', () => {
+      const fixture = render();
+      service.current.set(track);
+      fixture.detectChanges();
+
+      expect(titleLine(fixture)).toBe('Episode 1');
+      expect(fixture.debugElement.query(By.css('.subtitle'))).toBeNull();
+    });
+
+    it('follows the chapter as playback moves on', () => {
+      const fixture = chaptered(intro);
+      expect(titleLine(fixture)).toBe('Intro · Episode 1');
+
+      service.currentChapter.set(main);
+      fixture.detectChanges();
+
+      expect(titleLine(fixture)).toBe('Main · Episode 1');
+    });
+
+    it('offers the chapter steps only while the track has chapters', () => {
+      const fixture = render();
+      service.current.set(track);
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('.previous-chapter'))).toBeNull();
+      expect(fixture.debugElement.query(By.css('.next-chapter'))).toBeNull();
+
+      service.chapters.set([intro, main]);
+      fixture.detectChanges();
+
+      expect(control(fixture, '.previous-chapter').getAttribute('aria-label')).toBe(
+        'Previous chapter',
+      );
+      expect(control(fixture, '.next-chapter').getAttribute('aria-label')).toBe('Next chapter');
+    });
+
+    it('steps between chapters, leaving previous and next to the tracks', () => {
+      const fixture = chaptered(main);
+      service.hasPreviousChapter.set(true);
+      service.hasNextChapter.set(true);
+      fixture.detectChanges();
+
+      control(fixture, '.previous-chapter').click();
+      control(fixture, '.next-chapter').click();
+
+      expect(service.previousChapter).toHaveBeenCalledTimes(1);
+      expect(service.nextChapter).toHaveBeenCalledTimes(1);
+      expect(service.previous).not.toHaveBeenCalled();
+      expect(service.next).not.toHaveBeenCalled();
+    });
+
+    it('disables the chapter steps at the ends of the track', () => {
+      const fixture = chaptered(intro);
+      service.hasPreviousChapter.set(false);
+      service.hasNextChapter.set(true);
+      fixture.detectChanges();
+
+      expect(control(fixture, '.previous-chapter').disabled).toBe(true);
+      expect(control(fixture, '.next-chapter').disabled).toBe(false);
+
+      service.hasPreviousChapter.set(true);
+      service.hasNextChapter.set(false);
+      fixture.detectChanges();
+
+      expect(control(fixture, '.previous-chapter').disabled).toBe(false);
+      expect(control(fixture, '.next-chapter').disabled).toBe(true);
+    });
+
+    it('groups the transport and the tail, so the phone can place them as rows', () => {
+      const fixture = chaptered(main);
+
+      const transport = fixture.debugElement
+        .queryAll(By.css('.transport > .ctrl'))
+        .map((button) => button.nativeElement.className);
+      const tail = fixture.debugElement
+        .queryAll(By.css('.tail > .ctrl'))
+        .map((button) => button.nativeElement.className);
+
+      expect(transport).toEqual([
+        'ctrl previous-chapter',
+        'ctrl previous',
+        'ctrl back',
+        'ctrl play',
+        'ctrl forward',
+        'ctrl next',
+        'ctrl next-chapter',
+      ]);
+      expect(tail).toEqual(['ctrl toggle-playlist', 'ctrl close']);
+    });
   });
 
   describe('the playlist', () => {

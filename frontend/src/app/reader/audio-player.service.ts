@@ -1,12 +1,4 @@
-import {
-  DestroyRef,
-  InjectionToken,
-  Injectable,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { DestroyRef, InjectionToken, Injectable, computed, inject, signal } from '@angular/core';
 import { onIdentityChange } from '../core/auth/session-identity';
 import {
   EMPTY_PLAYLIST,
@@ -18,12 +10,18 @@ import {
   move,
   remove,
   select,
+  withChapters,
 } from './audio/playlist';
-import { PlaylistStore } from './audio/playlist.store';
+import { PlaylistStore, type SavedPlaylist } from './audio/playlist.store';
+import { PlaylistPersistence } from './audio/playlist-persistence';
 import { AudioDeck } from './audio/audio-deck';
+import { cachedEnd } from './audio/cached-end';
 import { AudioTrack } from './audio/audio-track';
-import { MediaSessionControls } from './audio/media-session-controls';
+import { reflectInMediaSession } from './audio/media-session-reflection';
 import { PlaybackRate } from './audio/playback-rate';
+import { TrackChapters } from './audio/track-chapters';
+import { PlaybackPosition } from './chapters/chapter-player';
+import type { ChapterDto } from './models';
 
 export type { AudioTrack, AudioTrackEntry } from './audio/audio-track';
 
@@ -35,7 +33,6 @@ export const AUDIO_ELEMENT_FACTORY = new InjectionToken<() => HTMLAudioElement>(
 
 /** Jump size for the skip controls and the OS seek keys (#915). */
 export const SKIP_SECONDS = 15;
-const PERSIST_INTERVAL_MS = 5000;
 /** Past this, previous restarts the current track instead of stepping back (#1429). */
 export const RESTART_THRESHOLD_SECONDS = 3;
 
@@ -52,13 +49,20 @@ export const RESTART_THRESHOLD_SECONDS = 3;
  */
 @Injectable({ providedIn: 'root' })
 export class AudioPlayerService {
-  private readonly deck = new AudioDeck(inject(AUDIO_ELEMENT_FACTORY), (element, isPlaying) =>
-    this.bindElement(element, isPlaying),
+  private readonly deck = new AudioDeck(inject(AUDIO_ELEMENT_FACTORY), {
+    progress: () => this.onProgress(),
+    timeupdate: () => this.onTimeUpdate(),
+    loadedmetadata: () => this.onMetadata(),
+    durationchange: () => this.onMetadata(),
+    play: () => this.onPlaying(true),
+    pause: () => this.onPlaying(false),
+    ended: () => this.onEnded(),
+    error: () => this.onError(),
+  });
+  private readonly persistence = new PlaylistPersistence(inject(PlaylistStore), () =>
+    this.snapshot(),
   );
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly store = inject(PlaylistStore);
   private readonly playbackRate = inject(PlaybackRate);
-  private readonly mediaSession = new MediaSessionControls();
 
   private readonly _playlist = signal<Playlist>(EMPTY_PLAYLIST);
   private readonly _playing = signal(false);
@@ -78,28 +82,43 @@ export class AudioPlayerService {
   readonly buffered = this._buffered.asReadonly();
   readonly rate = this.playbackRate.value;
 
-  private lastPersistAt = 0;
+  readonly chapters = computed(() => this.current()?.chapters ?? []);
+  readonly hasChapters = computed(() => this.chapters().length > 0);
+  /** The position as the chapter helpers read it: the duration null while unknown. */
+  readonly playbackPosition = computed<PlaybackPosition>(() => ({
+    seconds: this._position(),
+    durationSeconds: this._duration() > 0 ? this._duration() : null,
+  }));
+  private readonly trackChapters = new TrackChapters(
+    this.chapters,
+    this.playbackPosition,
+    RESTART_THRESHOLD_SECONDS,
+  );
+  readonly chapterIndex = this.trackChapters.index;
+  readonly currentChapter = this.trackChapters.current;
+  readonly chapterProgress = this.trackChapters.progress;
+  readonly chapterPlayhead = this.trackChapters.playhead;
+  readonly hasPreviousChapter = this.trackChapters.hasPrevious;
+  readonly hasNextChapter = this.trackChapters.hasNext;
+
   private pendingSeek: number | null = null;
 
   constructor() {
-    this.mediaSession.bind(
+    reflectInMediaSession(
+      this,
       {
         play: () => this.resume(),
         pause: () => this.element.pause(),
         skip: (seconds) => this.skip(seconds),
         seek: (seconds) => this.seek(seconds),
+        previous: () => this.previous(),
+        next: () => this.next(),
       },
       SKIP_SECONDS,
     );
     this.restore();
     this.deck.setRate(this.rate());
-    this.bindLifecycle();
-    effect(() =>
-      this.mediaSession.setTrackSteps(
-        this.hasPrevious() ? () => this.previous() : null,
-        this.hasNext() ? () => this.next() : null,
-      ),
-    );
+    this.persistence.saveOnPageHide(inject(DestroyRef));
     onIdentityChange(() => this.stop());
   }
 
@@ -147,6 +166,32 @@ export class AudioPlayerService {
     this.go(select(this._playlist(), this.index() - 1));
   }
 
+  previousChapter(): void {
+    this.seekToChapterStart(this.trackChapters.previousStart());
+  }
+
+  nextChapter(): void {
+    this.seekToChapterStart(this.trackChapters.nextStart());
+  }
+
+  playChapter(index: number): void {
+    const track = this.current();
+    const chapter = this.chapters()[index];
+    if (track && chapter) this.playFrom(track, chapter.startSeconds);
+  }
+
+  /** Plays the queued track at `trackIndex` from its chapter `chapterIndex`; another track loads first. */
+  playTrackChapter(trackIndex: number, chapterIndex: number): void {
+    if (trackIndex !== this.index()) this.apply(select(this._playlist(), trackIndex));
+    this.playChapter(chapterIndex);
+  }
+
+  /** Gives the queued track at `url` its chapters, for a track queued before its article was opened. */
+  describeChapters(url: string, chapters: ChapterDto[]): void {
+    const described = withChapters(this._playlist(), url, chapters);
+    if (described !== this._playlist()) this.apply(described);
+  }
+
   toggle(): void {
     if (!this.current()) return;
     if (this._playing()) this.element.pause();
@@ -176,8 +221,11 @@ export class AudioPlayerService {
     this._position.set(0);
     this._duration.set(0);
     this._buffered.set(0);
-    this.forget();
-    this.mediaSession.showTrack(null);
+    this.persistence.save();
+  }
+
+  private seekToChapterStart(start: number | null): void {
+    if (start !== null) this.seek(start);
   }
 
   private go(playlist: Playlist): void {
@@ -192,7 +240,7 @@ export class AudioPlayerService {
     const changed = track.url !== this.current()?.url;
     this._playlist.set(playlist);
     if (changed) this.load(track);
-    this.persist();
+    this.persistence.save();
     this.precacheNext();
   }
 
@@ -201,7 +249,6 @@ export class AudioPlayerService {
     this._duration.set(track.durationInSeconds ?? 0);
     this._position.set(0);
     this._buffered.set(0);
-    this.mediaSession.showTrack(track);
     const cached = this.deck.load(track.url);
     this.element.currentTime = 0;
     if (cached) this.adoptCachedElement();
@@ -228,59 +275,27 @@ export class AudioPlayerService {
     });
   }
 
-  /** Both elements are bound once; only the one playing is listened to. */
-  private bindElement(element: HTMLAudioElement, isPlaying: () => boolean): void {
-    const handlers: Record<string, () => void> = {
-      progress: () => this.onProgress(),
-      timeupdate: () => this.onTimeUpdate(),
-      loadedmetadata: () => this.onMetadata(),
-      durationchange: () => this.onMetadata(),
-      play: () => this.onPlaying(true),
-      pause: () => this.onPlaying(false),
-      ended: () => this.onEnded(),
-      error: () => this.onError(),
-    };
-    for (const [type, handler] of Object.entries(handlers)) {
-      element.addEventListener(type, () => {
-        if (isPlaying()) handler();
-      });
-    }
-  }
-
   private onTimeUpdate(): void {
     this._position.set(this.element.currentTime);
     this.onProgress();
-    this.persistThrottled();
-    this.mediaSession.showPosition(this._position(), this._duration(), this.rate());
+    this.persistence.saveThrottled();
   }
 
-  /** The end of the cached range the playhead sits in; a range elsewhere (after a seek) is not ahead of it. */
   private onProgress(): void {
-    const ranges = this.element.buffered;
-    const playhead = this.element.currentTime;
-    let end = playhead;
-    for (let index = 0; index < ranges.length; index++) {
-      if (ranges.start(index) <= playhead && playhead <= ranges.end(index)) end = ranges.end(index);
-    }
-    this._buffered.set(end);
+    this._buffered.set(cachedEnd(this.element.buffered, this.element.currentTime));
     this.precacheNext();
   }
 
   private onMetadata(): void {
-    if (Number.isFinite(this.element.duration) && this.element.duration > 0) {
-      this._duration.set(this.element.duration);
-    }
-    if (this.pendingSeek !== null) {
-      this.seek(this.pendingSeek);
-      this.pendingSeek = null;
-    }
+    const duration = this.element.duration;
+    if (Number.isFinite(duration) && duration > 0) this._duration.set(duration);
+    if (this.pendingSeek !== null) this.seek(this.pendingSeek);
     this.precacheNext();
   }
 
   private onPlaying(playing: boolean): void {
     this._playing.set(playing);
-    if (!playing) this.persist();
-    this.mediaSession.showPlaying(this._playing());
+    if (!playing) this.persistence.save();
   }
 
   private onEnded(): void {
@@ -296,7 +311,7 @@ export class AudioPlayerService {
       return;
     }
     this._playing.set(false);
-    this.persist();
+    this.persistence.save();
   }
 
   private skipDeadTrack(): void {
@@ -320,7 +335,7 @@ export class AudioPlayerService {
   }
 
   private restore(): void {
-    const saved = this.store.load();
+    const saved = this.persistence.load();
     if (!saved) return;
     const track = currentTrack(saved.playlist);
     if (!track) return;
@@ -330,25 +345,9 @@ export class AudioPlayerService {
     this.pendingSeek = saved.position;
   }
 
-  private bindLifecycle(): void {
-    const save = (): void => this.persist();
-    window.addEventListener('pagehide', save);
-    this.destroyRef.onDestroy(() => window.removeEventListener('pagehide', save));
-  }
-
-  private persistThrottled(): void {
-    if (Date.now() - this.lastPersistAt < PERSIST_INTERVAL_MS) return;
-    this.lastPersistAt = Date.now();
-    this.persist();
-  }
-
-  private persist(): void {
-    if (!this.current()) return this.forget();
-    this.store.save({ playlist: this._playlist(), position: this._position() });
-  }
-
-  private forget(): void {
-    this.store.clear();
+  private snapshot(): SavedPlaylist | null {
+    if (!this.current()) return null;
+    return { playlist: this._playlist(), position: this._position() };
   }
 
   private get element(): HTMLAudioElement {

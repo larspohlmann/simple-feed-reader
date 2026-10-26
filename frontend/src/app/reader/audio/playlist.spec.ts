@@ -1,9 +1,11 @@
 import type { AudioTrack } from '../audio-player.service';
+import type { ChapterDto } from '../models';
 import {
   EMPTY_PLAYLIST,
   Playlist,
   append,
   currentTrack,
+  withChapters,
   insertNext,
   move,
   remove,
@@ -167,6 +169,37 @@ describe('playlist', () => {
       const playlist = of(0, alpha);
 
       expect(remove(playlist, 'https://x.test/none.mp3')).toBe(playlist);
+    });
+  });
+
+  describe('withChapters', () => {
+    const chapters: ChapterDto[] = [{ startSeconds: 0, title: 'Intro' }];
+
+    it('gives the queued track its chapters and keeps the index', () => {
+      const playlist = withChapters(of(1, alpha, bravo, charlie), bravo.url, chapters);
+
+      expect(playlist.tracks).toEqual([alpha, { ...bravo, chapters }, charlie]);
+      expect(playlist.index).toBe(1);
+    });
+
+    it('replaces the chapters a track already has', () => {
+      const described = { ...alpha, chapters: [{ startSeconds: 5, title: 'Old' }] };
+
+      const playlist = withChapters(of(0, described), alpha.url, chapters);
+
+      expect(playlist.tracks[0].chapters).toEqual(chapters);
+    });
+
+    it('ignores an unknown url', () => {
+      const playlist = of(0, alpha);
+
+      expect(withChapters(playlist, 'https://x.test/none.mp3', chapters)).toBe(playlist);
+    });
+
+    it('is the same playlist when the track already carries those chapters', () => {
+      const playlist = of(0, { ...alpha, chapters });
+
+      expect(withChapters(playlist, alpha.url, chapters)).toBe(playlist);
     });
   });
 });

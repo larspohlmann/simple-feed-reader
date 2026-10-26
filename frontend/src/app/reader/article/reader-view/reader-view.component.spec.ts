@@ -12,7 +12,7 @@ import { ArticleLayerComponent } from '../article-layer/article-layer.component'
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { entryScrollKey } from '../../scroll/list-scroll-memory';
-import { EntryDto, ReaderContent } from '../../models';
+import { ChapterDto, EntryDto, ReaderContent } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
@@ -66,8 +66,8 @@ class FakeEntryBodyService {
     this.stateFor(id);
   }
 
-  seed(id: number, html: string | null): void {
-    this.stateFor(id).set({ status: 'ok', html, chapters: [] });
+  seed(id: number, html: string | null, chapters: ChapterDto[] = []): void {
+    this.stateFor(id).set({ status: 'ok', html, chapters });
   }
 
   retry(id: number): void {
@@ -2179,6 +2179,33 @@ describe('ReaderViewComponent', () => {
       queue().click();
       fixture.detectChanges();
       expect(player.isQueued('https://x.test/ep.mp3')).toBe(false);
+    });
+
+    it('gives an episode queued before it was opened its chapters once they load (#1810)', () => {
+      const player = TestBed.inject(AudioPlayerService);
+      for (const method of ['pause', 'load'] as const) {
+        jest.spyOn(HTMLMediaElement.prototype, method).mockImplementation(() => {
+          /* jsdom implements no media playback. */
+        });
+      }
+      player.enqueue({
+        url: 'https://x.test/ep.mp3',
+        title: 'Ep 1',
+        faviconUrl: null,
+        imageUrl: null,
+        durationInSeconds: 120,
+      });
+      fakeBody.setLoading(1);
+      const fixture = mount(
+        entry({ attachments: [{ url: 'https://x.test/ep.mp3', mimeType: 'audio/mpeg' }] }),
+      );
+      expect(player.tracks()[0].chapters).toBeUndefined();
+
+      const chapters: ChapterDto[] = [{ startSeconds: 0, title: 'Intro' }];
+      fakeBody.seed(1, '<p>Notes</p>', chapters);
+      fixture.detectChanges();
+
+      expect(player.tracks()[0].chapters).toEqual(chapters);
     });
 
     it("drops the page's own player for the enclosure, so only Listen plays it (#1434)", async () => {

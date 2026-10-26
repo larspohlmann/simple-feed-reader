@@ -1,0 +1,20 @@
+<input
+  class="scrubber"
+  type="range"
+  min="0"
+  step="1"
+  [max]="duration()"
+  [value]="position()"
+  [style.--played]="fill().played"
+  [style.--cached]="fill().cached"
+  [attr.aria-label]="'reader.audioPlayer.seek' | transloco"
+  (input)="onScrub($event)"
+  (pointerdown)="dragging.emit(true)"
+  (pointerup)="dragging.emit(false)"
+  (pointercancel)="dragging.emit(false)"
+/>
+<div class="marks" aria-hidden="true">
+  @for (mark of marks(); track $index) {
+    <span class="mark" [style.left]="mark"></span>
+  }
+</div>

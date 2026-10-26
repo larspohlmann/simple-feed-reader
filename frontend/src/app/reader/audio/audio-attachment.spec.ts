@@ -1,5 +1,5 @@
-import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
-import { EntryAttachmentDto, EntryDto } from '../models';
+import { audioTrackEntry, firstAudioAttachment, toAudioTrack } from './audio-attachment';
+import { ChapterDto, EntryAttachmentDto, EntryDto } from '../models';
 import { anEntry } from '../../../testing/entry-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
@@ -117,5 +117,32 @@ describe('toAudioTrack', () => {
     });
 
     expect(track.entry?.publishedAt).toBe('2026-09-02T10:00:00Z');
+  });
+
+  it('has no chapters key without chapters, so a track saved before #1810 reads the same', () => {
+    const track = toAudioTrack(entry(), { url: 'https://x.test/ep.mp3' });
+
+    expect(track).not.toHaveProperty('chapters');
+  });
+
+  it('carries the chapters the article loaded (#1810)', () => {
+    const chapters: ChapterDto[] = [
+      { startSeconds: 0, title: 'Intro' },
+      { startSeconds: 90, title: 'Topic' },
+    ];
+
+    const track = toAudioTrack(entry(), { url: 'https://x.test/ep.mp3' }, chapters);
+
+    expect(track.chapters).toEqual(chapters);
+  });
+});
+
+describe('audioTrackEntry', () => {
+  it('builds the entry block a track carries', () => {
+    const subject = entry({ id: 7, publishedAt: '2026-09-01T08:00:00Z', excerpt: 'About it.' });
+
+    expect(audioTrackEntry(subject)).toEqual(
+      toAudioTrack(subject, { url: 'https://x.test/ep.mp3' }).entry,
+    );
   });
 });
