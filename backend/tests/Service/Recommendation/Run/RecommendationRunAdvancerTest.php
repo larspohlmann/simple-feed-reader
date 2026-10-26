@@ -32,6 +32,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
@@ -745,7 +746,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             (new RecommendationAnswerBudget())->outputBoundTokens(
                 \count($firstBatch),
                 RecommendationResponseSchema::BatchScore,
-                reasoning: Reasoning::Suppressed,
+                new OutputLimitModel(Reasoning::Suppressed, null),
             ),
             $batchCall['maxAnswerTokens'],
         );

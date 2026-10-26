@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Llm\Completion\Model;
 
+use App\Enum\TokenLimitParameter;
+
 /**
  * What to ask a provider for, as one value: the messages imply how many items the reply covers, which sizes
  * `maxAnswerTokens`, so the bound cannot drift from the prompt it belongs to.
@@ -17,6 +19,7 @@ final readonly class CompletionRequestModel
         public int $maxAnswerTokens,
         public JsonSchemaModel $responseSchema,
         public Reasoning $reasoning,
+        public TokenLimitParameter $tokenLimitParameter,
     ) {
     }
 }

@@ -9,6 +9,7 @@ use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
 use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
@@ -303,7 +304,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // so the ceiling (CONSOLIDATION_MAX_INPUT_FACTOR × picksLimit) binds.
         $size = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(1_000_000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            self::suppressedLimit(),
         );
 
         self::assertSame(300, $size);
@@ -321,7 +322,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // back to CONSOLIDATION_MIN_INPUT_FACTOR × picksLimit.
         $size = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(32768, 50), 'A profile.'),
-            Reasoning::Allowed,
+            self::allowedLimit(),
         );
 
         self::assertSame(100, $size);
@@ -333,16 +334,67 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $small = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            self::suppressedLimit(),
         );
         $large = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(1_000_000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            self::suppressedLimit(),
         );
 
         self::assertGreaterThan($small, $large);
         self::assertGreaterThanOrEqual(100, $small);
         self::assertLessThanOrEqual(300, $large);
+    }
+
+    public function testACappedModelTakesALongerShortlistWhereTheWindowLimits(): void
+    {
+        $context = new PromptContext($this->emptyHistory(), $this->settings(100_000, 50), null);
+
+        $uncapped = $this->builder->consolidationInputSize($context, self::allowedLimit());
+        $capped = $this->builder->consolidationInputSize($context, new OutputLimitModel(Reasoning::Allowed, 20_000));
+
+        self::assertSame(175, $uncapped);
+        self::assertSame(190, $capped);
+    }
+
+    public function testACapBelowTheAnswerBoundShrinksTheShortlistUntilTheAnswerFits(): void
+    {
+        $context = new PromptContext($this->emptyHistory(), $this->settings(1_000_000, 50), null);
+
+        $uncapped = $this->builder->consolidationInputSize($context, self::allowedLimit());
+        $capped = $this->builder->consolidationInputSize($context, new OutputLimitModel(Reasoning::Allowed, 16_384));
+
+        self::assertSame(300, $uncapped);
+        self::assertSame(156, $capped);
+    }
+
+    public function testTheFloorHoldsWhenEvenItsAnswerExceedsTheCap(): void
+    {
+        $size = $this->builder->consolidationInputSize(
+            new PromptContext($this->emptyHistory(), $this->settings(1_000_000, 50), null),
+            new OutputLimitModel(Reasoning::Allowed, 4096),
+        );
+
+        self::assertSame(100, $size);
+    }
+
+    public function testACallFillingTheWindowExactlyStillFits(): void
+    {
+        $limit = self::suppressedLimit();
+        // The empty-history overhead, 150 candidate lines, their reply bound and the suppressed reasoning headroom.
+        $exactFit = 1510 + 150 * 273 + 15_750 + 8000;
+
+        $atTheWindow = $this->builder->consolidationInputSize(
+            new PromptContext($this->emptyHistory(), $this->settings($exactFit, 50), null),
+            $limit,
+        );
+        $oneTokenShort = $this->builder->consolidationInputSize(
+            new PromptContext($this->emptyHistory(), $this->settings($exactFit - 1, 50), null),
+            $limit,
+        );
+
+        self::assertSame(150, $atTheWindow);
+        self::assertSame(149, $oneTokenShort);
     }
 
     public function testALongerProfileShrinksTheConsolidationShortlist(): void
@@ -351,11 +403,11 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $short = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            self::suppressedLimit(),
         );
         $long = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(60000, 50), str_repeat('Likes Rust. ', 400)),
-            Reasoning::Suppressed,
+            self::suppressedLimit(),
         );
 
         self::assertLessThan($short, $long);
@@ -372,11 +424,11 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $withFew = $this->builder->consolidationInputSize(
             new PromptContext($few, $this->settings(60000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            self::suppressedLimit(),
         );
         $withMany = $this->builder->consolidationInputSize(
             new PromptContext($many, $this->settings(60000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            self::suppressedLimit(),
         );
 
         self::assertLessThan($withFew, $withMany);
@@ -1010,6 +1062,16 @@ final class RecommendationPromptBuilderTest extends TestCase
             [],
             [],
         );
+    }
+
+    private static function suppressedLimit(): OutputLimitModel
+    {
+        return new OutputLimitModel(Reasoning::Suppressed, null);
+    }
+
+    private static function allowedLimit(): OutputLimitModel
+    {
+        return new OutputLimitModel(Reasoning::Allowed, null);
     }
 
     private static function line(int $id, string $title, int $descriptionChars): ArticleLineModel

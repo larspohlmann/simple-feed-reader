@@ -436,7 +436,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
             'stream_options' => ['include_usage' => true],
             // The only guard that prevents spend rather than discarding billed tokens; the caller sizes it from the
             // reserve the prompt left, so it never truncates a reply the prompt asked for.
-            'max_tokens' => $request->maxAnswerTokens,
+            $request->tokenLimitParameter->value => $request->maxAnswerTokens,
         ];
 
         if (Reasoning::Suppressed === $request->reasoning) {

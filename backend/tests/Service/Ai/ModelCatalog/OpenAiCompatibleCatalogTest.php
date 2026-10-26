@@ -91,6 +91,42 @@ final class OpenAiCompatibleCatalogTest extends TestCase
             ['id' => 'claude-haiku-5-5', 'max_input_tokens' => 1_000_000],
             new ModelDescriptor('claude-haiku-5-5', 1_000_000),
         ];
+        yield 'a model reporting its output cap (OpenRouter)' => [
+            [
+                'id' => 'openai/gpt-4.1-mini',
+                'context_length' => 1_047_576,
+                'top_provider' => ['max_completion_tokens' => 32_768],
+            ],
+            new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576, maxOutputTokens: 32_768),
+        ];
+        yield 'an output cap that is null' => [
+            [
+                'id' => 'acme/uncapped-1',
+                'context_length' => 32_000,
+                'top_provider' => ['max_completion_tokens' => null],
+            ],
+            new ModelDescriptor('acme/uncapped-1', 32_000),
+        ];
+        yield 'an output cap of zero' => [
+            [
+                'id' => 'acme/zero-cap-1',
+                'context_length' => 32_000,
+                'top_provider' => ['max_completion_tokens' => 0],
+            ],
+            new ModelDescriptor('acme/zero-cap-1', 32_000),
+        ];
+        yield 'an output cap given as a string' => [
+            [
+                'id' => 'acme/string-cap-1',
+                'context_length' => 32_000,
+                'top_provider' => ['max_completion_tokens' => '32768'],
+            ],
+            new ModelDescriptor('acme/string-cap-1', 32_000),
+        ];
+        yield 'a top provider that is no object' => [
+            ['id' => 'acme/odd-1', 'context_length' => 32_000, 'top_provider' => 'openai'],
+            new ModelDescriptor('acme/odd-1', 32_000),
+        ];
         yield 'an image model' => [self::entry('bytedance-seed/seedream-5-0-flash', 0, ['image']), null];
         yield 'an embedding model' => [self::entry('liquid/lfm-2.5-embedding-350m:free', 512, ['embeddings']), null];
         yield 'decisions beside another output' => [self::entry('acme/mixed-1', 32_000, ['decisions', 'rerank']), null];
@@ -129,6 +165,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         ));
 
         self::assertEquals(null === $expected ? [] : [$expected], $models);
+        self::assertSame($expected?->maxOutputTokens, $models[0]->maxOutputTokens ?? null);
     }
 
     /**

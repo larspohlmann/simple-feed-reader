@@ -10,6 +10,7 @@ use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\ScoringProtocol;
+use App\Enum\TokenLimitParameter;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -372,5 +373,152 @@ final class AiProviderSettingsTest extends TestCase
 
         self::assertSame(RecommendationEngineKind::Llm, $settings->getModelKind());
         self::assertNull($settings->getScoringProtocol());
+    }
+
+    public function testANewModelIsAskedWithMaxTokensAndNoCap(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null));
+
+        self::assertSame(TokenLimitParameter::MaxTokens, $connection->getTokenLimitParameter());
+        self::assertNull($connection->getModelMaxOutputTokens());
+    }
+
+    public function testTheCatalogsOutputCapIsKeptWithTheChosenModel(): void
+    {
+        $connection = $this->connectionChoosing(
+            new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576, maxOutputTokens: 32_768),
+        );
+
+        self::assertSame(32_768, $connection->getModelMaxOutputTokens());
+    }
+
+    public function testARefusedMaxTokensSwitchesToMaxCompletionTokens(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-5.4-nano', null));
+
+        $connection->recordMaxTokensRefused();
+
+        self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
+    }
+
+    public function testARecordedOutputCapReplacesTheCatalogs(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null, maxOutputTokens: 40_000));
+
+        $connection->recordOutputCap(32_768);
+
+        self::assertSame(32_768, $connection->getModelMaxOutputTokens());
+    }
+
+    public function testChoosingAnotherModelForgetsWhatTheLastOneTaught(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null));
+        $connection->recordMaxTokensRefused();
+        $connection->recordOutputCap(32_768);
+
+        $connection->chooseModel(
+            new ModelDescriptor('gpt-5.4-nano', null),
+            new \DateTimeImmutable('2026-10-26 11:00:00'),
+        );
+
+        self::assertSame(TokenLimitParameter::MaxTokens, $connection->getTokenLimitParameter());
+        self::assertNull($connection->getModelMaxOutputTokens());
+    }
+
+    public function testReChoosingTheSameModelKeepsWhatItTaught(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-5.4-nano', null));
+        $connection->recordMaxTokensRefused();
+        $connection->recordOutputCap(32_768);
+
+        $connection->chooseModel(
+            new ModelDescriptor('gpt-5.4-nano', null, maxOutputTokens: 40_000),
+            new \DateTimeImmutable('2026-10-26 11:00:00'),
+        );
+
+        self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
+        self::assertSame(32_768, $connection->getModelMaxOutputTokens());
+    }
+
+    /** @return iterable<string, array{?int, ?int, ?int}> */
+    public static function learnedAndReportedCaps(): iterable
+    {
+        yield 'the catalog reports none' => [32_768, null, 32_768];
+        yield 'a reported cap lower than the learned one' => [32_768, 16_384, 16_384];
+        yield 'a reported cap higher than the learned one' => [32_768, 40_000, 32_768];
+        yield 'none learned' => [null, 16_384, 16_384];
+    }
+
+    #[DataProvider('learnedAndReportedCaps')]
+    public function testReChoosingTheSameModelKeepsTheLowerOfTheLearnedAndReportedCap(
+        ?int $learned,
+        ?int $reported,
+        ?int $expected,
+    ): void {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null));
+        if (null !== $learned) {
+            $connection->recordOutputCap($learned);
+        }
+
+        $this->reChoose($connection, new ModelDescriptor('gpt-4.1-mini', null, maxOutputTokens: $reported));
+
+        self::assertSame($expected, $connection->getModelMaxOutputTokens());
+    }
+
+    public function testARecordedOutputCapNeverRaisesTheCapAlreadyKnown(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null, maxOutputTokens: 16_384));
+
+        $connection->recordOutputCap(32_768);
+
+        self::assertSame(16_384, $connection->getModelMaxOutputTokens());
+    }
+
+    public function testReplacingTheConnectionForgetsTheLearnedLimits(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null));
+        $connection->recordMaxTokensRefused();
+        $connection->recordOutputCap(32_768);
+
+        $connection->replaceConnection(
+            'https://other.example.test/v1',
+            $this->sealed('b3RoZXI='),
+            'wxyz',
+            new \DateTimeImmutable('2026-10-26 11:00:00'),
+        );
+        $connection->chooseModel(
+            new ModelDescriptor('gpt-4.1-mini', null),
+            new \DateTimeImmutable('2026-10-26 11:01:00'),
+        );
+
+        self::assertSame(TokenLimitParameter::MaxTokens, $connection->getTokenLimitParameter());
+        self::assertNull($connection->getModelMaxOutputTokens());
+    }
+
+    public function testAConnectionWithoutAModelCannotRecordARefusedMaxTokens(): void
+    {
+        $this->expectException(\LogicException::class);
+
+        $this->settings()->recordMaxTokensRefused();
+    }
+
+    public function testAConnectionWithoutAModelCannotRecordAnOutputCap(): void
+    {
+        $this->expectException(\LogicException::class);
+
+        $this->settings()->recordOutputCap(32_768);
+    }
+
+    private function reChoose(AiProviderSettings $connection, ModelDescriptor $model): void
+    {
+        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-26 11:00:00'));
+    }
+
+    private function connectionChoosing(ModelDescriptor $model): AiProviderSettings
+    {
+        $connection = $this->settings();
+        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-26 10:00:00'));
+
+        return $connection;
     }
 }

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Llm\Run;
 
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Llm\Completion\Support\CompletionFinishReason;
 use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
 use App\Service\Recommendation\Llm\Prompt\Model\ConsolidationParseResultModel;
+use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Recommendation\Llm\Prompt\Model\RecommendationPickModel;
 use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
@@ -53,7 +53,7 @@ final readonly class RecommendationConsolidationResolver
             $tick->settings,
             $run->getProfileText(),
         );
-        $inputSize = $this->promptBuilder->consolidationInputSize($prompt, Reasoning::preferredBy($tick->connection));
+        $inputSize = $this->promptBuilder->consolidationInputSize($prompt, OutputLimitModel::of($tick->connection));
         $pool = ConsolidationShortlist::of($this->ranker->ranked($run->getWinners()), $inputSize);
         $linesById = $this->candidateLoader->linesForIds($tick->userId(), array_column($pool, 'id'));
         $pool = self::stillPresent($pool, $linesById);

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Llm\Prompt;
 
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
@@ -103,9 +103,10 @@ final readonly class RecommendationPromptBuilder
 
     /**
      * How many ranked winners the consolidation call takes: the largest shortlist whose whole call, reply and
-     * reasoning headroom included, fits the context window, clamped between the floor and ceiling factors.
+     * reasoning headroom included, fits the context window and whose reply fits the model's cap, clamped between the
+     * floor and ceiling factors.
      */
-    public function consolidationInputSize(PromptContext $context, Reasoning $reasoning): int
+    public function consolidationInputSize(PromptContext $context, OutputLimitModel $limit): int
     {
         $contextWindow = $context->settings->packing->contextWindow;
         $picksLimit = $context->settings->poolLimits->picksLimit;
@@ -121,12 +122,9 @@ final readonly class RecommendationPromptBuilder
         for ($size = $ceiling; $size > $floor; --$size) {
             $callTokens = $fixedInputTokens
                 + $size * $perCandidateInputTokens
-                + $this->answerBudget->outputBoundTokens(
-                    $size,
-                    RecommendationResponseSchema::Consolidation,
-                    $reasoning,
-                );
-            if ($callTokens <= $contextWindow) {
+                + $this->answerBudget->outputBoundTokens($size, RecommendationResponseSchema::Consolidation, $limit);
+            $answerTokens = $this->answerBudget->answerBoundTokens($size, RecommendationResponseSchema::Consolidation);
+            if ($callTokens <= $contextWindow && $limit->admits($answerTokens)) {
                 return $size;
             }
         }

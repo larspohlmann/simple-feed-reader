@@ -18,6 +18,7 @@ final readonly class ModelDescriptor
         public string $id,
         public ?int $contextWindow,
         public ?ScoringProtocol $scoringProtocol = null,
+        public ?int $maxOutputTokens = null,
     ) {
         if (null !== $scoringProtocol && (null === $contextWindow || $contextWindow <= 0)) {
             throw new \InvalidArgumentException(

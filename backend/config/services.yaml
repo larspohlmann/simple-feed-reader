@@ -181,6 +181,12 @@ services:
         arguments:
             $lockKeepalive: '@App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive'
             $workerLiveness: '@App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat'
+    App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface: '@App\Service\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback'
+    App\Service\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback:
+        arguments:
+            $tokenParameter: '@App\Service\Recommendation\Llm\Run\MaxTokensRefusedFallback'
+            $outputCap: '@App\Service\Recommendation\Llm\Run\OutputCapFallback'
+            $suppressedReasoning: '@App\Service\Recommendation\Llm\Run\SuppressedReasoningFallback'
     App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface: '@App\Service\Process\ShellCommandRunner\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncher'
 

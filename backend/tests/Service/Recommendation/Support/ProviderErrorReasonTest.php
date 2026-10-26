@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Support;
 
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
 use App\Service\Recommendation\Support\ProviderErrorReason;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -88,6 +89,46 @@ final class ProviderErrorReasonTest extends TestCase
         $reason = self::reasonIn(json_encode(['error' => ['message' => $message]], \JSON_THROW_ON_ERROR));
 
         self::assertSame(str_repeat('x', 490) . '[redacted]…', $reason);
+    }
+
+    public function testItReadsOpenAisErrorCodeAndParameter(): void
+    {
+        self::assertEquals(
+            new ProviderErrorIdentifiersModel('invalid_value', 'max_tokens'),
+            ProviderErrorReason::identifiersIn(
+                '{"error":{"message":"max_tokens is too large: 35000.","type":"invalid_request_error",'
+                . '"param":"max_tokens","code":"invalid_value"}}',
+            ),
+        );
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function bodiesWithoutIdentifiers(): iterable
+    {
+        yield 'not json' => ['Bad Request'];
+        yield 'an error that is a bare string' => ['{"error":"nope"}'];
+        yield 'an error without them' => ['{"error":{"message":"No."}}'];
+        yield 'a numeric code and a null parameter' => ['{"error":{"code":400,"param":null}}'];
+        yield 'a detail body' => ['{"detail":"state is too long"}'];
+    }
+
+    #[DataProvider('bodiesWithoutIdentifiers')]
+    public function testABodyWithoutIdentifiersGivesNone(string $body): void
+    {
+        self::assertEquals(new ProviderErrorIdentifiersModel(null, null), ProviderErrorReason::identifiersIn($body));
+    }
+
+    public function testAnIdentifierIsClippedAfterSixtyFourCharactersNotBytes(): void
+    {
+        $body = json_encode(
+            ['error' => ['code' => str_repeat('c', 64), 'param' => str_repeat('ä', 65)]],
+            \JSON_THROW_ON_ERROR,
+        );
+
+        self::assertEquals(
+            new ProviderErrorIdentifiersModel(str_repeat('c', 64), str_repeat('ä', 64)),
+            ProviderErrorReason::identifiersIn($body),
+        );
     }
 
     private static function reasonIn(string $body): ?string
