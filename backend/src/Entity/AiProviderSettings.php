@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Enum\RecommendationEngineKind;
 use App\Enum\ScoringProtocol;
+use App\Enum\TokenLimitParameter;
 use App\Repository\AiProviderSettingsRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -176,9 +177,36 @@ final class AiProviderSettings
         $this->suppressionRefusedByModel = null;
     }
 
+    public function getModelMaxOutputTokens(): ?int
+    {
+        return $this->chosenModel->getModelMaxOutputTokens();
+    }
+
+    public function getTokenLimitParameter(): TokenLimitParameter
+    {
+        return $this->chosenModel->getTokenLimitParameter();
+    }
+
+    public function recordMaxTokensRefused(): void
+    {
+        $this->requireModelForARefusal();
+        $this->chosenModel->refuseMaxTokens();
+    }
+
+    public function recordOutputCap(int $tokens): void
+    {
+        $this->requireModelForARefusal();
+        $this->chosenModel->capOutput($tokens);
+    }
+
     public function recordSuppressionRefused(): void
     {
-        $this->suppressionRefusedByModel = $this->getModel()
+        $this->suppressionRefusedByModel = $this->requireModelForARefusal();
+    }
+
+    private function requireModelForARefusal(): string
+    {
+        return $this->getModel()
             ?? throw new \LogicException('A connection without a model has sent no request to refuse.');
     }
 
