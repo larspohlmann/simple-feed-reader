@@ -1060,6 +1060,8 @@ In `embedFrame`, after the attribute loop and before `return frame;`, add:
 
 `PlayingEmbedDirective` still overrides `allow` with `'autoplay; fullscreen'` for its own frames, so it is unaffected.
 
+Superseded by the closing `/simplify` pass. There is no URL-sniffing regex: `withPlayerApi` returns an `EmbedSource { url, allow: 'autoplay' }`, `upgradeMediaEmbeds` takes an `EmbedSourceOf`, and `embedFrame(source, title)` sets `allow` from the source. `PlayingEmbedDirective` passes its own `allow` the same way.
+
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `docker compose exec -T frontend npm test -- src/app/reader/media src/app/reader/article`
