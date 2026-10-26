@@ -18,7 +18,7 @@ import { releaseHlsStreams } from '../../media/hls-streams';
 import { UnplayableVideoService } from '../../media/unplayable-video.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
-import { withPlayerApi } from '../../media/media-embeds';
+import { withScriptablePlayer } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame, youTubeVideoId } from '../../audio/embed-media';
 import { ChapterDto, EntryDto } from '../../models';
@@ -129,7 +129,7 @@ export class ArticleBody {
     const chapteredEmbed = (): EmbedMedia | null => chapteredEmbedOf(host, chapterList, track);
     const controls = decorateArticle(host, this.i18n, {
       enclosureUrl: parts.enclosureUrl(),
-      embedSource: (url) => withPlayerApi(url, window.location.origin),
+      embedSource: (url) => withScriptablePlayer(url, window.location.origin),
       listen: this.embedAudio.actions({
         entry: parts.entry(),
         chaptersOf: (media) =>

@@ -1,5 +1,5 @@
 import { articleHost } from '../../../../testing/article-host-testing';
-import { upgradeMediaEmbeds, withPlayerApi } from '../../media/media-embeds';
+import { upgradeMediaEmbeds, withScriptablePlayer } from '../../media/media-embeds';
 import { addCinemaToggles } from './reader-cinema';
 import {
   addEmbedListenControls,
@@ -30,7 +30,7 @@ function actionsSpy(): ListenActions {
 
 function playerHost(html: string): HTMLElement {
   return articleHost(html, (host) => {
-    upgradeMediaEmbeds(host, (url) => withPlayerApi(url, 'https://reader.test'));
+    upgradeMediaEmbeds(host, (url) => withScriptablePlayer(url, 'https://reader.test'));
     addCinemaToggles(host, { enter: 'Cinema mode', exit: 'Exit cinema mode' });
   });
 }

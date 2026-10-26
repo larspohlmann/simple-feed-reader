@@ -29,6 +29,8 @@ export class SoundCloudChapterPlayer implements ChapterPlayer {
         return this.readDuration(message.value);
       case 'playProgress':
         return this.readPosition(message.value);
+      case 'ready':
+        return this.subscribe();
       case 'play':
         return this.becomePlaying();
       case 'pause':
@@ -41,7 +43,6 @@ export class SoundCloudChapterPlayer implements ChapterPlayer {
 
   private readonly onLoad = (): void => {
     this.playing = false;
-    this.subscribe();
   };
 
   constructor(private readonly frame: HTMLIFrameElement) {

@@ -34,13 +34,46 @@ function playerWithFrame(): {
 }
 
 describe('SoundCloudChapterPlayer', () => {
-  it('subscribes on construction and again when the frame loads', () => {
+  it('subscribes on construction, and again when the widget is ready', () => {
     const { frame, posted, player } = playerWithFrame();
     expect(messagesOf(posted)).toEqual(SUBSCRIPTION);
 
     frame.dispatchEvent(new Event('load'));
+    expect(messagesOf(posted)).toEqual(SUBSCRIPTION);
+
+    delivery(frame, { method: 'ready' });
 
     expect(messagesOf(posted)).toEqual([...SUBSCRIPTION, ...SUBSCRIPTION]);
+    player.release();
+  });
+
+  it('ignores a ready from another window', () => {
+    const { posted, player } = playerWithFrame();
+    posted.length = 0;
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify({ method: 'ready' }),
+        origin: SOUNDCLOUD_WIDGET_ORIGIN,
+      }),
+    );
+
+    expect(posted).toEqual([]);
+    player.release();
+  });
+
+  it('seeks a held chapter once the widget is ready and plays', () => {
+    const { frame, posted, player } = playerWithFrame();
+    player.playFrom(600);
+    posted.length = 0;
+
+    delivery(frame, { method: 'ready' });
+    delivery(frame, { method: 'play' });
+    delivery(frame, { method: 'play' });
+
+    expect(
+      messagesOf(posted).filter((message) => (message as { method: string }).method === 'seekTo'),
+    ).toEqual([seekTo(600000)]);
     player.release();
   });
 
