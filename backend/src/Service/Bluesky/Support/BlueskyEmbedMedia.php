@@ -59,6 +59,7 @@ final class BlueskyEmbedMedia
             $ratio->int('width'),
             $ratio->int('height'),
             HttpsImageUrl::orNull($embed->string('thumbnail')),
+            $embed->string('alt'),
         );
     }
 

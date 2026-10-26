@@ -115,11 +115,38 @@ describe('PostMediaComponent', () => {
     };
     const { fixture } = await mount([gif, pickerGif, stillPicture]);
     const items = Array.from(
-      fixture.nativeElement.querySelectorAll('app-post-media > .item') as NodeListOf<HTMLElement>,
+      fixture.nativeElement.querySelectorAll(
+        'app-post-media > .cell > .item',
+      ) as NodeListOf<HTMLElement>,
     );
 
     expect(items.map((item) => item.tagName.toLowerCase())).toEqual(['app-gif', 'app-gif', 'img']);
     expect(fixture.nativeElement.querySelector('.video-slot')).toBeNull();
+  });
+
+  it('puts an ALT badge on a described picture and GIF only', async () => {
+    const { fixture } = await mount([
+      { ...image(1), alt: 'A donkey' },
+      image(2),
+      { ...gif, alt: 'Clapping' },
+    ]);
+    const cells = Array.from(
+      fixture.nativeElement.querySelectorAll('app-post-media > .cell') as NodeListOf<HTMLElement>,
+    );
+
+    expect(cells.map((cell) => cell.querySelector('app-alt-text') !== null)).toEqual([
+      true,
+      false,
+      true,
+    ]);
+  });
+
+  it('names a video by its alt text before the given label', async () => {
+    const { fixture } = await mount([{ ...clip, alt: 'A donkey trots past' }]);
+
+    expect(fixture.nativeElement.querySelector('video').getAttribute('aria-label')).toBe(
+      'A donkey trots past',
+    );
   });
 
   it('pauses its video and releases its stream when destroyed', async () => {

@@ -1,0 +1,15 @@
+<div class="wrap" [appDismissOnOutside]="open()" (dismiss)="open.set(false)">
+  @if (open()) {
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+    <p class="text" (click)="toggle($event)">{{ text() }}</p>
+  }
+  <button
+    type="button"
+    class="badge"
+    [attr.aria-expanded]="open()"
+    [attr.aria-label]="(open() ? 'reader.media.hideAlt' : 'reader.media.showAlt') | transloco"
+    (click)="toggle($event)"
+  >
+    {{ 'reader.media.alt' | transloco }}
+  </button>
+</div>

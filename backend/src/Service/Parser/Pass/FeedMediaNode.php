@@ -12,6 +12,7 @@ use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\FeedMediaClassifier;
+use App\Service\Parser\Support\MediaDescription;
 use App\Service\Parser\Support\MediaDuration;
 
 /**
@@ -49,6 +50,7 @@ final readonly class FeedMediaNode
             VisualMediaKind::Image,
             $this->width(),
             $this->intAttribute('height'),
+            alt: $this->alt(),
         );
     }
 
@@ -65,6 +67,7 @@ final readonly class FeedMediaNode
             $this->width(),
             $this->intAttribute('height'),
             $previewImageUrl,
+            $this->alt(),
         );
     }
 
@@ -85,6 +88,11 @@ final readonly class FeedMediaNode
         $title = CoreElement::extension($this->element, FeedNamespace::MediaRss)->child('title');
 
         return $title === null ? null : self::nonEmpty($title->textContent);
+    }
+
+    private function alt(): ?string
+    {
+        return MediaDescription::plainText(MediaDescription::descriptionOf($this->element));
     }
 
     private function intAttribute(string $name): ?int

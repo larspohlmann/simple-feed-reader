@@ -1082,7 +1082,10 @@
     "closeSidebar": "Seitenleiste schließen",
     "mediaVideo": "Video",
     "media": {
-      "gif": "GIF"
+      "alt": "ALT",
+      "gif": "GIF",
+      "hideAlt": "Bildbeschreibung ausblenden",
+      "showAlt": "Bildbeschreibung anzeigen"
     },
     "quotedVideo": "Video im zitierten Beitrag",
     "quotingPostBy": "Zitiert einen Beitrag von {{handle}}",

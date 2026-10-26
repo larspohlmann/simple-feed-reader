@@ -148,6 +148,7 @@
 
   /* A label laid over a picture, whose colours are the picture's, not the theme's. */
   --media-scrim: rgb(0 0 0 / 55%);
+  --media-scrim-strong: rgb(0 0 0 / 80%);
   --on-media-scrim: rgb(255 255 255 / 92%);
 
   /* Row density, two named steps: every list/rail/picker row derives its

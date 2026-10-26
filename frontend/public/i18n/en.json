@@ -1082,7 +1082,10 @@
     "closeSidebar": "Close sidebar",
     "mediaVideo": "Video",
     "media": {
-      "gif": "GIF"
+      "alt": "ALT",
+      "gif": "GIF",
+      "hideAlt": "Hide image description",
+      "showAlt": "Show image description"
     },
     "quotedVideo": "Video in the quoted post",
     "quotingPostBy": "Quoting a post by {{handle}}",

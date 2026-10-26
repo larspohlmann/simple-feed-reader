@@ -43,6 +43,7 @@ final class MastodonAttachments
                 VisualMediaKind::Image,
                 $size->int('width'),
                 $size->int('height'),
+                alt: $attachment->string('description'),
             ),
             'video' === $type, 'gifv' === $type => new ParsedMediumModel(
                 $url,

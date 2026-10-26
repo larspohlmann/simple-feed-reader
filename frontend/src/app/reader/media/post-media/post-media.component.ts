@@ -8,6 +8,7 @@ import {
   input,
 } from '@angular/core';
 import { EntryMediumDto, isGif } from '../../entry-medium';
+import { AltTextComponent } from '../alt-text/alt-text.component';
 import { GifComponent } from '../gif/gif.component';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { armHlsStreams, releaseHlsStreams } from '../hls-streams';
@@ -18,7 +19,7 @@ import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
 @Component({
   selector: 'app-post-media',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GifComponent, ProxiedImageDirective],
+  imports: [AltTextComponent, GifComponent, ProxiedImageDirective],
   templateUrl: './post-media.component.html',
   styleUrl: './post-media.component.scss',
   host: { '[attr.data-count]': 'media().length', '[style.--ratio]': 'ratio()' },
@@ -56,7 +57,7 @@ export class PostMediaComponent {
     const clips = media.filter((medium) => medium.kind === 'video');
     this.host.querySelectorAll('.video-slot').forEach((slot, index) => {
       const video = slot.querySelector('video') ?? slot.appendChild(this.newVideo(clips[index]));
-      video.setAttribute('aria-label', label);
+      video.setAttribute('aria-label', clips[index].alt || label);
     });
   }
 

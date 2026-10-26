@@ -23,6 +23,19 @@ final class MastodonAttachmentsTest extends TestCase
         self::assertSame('https://files.example/a.jpg', $media[0]->url);
     }
 
+    public function testAnImageKeepsItsDescriptionAsAltText(): void
+    {
+        $media = MastodonAttachments::of([
+            JsonNodeModel::of([
+                'type' => 'image',
+                'url' => 'https://files.example/a.jpg',
+                'description' => 'A donkey in a field',
+            ]),
+        ]);
+
+        self::assertSame('A donkey in a field', $media[0]->alt);
+    }
+
     public function testAStatusesAttachmentsBecomeEntryMedia(): void
     {
         $media = MastodonAttachments::entryMediaOf(JsonNodeModel::of(['media_attachments' => [
