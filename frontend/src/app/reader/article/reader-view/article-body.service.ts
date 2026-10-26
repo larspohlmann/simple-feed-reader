@@ -108,7 +108,7 @@ export class ArticleBody {
           const track = parts.audioTrack();
           decorateArticle(host, this.i18n, {
             enclosureUrl: parts.enclosureUrl(),
-            frameUrl:
+            embedSource:
               chapterList.length && !track
                 ? (url) => withPlayerApi(url, window.location.origin)
                 : undefined,

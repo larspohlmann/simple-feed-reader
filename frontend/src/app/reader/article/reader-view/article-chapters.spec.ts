@@ -101,6 +101,7 @@ describe('ArticleChapters', () => {
     expect(host.querySelectorAll('.reader-chapters')).toHaveLength(1);
     expect(titles(host)).toEqual(['X', 'Y', 'Z']);
     const current = host.querySelector('.reader-chapters__row[aria-current="true"]');
-    expect(current?.textContent).toBe('0:30Y');
+    expect(current?.querySelector('.reader-chapters__time')?.textContent).toBe('0:30');
+    expect(current?.querySelector('.reader-chapters__title')?.textContent).toBe('Y');
   });
 });

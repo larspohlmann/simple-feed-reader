@@ -1,9 +1,15 @@
 import { ChapterDto } from '../../models';
-import { ChapterPlayer } from '../../chapters/chapter-player';
-import { currentChapterIndex } from '../../chapters/current-chapter';
+import { ChapterPlayer, PlaybackPosition } from '../../chapters/chapter-player';
+import {
+  ChapterProgress,
+  chapterProgress,
+  currentChapterIndex,
+} from '../../chapters/current-chapter';
 import { formatDuration } from '../../format';
 
 const LIST = 'reader-chapters';
+const PROGRESS = '--chapter-progress';
+const TIME_LEFT = `${LIST}__left`;
 
 export interface ChapterList {
   readonly chapters: ChapterDto[];
@@ -31,7 +37,11 @@ export function addChapterList(
   let marked = -1;
   const mark = (index: number): void => {
     if (index === marked) return;
-    rows[marked]?.removeAttribute('aria-current');
+    const previous = rows[marked];
+    if (previous) {
+      previous.removeAttribute('aria-current');
+      clearProgress(previous);
+    }
     rows[index]?.setAttribute('aria-current', 'true');
     marked = index;
   };
@@ -42,7 +52,12 @@ export function addChapterList(
     }),
   );
   const starts = chapters.map((chapter) => chapter.startSeconds);
-  player.watch((seconds) => mark(currentChapterIndex(starts, seconds)));
+  const follow = (position: PlaybackPosition | null): void => {
+    const index = currentChapterIndex(starts, position?.seconds ?? null);
+    mark(index);
+    if (position && index >= 0) showProgress(rows[index], chapterProgress(starts, index, position));
+  };
+  player.watch(follow);
 
   const list = document.createElement('nav');
   list.className = LIST;
@@ -62,9 +77,7 @@ export function addChapterList(
 }
 
 function toggle(items: HTMLElement, heading: string): HTMLButtonElement {
-  const icon = document.createElement('span');
-  icon.className = 'material-symbols-outlined';
-  icon.setAttribute('aria-hidden', 'true');
+  const icon = materialIcon('chevron_right');
   const label = document.createElement('span');
   label.textContent = heading;
   const button = document.createElement('button');
@@ -84,6 +97,37 @@ function toggle(items: HTMLElement, heading: string): HTMLButtonElement {
   return button;
 }
 
+function materialIcon(name: string): HTMLSpanElement {
+  const icon = document.createElement('span');
+  icon.className = 'material-symbols-outlined';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = name;
+  return icon;
+}
+
+function showProgress(row: HTMLElement, progress: ChapterProgress | null): void {
+  if (progress === null) {
+    clearProgress(row);
+    return;
+  }
+  row.style.setProperty(PROGRESS, progress.fraction.toFixed(4));
+  row
+    .querySelector(`.${TIME_LEFT}`)
+    ?.replaceChildren(materialIcon('schedule'), remaining(progress.secondsLeft));
+}
+
+function remaining(seconds: number): HTMLSpanElement {
+  const time = document.createElement('span');
+  time.className = `${LIST}__remaining`;
+  time.textContent = formatDuration(seconds);
+  return time;
+}
+
+function clearProgress(row: HTMLElement): void {
+  row.style.removeProperty(PROGRESS);
+  row.querySelector(`.${TIME_LEFT}`)?.replaceChildren();
+}
+
 function chapterRow(chapter: ChapterDto): HTMLButtonElement {
   const time = document.createElement('span');
   time.className = `${LIST}__time`;
@@ -91,9 +135,12 @@ function chapterRow(chapter: ChapterDto): HTMLButtonElement {
   const title = document.createElement('span');
   title.className = `${LIST}__title`;
   title.textContent = chapter.title;
+  const timeLeft = document.createElement('span');
+  timeLeft.className = TIME_LEFT;
+  timeLeft.setAttribute('aria-hidden', 'true');
   const row = document.createElement('button');
   row.type = 'button';
   row.className = `${LIST}__row`;
-  row.append(time, title);
+  row.append(time, title, timeLeft);
   return row;
 }
