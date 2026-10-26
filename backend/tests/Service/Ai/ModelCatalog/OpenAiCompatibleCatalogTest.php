@@ -99,13 +99,29 @@ final class OpenAiCompatibleCatalogTest extends TestCase
             ],
             new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576, maxOutputTokens: 32_768),
         ];
-        yield 'an output cap that is no positive number' => [
+        yield 'an output cap that is null' => [
             [
                 'id' => 'acme/uncapped-1',
                 'context_length' => 32_000,
                 'top_provider' => ['max_completion_tokens' => null],
             ],
             new ModelDescriptor('acme/uncapped-1', 32_000),
+        ];
+        yield 'an output cap of zero' => [
+            [
+                'id' => 'acme/zero-cap-1',
+                'context_length' => 32_000,
+                'top_provider' => ['max_completion_tokens' => 0],
+            ],
+            new ModelDescriptor('acme/zero-cap-1', 32_000),
+        ];
+        yield 'an output cap given as a string' => [
+            [
+                'id' => 'acme/string-cap-1',
+                'context_length' => 32_000,
+                'top_provider' => ['max_completion_tokens' => '32768'],
+            ],
+            new ModelDescriptor('acme/string-cap-1', 32_000),
         ];
         yield 'a top provider that is no object' => [
             ['id' => 'acme/odd-1', 'context_length' => 32_000, 'top_provider' => 'openai'],
@@ -149,6 +165,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         ));
 
         self::assertEquals(null === $expected ? [] : [$expected], $models);
+        self::assertSame($expected?->maxOutputTokens, $models[0]->maxOutputTokens ?? null);
     }
 
     /**
