@@ -1759,12 +1759,14 @@ restored with the playlist; every surface reads the current one from
   the full transport, the scrubber.
 - **Big player:** a chapter strip under the transport (previous chapter, the
   current title over "Chapter n of N" and its time left, next chapter); the
-  chapter list under the extras, open by default, toggled by the strip's title
-  and its own heading.
+  chapter list under the extras, toggled by the strip's title and its own
+  heading. It opens by itself only for the only queued track; a longer queue
+  starts with it closed (#1821).
 - **Queue:** a chaptered row shows its count after the duration and a chevron
   that expands `<app-audio-chapters class="nested">` inside the same draggable
-  row; the playing track opens with the queue. The nested list is never a
-  `cdkDropList` ([Gotchas](../CLAUDE.md)).
+  row; every row, the playing one too, starts closed, so the chapters never
+  show twice on the phone sheet. The nested list is never a `cdkDropList`
+  ([Gotchas](../CLAUDE.md)).
 - **Lock screen:** Media Session metadata puts the chapter in the title, the
   track as the artist and the feed as the album.
 

@@ -283,6 +283,14 @@ describe('BigPlayerComponent', () => {
       return fixture;
     }
 
+    function chapteredAlone(phone = false) {
+      const fixture = chaptered(phone);
+      player.tracks.set([episode]);
+      player.index.set(0);
+      fixture.detectChanges();
+      return fixture;
+    }
+
     function control(fixture: ReturnType<typeof render>, selector: string): HTMLButtonElement {
       return query<HTMLButtonElement>(fixture, selector)!;
     }
@@ -365,8 +373,8 @@ describe('BigPlayerComponent', () => {
       expect(control(fixture, '.next-chapter').disabled).toBe(true);
     });
 
-    it('opens with the list under a counted heading, between the extras and the queue', () => {
-      const fixture = chaptered(true);
+    it('opens the only queued track with its list under a counted heading, between the extras and the queue', () => {
+      const fixture = chapteredAlone(true);
       playlistShown.set(true);
       fixture.detectChanges();
 
@@ -378,8 +386,28 @@ describe('BigPlayerComponent', () => {
       expect(query(fixture, '.chapters + .queue')).not.toBeNull();
     });
 
-    it('hands the list the chapters, the current one and its progress', () => {
+    it('keeps the list closed while the queue holds more tracks', () => {
       const fixture = chaptered();
+
+      const heading = control(fixture, '.chapters-heading');
+      expect(heading.textContent).toContain('chevron_right');
+      expect(heading.getAttribute('aria-expanded')).toBe('false');
+      expect(heading.hasAttribute('aria-controls')).toBe(false);
+      expect(control(fixture, '.chapter-title').getAttribute('aria-expanded')).toBe('false');
+      expect(query(fixture, 'app-audio-chapters')).toBeNull();
+    });
+
+    it('closes the list when a second track joins the queue', () => {
+      const fixture = chapteredAlone();
+
+      player.tracks.set([first, episode]);
+      fixture.detectChanges();
+
+      expect(query(fixture, 'app-audio-chapters')).toBeNull();
+    });
+
+    it('hands the list the chapters, the current one and its progress', () => {
+      const fixture = chapteredAlone();
 
       expect(listRows(fixture).map((row) => row.textContent!.replace(/\s+/g, ''))).toEqual([
         '0:00Intro',
@@ -391,7 +419,7 @@ describe('BigPlayerComponent', () => {
     });
 
     it('plays a tapped chapter', () => {
-      const fixture = chaptered();
+      const fixture = chapteredAlone();
 
       listRows(fixture)[2].click();
 
@@ -400,7 +428,7 @@ describe('BigPlayerComponent', () => {
 
     for (const toggle of ['.chapter-title', '.chapters-heading']) {
       it(`collapses and reopens the list from ${toggle}`, () => {
-        const fixture = chaptered();
+        const fixture = chapteredAlone();
 
         control(fixture, toggle).click();
         fixture.detectChanges();
@@ -418,7 +446,7 @@ describe('BigPlayerComponent', () => {
     }
 
     it('scrolls the list into view when the sheet reopens it, not when it closes', () => {
-      const fixture = chaptered(true);
+      const fixture = chapteredAlone(true);
       const scrollIntoView = Element.prototype.scrollIntoView as jest.Mock;
 
       control(fixture, '.chapter-title').click();
@@ -433,7 +461,7 @@ describe('BigPlayerComponent', () => {
     });
 
     it('shows the reopened list in place on the card', () => {
-      const fixture = chaptered();
+      const fixture = chapteredAlone();
 
       control(fixture, '.chapters-heading').click();
       fixture.detectChanges();

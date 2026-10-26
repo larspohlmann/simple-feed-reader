@@ -17,11 +17,6 @@ interface PlaylistRow {
   durationInSeconds: number | null;
 }
 
-/** The playing track's chapters open with the queue; the others wait for a tap. */
-function openedAtFirst(current: AudioTrack | null): ReadonlySet<string> {
-  return new Set(current?.chapters?.length ? [current.url] : []);
-}
-
 /**
  * The queue's rows. It never scrolls itself: its host does,
  * marked cdkScrollable so a drag auto-scrolls it.
@@ -59,7 +54,7 @@ export class AudioPlaylistComponent {
     }));
   });
 
-  protected readonly expanded = signal<ReadonlySet<string>>(openedAtFirst(this.player.current()));
+  protected readonly expanded = signal<ReadonlySet<string>>(new Set());
 
   protected onDrop(event: CdkDragDrop<readonly AudioTrack[]>): void {
     this.player.move(event.previousIndex, event.currentIndex);

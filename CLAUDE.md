@@ -308,7 +308,8 @@ control, not ceremony — do not "simplify" it away, and do not delete
 - **git-flow.** Feature branches off `develop`; PRs merge into `develop`, never
   `main`. Every merge to `develop` is shippable.
 - **Branch names embed the GitHub issue number**: `feature/114-tag-triggered-deploy`,
-  `fix/112-arbitrary-join-on`.
+  `fix/112-arbitrary-join-on`. **Every change starts from an issue**: when a request
+  or a bug report has none, create one first and name the branch after it.
 - `develop` is the repository's **default branch**, so a PR whose body says
   `Closes #NN` **auto-closes the issue on merge**. Keep writing `Closes #NN`;
   after a merge, verify the issue closed rather than closing it by hand.
