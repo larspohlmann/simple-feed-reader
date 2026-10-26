@@ -22,6 +22,9 @@ final class ChapterLineTest extends TestCase
         yield 'hours with a zero' => ['0:00:00 Migdalor Remix ID (Unreleased)', 0, 'Migdalor Remix ID (Unreleased)'];
         yield 'a stamp in the middle' => ['A 4:05 B', 245, 'A B'];
         yield 'separators at both ends' => ['— Intro: 0:10 –', 10, 'Intro'];
+        yield 'a leading range' => ['0:00 - 1:00 A', 0, 'A'];
+        yield 'a leading range with an en dash and no spaces' => ['1:00–2:00 | B', 60, 'B'];
+        yield 'a leading range with a tilde' => ['2:00 ~ 3:00 C', 120, 'C'];
     }
 
     #[DataProvider('chapterLines')]
@@ -34,6 +37,9 @@ final class ChapterLineTest extends TestCase
     public static function notChapterLines(): iterable
     {
         yield 'two stamps' => ['0:00 to 1:00 A'];
+        yield 'a range that does not lead' => ['A 0:00 - 1:00'];
+        yield 'a bare range' => ['0:00 - 1:00'];
+        yield 'three stamps' => ['0:00 - 1:00 - 2:00 A'];
         yield 'a bare stamp' => ['00:00'];
         yield 'a bare bracketed stamp' => [' (00:00) - '];
         yield 'minutes past 59' => ['1:75:00 A'];
@@ -57,6 +63,7 @@ final class ChapterLineTest extends TestCase
         yield 'plain text' => ['BUY https://example.test/track', true];
         yield 'seconds with a third digit' => ['0:123 A', true];
         yield 'a longer colon run' => ['1:2:3:4 A', true];
+        yield 'a time parameter in a link' => ['https://youtu.be/x?t=1:30 watch', true];
         yield 'empty' => ['', true];
     }
 

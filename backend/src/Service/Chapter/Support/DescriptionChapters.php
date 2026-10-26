@@ -11,7 +11,7 @@ use App\Service\Html\Support\HtmlDocumentParser;
 use Dom\Element;
 use Dom\Text;
 
-/** YouTube's chapter rule over a description: the first run of three or more ascending chapter lines from `0:00`, stampless lines skipped. */
+/** YouTube's chapter rule over a description: the first run of three or more ascending chapter lines from `0:00`. */
 final class DescriptionChapters
 {
     private const int MINIMUM = 3;
@@ -49,7 +49,7 @@ final class DescriptionChapters
         $run = [];
         foreach ($lines as $line) {
             $text = $line->text();
-            if (ChapterLine::holdsNoStamp($text)) {
+            if (ChapterLine::holdsNoStamp($text) && self::staysInTheBlockOf($run, $line)) {
                 continue;
             }
             $chapter = ChapterLine::chapterOf($text);
@@ -64,6 +64,12 @@ final class DescriptionChapters
         }
 
         return self::isChapterBlock($run) ? $run : [];
+    }
+
+    /** @param list<array{DescriptionLine, EntryChapter}> $run */
+    private static function staysInTheBlockOf(array $run, DescriptionLine $line): bool
+    {
+        return $run === [] || $line->block === $run[\count($run) - 1][0]->block;
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */

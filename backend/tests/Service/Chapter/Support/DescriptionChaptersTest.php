@@ -76,6 +76,10 @@ final class DescriptionChaptersTest extends TestCase
             '<p>1. A (00:00)<br>2. B (01:00)<br>3. C (02:00)</p>',
             [new EntryChapter(0, '1. A'), new EntryChapter(60, '2. B'), new EntryChapter(120, '3. C')],
         ];
+        yield 'a leading range' => [
+            '<p>0:00 - 1:00 A<br>1:00 - 2:00 B<br>2:00 - 3:00 C</p>',
+            [new EntryChapter(0, 'A'), new EntryChapter(60, 'B'), new EntryChapter(120, 'C')],
+        ];
         yield 'a bare stamp at the end' => [
             '<p>1. A (Label) 00:00<br>2. B (Label) 01:00<br>3. C (Label) 02:00</p>',
             [
@@ -138,6 +142,34 @@ final class DescriptionChaptersTest extends TestCase
 
         self::assertCount(3, $described->chapters);
         self::assertSame('<p>Sponsor</p>', $described->contentHtml);
+    }
+
+    public function testTheTracklistKeepsTheLinksBetweenItsLinesInTheBody(): void
+    {
+        $description = (string) file_get_contents(self::FIXTURES . 'youtube-description-570hdDp8l4g.txt');
+
+        $described = DescriptionChapters::in((string) LinkedPlainText::asHtml($description));
+
+        self::assertCount(19, $described->chapters);
+        self::assertNotNull($described->contentHtml);
+        self::assertStringContainsString('BUY <a href="https://', $described->contentHtml);
+    }
+
+    public function testAStamplessParagraphAfterTheRunEndsIt(): void
+    {
+        $html = '<p>0:00 A<br>1:00 B<br>2:00 C</p>'
+            . '<p>Thanks for watching!</p><p>Live stream every Friday at 20:00 CET</p>';
+
+        $described = DescriptionChapters::in($html);
+
+        self::assertEquals(
+            [new EntryChapter(0, 'A'), new EntryChapter(60, 'B'), new EntryChapter(120, 'C')],
+            $described->chapters,
+        );
+        self::assertSame(
+            '<p>Thanks for watching!</p><p>Live stream every Friday at 20:00 CET</p>',
+            $described->contentHtml,
+        );
     }
 
     public function testRemovesABlockWithStampsAtTheEndFromTheBody(): void
