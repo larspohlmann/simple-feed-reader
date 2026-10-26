@@ -790,7 +790,7 @@ Expected: PASS, including `article-chapters.spec.ts`. That spec asserts the time
 - [ ] **Step 5: Style the icon and keep the width steady**
 
 In `article-chapters.scss`:
-- Add `display: inline-flex;`, `align-items: center;` and `gap: var(--space-1);` to the existing `.reader-chapters__left` rule.
+- Add `display: inline-flex;`, `align-items: center;` and `gap: var(--space-0);` to the existing `.reader-chapters__left` rule.
 - Delete the rule `:host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left { min-width: 6ch; text-align: end; }`.
 - Add after the `.reader-chapters__left` rule:
 
@@ -801,11 +801,11 @@ In `article-chapters.scss`:
 
 :host ::ng-deep .reader-chapters__remaining {
   min-width: 5ch;
-  text-align: end;
+  text-align: start;
 }
 ```
 
-The time span holds its 5ch (`10:00`) whatever the countdown reads, so the icon does not jump as digits change. The icon comes and goes with the time, once per chapter change.
+The time span reserves 5ch (`10:00`) and starts at the icon, so a short time sits right against it and the row stays steady whatever the countdown reads. The icon comes and goes with the time, once per chapter change.
 
 - [ ] **Step 6: Gates**
 
