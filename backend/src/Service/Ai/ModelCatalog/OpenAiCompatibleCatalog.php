@@ -133,7 +133,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
             $protocol = self::scoringProtocolOf($outputs);
             $window = self::reportedContextWindow($entry);
             if (self::isTextModel($outputs) || self::isBudgetableScoringModel($protocol, $window)) {
-                yield new ModelDescriptor($entry['id'], $window, $protocol);
+                yield new ModelDescriptor($entry['id'], $window, $protocol, self::reportedMaxOutputTokens($entry));
             }
         }
     }
@@ -188,5 +188,14 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
         }
 
         return null;
+    }
+
+    /** @param array<mixed> $entry */
+    private static function reportedMaxOutputTokens(array $entry): ?int
+    {
+        $topProvider = $entry['top_provider'] ?? null;
+        $cap = \is_array($topProvider) ? ($topProvider['max_completion_tokens'] ?? null) : null;
+
+        return \is_int($cap) && $cap > 0 ? $cap : null;
     }
 }
