@@ -425,6 +425,59 @@ final class AiProviderSettingsTest extends TestCase
         self::assertNull($connection->getModelMaxOutputTokens());
     }
 
+    public function testReChoosingTheSameModelKeepsWhatItTaught(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-5.4-nano', null));
+        $connection->recordMaxTokensRefused();
+        $connection->recordOutputCap(32_768);
+
+        $connection->chooseModel(
+            new ModelDescriptor('gpt-5.4-nano', null, maxOutputTokens: 40_000),
+            new \DateTimeImmutable('2026-10-26 11:00:00'),
+        );
+
+        self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
+        self::assertSame(32_768, $connection->getModelMaxOutputTokens());
+    }
+
+    public function testReChoosingTheSameModelKeepsTheLearnedCapWhenTheCatalogReportsNone(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null));
+        $connection->recordOutputCap(32_768);
+
+        $connection->chooseModel(
+            new ModelDescriptor('gpt-4.1-mini', null),
+            new \DateTimeImmutable('2026-10-26 11:00:00'),
+        );
+
+        self::assertSame(32_768, $connection->getModelMaxOutputTokens());
+    }
+
+    public function testReChoosingTheSameModelTakesAReportedCapLowerThanTheLearnedOne(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576));
+        $connection->recordOutputCap(32_768);
+
+        $connection->chooseModel(
+            new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576, maxOutputTokens: 16_384),
+            new \DateTimeImmutable('2026-10-26 11:00:00'),
+        );
+
+        self::assertSame(16_384, $connection->getModelMaxOutputTokens());
+    }
+
+    public function testReChoosingTheSameModelTakesTheReportedCapWhenNoneWasLearned(): void
+    {
+        $connection = $this->connectionChoosing(new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576));
+
+        $connection->chooseModel(
+            new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576, maxOutputTokens: 16_384),
+            new \DateTimeImmutable('2026-10-26 11:00:00'),
+        );
+
+        self::assertSame(16_384, $connection->getModelMaxOutputTokens());
+    }
+
     public function testReplacingTheConnectionForgetsTheLearnedLimits(): void
     {
         $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null));

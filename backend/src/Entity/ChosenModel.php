@@ -31,11 +31,13 @@ final class ChosenModel
 
     public function choose(ModelDescriptor $model): void
     {
+        if ($model->id !== $this->model) {
+            $this->forget();
+        }
         $this->model = $model->id;
         $this->modelContextWindow = $model->contextWindow;
         $this->scoringProtocol = $model->scoringProtocol;
-        $this->modelMaxOutputTokens = $model->maxOutputTokens;
-        $this->tokenLimitParameter = TokenLimitParameter::MaxTokens;
+        $this->modelMaxOutputTokens = self::lowerCap($this->modelMaxOutputTokens, $model->maxOutputTokens);
     }
 
     public function forget(): void
@@ -80,5 +82,17 @@ final class ChosenModel
     public function getTokenLimitParameter(): TokenLimitParameter
     {
         return $this->tokenLimitParameter;
+    }
+
+    private static function lowerCap(?int $learned, ?int $reported): ?int
+    {
+        if (null === $reported) {
+            return $learned;
+        }
+        if (null === $learned) {
+            return $reported;
+        }
+
+        return min($learned, $reported);
     }
 }
