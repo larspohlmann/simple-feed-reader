@@ -8,6 +8,66 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta name="description" content="A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.">
+<meta name="author" content="Lars Pohlmann">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f5f4">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161616">
+<link rel="canonical" href="https://lars-pohlmann.de/simplefeedreader/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="simple feed reader">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://lars-pohlmann.de/simplefeedreader/">
+<meta property="og:title" content="simple feed reader — an RSS reader that lays feeds out like a magazine">
+<meta property="og:description" content="A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.">
+<meta property="og:image" content="https://lars-pohlmann.de/simplefeedreader/share.png">
+<meta property="og:image:secure_url" content="https://lars-pohlmann.de/simplefeedreader/share.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="simple feed reader: an RSS reader that lays feeds out like a magazine, next to a screenshot of the magazine layout">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="simple feed reader — an RSS reader that lays feeds out like a magazine">
+<meta name="twitter:description" content="A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.">
+<meta name="twitter:image" content="https://lars-pohlmann.de/simplefeedreader/share.png">
+<meta name="twitter:image:alt" content="simple feed reader: an RSS reader that lays feeds out like a magazine, next to a screenshot of the magazine layout">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "simple feed reader",
+  "url": "https://lars-pohlmann.de/simplefeedreader/",
+  "description": "A self-hosted RSS/Atom reader for one or several users. Magazine, list and two-pane layouts, podcasts, YouTube, Bluesky and Mastodon, optional AI recommendations. Free and open source.",
+  "image": "https://lars-pohlmann.de/simplefeedreader/share.png",
+  "screenshot": [
+    "https://lars-pohlmann.de/simplefeedreader/screenshots/magazine-light.webp",
+    "https://lars-pohlmann.de/simplefeedreader/screenshots/pane-light.webp",
+    "https://lars-pohlmann.de/simplefeedreader/screenshots/mobile-magazine-light.webp"
+  ],
+  "applicationCategory": "NewsApplication",
+  "applicationSubCategory": "RSS reader",
+  "operatingSystem": "Linux, Docker",
+  "browserRequirements": "Requires a modern web browser",
+  "inLanguage": ["en", "de"],
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "license": "https://github.com/larspohlmann/simple-feed-reader/blob/main/LICENSE",
+  "installUrl": "https://github.com/larspohlmann/simple-feed-reader/blob/develop/docs/docker-production.md",
+  "softwareHelp": { "@type": "CreativeWork", "url": "https://github.com/larspohlmann/simple-feed-reader#readme" },
+  "sameAs": ["https://github.com/larspohlmann/simple-feed-reader"],
+  "author": { "@type": "Person", "name": "Lars Pohlmann", "url": "https://lars-pohlmann.de/" },
+  "featureList": [
+    "Magazine, two-pane and compact list layouts",
+    "Reader view with the extracted full text",
+    "Full-text search and saved searches",
+    "Daily or weekly email digest",
+    "Podcast and YouTube player with playlist",
+    "Bluesky and Mastodon timelines as feeds",
+    "Optional AI recommendations through any OpenAI-compatible API",
+    "OPML import and export",
+    "Email, Google, Apple and passkey sign-in",
+    "Account export, restore and deletion"
+  ]
+}
+</script>
 <script>
 (function () {
   try {
@@ -192,6 +252,7 @@ footer .copy{margin-left:auto}
   </div>
 </header>
 
+<main>
 <section class="hero">
   <div class="wrap">
     <div>
@@ -205,8 +266,8 @@ footer .copy{margin-left:auto}
       <div class="meta"><span>MIT licensed</span><span>·</span><span>Light &amp; dark themes</span><span>·</span><span>English &amp; German</span><span>·</span><span>One command to install</span></div>
     </div>
     <div class="shot">
-      <a class="zoom" href="screenshots/magazine-light.webp"><img class="light-only" src="screenshots/magazine-light.webp" width="1920" height="1200" alt="The magazine layout: one reading column of varied cards, with the sidebar of feeds, tags and saved searches"></a>
-      <a class="zoom" href="screenshots/magazine-dark.webp"><img class="dark-only" src="screenshots/magazine-dark.webp" width="1920" height="1200" alt="The magazine layout, dark theme"></a>
+      <a class="zoom" href="screenshots/magazine-light.webp"><img fetchpriority="high" class="light-only" src="screenshots/magazine-light.webp" width="1920" height="1200" alt="The magazine layout: one reading column of varied cards, with the sidebar of feeds, tags and saved searches"></a>
+      <a class="zoom" href="screenshots/magazine-dark.webp"><img decoding="async" class="dark-only" src="screenshots/magazine-dark.webp" width="1920" height="1200" alt="The magazine layout, dark theme"></a>
     </div>
   </div>
 </section>
@@ -219,9 +280,9 @@ footer .copy{margin-left:auto}
       <p class="muted">The layout can be switched at any time. The magazine gives the lead story a large image and varies the cards below it; the two-pane view shows the open article beside the entry list, with a draggable divider; the compact list shows one line per entry.</p>
     </div>
     <div class="layouts">
-      <figure><div class="shot"><a class="zoom" href="screenshots/magazine-airy-dark.webp"><img src="screenshots/magazine-airy-dark.webp" alt="The airy magazine style, dark theme"></a></div><figcaption><strong>Magazine</strong><span>Cards of varying size in one column. An airy variant drops the frames.</span></figcaption></figure>
-      <figure><div class="shot"><a class="zoom" href="screenshots/pane-light.webp"><img src="screenshots/pane-light.webp" alt="Two-pane view with the reader pane"></a></div><figcaption><strong>Two-pane</strong><span>The article beside the entry list; the divider is adjustable.</span></figcaption></figure>
-      <figure><div class="shot"><a class="zoom" href="screenshots/list-light.webp"><img src="screenshots/list-light.webp" alt="The compact list"></a></div><figcaption><strong>Compact list</strong><span>One line per entry, with a thumbnail.</span></figcaption></figure>
+      <figure><div class="shot"><a class="zoom" href="screenshots/magazine-airy-dark.webp"><img src="screenshots/magazine-airy-dark.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="The airy magazine style, dark theme"></a></div><figcaption><strong>Magazine</strong><span>Cards of varying size in one column. An airy variant drops the frames.</span></figcaption></figure>
+      <figure><div class="shot"><a class="zoom" href="screenshots/pane-light.webp"><img src="screenshots/pane-light.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="Two-pane view with the reader pane"></a></div><figcaption><strong>Two-pane</strong><span>The article beside the entry list; the divider is adjustable.</span></figcaption></figure>
+      <figure><div class="shot"><a class="zoom" href="screenshots/list-light.webp"><img src="screenshots/list-light.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="The compact list"></a></div><figcaption><strong>Compact list</strong><span>One line per entry, with a thumbnail.</span></figcaption></figure>
     </div>
   </div>
 </section>
@@ -251,12 +312,12 @@ footer .copy{margin-left:auto}
       <p class="muted">On small screens the sidebar collapses and opens with a swipe, lists refresh by pulling down, and controls are sized for touch. The player bar stays at the bottom and expands into a full-size player.</p>
     </div>
     <div class="phones">
-      <div class="shot"><a class="zoom" href="screenshots/mobile-magazine-light.webp"><img src="screenshots/mobile-magazine-light.webp" alt="The magazine on a phone"></a></div>
-      <div class="shot"><a class="zoom" href="screenshots/mobile-reader-dark.webp"><img src="screenshots/mobile-reader-dark.webp" alt="Reader view on a phone, dark theme"></a></div>
-      <div class="shot"><a class="zoom" href="screenshots/mobile-sidebar-light.webp"><img src="screenshots/mobile-sidebar-light.webp" alt="The sidebar drawer on a phone"></a></div>
-      <div class="shot"><a class="zoom" href="screenshots/mobile-podcast-player-light.webp"><img src="screenshots/mobile-podcast-player-light.webp" alt="The full-size audio player on a phone"></a></div>
-      <div class="shot"><a class="zoom" href="screenshots/mobile-podcast-playlist-light.webp"><img src="screenshots/mobile-podcast-playlist-light.webp" alt="The audio playlist on a phone, above the player bar"></a></div>
-      <div class="shot"><a class="zoom" href="screenshots/mobile-for-you-light.webp"><img src="screenshots/mobile-for-you-light.webp" alt="For you on a phone"></a></div>
+      <div class="shot"><a class="zoom" href="screenshots/mobile-magazine-light.webp"><img src="screenshots/mobile-magazine-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The magazine on a phone"></a></div>
+      <div class="shot"><a class="zoom" href="screenshots/mobile-reader-dark.webp"><img src="screenshots/mobile-reader-dark.webp" width="908" height="1832" loading="lazy" decoding="async" alt="Reader view on a phone, dark theme"></a></div>
+      <div class="shot"><a class="zoom" href="screenshots/mobile-sidebar-light.webp"><img src="screenshots/mobile-sidebar-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The sidebar drawer on a phone"></a></div>
+      <div class="shot"><a class="zoom" href="screenshots/mobile-podcast-player-light.webp"><img src="screenshots/mobile-podcast-player-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The full-size audio player on a phone"></a></div>
+      <div class="shot"><a class="zoom" href="screenshots/mobile-podcast-playlist-light.webp"><img src="screenshots/mobile-podcast-playlist-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The audio playlist on a phone, above the player bar"></a></div>
+      <div class="shot"><a class="zoom" href="screenshots/mobile-for-you-light.webp"><img src="screenshots/mobile-for-you-light.webp" width="908" height="1832" loading="lazy" decoding="async" alt="For you on a phone"></a></div>
     </div>
   </div>
 </section>
@@ -273,7 +334,7 @@ footer .copy{margin-left:auto}
         <li><span><strong>AI:</strong> off unless configured, and then against any OpenAI-compatible provider, local models included.</span></li>
       </ul>
     </div>
-    <div class="shot"><a class="zoom" href="screenshots/for-you-light.webp"><img src="screenshots/for-you-light.webp" alt="The For you recommendations"></a></div>
+    <div class="shot"><a class="zoom" href="screenshots/for-you-light.webp"><img src="screenshots/for-you-light.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="The For you recommendations"></a></div>
   </div>
 </section>
 
@@ -285,8 +346,8 @@ footer .copy{margin-left:auto}
       <p class="muted">Saved searches can be included in an email digest. It lists everything new that matched since the last one, grouped by search, with the image, source and summary of each entry. Daily or weekly, as HTML or plain text, sent through the instance’s own mail settings.</p>
     </div>
     <div class="digest">
-      <div class="shot wide cropped"><a class="zoom" href="screenshots/digest-light.webp"><img src="screenshots/digest-light.webp" alt="An email digest: new entries matching the saved searches, grouped by search"></a></div>
-      <div class="shot phone cropped"><a class="zoom" href="screenshots/mobile-digest-dark.webp"><img src="screenshots/mobile-digest-dark.webp" alt="The email digest on a phone, dark theme"></a></div>
+      <div class="shot wide cropped"><a class="zoom" href="screenshots/digest-light.webp"><img src="screenshots/digest-light.webp" width="1920" height="2666" loading="lazy" decoding="async" alt="An email digest: new entries matching the saved searches, grouped by search"></a></div>
+      <div class="shot phone cropped"><a class="zoom" href="screenshots/mobile-digest-dark.webp"><img src="screenshots/mobile-digest-dark.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The email digest on a phone, dark theme"></a></div>
     </div>
   </div>
 </section>
@@ -308,6 +369,7 @@ curl -fsSL https://raw.githubusercontent.com/larspohlmann/simple-feed-reader/mai
     <p class="note">All three packages run the same application with every feature; they differ only in the containers beside it. TLS, reverse proxies, mail and backups are covered in <a href="https://github.com/larspohlmann/simple-feed-reader/blob/develop/docs/docker-production.md">docs/docker-production.md</a>.</p>
   </div>
 </section>
+</main>
 
 <footer>
   <div class="wrap">
