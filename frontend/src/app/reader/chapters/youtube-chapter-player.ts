@@ -17,10 +17,11 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
 
   private readonly onMessage = (event: MessageEvent): void => {
     if (event.origin !== PLAYER_ORIGIN || event.source !== this.frame.contentWindow) return;
-    this.becomeReady();
+    const playedHeldStart = this.playHeldStartOnReady();
     const info = infoOf(event.data);
     const duration = secondsOf(info?.duration);
     if (duration !== null && duration > 0) this.durationSeconds = duration;
+    if (playedHeldStart) return;
     const seconds = secondsOf(info?.currentTime);
     if (seconds !== null) this.onPosition?.({ seconds, durationSeconds: this.durationSeconds });
   };
@@ -53,12 +54,14 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
     this.frame.removeEventListener('load', this.onLoad);
   }
 
-  private becomeReady(): void {
-    if (this.ready) return;
+  private playHeldStartOnReady(): boolean {
+    if (this.ready) return false;
     this.ready = true;
     const start = this.heldStart;
     this.heldStart = null;
-    if (start !== null) this.playFrom(start);
+    if (start === null) return false;
+    this.playFrom(start);
+    return true;
   }
 
   private listen(): void {

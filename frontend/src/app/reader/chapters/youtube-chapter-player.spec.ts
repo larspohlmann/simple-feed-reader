@@ -109,6 +109,21 @@ describe('YouTubeChapterPlayer', () => {
     player.release();
   });
 
+  it('does not report the position of the message that plays a held chapter', () => {
+    const { frame } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+    const positions: (PlaybackPosition | null)[] = [];
+    player.watch((position) => positions.push(position));
+    player.playFrom(256);
+
+    delivery(frame, { event: 'initialDelivery', info: { currentTime: 0, duration: 600 } });
+    expect(positions).toEqual([]);
+
+    delivery(frame, { event: 'infoDelivery', info: { currentTime: 256 } });
+    expect(positions).toEqual([{ seconds: 256, durationSeconds: 600 }]);
+    player.release();
+  });
+
   it('carries the last delivered duration on later positions', () => {
     const { frame } = frameWithWindow();
     const player = new YouTubeChapterPlayer(frame);
