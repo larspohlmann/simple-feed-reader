@@ -378,6 +378,25 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame(100, $size);
     }
 
+    public function testACallFillingTheWindowExactlyStillFits(): void
+    {
+        $limit = new OutputLimitModel(Reasoning::Suppressed, null);
+        // The empty-history overhead, 150 candidate lines, their reply bound and the suppressed reasoning headroom.
+        $exactFit = 1510 + 150 * 273 + 15_750 + 8000;
+
+        $atTheWindow = $this->builder->consolidationInputSize(
+            new PromptContext($this->emptyHistory(), $this->settings($exactFit, 50), null),
+            $limit,
+        );
+        $oneTokenShort = $this->builder->consolidationInputSize(
+            new PromptContext($this->emptyHistory(), $this->settings($exactFit - 1, 50), null),
+            $limit,
+        );
+
+        self::assertSame(150, $atTheWindow);
+        self::assertSame(149, $oneTokenShort);
+    }
+
     public function testALongerProfileShrinksTheConsolidationShortlist(): void
     {
         $history = new RecommendationHistoryModel(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);

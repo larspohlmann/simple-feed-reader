@@ -32,13 +32,11 @@ final class ProviderErrorReason
     public static function identifiersIn(string $body): ProviderErrorIdentifiersModel
     {
         $error = self::rootOf($body)['error'] ?? null;
-        if (!\is_array($error)) {
-            return ProviderErrorIdentifiersModel::none();
-        }
+        $fields = \is_array($error) ? $error : [];
 
         return new ProviderErrorIdentifiersModel(
-            self::identifier($error['code'] ?? null),
-            self::identifier($error['param'] ?? null),
+            self::identifier($fields['code'] ?? null),
+            self::identifier($fields['param'] ?? null),
         );
     }
 

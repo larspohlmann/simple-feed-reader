@@ -118,15 +118,15 @@ final class ProviderErrorReasonTest extends TestCase
         self::assertEquals(new ProviderErrorIdentifiersModel(null, null), ProviderErrorReason::identifiersIn($body));
     }
 
-    public function testAnIdentifierIsClippedAfterSixtyFourCharacters(): void
+    public function testAnIdentifierIsClippedAfterSixtyFourCharactersNotBytes(): void
     {
         $body = json_encode(
-            ['error' => ['code' => str_repeat('c', 64), 'param' => str_repeat('p', 65)]],
+            ['error' => ['code' => str_repeat('c', 64), 'param' => str_repeat('ä', 65)]],
             \JSON_THROW_ON_ERROR,
         );
 
         self::assertEquals(
-            new ProviderErrorIdentifiersModel(str_repeat('c', 64), str_repeat('p', 64)),
+            new ProviderErrorIdentifiersModel(str_repeat('c', 64), str_repeat('ä', 64)),
             ProviderErrorReason::identifiersIn($body),
         );
     }
