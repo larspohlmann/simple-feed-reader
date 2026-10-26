@@ -9,6 +9,7 @@ use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
 use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -31,11 +32,11 @@ final class RejectedRequestFallbackWiringTest extends KernelTestCase
         $fallback = $this->fallback();
         $connection = $this->suppressingConnectionOn('gpt-5.4-nano');
 
-        self::assertTrue($fallback->absorbs($connection, $this->rejection(self::MAX_TOKENS_REFUSED)));
+        self::assertTrue($fallback->absorbs($connection, $this->maxTokensRefusal()));
         self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
         self::assertFalse($connection->refusesSuppressedReasoning());
 
-        self::assertTrue($fallback->absorbs($connection, $this->rejection(self::REASONING_REFUSED)));
+        self::assertTrue($fallback->absorbs($connection, $this->reasoningRefusal()));
         self::assertTrue($connection->refusesSuppressedReasoning());
     }
 
@@ -44,11 +45,11 @@ final class RejectedRequestFallbackWiringTest extends KernelTestCase
         $fallback = $this->fallback();
         $connection = $this->suppressingConnectionOn('gpt-4.1-mini');
 
-        self::assertTrue($fallback->absorbs($connection, $this->rejection(self::TOO_LARGE)));
+        self::assertTrue($fallback->absorbs($connection, $this->tooLargeRefusal()));
         self::assertSame(32_768, $connection->getModelMaxOutputTokens());
         self::assertFalse($connection->refusesSuppressedReasoning());
 
-        self::assertTrue($fallback->absorbs($connection, $this->rejection(self::REASONING_REFUSED)));
+        self::assertTrue($fallback->absorbs($connection, $this->reasoningRefusal()));
         self::assertTrue($connection->refusesSuppressedReasoning());
     }
 
@@ -72,8 +73,26 @@ final class RejectedRequestFallbackWiringTest extends KernelTestCase
         return $connection;
     }
 
-    private function rejection(string $message): ProviderRejectedRequestException
+    private function maxTokensRefusal(): ProviderRejectedRequestException
     {
-        return new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, $message);
+        return new ProviderRejectedRequestException(
+            Response::HTTP_BAD_REQUEST,
+            self::MAX_TOKENS_REFUSED,
+            new ProviderErrorIdentifiersModel('unsupported_parameter', 'max_tokens'),
+        );
+    }
+
+    private function tooLargeRefusal(): ProviderRejectedRequestException
+    {
+        return new ProviderRejectedRequestException(
+            Response::HTTP_BAD_REQUEST,
+            self::TOO_LARGE,
+            new ProviderErrorIdentifiersModel('invalid_value', 'max_tokens'),
+        );
+    }
+
+    private function reasoningRefusal(): ProviderRejectedRequestException
+    {
+        return new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::REASONING_REFUSED);
     }
 }

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Run\RejectedRequestFallback;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
 use App\Service\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
@@ -49,6 +50,10 @@ final class CompositeRejectedRequestFallbackTest extends TestCase
 
     private function rejection(): ProviderRejectedRequestException
     {
-        return new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, 'No.');
+        return new ProviderRejectedRequestException(
+            Response::HTTP_BAD_REQUEST,
+            'No.',
+            new ProviderErrorIdentifiersModel('invalid_value', 'max_tokens'),
+        );
     }
 }

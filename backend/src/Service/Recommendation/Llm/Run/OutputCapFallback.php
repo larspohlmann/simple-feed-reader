@@ -12,7 +12,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class OutputCapFallback implements RejectedRequestFallbackInterface
 {
-    private const string CAP = '/supports at most (\d+) completion tokens/';
+    private const string CODE = 'invalid_value';
+
+    private const string PARAMETER = 'max_tokens';
+
+    private const string CAP = '/at most (\d+)/';
 
     public function __construct(private EntityManagerInterface $entityManager)
     {
@@ -33,7 +37,7 @@ final readonly class OutputCapFallback implements RejectedRequestFallbackInterfa
 
     private function capNamedIn(ProviderRejectedRequestException $rejection): ?int
     {
-        if (Response::HTTP_BAD_REQUEST !== $rejection->status()) {
+        if (!self::isTooLarge($rejection)) {
             return null;
         }
         if (1 !== preg_match(self::CAP, $rejection->getMessage(), $match)) {
@@ -42,6 +46,12 @@ final readonly class OutputCapFallback implements RejectedRequestFallbackInterfa
         $cap = (int) $match[1];
 
         return $cap > 0 ? $cap : null;
+    }
+
+    private static function isTooLarge(ProviderRejectedRequestException $rejection): bool
+    {
+        return Response::HTTP_BAD_REQUEST === $rejection->status()
+            && $rejection->identifiers()->names(self::CODE, self::PARAMETER);
     }
 
     private function lowers(AiProviderSettings $connection, int $cap): bool

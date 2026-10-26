@@ -13,7 +13,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MaxTokensRefusedFallback implements RejectedRequestFallbackInterface
 {
-    private const string REFUSAL = "Unsupported parameter: 'max_tokens'";
+    private const string CODE = 'unsupported_parameter';
+
+    private const string PARAMETER = 'max_tokens';
 
     public function __construct(private EntityManagerInterface $entityManager)
     {
@@ -35,6 +37,6 @@ final readonly class MaxTokensRefusedFallback implements RejectedRequestFallback
     {
         return Response::HTTP_BAD_REQUEST === $rejection->status()
             && TokenLimitParameter::MaxTokens === $connection->getTokenLimitParameter()
-            && str_contains($rejection->getMessage(), self::REFUSAL);
+            && $rejection->identifiers()->names(self::CODE, self::PARAMETER);
     }
 }

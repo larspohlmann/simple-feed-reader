@@ -12,6 +12,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderConnectionModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Llm\Completion\ChatCompletionClient\OpenAiCompatibleChatClient;
 use App\Service\Recommendation\Llm\Completion\CompletionBodyDecoder;
@@ -33,6 +34,7 @@ use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpClient\Response\ResponseStream;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
@@ -442,6 +444,25 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             400,
             'That provider refused the request (status 400): Reasoning effort "none" is not supported.',
         );
+    }
+
+    public function testARejectionCarriesTheErrorCodeAndParameterOpenAiNamed(): void
+    {
+        $client = $this->clientAnswering(new MockResponse(
+            '{"error":{"message":"Unsupported parameter: \'max_tokens\' is not supported with this model.",'
+            . '"type":"invalid_request_error","param":"max_tokens","code":"unsupported_parameter"}}',
+            ['http_code' => Response::HTTP_BAD_REQUEST],
+        ));
+
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail(ProviderRejectedRequestException::class . ' was not thrown.');
+        } catch (ProviderRejectedRequestException $exception) {
+            self::assertEquals(
+                new ProviderErrorIdentifiersModel('unsupported_parameter', 'max_tokens'),
+                $exception->identifiers(),
+            );
+        }
     }
 
     public function testARequestTimeoutStaysAnUnreachableProvider(): void

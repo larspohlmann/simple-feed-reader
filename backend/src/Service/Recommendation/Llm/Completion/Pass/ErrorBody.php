@@ -7,6 +7,7 @@ namespace App\Service\Recommendation\Llm\Completion\Pass;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Support\RejectingStatus;
+use App\Service\Recommendation\Support\ProviderErrorReason;
 use App\Service\Recommendation\Support\RefusalMessage;
 
 /** One call's error status and as much of its body as a reason can sit in; a larger body ends the call at once. */
@@ -47,7 +48,11 @@ final class ErrorBody
         $status = $this->status ?? throw new \LogicException('No error status was opened for this call.');
 
         return RejectingStatus::matches($status)
-            ? new ProviderRejectedRequestException($status, RefusalMessage::of($status, $reason))
+            ? new ProviderRejectedRequestException(
+                $status,
+                RefusalMessage::of($status, $reason),
+                ProviderErrorReason::identifiersIn($this->collected),
+            )
             : ProviderUnreachableException::answeredWithStatus($status, $reason);
     }
 }
