@@ -498,6 +498,17 @@ final class PostEmbedRendererTest extends TestCase
         self::assertNull($rendered->media[0]->previewImageUrl);
     }
 
+    public function testAVideoKeepsItsAltText(): void
+    {
+        $rendered = $this->renderedPost([
+            '$type' => 'app.bsky.embed.video#view',
+            'playlist' => 'https://video.example/p.m3u8',
+            'alt' => 'A donkey trots past',
+        ]);
+
+        self::assertSame('A donkey trots past', $rendered->media[0]->alt);
+    }
+
     /** @return iterable<string, array{string, list<string>}> */
     public static function sanitizedParts(): iterable
     {
