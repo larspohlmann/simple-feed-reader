@@ -20,7 +20,7 @@ import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coor
 import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
 import { withScriptablePlayer } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
-import { EmbedMedia, embedMediaOfFrame, youTubeVideoId } from '../../audio/embed-media';
+import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { ChapterDto, EntryDto } from '../../models';
 import { EmbedDetailsApi, EmbedDetailsDto } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
@@ -148,7 +148,7 @@ export class ArticleBody {
       // A video queued from a list row gains its chapters once its article opens (#1810).
       const embed = chapteredEmbed();
       if (embed) this.audio.describe(embed.url, { ...NOTHING_KNOWN, chapters: chapterList });
-      this.loadEmbedDetails(embedFramesToAsk(host, parts.entry()), heading, bodyChaptersOf);
+      this.loadEmbedDetails(chapterFrames(host), heading, bodyChaptersOf);
       this.media.follow(host);
     });
     parts.decorated(host);
@@ -176,16 +176,6 @@ function listenDetails<Fetched extends EmbedDetailsDto | null>(
 ): Fetched | EmbedDetailsDto {
   if (bodyChapters === null) return fetched;
   return { ...(fetched ?? NOTHING_KNOWN), chapters: bodyChapters };
-}
-
-/** The embeds to ask details for: all but a YouTube entry's own video. */
-function embedFramesToAsk(host: HTMLElement, entry: EntryDto | null): HTMLIFrameElement[] {
-  const ownVideoId = youTubeVideoId(entry?.url ?? '');
-  return chapterFrames(host).filter((frame) => {
-    const media = embedMediaOfFrame(frame);
-    if (!media) return false;
-    return media.kind !== 'youtube' || youTubeVideoId(media.url) !== ownVideoId;
-  });
 }
 
 /** The embed the body's chapters belong to: the player `ArticleChapters` drives, unless an episode owns them. */

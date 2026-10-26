@@ -548,13 +548,30 @@ describe('ArticleBody', () => {
       });
     });
 
-    it("never asks for the entry's own video, whose description the server already read", async () => {
-      entry.set(anEntry({ url: VIDEO_URL }));
-      audioTrack.set(EPISODE);
-      connectBody(YOUTUBE + SOUNDCLOUD);
+    it("gives a YouTube entry's own queued video its length, keeping the body's one chapter list", async () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      audio.enqueue({
+        url: VIDEO_URL,
+        title: 'The post',
+        faviconUrl: null,
+        imageUrl: null,
+        durationInSeconds: null,
+      });
+      answers({
+        [VIDEO_URL]: of({ title: null, durationSeconds: 600, chapters: VIDEO_CHAPTERS }),
+      });
+      entry.set(anEntry({ url: VIDEO_URL, title: 'The post' }));
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE);
       await Promise.resolve();
 
-      expect(askedUrls()).toEqual([WIDGET_URL]);
+      expect(askedUrls()).toEqual([VIDEO_URL]);
+      expect(audio.tracks()[0]).toEqual(
+        expect.objectContaining({ title: 'The post', durationInSeconds: 600, chapters: CHAPTERS }),
+      );
+      const lists = content.querySelectorAll('.reader-chapters');
+      expect(lists).toHaveLength(1);
+      expect(listRows(lists[0])).toEqual(['0:00Intro', '4:16How it works']);
     });
 
     it("hands Listen on the widget a track carrying the widget's title and chapters", async () => {
