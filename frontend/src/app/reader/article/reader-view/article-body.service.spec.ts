@@ -17,7 +17,7 @@ import { PlayingMedium } from '../../media/autoplay/autoplay-player';
 import { ChapterDto, EntryDto } from '../../models';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { anEntry } from '../../../../testing/entry-testing';
-import { Observable, Subject, of } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { TrackDetails, chaptersOnly } from '../../audio/audio-track';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { EmbedMedia } from '../../audio/embed-media';
@@ -329,15 +329,16 @@ describe('ArticleBody', () => {
       expect(content.firstElementChild!.classList).toContain('reader-chapters');
     });
 
-    it('hands the player the chapters of the video it lists, for a copy queued earlier', async () => {
+    it('hands the player the chapters of the video it lists, for a copy queued earlier, even when its own details fail', async () => {
       const describeTrack = jest
         .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
+      embedDetails.mockImplementation(() => throwError(() => new Error('503')));
       chapters.set(CHAPTERS);
       connectBody(YOUTUBE);
       await Promise.resolve();
 
-      expect(describeTrack).toHaveBeenCalledWith(VIDEO_URL, { ...NO_DETAILS, chapters: CHAPTERS });
+      expect(describeTrack.mock.calls).toEqual([[VIDEO_URL, chaptersOnly(CHAPTERS)]]);
     });
 
     it("gives no video the chapters while they are the episode's", async () => {

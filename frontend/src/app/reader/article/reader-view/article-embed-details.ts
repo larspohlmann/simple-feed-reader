@@ -1,21 +1,35 @@
 import { EMPTY, Subscription, catchError } from 'rxjs';
+import { AudioPlayerService } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
-import type { TrackDetails } from '../../audio/audio-track';
+import { TrackDetails, chaptersOnly } from '../../audio/audio-track';
 import { EmbedDetailsApi } from '../../embed-details-api';
+import { ChapterDto } from '../../models';
 
 interface EmbedFrames {
   readonly media: EmbedMedia;
   readonly frames: HTMLIFrameElement[];
 }
 
-type DetailsFound = (frame: HTMLIFrameElement, media: EmbedMedia, details: TrackDetails) => void;
+type DetailsFound = (frame: HTMLIFrameElement, details: TrackDetails) => void;
 
-/** The own title, length and chapters of a body's embedded videos and tracks, asked for once per embed (#1824). */
+/** What is known of a body's embedded videos and tracks: their own title, length and chapters,
+ *  asked for once per embed, under the body's own chapters for the embed they belong to (#1824).
+ *  Every queued copy of an embed is described as its details become known. */
 export class ArticleEmbedDetails {
   private readonly byEmbedUrl = new Map<string, TrackDetails>();
+  private readonly bodyChapters = new Map<string, ChapterDto[]>();
   private subscriptions: Subscription[] = [];
 
-  constructor(private readonly api: EmbedDetailsApi) {}
+  constructor(
+    private readonly api: EmbedDetailsApi,
+    private readonly audio: AudioPlayerService,
+  ) {}
+
+  /** The body's chapters for the embed they belong to; they outrank whatever its answer lists. */
+  seed(embedUrl: string, chapters: ChapterDto[]): void {
+    this.bodyChapters.set(embedUrl, chapters);
+    this.know(embedUrl, chaptersOnly(chapters));
+  }
 
   /** Asks for every frame's embed once; `found` runs per frame for every answer. */
   load(frames: HTMLIFrameElement[], found: DetailsFound): void {
@@ -23,15 +37,15 @@ export class ArticleEmbedDetails {
       const subscription = this.api
         .detailsOf(media)
         .pipe(catchError(() => EMPTY))
-        .subscribe((details) => {
-          this.byEmbedUrl.set(media.url, details);
-          for (const frame of framesOfEmbed) found(frame, media, details);
+        .subscribe((fetched) => {
+          const details = this.know(media.url, this.underBodyChapters(media.url, fetched));
+          for (const frame of framesOfEmbed) found(frame, details);
         });
       this.subscriptions.push(subscription);
     }
   }
 
-  /** What is known of an embed URL; null before its answer arrives or when none came. */
+  /** What is known of an embed URL; null while nothing is. */
   detailsOf(embedUrl: string): TrackDetails | null {
     return this.byEmbedUrl.get(embedUrl) ?? null;
   }
@@ -40,6 +54,18 @@ export class ArticleEmbedDetails {
     for (const subscription of this.subscriptions) subscription.unsubscribe();
     this.subscriptions = [];
     this.byEmbedUrl.clear();
+    this.bodyChapters.clear();
+  }
+
+  private know(embedUrl: string, details: TrackDetails): TrackDetails {
+    this.byEmbedUrl.set(embedUrl, details);
+    this.audio.describe(embedUrl, details);
+    return details;
+  }
+
+  private underBodyChapters(embedUrl: string, fetched: TrackDetails): TrackDetails {
+    const chapters = this.bodyChapters.get(embedUrl);
+    return chapters ? { ...fetched, chapters } : fetched;
   }
 }
 

@@ -1,13 +1,13 @@
 import { Observable, Subject, of, throwError } from 'rxjs';
 import {
-  SOUND_MEDIA,
   VIDEO_ID,
   VIDEO_MEDIA,
   WATCH_URL,
   WIDGET_URL,
 } from '../../../../testing/embed-media-testing';
 import { EmbedMedia } from '../../audio/embed-media';
-import type { TrackDetails } from '../../audio/audio-track';
+import { TrackDetails, chaptersOnly } from '../../audio/audio-track';
+import { AudioPlayerService } from '../../audio-player.service';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleEmbedDetails } from './article-embed-details';
 
@@ -26,6 +26,10 @@ const TRACK_DETAILS: TrackDetails = {
   chapters: [{ startSeconds: 30, title: 'Side B' }],
 };
 const UNCHAPTERED: TrackDetails = { title: 'A plain video', durationSeconds: 120, chapters: [] };
+const BODY_CHAPTERS = [
+  { startSeconds: 0, title: 'Opening' },
+  { startSeconds: 45, title: 'Body' },
+];
 
 function frameOf(source: string): HTMLIFrameElement {
   const frame = document.createElement('iframe');
@@ -35,7 +39,8 @@ function frameOf(source: string): HTMLIFrameElement {
 
 describe('ArticleEmbedDetails', () => {
   let detailsOf: jest.Mock<Observable<TrackDetails>, [EmbedMedia]>;
-  let found: jest.Mock<void, [HTMLIFrameElement, EmbedMedia, TrackDetails]>;
+  let found: jest.Mock<void, [HTMLIFrameElement, TrackDetails]>;
+  let describeTrack: jest.Mock<void, [string, TrackDetails]>;
   let details: ArticleEmbedDetails;
 
   function answering(answers: Record<string, Observable<TrackDetails>>): void {
@@ -45,7 +50,11 @@ describe('ArticleEmbedDetails', () => {
   beforeEach(() => {
     detailsOf = jest.fn();
     found = jest.fn();
-    details = new ArticleEmbedDetails({ detailsOf } as unknown as EmbedDetailsApi);
+    describeTrack = jest.fn();
+    details = new ArticleEmbedDetails(
+      { detailsOf } as unknown as EmbedDetailsApi,
+      { describe: describeTrack } as unknown as AudioPlayerService,
+    );
   });
 
   it('asks once per distinct embed and tells of it under every frame that shows it', () => {
@@ -58,8 +67,8 @@ describe('ArticleEmbedDetails', () => {
     expect(detailsOf).toHaveBeenCalledTimes(1);
     expect(detailsOf).toHaveBeenCalledWith(VIDEO_MEDIA);
     expect(found.mock.calls).toEqual([
-      [first, VIDEO_MEDIA, VIDEO_DETAILS],
-      [second, VIDEO_MEDIA, VIDEO_DETAILS],
+      [first, VIDEO_DETAILS],
+      [second, VIDEO_DETAILS],
     ]);
   });
 
@@ -71,8 +80,8 @@ describe('ArticleEmbedDetails', () => {
     details.load([video, widget], found);
 
     expect(found.mock.calls).toEqual([
-      [video, VIDEO_MEDIA, UNCHAPTERED],
-      [widget, SOUND_MEDIA, TRACK_DETAILS],
+      [video, UNCHAPTERED],
+      [widget, TRACK_DETAILS],
     ]);
     expect(details.detailsOf(WATCH_URL)).toEqual(UNCHAPTERED);
   });
@@ -121,5 +130,61 @@ describe('ArticleEmbedDetails', () => {
     expect(found).not.toHaveBeenCalled();
     expect(details.detailsOf(WATCH_URL)).toBeNull();
     expect(details.detailsOf(WIDGET_URL)).toBeNull();
+  });
+
+  it('describes every queued copy of an embed once its answer arrives', () => {
+    answering({ [WATCH_URL]: of(VIDEO_DETAILS), [WIDGET_URL]: of(TRACK_DETAILS) });
+
+    details.load([frameOf(API_FRAME_URL), frameOf(API_FRAME_URL), frameOf(WIDGET_URL)], found);
+
+    expect(describeTrack.mock.calls).toEqual([
+      [WATCH_URL, VIDEO_DETAILS],
+      [WIDGET_URL, TRACK_DETAILS],
+    ]);
+  });
+
+  describe("seeded with the body's chapters", () => {
+    beforeEach(() => details.seed(WATCH_URL, BODY_CHAPTERS));
+
+    it('knows them, and describes the queued copy, before any answer', () => {
+      expect(details.detailsOf(WATCH_URL)).toEqual(chaptersOnly(BODY_CHAPTERS));
+      expect(describeTrack).toHaveBeenCalledWith(WATCH_URL, chaptersOnly(BODY_CHAPTERS));
+    });
+
+    it('keeps them and describes the queued copy when the answer fails', () => {
+      answering({ [WATCH_URL]: throwError(() => new Error('503')) });
+
+      details.load([frameOf(API_FRAME_URL)], found);
+
+      expect(found).not.toHaveBeenCalled();
+      expect(details.detailsOf(WATCH_URL)).toEqual(chaptersOnly(BODY_CHAPTERS));
+      expect(describeTrack.mock.calls).toEqual([[WATCH_URL, chaptersOnly(BODY_CHAPTERS)]]);
+    });
+
+    it("takes the answer's title and length but keeps them over its chapters", () => {
+      answering({ [WATCH_URL]: of(VIDEO_DETAILS), [WIDGET_URL]: of(TRACK_DETAILS) });
+      const video = frameOf(API_FRAME_URL);
+      const widget = frameOf(WIDGET_URL);
+      const merged = { ...VIDEO_DETAILS, chapters: BODY_CHAPTERS };
+
+      details.load([video, widget], found);
+
+      expect(found.mock.calls).toEqual([
+        [video, merged],
+        [widget, TRACK_DETAILS],
+      ]);
+      expect(details.detailsOf(WATCH_URL)).toEqual(merged);
+      expect(describeTrack).toHaveBeenLastCalledWith(WIDGET_URL, TRACK_DETAILS);
+      expect(describeTrack).toHaveBeenCalledWith(WATCH_URL, merged);
+    });
+
+    it('forgets them once released', () => {
+      details.release();
+      answering({ [WATCH_URL]: of(VIDEO_DETAILS) });
+
+      details.load([frameOf(API_FRAME_URL)], found);
+
+      expect(details.detailsOf(WATCH_URL)).toEqual(VIDEO_DETAILS);
+    });
   });
 });
