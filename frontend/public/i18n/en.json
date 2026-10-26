@@ -1132,6 +1132,7 @@
       "nextChapter": "Next chapter",
       "chapterCount": "Chapters ({{ count }})",
       "chapterPosition": "Chapter {{ index }} of {{ count }}",
+      "trackChapters": "Chapters of {{ title }}",
       "playlist": "Playlist",
       "playTrack": "Play {{ title }}",
       "moveUp": "Move {{ title }} up",

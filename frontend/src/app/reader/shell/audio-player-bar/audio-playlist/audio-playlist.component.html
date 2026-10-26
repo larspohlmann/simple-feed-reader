@@ -7,6 +7,8 @@
 >
   @for (row of rows(); track row.track.url; let index = $index, last = $last) {
     @let queued = row.track;
+    @let chapters = queued.chapters ?? [];
+    @let open = expanded().has(queued.url);
     <li
       class="row"
       cdkDrag
@@ -29,7 +31,32 @@
         @if (row.durationInSeconds; as seconds) {
           <span class="row-time">{{ format(seconds) }}</span>
         }
+        @if (chapters.length > 0) {
+          <span
+            class="row-chapters"
+            [attr.aria-label]="
+              'reader.audioPlayer.chapterCount' | transloco: { count: chapters.length }
+            "
+          >
+            <app-icon name="list" size="xs" />
+            {{ chapters.length }}
+          </span>
+        }
       </button>
+      @if (chapters.length > 0) {
+        <button
+          type="button"
+          appIconButton
+          class="expand"
+          [attr.aria-expanded]="open"
+          [attr.aria-label]="
+            'reader.audioPlayer.trackChapters' | transloco: { title: queued.title }
+          "
+          (click)="toggleChapters(queued.url)"
+        >
+          <app-icon [name]="open ? 'expand_more' : 'chevron_right'" size="sm" />
+        </button>
+      }
       <button
         type="button"
         appIconButton
@@ -59,6 +86,15 @@
       >
         <app-icon name="close" size="sm" />
       </button>
+      @if (open && chapters.length > 0) {
+        <app-audio-chapters
+          class="nested"
+          [chapters]="chapters"
+          [currentIndex]="row.current ? player.chapterIndex() : -1"
+          [progress]="row.current ? player.chapterProgress() : null"
+          (pick)="player.playTrackChapter(index, $event)"
+        />
+      }
     </li>
   }
 </ol>

@@ -10,6 +10,7 @@
 
 .row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-4);
@@ -17,6 +18,8 @@
 }
 
 .row-title {
+  flex: 1;
+  min-width: 0;
   font-size: var(--fs-sm);
   color: var(--text-primary);
   white-space: nowrap;
@@ -24,14 +27,29 @@
   text-overflow: ellipsis;
 }
 
-.row-time {
+.row-time,
+.row-chapters {
   flex: none;
   white-space: nowrap;
-  margin-inline-start: auto;
   padding-inline-start: var(--space-2);
   font-size: var(--fs-2xs);
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+}
+
+.row-chapters {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-0);
+}
+
+// Lines the chapter times up under the track title: the chapter row's own padding and
+// border come off the width the handle, gap, pick padding and artwork take before the title.
+.nested {
+  --before-title: calc(var(--icon-sm) + 2 * var(--space-1) + var(--icon-lg) + var(--space-2));
+
+  flex-basis: 100%;
+  padding-inline-start: calc(var(--before-title) - var(--space-3) - var(--space-0));
 }
 
 .row.current {

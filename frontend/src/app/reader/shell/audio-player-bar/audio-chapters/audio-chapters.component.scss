@@ -11,3 +11,7 @@
 }
 
 @include chapter-rows.rows;
+
+:host(.nested) .reader-chapters__row {
+  font-size: var(--fs-xs);
+}
