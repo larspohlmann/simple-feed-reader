@@ -29,7 +29,8 @@ The two plans are independent and may merge in either order. The seams they shar
 
 - CLAUDE.md applies: Clean Code names, no boolean flag parameters, guard clauses, comments only where a reader would otherwise get the code wrong, one line each.
 - Component styles in the sibling `.scss`; no hex colours there, no ad-hoc `px` (Stylelint `declaration-property-unit-allowed-list`). The hidden-frame stylesheet lives in `src/styles/`, where those rules are relaxed, but still uses tokens.
-- `EMBED_FRAME_ATTRIBUTES` (`media-embeds.ts`) go on every provider frame this plan creates: `sandbox="allow-scripts allow-same-origin allow-presentation"` and `referrerpolicy`. The hidden frame additionally gets `allow="autoplay"` (Chrome delegates the page's user activation to the frame only through that permission) and `loading="eager"` (a lazily loaded frame that is never scrolled into view never loads).
+- Every provider frame this plan creates is built through `embedFrame(source, title)` (`media-embeds.ts`), so it carries `EMBED_FRAME_ATTRIBUTES` (`sandbox="allow-scripts allow-same-origin allow-presentation"`, `referrerpolicy`) and `allow="autoplay"` from its `EmbedSource`: a cross-origin player ignores a `playVideo` the page sends without that permission (reproduced in Brave, #1814). The hidden frame then overrides `loading` to `eager` (a lazily loaded frame that is never scrolled into view never loads).
+- YouTube drops any command that reaches the embed before its API has sent its first message, and `initialDelivery` arrives before `onReady` (#1814, `docs/superpowers/plans/2026-10-26-chapter-progress.md`, Task 6). So an adapter counts the first message of any kind as ready, holds a play or seek asked for before that, and never posts to a frame before its `load` event (a frame that has not loaded logs a postMessage origin error).
 - Only `https://www.youtube-nocookie.com` and `https://w.soundcloud.com` are ever posted to or accepted from; a message is accepted only when `event.origin` is the provider's and `event.source` is the adapter's own frame.
 - The deck and the service never learn a provider's name: they see `PlaybackElement`s and `PlaybackKind`s.
 - Frontend tests: `docker compose exec -T frontend npx jest <paths>` in the container; the gate is `cd frontend && npm run check` plus `npm run build` (template errors surface only there). Never two Jest processes at once in the container. Playwright smokes need the Docker stack and are outside the CI gate.
@@ -42,7 +43,7 @@ The two plans are independent and may merge in either order. The seams they shar
 | Create `frontend/src/app/reader/audio/playback/playback-element.ts` | `PlaybackElement`: the `HTMLMediaElement` slice the player drives; `PlaybackEvent`; `PlaybackSlot` (element + `dispose`) |
 | Create `frontend/src/app/reader/audio/playback/playback-kind.ts` | `PlaybackKind` (`file` / `youtube` / `soundcloud`) and `playbackKindOf(url)` |
 | Create `frontend/src/app/reader/audio/playback/frame-playback.ts` | `FramePlayback`: the abstract adapter over a hidden provider frame — state, events, seek-before-start, buffered ranges, failure |
-| Create `frontend/src/app/reader/audio/playback/hidden-frame.ts` | `hiddenPlaybackFrame(title)` and `hiddenPlaybackHost()`: the detached frame with its security attributes and the one `document.body` container |
+| Create `frontend/src/app/reader/audio/playback/hidden-frame.ts` | `hiddenPlaybackFrame(url, title)` and `hiddenPlaybackHost()`: the detached frame built through `embedFrame`, and the one `document.body` container |
 | Create `frontend/src/app/reader/audio/playback/youtube-playback.ts` | `YouTubePlayback extends FramePlayback`: the iframe API protocol |
 | Create `frontend/src/app/reader/audio/playback/soundcloud-playback.ts` | `SoundCloudPlayback extends FramePlayback`: the Widget API protocol |
 | Create `frontend/src/app/reader/audio/playback/playback-slots.ts` | `audioSlot(element)`, `frameSlot(playback)`, `PlaybackSlotFactory` |
@@ -259,9 +260,11 @@ and the deck is built with `(kind) => kind === 'file' ? audioSlot(createAudio())
 export function hiddenPlaybackHost(): HTMLElement;   // <div class="hidden-playback" aria-hidden="true"> on document.body
 
 /** A provider frame, still detached (iOS honours referrerpolicy only on a frame whose src precedes insertion, #1594). */
-export function hiddenPlaybackFrame(title: string): HTMLIFrameElement;
-// EMBED_FRAME_ATTRIBUTES, plus allow="autoplay", loading="eager", tabindex="-1", title.
+export function hiddenPlaybackFrame(url: string, title: string): HTMLIFrameElement;
+// embedFrame({ url, allow: 'autoplay' }, title), then loading="eager" and tabindex="-1".
 ```
+
+Because `embedFrame` wants the url before insertion, `FramePlayback` creates its frame on the first `src` it is given and replaces it on a later one, instead of holding an empty frame from construction.
 
 Stylesheet (`src/styles/_hidden-playback.scss`): fixed at the bottom end corner, `width: 16rem; aspect-ratio: 16 / 9`, `opacity: 0`, `pointer-events: none`, `z-index: -1`, `overflow: hidden`; the frame fills it, `border: 0`. Never `display: none` or a zero size: browsers throttle or refuse media in a frame that does not render.
 
@@ -272,7 +275,7 @@ Stylesheet (`src/styles/_hidden-playback.scss`): fixed at the bottom end corner,
 export abstract class FramePlayback implements PlaybackElement {
   preload: PlaybackElement['preload'] = 'auto';
   defaultPlaybackRate = 1;
-  protected readonly frame: HTMLIFrameElement;
+  protected frame: HTMLIFrameElement | null = null;
   private readonly listeners = new Map<PlaybackEvent, (() => void)[]>();
   private source = '';
   private time = 0;
@@ -286,11 +289,11 @@ export abstract class FramePlayback implements PlaybackElement {
   private pendingPlay = false;
   private startAt: number | null = null;
 
-  constructor(host: HTMLElement, private readonly origin: string, title: string) {
-    this.frame = hiddenPlaybackFrame(title);
+  constructor(private readonly host: HTMLElement, private readonly origin: string, private readonly title: string) {
     window.addEventListener('message', this.onMessage);
-    host.append(this.frame);
   }
+  // `set src` builds the frame with hiddenPlaybackFrame(frameUrlFor(url), title), listens for its `load`, appends it to `host`;
+  // a frame already held is removed first. `frame` is null until then.
 
   // PlaybackElement — the same contract as the element the service already handles:
   get src(): string;                      set src(url: string);     // resets state, loads frameUrlFor(url)
@@ -309,6 +312,7 @@ export abstract class FramePlayback implements PlaybackElement {
   // What a provider implements:
   protected abstract frameUrlFor(url: string): string;
   protected abstract onFrameLoaded(): void;                 // YouTube: send `listening`; SoundCloud: nothing, `ready` arrives on its own
+  protected abstract isReadyMessage(data: unknown): boolean; // YouTube: any parsable widget message (initialDelivery precedes onReady, #1814); SoundCloud: `ready`
   protected abstract readMessage(data: unknown): void;      // parse; call the report* methods
   protected abstract start(seconds: number | null): void;   // play, from `seconds` when given
   protected abstract stop(): void;
@@ -317,7 +321,7 @@ export abstract class FramePlayback implements PlaybackElement {
 
   // What a provider reports:
   protected post(message: object): void;    // JSON to the frame at `origin`
-  protected becameReady(): void;            // applies the rate; starts a pending play from startAt
+  protected becameReady(): void;            // called by the base on the first ready message; applies the rate; starts a pending play from startAt
   protected reportTime(seconds: number): void;
   protected reportDuration(seconds: number): void;   // emits loadedmetadata + durationchange on a change
   protected reportLoaded(fraction: number): void;    // emits progress
@@ -330,7 +334,7 @@ export abstract class FramePlayback implements PlaybackElement {
 
 The `message` listener accepts only `event.origin === this.origin && event.source === this.frame.contentWindow`. `UNPLAYABLE` is a frozen object satisfying `MediaError` with `code: 4`, so `sourceIsDead()` in the service skips the track the way it skips an expired enclosure.
 
-Why `startAt`: YouTube's `seekTo` on a cued video starts it, and the service sets `currentTime = 0` right after every load and seeks a restored position once metadata arrives. A seek before `started` is therefore kept and handed to `start()`; the first `reportPlaying` makes later seeks immediate.
+Why `startAt`: YouTube's `seekTo` on a cued video starts it, and the service sets `currentTime = 0` right after every load and seeks a restored position once metadata arrives. A seek before `started` is therefore kept and handed to `start()`; the first `reportPlaying` makes later seeks immediate. It is the same hold `YouTubeChapterPlayer.heldStart` keeps for a chapter tapped before the player is ready (#1814), generalised to both providers. `post()` is a no-op while no frame is held or loaded.
 
 - [ ] **Step 1: Write the specs** with a `TestPlayback` subclass that records `post` calls and exposes the report methods. Cover: the frame carries the security attributes, `allow="autoplay"` and `loading="eager"`; messages from another origin or another window are ignored; `play` before ready emits `play` and starts once `becameReady`; a seek before start is applied through `start(seconds)`, after start through `seekTo`; `reportDuration` flips `readyState` and emits both metadata events once; `reportEnded` emits `pause` then `ended`; `reportFailure` yields an error with `code === MEDIA_ERR_SRC_NOT_SUPPORTED` and `load()` clears it; `dispose` removes the frame and stops listening. Send messages with `window.dispatchEvent(new MessageEvent('message', { data, origin, source: frame.contentWindow }))` — see `youtube-chapter-player.spec.ts` for the pattern.
 - [ ] **Step 2: Run them to verify they fail**
@@ -349,13 +353,14 @@ Why `startAt`: YouTube's `seekTo` on a cued video starts it, and the service set
 Protocol (the one `YouTubeChapterPlayer` speaks, widened):
 
 - Frame url: `https://www.youtube-nocookie.com/embed/<id>?enablejsapi=1&origin=<encoded page origin>&playsinline=1&controls=0`, the id from `youTubeVideoId(url)`. Origin posted to and accepted from: `https://www.youtube-nocookie.com`.
-- On frame load: `{ event: 'listening', id: 1, channel: 'widget' }`.
+- On frame load: `{ event: 'listening', id: 1, channel: 'widget' }`, and once more when `play()` is asked before the first message arrived, the prompt `YouTubeChapterPlayer` sends for a held tap (a paused player may otherwise send nothing).
+- Ready: the first message the frame sends, whatever its `event`; YouTube's `initialDelivery` precedes `onReady`, and a command sent before either is dropped (#1814).
 - Commands: `{ event: 'command', func, args, id: 1, channel: 'widget' }` with `playVideo`, `pauseVideo`, `seekTo` (`[seconds, true]`), `setPlaybackRate` (`[rate]`). `start(seconds)`: `seekTo` when `seconds` is given and greater than zero, then `playVideo`.
-- Messages (JSON strings): `onReady` → `becameReady`; `infoDelivery` / `initialDelivery` with `info.currentTime` → `reportTime`, `info.duration > 0` → `reportDuration`, `info.videoLoadedFraction` → `reportLoaded`, `info.playerState` → as below; `onStateChange` with `info` as the state; `onError` → `reportFailure`.
+- Messages (JSON strings): `infoDelivery` / `initialDelivery` with `info.currentTime` → `reportTime`, `info.duration > 0` → `reportDuration`, `info.videoLoadedFraction` → `reportLoaded`, `info.playerState` → as below; `onStateChange` with `info` as the state; `onError` → `reportFailure`.
 - Player states: `1` playing → `reportPlaying`; `2` paused → `reportPaused`; `0` ended → `reportEnded`; `3` buffering, `5` cued, `-1` unstarted → nothing.
 - `applyRate`: `setPlaybackRate`; the app's rates (1, 1.25, 1.5, 2) are all ones YouTube offers.
 
-- [ ] **Step 1: Write the spec**: the frame url for a watch url and for a `youtu.be` link; `listening` on load; a `play` before ready becomes `playVideo` after `onReady`; a restored position becomes `seekTo` then `playVideo`; `infoDelivery` drives time, duration, loaded fraction and the playing state; `onStateChange` 2 and 0; `onError` 150 marks the element dead; the rate is sent on ready and on change; nothing is accepted from `https://www.youtube.com`.
+- [ ] **Step 1: Write the spec**: the frame url for a watch url and for a `youtu.be` link; `listening` on load; a `play` before ready posts `listening` again and becomes `playVideo` after the first message, be it `initialDelivery` or `onReady`; a restored position becomes `seekTo` then `playVideo`; `infoDelivery` drives time, duration, loaded fraction and the playing state; `onStateChange` 2 and 0; `onError` 150 marks the element dead; the rate is sent on ready and on change; nothing is accepted from `https://www.youtube.com`.
 - [ ] **Step 2: Run it to verify it fails**
 - [ ] **Step 3: Implement** (reuse `currentTimeOf`'s parsing approach: a tolerant `JSON.parse` of a string, every field read defensively).
 - [ ] **Step 4: Spec green**
@@ -455,7 +460,7 @@ Supported embeds: every `.reader-embed > iframe` for which `embedMediaOfFrame(fr
 - Modify: `frontend/src/app/reader/article/reader-view/article-body.service.ts`, `.spec.ts`
 - Modify: `frontend/src/app/reader/article/article-content/article-content.component.ts`, `reader-view.component.html`
 
-**`embed-frame-commands.ts`:** `pauseEmbedFrame(frame: HTMLIFrameElement): void` posts `pauseVideo` (widget protocol, origin `https://www.youtube-nocookie.com`) to a YouTube API frame and `{ method: 'pause' }` to a SoundCloud widget; anything else is left alone. `YouTubeChapterPlayer` keeps its own posting; a shared `postToYouTubeFrame` helper is welcome if it falls out naturally, not required.
+**`embed-frame-commands.ts`:** `pauseEmbedFrame(frame: HTMLIFrameElement): void` posts `pauseVideo` (widget protocol, origin `https://www.youtube-nocookie.com`) to a YouTube API frame and `{ method: 'pause' }` to a SoundCloud widget; anything else is left alone. A YouTube frame that has not yet answered drops the command (#1814), which is fine: such a frame is not playing. `YouTubeChapterPlayer` keeps its own posting; a shared `postToYouTubeFrame` helper is welcome if it falls out naturally, not required.
 
 **`article-embed-audio.ts`:**
 
@@ -472,11 +477,11 @@ export class ArticleEmbedAudio {
 
 `listen(media, frame)`: `pauseEmbedFrame(frame)`, `audio.play(toEmbedTrack(entry, media))`, `onListened(track)`. `toggleQueued`: `dequeue(url)` when queued, else `enqueue(track)`. An `effect` (with the injector) calls `showQueued(audio.isQueued(control.media.url))` on every control; `isQueued` reads the playlist signal, so the effect follows the queue.
 
-**Chapters follow the player (#1810 hook):** `ArticleChapters.followTrack(track: AudioTrack): void` replaces the current chapter player with an `AudioChapterPlayer` for `track` and re-adds the list at the same place (`addChapterList` already replaces an earlier list). `ArticleBody` passes `(track) => this.chapters.followTrack(track)` as `onListened`, so once the video is the player's current track its chapter list seeks the player, not the paused visible frame.
+**Chapters follow the player (#1810 hook):** `ArticleChapters.followTrack(track: AudioTrack): void` replaces the current chapter player with an `AudioChapterPlayer` for `track` and re-adds the list at the same place (`addChapterList` already replaces an earlier list). `AudioChapterPlayer` already reports `PlaybackPosition` with the player's duration (#1814), so the list's row progress and time left keep working on the audio player. `ArticleBody` passes `(track) => this.chapters.followTrack(track)` as `onListened`, so once the video is the player's current track its chapter list seeks the player, not the paused visible frame.
 
-**`ArticleBody`:** `ArticleBodyParts.entry: () => EntryDto | null`; every render passes `frameUrl: (url) => withPlayerApi(url, window.location.origin)` (decision 3; the chapters condition goes), the listen labels and actions into `decorateArticle`, and attaches `ArticleEmbedAudio` beside `ArticleChapters` inside `runOutsideAngular`; `release` both on cleanup and destroy. `ArticleContentComponent` gains `entry = input<EntryDto | null>(null)`; the reader view passes `[entry]="e"`.
+**`ArticleBody`:** `ArticleBodyParts.entry: () => EntryDto | null`; every render passes `embedSource: (url) => withPlayerApi(url, window.location.origin)` (decision 3; the chapters condition goes), so every landscape YouTube frame in an article loads with the API suffix and `allow="autoplay"` (`withPlayerApi` returns an `EmbedSource` since #1814; `media-embeds.spec.ts` keeps pinning that `upgradeMediaEmbeds` without a source mapper grants no autoplay, #748). It also passes the listen labels and actions into `decorateArticle`, and attaches `ArticleEmbedAudio` beside `ArticleChapters` inside `runOutsideAngular`; `release` both on cleanup and destroy. `ArticleContentComponent` gains `entry = input<EntryDto | null>(null)`; the reader view passes `[entry]="e"`.
 
-- [ ] **Step 1: Write the specs**: `pauseEmbedFrame` posts to each provider frame and to nothing else; `ArticleEmbedAudio` plays the track built from the entry, pauses the frame, reports the track, toggles the queue, and its controls follow `isQueued` (use `StubAudioPlayer` from `src/testing/stub-audio-player.ts`, extended with a `tracks` signal if `isQueued` needs it); `ArticleChapters.followTrack` swaps a video list onto the audio player; `ArticleBody` passes the API flag to every YouTube frame.
+- [ ] **Step 1: Write the specs**: `pauseEmbedFrame` posts to each provider frame and to nothing else; `ArticleEmbedAudio` plays the track built from the entry, pauses the frame, reports the track, toggles the queue, and its controls follow `isQueued` (use `StubAudioPlayer` from `src/testing/stub-audio-player.ts`, extended with a `tracks` signal if `isQueued` needs it); `ArticleChapters.followTrack` swaps a video list onto the audio player; `ArticleBody` passes `withPlayerApi` as the embed source on every render, chapters or not (adjust `article-body.service.spec.ts`, which today expects the API suffix only with chapters).
 - [ ] **Step 2: Run to verify they fail**
 - [ ] **Step 3: Implement**
 - [ ] **Step 4: `npm run check` and `npm run build` green**
