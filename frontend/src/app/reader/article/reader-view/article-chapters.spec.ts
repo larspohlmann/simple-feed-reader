@@ -45,7 +45,10 @@ describe('ArticleChapters', () => {
     host.innerHTML =
       '<div class="reader-cinema"><div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x"></iframe></div></div><p>Notes</p>';
 
-    chapters().attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, null);
+    chapters().attachToFrame(host.querySelector('iframe')!, {
+      chapters: CHAPTERS,
+      heading: 'Chapters',
+    });
 
     expect(host.children[1].classList.contains('reader-chapters')).toBe(true);
   });
@@ -54,7 +57,7 @@ describe('ArticleChapters', () => {
     const host = document.createElement('div');
     host.innerHTML = '<p>Notes</p>';
 
-    chapters().attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
+    chapters().attachToEpisode(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
 
     expect(host.firstElementChild?.classList.contains('reader-chapters')).toBe(true);
   });
@@ -66,18 +69,21 @@ describe('ArticleChapters', () => {
     host.innerHTML =
       '<div class="reader-cinema"><div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x"></iframe></div></div><p>Notes</p>';
 
-    chapters().attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
+    chapters().attachToEpisode(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
     host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
 
     expect(host.firstElementChild?.classList.contains('reader-chapters')).toBe(true);
     expect(playFrom).toHaveBeenCalledWith(TRACK, 60);
   });
 
-  it('adds nothing without a player to drive', () => {
+  it('adds nothing under a frame that plays no embed', () => {
     const host = document.createElement('div');
-    host.innerHTML = '<p>Notes</p>';
+    host.innerHTML = '<iframe src="https://player.vimeo.com/video/1"></iframe><p>Notes</p>';
 
-    chapters().attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, null);
+    chapters().attachToFrame(host.querySelector('iframe')!, {
+      chapters: CHAPTERS,
+      heading: 'Chapters',
+    });
 
     expect(host.querySelector('.reader-chapters')).toBeNull();
   });
@@ -86,7 +92,7 @@ describe('ArticleChapters', () => {
     const host = document.createElement('div');
     host.innerHTML = '<p>Notes</p>';
     const articleChapters = chapters();
-    articleChapters.attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
+    articleChapters.attachToEpisode(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
 
     articleChapters.release();
 
@@ -106,7 +112,10 @@ describe('ArticleChapters', () => {
       host.innerHTML = VIDEO_BODY;
       const posted = recordPosts(host.querySelector('iframe')!);
       const articleChapters = chapters();
-      articleChapters.attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, null);
+      articleChapters.attachToFrame(host.querySelector('iframe')!, {
+        chapters: CHAPTERS,
+        heading: 'Chapters',
+      });
 
       articleChapters.followTrack(VIDEO_TRACK);
       host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
@@ -122,7 +131,10 @@ describe('ArticleChapters', () => {
       const host = document.createElement('div');
       host.innerHTML = VIDEO_BODY;
       const articleChapters = chapters();
-      articleChapters.attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, null);
+      articleChapters.attachToFrame(host.querySelector('iframe')!, {
+        chapters: CHAPTERS,
+        heading: 'Chapters',
+      });
 
       articleChapters.followTrack(VIDEO_TRACK);
       const audio = TestBed.inject(AudioPlayerService);
@@ -138,7 +150,6 @@ describe('ArticleChapters', () => {
       const host = document.createElement('div');
       host.innerHTML = '<p>Notes</p>';
       const articleChapters = chapters();
-      articleChapters.attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, null);
 
       articleChapters.followTrack(VIDEO_TRACK);
 
@@ -150,9 +161,14 @@ describe('ArticleChapters', () => {
     const host = document.createElement('div');
     host.innerHTML = '<p>Notes</p>';
     const articleChapters = chapters();
-    articleChapters.attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
+    articleChapters.attachToEpisode(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
 
-    articleChapters.attach(host, { chapters: NEXT_CHAPTERS, heading: 'Chapters' }, NEXT_TRACK);
+    articleChapters.release();
+    articleChapters.attachToEpisode(
+      host,
+      { chapters: NEXT_CHAPTERS, heading: 'Chapters' },
+      NEXT_TRACK,
+    );
     const audio = TestBed.inject(AudioPlayerService);
     audio.enqueue(NEXT_TRACK);
     audio.seek(45);
@@ -259,11 +275,11 @@ describe('ArticleChapters', () => {
       articleChapters.release();
     });
 
-    it("keeps the body's own list beside an embed's list", () => {
+    it("keeps the episode's list beside an embed's list", () => {
       const { host, widget } = embedsHost();
       const articleChapters = chapters();
 
-      articleChapters.attach(host, LIST, null);
+      articleChapters.attachToEpisode(host, LIST, TRACK);
       articleChapters.attachToFrame(widget, LIST);
 
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(2);
@@ -327,11 +343,11 @@ describe('ArticleChapters', () => {
     it('leaves every list on its own player when the listened embed has no list', () => {
       const audio = TestBed.inject(AudioPlayerService);
       const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
-      const { host, video, widget } = embedsHost();
+      const { video, widget } = embedsHost();
       const videoPosts = recordPosts(video);
       const widgetPosts = recordPosts(widget);
       const articleChapters = chapters();
-      articleChapters.attach(host, LIST, null);
+      articleChapters.attachToFrame(video, LIST);
 
       articleChapters.followTrack(WIDGET_TRACK);
       deliverMessage(
@@ -352,7 +368,7 @@ describe('ArticleChapters', () => {
     it('gives an embed one list however often it is attached', () => {
       const { host, video, widget } = embedsHost();
       const articleChapters = chapters();
-      articleChapters.attach(host, LIST, null);
+      articleChapters.attachToFrame(video, LIST);
 
       articleChapters.attachToFrame(video, LIST);
       articleChapters.attachToFrame(widget, LIST);
@@ -361,6 +377,18 @@ describe('ArticleChapters', () => {
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(2);
       expect(listAfter(video)?.classList.contains('reader-chapters')).toBe(true);
       expect(listAfter(widget)?.classList.contains('reader-chapters')).toBe(true);
+      articleChapters.release();
+    });
+
+    it('keeps the first list attached to an embed, not a later one', () => {
+      const { host, video } = embedsHost();
+      const articleChapters = chapters();
+      articleChapters.attachToFrame(video, LIST);
+
+      articleChapters.attachToFrame(video, { chapters: NEXT_CHAPTERS, heading: 'Chapters' });
+
+      expect(host.querySelectorAll('.reader-chapters')).toHaveLength(1);
+      expect(titles(host)).toEqual(['A', 'B']);
       articleChapters.release();
     });
 
@@ -381,9 +409,9 @@ describe('ArticleChapters', () => {
     });
 
     it('takes every list away on release', () => {
-      const { host, widget } = embedsHost();
+      const { host, video, widget } = embedsHost();
       const articleChapters = chapters();
-      articleChapters.attach(host, LIST, null);
+      articleChapters.attachToFrame(video, LIST);
       articleChapters.attachToFrame(widget, LIST);
 
       articleChapters.release();

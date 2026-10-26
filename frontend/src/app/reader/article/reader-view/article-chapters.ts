@@ -25,7 +25,7 @@ interface ListToShow {
   readonly place: ChapterListPlace;
   readonly list: ChapterList;
   readonly player: ChapterPlayer;
-  readonly mediaUrl: string | null;
+  readonly mediaUrl: string;
   readonly frame: HTMLIFrameElement | null;
 }
 
@@ -33,7 +33,7 @@ interface ShownList extends ListToShow {
   readonly element: HTMLElement | null;
 }
 
-/** A rendered body's chapter lists: its own, on the episode or the first API video (#1808), and one per embed (#1824). */
+/** A rendered body's chapter lists: the episode's atop the body, and one under each embed (#1808, #1824). */
 export class ArticleChapters {
   private shown: ShownList[] = [];
 
@@ -42,24 +42,16 @@ export class ArticleChapters {
     private readonly injector: Injector,
   ) {}
 
-  attach(host: HTMLElement, list: ChapterList, track: AudioTrack | null): void {
-    this.release();
+  attachToEpisode(host: HTMLElement, list: ChapterList, track: AudioTrack): void {
     if (list.chapters.length === 0) return;
-    if (track) {
-      const place = { host, after: null };
-      this.show({ place, list, player: this.audioPlayer(track), mediaUrl: null, frame: null });
-      return;
-    }
-    const frame = apiPlayerFrame(host);
-    if (!frame) return;
-    const place = { host, after: embedBoxOf(frame) };
-    const mediaUrl = embedMediaOfFrame(frame)?.url ?? null;
-    this.show({ place, list, player: new YouTubeChapterPlayer(frame), mediaUrl, frame });
+    const place = { host, after: null };
+    this.show({ place, list, player: this.audioPlayer(track), mediaUrl: track.url, frame: null });
   }
 
+  /** The first list attached to a frame stays its only one. */
   attachToFrame(frame: HTMLIFrameElement, list: ChapterList): void {
     const media = embedMediaOfFrame(frame);
-    const after = embedBoxOf(frame) ?? frame;
+    const after = frame.closest('.reader-cinema') ?? frame.closest('.reader-embed') ?? frame;
     const host = after.parentElement;
     if (!media || !host || list.chapters.length === 0 || this.hasList(frame)) return;
     const player = this.embedPlayer(frame, media);
@@ -105,8 +97,4 @@ export class ArticleChapters {
   private audioPlayer(track: AudioTrack): AudioChapterPlayer {
     return new AudioChapterPlayer(this.audio, track, this.injector);
   }
-}
-
-function embedBoxOf(frame: HTMLIFrameElement): Element | null {
-  return frame.closest('.reader-cinema') ?? frame.closest('.reader-embed');
 }

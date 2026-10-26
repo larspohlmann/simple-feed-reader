@@ -14,6 +14,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { decorateArticle } from '../decorators/decorate-article';
 import { toggleCinemaByKey } from '../decorators/reader-cinema';
+import { ChapterList } from '../decorators/reader-chapters';
 import { releaseHlsStreams } from '../../media/hls-streams';
 import { UnplayableVideoService } from '../../media/unplayable-video.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
@@ -26,6 +27,11 @@ import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
 import { ArticleEmbedAudio } from './article-embed-audio';
 import { ArticleEmbedDetails } from './article-embed-details';
+
+interface ChapteredEmbed {
+  readonly frame: HTMLIFrameElement;
+  readonly media: EmbedMedia;
+}
 
 export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
@@ -135,18 +141,28 @@ export class ArticleBody {
         onListened: (listened) => this.chapters.followTrack(listened),
       }),
     });
-    // Only decoration gives the player frame its API flag, so the embed is resolved after it.
-    const chapteredEmbed = chapteredEmbedOf(host, chapterList, track);
-    const heading = this.i18n.translate('reader.chapters');
+    const list = { chapters: chapterList, heading: this.i18n.translate('reader.chapters') };
     this.zone.runOutsideAngular(() => {
-      this.chapters.attach(host, { chapters: chapterList, heading }, track);
+      this.attachBodyChapters(host, list, track);
       this.embedAudio.follow(controls);
-      // A video queued from a list row gains its chapters once its article opens (#1810).
-      if (chapteredEmbed) this.embedDetails.seed(chapteredEmbed.url, chapterList);
-      this.loadEmbedDetails(chapterFrames(host), heading);
+      this.loadEmbedDetails(chapterFrames(host), list.heading);
       this.media.follow(host);
     });
     parts.decorated(host);
+  }
+
+  /** Before any fetched list, so the body's chapters are the one list under their frame. */
+  private attachBodyChapters(host: HTMLElement, list: ChapterList, track: AudioTrack | null): void {
+    if (track) {
+      this.chapters.attachToEpisode(host, list, track);
+      return;
+    }
+    // Only decoration gives the player frame its API flag, so the embed is resolved after it.
+    const chaptered = chapteredEmbedOf(host, list.chapters);
+    if (!chaptered) return;
+    // A video queued from a list row gains its chapters once its article opens (#1810).
+    this.embedDetails.seed(chaptered.media.url, list.chapters);
+    this.chapters.attachToFrame(chaptered.frame, list);
   }
 
   private loadEmbedDetails(frames: HTMLIFrameElement[], heading: string): void {
@@ -156,15 +172,11 @@ export class ArticleBody {
   }
 }
 
-/** The embed the body's chapters belong to: the player `ArticleChapters` drives, unless an episode owns them. */
-function chapteredEmbedOf(
-  host: HTMLElement,
-  chapters: ChapterDto[],
-  track: AudioTrack | null,
-): EmbedMedia | null {
-  if (chapters.length === 0 || track) return null;
-  const frame = apiPlayerFrame(host);
-  return frame ? embedMediaOfFrame(frame) : null;
+/** The embed the body's chapters belong to when no episode owns them: the first video player. */
+function chapteredEmbedOf(host: HTMLElement, chapters: ChapterDto[]): ChapteredEmbed | null {
+  const frame = chapters.length > 0 ? apiPlayerFrame(host) : null;
+  const media = frame ? embedMediaOfFrame(frame) : null;
+  return frame && media ? { frame, media } : null;
 }
 
 function sameChapters(left: ChapterDto[], right: ChapterDto[]): boolean {
