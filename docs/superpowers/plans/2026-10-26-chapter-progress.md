@@ -821,6 +821,149 @@ git commit -m "feat(#1814): put a clock in front of the chapter's time left"
 
 ---
 
+### Task 6: A chapter tapped before the video is ready still plays
+
+This task was added during implementation, from a user bug report. After a fresh page load, tapping a chapter does not start the video.
+
+It was reproduced on :4200 (entry 655277). The tap's `seekTo`/`playVideo` went out at 2342 ms, but the player's first message (`initialDelivery`, then `onReady`) arrived at 2567 ms. YouTube drops commands that reach the embed before its API is listening, so the video stayed cued at 0:00. A tap after the player is ready works.
+
+The fix: `YouTubeChapterPlayer` holds the start a tap asks for until the frame has sent its first message, then seeks and plays it. If there are several taps before then, only the last one is held. Any message from the frame counts as "ready", not only `onReady`. A player attached to a frame whose handshake an earlier player already did sees only `infoDelivery` messages, and must still become ready.
+
+**Files:**
+- Modify: `frontend/src/app/reader/chapters/youtube-chapter-player.ts`
+- Test: `frontend/src/app/reader/chapters/youtube-chapter-player.spec.ts`
+
+**Interfaces:** The `ChapterPlayer` contract stays unchanged. `playFrom` may now defer its commands until the frame first speaks.
+
+- [ ] **Step 1: Write the failing tests**
+
+In `youtube-chapter-player.spec.ts`, the existing `'seeks, then plays'` test needs a player that is already ready. Deliver a message before `playFrom`:
+
+```ts
+  it('seeks, then plays', () => {
+    const { frame, posted } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+    delivery(frame, { event: 'onReady' });
+
+    player.playFrom(256);
+
+    expect(posted).toEqual([
+      { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
+      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
+    ]);
+    player.release();
+  });
+```
+
+Add after it:
+
+```ts
+  it('holds a chapter tapped before the player is ready, then plays it', () => {
+    const { frame, posted } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+
+    player.playFrom(256);
+    expect(posted).toEqual([]);
+
+    delivery(frame, { event: 'initialDelivery', info: { currentTime: 0 } });
+
+    expect(posted).toEqual([
+      { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
+      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
+    ]);
+    player.release();
+  });
+
+  it('plays only the last chapter tapped before the player is ready', () => {
+    const { frame, posted } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+
+    player.playFrom(10);
+    player.playFrom(256);
+    delivery(frame, { event: 'infoDelivery', info: { currentTime: 0 } });
+    delivery(frame, { event: 'infoDelivery', info: { currentTime: 1 } });
+
+    expect(posted).toEqual([
+      { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
+      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
+    ]);
+    player.release();
+  });
+
+  it('drops a held chapter once released', () => {
+    const { frame, posted } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+
+    player.playFrom(256);
+    player.release();
+    delivery(frame, { event: 'onReady' });
+
+    expect(posted).toEqual([]);
+  });
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `docker compose exec -T frontend npm test -- src/app/reader/chapters/youtube-chapter-player.spec.ts`
+Expected: FAIL. `playFrom` posts at once, so `'holds…'` and `'plays only the last…'` see the commands too early and too many times.
+
+- [ ] **Step 3: Implement**
+
+In `youtube-chapter-player.ts`, add two fields below `durationSeconds`:
+
+```ts
+  private ready = false;
+  private heldStart: number | null = null;
+```
+
+At the top of `onMessage`, right after the origin/source guard, add `this.becomeReady();`.
+
+Replace `playFrom` with:
+
+```ts
+  playFrom(seconds: number): void {
+    if (!this.ready) {
+      this.heldStart = seconds;
+      return;
+    }
+    this.command('seekTo', [seconds, true]);
+    this.command('playVideo', []);
+  }
+```
+
+Add `this.heldStart = null;` to `release()`, then add a private method below `release()`:
+
+```ts
+  private becomeReady(): void {
+    if (this.ready) return;
+    this.ready = true;
+    const start = this.heldStart;
+    this.heldStart = null;
+    if (start !== null) this.playFrom(start);
+  }
+```
+
+`release()` already removes the message listener, so a released player never becomes ready. The `'drops a held chapter…'` test pins this.
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `docker compose exec -T frontend npm test -- src/app/reader/chapters src/app/reader/article`
+Expected: PASS.
+
+- [ ] **Step 5: Gates**
+
+Run (from `frontend/`): `npm run check`
+Expected: exit 0.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add frontend/src/app/reader/chapters/youtube-chapter-player.ts frontend/src/app/reader/chapters/youtube-chapter-player.spec.ts
+git commit -m "fix(#1814): play a chapter tapped before the video is ready"
+```
+
+---
+
 ## Self-review notes
 
 - Spec coverage: fill on a faint track (Task 3 SCSS, in `article-chapters.scss`); time left right-aligned on the playing row (Task 3 tests 1–2, `margin-inline-start: auto`), hidden from the accessible name (Task 3 test 5); only the current row (selector `[aria-current='true']` + `mark` clears the left row); seeking moves it (Task 3 tests 2 and 4); unchanged before playback (no `aria-current`, empty time-left span is invisible, and only the current row reserves `min-width: 6ch` for it); last chapter to duration, track only while unknown (Task 2 tests 2–3, Task 3 test 3); YouTube duration from deliveries, audio from `duration()` (Task 1); `scaleX` via one custom property (Task 3 Step 5).
