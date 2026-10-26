@@ -14,7 +14,7 @@
 
 - CLAUDE.md applies in full: names reveal intent, no abbreviations, comments only when a reader would otherwise get the code wrong, one line each.
 - ESLint: `max-lines-per-function` 60, `complexity` 10, `@typescript-eslint/max-params` 3, Prettier 100 columns.
-- SCSS: no hex colours, no ad-hoc `px`, tokens only (`--accent-soft`, `--text-primary`). Styles stay in `article-content.component.scss`.
+- SCSS: no hex colours, no ad-hoc `px`, tokens only (`--accent-soft`, `--text-primary`). Every `.reader-chapters…` rule lives in the sibling `article-content/article-chapters.scss` (listed after `article-content.component.scss` in `styleUrls`), which keeps the component under the 14kB `anyComponentStyle` budget (changed during implementation).
 - Fill colour `var(--accent-soft)`; track colour `color-mix(in srgb, var(--text-primary) 5%, transparent)`. The left accent bar on the current row stays unchanged.
 - Time left: `formatDuration(secondsLeft)`, no sign (user decision mid-run), from `reader/format.ts`, right-aligned at the row's end, `--text-secondary`, tabular numerals, `aria-hidden`. No translation key needed.
 - Only the current (`aria-current='true'`) row shows track, fill and time left. Before any position arrives, the list looks as it does today.
@@ -34,7 +34,8 @@ All paths under `frontend/src/app/reader/`.
 | `chapters/audio-chapter-player.ts` | Reports `PlaybackPosition` from `position()` and `duration()` |
 | `chapters/current-chapter.ts` | New `ChapterProgress` and `chapterProgress(starts, index, position)` |
 | `article/decorators/reader-chapters.ts` | Each row gets a time-left span; writes `--chapter-progress` and the time left on the current row, clears both on the row it leaves |
-| `article/article-content/article-content.component.scss` | Track, fill and time left on the current row |
+| `article/article-content/article-chapters.scss` | All `.reader-chapters…` rules, moved out of `article-content.component.scss`; track, fill and a steady-width time left on the current row |
+| `article/article-content/article-content.component.ts` | `styleUrls` lists both stylesheets |
 | matching `*.spec.ts` | Tests per task |
 
 `article/reader-view/article-chapters.ts` only constructs players and needs no change.
@@ -421,16 +422,17 @@ git commit -m "feat(#1814): work out how far playback is through a chapter"
 
 **Files:**
 - Modify: `frontend/src/app/reader/article/decorators/reader-chapters.ts`
-- Modify: `frontend/src/app/reader/article/article-content/article-content.component.scss:473-498`
+- Create: `frontend/src/app/reader/article/article-content/article-chapters.scss` (the `.reader-chapters…` rules move here from `article-content.component.scss:473-498`)
+- Modify: `frontend/src/app/reader/article/article-content/article-content.component.scss` and `article-content.component.ts` (`styleUrls` of both files)
 - Test: `frontend/src/app/reader/article/decorators/reader-chapters.spec.ts`
 
 **Interfaces:**
 - Consumes: `PlaybackPosition` (Task 1), `ChapterProgress` and `chapterProgress` (Task 2), the spec's `fakePlayer().progressTo(position)` (Task 1, Step 3).
-- Produces: on the current `.reader-chapters__row`, the inline custom property `--chapter-progress` (the fraction, two decimals) and the text of its `.reader-chapters__left` span (`formatDuration(secondsLeft)`, no sign). Every other row has neither.
+- Produces: on the current `.reader-chapters__row`, the inline custom property `--chapter-progress` (the fraction, four decimals) and the text of its `.reader-chapters__left` span (`formatDuration(secondsLeft)`, no sign). Every other row has neither.
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `reader-chapters.spec.ts`, inside `describe('addChapterList', ...)`, after `'follows the position the player reports'`. `CHAPTERS` starts at 0, 256 and 3723. Values: 128 s is half of chapter 0 with 128 s left. 3800 s in a 4000 s file is 77/277 ≈ 0.28 of the last chapter, with 200 s left.
+Add to `reader-chapters.spec.ts`, inside `describe('addChapterList', ...)`, after `'follows the position the player reports'`. `CHAPTERS` starts at 0, 256 and 3723. Values: 128 s is half of chapter 0 with 128 s left. 3800 s in a 4000 s file is 77/277 ≈ 0.2780 of the last chapter, with 200 s left.
 
 ```ts
   function progressOf(row: HTMLElement): string {
@@ -448,7 +450,7 @@ Add to `reader-chapters.spec.ts`, inside `describe('addChapterList', ...)`, afte
 
     player.progressTo({ seconds: 128, durationSeconds: null });
 
-    expect(rows(host).map(progressOf)).toEqual(['0.50', '', '']);
+    expect(rows(host).map(progressOf)).toEqual(['0.5000', '', '']);
     expect(rows(host).map(timeLeftOf)).toEqual(['2:08', '', '']);
   });
 
@@ -460,7 +462,7 @@ Add to `reader-chapters.spec.ts`, inside `describe('addChapterList', ...)`, afte
     player.progressTo({ seconds: 128, durationSeconds: 4000 });
     player.progressTo({ seconds: 3800, durationSeconds: 4000 });
 
-    expect(rows(host).map(progressOf)).toEqual(['', '', '0.28']);
+    expect(rows(host).map(progressOf)).toEqual(['', '', '0.2780']);
     expect(rows(host).map(timeLeftOf)).toEqual(['', '', '3:20']);
   });
 
@@ -557,7 +559,7 @@ function showProgress(row: HTMLElement, progress: ChapterProgress | null): void 
     clearProgress(row);
     return;
   }
-  row.style.setProperty(PROGRESS, progress.fraction.toFixed(2));
+  row.style.setProperty(PROGRESS, progress.fraction.toFixed(4));
   row.querySelector(`.${TIME_LEFT}`)?.replaceChildren(formatDuration(progress.secondsLeft));
 }
 
@@ -586,7 +588,7 @@ Expected: PASS, the five new tests and the seven existing ones.
 
 - [ ] **Step 5: Draw the track, fill and time left**
 
-In `article-content.component.scss`, add `position: relative;` and `isolation: isolate;` to the existing `:host ::ng-deep .reader-chapters__row` block, after `cursor: pointer;`. Then add after the existing `.reader-chapters__time` block:
+Move every `.reader-chapters…` rule out of `article-content.component.scss` into the new `article-content/article-chapters.scss` (keep its `@use '../../../theme/glass-rim';`), and set `styleUrls: ['./article-content.component.scss', './article-chapters.scss']` in `article-content.component.ts`. In the moved `:host ::ng-deep .reader-chapters__row` block add `position: relative;` and `isolation: isolate;` after `cursor: pointer;`. Then add after the `.reader-chapters__time` block:
 
 ```scss
 :host ::ng-deep .reader-chapters__left {
@@ -596,8 +598,9 @@ In `article-content.component.scss`, add `position: relative;` and `isolation: i
   font-variant-numeric: tabular-nums;
 }
 
-:host ::ng-deep .reader-chapters__left:empty {
-  display: none;
+:host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left {
+  min-width: 6ch;
+  text-align: end;
 }
 
 :host ::ng-deep .reader-chapters__row[aria-current='true']::before,
@@ -619,6 +622,8 @@ In `article-content.component.scss`, add `position: relative;` and `isolation: i
 }
 ```
 
+The fixed `min-width: 6ch` on the current row's time left keeps its width steady as the countdown changes digits (changed during implementation; an earlier draft hid the empty span with `:empty`).
+
 `isolation: isolate` keeps the `z-index: -1` pseudo-elements inside the row: behind its text, above the card.
 
 - [ ] **Step 6: Gates**
@@ -629,7 +634,7 @@ Expected: both exit 0.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add frontend/src/app/reader/article/decorators/reader-chapters.ts frontend/src/app/reader/article/decorators/reader-chapters.spec.ts frontend/src/app/reader/article/article-content/article-content.component.scss
+git add frontend/src/app/reader/article/decorators/reader-chapters.ts frontend/src/app/reader/article/decorators/reader-chapters.spec.ts frontend/src/app/reader/article/article-content
 git commit -m "feat(#1814): fill the playing chapter's row and show its time left"
 ```
 
@@ -680,5 +685,5 @@ Play the episode from a chapter row and confirm the same things through the app'
 
 ## Self-review notes
 
-- Spec coverage: fill on a faint track (Task 3 SCSS); time left right-aligned on the playing row (Task 3 tests 1–2, `margin-inline-start: auto`), hidden from the accessible name (Task 3 test 5); only the current row (selector `[aria-current='true']` + `mark` clears the left row); seeking moves it (Task 3 tests 2 and 4); unchanged before playback (no `aria-current`, empty time-left span `display: none`); last chapter to duration, track only while unknown (Task 2 tests 2–3, Task 3 test 3); YouTube duration from deliveries, audio from `duration()` (Task 1); `scaleX` via one custom property (Task 3 Step 5).
+- Spec coverage: fill on a faint track (Task 3 SCSS, in `article-chapters.scss`); time left right-aligned on the playing row (Task 3 tests 1–2, `margin-inline-start: auto`), hidden from the accessible name (Task 3 test 5); only the current row (selector `[aria-current='true']` + `mark` clears the left row); seeking moves it (Task 3 tests 2 and 4); unchanged before playback (no `aria-current`, empty time-left span is invisible, and only the current row reserves `min-width: 6ch` for it); last chapter to duration, track only while unknown (Task 2 tests 2–3, Task 3 test 3); YouTube duration from deliveries, audio from `duration()` (Task 1); `scaleX` via one custom property (Task 3 Step 5).
 - Types: `PlaybackPosition { seconds, durationSeconds }` and `ChapterProgress { fraction, secondsLeft }` are used with the same names in Tasks 1–3; `chapterProgress(starts, index, position)` is called with that order in Task 3.
