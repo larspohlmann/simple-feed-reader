@@ -1,6 +1,6 @@
 import { EffectRef, Injector, effect } from '@angular/core';
 import { AudioPlayerService, AudioTrack } from '../audio-player.service';
-import { ChapterPlayer } from './chapter-player';
+import { ChapterPlayer, PlaybackPosition } from './chapter-player';
 
 /** Chapters of an episode, played through the app-wide audio player (#1808). */
 export class AudioChapterPlayer implements ChapterPlayer {
@@ -16,17 +16,19 @@ export class AudioChapterPlayer implements ChapterPlayer {
     this.player.playFrom(this.track, seconds);
   }
 
-  watch(onPosition: (seconds: number | null) => void): void {
+  watch(onPosition: (position: PlaybackPosition | null) => void): void {
     this.watcher?.destroy();
-    this.watcher = effect(
-      () =>
-        onPosition(this.player.current()?.url === this.track.url ? this.player.position() : null),
-      { injector: this.injector },
-    );
+    this.watcher = effect(() => onPosition(this.position()), { injector: this.injector });
   }
 
   release(): void {
     this.watcher?.destroy();
     this.watcher = null;
+  }
+
+  private position(): PlaybackPosition | null {
+    if (this.player.current()?.url !== this.track.url) return null;
+    const duration = this.player.duration();
+    return { seconds: this.player.position(), durationSeconds: duration > 0 ? duration : null };
   }
 }
