@@ -14,8 +14,9 @@ import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testin
 import { ArticleBody } from './article-body.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { PlayingMedium } from '../../media/autoplay/autoplay-player';
-import { ChapterDto } from '../../models';
-import { AudioTrack } from '../../audio-player.service';
+import { ChapterDto, EntryDto } from '../../models';
+import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
+import { anEntry } from '../../../../testing/entry-testing';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -23,6 +24,8 @@ const VIDEO = '<video controls src="https://x.test/clip.mp4"></video>';
 const STREAM = '<video controls src="https://x.test/master.m3u8"></video>';
 const YOUTUBE =
   '<a href="https://www.youtube-nocookie.com/embed/JsBZOcqZerk">Video</a><p>Notes</p>';
+const VIDEO_URL = 'https://www.youtube.com/watch?v=JsBZOcqZerk';
+const API_FRAME_URL = `https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
 const CHAPTERS: ChapterDto[] = [
   { startSeconds: 0, title: 'Intro' },
   { startSeconds: 256, title: 'How it works' },
@@ -44,6 +47,7 @@ describe('ArticleBody', () => {
   const html = signal('');
   const chapters = signal<ChapterDto[]>([]);
   const audioTrack = signal<AudioTrack | null>(null);
+  const entry = signal<EntryDto | null>(null);
 
   function connectBody(body: string): void {
     content = articleHost(body);
@@ -56,6 +60,7 @@ describe('ArticleBody', () => {
       enclosureUrl: () => null,
       chapters,
       audioTrack,
+      entry,
       decorated,
     });
     TestBed.tick();
@@ -84,8 +89,10 @@ describe('ArticleBody', () => {
       .mockImplementation(() => undefined);
 
   beforeEach(() => {
+    localStorage.clear();
     chapters.set([]);
     audioTrack.set(null);
+    entry.set(null);
     imageProxy = neverRecoveringImageProxy();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -270,21 +277,17 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       const frame = content.querySelector('iframe')!;
-      expect(frame.getAttribute('src')).toBe(
-        `https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`,
-      );
+      expect(frame.getAttribute('src')).toBe(API_FRAME_URL);
       expect(frame.closest('.reader-cinema')!.nextElementSibling!.classList).toContain(
         'reader-chapters',
       );
     });
 
-    it('leaves a video without chapters on its plain player', async () => {
+    it('loads a video without chapters with the player API too, so Listen can pause it', async () => {
       connectBody(YOUTUBE);
       await Promise.resolve();
 
-      expect(content.querySelector('iframe')!.getAttribute('src')).toBe(
-        'https://www.youtube-nocookie.com/embed/JsBZOcqZerk',
-      );
+      expect(content.querySelector('iframe')!.getAttribute('src')).toBe(API_FRAME_URL);
       expect(content.querySelector('.reader-chapters')).toBeNull();
     });
 
@@ -294,10 +297,31 @@ describe('ArticleBody', () => {
       connectBody(YOUTUBE);
       await Promise.resolve();
 
-      expect(content.querySelector('iframe')!.getAttribute('src')).toBe(
-        'https://www.youtube-nocookie.com/embed/JsBZOcqZerk',
-      );
+      expect(content.querySelector('iframe')!.getAttribute('src')).toBe(API_FRAME_URL);
       expect(content.firstElementChild!.classList).toContain('reader-chapters');
+    });
+
+    it('hands the player the chapters of the video it lists, for a copy queued earlier', async () => {
+      const describeChapters = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describeChapters')
+        .mockImplementation(() => undefined);
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      expect(describeChapters).toHaveBeenCalledWith(VIDEO_URL, CHAPTERS);
+    });
+
+    it("describes no video to the player while the chapters are the episode's", async () => {
+      const describeChapters = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describeChapters')
+        .mockImplementation(() => undefined);
+      chapters.set(CHAPTERS);
+      audioTrack.set(EPISODE);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      expect(describeChapters).not.toHaveBeenCalled();
     });
 
     it('decorates again when the chapters arrive after the body', async () => {
@@ -325,6 +349,85 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       expect(decorated).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('its embeds', () => {
+    const listenButton = (): HTMLButtonElement =>
+      content.querySelector<HTMLButtonElement>('.reader-listen__button')!;
+    const queueToggle = (): HTMLButtonElement =>
+      content.querySelector<HTMLButtonElement>('.reader-listen__button[aria-pressed]')!;
+
+    it('offers Listen under a video of the open entry', async () => {
+      entry.set(anEntry());
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      expect(listenButton()).not.toBeNull();
+    });
+
+    it('offers no Listen before the entry is known', async () => {
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      expect(listenButton()).toBeNull();
+    });
+
+    it('sends the video to the player on Listen, and its chapter list follows', async () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      const play = jest.spyOn(audio, 'play').mockImplementation(() => undefined);
+      const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
+      entry.set(anEntry({ title: 'The video' }));
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      listenButton().click();
+      content.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+
+      const track = expect.objectContaining({
+        url: VIDEO_URL,
+        title: 'The video',
+        chapters: CHAPTERS,
+      });
+      expect(play).toHaveBeenCalledWith(track);
+      expect(playFrom).toHaveBeenCalledWith(track, 256);
+    });
+
+    it('shows the queue toggle pressed while the video is in the playlist', async () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      entry.set(anEntry());
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+      TestBed.tick();
+      expect(queueToggle().getAttribute('aria-pressed')).toBe('false');
+
+      queueToggle().click();
+      TestBed.tick();
+
+      expect(audio.isQueued(VIDEO_URL)).toBe(true);
+      expect(queueToggle().getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('stops following the playlist once destroyed', async () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      entry.set(anEntry());
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+      TestBed.tick();
+      const toggle = queueToggle();
+
+      injector.destroy();
+      audio.enqueue({
+        url: VIDEO_URL,
+        title: 'V',
+        faviconUrl: null,
+        imageUrl: null,
+        durationInSeconds: null,
+      });
+      TestBed.tick();
+
+      expect(toggle.getAttribute('aria-pressed')).toBe('false');
     });
   });
 });
