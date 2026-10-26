@@ -426,7 +426,7 @@ git commit -m "feat(#1814): work out how far playback is through a chapter"
 
 **Interfaces:**
 - Consumes: `PlaybackPosition` (Task 1), `ChapterProgress` and `chapterProgress` (Task 2), the spec's `fakePlayer().progressTo(position)` (Task 1, Step 3).
-- Produces: on the current `.reader-chapters__row`, the inline custom property `--chapter-progress` (the fraction, two decimals) and the text of its `.reader-chapters__left` span (`−` + `formatDuration(secondsLeft)`, U+2212 minus). Every other row has neither.
+- Produces: on the current `.reader-chapters__row`, the inline custom property `--chapter-progress` (the fraction, two decimals) and the text of its `.reader-chapters__left` span (`formatDuration(secondsLeft)`, no sign). Every other row has neither.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -449,7 +449,7 @@ Add to `reader-chapters.spec.ts`, inside `describe('addChapterList', ...)`, afte
     player.progressTo({ seconds: 128, durationSeconds: null });
 
     expect(rows(host).map(progressOf)).toEqual(['0.50', '', '']);
-    expect(rows(host).map(timeLeftOf)).toEqual(['−2:08', '', '']);
+    expect(rows(host).map(timeLeftOf)).toEqual(['2:08', '', '']);
   });
 
   it('moves fill and time left to the chapter playback moves into', () => {
@@ -461,7 +461,7 @@ Add to `reader-chapters.spec.ts`, inside `describe('addChapterList', ...)`, afte
     player.progressTo({ seconds: 3800, durationSeconds: 4000 });
 
     expect(rows(host).map(progressOf)).toEqual(['', '', '0.28']);
-    expect(rows(host).map(timeLeftOf)).toEqual(['', '', '−3:20']);
+    expect(rows(host).map(timeLeftOf)).toEqual(['', '', '3:20']);
   });
 
   it('leaves the last chapter unfilled while the duration is unknown', () => {
@@ -558,7 +558,7 @@ function showProgress(row: HTMLElement, progress: ChapterProgress | null): void 
     return;
   }
   row.style.setProperty(PROGRESS, progress.fraction.toFixed(2));
-  row.querySelector(`.${TIME_LEFT}`)?.replaceChildren(`−${formatDuration(progress.secondsLeft)}`);
+  row.querySelector(`.${TIME_LEFT}`)?.replaceChildren(formatDuration(progress.secondsLeft));
 }
 
 function clearProgress(row: HTMLElement): void {
@@ -662,7 +662,7 @@ Open each entry's article view.
 - [ ] **Step 3: Check the video**
 
 Open the chapter list, play the video, and confirm:
-- the playing row shows the faint track and an accent fill that grows to the right, behind time and title, and a right-aligned `−m:ss` that counts down;
+- the playing row shows the faint track and an accent fill that grows to the right, behind time and title, and a right-aligned `m:ss` that counts down;
 - seeking into another chapter (tap a row, and also drag the YouTube scrubber) moves track, fill and time left to the new row, and the old row is plain;
 - a long chapter title wraps without pushing the time left out of the row, at desktop width and in the Mobile viewport;
 - the last chapter fills toward the video's end. If it shows only the track, run `document.querySelector('.reader-chapters__row[aria-current]').style.cssText` in the console. An empty value means YouTube delivered no `duration`: report that to the planner;
