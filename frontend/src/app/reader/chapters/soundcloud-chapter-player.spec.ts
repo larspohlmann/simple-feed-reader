@@ -116,6 +116,52 @@ describe('SoundCloudChapterPlayer', () => {
     player.release();
   });
 
+  it('learns from progress that the widget already plays, then seeks at once', () => {
+    const { frame, posted, player } = playerWithFrame();
+    delivery(frame, { method: 'playProgress', value: { currentPosition: 1000 } });
+    posted.length = 0;
+
+    player.playFrom(600);
+
+    expect(messagesOf(posted)).toEqual([seekTo(600000)]);
+    player.release();
+  });
+
+  it('sends a held seek on the first progress when no play event came', () => {
+    const { frame, posted, player } = playerWithFrame();
+    player.playFrom(600);
+    posted.length = 0;
+
+    delivery(frame, { method: 'playProgress', value: { currentPosition: 1000 } });
+
+    expect(messagesOf(posted)).toEqual([seekTo(600000)]);
+    player.release();
+  });
+
+  it('holds a chapter again after the frame reloads', () => {
+    const { frame, posted, player } = playerWithFrame();
+    delivery(frame, { method: 'play' });
+    frame.dispatchEvent(new Event('load'));
+    posted.length = 0;
+
+    player.playFrom(600);
+
+    expect(messagesOf(posted)).toEqual([PLAY]);
+    player.release();
+  });
+
+  it('keeps no duration of 0', () => {
+    const { frame, player } = playerWithFrame();
+    const positions: (PlaybackPosition | null)[] = [];
+    player.watch((position) => positions.push(position));
+
+    delivery(frame, { method: 'getDuration', value: 0 });
+    delivery(frame, { method: 'playProgress', value: { currentPosition: 1000 } });
+
+    expect(positions).toEqual([{ seconds: 1, durationSeconds: null }]);
+    player.release();
+  });
+
   it('reports nothing and seeks nothing once released', () => {
     const { frame, posted, player } = playerWithFrame();
     const positions: (PlaybackPosition | null)[] = [];

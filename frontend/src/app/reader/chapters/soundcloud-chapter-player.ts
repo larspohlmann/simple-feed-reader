@@ -39,7 +39,10 @@ export class SoundCloudChapterPlayer implements ChapterPlayer {
     }
   };
 
-  private readonly onLoad = (): void => this.subscribe();
+  private readonly onLoad = (): void => {
+    this.playing = false;
+    this.subscribe();
+  };
 
   constructor(private readonly frame: HTMLIFrameElement) {
     window.addEventListener('message', this.onMessage);
@@ -74,12 +77,14 @@ export class SoundCloudChapterPlayer implements ChapterPlayer {
 
   private readDuration(value: unknown): void {
     const milliseconds = finiteNumberOf(value);
-    if (milliseconds !== null) this.durationSeconds = milliseconds / MILLISECONDS;
+    if (milliseconds !== null && milliseconds > 0)
+      this.durationSeconds = milliseconds / MILLISECONDS;
   }
 
   private readPosition(value: unknown): void {
     const milliseconds = finiteNumberOf(widgetFieldOf(value, 'currentPosition'));
     if (milliseconds === null) return;
+    this.becomePlaying();
     this.onPosition?.({
       seconds: milliseconds / MILLISECONDS,
       durationSeconds: this.durationSeconds,
