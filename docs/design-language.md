@@ -1492,15 +1492,16 @@ bar whatever fills it. The first chapter's mark at 0 is omitted.
 |---|---|
 | `position`, `duration`, `buffered` | `number` (required), seconds |
 | `chapters` | `readonly ChapterDto[]` (default `[]`) |
-| `label` | `string` (required): the translated `aria-label` |
 | `(seek)` | `number`, the chosen second |
 | `(dragging)` | `boolean`, while the pointer holds the bar |
 
-Its size is the host's to set through three custom properties, with the mini
-bar's values as defaults: `--bar` (track height, `--space-1`), `--thumb`
-(`--space-3`; `0` for none) and `--tap` (input height, `--space-4`). The big
-player sets `--bar: var(--space-2)`, no thumb and `--tap: var(--tap-target)`, and
-thickens `--bar` while dragging.
+It labels itself (`reader.audioPlayer.seek`). Its size is the host's to set
+through custom properties, with the mini bar's values as defaults:
+`--scrubber-bar` (track height, `--space-1`), `--scrubber-thumb` (`--space-3`;
+`0` for none), `--scrubber-tap` (input height, `--space-4`) and
+`--scrubber-surface` (the notch colour, `--surface-1`: the surface the bar lies
+on). The big player sets a `--space-2` bar, no thumb and a `--tap-target` input,
+and thickens the bar while dragging.
 
 ```html
 <app-scrubber
@@ -1508,7 +1509,6 @@ thickens `--bar` while dragging.
   [duration]="player.duration()"
   [buffered]="player.buffered()"
   [chapters]="player.chapters()"
-  [label]="'reader.audioPlayer.seek' | transloco"
   (seek)="player.seek($event)"
 />
 ```
@@ -1518,14 +1518,16 @@ Used by: the audio player bar, the big player.
 ### `<app-audio-chapters>`
 
 The chapter rows of the article's list (#1808, #1814) as a component (#1810). It
-reads nothing from the player: `chapters` (required), `currentIndex` (default
-`-1`, no row marked) and `progress` (`ChapterProgress | null`) come in, a tapped
-row's index goes out as `(pick)`. The current row carries `aria-current="true"`,
-fills to `--chapter-progress` in `--accent-soft` and ends in its time left behind a
+reads nothing from the player: `chapters` (required) and `playhead`
+(`ChapterPlayhead | null`: the chapter playback is in and its progress, from
+`AudioPlayerService.chapterPlayhead`) come in, a tapped row's index goes out as
+`(pick)`. The current row carries `aria-current="true"`, fills to
+`--chapter-progress` in `--accent-soft` and ends in its time left behind a
 `schedule` icon. The row rules live in `reader/chapters/_chapter-rows.scss`, a
 mixin the article's `article-chapters.scss` and this component both include, so
-the two lists cannot drift apart. With the class `nested` (a queue row) its rows
-drop to `--fs-xs`.
+the two lists cannot drift apart; the rows inherit their font size from the list's
+host and take their inline inset from `--chapter-row-inset` (`--space-3`), which
+the queue zeroes for its nested rows and sets to `--fs-xs`.
 
 Used by: the big player's chapter list, the queue's expanded rows.
 

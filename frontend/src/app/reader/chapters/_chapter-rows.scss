@@ -1,17 +1,22 @@
 // The rows of a chapter list, drawn alike by the article's list and the player's (#1814, #1810).
 // The current row fills to `--chapter-progress` and ends in its time left.
 @mixin rows {
+  .reader-chapters__list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 var(--space-1);
+  }
+
   .reader-chapters__row {
     display: flex;
     gap: var(--space-3);
     width: 100%;
-    padding: var(--space-1) var(--space-3);
+    padding: var(--space-1) var(--chapter-row-inset, var(--space-3));
     background: none;
     border: none;
     border-inline-start: var(--space-0) solid transparent;
     color: var(--text-primary);
     font: inherit;
-    font-size: var(--fs-sm);
     text-align: start;
     cursor: pointer;
     position: relative;

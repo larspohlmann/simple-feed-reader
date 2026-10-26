@@ -43,13 +43,15 @@
   gap: var(--space-0);
 }
 
-// Lines the chapter times up under the track title: the chapter row's own padding and
-// border come off the width the handle, gap, pick padding and artwork take before the title.
+// Lines the chapter times up under the track title: the current marker's border comes off
+// the width the handle, gap, pick padding and artwork take before the title.
 .nested {
   --before-title: calc(var(--icon-sm) + 2 * var(--space-1) + var(--icon-lg) + var(--space-2));
+  --chapter-row-inset: 0;
 
   flex-basis: 100%;
-  padding-inline-start: calc(var(--before-title) - var(--space-3) - var(--space-0));
+  padding-inline-start: calc(var(--before-title) - var(--space-0));
+  font-size: var(--fs-xs);
 }
 
 .row.current {

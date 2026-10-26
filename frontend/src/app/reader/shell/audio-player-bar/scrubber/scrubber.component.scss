@@ -1,7 +1,8 @@
-/* Host-settable: --bar is the track's height, --thumb the thumb's size (0 for none), --tap the input's height. */
+/* Host-settable: --scrubber-bar is the track's height, --scrubber-thumb the thumb's size (0 for
+   none), --scrubber-tap the input's height, --scrubber-surface the colour the notches cut to. */
 :host {
-  --scrubber-bar: var(--bar, var(--space-1));
-  --scrubber-thumb: var(--thumb, var(--space-3));
+  --bar-height: var(--scrubber-bar, var(--space-1));
+  --thumb-size: var(--scrubber-thumb, var(--space-3));
 
   position: relative;
   display: block;
@@ -19,7 +20,7 @@
 
   display: block;
   inline-size: 100%;
-  block-size: var(--tap, var(--space-4));
+  block-size: var(--scrubber-tap, var(--space-4));
   margin: 0;
   appearance: none;
   background: transparent;
@@ -27,14 +28,14 @@
 }
 
 .scrubber::-webkit-slider-runnable-track {
-  height: var(--scrubber-bar);
+  height: var(--bar-height);
   border-radius: var(--radius-pill);
   background: var(--track);
   transition: height 0.15s ease;
 }
 
 .scrubber::-moz-range-track {
-  height: var(--scrubber-bar);
+  height: var(--bar-height);
   border-radius: var(--radius-pill);
   background: var(--track);
   transition: height 0.15s ease;
@@ -42,17 +43,17 @@
 
 .scrubber::-webkit-slider-thumb {
   appearance: none;
-  width: var(--scrubber-thumb);
-  height: var(--scrubber-thumb);
-  margin-top: calc((var(--scrubber-bar) - var(--scrubber-thumb)) / 2);
+  width: var(--thumb-size);
+  height: var(--thumb-size);
+  margin-top: calc((var(--bar-height) - var(--thumb-size)) / 2);
   border: 0;
   border-radius: 50%;
   background: var(--accent);
 }
 
 .scrubber::-moz-range-thumb {
-  width: var(--scrubber-thumb);
-  height: var(--scrubber-thumb);
+  width: var(--thumb-size);
+  height: var(--thumb-size);
   border: 0;
   border-radius: 50%;
   background: var(--accent);
@@ -75,8 +76,8 @@
   position: absolute;
   top: 50%;
   width: var(--space-0);
-  height: var(--scrubber-bar);
-  background: var(--surface-1);
+  height: var(--bar-height);
+  background: var(--scrubber-surface, var(--surface-1));
   transform: translate(-50%, -50%);
   transition: height 0.15s ease;
 }

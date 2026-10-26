@@ -34,8 +34,4 @@ export class PlaylistPersistence {
     window.addEventListener('pagehide', save);
     destroyRef.onDestroy(() => window.removeEventListener('pagehide', save));
   }
-
-  clear(): void {
-    this.store.clear();
-  }
 }

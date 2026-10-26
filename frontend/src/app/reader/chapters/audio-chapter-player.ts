@@ -28,7 +28,6 @@ export class AudioChapterPlayer implements ChapterPlayer {
 
   private position(): PlaybackPosition | null {
     if (this.player.current()?.url !== this.track.url) return null;
-    const duration = this.player.duration();
-    return { seconds: this.player.position(), durationSeconds: duration > 0 ? duration : null };
+    return this.player.playbackPosition();
   }
 }

@@ -88,13 +88,4 @@ describe('PlaylistPersistence', () => {
     window.dispatchEvent(new Event('pagehide'));
     expect(savedPosition()).toBe(5);
   });
-
-  it('clears the store on demand', () => {
-    const { persistence } = setUp(() => at(30));
-    persistence.save();
-
-    persistence.clear();
-
-    expect(localStorage.getItem('sfr.audio')).toBeNull();
-  });
 });

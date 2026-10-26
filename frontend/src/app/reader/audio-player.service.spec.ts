@@ -8,18 +8,12 @@ import {
 import { PRECACHE_LEAD_SECONDS } from './audio/audio-deck';
 import { PlaylistStore } from './audio/playlist.store';
 import { TokenStore } from '../core/auth/token.store';
+import { installFakeMediaSession } from '../../testing/fake-media-session';
+import { timeRanges } from '../../testing/time-ranges-testing';
 import type { ChapterDto } from './models';
 
 const SRC_NOT_SUPPORTED = 4;
 const NETWORK = 2;
-
-function ranges(...spans: [number, number][]): TimeRanges {
-  return {
-    length: spans.length,
-    start: (index: number) => spans[index][0],
-    end: (index: number) => spans[index][1],
-  };
-}
 
 class FakeAudio {
   error: { code: number; MEDIA_ERR_SRC_NOT_SUPPORTED: number } | null = null;
@@ -28,7 +22,7 @@ class FakeAudio {
   defaultPlaybackRate = 1;
   playbackRate = 1;
   preload = '';
-  buffered: TimeRanges = ranges();
+  buffered: TimeRanges = timeRanges();
   load = jest.fn();
   removeAttribute = jest.fn((name: string) => {
     if (name === 'src') this.source = '';
@@ -569,14 +563,7 @@ describe('AudioPlayerService', () => {
     });
 
     it('binds the OS track controls only while there is a track to step to, and plays nothing after close', () => {
-      const handlers: Record<string, (() => void) | null> = {};
-      Object.defineProperty(navigator, 'mediaSession', {
-        configurable: true,
-        value: {
-          setActionHandler: (action: string, handler: (() => void) | null) =>
-            (handlers[action] = handler),
-        },
-      });
+      const { handlers, restore } = installFakeMediaSession();
       try {
         const service = make();
         service.play(one);
@@ -586,19 +573,19 @@ describe('AudioPlayerService', () => {
 
         service.enqueue(two);
         TestBed.tick();
-        handlers['nexttrack']?.();
+        handlers['nexttrack']?.({});
         expect(service.current()).toBe(two);
         TestBed.tick();
         expect(handlers['nexttrack']).toBeNull();
-        handlers['previoustrack']?.();
+        handlers['previoustrack']?.({});
         expect(service.current()).toBe(one);
 
         service.stop();
         audio.play.mockClear();
-        handlers['play']?.();
+        handlers['play']?.({});
         expect(audio.play).not.toHaveBeenCalled();
       } finally {
-        delete (navigator as { mediaSession?: unknown }).mediaSession;
+        restore();
       }
     });
   });
@@ -652,18 +639,7 @@ describe('AudioPlayerService', () => {
     });
 
     it('titles the OS metadata with the current chapter and clears it on stop', () => {
-      class FakeMediaMetadata {
-        constructor(readonly init: MediaMetadataInit) {}
-      }
-      const session: { metadata: FakeMediaMetadata | null } = { metadata: null };
-      Object.defineProperty(navigator, 'mediaSession', {
-        configurable: true,
-        value: Object.assign(session, { setActionHandler: jest.fn() }),
-      });
-      Object.defineProperty(window, 'MediaMetadata', {
-        configurable: true,
-        value: FakeMediaMetadata,
-      });
+      const { session, restore } = installFakeMediaSession();
       try {
         const service = playingChaptered();
         at(30);
@@ -678,8 +654,7 @@ describe('AudioPlayerService', () => {
         TestBed.tick();
         expect(session.metadata).toBeNull();
       } finally {
-        Reflect.deleteProperty(navigator, 'mediaSession');
-        Reflect.deleteProperty(window, 'MediaMetadata');
+        restore();
       }
     });
 
@@ -846,7 +821,7 @@ describe('AudioPlayerService', () => {
       const service = make();
       service.play(track());
       audio.currentTime = 30;
-      audio.buffered = ranges([0, 10], [20, 75], [90, 100]);
+      audio.buffered = timeRanges([0, 10], [20, 75], [90, 100]);
 
       audio.fire('progress');
 
@@ -857,7 +832,7 @@ describe('AudioPlayerService', () => {
       const service = make();
       service.play(track());
       audio.currentTime = 50;
-      audio.buffered = ranges([0, 10]);
+      audio.buffered = timeRanges([0, 10]);
 
       audio.fire('progress');
 
@@ -878,7 +853,7 @@ describe('AudioPlayerService', () => {
 
       function progressAt(seconds: number, cachedTo = seconds): void {
         audio.currentTime = seconds;
-        audio.buffered = ranges([0, cachedTo]);
+        audio.buffered = timeRanges([0, cachedTo]);
         audio.fire('progress');
       }
 
@@ -1003,7 +978,7 @@ describe('AudioPlayerService', () => {
     it('starts a new track with nothing cached', () => {
       const service = make();
       service.play(track());
-      audio.buffered = ranges([0, 80]);
+      audio.buffered = timeRanges([0, 80]);
       audio.fire('progress');
 
       service.play(track({ url: 'https://x.test/other.mp3' }));

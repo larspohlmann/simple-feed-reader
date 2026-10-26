@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { IconComponent } from '../../../../shared/icon/icon.component';
-import type { ChapterProgress } from '../../../chapters/current-chapter';
+import type { ChapterPlayhead } from '../../../audio/track-chapters';
 import { formatDuration } from '../../../format';
 import type { ChapterDto } from '../../../models';
 
@@ -18,9 +18,7 @@ import type { ChapterDto } from '../../../models';
 })
 export class AudioChaptersComponent {
   readonly chapters = input.required<readonly ChapterDto[]>();
-  /** -1 marks no row. */
-  readonly currentIndex = input<number>(-1);
-  readonly progress = input<ChapterProgress | null>(null);
+  readonly playhead = input<ChapterPlayhead | null>(null);
   readonly pick = output<number>();
 
   protected readonly format = formatDuration;

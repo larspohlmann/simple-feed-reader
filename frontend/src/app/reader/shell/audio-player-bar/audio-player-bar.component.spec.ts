@@ -1,4 +1,3 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { CdkScrollable } from '@angular/cdk/scrolling';
@@ -7,22 +6,12 @@ import { AudioPlayerBarComponent } from './audio-player-bar.component';
 import { AudioPlayerService, AudioTrack, SKIP_SECONDS } from '../../audio-player.service';
 import type { ChapterDto } from '../../models';
 import { AudioSurface } from './audio-surface.service';
-import { ScrubberComponent } from './scrubber/scrubber.component';
+import { bigPlayerAudioSignals } from '../../../../testing/big-player-audio-signals';
+import { scrubberInput } from '../../../../testing/scrubber-testing';
 
 function stub() {
   return {
-    current: signal<AudioTrack | null>(null),
-    tracks: signal<AudioTrack[]>([]),
-    index: signal(-1),
-    hasNext: signal(false),
-    playing: signal(false),
-    position: signal(0),
-    duration: signal(0),
-    buffered: signal(0),
-    chapters: signal<ChapterDto[]>([]),
-    currentChapter: signal<ChapterDto | null>(null),
-    hasPreviousChapter: signal(false),
-    hasNextChapter: signal(false),
+    ...bigPlayerAudioSignals(),
     toggle: jest.fn(),
     seek: jest.fn(),
     skip: jest.fn(),
@@ -53,12 +42,6 @@ function render() {
 function titleLine(fixture: ReturnType<typeof render>): string {
   const title: HTMLElement = fixture.debugElement.query(By.css('.title')).nativeElement;
   return title.textContent.replace(/\s+/g, ' ').trim();
-}
-
-function scrubber(fixture: ReturnType<typeof render>): HTMLInputElement {
-  return fixture.debugElement
-    .query(By.directive(ScrubberComponent))
-    .query(By.css('input[type="range"]')).nativeElement;
 }
 
 const track: AudioTrack = {
@@ -101,8 +84,8 @@ describe('AudioPlayerBarComponent', () => {
     service.position.set(30);
     fixture.detectChanges();
 
-    expect(scrubber(fixture).max).toBe('120');
-    expect(scrubber(fixture).value).toBe('30');
+    expect(scrubberInput(fixture).max).toBe('120');
+    expect(scrubberInput(fixture).value).toBe('30');
   });
 
   it('draws how much of the stream is cached ahead of the playhead', () => {
@@ -113,8 +96,8 @@ describe('AudioPlayerBarComponent', () => {
     service.buffered.set(120);
     fixture.detectChanges();
 
-    expect(scrubber(fixture).style.getPropertyValue('--played')).toBe('25%');
-    expect(scrubber(fixture).style.getPropertyValue('--cached')).toBe('60%');
+    expect(scrubberInput(fixture).style.getPropertyValue('--played')).toBe('25%');
+    expect(scrubberInput(fixture).style.getPropertyValue('--cached')).toBe('60%');
   });
 
   it('marks the chapters of the track on the scrubber', () => {
@@ -137,8 +120,8 @@ describe('AudioPlayerBarComponent', () => {
     service.duration.set(120);
     fixture.detectChanges();
 
-    scrubber(fixture).value = '75';
-    scrubber(fixture).dispatchEvent(new Event('input'));
+    scrubberInput(fixture).value = '75';
+    scrubberInput(fixture).dispatchEvent(new Event('input'));
 
     expect(service.seek).toHaveBeenCalledWith(75);
   });

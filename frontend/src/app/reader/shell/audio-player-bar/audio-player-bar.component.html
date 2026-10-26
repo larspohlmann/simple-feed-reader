@@ -20,7 +20,7 @@
         <app-audio-artwork class="artwork" [track]="track" />
       </button>
       <div class="transport">
-        @if (player.chapters().length > 0) {
+        @if (player.hasChapters()) {
           <button
             class="ctrl previous-chapter"
             type="button"
@@ -74,7 +74,7 @@
         >
           <app-icon name="skip_next" size="md" />
         </button>
-        @if (player.chapters().length > 0) {
+        @if (player.hasChapters()) {
           <button
             class="ctrl next-chapter"
             type="button"
@@ -102,7 +102,6 @@
             [duration]="player.duration()"
             [buffered]="player.buffered()"
             [chapters]="player.chapters()"
-            [label]="'reader.audioPlayer.seek' | transloco"
             (seek)="player.seek($event)"
           />
           <span class="time">{{ format(player.duration()) }}</span>

@@ -1,6 +1,6 @@
 import { Signal, computed } from '@angular/core';
 import { PlaybackPosition } from '../chapters/chapter-player';
-import { chapterProgress, currentChapterIndex } from '../chapters/current-chapter';
+import { ChapterProgress, chapterProgress, currentChapterIndex } from '../chapters/current-chapter';
 import type { ChapterDto } from '../models';
 
 /** Where previous chapter seeks to, or null when there is nowhere to go: the current chapter's
@@ -22,6 +22,12 @@ export function nextChapterStart(starts: readonly number[], position: number): n
   return starts[currentChapterIndex(starts, position) + 1] ?? null;
 }
 
+/** The chapter playback is in and how far through it; null outside every chapter. */
+export interface ChapterPlayhead {
+  readonly index: number;
+  readonly progress: ChapterProgress | null;
+}
+
 /** The playing track's chapters, followed from the player's position (#1810). */
 export class TrackChapters {
   private readonly starts = computed(() => this.chapters().map((chapter) => chapter.startSeconds));
@@ -32,6 +38,10 @@ export class TrackChapters {
   readonly progress = computed(() => {
     const index = this.index();
     return index === -1 ? null : chapterProgress(this.starts(), index, this.position());
+  });
+  readonly playhead = computed<ChapterPlayhead | null>(() => {
+    const index = this.index();
+    return index === -1 ? null : { index, progress: this.progress() };
   });
   readonly previousStart = computed(() =>
     previousChapterStart(this.starts(), this.position().seconds, this.restartThreshold),

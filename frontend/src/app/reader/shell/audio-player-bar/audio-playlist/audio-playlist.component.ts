@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { toggled } from '../../../../core/toggled-set';
 import { IconComponent } from '../../../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../../../shared/icon-button/icon-button.directive';
 import { TOUCH_DRAG_START_DELAY } from '../../../../shared/touch-drag-delay';
@@ -18,7 +19,7 @@ interface PlaylistRow {
 
 /** The playing track's chapters open with the queue; the others wait for a tap. */
 function openedAtFirst(current: AudioTrack | null): ReadonlySet<string> {
-  return new Set(current ? [current.url] : []);
+  return new Set(current?.chapters?.length ? [current.url] : []);
 }
 
 /**
@@ -65,11 +66,6 @@ export class AudioPlaylistComponent {
   }
 
   protected toggleChapters(url: string): void {
-    this.expanded.update((urls) => {
-      const toggled = new Set(urls);
-      if (toggled.has(url)) toggled.delete(url);
-      else toggled.add(url);
-      return toggled;
-    });
+    this.expanded.update((urls) => toggled(urls, url));
   }
 }

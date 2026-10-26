@@ -7,7 +7,7 @@
   [value]="position()"
   [style.--played]="fill().played"
   [style.--cached]="fill().cached"
-  [attr.aria-label]="label()"
+  [attr.aria-label]="'reader.audioPlayer.seek' | transloco"
   (input)="onScrub($event)"
   (pointerdown)="dragging.emit(true)"
   (pointerup)="dragging.emit(false)"

@@ -1,9 +1,6 @@
 import type { AudioTrack } from '../audio-player.service';
+import { FakeMediaSession, installFakeMediaSession } from '../../../testing/fake-media-session';
 import { MediaSessionControls } from './media-session-controls';
-
-class FakeMediaMetadata {
-  constructor(readonly init: MediaMetadataInit) {}
-}
 
 const track: AudioTrack = {
   url: 'https://x.test/ep.mp3',
@@ -15,31 +12,19 @@ const track: AudioTrack = {
 };
 
 describe('MediaSessionControls', () => {
-  const setPositionState = jest.fn();
-  const session: { metadata: FakeMediaMetadata | null } = { metadata: null };
+  let session: FakeMediaSession;
+  let restore: () => void;
 
   beforeEach(() => {
-    setPositionState.mockClear();
-    session.metadata = null;
-    Object.defineProperty(navigator, 'mediaSession', {
-      configurable: true,
-      value: Object.assign(session, { setPositionState, setActionHandler: jest.fn() }),
-    });
-    Object.defineProperty(window, 'MediaMetadata', {
-      configurable: true,
-      value: FakeMediaMetadata,
-    });
+    ({ session, restore } = installFakeMediaSession());
   });
 
-  afterEach(() => {
-    Reflect.deleteProperty(navigator, 'mediaSession');
-    Reflect.deleteProperty(window, 'MediaMetadata');
-  });
+  afterEach(() => restore());
 
   it('tells the OS the playback speed, so its scrubber keeps pace', () => {
     new MediaSessionControls().showPosition(30, 120, 1.5);
 
-    expect(setPositionState).toHaveBeenCalledWith({
+    expect(session.setPositionState).toHaveBeenCalledWith({
       duration: 120,
       position: 30,
       playbackRate: 1.5,

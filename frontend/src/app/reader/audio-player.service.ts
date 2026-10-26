@@ -12,7 +12,7 @@ import {
   select,
   withChapters,
 } from './audio/playlist';
-import { PlaylistStore, SavedPlaylist } from './audio/playlist.store';
+import { PlaylistStore, type SavedPlaylist } from './audio/playlist.store';
 import { PlaylistPersistence } from './audio/playlist-persistence';
 import { AudioDeck } from './audio/audio-deck';
 import { cachedEnd } from './audio/cached-end';
@@ -83,7 +83,9 @@ export class AudioPlayerService {
   readonly rate = this.playbackRate.value;
 
   readonly chapters = computed(() => this.current()?.chapters ?? []);
-  private readonly playbackPosition = computed<PlaybackPosition>(() => ({
+  readonly hasChapters = computed(() => this.chapters().length > 0);
+  /** The position as the chapter helpers read it: the duration null while unknown. */
+  readonly playbackPosition = computed<PlaybackPosition>(() => ({
     seconds: this._position(),
     durationSeconds: this._duration() > 0 ? this._duration() : null,
   }));
@@ -95,6 +97,7 @@ export class AudioPlayerService {
   readonly chapterIndex = this.trackChapters.index;
   readonly currentChapter = this.trackChapters.current;
   readonly chapterProgress = this.trackChapters.progress;
+  readonly chapterPlayhead = this.trackChapters.playhead;
   readonly hasPreviousChapter = this.trackChapters.hasPrevious;
   readonly hasNextChapter = this.trackChapters.hasNext;
 
@@ -171,12 +174,10 @@ export class AudioPlayerService {
     this.seekToChapterStart(this.trackChapters.nextStart());
   }
 
-  /** Plays the current track from its chapter `index`, seeking once its metadata is known. */
   playChapter(index: number): void {
+    const track = this.current();
     const chapter = this.chapters()[index];
-    if (!chapter) return;
-    this.seekOnceLoaded(chapter.startSeconds);
-    this.resume();
+    if (track && chapter) this.playFrom(track, chapter.startSeconds);
   }
 
   /** Plays the queued track at `trackIndex` from its chapter `chapterIndex`; another track loads first. */
@@ -220,7 +221,7 @@ export class AudioPlayerService {
     this._position.set(0);
     this._duration.set(0);
     this._buffered.set(0);
-    this.persistence.clear();
+    this.persistence.save();
   }
 
   private seekToChapterStart(start: number | null): void {

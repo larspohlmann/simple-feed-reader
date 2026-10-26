@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideTranslocoTesting } from '../../../../../testing/transloco-testing';
 import type { ChapterDto } from '../../../models';
 import { ScrubberComponent } from './scrubber.component';
 
@@ -10,12 +11,11 @@ const chapters: ChapterDto[] = [
 ];
 
 function render(inputs: Partial<Record<'position' | 'duration' | 'buffered', number>> = {}) {
-  TestBed.configureTestingModule({ imports: [ScrubberComponent] });
+  TestBed.configureTestingModule({ imports: [ScrubberComponent, provideTranslocoTesting()] });
   const fixture = TestBed.createComponent(ScrubberComponent);
   fixture.componentRef.setInput('position', inputs.position ?? 0);
   fixture.componentRef.setInput('duration', inputs.duration ?? 0);
   fixture.componentRef.setInput('buffered', inputs.buffered ?? 0);
-  fixture.componentRef.setInput('label', 'Seek');
   fixture.detectChanges();
   return fixture;
 }

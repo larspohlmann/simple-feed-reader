@@ -1,4 +1,4 @@
-import { computed } from '@angular/core';
+import { computed, untracked } from '@angular/core';
 import { AudioPlayerService } from '../audio-player.service';
 import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
 import { ChapterDto, EntryDto } from '../models';
@@ -45,6 +45,14 @@ export class EntryAudio {
   togglePlaying(): void {
     if (this.playing()) this.player.toggle();
     else this.play();
+  }
+
+  /** Gives the queued track its chapters once the article has them; reads nothing of the queue. */
+  shareChapters(): void {
+    const track = this.track();
+    const chapters = track?.chapters;
+    if (!track || !chapters) return;
+    untracked(() => this.player.describeChapters(track.url, chapters));
   }
 
   toggleQueued(): void {

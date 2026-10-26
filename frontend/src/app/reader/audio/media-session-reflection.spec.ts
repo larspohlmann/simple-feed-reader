@@ -1,14 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { AudioTrack } from '../audio-player.service';
-import type { ChapterDto } from '../models';
+import { bigPlayerAudioSignals } from '../../../testing/big-player-audio-signals';
+import {
+  FakeMediaSession,
+  MediaActionHandler,
+  installFakeMediaSession,
+} from '../../../testing/fake-media-session';
 import { reflectInMediaSession } from './media-session-reflection';
-
-class FakeMediaMetadata {
-  constructor(readonly init: MediaMetadataInit) {}
-}
-
-type ActionHandler = ((details: { seekTime?: number }) => void) | null;
 
 const track: AudioTrack = {
   url: 'https://x.test/ep.mp3',
@@ -19,16 +18,7 @@ const track: AudioTrack = {
 };
 
 function setUp() {
-  const player = {
-    current: signal<AudioTrack | null>(null),
-    currentChapter: signal<ChapterDto | null>(null),
-    playing: signal(false),
-    position: signal(0),
-    duration: signal(0),
-    rate: signal(1),
-    hasPrevious: signal(false),
-    hasNext: signal(false),
-  };
+  const player = { ...bigPlayerAudioSignals(), hasPrevious: signal(false) };
   const actions = {
     play: jest.fn(),
     pause: jest.fn(),
@@ -43,33 +33,15 @@ function setUp() {
 }
 
 describe('reflectInMediaSession', () => {
-  const handlers: Record<string, ActionHandler> = {};
-  const session: {
-    metadata: FakeMediaMetadata | null;
-    playbackState: string;
-    setPositionState: jest.Mock;
-  } = { metadata: null, playbackState: 'none', setPositionState: jest.fn() };
+  let session: FakeMediaSession;
+  let handlers: Record<string, MediaActionHandler>;
+  let restore: () => void;
 
   beforeEach(() => {
-    session.metadata = null;
-    session.playbackState = 'none';
-    session.setPositionState.mockClear();
-    Object.defineProperty(navigator, 'mediaSession', {
-      configurable: true,
-      value: Object.assign(session, {
-        setActionHandler: (action: string, handler: ActionHandler) => (handlers[action] = handler),
-      }),
-    });
-    Object.defineProperty(window, 'MediaMetadata', {
-      configurable: true,
-      value: FakeMediaMetadata,
-    });
+    ({ session, handlers, restore } = installFakeMediaSession());
   });
 
-  afterEach(() => {
-    Reflect.deleteProperty(navigator, 'mediaSession');
-    Reflect.deleteProperty(window, 'MediaMetadata');
-  });
+  afterEach(() => restore());
 
   it('routes the OS controls to the player', () => {
     const { actions } = setUp();

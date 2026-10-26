@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { provideTranslocoTesting } from '../../../../../testing/transloco-testing';
 import { AudioPlayerService, AudioTrack } from '../../../audio-player.service';
-import type { ChapterProgress } from '../../../chapters/current-chapter';
+import type { ChapterPlayhead } from '../../../audio/track-chapters';
 import type { ChapterDto } from '../../../models';
 import { AudioPlaylistComponent } from './audio-playlist.component';
 
@@ -39,8 +39,7 @@ function stub() {
     current: signal<AudioTrack | null>(second),
     index: signal(1),
     duration: signal(0),
-    chapterIndex: signal(-1),
-    chapterProgress: signal<ChapterProgress | null>(null),
+    chapterPlayhead: signal<ChapterPlayhead | null>(null),
     playAt: jest.fn(),
     move: jest.fn(),
     dequeue: jest.fn(),
@@ -196,8 +195,7 @@ describe('AudioPlaylistComponent', () => {
 
   it("hands only the current row's list the service's chapter and progress", () => {
     const fixture = render();
-    player.chapterIndex.set(1);
-    player.chapterProgress.set({ fraction: 0.5, secondsLeft: 30 });
+    player.chapterPlayhead.set({ index: 1, progress: { fraction: 0.5, secondsLeft: 30 } });
     const [, current, later] = rows(fixture);
     click(later, '.expand');
     fixture.detectChanges();

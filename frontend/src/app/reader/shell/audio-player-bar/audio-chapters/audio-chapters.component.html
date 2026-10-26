@@ -1,7 +1,7 @@
 <ol class="reader-chapters__list">
   @for (chapter of chapters(); track $index; let index = $index) {
-    @let current = index === currentIndex();
-    @let shown = current ? progress() : null;
+    @let current = index === playhead()?.index;
+    @let shown = current ? playhead()?.progress : null;
     <li>
       <button
         type="button"

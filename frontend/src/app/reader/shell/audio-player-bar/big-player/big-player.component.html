@@ -44,7 +44,6 @@
         [duration]="player.duration()"
         [buffered]="player.buffered()"
         [chapters]="player.chapters()"
-        [label]="'reader.audioPlayer.seek' | transloco"
         (seek)="player.seek($event)"
         (dragging)="dragging.set($event)"
       />
@@ -100,7 +99,7 @@
       </button>
     </div>
 
-    @if (player.chapters().length > 0) {
+    @if (player.hasChapters()) {
       <div class="chapter-strip">
         <button
           class="ctrl previous-chapter"
@@ -188,7 +187,7 @@
     </div>
   </div>
 
-  @if (player.chapters().length > 0) {
+  @if (player.hasChapters()) {
     <section class="chapters" #chapterSection [attr.aria-label]="'reader.chapters' | transloco">
       <button
         class="chapters-heading"
@@ -204,8 +203,7 @@
         <app-audio-chapters
           id="big-player-chapters"
           [chapters]="player.chapters()"
-          [currentIndex]="player.chapterIndex()"
-          [progress]="player.chapterProgress()"
+          [playhead]="player.chapterPlayhead()"
           (pick)="player.playChapter($event)"
         />
       }

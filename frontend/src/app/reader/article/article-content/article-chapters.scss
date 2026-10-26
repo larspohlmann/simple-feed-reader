@@ -7,6 +7,7 @@
 
   margin: var(--space-3) 0 var(--space-4);
   border-radius: var(--radius);
+  font-size: var(--fs-sm);
 }
 
 :host ::ng-deep .reader-chapters__toggle {
@@ -17,7 +18,6 @@
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   color: var(--text-secondary);
-  font-size: var(--fs-sm);
   cursor: pointer;
 }
 
@@ -31,12 +31,6 @@
 
 :host ::ng-deep .reader-chapters__left .material-symbols-outlined {
   font-size: var(--icon-sm);
-}
-
-:host ::ng-deep .reader-chapters__list {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 var(--space-1);
 }
 
 :host ::ng-deep {

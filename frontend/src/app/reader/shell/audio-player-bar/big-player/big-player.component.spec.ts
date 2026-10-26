@@ -9,7 +9,7 @@ import { bigPlayerAudioSignals } from '../../../../../testing/big-player-audio-s
 import { AudioPlayerService, AudioTrack, SKIP_SECONDS } from '../../../audio-player.service';
 import { LayoutService } from '../../../layout.service';
 import type { ChapterDto } from '../../../models';
-import { ScrubberComponent } from '../scrubber/scrubber.component';
+import { scrubberInput } from '../../../../../testing/scrubber-testing';
 import { BigPlayerComponent } from './big-player.component';
 
 const first: AudioTrack = {
@@ -87,12 +87,6 @@ function query<T extends HTMLElement>(
   return fixture.debugElement.query(By.css(selector))?.nativeElement ?? null;
 }
 
-function scrubber(fixture: ReturnType<typeof render>): HTMLInputElement {
-  return fixture.debugElement
-    .query(By.directive(ScrubberComponent))
-    .query(By.css('input[type="range"]')).nativeElement;
-}
-
 function touch(type: string, target: EventTarget, ...clientYs: number[]) {
   const event = new Event(type, { bubbles: true });
   const points = clientYs.map((clientY) => ({ clientY }));
@@ -129,14 +123,14 @@ describe('BigPlayerComponent', () => {
   it('drives the scrubber, with elapsed and remaining time', () => {
     const fixture = render();
 
-    expect(scrubber(fixture).max).toBe('600');
-    expect(scrubber(fixture).value).toBe('90');
-    expect(scrubber(fixture).style.getPropertyValue('--played')).toBe('15%');
+    expect(scrubberInput(fixture).max).toBe('600');
+    expect(scrubberInput(fixture).value).toBe('90');
+    expect(scrubberInput(fixture).style.getPropertyValue('--played')).toBe('15%');
     const times = fixture.debugElement.queryAll(By.css('.time')).map((time) => time.nativeElement);
     expect(times.map((time) => time.textContent.trim())).toEqual(['1:30', '−8:30']);
 
-    scrubber(fixture).value = '75';
-    scrubber(fixture).dispatchEvent(new Event('input'));
+    scrubberInput(fixture).value = '75';
+    scrubberInput(fixture).dispatchEvent(new Event('input'));
     expect(player.seek).toHaveBeenCalledWith(75);
   });
 
@@ -156,11 +150,11 @@ describe('BigPlayerComponent', () => {
   it('thickens the scrubber while it is held', () => {
     const fixture = render();
 
-    scrubber(fixture).dispatchEvent(new Event('pointerdown'));
+    scrubberInput(fixture).dispatchEvent(new Event('pointerdown'));
     fixture.detectChanges();
     expect(query(fixture, '.scrub')!.classList).toContain('dragging');
 
-    scrubber(fixture).dispatchEvent(new Event('pointerup'));
+    scrubberInput(fixture).dispatchEvent(new Event('pointerup'));
     fixture.detectChanges();
     expect(query(fixture, '.scrub')!.classList).not.toContain('dragging');
   });
@@ -530,7 +524,7 @@ describe('BigPlayerComponent', () => {
     it('ignores a pull that starts on the scrubber', () => {
       const fixture = render();
 
-      pull(scrubber(fixture), [100, 300]);
+      pull(scrubberInput(fixture), [100, 300]);
 
       expect(ref.close).not.toHaveBeenCalled();
     });

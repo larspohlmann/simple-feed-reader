@@ -139,13 +139,13 @@
 
 /* No thumb (Apple-style): the bar alone shows the position, and the input's full height is the tap target. */
 .scrub {
-  --bar: var(--space-2);
-  --thumb: 0;
-  --tap: var(--tap-target);
+  --scrubber-bar: var(--space-2);
+  --scrubber-thumb: 0;
+  --scrubber-tap: var(--tap-target);
 }
 
 .scrub.dragging {
-  --bar: calc(var(--space-3) + var(--space-0));
+  --scrubber-bar: calc(var(--space-3) + var(--space-0));
 }
 
 .times {

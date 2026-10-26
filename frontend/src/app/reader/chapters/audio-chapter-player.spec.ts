@@ -1,4 +1,4 @@
-import { Injector, signal } from '@angular/core';
+import { Injector, computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AudioTrack } from '../audio-player.service';
 import { AudioChapterPlayer } from './audio-chapter-player';
@@ -16,7 +16,11 @@ function fakePlayer() {
   const current = signal<AudioTrack | null>(null);
   const position = signal(0);
   const duration = signal(0);
-  return { current, position, duration, playFrom: jest.fn() };
+  const playbackPosition = computed(() => ({
+    seconds: position(),
+    durationSeconds: duration() > 0 ? duration() : null,
+  }));
+  return { current, position, duration, playbackPosition, playFrom: jest.fn() };
 }
 
 describe('AudioChapterPlayer', () => {

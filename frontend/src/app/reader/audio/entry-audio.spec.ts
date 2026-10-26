@@ -56,6 +56,22 @@ describe('EntryAudio', () => {
     expect(audio.track()?.chapters).toEqual([{ startSeconds: 0, title: 'Intro' }]);
   });
 
+  it('shares the chapters with the player only once the track has some (#1810)', () => {
+    const chapters = signal<ChapterDto[]>([]);
+    const player = new StubAudioPlayer();
+    const audio = new EntryAudio(() => entry(), player.asService(), chapters);
+
+    audio.shareChapters();
+    expect(player.described).toEqual([]);
+
+    chapters.set([{ startSeconds: 0, title: 'Intro' }]);
+    audio.shareChapters();
+
+    expect(player.described).toEqual([
+      { url: EPISODE, chapters: [{ startSeconds: 0, title: 'Intro' }] },
+    ]);
+  });
+
   it('has no track while no entry is open', () => {
     expect(setUp(null).audio.track()).toBeNull();
   });
