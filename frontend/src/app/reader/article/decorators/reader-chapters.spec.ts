@@ -241,19 +241,23 @@ describe('addChapterList', () => {
     expect(host.querySelector('.reader-chapters')).toBeNull();
   });
 
-  it('replaces an earlier list with one that drives its own player', () => {
+  it('leaves another list in the host', () => {
     const host = document.createElement('div');
     const earlier = fakePlayer();
     const later = fakePlayer();
-    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, earlier);
+    const first = addChapterList(
+      { host, after: null },
+      { chapters: CHAPTERS, heading: 'Chapters' },
+      earlier,
+    );
 
-    const list = addChapterList(
+    const second = addChapterList(
       { host, after: null },
       { chapters: CHAPTERS.slice(0, 2), heading: 'Chapters' },
       later,
     );
 
-    expect(Array.from(host.querySelectorAll('.reader-chapters'))).toEqual([list]);
+    expect(Array.from(host.querySelectorAll('.reader-chapters'))).toEqual([second, first]);
     rows(host)[1].click();
     expect(later.playFrom).toHaveBeenCalledWith(256);
     expect(earlier.playFrom).not.toHaveBeenCalled();

@@ -11,10 +11,9 @@ use App\Service\Html\Support\HtmlDocumentParser;
 use Dom\Element;
 use Dom\Text;
 
-/** YouTube's chapter rule over a video description: the first `0:00`-led block of three or more ascending stamps. */
+/** YouTube's chapter rule: the first run of three or more ascending chapter lines from `0:00`, stamped alike. */
 final class DescriptionChapters
 {
-    private const string LINE = '/^\s*[(\[]?((?:\d{1,2}:)?\d{1,2}:\d{2})(?!\d)[)\]]?\s*[-–—:|]?\s*(\S.*?)\s*$/u';
     private const int MINIMUM = 3;
 
     public static function in(string $html): ServedChaptersModel
@@ -48,19 +47,40 @@ final class DescriptionChapters
     private static function firstRun(array $lines): array
     {
         $run = [];
-        foreach ([...$lines, null] as $line) {
-            $chapter = $line === null ? null : self::chapterOf($line->text());
-            if ($line !== null && $chapter !== null) {
+        foreach ($lines as $line) {
+            $text = $line->text();
+            if (ChapterLine::holdsNoStamp($text) && self::staysInTheBlockOf($run, $line)) {
+                continue;
+            }
+            $chapter = ChapterLine::chapterOf($text);
+            if ($chapter !== null && self::continues($run, $chapter, $text)) {
                 $run[] = [$line, $chapter];
                 continue;
             }
             if (self::isChapterBlock($run)) {
                 return $run;
             }
-            $run = [];
+            $run = $chapter === null ? [] : [[$line, $chapter]];
         }
 
-        return [];
+        return self::isChapterBlock($run) ? $run : [];
+    }
+
+    /** @param list<array{DescriptionLine, EntryChapter}> $run */
+    private static function staysInTheBlockOf(array $run, DescriptionLine $line): bool
+    {
+        return $run === [] || $line->block === $run[\count($run) - 1][0]->block;
+    }
+
+    /** @param list<array{DescriptionLine, EntryChapter}> $run */
+    private static function continues(array $run, EntryChapter $chapter, string $text): bool
+    {
+        if ($run === []) {
+            return true;
+        }
+
+        return $chapter->startSeconds > $run[\count($run) - 1][1]->startSeconds
+            && ChapterLine::positionOf($text) === ChapterLine::positionOf($run[0][0]->text());
     }
 
     /**
@@ -83,21 +103,7 @@ final class DescriptionChapters
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
     private static function isChapterBlock(array $run): bool
     {
-        $chapters = array_map(static fn (array $pair): EntryChapter => $pair[1], $run);
-
-        return \count($chapters) >= self::MINIMUM
-            && $chapters[0]->startSeconds === 0
-            && ChapterSequence::ascends($chapters);
-    }
-
-    private static function chapterOf(string $text): ?EntryChapter
-    {
-        if (preg_match(self::LINE, $text, $match) !== 1) {
-            return null;
-        }
-        $start = ChapterClock::seconds($match[1]);
-
-        return $start === null ? null : new EntryChapter($start, $match[2]);
+        return \count($run) >= self::MINIMUM && $run[0][1]->startSeconds === 0;
     }
 
     private static function tidy(Element $block): void

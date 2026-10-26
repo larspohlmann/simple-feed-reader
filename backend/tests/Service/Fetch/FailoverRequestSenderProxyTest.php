@@ -7,6 +7,7 @@ namespace App\Tests\Service\Fetch;
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Fetch\Exception\DirectRouteUnavailableException;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Tests\Support\FetchWiring;
@@ -287,6 +288,67 @@ final class FailoverRequestSenderProxyTest extends TestCase
         self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $status);
         self::assertCount(1, $calls);
         self::assertArrayHasKey('proxy', $calls[0]);
+    }
+
+    public function testARefusedProxiedAnswerIsAskedAgainOnThePinnedDirectRoute(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
+
+            return new MockResponse('ok');
+        });
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy($this->proxy()));
+
+        $response = $sender->sendDirectAfterProxyRefusal('GET', 'https://page.example', $this->guarded(), [
+            'timeout' => 3.0,
+        ]);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertCount(1, $calls);
+        self::assertArrayNotHasKey('proxy', $calls[0]);
+        self::assertSame(['page.example' => '203.0.113.9'], $calls[0]['resolve'] ?? null);
+        self::assertSame(3.0, $calls[0]['timeout'] ?? null);
+    }
+
+    public function testARefusedProxiedAnswerNeverGoesDirectWhenFallbackIsOff(): void
+    {
+        $client = new MockHttpClient(static fn () => self::fail('No request may leave without the proxy.'));
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy($this->proxy(directFallback: false)));
+
+        $this->expectException(DirectRouteUnavailableException::class);
+        $this->expectExceptionMessage('https://page.example may not go direct: the egress proxy forbids falling back.');
+
+        $sender->sendDirectAfterProxyRefusal('GET', 'https://page.example', $this->guarded(), []);
+    }
+
+    public function testWithoutAProxyThereIsNoDirectRouteToFallBackTo(): void
+    {
+        $client = new MockHttpClient(static fn () => self::fail('The request already went direct.'));
+        $sender = FetchWiring::failoverSender($client, $this->egressProxy(null));
+
+        $this->expectException(DirectRouteUnavailableException::class);
+        $this->expectExceptionMessage('https://page.example already went direct: no egress proxy is configured.');
+
+        $sender->sendDirectAfterProxyRefusal('GET', 'https://page.example', $this->guarded(), []);
+    }
+
+    public function testAnUnreadableProxyPasswordNeverSendsTheDirectRetry(): void
+    {
+        $client = new MockHttpClient(static fn () => self::fail('No request may leave, least of all a direct one.'));
+        $egressProxySource = $this->createStub(EgressProxySourceInterface::class);
+        $egressProxySource->method('egressProxy')->willThrowException(
+            new SecretUnreadableException('The stored secret failed its integrity check.'),
+        );
+        $sender = FetchWiring::failoverSender($client, $egressProxySource);
+
+        $this->expectException(TransportExceptionInterface::class);
+
+        $sender->sendDirectAfterProxyRefusal('GET', 'https://page.example', $this->guarded(), []);
     }
 
     private function egressProxy(?ProxyConfigModel $config): EgressProxySourceInterface

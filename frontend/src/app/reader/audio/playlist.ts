@@ -1,5 +1,5 @@
 import type { AudioTrack } from '../audio-player.service';
-import type { ChapterDto } from '../models';
+import type { TrackDetails } from './audio-track';
 
 /** The player's queue: tracks in play order, `index` the current one (-1 when empty).
  *  A track is identified by its url and appears at most once (#1429). */
@@ -65,13 +65,30 @@ export function remove(playlist: Playlist, url: string): Playlist {
   return { tracks, index: Math.min(index, tracks.length - 1) };
 }
 
-/** The playlist with the queued track at `url` carrying `chapters`; unchanged when it is not
- *  queued or already carries them. */
-export function withChapters(playlist: Playlist, url: string, chapters: ChapterDto[]): Playlist {
+/** The playlist with the queued track at `url` described by `details`; unchanged when it is not
+ *  queued or the details add nothing. */
+export function withDetails(playlist: Playlist, url: string, details: TrackDetails): Playlist {
   const at = indexOf(playlist, url);
-  if (at === -1 || playlist.tracks[at].chapters === chapters) return playlist;
-  const tracks = playlist.tracks.map((track, position) =>
-    position === at ? { ...track, chapters } : track,
-  );
+  if (at === -1) return playlist;
+  const queued = playlist.tracks[at];
+  const described = describedTrack(queued, details);
+  if (described === queued) return playlist;
+  const tracks = playlist.tracks.map((track, position) => (position === at ? described : track));
   return { ...playlist, tracks };
+}
+
+/** A known length wins over the details': it may come from an element that played. */
+function describedTrack(track: AudioTrack, details: TrackDetails): AudioTrack {
+  const title = details.title ?? track.title;
+  const durationInSeconds = track.durationInSeconds ?? details.durationSeconds;
+  const chapters = details.chapters.length > 0 ? details.chapters : track.chapters;
+  if (
+    title === track.title &&
+    durationInSeconds === track.durationInSeconds &&
+    chapters === track.chapters
+  ) {
+    return track;
+  }
+  const described = { ...track, title, durationInSeconds };
+  return chapters ? { ...described, chapters } : described;
 }

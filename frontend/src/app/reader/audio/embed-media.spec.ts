@@ -9,6 +9,7 @@ import {
   embedMediaOfFrame,
   embedMediaOfUrl,
   isSoundCloudPlayerUrl,
+  soundCloudTrackId,
   youTubeVideoId,
 } from './embed-media';
 
@@ -110,5 +111,34 @@ describe('embedMediaOfFrame', () => {
 
   it('leaves a frame without a source alone', () => {
     expect(embedMediaOfFrame(frameWithSource(null))).toBeNull();
+  });
+});
+
+describe('soundCloudTrackId', () => {
+  it('reads the track of the normalised widget url', () => {
+    expect(soundCloudTrackId(WIDGET_URL)).toBe('123456789');
+  });
+
+  it('reads the track of a widget url with more parameters', () => {
+    expect(soundCloudTrackId(`${WIDGET_URL}&color=%23ff5500&visual=true`)).toBe('123456789');
+  });
+
+  it.each([
+    [
+      'a playlist widget',
+      'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Fplaylists%2F42',
+    ],
+    ['a widget without a track', 'https://w.soundcloud.com/player/'],
+    [
+      'a look-alike track host',
+      'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com.evil.test%2Ftracks%2F1',
+    ],
+    [
+      'a non-SoundCloud url carrying a track',
+      'https://x.test/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F123456789',
+    ],
+    ['text that is no url', 'not a url'],
+  ])('yields null for %s', (_shape, url) => {
+    expect(soundCloudTrackId(url)).toBeNull();
   });
 });

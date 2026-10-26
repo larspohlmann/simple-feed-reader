@@ -1,5 +1,8 @@
 import {
+  MILLISECONDS_PER_SECOND,
+  seekToMessage,
   SOUNDCLOUD_WIDGET_ORIGIN,
+  subscriptionMessages,
   widgetFieldOf,
   widgetMessage,
   widgetMessageOf,
@@ -9,7 +12,6 @@ import { FramePlayback } from './frame-playback';
 
 const WIDGET_FLAGS = 'auto_play=false&show_artwork=false&visual=false';
 const SUBSCRIBED_EVENTS = ['play', 'pause', 'finish', 'playProgress', 'loadProgress', 'error'];
-const MILLISECONDS = 1000;
 
 /** The SoundCloud Widget API over the hidden frame: `{ method, value }` JSON both ways (#1815). */
 export class SoundCloudPlayback extends FramePlayback {
@@ -58,22 +60,21 @@ export class SoundCloudPlayback extends FramePlayback {
   }
 
   protected seekTo(seconds: number): void {
-    this.post(widgetMessage('seekTo', Math.round(seconds * MILLISECONDS)));
+    this.post(seekToMessage(seconds));
   }
 
   private subscribe(): void {
-    for (const event of SUBSCRIBED_EVENTS) this.post(widgetMessage('addEventListener', event));
-    this.post(widgetMessage('getDuration'));
+    for (const message of subscriptionMessages(SUBSCRIBED_EVENTS)) this.post(message);
   }
 
   private readDuration(value: unknown): void {
     const milliseconds = finiteNumberOf(value);
-    if (milliseconds !== null) this.reportDuration(milliseconds / MILLISECONDS);
+    if (milliseconds !== null) this.reportDuration(milliseconds / MILLISECONDS_PER_SECOND);
   }
 
   private readPosition(value: unknown): void {
     const milliseconds = finiteNumberOf(widgetFieldOf(value, 'currentPosition'));
-    if (milliseconds !== null) this.reportTime(milliseconds / MILLISECONDS);
+    if (milliseconds !== null) this.reportTime(milliseconds / MILLISECONDS_PER_SECOND);
   }
 
   private readLoaded(value: unknown): void {

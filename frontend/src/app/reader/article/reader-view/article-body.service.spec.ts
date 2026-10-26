@@ -17,6 +17,10 @@ import { PlayingMedium } from '../../media/autoplay/autoplay-player';
 import { ChapterDto, EntryDto } from '../../models';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { anEntry } from '../../../../testing/entry-testing';
+import { Observable, Subject, of, throwError } from 'rxjs';
+import { TrackDetails, chaptersOnly } from '../../audio/audio-track';
+import { EmbedDetailsApi } from '../../embed-details-api';
+import { EmbedMedia } from '../../audio/embed-media';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -30,6 +34,25 @@ const CHAPTERS: ChapterDto[] = [
   { startSeconds: 0, title: 'Intro' },
   { startSeconds: 256, title: 'How it works' },
 ];
+const WIDGET_URL =
+  'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F123456789';
+const SOUNDCLOUD = `<a href="${WIDGET_URL}">Track</a>`;
+const OTHER_VIDEO_URL = 'https://www.youtube.com/watch?v=aaaaaaaaaaa';
+const OTHER_YOUTUBE = '<a href="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa">Other</a>';
+const VIDEO_CHAPTERS: ChapterDto[] = [
+  { startSeconds: 0, title: 'Opening' },
+  { startSeconds: 61, title: 'Q&A' },
+];
+const TRACK_CHAPTERS: ChapterDto[] = [
+  { startSeconds: 0, title: 'Side A' },
+  { startSeconds: 120, title: 'Side B' },
+];
+const NO_DETAILS = chaptersOnly([]);
+const TRACK_DETAILS: TrackDetails = {
+  title: 'Catching Flies',
+  durationSeconds: null,
+  chapters: TRACK_CHAPTERS,
+};
 const EPISODE: AudioTrack = {
   url: 'https://x.test/ep.mp3',
   title: 'Ep',
@@ -44,6 +67,7 @@ describe('ArticleBody', () => {
   let decorated: jest.Mock<void, [HTMLElement]>;
   let content: HTMLElement;
   let autoplay: { nowPlaying: jest.Mock; stopped: jest.Mock };
+  let embedDetails: jest.Mock<Observable<TrackDetails>, [EmbedMedia]>;
   const html = signal('');
   const chapters = signal<ChapterDto[]>([]);
   const audioTrack = signal<AudioTrack | null>(null);
@@ -94,9 +118,13 @@ describe('ArticleBody', () => {
     audioTrack.set(null);
     entry.set(null);
     imageProxy = neverRecoveringImageProxy();
+    embedDetails = jest.fn<Observable<TrackDetails>, [EmbedMedia]>(() => of(NO_DETAILS));
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
-      providers: [{ provide: ImageProxyService, useValue: imageProxy }],
+      providers: [
+        { provide: ImageProxyService, useValue: imageProxy },
+        { provide: EmbedDetailsApi, useValue: { detailsOf: embedDetails } },
+      ],
     });
     autoplay = { nowPlaying: jest.fn(), stopped: jest.fn() };
     injector = createEnvironmentInjector(
@@ -301,27 +329,31 @@ describe('ArticleBody', () => {
       expect(content.firstElementChild!.classList).toContain('reader-chapters');
     });
 
-    it('hands the player the chapters of the video it lists, for a copy queued earlier', async () => {
-      const describeChapters = jest
-        .spyOn(TestBed.inject(AudioPlayerService), 'describeChapters')
+    it('hands the player the chapters of the video it lists, for a copy queued earlier, even when its own details fail', async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
+      embedDetails.mockImplementation(() => throwError(() => new Error('503')));
       chapters.set(CHAPTERS);
       connectBody(YOUTUBE);
       await Promise.resolve();
 
-      expect(describeChapters).toHaveBeenCalledWith(VIDEO_URL, CHAPTERS);
+      expect(describeTrack.mock.calls).toEqual([[VIDEO_URL, chaptersOnly(CHAPTERS)]]);
     });
 
-    it("describes no video to the player while the chapters are the episode's", async () => {
-      const describeChapters = jest
-        .spyOn(TestBed.inject(AudioPlayerService), 'describeChapters')
+    it("gives no video the chapters while they are the episode's", async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
       chapters.set(CHAPTERS);
       audioTrack.set(EPISODE);
       connectBody(YOUTUBE);
       await Promise.resolve();
 
-      expect(describeChapters).not.toHaveBeenCalled();
+      expect(describeTrack).not.toHaveBeenCalledWith(
+        VIDEO_URL,
+        expect.objectContaining({ chapters: CHAPTERS }),
+      );
     });
 
     it('decorates again when the chapters arrive after the body', async () => {
@@ -428,6 +460,237 @@ describe('ArticleBody', () => {
       TestBed.tick();
 
       expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    });
+  });
+  describe("its embeds' own details", () => {
+    const answers = (byUrl: Record<string, Observable<TrackDetails>>): void => {
+      embedDetails.mockImplementation((media) => byUrl[media.url] ?? of(NO_DETAILS));
+    };
+    const askedUrls = (): string[] => embedDetails.mock.calls.map(([media]) => media.url);
+    const listRows = (list: Element): string[] =>
+      Array.from(list.querySelectorAll('.reader-chapters__row')).map(
+        (row) => row.textContent ?? '',
+      );
+
+    it('asks for every embed and lists the chapters under each', async () => {
+      answers({
+        [VIDEO_URL]: of({ ...NO_DETAILS, chapters: VIDEO_CHAPTERS }),
+        [WIDGET_URL]: of(TRACK_DETAILS),
+      });
+      connectBody(YOUTUBE + SOUNDCLOUD);
+      await Promise.resolve();
+
+      expect(askedUrls()).toEqual([VIDEO_URL, WIDGET_URL]);
+      const lists = content.querySelectorAll('.reader-chapters');
+      expect(lists).toHaveLength(2);
+      expect(listRows(lists[0])).toEqual(['0:00Opening', '1:01Q&A']);
+      expect(listRows(lists[1])).toEqual(['0:00Side A', '2:00Side B']);
+      expect(content.querySelector('.reader-embed--audio')!.nextElementSibling).toBe(lists[1]);
+    });
+
+    describe("for the video the body's chapters belong to", () => {
+      const fetched: TrackDetails = {
+        title: 'The video itself',
+        durationSeconds: 4964,
+        chapters: VIDEO_CHAPTERS,
+      };
+
+      beforeEach(async () => {
+        answers({ [VIDEO_URL]: of(fetched) });
+        entry.set(anEntry({ title: 'The post' }));
+        chapters.set(CHAPTERS);
+        connectBody(YOUTUBE + OTHER_YOUTUBE + SOUNDCLOUD);
+        await Promise.resolve();
+      });
+
+      it('asks for its details too', () => {
+        expect(askedUrls()).toEqual([VIDEO_URL, OTHER_VIDEO_URL, WIDGET_URL]);
+      });
+
+      it("lists only the body's chapters under it, even when its answer has chapters", () => {
+        const lists = content.querySelectorAll('.reader-chapters');
+
+        expect(lists).toHaveLength(1);
+        expect(listRows(lists[0])).toEqual(['0:00Intro', '4:16How it works']);
+      });
+
+      it("hands Listen a track with its fetched title and length and the body's chapters", () => {
+        const play = jest
+          .spyOn(TestBed.inject(AudioPlayerService), 'play')
+          .mockImplementation(() => undefined);
+
+        content.querySelector<HTMLButtonElement>('.reader-listen__button')!.click();
+
+        expect(play).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: VIDEO_URL,
+            title: 'The video itself',
+            durationInSeconds: 4964,
+            chapters: CHAPTERS,
+          }),
+        );
+      });
+    });
+
+    it("lists the body's chapters once under every frame of its video", async () => {
+      answers({ [VIDEO_URL]: of({ ...NO_DETAILS, chapters: VIDEO_CHAPTERS }) });
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE + YOUTUBE);
+      await Promise.resolve();
+
+      const frames = Array.from(content.querySelectorAll('iframe'));
+      expect(frames).toHaveLength(2);
+      expect(content.querySelectorAll('.reader-chapters')).toHaveLength(2);
+      for (const frame of frames) {
+        const list = frame.closest('.reader-cinema')!.nextElementSibling!;
+        expect(list.classList).toContain('reader-chapters');
+        expect(listRows(list)).toEqual(['0:00Intro', '4:16How it works']);
+      }
+    });
+
+    it("describes the body's video by its fetched title and length, keeping the body's chapters", async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
+        .mockImplementation(() => undefined);
+      answers({
+        [VIDEO_URL]: of({ title: 'Own', durationSeconds: 300, chapters: VIDEO_CHAPTERS }),
+      });
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      expect(describeTrack).toHaveBeenLastCalledWith(VIDEO_URL, {
+        title: 'Own',
+        durationSeconds: 300,
+        chapters: CHAPTERS,
+      });
+    });
+
+    it("gives a YouTube entry's own queued video its length, keeping the body's one chapter list", async () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      audio.enqueue({
+        url: VIDEO_URL,
+        title: 'The post',
+        faviconUrl: null,
+        imageUrl: null,
+        durationInSeconds: null,
+      });
+      answers({
+        [VIDEO_URL]: of({ title: null, durationSeconds: 600, chapters: VIDEO_CHAPTERS }),
+      });
+      entry.set(anEntry({ url: VIDEO_URL, title: 'The post' }));
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      expect(askedUrls()).toEqual([VIDEO_URL]);
+      expect(audio.tracks()[0]).toEqual(
+        expect.objectContaining({ title: 'The post', durationInSeconds: 600, chapters: CHAPTERS }),
+      );
+      const lists = content.querySelectorAll('.reader-chapters');
+      expect(lists).toHaveLength(1);
+      expect(listRows(lists[0])).toEqual(['0:00Intro', '4:16How it works']);
+    });
+
+    it("hands Listen on the widget a track carrying the widget's title and chapters", async () => {
+      const play = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'play')
+        .mockImplementation(() => undefined);
+      answers({ [WIDGET_URL]: of(TRACK_DETAILS) });
+      entry.set(anEntry());
+      connectBody(YOUTUBE + SOUNDCLOUD);
+      await Promise.resolve();
+
+      content
+        .querySelectorAll('.reader-listen')[1]
+        .querySelector<HTMLButtonElement>('.reader-listen__button')!
+        .click();
+
+      expect(play).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: WIDGET_URL,
+          title: 'Catching Flies',
+          chapters: TRACK_CHAPTERS,
+        }),
+      );
+    });
+
+    it("names Listen's track for the video the body lists by the post while nothing was fetched", async () => {
+      const play = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'play')
+        .mockImplementation(() => undefined);
+      entry.set(anEntry({ title: 'The post' }));
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      content.querySelector<HTMLButtonElement>('.reader-listen__button')!.click();
+
+      expect(play).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: VIDEO_URL,
+          title: 'The post',
+          durationInSeconds: null,
+          chapters: CHAPTERS,
+        }),
+      );
+    });
+
+    it('hands the player the details of an embed queued before they arrived', async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
+        .mockImplementation(() => undefined);
+      const answer = new Subject<TrackDetails>();
+      answers({ [WIDGET_URL]: answer });
+      connectBody(SOUNDCLOUD);
+      await Promise.resolve();
+
+      answer.next(TRACK_DETAILS);
+
+      expect(describeTrack).toHaveBeenCalledWith(WIDGET_URL, TRACK_DETAILS);
+    });
+
+    it('describes an embed without chapters by its title, and attaches no list', async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
+        .mockImplementation(() => undefined);
+      const unchaptered: TrackDetails = { title: 'A mix', durationSeconds: 4964, chapters: [] };
+      answers({ [WIDGET_URL]: of(unchaptered) });
+      connectBody(SOUNDCLOUD);
+      await Promise.resolve();
+
+      expect(content.querySelector('.reader-chapters')).toBeNull();
+      expect(describeTrack).toHaveBeenCalledWith(WIDGET_URL, unchaptered);
+    });
+
+    it("drops a late answer for the swapped-out body's embed", async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
+        .mockImplementation(() => undefined);
+      const late = new Subject<TrackDetails>();
+      answers({ [WIDGET_URL]: late });
+      connectBody(SOUNDCLOUD);
+      await Promise.resolve();
+      const swappedOut = content.querySelector('.reader-embed--audio')!;
+
+      html.set('<p>Reader.</p>');
+      TestBed.tick();
+      late.next(TRACK_DETAILS);
+
+      expect(swappedOut.parentElement!.querySelector('.reader-chapters')).toBeNull();
+      expect(describeTrack).not.toHaveBeenCalled();
+    });
+
+    it('drops a late answer once destroyed', async () => {
+      const late = new Subject<TrackDetails>();
+      answers({ [WIDGET_URL]: late });
+      connectBody(SOUNDCLOUD);
+      await Promise.resolve();
+
+      injector.destroy();
+      late.next(TRACK_DETAILS);
+
+      expect(content.querySelector('.reader-chapters')).toBeNull();
     });
   });
 });

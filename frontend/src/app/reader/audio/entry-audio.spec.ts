@@ -68,7 +68,14 @@ describe('EntryAudio', () => {
     audio.shareChapters();
 
     expect(player.described).toEqual([
-      { url: EPISODE, chapters: [{ startSeconds: 0, title: 'Intro' }] },
+      {
+        url: EPISODE,
+        details: {
+          title: null,
+          durationSeconds: null,
+          chapters: [{ startSeconds: 0, title: 'Intro' }],
+        },
+      },
     ]);
   });
 

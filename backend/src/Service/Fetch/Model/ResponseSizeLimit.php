@@ -13,6 +13,7 @@ enum ResponseSizeLimit: int
     case Download = 5_000;
     case Api = 2_000;
     case ChapterFile = 64;
+    case EmbedDescription = 512;
 
     public function bytes(): int
     {

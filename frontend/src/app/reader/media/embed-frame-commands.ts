@@ -1,5 +1,5 @@
 import type { FrameKind } from '../audio/playback/playback-kind';
-import { SOUNDCLOUD_WIDGET_ORIGIN, widgetMessage } from './soundcloud-widget-protocol';
+import { postToWidgetFrame, widgetMessage } from './soundcloud-widget-protocol';
 import { playerCommand, postToPlayerFrame } from './youtube-player-protocol';
 
 /** Pauses a visible YouTube API player or SoundCloud widget (#1815). */
@@ -9,10 +9,7 @@ export function pauseEmbedFrame(frame: HTMLIFrameElement, kind: FrameKind): void
       postToPlayerFrame(frame, playerCommand('pauseVideo', []));
       return;
     case 'soundcloud':
-      frame.contentWindow?.postMessage(
-        JSON.stringify(widgetMessage('pause')),
-        SOUNDCLOUD_WIDGET_ORIGIN,
-      );
+      postToWidgetFrame(frame, widgetMessage('pause'));
       return;
   }
 }

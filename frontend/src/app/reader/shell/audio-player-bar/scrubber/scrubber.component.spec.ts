@@ -40,8 +40,8 @@ describe('ScrubberComponent', () => {
   it('draws the played and the cached share of the track', () => {
     const fixture = render({ position: 50, duration: 200, buffered: 120 });
 
-    expect(range(fixture).style.getPropertyValue('--played')).toBe('25%');
-    expect(range(fixture).style.getPropertyValue('--cached')).toBe('60%');
+    expect(range(fixture).style.getPropertyValue('--played')).toBe('0.25');
+    expect(range(fixture).style.getPropertyValue('--cached')).toBe('0.6');
   });
 
   it('draws one mark per chapter start, decorative only', () => {
@@ -49,7 +49,10 @@ describe('ScrubberComponent', () => {
     fixture.componentRef.setInput('chapters', chapters);
     fixture.detectChanges();
 
-    expect(marks(fixture).map((mark) => mark.style.left)).toEqual(['15%', '50%']);
+    expect(marks(fixture).map((mark) => mark.style.getPropertyValue('--at'))).toEqual([
+      '0.15',
+      '0.5',
+    ]);
     expect(
       fixture.debugElement.query(By.css('.marks')).nativeElement.getAttribute('aria-hidden'),
     ).toBe('true');

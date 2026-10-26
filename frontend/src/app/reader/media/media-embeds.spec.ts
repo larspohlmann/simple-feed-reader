@@ -1,5 +1,5 @@
 import { articleHost } from '../../../testing/article-host-testing';
-import { upgradeMediaEmbeds, withPlayerApi } from './media-embeds';
+import { upgradeMediaEmbeds, withScriptablePlayer } from './media-embeds';
 
 const host = (html: string): HTMLElement => articleHost(html, upgradeMediaEmbeds);
 
@@ -28,7 +28,8 @@ describe('upgradeMediaEmbeds', () => {
   it('lets a player the chapters drive start playback', () => {
     const element = articleHost(
       '<a href="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa">x</a>',
-      (target) => upgradeMediaEmbeds(target, (url) => withPlayerApi(url, 'http://localhost:4200')),
+      (target) =>
+        upgradeMediaEmbeds(target, (url) => withScriptablePlayer(url, 'http://localhost:4200')),
     );
 
     expect(element.querySelector('iframe')?.getAttribute('allow')).toBe('autoplay');
@@ -228,20 +229,34 @@ describe('upgradeMediaEmbeds', () => {
     expect(element.querySelector('.reader-embed--audio')).toBeNull();
   });
 });
-describe('withPlayerApi', () => {
+describe('withScriptablePlayer', () => {
   it('opens a YouTube video to the iframe API for this origin', () => {
     expect(
-      withPlayerApi('https://www.youtube-nocookie.com/embed/JsBZOcqZerk', 'http://localhost:4200'),
+      withScriptablePlayer(
+        'https://www.youtube-nocookie.com/embed/JsBZOcqZerk',
+        'http://localhost:4200',
+      ),
     ).toEqual({
       url: 'https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=http%3A%2F%2Flocalhost%3A4200',
       allow: 'autoplay',
     });
   });
 
+  it('lets a SoundCloud widget autoplay, its URL unchanged', () => {
+    const widget =
+      'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1';
+    expect(withScriptablePlayer(widget, 'http://localhost:4200')).toEqual({
+      url: widget,
+      allow: 'autoplay',
+    });
+  });
+
   it('leaves a Short and any other player alone', () => {
     const short = 'https://www.youtube-nocookie.com/embed/JsBZOcqZerk#shorts';
-    expect(withPlayerApi(short, 'http://localhost:4200')).toEqual({ url: short });
-    expect(withPlayerApi('https://player.vimeo.com/video/1', 'http://localhost:4200')).toEqual({
+    expect(withScriptablePlayer(short, 'http://localhost:4200')).toEqual({ url: short });
+    expect(
+      withScriptablePlayer('https://player.vimeo.com/video/1', 'http://localhost:4200'),
+    ).toEqual({
       url: 'https://player.vimeo.com/video/1',
     });
   });

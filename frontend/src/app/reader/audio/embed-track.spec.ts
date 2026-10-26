@@ -2,6 +2,7 @@ import { toEmbedTrack } from './embed-track';
 import { EmbedMedia } from './embed-media';
 import { toAudioTrack } from './audio-attachment';
 import { ChapterDto, EntryDto } from '../models';
+import type { TrackDetails } from './audio-track';
 import { anEntry } from '../../../testing/entry-testing';
 
 const VIDEO_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
@@ -65,12 +66,41 @@ describe('toEmbedTrack', () => {
     expect(toEmbedTrack(entry(), video())).not.toHaveProperty('chapters');
   });
 
-  it('carries the chapters the article loaded (#1810)', () => {
+  describe('with the embed details (#1824)', () => {
     const chapters: ChapterDto[] = [
       { startSeconds: 0, title: 'Intro' },
       { startSeconds: 90, title: 'Topic' },
     ];
+    const details = (overrides: Partial<TrackDetails> = {}): TrackDetails => ({
+      title: 'The video itself',
+      durationSeconds: 4964,
+      chapters,
+      ...overrides,
+    });
 
-    expect(toEmbedTrack(entry(), video(), chapters).chapters).toEqual(chapters);
+    it("takes the embed's own title, length and chapters, keeping the post in its entry", () => {
+      const track = toEmbedTrack(entry(), video(), details());
+
+      expect(track.title).toBe('The video itself');
+      expect(track.durationInSeconds).toBe(4964);
+      expect(track.chapters).toEqual(chapters);
+      expect(track.entry?.title).toBe('The entry headline');
+    });
+
+    it('falls back to the post title and an unknown length for what the details lack', () => {
+      const track = toEmbedTrack(
+        entry(),
+        video(),
+        details({ title: null, durationSeconds: null, chapters: [] }),
+      );
+
+      expect(track.title).toBe('The entry headline');
+      expect(track.durationInSeconds).toBeNull();
+      expect(track).not.toHaveProperty('chapters');
+    });
+
+    it('is the post-named track without details', () => {
+      expect(toEmbedTrack(entry(), video(), null)).toEqual(toEmbedTrack(entry(), video()));
+    });
   });
 });

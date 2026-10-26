@@ -23,16 +23,12 @@ export interface ChapterListPlace {
   readonly after: Element | null;
 }
 
-/**
- * A collapsed chapter list whose rows start `player` at their chapter and follow its position; it
- * replaces any earlier list in `host` (#1808).
- */
+/** A collapsed chapter list whose rows start `player` at their chapter and follow its position (#1808). */
 export function addChapterList(
   { host, after }: ChapterListPlace,
   { chapters, heading }: ChapterList,
   player: ChapterPlayer,
 ): HTMLElement | null {
-  host.querySelector(`.${LIST}`)?.remove();
   if (chapters.length === 0) return null;
   const rows = chapters.map((chapter) => chapterRow(chapter));
   let marked = -1;

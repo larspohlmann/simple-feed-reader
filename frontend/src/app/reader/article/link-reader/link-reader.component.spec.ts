@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
 import { installMockResizeObserver } from '../../../../testing/resize-observer-testing';
 import { A_READER_TOKEN, aLinkCard } from '../../../../testing/entry-testing';
 import { ReaderContent } from '../../models';
@@ -53,6 +54,7 @@ describe('LinkReaderComponent', () => {
         { provide: ReaderRouteState, useValue: routeState },
         { provide: ReaderContentService, useValue: { load: loadTarget, reload: reloadTarget } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
+        NO_EMBED_DETAILS,
         {
           provide: ImageProxyService,
           useValue: { recover: jest.fn<Promise<ProxyOutcome>, []>().mockResolvedValue('failed') },

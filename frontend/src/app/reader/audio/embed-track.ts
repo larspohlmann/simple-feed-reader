@@ -1,22 +1,25 @@
 import { AudioTrack } from '../audio-player.service';
-import { ChapterDto, EntryDto } from '../models';
+import { EntryDto } from '../models';
+import type { TrackDetails } from './audio-track';
 import { entryDisplayTitle } from '../entry/entry-text';
 import { audioTrackEntry } from './audio-attachment';
 import { EmbedMedia } from './embed-media';
 
-/** The track an embedded video or sound becomes in the player, mirroring `toAudioTrack`; its length is only known once it plays. */
+/** The track an embedded video or sound becomes in the player, mirroring `toAudioTrack`; named and
+ *  timed by the embed's own details when they arrived, else by the post until it plays. */
 export function toEmbedTrack(
   entry: EntryDto,
   media: EmbedMedia,
-  chapters: ChapterDto[] = [],
+  details: TrackDetails | null = null,
 ): AudioTrack {
   const track: AudioTrack = {
     url: media.url,
-    title: entryDisplayTitle(entry),
+    title: details?.title ?? entryDisplayTitle(entry),
     faviconUrl: entry.faviconUrl,
     imageUrl: media.posterUrl ?? entry.imageUrl,
-    durationInSeconds: null,
+    durationInSeconds: details?.durationSeconds ?? null,
     entry: audioTrackEntry(entry),
   };
+  const chapters = details?.chapters ?? [];
   return chapters.length > 0 ? { ...track, chapters } : track;
 }

@@ -125,7 +125,7 @@ describe('BigPlayerComponent', () => {
 
     expect(scrubberInput(fixture).max).toBe('600');
     expect(scrubberInput(fixture).value).toBe('90');
-    expect(scrubberInput(fixture).style.getPropertyValue('--played')).toBe('15%');
+    expect(scrubberInput(fixture).style.getPropertyValue('--played')).toBe('0.15');
     const times = fixture.debugElement.queryAll(By.css('.time')).map((time) => time.nativeElement);
     expect(times.map((time) => time.textContent.trim())).toEqual(['1:30', '−8:30']);
 
@@ -144,7 +144,10 @@ describe('BigPlayerComponent', () => {
     fixture.detectChanges();
 
     const marks = fixture.debugElement.queryAll(By.css('.mark')).map((mark) => mark.nativeElement);
-    expect(marks.map((mark: HTMLElement) => mark.style.left)).toEqual(['15%', '50%']);
+    expect(marks.map((mark: HTMLElement) => mark.style.getPropertyValue('--at'))).toEqual([
+      '0.15',
+      '0.5',
+    ]);
   });
 
   it('thickens the scrubber while it is held', () => {

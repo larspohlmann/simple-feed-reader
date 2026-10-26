@@ -140,7 +140,7 @@
 /* No thumb (Apple-style): the bar alone shows the position, and the input's full height is the tap target. */
 .scrub {
   --scrubber-bar: var(--space-2);
-  --scrubber-thumb: 0;
+  --scrubber-thumb: 0px;
   --scrubber-tap: var(--tap-target);
 }
 

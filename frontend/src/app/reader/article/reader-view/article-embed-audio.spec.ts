@@ -7,6 +7,7 @@ import { AudioTrack } from '../../audio-player.service';
 import { EmbedMedia } from '../../audio/embed-media';
 import { toEmbedTrack } from '../../audio/embed-track';
 import { ChapterDto } from '../../models';
+import type { TrackDetails } from '../../audio/audio-track';
 import { EmbedListenControl, ListenActions } from '../decorators/reader-listen';
 import { ArticleEmbedAudio, EmbedListenContext } from './article-embed-audio';
 
@@ -24,6 +25,11 @@ const CHAPTERS: ChapterDto[] = [
   { startSeconds: 0, title: 'Intro' },
   { startSeconds: 256, title: 'How it works' },
 ];
+const VIDEO_DETAILS: TrackDetails = {
+  title: 'Its own title',
+  durationSeconds: 300,
+  chapters: CHAPTERS,
+};
 const ENTRY = anEntry({ id: 42, title: 'The video' });
 
 function setUp(context: Partial<EmbedListenContext> = {}) {
@@ -32,7 +38,7 @@ function setUp(context: Partial<EmbedListenContext> = {}) {
   const listened: AudioTrack[] = [];
   const actions = embedAudio.actions({
     entry: ENTRY,
-    chaptersOf: (media) => (media.url === VIDEO.url ? CHAPTERS : []),
+    detailsOf: (media) => (media.url === VIDEO.url ? VIDEO_DETAILS : null),
     onListened: (track) => listened.push(track),
     ...context,
   });
@@ -50,13 +56,13 @@ describe('ArticleEmbedAudio', () => {
   });
 
   describe('listen', () => {
-    it('pauses the visible player, then plays the embed with the chapters the body gives it', () => {
+    it('pauses the visible player, then plays the embed with the details the body gives it', () => {
       const { player, listened, actions } = setUp();
       const { frame, posted } = frameWithWindow();
 
       (actions as ListenActions).listen(VIDEO, frame);
 
-      const track = toEmbedTrack(ENTRY, VIDEO, CHAPTERS);
+      const track = toEmbedTrack(ENTRY, VIDEO, VIDEO_DETAILS);
       expect(messagesOf(posted)).toEqual([
         { event: 'command', func: 'pauseVideo', args: [], id: 1, channel: 'widget' },
       ]);
@@ -64,7 +70,7 @@ describe('ArticleEmbedAudio', () => {
       expect(listened).toEqual([track]);
     });
 
-    it('gives an embed the body does not chapter a track without chapters', () => {
+    it('gives an embed the body knows nothing of a track named by the post', () => {
       const { player, actions } = setUp();
 
       (actions as ListenActions).listen(SOUND, document.createElement('iframe'));

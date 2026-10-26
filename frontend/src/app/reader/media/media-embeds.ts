@@ -1,4 +1,5 @@
 import generatedFrames from './embed-frame-allowlist.generated.json';
+import { SOUNDCLOUD_PLAYER_URL } from './soundcloud-widget-protocol';
 
 type EmbedKind = 'audio' | 'video';
 type EmbedShape = 'landscape' | 'tall' | 'portrait';
@@ -55,11 +56,12 @@ export interface EmbedSource {
 /** Maps an allow-listed player URL to the source its frame loads. */
 export type EmbedSourceOf = (url: string) => EmbedSource;
 
-/** The YouTube video player that answers the iframe API, for a page driving it with chapters (#1808). Only
+/** The YouTube iframe API player or SoundCloud widget, for a page driving it with chapters (#1808). Only
  *  ever applied to a URL the allow-list already accepted; the suffix is ours and constant. */
-export function withPlayerApi(url: string, origin: string): EmbedSource {
+export function withScriptablePlayer(url: string, origin: string): EmbedSource {
+  // Without autoplay, a cross-origin player ignores the play a chapter tap sends (Brave, #1814).
+  if (url.startsWith(SOUNDCLOUD_PLAYER_URL)) return { url, allow: 'autoplay' };
   if (!YOUTUBE_VIDEO_FRAME.test(url)) return { url };
-  // Without autoplay, a cross-origin player ignores the playVideo a chapter tap sends (Brave, #1814).
   return { url: `${url}?enablejsapi=1&origin=${encodeURIComponent(origin)}`, allow: 'autoplay' };
 }
 

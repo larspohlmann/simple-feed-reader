@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Service\Fetch\Exception\DirectRouteUnavailableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
@@ -183,7 +184,7 @@ final class GuardedApiClientTest extends TestCase
 
     public function testANonJsonBodyReadsAsEmpty(): void
     {
-        $http = new MockHttpClient(new MockResponse('<html>', ['http_code' => Response::HTTP_BAD_GATEWAY]));
+        $http = new MockHttpClient(new MockResponse('not json', ['http_code' => Response::HTTP_BAD_GATEWAY]));
 
         self::assertSame([], $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'))->json());
     }
@@ -198,6 +199,57 @@ final class GuardedApiClientTest extends TestCase
         $response = $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
 
         self::assertSame('<https://api.example.test/x?page=2>; rel="next"', $response->header('link'));
+    }
+
+    public function testARefusedProxiedCallIsSentAgainDirectlyWithinItsBudget(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{"ok":true}');
+        });
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, true);
+        $budget = new ApiBudgetModel(1.5, 2.5, ResponseSizeLimit::EmbedDescription);
+
+        $response = $this->client($http, $proxy)->sendDirectAfterProxyRefusal(
+            ApiRequestModel::postJson('https://api.example.test/x', ['a' => 1]),
+            $budget,
+        );
+
+        self::assertSame(['ok' => true], $response->json());
+        self::assertArrayNotHasKey('proxy', $seenOptions);
+        self::assertSame(['api.example.test' => '93.184.216.34'], $seenOptions['resolve'] ?? null);
+        self::assertSame('{"a":1}', $seenOptions['body'] ?? null);
+        self::assertSame(1.5, $seenOptions['timeout'] ?? null);
+        self::assertSame(2.5, $seenOptions['max_duration'] ?? null);
+        self::assertSame(0, $seenOptions['max_redirects'] ?? null);
+    }
+
+    public function testARefusedProxiedCallIsNotSentDirectlyWhenTheProxyForbidsIt(): void
+    {
+        $http = new MockHttpClient(static fn () => self::fail('No request may leave without the proxy.'));
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, false);
+
+        $this->expectException(DirectRouteUnavailableException::class);
+
+        $this->client($http, $proxy)->sendDirectAfterProxyRefusal(
+            ApiRequestModel::get('https://api.example.test/x'),
+            ApiBudgetModel::standard(),
+        );
+    }
+
+    public function testADirectRetryToAPrivateTargetIsRefusedBeforeAnyRequest(): void
+    {
+        $http = new MockHttpClient(static fn () => self::fail('No request may leave for a private address.'));
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, true);
+
+        $this->expectException(SsrfBlockedException::class);
+
+        $this->client($http, $proxy)->sendDirectAfterProxyRefusal(
+            ApiRequestModel::get('https://lan.example.test/x'),
+            ApiBudgetModel::standard(),
+        );
     }
 
     public function testATooManyRequestsAnswerCostsOneRequestOverEveryFamily(): void
