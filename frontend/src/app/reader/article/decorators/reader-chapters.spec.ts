@@ -53,19 +53,18 @@ describe('addChapterList', () => {
       { chapters: CHAPTERS, heading: 'Chapters' },
       fakePlayer(),
     );
-    const toggle = host.querySelector<HTMLButtonElement>('.reader-chapters__toggle');
-    const list = host.querySelector<HTMLElement>('.reader-chapters__list');
+    const details = host.querySelector<HTMLDetailsElement>('nav.reader-chapters > details');
+    const toggle = details?.querySelector<HTMLElement>(':scope > summary.reader-chapters__toggle');
 
     expect(toggle?.textContent).toContain('Chapters');
-    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
-    expect(list?.hidden).toBe(true);
+    expect(details?.querySelector(':scope > ol.reader-chapters__list')).not.toBeNull();
+    expect(details?.open).toBe(false);
 
     toggle?.click();
-    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
-    expect(list?.hidden).toBe(false);
+    expect(details?.open).toBe(true);
 
     toggle?.click();
-    expect(list?.hidden).toBe(true);
+    expect(details?.open).toBe(false);
   });
 
   it('goes first when there is nothing to follow', () => {
