@@ -7,7 +7,7 @@ import { ChapterDto } from '../../models';
 @Component({
   selector: 'app-article-content',
   template: '',
-  styleUrl: './article-content.component.scss',
+  styleUrls: ['./article-content.component.scss', './article-chapters.scss'],
   providers: [ArticleBody],
   host: { class: 'content', '[innerHTML]': 'html()' },
 })
