@@ -64,37 +64,24 @@ export function addChapterList(
   list.setAttribute('aria-label', heading);
   const items = document.createElement('ol');
   items.className = `${LIST}__list`;
-  items.hidden = true;
   for (const row of rows) {
     const item = document.createElement('li');
     item.append(row);
     items.append(item);
   }
-  list.append(toggle(items, heading), items);
+  const details = document.createElement('details');
+  details.append(toggle(heading), items);
+  list.append(details);
   if (after) after.after(list);
   else host.prepend(list);
   return list;
 }
 
-function toggle(items: HTMLElement, heading: string): HTMLButtonElement {
-  const icon = materialIcon('chevron_right');
-  const label = document.createElement('span');
-  label.textContent = heading;
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = `${LIST}__toggle`;
-  button.append(icon, label);
-
-  const render = (): void => {
-    button.setAttribute('aria-expanded', String(!items.hidden));
-    icon.textContent = items.hidden ? 'chevron_right' : 'expand_more';
-  };
-  button.addEventListener('click', () => {
-    items.hidden = !items.hidden;
-    render();
-  });
-  render();
-  return button;
+function toggle(heading: string): HTMLElement {
+  const summary = document.createElement('summary');
+  summary.className = `${LIST}__toggle`;
+  summary.append(materialIcon('chevron_right'), heading);
+  return summary;
 }
 
 function materialIcon(name: string): HTMLSpanElement {

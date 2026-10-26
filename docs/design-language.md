@@ -2032,12 +2032,13 @@ tag row pills-only. The projected element must stay inline: the kicker is a
 `<p>`, and the HTML parser closes a paragraph at a block-level child, which
 drops the icons onto a second line without any error.
 
-**The reader's narration player uses a plain `<details>`, not `<app-disclosure>`.**
-Machine-generated narration is marked server-side and rendered inside the reader
-body via `[innerHTML]` (#903), where an Angular component cannot mount. So
-`reader-narration.ts` builds a bare `<details class="reader-narration-box">`,
-styled in `reader-view.component.scss` to read as one muted, collapsed line that
-matches the disclosure look without the component.
+**Reader-body decorators use a plain `<details>`, not `<app-disclosure>`.**
+They work on the article body rendered via `[innerHTML]` (#903), where an Angular
+component cannot mount. So the narration player (`reader-narration.ts`), the
+chapter list (`reader-chapters.ts`, #1817) and publisher FAQs (`reader-faq.ts`)
+build bare `<details>`, styled in `article-content.component.scss` and
+`article-chapters.scss`. A summary that drops the native marker includes
+`bare-summary.marker-hidden` (`theme/_bare-summary.scss`), as `<app-disclosure>` does.
 
 ---
 

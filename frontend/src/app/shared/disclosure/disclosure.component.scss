@@ -1,3 +1,4 @@
+@use '../../theme/bare-summary';
 @use '../../theme/glass-rim';
 
 // The shared chrome for a native <details>/<summary> pair, consolidated from
@@ -13,6 +14,7 @@
 // needs the -webkit marker hidden too), so a CSS chevron stands in instead.
 summary {
   @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+  @include bare-summary.marker-hidden;
 
   display: inline-flex;
   align-items: center;
@@ -23,12 +25,7 @@ summary {
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
-  list-style: none;
   user-select: none;
-}
-
-summary::-webkit-details-marker {
-  display: none;
 }
 
 summary::before {
