@@ -1,3 +1,4 @@
+@use '../../../theme/bare-summary';
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
 @use '../../link-card/link-card-layout';
@@ -467,18 +468,15 @@
 }
 
 :host ::ng-deep details.reader-faq summary {
+  @include bare-summary.marker-hidden;
+
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   color: var(--accent);
   font-weight: 650;
-  list-style: none;
   cursor: pointer;
-}
-
-:host ::ng-deep details.reader-faq summary::-webkit-details-marker {
-  display: none;
 }
 
 :host ::ng-deep details.reader-faq summary::after {

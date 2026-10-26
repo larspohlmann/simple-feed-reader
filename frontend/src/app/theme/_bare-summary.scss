@@ -1,0 +1,8 @@
+// A <summary> without the native disclosure marker; iOS Safari keeps it unless the -webkit marker is hidden too.
+@mixin marker-hidden {
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+}

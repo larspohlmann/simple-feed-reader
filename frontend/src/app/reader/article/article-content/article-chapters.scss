@@ -1,3 +1,4 @@
+@use '../../../theme/bare-summary';
 @use '../../../theme/glass-rim';
 
 :host ::ng-deep .reader-chapters {
@@ -8,18 +9,15 @@
 }
 
 :host ::ng-deep .reader-chapters__toggle {
+  @include bare-summary.marker-hidden;
+
   display: flex;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
-  list-style: none;
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   cursor: pointer;
-}
-
-:host ::ng-deep .reader-chapters__toggle::-webkit-details-marker {
-  display: none;
 }
 
 :host ::ng-deep .reader-chapters__toggle .material-symbols-outlined {

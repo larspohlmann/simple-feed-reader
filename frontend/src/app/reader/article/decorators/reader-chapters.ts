@@ -78,11 +78,9 @@ export function addChapterList(
 }
 
 function toggle(heading: string): HTMLElement {
-  const label = document.createElement('span');
-  label.textContent = heading;
   const summary = document.createElement('summary');
   summary.className = `${LIST}__toggle`;
-  summary.append(materialIcon('chevron_right'), label);
+  summary.append(materialIcon('chevron_right'), heading);
   return summary;
 }
 
