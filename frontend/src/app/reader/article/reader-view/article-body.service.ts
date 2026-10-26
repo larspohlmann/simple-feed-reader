@@ -129,16 +129,15 @@ export class ArticleBody {
   private render(parts: ArticleBodyParts, host: HTMLElement, chapterList: ChapterDto[]): void {
     const track = parts.audioTrack();
     const chapteredEmbed = (): EmbedMedia | null => chapteredEmbedOf(host, chapterList, track);
+    const bodyChaptersOf = (url: string): ChapterDto[] | null =>
+      url === chapteredEmbed()?.url ? chapterList : null;
     const controls = decorateArticle(host, this.i18n, {
       enclosureUrl: parts.enclosureUrl(),
       embedSource: (url) => withScriptablePlayer(url, window.location.origin),
       listen: this.embedAudio.actions({
         entry: parts.entry(),
         detailsOf: (media) =>
-          listenDetails(
-            this.embedDetails.detailsOf(media.url),
-            media.url === chapteredEmbed()?.url ? chapterList : null,
-          ),
+          listenDetails(this.embedDetails.detailsOf(media.url), bodyChaptersOf(media.url)),
         onListened: (listened) => this.chapters.followTrack(listened),
       }),
     });
@@ -149,41 +148,42 @@ export class ArticleBody {
       // A video queued from a list row gains its chapters once its article opens (#1810).
       const embed = chapteredEmbed();
       if (embed) this.audio.describe(embed.url, { ...NOTHING_KNOWN, chapters: chapterList });
-      this.loadEmbedDetails(embedFramesToAsk(host, embed, parts.entry()), heading);
+      this.loadEmbedDetails(embedFramesToAsk(host, parts.entry()), heading, bodyChaptersOf);
       this.media.follow(host);
     });
     parts.decorated(host);
   }
 
-  private loadEmbedDetails(frames: HTMLIFrameElement[], heading: string): void {
+  private loadEmbedDetails(
+    frames: HTMLIFrameElement[],
+    heading: string,
+    bodyChaptersOf: (url: string) => ChapterDto[] | null,
+  ): void {
     this.embedDetails.load(frames, (frame, media, details) => {
-      if (details.chapters.length > 0) {
+      const bodyChapters = bodyChaptersOf(media.url);
+      if (bodyChapters === null && details.chapters.length > 0) {
         this.chapters.attachToFrame(frame, { chapters: details.chapters, heading });
       }
-      this.audio.describe(media.url, details);
+      this.audio.describe(media.url, listenDetails(details, bodyChapters));
     });
   }
 }
 
 /** An embed's fetched details, carrying the body's chapters instead when the body lists them for it. */
-function listenDetails(
-  fetched: EmbedDetailsDto | null,
+function listenDetails<Fetched extends EmbedDetailsDto | null>(
+  fetched: Fetched,
   bodyChapters: ChapterDto[] | null,
-): EmbedDetailsDto | null {
+): Fetched | EmbedDetailsDto {
   if (bodyChapters === null) return fetched;
   return { ...(fetched ?? NOTHING_KNOWN), chapters: bodyChapters };
 }
 
-/** The embeds to ask details for: not the one showing the body's chapters, nor a YouTube entry's own video. */
-function embedFramesToAsk(
-  host: HTMLElement,
-  chapteredEmbed: EmbedMedia | null,
-  entry: EntryDto | null,
-): HTMLIFrameElement[] {
+/** The embeds to ask details for: all but a YouTube entry's own video. */
+function embedFramesToAsk(host: HTMLElement, entry: EntryDto | null): HTMLIFrameElement[] {
   const ownVideoId = youTubeVideoId(entry?.url ?? '');
   return chapterFrames(host).filter((frame) => {
     const media = embedMediaOfFrame(frame);
-    if (!media || media.url === chapteredEmbed?.url) return false;
+    if (!media) return false;
     return media.kind !== 'youtube' || youTubeVideoId(media.url) !== ownVideoId;
   });
 }

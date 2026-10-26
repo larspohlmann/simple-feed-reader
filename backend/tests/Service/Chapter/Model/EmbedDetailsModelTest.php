@@ -49,6 +49,11 @@ final class EmbedDetailsModelTest extends TestCase
         yield 'not an array' => ['garbage'];
         yield 'a bare chapter list' => [$chapters];
         yield 'no chapters key' => [['title' => 'x', 'durationSeconds' => 1]];
+        yield 'no title key' => [['durationSeconds' => 1, 'chapters' => $chapters]];
+        yield 'no length key' => [['title' => 'x', 'chapters' => $chapters]];
+        yield 'only chapters' => [['chapters' => []]];
+        yield 'a length of zero' => [['title' => 'x', 'durationSeconds' => 0, 'chapters' => $chapters]];
+        yield 'a negative length' => [['title' => 'x', 'durationSeconds' => -5, 'chapters' => $chapters]];
         yield 'a title not a string' => [['title' => 5, 'durationSeconds' => 1, 'chapters' => $chapters]];
         yield 'a length not an int' => [['title' => 'x', 'durationSeconds' => '1', 'chapters' => $chapters]];
         yield 'chapters not a list' => [['title' => 'x', 'durationSeconds' => 1, 'chapters' => ['a' => $chapters[0]]]];

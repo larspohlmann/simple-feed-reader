@@ -486,13 +486,66 @@ describe('ArticleBody', () => {
       expect(content.querySelector('.reader-embed--audio')!.nextElementSibling).toBe(lists[1]);
     });
 
-    it("asks only for the other embeds when the body's chapters are the first video's", async () => {
-      entry.set(anEntry({ url: VIDEO_URL }));
+    describe("for the video the body's chapters belong to", () => {
+      const fetched: EmbedDetailsDto = {
+        title: 'The video itself',
+        durationSeconds: 4964,
+        chapters: VIDEO_CHAPTERS,
+      };
+
+      beforeEach(async () => {
+        answers({ [VIDEO_URL]: of(fetched) });
+        entry.set(anEntry({ title: 'The post' }));
+        chapters.set(CHAPTERS);
+        connectBody(YOUTUBE + OTHER_YOUTUBE + SOUNDCLOUD);
+        await Promise.resolve();
+      });
+
+      it('asks for its details too', () => {
+        expect(askedUrls()).toEqual([VIDEO_URL, OTHER_VIDEO_URL, WIDGET_URL]);
+      });
+
+      it("lists only the body's chapters under it, even when its answer has chapters", () => {
+        const lists = content.querySelectorAll('.reader-chapters');
+
+        expect(lists).toHaveLength(1);
+        expect(listRows(lists[0])).toEqual(['0:00Intro', '4:16How it works']);
+      });
+
+      it("hands Listen a track with its fetched title and length and the body's chapters", () => {
+        const play = jest
+          .spyOn(TestBed.inject(AudioPlayerService), 'play')
+          .mockImplementation(() => undefined);
+
+        content.querySelector<HTMLButtonElement>('.reader-listen__button')!.click();
+
+        expect(play).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: VIDEO_URL,
+            title: 'The video itself',
+            durationInSeconds: 4964,
+            chapters: CHAPTERS,
+          }),
+        );
+      });
+    });
+
+    it("describes the body's video by its fetched title and length, keeping the body's chapters", async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
+        .mockImplementation(() => undefined);
+      answers({
+        [VIDEO_URL]: of({ title: 'Own', durationSeconds: 300, chapters: VIDEO_CHAPTERS }),
+      });
       chapters.set(CHAPTERS);
-      connectBody(YOUTUBE + OTHER_YOUTUBE + SOUNDCLOUD);
+      connectBody(YOUTUBE);
       await Promise.resolve();
 
-      expect(askedUrls()).toEqual([OTHER_VIDEO_URL, WIDGET_URL]);
+      expect(describeTrack).toHaveBeenLastCalledWith(VIDEO_URL, {
+        title: 'Own',
+        durationSeconds: 300,
+        chapters: CHAPTERS,
+      });
     });
 
     it("never asks for the entry's own video, whose description the server already read", async () => {

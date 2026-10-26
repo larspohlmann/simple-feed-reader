@@ -7,7 +7,6 @@ namespace App\Service\Chapter\Model;
 use App\Entity\EntryChapter;
 use App\Entity\EntryMedia;
 
-/** An embed's own title, length and chapters (#1824). */
 final readonly class EmbedDetailsModel
 {
     /** @param list<EntryChapter> $chapters */
@@ -30,17 +29,37 @@ final readonly class EmbedDetailsModel
 
     public static function fromCacheEntryOrNull(mixed $stored): ?self
     {
-        if (!\is_array($stored)) {
+        if (!\is_array($stored) || !self::hasEveryKey($stored)) {
             return null;
         }
-        $title = $stored['title'] ?? null;
-        $durationSeconds = $stored['durationSeconds'] ?? null;
-        $chapters = self::chaptersFrom($stored['chapters'] ?? null);
-        if (($title !== null && !\is_string($title)) || ($durationSeconds !== null && !\is_int($durationSeconds))) {
+        $title = $stored['title'];
+        $durationSeconds = $stored['durationSeconds'];
+        $chapters = self::chaptersFrom($stored['chapters']);
+        if (!self::isTitle($title) || !self::isDuration($durationSeconds) || $chapters === null) {
             return null;
         }
 
-        return $chapters === null ? null : new self($title, $durationSeconds, $chapters);
+        return new self($title, $durationSeconds, $chapters);
+    }
+
+    /** @param array<mixed> $stored */
+    private static function hasEveryKey(array $stored): bool
+    {
+        return \array_key_exists('title', $stored)
+            && \array_key_exists('durationSeconds', $stored)
+            && \array_key_exists('chapters', $stored);
+    }
+
+    /** @phpstan-assert-if-true string|null $title */
+    private static function isTitle(mixed $title): bool
+    {
+        return $title === null || \is_string($title);
+    }
+
+    /** @phpstan-assert-if-true int|null $durationSeconds */
+    private static function isDuration(mixed $durationSeconds): bool
+    {
+        return $durationSeconds === null || (\is_int($durationSeconds) && $durationSeconds > 0);
     }
 
     /** @return list<EntryChapter>|null */
