@@ -12,6 +12,7 @@ use App\Enum\TokenLimitParameter;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
+use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
 use PHPUnit\Framework\TestCase;
@@ -93,7 +94,11 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
 
     private function headroomFor(Reasoning $reasoning): int
     {
-        return $this->answerBudget->outputBoundTokens(45, RecommendationResponseSchema::Consolidation, $reasoning);
+        return $this->answerBudget->outputBoundTokens(
+            45,
+            RecommendationResponseSchema::Consolidation,
+            new OutputLimitModel($reasoning, null),
+        );
     }
 
     private function prompt(): CallPromptModel

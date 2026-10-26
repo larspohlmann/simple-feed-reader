@@ -9,6 +9,7 @@ use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
 use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
@@ -303,7 +304,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // so the ceiling (CONSOLIDATION_MAX_INPUT_FACTOR × picksLimit) binds.
         $size = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(1_000_000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            new OutputLimitModel(Reasoning::Suppressed, null),
         );
 
         self::assertSame(300, $size);
@@ -321,7 +322,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // back to CONSOLIDATION_MIN_INPUT_FACTOR × picksLimit.
         $size = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(32768, 50), 'A profile.'),
-            Reasoning::Allowed,
+            new OutputLimitModel(Reasoning::Allowed, null),
         );
 
         self::assertSame(100, $size);
@@ -333,16 +334,48 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $small = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            new OutputLimitModel(Reasoning::Suppressed, null),
         );
         $large = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(1_000_000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            new OutputLimitModel(Reasoning::Suppressed, null),
         );
 
         self::assertGreaterThan($small, $large);
         self::assertGreaterThanOrEqual(100, $small);
         self::assertLessThanOrEqual(300, $large);
+    }
+
+    public function testACappedModelTakesALongerShortlistWhereTheWindowLimits(): void
+    {
+        $context = new PromptContext($this->emptyHistory(), $this->settings(100_000, 50), null);
+
+        $uncapped = $this->builder->consolidationInputSize($context, new OutputLimitModel(Reasoning::Allowed, null));
+        $capped = $this->builder->consolidationInputSize($context, new OutputLimitModel(Reasoning::Allowed, 20_000));
+
+        self::assertSame(175, $uncapped);
+        self::assertSame(190, $capped);
+    }
+
+    public function testACapBelowTheAnswerBoundShrinksTheShortlistUntilTheAnswerFits(): void
+    {
+        $context = new PromptContext($this->emptyHistory(), $this->settings(1_000_000, 50), null);
+
+        $uncapped = $this->builder->consolidationInputSize($context, new OutputLimitModel(Reasoning::Allowed, null));
+        $capped = $this->builder->consolidationInputSize($context, new OutputLimitModel(Reasoning::Allowed, 16_384));
+
+        self::assertSame(300, $uncapped);
+        self::assertSame(156, $capped);
+    }
+
+    public function testTheFloorHoldsWhenEvenItsAnswerExceedsTheCap(): void
+    {
+        $size = $this->builder->consolidationInputSize(
+            new PromptContext($this->emptyHistory(), $this->settings(1_000_000, 50), null),
+            new OutputLimitModel(Reasoning::Allowed, 4096),
+        );
+
+        self::assertSame(100, $size);
     }
 
     public function testALongerProfileShrinksTheConsolidationShortlist(): void
@@ -351,11 +384,11 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $short = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            new OutputLimitModel(Reasoning::Suppressed, null),
         );
         $long = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(60000, 50), str_repeat('Likes Rust. ', 400)),
-            Reasoning::Suppressed,
+            new OutputLimitModel(Reasoning::Suppressed, null),
         );
 
         self::assertLessThan($short, $long);
@@ -372,11 +405,11 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $withFew = $this->builder->consolidationInputSize(
             new PromptContext($few, $this->settings(60000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            new OutputLimitModel(Reasoning::Suppressed, null),
         );
         $withMany = $this->builder->consolidationInputSize(
             new PromptContext($many, $this->settings(60000, 50), 'A profile.'),
-            Reasoning::Suppressed,
+            new OutputLimitModel(Reasoning::Suppressed, null),
         );
 
         self::assertLessThan($withFew, $withMany);

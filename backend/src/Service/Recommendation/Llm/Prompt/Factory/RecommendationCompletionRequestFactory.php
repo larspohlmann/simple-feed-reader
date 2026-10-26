@@ -6,8 +6,8 @@ namespace App\Service\Recommendation\Llm\Prompt\Factory;
 
 use App\Entity\AiProviderSettings;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
+use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
 
 /** Builds every phase's request, so a prompt and its output bound are always derived together. */
@@ -19,23 +19,15 @@ final readonly class RecommendationCompletionRequestFactory
 
     public function create(AiProviderSettings $connection, CallPromptModel $prompt): CompletionRequestModel
     {
-        $reasoning = Reasoning::preferredBy($connection);
+        $limit = OutputLimitModel::of($connection);
 
         return new CompletionRequestModel(
             $connection->getModel() ?? '',
             $prompt->messages,
-            $this->outputBoundFor($connection, $prompt, $reasoning),
+            $this->answerBudget->outputBoundTokens($prompt->replyItemCount, $prompt->schema, $limit),
             $prompt->schema->toJsonSchema(),
-            $reasoning,
+            $limit->reasoning,
             $connection->getTokenLimitParameter(),
         );
-    }
-
-    private function outputBoundFor(AiProviderSettings $connection, CallPromptModel $prompt, Reasoning $reasoning): int
-    {
-        $bound = $this->answerBudget->outputBoundTokens($prompt->replyItemCount, $prompt->schema, $reasoning);
-        $cap = $connection->getModelMaxOutputTokens();
-
-        return null === $cap ? $bound : min($bound, $cap);
     }
 }

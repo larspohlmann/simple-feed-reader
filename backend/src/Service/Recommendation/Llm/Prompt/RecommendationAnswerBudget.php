@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm\Prompt;
 
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Recommendation\Llm\Prompt\Model\OutputLimitModel;
 use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 
@@ -68,15 +69,22 @@ final readonly class RecommendationAnswerBudget
     }
 
     /**
-     * The answer bound plus a reasoning headroom, smaller when the connection suppresses reasoning. The headroom is a
-     * ceiling, not a reservation.
+     * The answer bound plus a reasoning headroom, smaller when the connection suppresses reasoning, kept under the
+     * model's cap. The headroom is a ceiling, not a reservation.
      */
     public function outputBoundTokens(
         int $replyItemCount,
         RecommendationResponseSchema $schema,
-        Reasoning $reasoning,
+        OutputLimitModel $limit,
     ): int {
-        return $this->answerBoundTokens($replyItemCount, $schema) + self::reasoningHeadroomTokens($reasoning);
+        $bound = $this->answerBoundTokens($replyItemCount, $schema) + self::reasoningHeadroomTokens($limit->reasoning);
+
+        return null === $limit->capTokens ? $bound : min($bound, $limit->capTokens);
+    }
+
+    public function answerFits(int $replyItemCount, RecommendationResponseSchema $schema, OutputLimitModel $limit): bool
+    {
+        return null === $limit->capTokens || $this->answerBoundTokens($replyItemCount, $schema) <= $limit->capTokens;
     }
 
     private static function reasoningHeadroomTokens(Reasoning $reasoning): int
