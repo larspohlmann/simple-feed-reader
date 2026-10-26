@@ -31,7 +31,7 @@ The two plans are independent and may merge in either order. The seams they shar
 
 ## Visual round (decided 2026-10-26)
 
-The layouts were settled on a mockup of the three surfaces drawn with the app's tokens (https://claude.ai/artifact/66VxSS4hgJJg8QoTmzJbdq). What it fixed, beyond the issue text:
+The layouts were settled on a mockup of the three surfaces drawn with the app's tokens. What it fixed, beyond the issue text:
 
 - **Mini bar title:** one line, the chapter title first and the track title after a middle dot, muted; a track without chapters keeps today's line.
 - **Mini bar chapter steps:** two chevron buttons (`chevron_left`, `chevron_right`) flanking the transport group, shown only while the track has chapters; previous/next stay track steps on every surface, the lock screen included.
