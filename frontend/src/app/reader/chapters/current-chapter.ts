@@ -1,6 +1,5 @@
 import { PlaybackPosition } from './chapter-player';
 
-/** How far playback is through one chapter. */
 export interface ChapterProgress {
   readonly fraction: number;
   readonly secondsLeft: number;
