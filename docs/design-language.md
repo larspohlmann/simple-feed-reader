@@ -1486,7 +1486,10 @@ The seek bar the mini player bar and the big player share (#1810): a native
 cached fill drawn on its track (accent, `--text-muted`, `--border`), and a
 decorative `aria-hidden` layer of chapter marks over it. A mark is a notch:
 `--space-0` wide, the bar's height, in `--surface-1`, so it reads as a gap in the
-bar whatever fills it. The first chapter's mark at 0 is omitted.
+bar whatever fills it. The first chapter's mark at 0 is omitted. Marks and fill
+are drawn in the thumb's travel, `thumb / 2 + (width - thumb) * fraction`, so the
+thumb's centre sits on its notch and at the end of the played fill; the range
+resets the global input padding and border so its track spans the full width.
 
 | Input / output | Type |
 |---|---|
@@ -1498,7 +1501,7 @@ bar whatever fills it. The first chapter's mark at 0 is omitted.
 It labels itself (`reader.audioPlayer.seek`). Its size is the host's to set
 through custom properties, with the mini bar's values as defaults:
 `--scrubber-bar` (track height, `--space-1`), `--scrubber-thumb` (`--space-3`;
-`0` for none), `--scrubber-tap` (input height, `--space-4`) and
+`0px` for none, with a unit: it enters `calc`), `--scrubber-tap` (input height, `--space-4`) and
 `--scrubber-surface` (the notch colour, `--surface-1`: the surface the bar lies
 on). The big player sets a `--space-2` bar, no thumb and a `--tap-target` input,
 and thickens the bar while dragging.

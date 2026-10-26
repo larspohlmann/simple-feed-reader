@@ -96,8 +96,8 @@ describe('AudioPlayerBarComponent', () => {
     service.buffered.set(120);
     fixture.detectChanges();
 
-    expect(scrubberInput(fixture).style.getPropertyValue('--played')).toBe('25%');
-    expect(scrubberInput(fixture).style.getPropertyValue('--cached')).toBe('60%');
+    expect(scrubberInput(fixture).style.getPropertyValue('--played')).toBe('0.25');
+    expect(scrubberInput(fixture).style.getPropertyValue('--cached')).toBe('0.6');
   });
 
   it('marks the chapters of the track on the scrubber', () => {
@@ -111,7 +111,7 @@ describe('AudioPlayerBarComponent', () => {
     fixture.detectChanges();
 
     const marks = fixture.debugElement.queryAll(By.css('.mark')).map((mark) => mark.nativeElement);
-    expect(marks.map((mark: HTMLElement) => mark.style.left)).toEqual(['25%']);
+    expect(marks.map((mark: HTMLElement) => mark.style.getPropertyValue('--at'))).toEqual(['0.25']);
   });
 
   it('seeks when the scrubber is moved', () => {

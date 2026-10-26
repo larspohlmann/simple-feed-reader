@@ -15,6 +15,6 @@
 />
 <div class="marks" aria-hidden="true">
   @for (mark of marks(); track $index) {
-    <span class="mark" [style.left]="mark"></span>
+    <span class="mark" [style.--at]="mark"></span>
   }
 </div>
