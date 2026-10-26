@@ -651,6 +651,38 @@ describe('AudioPlayerService', () => {
       expect(service.currentChapter()?.title).toBe('Main');
     });
 
+    it('titles the OS metadata with the current chapter and clears it on stop', () => {
+      class FakeMediaMetadata {
+        constructor(readonly init: MediaMetadataInit) {}
+      }
+      const session: { metadata: FakeMediaMetadata | null } = { metadata: null };
+      Object.defineProperty(navigator, 'mediaSession', {
+        configurable: true,
+        value: Object.assign(session, { setActionHandler: jest.fn() }),
+      });
+      Object.defineProperty(window, 'MediaMetadata', {
+        configurable: true,
+        value: FakeMediaMetadata,
+      });
+      try {
+        const service = playingChaptered();
+        at(30);
+        TestBed.tick();
+        expect(session.metadata?.init).toMatchObject({ title: 'Intro', artist: 'Episode 1' });
+
+        at(61);
+        TestBed.tick();
+        expect(session.metadata?.init.title).toBe('Main');
+
+        service.stop();
+        TestBed.tick();
+        expect(session.metadata).toBeNull();
+      } finally {
+        Reflect.deleteProperty(navigator, 'mediaSession');
+        Reflect.deleteProperty(window, 'MediaMetadata');
+      }
+    });
+
     it('measures the progress through the current chapter', () => {
       const service = playingChaptered();
 

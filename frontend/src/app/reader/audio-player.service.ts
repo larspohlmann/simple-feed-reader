@@ -1,12 +1,4 @@
-import {
-  DestroyRef,
-  InjectionToken,
-  Injectable,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { DestroyRef, InjectionToken, Injectable, computed, inject, signal } from '@angular/core';
 import { onIdentityChange } from '../core/auth/session-identity';
 import {
   EMPTY_PLAYLIST,
@@ -25,7 +17,7 @@ import { PlaylistPersistence } from './audio/playlist-persistence';
 import { AudioDeck } from './audio/audio-deck';
 import { cachedEnd } from './audio/cached-end';
 import { AudioTrack } from './audio/audio-track';
-import { MediaSessionControls } from './audio/media-session-controls';
+import { reflectInMediaSession } from './audio/media-session-reflection';
 import { PlaybackRate } from './audio/playback-rate';
 import { TrackChapters } from './audio/track-chapters';
 import { PlaybackPosition } from './chapters/chapter-player';
@@ -71,7 +63,6 @@ export class AudioPlayerService {
     this.snapshot(),
   );
   private readonly playbackRate = inject(PlaybackRate);
-  private readonly mediaSession = new MediaSessionControls();
 
   private readonly _playlist = signal<Playlist>(EMPTY_PLAYLIST);
   private readonly _playing = signal(false);
@@ -110,24 +101,21 @@ export class AudioPlayerService {
   private pendingSeek: number | null = null;
 
   constructor() {
-    this.mediaSession.bind(
+    reflectInMediaSession(
+      this,
       {
         play: () => this.resume(),
         pause: () => this.element.pause(),
         skip: (seconds) => this.skip(seconds),
         seek: (seconds) => this.seek(seconds),
+        previous: () => this.previous(),
+        next: () => this.next(),
       },
       SKIP_SECONDS,
     );
     this.restore();
     this.deck.setRate(this.rate());
     this.persistence.saveOnPageHide(inject(DestroyRef));
-    effect(() =>
-      this.mediaSession.setTrackSteps(
-        this.hasPrevious() ? () => this.previous() : null,
-        this.hasNext() ? () => this.next() : null,
-      ),
-    );
     onIdentityChange(() => this.stop());
   }
 
@@ -233,7 +221,6 @@ export class AudioPlayerService {
     this._duration.set(0);
     this._buffered.set(0);
     this.persistence.clear();
-    this.mediaSession.showTrack(null);
   }
 
   private seekToChapterStart(start: number | null): void {
@@ -261,7 +248,6 @@ export class AudioPlayerService {
     this._duration.set(track.durationInSeconds ?? 0);
     this._position.set(0);
     this._buffered.set(0);
-    this.mediaSession.showTrack(track);
     const cached = this.deck.load(track.url);
     this.element.currentTime = 0;
     if (cached) this.adoptCachedElement();
@@ -292,7 +278,6 @@ export class AudioPlayerService {
     this._position.set(this.element.currentTime);
     this.onProgress();
     this.persistence.saveThrottled();
-    this.mediaSession.showPosition(this._position(), this._duration(), this.rate());
   }
 
   private onProgress(): void {
@@ -310,7 +295,6 @@ export class AudioPlayerService {
   private onPlaying(playing: boolean): void {
     this._playing.set(playing);
     if (!playing) this.persistence.save();
-    this.mediaSession.showPlaying(this._playing());
   }
 
   private onEnded(): void {

@@ -1,4 +1,5 @@
 import type { AudioTrack } from '../audio-player.service';
+import type { ChapterDto } from '../models';
 
 export interface MediaSessionActions {
   play(): void;
@@ -30,14 +31,15 @@ export class MediaSessionControls {
     this.session?.setActionHandler('nexttrack', next);
   }
 
-  showTrack(track: AudioTrack | null): void {
+  /** A chapter takes the title line, with the track below it; without one the track leads. */
+  showTrack(track: AudioTrack | null, chapter: ChapterDto | null): void {
     if (!this.session) return;
     if (!track || !('MediaMetadata' in window)) {
       this.session.metadata = null;
       return;
     }
     const artwork = track.imageUrl ? [{ src: track.imageUrl }] : [];
-    this.session.metadata = new MediaMetadata({ title: track.title, artwork });
+    this.session.metadata = new MediaMetadata({ ...titles(track, chapter), artwork });
   }
 
   showPlaying(playing: boolean): void {
@@ -52,4 +54,10 @@ export class MediaSessionControls {
       playbackRate,
     });
   }
+}
+
+function titles(track: AudioTrack, chapter: ChapterDto | null): MediaMetadataInit {
+  const feedTitle = track.entry?.feedTitle ?? '';
+  if (!chapter) return { title: track.title, artist: feedTitle };
+  return { title: chapter.title, artist: track.title, album: feedTitle };
 }
