@@ -22,10 +22,12 @@ import { withScriptablePlayer } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame, youTubeVideoId } from '../../audio/embed-media';
 import { ChapterDto, EntryDto } from '../../models';
-import { EmbedChaptersApi } from '../../embed-chapters-api';
+import { EmbedDetailsApi, EmbedDetailsDto } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
 import { ArticleEmbedAudio } from './article-embed-audio';
-import { ArticleEmbedChapters } from './article-embed-chapters';
+import { ArticleEmbedDetails } from './article-embed-details';
+
+const NOTHING_KNOWN: EmbedDetailsDto = { title: null, durationSeconds: null, chapters: [] };
 
 export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
@@ -50,7 +52,7 @@ export class ArticleBody {
   private readonly audio = inject(AudioPlayerService);
   private readonly chapters = new ArticleChapters(this.audio, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(this.audio, this.injector);
-  private readonly embedChapters = new ArticleEmbedChapters(inject(EmbedChaptersApi));
+  private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi));
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
   private destroyed = false;
 
@@ -62,7 +64,7 @@ export class ArticleBody {
       this.destroyed = true;
       this.chapters.release();
       this.embedAudio.release();
-      this.embedChapters.release();
+      this.embedDetails.release();
       document.removeEventListener('keydown', onKeydown);
     });
   }
@@ -112,7 +114,7 @@ export class ArticleBody {
           this.media.forgetAll();
           this.chapters.release();
           this.embedAudio.release();
-          this.embedChapters.release();
+          this.embedDetails.release();
         });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
@@ -132,10 +134,11 @@ export class ArticleBody {
       embedSource: (url) => withScriptablePlayer(url, window.location.origin),
       listen: this.embedAudio.actions({
         entry: parts.entry(),
-        chaptersOf: (media) =>
-          media.url === chapteredEmbed()?.url
-            ? chapterList
-            : this.embedChapters.chaptersOf(media.url),
+        detailsOf: (media) =>
+          listenDetails(
+            this.embedDetails.detailsOf(media.url),
+            media.url === chapteredEmbed()?.url ? chapterList : null,
+          ),
         onListened: (listened) => this.chapters.followTrack(listened),
       }),
     });
@@ -145,22 +148,33 @@ export class ArticleBody {
       this.embedAudio.follow(controls);
       // A video queued from a list row gains its chapters once its article opens (#1810).
       const embed = chapteredEmbed();
-      if (embed) this.audio.describeChapters(embed.url, chapterList);
-      this.loadEmbedChapters(embedFramesToAsk(host, embed, parts.entry()), heading);
+      if (embed) this.audio.describe(embed.url, { ...NOTHING_KNOWN, chapters: chapterList });
+      this.loadEmbedDetails(embedFramesToAsk(host, embed, parts.entry()), heading);
       this.media.follow(host);
     });
     parts.decorated(host);
   }
 
-  private loadEmbedChapters(frames: HTMLIFrameElement[], heading: string): void {
-    this.embedChapters.load(frames, (frame, media, chapters) => {
-      this.chapters.attachToFrame(frame, { chapters, heading });
-      this.audio.describeChapters(media.url, chapters);
+  private loadEmbedDetails(frames: HTMLIFrameElement[], heading: string): void {
+    this.embedDetails.load(frames, (frame, media, details) => {
+      if (details.chapters.length > 0) {
+        this.chapters.attachToFrame(frame, { chapters: details.chapters, heading });
+      }
+      this.audio.describe(media.url, details);
     });
   }
 }
 
-/** The embeds to ask chapters for: not the one showing the body's, nor a YouTube entry's own video. */
+/** An embed's fetched details, carrying the body's chapters instead when the body lists them for it. */
+function listenDetails(
+  fetched: EmbedDetailsDto | null,
+  bodyChapters: ChapterDto[] | null,
+): EmbedDetailsDto | null {
+  if (bodyChapters === null) return fetched;
+  return { ...(fetched ?? NOTHING_KNOWN), chapters: bodyChapters };
+}
+
+/** The embeds to ask details for: not the one showing the body's chapters, nor a YouTube entry's own video. */
 function embedFramesToAsk(
   host: HTMLElement,
   chapteredEmbed: EmbedMedia | null,

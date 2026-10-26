@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { NO_EMBED_CHAPTERS } from '../../../../testing/embed-chapters-testing';
+import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
 import { ArticleContentComponent } from './article-content.component';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
@@ -27,7 +27,7 @@ describe('ArticleContentComponent', () => {
       imports: [provideTranslocoTesting()],
       providers: [
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
-        NO_EMBED_CHAPTERS,
+        NO_EMBED_DETAILS,
       ],
     });
   });

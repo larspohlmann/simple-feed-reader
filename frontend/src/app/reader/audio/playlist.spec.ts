@@ -1,11 +1,11 @@
-import type { AudioTrack } from '../audio-player.service';
+import type { AudioTrack, TrackDetails } from '../audio-player.service';
 import type { ChapterDto } from '../models';
 import {
   EMPTY_PLAYLIST,
   Playlist,
   append,
   currentTrack,
-  withChapters,
+  withDetails,
   insertNext,
   move,
   remove,
@@ -172,34 +172,77 @@ describe('playlist', () => {
     });
   });
 
-  describe('withChapters', () => {
+  describe('withDetails', () => {
     const chapters: ChapterDto[] = [{ startSeconds: 0, title: 'Intro' }];
+    const nothing: TrackDetails = { title: null, durationSeconds: null, chapters: [] };
 
-    it('gives the queued track its chapters and keeps the index', () => {
-      const playlist = withChapters(of(1, alpha, bravo, charlie), bravo.url, chapters);
+    it('gives the queued track its title, length and chapters and keeps the index', () => {
+      const playlist = withDetails(of(1, alpha, bravo, charlie), bravo.url, {
+        title: 'Bravo itself',
+        durationSeconds: 300,
+        chapters,
+      });
 
-      expect(playlist.tracks).toEqual([alpha, { ...bravo, chapters }, charlie]);
+      expect(playlist.tracks).toEqual([
+        alpha,
+        { ...bravo, title: 'Bravo itself', durationInSeconds: 300, chapters },
+        charlie,
+      ]);
       expect(playlist.index).toBe(1);
+    });
+
+    it('keeps the title when the details name none', () => {
+      const playlist = withDetails(of(0, alpha), alpha.url, { ...nothing, durationSeconds: 300 });
+
+      expect(playlist.tracks[0].title).toBe('a');
+      expect(playlist.tracks[0].durationInSeconds).toBe(300);
+    });
+
+    it('keeps a length the track already has', () => {
+      const timed = { ...alpha, durationInSeconds: 290 };
+
+      const playlist = withDetails(of(0, timed), alpha.url, { ...nothing, durationSeconds: 300 });
+
+      expect(playlist.tracks[0].durationInSeconds).toBe(290);
     });
 
     it('replaces the chapters a track already has', () => {
       const described = { ...alpha, chapters: [{ startSeconds: 5, title: 'Old' }] };
 
-      const playlist = withChapters(of(0, described), alpha.url, chapters);
+      const playlist = withDetails(of(0, described), alpha.url, { ...nothing, chapters });
 
       expect(playlist.tracks[0].chapters).toEqual(chapters);
+    });
+
+    it('keeps the chapters a track has when the details bring none', () => {
+      const described = { ...alpha, chapters };
+
+      const playlist = withDetails(of(0, described), alpha.url, { ...nothing, title: 'Renamed' });
+
+      expect(playlist.tracks[0]).toEqual({ ...described, title: 'Renamed' });
+    });
+
+    it('adds no chapters key when neither has chapters', () => {
+      const playlist = withDetails(of(0, alpha), alpha.url, { ...nothing, title: 'Renamed' });
+
+      expect(playlist.tracks[0]).not.toHaveProperty('chapters');
     });
 
     it('ignores an unknown url', () => {
       const playlist = of(0, alpha);
 
-      expect(withChapters(playlist, 'https://x.test/none.mp3', chapters)).toBe(playlist);
+      expect(withDetails(playlist, 'https://x.test/none.mp3', { ...nothing, chapters })).toBe(
+        playlist,
+      );
     });
 
-    it('is the same playlist when the track already carries those chapters', () => {
-      const playlist = of(0, { ...alpha, chapters });
+    it('is the same playlist when the details add nothing', () => {
+      const playlist = of(0, { ...alpha, durationInSeconds: 290, chapters });
 
-      expect(withChapters(playlist, alpha.url, chapters)).toBe(playlist);
+      expect(withDetails(playlist, alpha.url, nothing)).toBe(playlist);
+      expect(withDetails(playlist, alpha.url, { title: 'a', durationSeconds: 300, chapters })).toBe(
+        playlist,
+      );
     });
   });
 });

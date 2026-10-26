@@ -10,7 +10,7 @@ import {
   move,
   remove,
   select,
-  withChapters,
+  withDetails,
 } from './audio/playlist';
 import { PlaylistStore, type SavedPlaylist } from './audio/playlist.store';
 import { PlaylistPersistence } from './audio/playlist-persistence';
@@ -22,14 +22,13 @@ import {
   providerPlayback,
 } from './audio/playback/playback-slots';
 import { cachedEnd } from './audio/cached-end';
-import { AudioTrack } from './audio/audio-track';
+import { AudioTrack, TrackDetails } from './audio/audio-track';
 import { reflectInMediaSession } from './audio/media-session-reflection';
 import { PlaybackRate } from './audio/playback-rate';
 import { TrackChapters } from './audio/track-chapters';
 import { PlaybackPosition } from './chapters/chapter-player';
-import type { ChapterDto } from './models';
 
-export type { AudioTrack, AudioTrackEntry } from './audio/audio-track';
+export type { AudioTrack, AudioTrackEntry, TrackDetails } from './audio/audio-track';
 
 /** Injected so tests supply a stub: jsdom does not implement HTMLMediaElement. */
 export const AUDIO_ELEMENT_FACTORY = new InjectionToken<() => HTMLAudioElement>(
@@ -206,9 +205,10 @@ export class AudioPlayerService {
     this.playChapter(chapterIndex);
   }
 
-  /** Gives the queued track at `url` its chapters, for a track queued before its article was opened. */
-  describeChapters(url: string, chapters: ChapterDto[]): void {
-    const described = withChapters(this._playlist(), url, chapters);
+  /** Gives the queued track at `url` its own title, length and chapters, for a track queued
+   *  before its article was opened. */
+  describe(url: string, details: TrackDetails): void {
+    const described = withDetails(this._playlist(), url, details);
     if (described !== this._playlist()) this.apply(described);
   }
 
@@ -260,6 +260,7 @@ export class AudioPlayerService {
     const changed = track.url !== this.current()?.url;
     this._playlist.set(playlist);
     if (changed) this.load(track);
+    else if (this._duration() === 0) this._duration.set(track.durationInSeconds ?? 0);
     this.persistence.save();
     this.precacheNext();
   }

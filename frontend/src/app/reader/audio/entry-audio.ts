@@ -52,7 +52,9 @@ export class EntryAudio {
     const track = this.track();
     const chapters = track?.chapters;
     if (!track || !chapters) return;
-    untracked(() => this.player.describeChapters(track.url, chapters));
+    untracked(() =>
+      this.player.describe(track.url, { title: null, durationSeconds: null, chapters }),
+    );
   }
 
   toggleQueued(): void {

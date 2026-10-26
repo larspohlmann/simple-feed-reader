@@ -18,7 +18,7 @@ import { ChapterDto, EntryDto } from '../../models';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { anEntry } from '../../../../testing/entry-testing';
 import { Observable, Subject, of } from 'rxjs';
-import { EmbedChaptersApi, EmbedChaptersDto } from '../../embed-chapters-api';
+import { EmbedDetailsApi, EmbedDetailsDto } from '../../embed-details-api';
 import { EmbedMedia } from '../../audio/embed-media';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
@@ -46,6 +46,12 @@ const TRACK_CHAPTERS: ChapterDto[] = [
   { startSeconds: 0, title: 'Side A' },
   { startSeconds: 120, title: 'Side B' },
 ];
+const NO_DETAILS: EmbedDetailsDto = { title: null, durationSeconds: null, chapters: [] };
+const TRACK_DETAILS: EmbedDetailsDto = {
+  title: 'Catching Flies',
+  durationSeconds: null,
+  chapters: TRACK_CHAPTERS,
+};
 const EPISODE: AudioTrack = {
   url: 'https://x.test/ep.mp3',
   title: 'Ep',
@@ -60,7 +66,7 @@ describe('ArticleBody', () => {
   let decorated: jest.Mock<void, [HTMLElement]>;
   let content: HTMLElement;
   let autoplay: { nowPlaying: jest.Mock; stopped: jest.Mock };
-  let embedChapters: jest.Mock<Observable<EmbedChaptersDto>, [EmbedMedia]>;
+  let embedDetails: jest.Mock<Observable<EmbedDetailsDto>, [EmbedMedia]>;
   const html = signal('');
   const chapters = signal<ChapterDto[]>([]);
   const audioTrack = signal<AudioTrack | null>(null);
@@ -111,12 +117,12 @@ describe('ArticleBody', () => {
     audioTrack.set(null);
     entry.set(null);
     imageProxy = neverRecoveringImageProxy();
-    embedChapters = jest.fn<Observable<EmbedChaptersDto>, [EmbedMedia]>(() => of({ chapters: [] }));
+    embedDetails = jest.fn<Observable<EmbedDetailsDto>, [EmbedMedia]>(() => of(NO_DETAILS));
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         { provide: ImageProxyService, useValue: imageProxy },
-        { provide: EmbedChaptersApi, useValue: { chaptersOf: embedChapters } },
+        { provide: EmbedDetailsApi, useValue: { detailsOf: embedDetails } },
       ],
     });
     autoplay = { nowPlaying: jest.fn(), stopped: jest.fn() };
@@ -323,26 +329,29 @@ describe('ArticleBody', () => {
     });
 
     it('hands the player the chapters of the video it lists, for a copy queued earlier', async () => {
-      const describeChapters = jest
-        .spyOn(TestBed.inject(AudioPlayerService), 'describeChapters')
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
       chapters.set(CHAPTERS);
       connectBody(YOUTUBE);
       await Promise.resolve();
 
-      expect(describeChapters).toHaveBeenCalledWith(VIDEO_URL, CHAPTERS);
+      expect(describeTrack).toHaveBeenCalledWith(VIDEO_URL, { ...NO_DETAILS, chapters: CHAPTERS });
     });
 
-    it("describes no video to the player while the chapters are the episode's", async () => {
-      const describeChapters = jest
-        .spyOn(TestBed.inject(AudioPlayerService), 'describeChapters')
+    it("gives no video the chapters while they are the episode's", async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
       chapters.set(CHAPTERS);
       audioTrack.set(EPISODE);
       connectBody(YOUTUBE);
       await Promise.resolve();
 
-      expect(describeChapters).not.toHaveBeenCalled();
+      expect(describeTrack).not.toHaveBeenCalledWith(
+        VIDEO_URL,
+        expect.objectContaining({ chapters: CHAPTERS }),
+      );
     });
 
     it('decorates again when the chapters arrive after the body', async () => {
@@ -451,11 +460,11 @@ describe('ArticleBody', () => {
       expect(toggle.getAttribute('aria-pressed')).toBe('false');
     });
   });
-  describe("its embeds' own chapters", () => {
-    const answers = (byUrl: Record<string, Observable<EmbedChaptersDto>>): void => {
-      embedChapters.mockImplementation((media) => byUrl[media.url] ?? of({ chapters: [] }));
+  describe("its embeds' own details", () => {
+    const answers = (byUrl: Record<string, Observable<EmbedDetailsDto>>): void => {
+      embedDetails.mockImplementation((media) => byUrl[media.url] ?? of(NO_DETAILS));
     };
-    const askedUrls = (): string[] => embedChapters.mock.calls.map(([media]) => media.url);
+    const askedUrls = (): string[] => embedDetails.mock.calls.map(([media]) => media.url);
     const listRows = (list: Element): string[] =>
       Array.from(list.querySelectorAll('.reader-chapters__row')).map(
         (row) => row.textContent ?? '',
@@ -463,8 +472,8 @@ describe('ArticleBody', () => {
 
     it('asks for every embed and lists the chapters under each', async () => {
       answers({
-        [VIDEO_URL]: of({ chapters: VIDEO_CHAPTERS }),
-        [WIDGET_URL]: of({ chapters: TRACK_CHAPTERS }),
+        [VIDEO_URL]: of({ ...NO_DETAILS, chapters: VIDEO_CHAPTERS }),
+        [WIDGET_URL]: of(TRACK_DETAILS),
       });
       connectBody(YOUTUBE + SOUNDCLOUD);
       await Promise.resolve();
@@ -495,11 +504,11 @@ describe('ArticleBody', () => {
       expect(askedUrls()).toEqual([WIDGET_URL]);
     });
 
-    it("hands Listen on the widget a track carrying the widget's chapters", async () => {
+    it("hands Listen on the widget a track carrying the widget's title and chapters", async () => {
       const play = jest
         .spyOn(TestBed.inject(AudioPlayerService), 'play')
         .mockImplementation(() => undefined);
-      answers({ [WIDGET_URL]: of({ chapters: TRACK_CHAPTERS }) });
+      answers({ [WIDGET_URL]: of(TRACK_DETAILS) });
       entry.set(anEntry());
       connectBody(YOUTUBE + SOUNDCLOUD);
       await Promise.resolve();
@@ -510,40 +519,67 @@ describe('ArticleBody', () => {
         .click();
 
       expect(play).toHaveBeenCalledWith(
-        expect.objectContaining({ url: WIDGET_URL, chapters: TRACK_CHAPTERS }),
+        expect.objectContaining({
+          url: WIDGET_URL,
+          title: 'Catching Flies',
+          chapters: TRACK_CHAPTERS,
+        }),
       );
     });
 
-    it('hands the player the chapters of an embed queued before they arrived', async () => {
-      const describeChapters = jest
-        .spyOn(TestBed.inject(AudioPlayerService), 'describeChapters')
+    it("names Listen's track for the video the body lists by the post while nothing was fetched", async () => {
+      const play = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'play')
         .mockImplementation(() => undefined);
-      const answer = new Subject<EmbedChaptersDto>();
+      entry.set(anEntry({ title: 'The post' }));
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+
+      content.querySelector<HTMLButtonElement>('.reader-listen__button')!.click();
+
+      expect(play).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: VIDEO_URL,
+          title: 'The post',
+          durationInSeconds: null,
+          chapters: CHAPTERS,
+        }),
+      );
+    });
+
+    it('hands the player the details of an embed queued before they arrived', async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
+        .mockImplementation(() => undefined);
+      const answer = new Subject<EmbedDetailsDto>();
       answers({ [WIDGET_URL]: answer });
       connectBody(SOUNDCLOUD);
       await Promise.resolve();
 
-      answer.next({ chapters: TRACK_CHAPTERS });
+      answer.next(TRACK_DETAILS);
 
-      expect(describeChapters).toHaveBeenCalledWith(WIDGET_URL, TRACK_CHAPTERS);
+      expect(describeTrack).toHaveBeenCalledWith(WIDGET_URL, TRACK_DETAILS);
     });
 
-    it('attaches and describes nothing for an embed without chapters', async () => {
-      const describeChapters = jest
-        .spyOn(TestBed.inject(AudioPlayerService), 'describeChapters')
+    it('describes an embed without chapters by its title, and attaches no list', async () => {
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
+      const unchaptered: EmbedDetailsDto = { title: 'A mix', durationSeconds: 4964, chapters: [] };
+      answers({ [WIDGET_URL]: of(unchaptered) });
       connectBody(SOUNDCLOUD);
       await Promise.resolve();
 
       expect(content.querySelector('.reader-chapters')).toBeNull();
-      expect(describeChapters).not.toHaveBeenCalled();
+      expect(describeTrack).toHaveBeenCalledWith(WIDGET_URL, unchaptered);
     });
 
     it("drops a late answer for the swapped-out body's embed", async () => {
-      const describeChapters = jest
-        .spyOn(TestBed.inject(AudioPlayerService), 'describeChapters')
+      const describeTrack = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
-      const late = new Subject<EmbedChaptersDto>();
+      const late = new Subject<EmbedDetailsDto>();
       answers({ [WIDGET_URL]: late });
       connectBody(SOUNDCLOUD);
       await Promise.resolve();
@@ -551,20 +587,20 @@ describe('ArticleBody', () => {
 
       html.set('<p>Reader.</p>');
       TestBed.tick();
-      late.next({ chapters: TRACK_CHAPTERS });
+      late.next(TRACK_DETAILS);
 
       expect(swappedOut.parentElement!.querySelector('.reader-chapters')).toBeNull();
-      expect(describeChapters).not.toHaveBeenCalled();
+      expect(describeTrack).not.toHaveBeenCalled();
     });
 
     it('drops a late answer once destroyed', async () => {
-      const late = new Subject<EmbedChaptersDto>();
+      const late = new Subject<EmbedDetailsDto>();
       answers({ [WIDGET_URL]: late });
       connectBody(SOUNDCLOUD);
       await Promise.resolve();
 
       injector.destroy();
-      late.next({ chapters: TRACK_CHAPTERS });
+      late.next(TRACK_DETAILS);
 
       expect(content.querySelector('.reader-chapters')).toBeNull();
     });

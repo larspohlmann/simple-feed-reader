@@ -108,9 +108,9 @@ framework:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 86400
 
-            # Chapters from an embedded video's or track's description, per embed (#1824). EmbedChaptersCache sets
-            # each lifetime; this one is the backstop.
-            embed.chapters.cache:
+            # An embedded video's or track's title, length and description chapters, per embed (#1824).
+            # EmbedDetailsCache sets each lifetime; this one is the backstop.
+            embed.details.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 2592000
 

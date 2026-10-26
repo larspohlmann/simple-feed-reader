@@ -18,7 +18,7 @@ import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { AudioPlayerService } from '../../audio-player.service';
-import { NO_EMBED_CHAPTERS } from '../../../../testing/embed-chapters-testing';
+import { NO_EMBED_DETAILS } from '../../../../testing/embed-details-testing';
 import { CommentsService, CommentsState } from '../entry-comments/comments.service';
 import { SocialCountsService, SocialCountsState } from '../social-counts/social-counts.service';
 import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
@@ -180,7 +180,7 @@ describe('ReaderViewComponent', () => {
         { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },
         { provide: EntryBodyService, useValue: fakeBody },
         { provide: ImageProxyService, useValue: imageProxy },
-        NO_EMBED_CHAPTERS,
+        NO_EMBED_DETAILS,
         { provide: PreviewProgress, useValue: { isLoading: () => true } },
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
         {

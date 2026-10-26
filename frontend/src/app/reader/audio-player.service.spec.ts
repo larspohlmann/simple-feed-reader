@@ -729,19 +729,56 @@ describe('AudioPlayerService', () => {
       expect(service.playing()).toBe(true);
     });
 
-    it('describes a queued track with its chapters and saves them, without reloading it', () => {
+    it('describes a queued track with its details and saves them, without reloading it', () => {
       const service = make();
       service.enqueue(track());
       audio.load.mockClear();
 
-      service.describeChapters('https://x.test/ep.mp3', chapters);
+      service.describe('https://x.test/ep.mp3', {
+        title: 'Its own',
+        durationSeconds: 300,
+        chapters,
+      });
 
+      expect(service.current()?.title).toBe('Its own');
       expect(service.current()?.chapters).toEqual(chapters);
       expect(service.chapters()).toEqual(chapters);
       expect(audio.src).toBe('https://x.test/ep.mp3');
       expect(audio.load).not.toHaveBeenCalled();
       const saved = JSON.parse(localStorage.getItem('sfr.audio') ?? '{}');
       expect(saved.tracks[0].chapters).toEqual(chapters);
+      expect(saved.tracks[0].title).toBe('Its own');
+    });
+
+    it('shows the length of a current track that had none until described', () => {
+      const service = make();
+      service.enqueue(track({ durationInSeconds: null }));
+      audio.load.mockClear();
+      expect(service.duration()).toBe(0);
+
+      service.describe('https://x.test/ep.mp3', {
+        title: null,
+        durationSeconds: 300,
+        chapters: [],
+      });
+
+      expect(service.duration()).toBe(300);
+      expect(audio.load).not.toHaveBeenCalled();
+    });
+
+    it('keeps a length the element already reported', () => {
+      const service = make();
+      service.enqueue(track({ durationInSeconds: null }));
+      audio.duration = 290;
+      audio.fire('loadedmetadata');
+
+      service.describe('https://x.test/ep.mp3', {
+        title: null,
+        durationSeconds: 300,
+        chapters: [],
+      });
+
+      expect(service.duration()).toBe(290);
     });
 
     it('describes a track behind the current one', () => {
@@ -749,7 +786,7 @@ describe('AudioPlayerService', () => {
       service.play(track({ url: 'https://x.test/other.mp3' }));
       service.enqueue(track());
 
-      service.describeChapters('https://x.test/ep.mp3', chapters);
+      service.describe('https://x.test/ep.mp3', { title: null, durationSeconds: null, chapters });
 
       expect(service.tracks()[1].chapters).toEqual(chapters);
       expect(service.chapters()).toEqual([]);
@@ -760,7 +797,7 @@ describe('AudioPlayerService', () => {
       service.play(track());
       const tracks = service.tracks();
 
-      service.describeChapters('https://x.test/none.mp3', chapters);
+      service.describe('https://x.test/none.mp3', { title: null, durationSeconds: null, chapters });
 
       expect(service.tracks()).toBe(tracks);
     });
@@ -770,7 +807,7 @@ describe('AudioPlayerService', () => {
       const store = TestBed.inject(PlaylistStore);
       const clear = jest.spyOn(store, 'clear');
 
-      service.describeChapters('https://x.test/none.mp3', chapters);
+      service.describe('https://x.test/none.mp3', { title: null, durationSeconds: null, chapters });
 
       expect(service.current()).toBeNull();
       expect(clear).not.toHaveBeenCalled();

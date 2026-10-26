@@ -23,3 +23,10 @@ export interface AudioTrack {
   /** Ascending by start; absent on tracks saved before #1810 and on tracks queued where none were loaded. */
   chapters?: ChapterDto[];
 }
+
+/** What a track's own source tells of it after it was queued (#1824). */
+export interface TrackDetails {
+  title: string | null;
+  durationSeconds: number | null;
+  chapters: ChapterDto[];
+}

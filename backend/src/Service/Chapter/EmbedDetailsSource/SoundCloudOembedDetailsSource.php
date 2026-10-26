@@ -2,15 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Chapter\EmbedDescriptionSource;
+namespace App\Service\Chapter\EmbedDetailsSource;
 
 use App\Service\Chapter\GuardedDescriptionRequest;
 use App\Service\Chapter\Model\ChapteredEmbed;
 use App\Service\Chapter\Model\EmbedAddressModel;
+use App\Service\Chapter\Model\EmbedDescriptionModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 
-/** Reads a track's description from SoundCloud's oEmbed endpoint, which needs no key. */
-final readonly class SoundCloudOembedDescriptionSource implements EmbedDescriptionSourceInterface
+/** Reads a track's title and description from SoundCloud's oEmbed endpoint, which needs no key and tells no length. */
+final readonly class SoundCloudOembedDetailsSource implements EmbedDetailsSourceInterface
 {
     private const string OEMBED = 'https://soundcloud.com/oembed?';
     private const string TRACK = 'https://api.soundcloud.com/tracks/';
@@ -24,13 +25,18 @@ final readonly class SoundCloudOembedDescriptionSource implements EmbedDescripti
         return ChapteredEmbed::SoundCloud->value;
     }
 
-    public function descriptionOf(EmbedAddressModel $embed): string
+    public function detailsOf(EmbedAddressModel $embed): EmbedDescriptionModel
     {
         $oembed = $this->request->answerOf(ApiRequestModel::get(
             self::OEMBED . http_build_query(['format' => 'json', 'url' => self::TRACK . $embed->id]),
         ), $embed);
+        $title = $oembed['title'] ?? null;
         $description = $oembed['description'] ?? null;
 
-        return \is_string($description) ? $description : '';
+        return new EmbedDescriptionModel(
+            \is_string($title) && $title !== '' ? $title : null,
+            null,
+            \is_string($description) ? $description : '',
+        );
     }
 }

@@ -1,40 +1,38 @@
 import { EMPTY, Subscription, catchError } from 'rxjs';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
-import { ChapterDto } from '../../models';
-import { EmbedChaptersApi } from '../../embed-chapters-api';
+import { EmbedDetailsApi, EmbedDetailsDto } from '../../embed-details-api';
 
 interface EmbedFrames {
   readonly media: EmbedMedia;
   readonly frames: HTMLIFrameElement[];
 }
 
-type ChaptersFound = (frame: HTMLIFrameElement, media: EmbedMedia, chapters: ChapterDto[]) => void;
+type DetailsFound = (frame: HTMLIFrameElement, media: EmbedMedia, details: EmbedDetailsDto) => void;
 
-/** The chapters of a body's embedded videos and tracks, asked for once per embed (#1824). */
-export class ArticleEmbedChapters {
-  private readonly byEmbedUrl = new Map<string, ChapterDto[]>();
+/** The own title, length and chapters of a body's embedded videos and tracks, asked for once per embed (#1824). */
+export class ArticleEmbedDetails {
+  private readonly byEmbedUrl = new Map<string, EmbedDetailsDto>();
   private subscriptions: Subscription[] = [];
 
-  constructor(private readonly api: EmbedChaptersApi) {}
+  constructor(private readonly api: EmbedDetailsApi) {}
 
-  /** Asks for every frame's embed once; `found` runs per frame whose embed has chapters. */
-  load(frames: HTMLIFrameElement[], found: ChaptersFound): void {
+  /** Asks for every frame's embed once; `found` runs per frame for every answer. */
+  load(frames: HTMLIFrameElement[], found: DetailsFound): void {
     for (const { media, frames: framesOfEmbed } of framesByEmbed(frames)) {
       const subscription = this.api
-        .chaptersOf(media)
+        .detailsOf(media)
         .pipe(catchError(() => EMPTY))
-        .subscribe(({ chapters }) => {
-          if (chapters.length === 0) return;
-          this.byEmbedUrl.set(media.url, chapters);
-          for (const frame of framesOfEmbed) found(frame, media, chapters);
+        .subscribe((details) => {
+          this.byEmbedUrl.set(media.url, details);
+          for (const frame of framesOfEmbed) found(frame, media, details);
         });
       this.subscriptions.push(subscription);
     }
   }
 
-  /** The chapters known for an embed URL; [] before they arrive or when it has none. */
-  chaptersOf(embedUrl: string): ChapterDto[] {
-    return this.byEmbedUrl.get(embedUrl) ?? [];
+  /** What is known of an embed URL; null before its answer arrives or when none came. */
+  detailsOf(embedUrl: string): EmbedDetailsDto | null {
+    return this.byEmbedUrl.get(embedUrl) ?? null;
   }
 
   release(): void {

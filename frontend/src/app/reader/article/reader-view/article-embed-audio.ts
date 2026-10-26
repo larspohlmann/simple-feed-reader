@@ -3,14 +3,15 @@ import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia } from '../../audio/embed-media';
 import { toEmbedTrack } from '../../audio/embed-track';
 import { pauseEmbedFrame } from '../../media/embed-frame-commands';
-import { ChapterDto, EntryDto } from '../../models';
+import { EntryDto } from '../../models';
+import { EmbedDetailsDto } from '../../embed-details-api';
 import { EmbedListenControl, ListenActions } from '../decorators/reader-listen';
 
 /** What one rendered body's embeds become tracks of. */
 export interface EmbedListenContext {
   readonly entry: EntryDto | null;
-  /** The chapters an embed's track carries: the body's, for the embed whose list the body shows. */
-  readonly chaptersOf: (media: EmbedMedia) => ChapterDto[];
+  /** What an embed's track is named, timed and chaptered by; null while nothing is known. */
+  readonly detailsOf: (media: EmbedMedia) => EmbedDetailsDto | null;
   readonly onListened: (track: AudioTrack) => void;
 }
 
@@ -28,7 +29,7 @@ export class ArticleEmbedAudio {
     const entry = context.entry;
     if (!entry) return undefined;
     const trackOf = (media: EmbedMedia): AudioTrack =>
-      toEmbedTrack(entry, media, context.chaptersOf(media));
+      toEmbedTrack(entry, media, context.detailsOf(media));
     return {
       listen: (media, frame) => {
         pauseEmbedFrame(frame, media.kind);
