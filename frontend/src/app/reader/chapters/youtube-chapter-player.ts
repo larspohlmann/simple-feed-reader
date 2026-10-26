@@ -12,9 +12,12 @@ interface PlayerInfo {
 export class YouTubeChapterPlayer implements ChapterPlayer {
   private onPosition: ((position: PlaybackPosition | null) => void) | null = null;
   private durationSeconds: number | null = null;
+  private ready = false;
+  private heldStart: number | null = null;
 
   private readonly onMessage = (event: MessageEvent): void => {
     if (event.origin !== PLAYER_ORIGIN || event.source !== this.frame.contentWindow) return;
+    this.becomeReady();
     const info = infoOf(event.data);
     const duration = secondsOf(info?.duration);
     if (duration !== null && duration > 0) this.durationSeconds = duration;
@@ -30,6 +33,10 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
   }
 
   playFrom(seconds: number): void {
+    if (!this.ready) {
+      this.heldStart = seconds;
+      return;
+    }
     this.command('seekTo', [seconds, true]);
     this.command('playVideo', []);
   }
@@ -40,8 +47,17 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
 
   release(): void {
     this.onPosition = null;
+    this.heldStart = null;
     window.removeEventListener('message', this.onMessage);
     this.frame.removeEventListener('load', this.onLoad);
+  }
+
+  private becomeReady(): void {
+    if (this.ready) return;
+    this.ready = true;
+    const start = this.heldStart;
+    this.heldStart = null;
+    if (start !== null) this.playFrom(start);
   }
 
   private command(name: string, commandArguments: unknown[]): void {

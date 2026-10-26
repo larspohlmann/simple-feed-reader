@@ -32,6 +32,7 @@ describe('YouTubeChapterPlayer', () => {
   it('seeks, then plays', () => {
     const { frame, posted } = frameWithWindow();
     const player = new YouTubeChapterPlayer(frame);
+    delivery(frame, { event: 'onReady' });
 
     player.playFrom(256);
 
@@ -40,6 +41,49 @@ describe('YouTubeChapterPlayer', () => {
       { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
     ]);
     player.release();
+  });
+
+  it('holds a chapter tapped before the player is ready, then plays it', () => {
+    const { frame, posted } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+
+    player.playFrom(256);
+    expect(posted).toEqual([]);
+
+    delivery(frame, { event: 'initialDelivery', info: { currentTime: 0 } });
+
+    expect(posted).toEqual([
+      { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
+      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
+    ]);
+    player.release();
+  });
+
+  it('plays only the last chapter tapped before the player is ready', () => {
+    const { frame, posted } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+
+    player.playFrom(10);
+    player.playFrom(256);
+    delivery(frame, { event: 'infoDelivery', info: { currentTime: 0 } });
+    delivery(frame, { event: 'infoDelivery', info: { currentTime: 1 } });
+
+    expect(posted).toEqual([
+      { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
+      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
+    ]);
+    player.release();
+  });
+
+  it('drops a held chapter once released', () => {
+    const { frame, posted } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+
+    player.playFrom(256);
+    player.release();
+    delivery(frame, { event: 'onReady' });
+
+    expect(posted).toEqual([]);
   });
 
   it('reports the position the player delivers', () => {
