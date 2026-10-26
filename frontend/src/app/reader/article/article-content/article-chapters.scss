@@ -10,8 +10,7 @@
 :host ::ng-deep .reader-chapters__toggle {
   display: flex;
   align-items: center;
-  gap: var(--space-0);
-  justify-content: flex-end;
+  gap: var(--space-1);
   width: 100%;
   padding: var(--space-2) var(--space-3);
   background: none;
@@ -64,6 +63,7 @@
 :host ::ng-deep .reader-chapters__left {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-0);
   flex: none;
   margin-inline-start: auto;
