@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Chapter\EmbedDetailsSource;
 
+use App\Enum\ProxyType;
 use App\Service\Chapter\EmbedDetailsSource\YouTubePlayerDetailsSource;
 use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
 use App\Service\Chapter\GuardedDescriptionRequest;
@@ -11,16 +12,24 @@ use App\Service\Chapter\Model\ChapteredEmbed;
 use App\Service\Chapter\Model\EmbedAddressModel;
 use App\Service\Chapter\Model\EmbedDescriptionModel;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class YouTubePlayerDetailsSourceTest extends TestCase
 {
+    private const string WITHOUT_THE_VIDEO = 'The youtube description of dQw4w9WgXcQ answered without the video.';
+    private const string WALL = '{"playabilityStatus":{"status":"LOGIN_REQUIRED","reason":"Sign in"}}';
+
     public function testAsksThePlayerEndpointForTheVideo(): void
     {
         $seenMethod = '';
@@ -121,7 +130,7 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
     public function testAnAnswerWithoutTheVideoIsAnOutage(string $body): void
     {
         $this->expectException(EmbedDescriptionUnreachableException::class);
-        $this->expectExceptionMessage('The youtube description of dQw4w9WgXcQ answered without the video.');
+        $this->expectExceptionMessage(self::WITHOUT_THE_VIDEO);
 
         $this->source(new MockHttpClient(new MockResponse($body)))->detailsOf($this->embed());
     }
@@ -132,6 +141,82 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         yield 'a login wall' => ['{"playabilityStatus":{"status":"LOGIN_REQUIRED","reason":"Sign in"}}'];
         yield 'no video details' => ['{}'];
         yield 'video details not an object' => ['{"videoDetails":"x"}'];
+    }
+
+    public function testAnAnswerWalledAtTheProxyIsAskedAgainDirectly(): void
+    {
+        $seenOptions = [];
+        $direct = '{"playabilityStatus":{"status":"OK"},"videoDetails":{"title":"A mix"}}';
+        $http = self::answeringThroughTheProxy(self::WALL, $direct, $seenOptions);
+        $logger = new RecordingLogger();
+
+        $details = $this->source($http, self::proxy(directFallback: true), $logger)->detailsOf($this->embed());
+
+        self::assertSame('A mix', $details->title);
+        self::assertCount(2, $seenOptions);
+        self::assertArrayHasKey('proxy', $seenOptions[0]);
+        self::assertArrayNotHasKey('proxy', $seenOptions[1]);
+        self::assertSame(['www.youtube.com' => '93.184.216.34'], $seenOptions[1]['resolve'] ?? null);
+        self::assertSame([[
+            'level' => LogLevel::INFO,
+            'message' => 'YouTube walled the proxied player request for {videoId}; asked again directly.',
+            'context' => ['videoId' => 'dQw4w9WgXcQ', 'walledAgain' => false],
+        ]], $logger->records);
+    }
+
+    public function testAWalledAnswerStaysAnOutageWhenTheProxyForbidsGoingDirect(): void
+    {
+        $seenOptions = [];
+        $http = self::answeringThroughTheProxy(self::WALL, '{"videoDetails":{}}', $seenOptions);
+        $logger = new RecordingLogger();
+
+        try {
+            $this->source($http, self::proxy(directFallback: false), $logger)->detailsOf($this->embed());
+            self::fail('expected the walled answer to be an outage');
+        } catch (EmbedDescriptionUnreachableException $exception) {
+            self::assertSame(self::WITHOUT_THE_VIDEO, $exception->getMessage());
+        }
+        self::assertCount(1, $seenOptions);
+        self::assertSame([], $logger->records);
+    }
+
+    public function testAWalledAnswerWithoutAProxyIsNotAskedAgain(): void
+    {
+        $http = new MockHttpClient(new MockResponse(self::WALL));
+
+        try {
+            $this->source($http)->detailsOf($this->embed());
+            self::fail('expected the walled answer to be an outage');
+        } catch (EmbedDescriptionUnreachableException) {
+            self::assertSame(1, $http->getRequestsCount());
+        }
+    }
+
+    public function testAnAnswerWalledOnBothRoutesIsAnOutage(): void
+    {
+        $seenOptions = [];
+        $http = self::answeringThroughTheProxy(self::WALL, self::WALL, $seenOptions);
+        $logger = new RecordingLogger();
+
+        try {
+            $this->source($http, self::proxy(directFallback: true), $logger)->detailsOf($this->embed());
+            self::fail('expected the walled answer to be an outage');
+        } catch (EmbedDescriptionUnreachableException $exception) {
+            self::assertSame(self::WITHOUT_THE_VIDEO, $exception->getMessage());
+        }
+        self::assertCount(2, $seenOptions);
+        self::assertSame(['videoId' => 'dQw4w9WgXcQ', 'walledAgain' => true], $logger->records[0]['context'] ?? null);
+    }
+
+    public function testAnAnswerWithTheVideoThroughTheProxyIsAskedOnce(): void
+    {
+        $seenOptions = [];
+        $http = self::answeringThroughTheProxy('{"videoDetails":{"title":"A mix"}}', self::WALL, $seenOptions);
+
+        $details = $this->source($http, self::proxy(directFallback: true))->detailsOf($this->embed());
+
+        self::assertSame('A mix', $details->title);
+        self::assertCount(1, $seenOptions);
     }
 
     public function testIsTheYouTubeSource(): void
@@ -158,12 +243,35 @@ final class YouTubePlayerDetailsSourceTest extends TestCase
         return new EmbedAddressModel(ChapteredEmbed::YouTube, 'dQw4w9WgXcQ');
     }
 
-    private function source(MockHttpClient $http): YouTubePlayerDetailsSource
-    {
+    private function source(
+        MockHttpClient $http,
+        ?ProxyConfigModel $proxy = null,
+        LoggerInterface $logger = new NullLogger(),
+    ): YouTubePlayerDetailsSource {
         $guard = new UrlGuard(new StaticDnsResolver(['www.youtube.com' => ['93.184.216.34']]), new IpValidator());
 
-        $request = new GuardedDescriptionRequest(FetchWiring::guardedApiClient($http, $guard));
+        $request = new GuardedDescriptionRequest(FetchWiring::guardedApiClient($http, $guard, $proxy));
 
-        return new YouTubePlayerDetailsSource($request);
+        return new YouTubePlayerDetailsSource($request, $logger);
+    }
+
+    /** @param list<array<string, mixed>> $seenOptions */
+    private static function answeringThroughTheProxy(
+        string $proxied,
+        string $direct,
+        array &$seenOptions,
+    ): MockHttpClient {
+        return new MockHttpClient(
+            static function (string $method, string $url, array $options) use ($proxied, $direct, &$seenOptions) {
+                $seenOptions[] = $options;
+
+                return new MockResponse(isset($options['proxy']) ? $proxied : $direct);
+            },
+        );
+    }
+
+    private static function proxy(bool $directFallback): ProxyConfigModel
+    {
+        return new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, $directFallback);
     }
 }

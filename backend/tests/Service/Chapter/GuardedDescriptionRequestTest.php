@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Chapter;
 
+use App\Enum\ProxyType;
 use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
 use App\Service\Chapter\GuardedDescriptionRequest;
 use App\Service\Chapter\Model\ChapteredEmbed;
 use App\Service\Chapter\Model\EmbedAddressModel;
+use App\Service\Fetch\Exception\DirectRouteUnavailableException;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ApiRequestModel;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
@@ -134,15 +137,60 @@ final class GuardedDescriptionRequestTest extends TestCase
         $request->answerOf(ApiRequestModel::get(self::URL), $this->embed());
     }
 
+    public function testADirectAnswerIsAskedWithinTheShortBudgetOffTheProxy(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{"description":"0:00 Intro"}');
+        });
+        $request = new GuardedDescriptionRequest($this->client($http, $this->proxy(directFallback: true)));
+
+        $answer = $request->directAnswerOf(ApiRequestModel::get(self::URL), $this->embed());
+
+        self::assertSame(['description' => '0:00 Intro'], $answer);
+        self::assertArrayNotHasKey('proxy', $seenOptions);
+        self::assertSame(3.0, $seenOptions['timeout'] ?? null);
+        self::assertSame(3.0, $seenOptions['max_duration'] ?? null);
+    }
+
+    public function testADirectAnswerThatFailsIsUnreachable(): void
+    {
+        $request = new GuardedDescriptionRequest($this->client(
+            new MockHttpClient(new MockResponse('', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE])),
+            $this->proxy(directFallback: true),
+        ));
+
+        $this->expectException(EmbedDescriptionUnreachableException::class);
+        $request->directAnswerOf(ApiRequestModel::get(self::URL), $this->embed());
+    }
+
+    public function testNoDirectAnswerIsAskedWhenTheProxyForbidsIt(): void
+    {
+        $request = new GuardedDescriptionRequest($this->client(
+            new MockHttpClient(static fn () => self::fail('No request may leave without the proxy.')),
+            $this->proxy(directFallback: false),
+        ));
+
+        $this->expectException(DirectRouteUnavailableException::class);
+        $request->directAnswerOf(ApiRequestModel::get(self::URL), $this->embed());
+    }
+
+    private function proxy(bool $directFallback): ProxyConfigModel
+    {
+        return new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, $directFallback);
+    }
+
     private function embed(): EmbedAddressModel
     {
         return new EmbedAddressModel(ChapteredEmbed::YouTube, 'dQw4w9WgXcQ');
     }
 
-    private function client(MockHttpClient $http): GuardedApiClient
+    private function client(MockHttpClient $http, ?ProxyConfigModel $proxy = null): GuardedApiClient
     {
         $guard = new UrlGuard(new StaticDnsResolver(['cdn.test' => ['93.184.216.34']]), new IpValidator());
 
-        return FetchWiring::guardedApiClient($http, $guard);
+        return FetchWiring::guardedApiClient($http, $guard, $proxy);
     }
 }

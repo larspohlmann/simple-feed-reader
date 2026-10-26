@@ -6,6 +6,7 @@ namespace App\Service\Fetch;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
+use App\Service\Fetch\Exception\DirectRouteUnavailableException;
 use App\Service\Fetch\Exception\ProxiedAttemptFailedException;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
@@ -45,6 +46,31 @@ final readonly class FailoverRequestSender
         } catch (ProxiedAttemptFailedException) {
             return $this->sendPinnedFamilies($method, $url, $guarded, $options);
         }
+    }
+
+    /**
+     * For a proxied answer only the caller can tell is a refusal of the proxy's egress, as no status says so.
+     *
+     * @param array<string, mixed> $options any `resolve` is overridden per family attempt
+     *
+     * @throws DirectRouteUnavailableException when no proxy is configured or its direct fallback is off
+     * @throws TransportExceptionInterface     when the egress cannot be resolved, or the last family fails
+     */
+    public function sendDirectAfterProxyRefusal(
+        string $method,
+        string $url,
+        GuardedUrlModel $guarded,
+        array $options,
+    ): ResponseInterface {
+        $proxy = $this->egressProxyOrFail();
+        if (null === $proxy) {
+            throw DirectRouteUnavailableException::withoutAProxy($url);
+        }
+        if (!$proxy->directFallback) {
+            throw DirectRouteUnavailableException::withoutFallback($url);
+        }
+
+        return $this->sendPinnedFamilies($method, $url, $guarded, $options);
     }
 
     /**
