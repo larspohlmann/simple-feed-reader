@@ -75,6 +75,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.transport,
+.tail {
+  display: contents;
+}
+
 .meta {
   display: flex;
   flex-direction: column;
@@ -89,6 +94,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.subtitle {
+  color: var(--text-muted);
 }
 
 .track {
@@ -119,12 +128,55 @@ app-scrubber {
 
 @media (width < bp.$bp-sm) {
   .controls {
-    gap: var(--space-1);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-2);
     padding-inline: var(--space-2);
   }
 
-  .back,
-  .forward {
-    display: none;
+  .open-player {
+    grid-row: 1 / -1;
+    grid-column: 1;
+    border-radius: var(--radius);
+  }
+
+  .artwork {
+    --artwork-size: calc(var(--space-7) + var(--space-5));
+
+    border-radius: var(--radius);
+  }
+
+  .meta {
+    display: contents;
+  }
+
+  .title {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .tail {
+    display: flex;
+    grid-row: 1;
+    grid-column: 3;
+  }
+
+  .tail .ctrl {
+    padding-block: var(--space-0);
+  }
+
+  .transport {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-1);
+    grid-row: 2;
+    grid-column: 2 / -1;
+    margin-block-start: calc(-1 * var(--space-1));
+  }
+
+  .track {
+    grid-row: 3;
+    grid-column: 2 / -1;
+    min-width: 0;
   }
 }

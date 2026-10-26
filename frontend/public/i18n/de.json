@@ -1128,6 +1128,8 @@
       "close": "Player schließen",
       "previous": "Vorheriger Titel",
       "next": "Nächster Titel",
+      "previousChapter": "Vorheriges Kapitel",
+      "nextChapter": "Nächstes Kapitel",
       "playlist": "Playlist",
       "playTrack": "{{ title }} abspielen",
       "moveUp": "{{ title }} nach oben",

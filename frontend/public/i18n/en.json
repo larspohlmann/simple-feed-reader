@@ -1128,6 +1128,8 @@
       "close": "Close player",
       "previous": "Previous track",
       "next": "Next track",
+      "previousChapter": "Previous chapter",
+      "nextChapter": "Next chapter",
       "playlist": "Playlist",
       "playTrack": "Play {{ title }}",
       "moveUp": "Move {{ title }} up",

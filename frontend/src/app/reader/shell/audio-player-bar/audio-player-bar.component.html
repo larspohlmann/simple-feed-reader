@@ -19,51 +19,82 @@
       >
         <app-audio-artwork class="artwork" [track]="track" />
       </button>
-      <button
-        class="ctrl previous"
-        type="button"
-        [attr.aria-label]="'reader.audioPlayer.previous' | transloco"
-        (click)="player.previous()"
-      >
-        <app-icon name="skip_previous" size="md" />
-      </button>
-      <button
-        class="ctrl back"
-        type="button"
-        [attr.aria-label]="'reader.audioPlayer.back' | transloco: { seconds: skipStep }"
-        (click)="player.skip(-skipStep)"
-      >
-        <app-icon name="replay" size="md" />
-      </button>
-      <button
-        class="ctrl play"
-        type="button"
-        [attr.aria-label]="
-          (player.playing() ? 'reader.audioPlayer.pause' : 'reader.audioPlayer.play') | transloco
-        "
-        (click)="player.toggle()"
-      >
-        <app-icon [name]="player.playing() ? 'pause' : 'play_arrow'" size="lg" />
-      </button>
-      <button
-        class="ctrl forward"
-        type="button"
-        [attr.aria-label]="'reader.audioPlayer.forward' | transloco: { seconds: skipStep }"
-        (click)="player.skip(skipStep)"
-      >
-        <app-icon name="forward_media" size="md" />
-      </button>
-      <button
-        class="ctrl next"
-        type="button"
-        [disabled]="!player.hasNext()"
-        [attr.aria-label]="'reader.audioPlayer.next' | transloco"
-        (click)="player.next()"
-      >
-        <app-icon name="skip_next" size="md" />
-      </button>
+      <div class="transport">
+        @if (player.chapters().length > 0) {
+          <button
+            class="ctrl previous-chapter"
+            type="button"
+            [disabled]="!player.hasPreviousChapter()"
+            [attr.aria-label]="'reader.audioPlayer.previousChapter' | transloco"
+            (click)="player.previousChapter()"
+          >
+            <app-icon name="chevron_left" size="md" />
+          </button>
+        }
+        <button
+          class="ctrl previous"
+          type="button"
+          [attr.aria-label]="'reader.audioPlayer.previous' | transloco"
+          (click)="player.previous()"
+        >
+          <app-icon name="skip_previous" size="md" />
+        </button>
+        <button
+          class="ctrl back"
+          type="button"
+          [attr.aria-label]="'reader.audioPlayer.back' | transloco: { seconds: skipStep }"
+          (click)="player.skip(-skipStep)"
+        >
+          <app-icon name="replay" size="md" />
+        </button>
+        <button
+          class="ctrl play"
+          type="button"
+          [attr.aria-label]="
+            (player.playing() ? 'reader.audioPlayer.pause' : 'reader.audioPlayer.play') | transloco
+          "
+          (click)="player.toggle()"
+        >
+          <app-icon [name]="player.playing() ? 'pause' : 'play_arrow'" size="lg" />
+        </button>
+        <button
+          class="ctrl forward"
+          type="button"
+          [attr.aria-label]="'reader.audioPlayer.forward' | transloco: { seconds: skipStep }"
+          (click)="player.skip(skipStep)"
+        >
+          <app-icon name="forward_media" size="md" />
+        </button>
+        <button
+          class="ctrl next"
+          type="button"
+          [disabled]="!player.hasNext()"
+          [attr.aria-label]="'reader.audioPlayer.next' | transloco"
+          (click)="player.next()"
+        >
+          <app-icon name="skip_next" size="md" />
+        </button>
+        @if (player.chapters().length > 0) {
+          <button
+            class="ctrl next-chapter"
+            type="button"
+            [disabled]="!player.hasNextChapter()"
+            [attr.aria-label]="'reader.audioPlayer.nextChapter' | transloco"
+            (click)="player.nextChapter()"
+          >
+            <app-icon name="chevron_right" size="md" />
+          </button>
+        }
+      </div>
       <div class="meta">
-        <span class="title">{{ track.title }}</span>
+        <span class="title">
+          @if (player.currentChapter(); as chapter) {
+            {{ chapter.title }}
+            <span class="subtitle">· {{ track.title }}</span>
+          } @else {
+            {{ track.title }}
+          }
+        </span>
         <div class="track">
           <span class="time">{{ format(player.position()) }}</span>
           <app-scrubber
@@ -77,27 +108,29 @@
           <span class="time">{{ format(player.duration()) }}</span>
         </div>
       </div>
-      <button
-        class="ctrl toggle-playlist"
-        type="button"
-        [attr.aria-controls]="surface.playlistOpen() ? 'audio-playlist' : null"
-        [attr.aria-expanded]="surface.playlistOpen()"
-        [attr.aria-label]="
-          'reader.audioPlayer.playlistCount' | transloco: { count: player.tracks().length }
-        "
-        (click)="surface.togglePlaylist()"
-      >
-        <app-icon name="queue_music" size="md" />
-        <span class="count" aria-hidden="true">{{ player.tracks().length }}</span>
-      </button>
-      <button
-        class="ctrl close"
-        type="button"
-        [attr.aria-label]="'reader.audioPlayer.close' | transloco"
-        (click)="player.stop()"
-      >
-        <app-icon name="close" size="md" />
-      </button>
+      <div class="tail">
+        <button
+          class="ctrl toggle-playlist"
+          type="button"
+          [attr.aria-controls]="surface.playlistOpen() ? 'audio-playlist' : null"
+          [attr.aria-expanded]="surface.playlistOpen()"
+          [attr.aria-label]="
+            'reader.audioPlayer.playlistCount' | transloco: { count: player.tracks().length }
+          "
+          (click)="surface.togglePlaylist()"
+        >
+          <app-icon name="queue_music" size="md" />
+          <span class="count" aria-hidden="true">{{ player.tracks().length }}</span>
+        </button>
+        <button
+          class="ctrl close"
+          type="button"
+          [attr.aria-label]="'reader.audioPlayer.close' | transloco"
+          (click)="player.stop()"
+        >
+          <app-icon name="close" size="md" />
+        </button>
+      </div>
     </div>
   </div>
 }
