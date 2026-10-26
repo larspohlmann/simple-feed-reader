@@ -118,7 +118,7 @@ describe('addChapterList', () => {
 
     player.progressTo({ seconds: 128, durationSeconds: null });
 
-    expect(rows(host).map(progressOf)).toEqual(['0.50', '', '']);
+    expect(rows(host).map(progressOf)).toEqual(['0.5000', '', '']);
     expect(rows(host).map(timeLeftOf)).toEqual(['2:08', '', '']);
   });
 
@@ -130,7 +130,7 @@ describe('addChapterList', () => {
     player.progressTo({ seconds: 128, durationSeconds: 4000 });
     player.progressTo({ seconds: 3800, durationSeconds: 4000 });
 
-    expect(rows(host).map(progressOf)).toEqual(['', '', '0.28']);
+    expect(rows(host).map(progressOf)).toEqual(['', '', '0.2780']);
     expect(rows(host).map(timeLeftOf)).toEqual(['', '', '3:20']);
   });
 
@@ -156,6 +156,43 @@ describe('addChapterList', () => {
 
     expect(rows(host).map(progressOf)).toEqual(['', '', '']);
     expect(rows(host).map(timeLeftOf)).toEqual(['', '', '']);
+  });
+
+  it('clears fill and time left when playback stops', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 128, durationSeconds: null });
+    player.positionTo(null);
+
+    expect(rows(host).map(progressOf)).toEqual(['', '', '']);
+    expect(rows(host).map(timeLeftOf)).toEqual(['', '', '']);
+  });
+
+  it('updates the playing chapter as playback advances within it', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 128, durationSeconds: null });
+    player.progressTo({ seconds: 192, durationSeconds: null });
+
+    expect(progressOf(rows(host)[0])).toBe('0.7500');
+    expect(timeLeftOf(rows(host)[0])).toBe('1:04');
+  });
+
+  it('clears the last chapter when its duration becomes unknown', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 3800, durationSeconds: 4000 });
+    player.progressTo({ seconds: 3800, durationSeconds: null });
+
+    expect(rows(host)[2].getAttribute('aria-current')).toBe('true');
+    expect(progressOf(rows(host)[2])).toBe('');
+    expect(timeLeftOf(rows(host)[2])).toBe('');
   });
 
   it('keeps the time left out of the row name a screen reader reads', () => {

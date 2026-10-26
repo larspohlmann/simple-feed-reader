@@ -104,7 +104,7 @@ function showProgress(row: HTMLElement, progress: ChapterProgress | null): void 
     clearProgress(row);
     return;
   }
-  row.style.setProperty(PROGRESS, progress.fraction.toFixed(2));
+  row.style.setProperty(PROGRESS, progress.fraction.toFixed(4));
   row.querySelector(`.${TIME_LEFT}`)?.replaceChildren(formatDuration(progress.secondsLeft));
 }
 
