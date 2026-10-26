@@ -30,9 +30,13 @@ final class EmbedChaptersTest extends TestCase
         );
     }
 
-    public function testARealYouTubeDescriptionWithTrackNumbersBeforeItsStampsGivesNoChapters(): void
+    public function testARealYouTubeDescriptionWithTrackNumbersBeforeItsStampsGivesYouTubesNineteenChapters(): void
     {
-        self::assertSame([], $this->chaptersOf($this->fixture('youtube-description-570hdDp8l4g.txt')));
+        $chapters = $this->chaptersOf($this->fixture('youtube-description-570hdDp8l4g.txt'));
+
+        self::assertCount(19, $chapters);
+        self::assertSame('01. IKØN - A World Between Us [Iboga Records]', $chapters[0]->title);
+        self::assertSame(4543, $chapters[18]->startSeconds);
     }
 
     public function testARealSoundCloudDescriptionGivesItsThirtyTwoChapters(): void

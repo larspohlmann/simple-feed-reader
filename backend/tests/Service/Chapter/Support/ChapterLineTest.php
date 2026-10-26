@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Chapter\Support;
+
+use App\Entity\EntryChapter;
+use App\Service\Chapter\Support\ChapterLine;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+final class ChapterLineTest extends TestCase
+{
+    /** @return iterable<string, array{string, int, string}> */
+    public static function chapterLines(): iterable
+    {
+        yield 'a stamp after a number prefix' => ['01. 00:00 IKØN - A World', 0, '01. IKØN - A World'];
+        yield 'a bracketed stamp at the end' => ['1. Disclosure Day (00:00)', 0, '1. Disclosure Day'];
+        yield 'a bare stamp at the end' => ['1. Title (Iboga Records) 00:00', 0, '1. Title (Iboga Records)'];
+        yield 'a square-bracketed stamp and a dash' => ['[12:30] - Middle', 750, 'Middle'];
+        yield 'hours and a bar' => ['1:02:03 | End', 3723, 'End'];
+        yield 'hours with a zero' => ['0:00:00 Migdalor Remix ID (Unreleased)', 0, 'Migdalor Remix ID (Unreleased)'];
+        yield 'a stamp in the middle' => ['A 4:05 B', 245, 'A B'];
+        yield 'separators at both ends' => ['— Intro: 0:10 –', 10, 'Intro'];
+    }
+
+    #[DataProvider('chapterLines')]
+    public function testReadsTheStampAndTheTextAroundIt(string $text, int $start, string $title): void
+    {
+        self::assertEquals(new EntryChapter($start, $title), ChapterLine::chapterOf($text));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function notChapterLines(): iterable
+    {
+        yield 'two stamps' => ['0:00 to 1:00 A'];
+        yield 'a bare stamp' => ['00:00'];
+        yield 'a bare bracketed stamp' => [' (00:00) - '];
+        yield 'minutes past 59' => ['1:75:00 A'];
+        yield 'no stamp' => ['Sponsor'];
+        yield 'seconds with a third digit' => ['0:123 A'];
+        yield 'a longer colon run' => ['1:2:3:4 A'];
+    }
+
+    #[DataProvider('notChapterLines')]
+    public function testALineWithoutExactlyOneStampAndATitleIsNoChapter(string $text): void
+    {
+        self::assertNull(ChapterLine::chapterOf($text));
+    }
+
+    /** @return iterable<string, array{string, bool}> */
+    public static function stampedOrNot(): iterable
+    {
+        yield 'a chapter line' => ['0:00 A', false];
+        yield 'two stamps' => ['0:00 to 1:00 A', false];
+        yield 'a bare stamp' => ['00:00', false];
+        yield 'plain text' => ['BUY https://example.test/track', true];
+        yield 'seconds with a third digit' => ['0:123 A', true];
+        yield 'a longer colon run' => ['1:2:3:4 A', true];
+        yield 'empty' => ['', true];
+    }
+
+    #[DataProvider('stampedOrNot')]
+    public function testTellsALineWithoutAnyStamp(string $text, bool $holdsNoStamp): void
+    {
+        self::assertSame($holdsNoStamp, ChapterLine::holdsNoStamp($text));
+    }
+}
