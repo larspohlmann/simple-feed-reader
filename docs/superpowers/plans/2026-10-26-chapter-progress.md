@@ -683,6 +683,144 @@ Play the episode from a chapter row and confirm the same things through the app'
 
 ---
 
+### Task 5: A clock icon in front of the time left
+
+Added during implementation: the user chose the Material Symbols `schedule` icon, shown in front of the time left on the playing row.
+
+**Files:**
+- Modify: `frontend/src/app/reader/article/decorators/reader-chapters.ts`
+- Modify: `frontend/src/app/reader/article/article-content/article-chapters.scss`
+- Test: `frontend/src/app/reader/article/decorators/reader-chapters.spec.ts`
+
+**Interfaces:**
+- Consumes: `showProgress`, `clearProgress`, `toggle` and the `TIME_LEFT` span from Task 3.
+- Produces: while a row shows progress, its `.reader-chapters__left` span holds two children: a `span.material-symbols-outlined` with text `schedule`, then a `span.reader-chapters__remaining` with `formatDuration(secondsLeft)`. A cleared row's `.reader-chapters__left` is empty, as before.
+
+The icon and time are written together on each tick, so an idle row's DOM stays exactly as it is today. Every row's `textContent` stays `'0:00Intro'` etc. until it plays.
+
+- [ ] **Step 1: Write the failing tests**
+
+In `reader-chapters.spec.ts`, make `timeLeftOf` read the time span only. A cleared row has no such span, so default to `''`:
+
+```ts
+  function timeLeftOf(row: HTMLElement): string {
+    return row.querySelector('.reader-chapters__remaining')?.textContent ?? '';
+  }
+```
+
+Add after the test `'fills the playing chapter and shows its time left'`:
+
+```ts
+  it('puts a clock in front of the time left', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 128, durationSeconds: null });
+
+    const timeLeft = rows(host)[0].querySelector('.reader-chapters__left');
+    expect(Array.from(timeLeft?.children ?? []).map((child) => child.className)).toEqual([
+      'material-symbols-outlined',
+      'reader-chapters__remaining',
+    ]);
+    expect(timeLeft?.firstElementChild?.textContent).toBe('schedule');
+  });
+
+  it('removes the clock with the time left', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 128, durationSeconds: null });
+    player.progressTo({ seconds: 300, durationSeconds: null });
+
+    expect(rows(host)[0].querySelector('.reader-chapters__left')?.childElementCount).toBe(0);
+  });
+```
+
+Run Prettier on the spec. All other progress tests keep their expectations: `timeLeftOf` now returns `''` for a cleared row, as before.
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `docker compose exec -T frontend npm test -- src/app/reader/article/decorators/reader-chapters.spec.ts`
+Expected: FAIL. There is no `.reader-chapters__remaining` span yet, so `timeLeftOf` returns `''` where `'2:08'`, `'3:20'` and `'1:04'` are expected, and the clock test finds no children.
+
+- [ ] **Step 3: Implement**
+
+In `reader-chapters.ts`, give the material icon one home. Add below `toggle`:
+
+```ts
+function materialIcon(name: string): HTMLSpanElement {
+  const icon = document.createElement('span');
+  icon.className = 'material-symbols-outlined';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = name;
+  return icon;
+}
+```
+
+In `toggle`, replace the three lines that build `icon` with `const icon = materialIcon('chevron_right');`. `render()` still sets its text right after, so the toggle behaves exactly as before.
+
+In `showProgress`, replace the `replaceChildren(formatDuration(...))` line with:
+
+```ts
+  row
+    .querySelector(`.${TIME_LEFT}`)
+    ?.replaceChildren(materialIcon('schedule'), remaining(progress.secondsLeft));
+```
+
+and add:
+
+```ts
+function remaining(seconds: number): HTMLSpanElement {
+  const time = document.createElement('span');
+  time.className = `${LIST}__remaining`;
+  time.textContent = formatDuration(seconds);
+  return time;
+}
+```
+
+`clearProgress` stays as it is: `replaceChildren()` empties the span.
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `docker compose exec -T frontend npm test -- src/app/reader/article`
+Expected: PASS, including `article-chapters.spec.ts`. That spec asserts the time and title spans separately, so the icon's ligature text does not affect it.
+
+- [ ] **Step 5: Style the icon and keep the width steady**
+
+In `article-chapters.scss`:
+- Add `display: inline-flex;`, `align-items: center;` and `gap: var(--space-1);` to the existing `.reader-chapters__left` rule.
+- Delete the rule `:host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left { min-width: 6ch; text-align: end; }`.
+- Add after the `.reader-chapters__left` rule:
+
+```scss
+:host ::ng-deep .reader-chapters__left .material-symbols-outlined {
+  font-size: var(--icon-sm);
+}
+
+:host ::ng-deep .reader-chapters__remaining {
+  min-width: 5ch;
+  text-align: end;
+}
+```
+
+The time span holds its 5ch (`10:00`) whatever the countdown reads, so the icon does not jump as digits change. The icon comes and goes with the time, once per chapter change.
+
+- [ ] **Step 6: Gates**
+
+Run (from `frontend/`): `npm run check && npx ng build`
+Expected: both exit 0. `ng build` stays under the 14kB `anyComponentStyle` error budget.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add frontend/src/app/reader/article/decorators/reader-chapters.ts frontend/src/app/reader/article/decorators/reader-chapters.spec.ts frontend/src/app/reader/article/article-content/article-chapters.scss
+git commit -m "feat(#1814): put a clock in front of the chapter's time left"
+```
+
+---
+
 ## Self-review notes
 
 - Spec coverage: fill on a faint track (Task 3 SCSS, in `article-chapters.scss`); time left right-aligned on the playing row (Task 3 tests 1–2, `margin-inline-start: auto`), hidden from the accessible name (Task 3 test 5); only the current row (selector `[aria-current='true']` + `mark` clears the left row); seeking moves it (Task 3 tests 2 and 4); unchanged before playback (no `aria-current`, empty time-left span is invisible, and only the current row reserves `min-width: 6ch` for it); last chapter to duration, track only while unknown (Task 2 tests 2–3, Task 3 test 3); YouTube duration from deliveries, audio from `duration()` (Task 1); `scaleX` via one custom property (Task 3 Step 5).
