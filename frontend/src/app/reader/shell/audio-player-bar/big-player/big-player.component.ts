@@ -18,7 +18,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../../shared/icon/icon.component';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { AudioPlayerService, AudioTrackEntry, SKIP_SECONDS } from '../../../audio-player.service';
-import { scrubFill } from '../../../audio/scrub-fill';
 import { formatDuration, relativeTime } from '../../../format';
 import { LayoutService } from '../../../layout.service';
 import { prefersReducedMotion } from '../../../../core/reduced-motion';
@@ -26,6 +25,7 @@ import { entryParam } from '../../../query/slug';
 import { entryChangeParams } from '../../../query/link-param';
 import { AudioArtworkComponent } from '../audio-artwork/audio-artwork.component';
 import { AudioPlaylistComponent } from '../audio-playlist/audio-playlist.component';
+import { ScrubberComponent } from '../scrubber/scrubber.component';
 
 /** What closing the big player asks for next; closing without one just minimises it. */
 export type BigPlayerExit = 'playlist';
@@ -47,7 +47,13 @@ const SWIPE_DISMISS_DISTANCE = 60;
  */
 @Component({
   selector: 'app-big-player',
-  imports: [IconComponent, AudioArtworkComponent, AudioPlaylistComponent, TranslocoPipe],
+  imports: [
+    IconComponent,
+    AudioArtworkComponent,
+    AudioPlaylistComponent,
+    ScrubberComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './big-player.component.html',
   styleUrl: './big-player.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,9 +80,6 @@ export class BigPlayerComponent {
   protected readonly sheet = inject(LayoutService).isPhone;
   protected readonly playlistShown = computed(() => this.sheet() && this.data.playlistShown());
 
-  protected readonly fill = computed(() =>
-    scrubFill(this.player.position(), this.player.buffered(), this.player.duration()),
-  );
   protected readonly remaining = computed(() =>
     formatDuration(Math.max(0, this.player.duration() - this.player.position())),
   );
@@ -124,13 +127,9 @@ export class BigPlayerComponent {
     this.ref.close();
   }
 
-  protected onScrub(event: Event): void {
-    this.player.seek((event.target as HTMLInputElement).valueAsNumber);
-  }
-
   protected onTouchStart(event: TouchEvent): void {
     const exempt =
-      event.target instanceof Element && event.target.closest('.scrubber, app-audio-playlist');
+      event.target instanceof Element && event.target.closest('app-scrubber, app-audio-playlist');
     const scrolled = this.host.nativeElement.scrollTop > 0;
     this.swipeStart =
       event.touches.length === 1 && !exempt && !scrolled ? event.touches[0].clientY : null;

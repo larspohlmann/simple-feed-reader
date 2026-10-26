@@ -1,0 +1,82 @@
+/* Host-settable: --bar is the track's height, --thumb the thumb's size (0 for none), --tap the input's height. */
+:host {
+  --scrubber-bar: var(--bar, var(--space-1));
+  --scrubber-thumb: var(--thumb, var(--space-3));
+
+  position: relative;
+  display: block;
+}
+
+/* A hand-drawn track, since a native range has no buffered segment: played in
+   the accent, cached-ahead muted, the rest a hairline. */
+.scrubber {
+  --track: linear-gradient(
+    to right,
+    var(--accent) var(--played, 0%),
+    var(--text-muted) var(--played, 0%) var(--cached, 0%),
+    var(--border) var(--cached, 0%)
+  );
+
+  display: block;
+  inline-size: 100%;
+  block-size: var(--tap, var(--space-4));
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.scrubber::-webkit-slider-runnable-track {
+  height: var(--scrubber-bar);
+  border-radius: var(--radius-pill);
+  background: var(--track);
+  transition: height 0.15s ease;
+}
+
+.scrubber::-moz-range-track {
+  height: var(--scrubber-bar);
+  border-radius: var(--radius-pill);
+  background: var(--track);
+  transition: height 0.15s ease;
+}
+
+.scrubber::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--scrubber-thumb);
+  height: var(--scrubber-thumb);
+  margin-top: calc((var(--scrubber-bar) - var(--scrubber-thumb)) / 2);
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.scrubber::-moz-range-thumb {
+  width: var(--scrubber-thumb);
+  height: var(--scrubber-thumb);
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.scrubber:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--space-0);
+  border-radius: var(--radius-pill);
+}
+
+.marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* A notch in the surface colour, so it reads as a gap in the bar whatever fills it. */
+.mark {
+  position: absolute;
+  top: 50%;
+  width: var(--space-0);
+  height: var(--scrubber-bar);
+  background: var(--surface-1);
+  transform: translate(-50%, -50%);
+  transition: height 0.15s ease;
+}

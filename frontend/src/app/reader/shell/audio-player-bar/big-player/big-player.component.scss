@@ -137,64 +137,15 @@
   overflow: hidden;
 }
 
-/* The bar is drawn on the track, with no thumb (Apple-style); the input stays a native
-   range for keyboard and screen-reader seeking, and its full height is the tap target. */
+/* No thumb (Apple-style): the bar alone shows the position, and the input's full height is the tap target. */
 .scrub {
   --bar: var(--space-2);
+  --thumb: 0;
+  --tap: var(--tap-target);
 }
 
 .scrub.dragging {
   --bar: calc(var(--space-3) + var(--space-0));
-}
-
-.scrubber {
-  --track: linear-gradient(
-    to right,
-    var(--accent) var(--played, 0%),
-    var(--text-muted) var(--played, 0%) var(--cached, 0%),
-    var(--border) var(--cached, 0%)
-  );
-
-  display: block;
-  inline-size: 100%;
-  block-size: var(--tap-target);
-  margin: 0;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
-}
-
-.scrubber::-webkit-slider-runnable-track {
-  height: var(--bar);
-  border-radius: var(--radius-pill);
-  background: var(--track);
-  transition: height 0.15s ease;
-}
-
-.scrubber::-moz-range-track {
-  height: var(--bar);
-  border-radius: var(--radius-pill);
-  background: var(--track);
-  transition: height 0.15s ease;
-}
-
-.scrubber::-webkit-slider-thumb {
-  appearance: none;
-  width: 0;
-  height: var(--bar);
-  border: 0;
-}
-
-.scrubber::-moz-range-thumb {
-  width: 0;
-  height: 0;
-  border: 0;
-}
-
-.scrubber:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: var(--space-0);
-  border-radius: var(--radius-pill);
 }
 
 .times {

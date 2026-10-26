@@ -39,20 +39,14 @@
     </div>
 
     <div class="scrub" [class.dragging]="dragging()">
-      <input
-        class="scrubber"
-        type="range"
-        min="0"
-        step="1"
-        [max]="player.duration()"
-        [value]="player.position()"
-        [style.--played]="fill().played"
-        [style.--cached]="fill().cached"
-        [attr.aria-label]="'reader.audioPlayer.seek' | transloco"
-        (input)="onScrub($event)"
-        (pointerdown)="dragging.set(true)"
-        (pointerup)="dragging.set(false)"
-        (pointercancel)="dragging.set(false)"
+      <app-scrubber
+        [position]="player.position()"
+        [duration]="player.duration()"
+        [buffered]="player.buffered()"
+        [chapters]="player.chapters()"
+        [label]="'reader.audioPlayer.seek' | transloco"
+        (seek)="player.seek($event)"
+        (dragging)="dragging.set($event)"
       />
       <div class="times">
         <span class="time">{{ format(player.position()) }}</span>

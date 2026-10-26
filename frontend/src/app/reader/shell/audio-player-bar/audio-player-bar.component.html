@@ -66,17 +66,13 @@
         <span class="title">{{ track.title }}</span>
         <div class="track">
           <span class="time">{{ format(player.position()) }}</span>
-          <input
-            class="scrubber"
-            type="range"
-            min="0"
-            step="1"
-            [max]="player.duration()"
-            [value]="player.position()"
-            [style.--played]="progress().played"
-            [style.--cached]="progress().cached"
-            [attr.aria-label]="'reader.audioPlayer.seek' | transloco"
-            (input)="onScrub($event)"
+          <app-scrubber
+            [position]="player.position()"
+            [duration]="player.duration()"
+            [buffered]="player.buffered()"
+            [chapters]="player.chapters()"
+            [label]="'reader.audioPlayer.seek' | transloco"
+            (seek)="player.seek($event)"
           />
           <span class="time">{{ format(player.duration()) }}</span>
         </div>

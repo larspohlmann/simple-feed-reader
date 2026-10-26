@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { AudioTrack } from '../app/reader/audio-player.service';
+import type { ChapterDto } from '../app/reader/models';
 
 /** Every player signal the big player reads, for its own spec and AudioSurface's. */
 export function bigPlayerAudioSignals() {
@@ -12,6 +13,7 @@ export function bigPlayerAudioSignals() {
     position: signal(0),
     duration: signal(0),
     buffered: signal(0),
+    chapters: signal<ChapterDto[]>([]),
     rate: signal(1),
   };
 }
