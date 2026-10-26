@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Llm\Completion\ChatCompletionClient;
 
+use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderRunawayException;
@@ -1022,6 +1023,21 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $body = $this->captureRequestBody($this->request());
 
         self::assertArrayNotHasKey('reasoning', $body);
+    }
+
+    public function testBoundsTheAnswerWithMaxCompletionTokensWhenTheRequestSaysSo(): void
+    {
+        $body = $this->captureRequestBody(new CompletionRequestModel(
+            'm',
+            $this->messages(),
+            2048,
+            $this->schema(),
+            Reasoning::Allowed,
+            TokenLimitParameter::MaxCompletionTokens,
+        ));
+
+        self::assertSame(2048, $body['max_completion_tokens']);
+        self::assertArrayNotHasKey('max_tokens', $body);
     }
 
     public function testAsksTheProviderToIncludeUsageInTheStream(): void

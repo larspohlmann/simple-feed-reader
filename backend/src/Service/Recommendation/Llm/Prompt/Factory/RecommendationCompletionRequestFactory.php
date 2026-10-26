@@ -24,9 +24,18 @@ final readonly class RecommendationCompletionRequestFactory
         return new CompletionRequestModel(
             $connection->getModel() ?? '',
             $prompt->messages,
-            $this->answerBudget->outputBoundTokens($prompt->replyItemCount, $prompt->schema, $reasoning),
+            $this->outputBoundFor($connection, $prompt, $reasoning),
             $prompt->schema->toJsonSchema(),
             $reasoning,
+            $connection->getTokenLimitParameter(),
         );
+    }
+
+    private function outputBoundFor(AiProviderSettings $connection, CallPromptModel $prompt, Reasoning $reasoning): int
+    {
+        $bound = $this->answerBudget->outputBoundTokens($prompt->replyItemCount, $prompt->schema, $reasoning);
+        $cap = $connection->getModelMaxOutputTokens();
+
+        return null === $cap ? $bound : min($bound, $cap);
     }
 }

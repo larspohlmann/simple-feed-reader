@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\SealedSecret;
 use App\Entity\User;
+use App\Enum\TokenLimitParameter;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
@@ -57,6 +58,37 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
 
         self::assertSame(Reasoning::Allowed, $request->reasoning);
         self::assertSame($this->headroomFor(Reasoning::Allowed), $request->maxAnswerTokens);
+    }
+
+    public function testTheOutputBoundStaysUnderTheModelsCap(): void
+    {
+        $connection = $this->settings(suppressReasoning: false);
+        $connection->recordOutputCap(16_384);
+
+        $request = $this->factory->create($connection, $this->prompt());
+
+        self::assertGreaterThan(16_384, $this->headroomFor(Reasoning::Allowed));
+        self::assertSame(16_384, $request->maxAnswerTokens);
+    }
+
+    public function testACapAboveTheBoundLeavesTheBoundAlone(): void
+    {
+        $connection = $this->settings(suppressReasoning: false);
+        $connection->recordOutputCap(128_000);
+
+        $request = $this->factory->create($connection, $this->prompt());
+
+        self::assertSame($this->headroomFor(Reasoning::Allowed), $request->maxAnswerTokens);
+    }
+
+    public function testTheRequestNamesTheParameterTheConnectionLearned(): void
+    {
+        $connection = $this->settings(suppressReasoning: false);
+        $connection->recordMaxTokensRefused();
+
+        $request = $this->factory->create($connection, $this->prompt());
+
+        self::assertSame(TokenLimitParameter::MaxCompletionTokens, $request->tokenLimitParameter);
     }
 
     private function headroomFor(Reasoning $reasoning): int
