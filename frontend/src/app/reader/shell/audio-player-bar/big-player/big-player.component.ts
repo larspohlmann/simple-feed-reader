@@ -9,6 +9,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -83,7 +84,8 @@ export class BigPlayerComponent {
   protected readonly dragging = signal(false);
   protected readonly sheet = inject(LayoutService).isPhone;
   protected readonly playlistShown = computed(() => this.sheet() && this.data.playlistShown());
-  protected readonly chaptersShown = signal(true);
+  /** The only queued track's list opens; in a longer queue both lists start closed (#1821). */
+  protected readonly chaptersShown = linkedSignal(() => this.player.tracks().length === 1);
 
   protected readonly remaining = computed(() =>
     formatDuration(Math.max(0, this.player.duration() - this.player.position())),
