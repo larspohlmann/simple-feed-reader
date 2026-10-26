@@ -11,6 +11,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-0);
+  justify-content: flex-end;
   width: 100%;
   padding: var(--space-2) var(--space-3);
   background: none;
@@ -74,9 +75,8 @@
   font-size: var(--icon-sm);
 }
 
-:host ::ng-deep .reader-chapters__remaining {
-  min-width: 5ch;
-  text-align: start;
+:host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left {
+  min-width: calc(5ch + var(--icon-sm) + var(--space-0));
 }
 
 :host ::ng-deep .reader-chapters__row[aria-current='true']::before,
