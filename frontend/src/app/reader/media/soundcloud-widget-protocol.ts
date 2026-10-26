@@ -23,3 +23,7 @@ export function widgetFieldOf(value: unknown, name: string): unknown {
   if (typeof value !== 'object' || value === null) return undefined;
   return (value as Record<string, unknown>)[name];
 }
+
+export function postToWidgetFrame(frame: HTMLIFrameElement, message: WidgetMessage): void {
+  frame.contentWindow?.postMessage(JSON.stringify(message), SOUNDCLOUD_WIDGET_ORIGIN);
+}

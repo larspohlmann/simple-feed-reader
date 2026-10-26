@@ -1,4 +1,11 @@
-import { widgetFieldOf, widgetMessage, widgetMessageOf } from './soundcloud-widget-protocol';
+import { frameWithWindow } from '../../../testing/frame-playback-testing';
+import {
+  postToWidgetFrame,
+  SOUNDCLOUD_WIDGET_ORIGIN,
+  widgetFieldOf,
+  widgetMessage,
+  widgetMessageOf,
+} from './soundcloud-widget-protocol';
 
 describe('widgetMessage', () => {
   it('names the method alone when there is no value', () => {
@@ -37,5 +44,17 @@ describe('widgetFieldOf', () => {
   it('reads nothing from a value that is no record', () => {
     expect(widgetFieldOf(null, 'loadedProgress')).toBeUndefined();
     expect(widgetFieldOf(600000, 'loadedProgress')).toBeUndefined();
+  });
+});
+
+describe('postToWidgetFrame', () => {
+  it('posts the message as JSON to the widget origin', () => {
+    const { frame, posted } = frameWithWindow();
+
+    postToWidgetFrame(frame, widgetMessage('seekTo', 5000));
+
+    expect(posted).toEqual([
+      { message: { method: 'seekTo', value: 5000 }, origin: SOUNDCLOUD_WIDGET_ORIGIN },
+    ]);
   });
 });
