@@ -32,7 +32,7 @@ final readonly class GuardedDescriptionRequest
     }
 
     /**
-     * Asks again directly, for an answer the provider gave the egress proxy but would give the server itself.
+     * Asks again directly, after the provider refused to answer the egress proxy.
      *
      * @return array<mixed>
      *
