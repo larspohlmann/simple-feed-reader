@@ -1,0 +1,13 @@
+@use '../../../chapters/chapter-rows';
+
+:host {
+  display: block;
+}
+
+.reader-chapters__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@include chapter-rows.rows;

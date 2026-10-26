@@ -1130,6 +1130,8 @@
       "next": "Nächster Titel",
       "previousChapter": "Vorheriges Kapitel",
       "nextChapter": "Nächstes Kapitel",
+      "chapterCount": "Kapitel ({{ count }})",
+      "chapterPosition": "Kapitel {{ index }} von {{ count }}",
       "playlist": "Playlist",
       "playTrack": "{{ title }} abspielen",
       "moveUp": "{{ title }} nach oben",

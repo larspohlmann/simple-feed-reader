@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   Injector,
+  Signal,
   WritableSignal,
   afterNextRender,
   computed,
@@ -24,6 +25,7 @@ import { prefersReducedMotion } from '../../../../core/reduced-motion';
 import { entryParam } from '../../../query/slug';
 import { entryChangeParams } from '../../../query/link-param';
 import { AudioArtworkComponent } from '../audio-artwork/audio-artwork.component';
+import { AudioChaptersComponent } from '../audio-chapters/audio-chapters.component';
 import { AudioPlaylistComponent } from '../audio-playlist/audio-playlist.component';
 import { ScrubberComponent } from '../scrubber/scrubber.component';
 
@@ -50,6 +52,7 @@ const SWIPE_DISMISS_DISTANCE = 60;
   imports: [
     IconComponent,
     AudioArtworkComponent,
+    AudioChaptersComponent,
     AudioPlaylistComponent,
     ScrubberComponent,
     TranslocoPipe,
@@ -72,6 +75,7 @@ export class BigPlayerComponent {
   private readonly data = inject<BigPlayerData>(DIALOG_DATA);
   private readonly injector = inject(Injector);
   private readonly extras = viewChild.required<ElementRef<HTMLElement>>('extras');
+  private readonly chapterSection = viewChild<ElementRef<HTMLElement>>('chapterSection');
 
   protected readonly titleId = BIG_PLAYER_TITLE_ID;
   protected readonly skipStep = SKIP_SECONDS;
@@ -79,6 +83,7 @@ export class BigPlayerComponent {
   protected readonly dragging = signal(false);
   protected readonly sheet = inject(LayoutService).isPhone;
   protected readonly playlistShown = computed(() => this.sheet() && this.data.playlistShown());
+  protected readonly chaptersShown = signal(true);
 
   protected readonly remaining = computed(() =>
     formatDuration(Math.max(0, this.player.duration() - this.player.position())),
@@ -107,16 +112,24 @@ export class BigPlayerComponent {
       return;
     }
     this.data.playlistShown.update((shown) => !shown);
-    if (this.data.playlistShown()) {
-      afterNextRender(
-        () =>
-          this.extras().nativeElement.scrollIntoView({
-            block: 'start',
-            behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-          }),
-        { injector: this.injector },
-      );
-    }
+    if (this.data.playlistShown()) this.reveal(this.extras);
+  }
+
+  /** The list opens in place on the card, which already scrolls; the sheet brings it up. */
+  protected toggleChapters(): void {
+    this.chaptersShown.update((shown) => !shown);
+    if (this.sheet() && this.chaptersShown()) this.reveal(this.chapterSection);
+  }
+
+  private reveal(target: Signal<ElementRef<HTMLElement> | undefined>): void {
+    afterNextRender(
+      () =>
+        target()?.nativeElement.scrollIntoView({
+          block: 'start',
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        }),
+      { injector: this.injector },
+    );
   }
 
   protected openArticle(entry: AudioTrackEntry): void {

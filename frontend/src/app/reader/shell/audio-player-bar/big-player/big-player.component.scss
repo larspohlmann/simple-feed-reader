@@ -191,13 +191,87 @@
 }
 
 @media (hover: hover) {
-  .ctrl:hover:not(:disabled) {
+  .ctrl:hover:not(:disabled),
+  .chapter-title:hover,
+  .chapters-heading:hover {
     background: var(--surface-2);
   }
 
   .play:hover:not(:disabled) {
     background: var(--accent);
   }
+}
+
+.chapter-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chapter-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-0);
+  min-inline-size: 0;
+  min-block-size: var(--tap-target);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.chapter-name {
+  max-inline-size: 100%;
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chapter-meta,
+.chapter-left {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chapter-meta {
+  gap: var(--space-2);
+}
+
+.chapter-left {
+  gap: var(--space-0);
+}
+
+/* The rows' own inline padding reaches into the gutter, so their text lines up with the content. */
+.chapters {
+  margin-inline: calc(-1 * var(--space-3));
+}
+
+.chapters-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  inline-size: 100%;
+  min-block-size: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: start;
+  cursor: pointer;
 }
 
 .extras {

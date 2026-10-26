@@ -8,6 +8,7 @@ import { provideTranslocoTesting } from '../../../../../testing/transloco-testin
 import { bigPlayerAudioSignals } from '../../../../../testing/big-player-audio-signals';
 import { AudioPlayerService, AudioTrack, SKIP_SECONDS } from '../../../audio-player.service';
 import { LayoutService } from '../../../layout.service';
+import type { ChapterDto } from '../../../models';
 import { ScrubberComponent } from '../scrubber/scrubber.component';
 import { BigPlayerComponent } from './big-player.component';
 
@@ -42,6 +43,9 @@ function stub() {
     skip: jest.fn(),
     previous: jest.fn(),
     next: jest.fn(),
+    previousChapter: jest.fn(),
+    nextChapter: jest.fn(),
+    playChapter: jest.fn(),
     cycleRate: jest.fn(),
   };
 }
@@ -263,6 +267,187 @@ describe('BigPlayerComponent', () => {
       fixture.detectChanges();
 
       expect(query(fixture, 'app-audio-playlist')).not.toBeNull();
+    });
+  });
+
+  describe('the chapters', () => {
+    const chapters: ChapterDto[] = [
+      { startSeconds: 0, title: 'Intro' },
+      { startSeconds: 90, title: 'Main' },
+      { startSeconds: 300, title: 'Outro' },
+    ];
+
+    function chaptered(phone = false) {
+      const fixture = render(episode, phone);
+      player.chapters.set(chapters);
+      player.chapterIndex.set(1);
+      player.currentChapter.set(chapters[1]);
+      player.chapterProgress.set({ fraction: 0.5, secondsLeft: 105 });
+      player.hasPreviousChapter.set(true);
+      player.hasNextChapter.set(true);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    function control(fixture: ReturnType<typeof render>, selector: string): HTMLButtonElement {
+      return query<HTMLButtonElement>(fixture, selector)!;
+    }
+
+    function listRows(fixture: ReturnType<typeof render>): HTMLButtonElement[] {
+      return fixture.debugElement
+        .queryAll(By.css('#big-player-chapters .reader-chapters__row'))
+        .map((row) => row.nativeElement);
+    }
+
+    it('shows neither the strip nor the list for a track without chapters', () => {
+      const fixture = render();
+
+      expect(query(fixture, '.chapter-strip')).toBeNull();
+      expect(query(fixture, '.chapters')).toBeNull();
+      expect(query(fixture, 'app-audio-chapters')).toBeNull();
+    });
+
+    it('names the current chapter with its position and time left under the transport', () => {
+      const fixture = chaptered();
+
+      expect(query(fixture, '.transport + .chapter-strip')).not.toBeNull();
+      expect(query(fixture, '.chapter-name')!.textContent!.trim()).toBe('Main');
+      expect(query(fixture, '.chapter-meta')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+        'Chapter 2 of 3 schedule 1:45',
+      );
+    });
+
+    it('leaves the time left out while the chapter end is unknown', () => {
+      const fixture = chaptered();
+      player.chapterProgress.set(null);
+      fixture.detectChanges();
+
+      expect(query(fixture, '.chapter-meta')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+        'Chapter 2 of 3',
+      );
+      expect(query(fixture, '.chapter-left')).toBeNull();
+    });
+
+    it('offers the chapter count where the title goes before the first chapter starts', () => {
+      const fixture = chaptered();
+      player.chapterIndex.set(-1);
+      player.currentChapter.set(null);
+      player.chapterProgress.set(null);
+      fixture.detectChanges();
+
+      expect(query(fixture, '.chapter-name')!.textContent!.trim()).toBe('Chapters (3)');
+      expect(query(fixture, '.chapter-meta')).toBeNull();
+    });
+
+    it('steps between chapters, leaving previous and next to the tracks', () => {
+      const fixture = chaptered();
+
+      control(fixture, '.previous-chapter').click();
+      control(fixture, '.next-chapter').click();
+
+      expect(player.previousChapter).toHaveBeenCalledTimes(1);
+      expect(player.nextChapter).toHaveBeenCalledTimes(1);
+      expect(player.previous).not.toHaveBeenCalled();
+      expect(player.next).not.toHaveBeenCalled();
+      expect(control(fixture, '.previous-chapter').getAttribute('aria-label')).toBe(
+        'Previous chapter',
+      );
+      expect(control(fixture, '.next-chapter').getAttribute('aria-label')).toBe('Next chapter');
+    });
+
+    it('disables the chapter steps at the ends of the track', () => {
+      const fixture = chaptered();
+      player.hasPreviousChapter.set(false);
+      fixture.detectChanges();
+
+      expect(control(fixture, '.previous-chapter').disabled).toBe(true);
+      expect(control(fixture, '.next-chapter').disabled).toBe(false);
+
+      player.hasPreviousChapter.set(true);
+      player.hasNextChapter.set(false);
+      fixture.detectChanges();
+
+      expect(control(fixture, '.previous-chapter').disabled).toBe(false);
+      expect(control(fixture, '.next-chapter').disabled).toBe(true);
+    });
+
+    it('opens with the list under a counted heading, between the extras and the queue', () => {
+      const fixture = chaptered(true);
+      playlistShown.set(true);
+      fixture.detectChanges();
+
+      const heading = control(fixture, '.chapters-heading');
+      expect(heading.textContent!.replace(/\s+/g, ' ').trim()).toBe('expand_more Chapters (3)');
+      expect(heading.getAttribute('aria-expanded')).toBe('true');
+      expect(heading.getAttribute('aria-controls')).toBe('big-player-chapters');
+      expect(query(fixture, '.now-playing + .chapters')).not.toBeNull();
+      expect(query(fixture, '.chapters + .queue')).not.toBeNull();
+    });
+
+    it('hands the list the chapters, the current one and its progress', () => {
+      const fixture = chaptered();
+
+      expect(listRows(fixture).map((row) => row.textContent!.replace(/\s+/g, ''))).toEqual([
+        '0:00Intro',
+        '1:30Mainschedule1:45',
+        '5:00Outro',
+      ]);
+      expect(listRows(fixture)[1].getAttribute('aria-current')).toBe('true');
+      expect(listRows(fixture)[1].style.getPropertyValue('--chapter-progress')).toBe('0.5');
+    });
+
+    it('plays a tapped chapter', () => {
+      const fixture = chaptered();
+
+      listRows(fixture)[2].click();
+
+      expect(player.playChapter).toHaveBeenCalledWith(2);
+    });
+
+    for (const toggle of ['.chapter-title', '.chapters-heading']) {
+      it(`collapses and reopens the list from ${toggle}`, () => {
+        const fixture = chaptered();
+
+        control(fixture, toggle).click();
+        fixture.detectChanges();
+        expect(query(fixture, 'app-audio-chapters')).toBeNull();
+        expect(control(fixture, '.chapter-title').getAttribute('aria-expanded')).toBe('false');
+        expect(control(fixture, '.chapters-heading').getAttribute('aria-expanded')).toBe('false');
+        expect(control(fixture, '.chapters-heading').hasAttribute('aria-controls')).toBe(false);
+        expect(control(fixture, '.chapters-heading').textContent).toContain('chevron_right');
+
+        control(fixture, toggle).click();
+        fixture.detectChanges();
+        expect(listRows(fixture)).toHaveLength(3);
+        expect(control(fixture, '.chapter-title').getAttribute('aria-expanded')).toBe('true');
+      });
+    }
+
+    it('scrolls the list into view when the sheet reopens it, not when it closes', () => {
+      const fixture = chaptered(true);
+      const scrollIntoView = Element.prototype.scrollIntoView as jest.Mock;
+
+      control(fixture, '.chapter-title').click();
+      fixture.detectChanges();
+      expect(scrollIntoView).not.toHaveBeenCalled();
+
+      control(fixture, '.chapter-title').click();
+      fixture.detectChanges();
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' });
+      expect(scrollIntoView.mock.contexts[0]).toBe(query(fixture, '.chapters'));
+    });
+
+    it('shows the reopened list in place on the card', () => {
+      const fixture = chaptered();
+
+      control(fixture, '.chapters-heading').click();
+      fixture.detectChanges();
+      control(fixture, '.chapters-heading').click();
+      fixture.detectChanges();
+
+      expect(listRows(fixture)).toHaveLength(3);
+      expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
     });
   });
 

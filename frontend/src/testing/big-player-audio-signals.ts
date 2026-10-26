@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { AudioTrack } from '../app/reader/audio-player.service';
+import type { ChapterProgress } from '../app/reader/chapters/current-chapter';
 import type { ChapterDto } from '../app/reader/models';
 
 /** Every player signal the big player reads, for its own spec and AudioSurface's. */
@@ -14,6 +15,11 @@ export function bigPlayerAudioSignals() {
     duration: signal(0),
     buffered: signal(0),
     chapters: signal<ChapterDto[]>([]),
+    chapterIndex: signal(-1),
+    currentChapter: signal<ChapterDto | null>(null),
+    chapterProgress: signal<ChapterProgress | null>(null),
+    hasPreviousChapter: signal(false),
+    hasNextChapter: signal(false),
     rate: signal(1),
   };
 }

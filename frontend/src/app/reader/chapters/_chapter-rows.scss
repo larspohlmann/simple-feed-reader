@@ -1,0 +1,73 @@
+// The rows of a chapter list, drawn alike by the article's list and the player's (#1814, #1810).
+// The current row fills to `--chapter-progress` and ends in its time left.
+@mixin rows {
+  .reader-chapters__row {
+    display: flex;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-1) var(--space-3);
+    background: none;
+    border: none;
+    border-inline-start: var(--space-0) solid transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--fs-sm);
+    text-align: start;
+    cursor: pointer;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .reader-chapters__row[aria-current='true'] {
+    border-inline-start-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .reader-chapters__time {
+    flex: none;
+    min-width: 4ch;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .reader-chapters__left {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    justify-content: flex-end;
+    gap: calc(var(--space-0) + var(--space-1));
+    flex: none;
+    margin-inline-start: auto;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .reader-chapters__row[aria-current='true'] .reader-chapters__left {
+    min-width: calc(5ch + var(--icon-sm) + var(--space-0) + var(--space-1));
+    margin-inline-end: calc(-1 * var(--space-1));
+  }
+
+  .reader-chapters__row[aria-current='true']::before,
+  .reader-chapters__row[aria-current='true']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .reader-chapters__row[aria-current='true']::before {
+    background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  }
+
+  .reader-chapters__row[aria-current='true']::after {
+    background: var(--accent-soft);
+    transform: scaleX(var(--chapter-progress, 0));
+    transform-origin: left;
+  }
+
+  @media (hover: hover) {
+    .reader-chapters__row:hover .reader-chapters__title {
+      text-decoration: underline;
+    }
+  }
+}
