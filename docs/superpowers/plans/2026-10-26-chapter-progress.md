@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** While a chapter of a YouTube video or a podcast episode plays, its row in the article's chapter list shows how far into that chapter playback is: a faint track across the row with a muted accent fill growing over it, behind the time and title, and the time left in that chapter, right-aligned (`−3:12`).
+**Goal:** While a chapter of a YouTube video or a podcast episode plays, its row in the article's chapter list shows how far into that chapter playback is: a faint track across the row with a muted accent fill growing over it, behind the time and title, and the time left in that chapter, right-aligned (`3:12`).
 
 **Architecture:** `ChapterPlayer.watch` reports a `PlaybackPosition` (seconds plus the media's duration once known) instead of bare seconds. A pure helper `chapterProgress` turns starts + index + position into a `ChapterProgress` (`fraction` 0–1, `secondsLeft`). The chapter list writes the fraction into one custom property, `--chapter-progress`, on the current row, and the time left into a right-aligned span. CSS draws the track (`::before`) and the fill (`::after`, `transform: scaleX(...)`), only on `[aria-current='true']`, so position updates cause no layout.
 
@@ -16,7 +16,7 @@
 - ESLint: `max-lines-per-function` 60, `complexity` 10, `@typescript-eslint/max-params` 3, Prettier 100 columns.
 - SCSS: no hex colours, no ad-hoc `px`, tokens only (`--accent-soft`, `--text-primary`). Styles stay in `article-content.component.scss`.
 - Fill colour `var(--accent-soft)`; track colour `color-mix(in srgb, var(--text-primary) 5%, transparent)`. The left accent bar on the current row stays unchanged.
-- Time left: `−` (U+2212) + `formatDuration(secondsLeft)` from `reader/format.ts`, right-aligned at the row's end, `--text-secondary`, tabular numerals, `aria-hidden`. No translation key needed.
+- Time left: `formatDuration(secondsLeft)`, no sign (user decision mid-run), from `reader/format.ts`, right-aligned at the row's end, `--text-secondary`, tabular numerals, `aria-hidden`. No translation key needed.
 - Only the current (`aria-current='true'`) row shows track, fill and time left. Before any position arrives, the list looks as it does today.
 - The last chapter ends at the media's duration; while that is unknown (`null`), the row shows the track without a fill and without a time left.
 - Frontend gates: `npm run check` and `npx ng build` (template errors), Jest inside the Docker frontend container: `docker compose exec -T frontend npm test -- <path>`. Never run two Jest runs in the container at once.
