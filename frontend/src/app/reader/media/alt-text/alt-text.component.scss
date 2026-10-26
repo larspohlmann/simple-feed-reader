@@ -1,0 +1,44 @@
+// Above a quoted post's stretched link (#1612), so a tap reads the text rather than opening the post.
+:host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.badge,
+.text {
+  pointer-events: auto;
+}
+
+.badge {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
+  padding: var(--space-0) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--media-scrim);
+  color: var(--on-media-scrim);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: var(--focus-ring);
+  }
+}
+
+.text {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: var(--space-3) var(--space-3) var(--space-6);
+  overflow-y: auto;
+  background: var(--media-scrim-strong);
+  color: var(--on-media-scrim);
+  font-size: var(--fs-sm);
+  white-space: pre-line;
+  cursor: pointer;
+}

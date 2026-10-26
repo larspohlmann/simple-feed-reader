@@ -1,24 +1,29 @@
 @for (medium of media(); track medium.url) {
-  @if (isGif(medium)) {
-    <app-gif class="item" [medium]="medium" />
-  } @else if (medium.kind === 'video') {
-    <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
-    <div
-      class="item video-slot"
-      (click)="$event.stopPropagation()"
-      (keydown)="$event.stopPropagation()"
-    ></div>
-  } @else {
-    <img
-      class="item"
-      appProxiedImage
-      [src]="medium.url"
-      [attr.width]="medium.width ?? null"
-      [attr.height]="medium.height ?? null"
-      [attr.alt]="medium.alt ?? ''"
-      loading="lazy"
-      decoding="async"
-      referrerpolicy="no-referrer"
-    />
-  }
+  <div class="cell">
+    @if (isGif(medium)) {
+      <app-gif class="item" [medium]="medium" />
+    } @else if (medium.kind === 'video') {
+      <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
+      <div
+        class="item video-slot"
+        (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
+      ></div>
+    } @else {
+      <img
+        class="item"
+        appProxiedImage
+        [src]="medium.url"
+        [attr.width]="medium.width ?? null"
+        [attr.height]="medium.height ?? null"
+        [attr.alt]="medium.alt ?? ''"
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+      />
+    }
+    @if (medium.alt && (isGif(medium) || medium.kind === 'image')) {
+      <app-alt-text [text]="medium.alt" />
+    }
+  </div>
 }

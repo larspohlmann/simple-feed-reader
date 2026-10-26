@@ -4,6 +4,11 @@
   @include post-media-grid.grid;
 }
 
+.cell {
+  position: relative;
+  min-height: 0;
+}
+
 .item {
   @include post-media-grid.item;
 }
