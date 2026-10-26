@@ -14,6 +14,7 @@ use App\Tests\Support\AiProviderSettingsFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Rule\InvocationOrder;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Response;
 
 final class MaxTokensRefusedFallbackTest extends TestCase
 {
@@ -24,7 +25,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
     {
         $connection = $this->connectionOn('gpt-5.4-nano');
 
-        $rejection = new ProviderRejectedRequestException(400, self::REFUSAL);
+        $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
         self::assertTrue($this->fallbackFlushing($this->once())->absorbs($connection, $rejection));
         self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
@@ -34,7 +35,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
     {
         $connection = $this->connectionOn('gpt-5.4-nano');
         $rejection = new ProviderRejectedRequestException(
-            400,
+            Response::HTTP_BAD_REQUEST,
             "That provider refused the request (status 400): Unknown parameter: 'reasoning'.",
         );
 
@@ -46,7 +47,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
     {
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs(
             $this->connectionOn('gpt-5.4-nano'),
-            new ProviderRejectedRequestException(422, self::REFUSAL),
+            new ProviderRejectedRequestException(Response::HTTP_UNPROCESSABLE_ENTITY, self::REFUSAL),
         ));
     }
 
@@ -55,7 +56,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
         $connection = $this->connectionOn('gpt-5.4-nano');
         $connection->recordMaxTokensRefused();
 
-        $rejection = new ProviderRejectedRequestException(400, self::REFUSAL);
+        $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
     }

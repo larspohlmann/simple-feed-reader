@@ -10,6 +10,7 @@ use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\Response;
 
 final class CompositeRejectedRequestFallbackTest extends TestCase
 {
@@ -22,7 +23,7 @@ final class CompositeRejectedRequestFallbackTest extends TestCase
             new RecordingFallback('suppressedReasoning', true, $calls),
         );
 
-        self::assertTrue($composite->absorbs($this->connection(), new ProviderRejectedRequestException(400, 'No.')));
+        self::assertTrue($composite->absorbs($this->connection(), $this->rejection()));
         self::assertSame(['tokenParameter', 'outputCap'], $calls->getArrayCopy());
     }
 
@@ -35,7 +36,7 @@ final class CompositeRejectedRequestFallbackTest extends TestCase
             new RecordingFallback('suppressedReasoning', false, $calls),
         );
 
-        self::assertFalse($composite->absorbs($this->connection(), new ProviderRejectedRequestException(400, 'No.')));
+        self::assertFalse($composite->absorbs($this->connection(), $this->rejection()));
         self::assertSame(['tokenParameter', 'outputCap', 'suppressedReasoning'], $calls->getArrayCopy());
     }
 
@@ -44,5 +45,10 @@ final class CompositeRejectedRequestFallbackTest extends TestCase
         return AiProviderSettingsFactory::build(
             new User('reader@example.test', new \DateTimeImmutable('2026-10-26 09:00:00')),
         );
+    }
+
+    private function rejection(): ProviderRejectedRequestException
+    {
+        return new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, 'No.');
     }
 }

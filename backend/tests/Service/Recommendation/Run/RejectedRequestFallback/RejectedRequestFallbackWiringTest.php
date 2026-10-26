@@ -12,6 +12,7 @@ use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\HttpFoundation\Response;
 
 /** The members' unit tests build the composite by hand; only the compiled container proves which order runs. */
 final class RejectedRequestFallbackWiringTest extends KernelTestCase
@@ -73,6 +74,6 @@ final class RejectedRequestFallbackWiringTest extends KernelTestCase
 
     private function rejection(string $message): ProviderRejectedRequestException
     {
-        return new ProviderRejectedRequestException(400, $message);
+        return new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, $message);
     }
 }
