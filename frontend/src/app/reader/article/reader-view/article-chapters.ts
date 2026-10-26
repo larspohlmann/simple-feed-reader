@@ -12,16 +12,14 @@ export function apiPlayerFrame(host: HTMLElement): HTMLIFrameElement | null {
   return host.querySelector<HTMLIFrameElement>(API_PLAYER);
 }
 
-interface PlacedList {
-  readonly place: ChapterListPlace;
-  readonly list: ChapterList;
-}
-
 /** One rendered body's chapter list and the player it drives: the episode, else the video's API player (#1808). */
 export class ArticleChapters {
-  private player: ChapterPlayer | null = null;
-  private listElement: HTMLElement | null = null;
-  private placed: PlacedList | null = null;
+  private shown: {
+    place: ChapterListPlace;
+    list: ChapterList;
+    player: ChapterPlayer;
+    element: HTMLElement | null;
+  } | null = null;
 
   constructor(
     private readonly audio: AudioPlayerService,
@@ -43,24 +41,20 @@ export class ArticleChapters {
 
   /** Once the video is the audio player's track, its list seeks the player, not the paused frame (#1815). */
   followTrack(track: AudioTrack): void {
-    const placed = this.placed;
-    if (!placed) return;
-    this.player?.release();
-    this.show(placed.place, placed.list, this.audioPlayer(track));
+    const shown = this.shown;
+    if (!shown) return;
+    shown.player.release();
+    this.show(shown.place, shown.list, this.audioPlayer(track));
   }
 
   release(): void {
-    this.player?.release();
-    this.player = null;
-    this.listElement?.remove();
-    this.listElement = null;
-    this.placed = null;
+    this.shown?.player.release();
+    this.shown?.element?.remove();
+    this.shown = null;
   }
 
   private show(place: ChapterListPlace, list: ChapterList, player: ChapterPlayer): void {
-    this.player = player;
-    this.placed = { place, list };
-    this.listElement = addChapterList(place, list, player);
+    this.shown = { place, list, player, element: addChapterList(place, list, player) };
   }
 
   private audioPlayer(track: AudioTrack): AudioChapterPlayer {

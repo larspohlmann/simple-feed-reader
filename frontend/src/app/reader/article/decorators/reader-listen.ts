@@ -1,5 +1,6 @@
 import { embedMediaOfFrame, type EmbedMedia } from '../../audio/embed-media';
-import { PLAYER_BAR, playerBar } from './reader-cinema';
+import { materialIcon } from './material-icon';
+import { playerBar } from './reader-cinema';
 
 export interface ListenLabels {
   listen: string;
@@ -19,7 +20,7 @@ export interface EmbedListenControl {
   showQueued(queued: boolean): void;
 }
 
-const EMBED_FRAME = '.reader-embed > iframe';
+const EMBED_BOX = '.reader-embed';
 const MARKER = 'reader-listen';
 const BUTTON = 'reader-listen__button';
 const QUEUED = 'reader-listen__button--queued';
@@ -31,10 +32,11 @@ export function addEmbedListenControls(
   actions: ListenActions,
 ): EmbedListenControl[] {
   const controls: EmbedListenControl[] = [];
-  for (const frame of Array.from(host.querySelectorAll<HTMLIFrameElement>(EMBED_FRAME))) {
-    const media = embedMediaOfFrame(frame);
-    if (media === null) continue;
-    const bar = playerBarAfter(frame.parentElement as HTMLElement);
+  for (const box of Array.from(host.querySelectorAll<HTMLElement>(EMBED_BOX))) {
+    const frame = box.querySelector<HTMLIFrameElement>(':scope > iframe');
+    const media = frame && embedMediaOfFrame(frame);
+    if (!media) continue;
+    const bar = playerBarAfter(box);
     if (bar.classList.contains(MARKER)) continue;
     bar.classList.add(MARKER);
     const queueToggle = new QueueToggle(media, labels, () => actions.toggleQueued(media));
@@ -50,14 +52,14 @@ export function addEmbedListenControls(
 /** The bar the cinema decorator left under a wrapped player, else a new one after the embed box. */
 function playerBarAfter(box: HTMLElement): HTMLElement {
   const next = box.nextElementSibling;
-  if (next instanceof HTMLElement && next.classList.contains(PLAYER_BAR)) return next;
+  if (next instanceof HTMLElement && next.matches('.reader-player-bar')) return next;
   const bar = playerBar();
   box.after(bar);
   return bar;
 }
 
 function listenButton(labels: ListenLabels, onClick: () => void): HTMLButtonElement {
-  const button = controlButton(iconSpan('play_circle'), labelSpan(labels.listen));
+  const button = controlButton(materialIcon('play_circle'), labelSpan(labels.listen));
   button.title = labels.listenEmbed;
   button.addEventListener('click', onClick);
   return button;
@@ -65,7 +67,7 @@ function listenButton(labels: ListenLabels, onClick: () => void): HTMLButtonElem
 
 class QueueToggle implements EmbedListenControl {
   readonly button: HTMLButtonElement;
-  private readonly icon = iconSpan('playlist_add');
+  private readonly icon = materialIcon('playlist_add');
   private readonly label: HTMLSpanElement;
 
   constructor(
@@ -93,14 +95,6 @@ function controlButton(icon: HTMLSpanElement, label: HTMLSpanElement): HTMLButto
   button.className = BUTTON;
   button.append(icon, label);
   return button;
-}
-
-function iconSpan(name: string): HTMLSpanElement {
-  const icon = document.createElement('span');
-  icon.className = 'material-symbols-outlined';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = name;
-  return icon;
 }
 
 function labelSpan(text: string): HTMLSpanElement {

@@ -1,76 +1,37 @@
-import { PlaybackEvent } from './playback-element';
+import { WATCH_URL } from '../../../../testing/embed-media-testing';
+import {
+  deliverMessage,
+  frameOf,
+  messagesOf,
+  playbackFixture,
+  PlaybackFixture,
+  recordPosts,
+} from '../../../../testing/frame-playback-testing';
+import {
+  LISTENING,
+  playerCommand,
+  YOUTUBE_PLAYER_ORIGIN,
+} from '../../media/youtube-player-protocol';
 import { YouTubePlayback } from './youtube-playback';
 
-const PLAYER_ORIGIN = 'https://www.youtube-nocookie.com';
-const WIDGET = { id: 1, channel: 'widget' };
-const LISTENING = { event: 'listening', ...WIDGET };
-const WATCH_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-const ALL_EVENTS: PlaybackEvent[] = [
-  'progress',
-  'timeupdate',
-  'loadedmetadata',
-  'durationchange',
-  'play',
-  'pause',
-  'ended',
-  'error',
-];
+const READY = { event: 'onReady', info: {} };
 
-interface Fixture {
-  playback: YouTubePlayback;
-  host: HTMLElement;
-  events: PlaybackEvent[];
-  frame: HTMLIFrameElement;
-  posted: unknown[];
-}
+type Fixture = PlaybackFixture<YouTubePlayback>;
 
-function command(name: string, commandArguments: unknown[]): object {
-  return { event: 'command', func: name, args: commandArguments, ...WIDGET };
-}
-
-function frameOf(host: HTMLElement): HTMLIFrameElement {
-  const frame = host.querySelector('iframe');
-  if (!frame) throw new Error('no frame in the host');
-  return frame;
-}
-
-/** Replaces the frame's window with one that records what is posted to it. */
-function recordPosts(frame: HTMLIFrameElement): unknown[] {
-  const posted: unknown[] = [];
-  const postMessage = jest.fn((message: string) => posted.push(JSON.parse(message)));
-  Object.defineProperty(frame, 'contentWindow', { value: { postMessage }, configurable: true });
-  return posted;
-}
-
-/** jsdom accepts only a real Window as a MessageEvent source, so the fake one is set afterwards. */
-function delivery(frame: HTMLIFrameElement, data: unknown, origin = PLAYER_ORIGIN): void {
-  const event = new MessageEvent('message', { data: JSON.stringify(data), origin });
-  Object.defineProperty(event, 'source', { value: frame.contentWindow });
-  window.dispatchEvent(event);
+function delivery(frame: HTMLIFrameElement, data: unknown, origin = YOUTUBE_PLAYER_ORIGIN): void {
+  deliverMessage(frame, JSON.stringify(data), origin);
 }
 
 function playbackWithSource(url = WATCH_URL): Fixture {
-  const host = document.createElement('div');
-  document.body.appendChild(host);
-  const playback = new YouTubePlayback(host);
-  const events: PlaybackEvent[] = [];
-  for (const type of ALL_EVENTS) playback.addEventListener(type, () => events.push(type));
-  playback.src = url;
-  const frame = frameOf(host);
-  const posted = recordPosts(frame);
-  return { playback, host, events, frame, posted };
+  return playbackFixture((host) => new YouTubePlayback(host), url);
 }
 
 function loadedPlayback(url?: string): Fixture {
-  const fixture = playbackWithSource(url);
-  fixture.frame.dispatchEvent(new Event('load'));
-  return fixture;
+  return playbackWithSource(url).loaded();
 }
 
 function readyPlayback(url?: string): Fixture {
-  const fixture = loadedPlayback(url);
-  delivery(fixture.frame, { event: 'onReady', info: {} });
-  return fixture;
+  return loadedPlayback(url).ready(JSON.stringify(READY));
 }
 
 describe('YouTubePlayback', () => {
@@ -105,7 +66,7 @@ describe('YouTubePlayback', () => {
       expect(posted).toEqual([]);
       frame.dispatchEvent(new Event('load'));
 
-      expect(posted).toEqual([LISTENING]);
+      expect(posted).toEqual([{ message: LISTENING, origin: YOUTUBE_PLAYER_ORIGIN }]);
       playback.dispose();
     });
   });
@@ -116,12 +77,15 @@ describe('YouTubePlayback', () => {
 
       await playback.play();
 
-      expect(posted).toEqual([LISTENING, LISTENING]);
+      expect(messagesOf(posted)).toEqual([LISTENING, LISTENING]);
       expect(events).toEqual(['play']);
 
       delivery(frame, { event: 'initialDelivery', info: { currentTime: 0 } });
 
-      expect(posted.slice(2)).toEqual([command('setPlaybackRate', [1]), command('playVideo', [])]);
+      expect(messagesOf(posted).slice(2)).toEqual([
+        playerCommand('setPlaybackRate', [1]),
+        playerCommand('playVideo', []),
+      ]);
       playback.dispose();
     });
 
@@ -129,9 +93,12 @@ describe('YouTubePlayback', () => {
       const { playback, frame, posted } = loadedPlayback();
       await playback.play();
 
-      delivery(frame, { event: 'onReady', info: {} });
+      delivery(frame, READY);
 
-      expect(posted.slice(2)).toEqual([command('setPlaybackRate', [1]), command('playVideo', [])]);
+      expect(messagesOf(posted).slice(2)).toEqual([
+        playerCommand('setPlaybackRate', [1]),
+        playerCommand('playVideo', []),
+      ]);
       playback.dispose();
     });
 
@@ -140,10 +107,10 @@ describe('YouTubePlayback', () => {
 
       await playback.play();
 
-      expect(posted).toEqual([
+      expect(messagesOf(posted)).toEqual([
         LISTENING,
-        command('setPlaybackRate', [1]),
-        command('playVideo', []),
+        playerCommand('setPlaybackRate', [1]),
+        playerCommand('playVideo', []),
       ]);
       playback.dispose();
     });
@@ -153,12 +120,12 @@ describe('YouTubePlayback', () => {
       playback.currentTime = 256;
 
       await playback.play();
-      delivery(frame, { event: 'onReady', info: {} });
+      delivery(frame, READY);
 
-      expect(posted.slice(2)).toEqual([
-        command('setPlaybackRate', [1]),
-        command('seekTo', [256, true]),
-        command('playVideo', []),
+      expect(messagesOf(posted).slice(2)).toEqual([
+        playerCommand('setPlaybackRate', [1]),
+        playerCommand('seekTo', [256, true]),
+        playerCommand('playVideo', []),
       ]);
       playback.dispose();
     });
@@ -169,7 +136,10 @@ describe('YouTubePlayback', () => {
 
       await playback.play();
 
-      expect(posted.slice(1)).toEqual([command('setPlaybackRate', [1]), command('playVideo', [])]);
+      expect(messagesOf(posted).slice(1)).toEqual([
+        playerCommand('setPlaybackRate', [1]),
+        playerCommand('playVideo', []),
+      ]);
       playback.dispose();
     });
 
@@ -177,16 +147,10 @@ describe('YouTubePlayback', () => {
       const { playback, frame, posted } = loadedPlayback();
       await playback.play();
 
-      window.dispatchEvent(
-        Object.defineProperty(
-          new MessageEvent('message', { data: 'not json', origin: PLAYER_ORIGIN }),
-          'source',
-          { value: frame.contentWindow },
-        ),
-      );
+      deliverMessage(frame, 'not json', YOUTUBE_PLAYER_ORIGIN);
       delivery(frame, 42);
 
-      expect(posted).toEqual([LISTENING, LISTENING]);
+      expect(messagesOf(posted)).toEqual([LISTENING, LISTENING]);
       playback.dispose();
     });
   });
@@ -199,7 +163,7 @@ describe('YouTubePlayback', () => {
 
       playback.pause();
 
-      expect(posted.at(-1)).toEqual(command('pauseVideo', []));
+      expect(messagesOf(posted).at(-1)).toEqual(playerCommand('pauseVideo', []));
       playback.dispose();
     });
 
@@ -209,7 +173,7 @@ describe('YouTubePlayback', () => {
 
       playback.currentTime = 30;
 
-      expect(posted.at(-1)).toEqual(command('seekTo', [30, true]));
+      expect(messagesOf(posted).at(-1)).toEqual(playerCommand('seekTo', [30, true]));
       playback.dispose();
     });
   });
@@ -288,10 +252,10 @@ describe('YouTubePlayback', () => {
       const { playback, frame, posted, events } = loadedPlayback();
       await playback.play();
 
-      delivery(frame, { event: 'onReady', info: {} }, 'https://www.youtube.com');
+      delivery(frame, READY, 'https://www.youtube.com');
       delivery(frame, { event: 'onError', info: 150 }, 'https://www.youtube.com');
 
-      expect(posted).toEqual([LISTENING, LISTENING]);
+      expect(messagesOf(posted)).toEqual([LISTENING, LISTENING]);
       expect(events).toEqual(['play']);
       expect(playback.error).toBeNull();
       playback.dispose();
@@ -302,28 +266,30 @@ describe('YouTubePlayback', () => {
     it('sends the rate once ready and on every change', () => {
       const { playback, frame, posted } = loadedPlayback();
       playback.playbackRate = 1.5;
-      expect(posted).toEqual([LISTENING]);
+      expect(messagesOf(posted)).toEqual([LISTENING]);
 
-      delivery(frame, { event: 'onReady', info: {} });
-      expect(posted.slice(1)).toEqual([command('setPlaybackRate', [1.5])]);
+      delivery(frame, READY);
+      expect(messagesOf(posted).slice(1)).toEqual([playerCommand('setPlaybackRate', [1.5])]);
 
       playback.playbackRate = 2;
-      expect(posted.slice(2)).toEqual([command('setPlaybackRate', [2])]);
+      expect(messagesOf(posted).slice(2)).toEqual([playerCommand('setPlaybackRate', [2])]);
       playback.dispose();
     });
   });
 
   describe('a new source', () => {
-    it('prompts the fresh player again for a play asked before it has spoken', async () => {
+    it('builds the fresh player on play and prompts it again for a play before it has spoken', async () => {
       const { playback, host } = readyPlayback();
 
       playback.src = 'https://youtu.be/aaaaaaaaaaa';
+      await playback.play();
       const frame = frameOf(host);
       const posted = recordPosts(frame);
       frame.dispatchEvent(new Event('load'));
       await playback.play();
 
-      expect(posted).toEqual([LISTENING, LISTENING]);
+      expect(frame.getAttribute('src')).toContain('/embed/aaaaaaaaaaa?');
+      expect(messagesOf(posted)).toEqual([LISTENING, LISTENING]);
       playback.dispose();
     });
   });

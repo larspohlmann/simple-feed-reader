@@ -16,7 +16,7 @@ export interface PlaybackElement {
   readonly duration: number;
   readonly buffered: TimeRanges;
   readonly readyState: number;
-  readonly error: MediaError | null;
+  readonly error: Pick<MediaError, 'code' | 'MEDIA_ERR_SRC_NOT_SUPPORTED'> | null;
   defaultPlaybackRate: number;
   playbackRate: number;
   play(): Promise<void>;

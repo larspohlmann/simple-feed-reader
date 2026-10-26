@@ -135,15 +135,12 @@ export class ArticleBody {
     this.zone.runOutsideAngular(() => {
       this.chapters.attach(host, { chapters: chapterList, heading }, track);
       this.embedAudio.follow(controls);
-      this.shareChapters(chapteredEmbed(), chapterList);
+      // A video queued from a list row gains its chapters once its article opens (#1810).
+      const embed = chapteredEmbed();
+      if (embed) this.audio.describeChapters(embed.url, chapterList);
       this.media.follow(host);
     });
     parts.decorated(host);
-  }
-
-  /** A video queued from a list row gains its chapters once its article opens (#1810). */
-  private shareChapters(embed: EmbedMedia | null, chapters: ChapterDto[]): void {
-    if (embed) this.audio.describeChapters(embed.url, chapters);
   }
 }
 

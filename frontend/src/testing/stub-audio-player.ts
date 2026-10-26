@@ -13,6 +13,7 @@ export class StubAudioPlayer implements Pick<
   | 'isQueued'
   | 'enqueue'
   | 'dequeue'
+  | 'toggleQueued'
   | 'describeChapters'
 > {
   readonly queue = signal<string[]>([]);
@@ -44,6 +45,11 @@ export class StubAudioPlayer implements Pick<
 
   dequeue(url: string): void {
     this.queue.update((urls) => urls.filter((queued) => queued !== url));
+  }
+
+  toggleQueued(track: AudioTrack): void {
+    if (this.isQueued(track.url)) this.dequeue(track.url);
+    else this.enqueue(track);
   }
 
   asService(): AudioPlayerService {

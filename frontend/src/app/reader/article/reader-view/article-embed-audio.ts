@@ -31,15 +31,12 @@ export class ArticleEmbedAudio {
       toEmbedTrack(entry, media, context.chaptersOf(media));
     return {
       listen: (media, frame) => {
-        pauseEmbedFrame(frame);
+        pauseEmbedFrame(frame, media.kind);
         const track = trackOf(media);
         this.audio.play(track);
         context.onListened(track);
       },
-      toggleQueued: (media) => {
-        if (this.audio.isQueued(media.url)) this.audio.dequeue(media.url);
-        else this.audio.enqueue(trackOf(media));
-      },
+      toggleQueued: (media) => this.audio.toggleQueued(trackOf(media)),
     };
   }
 

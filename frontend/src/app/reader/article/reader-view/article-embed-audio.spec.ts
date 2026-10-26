@@ -1,6 +1,7 @@
 import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { anEntry } from '../../../../testing/entry-testing';
+import { frameWithWindow, messagesOf } from '../../../../testing/frame-playback-testing';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { AudioTrack } from '../../audio-player.service';
 import { EmbedMedia } from '../../audio/embed-media';
@@ -24,16 +25,6 @@ const CHAPTERS: ChapterDto[] = [
   { startSeconds: 256, title: 'How it works' },
 ];
 const ENTRY = anEntry({ id: 42, title: 'The video' });
-
-function apiFrame(): { frame: HTMLIFrameElement; posted: unknown[] } {
-  const frame = document.createElement('iframe');
-  frame.setAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1');
-  const posted: unknown[] = [];
-  Object.defineProperty(frame, 'contentWindow', {
-    value: { postMessage: (message: string) => posted.push(JSON.parse(message)) },
-  });
-  return { frame, posted };
-}
 
 function setUp(context: Partial<EmbedListenContext> = {}) {
   const player = new StubAudioPlayer();
@@ -61,12 +52,12 @@ describe('ArticleEmbedAudio', () => {
   describe('listen', () => {
     it('pauses the visible player, then plays the embed with the chapters the body gives it', () => {
       const { player, listened, actions } = setUp();
-      const { frame, posted } = apiFrame();
+      const { frame, posted } = frameWithWindow();
 
       (actions as ListenActions).listen(VIDEO, frame);
 
       const track = toEmbedTrack(ENTRY, VIDEO, CHAPTERS);
-      expect(posted).toEqual([
+      expect(messagesOf(posted)).toEqual([
         { event: 'command', func: 'pauseVideo', args: [], id: 1, channel: 'widget' },
       ]);
       expect(player.played).toEqual([track]);

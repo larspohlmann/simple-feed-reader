@@ -1,104 +1,93 @@
+import {
+  deliverMessage,
+  frameWithWindow,
+  messagesOf,
+  Posted,
+} from '../../../testing/frame-playback-testing';
 import { PlaybackPosition } from './chapter-player';
 import { YouTubeChapterPlayer } from './youtube-chapter-player';
 
 const PLAYER_ORIGIN = 'https://www.youtube-nocookie.com';
+const LISTENING = { event: 'listening', id: 1, channel: 'widget' };
+const PLAY_VIDEO = { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' };
 
-function frameWithWindow(): { frame: HTMLIFrameElement; posted: unknown[] } {
-  const frame = document.createElement('iframe');
-  const posted: unknown[] = [];
-  const contentWindow = { postMessage: (message: string) => posted.push(JSON.parse(message)) };
-  Object.defineProperty(frame, 'contentWindow', { value: contentWindow });
-  return { frame, posted };
+function seekTo(seconds: number): object {
+  return { event: 'command', func: 'seekTo', args: [seconds, true], id: 1, channel: 'widget' };
 }
 
-/** jsdom accepts only a real Window as a MessageEvent source, so the fake one is set afterwards. */
 function delivery(frame: HTMLIFrameElement, data: unknown, origin = PLAYER_ORIGIN): void {
-  const event = new MessageEvent('message', { data: JSON.stringify(data), origin });
-  Object.defineProperty(event, 'source', { value: frame.contentWindow });
-  window.dispatchEvent(event);
+  deliverMessage(frame, JSON.stringify(data), origin);
+}
+
+function playerWithFrame(): {
+  frame: HTMLIFrameElement;
+  posted: Posted[];
+  player: YouTubeChapterPlayer;
+} {
+  const { frame, posted } = frameWithWindow();
+  return { frame, posted, player: new YouTubeChapterPlayer(frame) };
 }
 
 describe('YouTubeChapterPlayer', () => {
   it('asks the player for its position once the frame loads', () => {
-    const { frame, posted } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, posted, player } = playerWithFrame();
 
     frame.dispatchEvent(new Event('load'));
 
-    expect(posted).toEqual([{ event: 'listening', id: 1, channel: 'widget' }]);
+    expect(posted).toEqual([{ message: LISTENING, origin: PLAYER_ORIGIN }]);
     player.release();
   });
 
   it('seeks, then plays', () => {
-    const { frame, posted } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, posted, player } = playerWithFrame();
     delivery(frame, { event: 'onReady' });
 
     player.playFrom(256);
 
-    expect(posted).toEqual([
-      { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
-      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
-    ]);
+    expect(messagesOf(posted)).toEqual([seekTo(256), PLAY_VIDEO]);
     player.release();
   });
 
   it('holds a chapter tapped before the player is ready, then plays it', () => {
-    const { frame, posted } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, posted, player } = playerWithFrame();
 
     player.playFrom(256);
-    expect(posted).toEqual([{ event: 'listening', id: 1, channel: 'widget' }]);
+    expect(messagesOf(posted)).toEqual([LISTENING]);
 
     delivery(frame, { event: 'initialDelivery', info: { currentTime: 0 } });
 
-    expect(posted).toEqual([
-      { event: 'listening', id: 1, channel: 'widget' },
-      { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
-      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
-    ]);
+    expect(messagesOf(posted)).toEqual([LISTENING, seekTo(256), PLAY_VIDEO]);
 
     player.playFrom(30);
 
-    expect(posted.slice(3)).toEqual([
-      { event: 'command', func: 'seekTo', args: [30, true], id: 1, channel: 'widget' },
-      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
-    ]);
+    expect(messagesOf(posted).slice(3)).toEqual([seekTo(30), PLAY_VIDEO]);
     player.release();
   });
 
   it('plays only the last chapter tapped before the player is ready', () => {
-    const { frame, posted } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, posted, player } = playerWithFrame();
 
     player.playFrom(10);
     player.playFrom(256);
     delivery(frame, { event: 'infoDelivery', info: { currentTime: 0 } });
     delivery(frame, { event: 'infoDelivery', info: { currentTime: 1 } });
 
-    expect(posted).toEqual([
-      { event: 'listening', id: 1, channel: 'widget' },
-      { event: 'listening', id: 1, channel: 'widget' },
-      { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
-      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
-    ]);
+    expect(messagesOf(posted)).toEqual([LISTENING, LISTENING, seekTo(256), PLAY_VIDEO]);
     player.release();
   });
 
   it('drops a held chapter once released', () => {
-    const { frame, posted } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, posted, player } = playerWithFrame();
 
     player.playFrom(256);
     player.release();
     delivery(frame, { event: 'onReady' });
 
-    expect(posted).toEqual([{ event: 'listening', id: 1, channel: 'widget' }]);
+    expect(messagesOf(posted)).toEqual([LISTENING]);
   });
 
   it('reports the position the player delivers', () => {
-    const { frame } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, player } = playerWithFrame();
     const positions: (PlaybackPosition | null)[] = [];
     player.watch((position) => positions.push(position));
 
@@ -110,8 +99,7 @@ describe('YouTubeChapterPlayer', () => {
   });
 
   it('does not report the position of the message that plays a held chapter', () => {
-    const { frame } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, player } = playerWithFrame();
     const positions: (PlaybackPosition | null)[] = [];
     player.watch((position) => positions.push(position));
     player.playFrom(256);
@@ -125,8 +113,7 @@ describe('YouTubeChapterPlayer', () => {
   });
 
   it('carries the last delivered duration on later positions', () => {
-    const { frame } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, player } = playerWithFrame();
     const positions: (PlaybackPosition | null)[] = [];
     player.watch((position) => positions.push(position));
 
@@ -141,8 +128,7 @@ describe('YouTubeChapterPlayer', () => {
   });
 
   it('knows no duration while the player reports none', () => {
-    const { frame } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, player } = playerWithFrame();
     const positions: (PlaybackPosition | null)[] = [];
     player.watch((position) => positions.push(position));
 
@@ -153,9 +139,8 @@ describe('YouTubeChapterPlayer', () => {
   });
 
   it('ignores another origin and another frame', () => {
-    const { frame } = frameWithWindow();
+    const { frame, player } = playerWithFrame();
     const other = frameWithWindow().frame;
-    const player = new YouTubeChapterPlayer(frame);
     const positions: (PlaybackPosition | null)[] = [];
     player.watch((position) => positions.push(position));
 
@@ -167,8 +152,7 @@ describe('YouTubeChapterPlayer', () => {
   });
 
   it('stops listening once released', () => {
-    const { frame } = frameWithWindow();
-    const player = new YouTubeChapterPlayer(frame);
+    const { frame, player } = playerWithFrame();
     const positions: (PlaybackPosition | null)[] = [];
     player.watch((position) => positions.push(position));
 

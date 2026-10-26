@@ -1,14 +1,15 @@
+import {
+  SOUNDCLOUD_WIDGET_ORIGIN,
+  widgetFieldOf,
+  widgetMessage,
+  widgetMessageOf,
+} from '../../media/soundcloud-widget-protocol';
+import { finiteNumberOf } from '../../media/youtube-player-protocol';
 import { FramePlayback } from './frame-playback';
 
-const WIDGET_ORIGIN = 'https://w.soundcloud.com';
 const WIDGET_FLAGS = 'auto_play=false&show_artwork=false&visual=false';
 const SUBSCRIBED_EVENTS = ['play', 'pause', 'finish', 'playProgress', 'loadProgress', 'error'];
 const MILLISECONDS = 1000;
-
-interface WidgetMessage {
-  readonly method: string;
-  readonly value?: unknown;
-}
 
 /** The SoundCloud Widget API over the hidden frame: `{ method, value }` JSON both ways (#1815). */
 export class SoundCloudPlayback extends FramePlayback {
@@ -16,15 +17,11 @@ export class SoundCloudPlayback extends FramePlayback {
   private seekOnPlay: number | null = null;
 
   constructor(host: HTMLElement) {
-    super(host, WIDGET_ORIGIN, 'SoundCloud');
+    super(host, SOUNDCLOUD_WIDGET_ORIGIN, 'SoundCloud');
   }
 
   protected frameUrlFor(url: string): string {
     return `${url}${url.includes('?') ? '&' : '?'}${WIDGET_FLAGS}`;
-  }
-
-  protected onFrameLoaded(): void {
-    // The widget posts `ready` on its own.
   }
 
   protected isReadyMessage(data: unknown): boolean {
@@ -53,24 +50,20 @@ export class SoundCloudPlayback extends FramePlayback {
 
   protected start(seconds: number | null): void {
     this.seekOnPlay = seconds !== null && seconds > 0 ? seconds : null;
-    this.post({ method: 'play' });
+    this.post(widgetMessage('play'));
   }
 
   protected stop(): void {
-    this.post({ method: 'pause' });
+    this.post(widgetMessage('pause'));
   }
 
   protected seekTo(seconds: number): void {
-    this.post({ method: 'seekTo', value: Math.round(seconds * MILLISECONDS) });
-  }
-
-  protected applyRate(): void {
-    // The widget has no rate control; the speed applies to the other tracks.
+    this.post(widgetMessage('seekTo', Math.round(seconds * MILLISECONDS)));
   }
 
   private subscribe(): void {
-    for (const event of SUBSCRIBED_EVENTS) this.post({ method: 'addEventListener', value: event });
-    this.post({ method: 'getDuration' });
+    for (const event of SUBSCRIBED_EVENTS) this.post(widgetMessage('addEventListener', event));
+    this.post(widgetMessage('getDuration'));
   }
 
   private readDuration(value: unknown): void {
@@ -79,12 +72,12 @@ export class SoundCloudPlayback extends FramePlayback {
   }
 
   private readPosition(value: unknown): void {
-    const milliseconds = finiteNumberOf(fieldOf(value, 'currentPosition'));
+    const milliseconds = finiteNumberOf(widgetFieldOf(value, 'currentPosition'));
     if (milliseconds !== null) this.reportTime(milliseconds / MILLISECONDS);
   }
 
   private readLoaded(value: unknown): void {
-    const fraction = finiteNumberOf(fieldOf(value, 'loadedProgress'));
+    const fraction = finiteNumberOf(widgetFieldOf(value, 'loadedProgress'));
     if (fraction !== null) this.reportLoaded(fraction);
   }
 
@@ -109,23 +102,4 @@ export class SoundCloudPlayback extends FramePlayback {
     this.seekTo(this.seekOnPlay);
     this.seekOnPlay = null;
   }
-}
-
-function widgetMessageOf(data: unknown): WidgetMessage | null {
-  if (typeof data !== 'string') return null;
-  try {
-    const parsed: unknown = JSON.parse(data);
-    return typeof fieldOf(parsed, 'method') === 'string' ? (parsed as WidgetMessage) : null;
-  } catch {
-    return null;
-  }
-}
-
-function fieldOf(value: unknown, name: string): unknown {
-  if (typeof value !== 'object' || value === null) return undefined;
-  return (value as Record<string, unknown>)[name];
-}
-
-function finiteNumberOf(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }

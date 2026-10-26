@@ -1,5 +1,6 @@
 import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { recordPosts } from '../../../../testing/frame-playback-testing';
 import { AudioPlayerService } from '../../audio-player.service';
 import { ArticleChapters } from './article-chapters';
 
@@ -98,11 +99,7 @@ describe('ArticleChapters', () => {
       const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
       const host = document.createElement('div');
       host.innerHTML = VIDEO_BODY;
-      const frame = host.querySelector('iframe')!;
-      const posted: unknown[] = [];
-      Object.defineProperty(frame, 'contentWindow', {
-        value: { postMessage: (message: string) => posted.push(message) },
-      });
+      const posted = recordPosts(host.querySelector('iframe')!);
       const articleChapters = chapters();
       articleChapters.attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, null);
 

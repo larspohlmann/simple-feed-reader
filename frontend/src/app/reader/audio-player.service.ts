@@ -70,7 +70,7 @@ export class AudioPlayerService {
       durationchange: () => this.onMetadata(),
       play: () => this.onPlaying(true),
       pause: () => this.onPlaying(false),
-      ended: () => this.onEnded(),
+      ended: () => this.playNextOrStop(),
       error: () => this.onError(),
     },
   );
@@ -139,6 +139,11 @@ export class AudioPlayerService {
 
   isQueued(url: string): boolean {
     return indexOf(this._playlist(), url) !== -1;
+  }
+
+  toggleQueued(track: AudioTrack): void {
+    if (this.isQueued(track.url)) this.dequeue(track.url);
+    else this.enqueue(track);
   }
 
   play(track: AudioTrack): void {
@@ -283,7 +288,7 @@ export class AudioPlayerService {
 
   private resume(): void {
     if (!this.current()) return;
-    if (this.sourceIsDead()) return this.skipDeadTrack();
+    if (this.sourceIsDead()) return this.playNextOrStop();
     if (this.element.error) this.reloadAtPosition();
     void this.element.play().catch(() => {
       /* Autoplay can be blocked until the user gestures; the play control retries. */
@@ -313,23 +318,18 @@ export class AudioPlayerService {
     if (!playing) this.persistence.save();
   }
 
-  private onEnded(): void {
-    if (this.hasNext()) return this.next();
-    this._playing.set(false);
-  }
-
   /** A dead enclosure (an expired podcast link) never ends, so it is skipped; a dropped
    *  connection only pauses, keeping the listener's place for play to reload from. */
   private onError(): void {
     if (this.sourceIsDead()) {
-      if (this._playing()) this.skipDeadTrack();
+      if (this._playing()) this.playNextOrStop();
       return;
     }
     this._playing.set(false);
     this.persistence.save();
   }
 
-  private skipDeadTrack(): void {
+  private playNextOrStop(): void {
     if (this.hasNext()) return this.next();
     this._playing.set(false);
   }

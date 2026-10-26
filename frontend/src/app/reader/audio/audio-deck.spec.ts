@@ -1,54 +1,17 @@
-import { timeRanges } from '../../../testing/time-ranges-testing';
+import { WATCH_URL, WIDGET_URL } from '../../../testing/embed-media-testing';
+import { FakeAudio } from '../../../testing/fake-audio-element';
 import { AudioDeck } from './audio-deck';
-import { PlaybackElement, PlaybackEvent, PlaybackSlot } from './playback/playback-element';
+import { PlaybackEvent, PlaybackSlot } from './playback/playback-element';
 import { PlaybackKind } from './playback/playback-kind';
 import { PlaybackSlotFactory } from './playback/playback-slots';
 
 const EPISODE_URL = 'https://x.test/ep.mp3';
 const NEXT_EPISODE_URL = 'https://x.test/next.mp3';
-const VIDEO_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-const SOUND_URL =
-  'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F123456789';
 const DURATION = 3600;
-
-class FakeElement implements PlaybackElement {
-  src = '';
-  preload: PlaybackElement['preload'] = '';
-  currentTime = 0;
-  duration = NaN;
-  buffered = timeRanges();
-  readyState = 0;
-  error = null;
-  defaultPlaybackRate = 1;
-  playbackRate = 1;
-  paused = true;
-  private readonly listeners = new Map<PlaybackEvent, (() => void)[]>();
-
-  play(): Promise<void> {
-    this.paused = false;
-    return Promise.resolve();
-  }
-
-  pause(): void {
-    this.paused = true;
-  }
-
-  load(): void {
-    /* The fake has nothing to reload. */
-  }
-
-  addEventListener(type: PlaybackEvent, listener: () => void): void {
-    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
-  }
-
-  fire(type: PlaybackEvent): void {
-    for (const listener of this.listeners.get(type) ?? []) listener();
-  }
-}
 
 interface RecordedSlot extends PlaybackSlot {
   readonly kind: PlaybackKind;
-  readonly element: FakeElement;
+  readonly element: FakeAudio;
   disposed: boolean;
 }
 
@@ -57,7 +20,7 @@ function recordingSlots(): { created: RecordedSlot[]; createSlot: PlaybackSlotFa
   const createSlot: PlaybackSlotFactory = (kind) => {
     const slot: RecordedSlot = {
       kind,
-      element: new FakeElement(),
+      element: new FakeAudio(),
       disposed: false,
       dispose: () => {
         slot.disposed = true;
@@ -123,19 +86,19 @@ describe('AudioDeck', () => {
     it('holds a youtube slot in place of the playing file slot', () => {
       make();
 
-      expect(deck.load(VIDEO_URL)).toBe(false);
+      expect(deck.load(WATCH_URL)).toBe(false);
 
       expect(created[0].disposed).toBe(true);
       expect(kindsOf(created)).toEqual(['file', 'file', 'youtube']);
       expect(deck.element).toBe(created[2].element);
-      expect(created[2].element.src).toBe(VIDEO_URL);
+      expect(created[2].element.src).toBe(WATCH_URL);
       expect(created[2].element.preload).toBe('auto');
     });
 
     it('leaves the standby slot as it is', () => {
       make();
 
-      deck.load(VIDEO_URL);
+      deck.load(WATCH_URL);
 
       expect(created[1].disposed).toBe(false);
       expect(created[1].kind).toBe('file');
@@ -145,7 +108,7 @@ describe('AudioDeck', () => {
       make();
       deck.setRate(1.5);
 
-      deck.load(VIDEO_URL);
+      deck.load(WATCH_URL);
 
       expect(created[2].element.playbackRate).toBe(1.5);
       expect(created[2].element.defaultPlaybackRate).toBe(1.5);
@@ -153,7 +116,7 @@ describe('AudioDeck', () => {
 
     it('hears the slot held later', () => {
       make();
-      deck.load(VIDEO_URL);
+      deck.load(WATCH_URL);
 
       created[2].element.fire('timeupdate');
 
@@ -164,11 +127,11 @@ describe('AudioDeck', () => {
       make();
       deck.load(EPISODE_URL);
 
-      cacheNext(SOUND_URL);
+      cacheNext(WIDGET_URL);
 
       expect(created[1].disposed).toBe(true);
       expect(kindsOf(created)).toEqual(['file', 'file', 'soundcloud']);
-      expect(created[2].element.src).toBe(SOUND_URL);
+      expect(created[2].element.src).toBe(WIDGET_URL);
       expect(deck.element).toBe(created[0].element);
     });
 
@@ -185,9 +148,9 @@ describe('AudioDeck', () => {
     it('swaps into the cached frame slot and keeps the outgoing file slot on standby', () => {
       make();
       deck.load(EPISODE_URL);
-      cacheNext(VIDEO_URL);
+      cacheNext(WATCH_URL);
 
-      expect(deck.load(VIDEO_URL)).toBe(true);
+      expect(deck.load(WATCH_URL)).toBe(true);
 
       expect(deck.element).toBe(created[2].element);
       expect(created[0].element.paused).toBe(true);
@@ -232,7 +195,7 @@ describe('AudioDeck', () => {
     it('disposes the standby slot and holds a fresh file slot', () => {
       make();
       deck.load(EPISODE_URL);
-      cacheNext(VIDEO_URL);
+      cacheNext(WATCH_URL);
 
       deck.release();
 
@@ -240,6 +203,17 @@ describe('AudioDeck', () => {
       expect(created[0].disposed).toBe(false);
       expect(kindsOf(created)).toEqual(['file', 'file', 'youtube', 'file']);
       expect(created[3].element.preload).toBe('auto');
+    });
+
+    it('lets go of a provider frame left playing', () => {
+      make();
+      deck.load(WATCH_URL);
+
+      deck.release();
+
+      expect(created[2].disposed).toBe(true);
+      expect(kindsOf(created)).toEqual(['file', 'file', 'youtube', 'file', 'file']);
+      expect(deck.element).toBe(created[3].element);
     });
 
     it('forgets the released urls, so the same track loads afresh', () => {

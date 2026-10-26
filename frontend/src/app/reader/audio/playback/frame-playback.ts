@@ -1,14 +1,7 @@
 import { hiddenPlaybackFrame } from './hidden-frame';
 import { PlaybackElement, PlaybackEvent } from './playback-element';
 
-const UNPLAYABLE: MediaError = Object.freeze({
-  code: 4,
-  MEDIA_ERR_ABORTED: 1,
-  MEDIA_ERR_NETWORK: 2,
-  MEDIA_ERR_DECODE: 3,
-  MEDIA_ERR_SRC_NOT_SUPPORTED: 4,
-  message: 'The provider does not play this media.',
-} as const);
+const UNPLAYABLE = { code: 4, MEDIA_ERR_SRC_NOT_SUPPORTED: 4 } as const;
 
 const NO_RANGES: TimeRanges = Object.freeze({
   length: 0,
@@ -20,7 +13,6 @@ function singleRange(end: number): TimeRanges {
   return { length: 1, start: () => 0, end: () => end };
 }
 
-/** A player frame the audio player drives as if it were an audio element (#1815). */
 export abstract class FramePlayback implements PlaybackElement {
   preload: PlaybackElement['preload'] = 'auto';
   defaultPlaybackRate = 1;
@@ -33,10 +25,10 @@ export abstract class FramePlayback implements PlaybackElement {
   private rate = 1;
   private loaded = false;
   private ready = false;
+  /** A seek before the provider has played is held, because YouTube's seekTo on a cued video starts it. */
   private started = false;
   private paused = true;
   private failed = false;
-  private pendingPlay = false;
   private startAt: number | null = null;
 
   private readonly onMessage = (event: MessageEvent): void => {
@@ -61,11 +53,7 @@ export abstract class FramePlayback implements PlaybackElement {
   set src(url: string) {
     this.source = url;
     this.resetState();
-    this.frame?.remove();
-    this.frame = null;
-    if (!url) return;
-    this.frame = this.buildFrame(url);
-    this.host.appendChild(this.frame);
+    this.dropFrame();
   }
 
   get currentTime(): number {
@@ -94,7 +82,7 @@ export abstract class FramePlayback implements PlaybackElement {
     return this.hasLength() ? HTMLMediaElement.HAVE_METADATA : HTMLMediaElement.HAVE_NOTHING;
   }
 
-  get error(): MediaError | null {
+  get error(): PlaybackElement['error'] {
     return this.failed ? UNPLAYABLE : null;
   }
 
@@ -104,7 +92,7 @@ export abstract class FramePlayback implements PlaybackElement {
 
   set playbackRate(rate: number) {
     this.rate = rate;
-    if (this.ready) this.applyRate(rate);
+    if (this.ready) this.applyRate();
   }
 
   play(): Promise<void> {
@@ -112,10 +100,11 @@ export abstract class FramePlayback implements PlaybackElement {
       this.paused = false;
       this.emit('play');
     }
+    if (!this.frame) this.mountFrame();
     if (this.ready) {
       this.startFromHeldPosition();
     } else {
-      this.pendingPlay = true;
+      this.promptProvider();
     }
     return Promise.resolve();
   }
@@ -125,14 +114,15 @@ export abstract class FramePlayback implements PlaybackElement {
       this.stop();
       return;
     }
-    this.pendingPlay = false;
     if (this.paused) return;
     this.paused = true;
     this.emit('pause');
   }
 
   load(): void {
-    this.src = this.source;
+    this.resetState();
+    this.dropFrame();
+    this.mountFrame();
   }
 
   addEventListener(type: PlaybackEvent, listener: () => void): void {
@@ -141,19 +131,26 @@ export abstract class FramePlayback implements PlaybackElement {
 
   dispose(): void {
     window.removeEventListener('message', this.onMessage);
-    this.frame?.remove();
-    this.frame = null;
+    this.dropFrame();
     this.listeners.clear();
   }
 
   protected abstract frameUrlFor(url: string): string;
-  protected abstract onFrameLoaded(): void;
   protected abstract isReadyMessage(data: unknown): boolean;
   protected abstract readMessage(data: unknown): void;
   protected abstract start(seconds: number | null): void;
   protected abstract stop(): void;
   protected abstract seekTo(seconds: number): void;
-  protected abstract applyRate(rate: number): void;
+
+  /** Asked once the frame has loaded, and again for every play before the provider is ready. */
+  protected promptProvider(): void {
+    /* Most providers speak unprompted. */
+  }
+
+  /** Hands `playbackRate` to the provider; one without a rate control keeps its own pace. */
+  protected applyRate(): void {
+    /* Nothing to send. */
+  }
 
   protected post(message: object): void {
     if (!this.loaded || !this.frame) return;
@@ -163,9 +160,8 @@ export abstract class FramePlayback implements PlaybackElement {
   protected becameReady(): void {
     if (this.ready) return;
     this.ready = true;
-    this.applyRate(this.rate);
-    if (!this.pendingPlay) return;
-    this.pendingPlay = false;
+    this.applyRate();
+    if (this.paused) return;
     this.startFromHeldPosition();
   }
 
@@ -182,6 +178,7 @@ export abstract class FramePlayback implements PlaybackElement {
   }
 
   protected reportLoaded(fraction: number): void {
+    if (fraction === this.loadedFraction) return;
     this.loadedFraction = fraction;
     this.emit('progress');
   }
@@ -209,14 +206,21 @@ export abstract class FramePlayback implements PlaybackElement {
     this.emit('error');
   }
 
-  private buildFrame(url: string): HTMLIFrameElement {
-    const frame = hiddenPlaybackFrame(this.frameUrlFor(url), this.title);
+  private mountFrame(): void {
+    if (!this.source) return;
+    const frame = hiddenPlaybackFrame(this.frameUrlFor(this.source), this.title);
     frame.addEventListener('load', () => {
       if (frame !== this.frame) return;
       this.loaded = true;
-      this.onFrameLoaded();
+      this.promptProvider();
     });
-    return frame;
+    this.frame = frame;
+    this.host.appendChild(frame);
+  }
+
+  private dropFrame(): void {
+    this.frame?.remove();
+    this.frame = null;
   }
 
   private startFromHeldPosition(): void {
@@ -234,7 +238,6 @@ export abstract class FramePlayback implements PlaybackElement {
     this.started = false;
     this.paused = true;
     this.failed = false;
-    this.pendingPlay = false;
     this.startAt = null;
   }
 

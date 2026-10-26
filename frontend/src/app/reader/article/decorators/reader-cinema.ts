@@ -1,4 +1,5 @@
 import { isTextEntryTarget } from '../../../shared/text-entry-target';
+import { materialIcon } from './material-icon';
 
 export interface CinemaLabels {
   enter: string;
@@ -8,7 +9,7 @@ export interface CinemaLabels {
 const LANDSCAPE_PLAYER = '.reader-embed--landscape:not(.reader-embed--audio), video';
 const BOX = 'reader-cinema';
 const WIDENED = 'reader-cinema--on';
-export const PLAYER_BAR = 'reader-player-bar';
+const PLAYER_BAR = 'reader-player-bar';
 
 /** The bar under a player that the cinema toggle and the listen controls share. */
 export function playerBar(): HTMLElement {
@@ -29,9 +30,7 @@ export function addCinemaToggles(host: HTMLElement, labels: CinemaLabels): void 
 }
 
 function toggleBar(box: HTMLElement, labels: CinemaLabels): HTMLElement {
-  const icon = document.createElement('span');
-  icon.className = 'material-symbols-outlined';
-  icon.setAttribute('aria-hidden', 'true');
+  const icon = materialIcon('width_wide');
   const label = document.createElement('span');
   const key = document.createElement('kbd');
   key.setAttribute('aria-hidden', 'true');

@@ -1,16 +1,11 @@
+import { FakeAudio } from '../../../../testing/fake-audio-element';
 import { FramePlayback } from './frame-playback';
-import { audioSlot, frameSlot, playbackSlotFactory, providerPlayback } from './playback-slots';
+import { playbackSlotFactory, providerPlayback } from './playback-slots';
 import { SoundCloudPlayback } from './soundcloud-playback';
 import { YouTubePlayback } from './youtube-playback';
 
-function fakeAudio(): HTMLAudioElement & { calls: string[] } {
-  const calls: string[] = [];
-  return {
-    calls,
-    pause: () => calls.push('pause'),
-    removeAttribute: (name: string) => calls.push(`removeAttribute:${name}`),
-    load: () => calls.push('load'),
-  } as unknown as HTMLAudioElement & { calls: string[] };
+function fakeAudio(): FakeAudio {
+  return new FakeAudio();
 }
 
 function fakePlayback(): FramePlayback & { disposed: boolean } {
@@ -18,52 +13,36 @@ function fakePlayback(): FramePlayback & { disposed: boolean } {
   return playback as unknown as FramePlayback & { disposed: boolean };
 }
 
-describe('audioSlot', () => {
-  it('holds the element', () => {
-    const element = fakeAudio();
-
-    expect(audioSlot(element).element).toBe(element);
-  });
-
-  it('pauses, unsets the source and reloads on dispose', () => {
-    const element = fakeAudio();
-
-    audioSlot(element).dispose();
-
-    expect(element.calls).toEqual(['pause', 'removeAttribute:src', 'load']);
-  });
-});
-
-describe('frameSlot', () => {
-  it('holds the playback as its element', () => {
-    const playback = fakePlayback();
-
-    expect(frameSlot(playback).element).toBe(playback);
-  });
-
-  it('disposes the playback on dispose', () => {
-    const playback = fakePlayback();
-
-    frameSlot(playback).dispose();
-
-    expect(playback.disposed).toBe(true);
-  });
-});
+function slotsOf(audio: FakeAudio, playback: FramePlayback) {
+  return playbackSlotFactory(
+    () => audio as unknown as HTMLAudioElement,
+    () => playback,
+  );
+}
 
 describe('playbackSlotFactory', () => {
-  it('builds a file slot from the audio factory', () => {
-    const element = fakeAudio();
-    const createSlot = playbackSlotFactory(
-      () => element,
-      () => fakePlayback(),
-    );
+  it('builds a file slot holding the audio element', () => {
+    const audio = fakeAudio();
+    const createSlot = slotsOf(audio, fakePlayback());
 
-    expect(createSlot('file').element).toBe(element);
+    expect(createSlot('file').element).toBe(audio);
+  });
+
+  it('lets go of a file slot by pausing, unsetting the source and reloading the element', () => {
+    const audio = fakeAudio();
+    audio.src = 'https://x.test/ep.mp3';
+    const createSlot = slotsOf(audio, fakePlayback());
+
+    createSlot('file').dispose();
+
+    expect(audio.pause).toHaveBeenCalled();
+    expect(audio.src).toBe('');
+    expect(audio.load).toHaveBeenCalled();
   });
 
   it('builds a frame slot from the frame factory for the other kinds', () => {
     const playback = fakePlayback();
-    const createSlot = playbackSlotFactory(fakeAudio, () => playback);
+    const createSlot = slotsOf(fakeAudio(), playback);
 
     expect(createSlot('youtube').element).toBe(playback);
     expect(createSlot('soundcloud').element).toBe(playback);
@@ -71,14 +50,26 @@ describe('playbackSlotFactory', () => {
 
   it('hands the frame factory the kind', () => {
     const asked: string[] = [];
-    const createSlot = playbackSlotFactory(fakeAudio, (kind) => {
-      asked.push(kind);
-      return fakePlayback();
-    });
+    const createSlot = playbackSlotFactory(
+      () => fakeAudio() as unknown as HTMLAudioElement,
+      (kind) => {
+        asked.push(kind);
+        return fakePlayback();
+      },
+    );
 
     createSlot('soundcloud');
 
     expect(asked).toEqual(['soundcloud']);
+  });
+
+  it('lets go of a frame slot by disposing the playback', () => {
+    const playback = fakePlayback();
+    const createSlot = slotsOf(fakeAudio(), playback);
+
+    createSlot('youtube').dispose();
+
+    expect(playback.disposed).toBe(true);
   });
 });
 

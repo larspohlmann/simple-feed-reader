@@ -1,18 +1,17 @@
+import {
+  deliverMessage,
+  frameOf,
+  messagesOf,
+  playbackFixture,
+  PlaybackFixture,
+  recordPosts,
+} from '../../../../testing/frame-playback-testing';
 import { EMBED_FRAME_ATTRIBUTES } from '../../media/media-embeds';
 import { FramePlayback } from './frame-playback';
-import { PlaybackEvent } from './playback-element';
 
 const ORIGIN = 'https://player.test';
-const ALL_EVENTS: PlaybackEvent[] = [
-  'progress',
-  'timeupdate',
-  'loadedmetadata',
-  'durationchange',
-  'play',
-  'pause',
-  'ended',
-  'error',
-];
+const MEDIA_URL = 'https://media.test/one';
+const LISTENING = { event: 'listening' };
 
 class TestPlayback extends FramePlayback {
   readonly commands: string[] = [];
@@ -50,8 +49,8 @@ class TestPlayback extends FramePlayback {
     return `${ORIGIN}/embed?media=${encodeURIComponent(url)}`;
   }
 
-  protected onFrameLoaded(): void {
-    this.post({ event: 'listening' });
+  protected override promptProvider(): void {
+    this.post(LISTENING);
   }
 
   protected isReadyMessage(data: unknown): boolean {
@@ -74,62 +73,27 @@ class TestPlayback extends FramePlayback {
     this.commands.push(`seekTo:${seconds}`);
   }
 
-  protected applyRate(rate: number): void {
-    this.commands.push(`rate:${rate}`);
+  protected override applyRate(): void {
+    this.commands.push(`rate:${this.playbackRate}`);
   }
 }
 
-interface Fixture {
-  playback: TestPlayback;
-  host: HTMLElement;
-  events: PlaybackEvent[];
-  frame: HTMLIFrameElement;
-  posted: unknown[];
+type Fixture = PlaybackFixture<TestPlayback>;
+
+function delivery(frame: HTMLIFrameElement, data: unknown): void {
+  deliverMessage(frame, data, ORIGIN);
 }
 
-function frameOf(host: HTMLElement): HTMLIFrameElement {
-  const frame = host.querySelector('iframe');
-  if (!frame) throw new Error('no frame in the host');
-  return frame;
-}
-
-/** Replaces the frame's window with one that records what is posted to it. */
-function recordPosts(frame: HTMLIFrameElement): unknown[] {
-  const posted: unknown[] = [];
-  const contentWindow = { postMessage: (message: string) => posted.push(JSON.parse(message)) };
-  Object.defineProperty(frame, 'contentWindow', { value: contentWindow, configurable: true });
-  return posted;
-}
-
-/** jsdom accepts only a real Window as a MessageEvent source, so the fake one is set afterwards. */
-function delivery(frame: HTMLIFrameElement, data: unknown, origin = ORIGIN): void {
-  const event = new MessageEvent('message', { data, origin });
-  Object.defineProperty(event, 'source', { value: frame.contentWindow });
-  window.dispatchEvent(event);
-}
-
-function playbackWithSource(url = 'https://media.test/one'): Fixture {
-  const host = document.createElement('div');
-  document.body.appendChild(host);
-  const playback = new TestPlayback(host, ORIGIN, 'A title');
-  const events: PlaybackEvent[] = [];
-  for (const type of ALL_EVENTS) playback.addEventListener(type, () => events.push(type));
-  playback.src = url;
-  const frame = frameOf(host);
-  const posted = recordPosts(frame);
-  return { playback, host, events, frame, posted };
+function playbackWithSource(url = MEDIA_URL): Fixture {
+  return playbackFixture((host) => new TestPlayback(host, ORIGIN, 'A title'), url);
 }
 
 function loadedPlayback(url?: string): Fixture {
-  const fixture = playbackWithSource(url);
-  fixture.frame.dispatchEvent(new Event('load'));
-  return fixture;
+  return playbackWithSource(url).loaded();
 }
 
 function readyPlayback(url?: string): Fixture {
-  const fixture = loadedPlayback(url);
-  delivery(fixture.frame, 'ready');
-  return fixture;
+  return loadedPlayback(url).ready('ready');
 }
 
 describe('FramePlayback', () => {
@@ -138,19 +102,25 @@ describe('FramePlayback', () => {
   });
 
   describe('frame', () => {
-    it('holds no frame until a source is given', () => {
+    it('builds the provider frame on the first play, not on the source', () => {
       const host = document.createElement('div');
       const playback = new TestPlayback(host, ORIGIN, 'A title');
 
+      playback.src = MEDIA_URL;
+
       expect(host.querySelector('iframe')).toBeNull();
-      expect(playback.src).toBe('');
+      expect(playback.src).toBe(MEDIA_URL);
+
+      void playback.play();
+
+      expect(frameOf(host).getAttribute('src')).toContain('media.test%2Fone');
       playback.dispose();
     });
 
     it('builds the provider frame in the host from the source, keeping the source as given', () => {
-      const { playback, frame } = playbackWithSource('https://media.test/one');
+      const { playback, frame } = playbackWithSource(MEDIA_URL);
 
-      expect(playback.src).toBe('https://media.test/one');
+      expect(playback.src).toBe(MEDIA_URL);
       expect(frame.getAttribute('src')).toBe(
         'https://player.test/embed?media=https%3A%2F%2Fmedia.test%2Fone',
       );
@@ -163,36 +133,40 @@ describe('FramePlayback', () => {
       playback.dispose();
     });
 
-    it('replaces the frame on a new source', () => {
-      const { playback, host, frame } = readyPlayback('https://media.test/one');
+    it('drops the frame on a new source and builds a fresh one on the next play', () => {
+      const { playback, host, frame } = readyPlayback(MEDIA_URL);
 
       playback.src = 'https://media.test/two';
 
       expect(frame.isConnected).toBe(false);
+      expect(host.querySelector('iframe')).toBeNull();
+
+      void playback.play();
+
       expect(host.querySelectorAll('iframe')).toHaveLength(1);
       expect(frameOf(host).getAttribute('src')).toContain('media.test%2Ftwo');
       playback.dispose();
     });
 
-    it('posts nothing before the frame has loaded, then lets the provider speak', () => {
+    it('posts nothing before the frame has loaded, then prompts the provider', () => {
       const { playback, frame, posted } = playbackWithSource();
 
       expect(posted).toEqual([]);
       frame.dispatchEvent(new Event('load'));
 
-      expect(posted).toEqual([{ event: 'listening' }]);
+      expect(posted).toEqual([{ message: LISTENING, origin: ORIGIN }]);
       playback.dispose();
     });
 
     it('starts over with a fresh frame at the same source on load()', () => {
-      const { playback, host, frame } = readyPlayback('https://media.test/one');
+      const { playback, host, frame } = readyPlayback(MEDIA_URL);
       playback.reportFailure();
 
       playback.load();
 
       expect(frame.isConnected).toBe(false);
       expect(frameOf(host).getAttribute('src')).toContain('media.test%2Fone');
-      expect(playback.src).toBe('https://media.test/one');
+      expect(playback.src).toBe(MEDIA_URL);
       expect(playback.error).toBeNull();
       playback.dispose();
     });
@@ -214,7 +188,7 @@ describe('FramePlayback', () => {
       const other = document.createElement('iframe');
       recordPosts(other);
 
-      delivery(frame, 'ready', 'https://evil.test');
+      deliverMessage(frame, 'ready', 'https://evil.test');
       delivery(other, 'ready');
 
       expect(playback.received).toEqual([]);
@@ -246,13 +220,24 @@ describe('FramePlayback', () => {
       playback.dispose();
     });
 
+    it('prompts the provider again for every play before it is ready', async () => {
+      const { playback, posted } = loadedPlayback();
+
+      await playback.play();
+      await playback.play();
+
+      expect(messagesOf(posted)).toEqual([LISTENING, LISTENING, LISTENING]);
+      playback.dispose();
+    });
+
     it('starts at once when the provider is ready', async () => {
-      const { playback, frame, events } = readyPlayback();
+      const { playback, frame, events, posted } = readyPlayback();
 
       await playback.play();
 
       expect(events).toEqual(['play']);
       expect(playback.commands).toEqual(['rate:1', 'start:null']);
+      expect(messagesOf(posted)).toEqual([LISTENING]);
       expect(frame.isConnected).toBe(true);
       playback.dispose();
     });
@@ -445,6 +430,17 @@ describe('FramePlayback', () => {
       expect(events).toEqual(['loadedmetadata', 'durationchange', 'progress']);
       playback.dispose();
     });
+
+    it('emits progress once for an unchanged fraction', () => {
+      const { playback, events } = readyPlayback();
+      playback.reportDuration(600);
+
+      playback.reportLoaded(0.25);
+      playback.reportLoaded(0.25);
+
+      expect(events).toEqual(['loadedmetadata', 'durationchange', 'progress']);
+      playback.dispose();
+    });
   });
 
   describe('ending and failing', () => {
@@ -483,6 +479,7 @@ describe('FramePlayback', () => {
       expect(playback.commands).toEqual(['rate:1.5', 'rate:2']);
 
       playback.src = 'https://media.test/two';
+      playback.load();
       const frame = frameOf(host);
       recordPosts(frame);
       frame.dispatchEvent(new Event('load'));

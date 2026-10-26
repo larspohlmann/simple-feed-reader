@@ -5,7 +5,7 @@ import { PlaybackSlotFactory } from './playback/playback-slots';
 /** The next track starts caching once the playing one is this close to its end, or fully cached. */
 export const PRECACHE_LEAD_SECONDS = 300;
 
-export type PlaybackHandlers = Record<PlaybackEvent, () => void>;
+type PlaybackHandlers = Record<PlaybackEvent, () => void>;
 
 interface HeldSlot extends PlaybackSlot {
   readonly kind: PlaybackKind;
@@ -67,6 +67,10 @@ export class AudioDeck {
 
   release(): void {
     this.playing.url = null;
+    if (this.playing.kind !== 'file') {
+      this.playing.dispose();
+      this.playing = this.hold('file');
+    }
     this.standby.dispose();
     this.standby = this.hold('file');
   }
@@ -84,7 +88,7 @@ export class AudioDeck {
     slot.element.preload = 'auto';
     this.listen(slot.element);
     this.applyRate(slot.element);
-    return { kind, url: null, element: slot.element, dispose: () => slot.dispose() };
+    return { ...slot, kind, url: null };
   }
 
   /** Every slot is bound once; only the one playing is heard. */
