@@ -10,9 +10,8 @@ export class PlayingEmbedDirective {
 
   constructor() {
     effect(() => {
-      const frame = embedFrame(this.appPlayingEmbed(), untracked(this.embedTitle));
-      frame.setAttribute('allow', 'autoplay; fullscreen');
-      this.host.replaceChildren(frame);
+      const source = { url: this.appPlayingEmbed(), allow: 'autoplay; fullscreen' };
+      this.host.replaceChildren(embedFrame(source, untracked(this.embedTitle)));
     });
   }
 }

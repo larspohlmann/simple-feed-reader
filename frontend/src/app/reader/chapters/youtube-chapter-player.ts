@@ -2,6 +2,7 @@ import { ChapterPlayer, PlaybackPosition } from './chapter-player';
 
 const PLAYER_ORIGIN = 'https://www.youtube-nocookie.com';
 const WIDGET = { id: 1, channel: 'widget' };
+const LISTENING = { event: 'listening', ...WIDGET };
 
 interface PlayerInfo {
   readonly currentTime?: unknown;
@@ -17,16 +18,16 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
 
   private readonly onMessage = (event: MessageEvent): void => {
     if (event.origin !== PLAYER_ORIGIN || event.source !== this.frame.contentWindow) return;
-    const playedHeldStart = this.playHeldStartOnReady();
+    const playsHeldStart = !this.ready && this.heldStart !== null;
+    this.becomeReady();
     const info = infoOf(event.data);
-    const duration = secondsOf(info?.duration);
-    if (duration !== null && duration > 0) this.durationSeconds = duration;
-    if (playedHeldStart) return;
+    this.rememberDuration(info);
+    if (playsHeldStart) return;
     const seconds = secondsOf(info?.currentTime);
     if (seconds !== null) this.onPosition?.({ seconds, durationSeconds: this.durationSeconds });
   };
 
-  private readonly onLoad = (): void => this.listen();
+  private readonly onLoad = (): void => this.post(LISTENING);
 
   constructor(private readonly frame: HTMLIFrameElement) {
     window.addEventListener('message', this.onMessage);
@@ -36,7 +37,7 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
   playFrom(seconds: number): void {
     if (!this.ready) {
       this.heldStart = seconds;
-      this.listen();
+      this.post(LISTENING);
       return;
     }
     this.command('seekTo', [seconds, true]);
@@ -54,18 +55,17 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
     this.frame.removeEventListener('load', this.onLoad);
   }
 
-  private playHeldStartOnReady(): boolean {
-    if (this.ready) return false;
+  private becomeReady(): void {
+    if (this.ready) return;
     this.ready = true;
     const start = this.heldStart;
     this.heldStart = null;
-    if (start === null) return false;
-    this.playFrom(start);
-    return true;
+    if (start !== null) this.playFrom(start);
   }
 
-  private listen(): void {
-    this.post({ event: 'listening', ...WIDGET });
+  private rememberDuration(info: PlayerInfo | null): void {
+    const duration = secondsOf(info?.duration);
+    if (duration !== null && duration > 0) this.durationSeconds = duration;
   }
 
   private command(name: string, commandArguments: unknown[]): void {

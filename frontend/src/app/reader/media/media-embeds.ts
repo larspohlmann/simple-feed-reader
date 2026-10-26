@@ -46,28 +46,33 @@ export function isAllowedEmbed(url: string): boolean {
 
 const YOUTUBE_VIDEO_FRAME = /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}$/;
 
-// Without autoplay, a cross-origin player ignores the playVideo a chapter tap sends (Brave, #1814).
-const PLAYER_API_FRAME =
-  /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}\?enablejsapi=1&origin=/;
+/** What an embed frame loads, and the browser features it may use beyond the sandbox. */
+export interface EmbedSource {
+  readonly url: string;
+  readonly allow?: string;
+}
 
-/** Maps an allow-listed player URL to the one the frame loads. */
-export type FrameUrl = (url: string) => string;
+/** Maps an allow-listed player URL to the source its frame loads. */
+export type EmbedSourceOf = (url: string) => EmbedSource;
 
 /** The YouTube video player that answers the iframe API, for a page driving it with chapters (#1808). Only
  *  ever applied to a URL the allow-list already accepted; the suffix is ours and constant. */
-export function withPlayerApi(url: string, origin: string): string {
-  return YOUTUBE_VIDEO_FRAME.test(url)
-    ? `${url}?enablejsapi=1&origin=${encodeURIComponent(origin)}`
-    : url;
+export function withPlayerApi(url: string, origin: string): EmbedSource {
+  if (!YOUTUBE_VIDEO_FRAME.test(url)) return { url };
+  // Without autoplay, a cross-origin player ignores the playVideo a chapter tap sends (Brave, #1814).
+  return { url: `${url}?enablejsapi=1&origin=${encodeURIComponent(origin)}`, allow: 'autoplay' };
 }
 
-export function upgradeMediaEmbeds(host: HTMLElement, frameUrl: FrameUrl = (url) => url): void {
+export function upgradeMediaEmbeds(
+  host: HTMLElement,
+  sourceOf: EmbedSourceOf = (url) => ({ url }),
+): void {
   for (const anchor of Array.from(host.querySelectorAll('a'))) {
     const url = anchor.getAttribute('href') ?? '';
     const frame = ALLOWED.find(({ pattern }) => pattern.test(url));
     if (!frame) continue;
     anchor.replaceWith(
-      embedBox(frameUrl(url), frame, anchor.textContent?.trim() || 'Embedded media'),
+      embedBox(sourceOf(url), frame, anchor.textContent?.trim() || 'Embedded media'),
     );
   }
 }
@@ -80,16 +85,16 @@ function boxClasses({ kind, shape }: EmbedPlayer): string[] {
   ];
 }
 
-function embedBox(url: string, player: EmbedPlayer, title: string): HTMLElement {
+function embedBox(source: EmbedSource, player: EmbedPlayer, title: string): HTMLElement {
   const box = document.createElement('div');
   box.classList.add(...boxClasses(player));
-  box.appendChild(embedFrame(url, title));
+  box.appendChild(embedFrame(source, title));
 
   return box;
 }
 
 /** An embed frame, still detached: insert it only once built, since iOS WebKit honours `referrerpolicy` only on a frame whose src precedes insertion (#1594). */
-export function embedFrame(url: string, title: string): HTMLIFrameElement {
+export function embedFrame({ url, allow }: EmbedSource, title: string): HTMLIFrameElement {
   const frame = document.createElement('iframe');
   frame.setAttribute('src', url);
   frame.setAttribute('title', title);
@@ -97,7 +102,7 @@ export function embedFrame(url: string, title: string): HTMLIFrameElement {
   for (const [name, value] of Object.entries(EMBED_FRAME_ATTRIBUTES)) {
     frame.setAttribute(name, value);
   }
-  if (PLAYER_API_FRAME.test(url)) frame.setAttribute('allow', 'autoplay');
+  if (allow) frame.setAttribute('allow', allow);
 
   return frame;
 }
