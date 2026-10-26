@@ -863,12 +863,20 @@ Add after it:
     const player = new YouTubeChapterPlayer(frame);
 
     player.playFrom(256);
-    expect(posted).toEqual([]);
+    expect(posted).toEqual([{ event: 'listening', id: 1, channel: 'widget' }]);
 
     delivery(frame, { event: 'initialDelivery', info: { currentTime: 0 } });
 
     expect(posted).toEqual([
+      { event: 'listening', id: 1, channel: 'widget' },
       { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
+      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
+    ]);
+
+    player.playFrom(30);
+
+    expect(posted.slice(3)).toEqual([
+      { event: 'command', func: 'seekTo', args: [30, true], id: 1, channel: 'widget' },
       { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
     ]);
     player.release();
@@ -884,6 +892,8 @@ Add after it:
     delivery(frame, { event: 'infoDelivery', info: { currentTime: 1 } });
 
     expect(posted).toEqual([
+      { event: 'listening', id: 1, channel: 'widget' },
+      { event: 'listening', id: 1, channel: 'widget' },
       { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
       { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
     ]);
@@ -898,7 +908,7 @@ Add after it:
     player.release();
     delivery(frame, { event: 'onReady' });
 
-    expect(posted).toEqual([]);
+    expect(posted).toEqual([{ event: 'listening', id: 1, channel: 'widget' }]);
   });
 ```
 
@@ -924,6 +934,7 @@ Replace `playFrom` with:
   playFrom(seconds: number): void {
     if (!this.ready) {
       this.heldStart = seconds;
+      this.listen();
       return;
     }
     this.command('seekTo', [seconds, true]);
@@ -931,7 +942,15 @@ Replace `playFrom` with:
   }
 ```
 
-Add `this.heldStart = null;` to `release()`, then add a private method below `release()`:
+Add `this.heldStart = null;` to `release()`. Change `onLoad` to `(): void => this.listen();` and add a private `listen()`:
+
+```ts
+  private listen(): void {
+    this.post({ event: 'listening', ...WIDGET });
+  }
+```
+
+Then add a private method below `release()`:
 
 ```ts
   private becomeReady(): void {
@@ -942,6 +961,8 @@ Add `this.heldStart = null;` to `release()`, then add a private method below `re
     if (start !== null) this.playFrom(start);
   }
 ```
+
+A held tap also posts `listening`: a player attached to a frame that already loaded never gets a `load` event, and a paused video may send nothing, so the prompt makes the frame answer. It is not posted from the constructor, because a frame that has not loaded yet logs a postMessage origin error.
 
 `release()` already removes the message listener, so a released player never becomes ready. The `'drops a held chapter…'` test pins this.
 

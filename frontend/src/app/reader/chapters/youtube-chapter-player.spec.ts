@@ -48,12 +48,20 @@ describe('YouTubeChapterPlayer', () => {
     const player = new YouTubeChapterPlayer(frame);
 
     player.playFrom(256);
-    expect(posted).toEqual([]);
+    expect(posted).toEqual([{ event: 'listening', id: 1, channel: 'widget' }]);
 
     delivery(frame, { event: 'initialDelivery', info: { currentTime: 0 } });
 
     expect(posted).toEqual([
+      { event: 'listening', id: 1, channel: 'widget' },
       { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
+      { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
+    ]);
+
+    player.playFrom(30);
+
+    expect(posted.slice(3)).toEqual([
+      { event: 'command', func: 'seekTo', args: [30, true], id: 1, channel: 'widget' },
       { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
     ]);
     player.release();
@@ -69,6 +77,8 @@ describe('YouTubeChapterPlayer', () => {
     delivery(frame, { event: 'infoDelivery', info: { currentTime: 1 } });
 
     expect(posted).toEqual([
+      { event: 'listening', id: 1, channel: 'widget' },
+      { event: 'listening', id: 1, channel: 'widget' },
       { event: 'command', func: 'seekTo', args: [256, true], id: 1, channel: 'widget' },
       { event: 'command', func: 'playVideo', args: [], id: 1, channel: 'widget' },
     ]);
@@ -83,7 +93,7 @@ describe('YouTubeChapterPlayer', () => {
     player.release();
     delivery(frame, { event: 'onReady' });
 
-    expect(posted).toEqual([]);
+    expect(posted).toEqual([{ event: 'listening', id: 1, channel: 'widget' }]);
   });
 
   it('reports the position the player delivers', () => {
