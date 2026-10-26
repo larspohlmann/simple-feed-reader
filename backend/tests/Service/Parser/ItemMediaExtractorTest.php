@@ -233,4 +233,46 @@ final class ItemMediaExtractorTest extends TestCase
         self::assertCount(1, $bundle->media);
         self::assertSame('https://i/photo.jpg', $bundle->media[0]->url);
     }
+
+    public function testAnImagesOwnMediaDescriptionIsItsAltText(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<media:content url="https://i/one.jpg" medium="image">'
+            . '<media:description type="plain"> A donkey &lt;3 </media:description>'
+            . '</media:content>'
+            . '<media:content url="https://i/two.jpg" medium="image">'
+            . '<media:description type="html">&lt;p&gt;Two &lt;b&gt;donkeys&lt;/b&gt;&lt;/p&gt;</media:description>'
+            . '</media:content>'
+            . '<media:content url="https://i/three.jpg" medium="image"><media:description> </media:description>'
+            . '</media:content>',
+        ));
+
+        self::assertSame(
+            ['A donkey <3', 'Two donkeys', null],
+            array_map(static fn ($medium) => $medium->alt, $bundle->media),
+        );
+    }
+
+    public function testAVideosOwnMediaDescriptionIsItsAltText(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<media:content url="https://v/clip.mp4" medium="video" type="video/mp4">'
+            . '<media:description>A donkey trots past</media:description>'
+            . '</media:content>',
+        ));
+
+        self::assertSame('A donkey trots past', $bundle->media[0]->alt);
+    }
+
+    public function testAGroupsDescriptionIsNoAltText(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<media:group>'
+            . '<media:content url="https://i/photo.jpg" medium="image" width="800"/>'
+            . '<media:description>The whole video description</media:description>'
+            . '</media:group>',
+        ));
+
+        self::assertNull($bundle->media[0]->alt);
+    }
 }
