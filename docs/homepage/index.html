@@ -63,6 +63,7 @@
     "Bluesky and Mastodon timelines as feeds",
     "Optional AI recommendations through any OpenAI-compatible API",
     "OPML import and export",
+    "Organise page for feeds and tags",
     "Tags nested up to three levels",
     "Email, Google, Apple and passkey sign-in",
     "Account export, restore and deletion"
@@ -169,14 +170,12 @@ section + section{border-top:1px solid var(--border)}
 .phones .shot{border-radius:20px}
 
 .split{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-7);align-items:center}
-.digest{display:grid;grid-template-columns:3fr 1fr;gap:var(--space-4);align-items:start}
-.digest .phone{border-radius:20px}
-.shot.cropped{position:relative;max-height:560px}
-.shot.cropped::after{content:"";position:absolute;inset:auto 0 0 0;height:140px;background:linear-gradient(to bottom,transparent,var(--surface-1));pointer-events:none}
+.digest-phone{max-width:300px;margin:0 auto;border-radius:20px}
 .split ul{margin:var(--space-4) 0 0;padding:0;list-style:none;display:grid;gap:var(--space-3)}
 .split li{display:flex;gap:var(--space-3);color:var(--text-secondary)}
 .split li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:9px}
 .split li strong{color:var(--text-primary)}
+.split.flip .shot{order:-1}
 
 /* install */
 .install{background:var(--surface-1)}
@@ -198,6 +197,7 @@ footer .copy{margin-left:auto}
 
 @media (max-width:900px){
   .hero .wrap,.split{grid-template-columns:1fr}
+  .split.flip .shot{order:0}
   .hero h1{font-size:36px}
   .layouts,.grid,.pkgs{grid-template-columns:1fr 1fr}
   .phones{grid-template-columns:repeat(3,1fr)}
@@ -207,9 +207,7 @@ footer .copy{margin-left:auto}
   .nav .theme-switch{margin-left:auto}
   .layouts,.grid,.pkgs{grid-template-columns:1fr}
   .phones{grid-template-columns:1fr 1fr}
-  .digest{grid-template-columns:1fr}
-  .digest .wide{display:none}
-  .digest .phone{max-height:480px}
+  .digest-phone{max-width:260px}
   section{padding:var(--space-7) 0}
   .hero{padding-top:var(--space-6)}
   .hero h1{font-size:32px}
@@ -297,9 +295,9 @@ footer .copy{margin-left:auto}
     <div class="grid">
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg></div><h3>Reader view</h3><p>The extracted full text of an article with its images, audio and video inline. A reading-time estimate, a progress bar, and a focus mode that dims everything except the current passage.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><h3>Saved searches</h3><p>Full-text search, including exact phrases in quotes. A search can be saved as a named view in the sidebar with its own unread count, and new matches can be sent as a daily or weekly email digest.</p></div>
-      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V6l10 6z"/><path d="M4 6v12"/></svg></div><h3>Podcasts &amp; YouTube</h3><p>A persistent audio player with a reorderable playlist. An Apple Podcasts, SoundCloud or YouTube link pasted into “Add feed” subscribes to the show or channel. Episodes and videos with chapters list them under the player; a tap jumps to one.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V6l10 6z"/><path d="M4 6v12"/></svg></div><h3>Podcasts &amp; YouTube</h3><p>A persistent audio player with a reorderable playlist. An Apple Podcasts, SoundCloud or YouTube link pasted into “Add feed” subscribes to the show, channel or playlist; Shorts play in a portrait player. Episodes and videos with chapters list them under the player; a tap jumps to one.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c-3 4-9 5-9 10a9 9 0 0 0 18 0c0-5-6-6-9-10z"/></svg></div><h3>Bluesky &amp; Mastodon</h3><p>A connected account contributes its home timeline, lists, custom feeds and followed accounts as feeds. Posts show their embedded images, links and quotes; likes and replies are sent from the reader.</p></div>
-      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m12 3 2.2 5.3L20 9l-4.3 4 1.3 5.8L12 15.8 7 18.8 8.3 13 4 9l5.8-.7z"/></svg></div><h3>“For you”, optional</h3><p>An optional ranking of unread articles, based on which entries get favorited, kept and read. It uses any OpenAI-compatible API, including local models through Ollama or LM Studio, and shows the cost of each run.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m12 3 2.2 5.3L20 9l-4.3 4 1.3 5.8L12 15.8 7 18.8 8.3 13 4 9l5.8-.7z"/></svg></div><h3>“For you”, optional</h3><p>An optional ranking of unread articles, based on which entries get favorited, kept and read. It uses any OpenAI-compatible API, including local models through Ollama or LM Studio, or TypeSafe’s Jev scorer, and shows the cost of each run.</p></div>
       <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 15h3"/></svg></div><h3>Feed management</h3><p>Pasting a site address finds its feed. Feeds can be previewed before subscribing, imported and exported as OPML, sorted into tags nested up to three levels with colours and icons, and show their fetch status in plain language.</p></div>
     </div>
   </div>
@@ -323,6 +321,17 @@ footer .copy{margin-left:auto}
   </div>
 </section>
 
+<section id="organise">
+  <div class="wrap split flip">
+    <div class="sect-head" style="margin-bottom:0">
+      <p class="eyebrow">Organise</p>
+      <h2>Every feed and tag in one place.</h2>
+      <p class="muted">The Organise page lists all feeds and tags. Both are reordered by drag; several feeds can be selected at once to tag them or change their visibility; feeds that error or are gone can be retried or unsubscribed from the same list.</p>
+    </div>
+    <div class="shot"><a class="zoom" href="screenshots/organise-light.webp"><img src="screenshots/organise-light.webp" width="1920" height="1200" loading="lazy" decoding="async" alt="The Organise page with every feed and tag"></a></div>
+  </div>
+</section>
+
 <section id="yours">
   <div class="wrap split">
     <div>
@@ -340,16 +349,13 @@ footer .copy{margin-left:auto}
 </section>
 
 <section id="digest">
-  <div class="wrap">
-    <div class="sect-head">
+  <div class="wrap split">
+    <div class="sect-head" style="margin-bottom:0">
       <p class="eyebrow">Email digest</p>
       <h2>New matches by email.</h2>
       <p class="muted">Saved searches can be included in an email digest. It lists everything new that matched since the last one, grouped by search, with the image, source and summary of each entry. Daily or weekly, as HTML or plain text, sent through the instance’s own mail settings.</p>
     </div>
-    <div class="digest">
-      <div class="shot wide cropped"><a class="zoom" href="screenshots/digest-light.webp"><img src="screenshots/digest-light.webp" width="1920" height="2666" loading="lazy" decoding="async" alt="An email digest: new entries matching the saved searches, grouped by search"></a></div>
-      <div class="shot phone cropped"><a class="zoom" href="screenshots/mobile-digest-dark.webp"><img src="screenshots/mobile-digest-dark.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The email digest on a phone, dark theme"></a></div>
-    </div>
+    <div class="shot phone digest-phone"><a class="zoom" href="screenshots/mobile-digest-dark.webp"><img src="screenshots/mobile-digest-dark.webp" width="908" height="1832" loading="lazy" decoding="async" alt="The email digest on a phone, dark theme"></a></div>
   </div>
 </section>
 
