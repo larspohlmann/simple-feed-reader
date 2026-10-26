@@ -1,7 +1,7 @@
 import { computed } from '@angular/core';
 import { AudioPlayerService } from '../audio-player.service';
 import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
-import { EntryDto } from '../models';
+import { ChapterDto, EntryDto } from '../models';
 import { formatDuration } from '../format';
 
 /** An entry's audio enclosure as the player sees it, with the controls the
@@ -12,7 +12,7 @@ export class EntryAudio {
   readonly track = computed(() => {
     const entry = this.entry();
     const attachment = this.attachment();
-    return entry && attachment ? toAudioTrack(entry, attachment) : null;
+    return entry && attachment ? toAudioTrack(entry, attachment, this.chapters()) : null;
   });
 
   /** The feed-declared length as `m:ss`, or null when the feed declares none. */
@@ -34,6 +34,7 @@ export class EntryAudio {
   constructor(
     private readonly entry: () => EntryDto | null | undefined,
     private readonly player: AudioPlayerService,
+    private readonly chapters: () => ChapterDto[] = () => [],
   ) {}
 
   play(): void {

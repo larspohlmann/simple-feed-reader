@@ -1,4 +1,5 @@
 import type { AudioTrack } from '../audio-player.service';
+import type { ChapterDto } from '../models';
 
 /** The player's queue: tracks in play order, `index` the current one (-1 when empty).
  *  A track is identified by its url and appears at most once (#1429). */
@@ -62,4 +63,14 @@ export function remove(playlist: Playlist, url: string): Playlist {
   if (tracks.length === 0) return EMPTY_PLAYLIST;
   const index = at < playlist.index ? playlist.index - 1 : playlist.index;
   return { tracks, index: Math.min(index, tracks.length - 1) };
+}
+
+/** The playlist with the queued track at `url` carrying `chapters`; unchanged when it is not queued. */
+export function withChapters(playlist: Playlist, url: string, chapters: ChapterDto[]): Playlist {
+  const at = indexOf(playlist, url);
+  if (at === -1) return playlist;
+  const tracks = playlist.tracks.map((track, position) =>
+    position === at ? { ...track, chapters } : track,
+  );
+  return { ...playlist, tracks };
 }

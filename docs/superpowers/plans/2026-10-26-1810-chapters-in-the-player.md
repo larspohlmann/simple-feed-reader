@@ -56,7 +56,7 @@ The layouts were settled on a mockup of the three surfaces drawn with the app's 
 | Modify `frontend/src/app/reader/audio/audio-track.ts` | `chapters?: ChapterDto[]` on `AudioTrack` |
 | Modify `frontend/src/app/reader/audio/audio-attachment.ts` | `toAudioTrack(entry, attachment, chapters = [])`; `audioTrackEntry(entry)` extracted |
 | Modify `frontend/src/app/reader/audio/entry-audio.ts` | Optional `chapters` source; the track carries them |
-| Modify `frontend/src/app/reader/audio/playlist.ts` | `describe(playlist, url, chapters)`: the queued track with those chapters |
+| Modify `frontend/src/app/reader/audio/playlist.ts` | `withChapters(playlist, url, chapters)`: the queued track with those chapters |
 | Create `frontend/src/app/reader/audio/track-chapters.ts` | `chapterStepTarget(starts, position, direction, threshold)`: where previous/next chapter seek to |
 | Modify `frontend/src/app/reader/audio/media-session-controls.ts` | `showTrack(track, chapter)`: chapter title first, track title as artist |
 | Modify `frontend/src/app/reader/audio-player.service.ts` | `chapters`, `chapterIndex`, `currentChapter`, `chapterProgress`, `hasPreviousChapter`, `hasNextChapter`; `previousChapter()`, `nextChapter()`, `playChapter(index)`, `playTrackChapter(trackIndex, chapterIndex)`, `describeChapters(url, chapters)`; metadata follows the chapter |
@@ -110,7 +110,7 @@ export class EntryAudio {
 
 // playlist.ts
 /** The playlist with the queued track at `url` carrying `chapters`; unchanged when it is not queued. */
-export function describe(playlist: Playlist, url: string, chapters: ChapterDto[]): Playlist;
+export function withChapters(playlist: Playlist, url: string, chapters: ChapterDto[]): Playlist;
 ```
 
 The reader view builds `new EntryAudio(this.entry, inject(AudioPlayerService), this.source.chapters)`. `entry-actions.component.ts` keeps its two-argument call.
@@ -155,7 +155,7 @@ playChapter(index: number): void; // seek to the chapter's start and resume
 /** Plays the queued track at `trackIndex` from its chapter `chapterIndex`: select, then seek once its metadata is known (like `playFrom`). */
 playTrackChapter(trackIndex: number, chapterIndex: number): void;
 /** Gives the queued track at `url` its chapters, for a track queued before its article was opened. */
-describeChapters(url: string, chapters: ChapterDto[]): void;   // apply(describe(playlist, url, chapters)) without reloading: the url is unchanged, so `apply` sees no change and only persists
+describeChapters(url: string, chapters: ChapterDto[]): void;   // apply(withChapters(playlist, url, chapters)) without reloading: the url is unchanged, so `apply` sees no change and only persists
 ```
 
 `previousChapter` uses `RESTART_THRESHOLD_SECONDS`, the threshold `previous()` already uses. `chapterIndex` is -1 before the first chapter or without chapters; the computeds read `_position`, so they move with playback and with a seek.
