@@ -21,6 +21,14 @@ The two plans are independent and may merge in either order. The seams they shar
 - After #1815's Listen, `ArticleChapters.followTrack(track)` hands the article's chapter list to the audio player, and the big player shows the same chapters from `track.chapters`.
 - Media Session: the chapter title goes into the metadata the top frame sets (Task 3); browsers show the top frame's metadata for audio a child frame produces, so an embed track's lock-screen title follows its chapters too.
 
+## Building on #1814 (chapter progress, merged)
+
+#1814 gave the article's chapter list a filled row and a time left for the playing chapter. Its pieces are reused, not rebuilt:
+
+- `PlaybackPosition { seconds, durationSeconds }` (`chapters/chapter-player.ts`) and `chapterProgress(starts, index, position)` (`chapters/current-chapter.ts`) compute a chapter's fraction and seconds left; the service exposes them (Task 2) and the big player's rows and strip read them (Task 6).
+- The row markup (`reader-chapters__row` with time, title and an `aria-hidden` time-left span carrying a `schedule` icon) and the `--chapter-progress` custom property that fills the row live in `decorators/reader-chapters.ts` and `article-content/article-chapters.scss`. The big player's list keeps the same look: Task 6 moves the row rules into a shared partial both stylesheets `@use`.
+- `AudioChapterPlayer` reports the player's duration with the position, so the article's list already shows progress for the enclosure; nothing in this plan changes it.
+
 ## Global Constraints
 
 - CLAUDE.md applies: Clean Code names, no boolean flag parameters, guard clauses, comments only where a reader would otherwise get the code wrong, one line each.
@@ -40,11 +48,12 @@ The two plans are independent and may merge in either order. The seams they shar
 | Modify `frontend/src/app/reader/audio/playlist.ts` | `describe(playlist, url, chapters)`: the queued track with those chapters |
 | Create `frontend/src/app/reader/audio/track-chapters.ts` | `chapterStepTarget(starts, position, direction, threshold)`: where previous/next chapter seek to |
 | Modify `frontend/src/app/reader/audio/media-session-controls.ts` | `showTrack(track, chapter)`: chapter title first, track title as artist |
-| Modify `frontend/src/app/reader/audio-player.service.ts` | `chapters`, `chapterIndex`, `currentChapter`, `hasPreviousChapter`, `hasNextChapter`; `previousChapter()`, `nextChapter()`, `playChapter(index)`, `describeChapters(url, chapters)`; metadata follows the chapter |
+| Modify `frontend/src/app/reader/audio-player.service.ts` | `chapters`, `chapterIndex`, `currentChapter`, `chapterProgress`, `hasPreviousChapter`, `hasNextChapter`; `previousChapter()`, `nextChapter()`, `playChapter(index)`, `describeChapters(url, chapters)`; metadata follows the chapter |
 | Create `frontend/src/app/reader/shell/audio-player-bar/scrubber/scrubber.component.{ts,html,scss,spec.ts}` | `<app-scrubber>`: the one range input both surfaces use, with fill and chapter marks |
 | Create `frontend/src/app/reader/audio/scrub-marks.ts` | `scrubMarks(chapters, duration)`: mark positions as percentages, the first chapter's mark at 0 omitted |
 | Modify `frontend/src/app/reader/shell/audio-player-bar/audio-player-bar.component.{html,scss,spec.ts}` | Uses `<app-scrubber>`; the title line shows the current chapter |
-| Create `frontend/src/app/reader/shell/audio-player-bar/audio-chapters/audio-chapters.component.{ts,html,scss,spec.ts}` | The big player's chapter list |
+| Create `frontend/src/app/reader/shell/audio-player-bar/audio-chapters/audio-chapters.component.{ts,html,scss,spec.ts}` | The big player's chapter list, with the row fill and time left of #1814 |
+| Create `frontend/src/app/reader/chapters/_chapter-rows.scss`; modify `frontend/src/app/reader/article/article-content/article-chapters.scss` | The chapter row rules both lists share |
 | Modify `frontend/src/app/reader/shell/audio-player-bar/big-player/big-player.component.{ts,html,scss,spec.ts}` | Uses `<app-scrubber>`; chapter strip (previous, current title, next); chapter list toggle and section |
 | Modify `frontend/src/testing/big-player-audio-signals.ts` | The chapter signals the surfaces read |
 | Modify `frontend/src/app/reader/article/reader-view/reader-view.component.ts` | `EntryAudio` gets `source.chapters`; back-fills a queued track's chapters on open |
@@ -123,6 +132,8 @@ export function chapterStepTarget(starts: readonly number[], position: number, s
 readonly chapters = computed(() => this.current()?.chapters ?? []);
 readonly chapterIndex = computed(() => currentChapterIndex(this.chapterStarts(), this._position()));
 readonly currentChapter = computed(() => this.chapters()[this.chapterIndex()] ?? null);
+/** How far playback is through the current chapter (#1814's helper); null without a chapter or while its end is unknown. */
+readonly chapterProgress = computed(() => chapterProgress(this.chapterStarts(), this.chapterIndex(), { seconds: this._position(), durationSeconds: this._duration() > 0 ? this._duration() : null }));
 readonly hasPreviousChapter = computed(() => chapterStepTarget(…, 'previous', …) !== null);
 readonly hasNextChapter = computed(() => chapterStepTarget(…, 'next', …) !== null);
 
@@ -137,7 +148,7 @@ describeChapters(url: string, chapters: ChapterDto[]): void;   // apply(describe
 
 The reader view back-fills: an `effect` that, when `source.chapters()` is non-empty and the entry's enclosure url is queued (`player.isQueued`), calls `describeChapters(url, chapters)`. (With #1815, `ArticleBody` extends the same call to the chaptered embed's url.)
 
-- [ ] **Step 1: Write the specs**: `chapterStepTarget` for every branch (before the first chapter, inside the first, past the threshold, at the last chapter, no chapters). Service: `currentChapter` follows `timeupdate`; `nextChapter` seeks to the next start and `hasNextChapter` turns false on the last; `previousChapter` restarts the chapter past the threshold and steps back within it; `playChapter` seeks and resumes a paused player; `describeChapters` reaches the saved playlist without reloading the element (`audio.src` untouched, `load` not called). Reader view: opening an article whose enclosure is queued describes its chapters once they load.
+- [ ] **Step 1: Write the specs**: `chapterStepTarget` for every branch (before the first chapter, inside the first, past the threshold, at the last chapter, no chapters). Service: `currentChapter` follows `timeupdate`; `chapterProgress` is null before metadata on the last chapter and fills in once the duration is known; `nextChapter` seeks to the next start and `hasNextChapter` turns false on the last; `previousChapter` restarts the chapter past the threshold and steps back within it; `playChapter` seeks and resumes a paused player; `describeChapters` reaches the saved playlist without reloading the element (`audio.src` untouched, `load` not called). Reader view: opening an article whose enclosure is queued describes its chapters once they load.
 - [ ] **Step 2: Run to verify they fail**
 - [ ] **Step 3: Implement**
 - [ ] **Step 4: Specs green**
@@ -225,15 +236,15 @@ The title line reads `<chapter title> · <track title>` when a chapter plays: th
 - Modify: `frontend/src/testing/big-player-audio-signals.ts`
 - Modify: `frontend/public/i18n/en.json`, `de.json`
 
-**Chapter strip**, under the transport and only when the track has chapters: previous-chapter button (`skip_previous`-style icon `first_page`? use `chevron_left`), the current chapter's title centred (or `reader.audioPlayer.chapterPosition` "Chapter {{ index }} of {{ count }}" muted beneath it), next-chapter button (`chevron_right`). The buttons disable with `hasPreviousChapter`/`hasNextChapter`; the title is a button that toggles the chapter list.
+**Chapter strip**, under the transport and only when the track has chapters: previous-chapter button (`chevron_left`), the current chapter's title centred with `reader.audioPlayer.chapterPosition` ("Chapter {{ index }} of {{ count }}") and the chapter's time left (`schedule` icon, from `player.chapterProgress()`) muted beneath it, next-chapter button (`chevron_right`). The buttons disable with `hasPreviousChapter`/`hasNextChapter`; the title is a button that toggles the chapter list.
 
-**Chapter list** (`<app-audio-chapters>`): the rows of the article's list (`reader-chapters__row`: time, title) as a component, `aria-current="true"` on `player.chapterIndex()`, a click calls `player.playChapter(index)`. It sits in the big player between the extras and the queue section, shown by a local `chaptersShown` signal the strip's title toggles; on the phone sheet it scrolls into view like the playlist does. On the card (desktop) it shows in place as well; the card already scrolls (`CdkScrollable`).
+**Chapter list** (`<app-audio-chapters>`): the rows of the article's list as a component: `reader-chapters__row` with time, title and the `aria-hidden` time-left span, `aria-current="true"` on `player.chapterIndex()`, `--chapter-progress` set from `player.chapterProgress()?.fraction` and the time left (`schedule` icon, `formatDuration(secondsLeft)`) on the current row, exactly as `showProgress` draws them in `reader-chapters.ts`. A click calls `player.playChapter(index)`. The row rules move from `article-chapters.scss` into `chapters/_chapter-rows.scss`, which both stylesheets `@use`; the article stylesheet keeps only its `:host ::ng-deep` wrapping and the list frame. It sits in the big player between the extras and the queue section, shown by a local `chaptersShown` signal the strip's title toggles; on the phone sheet it scrolls into view like the playlist does. On the card (desktop) it shows in place as well; the card already scrolls (`CdkScrollable`).
 
 **i18n:** `reader.audioPlayer.previousChapter` ("Previous chapter" / "Vorheriges Kapitel"), `nextChapter` ("Next chapter" / "Nächstes Kapitel"), `chapterCount` ("Chapters ({{ count }})" / "Kapitel ({{ count }})"), `chapterPosition` ("Chapter {{ index }} of {{ count }}" / "Kapitel {{ index }} von {{ count }}"). The list's heading reuses `reader.chapters`.
 
 `bigPlayerAudioSignals()` grows `chapters`, `chapterIndex`, `currentChapter`, `hasPreviousChapter`, `hasNextChapter`; the big-player stub grows `previousChapter`, `nextChapter`, `playChapter` mocks.
 
-- [ ] **Step 1: Write the specs**: no strip and no list without chapters; the strip shows the current title and position; previous/next call the service and disable at the ends; the title toggles the list; the list marks the current row and plays a tapped one; the sheet scrolls the list into view when opened.
+- [ ] **Step 1: Write the specs**: no strip and no list without chapters; the strip shows the current title, position and time left; previous/next call the service and disable at the ends; the title toggles the list; the list marks the current row, fills it from the progress and shows its time left, and plays a tapped one; the sheet scrolls the list into view when opened. `article-chapters.scss` still renders the article list unchanged after the move (the existing `reader-chapters.spec.ts` and a visual check).
 - [ ] **Step 2: Run to verify they fail**
 - [ ] **Step 3: Implement**
 - [ ] **Step 4: Specs green; translation-key spec green; `npm run build`**
