@@ -61,14 +61,21 @@
 }
 
 :host ::ng-deep .reader-chapters__left {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   flex: none;
   margin-inline-start: auto;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
-:host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left {
-  min-width: 6ch;
+:host ::ng-deep .reader-chapters__left .material-symbols-outlined {
+  font-size: var(--icon-sm);
+}
+
+:host ::ng-deep .reader-chapters__remaining {
+  min-width: 5ch;
   text-align: end;
 }
 

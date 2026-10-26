@@ -77,9 +77,7 @@ export function addChapterList(
 }
 
 function toggle(items: HTMLElement, heading: string): HTMLButtonElement {
-  const icon = document.createElement('span');
-  icon.className = 'material-symbols-outlined';
-  icon.setAttribute('aria-hidden', 'true');
+  const icon = materialIcon('chevron_right');
   const label = document.createElement('span');
   label.textContent = heading;
   const button = document.createElement('button');
@@ -99,13 +97,30 @@ function toggle(items: HTMLElement, heading: string): HTMLButtonElement {
   return button;
 }
 
+function materialIcon(name: string): HTMLSpanElement {
+  const icon = document.createElement('span');
+  icon.className = 'material-symbols-outlined';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = name;
+  return icon;
+}
+
 function showProgress(row: HTMLElement, progress: ChapterProgress | null): void {
   if (progress === null) {
     clearProgress(row);
     return;
   }
   row.style.setProperty(PROGRESS, progress.fraction.toFixed(4));
-  row.querySelector(`.${TIME_LEFT}`)?.replaceChildren(formatDuration(progress.secondsLeft));
+  row
+    .querySelector(`.${TIME_LEFT}`)
+    ?.replaceChildren(materialIcon('schedule'), remaining(progress.secondsLeft));
+}
+
+function remaining(seconds: number): HTMLSpanElement {
+  const time = document.createElement('span');
+  time.className = `${LIST}__remaining`;
+  time.textContent = formatDuration(seconds);
+  return time;
 }
 
 function clearProgress(row: HTMLElement): void {

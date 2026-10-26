@@ -107,8 +107,8 @@ describe('addChapterList', () => {
     return row.style.getPropertyValue('--chapter-progress');
   }
 
-  function timeLeftOf(row: HTMLElement): string | null | undefined {
-    return row.querySelector('.reader-chapters__left')?.textContent;
+  function timeLeftOf(row: HTMLElement): string {
+    return row.querySelector('.reader-chapters__remaining')?.textContent ?? '';
   }
 
   it('fills the playing chapter and shows its time left', () => {
@@ -120,6 +120,32 @@ describe('addChapterList', () => {
 
     expect(rows(host).map(progressOf)).toEqual(['0.5000', '', '']);
     expect(rows(host).map(timeLeftOf)).toEqual(['2:08', '', '']);
+  });
+
+  it('puts a clock in front of the time left', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 128, durationSeconds: null });
+
+    const timeLeft = rows(host)[0].querySelector('.reader-chapters__left');
+    expect(Array.from(timeLeft?.children ?? []).map((child) => child.className)).toEqual([
+      'material-symbols-outlined',
+      'reader-chapters__remaining',
+    ]);
+    expect(timeLeft?.firstElementChild?.textContent).toBe('schedule');
+  });
+
+  it('removes the clock with the time left', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 128, durationSeconds: null });
+    player.progressTo({ seconds: 300, durationSeconds: null });
+
+    expect(rows(host)[0].querySelector('.reader-chapters__left')?.childElementCount).toBe(0);
   });
 
   it('moves fill and time left to the chapter playback moves into', () => {
