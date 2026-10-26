@@ -103,6 +103,73 @@ describe('addChapterList', () => {
     expect(rows(host).some((row) => row.hasAttribute('aria-current'))).toBe(false);
   });
 
+  function progressOf(row: HTMLElement): string {
+    return row.style.getPropertyValue('--chapter-progress');
+  }
+
+  function timeLeftOf(row: HTMLElement): string | null | undefined {
+    return row.querySelector('.reader-chapters__left')?.textContent;
+  }
+
+  it('fills the playing chapter and shows its time left', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 128, durationSeconds: null });
+
+    expect(rows(host).map(progressOf)).toEqual(['0.50', '', '']);
+    expect(rows(host).map(timeLeftOf)).toEqual(['−2:08', '', '']);
+  });
+
+  it('moves fill and time left to the chapter playback moves into', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 128, durationSeconds: 4000 });
+    player.progressTo({ seconds: 3800, durationSeconds: 4000 });
+
+    expect(rows(host).map(progressOf)).toEqual(['', '', '0.28']);
+    expect(rows(host).map(timeLeftOf)).toEqual(['', '', '−3:20']);
+  });
+
+  it('leaves the last chapter unfilled while the duration is unknown', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 3800, durationSeconds: null });
+
+    expect(rows(host)[2].getAttribute('aria-current')).toBe('true');
+    expect(progressOf(rows(host)[2])).toBe('');
+    expect(timeLeftOf(rows(host)[2])).toBe('');
+  });
+
+  it('clears fill and time left of a chapter left by a tap', () => {
+    const host = document.createElement('div');
+    const player = fakePlayer();
+    addChapterList({ host, after: null }, { chapters: CHAPTERS, heading: 'Chapters' }, player);
+
+    player.progressTo({ seconds: 128, durationSeconds: null });
+    rows(host)[1].click();
+
+    expect(rows(host).map(progressOf)).toEqual(['', '', '']);
+    expect(rows(host).map(timeLeftOf)).toEqual(['', '', '']);
+  });
+
+  it('keeps the time left out of the row name a screen reader reads', () => {
+    const host = document.createElement('div');
+    addChapterList(
+      { host, after: null },
+      { chapters: CHAPTERS, heading: 'Chapters' },
+      fakePlayer(),
+    );
+
+    const timeLeft = rows(host)[0].querySelector('.reader-chapters__left');
+    expect(timeLeft?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('adds nothing for no chapters', () => {
     const host = document.createElement('div');
 

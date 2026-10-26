@@ -483,6 +483,8 @@
   font-size: var(--fs-sm);
   text-align: start;
   cursor: pointer;
+  position: relative;
+  isolation: isolate;
 }
 
 :host ::ng-deep .reader-chapters__row[aria-current='true'] {
@@ -495,6 +497,35 @@
   min-width: 4ch;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+}
+
+:host ::ng-deep .reader-chapters__left {
+  flex: none;
+  margin-inline-start: auto;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+:host ::ng-deep .reader-chapters__left:empty {
+  display: none;
+}
+
+:host ::ng-deep .reader-chapters__row[aria-current='true']::before,
+:host ::ng-deep .reader-chapters__row[aria-current='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+:host ::ng-deep .reader-chapters__row[aria-current='true']::before {
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+}
+
+:host ::ng-deep .reader-chapters__row[aria-current='true']::after {
+  background: var(--accent-soft);
+  transform: scaleX(var(--chapter-progress, 0));
+  transform-origin: left;
 }
 
 @media (hover: hover) {
