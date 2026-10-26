@@ -14,6 +14,13 @@ The symlink is the reason the page lives one level below `docs/` rather than in
 it: `cp -RL` at deploy time turns the link into a real folder, and the staged
 site is a plain tree with nothing outside it.
 
+`share.png` is the exception: the preview card social networks show for the
+page (`og:image`, `twitter:image`) is a composed 1200×630 image with the
+magazine screenshot inside it, and link previews need a PNG at a fixed URL.
+`scripts/homepage-share-image.mjs` renders it from
+`docs/screenshots/magazine-light.webp`; rerun it after retaking that
+screenshot and commit the result.
+
 ## Deployment
 
 `.github/workflows/deploy-homepage.yml` rsyncs this folder over SSH into
