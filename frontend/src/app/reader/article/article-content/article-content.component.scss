@@ -383,12 +383,17 @@
   margin: 0;
 }
 
-:host ::ng-deep .reader-cinema__bar {
-  display: none;
+:host ::ng-deep .reader-player-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-1);
 }
 
-:host ::ng-deep .reader-cinema__toggle {
-  display: inline-flex;
+:host ::ng-deep :is(.reader-cinema__toggle, .reader-listen__button) {
+  --rim-fill: transparent;
+
   gap: var(--space-1);
   align-items: center;
   padding: var(--space-1) var(--space-2);
@@ -397,7 +402,7 @@
   font-size: var(--fs-xs);
   color: var(--text-secondary);
   cursor: pointer;
-  background: none;
+  background: var(--rim-fill);
 
   @include glass-rim.ring(var(--border), control);
 
@@ -408,8 +413,22 @@
   }
 }
 
-:host ::ng-deep .reader-cinema__toggle .material-symbols-outlined {
+:host ::ng-deep :is(.reader-cinema__toggle, .reader-listen__button) .material-symbols-outlined {
   font-size: var(--icon-xs);
+}
+
+:host ::ng-deep .reader-listen__button {
+  display: inline-flex;
+}
+
+:host ::ng-deep .reader-listen__button--queued {
+  --rim-fill: var(--accent-soft);
+}
+
+/* Below the breakpoint the cinema toggle alone hides; the bar stays for the listen controls. */
+:host ::ng-deep .reader-cinema__toggle {
+  display: none;
+  margin-inline-start: auto;
 }
 
 :host ::ng-deep .reader-cinema__toggle kbd {
@@ -418,10 +437,8 @@
 }
 
 @container reader-pane (width > #{bp.$container-reader-cinema}) {
-  :host ::ng-deep .reader-cinema__bar {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: var(--space-1);
+  :host ::ng-deep .reader-cinema__toggle {
+    display: inline-flex;
   }
 
   /* Cinema mode (#1479): the widened box fills the pane but stays short enough for

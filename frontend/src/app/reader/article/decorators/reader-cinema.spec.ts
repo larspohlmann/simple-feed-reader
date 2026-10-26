@@ -16,7 +16,7 @@ describe('addCinemaToggles', () => {
     addCinemaToggles(element, labels);
     const box = element.querySelector('.reader-cinema')!;
     expect(box.firstElementChild!.classList.contains('reader-embed')).toBe(true);
-    const toggle = box.querySelector('.reader-cinema__bar > button.reader-cinema__toggle')!;
+    const toggle = box.querySelector('.reader-player-bar > button.reader-cinema__toggle')!;
     expect(toggle.getAttribute('type')).toBe('button');
     expect(toggle.getAttribute('aria-keyshortcuts')).toBe('t');
     expect(toggle.textContent).toBe('width_wideCinema mode(t)');
@@ -115,8 +115,8 @@ describe('toggleCinemaByKey', () => {
 
   it('does nothing where cinema is not offered', () => {
     const element = twoVideos();
-    element.querySelectorAll<HTMLElement>('.reader-cinema__bar').forEach((bar) => {
-      bar.style.display = 'none';
+    element.querySelectorAll<HTMLElement>('.reader-cinema__toggle').forEach((toggle) => {
+      toggle.style.display = 'none';
     });
     const event = key();
     toggleCinemaByKey(event, element);
