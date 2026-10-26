@@ -46,6 +46,10 @@ export function isAllowedEmbed(url: string): boolean {
 
 const YOUTUBE_VIDEO_FRAME = /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}$/;
 
+// Without autoplay, a cross-origin player ignores the playVideo a chapter tap sends (Brave, #1814).
+const PLAYER_API_FRAME =
+  /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}\?enablejsapi=1&origin=/;
+
 /** Maps an allow-listed player URL to the one the frame loads. */
 export type FrameUrl = (url: string) => string;
 
@@ -93,6 +97,7 @@ export function embedFrame(url: string, title: string): HTMLIFrameElement {
   for (const [name, value] of Object.entries(EMBED_FRAME_ATTRIBUTES)) {
     frame.setAttribute(name, value);
   }
+  if (PLAYER_API_FRAME.test(url)) frame.setAttribute('allow', 'autoplay');
 
   return frame;
 }

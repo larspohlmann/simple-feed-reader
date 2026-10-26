@@ -25,6 +25,15 @@ describe('upgradeMediaEmbeds', () => {
     expect(frame.getAttribute('allow') ?? '').not.toContain('autoplay');
   });
 
+  it('lets a player the chapters drive start playback', () => {
+    const element = articleHost(
+      '<a href="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa">x</a>',
+      (target) => upgradeMediaEmbeds(target, (url) => withPlayerApi(url, 'http://localhost:4200')),
+    );
+
+    expect(element.querySelector('iframe')?.getAttribute('allow')).toBe('autoplay');
+  });
+
   it('replaces a SoundCloud player link', () => {
     const element = host(
       '<a href="https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2370150908">x</a>',
