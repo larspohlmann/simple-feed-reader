@@ -6,6 +6,7 @@ import {
   currentChapterIndex,
 } from '../../chapters/current-chapter';
 import { formatDuration } from '../../format';
+import { materialIcon } from './material-icon';
 
 const LIST = 'reader-chapters';
 const PROGRESS = '--chapter-progress';
@@ -82,14 +83,6 @@ function toggle(heading: string): HTMLElement {
   summary.className = `${LIST}__toggle`;
   summary.append(materialIcon('chevron_right'), heading);
   return summary;
-}
-
-function materialIcon(name: string): HTMLSpanElement {
-  const icon = document.createElement('span');
-  icon.className = 'material-symbols-outlined';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = name;
-  return icon;
 }
 
 function showProgress(row: HTMLElement, progress: ChapterProgress | null): void {

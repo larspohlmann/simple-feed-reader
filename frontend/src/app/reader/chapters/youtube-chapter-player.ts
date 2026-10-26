@@ -1,13 +1,14 @@
+import {
+  finiteNumberOf,
+  LISTENING,
+  playerCommand,
+  playerInfoOf,
+  playerMessageOf,
+  PlayerMessage,
+  postToPlayerFrame,
+  YOUTUBE_PLAYER_ORIGIN,
+} from '../media/youtube-player-protocol';
 import { ChapterPlayer, PlaybackPosition } from './chapter-player';
-
-const PLAYER_ORIGIN = 'https://www.youtube-nocookie.com';
-const WIDGET = { id: 1, channel: 'widget' };
-const LISTENING = { event: 'listening', ...WIDGET };
-
-interface PlayerInfo {
-  readonly currentTime?: unknown;
-  readonly duration?: unknown;
-}
 
 /** Drives a YouTube embed through its iframe API; the frame must be loaded with `enablejsapi=1` (#1808). */
 export class YouTubeChapterPlayer implements ChapterPlayer {
@@ -17,13 +18,13 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
   private heldStart: number | null = null;
 
   private readonly onMessage = (event: MessageEvent): void => {
-    if (event.origin !== PLAYER_ORIGIN || event.source !== this.frame.contentWindow) return;
+    if (event.origin !== YOUTUBE_PLAYER_ORIGIN || event.source !== this.frame.contentWindow) return;
     const playsHeldStart = !this.ready && this.heldStart !== null;
     this.becomeReady();
-    const info = infoOf(event.data);
+    const info = playerInfoOf(playerMessageOf(event.data));
     this.rememberDuration(info);
     if (playsHeldStart) return;
-    const seconds = secondsOf(info?.currentTime);
+    const seconds = finiteNumberOf(info['currentTime']);
     if (seconds !== null) this.onPosition?.({ seconds, durationSeconds: this.durationSeconds });
   };
 
@@ -40,8 +41,8 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
       this.post(LISTENING);
       return;
     }
-    this.command('seekTo', [seconds, true]);
-    this.command('playVideo', []);
+    this.post(playerCommand('seekTo', [seconds, true]));
+    this.post(playerCommand('playVideo', []));
   }
 
   watch(onPosition: (position: PlaybackPosition | null) => void): void {
@@ -63,29 +64,12 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
     if (start !== null) this.playFrom(start);
   }
 
-  private rememberDuration(info: PlayerInfo | null): void {
-    const duration = secondsOf(info?.duration);
+  private rememberDuration(info: PlayerMessage): void {
+    const duration = finiteNumberOf(info['duration']);
     if (duration !== null && duration > 0) this.durationSeconds = duration;
   }
 
-  private command(name: string, commandArguments: unknown[]): void {
-    this.post({ event: 'command', func: name, args: commandArguments, ...WIDGET });
-  }
-
   private post(message: object): void {
-    this.frame.contentWindow?.postMessage(JSON.stringify(message), PLAYER_ORIGIN);
+    postToPlayerFrame(this.frame, message);
   }
-}
-
-function infoOf(data: unknown): PlayerInfo | null {
-  if (typeof data !== 'string') return null;
-  try {
-    return (JSON.parse(data) as { info?: PlayerInfo } | null)?.info ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function secondsOf(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }

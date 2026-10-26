@@ -1119,6 +1119,7 @@
     },
     "audioPlayer": {
       "listen": "Anhören",
+      "listenEmbed": "Den Ton im Audio-Player der App abspielen",
       "label": "Audio-Player",
       "play": "Abspielen",
       "pause": "Pause",

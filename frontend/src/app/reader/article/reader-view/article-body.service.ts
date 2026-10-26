@@ -20,8 +20,10 @@ import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coor
 import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
 import { withPlayerApi } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
-import { ChapterDto } from '../../models';
-import { ArticleChapters } from './article-chapters';
+import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
+import { ChapterDto, EntryDto } from '../../models';
+import { ArticleChapters, apiPlayerFrame } from './article-chapters';
+import { ArticleEmbedAudio } from './article-embed-audio';
 
 export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
@@ -30,6 +32,7 @@ export interface ArticleBodyParts {
   readonly enclosureUrl: () => string | null;
   readonly chapters: () => ChapterDto[];
   readonly audioTrack: () => AudioTrack | null;
+  readonly entry: () => EntryDto | null;
   readonly decorated: (host: HTMLElement) => void;
 }
 
@@ -42,7 +45,9 @@ export class ArticleBody {
   private readonly unplayableVideos = inject(UnplayableVideoService);
   private readonly zone = inject(NgZone);
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
-  private readonly chapters = new ArticleChapters(inject(AudioPlayerService), inject(Injector));
+  private readonly audio = inject(AudioPlayerService);
+  private readonly chapters = new ArticleChapters(this.audio, this.injector);
+  private readonly embedAudio = new ArticleEmbedAudio(this.audio, this.injector);
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
   private destroyed = false;
 
@@ -53,6 +58,7 @@ export class ArticleBody {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
       this.chapters.release();
+      this.embedAudio.release();
       document.removeEventListener('keydown', onKeydown);
     });
   }
@@ -101,29 +107,52 @@ export class ArticleBody {
           releaseHlsStreams(content);
           this.media.forgetAll();
           this.chapters.release();
+          this.embedAudio.release();
         });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
           if (!host || this.destroyed) return;
-          const track = parts.audioTrack();
-          decorateArticle(host, this.i18n, {
-            enclosureUrl: parts.enclosureUrl(),
-            embedSource:
-              chapterList.length && !track
-                ? (url) => withPlayerApi(url, window.location.origin)
-                : undefined,
-          });
-          const heading = this.i18n.translate('reader.chapters');
-          this.zone.runOutsideAngular(() => {
-            this.chapters.attach(host, { chapters: chapterList, heading }, track);
-            this.media.follow(host);
-          });
-          parts.decorated(host);
+          this.render(parts, host, chapterList);
         });
       },
       { injector: this.injector },
     );
   }
+
+  private render(parts: ArticleBodyParts, host: HTMLElement, chapterList: ChapterDto[]): void {
+    const track = parts.audioTrack();
+    const chapteredEmbed = (): EmbedMedia | null => chapteredEmbedOf(host, chapterList, track);
+    const controls = decorateArticle(host, this.i18n, {
+      enclosureUrl: parts.enclosureUrl(),
+      embedSource: (url) => withPlayerApi(url, window.location.origin),
+      listen: this.embedAudio.actions({
+        entry: parts.entry(),
+        chaptersOf: (media) => (media.url === chapteredEmbed()?.url ? chapterList : []),
+        onListened: (listened) => this.chapters.followTrack(listened),
+      }),
+    });
+    const heading = this.i18n.translate('reader.chapters');
+    this.zone.runOutsideAngular(() => {
+      this.chapters.attach(host, { chapters: chapterList, heading }, track);
+      this.embedAudio.follow(controls);
+      // A video queued from a list row gains its chapters once its article opens (#1810).
+      const embed = chapteredEmbed();
+      if (embed) this.audio.describeChapters(embed.url, chapterList);
+      this.media.follow(host);
+    });
+    parts.decorated(host);
+  }
+}
+
+/** The embed the body's chapters belong to: the player `ArticleChapters` drives, unless an episode owns them. */
+function chapteredEmbedOf(
+  host: HTMLElement,
+  chapters: ChapterDto[],
+  track: AudioTrack | null,
+): EmbedMedia | null {
+  if (chapters.length === 0 || track) return null;
+  const frame = apiPlayerFrame(host);
+  return frame ? embedMediaOfFrame(frame) : null;
 }
 
 function sameChapters(left: ChapterDto[], right: ChapterDto[]): boolean {

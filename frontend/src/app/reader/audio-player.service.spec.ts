@@ -3,11 +3,15 @@ import {
   AUDIO_ELEMENT_FACTORY,
   AudioPlayerService,
   AudioTrack,
+  FRAME_PLAYBACK_FACTORY,
   RESTART_THRESHOLD_SECONDS,
 } from './audio-player.service';
 import { PRECACHE_LEAD_SECONDS } from './audio/audio-deck';
+import type { FramePlayback } from './audio/playback/frame-playback';
+import type { FrameKind } from './audio/playback/playback-kind';
 import { PlaylistStore } from './audio/playlist.store';
 import { TokenStore } from '../core/auth/token.store';
+import { FakeAudio } from '../../testing/fake-audio-element';
 import { installFakeMediaSession } from '../../testing/fake-media-session';
 import { timeRanges } from '../../testing/time-ranges-testing';
 import type { ChapterDto } from './models';
@@ -15,61 +19,9 @@ import type { ChapterDto } from './models';
 const SRC_NOT_SUPPORTED = 4;
 const NETWORK = 2;
 
-class FakeAudio {
-  error: { code: number; MEDIA_ERR_SRC_NOT_SUPPORTED: number } | null = null;
-  currentTime = 0;
-  readyState = 0;
-  defaultPlaybackRate = 1;
-  playbackRate = 1;
-  preload = '';
-  buffered: TimeRanges = timeRanges();
-  load = jest.fn();
-  removeAttribute = jest.fn((name: string) => {
-    if (name === 'src') this.source = '';
-  });
-  private source = '';
-
-  /** Like the real element, a new source clears the last error. */
-  get src(): string {
-    return this.source;
-  }
-
-  set src(url: string) {
-    this.source = url;
-    this.error = null;
-    this.playbackRate = this.defaultPlaybackRate;
-  }
-
-  fail(code: number): void {
-    this.error = { code, MEDIA_ERR_SRC_NOT_SUPPORTED: SRC_NOT_SUPPORTED };
-    this.fire('error');
-  }
-
-  duration = NaN;
-  paused = true;
-  play = jest.fn(() => {
-    this.paused = false;
-    this.fire('play');
-    return Promise.resolve();
-  });
-  pause = jest.fn(() => {
-    this.paused = true;
-    this.fire('pause');
-  });
-
-  private readonly listeners: Record<string, (() => void)[]> = {};
-
-  addEventListener(type: string, callback: () => void): void {
-    (this.listeners[type] ??= []).push(callback);
-  }
-
-  removeEventListener(): void {
-    /* The service never detaches; the stub has nothing to remove. */
-  }
-
-  fire(type: string): void {
-    for (const callback of this.listeners[type] ?? []) callback();
-  }
+/** A provider frame driven like an element; the service sees only the `PlaybackElement` slice. */
+class FakeFramePlayback extends FakeAudio {
+  dispose = jest.fn();
 }
 
 function track(overrides: Partial<AudioTrack> = {}): AudioTrack {
@@ -86,9 +38,15 @@ function track(overrides: Partial<AudioTrack> = {}): AudioTrack {
 /** The element playing when the service starts, and the standby one caching the next track. */
 let audio: FakeAudio;
 let standby: FakeAudio;
+/** Every audio element made so far, and every provider frame with the kind it was asked for. */
+let audios: FakeAudio[];
+let frames: FakeFramePlayback[];
+let frameKinds: FrameKind[];
 
 function make(): AudioPlayerService {
-  const created: FakeAudio[] = [];
+  audios = [];
+  frames = [];
+  frameKinds = [];
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
@@ -96,14 +54,23 @@ function make(): AudioPlayerService {
         provide: AUDIO_ELEMENT_FACTORY,
         useValue: () => {
           const element = new FakeAudio();
-          created.push(element);
+          audios.push(element);
           return element as unknown as HTMLAudioElement;
+        },
+      },
+      {
+        provide: FRAME_PLAYBACK_FACTORY,
+        useValue: (kind: FrameKind) => {
+          const playback = new FakeFramePlayback();
+          frameKinds.push(kind);
+          frames.push(playback);
+          return playback as unknown as FramePlayback;
         },
       },
     ],
   });
   const service = TestBed.inject(AudioPlayerService);
-  [audio, standby] = created;
+  [audio, standby] = audios;
   return service;
 }
 
@@ -1036,6 +1003,148 @@ describe('AudioPlayerService', () => {
       localStorage.setItem('sfr.audio.rate', '3');
 
       expect(make().rate()).toBe(1);
+    });
+  });
+
+  describe('with an embed track', () => {
+    const WATCH_URL = 'https://www.youtube.com/watch?v=JsBZOcqZerk';
+    const WIDGET_URL =
+      'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F123456789';
+    const VIDEO_SECONDS = 600;
+    const video = track({ url: WATCH_URL, title: 'Talk', durationInSeconds: null });
+    const sound = track({ url: WIDGET_URL, title: 'Mix', durationInSeconds: null });
+    const episode = track({
+      url: 'https://x.test/after.mp3',
+      title: 'After',
+      durationInSeconds: 3600,
+    });
+
+    /** The frame driving the current track. */
+    function frame(): FakeFramePlayback {
+      return frames[frames.length - 1];
+    }
+
+    function videoKnowsItsLength(): void {
+      frame().duration = VIDEO_SECONDS;
+      frame().readyState = HTMLMediaElement.HAVE_METADATA;
+      frame().fire('loadedmetadata');
+    }
+
+    function videoCachedToItsEnd(): void {
+      frame().buffered = timeRanges([0, VIDEO_SECONDS]);
+      frame().fire('progress');
+    }
+
+    it('plays a YouTube video through a youtube playback', () => {
+      const service = make();
+
+      service.play(video);
+
+      expect(frameKinds).toEqual(['youtube']);
+      expect(frame().src).toBe(WATCH_URL);
+      expect(frame().play).toHaveBeenCalled();
+      expect(service.playing()).toBe(true);
+    });
+
+    it('plays a SoundCloud track through a soundcloud playback', () => {
+      const service = make();
+
+      service.play(sound);
+
+      expect(frameKinds).toEqual(['soundcloud']);
+      expect(frame().src).toBe(WIDGET_URL);
+      expect(service.current()).toBe(sound);
+    });
+
+    it('restores a video paused and seeks its saved position once the frame knows its length', () => {
+      const first = make();
+      first.play(video);
+      frame().currentTime = 42;
+      frame().fire('timeupdate');
+      window.dispatchEvent(new Event('pagehide'));
+
+      const restored = make();
+
+      expect(frameKinds).toEqual(['youtube']);
+      expect(restored.current()?.url).toBe(WATCH_URL);
+      expect(restored.position()).toBe(42);
+      expect(restored.playing()).toBe(false);
+      expect(frame().play).not.toHaveBeenCalled();
+
+      videoKnowsItsLength();
+
+      expect(frame().currentTime).toBe(42);
+      expect(restored.position()).toBe(42);
+    });
+
+    it('skips a video the provider will not play, like a dead enclosure', () => {
+      const service = make();
+      service.play(video);
+      service.enqueue(episode);
+      const dead = frame();
+
+      dead.fail(SRC_NOT_SUPPORTED);
+
+      expect(service.current()).toBe(episode);
+      expect(dead.dispose).toHaveBeenCalled();
+      const taken = audios[audios.length - 1];
+      expect(taken.src).toBe(episode.url);
+      expect(taken.play).toHaveBeenCalled();
+      expect(service.playing()).toBe(true);
+    });
+
+    it('plays the frame at the chosen speed', () => {
+      const service = make();
+      service.play(video);
+
+      service.cycleRate();
+
+      expect(frame().playbackRate).toBe(1.25);
+      expect(frame().defaultPlaybackRate).toBe(1.25);
+    });
+
+    it('caches an episode queued after the video on a file element once the video nears its end', () => {
+      const service = make();
+      service.play(video);
+      service.enqueue(episode);
+      videoKnowsItsLength();
+      expect(audios.map((element) => element.src)).not.toContain(episode.url);
+
+      videoCachedToItsEnd();
+
+      expect(audios.map((element) => element.src)).toContain(episode.url);
+      expect(frameKinds).toEqual(['youtube']);
+      expect(frame().src).toBe(WATCH_URL);
+    });
+
+    it('plays the cached episode when the video ends', () => {
+      const service = make();
+      service.play(video);
+      service.enqueue(episode);
+      videoKnowsItsLength();
+      videoCachedToItsEnd();
+      const cached = audios.find((element) => element.src === episode.url);
+
+      frame().fire('ended');
+
+      expect(service.current()).toBe(episode);
+      expect(cached?.play).toHaveBeenCalled();
+      expect(frame().pause).toHaveBeenCalled();
+      expect(service.playing()).toBe(true);
+    });
+
+    it('stops: pauses the frame, drops the standby and leaves the player empty', () => {
+      const service = make();
+      service.play(video);
+
+      service.stop();
+
+      expect(service.current()).toBeNull();
+      expect(service.playing()).toBe(false);
+      expect(frame().pause).toHaveBeenCalled();
+      expect(standby.src).toBe('');
+      expect(standby.load).toHaveBeenCalled();
+      expect(localStorage.getItem('sfr.audio')).toBeNull();
     });
   });
 });

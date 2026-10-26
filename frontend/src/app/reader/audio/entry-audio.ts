@@ -57,8 +57,6 @@ export class EntryAudio {
 
   toggleQueued(): void {
     const track = this.track();
-    if (!track) return;
-    if (this.queued()) this.player.dequeue(track.url);
-    else this.player.enqueue(track);
+    if (track) this.player.toggleQueued(track);
   }
 }

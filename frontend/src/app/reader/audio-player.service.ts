@@ -15,6 +15,12 @@ import {
 import { PlaylistStore, type SavedPlaylist } from './audio/playlist.store';
 import { PlaylistPersistence } from './audio/playlist-persistence';
 import { AudioDeck } from './audio/audio-deck';
+import type { PlaybackElement } from './audio/playback/playback-element';
+import {
+  FramePlaybackFactory,
+  playbackSlotFactory,
+  providerPlayback,
+} from './audio/playback/playback-slots';
 import { cachedEnd } from './audio/cached-end';
 import { AudioTrack } from './audio/audio-track';
 import { reflectInMediaSession } from './audio/media-session-reflection';
@@ -31,13 +37,19 @@ export const AUDIO_ELEMENT_FACTORY = new InjectionToken<() => HTMLAudioElement>(
   { providedIn: 'root', factory: () => () => new Audio() },
 );
 
+/** Injected so tests supply a stub: a provider frame cannot play in jsdom. */
+export const FRAME_PLAYBACK_FACTORY = new InjectionToken<FramePlaybackFactory>(
+  'FRAME_PLAYBACK_FACTORY',
+  { providedIn: 'root', factory: () => providerPlayback },
+);
+
 /** Jump size for the skip controls and the OS seek keys (#915). */
 export const SKIP_SECONDS = 15;
 /** Past this, previous restarts the current track instead of stepping back (#1429). */
 export const RESTART_THRESHOLD_SECONDS = 3;
 
 /**
- * The reader's single audio player. It owns its HTMLAudioElements in code, never
+ * The reader's single audio player. It owns its playback elements in code, never
  * placed in a template, so playback keeps running while the reader
  * view unmounts and across route changes; the mini-player bar is only a
  * reflection of these signals. It plays a playlist (#1429): the queue rules live
@@ -49,16 +61,19 @@ export const RESTART_THRESHOLD_SECONDS = 3;
  */
 @Injectable({ providedIn: 'root' })
 export class AudioPlayerService {
-  private readonly deck = new AudioDeck(inject(AUDIO_ELEMENT_FACTORY), {
-    progress: () => this.onProgress(),
-    timeupdate: () => this.onTimeUpdate(),
-    loadedmetadata: () => this.onMetadata(),
-    durationchange: () => this.onMetadata(),
-    play: () => this.onPlaying(true),
-    pause: () => this.onPlaying(false),
-    ended: () => this.onEnded(),
-    error: () => this.onError(),
-  });
+  private readonly deck = new AudioDeck(
+    playbackSlotFactory(inject(AUDIO_ELEMENT_FACTORY), inject(FRAME_PLAYBACK_FACTORY)),
+    {
+      progress: () => this.onProgress(),
+      timeupdate: () => this.onTimeUpdate(),
+      loadedmetadata: () => this.onMetadata(),
+      durationchange: () => this.onMetadata(),
+      play: () => this.onPlaying(true),
+      pause: () => this.onPlaying(false),
+      ended: () => this.playNextOrStop(),
+      error: () => this.onError(),
+    },
+  );
   private readonly persistence = new PlaylistPersistence(inject(PlaylistStore), () =>
     this.snapshot(),
   );
@@ -124,6 +139,11 @@ export class AudioPlayerService {
 
   isQueued(url: string): boolean {
     return indexOf(this._playlist(), url) !== -1;
+  }
+
+  toggleQueued(track: AudioTrack): void {
+    if (this.isQueued(track.url)) this.dequeue(track.url);
+    else this.enqueue(track);
   }
 
   play(track: AudioTrack): void {
@@ -268,7 +288,7 @@ export class AudioPlayerService {
 
   private resume(): void {
     if (!this.current()) return;
-    if (this.sourceIsDead()) return this.skipDeadTrack();
+    if (this.sourceIsDead()) return this.playNextOrStop();
     if (this.element.error) this.reloadAtPosition();
     void this.element.play().catch(() => {
       /* Autoplay can be blocked until the user gestures; the play control retries. */
@@ -298,23 +318,18 @@ export class AudioPlayerService {
     if (!playing) this.persistence.save();
   }
 
-  private onEnded(): void {
-    if (this.hasNext()) return this.next();
-    this._playing.set(false);
-  }
-
   /** A dead enclosure (an expired podcast link) never ends, so it is skipped; a dropped
    *  connection only pauses, keeping the listener's place for play to reload from. */
   private onError(): void {
     if (this.sourceIsDead()) {
-      if (this._playing()) this.skipDeadTrack();
+      if (this._playing()) this.playNextOrStop();
       return;
     }
     this._playing.set(false);
     this.persistence.save();
   }
 
-  private skipDeadTrack(): void {
+  private playNextOrStop(): void {
     if (this.hasNext()) return this.next();
     this._playing.set(false);
   }
@@ -350,7 +365,7 @@ export class AudioPlayerService {
     return { playlist: this._playlist(), position: this._position() };
   }
 
-  private get element(): HTMLAudioElement {
+  private get element(): PlaybackElement {
     return this.deck.element;
   }
 }

@@ -3,14 +3,23 @@ import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { AudioChapterPlayer } from '../../chapters/audio-chapter-player';
 import { ChapterPlayer } from '../../chapters/chapter-player';
 import { YouTubeChapterPlayer } from '../../chapters/youtube-chapter-player';
-import { ChapterList, addChapterList } from '../decorators/reader-chapters';
+import { ChapterList, ChapterListPlace, addChapterList } from '../decorators/reader-chapters';
 
 const API_PLAYER = 'iframe[src*="enablejsapi=1"]';
 
+/** The video player frame a body's chapter list drives when no episode owns the chapters. */
+export function apiPlayerFrame(host: HTMLElement): HTMLIFrameElement | null {
+  return host.querySelector<HTMLIFrameElement>(API_PLAYER);
+}
+
 /** One rendered body's chapter list and the player it drives: the episode, else the video's API player (#1808). */
 export class ArticleChapters {
-  private player: ChapterPlayer | null = null;
-  private list: HTMLElement | null = null;
+  private shown: {
+    place: ChapterListPlace;
+    list: ChapterList;
+    player: ChapterPlayer;
+    element: HTMLElement | null;
+  } | null = null;
 
   constructor(
     private readonly audio: AudioPlayerService,
@@ -21,21 +30,34 @@ export class ArticleChapters {
     this.release();
     if (list.chapters.length === 0) return;
     if (track) {
-      this.player = new AudioChapterPlayer(this.audio, track, this.injector);
-      this.list = addChapterList({ host, after: null }, list, this.player);
+      this.show({ host, after: null }, list, this.audioPlayer(track));
       return;
     }
-    const frame = host.querySelector<HTMLIFrameElement>(API_PLAYER);
+    const frame = apiPlayerFrame(host);
     if (!frame) return;
-    this.player = new YouTubeChapterPlayer(frame);
     const after = frame.closest('.reader-cinema') ?? frame.closest('.reader-embed');
-    this.list = addChapterList({ host, after }, list, this.player);
+    this.show({ host, after }, list, new YouTubeChapterPlayer(frame));
+  }
+
+  /** Once the video is the audio player's track, its list seeks the player, not the paused frame (#1815). */
+  followTrack(track: AudioTrack): void {
+    const shown = this.shown;
+    if (!shown) return;
+    shown.player.release();
+    this.show(shown.place, shown.list, this.audioPlayer(track));
   }
 
   release(): void {
-    this.player?.release();
-    this.player = null;
-    this.list?.remove();
-    this.list = null;
+    this.shown?.player.release();
+    this.shown?.element?.remove();
+    this.shown = null;
+  }
+
+  private show(place: ChapterListPlace, list: ChapterList, player: ChapterPlayer): void {
+    this.shown = { place, list, player, element: addChapterList(place, list, player) };
+  }
+
+  private audioPlayer(track: AudioTrack): AudioChapterPlayer {
+    return new AudioChapterPlayer(this.audio, track, this.injector);
   }
 }

@@ -1,4 +1,5 @@
 import { isTextEntryTarget } from '../../../shared/text-entry-target';
+import { materialIcon } from './material-icon';
 
 export interface CinemaLabels {
   enter: string;
@@ -8,6 +9,14 @@ export interface CinemaLabels {
 const LANDSCAPE_PLAYER = '.reader-embed--landscape:not(.reader-embed--audio), video';
 const BOX = 'reader-cinema';
 const WIDENED = 'reader-cinema--on';
+const PLAYER_BAR = 'reader-player-bar';
+
+/** The bar under a player that the cinema toggle and the listen controls share. */
+export function playerBar(): HTMLElement {
+  const bar = document.createElement('div');
+  bar.className = PLAYER_BAR;
+  return bar;
+}
 
 /** Puts a Cinema toggle beneath every landscape player, which widens it past the reading measure (#1479). Idempotent. */
 export function addCinemaToggles(host: HTMLElement, labels: CinemaLabels): void {
@@ -21,9 +30,7 @@ export function addCinemaToggles(host: HTMLElement, labels: CinemaLabels): void 
 }
 
 function toggleBar(box: HTMLElement, labels: CinemaLabels): HTMLElement {
-  const icon = document.createElement('span');
-  icon.className = 'material-symbols-outlined';
-  icon.setAttribute('aria-hidden', 'true');
+  const icon = materialIcon('width_wide');
   const label = document.createElement('span');
   const key = document.createElement('kbd');
   key.setAttribute('aria-hidden', 'true');
@@ -47,8 +54,7 @@ function toggleBar(box: HTMLElement, labels: CinemaLabels): HTMLElement {
   });
   render();
 
-  const bar = document.createElement('div');
-  bar.className = 'reader-cinema__bar';
+  const bar = playerBar();
   bar.append(toggle);
   return bar;
 }
@@ -72,7 +78,7 @@ function isCinemaKey(event: KeyboardEvent): boolean {
 }
 
 function isOffered(toggle: HTMLElement): boolean {
-  return toggle.parentElement !== null && getComputedStyle(toggle.parentElement).display !== 'none';
+  return getComputedStyle(toggle).display !== 'none';
 }
 
 function isInViewport(toggle: HTMLElement): boolean {

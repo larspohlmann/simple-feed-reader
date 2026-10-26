@@ -1119,6 +1119,7 @@
     },
     "audioPlayer": {
       "listen": "Listen",
+      "listenEmbed": "Play the sound in the reader's audio player",
       "label": "Audio player",
       "play": "Play",
       "pause": "Pause",

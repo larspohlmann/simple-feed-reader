@@ -1,5 +1,6 @@
 import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { recordPosts } from '../../../../testing/frame-playback-testing';
 import { AudioPlayerService } from '../../audio-player.service';
 import { ArticleChapters } from './article-chapters';
 
@@ -32,6 +33,8 @@ function chapters(): ArticleChapters {
 }
 
 describe('ArticleChapters', () => {
+  beforeEach(() => localStorage.clear());
+
   it('puts a video list after the cinema box of the API player', () => {
     const host = document.createElement('div');
     host.innerHTML =
@@ -84,6 +87,58 @@ describe('ArticleChapters', () => {
 
     expect(host.querySelector('.reader-chapters')).toBeNull();
     expect(host.innerHTML).toBe('<p>Notes</p>');
+  });
+
+  describe('followTrack', () => {
+    const VIDEO_TRACK = { ...TRACK, url: 'https://www.youtube.com/watch?v=JsBZOcqZerk' };
+    const VIDEO_BODY =
+      '<div class="reader-cinema"><div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x"></iframe></div></div><p>Notes</p>';
+
+    it('hands a video list to the audio player, leaving it under the video', () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
+      const host = document.createElement('div');
+      host.innerHTML = VIDEO_BODY;
+      const posted = recordPosts(host.querySelector('iframe')!);
+      const articleChapters = chapters();
+      articleChapters.attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, null);
+
+      articleChapters.followTrack(VIDEO_TRACK);
+      host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+
+      expect(host.querySelectorAll('.reader-chapters')).toHaveLength(1);
+      expect(host.children[1].classList.contains('reader-chapters')).toBe(true);
+      expect(titles(host)).toEqual(['A', 'B']);
+      expect(playFrom).toHaveBeenCalledWith(VIDEO_TRACK, 60);
+      expect(posted).toEqual([]);
+    });
+
+    it('follows the audio player once the video is its track', () => {
+      const host = document.createElement('div');
+      host.innerHTML = VIDEO_BODY;
+      const articleChapters = chapters();
+      articleChapters.attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, null);
+
+      articleChapters.followTrack(VIDEO_TRACK);
+      const audio = TestBed.inject(AudioPlayerService);
+      audio.enqueue(VIDEO_TRACK);
+      audio.seek(70);
+      TestBed.tick();
+
+      const current = host.querySelector('.reader-chapters__row[aria-current="true"]');
+      expect(current?.querySelector('.reader-chapters__title')?.textContent).toBe('B');
+    });
+
+    it('does nothing without a list to hand over', () => {
+      const host = document.createElement('div');
+      host.innerHTML = '<p>Notes</p>';
+      const articleChapters = chapters();
+      articleChapters.attach(host, { chapters: CHAPTERS, heading: 'Chapters' }, null);
+
+      articleChapters.followTrack(VIDEO_TRACK);
+
+      expect(host.innerHTML).toBe('<p>Notes</p>');
+    });
   });
 
   it('draws the next body its own list, following the new player', () => {
