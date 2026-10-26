@@ -119,7 +119,7 @@ describe('addChapterList', () => {
     player.progressTo({ seconds: 128, durationSeconds: null });
 
     expect(rows(host).map(progressOf)).toEqual(['0.50', '', '']);
-    expect(rows(host).map(timeLeftOf)).toEqual(['−2:08', '', '']);
+    expect(rows(host).map(timeLeftOf)).toEqual(['2:08', '', '']);
   });
 
   it('moves fill and time left to the chapter playback moves into', () => {
@@ -131,7 +131,7 @@ describe('addChapterList', () => {
     player.progressTo({ seconds: 3800, durationSeconds: 4000 });
 
     expect(rows(host).map(progressOf)).toEqual(['', '', '0.28']);
-    expect(rows(host).map(timeLeftOf)).toEqual(['', '', '−3:20']);
+    expect(rows(host).map(timeLeftOf)).toEqual(['', '', '3:20']);
   });
 
   it('leaves the last chapter unfilled while the duration is unknown', () => {
