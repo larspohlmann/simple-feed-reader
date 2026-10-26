@@ -25,6 +25,7 @@ interface ListToShow {
   readonly list: ChapterList;
   readonly player: ChapterPlayer;
   readonly mediaUrl: string | null;
+  readonly frame: HTMLIFrameElement | null;
 }
 
 interface ShownList extends ListToShow {
@@ -34,7 +35,6 @@ interface ShownList extends ListToShow {
 /** A rendered body's chapter lists: its own, on the episode or the first API video (#1808), and one per embed (#1824). */
 export class ArticleChapters {
   private shown: ShownList[] = [];
-  private own: ShownList | null = null;
 
   constructor(
     private readonly audio: AudioPlayerService,
@@ -46,34 +46,33 @@ export class ArticleChapters {
     if (list.chapters.length === 0) return;
     if (track) {
       const place = { host, after: null };
-      this.own = this.show({ place, list, player: this.audioPlayer(track), mediaUrl: null });
+      this.show({ place, list, player: this.audioPlayer(track), mediaUrl: null, frame: null });
       return;
     }
     const frame = apiPlayerFrame(host);
     if (!frame) return;
     const place = { host, after: embedBoxOf(frame) };
     const mediaUrl = embedMediaOfFrame(frame)?.url ?? null;
-    this.own = this.show({ place, list, player: new YouTubeChapterPlayer(frame), mediaUrl });
+    this.show({ place, list, player: new YouTubeChapterPlayer(frame), mediaUrl, frame });
   }
 
   attachToFrame(frame: HTMLIFrameElement, list: ChapterList): void {
     const media = embedMediaOfFrame(frame);
     const after = embedBoxOf(frame) ?? frame;
     const host = after.parentElement;
-    if (!media || !host || list.chapters.length === 0) return;
+    if (!media || !host || list.chapters.length === 0 || this.hasList(frame)) return;
     const player = this.embedPlayer(frame, media);
-    this.show({ place: { host, after }, list, player, mediaUrl: media.url });
+    this.show({ place: { host, after }, list, player, mediaUrl: media.url, frame });
   }
 
   /** Once an embed is the audio player's track, its list seeks the player, not the paused frame (#1815). */
   followTrack(track: AudioTrack): void {
-    const shown = this.shown.find((each) => each.mediaUrl === track.url) ?? this.own;
+    const shown = this.shown.find((each) => each.mediaUrl === track.url);
     if (!shown) return;
     shown.player.release();
     shown.element?.remove();
     this.shown = this.shown.filter((each) => each !== shown);
-    const followed = this.show({ ...shown, player: this.audioPlayer(track) });
-    if (shown === this.own) this.own = followed;
+    this.show({ ...shown, player: this.audioPlayer(track) });
   }
 
   release(): void {
@@ -82,14 +81,15 @@ export class ArticleChapters {
       shown.element?.remove();
     }
     this.shown = [];
-    this.own = null;
   }
 
-  private show(toShow: ListToShow): ShownList {
-    const { place, list, player, mediaUrl } = toShow;
-    const shown = { place, list, player, mediaUrl, element: addChapterList(place, list, player) };
-    this.shown.push(shown);
-    return shown;
+  private show(toShow: ListToShow): void {
+    const { place, list, player } = toShow;
+    this.shown.push({ ...toShow, element: addChapterList(place, list, player) });
+  }
+
+  private hasList(frame: HTMLIFrameElement): boolean {
+    return this.shown.some((shown) => shown.frame === frame);
   }
 
   private embedPlayer(frame: HTMLIFrameElement, media: EmbedMedia): ChapterPlayer {

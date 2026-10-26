@@ -273,7 +273,7 @@ describe('ArticleChapters', () => {
     it("hands only the listened embed's list to the audio player", () => {
       const audio = TestBed.inject(AudioPlayerService);
       const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
-      const { video, widget } = embedsHost();
+      const { host, video, widget } = embedsHost();
       const videoPosts = recordPosts(video);
       const widgetPosts = recordPosts(widget);
       const articleChapters = chapters();
@@ -293,6 +293,47 @@ describe('ArticleChapters', () => {
         id: 1,
         channel: 'widget',
       });
+      expect(listAfter(widget)?.classList.contains('reader-chapters')).toBe(true);
+      expect(host.querySelectorAll('.reader-chapters')).toHaveLength(2);
+      articleChapters.release();
+    });
+
+    it('leaves every list on its own player when the listened embed has no list', () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
+      const { host, video, widget } = embedsHost();
+      const videoPosts = recordPosts(video);
+      const widgetPosts = recordPosts(widget);
+      const articleChapters = chapters();
+      articleChapters.attach(host, LIST, null);
+
+      articleChapters.followTrack(WIDGET_TRACK);
+      deliverMessage(
+        video,
+        JSON.stringify({ event: 'onReady' }),
+        'https://www.youtube-nocookie.com',
+      );
+      tapSecondRow(video);
+
+      expect(playFrom).not.toHaveBeenCalled();
+      expect(messagesOf(videoPosts)).toContainEqual(
+        expect.objectContaining({ func: 'seekTo', args: [60, true] }),
+      );
+      expect(widgetPosts).toEqual([]);
+      articleChapters.release();
+    });
+
+    it('gives an embed one list however often it is attached', () => {
+      const { host, video, widget } = embedsHost();
+      const articleChapters = chapters();
+      articleChapters.attach(host, LIST, null);
+
+      articleChapters.attachToFrame(video, LIST);
+      articleChapters.attachToFrame(widget, LIST);
+      articleChapters.attachToFrame(widget, LIST);
+
+      expect(host.querySelectorAll('.reader-chapters')).toHaveLength(2);
+      expect(listAfter(video)?.classList.contains('reader-chapters')).toBe(true);
       expect(listAfter(widget)?.classList.contains('reader-chapters')).toBe(true);
       articleChapters.release();
     });
