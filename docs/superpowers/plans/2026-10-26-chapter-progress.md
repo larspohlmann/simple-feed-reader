@@ -790,7 +790,7 @@ Expected: PASS, including `article-chapters.spec.ts`. That spec asserts the time
 - [ ] **Step 5: Style the icon and keep the width steady**
 
 In `article-chapters.scss`:
-- Add `display: inline-flex;`, `align-items: center;`, `justify-content: flex-end;` and `gap: var(--space-0);` to the existing `.reader-chapters__left` rule, and replace its `margin-inline-start: auto;` with `margin-inline: auto calc(-1 * var(--space-1));` (Stylelint requires the shorthand).
+- Add `display: inline-flex;`, `align-items: center;`, `justify-content: flex-end;` and `gap: var(--space-0);` to the existing `.reader-chapters__left` rule, together with `align-self: flex-start;` (a wrapped title leaves the clock and time on the row's first line, level with the start time). Its `margin-inline-start: auto;` stays.
 - Delete the rule `:host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left { min-width: 6ch; text-align: end; }`.
 - Add after the `.reader-chapters__left` rule:
 
@@ -802,10 +802,11 @@ In `article-chapters.scss`:
 
 :host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left {
   min-width: calc(5ch + var(--icon-sm) + var(--space-0) + var(--space-1));
+  margin-inline-end: calc(-1 * var(--space-1));
 }
 ```
 
-The playing row's box (clock + time) reserves room for `10:00` and its contents sit at its right end. The box reaches `--space-1` into the row's right padding and the icon carries the same space after it, so the time sits a little further right while the clock stays where it was; the title's space does not change as the countdown ticks. The icon comes and goes with the time, once per chapter change.
+The playing row's box (clock + time) reserves room for `10:00` and its contents sit at its right end. Only the playing row's box reaches `--space-1` into the row's right padding and the icon carries the same space after it, so the time sits a little further right while the clock stays where it was; the title's space does not change as the countdown ticks. The icon comes and goes with the time, once per chapter change.
 
 - [ ] **Step 6: Gates**
 
@@ -910,6 +911,21 @@ Add after it:
 
     expect(posted).toEqual([{ event: 'listening', id: 1, channel: 'widget' }]);
   });
+
+  it('does not report the position of the message that plays a held chapter', () => {
+    const { frame } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+    const positions: (PlaybackPosition | null)[] = [];
+    player.watch((position) => positions.push(position));
+    player.playFrom(256);
+
+    delivery(frame, { event: 'initialDelivery', info: { currentTime: 0, duration: 600 } });
+    expect(positions).toEqual([]);
+
+    delivery(frame, { event: 'infoDelivery', info: { currentTime: 256 } });
+    expect(positions).toEqual([{ seconds: 256, durationSeconds: 600 }]);
+    player.release();
+  });
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -926,7 +942,7 @@ In `youtube-chapter-player.ts`, add two fields below `durationSeconds`:
   private heldStart: number | null = null;
 ```
 
-At the top of `onMessage`, right after the origin/source guard, add `this.becomeReady();`.
+At the top of `onMessage`, right after the origin/source guard, add `const playedHeldStart = this.playHeldStartOnReady();`. After the duration update, add `if (playedHeldStart) return;`, so the message that plays a held chapter records its duration but does not report its position (row 0 would flash as current before the seek lands).
 
 Replace `playFrom` with:
 
@@ -953,12 +969,14 @@ Add `this.heldStart = null;` to `release()`. Change `onLoad` to `(): void => thi
 Then add a private method below `release()`:
 
 ```ts
-  private becomeReady(): void {
-    if (this.ready) return;
+  private playHeldStartOnReady(): boolean {
+    if (this.ready) return false;
     this.ready = true;
     const start = this.heldStart;
     this.heldStart = null;
-    if (start !== null) this.playFrom(start);
+    if (start === null) return false;
+    this.playFrom(start);
+    return true;
   }
 ```
 
@@ -1063,5 +1081,5 @@ git commit -m "fix(#1814): let a video the chapters drive start playing"
 
 ## Self-review notes
 
-- Spec coverage: fill on a faint track (Task 3 SCSS, in `article-chapters.scss`); time left right-aligned on the playing row (Task 3 tests 1–2, `margin-inline-start: auto`), hidden from the accessible name (Task 3 test 5); only the current row (selector `[aria-current='true']` + `mark` clears the left row); seeking moves it (Task 3 tests 2 and 4); unchanged before playback (no `aria-current`, empty time-left span is invisible, and only the current row reserves `min-width: 6ch` for it); last chapter to duration, track only while unknown (Task 2 tests 2–3, Task 3 test 3); YouTube duration from deliveries, audio from `duration()` (Task 1); `scaleX` via one custom property (Task 3 Step 5).
+- Spec coverage: fill on a faint track (Task 3 SCSS, in `article-chapters.scss`); time left on the playing row (Task 3 tests 1–2; the box sits at the row's end, the clock right before the time, and the playing row reserves the box's width and takes the 4px nudge, per Task 5 Step 5), hidden from the accessible name (Task 3 test 5); only the current row (selector `[aria-current='true']` + `mark` clears the left row); seeking moves it (Task 3 tests 2 and 4); unchanged before playback (no `aria-current`, empty time-left span is invisible); last chapter to duration, track only while unknown (Task 2 tests 2–3, Task 3 test 3); YouTube duration from deliveries, audio from `duration()` (Task 1); `scaleX` via one custom property (Task 3 Step 5).
 - Types: `PlaybackPosition { seconds, durationSeconds }` and `ChapterProgress { fraction, secondsLeft }` are used with the same names in Tasks 1–3; `chapterProgress(starts, index, position)` is called with that order in Task 3.
