@@ -1,3 +1,4 @@
+import { PlaybackPosition } from './chapter-player';
 import { YouTubeChapterPlayer } from './youtube-chapter-player';
 
 const PLAYER_ORIGIN = 'https://www.youtube-nocookie.com';
@@ -44,13 +45,41 @@ describe('YouTubeChapterPlayer', () => {
   it('reports the position the player delivers', () => {
     const { frame } = frameWithWindow();
     const player = new YouTubeChapterPlayer(frame);
-    const positions: (number | null)[] = [];
-    player.watch((seconds) => positions.push(seconds));
+    const positions: (PlaybackPosition | null)[] = [];
+    player.watch((position) => positions.push(position));
 
     delivery(frame, { event: 'infoDelivery', info: { currentTime: 263.3 } });
     delivery(frame, { event: 'infoDelivery', info: { volume: 100 } });
 
-    expect(positions).toEqual([263.3]);
+    expect(positions).toEqual([{ seconds: 263.3, durationSeconds: null }]);
+    player.release();
+  });
+
+  it('carries the last delivered duration on later positions', () => {
+    const { frame } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+    const positions: (PlaybackPosition | null)[] = [];
+    player.watch((position) => positions.push(position));
+
+    delivery(frame, { event: 'initialDelivery', info: { currentTime: 0, duration: 600 } });
+    delivery(frame, { event: 'infoDelivery', info: { currentTime: 12 } });
+
+    expect(positions).toEqual([
+      { seconds: 0, durationSeconds: 600 },
+      { seconds: 12, durationSeconds: 600 },
+    ]);
+    player.release();
+  });
+
+  it('knows no duration while the player reports none', () => {
+    const { frame } = frameWithWindow();
+    const player = new YouTubeChapterPlayer(frame);
+    const positions: (PlaybackPosition | null)[] = [];
+    player.watch((position) => positions.push(position));
+
+    delivery(frame, { event: 'infoDelivery', info: { currentTime: 30, duration: 0 } });
+
+    expect(positions).toEqual([{ seconds: 30, durationSeconds: null }]);
     player.release();
   });
 
@@ -58,8 +87,8 @@ describe('YouTubeChapterPlayer', () => {
     const { frame } = frameWithWindow();
     const other = frameWithWindow().frame;
     const player = new YouTubeChapterPlayer(frame);
-    const positions: (number | null)[] = [];
-    player.watch((seconds) => positions.push(seconds));
+    const positions: (PlaybackPosition | null)[] = [];
+    player.watch((position) => positions.push(position));
 
     delivery(frame, { info: { currentTime: 5 } }, 'https://evil.test');
     delivery(other, { info: { currentTime: 5 } });
@@ -71,8 +100,8 @@ describe('YouTubeChapterPlayer', () => {
   it('stops listening once released', () => {
     const { frame } = frameWithWindow();
     const player = new YouTubeChapterPlayer(frame);
-    const positions: (number | null)[] = [];
-    player.watch((seconds) => positions.push(seconds));
+    const positions: (PlaybackPosition | null)[] = [];
+    player.watch((position) => positions.push(position));
 
     player.release();
     delivery(frame, { info: { currentTime: 5 } });

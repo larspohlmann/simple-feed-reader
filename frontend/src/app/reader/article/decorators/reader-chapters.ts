@@ -42,7 +42,7 @@ export function addChapterList(
     }),
   );
   const starts = chapters.map((chapter) => chapter.startSeconds);
-  player.watch((seconds) => mark(currentChapterIndex(starts, seconds)));
+  player.watch((position) => mark(currentChapterIndex(starts, position?.seconds ?? null)));
 
   const list = document.createElement('nav');
   list.className = LIST;

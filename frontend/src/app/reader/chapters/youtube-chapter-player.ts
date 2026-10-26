@@ -1,16 +1,25 @@
-import { ChapterPlayer } from './chapter-player';
+import { ChapterPlayer, PlaybackPosition } from './chapter-player';
 
 const PLAYER_ORIGIN = 'https://www.youtube-nocookie.com';
 const WIDGET = { id: 1, channel: 'widget' };
 
+interface PlayerInfo {
+  readonly currentTime?: unknown;
+  readonly duration?: unknown;
+}
+
 /** Drives a YouTube embed through its iframe API; the frame must be loaded with `enablejsapi=1` (#1808). */
 export class YouTubeChapterPlayer implements ChapterPlayer {
-  private onPosition: ((seconds: number | null) => void) | null = null;
+  private onPosition: ((position: PlaybackPosition | null) => void) | null = null;
+  private durationSeconds: number | null = null;
 
   private readonly onMessage = (event: MessageEvent): void => {
     if (event.origin !== PLAYER_ORIGIN || event.source !== this.frame.contentWindow) return;
-    const seconds = currentTimeOf(event.data);
-    if (seconds !== null) this.onPosition?.(seconds);
+    const info = infoOf(event.data);
+    const duration = secondsOf(info?.duration);
+    if (duration !== null && duration > 0) this.durationSeconds = duration;
+    const seconds = secondsOf(info?.currentTime);
+    if (seconds !== null) this.onPosition?.({ seconds, durationSeconds: this.durationSeconds });
   };
 
   private readonly onLoad = (): void => this.post({ event: 'listening', ...WIDGET });
@@ -25,7 +34,7 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
     this.command('playVideo', []);
   }
 
-  watch(onPosition: (seconds: number | null) => void): void {
+  watch(onPosition: (position: PlaybackPosition | null) => void): void {
     this.onPosition = onPosition;
   }
 
@@ -44,13 +53,15 @@ export class YouTubeChapterPlayer implements ChapterPlayer {
   }
 }
 
-function currentTimeOf(data: unknown): number | null {
+function infoOf(data: unknown): PlayerInfo | null {
   if (typeof data !== 'string') return null;
   try {
-    const time = (JSON.parse(data) as { info?: { currentTime?: unknown } } | null)?.info
-      ?.currentTime;
-    return typeof time === 'number' ? time : null;
+    return (JSON.parse(data) as { info?: PlayerInfo } | null)?.info ?? null;
   } catch {
     return null;
   }
+}
+
+function secondsOf(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }

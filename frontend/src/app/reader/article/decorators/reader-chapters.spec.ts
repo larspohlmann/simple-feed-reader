@@ -1,4 +1,4 @@
-import { ChapterPlayer } from '../../chapters/chapter-player';
+import { ChapterPlayer, PlaybackPosition } from '../../chapters/chapter-player';
 import { addChapterList } from './reader-chapters';
 
 const CHAPTERS = [
@@ -7,13 +7,19 @@ const CHAPTERS = [
   { startSeconds: 3723, title: 'Late' },
 ];
 
-function fakePlayer(): ChapterPlayer & { positionTo(seconds: number | null): void } {
-  let listener: (seconds: number | null) => void = () => undefined;
+type FakePlayer = ChapterPlayer & {
+  positionTo(seconds: number | null): void;
+  progressTo(position: PlaybackPosition): void;
+};
+
+function fakePlayer(): FakePlayer {
+  let listener: (position: PlaybackPosition | null) => void = () => undefined;
   return {
     playFrom: jest.fn(),
     watch: (onPosition) => (listener = onPosition),
     release: jest.fn(),
-    positionTo: (seconds) => listener(seconds),
+    positionTo: (seconds) => listener(seconds === null ? null : { seconds, durationSeconds: null }),
+    progressTo: (position) => listener(position),
   };
 }
 
