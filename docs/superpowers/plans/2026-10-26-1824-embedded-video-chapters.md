@@ -249,6 +249,12 @@ Fixtures: save the two descriptions as fetched with the requests in "Measured" (
 
 ---
 
+### Task 2b: YouTube's chapter rule reads a stamp anywhere in the line (added during execution)
+
+Task 2 found that #1808's `DescriptionChapters` reads only a line that its timestamp leads. YouTube's own rule is wider: YouTube makes chapters from `01. 00:00 Title`, `1. Title (00:00)`, `1. Title 00:00` and `0:00:00 Title`, the four shapes on the Trancentral post. It also skips lines without a stamp in between, such as a `BUY https://…` line after each track. `Support/ChapterLine` now reads a line holding exactly one stamp anywhere. The title is the line without the stamp, its bracket pair and the separator that joined it. A line without a stamp no longer breaks a run, and a descending stamp ends it. The first-run, `0:00`, ≥ 3 and ascending rules stay. Our counts match YouTube's own on all four videos (19, 8, 15 and 15, starts included). On the 80 YouTube entries in the dev DB the result is identical before and after (16 with chapters). Commit `fix(#1824): YouTube chapters read a timestamp anywhere in the line`.
+
+---
+
 ### Task 3: The endpoints
 
 **Files:**
