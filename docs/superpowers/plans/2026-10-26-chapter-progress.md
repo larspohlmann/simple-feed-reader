@@ -964,6 +964,82 @@ git commit -m "fix(#1814): play a chapter tapped before the video is ready"
 
 ---
 
+### Task 7: A frame the chapters drive may start playback
+
+Added during implementation, from a user bug report. Clicking a chapter in Brave seeks the video but does not play it.
+
+- **Reproduced:** in the user's Brave on :4200 (entry 655268). The click's `seekTo` lands (the player reports 259 s), but `playVideo` is refused. The player goes unstarted (-1) → buffering (3) → unstarted (-1), and never reaches playing (1).
+- **Cause confirmed:** setting `allow="autoplay"` on the iframe and reloading the frame made the same click reach playing (1). A cross-origin iframe without autoplay permission ignores a play command that comes from the parent page's click.
+
+**The fix.** A frame whose URL carries the iframe-API suffix that `withPlayerApi` adds gets `allow="autoplay"`. Every other article embed keeps no autoplay permission, as `media-embeds.spec.ts` already asserts (#748). YouTube never starts on its own: only our `playVideo` on a chapter click starts it.
+
+**Files:**
+- Modify: `frontend/src/app/reader/media/media-embeds.ts`
+- Test: `frontend/src/app/reader/media/media-embeds.spec.ts`
+
+**Interfaces:** No signature changes. `embedFrame(url, title)` additionally sets `allow="autoplay"` when `url` is a player-API URL.
+
+- [ ] **Step 1: Write the failing tests**
+
+In `media-embeds.spec.ts`, inside `describe('upgradeMediaEmbeds', …)`, after the test `'applies the sandbox and referrer policy'`, add the test below. Use the file's existing `articleHost` helper: `host` is `(html) => articleHost(html, upgradeMediaEmbeds)`, so pass a decorator that hands `upgradeMediaEmbeds` the player-API mapping.
+
+```ts
+  it('lets a player the chapters drive start playback', () => {
+    const element = articleHost(
+      '<a href="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa">x</a>',
+      (target) =>
+        upgradeMediaEmbeds(target, (url) => withPlayerApi(url, 'http://localhost:4200')),
+    );
+
+    expect(element.querySelector('iframe')?.getAttribute('allow')).toBe('autoplay');
+  });
+```
+
+The existing test `'applies the sandbox and referrer policy'` stays as it is. It pins that an ordinary embed has no autoplay.
+
+If `articleHost`'s decorator parameter has a different shape, adapt the call to it. Read its definition (imported at the top of the spec) rather than guessing, and keep the assertion.
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `docker compose exec -T frontend npm test -- src/app/reader/media/media-embeds.spec.ts`
+Expected: FAIL. `allow` is `null`.
+
+- [ ] **Step 3: Implement**
+
+In `media-embeds.ts`, below `YOUTUBE_VIDEO_FRAME`, add:
+
+```ts
+// Without autoplay, a cross-origin player ignores the playVideo a chapter tap sends (Brave, #1814).
+const PLAYER_API_FRAME = /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}\?enablejsapi=1&origin=/;
+```
+
+In `embedFrame`, after the attribute loop and before `return frame;`, add:
+
+```ts
+  if (PLAYER_API_FRAME.test(url)) frame.setAttribute('allow', 'autoplay');
+```
+
+`PlayingEmbedDirective` still overrides `allow` with `'autoplay; fullscreen'` for its own frames, so it is unaffected.
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `docker compose exec -T frontend npm test -- src/app/reader/media src/app/reader/article`
+Expected: PASS.
+
+- [ ] **Step 5: Gates**
+
+Run (from `frontend/`): `npm run check`
+Expected: exit 0.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add frontend/src/app/reader/media/media-embeds.ts frontend/src/app/reader/media/media-embeds.spec.ts
+git commit -m "fix(#1814): let a video the chapters drive start playing"
+```
+
+---
+
 ## Self-review notes
 
 - Spec coverage: fill on a faint track (Task 3 SCSS, in `article-chapters.scss`); time left right-aligned on the playing row (Task 3 tests 1–2, `margin-inline-start: auto`), hidden from the accessible name (Task 3 test 5); only the current row (selector `[aria-current='true']` + `mark` clears the left row); seeking moves it (Task 3 tests 2 and 4); unchanged before playback (no `aria-current`, empty time-left span is invisible, and only the current row reserves `min-width: 6ch` for it); last chapter to duration, track only while unknown (Task 2 tests 2–3, Task 3 test 3); YouTube duration from deliveries, audio from `duration()` (Task 1); `scaleX` via one custom property (Task 3 Step 5).
