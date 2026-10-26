@@ -1,5 +1,6 @@
-/* Host-settable: --scrubber-bar is the track's height, --scrubber-thumb the thumb's size (0 for
-   none), --scrubber-tap the input's height, --scrubber-surface the colour the notches cut to. */
+/* Host-settable: --scrubber-bar is the track's height, --scrubber-thumb the thumb's size (0px
+   for none; a unitless 0 breaks every calc), --scrubber-tap the input's height,
+   --scrubber-surface the colour the notches cut to. */
 :host {
   --bar-height: var(--scrubber-bar, var(--space-1));
   --thumb-size: var(--scrubber-thumb, var(--space-3));
