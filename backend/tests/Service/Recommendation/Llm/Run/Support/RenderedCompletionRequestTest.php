@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Llm\Run\Support;
 
+use App\Enum\TokenLimitParameter;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Llm\Completion\Model\JsonSchemaModel;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
@@ -23,6 +24,7 @@ final class RenderedCompletionRequestTest extends TestCase
                 1024,
                 new JsonSchemaModel('test', ['type' => 'object']),
                 Reasoning::Allowed,
+                TokenLimitParameter::MaxTokens,
             )),
         );
     }

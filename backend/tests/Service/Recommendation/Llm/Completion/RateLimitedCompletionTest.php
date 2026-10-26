@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Llm\Completion;
 
+use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderConnectionModel;
@@ -41,6 +42,7 @@ final class RateLimitedCompletionTest extends TestCase
             2048,
             new JsonSchemaModel('s', ['type' => 'object']),
             Reasoning::Allowed,
+            TokenLimitParameter::MaxTokens,
         );
     }
 

@@ -11,7 +11,6 @@ use App\Enum\ScoringProtocol;
  * One model as the provider's catalog describes it, and what a connection stores once it is chosen. The context window
  * is null when the provider does not report one — most OpenAI-style gateways do (context_length,
  * max_context_length or max_input_tokens), OpenAI itself does not.
- * The output cap is likewise null where the provider reports none.
  */
 final readonly class ModelDescriptor
 {

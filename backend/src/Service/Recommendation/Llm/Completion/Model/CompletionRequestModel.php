@@ -19,7 +19,7 @@ final readonly class CompletionRequestModel
         public int $maxAnswerTokens,
         public JsonSchemaModel $responseSchema,
         public Reasoning $reasoning,
-        public TokenLimitParameter $tokenLimitParameter = TokenLimitParameter::MaxTokens,
+        public TokenLimitParameter $tokenLimitParameter,
     ) {
     }
 }

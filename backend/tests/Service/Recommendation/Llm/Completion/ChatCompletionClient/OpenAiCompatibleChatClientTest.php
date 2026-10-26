@@ -57,12 +57,26 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     private function request(): CompletionRequestModel
     {
-        return new CompletionRequestModel('m', $this->messages(), 2048, $this->schema(), Reasoning::Allowed);
+        return new CompletionRequestModel(
+            'm',
+            $this->messages(),
+            2048,
+            $this->schema(),
+            Reasoning::Allowed,
+            TokenLimitParameter::MaxTokens,
+        );
     }
 
     private function suppressingRequest(): CompletionRequestModel
     {
-        return new CompletionRequestModel('m', $this->messages(), 2048, $this->schema(), Reasoning::Suppressed);
+        return new CompletionRequestModel(
+            'm',
+            $this->messages(),
+            2048,
+            $this->schema(),
+            Reasoning::Suppressed,
+            TokenLimitParameter::MaxTokens,
+        );
     }
 
     private function schema(): JsonSchemaModel
@@ -819,7 +833,14 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             \JSON_THROW_ON_ERROR,
         ) . "\n\n";
         $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
-        $request = new CompletionRequestModel('m', $this->messages(), 512, $this->schema(), Reasoning::Suppressed);
+        $request = new CompletionRequestModel(
+            'm',
+            $this->messages(),
+            512,
+            $this->schema(),
+            Reasoning::Suppressed,
+            TokenLimitParameter::MaxTokens,
+        );
 
         self::assertSame(
             'That provider answered with more than 4096 bytes.',

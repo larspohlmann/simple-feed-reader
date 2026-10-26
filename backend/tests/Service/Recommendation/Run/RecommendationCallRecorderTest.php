@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\ProfileRunTrigger;
+use App\Enum\TokenLimitParameter;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Model\ProviderCallUsageModel;
@@ -375,6 +376,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
             1024,
             new JsonSchemaModel('test', ['type' => 'object']),
             Reasoning::Allowed,
+            TokenLimitParameter::MaxTokens,
         ));
     }
 
