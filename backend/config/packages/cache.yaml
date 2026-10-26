@@ -121,5 +121,3 @@ when@test:
                 # Each test starts with no remembered verdict and no switch cursor, however the suite is ordered.
                 social.profile_visibility.cache:
                     adapter: cache.adapter.array
-                embed.chapters.cache:
-                    adapter: cache.adapter.array
