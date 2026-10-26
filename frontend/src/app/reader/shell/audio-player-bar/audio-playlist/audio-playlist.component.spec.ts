@@ -146,14 +146,11 @@ describe('AudioPlaylistComponent', () => {
     expect(expandButton(later).getAttribute('aria-label')).toBe('Chapters of Episode 3');
   });
 
-  it("opens the current track's chapters with the queue and keeps the others closed", () => {
+  it('keeps every chapter list closed until its chevron is tapped, the playing one too', () => {
     const [, current, later] = rows(render());
 
-    expect(nestedRows(current).map((row) => row.textContent)).toEqual([
-      expect.stringContaining('Intro'),
-      expect.stringContaining('Main part'),
-    ]);
-    expect(expandButton(current).getAttribute('aria-expanded')).toBe('true');
+    expect(nestedChapters(current)).toBeNull();
+    expect(expandButton(current).getAttribute('aria-expanded')).toBe('false');
     expect(nestedChapters(later)).toBeNull();
     expect(expandButton(later).getAttribute('aria-expanded')).toBe('false');
   });
@@ -177,6 +174,8 @@ describe('AudioPlaylistComponent', () => {
   it('keeps the drag target of the nested chapters inside the row', () => {
     const fixture = render();
     const current = rows(fixture)[1];
+    click(current, '.expand');
+    fixture.detectChanges();
 
     expect(nestedChapters(current)?.closest('.row')).toBe(current);
     expect(nestedChapters(current)?.hasAttribute('cdkdroplist')).toBe(false);
@@ -197,6 +196,7 @@ describe('AudioPlaylistComponent', () => {
     const fixture = render();
     player.chapterPlayhead.set({ index: 1, progress: { fraction: 0.5, secondsLeft: 30 } });
     const [, current, later] = rows(fixture);
+    click(current, '.expand');
     click(later, '.expand');
     fixture.detectChanges();
 
