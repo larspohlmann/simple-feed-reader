@@ -5,22 +5,40 @@ declare(strict_types=1);
 namespace App\Service\Chapter\Support;
 
 use App\Entity\EntryChapter;
+use App\Service\Chapter\Model\StampPosition;
 
-/** A line with one stamp anywhere or a leading range; its title is the rest, minus the stamp's brackets. */
+/** A line with one leading or trailing stamp, or a leading range; its title is the rest, minus the stamp's brackets. */
 final class ChapterLine
 {
     private const string STAMP = '(?<![\d:=])(?:\d{1,2}:)?\d{1,2}:\d{2}(?![\d:])';
     private const string STAMPS = '/' . self::STAMP . '/';
-    private const string BRACKETED_STAMP = '/\(' . self::STAMP . '\)|\[' . self::STAMP . '\]|' . self::STAMP . '/';
+    private const string BRACKETED_OR_BARE_STAMP
+        = '(?:\(' . self::STAMP . '\)|\[' . self::STAMP . '\]|' . self::STAMP . ')';
+    private const string BRACKETED_STAMP = '/' . self::BRACKETED_OR_BARE_STAMP . '/';
+    private const string LEADING_STAMP = '/^\s*(?:\d{1,3}[.)]?\s+)?' . self::BRACKETED_OR_BARE_STAMP . '/u';
+    private const string TRAILING_STAMP = '/' . self::BRACKETED_OR_BARE_STAMP . '\s*$/u';
     private const string LEADING_RANGE = '/^\s*(' . self::STAMP . ')\s*[-–—~]\s*' . self::STAMP . '(.*)$/su';
     private const string SEPARATORS_AT_THE_ENDS = '/^[\s\-–—:|]+|[\s\-–—:|]+$/u';
 
     public static function chapterOf(string $text): ?EntryChapter
     {
+        if (self::positionOf($text) === StampPosition::Inner) {
+            return null;
+        }
+
         return match (preg_match_all(self::STAMPS, $text)) {
             1 => self::chapter(self::firstStamp($text), (string) preg_replace(self::BRACKETED_STAMP, ' ', $text, 1)),
             2 => self::rangeChapterOf($text),
             default => null,
+        };
+    }
+
+    public static function positionOf(string $text): StampPosition
+    {
+        return match (true) {
+            preg_match(self::LEADING_STAMP, $text) === 1 => StampPosition::Leading,
+            preg_match(self::TRAILING_STAMP, $text) === 1 => StampPosition::Trailing,
+            default => StampPosition::Inner,
         };
     }
 

@@ -286,4 +286,75 @@ final class DescriptionChaptersTest extends TestCase
 
         self::assertSame('', $described->contentHtml);
     }
+
+    /** @return iterable<string, array{string, list<string>}> */
+    public static function proseAfterTheRun(): iterable
+    {
+        yield 'an inner stamp in the same paragraph' => [
+            "0:00 Intro\n1:00 B\n2:00 C\nThanks for watching\nLive stream every Friday at 20:00 CET",
+            ['Thanks for watching', 'Live stream every Friday at 20:00 CET'],
+        ];
+        yield 'an inner stamp in the next paragraph' => [
+            "0:00 Intro\n1:00 B\n2:00 C\n\nLive stream every Friday at 20:00 CET",
+            ['Live stream every Friday at 20:00 CET'],
+        ];
+        yield 'a trailing stamp after a leading run' => [
+            "Timestamps:\n0:00 Intro\n1:00 B\n2:00 C\nSubscribe!\nRecorded 2024-05-01 at 21:30",
+            ['Timestamps:', 'Subscribe!', 'Recorded 2024-05-01 at 21:30'],
+        ];
+        yield 'an inner stamp beside a link' => [
+            "0:00 Intro\n1:00 B\n2:00 C\nSee also https://youtu.be/abc?t=90 and 3:15 for the bonus",
+            ['See also <a href="https://youtu.be/abc?t=90">https://youtu.be/abc?t=90</a> and 3:15 for the bonus'],
+        ];
+    }
+
+    /** @param list<string> $keptLines */
+    #[DataProvider('proseAfterTheRun')]
+    public function testAStampOfAnotherPositionEndsTheRunAndStaysInTheBody(string $description, array $keptLines): void
+    {
+        $described = DescriptionChapters::in((string) LinkedPlainText::asHtml($description));
+
+        self::assertEquals(
+            [new EntryChapter(0, 'Intro'), new EntryChapter(60, 'B'), new EntryChapter(120, 'C')],
+            $described->chapters,
+        );
+        foreach ($keptLines as $keptLine) {
+            self::assertStringContainsString($keptLine, (string) $described->contentHtml);
+        }
+    }
+
+    public function testATrailingStampContinuesATrailingRun(): void
+    {
+        $description = "A 0:00\nB 1:00\nC 2:00\nRecorded at 21:30";
+
+        $described = DescriptionChapters::in((string) LinkedPlainText::asHtml($description));
+
+        self::assertEquals(
+            [
+                new EntryChapter(0, 'A'),
+                new EntryChapter(60, 'B'),
+                new EntryChapter(120, 'C'),
+                new EntryChapter(1290, 'Recorded at'),
+            ],
+            $described->chapters,
+        );
+    }
+
+    public function testALeadingStampEndsATrailingRun(): void
+    {
+        $described = DescriptionChapters::in('<p>A 0:00<br>B 1:00<br>C 2:00<br>3:00 D</p>');
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('<p>3:00 D</p>', $described->contentHtml);
+    }
+
+    public function testARunThatSwitchesPositionAfterItsFirstLineIsNoChapterBlock(): void
+    {
+        $html = '<p>0:00 A<br>B 1:00<br>C 2:00<br>D 3:00</p>';
+
+        $described = DescriptionChapters::in($html);
+
+        self::assertSame([], $described->chapters);
+        self::assertSame($html, $described->contentHtml);
+    }
 }

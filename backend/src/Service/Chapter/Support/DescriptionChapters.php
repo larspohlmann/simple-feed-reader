@@ -11,7 +11,7 @@ use App\Service\Html\Support\HtmlDocumentParser;
 use Dom\Element;
 use Dom\Text;
 
-/** YouTube's chapter rule over a description: the first run of three or more ascending chapter lines from `0:00`. */
+/** YouTube's chapter rule: the first run of three or more ascending chapter lines from `0:00`, stamped alike. */
 final class DescriptionChapters
 {
     private const int MINIMUM = 3;
@@ -53,7 +53,7 @@ final class DescriptionChapters
                 continue;
             }
             $chapter = ChapterLine::chapterOf($text);
-            if ($chapter !== null && self::continues($run, $chapter)) {
+            if ($chapter !== null && self::continues($run, $chapter, $text)) {
                 $run[] = [$line, $chapter];
                 continue;
             }
@@ -73,9 +73,14 @@ final class DescriptionChapters
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
-    private static function continues(array $run, EntryChapter $chapter): bool
+    private static function continues(array $run, EntryChapter $chapter, string $text): bool
     {
-        return $run === [] || $chapter->startSeconds > $run[\count($run) - 1][1]->startSeconds;
+        if ($run === []) {
+            return true;
+        }
+
+        return $chapter->startSeconds > $run[\count($run) - 1][1]->startSeconds
+            && ChapterLine::positionOf($text) === ChapterLine::positionOf($run[0][0]->text());
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Chapter\Support;
 
 use App\Entity\EntryChapter;
+use App\Service\Chapter\Model\StampPosition;
 use App\Service\Chapter\Support\ChapterLine;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -20,8 +21,9 @@ final class ChapterLineTest extends TestCase
         yield 'a square-bracketed stamp and a dash' => ['[12:30] - Middle', 750, 'Middle'];
         yield 'hours and a bar' => ['1:02:03 | End', 3723, 'End'];
         yield 'hours with a zero' => ['0:00:00 Migdalor Remix ID (Unreleased)', 0, 'Migdalor Remix ID (Unreleased)'];
-        yield 'a stamp in the middle' => ['A 4:05 B', 245, 'A B'];
-        yield 'separators at both ends' => ['— Intro: 0:10 –', 10, 'Intro'];
+        yield 'separators at both ends' => ['0:10 – Intro: –', 10, 'Intro'];
+        yield 'a stamp after a bare number prefix' => ['06  21:36 A', 1296, '06 A'];
+        yield 'a stamp after a parenthesised number prefix' => ['1) 0:00 A', 0, '1) A'];
         yield 'a leading range' => ['0:00 - 1:00 A', 0, 'A'];
         yield 'a leading range with an en dash and no spaces' => ['1:00–2:00 | B', 60, 'B'];
         yield 'a leading range with a tilde' => ['2:00 ~ 3:00 C', 120, 'C'];
@@ -46,6 +48,10 @@ final class ChapterLineTest extends TestCase
         yield 'no stamp' => ['Sponsor'];
         yield 'seconds with a third digit' => ['0:123 A'];
         yield 'a longer colon run' => ['1:2:3:4 A'];
+        yield 'a stamp inside the line' => ['A 4:05 B'];
+        yield 'a stamp inside prose' => ['Live stream every Friday at 20:00 CET'];
+        yield 'a stamp before trailing separators' => ['— Intro: 0:10 –'];
+        yield 'a stamp after a word that is no number prefix' => ['Track 1 0:00 A'];
     }
 
     #[DataProvider('notChapterLines')]
@@ -71,5 +77,29 @@ final class ChapterLineTest extends TestCase
     public function testTellsALineWithoutAnyStamp(string $text, bool $holdsNoStamp): void
     {
         self::assertSame($holdsNoStamp, ChapterLine::holdsNoStamp($text));
+    }
+
+    /** @return iterable<string, array{string, StampPosition}> */
+    public static function stampPositions(): iterable
+    {
+        yield 'a stamp that starts the line' => ['0:00 A', StampPosition::Leading];
+        yield 'a bracketed stamp that starts the line' => ['  [12:30] - Middle', StampPosition::Leading];
+        yield 'a stamp after a dotted number' => ['01. 00:00 A', StampPosition::Leading];
+        yield 'a stamp after a bare number' => ['06  21:36 A', StampPosition::Leading];
+        yield 'a stamp after a parenthesised number' => ['1) (0:00) A', StampPosition::Leading];
+        yield 'a leading range' => ['0:00 - 1:00 A', StampPosition::Leading];
+        yield 'a stamp that ends the line' => ['1. A (Label) 00:00', StampPosition::Trailing];
+        yield 'a bracketed stamp that ends the line' => ['1. A (00:00)  ', StampPosition::Trailing];
+        yield 'a square-bracketed stamp that ends the line' => ['Recorded at [21:30]', StampPosition::Trailing];
+        yield 'a stamp inside the line' => ['A 4:05 B', StampPosition::Inner];
+        yield 'a stamp after a word' => ['Track 1 0:00 A', StampPosition::Inner];
+        yield 'a stamp before a separator at the end' => ['Intro 0:10 –', StampPosition::Inner];
+        yield 'a stamp after a separator at the start' => ['— 0:10 Intro', StampPosition::Inner];
+    }
+
+    #[DataProvider('stampPositions')]
+    public function testTellsWhereTheStampSits(string $text, StampPosition $position): void
+    {
+        self::assertSame($position, ChapterLine::positionOf($text));
     }
 }
