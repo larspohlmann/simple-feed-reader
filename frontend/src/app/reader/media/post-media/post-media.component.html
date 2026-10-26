@@ -2,6 +2,9 @@
   <div class="cell">
     @if (isGif(medium)) {
       <app-gif class="item" [medium]="medium" />
+      @if (medium.alt) {
+        <app-alt-text [text]="medium.alt" />
+      }
     } @else if (medium.kind === 'video') {
       <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
       <div
@@ -21,9 +24,9 @@
         decoding="async"
         referrerpolicy="no-referrer"
       />
-    }
-    @if (medium.alt && (isGif(medium) || medium.kind === 'image')) {
-      <app-alt-text [text]="medium.alt" />
+      @if (medium.alt) {
+        <app-alt-text [text]="medium.alt" />
+      }
     }
   </div>
 }

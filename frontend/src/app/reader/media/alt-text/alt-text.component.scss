@@ -1,9 +1,15 @@
+@use '../../../theme/media-badge';
+
 // Above a quoted post's stretched link (#1612), so a tap reads the text rather than opening the post.
 :host {
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
+}
+
+.wrap {
+  display: contents;
 }
 
 .badge,
@@ -17,13 +23,10 @@
   inset-inline-end: var(--space-2);
   padding: var(--space-0) var(--space-2);
   border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--media-scrim);
-  color: var(--on-media-scrim);
   font: inherit;
-  font-size: var(--fs-xs);
-  font-weight: 600;
   cursor: pointer;
+
+  @include media-badge.media-badge;
 
   &:focus-visible {
     outline: var(--focus-ring);

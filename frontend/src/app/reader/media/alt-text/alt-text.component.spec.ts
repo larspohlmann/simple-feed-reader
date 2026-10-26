@@ -56,6 +56,17 @@ describe('AltTextComponent', () => {
     expect(panel()).toBeNull();
   });
 
+  it('closes on a press outside', async () => {
+    const { fixture, badge, panel } = await mount();
+    badge.click();
+    fixture.detectChanges();
+
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(panel()).toBeNull();
+  });
+
   it('keeps its taps from reaching the parent', async () => {
     const { fixture, parentClicks, badge, panel } = await mount();
 

@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
 
 @Component({
   selector: 'app-alt-text',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslocoPipe],
+  imports: [DismissOnOutsideDirective, TranslocoPipe],
   templateUrl: './alt-text.component.html',
   styleUrl: './alt-text.component.scss',
-  host: { '(keydown.escape)': 'close($event)' },
 })
 export class AltTextComponent {
   readonly text = input.required<string>();
@@ -16,11 +16,5 @@ export class AltTextComponent {
   protected toggle(event: Event): void {
     event.stopPropagation();
     this.open.update((open) => !open);
-  }
-
-  protected close(event: Event): void {
-    if (!this.open()) return;
-    event.stopPropagation();
-    this.open.set(false);
   }
 }
