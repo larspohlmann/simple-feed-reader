@@ -532,6 +532,22 @@ describe('ArticleBody', () => {
       });
     });
 
+    it("lists the body's chapters once under every frame of its video", async () => {
+      answers({ [VIDEO_URL]: of({ ...NO_DETAILS, chapters: VIDEO_CHAPTERS }) });
+      chapters.set(CHAPTERS);
+      connectBody(YOUTUBE + YOUTUBE);
+      await Promise.resolve();
+
+      const frames = Array.from(content.querySelectorAll('iframe'));
+      expect(frames).toHaveLength(2);
+      expect(content.querySelectorAll('.reader-chapters')).toHaveLength(2);
+      for (const frame of frames) {
+        const list = frame.closest('.reader-cinema')!.nextElementSibling!;
+        expect(list.classList).toContain('reader-chapters');
+        expect(listRows(list)).toEqual(['0:00Intro', '4:16How it works']);
+      }
+    });
+
     it("describes the body's video by its fetched title and length, keeping the body's chapters", async () => {
       const describeTrack = jest
         .spyOn(TestBed.inject(AudioPlayerService), 'describe')

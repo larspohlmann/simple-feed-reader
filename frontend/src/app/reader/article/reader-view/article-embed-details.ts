@@ -12,8 +12,7 @@ interface EmbedFrames {
 
 type DetailsFound = (frame: HTMLIFrameElement, details: TrackDetails) => void;
 
-/** What is known of a body's embedded videos and tracks: their own title, length and chapters,
- *  asked for once per embed, under the body's own chapters for the embed they belong to (#1824).
+/** Each body embed's own title, length and chapters, fetched once, the body's chapters winning (#1824).
  *  Every queued copy of an embed is described as its details become known. */
 export class ArticleEmbedDetails {
   private readonly byEmbedUrl = new Map<string, TrackDetails>();
@@ -28,7 +27,7 @@ export class ArticleEmbedDetails {
   /** The body's chapters for the embed they belong to; they outrank whatever its answer lists. */
   seed(embedUrl: string, chapters: ChapterDto[]): void {
     this.bodyChapters.set(embedUrl, chapters);
-    this.know(embedUrl, chaptersOnly(chapters));
+    this.record(embedUrl, chaptersOnly(chapters));
   }
 
   /** Asks for every frame's embed once; `found` runs per frame for every answer. */
@@ -38,7 +37,7 @@ export class ArticleEmbedDetails {
         .detailsOf(media)
         .pipe(catchError(() => EMPTY))
         .subscribe((fetched) => {
-          const details = this.know(media.url, this.underBodyChapters(media.url, fetched));
+          const details = this.record(media.url, this.underBodyChapters(media.url, fetched));
           for (const frame of framesOfEmbed) found(frame, details);
         });
       this.subscriptions.push(subscription);
@@ -57,7 +56,7 @@ export class ArticleEmbedDetails {
     this.bodyChapters.clear();
   }
 
-  private know(embedUrl: string, details: TrackDetails): TrackDetails {
+  private record(embedUrl: string, details: TrackDetails): TrackDetails {
     this.byEmbedUrl.set(embedUrl, details);
     this.audio.describe(embedUrl, details);
     return details;

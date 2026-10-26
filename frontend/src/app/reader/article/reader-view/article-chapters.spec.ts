@@ -146,24 +146,37 @@ describe('ArticleChapters', () => {
       expect(current?.querySelector('.reader-chapters__title')?.textContent).toBe('B');
     });
 
-    it('does nothing without a list to hand over', () => {
+    it('leaves a list on its frame when another track is followed', () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
       const host = document.createElement('div');
-      host.innerHTML = '<p>Notes</p>';
+      host.innerHTML = VIDEO_BODY;
+      const frame = host.querySelector('iframe')!;
+      const posted = recordPosts(frame);
       const articleChapters = chapters();
+      articleChapters.attachToFrame(frame, { chapters: CHAPTERS, heading: 'Chapters' });
+      deliverMessage(
+        frame,
+        JSON.stringify({ event: 'onReady' }),
+        'https://www.youtube-nocookie.com',
+      );
 
-      articleChapters.followTrack(VIDEO_TRACK);
+      articleChapters.followTrack(NEXT_TRACK);
+      host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
 
-      expect(host.innerHTML).toBe('<p>Notes</p>');
+      expect(playFrom).not.toHaveBeenCalled();
+      expect(messagesOf(posted)).toContainEqual(
+        expect.objectContaining({ func: 'seekTo', args: [60, true] }),
+      );
     });
   });
 
-  it('draws the next body its own list, following the new player', () => {
+  it('replaces an earlier episode list with a later one, following the new player', () => {
     const host = document.createElement('div');
     host.innerHTML = '<p>Notes</p>';
     const articleChapters = chapters();
     articleChapters.attachToEpisode(host, { chapters: CHAPTERS, heading: 'Chapters' }, TRACK);
 
-    articleChapters.release();
     articleChapters.attachToEpisode(
       host,
       { chapters: NEXT_CHAPTERS, heading: 'Chapters' },

@@ -42,7 +42,9 @@ export class ArticleChapters {
     private readonly injector: Injector,
   ) {}
 
+  /** A later episode list replaces an earlier one. */
   attachToEpisode(host: HTMLElement, list: ChapterList, track: AudioTrack): void {
+    this.drop(this.shown.filter((shown) => shown.frame === null));
     if (list.chapters.length === 0) return;
     const place = { host, after: null };
     this.show({ place, list, player: this.audioPlayer(track), mediaUrl: track.url, frame: null });
@@ -61,20 +63,20 @@ export class ArticleChapters {
   /** Once an embed is the audio player's track, its list seeks the player, not the paused frame (#1815). */
   followTrack(track: AudioTrack): void {
     const following = this.shown.filter((each) => each.mediaUrl === track.url);
-    this.shown = this.shown.filter((each) => !following.includes(each));
-    for (const shown of following) {
-      shown.player.release();
-      shown.element?.remove();
-      this.show({ ...shown, player: this.audioPlayer(track) });
-    }
+    this.drop(following);
+    for (const shown of following) this.show({ ...shown, player: this.audioPlayer(track) });
   }
 
   release(): void {
-    for (const shown of this.shown) {
+    this.drop(this.shown);
+  }
+
+  private drop(lists: ShownList[]): void {
+    for (const shown of lists) {
       shown.player.release();
       shown.element?.remove();
     }
-    this.shown = [];
+    this.shown = this.shown.filter((shown) => !lists.includes(shown));
   }
 
   private show(toShow: ListToShow): void {
