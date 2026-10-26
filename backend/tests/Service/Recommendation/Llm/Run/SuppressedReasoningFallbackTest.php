@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Llm\Run;
 
-use App\Entity\AiProviderSettings;
-use App\Entity\ModelDescriptor;
-use App\Entity\User;
 use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
@@ -37,7 +34,7 @@ final class SuppressedReasoningFallbackTest extends TestCase
     #[DataProvider('statusesARefusedParameterEarns')]
     public function testARejectedSuppressingRequestIsRecordedAsTheModelRefusingIt(int $status): void
     {
-        $connection = $this->connectionOn('qwen3-14b');
+        $connection = AiProviderSettingsFactory::buildOn('qwen3-14b');
 
         self::assertTrue($this->fallbackFlushing($this->once())->absorbs($connection, $this->rejection($status)));
         self::assertTrue($connection->refusesSuppressedReasoning());
@@ -46,7 +43,7 @@ final class SuppressedReasoningFallbackTest extends TestCase
     #[DataProvider('otherRejectingStatuses')]
     public function testARejectionThatNoParameterEarnsIsNotAbsorbed(int $status): void
     {
-        $connection = $this->connectionOn('qwen3-14b');
+        $connection = AiProviderSettingsFactory::buildOn('qwen3-14b');
 
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $this->rejection($status)));
         self::assertFalse($connection->refusesSuppressedReasoning());
@@ -54,7 +51,7 @@ final class SuppressedReasoningFallbackTest extends TestCase
 
     public function testARequestThatDidNotSuppressReasoningIsNotAbsorbed(): void
     {
-        $connection = $this->connectionOn('qwen3-14b');
+        $connection = AiProviderSettingsFactory::buildOn('qwen3-14b');
         $connection->setSuppressReasoning(false);
 
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $this->rejection(400)));
@@ -63,7 +60,7 @@ final class SuppressedReasoningFallbackTest extends TestCase
 
     public function testARejectionOfTheResendWithoutSuppressionIsNotAbsorbed(): void
     {
-        $connection = $this->connectionOn('qwen3-14b');
+        $connection = AiProviderSettingsFactory::buildOn('qwen3-14b');
         $connection->recordSuppressionRefused();
 
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $this->rejection(400)));
@@ -71,7 +68,7 @@ final class SuppressedReasoningFallbackTest extends TestCase
 
     public function testARejectionOnAnEngineWithoutASuppressReasoningSettingIsNotAbsorbed(): void
     {
-        $connection = $this->connectionOn('jev-latest', ScoringProtocol::SystemOne);
+        $connection = AiProviderSettingsFactory::buildOn('jev-latest', ScoringProtocol::SystemOne);
 
         self::assertTrue($connection->suppressesReasoning());
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $this->rejection(400)));
@@ -95,18 +92,5 @@ final class SuppressedReasoningFallbackTest extends TestCase
             $status,
             \sprintf('That provider refused the request (status %d): No.', $status),
         );
-    }
-
-    private function connectionOn(string $model, ?ScoringProtocol $protocol = null): AiProviderSettings
-    {
-        $connection = AiProviderSettingsFactory::build(
-            new User('reader@example.test', new \DateTimeImmutable('2026-10-05 09:00:00')),
-        );
-        $connection->chooseModel(
-            new ModelDescriptor($model, 32768, $protocol),
-            new \DateTimeImmutable('2026-10-05 10:00:00'),
-        );
-
-        return $connection;
     }
 }

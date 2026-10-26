@@ -54,33 +54,6 @@ final class RecommendationAnswerBudgetTest extends TestCase
         self::assertSame(42_500, $this->consolidationOutputBound(new OutputLimitModel(Reasoning::Allowed, 42_501)));
     }
 
-    public function testAnAnswerFitsAnUncappedModel(): void
-    {
-        self::assertTrue($this->answerBudget->answerFits(
-            100,
-            RecommendationResponseSchema::Consolidation,
-            new OutputLimitModel(Reasoning::Allowed, null),
-        ));
-    }
-
-    public function testAnAnswerFitsACapExactlyItsSize(): void
-    {
-        self::assertTrue($this->answerBudget->answerFits(
-            100,
-            RecommendationResponseSchema::Consolidation,
-            new OutputLimitModel(Reasoning::Allowed, 10_500),
-        ));
-    }
-
-    public function testAnAnswerDoesNotFitACapOneTokenSmaller(): void
-    {
-        self::assertFalse($this->answerBudget->answerFits(
-            100,
-            RecommendationResponseSchema::Consolidation,
-            new OutputLimitModel(Reasoning::Allowed, 10_499),
-        ));
-    }
-
     private function consolidationOutputBound(OutputLimitModel $limit): int
     {
         return $this->answerBudget->outputBoundTokens(100, RecommendationResponseSchema::Consolidation, $limit);

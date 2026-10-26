@@ -57,27 +57,18 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         return [['role' => 'user', 'content' => 'Rank these entries.']];
     }
 
-    private function request(): CompletionRequestModel
-    {
+    private function request(
+        Reasoning $reasoning = Reasoning::Allowed,
+        int $maxTokens = 2048,
+        TokenLimitParameter $tokenLimitParameter = TokenLimitParameter::MaxTokens,
+    ): CompletionRequestModel {
         return new CompletionRequestModel(
             'm',
             $this->messages(),
-            2048,
+            $maxTokens,
             $this->schema(),
-            Reasoning::Allowed,
-            TokenLimitParameter::MaxTokens,
-        );
-    }
-
-    private function suppressingRequest(): CompletionRequestModel
-    {
-        return new CompletionRequestModel(
-            'm',
-            $this->messages(),
-            2048,
-            $this->schema(),
-            Reasoning::Suppressed,
-            TokenLimitParameter::MaxTokens,
+            $reasoning,
+            $tokenLimitParameter,
         );
     }
 
@@ -854,14 +845,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             \JSON_THROW_ON_ERROR,
         ) . "\n\n";
         $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
-        $request = new CompletionRequestModel(
-            'm',
-            $this->messages(),
-            512,
-            $this->schema(),
-            Reasoning::Suppressed,
-            TokenLimitParameter::MaxTokens,
-        );
+        $request = $this->request(Reasoning::Suppressed, maxTokens: 512);
 
         self::assertSame(
             'That provider answered with more than 4096 bytes.',
@@ -1055,7 +1039,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     public function testAsksTheProviderNotToReasonWhenSuppressed(): void
     {
-        $body = $this->captureRequestBody($this->suppressingRequest());
+        $body = $this->captureRequestBody($this->request(Reasoning::Suppressed));
 
         self::assertSame(['effort' => 'none'], $body['reasoning']);
     }
@@ -1069,14 +1053,9 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     public function testBoundsTheAnswerWithMaxCompletionTokensWhenTheRequestSaysSo(): void
     {
-        $body = $this->captureRequestBody(new CompletionRequestModel(
-            'm',
-            $this->messages(),
-            2048,
-            $this->schema(),
-            Reasoning::Allowed,
-            TokenLimitParameter::MaxCompletionTokens,
-        ));
+        $body = $this->captureRequestBody(
+            $this->request(tokenLimitParameter: TokenLimitParameter::MaxCompletionTokens),
+        );
 
         self::assertSame(2048, $body['max_completion_tokens']);
         self::assertArrayNotHasKey('max_tokens', $body);

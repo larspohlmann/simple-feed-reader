@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Llm\Run;
 
-use App\Entity\AiProviderSettings;
-use App\Entity\ModelDescriptor;
-use App\Entity\User;
 use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
@@ -25,7 +22,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
     public function testOpenAisRefusalOfMaxTokensSwitchesTheConnection(): void
     {
-        $connection = $this->connectionOn('gpt-5.4-nano');
+        $connection = AiProviderSettingsFactory::buildOn('gpt-5.4-nano');
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
@@ -35,7 +32,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
     public function testTheRefusalIsRecognisedWhateverItsWording(): void
     {
-        $connection = $this->connectionOn('gpt-5.4-nano');
+        $connection = AiProviderSettingsFactory::buildOn('gpt-5.4-nano');
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, 'That provider refused the request (status 400): No.');
 
@@ -45,7 +42,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
     public function testTheRefusalsWordsWithoutItsCodeAndParameterAreNotAbsorbed(): void
     {
-        $connection = $this->connectionOn('gpt-5.4-nano');
+        $connection = AiProviderSettingsFactory::buildOn('gpt-5.4-nano');
 
         $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
@@ -63,7 +60,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
     #[DataProvider('otherIdentifiers')]
     public function testAnotherBadRequestIsLeftToTheNextFallback(ProviderErrorIdentifiersModel $identifiers): void
     {
-        $connection = $this->connectionOn('gpt-5.4-nano');
+        $connection = AiProviderSettingsFactory::buildOn('gpt-5.4-nano');
         $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::REFUSAL, $identifiers);
 
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
@@ -73,14 +70,14 @@ final class MaxTokensRefusedFallbackTest extends TestCase
     public function testTheSameRefusalUnderAnotherStatusIsNotAbsorbed(): void
     {
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs(
-            $this->connectionOn('gpt-5.4-nano'),
+            AiProviderSettingsFactory::buildOn('gpt-5.4-nano'),
             self::refusal(Response::HTTP_UNPROCESSABLE_ENTITY, self::REFUSAL),
         ));
     }
 
     public function testAConnectionAlreadyOnMaxCompletionTokensIsNotAbsorbedAgain(): void
     {
-        $connection = $this->connectionOn('gpt-5.4-nano');
+        $connection = AiProviderSettingsFactory::buildOn('gpt-5.4-nano');
         $connection->recordMaxTokensRefused();
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, self::REFUSAL);
@@ -103,15 +100,5 @@ final class MaxTokensRefusedFallbackTest extends TestCase
         $entityManager->expects($flushes)->method('flush');
 
         return new MaxTokensRefusedFallback($entityManager);
-    }
-
-    private function connectionOn(string $model): AiProviderSettings
-    {
-        $connection = AiProviderSettingsFactory::build(
-            new User('reader@example.test', new \DateTimeImmutable('2026-10-26 09:00:00')),
-        );
-        $connection->chooseModel(new ModelDescriptor($model, null), new \DateTimeImmutable('2026-10-26 10:00:00'));
-
-        return $connection;
     }
 }

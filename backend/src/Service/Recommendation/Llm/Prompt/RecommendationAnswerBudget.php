@@ -79,12 +79,7 @@ final readonly class RecommendationAnswerBudget
     ): int {
         $bound = $this->answerBoundTokens($replyItemCount, $schema) + self::reasoningHeadroomTokens($limit->reasoning);
 
-        return null === $limit->capTokens ? $bound : min($bound, $limit->capTokens);
-    }
-
-    public function answerFits(int $replyItemCount, RecommendationResponseSchema $schema, OutputLimitModel $limit): bool
-    {
-        return null === $limit->capTokens || $this->answerBoundTokens($replyItemCount, $schema) <= $limit->capTokens;
+        return $limit->clamp($bound);
     }
 
     private static function reasoningHeadroomTokens(Reasoning $reasoning): int

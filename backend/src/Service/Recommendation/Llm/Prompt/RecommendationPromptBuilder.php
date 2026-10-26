@@ -123,8 +123,8 @@ final readonly class RecommendationPromptBuilder
             $callTokens = $fixedInputTokens
                 + $size * $perCandidateInputTokens
                 + $this->answerBudget->outputBoundTokens($size, RecommendationResponseSchema::Consolidation, $limit);
-            $answerFits = $this->answerBudget->answerFits($size, RecommendationResponseSchema::Consolidation, $limit);
-            if ($callTokens <= $contextWindow && $answerFits) {
+            $answerTokens = $this->answerBudget->answerBoundTokens($size, RecommendationResponseSchema::Consolidation);
+            if ($callTokens <= $contextWindow && $limit->admits($answerTokens)) {
                 return $size;
             }
         }

@@ -25,11 +25,15 @@ final readonly class OutputCapFallback implements RejectedRequestFallbackInterfa
     public function absorbs(AiProviderSettings $connection, ProviderRejectedRequestException $rejection): bool
     {
         $cap = $this->capNamedIn($rejection);
-        if (null === $cap || !$this->lowers($connection, $cap)) {
+        if (null === $cap) {
             return false;
         }
 
+        $recorded = $connection->getModelMaxOutputTokens();
         $connection->recordOutputCap($cap);
+        if ($recorded === $connection->getModelMaxOutputTokens()) {
+            return false;
+        }
         $this->entityManager->flush();
 
         return true;
@@ -52,12 +56,5 @@ final readonly class OutputCapFallback implements RejectedRequestFallbackInterfa
     {
         return Response::HTTP_BAD_REQUEST === $rejection->status()
             && $rejection->identifiers()->names(self::CODE, self::PARAMETER);
-    }
-
-    private function lowers(AiProviderSettings $connection, int $cap): bool
-    {
-        $recorded = $connection->getModelMaxOutputTokens();
-
-        return null === $recorded || $cap < $recorded;
     }
 }

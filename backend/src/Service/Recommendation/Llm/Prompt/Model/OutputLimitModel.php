@@ -14,6 +14,16 @@ final readonly class OutputLimitModel
     {
     }
 
+    public function clamp(int $tokens): int
+    {
+        return null === $this->capTokens ? $tokens : min($tokens, $this->capTokens);
+    }
+
+    public function admits(int $tokens): bool
+    {
+        return null === $this->capTokens || $tokens <= $this->capTokens;
+    }
+
     public static function of(AiProviderSettings $connection): self
     {
         return new self(Reasoning::preferredBy($connection), $connection->getModelMaxOutputTokens());

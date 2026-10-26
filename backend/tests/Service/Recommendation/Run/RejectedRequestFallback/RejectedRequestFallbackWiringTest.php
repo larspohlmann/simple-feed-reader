@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run\RejectedRequestFallback;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\ModelDescriptor;
-use App\Entity\User;
 use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
@@ -64,10 +62,7 @@ final class RejectedRequestFallbackWiringTest extends KernelTestCase
 
     private function suppressingConnectionOn(string $model): AiProviderSettings
     {
-        $connection = AiProviderSettingsFactory::build(
-            new User('fallback-wiring@example.test', new \DateTimeImmutable('2026-10-26 09:00:00')),
-        );
-        $connection->chooseModel(new ModelDescriptor($model, null), new \DateTimeImmutable('2026-10-26 09:05:00'));
+        $connection = AiProviderSettingsFactory::buildOn($model);
         self::assertTrue($connection->suppressesReasoning());
 
         return $connection;

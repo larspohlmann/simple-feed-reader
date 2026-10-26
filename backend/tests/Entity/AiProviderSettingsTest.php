@@ -440,40 +440,36 @@ final class AiProviderSettingsTest extends TestCase
         self::assertSame(32_768, $connection->getModelMaxOutputTokens());
     }
 
-    public function testReChoosingTheSameModelKeepsTheLearnedCapWhenTheCatalogReportsNone(): void
+    /** @return iterable<string, array{?int, ?int, ?int}> */
+    public static function learnedAndReportedCaps(): iterable
     {
+        yield 'the catalog reports none' => [32_768, null, 32_768];
+        yield 'a reported cap lower than the learned one' => [32_768, 16_384, 16_384];
+        yield 'a reported cap higher than the learned one' => [32_768, 40_000, 32_768];
+        yield 'none learned' => [null, 16_384, 16_384];
+    }
+
+    #[DataProvider('learnedAndReportedCaps')]
+    public function testReChoosingTheSameModelKeepsTheLowerOfTheLearnedAndReportedCap(
+        ?int $learned,
+        ?int $reported,
+        ?int $expected,
+    ): void {
         $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null));
-        $connection->recordOutputCap(32_768);
+        if (null !== $learned) {
+            $connection->recordOutputCap($learned);
+        }
 
-        $connection->chooseModel(
-            new ModelDescriptor('gpt-4.1-mini', null),
-            new \DateTimeImmutable('2026-10-26 11:00:00'),
-        );
+        $this->reChoose($connection, new ModelDescriptor('gpt-4.1-mini', null, maxOutputTokens: $reported));
 
-        self::assertSame(32_768, $connection->getModelMaxOutputTokens());
+        self::assertSame($expected, $connection->getModelMaxOutputTokens());
     }
 
-    public function testReChoosingTheSameModelTakesAReportedCapLowerThanTheLearnedOne(): void
+    public function testARecordedOutputCapNeverRaisesTheCapAlreadyKnown(): void
     {
-        $connection = $this->connectionChoosing(new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576));
+        $connection = $this->connectionChoosing(new ModelDescriptor('gpt-4.1-mini', null, maxOutputTokens: 16_384));
+
         $connection->recordOutputCap(32_768);
-
-        $connection->chooseModel(
-            new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576, maxOutputTokens: 16_384),
-            new \DateTimeImmutable('2026-10-26 11:00:00'),
-        );
-
-        self::assertSame(16_384, $connection->getModelMaxOutputTokens());
-    }
-
-    public function testReChoosingTheSameModelTakesTheReportedCapWhenNoneWasLearned(): void
-    {
-        $connection = $this->connectionChoosing(new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576));
-
-        $connection->chooseModel(
-            new ModelDescriptor('openai/gpt-4.1-mini', 1_047_576, maxOutputTokens: 16_384),
-            new \DateTimeImmutable('2026-10-26 11:00:00'),
-        );
 
         self::assertSame(16_384, $connection->getModelMaxOutputTokens());
     }
@@ -511,6 +507,11 @@ final class AiProviderSettingsTest extends TestCase
         $this->expectException(\LogicException::class);
 
         $this->settings()->recordOutputCap(32_768);
+    }
+
+    private function reChoose(AiProviderSettings $connection, ModelDescriptor $model): void
+    {
+        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-26 11:00:00'));
     }
 
     private function connectionChoosing(ModelDescriptor $model): AiProviderSettings

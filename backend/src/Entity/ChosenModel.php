@@ -51,7 +51,7 @@ final class ChosenModel
 
     public function capOutput(int $tokens): void
     {
-        $this->modelMaxOutputTokens = $tokens;
+        $this->modelMaxOutputTokens = self::lowerCap($this->modelMaxOutputTokens, $tokens);
     }
 
     public function refuseMaxTokens(): void
