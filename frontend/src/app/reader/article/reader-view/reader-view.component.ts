@@ -168,13 +168,10 @@ export class ReaderViewComponent {
     layout: this.scope.readingEnd,
   });
 
+  private readonly player = inject(AudioPlayerService);
   /** The entry's first playable audio enclosure, surfaced as a listen control
    *  above the article; its attachment is null when the feed declared none (#915). */
-  protected readonly audio = new EntryAudio(
-    this.entry,
-    inject(AudioPlayerService),
-    this.source.chapters,
-  );
+  protected readonly audio = new EntryAudio(this.entry, this.player, this.source.chapters);
 
   /** Summary plus player is the whole of an audio-first entry whose page holds no article (#1428). */
   protected readonly fallbackNoticeShown = computed(
@@ -228,6 +225,8 @@ export class ReaderViewComponent {
       this.source.open(entry);
     });
 
+    effect(() => this.describeQueuedChapters());
+
     this.scope.connect({
       scroller: this.scroller,
       content: this.content,
@@ -235,6 +234,14 @@ export class ReaderViewComponent {
     });
 
     this.scope.observeResizes();
+  }
+
+  /** An episode queued from a list row, where no chapters were loaded, gets them from the open article (#1810). */
+  private describeQueuedChapters(): void {
+    const chapters = this.source.chapters();
+    const url = this.audio.attachment()?.url;
+    if (chapters.length === 0 || !url || !this.player.isQueued(url)) return;
+    this.player.describeChapters(url, chapters);
   }
 
   protected onDecorated(host: HTMLElement): void {

@@ -9,15 +9,21 @@ export class AudioDeck {
   private playingUrl: string | null = null;
   private standbyUrl: string | null = null;
 
-  constructor(
-    createElement: () => HTMLAudioElement,
-    bind: (element: HTMLAudioElement, isPlaying: () => boolean) => void,
-  ) {
+  constructor(createElement: () => HTMLAudioElement, handlers: Record<string, () => void>) {
     this.playing = createElement();
     this.standby = createElement();
     for (const element of [this.playing, this.standby]) {
       element.preload = 'auto';
-      bind(element, () => element === this.playing);
+      this.listen(element, handlers);
+    }
+  }
+
+  /** Both elements are bound once; only the one playing is heard. */
+  private listen(element: HTMLAudioElement, handlers: Record<string, () => void>): void {
+    for (const [type, handler] of Object.entries(handlers)) {
+      element.addEventListener(type, () => {
+        if (element === this.playing) handler();
+      });
     }
   }
 

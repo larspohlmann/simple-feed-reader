@@ -195,5 +195,11 @@ describe('playlist', () => {
 
       expect(withChapters(playlist, 'https://x.test/none.mp3', chapters)).toBe(playlist);
     });
+
+    it('is the same playlist when the track already carries those chapters', () => {
+      const playlist = of(0, { ...alpha, chapters });
+
+      expect(withChapters(playlist, alpha.url, chapters)).toBe(playlist);
+    });
   });
 });

@@ -57,7 +57,8 @@ The layouts were settled on a mockup of the three surfaces drawn with the app's 
 | Modify `frontend/src/app/reader/audio/audio-attachment.ts` | `toAudioTrack(entry, attachment, chapters = [])`; `audioTrackEntry(entry)` extracted |
 | Modify `frontend/src/app/reader/audio/entry-audio.ts` | Optional `chapters` source; the track carries them |
 | Modify `frontend/src/app/reader/audio/playlist.ts` | `withChapters(playlist, url, chapters)`: the queued track with those chapters |
-| Create `frontend/src/app/reader/audio/track-chapters.ts` | `chapterStepTarget(starts, position, direction, threshold)`: where previous/next chapter seek to |
+| Create `frontend/src/app/reader/audio/track-chapters.ts` | `previousChapterStart(starts, position, threshold)` / `nextChapterStart(starts, position)`: where a chapter step seeks to; `TrackChapters`: the chapter signals derived from the player's position |
+| Create `frontend/src/app/reader/audio/playlist-persistence.ts`, `cached-end.ts` | The save policy (throttle, pagehide, clear) and the buffered-range computation, moved out of the service to keep it under ESLint's `max-lines` |
 | Modify `frontend/src/app/reader/audio/media-session-controls.ts` | `showTrack(track, chapter)`: chapter title first, track title as artist |
 | Modify `frontend/src/app/reader/audio-player.service.ts` | `chapters`, `chapterIndex`, `currentChapter`, `chapterProgress`, `hasPreviousChapter`, `hasNextChapter`; `previousChapter()`, `nextChapter()`, `playChapter(index)`, `playTrackChapter(trackIndex, chapterIndex)`, `describeChapters(url, chapters)`; metadata follows the chapter |
 | Create `frontend/src/app/reader/shell/audio-player-bar/scrubber/scrubber.component.{ts,html,scss,spec.ts}` | `<app-scrubber>`: the one range input both surfaces use, with fill and chapter marks |
@@ -133,21 +134,24 @@ The reader view builds `new EntryAudio(this.entry, inject(AudioPlayerService), t
 **Interfaces:**
 
 ```ts
-// track-chapters.ts
-export type ChapterStep = 'previous' | 'next';
-/** Where a chapter step seeks to, or null when there is nowhere to go: previous restarts the
- *  current chapter once `position` is past its start by more than `threshold` (like `previous()`
- *  on a track), else goes to the one before; next goes to the following start. */
-export function chapterStepTarget(starts: readonly number[], position: number, step: ChapterStep, threshold: number): number | null;
+// track-chapters.ts (ESLint allows 3 parameters, so the step is two functions, not a flag)
+/** Where previous chapter seeks to, or null when there is nowhere to go: the current chapter's start
+ *  once `position` is past it by more than `threshold` (like `previous()` on a track), else the one before. */
+export function previousChapterStart(starts: readonly number[], position: number, threshold: number): number | null;
+/** The following chapter's start, or null in the last chapter. */
+export function nextChapterStart(starts: readonly number[], position: number): number | null;
+/** The playing track's chapters, followed from the player's position: `index`, `current`, `progress`
+ *  (#1814's helper; null without a chapter or while its end is unknown), `previousStart`, `nextStart`, `hasPrevious`, `hasNext`. */
+export class TrackChapters { constructor(chapters: Signal<readonly ChapterDto[]>, position: Signal<PlaybackPosition>, restartThreshold: number) }
 
 // audio-player.service.ts
 readonly chapters = computed(() => this.current()?.chapters ?? []);
-readonly chapterIndex = computed(() => currentChapterIndex(this.chapterStarts(), this._position()));
-readonly currentChapter = computed(() => this.chapters()[this.chapterIndex()] ?? null);
-/** How far playback is through the current chapter (#1814's helper); null without a chapter or while its end is unknown. */
-readonly chapterProgress = computed(() => chapterProgress(this.chapterStarts(), this.chapterIndex(), { seconds: this._position(), durationSeconds: this._duration() > 0 ? this._duration() : null }));
-readonly hasPreviousChapter = computed(() => chapterStepTarget(…, 'previous', …) !== null);
-readonly hasNextChapter = computed(() => chapterStepTarget(…, 'next', …) !== null);
+private readonly trackChapters = new TrackChapters(this.chapters, this.playbackPosition, RESTART_THRESHOLD_SECONDS);
+readonly chapterIndex = this.trackChapters.index;
+readonly currentChapter = this.trackChapters.current;
+readonly chapterProgress = this.trackChapters.progress;
+readonly hasPreviousChapter = this.trackChapters.hasPrevious;
+readonly hasNextChapter = this.trackChapters.hasNext;
 
 previousChapter(): void;          // seek to the target, if any
 nextChapter(): void;
@@ -158,11 +162,11 @@ playTrackChapter(trackIndex: number, chapterIndex: number): void;
 describeChapters(url: string, chapters: ChapterDto[]): void;   // apply(withChapters(playlist, url, chapters)) without reloading: the url is unchanged, so `apply` sees no change and only persists
 ```
 
-`previousChapter` uses `RESTART_THRESHOLD_SECONDS`, the threshold `previous()` already uses. `chapterIndex` is -1 before the first chapter or without chapters; the computeds read `_position`, so they move with playback and with a seek.
+`previousChapter` uses `RESTART_THRESHOLD_SECONDS`, the threshold `previous()` already uses. `chapterIndex` is -1 before the first chapter or without chapters; the computeds read `_position`, so they move with playback and with a seek. `describeChapters` is idempotent (`withChapters` returns the same playlist when the track already carries those chapters), so the reader view's effect, which reads the playlist through `isQueued`, settles. The service sits at ESLint's `max-lines` (300): this task moves the save policy into `PlaylistPersistence`, the buffered-range loop into `cachedEnd` and the "only the playing element is heard" guard into `AudioDeck`; Task 3's effect will need more such room.
 
 The reader view back-fills: an `effect` that, when `source.chapters()` is non-empty and the entry's enclosure url is queued (`player.isQueued`), calls `describeChapters(url, chapters)`. (With #1815, `ArticleBody` extends the same call to the chaptered embed's url.)
 
-- [ ] **Step 1: Write the specs**: `chapterStepTarget` for every branch (before the first chapter, inside the first, past the threshold, at the last chapter, no chapters). Service: `currentChapter` follows `timeupdate`; `chapterProgress` is null before metadata on the last chapter and fills in once the duration is known; `nextChapter` seeks to the next start and `hasNextChapter` turns false on the last; `previousChapter` restarts the chapter past the threshold and steps back within it; `playChapter` seeks and resumes a paused player; `playTrackChapter` on another track selects it and seeks once loaded, on the current track it behaves like `playChapter`; `describeChapters` reaches the saved playlist without reloading the element (`audio.src` untouched, `load` not called). Reader view: opening an article whose enclosure is queued describes its chapters once they load.
+- [ ] **Step 1: Write the specs**: `previousChapterStart`/`nextChapterStart` for every branch (before the first chapter, inside the first, past the threshold, at the last chapter, no chapters). Service: `currentChapter` follows `timeupdate`; `chapterProgress` is null before metadata on the last chapter and fills in once the duration is known; `nextChapter` seeks to the next start and `hasNextChapter` turns false on the last; `previousChapter` restarts the chapter past the threshold and steps back within it; `playChapter` seeks and resumes a paused player; `playTrackChapter` on another track selects it and seeks once loaded, on the current track it behaves like `playChapter`; `describeChapters` reaches the saved playlist without reloading the element (`audio.src` untouched, `load` not called). Reader view: opening an article whose enclosure is queued describes its chapters once they load.
 - [ ] **Step 2: Run to verify they fail**
 - [ ] **Step 3: Implement**
 - [ ] **Step 4: Specs green**

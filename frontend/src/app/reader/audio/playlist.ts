@@ -65,10 +65,11 @@ export function remove(playlist: Playlist, url: string): Playlist {
   return { tracks, index: Math.min(index, tracks.length - 1) };
 }
 
-/** The playlist with the queued track at `url` carrying `chapters`; unchanged when it is not queued. */
+/** The playlist with the queued track at `url` carrying `chapters`; unchanged when it is not
+ *  queued or already carries them. */
 export function withChapters(playlist: Playlist, url: string, chapters: ChapterDto[]): Playlist {
   const at = indexOf(playlist, url);
-  if (at === -1) return playlist;
+  if (at === -1 || playlist.tracks[at].chapters === chapters) return playlist;
   const tracks = playlist.tracks.map((track, position) =>
     position === at ? { ...track, chapters } : track,
   );
