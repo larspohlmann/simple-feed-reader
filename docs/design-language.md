@@ -1768,6 +1768,21 @@ restored with the playlist; every surface reads the current one from
 - **Lock screen:** Media Session metadata puts the chapter in the title, the
   track as the artist and the feed as the album.
 
+### Player bar under embeds (#1815)
+
+One `.reader-player-bar` sits under a landscape video or a SoundCloud box,
+shared by the decorators that fill it. A YouTube video or a SoundCloud track
+leads with **Listen** (`play_circle`), which sends the embed's sound to the
+audio player and pauses the visible embed, then the queue toggle
+(`aria-pressed`, "Add to playlist" / "In playlist"); a landscape video ends
+with the cinema toggle (`margin-inline-start: auto`). The bar shows at every
+width; only the cinema toggle hides below `bp.$container-reader-cinema`.
+
+The sound plays in a provider frame inside `.hidden-playback`
+(`src/styles/_hidden-playback.scss`), the one sanctioned invisible iframe: fixed
+in the bottom end corner at `opacity: 0`, never `display: none` or a zero size,
+because a browser throttles or refuses media in a frame that does not render.
+
 ### Forms
 
 `<app-field>` wraps a labelled control; the native control keeps its own
