@@ -20,10 +20,12 @@ import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coor
 import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
 import { withPlayerApi } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
-import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
+import { EmbedMedia, embedMediaOfFrame, youTubeVideoId } from '../../audio/embed-media';
 import { ChapterDto, EntryDto } from '../../models';
-import { ArticleChapters, apiPlayerFrame } from './article-chapters';
+import { EmbedChaptersApi } from '../../embed-chapters-api';
+import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
 import { ArticleEmbedAudio } from './article-embed-audio';
+import { ArticleEmbedChapters } from './article-embed-chapters';
 
 export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
@@ -48,6 +50,7 @@ export class ArticleBody {
   private readonly audio = inject(AudioPlayerService);
   private readonly chapters = new ArticleChapters(this.audio, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(this.audio, this.injector);
+  private readonly embedChapters = new ArticleEmbedChapters(inject(EmbedChaptersApi));
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
   private destroyed = false;
 
@@ -59,6 +62,7 @@ export class ArticleBody {
       this.destroyed = true;
       this.chapters.release();
       this.embedAudio.release();
+      this.embedChapters.release();
       document.removeEventListener('keydown', onKeydown);
     });
   }
@@ -108,6 +112,7 @@ export class ArticleBody {
           this.media.forgetAll();
           this.chapters.release();
           this.embedAudio.release();
+          this.embedChapters.release();
         });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
@@ -127,7 +132,10 @@ export class ArticleBody {
       embedSource: (url) => withPlayerApi(url, window.location.origin),
       listen: this.embedAudio.actions({
         entry: parts.entry(),
-        chaptersOf: (media) => (media.url === chapteredEmbed()?.url ? chapterList : []),
+        chaptersOf: (media) =>
+          media.url === chapteredEmbed()?.url
+            ? chapterList
+            : this.embedChapters.chaptersOf(media.url),
         onListened: (listened) => this.chapters.followTrack(listened),
       }),
     });
@@ -138,10 +146,32 @@ export class ArticleBody {
       // A video queued from a list row gains its chapters once its article opens (#1810).
       const embed = chapteredEmbed();
       if (embed) this.audio.describeChapters(embed.url, chapterList);
+      this.loadEmbedChapters(embedFramesToAsk(host, embed, parts.entry()), heading);
       this.media.follow(host);
     });
     parts.decorated(host);
   }
+
+  private loadEmbedChapters(frames: HTMLIFrameElement[], heading: string): void {
+    this.embedChapters.load(frames, (frame, media, chapters) => {
+      this.chapters.attachToFrame(frame, { chapters, heading });
+      this.audio.describeChapters(media.url, chapters);
+    });
+  }
+}
+
+/** The embeds to ask chapters for: not the one showing the body's, nor a YouTube entry's own video. */
+function embedFramesToAsk(
+  host: HTMLElement,
+  chapteredEmbed: EmbedMedia | null,
+  entry: EntryDto | null,
+): HTMLIFrameElement[] {
+  const ownVideoId = youTubeVideoId(entry?.url ?? '');
+  return chapterFrames(host).filter((frame) => {
+    const media = embedMediaOfFrame(frame);
+    if (!media || media.url === chapteredEmbed?.url) return false;
+    return media.kind !== 'youtube' || youTubeVideoId(media.url) !== ownVideoId;
+  });
 }
 
 /** The embed the body's chapters belong to: the player `ArticleChapters` drives, unless an episode owns them. */

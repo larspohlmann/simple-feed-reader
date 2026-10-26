@@ -12,6 +12,7 @@ const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 const WATCH_HOSTS = ['www.youtube.com', 'm.youtube.com', 'youtube.com'];
 const EMBED_HOSTS = ['www.youtube-nocookie.com', 'www.youtube.com'];
 const SOUNDCLOUD_PLAYER = 'https://w.soundcloud.com/player/';
+const SOUNDCLOUD_TRACK = /^https:\/\/api\.soundcloud\.com\/tracks\/(\d+)$/;
 
 export function youTubeVideoId(url: string): string | null {
   const parsed = URL.canParse(url) ? new URL(url) : null;
@@ -22,6 +23,12 @@ export function youTubeVideoId(url: string): string | null {
 
 export function isSoundCloudPlayerUrl(url: string): boolean {
   return url.startsWith(SOUNDCLOUD_PLAYER) && isAllowedEmbed(url);
+}
+
+export function soundCloudTrackId(playerUrl: string): string | null {
+  if (!playerUrl.startsWith(SOUNDCLOUD_PLAYER) || !URL.canParse(playerUrl)) return null;
+  const trackUrl = new URL(playerUrl).searchParams.get('url') ?? '';
+  return SOUNDCLOUD_TRACK.exec(trackUrl)?.[1] ?? null;
 }
 
 /** The media a provider url plays, or null for a url this feature does not take. */
