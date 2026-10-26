@@ -67,12 +67,13 @@ export class ArticleChapters {
 
   /** Once an embed is the audio player's track, its list seeks the player, not the paused frame (#1815). */
   followTrack(track: AudioTrack): void {
-    const shown = this.shown.find((each) => each.mediaUrl === track.url);
-    if (!shown) return;
-    shown.player.release();
-    shown.element?.remove();
-    this.shown = this.shown.filter((each) => each !== shown);
-    this.show({ ...shown, player: this.audioPlayer(track) });
+    const following = this.shown.filter((each) => each.mediaUrl === track.url);
+    this.shown = this.shown.filter((each) => !following.includes(each));
+    for (const shown of following) {
+      shown.player.release();
+      shown.element?.remove();
+      this.show({ ...shown, player: this.audioPlayer(track) });
+    }
   }
 
   release(): void {

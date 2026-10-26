@@ -23,4 +23,13 @@ final class EmbedDescriptionUnreachableException extends \RuntimeException
     {
         return new self(sprintf('The %s description of %s answered %d.', $embed->provider->value, $embed->id, $status));
     }
+
+    public static function withoutTheVideo(EmbedAddressModel $embed): self
+    {
+        return new self(sprintf(
+            'The %s description of %s answered without the video.',
+            $embed->provider->value,
+            $embed->id,
+        ));
+    }
 }

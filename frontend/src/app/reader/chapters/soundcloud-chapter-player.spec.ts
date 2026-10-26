@@ -12,6 +12,7 @@ const SUBSCRIPTION = [
   { method: 'addEventListener', value: 'playProgress' },
   { method: 'addEventListener', value: 'play' },
   { method: 'addEventListener', value: 'pause' },
+  { method: 'addEventListener', value: 'finish' },
   { method: 'getDuration' },
 ];
 const PLAY = { method: 'play' };
@@ -141,6 +142,18 @@ describe('SoundCloudChapterPlayer', () => {
     const { frame, posted, player } = playerWithFrame();
     delivery(frame, { method: 'play' });
     delivery(frame, { method: 'pause' });
+    posted.length = 0;
+
+    player.playFrom(60);
+
+    expect(messagesOf(posted)).toEqual([PLAY]);
+    player.release();
+  });
+
+  it('plays a chapter tapped after the sound finished again', () => {
+    const { frame, posted, player } = playerWithFrame();
+    delivery(frame, { method: 'play' });
+    delivery(frame, { method: 'finish' });
     posted.length = 0;
 
     player.playFrom(60);

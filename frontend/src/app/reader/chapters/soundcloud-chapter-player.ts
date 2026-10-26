@@ -8,10 +8,10 @@ import {
 import { finiteNumberOf } from '../media/youtube-player-protocol';
 import { ChapterPlayer, PlaybackPosition } from './chapter-player';
 
-const SUBSCRIBED_EVENTS = ['playProgress', 'play', 'pause'];
+const SUBSCRIBED_EVENTS = ['playProgress', 'play', 'pause', 'finish'];
 const MILLISECONDS = 1000;
 
-/** Drives a visible SoundCloud widget through its Widget API; no ready handshake is needed (#1824). */
+/** Drives a visible SoundCloud widget through its Widget API, subscribing again on each `ready` (#1824). */
 export class SoundCloudChapterPlayer implements ChapterPlayer {
   private onPosition: ((position: PlaybackPosition | null) => void) | null = null;
   private durationSeconds: number | null = null;
@@ -34,6 +34,7 @@ export class SoundCloudChapterPlayer implements ChapterPlayer {
       case 'play':
         return this.becomePlaying();
       case 'pause':
+      case 'finish':
         this.playing = false;
         return;
       default:

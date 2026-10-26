@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Chapter\EmbedDescriptionSource;
 
+use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
 use App\Service\Chapter\GuardedDescriptionRequest;
 use App\Service\Chapter\Model\ChapteredEmbed;
 use App\Service\Chapter\Model\EmbedAddressModel;
@@ -31,7 +32,10 @@ final readonly class YouTubePlayerDescriptionSource implements EmbedDescriptionS
             'context' => ['client' => ['clientName' => 'WEB', 'clientVersion' => self::CLIENT_VERSION, 'hl' => 'en']],
         ]), $embed);
         $details = $player['videoDetails'] ?? null;
-        $description = \is_array($details) ? ($details['shortDescription'] ?? null) : null;
+        if (!\is_array($details)) {
+            throw EmbedDescriptionUnreachableException::withoutTheVideo($embed);
+        }
+        $description = $details['shortDescription'] ?? null;
 
         return \is_string($description) ? $description : '';
     }

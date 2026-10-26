@@ -32,6 +32,17 @@ final class EmbedDescriptionUnreachableExceptionTest extends TestCase
         self::assertNull($exception->getPrevious());
     }
 
+    public function testAnAnswerWithoutTheVideoNamesTheEmbed(): void
+    {
+        $exception = EmbedDescriptionUnreachableException::withoutTheVideo($this->embed());
+
+        self::assertSame(
+            'The youtube description of dQw4w9WgXcQ answered without the video.',
+            $exception->getMessage(),
+        );
+        self::assertNull($exception->getPrevious());
+    }
+
     private function embed(): EmbedAddressModel
     {
         return new EmbedAddressModel(ChapteredEmbed::YouTube, 'dQw4w9WgXcQ');

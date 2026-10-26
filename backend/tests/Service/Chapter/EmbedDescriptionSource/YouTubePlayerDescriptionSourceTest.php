@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Chapter\EmbedDescriptionSource;
 
 use App\Service\Chapter\EmbedDescriptionSource\YouTubePlayerDescriptionSource;
+use App\Service\Chapter\Exception\EmbedDescriptionUnreachableException;
 use App\Service\Chapter\GuardedDescriptionRequest;
 use App\Service\Chapter\Model\ChapteredEmbed;
 use App\Service\Chapter\Model\EmbedAddressModel;
@@ -37,7 +38,7 @@ final class YouTubePlayerDescriptionSourceTest extends TestCase
             $seenUrl = $url;
             $seenBody = \is_string($options['body']) ? $options['body'] : '';
 
-            return new MockResponse('{}');
+            return new MockResponse('{"videoDetails":{}}');
         });
 
         $this->source($http)->descriptionOf($this->embed());
@@ -66,10 +67,25 @@ final class YouTubePlayerDescriptionSourceTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function answersWithoutADescription(): iterable
     {
-        yield 'no video details' => ['{"playabilityStatus":{}}'];
-        yield 'video details not an object' => ['{"videoDetails":"x"}'];
         yield 'no short description' => ['{"videoDetails":{}}'];
         yield 'description not a string' => ['{"videoDetails":{"shortDescription":5}}'];
+    }
+
+    #[DataProvider('answersWithoutTheVideo')]
+    public function testAnAnswerWithoutTheVideoIsAnOutage(string $body): void
+    {
+        $this->expectException(EmbedDescriptionUnreachableException::class);
+        $this->expectExceptionMessage('The youtube description of dQw4w9WgXcQ answered without the video.');
+
+        $this->source(new MockHttpClient(new MockResponse($body)))->descriptionOf($this->embed());
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function answersWithoutTheVideo(): iterable
+    {
+        yield 'a login wall' => ['{"playabilityStatus":{"status":"LOGIN_REQUIRED","reason":"Sign in"}}'];
+        yield 'no video details' => ['{}'];
+        yield 'video details not an object' => ['{"videoDetails":"x"}'];
     }
 
     public function testIsTheYouTubeSource(): void

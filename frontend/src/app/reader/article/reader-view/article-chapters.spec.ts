@@ -298,6 +298,32 @@ describe('ArticleChapters', () => {
       articleChapters.release();
     });
 
+    it('hands the list of every frame of the listened embed to the audio player', () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
+      const host = document.createElement('div');
+      const widgetBox = `<div class="reader-embed"><iframe src="${WIDGET_SRC}"></iframe></div>`;
+      host.innerHTML = `${widgetBox}<p>Between</p>${widgetBox}`;
+      const [first, second] = Array.from(host.querySelectorAll('iframe'));
+      const firstPosts = recordPosts(first);
+      const secondPosts = recordPosts(second);
+      const articleChapters = chapters();
+      articleChapters.attachToFrame(first, LIST);
+      articleChapters.attachToFrame(second, LIST);
+      firstPosts.length = 0;
+      secondPosts.length = 0;
+
+      articleChapters.followTrack(WIDGET_TRACK);
+      tapSecondRow(first);
+      tapSecondRow(second);
+
+      expect(playFrom).toHaveBeenCalledTimes(2);
+      expect(firstPosts).toEqual([]);
+      expect(secondPosts).toEqual([]);
+      expect(host.querySelectorAll('.reader-chapters')).toHaveLength(2);
+      articleChapters.release();
+    });
+
     it('leaves every list on its own player when the listened embed has no list', () => {
       const audio = TestBed.inject(AudioPlayerService);
       const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
