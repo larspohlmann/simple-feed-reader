@@ -1,0 +1,252 @@
+# Chapters in the audio player (#1810) Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** The chapters #1808 shows as a list in the article view travel with the track into the audio player: a chapter list and previous/next chapter controls in the big player, the current chapter's title in the mini bar and in the Media Session metadata (lock screen, AirPods), chapter marks on both scrub bars. A restored session keeps them.
+
+**Architecture:** Chapters become part of `AudioTrack` (`chapters?: ChapterDto[]`), so they are saved and restored by `PlaylistStore` with nothing else changing. The builders that make a track from an entry (`toAudioTrack`, and `toEmbedTrack` from #1815) take the chapters the article view has loaded; a track queued from a list row, where no chapters are loaded, gets them back-filled when its article is opened (`AudioPlayerService.describeChapters`). The service derives the current chapter from its own `position` with `currentChapterIndex` (#1808) and exposes chapter steps that are seeks. Both scrubbers become one `<app-scrubber>` component, which draws the marks. The article view's chapter list stays as it is: `AudioChapterPlayer` already drives the service.
+
+**Tech Stack:** Angular 20 (standalone, signals, OnPush), Jest (jsdom), SCSS with theme tokens. No backend change: `GET /api/entries/{id}` already serves `chapters`.
+
+**Spec:** GitHub issue #1810.
+
+## Alignment with #1815 (listen to a YouTube or SoundCloud embed)
+
+The two plans are independent and may merge in either order. The seams they share, named the same way in `docs/superpowers/plans/2026-10-26-1815-listen-to-embeds.md`:
+
+- `AudioTrack` is the one shape both build. This plan adds `chapters?: ChapterDto[]`; #1815 adds nothing. `toAudioTrack(entry, attachment, chapters = [])` here and `toEmbedTrack(entry, media, chapters = [])` there take the same trailing argument; whichever plan lands second adds the parameter to the other's builder and passes `source.chapters()` from the article view.
+- The `entry` block of a track is built once, by `audioTrackEntry(entry)` in `audio-attachment.ts` (Task 1 in both plans); the second plan to land reuses it.
+- `describeChapters(url, chapters)` (Task 2 here) back-fills a queued track. Once both plans are in, `ArticleBody` calls it for the chaptered player's url: the enclosure's, else the embed url of the frame `ArticleChapters` drives (`embedMediaOfFrame`, #1815 Task 1).
+- Chapter steps and scrub marks seek through `AudioPlayerService.seek`, which #1815's `FramePlayback` honours (`currentTime` seeks once started and is kept as a start position before). Nothing here is provider-specific.
+- After #1815's Listen, `ArticleChapters.followTrack(track)` hands the article's chapter list to the audio player, and the big player shows the same chapters from `track.chapters`.
+- Media Session: the chapter title goes into the metadata the top frame sets (Task 3); browsers show the top frame's metadata for audio a child frame produces, so an embed track's lock-screen title follows its chapters too.
+
+## Global Constraints
+
+- CLAUDE.md applies: Clean Code names, no boolean flag parameters, guard clauses, comments only where a reader would otherwise get the code wrong, one line each.
+- Component styles in the sibling `.scss`; no hex colours, no ad-hoc `px` (Stylelint). The scrubber keeps its native `<input type="range">` for keyboard and screen-reader seeking; marks are a decorative layer with `aria-hidden`.
+- Chapter times are whole seconds (`ChapterDto.startSeconds`), as #1808 stores them.
+- `AudioPlayerService` keeps holding no view state; the big player and the bar reflect its signals. The chapter list's open/closed state is the big player's.
+- Frontend tests: `docker compose exec -T frontend npx jest <paths>` in the container; the gate is `cd frontend && npm run check` plus `npm run build`. Never two Jest processes at once in the container.
+- Commits: `feat(#1810): …` / `refactor(#1810): …` / `test(#1810): …`, no attribution lines. Branch `feature/1810-chapters-in-player`. Merge `develop` in regularly.
+
+## File Structure
+
+| File | Responsibility |
+|---|---|
+| Modify `frontend/src/app/reader/audio/audio-track.ts` | `chapters?: ChapterDto[]` on `AudioTrack` |
+| Modify `frontend/src/app/reader/audio/audio-attachment.ts` | `toAudioTrack(entry, attachment, chapters = [])`; `audioTrackEntry(entry)` extracted |
+| Modify `frontend/src/app/reader/audio/entry-audio.ts` | Optional `chapters` source; the track carries them |
+| Modify `frontend/src/app/reader/audio/playlist.ts` | `describe(playlist, url, chapters)`: the queued track with those chapters |
+| Create `frontend/src/app/reader/audio/track-chapters.ts` | `chapterStepTarget(starts, position, direction, threshold)`: where previous/next chapter seek to |
+| Modify `frontend/src/app/reader/audio/media-session-controls.ts` | `showTrack(track, chapter)`: chapter title first, track title as artist |
+| Modify `frontend/src/app/reader/audio-player.service.ts` | `chapters`, `chapterIndex`, `currentChapter`, `hasPreviousChapter`, `hasNextChapter`; `previousChapter()`, `nextChapter()`, `playChapter(index)`, `describeChapters(url, chapters)`; metadata follows the chapter |
+| Create `frontend/src/app/reader/shell/audio-player-bar/scrubber/scrubber.component.{ts,html,scss,spec.ts}` | `<app-scrubber>`: the one range input both surfaces use, with fill and chapter marks |
+| Create `frontend/src/app/reader/audio/scrub-marks.ts` | `scrubMarks(chapters, duration)`: mark positions as percentages, the first chapter's mark at 0 omitted |
+| Modify `frontend/src/app/reader/shell/audio-player-bar/audio-player-bar.component.{html,scss,spec.ts}` | Uses `<app-scrubber>`; the title line shows the current chapter |
+| Create `frontend/src/app/reader/shell/audio-player-bar/audio-chapters/audio-chapters.component.{ts,html,scss,spec.ts}` | The big player's chapter list |
+| Modify `frontend/src/app/reader/shell/audio-player-bar/big-player/big-player.component.{ts,html,scss,spec.ts}` | Uses `<app-scrubber>`; chapter strip (previous, current title, next); chapter list toggle and section |
+| Modify `frontend/src/testing/big-player-audio-signals.ts` | The chapter signals the surfaces read |
+| Modify `frontend/src/app/reader/article/reader-view/reader-view.component.ts` | `EntryAudio` gets `source.chapters`; back-fills a queued track's chapters on open |
+| Modify `frontend/public/i18n/en.json`, `de.json` | `reader.audioPlayer.previousChapter`, `nextChapter`, `chapterCount`, `chapterPosition` |
+| Modify `docs/design-language.md` | §2: `<app-scrubber>`; §3: chapter marks and the chapter strip |
+
+Specs beside every created or changed `.ts` file.
+
+---
+
+### Task 1: Chapters on the track
+
+**Files:**
+- Modify: `frontend/src/app/reader/audio/audio-track.ts`, `audio-attachment.ts`, `entry-audio.ts`, `playlist.ts`, `playlist.store.ts` (spec only)
+- Modify: `frontend/src/app/reader/article/reader-view/reader-view.component.ts`
+- Test: `audio-attachment.spec.ts`, `entry-audio.spec.ts`, `playlist.spec.ts`, `playlist.store.spec.ts`
+
+**Interfaces:**
+
+```ts
+// audio-track.ts
+export interface AudioTrack {
+  …
+  /** The track's chapters, ascending by start; absent on tracks saved before #1810 and on tracks queued where none were loaded. */
+  chapters?: ChapterDto[];
+}
+
+// audio-attachment.ts
+export function audioTrackEntry(entry: EntryDto): AudioTrackEntry;
+export function toAudioTrack(entry: EntryDto, attachment: EntryAttachmentDto, chapters: ChapterDto[] = []): AudioTrack;
+// `chapters` lands on the track only when non-empty, so a track without chapters stays byte-identical to today's.
+
+// entry-audio.ts
+export class EntryAudio {
+  constructor(
+    private readonly entry: () => EntryDto | null | undefined,
+    private readonly player: AudioPlayerService,
+    private readonly chapters: () => ChapterDto[] = () => [],
+  ) {}
+  // `track` computed passes chapters() to toAudioTrack
+}
+
+// playlist.ts
+/** The playlist with the queued track at `url` carrying `chapters`; unchanged when it is not queued. */
+export function describe(playlist: Playlist, url: string, chapters: ChapterDto[]): Playlist;
+```
+
+The reader view builds `new EntryAudio(this.entry, inject(AudioPlayerService), this.source.chapters)`. `entry-actions.component.ts` keeps its two-argument call.
+
+- [ ] **Step 1: Write the failing specs**: `toAudioTrack` without chapters has no `chapters` key; with chapters carries them; `audioTrackEntry` equals the block `toAudioTrack` builds. `EntryAudio.track()` carries the chapters its source gives and re-computes when they load. `describe` replaces the chapters of the queued track only, keeps `index`, and returns the same playlist for an unknown url. `PlaylistStore` round-trips a track with chapters and loads one saved without them.
+- [ ] **Step 2: Run them to verify they fail** — `docker compose exec -T frontend npx jest src/app/reader/audio`
+- [ ] **Step 3: Implement**
+- [ ] **Step 4: Specs green; `npm run check:static`**
+- [ ] **Step 5: Commit** — `feat(#1810): chapters travel with the track into the playlist`
+
+---
+
+### Task 2: The service knows its chapter
+
+**Files:**
+- Create: `frontend/src/app/reader/audio/track-chapters.ts`, `.spec.ts`
+- Modify: `frontend/src/app/reader/audio-player.service.ts`, `.spec.ts`
+- Modify: `frontend/src/app/reader/article/reader-view/reader-view.component.ts`, `.spec.ts`
+
+**Interfaces:**
+
+```ts
+// track-chapters.ts
+export type ChapterStep = 'previous' | 'next';
+/** Where a chapter step seeks to, or null when there is nowhere to go: previous restarts the
+ *  current chapter once `position` is past its start by more than `threshold` (like `previous()`
+ *  on a track), else goes to the one before; next goes to the following start. */
+export function chapterStepTarget(starts: readonly number[], position: number, step: ChapterStep, threshold: number): number | null;
+
+// audio-player.service.ts
+readonly chapters = computed(() => this.current()?.chapters ?? []);
+readonly chapterIndex = computed(() => currentChapterIndex(this.chapterStarts(), this._position()));
+readonly currentChapter = computed(() => this.chapters()[this.chapterIndex()] ?? null);
+readonly hasPreviousChapter = computed(() => chapterStepTarget(…, 'previous', …) !== null);
+readonly hasNextChapter = computed(() => chapterStepTarget(…, 'next', …) !== null);
+
+previousChapter(): void;          // seek to the target, if any
+nextChapter(): void;
+playChapter(index: number): void; // seek to the chapter's start and resume
+/** Gives the queued track at `url` its chapters, for a track queued before its article was opened. */
+describeChapters(url: string, chapters: ChapterDto[]): void;   // apply(describe(playlist, url, chapters)) without reloading: the url is unchanged, so `apply` sees no change and only persists
+```
+
+`previousChapter` uses `RESTART_THRESHOLD_SECONDS`, the threshold `previous()` already uses. `chapterIndex` is -1 before the first chapter or without chapters; the computeds read `_position`, so they move with playback and with a seek.
+
+The reader view back-fills: an `effect` that, when `source.chapters()` is non-empty and the entry's enclosure url is queued (`player.isQueued`), calls `describeChapters(url, chapters)`. (With #1815, `ArticleBody` extends the same call to the chaptered embed's url.)
+
+- [ ] **Step 1: Write the specs**: `chapterStepTarget` for every branch (before the first chapter, inside the first, past the threshold, at the last chapter, no chapters). Service: `currentChapter` follows `timeupdate`; `nextChapter` seeks to the next start and `hasNextChapter` turns false on the last; `previousChapter` restarts the chapter past the threshold and steps back within it; `playChapter` seeks and resumes a paused player; `describeChapters` reaches the saved playlist without reloading the element (`audio.src` untouched, `load` not called). Reader view: opening an article whose enclosure is queued describes its chapters once they load.
+- [ ] **Step 2: Run to verify they fail**
+- [ ] **Step 3: Implement**
+- [ ] **Step 4: Specs green**
+- [ ] **Step 5: Commit** — `feat(#1810): the player follows the current chapter and steps between chapters`
+
+---
+
+### Task 3: The chapter on the lock screen
+
+**Files:**
+- Modify: `frontend/src/app/reader/audio/media-session-controls.ts`, `.spec.ts`
+- Modify: `frontend/src/app/reader/audio-player.service.ts`, `.spec.ts`
+
+`showTrack(track: AudioTrack | null, chapter: ChapterDto | null)`: with a chapter, `title: chapter.title`, `artist: track.title`, `album: track.entry?.feedTitle ?? ''`; without, `title: track.title`, `artist: track.entry?.feedTitle ?? ''`. Artwork as today. The service replaces its `showTrack(track)` call in `load` with an `effect` on `current()` and `currentChapter()`, so the lock screen changes with the chapter. The `previoustrack`/`nexttrack` handlers stay track steps: iOS swaps the ±15 s buttons for those once a handler exists (see `setTrackSteps`), and turning them into chapter steps is a separate decision.
+
+- [ ] **Step 1: Write the specs**: metadata with and without a chapter; the service updates the metadata as the chapter changes and clears it on stop.
+- [ ] **Step 2: Run to verify they fail**
+- [ ] **Step 3: Implement**
+- [ ] **Step 4: Specs green**
+- [ ] **Step 5: Commit** — `feat(#1810): the current chapter titles the Media Session metadata`
+
+---
+
+### Task 4: One scrubber with chapter marks
+
+**Files:**
+- Create: `frontend/src/app/reader/audio/scrub-marks.ts`, `.spec.ts`
+- Create: `frontend/src/app/reader/shell/audio-player-bar/scrubber/scrubber.component.{ts,html,scss,spec.ts}`
+- Modify: `frontend/src/app/reader/shell/audio-player-bar/audio-player-bar.component.{html,scss,spec.ts}`
+- Modify: `frontend/src/app/reader/shell/audio-player-bar/big-player/big-player.component.{ts,html,scss,spec.ts}`
+
+The two surfaces carry the same range input with the same fill variables; the third copy would be the marks, so the input becomes `<app-scrubber>`:
+
+```ts
+@Component({ selector: 'app-scrubber', … })
+export class ScrubberComponent {
+  readonly position = input.required<number>();
+  readonly duration = input.required<number>();
+  readonly buffered = input.required<number>();
+  readonly chapters = input<ChapterDto[]>([]);
+  readonly label = input.required<string>();          // the aria-label, translated by the caller
+  readonly seek = output<number>();
+  readonly dragging = output<boolean>();              // the big player thickens its bar while dragging
+  protected readonly fill = computed(() => scrubFill(…));
+  protected readonly marks = computed(() => scrubMarks(this.chapters(), this.duration()));
+}
+```
+
+```ts
+// scrub-marks.ts
+/** Where chapter marks sit on a scrubber, as percentages; a chapter starting at 0 draws no mark. */
+export function scrubMarks(chapters: readonly ChapterDto[], duration: number): string[];
+```
+
+Template: the `<input type="range">` as today, then `<div class="marks" aria-hidden="true">` with one `<span class="mark" [style.left]="mark">` per mark, positioned over the bar, `pointer-events: none`. Styles move from both components into `scrubber.component.scss`; the bar height variable (`--bar`) stays a host-settable custom property so the big player's `.dragging` thickening keeps working. A mark is `var(--space-0)` wide in `var(--surface-0)` with the bar's height.
+
+- [ ] **Step 1: Write the specs**: `scrubMarks` for chapters at 0, 90 and 300 over 600 s (`['15%', '50%']`), an unknown duration (`[]`), a chapter past the duration (clamped out). `ScrubberComponent` renders the fill variables, one mark per chapter and emits `seek` on input. Bar and big-player specs updated to find the scrubber by its component.
+- [ ] **Step 2: Run to verify they fail**
+- [ ] **Step 3: Implement**, replacing both inputs
+- [ ] **Step 4: Specs green; `npm run stylelint`; `npm run build`**
+- [ ] **Step 5: Commit** — `refactor(#1810): one scrubber for the bar and the big player, with chapter marks`
+
+---
+
+### Task 5: The chapter in the mini bar
+
+**Files:**
+- Modify: `frontend/src/app/reader/shell/audio-player-bar/audio-player-bar.component.{html,scss,spec.ts}`
+
+The title line reads `<chapter title> · <track title>` when a chapter plays: the chapter in `.title`, the track title after it in a muted `.subtitle` span, the line still one row, clipped with an ellipsis. Without a chapter the line is the track title, as today. The scrubber gets `[chapters]="player.chapters()"`.
+
+- [ ] **Step 1: Write the specs**: the title line with and without a current chapter; the line changes as the chapter changes.
+- [ ] **Step 2: Run to verify they fail**
+- [ ] **Step 3: Implement**
+- [ ] **Step 4: Specs green**
+- [ ] **Step 5: Commit** — `feat(#1810): the mini bar names the current chapter`
+
+---
+
+### Task 6: The chapter strip and list in the big player
+
+**Files:**
+- Create: `frontend/src/app/reader/shell/audio-player-bar/audio-chapters/audio-chapters.component.{ts,html,scss,spec.ts}`
+- Modify: `frontend/src/app/reader/shell/audio-player-bar/big-player/big-player.component.{ts,html,scss,spec.ts}`
+- Modify: `frontend/src/testing/big-player-audio-signals.ts`
+- Modify: `frontend/public/i18n/en.json`, `de.json`
+
+**Chapter strip**, under the transport and only when the track has chapters: previous-chapter button (`skip_previous`-style icon `first_page`? use `chevron_left`), the current chapter's title centred (or `reader.audioPlayer.chapterPosition` "Chapter {{ index }} of {{ count }}" muted beneath it), next-chapter button (`chevron_right`). The buttons disable with `hasPreviousChapter`/`hasNextChapter`; the title is a button that toggles the chapter list.
+
+**Chapter list** (`<app-audio-chapters>`): the rows of the article's list (`reader-chapters__row`: time, title) as a component, `aria-current="true"` on `player.chapterIndex()`, a click calls `player.playChapter(index)`. It sits in the big player between the extras and the queue section, shown by a local `chaptersShown` signal the strip's title toggles; on the phone sheet it scrolls into view like the playlist does. On the card (desktop) it shows in place as well; the card already scrolls (`CdkScrollable`).
+
+**i18n:** `reader.audioPlayer.previousChapter` ("Previous chapter" / "Vorheriges Kapitel"), `nextChapter` ("Next chapter" / "Nächstes Kapitel"), `chapterCount` ("Chapters ({{ count }})" / "Kapitel ({{ count }})"), `chapterPosition` ("Chapter {{ index }} of {{ count }}" / "Kapitel {{ index }} von {{ count }}"). The list's heading reuses `reader.chapters`.
+
+`bigPlayerAudioSignals()` grows `chapters`, `chapterIndex`, `currentChapter`, `hasPreviousChapter`, `hasNextChapter`; the big-player stub grows `previousChapter`, `nextChapter`, `playChapter` mocks.
+
+- [ ] **Step 1: Write the specs**: no strip and no list without chapters; the strip shows the current title and position; previous/next call the service and disable at the ends; the title toggles the list; the list marks the current row and plays a tapped one; the sheet scrolls the list into view when opened.
+- [ ] **Step 2: Run to verify they fail**
+- [ ] **Step 3: Implement**
+- [ ] **Step 4: Specs green; translation-key spec green; `npm run build`**
+- [ ] **Step 5: Commit** — `feat(#1810): chapter strip and chapter list in the big player`
+
+---
+
+### Task 7: Docs and gate
+
+**Files:**
+- Modify: `docs/design-language.md`
+
+- [ ] **Step 1: Design language** — §2 catalog entry for `<app-scrubber>` (inputs, outputs, the `--bar` custom property, the marks layer); §3 a note on the chapter strip and that chapters are view-less data on the track.
+- [ ] **Step 2:** `cd frontend && npm run check && npm run build`
+- [ ] **Step 3: Manual pass** in the Docker stack, desktop and a phone: a podcast with Podlove chapters and a YouTube entry with description chapters (after #1815, sent to the player): lock-screen title follows the chapter; AirPods previous/next still step tracks; marks line up with the list's times; previous chapter restarts the chapter past the threshold; a track queued from a list row gains its chapters when its article is opened; a reload keeps the chapters.
+- [ ] **Step 4:** Merge `develop`, open the PR with `Closes #1810`.
