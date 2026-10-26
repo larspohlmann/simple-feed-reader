@@ -790,21 +790,22 @@ Expected: PASS, including `article-chapters.spec.ts`. That spec asserts the time
 - [ ] **Step 5: Style the icon and keep the width steady**
 
 In `article-chapters.scss`:
-- Add `display: inline-flex;`, `align-items: center;`, `justify-content: flex-end;` and `gap: var(--space-0);` to the existing `.reader-chapters__left` rule.
+- Add `display: inline-flex;`, `align-items: center;`, `justify-content: flex-end;` and `gap: var(--space-0);` to the existing `.reader-chapters__left` rule, and replace its `margin-inline-start: auto;` with `margin-inline: auto calc(-1 * var(--space-1));` (Stylelint requires the shorthand).
 - Delete the rule `:host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left { min-width: 6ch; text-align: end; }`.
 - Add after the `.reader-chapters__left` rule:
 
 ```scss
 :host ::ng-deep .reader-chapters__left .material-symbols-outlined {
   font-size: var(--icon-sm);
+  margin-inline-end: var(--space-1);
 }
 
 :host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left {
-  min-width: calc(5ch + var(--icon-sm) + var(--space-0));
+  min-width: calc(5ch + var(--icon-sm) + var(--space-0) + var(--space-1));
 }
 ```
 
-The playing row's box (clock + time) reserves room for `10:00` and its contents sit at its right end, so the time stays at the row's end, the clock sits right in front of the number, and the title's space does not change as the countdown ticks. The icon comes and goes with the time, once per chapter change.
+The playing row's box (clock + time) reserves room for `10:00` and its contents sit at its right end. The box reaches `--space-1` into the row's right padding and the icon carries the same space after it, so the time sits a little further right while the clock stays where it was; the title's space does not change as the countdown ticks. The icon comes and goes with the time, once per chapter change.
 
 - [ ] **Step 6: Gates**
 

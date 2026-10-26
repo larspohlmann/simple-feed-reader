@@ -66,17 +66,18 @@
   justify-content: flex-end;
   gap: var(--space-0);
   flex: none;
-  margin-inline-start: auto;
+  margin-inline: auto calc(-1 * var(--space-1));
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
 :host ::ng-deep .reader-chapters__left .material-symbols-outlined {
   font-size: var(--icon-sm);
+  margin-inline-end: var(--space-1);
 }
 
 :host ::ng-deep .reader-chapters__row[aria-current='true'] .reader-chapters__left {
-  min-width: calc(5ch + var(--icon-sm) + var(--space-0));
+  min-width: calc(5ch + var(--icon-sm) + var(--space-0) + var(--space-1));
 }
 
 :host ::ng-deep .reader-chapters__row[aria-current='true']::before,
