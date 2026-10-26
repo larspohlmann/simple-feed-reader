@@ -19,7 +19,7 @@ use App\Service\Fetch\Model\ResponseSizeLimit;
 /** One budgeted, size-capped request to a description provider (#1824). */
 final readonly class GuardedDescriptionRequest
 {
-    public const float BUDGET_SECONDS = 3.0;
+    private const float BUDGET_SECONDS = 3.0;
 
     public function __construct(private GuardedApiClient $api)
     {

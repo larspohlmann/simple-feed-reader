@@ -3,12 +3,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
 import { SOUND_MEDIA, VIDEO_ID, VIDEO_MEDIA } from '../../testing/embed-media-testing';
-import { EmbedDetailsApi, EmbedDetailsDto } from './embed-details-api';
+import type { TrackDetails } from './audio/audio-track';
+import { EmbedDetailsApi } from './embed-details-api';
 
 const PLAYLIST_WIDGET_URL =
   'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Fplaylists%2F42';
 const VIDEO_PATH = `https://api.test/api/youtube/videos/${VIDEO_ID}`;
-const DETAILS: EmbedDetailsDto = {
+const DETAILS: TrackDetails = {
   title: 'A mix',
   durationSeconds: 4964,
   chapters: [{ startSeconds: 0, title: 'Intro' }],

@@ -1,4 +1,5 @@
-import type { AudioTrack, TrackDetails } from '../audio-player.service';
+import type { AudioTrack } from '../audio-player.service';
+import { chaptersOnly } from './audio-track';
 import type { ChapterDto } from '../models';
 import {
   EMPTY_PLAYLIST,
@@ -174,7 +175,7 @@ describe('playlist', () => {
 
   describe('withDetails', () => {
     const chapters: ChapterDto[] = [{ startSeconds: 0, title: 'Intro' }];
-    const nothing: TrackDetails = { title: null, durationSeconds: null, chapters: [] };
+    const nothing = chaptersOnly([]);
 
     it('gives the queued track its title, length and chapters and keeps the index', () => {
       const playlist = withDetails(of(1, alpha, bravo, charlie), bravo.url, {

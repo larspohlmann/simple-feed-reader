@@ -7,11 +7,12 @@ import {
   WIDGET_URL,
 } from '../../../../testing/embed-media-testing';
 import { EmbedMedia } from '../../audio/embed-media';
-import { EmbedDetailsApi, EmbedDetailsDto } from '../../embed-details-api';
+import type { TrackDetails } from '../../audio/audio-track';
+import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleEmbedDetails } from './article-embed-details';
 
 const API_FRAME_URL = `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?enablejsapi=1`;
-const VIDEO_DETAILS: EmbedDetailsDto = {
+const VIDEO_DETAILS: TrackDetails = {
   title: 'A video',
   durationSeconds: 300,
   chapters: [
@@ -19,12 +20,12 @@ const VIDEO_DETAILS: EmbedDetailsDto = {
     { startSeconds: 90, title: 'Demo' },
   ],
 };
-const TRACK_DETAILS: EmbedDetailsDto = {
+const TRACK_DETAILS: TrackDetails = {
   title: 'A track',
   durationSeconds: null,
   chapters: [{ startSeconds: 30, title: 'Side B' }],
 };
-const UNCHAPTERED: EmbedDetailsDto = { title: 'A plain video', durationSeconds: 120, chapters: [] };
+const UNCHAPTERED: TrackDetails = { title: 'A plain video', durationSeconds: 120, chapters: [] };
 
 function frameOf(source: string): HTMLIFrameElement {
   const frame = document.createElement('iframe');
@@ -33,11 +34,11 @@ function frameOf(source: string): HTMLIFrameElement {
 }
 
 describe('ArticleEmbedDetails', () => {
-  let detailsOf: jest.Mock<Observable<EmbedDetailsDto>, [EmbedMedia]>;
-  let found: jest.Mock<void, [HTMLIFrameElement, EmbedMedia, EmbedDetailsDto]>;
+  let detailsOf: jest.Mock<Observable<TrackDetails>, [EmbedMedia]>;
+  let found: jest.Mock<void, [HTMLIFrameElement, EmbedMedia, TrackDetails]>;
   let details: ArticleEmbedDetails;
 
-  function answering(answers: Record<string, Observable<EmbedDetailsDto>>): void {
+  function answering(answers: Record<string, Observable<TrackDetails>>): void {
     detailsOf.mockImplementation((media) => answers[media.url]);
   }
 
@@ -86,7 +87,7 @@ describe('ArticleEmbedDetails', () => {
   });
 
   it('knows nothing before the answer arrives', () => {
-    answering({ [WATCH_URL]: new Subject<EmbedDetailsDto>() });
+    answering({ [WATCH_URL]: new Subject<TrackDetails>() });
 
     details.load([frameOf(API_FRAME_URL)], found);
 
@@ -109,7 +110,7 @@ describe('ArticleEmbedDetails', () => {
   });
 
   it('hands a late answer to nobody once released, and forgets what it knew', () => {
-    const late = new Subject<EmbedDetailsDto>();
+    const late = new Subject<TrackDetails>();
     answering({ [WATCH_URL]: late, [WIDGET_URL]: of(TRACK_DETAILS) });
     details.load([frameOf(API_FRAME_URL), frameOf(WIDGET_URL)], found);
     found.mockClear();

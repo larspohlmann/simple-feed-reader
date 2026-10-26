@@ -6,6 +6,7 @@ import {
   FRAME_PLAYBACK_FACTORY,
   RESTART_THRESHOLD_SECONDS,
 } from './audio-player.service';
+import { chaptersOnly } from './audio/audio-track';
 import { PRECACHE_LEAD_SECONDS } from './audio/audio-deck';
 import type { FramePlayback } from './audio/playback/frame-playback';
 import type { FrameKind } from './audio/playback/playback-kind';
@@ -786,7 +787,7 @@ describe('AudioPlayerService', () => {
       service.play(track({ url: 'https://x.test/other.mp3' }));
       service.enqueue(track());
 
-      service.describe('https://x.test/ep.mp3', { title: null, durationSeconds: null, chapters });
+      service.describe('https://x.test/ep.mp3', chaptersOnly(chapters));
 
       expect(service.tracks()[1].chapters).toEqual(chapters);
       expect(service.chapters()).toEqual([]);
@@ -797,7 +798,7 @@ describe('AudioPlayerService', () => {
       service.play(track());
       const tracks = service.tracks();
 
-      service.describe('https://x.test/none.mp3', { title: null, durationSeconds: null, chapters });
+      service.describe('https://x.test/none.mp3', chaptersOnly(chapters));
 
       expect(service.tracks()).toBe(tracks);
     });
@@ -807,7 +808,7 @@ describe('AudioPlayerService', () => {
       const store = TestBed.inject(PlaylistStore);
       const clear = jest.spyOn(store, 'clear');
 
-      service.describe('https://x.test/none.mp3', { title: null, durationSeconds: null, chapters });
+      service.describe('https://x.test/none.mp3', chaptersOnly(chapters));
 
       expect(service.current()).toBeNull();
       expect(clear).not.toHaveBeenCalled();

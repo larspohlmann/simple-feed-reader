@@ -45,12 +45,9 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
     private function videoOf(EmbedAddressModel $embed): array
     {
         $request = self::playerRequestFor($embed);
-        $player = $this->request->answerOf($request, $embed);
-        if (self::isWalled($player)) {
-            $player = $this->askedDirectly($request, $embed);
-        }
-        $video = $player['videoDetails'] ?? null;
-        if (!\is_array($video)) {
+        $video = self::videoDetailsIn($this->request->answerOf($request, $embed))
+            ?? self::videoDetailsIn($this->askedDirectly($request, $embed));
+        if ($video === null) {
             throw EmbedDescriptionUnreachableException::withoutTheVideo($embed);
         }
 
@@ -67,7 +64,7 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
         }
         $this->logger->info('YouTube walled the proxied player request for {videoId}; asked again directly.', [
             'videoId' => $embed->id,
-            'walledAgain' => self::isWalled($player),
+            'walledAgain' => self::videoDetailsIn($player) === null,
         ]);
 
         return $player;
@@ -81,10 +78,15 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
         ]);
     }
 
-    /** @param array<mixed> $player */
-    private static function isWalled(array $player): bool
+    /**
+     * @param array<mixed> $player
+     * @return array<mixed>|null
+     */
+    private static function videoDetailsIn(array $player): ?array
     {
-        return !\is_array($player['videoDetails'] ?? null);
+        $video = $player['videoDetails'] ?? null;
+
+        return \is_array($video) ? $video : null;
     }
 
     private static function secondsIn(mixed $lengthSeconds): ?int

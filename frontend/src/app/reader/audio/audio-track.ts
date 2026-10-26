@@ -30,3 +30,7 @@ export interface TrackDetails {
   durationSeconds: number | null;
   chapters: ChapterDto[];
 }
+
+export function chaptersOnly(chapters: ChapterDto[]): TrackDetails {
+  return { title: null, durationSeconds: null, chapters };
+}

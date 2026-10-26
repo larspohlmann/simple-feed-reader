@@ -1,17 +1,18 @@
 import { EMPTY, Subscription, catchError } from 'rxjs';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
-import { EmbedDetailsApi, EmbedDetailsDto } from '../../embed-details-api';
+import type { TrackDetails } from '../../audio/audio-track';
+import { EmbedDetailsApi } from '../../embed-details-api';
 
 interface EmbedFrames {
   readonly media: EmbedMedia;
   readonly frames: HTMLIFrameElement[];
 }
 
-type DetailsFound = (frame: HTMLIFrameElement, media: EmbedMedia, details: EmbedDetailsDto) => void;
+type DetailsFound = (frame: HTMLIFrameElement, media: EmbedMedia, details: TrackDetails) => void;
 
 /** The own title, length and chapters of a body's embedded videos and tracks, asked for once per embed (#1824). */
 export class ArticleEmbedDetails {
-  private readonly byEmbedUrl = new Map<string, EmbedDetailsDto>();
+  private readonly byEmbedUrl = new Map<string, TrackDetails>();
   private subscriptions: Subscription[] = [];
 
   constructor(private readonly api: EmbedDetailsApi) {}
@@ -31,7 +32,7 @@ export class ArticleEmbedDetails {
   }
 
   /** What is known of an embed URL; null before its answer arrives or when none came. */
-  detailsOf(embedUrl: string): EmbedDetailsDto | null {
+  detailsOf(embedUrl: string): TrackDetails | null {
     return this.byEmbedUrl.get(embedUrl) ?? null;
   }
 

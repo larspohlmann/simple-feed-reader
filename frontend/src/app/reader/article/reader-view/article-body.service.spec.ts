@@ -18,7 +18,8 @@ import { ChapterDto, EntryDto } from '../../models';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { anEntry } from '../../../../testing/entry-testing';
 import { Observable, Subject, of } from 'rxjs';
-import { EmbedDetailsApi, EmbedDetailsDto } from '../../embed-details-api';
+import { TrackDetails, chaptersOnly } from '../../audio/audio-track';
+import { EmbedDetailsApi } from '../../embed-details-api';
 import { EmbedMedia } from '../../audio/embed-media';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
@@ -46,8 +47,8 @@ const TRACK_CHAPTERS: ChapterDto[] = [
   { startSeconds: 0, title: 'Side A' },
   { startSeconds: 120, title: 'Side B' },
 ];
-const NO_DETAILS: EmbedDetailsDto = { title: null, durationSeconds: null, chapters: [] };
-const TRACK_DETAILS: EmbedDetailsDto = {
+const NO_DETAILS = chaptersOnly([]);
+const TRACK_DETAILS: TrackDetails = {
   title: 'Catching Flies',
   durationSeconds: null,
   chapters: TRACK_CHAPTERS,
@@ -66,7 +67,7 @@ describe('ArticleBody', () => {
   let decorated: jest.Mock<void, [HTMLElement]>;
   let content: HTMLElement;
   let autoplay: { nowPlaying: jest.Mock; stopped: jest.Mock };
-  let embedDetails: jest.Mock<Observable<EmbedDetailsDto>, [EmbedMedia]>;
+  let embedDetails: jest.Mock<Observable<TrackDetails>, [EmbedMedia]>;
   const html = signal('');
   const chapters = signal<ChapterDto[]>([]);
   const audioTrack = signal<AudioTrack | null>(null);
@@ -117,7 +118,7 @@ describe('ArticleBody', () => {
     audioTrack.set(null);
     entry.set(null);
     imageProxy = neverRecoveringImageProxy();
-    embedDetails = jest.fn<Observable<EmbedDetailsDto>, [EmbedMedia]>(() => of(NO_DETAILS));
+    embedDetails = jest.fn<Observable<TrackDetails>, [EmbedMedia]>(() => of(NO_DETAILS));
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -461,7 +462,7 @@ describe('ArticleBody', () => {
     });
   });
   describe("its embeds' own details", () => {
-    const answers = (byUrl: Record<string, Observable<EmbedDetailsDto>>): void => {
+    const answers = (byUrl: Record<string, Observable<TrackDetails>>): void => {
       embedDetails.mockImplementation((media) => byUrl[media.url] ?? of(NO_DETAILS));
     };
     const askedUrls = (): string[] => embedDetails.mock.calls.map(([media]) => media.url);
@@ -487,7 +488,7 @@ describe('ArticleBody', () => {
     });
 
     describe("for the video the body's chapters belong to", () => {
-      const fetched: EmbedDetailsDto = {
+      const fetched: TrackDetails = {
         title: 'The video itself',
         durationSeconds: 4964,
         chapters: VIDEO_CHAPTERS,
@@ -622,7 +623,7 @@ describe('ArticleBody', () => {
       const describeTrack = jest
         .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
-      const answer = new Subject<EmbedDetailsDto>();
+      const answer = new Subject<TrackDetails>();
       answers({ [WIDGET_URL]: answer });
       connectBody(SOUNDCLOUD);
       await Promise.resolve();
@@ -636,7 +637,7 @@ describe('ArticleBody', () => {
       const describeTrack = jest
         .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
-      const unchaptered: EmbedDetailsDto = { title: 'A mix', durationSeconds: 4964, chapters: [] };
+      const unchaptered: TrackDetails = { title: 'A mix', durationSeconds: 4964, chapters: [] };
       answers({ [WIDGET_URL]: of(unchaptered) });
       connectBody(SOUNDCLOUD);
       await Promise.resolve();
@@ -649,7 +650,7 @@ describe('ArticleBody', () => {
       const describeTrack = jest
         .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
-      const late = new Subject<EmbedDetailsDto>();
+      const late = new Subject<TrackDetails>();
       answers({ [WIDGET_URL]: late });
       connectBody(SOUNDCLOUD);
       await Promise.resolve();
@@ -664,7 +665,7 @@ describe('ArticleBody', () => {
     });
 
     it('drops a late answer once destroyed', async () => {
-      const late = new Subject<EmbedDetailsDto>();
+      const late = new Subject<TrackDetails>();
       answers({ [WIDGET_URL]: late });
       connectBody(SOUNDCLOUD);
       await Promise.resolve();

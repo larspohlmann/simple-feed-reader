@@ -1,6 +1,10 @@
 import {
+  MILLISECONDS_PER_SECOND,
   postToWidgetFrame,
+  seekToMessage,
   SOUNDCLOUD_WIDGET_ORIGIN,
+  subscriptionMessages,
+  WidgetMessage,
   widgetFieldOf,
   widgetMessage,
   widgetMessageOf,
@@ -9,7 +13,6 @@ import { finiteNumberOf } from '../media/youtube-player-protocol';
 import { ChapterPlayer, PlaybackPosition } from './chapter-player';
 
 const SUBSCRIBED_EVENTS = ['playProgress', 'play', 'pause', 'finish'];
-const MILLISECONDS = 1000;
 
 /** Drives a visible SoundCloud widget through its Widget API, subscribing again on each `ready` (#1824). */
 export class SoundCloudChapterPlayer implements ChapterPlayer {
@@ -73,14 +76,13 @@ export class SoundCloudChapterPlayer implements ChapterPlayer {
   }
 
   private subscribe(): void {
-    for (const event of SUBSCRIBED_EVENTS) this.post(widgetMessage('addEventListener', event));
-    this.post(widgetMessage('getDuration'));
+    for (const message of subscriptionMessages(SUBSCRIBED_EVENTS)) this.post(message);
   }
 
   private readDuration(value: unknown): void {
     const milliseconds = finiteNumberOf(value);
     if (milliseconds !== null && milliseconds > 0)
-      this.durationSeconds = milliseconds / MILLISECONDS;
+      this.durationSeconds = milliseconds / MILLISECONDS_PER_SECOND;
   }
 
   private readPosition(value: unknown): void {
@@ -88,7 +90,7 @@ export class SoundCloudChapterPlayer implements ChapterPlayer {
     if (milliseconds === null) return;
     this.becomePlaying();
     this.onPosition?.({
-      seconds: milliseconds / MILLISECONDS,
+      seconds: milliseconds / MILLISECONDS_PER_SECOND,
       durationSeconds: this.durationSeconds,
     });
   }
@@ -101,10 +103,10 @@ export class SoundCloudChapterPlayer implements ChapterPlayer {
   }
 
   private seekTo(seconds: number): void {
-    this.post(widgetMessage('seekTo', Math.round(seconds * MILLISECONDS)));
+    this.post(seekToMessage(seconds));
   }
 
-  private post(message: ReturnType<typeof widgetMessage>): void {
+  private post(message: WidgetMessage): void {
     postToWidgetFrame(this.frame, message);
   }
 }

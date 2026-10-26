@@ -19,15 +19,14 @@ import { UnplayableVideoService } from '../../media/unplayable-video.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
 import { withScriptablePlayer } from '../../media/media-embeds';
-import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
+import { AudioPlayerService, AudioTrack, TrackDetails } from '../../audio-player.service';
+import { chaptersOnly } from '../../audio/audio-track';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { ChapterDto, EntryDto } from '../../models';
-import { EmbedDetailsApi, EmbedDetailsDto } from '../../embed-details-api';
+import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
 import { ArticleEmbedAudio } from './article-embed-audio';
 import { ArticleEmbedDetails } from './article-embed-details';
-
-const NOTHING_KNOWN: EmbedDetailsDto = { title: null, durationSeconds: null, chapters: [] };
 
 export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
@@ -128,9 +127,6 @@ export class ArticleBody {
 
   private render(parts: ArticleBodyParts, host: HTMLElement, chapterList: ChapterDto[]): void {
     const track = parts.audioTrack();
-    const chapteredEmbed = (): EmbedMedia | null => chapteredEmbedOf(host, chapterList, track);
-    const bodyChaptersOf = (url: string): ChapterDto[] | null =>
-      url === chapteredEmbed()?.url ? chapterList : null;
     const controls = decorateArticle(host, this.i18n, {
       enclosureUrl: parts.enclosureUrl(),
       embedSource: (url) => withScriptablePlayer(url, window.location.origin),
@@ -141,13 +137,16 @@ export class ArticleBody {
         onListened: (listened) => this.chapters.followTrack(listened),
       }),
     });
+    // Only decoration gives the player frame its API flag, so the embed is resolved after it.
+    const chapteredEmbed = chapteredEmbedOf(host, chapterList, track);
+    const bodyChaptersOf = (url: string): ChapterDto[] | null =>
+      url === chapteredEmbed?.url ? chapterList : null;
     const heading = this.i18n.translate('reader.chapters');
     this.zone.runOutsideAngular(() => {
       this.chapters.attach(host, { chapters: chapterList, heading }, track);
       this.embedAudio.follow(controls);
       // A video queued from a list row gains its chapters once its article opens (#1810).
-      const embed = chapteredEmbed();
-      if (embed) this.audio.describe(embed.url, { ...NOTHING_KNOWN, chapters: chapterList });
+      if (chapteredEmbed) this.audio.describe(chapteredEmbed.url, chaptersOnly(chapterList));
       this.loadEmbedDetails(chapterFrames(host), heading, bodyChaptersOf);
       this.media.follow(host);
     });
@@ -164,18 +163,18 @@ export class ArticleBody {
       if (bodyChapters === null && details.chapters.length > 0) {
         this.chapters.attachToFrame(frame, { chapters: details.chapters, heading });
       }
-      this.audio.describe(media.url, listenDetails(details, bodyChapters));
+      this.audio.describe(media.url, { ...details, chapters: bodyChapters ?? details.chapters });
     });
   }
 }
 
 /** An embed's fetched details, carrying the body's chapters instead when the body lists them for it. */
-function listenDetails<Fetched extends EmbedDetailsDto | null>(
-  fetched: Fetched,
+function listenDetails(
+  fetched: TrackDetails | null,
   bodyChapters: ChapterDto[] | null,
-): Fetched | EmbedDetailsDto {
+): TrackDetails | null {
   if (bodyChapters === null) return fetched;
-  return { ...(fetched ?? NOTHING_KNOWN), chapters: bodyChapters };
+  return fetched === null ? chaptersOnly(bodyChapters) : { ...fetched, chapters: bodyChapters };
 }
 
 /** The embed the body's chapters belong to: the player `ArticleChapters` drives, unless an episode owns them. */

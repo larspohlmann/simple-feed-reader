@@ -1,6 +1,7 @@
 import { computed, untracked } from '@angular/core';
 import { AudioPlayerService } from '../audio-player.service';
 import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
+import { chaptersOnly } from './audio-track';
 import { ChapterDto, EntryDto } from '../models';
 import { formatDuration } from '../format';
 
@@ -52,9 +53,7 @@ export class EntryAudio {
     const track = this.track();
     const chapters = track?.chapters;
     if (!track || !chapters) return;
-    untracked(() =>
-      this.player.describe(track.url, { title: null, durationSeconds: null, chapters }),
-    );
+    untracked(() => this.player.describe(track.url, chaptersOnly(chapters)));
   }
 
   toggleQueued(): void {

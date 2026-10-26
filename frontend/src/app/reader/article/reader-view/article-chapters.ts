@@ -5,10 +5,11 @@ import { AudioChapterPlayer } from '../../chapters/audio-chapter-player';
 import { ChapterPlayer } from '../../chapters/chapter-player';
 import { SoundCloudChapterPlayer } from '../../chapters/soundcloud-chapter-player';
 import { YouTubeChapterPlayer } from '../../chapters/youtube-chapter-player';
+import { SOUNDCLOUD_PLAYER_URL } from '../../media/soundcloud-widget-protocol';
 import { ChapterList, ChapterListPlace, addChapterList } from '../decorators/reader-chapters';
 
 const API_PLAYER = 'iframe[src*="enablejsapi=1"]';
-const CHAPTER_FRAMES = `${API_PLAYER}, iframe[src^="https://w.soundcloud.com/player/"]`;
+const CHAPTER_FRAMES = `${API_PLAYER}, iframe[src^="${SOUNDCLOUD_PLAYER_URL}"]`;
 
 /** The video player frame a body's chapter list drives when no episode owns the chapters. */
 export function apiPlayerFrame(host: HTMLElement): HTMLIFrameElement | null {

@@ -2,7 +2,7 @@ import { toEmbedTrack } from './embed-track';
 import { EmbedMedia } from './embed-media';
 import { toAudioTrack } from './audio-attachment';
 import { ChapterDto, EntryDto } from '../models';
-import { EmbedDetailsDto } from '../embed-details-api';
+import type { TrackDetails } from './audio-track';
 import { anEntry } from '../../../testing/entry-testing';
 
 const VIDEO_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
@@ -71,7 +71,7 @@ describe('toEmbedTrack', () => {
       { startSeconds: 0, title: 'Intro' },
       { startSeconds: 90, title: 'Topic' },
     ];
-    const details = (overrides: Partial<EmbedDetailsDto> = {}): EmbedDetailsDto => ({
+    const details = (overrides: Partial<TrackDetails> = {}): TrackDetails => ({
       title: 'The video itself',
       durationSeconds: 4964,
       chapters,

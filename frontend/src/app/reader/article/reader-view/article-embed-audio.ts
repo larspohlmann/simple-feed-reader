@@ -4,14 +4,14 @@ import { EmbedMedia } from '../../audio/embed-media';
 import { toEmbedTrack } from '../../audio/embed-track';
 import { pauseEmbedFrame } from '../../media/embed-frame-commands';
 import { EntryDto } from '../../models';
-import { EmbedDetailsDto } from '../../embed-details-api';
+import type { TrackDetails } from '../../audio/audio-track';
 import { EmbedListenControl, ListenActions } from '../decorators/reader-listen';
 
 /** What one rendered body's embeds become tracks of. */
 export interface EmbedListenContext {
   readonly entry: EntryDto | null;
   /** What an embed's track is named, timed and chaptered by; null while nothing is known. */
-  readonly detailsOf: (media: EmbedMedia) => EmbedDetailsDto | null;
+  readonly detailsOf: (media: EmbedMedia) => TrackDetails | null;
   readonly onListened: (track: AudioTrack) => void;
 }
 

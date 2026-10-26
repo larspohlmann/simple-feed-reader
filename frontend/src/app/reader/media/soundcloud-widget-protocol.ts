@@ -1,4 +1,6 @@
 export const SOUNDCLOUD_WIDGET_ORIGIN = 'https://w.soundcloud.com';
+export const SOUNDCLOUD_PLAYER_URL = `${SOUNDCLOUD_WIDGET_ORIGIN}/player/`;
+export const MILLISECONDS_PER_SECOND = 1000;
 
 export interface WidgetMessage {
   readonly method: string;
@@ -7,6 +9,18 @@ export interface WidgetMessage {
 
 export function widgetMessage(method: string, value?: unknown): WidgetMessage {
   return value === undefined ? { method } : { method, value };
+}
+
+export function seekToMessage(seconds: number): WidgetMessage {
+  return widgetMessage('seekTo', Math.round(seconds * MILLISECONDS_PER_SECOND));
+}
+
+/** Asks the widget for each of `events`, then for the sound's length. */
+export function subscriptionMessages(events: readonly string[]): WidgetMessage[] {
+  return [
+    ...events.map((event) => widgetMessage('addEventListener', event)),
+    widgetMessage('getDuration'),
+  ];
 }
 
 export function widgetMessageOf(data: unknown): WidgetMessage | null {

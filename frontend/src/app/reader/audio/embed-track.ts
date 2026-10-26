@@ -1,6 +1,6 @@
 import { AudioTrack } from '../audio-player.service';
 import { EntryDto } from '../models';
-import { EmbedDetailsDto } from '../embed-details-api';
+import type { TrackDetails } from './audio-track';
 import { entryDisplayTitle } from '../entry/entry-text';
 import { audioTrackEntry } from './audio-attachment';
 import { EmbedMedia } from './embed-media';
@@ -10,7 +10,7 @@ import { EmbedMedia } from './embed-media';
 export function toEmbedTrack(
   entry: EntryDto,
   media: EmbedMedia,
-  details: EmbedDetailsDto | null = null,
+  details: TrackDetails | null = null,
 ): AudioTrack {
   const track: AudioTrack = {
     url: media.url,

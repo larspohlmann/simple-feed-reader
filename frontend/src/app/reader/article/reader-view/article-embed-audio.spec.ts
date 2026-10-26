@@ -7,7 +7,7 @@ import { AudioTrack } from '../../audio-player.service';
 import { EmbedMedia } from '../../audio/embed-media';
 import { toEmbedTrack } from '../../audio/embed-track';
 import { ChapterDto } from '../../models';
-import { EmbedDetailsDto } from '../../embed-details-api';
+import type { TrackDetails } from '../../audio/audio-track';
 import { EmbedListenControl, ListenActions } from '../decorators/reader-listen';
 import { ArticleEmbedAudio, EmbedListenContext } from './article-embed-audio';
 
@@ -25,7 +25,7 @@ const CHAPTERS: ChapterDto[] = [
   { startSeconds: 0, title: 'Intro' },
   { startSeconds: 256, title: 'How it works' },
 ];
-const VIDEO_DETAILS: EmbedDetailsDto = {
+const VIDEO_DETAILS: TrackDetails = {
   title: 'Its own title',
   durationSeconds: 300,
   chapters: CHAPTERS,
