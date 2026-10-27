@@ -8,13 +8,14 @@ const SECTION = 'reader-transcript';
 export interface TranscriptView {
   readonly transcript: TranscriptDto;
   readonly heading: string;
+  readonly playFromLabel: (time: string) => string;
   readonly open: boolean;
 }
 
 /** An episode's transcript under its body; with a player, each timestamp starts it there (#1809). */
 export function addTranscript(
   host: HTMLElement,
-  { transcript, heading, open }: TranscriptView,
+  { transcript, heading, playFromLabel, open }: TranscriptView,
   player: ChapterPlayer | null,
 ): HTMLElement | null {
   if (transcript.paragraphs.length === 0) return null;
@@ -25,7 +26,7 @@ export function addTranscript(
   details.open = open;
   details.append(
     summary,
-    ...transcript.paragraphs.map((paragraph) => paragraphOf(paragraph, player)),
+    ...transcript.paragraphs.map((paragraph) => paragraphOf(paragraph, player, playFromLabel)),
   );
   const section = document.createElement('section');
   section.className = SECTION;
@@ -39,10 +40,12 @@ export function addTranscript(
 function paragraphOf(
   paragraph: TranscriptParagraphDto,
   player: ChapterPlayer | null,
+  playFromLabel: (time: string) => string,
 ): HTMLParagraphElement {
   const element = document.createElement('p');
   element.className = `${SECTION}__paragraph`;
-  if (paragraph.startSeconds !== null) element.append(timeOf(paragraph.startSeconds, player));
+  if (paragraph.startSeconds !== null)
+    element.append(timeOf(paragraph.startSeconds, player, playFromLabel));
   if (paragraph.speaker) {
     const speaker = document.createElement('strong');
     speaker.className = `${SECTION}__speaker`;
@@ -56,12 +59,18 @@ function paragraphOf(
   return element;
 }
 
-function timeOf(seconds: number, player: ChapterPlayer | null): HTMLElement {
+function timeOf(
+  seconds: number,
+  player: ChapterPlayer | null,
+  playFromLabel: (time: string) => string,
+): HTMLElement {
   const time = document.createElement(player ? 'button' : 'span');
   time.className = `${SECTION}__time`;
-  time.textContent = formatDuration(seconds);
+  const formatted = formatDuration(seconds);
+  time.textContent = formatted;
   if (player && time instanceof HTMLButtonElement) {
     time.type = 'button';
+    time.setAttribute('aria-label', playFromLabel(formatted));
     time.addEventListener('click', () => player.playFrom(seconds));
   }
   return time;

@@ -1120,6 +1120,7 @@
     "cinemaExit": "Kinomodus beenden",
     "chapters": "Kapitel",
     "transcript": "Transkript",
+    "transcriptPlayFrom": "Abspielen ab {{time}}",
     "unplayableVideo": {
       "title": "Dieses Video lässt sich in deinem Browser nicht abspielen",
       "action": "Auf der Originalseite ansehen"

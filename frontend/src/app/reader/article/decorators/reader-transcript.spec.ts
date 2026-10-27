@@ -11,6 +11,8 @@ const TRANSCRIPT: TranscriptDto = {
   ],
 };
 
+const playFromLabel = (time: string): string => `Play from ${time}`;
+
 function bodyWith(html: string): HTMLElement {
   const host = document.createElement('div');
   host.innerHTML = html;
@@ -33,7 +35,7 @@ describe('addTranscript', () => {
 
     const section = addTranscript(
       host,
-      { transcript: TRANSCRIPT, heading: 'Transcript', open: false },
+      { transcript: TRANSCRIPT, heading: 'Transcript', playFromLabel, open: false },
       null,
     );
 
@@ -44,7 +46,7 @@ describe('addTranscript', () => {
   it('opens when the transcript is the body', () => {
     const section = addTranscript(
       bodyWith(''),
-      { transcript: TRANSCRIPT, heading: 'Transcript', open: true },
+      { transcript: TRANSCRIPT, heading: 'Transcript', playFromLabel, open: true },
       null,
     );
 
@@ -55,7 +57,7 @@ describe('addTranscript', () => {
     const player = recordingPlayer();
     const section = addTranscript(
       bodyWith(''),
-      { transcript: TRANSCRIPT, heading: 'T', open: true },
+      { transcript: TRANSCRIPT, heading: 'T', playFromLabel, open: true },
       player,
     );
 
@@ -63,13 +65,15 @@ describe('addTranscript', () => {
     stamps[1].click();
 
     expect(player.playedFrom).toEqual([75]);
+    expect(stamps[0].getAttribute('aria-label')).toBe('Play from 0:00');
+    expect(stamps[1].getAttribute('aria-label')).toBe('Play from 1:15');
     expect(stamps).toHaveLength(2);
   });
 
   it('shows timestamps as text with no player', () => {
     const section = addTranscript(
       bodyWith(''),
-      { transcript: TRANSCRIPT, heading: 'T', open: true },
+      { transcript: TRANSCRIPT, heading: 'T', playFromLabel, open: true },
       null,
     );
 
@@ -86,6 +90,7 @@ describe('addTranscript', () => {
           paragraphs: [{ startSeconds: 0, speaker: 'Ann', text: '<b>x</b>' }],
         },
         heading: 'T',
+        playFromLabel,
         open: true,
       },
       null,
@@ -97,7 +102,12 @@ describe('addTranscript', () => {
   });
 
   it('adds nothing for an empty transcript', () => {
-    const view = { transcript: { language: null, paragraphs: [] }, heading: 'T', open: true };
+    const view = {
+      transcript: { language: null, paragraphs: [] },
+      heading: 'T',
+      playFromLabel,
+      open: true,
+    };
 
     expect(addTranscript(bodyWith(''), view, null)).toBeNull();
   });

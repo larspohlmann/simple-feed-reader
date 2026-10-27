@@ -11,7 +11,12 @@ const TRANSCRIPT: TranscriptDto = {
     { startSeconds: 60, speaker: null, text: 'Two.' },
   ],
 };
-const VIEW = { transcript: TRANSCRIPT, heading: 'Transcript', open: false };
+const VIEW = {
+  transcript: TRANSCRIPT,
+  heading: 'Transcript',
+  playFromLabel: (time: string) => `Play from ${time}`,
+  open: false,
+};
 const TRACK = {
   url: 'https://x.test/ep.mp3',
   title: 'Ep',

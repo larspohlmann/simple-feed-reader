@@ -164,6 +164,7 @@ export class ArticleBody {
           {
             transcript,
             heading: this.i18n.translate('reader.transcript'),
+            playFromLabel: (time) => this.i18n.translate('reader.transcriptPlayFrom', { time }),
             open: parts.transcriptIsTheBody(),
           },
           track,
