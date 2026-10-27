@@ -20,6 +20,7 @@ final class EntryTranscriptTest extends TestCase
         self::assertTrue($transcript->isPending());
         self::assertSame([], $transcript->getParagraphs());
         self::assertNull($transcript->getSearchText());
+        self::assertNull($transcript->getNextAttemptAt());
     }
 
     public function testFillingStoresTheParagraphsAndTheSearchText(): void
@@ -67,11 +68,13 @@ final class EntryTranscriptTest extends TestCase
     public function testFailingIsFinal(): void
     {
         $transcript = $this->transcript();
+        $transcript->retryAfter(new \DateTimeImmutable('2026-10-27 12:00:00'));
 
         $transcript->fail();
 
         self::assertTrue($transcript->isFailed());
         self::assertFalse($transcript->isPending());
+        self::assertNull($transcript->getNextAttemptAt());
     }
 
     private function transcript(): EntryTranscript

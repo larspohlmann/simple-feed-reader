@@ -55,6 +55,18 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
         self::assertCount(1, $this->transcripts->findClaimable($now->modify('+6 minutes'), 10));
     }
 
+    public function testAFilledFailedOrNotYetDueRowIsNotClaimed(): void
+    {
+        $now = new \DateTimeImmutable('2026-10-27 12:00:00');
+        [$filled, $failed, $notYetDue] = $this->seedTranscripts(3);
+        $filled->fill([new TranscriptParagraph(0, null, 'x')], 'x');
+        $failed->fail();
+        $notYetDue->retryAfter($now);
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->transcripts->claim([$filled, $failed, $notYetDue], $now));
+    }
+
     public function testSearchTextsAreKeyedByEntryIdForFilledRowsOnly(): void
     {
         [$filled, $pending] = $this->seedTranscripts(2);

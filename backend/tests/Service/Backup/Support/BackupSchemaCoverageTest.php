@@ -11,8 +11,8 @@ use App\Entity\CatalogFeed;
 use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
-use App\Entity\EntryTranscript;
 use App\Entity\EntryState;
+use App\Entity\EntryTranscript;
 use App\Entity\Feed;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
@@ -140,7 +140,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ThreadPost::class => 'A post\'s self-reply continuation, read from the network at ingest (#1668); a '
             . 'restored entry shows its root post alone.',
         EntryTranscript::class => 'An episode\'s transcript, fetched from the URL its feed declares (#1809); a '
-            . 'restored entry queues it again.',
+            . 'restored episode has none, since a backup carries no transcript declaration.',
     ];
 
     /**
