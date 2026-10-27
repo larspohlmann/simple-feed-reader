@@ -9,11 +9,12 @@ use App\Entity\EntryTranscript;
 use App\Repository\EntryTranscriptRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Search\EntryIndexer;
+use App\Service\Search\Membership\SavedSearchRematch;
 use App\Service\Transcript\Model\TranscriptBudgetModel;
 use App\Service\Transcript\Model\TranscriptSweepReportModel;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** Fetches the newest queued transcripts that are due, then indexes the episodes that gained one. */
+/** Fetches the newest queued transcripts that are due, then indexes the episodes that gained one and re-matches them against the saved searches. */
 final readonly class TranscriptSweep
 {
     public function __construct(
@@ -21,6 +22,7 @@ final readonly class TranscriptSweep
         private TranscriptFiller $filler,
         private EntityManagerInterface $entityManager,
         private EntryIndexer $indexer,
+        private SavedSearchRematch $rematch,
         private NaiveUtcClock $clock,
     ) {
     }
@@ -42,10 +44,9 @@ final readonly class TranscriptSweep
             $claimed,
             static fn (EntryTranscript $transcript): bool => $transcript->isFilled(),
         ));
-        $this->indexer->index(array_map(
-            static fn (EntryTranscript $transcript): Entry => $transcript->getEntry(),
-            $filled,
-        ));
+        $entries = array_map(static fn (EntryTranscript $transcript): Entry => $transcript->getEntry(), $filled);
+        $this->indexer->index($entries);
+        $this->rematch->rematch($entries);
 
         return new TranscriptSweepReportModel(\count($claimed), \count($filled));
     }
