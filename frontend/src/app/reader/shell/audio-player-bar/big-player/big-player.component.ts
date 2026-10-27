@@ -30,12 +30,9 @@ import { AudioChaptersComponent } from '../audio-chapters/audio-chapters.compone
 import { AudioPlaylistComponent } from '../audio-playlist/audio-playlist.component';
 import { ScrubberComponent } from '../scrubber/scrubber.component';
 
-/** What closing the big player asks for next; closing without one just minimises it. */
-export type BigPlayerExit = 'playlist';
-
 export const BIG_PLAYER_TITLE_ID = 'big-player-title';
 
-/** AudioSurface owns whether the phone sheet shows the playlist, so it outlasts one opening. */
+/** AudioSurface owns whether the player shows the playlist, so it outlasts one opening. */
 export interface BigPlayerData {
   playlistShown: WritableSignal<boolean>;
 }
@@ -69,13 +66,13 @@ const SWIPE_DISMISS_DISTANCE = 60;
 })
 export class BigPlayerComponent {
   protected readonly player = inject(AudioPlayerService);
-  private readonly ref = inject<DialogRef<BigPlayerExit>>(DialogRef);
+  private readonly ref = inject(DialogRef);
   private readonly router = inject(Router);
   private readonly language = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly data = inject<BigPlayerData>(DIALOG_DATA);
   private readonly injector = inject(Injector);
-  private readonly extras = viewChild.required<ElementRef<HTMLElement>>('extras');
+  private readonly playlistButton = viewChild.required<ElementRef<HTMLElement>>('playlistButton');
   private readonly chapterSection = viewChild<ElementRef<HTMLElement>>('chapterSection');
 
   protected readonly titleId = BIG_PLAYER_TITLE_ID;
@@ -83,7 +80,7 @@ export class BigPlayerComponent {
   protected readonly format = formatDuration;
   protected readonly dragging = signal(false);
   protected readonly sheet = inject(LayoutService).isPhone;
-  protected readonly playlistShown = computed(() => this.sheet() && this.data.playlistShown());
+  protected readonly playlistShown = this.data.playlistShown.asReadonly();
   /** The only queued track's list opens; in a longer queue both lists start closed (#1821). */
   protected readonly chaptersShown = linkedSignal(() => this.player.tracks().length === 1);
 
@@ -107,14 +104,9 @@ export class BigPlayerComponent {
     this.ref.close();
   }
 
-  /** The sheet has room for the list under the controls; the card hands over to the bar's panel. */
   protected togglePlaylist(): void {
-    if (!this.sheet()) {
-      this.ref.close('playlist');
-      return;
-    }
     this.data.playlistShown.update((shown) => !shown);
-    if (this.data.playlistShown()) this.reveal(this.extras);
+    if (this.data.playlistShown()) this.reveal(this.playlistButton);
   }
 
   /** The list opens in place on the card, which already scrolls; the sheet brings it up. */

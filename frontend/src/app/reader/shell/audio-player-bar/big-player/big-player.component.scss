@@ -10,9 +10,9 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-padding-block-start: env(safe-area-inset-top);
-  padding: calc(var(--space-2) + env(safe-area-inset-top)) var(--space-5)
+  padding: calc(var(--space-2) + env(safe-area-inset-top)) var(--space-4)
     calc(var(--space-5) + env(safe-area-inset-bottom));
-  background: linear-gradient(var(--surface-2), var(--surface-1) 55%);
+  background: var(--surface-0);
   color: var(--text-primary);
   animation: big-player-rise 0.25s ease-out;
 }
@@ -21,12 +21,7 @@
   :host {
     max-block-size: calc(100dvh - 2 * var(--space-5));
 
-    @include glass-rim.filled(
-      var(--surface-1),
-      var(--border),
-      surface,
-      (linear-gradient(var(--surface-2), transparent 55%) padding-box)
-    );
+    @include glass-rim.filled(var(--surface-0));
 
     border-radius: var(--radius-lg);
     box-shadow: 0 20px 50px rgb(0 0 0 / 45%);
@@ -41,21 +36,16 @@
 }
 
 .top,
-.transport,
-.extras {
+.transport {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .position {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
-}
-
-.balance {
-  inline-size: var(--tap-target);
 }
 
 /* At most one screen tall, so the artwork shrinks to fit a short screen. */
@@ -63,8 +53,13 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
   max-block-size: 100%;
+}
+
+/* An open list makes the sheet taller than the screen anyway, so the artwork keeps its size. */
+.now-playing.expanded {
+  max-block-size: none;
 }
 
 .art-box {
@@ -102,6 +97,7 @@
 .details {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-1);
   min-inline-size: 0;
 }
@@ -110,23 +106,34 @@
   margin: 0;
   font-size: var(--fs-lg);
   font-weight: 600;
-  line-height: 1.25;
+  line-height: var(--lh-tight);
 }
 
-.title-link {
+.title-link,
+.article-title {
   padding: 0;
   border: 0;
   background: none;
-  color: inherit;
   font: inherit;
   text-align: start;
   cursor: pointer;
 }
 
+.title-link {
+  color: inherit;
+}
+
 .article-title {
-  margin: 0;
   font-size: var(--fs-base);
-  color: var(--text-primary);
+  color: var(--accent);
+}
+
+@media (hover: hover) {
+  .title-link:hover,
+  .article-title:hover {
+    text-decoration: underline;
+    text-underline-offset: var(--space-1);
+  }
 }
 
 .source,
@@ -143,25 +150,39 @@
   overflow: hidden;
 }
 
+.card {
+  @include glass-rim.filled(var(--surface-1));
+
+  flex: none;
+  border-radius: var(--radius-lg);
+}
+
+.playback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+}
+
 /* No thumb (Apple-style): the bar alone shows the position, and the input's full height is the tap target. */
 .scrub {
-  --scrubber-bar: var(--space-2);
+  --scrubber-bar: var(--space-1);
   --scrubber-thumb: 0px;
   --scrubber-tap: var(--tap-target);
 }
 
 .scrub.dragging {
-  --scrubber-bar: calc(var(--space-3) + var(--space-0));
+  --scrubber-bar: var(--space-3);
 }
 
 .times {
   display: flex;
   justify-content: space-between;
-  margin-block-start: calc(-1 * var(--space-2));
+  margin-block-start: calc(-1 * var(--space-3));
 }
 
 .time {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -189,29 +210,56 @@
   cursor: default;
 }
 
-.play {
-  inline-size: var(--space-7);
-  block-size: var(--space-7);
-  background: var(--accent);
-  color: var(--on-accent);
+.collapse,
+.speed {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
 }
 
-@media (hover: hover) {
-  .ctrl:hover:not(:disabled),
-  .chapter-title:hover,
-  .chapters-heading:hover {
-    background: var(--surface-2);
-  }
+.speed {
+  padding-inline: var(--space-3);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
-  .play:hover:not(:disabled) {
-    background: var(--accent);
-  }
+.previous,
+.next {
+  color: var(--text-secondary);
+}
+
+.skip {
+  position: relative;
+}
+
+.mirrored {
+  transform: scaleX(-1);
+}
+
+/* Sits in the arrow's hollow, which hangs a little below the glyph's middle. */
+.skip-seconds {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block-start: var(--space-0);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.play {
+  inline-size: calc(var(--space-7) + var(--space-4));
+  block-size: calc(var(--space-7) + var(--space-4));
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .chapter-strip {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-1);
 }
 
 .chapter-title {
@@ -219,7 +267,6 @@
   flex: 1;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-0);
   min-inline-size: 0;
   min-block-size: var(--tap-target);
   padding: var(--space-1) var(--space-2);
@@ -232,71 +279,109 @@
   cursor: pointer;
 }
 
+.chapter-position {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
 .chapter-name {
   max-inline-size: 100%;
   overflow: hidden;
-  font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.chapter-meta,
 .chapter-left {
   display: inline-flex;
   align-items: center;
-  font-size: var(--fs-xs);
+  gap: var(--space-1);
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
-.chapter-meta {
-  gap: var(--space-2);
-}
-
-.chapter-left {
-  gap: var(--space-0);
-}
-
-/* The rows' own inline padding reaches into the gutter, so their text lines up with the content. */
-.chapters {
-  margin-inline: calc(-1 * var(--space-3));
-}
-
-.chapters-heading {
+.card-row {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-3);
   inline-size: 100%;
-  min-block-size: var(--tap-target);
-  padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--text-secondary);
+  min-block-size: calc(var(--tap-target) + var(--space-1));
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-primary);
   font: inherit;
-  font-size: var(--fs-sm);
   text-align: start;
   cursor: pointer;
 }
 
-.extras {
+.chapters-heading {
+  border: 0;
+  border-block-start: 1px solid var(--border);
+  background: none;
+}
+
+.show-playlist {
+  border: 0;
+  background: none;
+}
+
+.chapters,
+.queue {
+  display: block;
+  border-block-start: 1px solid var(--border);
+}
+
+.queue {
+  --playlist-row-inset: var(--space-2);
+}
+
+.row-lead,
+.row-trail {
   color: var(--text-secondary);
 }
 
-.speed {
-  font-size: var(--fs-sm);
+.row-label {
+  flex: 1;
+}
+
+.count {
+  padding: var(--space-0) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.show-playlist[aria-expanded='true'] {
-  color: var(--accent);
+@media (hover: hover) {
+  .ctrl:hover:not(:disabled, .collapse, .speed),
+  .chapter-title:hover,
+  .chapters-heading:hover {
+    background: var(--surface-2);
+  }
+
+  .collapse:hover,
+  .speed:hover {
+    --rim-fill: var(--surface-2);
+  }
+
+  .show-playlist:hover {
+    background: var(--surface-2);
+  }
+
+  .play:hover:not(:disabled) {
+    background: var(--accent);
+  }
 }
 
-/* No scroller of its own: a second one inside the scrolling sheet is hard to use on a phone. */
-.queue {
-  margin-inline: calc(-1 * var(--space-5));
+/* The rows run to the card's rounded edge. No scroller of its own: a second one inside the scrolling sheet is hard to use on a phone. */
+.chapter-card,
+.playlist-card {
+  overflow: hidden;
 }
 
 @keyframes big-player-rise {

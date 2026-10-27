@@ -1136,6 +1136,8 @@
       "nextChapter": "Next chapter",
       "chapterCount": "Chapters ({{ count }})",
       "chapterPosition": "Chapter {{ index }} of {{ count }}",
+      "allChapters": "All chapters",
+      "chapterLeft": "{{ time }} left",
       "trackChapters": "Chapters of {{ title }}",
       "playlist": "Playlist",
       "playTrack": "Play {{ title }}",
@@ -1147,8 +1149,7 @@
       "playlistCount": "Playlist ({{ count }})",
       "openPlayer": "Open player",
       "collapse": "Minimise player",
-      "position": "{{ index }} of {{ count }}",
-      "openArticle": "Open article",
+      "position": "Track {{ index }} of {{ count }}",
       "speed": "Playback speed {{ rate }}×"
     },
     "savedSearches": "Saved searches",

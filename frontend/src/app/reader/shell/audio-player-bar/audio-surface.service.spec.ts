@@ -77,16 +77,6 @@ describe('AudioSurface', () => {
     expect(surface.playlistOpen()).toBe(false);
   });
 
-  it('swaps the big player for the playlist panel', () => {
-    surface.openPlayer();
-    settle();
-
-    click('.show-playlist');
-
-    expect(panes()).toHaveLength(0);
-    expect(surface.playlistOpen()).toBe(true);
-  });
-
   it('minimises to neither, and opens again afterwards', () => {
     surface.openPlayer();
     settle();
@@ -100,19 +90,23 @@ describe('AudioSurface', () => {
     expect(panes()).toHaveLength(1);
   });
 
-  it('keeps the phone sheet showing the playlist across openings', () => {
-    layout.isPhone.set(true);
-    const list = () => container.querySelector('app-big-player app-audio-playlist');
-    surface.openPlayer();
-    settle();
+  for (const phone of [false, true]) {
+    it(`keeps the ${phone ? 'phone sheet' : 'card'} showing its own playlist across openings`, () => {
+      layout.isPhone.set(phone);
+      const list = () => container.querySelector('app-big-player app-audio-playlist');
+      surface.openPlayer();
+      settle();
 
-    click('.show-playlist');
-    expect(panes()).toHaveLength(1);
-    expect(list()).not.toBeNull();
+      click('.show-playlist');
+      expect(panes()).toHaveLength(1);
+      expect(list()).not.toBeNull();
 
-    click('.collapse');
-    surface.openPlayer();
-    settle();
-    expect(list()).not.toBeNull();
-  });
+      expect(surface.playlistOpen()).toBe(false);
+
+      click('.collapse');
+      surface.openPlayer();
+      settle();
+      expect(list()).not.toBeNull();
+    });
+  }
 });
