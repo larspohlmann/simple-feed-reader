@@ -122,6 +122,37 @@ describe('BigPlayerComponent', () => {
     expect(query(fixture, '.position')!.textContent!.trim()).toBe('Track 2 of 2');
   });
 
+  it('keeps the title on one line that scrolls when it overflows', () => {
+    const fixture = render();
+
+    expect(query(fixture, '.title app-marquee')!.textContent).toContain('Episode 2');
+  });
+
+  it('expands and collapses the excerpt on a tap', () => {
+    const fixture = render();
+    const excerpt = query(fixture, '.excerpt')!;
+
+    expect(excerpt.getAttribute('aria-expanded')).toBe('false');
+    excerpt.click();
+    fixture.detectChanges();
+    expect(excerpt.classList).toContain('expanded');
+    expect(excerpt.getAttribute('aria-expanded')).toBe('true');
+    excerpt.click();
+    fixture.detectChanges();
+    expect(excerpt.classList).not.toContain('expanded');
+  });
+
+  it('collapses the excerpt again for the next track', () => {
+    const fixture = render();
+    query(fixture, '.excerpt')!.click();
+    fixture.detectChanges();
+
+    player.current.set(sameTitle);
+    fixture.detectChanges();
+
+    expect(query(fixture, '.excerpt')!.classList).not.toContain('expanded');
+  });
+
   it('links the article a track came from below its own title', () => {
     const fixture = render();
 
@@ -337,7 +368,7 @@ describe('BigPlayerComponent', () => {
       const fixture = render();
 
       expect(query(fixture, '.chapter-card')).toBeNull();
-      expect(query(fixture, '.playback + .playlist-card')).not.toBeNull();
+      expect(query(fixture, '.now-playing:has(.playback) + .playlist-card')).not.toBeNull();
       expect(query(fixture, '.chapters')).toBeNull();
       expect(query(fixture, 'app-audio-chapters')).toBeNull();
     });
@@ -345,7 +376,7 @@ describe('BigPlayerComponent', () => {
     it('names the current chapter with its position and time left in a card under the playback', () => {
       const fixture = chaptered();
 
-      expect(query(fixture, '.playback + .chapter-card + .playlist-card')).not.toBeNull();
+      expect(query(fixture, '.now-playing + .chapter-card + .playlist-card')).not.toBeNull();
       expect(query(fixture, '.chapter-position')!.textContent!.trim()).toBe('Chapter 2 of 3');
       expect(query(fixture, '.chapter-name')!.textContent!.trim()).toBe('Main');
       expect(query(fixture, '.chapter-left')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(

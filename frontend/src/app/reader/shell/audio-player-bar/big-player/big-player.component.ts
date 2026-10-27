@@ -18,6 +18,7 @@ import { CdkScrollable } from '@angular/cdk/scrolling';
 import { Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../../../shared/icon/icon.component';
+import { MarqueeComponent } from '../../../../shared/marquee/marquee.component';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { AudioPlayerService, AudioTrackEntry, SKIP_SECONDS } from '../../../audio-player.service';
 import { formatDuration, relativeTime } from '../../../format';
@@ -49,6 +50,7 @@ const SWIPE_DISMISS_DISTANCE = 60;
   selector: 'app-big-player',
   imports: [
     IconComponent,
+    MarqueeComponent,
     AudioArtworkComponent,
     AudioChaptersComponent,
     AudioPlaylistComponent,
@@ -84,6 +86,10 @@ export class BigPlayerComponent {
   protected readonly playlistShown = this.data.playlistShown.asReadonly();
   /** The only queued track's list opens; in a longer queue both lists start closed (#1821). */
   protected readonly chaptersShown = linkedSignal(() => this.player.tracks().length === 1);
+  protected readonly excerptShown = linkedSignal({
+    source: this.player.current,
+    computation: () => false,
+  });
 
   protected readonly remaining = computed(() =>
     formatDuration(Math.max(0, this.player.duration() - this.player.position())),
@@ -119,6 +125,10 @@ export class BigPlayerComponent {
 
   protected minimise(): void {
     this.ref.close();
+  }
+
+  protected toggleExcerpt(): void {
+    this.excerptShown.update((shown) => !shown);
   }
 
   protected togglePlaylist(): void {

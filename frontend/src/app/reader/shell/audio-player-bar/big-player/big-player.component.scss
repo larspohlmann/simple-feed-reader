@@ -57,11 +57,6 @@
   max-block-size: 100%;
 }
 
-/* An open list makes the sheet taller than the screen anyway, so the artwork keeps its size. */
-.now-playing:has(.chapters, .queue) {
-  max-block-size: none;
-}
-
 .art-box {
   display: flex;
   align-items: center;
@@ -69,7 +64,7 @@
 }
 
 .art {
-  inline-size: min(100%, 50dvh);
+  inline-size: min(100%, 40dvh);
   block-size: auto;
   aspect-ratio: 1;
   flex: none;
@@ -84,13 +79,13 @@
   }
 
   .art-box {
-    flex: 0 1 100cqi;
+    flex: 0 1 80cqi;
     min-block-size: calc(4 * var(--space-7));
     container-type: size;
   }
 
   .art {
-    inline-size: min(100cqi, 100cqb);
+    inline-size: min(80cqi, 100cqb);
   }
 }
 
@@ -102,6 +97,12 @@
   min-inline-size: 0;
 }
 
+.title,
+.title-link {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
 .title {
   margin: 0;
   font-size: var(--fs-lg);
@@ -110,7 +111,8 @@
 }
 
 .title-link,
-.article-title {
+.article-title,
+.excerpt {
   padding: 0;
   border: 0;
   background: none;
@@ -140,9 +142,9 @@
   color: var(--text-secondary);
 }
 
-.excerpt {
+.excerpt:not(.expanded) {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -205,11 +207,6 @@
 .ctrl:disabled {
   color: var(--text-muted);
   cursor: default;
-}
-
-.collapse,
-.speed {
-  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
 }
 
 .speed {
@@ -346,15 +343,10 @@
 }
 
 @media (hover: hover) {
-  .ctrl:hover:not(:disabled, .collapse, .speed),
+  .ctrl:hover:not(:disabled),
   .chapter-title:hover,
   .card-row:hover {
     background: var(--surface-2);
-  }
-
-  .collapse:hover,
-  .speed:hover {
-    --rim-fill: var(--surface-2);
   }
 
   .play:hover:not(:disabled) {
