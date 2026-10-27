@@ -5,7 +5,6 @@
 // The Liquid Glass rim (#1402) is tuned here and only here: every token and gradient derives from these.
 $strength: 0.3;
 $control-boost: 1.9;
-$emphasis-boost: 13;
 $faint-ratio: 0.55;
 $modes: (
   light: (
@@ -30,11 +29,6 @@ $-tiers: (
     infix: 'control-',
     boost: $control-boost,
   ),
-  emphasis: (
-    infix: 'emphasis-',
-    boost: $emphasis-boost,
-    unshaded-in: (light),
-  ),
 );
 
 @function one-decimal($amount) {
@@ -43,7 +37,7 @@ $-tiers: (
 
 @function -tier-token-name($tier, $name) {
   @if not map.has-key($-tiers, $tier) {
-    @error 'Unknown glass-rim tier `#{$tier}`: use surface, control or emphasis.';
+    @error 'Unknown glass-rim tier `#{$tier}`: use surface or control.';
   }
 
   @return --rim-#{map.get($-tiers, $tier, infix)}#{$name};
@@ -88,15 +82,10 @@ $-tiers: (
   @each $settings in map.values($-tiers) {
     $infix: map.get($settings, infix);
     $boost: map.get($settings, boost);
-    $shade-boost: $boost;
 
-    @if list.index(map.get($settings, unshaded-in) or (), $mode) {
-      $shade-boost: 0;
-    }
-
-    --rim-#{$infix}glint: #{one-decimal(math.min($glint * $boost, 100%))};
-    --rim-#{$infix}glint-faint: #{one-decimal(math.min($glint * $boost * $faint-ratio, 100%))};
-    --rim-#{$infix}shade: #{one-decimal(math.min($shade * $shade-boost, 100%))};
+    --rim-#{$infix}glint: #{one-decimal($glint * $boost)};
+    --rim-#{$infix}glint-faint: #{one-decimal($glint * $boost * $faint-ratio)};
+    --rim-#{$infix}shade: #{one-decimal($shade * $boost)};
   }
 }
 

@@ -1,5 +1,6 @@
 @use '../../../../theme/breakpoints' as bp;
 @use '../../../../theme/glass-rim';
+@use '../../../../theme/glossy';
 
 :host {
   display: flex;
@@ -264,10 +265,8 @@
   inline-size: calc(var(--space-7) + var(--space-4));
   block-size: calc(var(--space-7) + var(--space-4));
 
-  @include glass-rim.filled(var(--accent), var(--accent), emphasis);
+  @include glossy.gel;
 
-  border-width: 2px;
-  box-shadow: var(--emphasis-shadow);
   color: var(--on-accent);
 }
 

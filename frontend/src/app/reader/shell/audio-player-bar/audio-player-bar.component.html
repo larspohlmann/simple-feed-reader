@@ -18,6 +18,9 @@
         (click)="surface.openPlayer()"
       >
         <app-audio-artwork class="artwork" [track]="track" />
+        <span class="expand-hint" aria-hidden="true">
+          <app-icon name="keyboard_arrow_up" size="sm" />
+        </span>
       </button>
       <div class="transport">
         @if (player.hasChapters()) {

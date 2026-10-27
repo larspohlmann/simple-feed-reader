@@ -1,0 +1,15 @@
+// A round primary button's gel: lit from straight above, shaded inside at the bottom (#1845).
+@mixin gel($fill: var(--accent)) {
+  border: 0;
+  background:
+    radial-gradient(90% 55% at 50% 8%, rgb(255 255 255 / 38%), rgb(255 255 255 / 0%) 70%),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, #{$fill}, white 12%),
+      color-mix(in oklab, #{$fill}, black 10%)
+    );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 60%),
+    inset 0 -8px 18px -10px rgb(0 0 0 / 45%),
+    0 10px 24px -12px rgb(0 0 0 / 55%);
+}

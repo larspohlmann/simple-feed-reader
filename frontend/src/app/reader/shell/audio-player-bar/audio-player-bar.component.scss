@@ -1,4 +1,6 @@
 @use '../../../theme/breakpoints' as bp;
+@use '../../../theme/glossy';
+@use '../../../theme/media-badge';
 
 :host {
   display: block;
@@ -23,6 +25,7 @@
 }
 
 .open-player {
+  position: relative;
   display: inline-flex;
   flex: none;
   padding: 0;
@@ -30,6 +33,19 @@
   border-radius: var(--radius-sm);
   background: none;
   cursor: pointer;
+}
+
+.expand-hint {
+  @include media-badge.media-badge;
+
+  position: absolute;
+  inset-block-start: var(--space-0);
+  inset-inline-end: var(--space-0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--space-5);
+  block-size: var(--space-5);
 }
 
 .open-player:focus-visible {
@@ -49,7 +65,7 @@
   padding: var(--space-1);
 }
 
-.ctrl:hover:not(:disabled) {
+.ctrl:hover:not(:disabled, .play) {
   background: var(--surface-2);
 }
 
@@ -59,7 +75,9 @@
 }
 
 .play {
-  color: var(--accent);
+  @include glossy.gel;
+
+  color: var(--on-accent);
 }
 
 .toggle-playlist {
