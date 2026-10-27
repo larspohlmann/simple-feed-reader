@@ -22,15 +22,21 @@ import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
 import { withScriptablePlayer } from '../../media/media-embeds';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
-import { ChapterDto, EntryDto } from '../../models';
+import { ChapterDto, EntryDto, TranscriptDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
 import { ArticleEmbedAudio } from './article-embed-audio';
 import { ArticleEmbedDetails } from './article-embed-details';
+import { ArticleTranscript } from './article-transcript';
 
 interface ChapteredEmbed {
   readonly frame: HTMLIFrameElement;
   readonly media: EmbedMedia;
+}
+
+interface EpisodeText {
+  readonly chapters: ChapterDto[];
+  readonly transcript: TranscriptDto | null;
 }
 
 export interface ArticleBodyParts {
@@ -39,6 +45,8 @@ export interface ArticleBodyParts {
   readonly pageUrl: () => string | null;
   readonly enclosureUrl: () => string | null;
   readonly chapters: () => ChapterDto[];
+  readonly transcript: () => TranscriptDto | null;
+  readonly transcriptIsTheBody: () => boolean;
   readonly audioTrack: () => AudioTrack | null;
   readonly entry: () => EntryDto | null;
   readonly decorated: (host: HTMLElement) => void;
@@ -55,6 +63,7 @@ export class ArticleBody {
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private readonly audio = inject(AudioPlayerService);
   private readonly chapters = new ArticleChapters(this.audio, this.injector);
+  private readonly transcriptSection = new ArticleTranscript(this.audio, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(this.audio, this.injector);
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
@@ -67,6 +76,7 @@ export class ArticleBody {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
       this.chapters.release();
+      this.transcriptSection.release();
       this.embedAudio.release();
       this.embedDetails.release();
       document.removeEventListener('keydown', onKeydown);
@@ -104,10 +114,12 @@ export class ArticleBody {
    *  releasing the swapped-out body's streams; the effect never re-runs under a playing video. */
   private decorateEachRender(parts: ArticleBodyParts): void {
     const chapters = computed(parts.chapters, { equal: sameChapters });
+    const transcript = computed(parts.transcript, { equal: (left, right) => left === right });
     effect(
       (onCleanup) => {
         parts.html();
         const chapterList = chapters();
+        const episodeTranscript = transcript();
         // Depend on the container too, not just the HTML: when extraction fails,
         // the HTML recomputes to the same string and never notifies, so the
         // container replacing the placeholder is the only render signal (#101).
@@ -117,20 +129,22 @@ export class ArticleBody {
           releaseHlsStreams(content);
           this.media.forgetAll();
           this.chapters.release();
+          this.transcriptSection.release();
           this.embedAudio.release();
           this.embedDetails.release();
         });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
           if (!host || this.destroyed) return;
-          this.render(parts, host, chapterList);
+          this.render(parts, host, { chapters: chapterList, transcript: episodeTranscript });
         });
       },
       { injector: this.injector },
     );
   }
 
-  private render(parts: ArticleBodyParts, host: HTMLElement, chapterList: ChapterDto[]): void {
+  private render(parts: ArticleBodyParts, host: HTMLElement, episode: EpisodeText): void {
+    const { chapters: chapterList, transcript } = episode;
     const track = parts.audioTrack();
     const controls = decorateArticle(host, this.i18n, {
       enclosureUrl: parts.enclosureUrl(),
@@ -144,6 +158,17 @@ export class ArticleBody {
     const list = { chapters: chapterList, heading: this.i18n.translate('reader.chapters') };
     this.zone.runOutsideAngular(() => {
       this.attachBodyChapters(host, list, track);
+      if (transcript) {
+        this.transcriptSection.attach(
+          host,
+          {
+            transcript,
+            heading: this.i18n.translate('reader.transcript'),
+            open: parts.transcriptIsTheBody(),
+          },
+          track,
+        );
+      }
       this.embedAudio.follow(controls);
       this.loadEmbedDetails(chapterFrames(host), list.heading);
       this.media.follow(host);

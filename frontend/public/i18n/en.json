@@ -1119,6 +1119,7 @@
     "cinema": "Cinema mode",
     "cinemaExit": "Exit cinema mode",
     "chapters": "Chapters",
+    "transcript": "Transcript",
     "unplayableVideo": {
       "title": "This video can't play in your browser",
       "action": "Watch it on the original page"

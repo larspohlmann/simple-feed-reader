@@ -197,6 +197,8 @@
           [pageUrl]="e.url"
           [enclosureUrl]="audio.attachment()?.url ?? null"
           [chapters]="source.chapters()"
+          [transcript]="source.transcript()"
+          [transcriptIsTheBody]="source.transcriptIsTheBody()"
           [audioTrack]="audio.track()"
           [entry]="e"
           (decorated)="onDecorated($event)"
