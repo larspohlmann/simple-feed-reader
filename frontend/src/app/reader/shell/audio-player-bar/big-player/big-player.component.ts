@@ -77,6 +77,7 @@ export class BigPlayerComponent {
   private readonly injector = inject(Injector);
   private readonly playlistButton = viewChild.required<ElementRef<HTMLElement>>('playlistButton');
   private readonly chapterSection = viewChild<ElementRef<HTMLElement>>('chapterSection');
+  private readonly excerptText = viewChild<ElementRef<HTMLElement>>('excerptText');
 
   protected readonly titleId = BIG_PLAYER_TITLE_ID;
   protected readonly skipStep = SKIP_SECONDS;
@@ -90,6 +91,7 @@ export class BigPlayerComponent {
     source: this.player.current,
     computation: () => false,
   });
+  protected readonly excerptClipped = signal(false);
 
   protected readonly remaining = computed(() =>
     formatDuration(Math.max(0, this.player.duration() - this.player.position())),
@@ -120,6 +122,16 @@ export class BigPlayerComponent {
   constructor() {
     effect(() => {
       if (!this.player.current()) this.ref.close();
+    });
+    effect((onCleanup) => {
+      this.player.current();
+      const text = this.excerptText()?.nativeElement;
+      if (!text || typeof ResizeObserver === 'undefined') return;
+      const observer = new ResizeObserver(() =>
+        this.excerptClipped.set(text.scrollHeight > text.clientHeight),
+      );
+      observer.observe(text);
+      onCleanup(() => observer.disconnect());
     });
   }
 
