@@ -14,6 +14,7 @@ use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Transcript\Model\TranscriptSweepReportModel;
 
 /** The /maintenance/tick response: every half under a stable key; a skipped sweep says why. */
 final class MaintenanceTickJson
@@ -36,7 +37,8 @@ final class MaintenanceTickJson
                 $sweeps,
                 self::imageVerification($sweeps->imageVerification),
             ),
-            'linkCards' => self::markedIfSkipped($sweeps, self::linkCards($sweeps->linkCards)),
+            'linkCards' => self::markedIfSkipped($sweeps, self::linkCards($sweeps->followUpFetches->linkCards)),
+            'transcripts' => self::markedIfSkipped($sweeps, self::transcripts($sweeps->followUpFetches->transcripts)),
             'profileImages' => self::markedIfSkipped($sweeps, self::profileImages($sweeps->profileImages)),
             'hiddenProfiles' => self::markedIfSkipped($sweeps, self::hiddenProfiles($sweeps->hiddenProfiles)),
             'privateFeedSync' => self::markedIfSkipped($sweeps, self::privateFeedSync($sweeps->privateFeedSync)),
@@ -72,6 +74,12 @@ final class MaintenanceTickJson
     private static function linkCards(LinkCardSweepReportModel $report): array
     {
         return ['considered' => $report->considered, 'completed' => $report->completed];
+    }
+
+    /** @return array{claimed: int, filled: int} */
+    private static function transcripts(TranscriptSweepReportModel $report): array
+    {
+        return ['claimed' => $report->claimed, 'filled' => $report->filled];
     }
 
     /** @return array{checked: int, changed: int} */

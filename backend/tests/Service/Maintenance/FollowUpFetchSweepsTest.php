@@ -1,0 +1,77 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Maintenance;
+
+use App\Entity\Entry;
+use App\Entity\EntryTranscript;
+use App\Entity\Feed;
+use App\Enum\TranscriptFormat;
+use App\Service\LinkCard\LinkCardSweep;
+use App\Service\Maintenance\FollowUpFetchSweeps;
+use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
+use App\Service\Transcript\TranscriptSweep;
+use App\Tests\DbTestCase;
+use App\Tests\Support\ScriptedTranscriptSource;
+use Symfony\Component\Clock\MockClock;
+
+final class FollowUpFetchSweepsTest extends DbTestCase
+{
+    private const string READABLE = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHallo.\n";
+
+    public function testADeadlineNineSecondsAwayGivesTheTranscriptsTwoFetchesAfterTheLinkCardsSpentNone(): void
+    {
+        $this->seedPendingTranscripts(3);
+        $source = ScriptedTranscriptSource::answering(self::READABLE);
+        self::getContainer()->set(TranscriptSourceInterface::class, $source);
+        $clock = new MockClock('2026-10-27 12:00:00', 'UTC');
+
+        $report = $this->sweeps($clock)->sweep($clock->now()->modify('+9 seconds'));
+
+        self::assertSame(0, $report->linkCards->considered);
+        self::assertSame(2, $report->transcripts->claimed);
+        self::assertCount(2, $source->fetchedUrls);
+    }
+
+    public function testADeadlineUnderOneFetchAwayFetchesNothing(): void
+    {
+        $this->seedPendingTranscripts(1);
+        $clock = new MockClock('2026-10-27 12:00:00', 'UTC');
+
+        $report = $this->sweeps($clock)->sweep($clock->now()->modify('+3 seconds'));
+
+        self::assertSame(0, $report->transcripts->claimed);
+    }
+
+    private function sweeps(MockClock $clock): FollowUpFetchSweeps
+    {
+        $linkCards = self::getContainer()->get(LinkCardSweep::class);
+        self::assertInstanceOf(LinkCardSweep::class, $linkCards);
+        $transcripts = self::getContainer()->get(TranscriptSweep::class);
+        self::assertInstanceOf(TranscriptSweep::class, $transcripts);
+
+        return new FollowUpFetchSweeps($linkCards, $transcripts, $clock);
+    }
+
+    private function seedPendingTranscripts(int $count): void
+    {
+        $feed = new Feed('https://pod.test/feed.xml');
+        $this->entityManager->persist($feed);
+        for ($index = 1; $index <= $count; $index++) {
+            $entry = new Entry(
+                $feed,
+                'guid-' . $index,
+                'https://pod.test/ep' . $index,
+                'Episode ' . $index,
+                new \DateTimeImmutable('2026-10-27 06:00:00'),
+                new \DateTimeImmutable('2026-10-27 05:00:00'),
+            );
+            $this->entityManager->persist($entry);
+            $this->entityManager->persist(
+                new EntryTranscript($entry, 'https://pod.test/ep' . $index . '.vtt', TranscriptFormat::Vtt, null),
+            );
+        }
+        $this->entityManager->flush();
+    }
+}

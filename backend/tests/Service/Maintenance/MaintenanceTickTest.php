@@ -23,6 +23,7 @@ use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
+use App\Service\Maintenance\FollowUpFetchSweeps;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Recommendation\Run\ForYouSweep;
@@ -51,6 +52,7 @@ use App\Service\Social\Model\HiddenProfileModel;
 use App\Service\Social\ProfileImageSweep;
 use App\Service\Social\ProfileVisibilityCache;
 use App\Service\Social\SocialMaintenance;
+use App\Service\Transcript\TranscriptSweep;
 use App\Tests\Support\PrivateFeedSyncWiring;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubHiddenProfiles;
@@ -279,7 +281,7 @@ final class MaintenanceTickTest extends DbTestCase
         $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
 
         self::assertFalse($report->refresh->isAborted());
-        self::assertEquals($expectedSweep, $report->sweeps->linkCards);
+        self::assertEquals($expectedSweep, $report->sweeps->followUpFetches->linkCards);
         self::assertSame($expectedPageFetches, $pages->getRequestsCount());
     }
 
@@ -322,7 +324,7 @@ final class MaintenanceTickTest extends DbTestCase
                 new ImageVerifier(new StubGuardedImageDownloader(), new NaiveUtcClock($clock)),
                 $this->entityManager,
             ),
-            $linkCardSweep,
+            $this->followUpFetchSweeps($linkCardSweep, $clock),
             new SocialMaintenance(
                 $this->profileImageSweep($appViewFetcher ?? self::unreachableAppView(), $clock),
                 $this->hiddenProfileSwitchSweep(),
@@ -346,6 +348,14 @@ final class MaintenanceTickTest extends DbTestCase
             ),
             $clock,
         );
+    }
+
+    private function followUpFetchSweeps(LinkCardSweep $linkCardSweep, MockClock $clock): FollowUpFetchSweeps
+    {
+        $transcriptSweep = self::getContainer()->get(TranscriptSweep::class);
+        self::assertInstanceOf(TranscriptSweep::class, $transcriptSweep);
+
+        return new FollowUpFetchSweeps($linkCardSweep, $transcriptSweep, $clock);
     }
 
     private function hiddenProfileSwitchSweep(): HiddenProfileSwitchSweep

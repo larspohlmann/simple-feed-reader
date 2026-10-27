@@ -7,6 +7,8 @@ namespace App\Tests\Http;
 use App\Http\MaintenanceTickJson;
 use App\Service\Image\Model\ImageVerificationReportModel;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
+use App\Service\Maintenance\Model\FollowUpFetchesReportModel;
+use App\Service\Transcript\Model\TranscriptSweepReportModel;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
@@ -29,7 +31,10 @@ final class MaintenanceTickJsonTest extends TestCase
                 new ForYouSweepReportModel(1, 2, 3),
                 new DigestSweepReportModel(4, 5, 6),
                 new ImageVerificationReportModel(7, 8, 9, 10),
-                new LinkCardSweepReportModel(16, 17),
+                new FollowUpFetchesReportModel(
+                    new LinkCardSweepReportModel(16, 17),
+                    new TranscriptSweepReportModel(26, 27),
+                ),
                 new ProfileImageSweepReportModel(18, 19),
                 new HiddenProfileSwitchReportModel(24, 25),
                 new PrivateFeedSyncReportModel(20, 21, 22, 23),
@@ -62,6 +67,7 @@ final class MaintenanceTickJsonTest extends TestCase
                 'digests' => ['considered' => 4, 'sent' => 5, 'skippedEmpty' => 6],
                 'imageVerification' => ['measured' => 7, 'kept' => 8, 'dropped' => 9, 'retried' => 10],
                 'linkCards' => ['considered' => 16, 'completed' => 17],
+                'transcripts' => ['claimed' => 26, 'filled' => 27],
                 'profileImages' => ['checked' => 18, 'changed' => 19],
                 'hiddenProfiles' => ['started' => 24, 'finished' => 25],
                 'privateFeedSync' => ['accountsChecked' => 20, 'accountsSkipped' => 21, 'added' => 22, 'removed' => 23],
@@ -117,6 +123,7 @@ final class MaintenanceTickJsonTest extends TestCase
                     'skipped' => $reason,
                 ],
                 'linkCards' => ['considered' => 0, 'completed' => 0, 'skipped' => $reason],
+                'transcripts' => ['claimed' => 0, 'filled' => 0, 'skipped' => $reason],
                 'profileImages' => ['checked' => 0, 'changed' => 0, 'skipped' => $reason],
                 'hiddenProfiles' => ['started' => 0, 'finished' => 0, 'skipped' => $reason],
                 'privateFeedSync' => [
