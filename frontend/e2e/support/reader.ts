@@ -110,7 +110,7 @@ export function entryDetailJson(
   const { imageRenditions, media, linkCards, thread, share } = entry;
   const completed = { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight };
   return {
-    entry: { ...entry, contentHtml, chapters },
+    entry: { ...entry, contentHtml, chapters, transcript: null },
     completed: {
       ...completed,
       imageRenditions,

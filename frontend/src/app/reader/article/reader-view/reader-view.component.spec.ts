@@ -68,12 +68,12 @@ class FakeEntryBodyService {
   }
 
   seed(id: number, html: string | null, chapters: ChapterDto[] = []): void {
-    this.stateFor(id).set({ status: 'ok', html, chapters });
+    this.stateFor(id).set({ status: 'ok', html, chapters, transcript: null });
   }
 
   retry(id: number): void {
     this.retriedIds.push(id);
-    this.stateFor(id).set({ status: 'ok', html: 'RETRIED', chapters: [] });
+    this.stateFor(id).set({ status: 'ok', html: 'RETRIED', chapters: [], transcript: null });
   }
 
   /** What `body(id)` answers before anything else sets it — the stand-in for
@@ -97,6 +97,7 @@ class FakeEntryBodyService {
         status: 'ok',
         html: this.defaults.get(id) ?? null,
         chapters: [],
+        transcript: null,
       });
       this.states.set(id, state);
     }

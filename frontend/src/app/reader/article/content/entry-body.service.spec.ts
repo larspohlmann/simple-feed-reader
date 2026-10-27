@@ -40,9 +40,11 @@ describe('EntryBodyService', () => {
     expect(state()).toEqual({ status: 'loading' });
 
     await settle();
-    ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: '<p>a</p>' } });
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { transcript: null, contentHtml: '<p>a</p>' } });
 
-    expect(state()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [] });
+    expect(state()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [], transcript: null });
   });
 
   it('keeps the chapters the detail sends beside the body', async () => {
@@ -55,9 +57,9 @@ describe('EntryBodyService', () => {
     await settle();
     ctrl
       .expectOne('https://api.test/api/entries/1')
-      .flush({ entry: { contentHtml: '<p>x</p>', chapters } });
+      .flush({ entry: { transcript: null, contentHtml: '<p>x</p>', chapters } });
 
-    expect(state()).toEqual({ status: 'ok', html: '<p>x</p>', chapters });
+    expect(state()).toEqual({ status: 'ok', html: '<p>x</p>', chapters, transcript: null });
   });
 
   it('reads no chapters as an empty list', async () => {
@@ -66,20 +68,22 @@ describe('EntryBodyService', () => {
     await settle();
     ctrl
       .expectOne('https://api.test/api/entries/1')
-      .flush({ entry: { contentHtml: '<p>x</p>', chapters: null } });
+      .flush({ entry: { transcript: null, contentHtml: '<p>x</p>', chapters: null } });
 
-    expect(state()).toEqual({ status: 'ok', html: '<p>x</p>', chapters: [] });
+    expect(state()).toEqual({ status: 'ok', html: '<p>x</p>', chapters: [], transcript: null });
   });
 
   it('answers a cache hit without a second request', async () => {
     store.body(1);
     await settle();
-    ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: '<p>a</p>' } });
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { transcript: null, contentHtml: '<p>a</p>' } });
 
     const second = store.body(1);
     await settle();
 
-    expect(second()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [] });
+    expect(second()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [], transcript: null });
     ctrl.expectNone('https://api.test/api/entries/1');
   });
 
@@ -88,7 +92,9 @@ describe('EntryBodyService', () => {
     const second = store.body(1);
     await settle();
 
-    ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: '<p>a</p>' } });
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { transcript: null, contentHtml: '<p>a</p>' } });
 
     expect(first()).toEqual(second());
   });
@@ -105,21 +111,51 @@ describe('EntryBodyService', () => {
     expect(state()).toEqual({ status: 'error' });
   });
 
+  it('keeps the transcript the detail sends beside the body', async () => {
+    const transcript = {
+      language: 'de',
+      paragraphs: [
+        { startSeconds: 0, speaker: 'Ada', text: 'Hallo' },
+        { startSeconds: null, speaker: null, text: 'Welt' },
+      ],
+    };
+    const state = store.body(1);
+
+    await settle();
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { contentHtml: '<p>x</p>', chapters: null, transcript } });
+
+    expect(state()).toEqual({ status: 'ok', html: '<p>x</p>', chapters: [], transcript });
+  });
+
   it('seeds a body directly, skipping a request', async () => {
-    store.seed(1, '<p>seeded</p>', null);
+    store.seed(1, { contentHtml: '<p>seeded</p>', chapters: null, transcript: null });
     const state = store.body(1);
     await settle();
 
-    expect(state()).toEqual({ status: 'ok', html: '<p>seeded</p>', chapters: [] });
+    expect(state()).toEqual({
+      status: 'ok',
+      html: '<p>seeded</p>',
+      chapters: [],
+      transcript: null,
+    });
     ctrl.expectNone('https://api.test/api/entries/1');
   });
 
   it('prefetch warms the cache for an id nothing is displaying yet', async () => {
     store.prefetch(7);
     await settle();
-    ctrl.expectOne('https://api.test/api/entries/7').flush({ entry: { contentHtml: '<p>x</p>' } });
+    ctrl
+      .expectOne('https://api.test/api/entries/7')
+      .flush({ entry: { transcript: null, contentHtml: '<p>x</p>' } });
 
-    expect(store.body(7)()).toEqual({ status: 'ok', html: '<p>x</p>', chapters: [] });
+    expect(store.body(7)()).toEqual({
+      status: 'ok',
+      html: '<p>x</p>',
+      chapters: [],
+      transcript: null,
+    });
   });
 
   it('retry refetches a failed body', async () => {
@@ -134,16 +170,20 @@ describe('EntryBodyService', () => {
     store.retry(1);
     expect(state()).toEqual({ status: 'loading' });
     await settle();
-    ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: '<p>b</p>' } });
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { transcript: null, contentHtml: '<p>b</p>' } });
 
-    expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [] });
+    expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [], transcript: null });
   });
 
   describe('refresh (#1502)', () => {
     async function shown(html: string) {
       const state = store.body(1);
       await settle();
-      ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: html } });
+      ctrl
+        .expectOne('https://api.test/api/entries/1')
+        .flush({ entry: { transcript: null, contentHtml: html } });
       return state;
     }
 
@@ -152,12 +192,12 @@ describe('EntryBodyService', () => {
 
       store.refresh(1);
       await settle();
-      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [] });
+      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [], transcript: null });
       ctrl
         .expectOne('https://api.test/api/entries/1')
-        .flush({ entry: { contentHtml: '<p>b</p>' } });
+        .flush({ entry: { transcript: null, contentHtml: '<p>b</p>' } });
 
-      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [] });
+      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [], transcript: null });
     });
 
     it('keeps the shown body when the refetch fails', async () => {
@@ -170,7 +210,7 @@ describe('EntryBodyService', () => {
         statusText: 'Server Error',
       });
 
-      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [] });
+      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>', chapters: [], transcript: null });
     });
 
     it('cancels the fetch still on the wire and ends on the new body', async () => {
@@ -183,9 +223,9 @@ describe('EntryBodyService', () => {
       expect(first.cancelled).toBe(true);
       ctrl
         .expectOne('https://api.test/api/entries/1')
-        .flush({ entry: { contentHtml: '<p>new</p>' } });
+        .flush({ entry: { transcript: null, contentHtml: '<p>new</p>' } });
 
-      expect(state()).toEqual({ status: 'ok', html: '<p>new</p>', chapters: [] });
+      expect(state()).toEqual({ status: 'ok', html: '<p>new</p>', chapters: [], transcript: null });
     });
 
     it('forgets a body so the next request fetches it afresh', async () => {
@@ -196,9 +236,9 @@ describe('EntryBodyService', () => {
       await settle();
       ctrl
         .expectOne('https://api.test/api/entries/1')
-        .flush({ entry: { contentHtml: '<p>b</p>' } });
+        .flush({ entry: { transcript: null, contentHtml: '<p>b</p>' } });
 
-      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [] });
+      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [], transcript: null });
     });
 
     it('merges what completing a fetched entry filled in, and cancels a body forgotten meanwhile', async () => {
@@ -210,7 +250,7 @@ describe('EntryBodyService', () => {
       expect(ctrl.expectOne('https://api.test/api/entries/2').cancelled).toBe(true);
       ctrl
         .expectOne('https://api.test/api/entries/1')
-        .flush({ entry: { id: 1, contentHtml: '' }, completed: { id: 1 } });
+        .flush({ entry: { transcript: null, id: 1, contentHtml: '' }, completed: { id: 1 } });
 
       expect(mergeCompleted.mock.calls).toEqual([[[{ id: 1 }]]]);
     });
@@ -241,11 +281,13 @@ describe('EntryBodyService', () => {
     await settle();
     ctrl
       .expectOne('https://api.test/api/entries/51')
-      .flush({ entry: { contentHtml: '<p>51</p>' } });
+      .flush({ entry: { transcript: null, contentHtml: '<p>51</p>' } });
 
     store.body(2);
     await settle();
-    ctrl.expectOne('https://api.test/api/entries/2').flush({ entry: { contentHtml: '<p>2</p>' } });
+    ctrl
+      .expectOne('https://api.test/api/entries/2')
+      .flush({ entry: { transcript: null, contentHtml: '<p>2</p>' } });
   });
 
   it('lets an evicted body still on the wire land in the signal a view holds', async () => {
@@ -256,13 +298,13 @@ describe('EntryBodyService', () => {
 
     const [first, again] = ctrl.match('https://api.test/api/entries/1');
     expect(first.cancelled).toBe(false);
-    first.flush({ entry: { contentHtml: '<p>1</p>' } });
-    again.flush({ entry: { contentHtml: '<p>1</p>' } });
+    first.flush({ entry: { transcript: null, contentHtml: '<p>1</p>' } });
+    again.flush({ entry: { transcript: null, contentHtml: '<p>1</p>' } });
     ctrl
       .match((request) => request.url.startsWith('https://api.test/api/entries/'))
-      .forEach((request) => request.flush({ entry: { contentHtml: '' } }));
+      .forEach((request) => request.flush({ entry: { transcript: null, contentHtml: '' } }));
 
-    expect(evicted()).toEqual({ status: 'ok', html: '<p>1</p>', chapters: [] });
+    expect(evicted()).toEqual({ status: 'ok', html: '<p>1</p>', chapters: [], transcript: null });
   });
 
   it("never shows one entry's body under another, whichever lands first", async () => {
@@ -270,11 +312,15 @@ describe('EntryBodyService', () => {
     const second = store.body(2);
     await settle();
 
-    ctrl.expectOne('https://api.test/api/entries/2').flush({ entry: { contentHtml: '<p>B</p>' } });
-    ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: '<p>A</p>' } });
+    ctrl
+      .expectOne('https://api.test/api/entries/2')
+      .flush({ entry: { transcript: null, contentHtml: '<p>B</p>' } });
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { transcript: null, contentHtml: '<p>A</p>' } });
 
-    expect(second()).toEqual({ status: 'ok', html: '<p>B</p>', chapters: [] });
-    expect(first()).toEqual({ status: 'ok', html: '<p>A</p>', chapters: [] });
+    expect(second()).toEqual({ status: 'ok', html: '<p>B</p>', chapters: [], transcript: null });
+    expect(first()).toEqual({ status: 'ok', html: '<p>A</p>', chapters: [], transcript: null });
   });
 
   describe('when the signed-in identity changes', () => {
@@ -303,7 +349,7 @@ describe('EntryBodyService', () => {
       await settle();
       ctrl
         .expectOne('https://api.test/api/entries/1')
-        .flush({ entry: { contentHtml: '<p>a</p>' } });
+        .flush({ entry: { transcript: null, contentHtml: '<p>a</p>' } });
 
       tokens.clear();
       tokens.set('user-b.jwt');
@@ -314,8 +360,8 @@ describe('EntryBodyService', () => {
       await settle();
       ctrl
         .expectOne('https://api.test/api/entries/1')
-        .flush({ entry: { contentHtml: '<p>b</p>' } });
-      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [] });
+        .flush({ entry: { transcript: null, contentHtml: '<p>b</p>' } });
+      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>', chapters: [], transcript: null });
     });
   });
 });

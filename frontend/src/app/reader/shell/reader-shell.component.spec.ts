@@ -145,7 +145,7 @@ describe('ReaderShellComponent', () => {
     bodyStore = {
       prefetch: jest.fn(),
       seed: jest.fn(),
-      body: jest.fn(() => signal({ status: 'ok', html: null, chapters: [] })),
+      body: jest.fn(() => signal({ status: 'ok', html: null, chapters: [], transcript: null })),
       retry: jest.fn(),
     };
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
@@ -1185,6 +1185,7 @@ describe('ReaderShellComponent', () => {
         title: 'Deep linked story',
         contentHtml: '<p>Deep linked body</p>',
         chapters: [{ startSeconds: 5, title: 'Start' }],
+        transcript: null,
         isHidden: true,
         isViewed: true,
       },
@@ -1194,9 +1195,14 @@ describe('ReaderShellComponent', () => {
     expect(fixture.nativeElement.querySelector('app-reader-view')).not.toBeNull();
     // The detail response already carries the body — seed the store with it
     // rather than let the reader view issue a redundant fetch of its own.
-    expect(bodyStore.seed).toHaveBeenCalledWith(514, '<p>Deep linked body</p>', [
-      { startSeconds: 5, title: 'Start' },
-    ]);
+    expect(bodyStore.seed).toHaveBeenCalledWith(
+      514,
+      expect.objectContaining({
+        contentHtml: '<p>Deep linked body</p>',
+        chapters: [{ startSeconds: 5, title: 'Start' }],
+        transcript: null,
+      }),
+    );
     ctrl.verify();
   });
 

@@ -6,6 +6,9 @@ import { SocialAccountRefDto, SocialFeedRefDto } from './social-feed';
 import { FeedGroupName } from '../core/feed-group';
 import { NetworkFeedKind, SocialNetworkName } from '../core/social-network';
 import { EntrySocialDto } from './entry-social';
+import { ChapterDto, TranscriptDto } from './episode-detail';
+
+export type { ChapterDto, TranscriptDto, TranscriptParagraphDto } from './episode-detail';
 
 /** One saved search an entry belongs to, as embedded on the entry itself
  *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup
@@ -262,17 +265,12 @@ export interface EntryDto {
   duplicates?: EntryDto[];
 }
 
-/** One chapter of a video or an episode (#1808). */
-export interface ChapterDto {
-  startSeconds: number;
-  title: string;
-}
-
 /** The `/api/entries/{id}` detail shape: every list field plus the full body,
- *  which the list endpoints omit to keep pages small (#1100), and its chapters (#1808). */
+ *  which the list endpoints omit to keep pages small (#1100), its chapters (#1808) and transcript (#1809). */
 export interface EntryDetailDto extends EntryDto {
   contentHtml: string | null;
   chapters: ChapterDto[] | null;
+  transcript: TranscriptDto | null;
 }
 
 export interface EntriesPage {
