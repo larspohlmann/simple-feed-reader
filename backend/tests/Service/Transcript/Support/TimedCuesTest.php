@@ -43,6 +43,22 @@ final class TimedCuesTest extends TestCase
         );
     }
 
+    public function testAnAbsurdHourIsNoTimedCueAndRaisesNothing(): void
+    {
+        self::assertSame(
+            [],
+            TimedCues::of("WEBVTT\n\n99999999999999999999:00:00.000 --> 00:00:02.000\nToo late.\n"),
+        );
+    }
+
+    public function testReadsTimingsWithoutMillisecondsOrSpacesAroundTheArrow(): void
+    {
+        self::assertEquals(
+            [new TranscriptCueModel(1, null, 'Bare.'), new TranscriptCueModel(3, null, 'Tight.')],
+            TimedCues::of("WEBVTT\n\n00:00:01 --> 00:00:02\nBare.\n\n00:00:03-->00:00:04\nTight.\n"),
+        );
+    }
+
     public function testACueWithoutTextIsSkipped(): void
     {
         self::assertSame([], TimedCues::of("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n\n"));

@@ -10,6 +10,8 @@ use App\Service\Transcript\Model\TranscriptCueModel;
 /** The podcast namespace's JSON transcript: `segments[]` of `startTime`, `speaker`, `body`. */
 final class JsonCues
 {
+    private const int MAX_START_SECONDS = 1000 * 3600;
+
     /**
      * @return list<TranscriptCueModel>
      *
@@ -47,10 +49,18 @@ final class JsonCues
         $speaker = \is_string($segment['speaker'] ?? null) ? trim($segment['speaker']) : '';
 
         return new TranscriptCueModel(
-            \is_int($start) || \is_float($start) ? (int) floor($start) : null,
+            self::startOf($start),
             $speaker === '' ? null : $speaker,
             $text,
         );
+    }
+
+    private static function startOf(mixed $start): ?int
+    {
+        $isUsable = (\is_int($start) || \is_float($start)) && is_finite($start)
+            && $start >= 0 && $start < self::MAX_START_SECONDS;
+
+        return $isUsable ? (int) floor($start) : null;
     }
 
     private function __construct()

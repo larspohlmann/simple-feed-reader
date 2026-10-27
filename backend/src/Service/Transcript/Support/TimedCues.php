@@ -9,7 +9,7 @@ use App\Service\Transcript\Model\TranscriptCueModel;
 /** WebVTT and SubRip cues: a block's timing line starts it, the lines after it are its text. */
 final class TimedCues
 {
-    private const string TIMING = '/^(?:(\d+):)?(\d{1,2}):(\d{2})[.,]\d{1,3}\s+-->/';
+    private const string TIMING = '/^(?:(\d{1,3}):)?(\d{1,2}):(\d{2})(?:[.,]\d{1,3})?\s*-->/';
     private const string VOICE = '/^<v(?:\.[^\s>]*)?\s+([^>]+)>/';
 
     /** @return list<TranscriptCueModel> */

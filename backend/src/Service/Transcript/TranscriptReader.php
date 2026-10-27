@@ -23,7 +23,7 @@ final readonly class TranscriptReader
     /** @throws TranscriptUnusableException */
     public function read(string $body, TranscriptFormat $format): ReadTranscriptModel
     {
-        $paragraphs = TranscriptParagraphs::from($this->cuesOf($body, $format));
+        $paragraphs = TranscriptParagraphs::from($this->cuesOf(mb_scrub($body, 'UTF-8'), $format));
         if ($paragraphs === []) {
             throw TranscriptUnusableException::empty();
         }

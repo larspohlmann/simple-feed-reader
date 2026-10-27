@@ -22,6 +22,17 @@ final class JsonCuesTest extends TestCase
         );
     }
 
+    public function testOnlyFiniteStartsWithinRangeAreKept(): void
+    {
+        $cues = JsonCues::of('{"segments":[{"startTime":-1,"body":"A"},{"startTime":1e30,"body":"B"},'
+            . '{"startTime":3599999,"body":"C"},{"startTime":3600000,"body":"D"},{"startTime":"5","body":"E"}]}');
+
+        self::assertSame([null, null, 3599999, null, null], array_map(
+            static fn (TranscriptCueModel $cue): ?int => $cue->startSeconds,
+            $cues,
+        ));
+    }
+
     public function testMalformedJsonIsUnusable(): void
     {
         $this->expectException(TranscriptUnusableException::class);
