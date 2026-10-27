@@ -118,6 +118,14 @@ final class GuardedTranscriptSourceTest extends TestCase
         $source->bodyAt('http://127.0.0.1/ep.vtt', 10.0);
     }
 
+    public function testAnUnresolvableHostIsUnreachable(): void
+    {
+        $source = new GuardedTranscriptSource($this->client(new MockHttpClient()));
+
+        $this->expectException(TranscriptUnreachableException::class);
+        $source->bodyAt('https://unknown.test/ep.vtt', 10.0);
+    }
+
     public function testANetworkFailureIsUnreachable(): void
     {
         $source = new GuardedTranscriptSource($this->client(new MockHttpClient(

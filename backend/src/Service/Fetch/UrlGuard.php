@@ -6,6 +6,7 @@ namespace App\Service\Fetch;
 
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\SsrfBlockedException;
+use App\Service\Fetch\Exception\UnresolvableHostException;
 use App\Service\Fetch\Model\GuardedUrlModel;
 
 /**
@@ -61,7 +62,7 @@ final readonly class UrlGuard
             : $this->dnsResolver->resolve($host);
 
         if ($ips === []) {
-            throw new SsrfBlockedException(sprintf('DNS resolution failed for "%s"', $host));
+            throw new UnresolvableHostException(sprintf('DNS resolution failed for "%s"', $host));
         }
 
         foreach ($ips as $ip) {

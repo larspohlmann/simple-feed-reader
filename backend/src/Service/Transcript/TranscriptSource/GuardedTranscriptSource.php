@@ -7,6 +7,7 @@ namespace App\Service\Transcript\TranscriptSource;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
+use App\Service\Fetch\Exception\UnresolvableHostException;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\Model\ApiBudgetModel;
 use App\Service\Fetch\Model\ApiRequestModel;
@@ -27,6 +28,8 @@ final readonly class GuardedTranscriptSource implements TranscriptSourceInterfac
                 ApiRequestModel::get($url, ['Accept' => '*/*']),
                 new ApiBudgetModel($budgetSeconds, $budgetSeconds, ResponseSizeLimit::TranscriptFile),
             );
+        } catch (UnresolvableHostException $exception) {
+            throw TranscriptUnreachableException::from($url, $exception);
         } catch (SsrfBlockedException | ResponseTooLargeException $exception) {
             throw TranscriptUnusableException::refused($url, $exception);
         } catch (FetchException $exception) {

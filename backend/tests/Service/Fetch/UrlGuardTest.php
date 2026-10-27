@@ -6,6 +6,7 @@ namespace App\Tests\Service\Fetch;
 
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\SsrfBlockedException;
+use App\Service\Fetch\Exception\UnresolvableHostException;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -89,7 +90,7 @@ final class UrlGuardTest extends TestCase
 
     public function testBlocksWhenDnsResolutionFails(): void
     {
-        $this->expectException(SsrfBlockedException::class);
+        $this->expectException(UnresolvableHostException::class);
         $this->guard()->assertSafe('https://unresolvable.example.com/');
     }
 }
