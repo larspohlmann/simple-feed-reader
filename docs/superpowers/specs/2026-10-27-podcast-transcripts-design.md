@@ -84,9 +84,9 @@ transcript (accepted for v1).
   `TranscriptUnreachableException`). A DNS failure (`UnresolvableHostException`, a subclass of
   `SsrfBlockedException`) is transient: it backs the row off instead of failing it.
 - `TranscriptFiller` — fills one row from the source; a permanent failure marks it `failed`, a
-  transient one increments `attempts` and pushes `nextAttemptAt` out (exponential), failing it after 5
-  attempts. Each outcome logs once at `info`. Any unexpected failure while filling also backs the row off
-  (logged at `error`) and fails it after 5 attempts, so one bad row never aborts the sweep.
+  transient one increments `attempts` and pushes `nextAttemptAt` out by `15 · 2^attempts` minutes (the 5th failed
+  attempt fails the row). Each permanent or transient outcome logs once at `info`; an unexpected failure
+  while filling also backs the row off, logs at `error`, and counts toward the same 5 attempts, so one bad row never aborts the sweep.
 - `TranscriptSweep` — runs in `MaintenanceTick` beside the link-card sweep, with its own
   `TranscriptBudgetModel` (fetch count, seconds). `MaintenanceTick` gains no tenth constructor parameter
   (PHPMD `ExcessiveParameterList` fires at 10): link cards and transcripts sit behind one
@@ -95,7 +95,8 @@ transcript (accepted for v1).
   entries to `EntryIndexer::index()`. Its report joins `MaintenanceSweepsModel` and
   `MaintenanceTickJson`.
 - `TranscriptOnOpen` — when the opened entry's row is still `pending`, fills it within a 3 s budget
-  (like `ChaptersOnOpen`); on failure the row stays for the sweep and the response has no transcript.
+  (like `ChaptersOnOpen`); a transient failure leaves the row `pending` for the sweep, a permanent one marks it `failed`; either way the
+  response has no transcript.
 
 ### Search
 
@@ -104,7 +105,7 @@ transcript (accepted for v1).
   lazy relation, so only indexing loads it. `app:search:reindex` needs nothing else.
 - **LIKE fallback**: `SearchTermsPredicateBuilder` ORs a third alternative per term —
   `EXISTS (SELECT 1 FROM EntryTranscript t WHERE t.entry = e AND <searchText predicate>)`, its subquery
-  alias built from the entry alias too, so the nested duplicate-collapse query stays unambiguous, — in both the
+  alias built from the entry alias too, so the nested duplicate-collapse query stays unambiguous. It is added in both the
   substring and the whole-word form, keeping the cheap-`%term%`-first rule. It sits inside the existing
   scope predicates, so it scans only the user's entries; `DatabaseSavedSearchMatcher` uses the same
   builder and so matches transcripts too.
