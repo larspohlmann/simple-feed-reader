@@ -67,6 +67,16 @@ final class TranscriptFillerTest extends TestCase
         self::assertEquals(new \DateTimeImmutable('2026-10-27 12:30:00'), $transcript->getNextAttemptAt());
     }
 
+    public function testAnUnexpectedFailureBacksTheRowOffInsteadOfEscaping(): void
+    {
+        $transcript = $this->transcript();
+
+        $this->filler(static fn (): never => throw new \RuntimeException('boom'))->fill($transcript, 10.0);
+
+        self::assertTrue($transcript->isPending());
+        self::assertEquals(new \DateTimeImmutable('2026-10-27 12:30:00'), $transcript->getNextAttemptAt());
+    }
+
     public function testTheBudgetReachesTheSource(): void
     {
         $seen = null;

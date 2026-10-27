@@ -14,6 +14,9 @@ final class ScriptedTranscriptSource implements TranscriptSourceInterface
     /** @var list<string> */
     public array $fetchedUrls = [];
 
+    /** @var array<string, \Throwable> */
+    private array $failures = [];
+
     private function __construct(private readonly ?string $body)
     {
     }
@@ -28,9 +31,19 @@ final class ScriptedTranscriptSource implements TranscriptSourceInterface
         return new self(null);
     }
 
+    public function failingAt(string $url, \Throwable $failure): self
+    {
+        $this->failures[$url] = $failure;
+
+        return $this;
+    }
+
     public function bodyAt(string $url, float $budgetSeconds): string
     {
         $this->fetchedUrls[] = $url;
+        if (isset($this->failures[$url])) {
+            throw $this->failures[$url];
+        }
 
         return $this->body ?? throw TranscriptUnusableException::answered($url, Response::HTTP_NOT_FOUND);
     }

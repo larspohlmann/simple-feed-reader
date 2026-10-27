@@ -7,10 +7,9 @@ namespace App\Tests\Http;
 use App\Http\MaintenanceTickJson;
 use App\Service\Image\Model\ImageVerificationReportModel;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
-use App\Service\Maintenance\Model\FollowUpFetchesReportModel;
-use App\Service\Transcript\Model\TranscriptSweepReportModel;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
+use App\Service\Maintenance\Model\FollowUpFetchesReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
 use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
@@ -19,6 +18,7 @@ use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Social\Model\HiddenProfileSwitchReportModel;
 use App\Service\Social\Model\PrivateFeedSyncReportModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
+use App\Service\Transcript\Model\TranscriptSweepReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class MaintenanceTickJsonTest extends TestCase

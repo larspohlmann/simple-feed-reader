@@ -39,6 +39,14 @@ final readonly class TranscriptFiller
             $this->logger->info('Transcript unreachable; retried later.', $this->contextOf($transcript, $exception));
 
             return;
+        } catch (\Throwable $exception) {
+            $transcript->retryAfter($this->clock->now());
+            $this->logger->error(
+                'Transcript fetch failed unexpectedly; retried later.',
+                $this->contextOf($transcript, $exception),
+            );
+
+            return;
         }
 
         $transcript->fill($read->paragraphs, $read->searchText);

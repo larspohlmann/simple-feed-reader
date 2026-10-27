@@ -57,6 +57,22 @@ final class TranscriptSweepTest extends DbTestCase
         self::assertSame([], $this->upsertedIds());
     }
 
+    public function testAnUnexpectedFailureLeavesTheOtherRowsFilled(): void
+    {
+        [$older, $newer] = $this->seedPendingTranscripts(2);
+        $this->useSource(
+            ScriptedTranscriptSource::answering(self::READABLE)
+                ->failingAt($newer->getUrl(), new \RuntimeException('boom')),
+        );
+
+        $report = $this->sweep()->sweep(TranscriptBudgetModel::fetches(2));
+
+        self::assertSame(2, $report->claimed);
+        self::assertSame(1, $report->filled);
+        self::assertSame('filled', $this->statusOf($older));
+        self::assertSame('pending', $this->statusOf($newer));
+    }
+
     public function testAnEmptyBudgetTouchesNothing(): void
     {
         [$row] = $this->seedPendingTranscripts(1);
