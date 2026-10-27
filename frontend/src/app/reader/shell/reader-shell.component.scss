@@ -106,6 +106,17 @@ app-reader-header.hidden {
   }
 }
 
+.article-overlay.article-leave {
+  pointer-events: none;
+  animation: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .main:not(.split) > .article-overlay.article-leave {
+    animation: article-leave 0.22s ease-in forwards;
+  }
+}
+
 @keyframes article-enter {
   from {
     transform: translateX(100%);
@@ -113,6 +124,16 @@ app-reader-header.hidden {
 
   to {
     transform: translateX(0);
+  }
+}
+
+@keyframes article-leave {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(100%);
   }
 }
 
