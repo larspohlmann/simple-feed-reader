@@ -120,7 +120,7 @@ test('on a phone the big player shows the playlist inside its sheet (#1442)', as
   const player = page.getByRole('dialog');
   await bar.getByRole('button', { name: 'Open player', exact: true }).click();
   await expect(player.getByRole('heading', { name: 'Episode 2' })).toBeVisible();
-  await expect(player.getByText('1 of 2', { exact: true })).toBeVisible();
+  await expect(player.getByText('Track 1 of 2', { exact: true })).toBeVisible();
   await expect(player.getByText(/^Fixture feed · /)).toBeVisible();
 
   await player.getByRole('button', { name: 'Playback speed 1×', exact: true }).click();
@@ -128,20 +128,23 @@ test('on a phone the big player shows the playlist inside its sheet (#1442)', as
     player.getByRole('button', { name: 'Playback speed 1.25×', exact: true }),
   ).toBeVisible();
 
-  const playlist = player.getByRole('button', { name: 'Playlist (2)', exact: true });
+  const playlist = player.getByRole('button', { name: 'Playlist 2', exact: true });
   await playlist.click();
   await expect(playlist).toHaveAttribute('aria-expanded', 'true');
   await expect(player.locator('.row .row-title')).toHaveText(['Episode 2', 'Episode 3']);
   await expect(bar.locator('.row')).toHaveCount(0);
   await playlist.click();
   await expect(player.locator('.row')).toHaveCount(0);
-  await player.getByRole('button', { name: 'Open article', exact: true }).click();
+  await player
+    .getByRole('heading', { name: 'Episode 2' })
+    .getByRole('button', { name: 'Episode 2', exact: true })
+    .click();
   await expect(player).toHaveCount(0);
   await expect(page).toHaveURL(/[?&]entry=2-episode-2/);
   await expect(page.locator('app-reader-view')).toBeVisible();
 });
 
-test('on a wide screen the big player trades places with the playlist panel (#1442)', async ({
+test('on a wide screen the big player opens its playlist in place and keeps it open (#1829)', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -156,12 +159,16 @@ test('on a wide screen the big player trades places with the playlist panel (#14
 
   const bar = page.locator('app-audio-player-bar');
   const player = page.getByRole('dialog');
+  const playlist = player.getByRole('button', { name: 'Playlist 2', exact: true });
   await bar.getByRole('button', { name: 'Open player', exact: true }).click();
-  await player.getByRole('button', { name: 'Playlist (2)', exact: true }).click();
-  await expect(player).toHaveCount(0);
-  await expect(bar.locator('.row .row-title')).toHaveText(['Episode 2', 'Episode 3']);
-
-  await bar.getByRole('button', { name: 'Open player', exact: true }).click();
+  await playlist.click();
   await expect(player).toBeVisible();
+  await expect(player.locator('.row .row-title')).toHaveText(['Episode 2', 'Episode 3']);
   await expect(bar.locator('.row')).toHaveCount(0);
+
+  await player.getByRole('button', { name: 'Minimise player', exact: true }).click();
+  await expect(player).toHaveCount(0);
+  await bar.getByRole('button', { name: 'Open player', exact: true }).click();
+  await expect(playlist).toHaveAttribute('aria-expanded', 'true');
+  await expect(player.locator('.row .row-title')).toHaveText(['Episode 2', 'Episode 3']);
 });
