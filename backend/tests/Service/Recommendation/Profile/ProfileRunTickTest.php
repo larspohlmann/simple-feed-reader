@@ -13,6 +13,7 @@ use App\Entity\User;
 use App\Enum\CallVerdict;
 use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
+use App\Enum\RequestAdjustment;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -321,6 +322,7 @@ final class ProfileRunTickTest extends DbTestCase
             ['That provider refused the request (status 400): No.'],
             array_column($rows, 'errorDetail'),
         );
+        self::assertSame([null], array_column($rows, 'adjustedSetting'));
     }
 
     public function testARejectionAfterTheLockWasLostRecordsNothing(): void
@@ -363,6 +365,9 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertSame(0, $this->saved($profileRun)->getTransportFailures());
         self::assertSame(0, $this->saved($profileRun)->getAttempts());
         self::assertTrue($this->savedConnection()->refusesSuppressedReasoning());
+        $rows = $this->logs()->listForProfileRun($this->owner, $profileRun->requireId());
+        self::assertSame([RequestAdjustment::ReasoningSuppression], array_column($rows, 'adjustedSetting'));
+        self::assertSame([null], array_column($rows, 'adjustedValue'));
 
         $this->advance($this->saved($profileRun), TickDriver::Poll);
 

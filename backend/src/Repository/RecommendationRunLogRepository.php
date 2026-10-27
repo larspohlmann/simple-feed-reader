@@ -10,6 +10,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
+use App\Enum\RequestAdjustment;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -20,7 +21,8 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @phpstan-type DebugLogRow array{id: int, runId: int, phase: CallPhase, batchNumber: ?int, attempt: int,
  *     verdict: ?CallVerdict, requestBytes: int, responseBytes: int, wireBytes: int,
- *     createdAt: \DateTimeImmutable, finishedAt: ?\DateTimeImmutable, errorDetail: ?string, finishReason: ?string}
+ *     createdAt: \DateTimeImmutable, finishedAt: ?\DateTimeImmutable, errorDetail: ?string, finishReason: ?string,
+ *     adjustedSetting: ?RequestAdjustment, adjustedValue: ?string}
  *
  * @extends ServiceEntityRepository<RecommendationRunLog>
  */
@@ -56,7 +58,8 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         /** @var list<array{id: int, runId: int, phase: CallPhase, batchNumber: ?int, attempt: int,
          *     verdict: ?CallVerdict, requestBytes: int|string, responseBytes: int|string,
          *     wireBytes: int, createdAt: \DateTimeImmutable, finishedAt: ?\DateTimeImmutable,
-         *     errorDetail: ?string, finishReason: ?string}> $rows */
+         *     errorDetail: ?string, finishReason: ?string, adjustedSetting: ?RequestAdjustment,
+         *     adjustedValue: ?string}> $rows */
         $rows = $this->createQueryBuilder('l')
             ->select(
                 'l.id AS id',
@@ -72,6 +75,8 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'l.finishedAt AS finishedAt',
                 'l.errorDetail AS errorDetail',
                 'l.finishReason AS finishReason',
+                'l.receipt.adjustedSetting AS adjustedSetting',
+                'l.receipt.adjustedValue AS adjustedValue',
             )
             ->join('l.' . $owner, 'r')
             ->where('r.user = :user')
@@ -98,6 +103,8 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'finishedAt' => $row['finishedAt'],
                 'errorDetail' => $row['errorDetail'],
                 'finishReason' => $row['finishReason'],
+                'adjustedSetting' => $row['adjustedSetting'],
+                'adjustedValue' => $row['adjustedValue'],
             ],
             $rows,
         );

@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
+use App\Repository\CallingRun;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Profile\Pass\ProfileTick;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
-use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
+use App\Service\Recommendation\Run\RejectedRequestRecovery;
 use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -20,7 +21,7 @@ final readonly class ProfileRunFailure
 
     public function __construct(
         private TickLockKeepalive $keepalive,
-        private RejectedRequestFallbackInterface $fallback,
+        private RejectedRequestRecovery $recovery,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
     ) {
@@ -38,7 +39,13 @@ final readonly class ProfileRunFailure
             return;
         }
 
-        if (null !== $this->fallback->adjust($tick->connection, $rejection)) {
+        if (
+            $this->recovery->recovers(
+                CallingRun::profileRun($tick->profileRun->requireId()),
+                $tick->connection,
+                $rejection,
+            )
+        ) {
             return;
         }
 
