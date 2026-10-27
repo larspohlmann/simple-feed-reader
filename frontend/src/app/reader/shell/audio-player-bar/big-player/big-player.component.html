@@ -57,7 +57,15 @@
             [attr.aria-expanded]="excerptShown()"
             (click)="toggleExcerpt()"
           >
-            <span class="excerpt-text">{{ entry.excerpt }}</span>
+            <span #excerptText class="excerpt-text">{{ entry.excerpt }}</span>
+            @if (excerptShown() || excerptClipped()) {
+              <span class="excerpt-toggle">
+                {{
+                  (excerptShown() ? 'reader.audioPlayer.less' : 'reader.audioPlayer.more')
+                    | transloco
+                }}
+              </span>
+            }
           </button>
         }
       }

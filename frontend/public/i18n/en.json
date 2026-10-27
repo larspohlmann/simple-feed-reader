@@ -1153,7 +1153,9 @@
       "openPlayer": "Open player",
       "collapse": "Minimise player",
       "position": "Track {{ index }} of {{ count }}",
-      "speed": "Playback speed {{ rate }}×"
+      "speed": "Playback speed {{ rate }}×",
+      "more": "More",
+      "less": "Less"
     },
     "savedSearches": "Saved searches",
     "savedSearchesEmpty": "No saved searches yet. Save a search to see it here.",

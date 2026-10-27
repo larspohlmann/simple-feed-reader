@@ -153,6 +153,51 @@ describe('BigPlayerComponent', () => {
     expect(query(fixture, '.excerpt')!.classList).not.toContain('expanded');
   });
 
+  describe('the excerpt label', () => {
+    let clipped: boolean;
+
+    beforeEach(() => {
+      clipped = true;
+      global.ResizeObserver = class {
+        constructor(private readonly measured: () => void) {}
+        observe(): void {
+          this.measured();
+        }
+        disconnect = jest.fn();
+      } as unknown as typeof ResizeObserver;
+      jest
+        .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
+        .mockImplementation(() => (clipped ? 40 : 20));
+      jest.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(20);
+    });
+
+    afterEach(() => {
+      delete (global as Partial<typeof globalThis>).ResizeObserver;
+    });
+
+    function label(fixture: ReturnType<typeof render>): string | null {
+      return query(fixture, '.excerpt-toggle')?.textContent?.trim() ?? null;
+    }
+
+    it('offers more when the line cuts the excerpt off, and less once it is open', () => {
+      const fixture = render();
+      fixture.detectChanges();
+
+      expect(label(fixture)).toBe('More');
+      query(fixture, '.excerpt')!.click();
+      fixture.detectChanges();
+      expect(label(fixture)).toBe('Less');
+    });
+
+    it('offers nothing when the excerpt fits its line', () => {
+      clipped = false;
+      const fixture = render();
+      fixture.detectChanges();
+
+      expect(label(fixture)).toBeNull();
+    });
+  });
+
   it('links the article a track came from below its own title', () => {
     const fixture = render();
 

@@ -1153,7 +1153,9 @@
       "openPlayer": "Player öffnen",
       "collapse": "Player minimieren",
       "position": "Titel {{ index }} von {{ count }}",
-      "speed": "Wiedergabegeschwindigkeit {{ rate }}×"
+      "speed": "Wiedergabegeschwindigkeit {{ rate }}×",
+      "more": "Mehr",
+      "less": "Weniger"
     },
     "savedSearches": "Gespeicherte Suchen",
     "savedSearchesEmpty": "Noch keine gespeicherten Suchen. Speichern Sie eine Suche, um sie hier zu sehen.",
