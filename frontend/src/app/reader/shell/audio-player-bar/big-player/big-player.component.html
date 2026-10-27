@@ -57,7 +57,7 @@
             [attr.aria-expanded]="excerptShown()"
             (click)="toggleExcerpt()"
           >
-            {{ entry.excerpt }}
+            <span class="excerpt-text">{{ entry.excerpt }}</span>
           </button>
         }
       }
