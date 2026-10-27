@@ -696,11 +696,12 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
         $token = $this->tokenFor($admin);
+        $lastLoginAt = new \DateTimeImmutable('yesterday 09:00:00');
         $user = $this->factory()->create(
             'detailed@example.com',
             roles: ['ROLE_ADMIN'],
             locale: 'de',
-            lastLoginAt: new \DateTimeImmutable('2026-07-29 09:00:00'),
+            lastLoginAt: $lastLoginAt,
         );
 
         $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
@@ -724,7 +725,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertIsString($account['approvedAt']);
         self::assertStringStartsWith('2026-07-01T10:00:00', $account['approvedAt']);
         self::assertIsString($account['lastLoginAt']);
-        self::assertStringStartsWith('2026-07-29T09:00:00', $account['lastLoginAt']);
+        self::assertStringStartsWith($lastLoginAt->format('Y-m-d\\TH:i:s'), $account['lastLoginAt']);
         self::assertSame([], $account['identities']);
 
         self::assertSame(
