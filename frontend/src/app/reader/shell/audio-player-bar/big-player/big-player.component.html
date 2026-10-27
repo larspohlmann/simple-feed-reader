@@ -55,7 +55,7 @@
             class="excerpt"
             [class.expanded]="excerptShown()"
             [attr.aria-expanded]="excerptShown()"
-            (click)="excerptShown.set(!excerptShown())"
+            (click)="toggleExcerpt()"
           >
             {{ entry.excerpt }}
           </button>

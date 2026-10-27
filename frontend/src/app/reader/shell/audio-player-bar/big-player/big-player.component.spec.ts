@@ -153,15 +153,6 @@ describe('BigPlayerComponent', () => {
     expect(query(fixture, '.excerpt')!.classList).not.toContain('expanded');
   });
 
-  it('keeps the lists out of the screen-sized block above them, so an open list never pushes the controls down', () => {
-    const fixture = render();
-    const host = fixture.nativeElement as HTMLElement;
-
-    expect(host.querySelector('.now-playing .playback')).not.toBeNull();
-    expect(host.querySelector('.now-playing .playlist-card')).toBeNull();
-    expect(host.querySelector(':scope > .playlist-card')).not.toBeNull();
-  });
-
   it('links the article a track came from below its own title', () => {
     const fixture = render();
 
@@ -377,7 +368,7 @@ describe('BigPlayerComponent', () => {
       const fixture = render();
 
       expect(query(fixture, '.chapter-card')).toBeNull();
-      expect(query(fixture, '.now-playing + .playlist-card')).not.toBeNull();
+      expect(query(fixture, '.now-playing:has(.playback) + .playlist-card')).not.toBeNull();
       expect(query(fixture, '.chapters')).toBeNull();
       expect(query(fixture, 'app-audio-chapters')).toBeNull();
     });

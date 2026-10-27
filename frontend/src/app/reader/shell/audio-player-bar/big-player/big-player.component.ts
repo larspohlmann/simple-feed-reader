@@ -127,6 +127,10 @@ export class BigPlayerComponent {
     this.ref.close();
   }
 
+  protected toggleExcerpt(): void {
+    this.excerptShown.update((shown) => !shown);
+  }
+
   protected togglePlaylist(): void {
     this.data.playlistShown.update((shown) => !shown);
     if (this.playlistShown()) this.reveal(this.playlistButton);
