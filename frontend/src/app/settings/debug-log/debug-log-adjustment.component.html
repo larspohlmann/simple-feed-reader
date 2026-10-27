@@ -8,7 +8,7 @@
   @case ('output-cap') {
     {{ 'settings.ai.recommendations.debugAdjustedOutputCap' | transloco: { value: change.value } }}
   }
-  @default {
+  @case ('reasoning-suppression') {
     {{ 'settings.ai.recommendations.debugAdjustedReasoning' | transloco }}
   }
 }

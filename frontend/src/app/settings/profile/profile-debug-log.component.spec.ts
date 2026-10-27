@@ -145,7 +145,6 @@ describe('ProfileDebugLogComponent', () => {
       responseText: '{"profile":"Likes maps."}',
       wireBytes: 90,
       finishReason: 'stop',
-      adjustment: null,
     });
     fixture.detectChanges();
 
@@ -172,7 +171,6 @@ describe('ProfileDebugLogComponent', () => {
         responseText,
         wireBytes: 90,
         finishReason: null,
-        adjustment: null,
       };
     }
 

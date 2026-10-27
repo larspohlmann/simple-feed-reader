@@ -189,7 +189,6 @@ describe('SettingsApi', () => {
       requestBody: '{}',
       responseText: '{}',
       finishReason: 'stop',
-      adjustment: null,
     });
   });
 });

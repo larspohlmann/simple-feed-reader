@@ -6,10 +6,9 @@ export interface OpmlImportResult {
 }
 
 /** What a fallback changed after the provider rejected a call, and the value the next attempt sends. */
-export interface DebugLogAdjustment {
-  setting: 'token-parameter' | 'output-cap' | 'reasoning-suppression';
-  value: string | null;
-}
+export type DebugLogAdjustment =
+  | { setting: 'token-parameter' | 'output-cap'; value: string }
+  | { setting: 'reasoning-suppression'; value: null };
 
 /** One provider call logged during a for-you run or a profile run. `verdict`
  *  is null while the call is still streaming. */
