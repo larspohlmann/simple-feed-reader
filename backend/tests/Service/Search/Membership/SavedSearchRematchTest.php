@@ -105,6 +105,8 @@ final class SavedSearchRematchTest extends DbTestCase
 
         self::assertSame([], $this->memberEntryIds($search));
         self::assertCount(1, $logger->records);
+        self::assertSame('warning', $logger->records[0]['level']);
+        self::assertInstanceOf(SearchEngineUnavailableException::class, $logger->records[0]['context']['exception']);
     }
 
     private function rematchWith(
