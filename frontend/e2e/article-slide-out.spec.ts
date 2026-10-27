@@ -48,7 +48,6 @@ async function openArticle(page: Page): Promise<void> {
   await page.waitForTimeout(400);
 }
 
-/** Records the animation each `.article-overlay` is given as it leaves. */
 async function watchLeaves(page: Page): Promise<void> {
   await page.evaluate(() => {
     const seen: string[] = [];
