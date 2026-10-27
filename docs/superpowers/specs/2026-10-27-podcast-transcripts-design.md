@@ -70,22 +70,27 @@ transcript (accepted for v1).
 
 - `TranscriptReader` picks the cue reader with a `match` on the format, not a keyed locator: the readers
   are pure static helpers in `Support/` (`TimedCues` for VTT and SRT, which share one cue reader, with the
-  speaker from `<v Name>`; `JsonCues` for podcast-namespace JSON `segments[].startTime/speaker/body`), and
+  speaker from `<v Name>`, else from an inline ALL-CAPS label such as `JACK: ` at the start of the cue
+  (letters, digits, spaces, `.`, `'`, `’`, `-`; at most 40 characters; stripped from the text); `JsonCues` for podcast-namespace JSON `segments[].startTime/speaker/body`), and
   HTML goes through the existing sanitiser to plain paragraphs without timestamps. Each yields
   `Model/TranscriptCueModel(startSeconds, speaker, text)`.
 - Reading is defensive: bodies are scrubbed to valid UTF-8 first; timings accept 1–3 digit hours and
   optional milliseconds and spaces around `-->`; JSON starts are kept only when finite and within
   [0, 1000 h).
-- `Support/TranscriptParagraphs` — merges consecutive cues of the same speaker into a paragraph that
-  starts at its first cue (an `int` `startSeconds`, as `EntryChapter` has); builds `searchText` from the result.
+- `Support/TranscriptParagraphs` (per-call state in `Pass/ParagraphRun`) — a cue without a speaker joins the open
+  paragraph, a cue with a speaker joins it only when the speaker is the open paragraph's, otherwise a new paragraph
+  starts; a paragraph also closes at a sentence end (`.`, `?`, `!`, `…`, optionally a closing quote or bracket) once
+  it holds 400 characters, and the next paragraph keeps its speaker unless the cue names one. A paragraph starts at
+  its first cue (an `int` `startSeconds`, as `EntryChapter` has). HTML bodies skip merging: each block is its own
+  paragraph. `searchText` is built from the result.
 - `TranscriptSource/GuardedTranscriptSource` — fetches through `GuardedApiClient` with a new
   `ResponseSizeLimit::TranscriptFile` (1 MB). Separates permanent failures (SSRF-blocked, too large,
   4xx, unparseable → `TranscriptUnusableException`) from transient ones (timeout, 5xx, 429 →
   `TranscriptUnreachableException`). A DNS failure (`UnresolvableHostException`, a subclass of
   `SsrfBlockedException`) is transient: it backs the row off instead of failing it.
 - `TranscriptFiller` — fills one row from the source; a permanent failure marks it `failed`, a
-  transient one increments `attempts` and pushes `nextAttemptAt` out by `15 · 2^attempts` minutes (the 5th failed
-  attempt fails the row). Each permanent or transient outcome logs once at `info`; an unexpected failure
+  transient one increments `attempts` first, then pushes `nextAttemptAt` out by `15 · 2^attempts` minutes: 30, 60,
+  120 and 240 minutes after the 1st to 4th failed attempts, and the 5th failed attempt fails the row. Each permanent or transient outcome logs once at `info`; an unexpected failure
   while filling also backs the row off, logs at `error`, and counts toward the same 5 attempts, so one bad row never aborts the sweep.
 - `TranscriptSweep` — runs in `MaintenanceTick` beside the link-card sweep, with its own
   `TranscriptBudgetModel` (fetch count, seconds). `MaintenanceTick` gains no tenth constructor parameter

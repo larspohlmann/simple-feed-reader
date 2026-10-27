@@ -6,6 +6,7 @@ namespace App\Tests\Service\Transcript\Support;
 
 use App\Service\Transcript\Model\TranscriptCueModel;
 use App\Service\Transcript\Support\TimedCues;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class TimedCuesTest extends TestCase
@@ -80,6 +81,58 @@ final class TimedCuesTest extends TestCase
         self::assertEquals(
             [new TranscriptCueModel(1, null, 'It\'s "fine".')],
             TimedCues::of("00:00:01 --> 00:00:02\nIt&apos;s &quot;fine&quot;.\n"),
+        );
+    }
+
+    public function testAnInlineAllCapsLabelBecomesTheSpeaker(): void
+    {
+        self::assertEquals(
+            [
+                new TranscriptCueModel(0, 'JACK', '[Music] Hello.'),
+                new TranscriptCueModel(2, 'ALEX HOLDEN', "It's me."),
+            ],
+            TimedCues::of(
+                "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nJACK: [Music] Hello.\n\n"
+                . "00:00:02.000 --> 00:00:03.000\nALEX HOLDEN: It's me.\n",
+            ),
+        );
+    }
+
+    public function testAVoiceTagWinsOverAnInlineLabel(): void
+    {
+        self::assertEquals(
+            [new TranscriptCueModel(0, 'Ann', 'BOB: said.')],
+            TimedCues::of("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n<v Ann>BOB: said.\n"),
+        );
+    }
+
+    /** @param non-empty-string $text */
+    #[DataProvider('notLabels')]
+    public function testOtherPrefixesAreNotLabels(string $text): void
+    {
+        self::assertEquals(
+            [new TranscriptCueModel(0, null, $text)],
+            TimedCues::of("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n" . $text . "\n"),
+        );
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function notLabels(): iterable
+    {
+        yield 'mixed case' => ['Note: something'];
+        yield 'time of day' => ['10:30 is late'];
+        yield 'label of 41 characters' => [str_repeat('A', 41) . ': text'];
+        yield 'no space after the colon' => ['JACK:text'];
+        yield 'label without text' => ['JACK:'];
+    }
+
+    public function testALabelOfFortyCharactersIsStillALabel(): void
+    {
+        $label = str_repeat('A', 40);
+
+        self::assertEquals(
+            [new TranscriptCueModel(0, $label, 'text')],
+            TimedCues::of("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n" . $label . ": text\n"),
         );
     }
 

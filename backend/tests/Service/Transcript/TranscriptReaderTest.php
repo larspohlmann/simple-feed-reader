@@ -61,6 +61,22 @@ final class TranscriptReaderTest extends TestCase
         self::assertStringEndsWith('Ok, let\'s get into this week\'s news.', $paragraphs[1]->text);
     }
 
+    public function testTheDarknetDiariesFixtureMergesIntoFewParagraphsWithTheirSpeakers(): void
+    {
+        $body = (string) file_get_contents(__DIR__ . '/../../Fixtures/Transcript/darknet-diaries.vtt');
+
+        $paragraphs = $this->reader()->read($body, TranscriptFormat::Vtt)->paragraphs;
+
+        self::assertSame(['JACK', 'CONTI', 'JACK'], array_map(
+            static fn (TranscriptParagraph $paragraph): ?string => $paragraph->speaker,
+            $paragraphs,
+        ));
+        self::assertStringStartsWith(
+            '[Music] There’s a kind of silence that follows a ransomware attack.',
+            $paragraphs[0]->text,
+        );
+    }
+
     public function testInvalidUtf8BytesDoNotDropTheCue(): void
     {
         $read = $this->reader()->read(

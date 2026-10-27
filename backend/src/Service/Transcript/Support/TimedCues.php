@@ -10,6 +10,7 @@ use App\Service\Transcript\Model\TranscriptCueModel;
 final class TimedCues
 {
     private const string TIMING = '/^(?:(\d{1,3}):)?(\d{1,2}):(\d{2})(?:[.,]\d{1,3})?\s*-->/';
+    private const string INLINE_LABEL = '/^(\p{Lu}[\p{Lu}\p{N} .\'’-]{0,39}):\s+/u';
     private const string VOICE = '/^<v(?:\.[^\s>]*)?\s+([^>]+)>/';
 
     /** @return list<TranscriptCueModel> */
@@ -61,10 +62,14 @@ final class TimedCues
     private static function cueAt(int $start, array $textLines): ?TranscriptCueModel
     {
         $raw = trim(implode(' ', $textLines));
-        $speaker = preg_match(self::VOICE, $raw, $match) === 1 ? trim($match[1]) : null;
+        $voice = preg_match(self::VOICE, $raw, $match) === 1 ? trim($match[1]) : '';
         $text = self::plain($raw);
+        if ($voice === '' && preg_match(self::INLINE_LABEL, $text, $match) === 1) {
+            $voice = trim($match[1]);
+            $text = substr($text, \strlen($match[0]));
+        }
 
-        return $text === '' ? null : new TranscriptCueModel($start, $speaker === '' ? null : $speaker, $text);
+        return $text === '' ? null : new TranscriptCueModel($start, $voice === '' ? null : $voice, $text);
     }
 
     private static function plain(string $markup): string

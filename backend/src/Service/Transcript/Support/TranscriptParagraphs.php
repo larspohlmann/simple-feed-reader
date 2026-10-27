@@ -6,11 +6,13 @@ namespace App\Service\Transcript\Support;
 
 use App\Entity\TranscriptParagraph;
 use App\Service\Transcript\Model\TranscriptCueModel;
+use App\Service\Transcript\Pass\ParagraphRun;
 
 final class TranscriptParagraphs
 {
     /**
-     * A speaker's consecutive cues are one paragraph, starting at the first; cues without a speaker stay apart.
+     * A speakerless cue joins the open paragraph, a speaker's cue joins it when the speaker is the same, and a
+     * paragraph closes at a sentence end once it is long enough.
      *
      * @param list<TranscriptCueModel> $cues
      *
@@ -18,23 +20,12 @@ final class TranscriptParagraphs
      */
     public static function from(array $cues): array
     {
-        $paragraphs = [];
-        $open = null;
+        $run = new ParagraphRun();
         foreach ($cues as $cue) {
-            if ($open !== null && $cue->speaker !== null && $cue->speaker === $open->speaker) {
-                $open = new TranscriptParagraph($open->startSeconds, $open->speaker, $open->text . ' ' . $cue->text);
-                continue;
-            }
-            if ($open !== null) {
-                $paragraphs[] = $open;
-            }
-            $open = new TranscriptParagraph($cue->startSeconds, $cue->speaker, $cue->text);
-        }
-        if ($open !== null) {
-            $paragraphs[] = $open;
+            $run->add($cue);
         }
 
-        return $paragraphs;
+        return $run->finish();
     }
 
     /** @param list<TranscriptParagraph> $paragraphs */
