@@ -7,6 +7,7 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  input,
   signal,
   TemplateRef,
   viewChild,
@@ -14,29 +15,29 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 
 const PIXELS_PER_SECOND = 24;
-/** Share of each lap spent moving; the rest holds the start still so it can be read. */
+/** Share of each lap spent moving; must match the 15% hold in the keyframes. */
 const MOVING_SHARE = 0.85;
 
-/**
- * One line of text that, when wider than its box, loops sideways without end: a second
- * copy follows the first, so the line's end runs straight into its start again.
- * The line is an `<ng-template>` child, as projected content can be rendered only once.
- */
+/** One line that loops sideways without end when wider than its box. The line is an
+ *  `<ng-template>` child, because the loop renders it twice and projected content renders once. */
 @Component({
   selector: 'app-marquee',
   imports: [NgTemplateOutlet],
   template: `
-    <span #copy class="copy"><ng-container [ngTemplateOutlet]="line()" /></span>
-    @if (overflowing()) {
-      <span class="copy repeat" aria-hidden="true"
-        ><ng-container [ngTemplateOutlet]="line()"
-      /></span>
-    }
+    <span class="track">
+      <span #copy class="copy"><ng-container [ngTemplateOutlet]="line()" /></span>
+      @if (overflowing()) {
+        <span class="copy repeat" aria-hidden="true"
+          ><ng-container [ngTemplateOutlet]="line()"
+        /></span>
+      }
+    </span>
   `,
   styleUrl: './marquee.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class.overflowing]': 'overflowing()',
+    '[class.paused]': 'paused()',
     '[style.--marquee-copy]': "copyWidth() + 'px'",
     '[style.--marquee-duration]': "duration() + 's'",
   },
@@ -45,6 +46,8 @@ export class MarqueeComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly copy = viewChild.required<ElementRef<HTMLElement>>('copy');
   protected readonly line = contentChild.required(TemplateRef);
+  /** Holds the line where it is, e.g. while something covers it. */
+  readonly paused = input(false);
 
   protected readonly copyWidth = signal(0);
   private readonly available = signal(0);

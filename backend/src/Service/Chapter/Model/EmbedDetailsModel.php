@@ -14,7 +14,7 @@ final readonly class EmbedDetailsModel
         public ?string $title,
         public ?int $durationSeconds,
         public array $chapters,
-        public ?string $artworkUrl = null,
+        public ?string $artworkUrl,
     ) {
     }
 
@@ -38,10 +38,10 @@ final readonly class EmbedDetailsModel
         $durationSeconds = $stored['durationSeconds'];
         $chapters = self::chaptersFrom($stored['chapters']);
         $artworkUrl = $stored['artworkUrl'];
-        if (!self::isOptionalText($title) || !self::isDuration($durationSeconds) || $chapters === null) {
+        if (!self::isOptionalText($title) || !self::isOptionalText($artworkUrl)) {
             return null;
         }
-        if (!self::isOptionalText($artworkUrl)) {
+        if (!self::isDuration($durationSeconds) || $chapters === null) {
             return null;
         }
 

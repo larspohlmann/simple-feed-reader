@@ -16,7 +16,7 @@ import {
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { Router } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../../../shared/icon/icon.component';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { AudioPlayerService, AudioTrackEntry, SKIP_SECONDS } from '../../../audio-player.service';
@@ -69,6 +69,7 @@ export class BigPlayerComponent {
   private readonly ref = inject(DialogRef);
   private readonly router = inject(Router);
   private readonly language = inject(LanguageService);
+  private readonly i18n = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly data = inject<BigPlayerData>(DIALOG_DATA);
   private readonly injector = inject(Injector);
@@ -87,6 +88,22 @@ export class BigPlayerComponent {
   protected readonly remaining = computed(() =>
     formatDuration(Math.max(0, this.player.duration() - this.player.position())),
   );
+  /** The article when its own title differs from the track's; otherwise the track title links to it. */
+  protected readonly separateArticle = computed(() => {
+    const track = this.player.current();
+    const entry = track?.entry;
+    return entry && entry.title !== '' && entry.title !== track.title ? entry : null;
+  });
+  /** Translated here, not by the pipe: the time changes every second, and the pipe resubscribes on each change. */
+  protected readonly chapterLeft = computed(() => {
+    const progress = this.player.chapterProgress();
+    this.language.lang();
+    return progress
+      ? this.i18n.translate('reader.audioPlayer.chapterLeft', {
+          time: formatDuration(progress.secondsLeft),
+        })
+      : null;
+  });
   protected readonly published = computed(() => {
     const entry = this.player.current()?.entry;
     return entry ? relativeTime(entry.publishedAt, this.language.lang()) : '';
@@ -106,7 +123,7 @@ export class BigPlayerComponent {
 
   protected togglePlaylist(): void {
     this.data.playlistShown.update((shown) => !shown);
-    if (this.data.playlistShown()) this.reveal(this.playlistButton);
+    if (this.playlistShown()) this.reveal(this.playlistButton);
   }
 
   /** The list opens in place on the card, which already scrolls; the sheet brings it up. */

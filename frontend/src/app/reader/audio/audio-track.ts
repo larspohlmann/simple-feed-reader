@@ -29,10 +29,27 @@ export interface TrackDetails {
   title: string | null;
   durationSeconds: number | null;
   chapters: ChapterDto[];
-  /** The source's own picture of the track; absent where it tells none. */
-  artworkUrl?: string | null;
+  artworkUrl: string | null;
 }
 
 export function chaptersOnly(chapters: ChapterDto[]): TrackDetails {
-  return { title: null, durationSeconds: null, chapters };
+  return { title: null, durationSeconds: null, chapters, artworkUrl: null };
+}
+
+/** A known length wins over the details': it may come from an element that played. */
+export function describedTrack(track: AudioTrack, details: TrackDetails): AudioTrack {
+  const title = details.title ?? track.title;
+  const durationInSeconds = track.durationInSeconds ?? details.durationSeconds;
+  const chapters = details.chapters.length > 0 ? details.chapters : track.chapters;
+  const imageUrl = details.artworkUrl ?? track.imageUrl;
+  if (
+    title === track.title &&
+    durationInSeconds === track.durationInSeconds &&
+    chapters === track.chapters &&
+    imageUrl === track.imageUrl
+  ) {
+    return track;
+  }
+  const described = { ...track, title, durationInSeconds, imageUrl };
+  return chapters ? { ...described, chapters } : described;
 }

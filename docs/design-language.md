@@ -96,7 +96,7 @@ Every row height is `--tap-target` on a coarse pointer.
 
 ### Icon sizes
 
-Five steps. The same tag glyph runs from a 12px pill to a 20px sidebar lead, and the sidebar's 28px buttons, its segmented controls and a child tag's lead carry an 18px glyph (#1749).
+Seven steps. The same tag glyph runs from a 12px pill to a 20px sidebar lead, and the sidebar's 28px buttons, its segmented controls and a child tag's lead carry an 18px glyph (#1749).
 
 | Token | Value | Named size |
 |---|---|---|
@@ -105,6 +105,8 @@ Five steps. The same tag glyph runs from a 12px pill to a 20px sidebar lead, and
 | `--icon-dense` | `18px` | `dense` |
 | `--icon-md` | `20px` | `md` (default) |
 | `--icon-lg` | `24px` | `lg` |
+| `--icon-xl` | `32px` | `xl` (the big player's skip glyphs) |
+| `--icon-2xl` | `36px` | `2xl` (the big player's play glyph) |
 | — | `0.85em` | `text` |
 
 Never write these directly in a component if an `<app-icon>` / `<app-tag-glyph>`

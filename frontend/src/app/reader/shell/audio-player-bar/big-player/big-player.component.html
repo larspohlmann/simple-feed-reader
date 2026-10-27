@@ -1,5 +1,5 @@
 @if (player.current(); as track) {
-  <div class="now-playing" [class.expanded]="chaptersShown() || playlistShown()">
+  <div class="now-playing">
     <div class="top">
       <button
         type="button"
@@ -28,25 +28,22 @@
     <div class="art-box"><app-audio-artwork class="art" [track]="track" /></div>
 
     <div class="details">
+      @let entry = track.entry;
       <h2 class="title" [id]="titleId">
-        @if (track.entry; as entry) {
-          @if (entry.title === track.title) {
-            <button type="button" class="title-link" (click)="openArticle(entry)">
-              {{ track.title }}
-            </button>
-          } @else {
+        @if (entry && !separateArticle()) {
+          <button type="button" class="title-link" (click)="openArticle(entry)">
             {{ track.title }}
-          }
+          </button>
         } @else {
           {{ track.title }}
         }
       </h2>
-      @if (track.entry; as entry) {
-        @if (entry.title !== track.title) {
-          <button type="button" class="article-title" (click)="openArticle(entry)">
-            {{ entry.title }}
-          </button>
-        }
+      @if (separateArticle(); as article) {
+        <button type="button" class="article-title" (click)="openArticle(article)">
+          {{ article.title }}
+        </button>
+      }
+      @if (entry) {
         <p class="source">{{ entry.feedTitle }} · {{ published() }}</p>
         @if (entry.excerpt) {
           <p class="excerpt">{{ entry.excerpt }}</p>
@@ -85,7 +82,7 @@
           [attr.aria-label]="'reader.audioPlayer.back' | transloco: { seconds: skipStep }"
           (click)="player.skip(-skipStep)"
         >
-          <app-icon name="replay" [style.font-size]="'calc(var(--icon-lg) + var(--space-2))'" />
+          <app-icon name="replay" size="xl" />
           <span class="skip-seconds" aria-hidden="true">{{ skipStep }}</span>
         </button>
         <button
@@ -96,11 +93,7 @@
           "
           (click)="player.toggle()"
         >
-          <app-icon
-            [name]="player.playing() ? 'pause' : 'play_arrow'"
-            [style.font-size]="'calc(var(--icon-lg) + var(--space-3))'"
-            [fill]="true"
-          />
+          <app-icon [name]="player.playing() ? 'pause' : 'play_arrow'" size="2xl" [fill]="true" />
         </button>
         <button
           class="ctrl skip forward"
@@ -108,11 +101,7 @@
           [attr.aria-label]="'reader.audioPlayer.forward' | transloco: { seconds: skipStep }"
           (click)="player.skip(skipStep)"
         >
-          <app-icon
-            class="mirrored"
-            name="replay"
-            [style.font-size]="'calc(var(--icon-lg) + var(--space-2))'"
-          />
+          <app-icon class="mirrored" name="replay" size="xl" />
           <span class="skip-seconds" aria-hidden="true">{{ skipStep }}</span>
         </button>
         <button
@@ -151,7 +140,7 @@
             (click)="toggleChapters()"
           >
             @if (player.currentChapter(); as chapter) {
-              <span class="chapter-position">
+              <span class="chapter-position group-caption">
                 {{
                   'reader.audioPlayer.chapterPosition'
                     | transloco
@@ -159,13 +148,10 @@
                 }}
               </span>
               <span class="chapter-name">{{ chapter.title }}</span>
-              @if (player.chapterProgress(); as progress) {
+              @if (chapterLeft(); as left) {
                 <span class="chapter-left">
                   <app-icon name="schedule" size="sm" />
-                  {{
-                    'reader.audioPlayer.chapterLeft'
-                      | transloco: { time: format(progress.secondsLeft) }
-                  }}
+                  {{ left }}
                 </span>
               }
             } @else {

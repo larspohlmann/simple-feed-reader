@@ -87,7 +87,7 @@
         }
       </div>
       <div class="meta">
-        <app-marquee class="title">
+        <app-marquee class="title" [paused]="surface.playerOpen()">
           <ng-template>
             @if (player.currentChapter(); as chapter) {
               {{ chapter.title }}

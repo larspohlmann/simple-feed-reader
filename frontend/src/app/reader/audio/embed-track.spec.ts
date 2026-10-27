@@ -75,6 +75,7 @@ describe('toEmbedTrack', () => {
       title: 'The video itself',
       durationSeconds: 4964,
       chapters,
+      artworkUrl: null,
       ...overrides,
     });
 

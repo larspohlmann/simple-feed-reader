@@ -74,6 +74,7 @@ describe('EntryAudio', () => {
           title: null,
           durationSeconds: null,
           chapters: [{ startSeconds: 0, title: 'Intro' }],
+          artworkUrl: null,
         },
       },
     ]);

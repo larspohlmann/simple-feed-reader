@@ -52,6 +52,7 @@ const TRACK_DETAILS: TrackDetails = {
   title: 'Catching Flies',
   durationSeconds: null,
   chapters: TRACK_CHAPTERS,
+  artworkUrl: null,
 };
 const EPISODE: AudioTrack = {
   url: 'https://x.test/ep.mp3',
@@ -493,6 +494,7 @@ describe('ArticleBody', () => {
         title: 'The video itself',
         durationSeconds: 4964,
         chapters: VIDEO_CHAPTERS,
+        artworkUrl: null,
       };
 
       beforeEach(async () => {
@@ -553,7 +555,12 @@ describe('ArticleBody', () => {
         .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
       answers({
-        [VIDEO_URL]: of({ title: 'Own', durationSeconds: 300, chapters: VIDEO_CHAPTERS }),
+        [VIDEO_URL]: of({
+          title: 'Own',
+          durationSeconds: 300,
+          chapters: VIDEO_CHAPTERS,
+          artworkUrl: null,
+        }),
       });
       chapters.set(CHAPTERS);
       connectBody(YOUTUBE);
@@ -563,6 +570,7 @@ describe('ArticleBody', () => {
         title: 'Own',
         durationSeconds: 300,
         chapters: CHAPTERS,
+        artworkUrl: null,
       });
     });
 
@@ -576,7 +584,12 @@ describe('ArticleBody', () => {
         durationInSeconds: null,
       });
       answers({
-        [VIDEO_URL]: of({ title: null, durationSeconds: 600, chapters: VIDEO_CHAPTERS }),
+        [VIDEO_URL]: of({
+          title: null,
+          durationSeconds: 600,
+          chapters: VIDEO_CHAPTERS,
+          artworkUrl: null,
+        }),
       });
       entry.set(anEntry({ url: VIDEO_URL, title: 'The post' }));
       chapters.set(CHAPTERS);
@@ -654,7 +667,12 @@ describe('ArticleBody', () => {
       const describeTrack = jest
         .spyOn(TestBed.inject(AudioPlayerService), 'describe')
         .mockImplementation(() => undefined);
-      const unchaptered: TrackDetails = { title: 'A mix', durationSeconds: 4964, chapters: [] };
+      const unchaptered: TrackDetails = {
+        title: 'A mix',
+        durationSeconds: 4964,
+        chapters: [],
+        artworkUrl: null,
+      };
       answers({ [WIDGET_URL]: of(unchaptered) });
       connectBody(SOUNDCLOUD);
       await Promise.resolve();

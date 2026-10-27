@@ -38,6 +38,7 @@ final readonly class YouTubePlayerDetailsSource implements EmbedDetailsSourceInt
             \is_string($title) && $title !== '' ? $title : null,
             self::secondsIn($video['lengthSeconds'] ?? null),
             \is_string($description) ? $description : '',
+            null,
         );
     }
 

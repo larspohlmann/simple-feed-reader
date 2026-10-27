@@ -18,6 +18,7 @@ export class AudioSurface {
   private readonly playerPlaylist = accountSignal(false);
 
   readonly playlistOpen = computed(() => this.view() === 'playlist');
+  readonly playerOpen = computed(() => this.view() === 'player');
 
   togglePlaylist(): void {
     this.view.set(this.playlistOpen() ? 'none' : 'playlist');

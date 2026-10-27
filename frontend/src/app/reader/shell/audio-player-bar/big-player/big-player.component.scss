@@ -58,7 +58,7 @@
 }
 
 /* An open list makes the sheet taller than the screen anyway, so the artwork keeps its size. */
-.now-playing.expanded {
+.now-playing:has(.chapters, .queue) {
   max-block-size: none;
 }
 
@@ -114,13 +114,10 @@
   padding: 0;
   border: 0;
   background: none;
+  color: inherit;
   font: inherit;
   text-align: start;
   cursor: pointer;
-}
-
-.title-link {
-  color: inherit;
 }
 
 .article-title {
@@ -280,11 +277,7 @@
 }
 
 .chapter-position {
-  font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
 }
 
 .chapter-name {
@@ -311,6 +304,8 @@
   inline-size: 100%;
   min-block-size: calc(var(--tap-target) + var(--space-1));
   padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: none;
   color: var(--text-primary);
   font: inherit;
   text-align: start;
@@ -318,14 +313,7 @@
 }
 
 .chapters-heading {
-  border: 0;
   border-block-start: 1px solid var(--border);
-  background: none;
-}
-
-.show-playlist {
-  border: 0;
-  background: none;
 }
 
 .chapters,
@@ -360,7 +348,7 @@
 @media (hover: hover) {
   .ctrl:hover:not(:disabled, .collapse, .speed),
   .chapter-title:hover,
-  .chapters-heading:hover {
+  .card-row:hover {
     background: var(--surface-2);
   }
 
@@ -369,16 +357,12 @@
     --rim-fill: var(--surface-2);
   }
 
-  .show-playlist:hover {
-    background: var(--surface-2);
-  }
-
   .play:hover:not(:disabled) {
     background: var(--accent);
   }
 }
 
-/* The rows run to the card's rounded edge. No scroller of its own: a second one inside the scrolling sheet is hard to use on a phone. */
+/* The rows run to the card's rounded edge. */
 .chapter-card,
 .playlist-card {
   overflow: hidden;

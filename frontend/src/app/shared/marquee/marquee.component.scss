@@ -7,6 +7,7 @@
   white-space: nowrap;
 }
 
+.track,
 .copy {
   display: inline-block;
 }
@@ -15,8 +16,14 @@
   margin-inline-start: var(--marquee-gap);
 }
 
-:host(.overflowing) .copy {
-  animation: marquee var(--marquee-duration) linear infinite;
+@media (prefers-reduced-motion: no-preference) {
+  :host(.overflowing) .track {
+    animation: marquee var(--marquee-duration) linear infinite;
+  }
+
+  :host(.paused) .track {
+    animation-play-state: paused;
+  }
 }
 
 @keyframes marquee {
@@ -36,12 +43,9 @@
     text-overflow: ellipsis;
   }
 
+  .track,
   .copy {
     display: inline;
-  }
-
-  :host(.overflowing) .copy {
-    animation: none;
   }
 
   .repeat {

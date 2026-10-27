@@ -37,8 +37,8 @@ final class EmbedDetailsModelTest extends TestCase
     {
         $chapters = [new EntryChapter(0, 'A'), new EntryChapter(9, 'B')];
         yield 'everything' => [new EmbedDetailsModel('A mix', 4964, $chapters, 'https://art.test/a.jpg')];
-        yield 'nothing known' => [new EmbedDetailsModel(null, null, [])];
-        yield 'a title only' => [new EmbedDetailsModel('A track', null, [])];
+        yield 'nothing known' => [new EmbedDetailsModel(null, null, [], null)];
+        yield 'a title only' => [new EmbedDetailsModel('A track', null, [], null)];
         yield 'artwork only' => [new EmbedDetailsModel(null, null, [], 'https://art.test/a.jpg')];
     }
 

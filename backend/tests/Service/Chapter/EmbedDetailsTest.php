@@ -64,7 +64,7 @@ final class EmbedDetailsTest extends TestCase
 
     public function testTheSourcesTitleAndLengthTravelWithTheChapters(): void
     {
-        $source = new CountingSource(new EmbedDescriptionModel('A mix', 4964, self::TRACKLIST));
+        $source = new CountingSource(new EmbedDescriptionModel('A mix', 4964, self::TRACKLIST, null));
 
         $details = $this->details($source, CountingSource::describing(''))->of($this->youTube());
 
@@ -75,7 +75,7 @@ final class EmbedDetailsTest extends TestCase
 
     public function testAChapterStartingAtOrPastTheEndIsDropped(): void
     {
-        $source = new CountingSource(new EmbedDescriptionModel(null, 465, self::TRACKLIST));
+        $source = new CountingSource(new EmbedDescriptionModel(null, 465, self::TRACKLIST, null));
 
         $details = $this->details($source, CountingSource::describing(''))->of($this->youTube());
 
@@ -87,7 +87,7 @@ final class EmbedDetailsTest extends TestCase
 
     public function testAChapterJustBeforeTheEndStays(): void
     {
-        $source = new CountingSource(new EmbedDescriptionModel(null, 466, self::TRACKLIST));
+        $source = new CountingSource(new EmbedDescriptionModel(null, 466, self::TRACKLIST, null));
 
         self::assertCount(3, $this->details($source, CountingSource::describing(''))->of($this->youTube())->chapters);
     }
@@ -106,7 +106,7 @@ final class EmbedDetailsTest extends TestCase
 
     public function testASecondCallIsAnsweredFromTheCache(): void
     {
-        $source = new CountingSource(new EmbedDescriptionModel('A mix', 4964, self::TRACKLIST));
+        $source = new CountingSource(new EmbedDescriptionModel('A mix', 4964, self::TRACKLIST, null));
         $details = $this->details($source, CountingSource::describing(''));
 
         $first = $details->of($this->youTube());

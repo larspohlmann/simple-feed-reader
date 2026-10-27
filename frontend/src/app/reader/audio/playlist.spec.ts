@@ -182,6 +182,7 @@ describe('playlist', () => {
         title: 'Bravo itself',
         durationSeconds: 300,
         chapters,
+        artworkUrl: null,
       });
 
       expect(playlist.tracks).toEqual([
@@ -260,9 +261,14 @@ describe('playlist', () => {
       const playlist = of(0, { ...alpha, durationInSeconds: 290, chapters });
 
       expect(withDetails(playlist, alpha.url, nothing)).toBe(playlist);
-      expect(withDetails(playlist, alpha.url, { title: 'a', durationSeconds: 300, chapters })).toBe(
-        playlist,
-      );
+      expect(
+        withDetails(playlist, alpha.url, {
+          title: 'a',
+          durationSeconds: 300,
+          chapters,
+          artworkUrl: null,
+        }),
+      ).toBe(playlist);
     });
   });
 });
