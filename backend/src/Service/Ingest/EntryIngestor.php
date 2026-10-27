@@ -43,6 +43,7 @@ final readonly class EntryIngestor
         private IngestedEntryFactory $entryFactory,
         private EntryImageWriter $imageWriter,
         private FeedTitleInterface $feedTitle,
+        private EntryTranscriptWriter $transcriptWriter,
     ) {
     }
 
@@ -77,6 +78,7 @@ final readonly class EntryIngestor
         }
 
         $this->categoryWriter->attach($newPairs);
+        $this->transcriptWriter->attach($newPairs);
 
         return $created;
     }
