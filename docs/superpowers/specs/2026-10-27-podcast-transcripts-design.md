@@ -14,7 +14,7 @@ and makes what was said searchable on both search engines.
 | Strato measurement before building the LIKE half | None; build it, tune if it proves slow |
 | Size | Stored and indexed in full; a file over 1 MB is not fetched (the row fails) |
 | Retention | None of its own: the transcript cascades with its entry |
-| Reader display | The body when the entry has no article; otherwise a collapsed "Transcript" toggle below the body |
+| Reader display | The section renders open when the feed body has no text, collapsed otherwise, as a "Transcript" toggle below the body |
 | Search hit inside a transcript | The entry is listed like any match; no snippet, no jump-to-match |
 | Out of scope (v1) | Speech-to-text, live highlight of the playing paragraph, a transcript search box, snippets |
 
@@ -37,8 +37,9 @@ and makes what was said searchable on both search engines.
 
 `Support/DeclaredTranscripts`, beside `DeclaredChapters`, reads every
 `<podcast:transcript url type language rel>` of an item and picks one: by type
-(`text/vtt` → `application/json` → `application/x-subrip`/`application/srt` → `text/html`), then a
-language matching the feed's `<language>`, then document order. `rel="captions"` is treated like any
+(`text/vtt` → `application/json` → `application/x-subrip`/`application/srt` → `text/html`), then document
+order; there is no language tie-break, since the feed's `<language>` is not stored on `Feed` and the item
+parser never sees it. `rel="captions"` is treated like any
 other. Unknown types are ignored. The pick travels on the parsed media bundle as a
 `ParsedTranscriptModel(url, format, language)`; `TranscriptFormat` is an enum in `App\Enum`, since the
 entity stores it.
@@ -54,33 +55,42 @@ FK `ON DELETE CASCADE`. It is the queue and the store at once:
 | `url`, `format`, `language` | string, enum, ?string | the declaration |
 | `status` | enum `pending` / `filled` / `failed` | |
 | `attempts`, `nextAttemptAt` | int, ?datetime (naive UTC) | transient-failure backoff |
-| `paragraphs` | JSON `list<{start: ?float, speaker: ?string, text: string}>` | what the reader renders |
+| `paragraphs` | JSON `list<{startSeconds: ?int, speaker: ?string, text: string}>` | what the reader renders |
 | `searchText` | LONGTEXT, nullable | speakers and text as plain prose, for both search engines |
 
 A separate table keeps 100–200 KB per episode off `entry`, which every list reads, and confines the
 LIKE scan to transcripts. Indexed on `(status, nextAttemptAt)` for the sweep's claim.
 
-`IngestedEntryFactory` attaches a `pending` row when the parsed bundle carries a transcript, so
-subscribe, refresh and restore all queue without a hook of their own.
+`EntryTranscriptWriter` (`Service/Ingest`) persists a `pending` row for each newly created entry whose parsed
+bundle carries a transcript, so subscribe and refresh queue it. Restore queues nothing: backups carry no
+transcript declaration and restore does not go through `EntryIngestor`, so a restored episode has no
+transcript (accepted for v1).
 
 ### Module `Service/Transcript`
 
-- `TranscriptFormat/TranscriptFormatInterface` — one normaliser per format, tagged and served through a
-  keyed locator (the `FeedBodyParser` pattern): `VttTranscriptFormat` (speaker from `<v Name>`),
-  `JsonTranscriptFormat` (podcast-namespace JSON: `segments[].startTime/speaker/body`),
-  `SrtTranscriptFormat` (no speaker), `HtmlTranscriptFormat` (the existing sanitiser to plain
-  paragraphs, no timestamps). Each yields `Model/TranscriptCueModel(start, speaker, text)`.
+- `TranscriptReader` picks the cue reader with a `match` on the format, not a keyed locator: the readers
+  are pure static helpers in `Support/` (`TimedCues` for VTT and SRT, which share one cue reader, with the
+  speaker from `<v Name>`; `JsonCues` for podcast-namespace JSON `segments[].startTime/speaker/body`), and
+  HTML goes through the existing sanitiser to plain paragraphs without timestamps. Each yields
+  `Model/TranscriptCueModel(startSeconds, speaker, text)`.
+- Reading is defensive: bodies are scrubbed to valid UTF-8 first; timings accept 1–3 digit hours and
+  optional milliseconds and spaces around `-->`; JSON starts are kept only when finite and within
+  [0, 1000 h).
 - `Support/TranscriptParagraphs` — merges consecutive cues of the same speaker into a paragraph that
-  starts at its first cue; builds `searchText` from the result.
+  starts at its first cue (an `int` `startSeconds`, as `EntryChapter` has); builds `searchText` from the result.
 - `TranscriptSource/GuardedTranscriptSource` — fetches through `GuardedApiClient` with a new
   `ResponseSizeLimit::TranscriptFile` (1 MB). Separates permanent failures (SSRF-blocked, too large,
   4xx, unparseable → `TranscriptUnusableException`) from transient ones (timeout, 5xx, 429 →
-  `TranscriptUnreachableException`).
+  `TranscriptUnreachableException`). A DNS failure (`UnresolvableHostException`, a subclass of
+  `SsrfBlockedException`) is transient: it backs the row off instead of failing it.
 - `TranscriptFiller` — fills one row from the source; a permanent failure marks it `failed`, a
   transient one increments `attempts` and pushes `nextAttemptAt` out (exponential), failing it after 5
-  attempts. Each outcome logs once at `info`.
-- `TranscriptSweep` — runs in `MaintenanceTick` beside `LinkCardSweep`, with its own
-  `TranscriptBudgetModel` (fetch count, seconds). Claims due `pending` rows, newest entry first
+  attempts. Each outcome logs once at `info`. Any unexpected failure while filling also backs the row off
+  (logged at `error`) and fails it after 5 attempts, so one bad row never aborts the sweep.
+- `TranscriptSweep` — runs in `MaintenanceTick` beside the link-card sweep, with its own
+  `TranscriptBudgetModel` (fetch count, seconds). `MaintenanceTick` gains no tenth constructor parameter
+  (PHPMD `ExcessiveParameterList` fires at 10): link cards and transcripts sit behind one
+  `FollowUpFetchSweeps` service and one report model. Claims due `pending` rows, newest entry first
   (`EntryTranscriptRepository::findClaimable(now, limit)`), fills them, flushes, then hands the filled
   entries to `EntryIndexer::index()`. Its report joins `MaintenanceSweepsModel` and
   `MaintenanceTickJson`.
@@ -93,7 +103,8 @@ subscribe, refresh and restore all queue without a hook of their own.
   list it as searchable, ranked after `content`. `EntryIndexer::toIndexedEntry` reads it through the
   lazy relation, so only indexing loads it. `app:search:reindex` needs nothing else.
 - **LIKE fallback**: `SearchTermsPredicateBuilder` ORs a third alternative per term —
-  `EXISTS (SELECT 1 FROM EntryTranscript t WHERE t.entry = e AND <searchText predicate>)` — in both the
+  `EXISTS (SELECT 1 FROM EntryTranscript t WHERE t.entry = e AND <searchText predicate>)`, its subquery
+  alias built from the entry alias too, so the nested duplicate-collapse query stays unambiguous, — in both the
   substring and the whole-word form, keeping the cheap-`%term%`-first rule. It sits inside the existing
   scope predicates, so it scans only the user's entries; `DatabaseSavedSearchMatcher` uses the same
   builder and so matches transcripts too.
@@ -106,12 +117,11 @@ Plain JSON, no browser-only input: an iOS client can render it as is.
 
 ## Frontend
 
-- `reader/article/reader-view/article-transcript` (standalone component, sibling `.scss`, shared
-  tokens): a paragraph is a timestamp button, a bold speaker when present, then the text. Paragraphs
-  without a start render as text only.
-- **Body or section**: when the article body is empty or unavailable (the audio-first case, #1428), the
-  transcript is the body; otherwise a collapsed "Transcript" toggle below the body and chapters, styled
-  like the #1817 chapter details toggle.
+- `reader/article/decorators/reader-transcript.ts` is a DOM decorator, as chapters are, not a component: a
+  paragraph is a timestamp button, a bold speaker when present, then the text. Paragraphs without a start
+  render as text only. `ChapterDto` and the transcript DTOs live in `reader/episode-detail.ts`.
+- **Open or collapsed**: the section renders open when the feed body has no text (the audio-first case,
+  #1428), collapsed otherwise, below the body and chapters, styled like the #1817 chapter details toggle.
 - **Seeking** goes through the `ChapterPlayer` interface (`seek(seconds)`) by the path
   `reader-chapters.ts` uses, so audio, YouTube and SoundCloud players all work. With no player,
   timestamps render as plain text.
@@ -120,12 +130,12 @@ Plain JSON, no browser-only input: an iOS client can render it as is.
 
 - Normaliser tests on fixture files trimmed from the measured feeds (Logbuch, Darknet Diaries, Lage der
   Nation VTT; Changelog HTML) plus JSON and SRT samples; speaker merging; `searchText` shape.
-- Parser tests: type preference, language tie-break, unknown types ignored.
+- Parser tests: type preference, document-order tie, unknown types ignored.
 - Filler/sweep tests: every permanent and transient class, backoff, the 5-attempt ceiling, newest-first
   claim, reindex of filled entries only.
 - Functional test of the entry detail response (filled, pending, failed, none); `TranscriptOnOpen`.
 - Search: substring and whole-word over transcript text on both engines, saved-search membership; both
   the SQLite and the MySQL leg.
 - Migration from empty on SQLite and MySQL, `doctrine:schema:validate`; FK cascade on prune.
-- Jest: body-vs-section rule, seek wiring, no-player fallback. Live check on :4200 with a real Logbuch
+- Jest: open-vs-collapsed rule, seek wiring, no-player fallback. Live check on :4200 with a real Logbuch
   episode.
