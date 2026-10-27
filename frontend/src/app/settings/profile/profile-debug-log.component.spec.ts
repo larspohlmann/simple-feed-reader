@@ -24,6 +24,7 @@ function entry(over: Partial<DebugLogEntry> = {}): DebugLogEntry {
     finishedAt: '2026-10-03T09:00:04+00:00',
     errorDetail: null,
     finishReason: 'stop',
+    adjustment: null,
     ...over,
   };
 }
@@ -65,6 +66,29 @@ describe('ProfileDebugLogComponent', () => {
     expect(text(fixture)).toContain('Distill');
     expect(text(fixture)).toContain('attempt 2');
     expect(text(fixture)).toContain('usable');
+  });
+
+  it('lists an adjustment as its own entry right after the rejected call', () => {
+    const fixture = mount(false);
+    http.expectOne(LOG).flush({
+      entries: [
+        entry({
+          id: 31,
+          verdict: 'transport-failed',
+          errorDetail: 'No.',
+          adjustment: { setting: 'output-cap', value: '32768' },
+        }),
+        entry({ id: 32, attempt: 3 }),
+      ],
+    });
+    fixture.detectChanges();
+
+    const items = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('li'));
+    expect(items.map((item) => item.querySelector('app-debug-log-adjustment') !== null)).toEqual([
+      false,
+      true,
+      false,
+    ]);
   });
 
   it('polls while the run is active and stops once it is not', () => {

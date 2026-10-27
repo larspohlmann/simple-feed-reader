@@ -8,6 +8,7 @@ use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
 use App\Service\Recommendation\Llm\Run\MaxTokensRefusedFallback;
+use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -26,7 +27,10 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
-        self::assertTrue($this->fallbackFlushing($this->once())->absorbs($connection, $rejection));
+        self::assertEquals(
+            RequestAdjustmentModel::tokenParameter(TokenLimitParameter::MaxCompletionTokens),
+            $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
+        );
         self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
     }
 
@@ -36,7 +40,10 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, 'That provider refused the request (status 400): No.');
 
-        self::assertTrue($this->fallbackFlushing($this->once())->absorbs($connection, $rejection));
+        self::assertEquals(
+            RequestAdjustmentModel::tokenParameter(TokenLimitParameter::MaxCompletionTokens),
+            $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
+        );
         self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
     }
 
@@ -46,7 +53,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
         self::assertSame(TokenLimitParameter::MaxTokens, $connection->getTokenLimitParameter());
     }
 
@@ -63,13 +70,13 @@ final class MaxTokensRefusedFallbackTest extends TestCase
         $connection = AiProviderSettingsFactory::buildOn('gpt-5.4-nano');
         $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::REFUSAL, $identifiers);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
         self::assertSame(TokenLimitParameter::MaxTokens, $connection->getTokenLimitParameter());
     }
 
     public function testTheSameRefusalUnderAnotherStatusIsNotAbsorbed(): void
     {
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs(
+        self::assertNull($this->fallbackFlushing($this->never())->adjust(
             AiProviderSettingsFactory::buildOn('gpt-5.4-nano'),
             self::refusal(Response::HTTP_UNPROCESSABLE_ENTITY, self::REFUSAL),
         ));
@@ -82,7 +89,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
     }
 
     private static function refusal(int $status, string $message): ProviderRejectedRequestException

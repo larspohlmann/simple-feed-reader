@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Llm\Run;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
 use App\Service\Recommendation\Llm\Run\OutputCapFallback;
+use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -25,7 +26,10 @@ final class OutputCapFallbackTest extends TestCase
 
         $rejection = self::tooLarge(Response::HTTP_BAD_REQUEST, self::TOO_LARGE);
 
-        self::assertTrue($this->fallbackFlushing($this->once())->absorbs($connection, $rejection));
+        self::assertEquals(
+            RequestAdjustmentModel::outputCap(32_768),
+            $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
+        );
         self::assertSame(32_768, $connection->getModelMaxOutputTokens());
     }
 
@@ -38,7 +42,10 @@ final class OutputCapFallbackTest extends TestCase
             'That provider refused the request (status 400): The output may be at most 16384 tokens long.',
         );
 
-        self::assertTrue($this->fallbackFlushing($this->once())->absorbs($connection, $rejection));
+        self::assertEquals(
+            RequestAdjustmentModel::outputCap(16_384),
+            $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
+        );
         self::assertSame(16_384, $connection->getModelMaxOutputTokens());
     }
 
@@ -48,7 +55,7 @@ final class OutputCapFallbackTest extends TestCase
 
         $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::TOO_LARGE);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
         self::assertNull($connection->getModelMaxOutputTokens());
     }
 
@@ -65,7 +72,7 @@ final class OutputCapFallbackTest extends TestCase
         $connection = AiProviderSettingsFactory::buildOn('gpt-4.1-mini');
         $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::TOO_LARGE, $identifiers);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
         self::assertNull($connection->getModelMaxOutputTokens());
     }
 
@@ -76,7 +83,7 @@ final class OutputCapFallbackTest extends TestCase
 
         $rejection = self::tooLarge(Response::HTTP_BAD_REQUEST, self::TOO_LARGE);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
     }
 
     public function testACapAboveTheRecordedOneIsNotAbsorbedAndKeepsTheLowerOne(): void
@@ -85,7 +92,7 @@ final class OutputCapFallbackTest extends TestCase
         $connection->recordOutputCap(16_384);
         $rejection = self::tooLarge(Response::HTTP_BAD_REQUEST, self::TOO_LARGE);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
         self::assertSame(16_384, $connection->getModelMaxOutputTokens());
     }
 
@@ -95,7 +102,10 @@ final class OutputCapFallbackTest extends TestCase
         $connection->recordOutputCap(65_536);
         $rejection = self::tooLarge(Response::HTTP_BAD_REQUEST, self::TOO_LARGE);
 
-        self::assertTrue($this->fallbackFlushing($this->once())->absorbs($connection, $rejection));
+        self::assertEquals(
+            RequestAdjustmentModel::outputCap(32_768),
+            $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
+        );
         self::assertSame(32_768, $connection->getModelMaxOutputTokens());
     }
 
@@ -104,13 +114,13 @@ final class OutputCapFallbackTest extends TestCase
         $connection = AiProviderSettingsFactory::buildOn('gpt-4.1-mini');
         $rejection = self::tooLarge(Response::HTTP_BAD_REQUEST, 'That provider refused the request (status 400): No.');
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
         self::assertNull($connection->getModelMaxOutputTokens());
     }
 
     public function testACapUnderAnotherStatusIsNotAbsorbed(): void
     {
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs(
+        self::assertNull($this->fallbackFlushing($this->never())->adjust(
             AiProviderSettingsFactory::buildOn('gpt-4.1-mini'),
             self::tooLarge(Response::HTTP_UNPROCESSABLE_ENTITY, self::TOO_LARGE),
         ));
@@ -124,7 +134,7 @@ final class OutputCapFallbackTest extends TestCase
             'That provider refused the request (status 400): This model supports at most 0 completion tokens.',
         );
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
         self::assertNull($connection->getModelMaxOutputTokens());
     }
 

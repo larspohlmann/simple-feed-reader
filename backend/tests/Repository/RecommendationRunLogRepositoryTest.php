@@ -93,6 +93,8 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                     'finishedAt' => (new \DateTimeImmutable('2026-08-08T10:00:05Z'))->format(\DATE_ATOM),
                     'errorDetail' => null,
                     'finishReason' => 'stop',
+                    'adjustedSetting' => null,
+                    'adjustedValue' => null,
                 ],
                 [
                     'id' => $rows[1]['id'],
@@ -108,6 +110,8 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                     'finishedAt' => null,
                     'errorDetail' => null,
                     'finishReason' => null,
+                    'adjustedSetting' => null,
+                    'adjustedValue' => null,
                 ],
             ],
             $rows,

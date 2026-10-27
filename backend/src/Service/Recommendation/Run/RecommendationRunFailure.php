@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
+use App\Repository\CallingRun;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -17,7 +17,7 @@ final readonly class RecommendationRunFailure
 {
     public function __construct(
         private RecommendationTickCheckpoint $checkpoint,
-        private RejectedRequestFallbackInterface $fallback,
+        private RejectedRequestRecovery $recovery,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
     ) {
@@ -35,7 +35,8 @@ final readonly class RecommendationRunFailure
         ProviderRejectedRequestException $rejection,
     ): RecommendationRunReportModel {
         $this->checkpoint->guard($tick->run);
-        if ($this->fallback->absorbs($tick->connection, $rejection)) {
+        $callingRun = CallingRun::recommendationRun($tick->run->requireId());
+        if ($this->recovery->recovers($callingRun, $tick->connection, $rejection)) {
             return RecommendationRunReportModel::fromRun($tick->run);
         }
 

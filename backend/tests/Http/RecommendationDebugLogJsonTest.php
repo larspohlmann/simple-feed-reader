@@ -9,6 +9,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
+use App\Enum\RequestAdjustment;
 use App\Http\RecommendationDebugLogJson;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Recommendation\Feed\Model\RecommendationDebugLogModel;
@@ -93,6 +94,27 @@ final class RecommendationDebugLogJsonTest extends TestCase
         self::assertNull($detail['verdict']);
     }
 
+    public function testAnEntryWithoutAnAdjustmentCarriesNull(): void
+    {
+        $log = new RecommendationDebugLogModel([self::row(7)], [], null, []);
+        $entry = RecommendationDebugLogJson::list($log)['entries'][0];
+
+        self::assertNull($entry['adjustment']);
+        self::assertArrayNotHasKey('adjustedSetting', $entry);
+        self::assertArrayNotHasKey('adjustedValue', $entry);
+    }
+
+    public function testAnAdjustedEntryCarriesTheSettingAsAWireStringAndItsValue(): void
+    {
+        $row = self::row(7);
+        $row['adjustedSetting'] = RequestAdjustment::OutputCap;
+        $row['adjustedValue'] = '32768';
+
+        $entry = RecommendationDebugLogJson::list(new RecommendationDebugLogModel([$row], [], null, []))['entries'][0];
+
+        self::assertSame(['setting' => 'output-cap', 'value' => '32768'], $entry['adjustment']);
+    }
+
     /** @return DebugLogRow */
     private static function row(int $id): array
     {
@@ -110,6 +132,8 @@ final class RecommendationDebugLogJsonTest extends TestCase
             'finishedAt' => null,
             'errorDetail' => null,
             'finishReason' => null,
+            'adjustedSetting' => null,
+            'adjustedValue' => null,
         ];
     }
 }

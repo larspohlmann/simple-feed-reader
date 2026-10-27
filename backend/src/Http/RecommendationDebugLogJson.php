@@ -61,12 +61,17 @@ final class RecommendationDebugLogJson
      */
     private static function entry(array $row): array
     {
+        $setting = $row['adjustedSetting'];
+        $value = $row['adjustedValue'];
+        unset($row['adjustedSetting'], $row['adjustedValue']);
+
         return [
             ...$row,
             'phase' => $row['phase']->value,
             'verdict' => $row['verdict']?->value,
             'createdAt' => $row['createdAt']->format(\DATE_ATOM),
             'finishedAt' => $row['finishedAt']?->format(\DATE_ATOM),
+            'adjustment' => null === $setting ? null : ['setting' => $setting->value, 'value' => $value],
         ];
     }
 

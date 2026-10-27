@@ -70,16 +70,15 @@ final class RecommendationRunLog
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $finishedAt = null;
 
-    /** The transport exception's message, for transport-failed calls only. */
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $errorDetail = null;
-
     /** Why the provider stopped: `length` when max_tokens truncated the answer, `stop` at a natural end. */
     #[ORM\Column(length: 32, nullable: true)]
     private ?string $finishReason = null;
 
     #[ORM\Embedded(class: CallReceipt::class, columnPrefix: false)]
     private CallReceipt $receipt;
+
+    #[ORM\Embedded(class: CallFailure::class, columnPrefix: false)]
+    private CallFailure $failure;
 
     /** Private: forRun() and forProfileRun() are the only ways in, so exactly one of the two owners is set. */
     private function __construct(
@@ -99,6 +98,7 @@ final class RecommendationRunLog
         $this->requestBody = $requestBody;
         $this->createdAt = $createdAt;
         $this->receipt = new CallReceipt();
+        $this->failure = new CallFailure();
     }
 
     public static function forRun(
@@ -183,7 +183,7 @@ final class RecommendationRunLog
 
     public function getErrorDetail(): ?string
     {
-        return $this->errorDetail;
+        return $this->failure->getErrorDetail();
     }
 
     public function getFinishReason(): ?string

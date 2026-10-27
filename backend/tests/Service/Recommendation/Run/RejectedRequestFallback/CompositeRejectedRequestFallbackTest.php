@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
+use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
 use App\Service\Recommendation\Run\RejectedRequestFallback\CompositeRejectedRequestFallback;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
@@ -15,29 +16,30 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class CompositeRejectedRequestFallbackTest extends TestCase
 {
-    public function testTheFirstMemberThatAbsorbsEndsTheChain(): void
+    public function testTheFirstMemberThatAdjustsEndsTheChainAndItsAdjustmentIsReturned(): void
     {
         $calls = new \ArrayObject();
+        $outputCap = RequestAdjustmentModel::outputCap(32_768);
         $composite = new CompositeRejectedRequestFallback(
-            new RecordingFallback('tokenParameter', false, $calls),
-            new RecordingFallback('outputCap', true, $calls),
-            new RecordingFallback('suppressedReasoning', true, $calls),
+            new RecordingFallback('tokenParameter', null, $calls),
+            new RecordingFallback('outputCap', $outputCap, $calls),
+            new RecordingFallback('suppressedReasoning', RequestAdjustmentModel::reasoningSuppressionDropped(), $calls),
         );
 
-        self::assertTrue($composite->absorbs($this->connection(), $this->rejection()));
+        self::assertSame($outputCap, $composite->adjust($this->connection(), $this->rejection()));
         self::assertSame(['tokenParameter', 'outputCap'], $calls->getArrayCopy());
     }
 
-    public function testNoMemberAbsorbingLeavesTheRejectionStanding(): void
+    public function testNoMemberAdjustingLeavesTheRejectionStanding(): void
     {
         $calls = new \ArrayObject();
         $composite = new CompositeRejectedRequestFallback(
-            new RecordingFallback('tokenParameter', false, $calls),
-            new RecordingFallback('outputCap', false, $calls),
-            new RecordingFallback('suppressedReasoning', false, $calls),
+            new RecordingFallback('tokenParameter', null, $calls),
+            new RecordingFallback('outputCap', null, $calls),
+            new RecordingFallback('suppressedReasoning', null, $calls),
         );
 
-        self::assertFalse($composite->absorbs($this->connection(), $this->rejection()));
+        self::assertNull($composite->adjust($this->connection(), $this->rejection()));
         self::assertSame(['tokenParameter', 'outputCap', 'suppressedReasoning'], $calls->getArrayCopy());
     }
 

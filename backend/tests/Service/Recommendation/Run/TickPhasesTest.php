@@ -16,7 +16,7 @@ use App\Service\Recommendation\Run\RecommendationRunDeferral;
 use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Run\RecommendationTransportFailureRecorder;
-use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
+use App\Service\Recommendation\Run\RejectedRequestRecovery;
 use App\Service\Recommendation\Run\SnapshotPhase;
 use App\Service\Recommendation\Run\TickPhases;
 use App\Tests\DbTestCase;
@@ -197,10 +197,10 @@ final class TickPhasesTest extends DbTestCase
         $checkpoint = self::getContainer()->get(RecommendationTickCheckpoint::class);
         /** @var ProfileForRunInterface $profiles */
         $profiles = self::getContainer()->get(ProfileForRunInterface::class);
-        /** @var RejectedRequestFallbackInterface $fallback */
-        $fallback = self::getContainer()->get(RejectedRequestFallbackInterface::class);
+        /** @var RejectedRequestRecovery $recovery */
+        $recovery = self::getContainer()->get(RejectedRequestRecovery::class);
         $resolver = $engine->resolver();
-        $runFailure = new RecommendationRunFailure($checkpoint, $fallback, $this->entityManager, $this->clock);
+        $runFailure = new RecommendationRunFailure($checkpoint, $recovery, $this->entityManager, $this->clock);
 
         return new TickPhases(
             new SnapshotPhase($candidates, $resolver, $this->entityManager, $this->clock, $profiles, $runFailure),

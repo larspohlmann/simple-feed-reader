@@ -19,6 +19,7 @@ const STREAMING: DebugLogEntry = {
   finishedAt: null,
   errorDetail: null,
   finishReason: null,
+  adjustment: null,
 };
 
 const SETTLED: DebugLogEntry = { ...STREAMING, verdict: 'usable', streamingText: null };

@@ -19,6 +19,7 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\RequestAdjustment;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
@@ -976,11 +977,17 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(0, $absorbed->getAttempts());
         self::assertSame(1, $absorbed->getProgress()->batchesDone);
         self::assertTrue($this->persistedConnection()->refusesSuppressedReasoning());
-        $waveRows = \array_slice($this->logRowsOfLatestRun(), 1);
+        $rows = $this->logRowsOfLatestRun();
+        $waveRows = \array_slice($rows, 1);
         self::assertSame(
             [CallVerdict::TransportFailed, CallVerdict::TransportFailed, CallVerdict::TransportFailed],
             array_column($waveRows, 'verdict'),
         );
+        self::assertSame(
+            [null, null, RequestAdjustment::ReasoningSuppression],
+            array_column($waveRows, 'adjustedSetting'),
+        );
+        self::assertNull($rows[0]['adjustedSetting']);
         self::assertNotContains(null, array_column($waveRows, 'finishedAt'));
 
         $callsBeforeTheResend = \count($this->stubChatClient()->calls());

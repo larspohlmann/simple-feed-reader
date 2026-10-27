@@ -11,6 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
 import { DebugLogDetails } from '../debug-log/debug-log-details.service';
+import { DebugLogAdjustmentComponent } from '../debug-log/debug-log-adjustment.component';
 import { DebugLogEntryComponent } from '../debug-log/debug-log-entry.component';
 import { debugLogTime } from '../debug-log/debug-log-time';
 import { SettingsApi } from '../settings-api';
@@ -37,7 +38,7 @@ export interface DebugLogRunGroup {
 @Component({
   selector: 'app-recommendation-debug-log',
   standalone: true,
-  imports: [TranslocoModule, DebugLogEntryComponent],
+  imports: [TranslocoModule, DebugLogEntryComponent, DebugLogAdjustmentComponent],
   providers: [DebugLogDetails],
   templateUrl: './recommendation-debug-log.component.html',
   styleUrl: './recommendation-debug-log.component.scss',

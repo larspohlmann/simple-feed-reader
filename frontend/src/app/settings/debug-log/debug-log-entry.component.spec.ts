@@ -18,6 +18,7 @@ const SETTLED: DebugLogEntry = {
   finishedAt: '2026-08-08T10:01:05Z',
   errorDetail: null,
   finishReason: 'stop',
+  adjustment: null,
 };
 
 const DETAIL: DebugLogDetail = {
