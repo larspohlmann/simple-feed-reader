@@ -46,8 +46,8 @@ final class SavedSearchRematchTest extends DbTestCase
         $this->rematch()->rematch([]);
 
         self::assertSame(
-            0,
-            (int) $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM saved_search_entry'),
+            [],
+            $this->entityManager->getConnection()->fetchFirstColumn('SELECT entry_id FROM saved_search_entry'),
         );
     }
 

@@ -20,8 +20,8 @@ use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 /**
- * The LIKE search over title, summary and transcript text, with ASCII terms only: MySQL's collation folds case and accents, SQLite's
- * LIKE folds ASCII case only, so "Ubung" finding "Übung" would pass in production and fail here.
+ * The LIKE search over title, summary and transcript text, with ASCII terms only: MySQL's collation folds case and
+ * accents, SQLite's LIKE folds ASCII case only, so "Ubung" finding "Übung" would pass in production and fail here.
  */
 final class EntrySearchTest extends DbTestCase
 {

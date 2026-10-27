@@ -139,7 +139,6 @@ final class TranscriptSweepTest extends DbTestCase
         return $status;
     }
 
-    /** @return list<EntryTranscript> */
     private function searchForTranscriptOnlyTerm(): SavedSearch
     {
         $user = new User('rematch@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
@@ -163,6 +162,7 @@ final class TranscriptSweepTest extends DbTestCase
         return array_map(intval(...), $ids);
     }
 
+    /** @return list<EntryTranscript> */
     private function seedPendingTranscripts(int $count): array
     {
         $feed = new Feed('https://pod.test/feed.xml');

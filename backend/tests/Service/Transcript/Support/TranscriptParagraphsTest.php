@@ -92,10 +92,13 @@ final class TranscriptParagraphsTest extends TestCase
         }
         self::assertSame(
             250 * 18 + 247,
-            array_sum(array_map(static fn (TranscriptParagraph $paragraph): int => mb_strlen($paragraph->text), $paragraphs)),
+            array_sum(array_map(
+                static fn (TranscriptParagraph $paragraph): int => mb_strlen($paragraph->text),
+                $paragraphs,
+            )),
         );
         self::assertSame([0, 106, 212], array_map(
-            static fn (TranscriptParagraph $paragraph): int => $paragraph->startSeconds,
+            static fn (TranscriptParagraph $paragraph): ?int => $paragraph->startSeconds,
             $paragraphs,
         ));
     }
