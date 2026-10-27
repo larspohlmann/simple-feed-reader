@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Llm\Run;
 
-use App\Enum\RequestAdjustment;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
 use App\Service\Recommendation\Llm\Run\OutputCapFallback;
@@ -27,9 +26,8 @@ final class OutputCapFallbackTest extends TestCase
 
         $rejection = self::tooLarge(Response::HTTP_BAD_REQUEST, self::TOO_LARGE);
 
-        self::assertAdjusted(
-            RequestAdjustment::OutputCap,
-            '32768',
+        self::assertEquals(
+            RequestAdjustmentModel::outputCap(32_768),
             $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
         );
         self::assertSame(32_768, $connection->getModelMaxOutputTokens());
@@ -44,9 +42,8 @@ final class OutputCapFallbackTest extends TestCase
             'That provider refused the request (status 400): The output may be at most 16384 tokens long.',
         );
 
-        self::assertAdjusted(
-            RequestAdjustment::OutputCap,
-            '16384',
+        self::assertEquals(
+            RequestAdjustmentModel::outputCap(16_384),
             $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
         );
         self::assertSame(16_384, $connection->getModelMaxOutputTokens());
@@ -105,9 +102,8 @@ final class OutputCapFallbackTest extends TestCase
         $connection->recordOutputCap(65_536);
         $rejection = self::tooLarge(Response::HTTP_BAD_REQUEST, self::TOO_LARGE);
 
-        self::assertAdjusted(
-            RequestAdjustment::OutputCap,
-            '32768',
+        self::assertEquals(
+            RequestAdjustmentModel::outputCap(32_768),
             $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
         );
         self::assertSame(32_768, $connection->getModelMaxOutputTokens());
@@ -157,15 +153,5 @@ final class OutputCapFallbackTest extends TestCase
         $entityManager->expects($flushes)->method('flush');
 
         return new OutputCapFallback($entityManager);
-    }
-
-    private static function assertAdjusted(
-        RequestAdjustment $setting,
-        ?string $value,
-        ?RequestAdjustmentModel $adjustment,
-    ): void {
-        self::assertNotNull($adjustment);
-        self::assertSame($setting, $adjustment->setting);
-        self::assertSame($value, $adjustment->value);
     }
 }

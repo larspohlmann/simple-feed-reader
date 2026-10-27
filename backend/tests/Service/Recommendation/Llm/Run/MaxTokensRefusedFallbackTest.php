@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Llm\Run;
 
-use App\Enum\RequestAdjustment;
 use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
@@ -28,9 +27,8 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
-        self::assertAdjusted(
-            RequestAdjustment::TokenParameter,
-            'max_completion_tokens',
+        self::assertEquals(
+            RequestAdjustmentModel::tokenParameter(TokenLimitParameter::MaxCompletionTokens),
             $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
         );
         self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
@@ -42,9 +40,8 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, 'That provider refused the request (status 400): No.');
 
-        self::assertAdjusted(
-            RequestAdjustment::TokenParameter,
-            'max_completion_tokens',
+        self::assertEquals(
+            RequestAdjustmentModel::tokenParameter(TokenLimitParameter::MaxCompletionTokens),
             $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
         );
         self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
@@ -110,15 +107,5 @@ final class MaxTokensRefusedFallbackTest extends TestCase
         $entityManager->expects($flushes)->method('flush');
 
         return new MaxTokensRefusedFallback($entityManager);
-    }
-
-    private static function assertAdjusted(
-        RequestAdjustment $setting,
-        ?string $value,
-        ?RequestAdjustmentModel $adjustment,
-    ): void {
-        self::assertNotNull($adjustment);
-        self::assertSame($setting, $adjustment->setting);
-        self::assertSame($value, $adjustment->value);
     }
 }

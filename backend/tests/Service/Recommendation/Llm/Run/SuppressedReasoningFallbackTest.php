@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Llm\Run;
 
-use App\Enum\RequestAdjustment;
 use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
@@ -38,9 +37,8 @@ final class SuppressedReasoningFallbackTest extends TestCase
     {
         $connection = AiProviderSettingsFactory::buildOn('qwen3-14b');
 
-        self::assertAdjusted(
-            RequestAdjustment::ReasoningSuppression,
-            null,
+        self::assertEquals(
+            RequestAdjustmentModel::reasoningSuppressionDropped(),
             $this->fallbackFlushing($this->once())->adjust($connection, $this->rejection($status)),
         );
         self::assertTrue($connection->refusesSuppressedReasoning());
@@ -98,15 +96,5 @@ final class SuppressedReasoningFallbackTest extends TestCase
             $status,
             \sprintf('That provider refused the request (status %d): No.', $status),
         );
-    }
-
-    private static function assertAdjusted(
-        RequestAdjustment $setting,
-        ?string $value,
-        ?RequestAdjustmentModel $adjustment,
-    ): void {
-        self::assertNotNull($adjustment);
-        self::assertSame($setting, $adjustment->setting);
-        self::assertSame($value, $adjustment->value);
     }
 }
