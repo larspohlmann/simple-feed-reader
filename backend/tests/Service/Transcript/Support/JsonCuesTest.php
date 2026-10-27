@@ -39,6 +39,8 @@ final class JsonCuesTest extends TestCase
 
         self::assertCount(1, $cues);
         self::assertSame(0, $cues[0]->startSeconds);
+        self::assertSame('Opening.', $cues[0]->text);
+        self::assertNull($cues[0]->speaker);
     }
 
     public function testSpeakersAreTrimmedAndBlankOnesDropped(): void
