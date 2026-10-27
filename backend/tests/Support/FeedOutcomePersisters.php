@@ -13,7 +13,6 @@ use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\FeedShareEnrichment;
 use App\Service\Refresh\IncomingEntries;
-use App\Service\Search\EntryIndexer;
 use App\Service\Social\SelfThreadEnricher;
 use App\Service\Social\TimelineSelfThreads;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
@@ -116,7 +115,7 @@ final class FeedOutcomePersisters
                 new PlatformEntryRules([new BlueskyEntryRule()]),
             ),
             FeedSchedulers::build($this->clock),
-            new EntryIndexer($this->indexWriter, new NullLogger()),
+            EntryIndexers::with($this->indexWriter),
             new IncomingEntries(PostEnrichers::queue($this->entityManager, $this->clock), $this->timelineSelfThreads),
             new FeedShareEnrichment(
                 $postEnricher,

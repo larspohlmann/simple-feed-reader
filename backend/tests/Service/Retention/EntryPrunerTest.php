@@ -21,7 +21,7 @@ use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
-use Psr\Log\NullLogger;
+use App\Tests\Support\EntryIndexers;
 use Symfony\Component\Clock\MockClock;
 
 final class EntryPrunerTest extends DbTestCase
@@ -46,7 +46,7 @@ final class EntryPrunerTest extends DbTestCase
 
     private function indexer(): EntryIndexer
     {
-        return new EntryIndexer($this->indexWriter, new NullLogger());
+        return EntryIndexers::with($this->indexWriter);
     }
 
     private function prunerWithCap(int $cap): EntryPruner
@@ -278,7 +278,7 @@ final class EntryPrunerTest extends DbTestCase
             $this->retention(),
             $this->settings(),
             $this->clock,
-            new EntryIndexer($failingWriter, new NullLogger()),
+            EntryIndexers::with($failingWriter),
         );
 
         self::assertSame(10, $pruner->prune());

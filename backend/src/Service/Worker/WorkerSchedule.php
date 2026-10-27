@@ -6,6 +6,7 @@ namespace App\Service\Worker;
 
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\Message\CompleteQueuedLinkCards;
+use App\Service\Worker\Message\CompleteQueuedTranscripts;
 use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use App\Service\Worker\Message\RefreshProfileImages;
@@ -52,6 +53,7 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
             ->add(RecurringMessage::every('10 minutes', new RefreshProfileImages()))
             ->add(RecurringMessage::every('10 minutes', new SyncPrivateFeeds()))
             ->add(RecurringMessage::every('10 minutes', new SwitchHiddenProfileFeeds()))
+            ->add(RecurringMessage::every('1 minute', new CompleteQueuedTranscripts()))
             ->stateful($this->schedulerStateCache)
             ->processOnlyLastMissedRun(true);
     }

@@ -3,16 +3,27 @@ import { Subscription, asapScheduler, finalize, subscribeOn } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { EntriesStore } from '../../state/entries.store';
 import { ReaderApi } from '../../reader-api';
-import { ChapterDto } from '../../models';
+import { ChapterDto, EntryDetailDto, TranscriptDto } from '../../models';
 
 /** How many article bodies stay cached at once — one browsing session's worth
  *  of feed reading, not the whole account's history. */
 const CACHE_CAP = 50;
 
+export type BodyOfDetail = Pick<EntryDetailDto, 'contentHtml' | 'chapters' | 'transcript'>;
+
 export type EntryBodyState =
   | { status: 'loading' }
-  | { status: 'ok'; html: string | null; chapters: ChapterDto[] }
+  | { status: 'ok'; html: string | null; chapters: ChapterDto[]; transcript: TranscriptDto | null }
   | { status: 'error' };
+
+function okBody(detail: BodyOfDetail): EntryBodyState {
+  return {
+    status: 'ok',
+    html: detail.contentHtml,
+    chapters: detail.chapters ?? [],
+    transcript: detail.transcript,
+  };
+}
 
 /**
  * The reader's in-memory body cache — a `Map`, not `reader-cache.service`'s
@@ -47,9 +58,9 @@ export class EntryBodyService {
   /** Seed the cache from a detail response already in hand (a deep link's own
    *  fetch), skipping a redundant request. Writes the existing signal in
    *  place so a view already reading it for this id sees the update. */
-  seed(id: number, html: string | null, chapters: ChapterDto[] | null): void {
+  seed(id: number, detail: BodyOfDetail): void {
     const state = this.cache.get(id) ?? signal<EntryBodyState>({ status: 'loading' });
-    state.set({ status: 'ok', html, chapters: chapters ?? [] });
+    state.set(okBody(detail));
     this.touch(id, state);
   }
 
@@ -110,11 +121,7 @@ export class EntryBodyService {
       )
       .subscribe({
         next: (response) => {
-          state.set({
-            status: 'ok',
-            html: response.entry.contentHtml,
-            chapters: response.entry.chapters ?? [],
-          });
+          state.set(okBody(response.entry));
           this.entries.mergeCompleted([response.completed]);
         },
         error: () => {

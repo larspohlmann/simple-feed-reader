@@ -23,15 +23,14 @@ use App\Service\SavedPosts\SavedFeeds;
 use App\Service\SavedPosts\SavedPostRescue;
 use App\Service\SavedPosts\SavedStateMover;
 use App\Service\SavedPosts\Support\SavedFeedUrl;
-use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\UserFactory;
-use Psr\Log\NullLogger;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SavedPostRescueTest extends DbTestCase
@@ -519,7 +518,7 @@ final class SavedPostRescueTest extends DbTestCase
             $savedFeeds,
             $stateMover,
             $entries,
-            new EntryIndexer($writer, new NullLogger()),
+            EntryIndexers::with($writer),
         );
     }
 

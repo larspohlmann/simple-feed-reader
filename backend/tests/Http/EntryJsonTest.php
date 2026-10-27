@@ -343,7 +343,7 @@ final class EntryJsonTest extends TestCase
 
         self::assertSame(
             ['network' => 'bluesky', 'isLiked' => true, 'canLike' => true],
-            JsonMappers::entryJson()->detail($row, new ServedChaptersModel([], null))['social'],
+            JsonMappers::entryJson()->detail($row, new ServedChaptersModel([], null), null)['social'],
         );
     }
 
@@ -466,7 +466,8 @@ final class EntryJsonTest extends TestCase
         $entry->setContentHtml('<p>Full body.</p>');
         $row = $this->row($entry)->withDuplicates([$this->row($sibling)]);
 
-        $json = JsonMappers::entryJson()->detail($row, new ServedChaptersModel([], $row->entry->getContentHtml()));
+        $served = new ServedChaptersModel([], $row->entry->getContentHtml());
+        $json = JsonMappers::entryJson()->detail($row, $served, null);
 
         self::assertSame('<p>Full body.</p>', $json['contentHtml'] ?? null);
         self::assertArrayNotHasKey('contentHtml', $json['duplicates'][0]);

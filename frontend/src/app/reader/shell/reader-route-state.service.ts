@@ -96,11 +96,7 @@ export class ReaderRouteState {
       next: (response) => {
         if (this.entryId() !== id) return;
         this.entries.holdUnlisted(response.entry);
-        this.bodyService.seed(
-          response.entry.id,
-          response.entry.contentHtml,
-          response.entry.chapters,
-        );
+        this.bodyService.seed(response.entry.id, response.entry);
       },
     });
   }

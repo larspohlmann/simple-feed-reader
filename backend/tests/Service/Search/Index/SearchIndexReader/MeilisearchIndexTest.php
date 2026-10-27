@@ -461,7 +461,7 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame(self::BASE_URL . '/indexes/entries/settings', $this->capturedRequest['url']);
 
         $decoded = $this->capturedJsonObject();
-        self::assertSame(['title', 'summary', 'content', 'feedTitle'], $decoded['searchableAttributes']);
+        self::assertSame(['title', 'summary', 'content', 'transcript', 'feedTitle'], $decoded['searchableAttributes']);
         self::assertSame(['feedId', 'effectiveDate', 'id'], $decoded['filterableAttributes']);
         self::assertSame(['effectiveDate', 'id'], $decoded['sortableAttributes']);
         self::assertSame(
@@ -481,6 +481,7 @@ final class MeilisearchIndexTest extends TestCase
             'How to receive a package',
             'A short summary',
             'The plain-text body',
+            'Ann: Hallo',
             'Example Feed',
             new \DateTimeImmutable('@1700000000'),
         );
@@ -500,6 +501,7 @@ final class MeilisearchIndexTest extends TestCase
             'title' => 'How to receive a package',
             'summary' => 'A short summary',
             'content' => 'The plain-text body',
+            'transcript' => 'Ann: Hallo',
             'feedTitle' => 'Example Feed',
             'effectiveDate' => 1700000000,
         ]], $this->capturedJsonList());
@@ -510,13 +512,14 @@ final class MeilisearchIndexTest extends TestCase
         $response = new MockResponse('{"taskUid":1,"status":"enqueued"}', ['http_code' => 202]);
         $client = $this->clientCapturing($response);
 
-        $entry = new IndexedEntryModel(1, 1, 'Title only', null, null, null, new \DateTimeImmutable('@0'));
+        $entry = new IndexedEntryModel(1, 1, 'Title only', null, null, null, null, new \DateTimeImmutable('@0'));
         $this->index($client)->upsert([$entry]);
 
         $document = $this->capturedJsonList()[0];
         self::assertIsArray($document);
         self::assertNull($document['summary']);
         self::assertNull($document['content']);
+        self::assertNull($document['transcript']);
         self::assertNull($document['feedTitle']);
     }
 
@@ -587,6 +590,7 @@ final class MeilisearchIndexTest extends TestCase
             'How to receive a package',
             'A short summary',
             'The plain-text body',
+            null,
             'Example Feed',
             new \DateTimeImmutable('@1700000000'),
         )]);

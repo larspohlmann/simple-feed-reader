@@ -31,11 +31,11 @@ use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
-use App\Service\Search\EntryIndexer;
 use App\Service\Social\Pass\ReplyNode;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\Bluesky;
+use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\FailingEmbedWriter;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\FakeReplyThreadSource;
@@ -48,7 +48,6 @@ use App\Tests\Support\SelfThreadEnrichers;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -728,7 +727,7 @@ final class PostEnricherTest extends DbTestCase
             PostEnrichers::enrichments($this->entityManager),
             new AppViewClient($this->appView, $this->throttle),
             $embedWriter,
-            new EntryIndexer($this->indexWriter, new NullLogger()),
+            EntryIndexers::with($this->indexWriter),
             $naiveUtcClock,
             $this->logger,
         );

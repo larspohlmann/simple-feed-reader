@@ -12,6 +12,7 @@ use App\Service\Category\CategoryNormalizer;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\EntryTranscriptWriter;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Sanitize\EntrySanitizer;
@@ -49,6 +50,7 @@ final class EntryIngestors
             new IngestedEntryFactory(new EntrySanitizer(new TrailingBlankRemover()), $imageWriter),
             $imageWriter,
             new ProfileFeedTitle(),
+            new EntryTranscriptWriter($entityManager),
         );
     }
 }

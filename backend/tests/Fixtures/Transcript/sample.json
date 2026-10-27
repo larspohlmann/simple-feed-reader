@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "segments": [
+    {"speaker": "Ann", "startTime": 0.5, "endTime": 4, "body": "Welcome to the show."},
+    {"speaker": "Ann", "startTime": 4, "endTime": 8, "body": "Today we talk about feeds."},
+    {"speaker": "Bob", "startTime": 8.2, "endTime": 11, "body": "Thanks for having me."}
+  ]
+}

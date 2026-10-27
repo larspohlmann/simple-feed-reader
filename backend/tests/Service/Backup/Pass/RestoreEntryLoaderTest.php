@@ -16,13 +16,12 @@ use App\Service\Backup\Pass\RestoreFeedTargets;
 use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
 use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Service\Search\EntryIndexer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\EntryIndexers;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 /**
@@ -103,7 +102,7 @@ final class RestoreEntryLoaderTest extends TestCase
             $entries,
             $this->createStub(RestoreEntryStatesInterface::class),
             new EntryBatchInserter($this->createStub(Connection::class), new UrlNormalizer()),
-            new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
+            EntryIndexers::with(new RecordingSearchIndexWriter()),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),
             new RestoreDestination($this->user(), $this->targets($entries)),
         );

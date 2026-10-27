@@ -14,7 +14,7 @@ import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testin
 import { ArticleBody } from './article-body.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { PlayingMedium } from '../../media/autoplay/autoplay-player';
-import { ChapterDto, EntryDto } from '../../models';
+import { ChapterDto, EntryDto, TranscriptDto } from '../../models';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { anEntry } from '../../../../testing/entry-testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
@@ -71,6 +71,8 @@ describe('ArticleBody', () => {
   let embedDetails: jest.Mock<Observable<TrackDetails>, [EmbedMedia]>;
   const html = signal('');
   const chapters = signal<ChapterDto[]>([]);
+  const transcript = signal<TranscriptDto | null>(null);
+  const transcriptIsTheBody = signal(false);
   const audioTrack = signal<AudioTrack | null>(null);
   const entry = signal<EntryDto | null>(null);
 
@@ -84,6 +86,8 @@ describe('ArticleBody', () => {
       pageUrl: () => 'https://news.test/story',
       enclosureUrl: () => null,
       chapters,
+      transcript,
+      transcriptIsTheBody,
       audioTrack,
       entry,
       decorated,
@@ -116,6 +120,8 @@ describe('ArticleBody', () => {
   beforeEach(() => {
     localStorage.clear();
     chapters.set([]);
+    transcript.set(null);
+    transcriptIsTheBody.set(false);
     audioTrack.set(null);
     entry.set(null);
     imageProxy = neverRecoveringImageProxy();
@@ -281,6 +287,53 @@ describe('ArticleBody', () => {
 
       expect(autoplay.stopped).toHaveBeenCalledTimes(1);
       expect(autoplay.nowPlaying).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('its transcript', () => {
+    const TRANSCRIPT: TranscriptDto = {
+      language: null,
+      paragraphs: [{ startSeconds: 60, speaker: null, text: 'Hello.' }],
+    };
+
+    it('appends a collapsed Transcript section under the body', async () => {
+      transcript.set(TRANSCRIPT);
+      connectBody('<p>Notes</p>');
+      await Promise.resolve();
+
+      const section = content.lastElementChild!;
+      expect(section.getAttribute('aria-label')).toBe('Transcript');
+      expect(section.querySelector('details')!.open).toBe(false);
+    });
+
+    it('opens it when the transcript is the body', async () => {
+      transcript.set(TRANSCRIPT);
+      transcriptIsTheBody.set(true);
+      connectBody('');
+      await Promise.resolve();
+
+      expect(content.querySelector('details')!.open).toBe(true);
+    });
+
+    it('seeks the episode from a timestamp', async () => {
+      const playFrom = jest
+        .spyOn(TestBed.inject(AudioPlayerService), 'playFrom')
+        .mockImplementation(() => undefined);
+      transcript.set(TRANSCRIPT);
+      audioTrack.set(EPISODE);
+      connectBody('<p>Notes</p>');
+      await Promise.resolve();
+
+      content.querySelector<HTMLButtonElement>('.reader-transcript__time')!.click();
+
+      expect(playFrom).toHaveBeenCalledWith(EPISODE, 60);
+    });
+
+    it('adds no section without a transcript', async () => {
+      connectBody('<p>Notes</p>');
+      await Promise.resolve();
+
+      expect(content.querySelector('.reader-transcript')).toBeNull();
     });
   });
 

@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Doctrine\WordBoundaries;
+use App\Entity\EntryTranscript;
 use App\Service\Search\Model\SearchTermsModel;
 use App\Service\Search\Support\LikePattern;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * One search's terms compiled into a title/summary LIKE predicate, and bound
+ * One search's terms compiled into a title, summary and transcript-text LIKE predicate, and bound
  * onto the QueryBuilder it is handed. Needs no repository state of its own.
  */
 final readonly class SearchTermsPredicateBuilder
@@ -24,28 +25,46 @@ final readonly class SearchTermsPredicateBuilder
         $predicates = [];
         foreach ($terms->terms as $position => $term) {
             $parameter = $prefix . $position;
-            $predicates[] = $terms->isWholeWord
-                ? $this->wholeWordPredicate($qb, $parameter, $term, $entryAlias)
-                : $this->substringPredicate($qb, $parameter, $term, $entryAlias);
+            $columnMatch = $terms->isWholeWord
+                ? $this->wholeWordMatch($qb, $parameter, $term)
+                : $this->substringMatch($qb, $parameter, $term);
+            $predicates[] = self::anyColumn($columnMatch, $parameter, $entryAlias);
         }
 
         return '(' . implode(' AND ', $predicates) . ')';
     }
 
     /**
-     * A summary is nullable, and NULL LIKE … is never true, so the OR alone
-     * handles an entry that carries no summary.
+     * A summary is nullable and an entry may have no transcript row, and NULL LIKE … is never true, so the ORs alone
+     * handle both. The transcript is reached by a correlated EXISTS over its unique entry_id, never a join.
+     *
+     * @param \Closure(string): string $columnMatch
      */
-    private function substringPredicate(QueryBuilder $qb, string $parameter, string $term, string $entryAlias): string
+    private static function anyColumn(\Closure $columnMatch, string $parameter, string $entryAlias): string
+    {
+        $transcript = 'transcript' . $entryAlias . $parameter;
+
+        return \sprintf(
+            '(%s OR %s OR EXISTS (SELECT %s.id FROM %s %s WHERE %s.entry = %s AND %s))',
+            $columnMatch($entryAlias . '.headline.title'),
+            $columnMatch($entryAlias . '.summary'),
+            $transcript,
+            EntryTranscript::class,
+            $transcript,
+            $transcript,
+            $entryAlias,
+            $columnMatch($transcript . '.searchText'),
+        );
+    }
+
+    /** @return \Closure(string): string */
+    private function substringMatch(QueryBuilder $qb, string $parameter, string $term): \Closure
     {
         $qb->setParameter($parameter, LikePattern::containing($term));
 
-        return \sprintf(
-            "(%s LIKE :%s ESCAPE '%s' OR %s LIKE :%s ESCAPE '%s')",
-            \sprintf('%s.headline.title', $entryAlias),
-            $parameter,
-            LikePattern::ESCAPE_CHARACTER,
-            \sprintf('%s.summary', $entryAlias),
+        return static fn (string $column): string => \sprintf(
+            "%s LIKE :%s ESCAPE '%s'",
+            $column,
             $parameter,
             LikePattern::ESCAPE_CHARACTER,
         );
@@ -55,8 +74,10 @@ final readonly class SearchTermsPredicateBuilder
      * A cheap "%term%" LIKE runs first and rejects most rows before the REPLACE chain. It is sound only while the raw
      * term is a substring of every row the normalized check accepts, so a term with boundary punctuation skips it:
      * "E-Mail" must match "E–Mail", which does not contain it.
+     *
+     * @return \Closure(string): string
      */
-    private function wholeWordPredicate(QueryBuilder $qb, string $parameter, string $term, string $entryAlias): string
+    private function wholeWordMatch(QueryBuilder $qb, string $parameter, string $term): \Closure
     {
         $word = $parameter . 'Word';
         $cheap = WordBoundaries::areIn($term) ? null : $parameter . 'Cheap';
@@ -66,24 +87,14 @@ final readonly class SearchTermsPredicateBuilder
             $qb->setParameter($cheap, LikePattern::containing($term));
         }
 
-        return \sprintf(
-            '(%s OR %s)',
-            $this->wholeWordColumnPredicate('headline.title', $cheap, $word, $entryAlias),
-            $this->wholeWordColumnPredicate('summary', $cheap, $word, $entryAlias),
-        );
+        return static fn (string $column): string => self::wholeWordColumnMatch($column, $cheap, $word);
     }
 
-    /**
-     * One column's half of wholeWordPredicate: the cheap "%term%" scan first
-     * when it is sound, the normalized boundary check for the rows that
-     * survive it.
-     */
-    private function wholeWordColumnPredicate(string $column, ?string $cheap, string $word, string $entryAlias): string
+    private static function wholeWordColumnMatch(string $column, ?string $cheap, string $word): string
     {
         $escape = LikePattern::ESCAPE_CHARACTER;
         $normalized = \sprintf(
-            "CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(%s.%s), ' ') LIKE :%s ESCAPE '%s'",
-            $entryAlias,
+            "CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(%s), ' ') LIKE :%s ESCAPE '%s'",
             $column,
             $word,
             $escape,
@@ -93,13 +104,6 @@ final readonly class SearchTermsPredicateBuilder
             return '(' . $normalized . ')';
         }
 
-        return \sprintf(
-            "(%s.%s LIKE :%s ESCAPE '%s' AND %s)",
-            $entryAlias,
-            $column,
-            $cheap,
-            $escape,
-            $normalized,
-        );
+        return \sprintf("(%s LIKE :%s ESCAPE '%s' AND %s)", $column, $cheap, $escape, $normalized);
     }
 }

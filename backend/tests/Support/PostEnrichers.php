@@ -21,7 +21,6 @@ use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
-use App\Service\Search\EntryIndexer;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\Share\EntryShareClassifier;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -51,7 +50,7 @@ final class PostEnrichers
             self::enrichments($entityManager),
             $appView,
             self::embedWriter($entityManager),
-            new EntryIndexer($indexWriter, new NullLogger()),
+            EntryIndexers::with($indexWriter),
             $naiveUtcClock,
             $logger,
         );

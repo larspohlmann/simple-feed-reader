@@ -6,10 +6,13 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
+use App\Entity\EntryTranscript;
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Entity\TranscriptParagraph;
 use App\Entity\User;
 use App\Enum\ListOrder;
+use App\Enum\TranscriptFormat;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
@@ -17,8 +20,8 @@ use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 /**
- * The LIKE search over title and summary, with ASCII terms only: MySQL's collation folds case and accents, SQLite's
- * LIKE folds ASCII case only, so "Ubung" finding "Übung" would pass in production and fail here.
+ * The LIKE search over title, summary and transcript text, with ASCII terms only: MySQL's collation folds case and
+ * accents, SQLite's LIKE folds ASCII case only, so "Ubung" finding "Übung" would pass in production and fail here.
  */
 final class EntrySearchTest extends DbTestCase
 {
@@ -112,6 +115,72 @@ final class EntrySearchTest extends DbTestCase
             cursor: $cursor,
             order: ListOrder::OldestFirst,
         ));
+    }
+
+    private function transcribed(Entry $entry, string $searchText): void
+    {
+        $transcript = new EntryTranscript($entry, 'https://example.com/t.vtt', TranscriptFormat::Vtt, null);
+        $transcript->fill([new TranscriptParagraph(null, null, $searchText)], $searchText);
+        $this->entityManager->persist($transcript);
+        $this->entityManager->flush();
+    }
+
+    private function queuedTranscript(Entry $entry): void
+    {
+        $this->entityManager->persist(
+            new EntryTranscript($entry, 'https://example.com/t.vtt', TranscriptFormat::Vtt, null),
+        );
+        $this->entityManager->flush();
+    }
+
+    private function episodeSaidZwiebelring(): void
+    {
+        $this->transcribed($this->entry('spoken', 'Episode one', 'Nothing relevant'), 'Ann: Ein Zwiebelring, bitte.');
+        $this->queuedTranscript($this->entry('queued', 'Episode two', 'Nothing relevant'));
+    }
+
+    public function testASubstringMatchesTranscriptText(): void
+    {
+        $this->episodeSaidZwiebelring();
+
+        self::assertSame(['spoken'], $this->search('wiebel'));
+    }
+
+    public function testAWholeWordMatchesTranscriptText(): void
+    {
+        $this->episodeSaidZwiebelring();
+
+        self::assertSame(['spoken'], $this->search('Zwiebelring '));
+    }
+
+    public function testAWholeWordRejectsAPartOfATranscriptWord(): void
+    {
+        $this->episodeSaidZwiebelring();
+
+        self::assertSame([], $this->search('Zwiebel '));
+    }
+
+    public function testEveryTermMayMatchInTheTranscript(): void
+    {
+        $this->episodeSaidZwiebelring();
+
+        self::assertSame(['spoken'], $this->search('Zwiebelring Ann'));
+        self::assertSame(['spoken'], $this->search('Zwiebelring Ann '));
+    }
+
+    public function testATermMissingFromTheTranscriptRejectsTheEntry(): void
+    {
+        $this->episodeSaidZwiebelring();
+
+        self::assertSame([], $this->search('Zwiebelring Nothere'));
+    }
+
+    public function testATitleMatchStillFindsAnEntryWithoutATranscriptRow(): void
+    {
+        $this->episodeSaidZwiebelring();
+        $this->entry('plain', 'Zwiebelring in the title');
+
+        self::assertEqualsCanonicalizing(['spoken', 'plain'], $this->search('Zwiebelring'));
     }
 
     public function testMatchesTheTitle(): void

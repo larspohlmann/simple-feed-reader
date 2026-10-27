@@ -9,6 +9,7 @@ use App\Entity\Entry;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\Model\IndexedEntryModel;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
+use App\Service\Search\TranscriptText\TranscriptTextInterface;
 use App\Service\Text\Support\PlainText;
 use Psr\Log\LoggerInterface;
 
@@ -24,6 +25,7 @@ final class EntryIndexer
 
     public function __construct(
         private readonly SearchIndexWriterInterface $index,
+        private readonly TranscriptTextInterface $transcriptTexts,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -41,7 +43,7 @@ final class EntryIndexer
 
         try {
             $this->configureOnce();
-            $this->index->upsert(self::toIndexedEntries($entries));
+            $this->index->upsert($this->toIndexedEntries($entries));
         } catch (SearchEngineUnavailableException $exception) {
             $this->logger->error('Failed to index entries', ['exception' => $exception]);
         }
@@ -71,9 +73,19 @@ final class EntryIndexer
      *
      * @return list<IndexedEntryModel>
      */
-    public static function toIndexedEntries(array $entries): array
+    public function toIndexedEntries(array $entries): array
     {
-        return array_map(self::toIndexedEntry(...), $entries);
+        $texts = $this->transcriptTexts->searchTextsFor(
+            array_map(static fn (Entry $entry): int => $entry->requireId(), $entries),
+        );
+
+        return array_map(
+            static fn (Entry $entry): IndexedEntryModel => self::toIndexedEntry(
+                $entry,
+                $texts[$entry->requireId()] ?? null,
+            ),
+            $entries,
+        );
     }
 
     /**
@@ -98,7 +110,7 @@ final class EntryIndexer
      * An indexed entry keeps this feedTitle until app:search:reindex, even after a refresh renames the feed; accepted,
      * since renames are rare next to the ingest volume propagation would cost.
      */
-    private static function toIndexedEntry(Entry $entry): IndexedEntryModel
+    private static function toIndexedEntry(Entry $entry, ?string $transcript): IndexedEntryModel
     {
         return new IndexedEntryModel(
             id: $entry->requireId(),
@@ -106,6 +118,7 @@ final class EntryIndexer
             title: $entry->getTitle(),
             summary: $entry->getSummary(),
             content: PlainText::fromHtmlBlocks($entry->getContentHtml()),
+            transcript: $transcript,
             feedTitle: $entry->getFeed()->getTitle(),
             effectiveDate: $entry->getEffectiveDate(),
         );

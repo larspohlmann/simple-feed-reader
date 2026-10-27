@@ -210,6 +210,7 @@ writes none of them.
 | `MailSendFailure` | The record of automated e-mails the instance failed to send. It is a machine record, not your data. |
 | `ShareEnrichment` | The queue of entries whose embed or link cards are still to come. It is a machine record, not your data. |
 | `ThreadPost` | The replies in which a post's author continued it, read from the network when the post arrives. A restored article shows its root post alone. |
+| `EntryTranscript` | An episode's transcript, fetched from the URL its feed declares. A restored episode has no transcript, since a backup carries no transcript declaration. |
 
 ### 6.2 Account data that the file drops in full
 

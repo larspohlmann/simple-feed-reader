@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryTranscript;
 use App\Entity\Feed;
+use App\Entity\TranscriptParagraph;
+use App\Enum\TranscriptFormat;
 use App\Repository\DatabaseSavedSearchMatcher;
 use App\Repository\SearchTermsPredicateBuilder;
 use App\Service\Search\Model\SavedSearchTermModel;
@@ -44,6 +47,19 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
             2 => [$rocket->getId()],
             3 => [],
         ], $matches);
+    }
+
+    public function testASavedSearchFlagsAnEntryWhoseTranscriptMatches(): void
+    {
+        $episode = $this->entry('a', 'Episode one');
+        $transcript = new EntryTranscript($episode, 'https://example.com/t.vtt', TranscriptFormat::Vtt, null);
+        $transcript->fill([new TranscriptParagraph(null, 'Ann', 'Ein Zwiebelring')], 'Ann: Ein Zwiebelring, bitte.');
+        $this->entityManager->persist($transcript);
+        $this->entityManager->flush();
+
+        $matches = $this->matcher()->matchingIds([$this->search(1, 'Zwiebelring')], [$episode->requireId()]);
+
+        self::assertSame([1 => [$episode->getId()]], $matches);
     }
 
     public function testAMatchOutsideTheCandidatesIsNotReturned(): void

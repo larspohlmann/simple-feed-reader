@@ -13,6 +13,7 @@ final readonly class IndexedEntryModel
         public string $title,
         public ?string $summary,
         public ?string $content,
+        public ?string $transcript,
         public ?string $feedTitle,
         public \DateTimeImmutable $effectiveDate,
     ) {

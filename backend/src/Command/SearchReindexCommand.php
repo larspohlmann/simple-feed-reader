@@ -27,8 +27,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 final class SearchReindexCommand extends Command
 {
-    /** DELETE_CHUNK_SIZE's value (EntryPruner, OrphanedFeedReclaimer): few engine round-trips, little memory each. */
-    private const int BATCH_SIZE = 500;
+    /** A batch carries each episode's full transcript text, so it stays small enough for one engine request. */
+    private const int BATCH_SIZE = 100;
 
     public function __construct(
         private readonly SearchIndexWriterInterface $writer,
@@ -36,6 +36,7 @@ final class SearchReindexCommand extends Command
         private readonly EntityManagerInterface $entityManager,
         private readonly SearchEngineCapability $capability,
         private readonly SavedSearchRepository $savedSearches,
+        private readonly EntryIndexer $indexer,
         private readonly int $batchSize = self::BATCH_SIZE,
     ) {
         parent::__construct();
@@ -103,7 +104,7 @@ final class SearchReindexCommand extends Command
                 return $indexed;
             }
 
-            $this->writer->upsert(EntryIndexer::toIndexedEntries($batch));
+            $this->writer->upsert($this->indexer->toIndexedEntries($batch));
 
             $indexed += \count($batch);
             $lastId = $batch[array_key_last($batch)]->requireId();

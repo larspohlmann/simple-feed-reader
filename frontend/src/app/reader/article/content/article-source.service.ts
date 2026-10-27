@@ -15,6 +15,11 @@ const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([
   'player_page',
 ]);
 
+function textOf(html: string | null): string {
+  if (!html) return '';
+  return (new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '').trim();
+}
+
 /** What the open article shows: the extracted reader article, or the feed's
  *  own body, and the load lifecycle between them. */
 @Injectable()
@@ -84,6 +89,18 @@ export class ArticleSource {
   readonly chapters = computed(() => {
     const body = this.feedBody();
     return body?.status === 'ok' ? body.chapters : [];
+  });
+
+  /** The open episode's transcript, which comes with its feed body (#1809). */
+  readonly transcript = computed(() => {
+    const body = this.feedBody();
+    return body?.status === 'ok' ? body.transcript : null;
+  });
+
+  /** With no show notes of its own, the transcript is what there is to read, so it opens. */
+  readonly transcriptIsTheBody = computed(() => {
+    const body = this.feedBody();
+    return body?.status === 'ok' && body.transcript !== null && textOf(body.html) === '';
   });
 
   readonly displayHtml = computed(() => {

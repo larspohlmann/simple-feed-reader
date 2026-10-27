@@ -24,7 +24,6 @@ use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\SavedPosts\SavedPostRescue;
-use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\FirstFetchRecorder;
@@ -36,12 +35,12 @@ use App\Service\Subscription\SubscriptionLimitResolver;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingSubscribeRoute;
 use App\Tests\Support\UserFactory;
-use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -110,7 +109,7 @@ final class SubscriptionServiceTest extends DbTestCase
                 FeedSchedulers::build($clock),
                 $this->entityManager,
                 $clock,
-                new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
+                EntryIndexers::with(new RecordingSearchIndexWriter()),
                 PostEnrichers::queue($this->entityManager, $clock),
             ),
             new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),

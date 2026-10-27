@@ -12,14 +12,13 @@ use App\Enum\ShareEnrichmentKind;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\FirstFetchRecorder;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\PostEnrichers;
-use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 final class FirstFetchRecorderTest extends DbTestCase
@@ -38,7 +37,7 @@ final class FirstFetchRecorderTest extends DbTestCase
             FeedSchedulers::build($clock),
             $this->entityManager,
             $clock,
-            new EntryIndexer($this->indexWriter, new NullLogger()),
+            EntryIndexers::with($this->indexWriter),
             PostEnrichers::queue($this->entityManager, $clock),
         );
     }

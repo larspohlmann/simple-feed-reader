@@ -19,7 +19,6 @@ use App\Service\LinkCard\ShareTargetReader;
 use App\Service\Reader\PageHeadFetcher;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
-use App\Service\Search\EntryIndexer;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -65,7 +64,7 @@ final class ShareLinkCardsWiring
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),
             $entityManager,
-            new EntryIndexer($indexWriter, new NullLogger()),
+            EntryIndexers::with($indexWriter),
             new NaiveUtcClock($clock),
         );
     }
