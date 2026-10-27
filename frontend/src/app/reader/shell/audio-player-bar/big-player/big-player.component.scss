@@ -48,13 +48,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* At most one screen tall, so the artwork shrinks to fit a short screen. */
 .now-playing {
-  display: flex;
+  display: grid;
   flex: none;
-  flex-direction: column;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
-  max-block-size: 100%;
 }
 
 .art-box {
@@ -72,15 +70,14 @@
   box-shadow: 0 14px 34px rgb(0 0 0 / 35%);
 }
 
-/* The artwork box starts as wide as the content and gives up height when the screen is short. */
+/* At least one screen tall, the artwork taking what the rest leaves: a short screen shrinks it, a taller block never spills over the cards below. */
 @media (width < bp.$bp-sm) {
-  :host {
-    container-type: inline-size;
+  .now-playing {
+    grid-template-rows: auto minmax(calc(4 * var(--space-7)), 1fr) auto auto;
+    min-block-size: 100%;
   }
 
   .art-box {
-    flex: 0 1 80cqi;
-    min-block-size: calc(4 * var(--space-7));
     container-type: size;
   }
 
@@ -142,7 +139,7 @@
   color: var(--text-secondary);
 }
 
-.excerpt:not(.expanded) {
+.excerpt:not(.expanded) .excerpt-text {
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
