@@ -1,15 +1,16 @@
 import { EntryDto } from '../../models';
-import {
-  BLOCK_HEIGHT,
-  DEMOTION,
-  EntryKind,
-  MagazineBlock,
-  ShareKind,
-  TemplateKind,
-} from './magazine-block';
+import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock, TemplateKind } from './magazine-block';
 import { leadWithImage, prefersTextFamily } from './magazine-family';
 import { blockHeight } from './magazine-block-height';
-import { fits, fitsAtAnySize, ImageBar, IMAGE_KINDS, shareKind, settle } from './magazine-slot-fit';
+import { fits, ImageBar, shareKind, settle } from './magazine-slot-fit';
+import { liftFeaturelessPage } from './magazine-page-lift';
+import {
+  PAGE_HEIGHT_CAP,
+  PageLayout,
+  PinnedShare,
+  pageHeight,
+  tallestWhere,
+} from './magazine-page';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
@@ -44,10 +45,6 @@ const WIDGET_PREVIEW = 4;
 const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** The largest slot may reach this far ahead for an entry that fits it. */
 const LOOK_AHEAD = 2;
-/** Per-page height ceiling, in BLOCK_HEIGHT units — about one and a half phone
- *  screens. Without it three heroes can land in one page. */
-const PAGE_HEIGHT_CAP = 1100;
-
 /** A template family, and the image an entry needs before the family refuses to
  *  hide it in a text block. The text family serves wire services whose every entry
  *  carries a miniature, so only a picture that fills a `split` counts there. */
@@ -78,19 +75,6 @@ interface PlanPass {
   readonly uncollapsibleSources: ReadonlySet<number>;
   readonly blocks: MagazineBlock[];
   page: number;
-}
-
-/** The share block each entry of a page claims (null where the template decides), and the image
- *  bar its family holds the page to. */
-interface PinnedShare {
-  readonly kind: ShareKind;
-  /** A quote share takes its height from its entry (#1612). */
-  readonly height: number;
-}
-
-interface PageLayout {
-  readonly pinned: readonly (PinnedShare | null)[];
-  readonly imageBar: ImageBar;
 }
 
 interface SlotAt {
@@ -271,50 +255,10 @@ function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]
     settle(DEMOTION[kind], slice[position], layout.imageBar),
   );
 
-  const lifted = liftFeaturelessPage(wanted, assigned, slice, layout);
+  const lifted = liftFeaturelessPage({ wanted, assigned, entries: slice }, layout);
 
   return lifted.map((kind, position) =>
     toBlock(layout.pinned[position]?.kind ?? kind, slice[position], { page, position }),
-  );
-}
-
-/** Variety over fit: a page that settled without a large image block gives its tallest asked-for
- *  image slot the largest block its picture can take at any size, within the height cap. */
-function liftFeaturelessPage(
-  wanted: TemplateKind[],
-  assigned: TemplateKind[],
-  slice: EntryDto[],
-  layout: PageLayout,
-): TemplateKind[] {
-  if (hasLargeImageBlock(assigned, layout)) return assigned;
-  const position = tallestWhere(
-    wanted,
-    (kind, at) =>
-      layout.pinned[at] === null &&
-      BLOCK_HEIGHT[kind] > BLOCK_HEIGHT[assigned[at]] &&
-      fitsAtAnySize('thumb', slice[at]) &&
-      IMAGE_KINDS.includes(kind),
-  );
-  if (position === null) return assigned;
-
-  const lifted = [...assigned];
-  for (
-    let kind = wanted[position];
-    BLOCK_HEIGHT[kind] > BLOCK_HEIGHT[assigned[position]];
-    kind = DEMOTION[kind]
-  ) {
-    lifted[position] = kind;
-    if (fitsAtAnySize(kind, slice[position]) && pageHeight(lifted, layout) <= PAGE_HEIGHT_CAP) {
-      return lifted;
-    }
-  }
-  return assigned;
-}
-
-function hasLargeImageBlock(kinds: TemplateKind[], layout: PageLayout): boolean {
-  return kinds.some(
-    (kind, position) =>
-      layout.pinned[position] === null && IMAGE_KINDS.includes(kind) && kind !== 'thumb',
   );
 }
 
@@ -368,28 +312,6 @@ function withinBudget(
   }
 
   return result;
-}
-
-function pageHeight(kinds: TemplateKind[], layout: PageLayout): number {
-  return kinds.reduce(
-    (sum, kind, position) => sum + (layout.pinned[position]?.height ?? BLOCK_HEIGHT[kind]),
-    0,
-  );
-}
-
-/** The first of the tallest slots `eligible` admits, or null when it admits none. */
-function tallestWhere(
-  kinds: TemplateKind[],
-  eligible: (kind: TemplateKind, position: number) => boolean,
-): number | null {
-  let tallest: number | null = null;
-  for (let index = 0; index < kinds.length; index++) {
-    if (!eligible(kinds[index], index)) continue;
-    if (tallest === null || BLOCK_HEIGHT[kinds[index]] > BLOCK_HEIGHT[kinds[tallest]]) {
-      tallest = index;
-    }
-  }
-  return tallest;
 }
 
 /**
