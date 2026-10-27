@@ -116,7 +116,7 @@ final class FeedOutcomePersisters
                 new PlatformEntryRules([new BlueskyEntryRule()]),
             ),
             FeedSchedulers::build($this->clock),
-            new EntryIndexer($this->indexWriter, new NullLogger()),
+            new EntryIndexer($this->indexWriter, new NoTranscriptTexts(), new NullLogger()),
             new IncomingEntries(PostEnrichers::queue($this->entityManager, $this->clock), $this->timelineSelfThreads),
             new FeedShareEnrichment(
                 $postEnricher,

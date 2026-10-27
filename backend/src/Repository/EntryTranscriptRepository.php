@@ -7,13 +7,14 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryTranscript;
 use App\Enum\TranscriptStatus;
+use App\Service\Search\TranscriptText\TranscriptTextInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /** @extends ServiceEntityRepository<EntryTranscript> */
-final class EntryTranscriptRepository extends ServiceEntityRepository
+final class EntryTranscriptRepository extends ServiceEntityRepository implements TranscriptTextInterface
 {
     /** Outlasts a worker sweep (5 fetches × TranscriptBudgetModel::FETCH_SECONDS) with room to spare. */
     public const string CLAIM_LEASE = 'PT5M';

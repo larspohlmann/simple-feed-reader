@@ -27,6 +27,7 @@ use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\NoTranscriptTexts;
 use App\Tests\Support\SavedPostFixtures;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
@@ -519,7 +520,7 @@ final class SavedPostRescueTest extends DbTestCase
             $savedFeeds,
             $stateMover,
             $entries,
-            new EntryIndexer($writer, new NullLogger()),
+            new EntryIndexer($writer, new NoTranscriptTexts(), new NullLogger()),
         );
     }
 

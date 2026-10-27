@@ -19,6 +19,7 @@ use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use App\Service\Search\EntryIndexer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\NoTranscriptTexts;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -103,7 +104,7 @@ final class RestoreEntryLoaderTest extends TestCase
             $entries,
             $this->createStub(RestoreEntryStatesInterface::class),
             new EntryBatchInserter($this->createStub(Connection::class), new UrlNormalizer()),
-            new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
+            new EntryIndexer(new RecordingSearchIndexWriter(), new NoTranscriptTexts(), new NullLogger()),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),
             new RestoreDestination($this->user(), $this->targets($entries)),
         );

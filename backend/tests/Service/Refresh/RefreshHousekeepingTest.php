@@ -16,6 +16,7 @@ use App\Service\Retention\EntryPruner;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\NoTranscriptTexts;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SubscriptionHistoryFixtures;
 use Psr\Log\NullLogger;
@@ -119,7 +120,7 @@ final class RefreshHousekeepingTest extends DbTestCase
                 new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
                 $this->retentionSettings(),
                 new MockClock(self::NOW, 'UTC'),
-                new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
+                new EntryIndexer(new RecordingSearchIndexWriter(), new NoTranscriptTexts(), new NullLogger()),
             ),
             $this->historyWiring(self::NOW)->recorder(),
             $this->logger,

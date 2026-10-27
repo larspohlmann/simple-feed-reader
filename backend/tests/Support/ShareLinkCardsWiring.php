@@ -65,7 +65,7 @@ final class ShareLinkCardsWiring
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),
             $entityManager,
-            new EntryIndexer($indexWriter, new NullLogger()),
+            new EntryIndexer($indexWriter, new NoTranscriptTexts(), new NullLogger()),
             new NaiveUtcClock($clock),
         );
     }

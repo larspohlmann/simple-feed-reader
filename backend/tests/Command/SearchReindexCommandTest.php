@@ -11,12 +11,15 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\SavedSearchRepository;
+use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\Search\SearchEngineCapability;
 use App\Tests\DbTestCase;
-use App\Tests\Support\StoredMark;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\NoTranscriptTexts;
+use App\Tests\Support\StoredMark;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -76,6 +79,7 @@ final class SearchReindexCommandTest extends DbTestCase
             $this->entityManager,
             $capability,
             $savedSearches,
+            new EntryIndexer($writer, new NoTranscriptTexts(), new NullLogger()),
             $batchSize,
         );
 

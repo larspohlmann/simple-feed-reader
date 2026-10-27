@@ -38,6 +38,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\NoTranscriptTexts;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingSubscribeRoute;
 use App\Tests\Support\UserFactory;
@@ -110,7 +111,7 @@ final class SubscriptionServiceTest extends DbTestCase
                 FeedSchedulers::build($clock),
                 $this->entityManager,
                 $clock,
-                new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
+                new EntryIndexer(new RecordingSearchIndexWriter(), new NoTranscriptTexts(), new NullLogger()),
                 PostEnrichers::queue($this->entityManager, $clock),
             ),
             new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),

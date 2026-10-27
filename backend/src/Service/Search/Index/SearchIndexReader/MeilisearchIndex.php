@@ -47,7 +47,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
      * }
      */
     private const array SETTINGS = [
-        'searchableAttributes' => ['title', 'summary', 'content', 'feedTitle'],
+        'searchableAttributes' => ['title', 'summary', 'content', 'transcript', 'feedTitle'],
         'filterableAttributes' => ['feedId', 'effectiveDate', 'id'],
         'sortableAttributes' => ['effectiveDate', 'id'],
         'rankingRules' => ['sort', 'words', 'typo', 'proximity', 'attribute', 'exactness'],
@@ -304,6 +304,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
      *     title: string,
      *     summary: ?string,
      *     content: ?string,
+     *     transcript: ?string,
      *     feedTitle: ?string,
      *     effectiveDate: int,
      * }
@@ -316,6 +317,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
             'title' => $entry->title,
             'summary' => $entry->summary,
             'content' => $entry->content,
+            'transcript' => $entry->transcript,
             'feedTitle' => $entry->feedTitle,
             'effectiveDate' => $entry->effectiveDate->getTimestamp(),
         ];

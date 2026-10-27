@@ -18,6 +18,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\NoTranscriptTexts;
 use App\Tests\Support\PostEnrichers;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -38,7 +39,7 @@ final class FirstFetchRecorderTest extends DbTestCase
             FeedSchedulers::build($clock),
             $this->entityManager,
             $clock,
-            new EntryIndexer($this->indexWriter, new NullLogger()),
+            new EntryIndexer($this->indexWriter, new NoTranscriptTexts(), new NullLogger()),
             PostEnrichers::queue($this->entityManager, $clock),
         );
     }

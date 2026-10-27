@@ -36,6 +36,7 @@ final class SearchReindexCommand extends Command
         private readonly EntityManagerInterface $entityManager,
         private readonly SearchEngineCapability $capability,
         private readonly SavedSearchRepository $savedSearches,
+        private readonly EntryIndexer $indexer,
         private readonly int $batchSize = self::BATCH_SIZE,
     ) {
         parent::__construct();
@@ -103,7 +104,7 @@ final class SearchReindexCommand extends Command
                 return $indexed;
             }
 
-            $this->writer->upsert(EntryIndexer::toIndexedEntries($batch));
+            $this->writer->upsert($this->indexer->toIndexedEntries($batch));
 
             $indexed += \count($batch);
             $lastId = $batch[array_key_last($batch)]->requireId();

@@ -27,6 +27,7 @@ use App\Service\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\NoTranscriptTexts;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
@@ -471,7 +472,7 @@ final class EntryPartRestorerTest extends DbTestCase
             $entries,
             $entryStates,
             $inserter,
-            new EntryIndexer($this->indexWriter, new NullLogger()),
+            new EntryIndexer($this->indexWriter, new NoTranscriptTexts(), new NullLogger()),
             new RestoredEntryStateFactory(new MockClock('2026-08-20 00:00:00', 'UTC')),
             $feeds,
         );

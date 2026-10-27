@@ -39,6 +39,7 @@ use App\Tests\Support\Bluesky;
 use App\Tests\Support\FailingEmbedWriter;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\FakeReplyThreadSource;
+use App\Tests\Support\NoTranscriptTexts;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\QueryRecorder;
@@ -728,7 +729,7 @@ final class PostEnricherTest extends DbTestCase
             PostEnrichers::enrichments($this->entityManager),
             new AppViewClient($this->appView, $this->throttle),
             $embedWriter,
-            new EntryIndexer($this->indexWriter, new NullLogger()),
+            new EntryIndexer($this->indexWriter, new NoTranscriptTexts(), new NullLogger()),
             $naiveUtcClock,
             $this->logger,
         );

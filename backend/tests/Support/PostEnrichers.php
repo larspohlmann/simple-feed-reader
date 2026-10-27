@@ -51,7 +51,7 @@ final class PostEnrichers
             self::enrichments($entityManager),
             $appView,
             self::embedWriter($entityManager),
-            new EntryIndexer($indexWriter, new NullLogger()),
+            new EntryIndexer($indexWriter, new NoTranscriptTexts(), new NullLogger()),
             $naiveUtcClock,
             $logger,
         );
