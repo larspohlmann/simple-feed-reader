@@ -14,6 +14,9 @@ final class ScriptedTranscriptSource implements TranscriptSourceInterface
     /** @var list<string> */
     public array $fetchedUrls = [];
 
+    /** @var list<float> */
+    public array $budgets = [];
+
     /** @var array<string, \Throwable> */
     private array $failures = [];
 
@@ -41,6 +44,7 @@ final class ScriptedTranscriptSource implements TranscriptSourceInterface
     public function bodyAt(string $url, float $budgetSeconds): string
     {
         $this->fetchedUrls[] = $url;
+        $this->budgets[] = $budgetSeconds;
         if (isset($this->failures[$url])) {
             throw $this->failures[$url];
         }

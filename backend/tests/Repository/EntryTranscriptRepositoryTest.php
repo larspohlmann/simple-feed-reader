@@ -80,6 +80,21 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
         );
     }
 
+    public function testEveryFilledEntrysSearchTextIsReturned(): void
+    {
+        [$first, $second] = $this->seedTranscripts(2);
+        $first->fill([new TranscriptParagraph(0, null, 'Eins')], 'Eins');
+        $second->fill([new TranscriptParagraph(0, null, 'Zwei')], 'Zwei');
+        $this->entityManager->flush();
+        $firstId = $first->getEntry()->requireId();
+        $secondId = $second->getEntry()->requireId();
+
+        self::assertSame(
+            [$firstId => 'Eins', $secondId => 'Zwei'],
+            $this->transcripts->searchTextsFor([$firstId, $secondId]),
+        );
+    }
+
     public function testNoEntryIdsFindNoSearchTexts(): void
     {
         self::assertSame([], $this->transcripts->searchTextsFor([]));
@@ -90,6 +105,14 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
         [$row] = $this->seedTranscripts(1);
 
         self::assertSame($row, $this->transcripts->findForEntry($row->getEntry()));
+    }
+
+    public function testFindsOnlyTheTranscriptOfTheEntryAsked(): void
+    {
+        [$first, $second] = $this->seedTranscripts(2);
+
+        self::assertSame($second, $this->transcripts->findForEntry($second->getEntry()));
+        self::assertNotSame($first, $this->transcripts->findForEntry($second->getEntry()));
     }
 
     public function testDeletingTheEntryDeletesItsTranscript(): void

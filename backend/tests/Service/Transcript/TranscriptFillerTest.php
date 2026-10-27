@@ -16,7 +16,11 @@ use App\Service\Transcript\Exception\TranscriptUnusableException;
 use App\Service\Transcript\TranscriptFiller;
 use App\Service\Transcript\TranscriptReader;
 use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
+use Monolog\Handler\TestHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpFoundation\Response;
@@ -77,6 +81,48 @@ final class TranscriptFillerTest extends TestCase
         self::assertEquals(new \DateTimeImmutable('2026-10-27 12:30:00'), $transcript->getNextAttemptAt());
     }
 
+    public function testAnUnusableAnswerIsLoggedWithItsUrlAndCause(): void
+    {
+        $handler = new TestHandler();
+        $failure = TranscriptUnusableException::answered('u', Response::HTTP_NOT_FOUND);
+
+        $this->filler(static fn (): never => throw $failure, new Logger('test', [$handler]))
+            ->fill($this->transcript(), 10.0);
+
+        self::assertCount(1, $handler->getRecords());
+        self::assertSame(Level::Info, $handler->getRecords()[0]->level);
+        self::assertSame('https://pod.test/ep1.vtt', $handler->getRecords()[0]->context['url']);
+        self::assertSame($failure, $handler->getRecords()[0]->context['exception']);
+    }
+
+    public function testAnUnreachableHostIsLoggedAtInfo(): void
+    {
+        $handler = new TestHandler();
+        $failure = TranscriptUnreachableException::answered('u', Response::HTTP_SERVICE_UNAVAILABLE);
+
+        $this->filler(static fn (): never => throw $failure, new Logger('test', [$handler]))
+            ->fill($this->transcript(), 10.0);
+
+        self::assertCount(1, $handler->getRecords());
+        self::assertSame(Level::Info, $handler->getRecords()[0]->level);
+        self::assertSame('https://pod.test/ep1.vtt', $handler->getRecords()[0]->context['url']);
+        self::assertSame($failure, $handler->getRecords()[0]->context['exception']);
+    }
+
+    public function testAnUnexpectedFailureIsLoggedAtError(): void
+    {
+        $handler = new TestHandler();
+        $failure = new \RuntimeException('boom');
+
+        $this->filler(static fn (): never => throw $failure, new Logger('test', [$handler]))
+            ->fill($this->transcript(), 10.0);
+
+        self::assertCount(1, $handler->getRecords());
+        self::assertSame(Level::Error, $handler->getRecords()[0]->level);
+        self::assertSame('https://pod.test/ep1.vtt', $handler->getRecords()[0]->context['url']);
+        self::assertSame($failure, $handler->getRecords()[0]->context['exception']);
+    }
+
     public function testTheBudgetReachesTheSource(): void
     {
         $seen = null;
@@ -90,7 +136,7 @@ final class TranscriptFillerTest extends TestCase
     }
 
     /** @param \Closure(string, float): string $body */
-    private function filler(\Closure $body): TranscriptFiller
+    private function filler(\Closure $body, ?LoggerInterface $logger = null): TranscriptFiller
     {
         $source = new readonly class ($body) implements TranscriptSourceInterface {
             public function __construct(private \Closure $body)
@@ -110,7 +156,7 @@ final class TranscriptFillerTest extends TestCase
             $source,
             new TranscriptReader(new EntrySanitizer(new TrailingBlankRemover())),
             new NaiveUtcClock(new MockClock('2026-10-27T12:00:00Z')),
-            new NullLogger(),
+            $logger ?? new NullLogger(),
         );
     }
 

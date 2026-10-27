@@ -23,6 +23,13 @@ final class EntryTranscriptTest extends TestCase
         self::assertNull($transcript->getNextAttemptAt());
     }
 
+    public function testItHasNoIdBeforeItIsFlushed(): void
+    {
+        $this->expectException(\LogicException::class);
+
+        $this->transcript()->requireId();
+    }
+
     public function testFillingStoresTheParagraphsAndTheSearchText(): void
     {
         $transcript = $this->transcript();

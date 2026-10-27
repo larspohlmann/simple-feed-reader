@@ -28,6 +28,17 @@ final class TranscriptFormatTest extends TestCase
         yield 'plain text is unknown' => ['text/plain', null];
     }
 
+    public function testPreferenceRanksAreConsecutiveFromZero(): void
+    {
+        self::assertSame(
+            [0, 1, 2, 3],
+            array_map(
+                static fn (TranscriptFormat $format): int => $format->preference(),
+                [TranscriptFormat::Vtt, TranscriptFormat::Json, TranscriptFormat::Srt, TranscriptFormat::Html],
+            ),
+        );
+    }
+
     public function testPrefersVttThenJsonThenSrtThenHtml(): void
     {
         $ranked = TranscriptFormat::cases();

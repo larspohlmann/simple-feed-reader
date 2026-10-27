@@ -88,6 +88,32 @@ final class EntryIndexerTest extends DbTestCase
         self::assertCount(2, $logSpy->getRecords());
     }
 
+    public function testTranscriptTextsAreLookedUpOnceForExactlyTheBatchIdsAndAttached(): void
+    {
+        $texts = new class implements TranscriptTextInterface {
+            /** @var list<list<int>> */
+            public array $lookups = [];
+
+            public function searchTextsFor(array $entryIds): array
+            {
+                $this->lookups[] = $entryIds;
+
+                return [$entryIds[1] => 'what was said'];
+            }
+        };
+        $writer = new RecordingSearchIndexWriter();
+        $indexer = new EntryIndexer($writer, $texts, new NullLogger());
+        $feed = $this->feed();
+        $first = $this->entry($feed, 'g1');
+        $second = $this->entry($feed, 'g2');
+
+        $indexer->index([$first, $second]);
+
+        self::assertSame([[$first->requireId(), $second->requireId()]], $texts->lookups);
+        self::assertNull($writer->upserts[0][0]->transcript);
+        self::assertSame('what was said', $writer->upserts[0][1]->transcript);
+    }
+
     public function testTheMappedDocumentCarriesThePlainTextContentAndTheFeedTitle(): void
     {
         $writer = new RecordingSearchIndexWriter();

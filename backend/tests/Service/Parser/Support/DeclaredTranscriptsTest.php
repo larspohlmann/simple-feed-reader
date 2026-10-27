@@ -42,12 +42,28 @@ final class DeclaredTranscriptsTest extends TestCase
         self::assertSame('https://pod.test/a.srt', $transcript?->url);
     }
 
-    public function testUnknownTypesAndMissingUrlsAreIgnored(): void
+    public function testAnUnknownTypeIsIgnored(): void
     {
         self::assertNull(DeclaredTranscripts::of($this->rssItem(
-            '<podcast:transcript url="https://pod.test/ep.txt" type="text/plain"/>'
-            . '<podcast:transcript url=" " type="text/vtt"/>',
+            '<podcast:transcript url="https://pod.test/ep.txt" type="text/plain"/>',
         )));
+    }
+
+    public function testAMissingUrlIsIgnored(): void
+    {
+        self::assertNull(DeclaredTranscripts::of($this->rssItem(
+            '<podcast:transcript url=" " type="text/vtt"/>',
+        )));
+    }
+
+    public function testALanguageIsTrimmedAndCutByCharactersNotBytes(): void
+    {
+        $transcript = DeclaredTranscripts::of($this->rssItem(
+            '<podcast:transcript url="https://pod.test/ep.vtt" type="text/vtt" language="  '
+            . str_repeat('ä', 40) . '  "/>',
+        ));
+
+        self::assertSame(str_repeat('ä', 35), $transcript?->language);
     }
 
     public function testAnEmptyLanguageIsNone(): void

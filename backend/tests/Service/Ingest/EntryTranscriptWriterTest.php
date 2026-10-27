@@ -6,6 +6,7 @@ namespace App\Tests\Service\Ingest;
 
 use App\Entity\EntryTranscript;
 use App\Entity\Feed;
+use App\Enum\TranscriptFormat;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Tests\DbTestCase;
@@ -31,7 +32,7 @@ final class EntryTranscriptWriterTest extends DbTestCase
     public function testOnlyTheEpisodeThatDeclaresATranscriptGetsAPendingRow(): void
     {
         $this->ingest([
-            ['with', '<podcast:transcript url="https://pod.test/ep.vtt" type="text/vtt"/>'],
+            ['with', '<podcast:transcript url="https://pod.test/ep.vtt" type="text/vtt" language="de"/>'],
             ['without', ''],
         ]);
 
@@ -39,6 +40,9 @@ final class EntryTranscriptWriterTest extends DbTestCase
         self::assertCount(1, $rows);
         self::assertSame('https://pod.test/ep.vtt', $rows[0]->getUrl());
         self::assertTrue($rows[0]->isPending());
+        self::assertSame(TranscriptFormat::Vtt, $rows[0]->getFormat());
+        self::assertSame('de', $rows[0]->getLanguage());
+        self::assertSame('with', $rows[0]->getEntry()->getGuid());
     }
 
     public function testAUrlThatIsNotAbsoluteHttpQueuesNothing(): void

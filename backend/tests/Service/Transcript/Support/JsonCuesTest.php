@@ -33,6 +33,25 @@ final class JsonCuesTest extends TestCase
         ));
     }
 
+    public function testAStartAtZeroIsKept(): void
+    {
+        self::assertEquals(
+            [new TranscriptCueModel(0, null, 'Opening.')],
+            JsonCues::of('{"segments":[{"startTime":0,"body":"Opening."}]}'),
+        );
+    }
+
+    public function testSpeakersAreTrimmedAndBlankOnesDropped(): void
+    {
+        self::assertEquals(
+            [new TranscriptCueModel(1, 'Ann', 'A.'), new TranscriptCueModel(2, null, 'B.')],
+            JsonCues::of(
+                '{"segments":[{"speaker":"  Ann ","startTime":1,"body":"A."},'
+                . '{"speaker":"   ","startTime":2,"body":"B."}]}',
+            ),
+        );
+    }
+
     public function testMalformedJsonIsUnusable(): void
     {
         $this->expectException(TranscriptUnusableException::class);

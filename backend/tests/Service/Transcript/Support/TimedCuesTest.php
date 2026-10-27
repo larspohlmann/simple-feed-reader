@@ -59,6 +59,30 @@ final class TimedCuesTest extends TestCase
         );
     }
 
+    public function testToleratesSurroundingWhitespaceAroundTimingsVoicesAndText(): void
+    {
+        self::assertEquals(
+            [new TranscriptCueModel(7, 'Ann', 'Hi there.')],
+            TimedCues::of("WEBVTT\n\n  00:00:07.000 --> 00:00:08.000  \n   <v  Ann >  <b> Hi there. </b>\n"),
+        );
+    }
+
+    public function testAByteOrderMarkAndLoneCarriageReturnsDoNotHideACue(): void
+    {
+        self::assertEquals(
+            [new TranscriptCueModel(1, null, 'First.'), new TranscriptCueModel(3, null, 'Second.')],
+            TimedCues::of("\u{FEFF}00:00:01 --> 00:00:02\rFirst.\r\r00:00:03 --> 00:00:04\rSecond.\r"),
+        );
+    }
+
+    public function testDecodesQuotesAndApostrophesInCueText(): void
+    {
+        self::assertEquals(
+            [new TranscriptCueModel(1, null, 'It\'s "fine".')],
+            TimedCues::of("00:00:01 --> 00:00:02\nIt&apos;s &quot;fine&quot;.\n"),
+        );
+    }
+
     public function testACueWithoutTextIsSkipped(): void
     {
         self::assertSame([], TimedCues::of("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n\n"));

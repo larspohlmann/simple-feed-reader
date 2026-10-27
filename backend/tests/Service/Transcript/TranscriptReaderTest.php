@@ -26,6 +26,13 @@ final class TranscriptReaderTest extends TestCase
         self::assertSame('Ann: Hi. Again.', $read->searchText);
     }
 
+    public function testAnSrtBodyIsReadAsTimedCues(): void
+    {
+        $read = $this->reader()->read("1\n00:00:05,000 --> 00:00:06,000\nHallo.\n", TranscriptFormat::Srt);
+
+        self::assertEquals([new TranscriptParagraph(5, null, 'Hallo.')], $read->paragraphs);
+    }
+
     public function testAnHtmlBodyIsSanitizedIntoUntimedParagraphs(): void
     {
         $read = $this->reader()->read(
