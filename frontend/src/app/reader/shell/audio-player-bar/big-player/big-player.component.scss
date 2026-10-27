@@ -263,7 +263,11 @@
 .play {
   inline-size: calc(var(--space-7) + var(--space-4));
   block-size: calc(var(--space-7) + var(--space-4));
-  background: var(--accent);
+
+  @include glass-rim.filled(var(--accent), var(--accent), emphasis);
+
+  border-width: 2px;
+  box-shadow: var(--emphasis-shadow);
   color: var(--on-accent);
 }
 
@@ -361,14 +365,10 @@
 }
 
 @media (hover: hover) {
-  .ctrl:hover:not(:disabled),
+  .ctrl:hover:not(:disabled, .play),
   .chapter-title:hover,
   .card-row:hover {
     background: var(--surface-2);
-  }
-
-  .play:hover:not(:disabled) {
-    background: var(--accent);
   }
 }
 

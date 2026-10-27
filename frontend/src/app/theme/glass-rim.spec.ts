@@ -8,6 +8,7 @@ const PROBE = `
 knobs {
   strength: glass-rim.$strength;
   control-boost: glass-rim.$control-boost;
+  emphasis-boost: glass-rim.$emphasis-boost;
   faint-ratio: glass-rim.$faint-ratio;
   light-glint: map.get(glass-rim.$modes, light, glint);
   light-shade: map.get(glass-rim.$modes, light, shade);
@@ -88,6 +89,19 @@ describe.each(['light', 'dark'] as const)('%s rim tokens', (mode) => {
     expectOneDecimalOf(tokens['--rim-control-shade'], shade * boost);
   });
 
+  it('gives emphasis the further boosted amounts, never past full white or black, unshaded in light', () => {
+    const emphasis = knob('emphasis-boost');
+    expectOneDecimalOf(tokens['--rim-emphasis-glint'], Math.min(glint * emphasis, 100));
+    expectOneDecimalOf(
+      tokens['--rim-emphasis-glint-faint'],
+      Math.min(glint * emphasis * faint, 100),
+    );
+    expectOneDecimalOf(
+      tokens['--rim-emphasis-shade'],
+      mode === 'light' ? 0 : Math.min(shade * emphasis, 100),
+    );
+  });
+
   it('emits white as the step-0 highlight colour', () => {
     expect(tokens['--rim-light']).toBe('white');
   });
@@ -112,18 +126,21 @@ describe('gradients', () => {
     join(__dirname, '..', '..', '..', 'node_modules'),
   ]);
 
-  it('declares both tier gradients once, on every element, in the global stylesheet', () => {
+  it('declares every tier gradient once, on every element, in the global stylesheet', () => {
     expect(global.match(/--rim-gradient:/g)).toHaveLength(1);
     expect(global.match(/--rim-control-gradient:/g)).toHaveLength(1);
+    expect(global.match(/--rim-emphasis-gradient:/g)).toHaveLength(1);
     expect(Object.keys(rulesBySelector(global)[':where(*)'])).toEqual([
       '--rim-gradient',
       '--rim-control-gradient',
+      '--rim-emphasis-gradient',
     ]);
   });
 
   it.each([
     ['surface', 'rim-'],
     ['control', 'rim-control-'],
+    ['emphasis', 'rim-emphasis-'],
   ])('glints the %s rim toward the light and shades it toward black', (_tier, prefix) => {
     expect(rulesBySelector(global)[':where(*)'][`--${prefix}gradient`]).toBe(gradient(prefix));
   });

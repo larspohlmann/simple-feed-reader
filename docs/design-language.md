@@ -294,7 +294,7 @@ corner, a fainter glint at the bottom-right, a hair darker at the other two.
 Single-side dividers stay flat.
 
 **Tune it in one place: `theme/_glass-rim.scss`.** Its knobs — `$strength`,
-`$control-boost`, `$faint-ratio`, the per-mode `$modes` amounts and the gradient
+`$control-boost`, `$emphasis-boost`, `$faint-ratio`, the per-mode `$modes` amounts and the gradient
 geometry (`$angle`, `$base-from`, `$shade-at`, `$base-to`) — derive every token
 at build time; `tokens.scss` only calls `glass-rim.tokens(light)`,
 `glass-rim.tokens(dark)` and `glass-rim.gradients()`. Never hand-edit one of
@@ -307,26 +307,30 @@ the tokens below.
 | `--rim-glint-faint` | `--rim-glint` × `$faint-ratio`, toward `--rim-light` at the bottom-right |
 | `--rim-shade` | the mode's shade × `$strength`, toward black at the middle stop |
 | `--rim-control-*` | each of the three amounts × `$control-boost` |
-| `--rim-gradient`, `--rim-control-gradient` | the painted gradient of each tier, built from the amounts above and `--rim-base` |
+| `--rim-emphasis-*` | each of the three amounts × `$emphasis-boost`, capped at 100%; no shade in light, where the white glint vanishes into the card and only the dark edge would show |
+| `--rim-gradient`, `--rim-control-gradient`, `--rim-emphasis-gradient` | the painted gradient of each tier, built from the amounts above and `--rim-base` |
 
 Each amount is rounded to one decimal and mixed with `color-mix(in oklab, …)`
 from the element's own border colour, so the brightness steps carry over.
 
 **The gradient is declared once.** `glass-rim.gradients()` emits a single
-`:where(*) { --rim-gradient: …; --rim-control-gradient: … }` rule (zero
+`:where(*) { --rim-gradient: …; --rim-control-gradient: …; --rim-emphasis-gradient: … }` rule (zero
 specificity, from `tokens.scss`), so every element resolves `var(--rim-base)`
 against its own value; `filled` and `ring` only paint
-`var(--rim[-control]-gradient)`. A copy of the gradient at every site blew the
+`var(--rim[-control|-emphasis]-gradient)`. A copy of the gradient at every site blew the
 component-style budget. Never declare the gradient in a component — set
 `--rim-base` and let the global rule resolve it.
 
-**Two tiers.** `surface` (the default): magazine cards, source groups, settings
+**Three tiers.** `surface` (the default): magazine cards, source groups, settings
 cards and panels, popovers and menus, dialogs (shadow unchanged), toasts, article
 boxes, tiles, list containers. `control`: bordered buttons, inputs, selects and
 textareas, the search field, icon buttons and glyph boxes, pills, chips, badges,
 the count pill, unread dots, segmented frames — a small element shows the same
 shift over a few pixels, so it carries `$control-boost` times the amount. When
-in doubt, an element at or below control height is a `control`.
+in doubt, an element at or below control height is a `control`. `emphasis`: an
+accent-filled primary control, where the control glint vanishes into the colour —
+today only the big player's play button, with a 2px rim and `--emphasis-shadow`, a
+soft accent cast in light and none in dark (#1843).
 
 **Two mixins.**
 

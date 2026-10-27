@@ -18,6 +18,7 @@
      UI needs only a hair of shadow, a dark one a deeper cast to lift the
      surface off its near-black ground. */
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 6px 20px rgb(0 0 0 / 5%);
+  --emphasis-shadow: 0 4px 12px color-mix(in oklab, var(--accent), transparent 60%);
   --drawer-scrim: rgb(0 0 0 / 32%);
   --hidden-favicon-opacity: 0.35;
 
@@ -48,6 +49,7 @@
   @include brightness.media-at-rest(dark);
 
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 30%);
+  --emphasis-shadow: none;
   --drawer-scrim: rgb(0 0 0 / 55%);
   --hidden-favicon-opacity: 0.55;
 
