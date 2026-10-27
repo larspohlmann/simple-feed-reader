@@ -77,6 +77,27 @@ final class TranscriptParagraphsTest extends TestCase
         );
     }
 
+    public function testASpeakerOnTheCueAfterAClosedParagraphWinsOverTheCarriedOne(): void
+    {
+        $long = str_repeat('word ', 80) . 'end.';
+
+        self::assertEquals(
+            [new TranscriptParagraph(0, 'Ann', $long), new TranscriptParagraph(9, 'Bob', 'Mine.')],
+            TranscriptParagraphs::from([
+                new TranscriptCueModel(0, 'Ann', $long),
+                new TranscriptCueModel(9, 'Bob', 'Mine.'),
+            ]),
+        );
+    }
+
+    public function testTheClosingLengthCountsCharactersNotBytes(): void
+    {
+        self::assertCount(1, TranscriptParagraphs::from([
+            new TranscriptCueModel(0, null, str_repeat('é', 200) . '.'),
+            new TranscriptCueModel(1, null, 'Next.'),
+        ]));
+    }
+
     public function testALongParagraphEndingInAClosingQuoteClosesToo(): void
     {
         $long = str_repeat('word ', 80) . 'end."';

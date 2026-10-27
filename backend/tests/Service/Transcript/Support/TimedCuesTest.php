@@ -98,6 +98,14 @@ final class TimedCuesTest extends TestCase
         );
     }
 
+    public function testASpaceBeforeTheLabelColonIsNotPartOfTheSpeaker(): void
+    {
+        self::assertEquals(
+            [new TranscriptCueModel(0, 'JACK', 'text')],
+            TimedCues::of("WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nJACK : text\n"),
+        );
+    }
+
     public function testAVoiceTagWinsOverAnInlineLabel(): void
     {
         self::assertEquals(
