@@ -39,13 +39,8 @@ final readonly class ProfileRunFailure
             return;
         }
 
-        if (
-            $this->recovery->recovers(
-                CallingRun::profileRun($tick->profileRun->requireId()),
-                $tick->connection,
-                $rejection,
-            )
-        ) {
+        $callingRun = CallingRun::profileRun($tick->profileRun->requireId());
+        if ($this->recovery->recovers($callingRun, $tick->connection, $rejection)) {
             return;
         }
 

@@ -977,7 +977,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(0, $absorbed->getAttempts());
         self::assertSame(1, $absorbed->getProgress()->batchesDone);
         self::assertTrue($this->persistedConnection()->refusesSuppressedReasoning());
-        $waveRows = \array_slice($this->logRowsOfLatestRun(), 1);
+        $rows = $this->logRowsOfLatestRun();
+        $waveRows = \array_slice($rows, 1);
         self::assertSame(
             [CallVerdict::TransportFailed, CallVerdict::TransportFailed, CallVerdict::TransportFailed],
             array_column($waveRows, 'verdict'),
@@ -986,7 +987,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             [null, null, RequestAdjustment::ReasoningSuppression],
             array_column($waveRows, 'adjustedSetting'),
         );
-        self::assertSame([null], array_column(\array_slice($this->logRowsOfLatestRun(), 0, 1), 'adjustedSetting'));
+        self::assertNull($rows[0]['adjustedSetting']);
         self::assertNotContains(null, array_column($waveRows, 'finishedAt'));
 
         $callsBeforeTheResend = \count($this->stubChatClient()->calls());

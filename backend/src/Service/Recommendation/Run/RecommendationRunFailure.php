@@ -35,13 +35,8 @@ final readonly class RecommendationRunFailure
         ProviderRejectedRequestException $rejection,
     ): RecommendationRunReportModel {
         $this->checkpoint->guard($tick->run);
-        if (
-            $this->recovery->recovers(
-                CallingRun::recommendationRun($tick->run->requireId()),
-                $tick->connection,
-                $rejection,
-            )
-        ) {
+        $callingRun = CallingRun::recommendationRun($tick->run->requireId());
+        if ($this->recovery->recovers($callingRun, $tick->connection, $rejection)) {
             return RecommendationRunReportModel::fromRun($tick->run);
         }
 

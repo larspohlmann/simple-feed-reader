@@ -17,11 +17,11 @@ final class CallFailure
     // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
     private ?string $errorDetail = null;
 
-    #[ORM\Column(name: 'adjusted_setting', length: 24, nullable: true, enumType: RequestAdjustment::class)]
+    #[ORM\Column(length: 24, nullable: true, enumType: RequestAdjustment::class)]
     // @phpstan-ignore property.unusedType, property.onlyWritten (the repository's SQL assigns it, DQL reads it)
     private ?RequestAdjustment $adjustedSetting = null;
 
-    #[ORM\Column(name: 'adjusted_value', length: 64, nullable: true)]
+    #[ORM\Column(length: 64, nullable: true)]
     // @phpstan-ignore property.unusedType, property.onlyWritten (the repository's SQL assigns it, DQL reads it)
     private ?string $adjustedValue = null;
 
