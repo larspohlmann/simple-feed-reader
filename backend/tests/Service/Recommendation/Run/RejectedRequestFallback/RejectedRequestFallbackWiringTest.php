@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run\RejectedRequestFallback;
 
 use App\Entity\AiProviderSettings;
+use App\Enum\RequestAdjustment;
 use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
@@ -30,11 +31,17 @@ final class RejectedRequestFallbackWiringTest extends KernelTestCase
         $fallback = $this->fallback();
         $connection = $this->suppressingConnectionOn('gpt-5.4-nano');
 
-        self::assertTrue($fallback->absorbs($connection, $this->maxTokensRefusal()));
+        self::assertSame(
+            RequestAdjustment::TokenParameter,
+            $fallback->adjust($connection, $this->maxTokensRefusal())?->setting,
+        );
         self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
         self::assertFalse($connection->refusesSuppressedReasoning());
 
-        self::assertTrue($fallback->absorbs($connection, $this->reasoningRefusal()));
+        self::assertSame(
+            RequestAdjustment::ReasoningSuppression,
+            $fallback->adjust($connection, $this->reasoningRefusal())?->setting,
+        );
         self::assertTrue($connection->refusesSuppressedReasoning());
     }
 
@@ -43,11 +50,17 @@ final class RejectedRequestFallbackWiringTest extends KernelTestCase
         $fallback = $this->fallback();
         $connection = $this->suppressingConnectionOn('gpt-4.1-mini');
 
-        self::assertTrue($fallback->absorbs($connection, $this->tooLargeRefusal()));
+        self::assertSame(
+            RequestAdjustment::OutputCap,
+            $fallback->adjust($connection, $this->tooLargeRefusal())?->setting,
+        );
         self::assertSame(32_768, $connection->getModelMaxOutputTokens());
         self::assertFalse($connection->refusesSuppressedReasoning());
 
-        self::assertTrue($fallback->absorbs($connection, $this->reasoningRefusal()));
+        self::assertSame(
+            RequestAdjustment::ReasoningSuppression,
+            $fallback->adjust($connection, $this->reasoningRefusal())?->setting,
+        );
         self::assertTrue($connection->refusesSuppressedReasoning());
     }
 

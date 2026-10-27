@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Llm\Run;
 
 use App\Entity\AiProviderSettings;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
 use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,21 +23,23 @@ final readonly class OutputCapFallback implements RejectedRequestFallbackInterfa
     {
     }
 
-    public function absorbs(AiProviderSettings $connection, ProviderRejectedRequestException $rejection): bool
-    {
+    public function adjust(
+        AiProviderSettings $connection,
+        ProviderRejectedRequestException $rejection,
+    ): ?RequestAdjustmentModel {
         $cap = $this->capNamedIn($rejection);
         if (null === $cap) {
-            return false;
+            return null;
         }
 
         $recorded = $connection->getModelMaxOutputTokens();
         $connection->recordOutputCap($cap);
         if ($recorded === $connection->getModelMaxOutputTokens()) {
-            return false;
+            return null;
         }
         $this->entityManager->flush();
 
-        return true;
+        return RequestAdjustmentModel::outputCap($cap);
     }
 
     private function capNamedIn(ProviderRejectedRequestException $rejection): ?int

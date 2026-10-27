@@ -38,7 +38,7 @@ final readonly class ProfileRunFailure
             return;
         }
 
-        if ($this->fallback->absorbs($tick->connection, $rejection)) {
+        if (null !== $this->fallback->adjust($tick->connection, $rejection)) {
             return;
         }
 

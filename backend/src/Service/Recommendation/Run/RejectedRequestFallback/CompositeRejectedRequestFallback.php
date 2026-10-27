@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run\RejectedRequestFallback;
 
 use App\Entity\AiProviderSettings;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
 
 /** Specific readings first: the suppressed-reasoning member absorbs any 400 and would misfile the others' refusals. */
 final readonly class CompositeRejectedRequestFallback implements RejectedRequestFallbackInterface
@@ -17,10 +18,12 @@ final readonly class CompositeRejectedRequestFallback implements RejectedRequest
     ) {
     }
 
-    public function absorbs(AiProviderSettings $connection, ProviderRejectedRequestException $rejection): bool
-    {
-        return $this->tokenParameter->absorbs($connection, $rejection)
-            || $this->outputCap->absorbs($connection, $rejection)
-            || $this->suppressedReasoning->absorbs($connection, $rejection);
+    public function adjust(
+        AiProviderSettings $connection,
+        ProviderRejectedRequestException $rejection,
+    ): ?RequestAdjustmentModel {
+        return $this->tokenParameter->adjust($connection, $rejection)
+            ?? $this->outputCap->adjust($connection, $rejection)
+            ?? $this->suppressedReasoning->adjust($connection, $rejection);
     }
 }

@@ -7,6 +7,7 @@ namespace App\Service\Recommendation\Llm\Run;
 use App\Entity\AiProviderSettings;
 use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
+use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
 use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,16 +22,18 @@ final readonly class MaxTokensRefusedFallback implements RejectedRequestFallback
     {
     }
 
-    public function absorbs(AiProviderSettings $connection, ProviderRejectedRequestException $rejection): bool
-    {
+    public function adjust(
+        AiProviderSettings $connection,
+        ProviderRejectedRequestException $rejection,
+    ): ?RequestAdjustmentModel {
         if (!$this->refusesMaxTokens($connection, $rejection)) {
-            return false;
+            return null;
         }
 
         $connection->recordMaxTokensRefused();
         $this->entityManager->flush();
 
-        return true;
+        return RequestAdjustmentModel::tokenParameter($connection->getTokenLimitParameter());
     }
 
     private function refusesMaxTokens(AiProviderSettings $connection, ProviderRejectedRequestException $rejection): bool

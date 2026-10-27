@@ -9,6 +9,7 @@ use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
 use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -26,16 +27,18 @@ final readonly class SuppressedReasoningFallback implements RejectedRequestFallb
     ) {
     }
 
-    public function absorbs(AiProviderSettings $connection, ProviderRejectedRequestException $rejection): bool
-    {
+    public function adjust(
+        AiProviderSettings $connection,
+        ProviderRejectedRequestException $rejection,
+    ): ?RequestAdjustmentModel {
         if (!$this->mayBeARefusedSuppression($connection, $rejection)) {
-            return false;
+            return null;
         }
 
         $connection->recordSuppressionRefused();
         $this->entityManager->flush();
 
-        return true;
+        return RequestAdjustmentModel::reasoningSuppressionDropped();
     }
 
     private function mayBeARefusedSuppression(

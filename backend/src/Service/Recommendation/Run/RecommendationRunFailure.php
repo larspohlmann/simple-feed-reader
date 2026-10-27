@@ -35,7 +35,7 @@ final readonly class RecommendationRunFailure
         ProviderRejectedRequestException $rejection,
     ): RecommendationRunReportModel {
         $this->checkpoint->guard($tick->run);
-        if ($this->fallback->absorbs($tick->connection, $rejection)) {
+        if (null !== $this->fallback->adjust($tick->connection, $rejection)) {
             return RecommendationRunReportModel::fromRun($tick->run);
         }
 

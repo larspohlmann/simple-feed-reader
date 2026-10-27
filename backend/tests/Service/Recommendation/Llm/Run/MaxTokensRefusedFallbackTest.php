@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Llm\Run;
 
+use App\Enum\RequestAdjustment;
 use App\Enum\TokenLimitParameter;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\ProviderErrorIdentifiersModel;
 use App\Service\Recommendation\Llm\Run\MaxTokensRefusedFallback;
+use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -26,7 +28,11 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
-        self::assertTrue($this->fallbackFlushing($this->once())->absorbs($connection, $rejection));
+        self::assertAdjusted(
+            RequestAdjustment::TokenParameter,
+            'max_completion_tokens',
+            $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
+        );
         self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
     }
 
@@ -36,7 +42,11 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, 'That provider refused the request (status 400): No.');
 
-        self::assertTrue($this->fallbackFlushing($this->once())->absorbs($connection, $rejection));
+        self::assertAdjusted(
+            RequestAdjustment::TokenParameter,
+            'max_completion_tokens',
+            $this->fallbackFlushing($this->once())->adjust($connection, $rejection),
+        );
         self::assertSame(TokenLimitParameter::MaxCompletionTokens, $connection->getTokenLimitParameter());
     }
 
@@ -46,7 +56,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
         self::assertSame(TokenLimitParameter::MaxTokens, $connection->getTokenLimitParameter());
     }
 
@@ -63,13 +73,13 @@ final class MaxTokensRefusedFallbackTest extends TestCase
         $connection = AiProviderSettingsFactory::buildOn('gpt-5.4-nano');
         $rejection = new ProviderRejectedRequestException(Response::HTTP_BAD_REQUEST, self::REFUSAL, $identifiers);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
         self::assertSame(TokenLimitParameter::MaxTokens, $connection->getTokenLimitParameter());
     }
 
     public function testTheSameRefusalUnderAnotherStatusIsNotAbsorbed(): void
     {
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs(
+        self::assertNull($this->fallbackFlushing($this->never())->adjust(
             AiProviderSettingsFactory::buildOn('gpt-5.4-nano'),
             self::refusal(Response::HTTP_UNPROCESSABLE_ENTITY, self::REFUSAL),
         ));
@@ -82,7 +92,7 @@ final class MaxTokensRefusedFallbackTest extends TestCase
 
         $rejection = self::refusal(Response::HTTP_BAD_REQUEST, self::REFUSAL);
 
-        self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $rejection));
+        self::assertNull($this->fallbackFlushing($this->never())->adjust($connection, $rejection));
     }
 
     private static function refusal(int $status, string $message): ProviderRejectedRequestException
@@ -100,5 +110,15 @@ final class MaxTokensRefusedFallbackTest extends TestCase
         $entityManager->expects($flushes)->method('flush');
 
         return new MaxTokensRefusedFallback($entityManager);
+    }
+
+    private static function assertAdjusted(
+        RequestAdjustment $setting,
+        ?string $value,
+        ?RequestAdjustmentModel $adjustment,
+    ): void {
+        self::assertNotNull($adjustment);
+        self::assertSame($setting, $adjustment->setting);
+        self::assertSame($value, $adjustment->value);
     }
 }
