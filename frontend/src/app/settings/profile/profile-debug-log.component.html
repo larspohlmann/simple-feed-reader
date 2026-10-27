@@ -10,6 +10,11 @@
             (toggled)="details.toggle(entry.id)"
           />
         </li>
+        @if (entry.adjustment; as adjustment) {
+          <li>
+            <app-debug-log-adjustment [adjustment]="adjustment" />
+          </li>
+        }
       }
     </ol>
   </div>

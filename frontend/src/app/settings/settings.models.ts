@@ -5,6 +5,12 @@ export interface OpmlImportResult {
   skippedOverLimit: number;
 }
 
+/** What a fallback changed after the provider rejected a call, and the value the next attempt sends. */
+export interface DebugLogAdjustment {
+  setting: 'token-parameter' | 'output-cap' | 'reasoning-suppression';
+  value: string | null;
+}
+
 /** One provider call logged during a for-you run or a profile run. `verdict`
  *  is null while the call is still streaming. */
 export interface DebugLogEntry {
@@ -30,6 +36,8 @@ export interface DebugLogEntry {
   /** Why the provider stopped generating: `length` when `max_tokens` truncated
    *  the answer, `stop` on a natural end. Null until the provider stamps it. */
   finishReason: string | null;
+  /** Set on the newest rejected call of a run when a fallback answered the rejection. */
+  adjustment: DebugLogAdjustment | null;
 }
 
 /** One run the debug panel may switch to. The log keeps the last ten runs,

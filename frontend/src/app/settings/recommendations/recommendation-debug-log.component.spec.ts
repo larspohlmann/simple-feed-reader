@@ -22,6 +22,7 @@ const BATCH_ENTRY: DebugLogEntry = {
   finishedAt: null,
   errorDetail: null,
   finishReason: null,
+  adjustment: null,
 };
 
 const DEDUP_ENTRY: DebugLogEntry = {
@@ -39,6 +40,7 @@ const DEDUP_ENTRY: DebugLogEntry = {
   finishedAt: '2026-08-08T10:01:05Z',
   errorDetail: null,
   finishReason: 'stop',
+  adjustment: null,
 };
 
 const STREAMING_ENTRY: DebugLogEntry = {
@@ -56,6 +58,7 @@ const STREAMING_ENTRY: DebugLogEntry = {
   finishedAt: null,
   errorDetail: null,
   finishReason: null,
+  adjustment: null,
 };
 
 const TRANSPORT_FAILED_ENTRY: DebugLogEntry = {
@@ -73,6 +76,7 @@ const TRANSPORT_FAILED_ENTRY: DebugLogEntry = {
   finishedAt: '2026-08-08T10:03:02Z',
   errorDetail: 'cURL error 28: Operation timed out',
   finishReason: 'length',
+  adjustment: null,
 };
 
 const DETAIL: DebugLogDetail = {
@@ -545,5 +549,29 @@ describe('RecommendationDebugLogComponent', () => {
     const element = fixture.nativeElement as HTMLElement;
 
     expect(element.querySelectorAll('.debug-panel__group')).toHaveLength(1);
+  });
+
+  it('lists an adjustment as its own entry right after the rejected call', () => {
+    debugLog.mockReturnValue(
+      of({
+        run: null,
+        runs: [],
+        entries: [
+          {
+            ...TRANSPORT_FAILED_ENTRY,
+            adjustment: { setting: 'token-parameter', value: 'max_completion_tokens' },
+          },
+          DEDUP_ENTRY,
+        ],
+      }),
+    );
+    const fixture = mount();
+
+    const items = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('li'));
+    expect(items.map((item) => item.querySelector('app-debug-log-adjustment') !== null)).toEqual([
+      false,
+      true,
+      false,
+    ]);
   });
 });

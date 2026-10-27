@@ -1,0 +1,12 @@
+@use '../../theme/glass-rim';
+
+/* Same box as a call entry, quieter: it notes a change, it is not a call. */
+:host {
+  @include glass-rim.filled(var(--surface-0));
+
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+}

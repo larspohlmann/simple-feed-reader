@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DebugLogDetails } from '../debug-log/debug-log-details.service';
+import { DebugLogAdjustmentComponent } from '../debug-log/debug-log-adjustment.component';
 import { DebugLogEntryComponent } from '../debug-log/debug-log-entry.component';
 import { SettingsApi } from '../settings-api';
 import { DebugLogEntry } from '../settings.models';
@@ -20,7 +21,7 @@ const POLL_MS = 2000;
 /** The newest profile run's provider calls, polled while the run is active; a row opens to its bodies. */
 @Component({
   selector: 'app-profile-debug-log',
-  imports: [DebugLogEntryComponent],
+  imports: [DebugLogEntryComponent, DebugLogAdjustmentComponent],
   providers: [DebugLogDetails],
   templateUrl: './profile-debug-log.component.html',
   styleUrl: './profile-debug-log.component.scss',
