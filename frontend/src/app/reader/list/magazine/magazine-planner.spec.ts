@@ -42,6 +42,19 @@ const wire = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
+// A WordPress feed's entry: one small square crop and a teaser too short for a pull quote.
+const smallThumb = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+  entryAt(id, {
+    imageUrl: `https://i/${id}-202x202.jpg`,
+    imageWidth: 202,
+    imageHeight: 202,
+    imageRenditions: [],
+    summary: 'A teaser of about one and a half lines, the way a WordPress feed ships it. '.repeat(
+      2,
+    ),
+    ...over,
+  });
+
 const CARD = aLinkCard();
 const linkShare = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   big(id, { titleDerived: true, share: 'link', linkCards: [CARD], ...over });
@@ -688,6 +701,55 @@ describe('planMagazine', () => {
     const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
     expect(ks[15]).toBe('split');
     expect(ks[16]).toBe('thumb');
+  });
+
+  it('gives each page of a small-thumbnail feed one larger block the template asks for', () => {
+    const ks = kinds(
+      planMagazine({ entries: many(17, smallThumb), grouping: false, complete: true }),
+    );
+    expect(ks.slice(0, 11)).toEqual([
+      'wide',
+      'thumb',
+      'thumb',
+      'thumb',
+      'thumb',
+      'thumb',
+      'hero',
+      'thumb',
+      'thumb',
+      'thumb',
+      'thumb',
+    ]);
+    expect(ks[11]).toBe('hero');
+  });
+
+  it('lifts a page that mixes thumbnails with text blocks but shows no large image', () => {
+    const entries = many(6, (index) => (index === 3 ? entryAt(index) : smallThumb(index)));
+    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    expect(ks).toEqual(['wide', 'thumb', 'kicker', 'thumb', 'thumb', 'thumb']);
+  });
+
+  it('keeps a small portrait picture out of a lifted hero or wide', () => {
+    const entries = many(11, (index) => smallThumb(index, { imageHeight: 360 }));
+    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    expect(ks[0]).toBe('split');
+    expect(ks[6]).toBe('split');
+  });
+
+  it('lifts only as far as the page height cap allows', () => {
+    // Page 1 asks for a hero beside a pinned media share: 463 + 463 + 3 × 90 exceeds the cap.
+    const entries = many(11, (index) => (index === 8 ? mediaShare(index) : smallThumb(index)));
+    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    expect(ks.slice(6, 8)).toEqual(['wide', 'media']);
+  });
+
+  it('is prefix-stable for a small-thumbnail feed', () => {
+    const entries = many(40, smallThumb);
+    const full = planned(planMagazine({ entries, grouping: false, complete: true }));
+    const partial = planned(
+      planMagazine({ entries: entries.slice(0, 23), grouping: false, complete: false }),
+    );
+    expect(full.slice(0, partial.length)).toEqual(partial);
   });
 
   it('shows a real picture in the text family rather than a text block', () => {

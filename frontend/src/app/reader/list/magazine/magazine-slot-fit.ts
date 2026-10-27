@@ -136,6 +136,13 @@ export function fits(kind: TemplateKind, entry: EntryDto): boolean {
   return FITS[kind](entry);
 }
 
+/** Whether the entry's picture could take `kind` were its file large enough: no size floor,
+ *  but a portrait cover still never fills a `hero` or `wide`. */
+export function fitsAtAnySize(kind: TemplateKind, entry: EntryDto): boolean {
+  if (!IMAGE_KINDS.includes(kind) || entryImage(entry) === null) return false;
+  return (kind !== 'hero' && kind !== 'wide') || portraitCoverRatio(entry) === null;
+}
+
 /** An unknown width is trusted only alongside the persisted image field. */
 function imageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
   const image = entryImage(entry);

@@ -9,7 +9,7 @@ import {
 } from './magazine-block';
 import { leadWithImage, prefersTextFamily } from './magazine-family';
 import { blockHeight } from './magazine-block-height';
-import { fits, ImageBar, shareKind, settle } from './magazine-slot-fit';
+import { fits, fitsAtAnySize, ImageBar, IMAGE_KINDS, shareKind, settle } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
@@ -271,8 +271,50 @@ function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]
     settle(DEMOTION[kind], slice[position], layout.imageBar),
   );
 
-  return assigned.map((kind, position) =>
+  const lifted = liftFeaturelessPage(wanted, assigned, slice, layout);
+
+  return lifted.map((kind, position) =>
     toBlock(layout.pinned[position]?.kind ?? kind, slice[position], { page, position }),
+  );
+}
+
+/** Variety over fit: a page that settled without a large image block gives its tallest asked-for
+ *  image slot the largest block its picture can take at any size, within the height cap. */
+function liftFeaturelessPage(
+  wanted: TemplateKind[],
+  assigned: TemplateKind[],
+  slice: EntryDto[],
+  layout: PageLayout,
+): TemplateKind[] {
+  if (hasLargeImageBlock(assigned, layout)) return assigned;
+  const position = tallestWhere(
+    wanted,
+    (kind, at) =>
+      layout.pinned[at] === null &&
+      BLOCK_HEIGHT[kind] > BLOCK_HEIGHT[assigned[at]] &&
+      fitsAtAnySize('thumb', slice[at]) &&
+      IMAGE_KINDS.includes(kind),
+  );
+  if (position === null) return assigned;
+
+  const lifted = [...assigned];
+  for (
+    let kind = wanted[position];
+    BLOCK_HEIGHT[kind] > BLOCK_HEIGHT[assigned[position]];
+    kind = DEMOTION[kind]
+  ) {
+    lifted[position] = kind;
+    if (fitsAtAnySize(kind, slice[position]) && pageHeight(lifted, layout) <= PAGE_HEIGHT_CAP) {
+      return lifted;
+    }
+  }
+  return assigned;
+}
+
+function hasLargeImageBlock(kinds: TemplateKind[], layout: PageLayout): boolean {
+  return kinds.some(
+    (kind, position) =>
+      layout.pinned[position] === null && IMAGE_KINDS.includes(kind) && kind !== 'thumb',
   );
 }
 
@@ -310,10 +352,7 @@ function withinBudget(
   demote: (kind: TemplateKind, position: number) => TemplateKind,
 ): TemplateKind[] {
   const result = [...kinds];
-  let height = result.reduce(
-    (sum, kind, position) => sum + (layout.pinned[position]?.height ?? BLOCK_HEIGHT[kind]),
-    0,
-  );
+  let height = pageHeight(result, layout);
 
   while (height > PAGE_HEIGHT_CAP) {
     const tallest = tallestWhere(
@@ -329,6 +368,13 @@ function withinBudget(
   }
 
   return result;
+}
+
+function pageHeight(kinds: TemplateKind[], layout: PageLayout): number {
+  return kinds.reduce(
+    (sum, kind, position) => sum + (layout.pinned[position]?.height ?? BLOCK_HEIGHT[kind]),
+    0,
+  );
 }
 
 /** The first of the tallest slots `eligible` admits, or null when it admits none. */
