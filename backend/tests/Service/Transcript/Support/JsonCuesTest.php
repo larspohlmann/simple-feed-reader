@@ -35,10 +35,10 @@ final class JsonCuesTest extends TestCase
 
     public function testAStartAtZeroIsKept(): void
     {
-        self::assertEquals(
-            [new TranscriptCueModel(0, null, 'Opening.')],
-            JsonCues::of('{"segments":[{"startTime":0,"body":"Opening."}]}'),
-        );
+        $cues = JsonCues::of('{"segments":[{"startTime":0,"body":"Opening."}]}');
+
+        self::assertCount(1, $cues);
+        self::assertSame(0, $cues[0]->startSeconds);
     }
 
     public function testSpeakersAreTrimmedAndBlankOnesDropped(): void

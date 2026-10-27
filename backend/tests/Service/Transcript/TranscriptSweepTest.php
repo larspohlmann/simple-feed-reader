@@ -71,6 +71,7 @@ final class TranscriptSweepTest extends DbTestCase
         self::assertSame(1, $report->filled);
         self::assertSame('filled', $this->statusOf($older));
         self::assertSame('pending', $this->statusOf($newer));
+        self::assertTrue(array_is_list($this->indexWriter->upserts[0]));
     }
 
     public function testAnEmptyBudgetTouchesNothing(): void
