@@ -80,7 +80,7 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
         yield 'unlisted vimeo' => ['https://vimeo.com/76979871/8272103f6e', EmbedShape::Landscape];
         yield 'soundcloud' => [
             'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/2370150908',
-            EmbedShape::Landscape,
+            EmbedShape::Strip,
         ];
         yield 'brightcove' => [
             'https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112',

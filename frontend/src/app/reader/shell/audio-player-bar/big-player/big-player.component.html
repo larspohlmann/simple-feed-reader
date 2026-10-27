@@ -15,155 +15,6 @@
             | transloco: { index: player.index() + 1, count: player.tracks().length }
         }}
       </span>
-      <span class="balance" aria-hidden="true"></span>
-    </div>
-
-    <div class="art-box"><app-audio-artwork class="art" [track]="track" /></div>
-
-    <div class="details">
-      <h2 class="title" [id]="titleId">
-        @if (track.entry; as entry) {
-          <button type="button" class="title-link" (click)="openArticle(entry)">
-            {{ track.title }}
-          </button>
-        } @else {
-          {{ track.title }}
-        }
-      </h2>
-      @if (track.entry; as entry) {
-        <p class="source">{{ entry.feedTitle }} · {{ published() }}</p>
-        @if (entry.excerpt) {
-          <p class="excerpt">{{ entry.excerpt }}</p>
-        }
-      }
-    </div>
-
-    <div class="scrub" [class.dragging]="dragging()">
-      <app-scrubber
-        [position]="player.position()"
-        [duration]="player.duration()"
-        [buffered]="player.buffered()"
-        [chapters]="player.chapters()"
-        (seek)="player.seek($event)"
-        (dragging)="dragging.set($event)"
-      />
-      <div class="times">
-        <span class="time">{{ format(player.position()) }}</span>
-        <span class="time">−{{ remaining() }}</span>
-      </div>
-    </div>
-
-    <div class="transport">
-      <button
-        class="ctrl previous"
-        type="button"
-        [attr.aria-label]="'reader.audioPlayer.previous' | transloco"
-        (click)="player.previous()"
-      >
-        <app-icon name="skip_previous" size="lg" />
-      </button>
-      <button
-        class="ctrl back"
-        type="button"
-        [attr.aria-label]="'reader.audioPlayer.back' | transloco: { seconds: skipStep }"
-        (click)="player.skip(-skipStep)"
-      >
-        <app-icon name="replay" size="lg" />
-      </button>
-      <button
-        class="ctrl play"
-        type="button"
-        [attr.aria-label]="
-          (player.playing() ? 'reader.audioPlayer.pause' : 'reader.audioPlayer.play') | transloco
-        "
-        (click)="player.toggle()"
-      >
-        <app-icon [name]="player.playing() ? 'pause' : 'play_arrow'" size="lg" />
-      </button>
-      <button
-        class="ctrl forward"
-        type="button"
-        [attr.aria-label]="'reader.audioPlayer.forward' | transloco: { seconds: skipStep }"
-        (click)="player.skip(skipStep)"
-      >
-        <app-icon name="forward_media" size="lg" />
-      </button>
-      <button
-        class="ctrl next"
-        type="button"
-        [disabled]="!player.hasNext()"
-        [attr.aria-label]="'reader.audioPlayer.next' | transloco"
-        (click)="player.next()"
-      >
-        <app-icon name="skip_next" size="lg" />
-      </button>
-    </div>
-
-    @if (player.hasChapters()) {
-      <div class="chapter-strip">
-        <button
-          class="ctrl previous-chapter"
-          type="button"
-          [disabled]="!player.hasPreviousChapter()"
-          [attr.aria-label]="'reader.audioPlayer.previousChapter' | transloco"
-          (click)="player.previousChapter()"
-        >
-          <app-icon name="chevron_left" size="lg" />
-        </button>
-        <button
-          class="chapter-title"
-          type="button"
-          [attr.aria-expanded]="chaptersShown()"
-          [attr.aria-controls]="chaptersShown() ? 'big-player-chapters' : null"
-          (click)="toggleChapters()"
-        >
-          @if (player.currentChapter(); as chapter) {
-            <span class="chapter-name">{{ chapter.title }}</span>
-            <span class="chapter-meta">
-              {{
-                'reader.audioPlayer.chapterPosition'
-                  | transloco: { index: player.chapterIndex() + 1, count: player.chapters().length }
-              }}
-              @if (player.chapterProgress(); as progress) {
-                <span class="chapter-left">
-                  <app-icon name="schedule" size="xs" />
-                  {{ format(progress.secondsLeft) }}
-                </span>
-              }
-            </span>
-          } @else {
-            <span class="chapter-name">
-              {{
-                'reader.audioPlayer.chapterCount' | transloco: { count: player.chapters().length }
-              }}
-            </span>
-          }
-        </button>
-        <button
-          class="ctrl next-chapter"
-          type="button"
-          [disabled]="!player.hasNextChapter()"
-          [attr.aria-label]="'reader.audioPlayer.nextChapter' | transloco"
-          (click)="player.nextChapter()"
-        >
-          <app-icon name="chevron_right" size="lg" />
-        </button>
-      </div>
-    }
-
-    <div class="extras" #extras>
-      @if (track.entry; as entry) {
-        <button
-          type="button"
-          class="ctrl open-article"
-          [attr.aria-label]="'reader.audioPlayer.openArticle' | transloco"
-          (click)="openArticle(entry)"
-        >
-          <app-icon name="article" size="md" />
-        </button>
-      } @else {
-        <span class="balance" aria-hidden="true"></span>
-      }
       <button
         type="button"
         class="ctrl speed"
@@ -172,51 +23,199 @@
       >
         {{ player.rate() }}×
       </button>
-      <button
-        type="button"
-        class="ctrl show-playlist"
-        [attr.aria-expanded]="sheet() ? playlistShown() : null"
-        [attr.aria-controls]="playlistShown() ? 'big-player-playlist' : null"
-        [attr.aria-label]="
-          'reader.audioPlayer.playlistCount' | transloco: { count: player.tracks().length }
-        "
-        (click)="togglePlaylist()"
-      >
-        <app-icon name="queue_music" size="md" />
-      </button>
     </div>
-  </div>
 
-  @if (player.hasChapters()) {
-    <section class="chapters" #chapterSection [attr.aria-label]="'reader.chapters' | transloco">
-      <button
-        class="chapters-heading"
-        type="button"
-        [attr.aria-expanded]="chaptersShown()"
-        [attr.aria-controls]="chaptersShown() ? 'big-player-chapters' : null"
-        (click)="toggleChapters()"
-      >
-        <app-icon [name]="chaptersShown() ? 'expand_more' : 'chevron_right'" size="md" />
-        {{ 'reader.audioPlayer.chapterCount' | transloco: { count: player.chapters().length } }}
-      </button>
-      @if (chaptersShown()) {
-        <app-audio-chapters
-          id="big-player-chapters"
-          [chapters]="player.chapters()"
-          [playhead]="player.chapterPlayhead()"
-          (pick)="player.playChapter($event)"
-        />
+    <div class="art-box"><app-audio-artwork class="art" [track]="track" /></div>
+
+    <div class="details">
+      @let entry = track.entry;
+      <h2 class="title" [id]="titleId">
+        @if (entry && !separateArticle()) {
+          <button type="button" class="title-link" (click)="openArticle(entry)">
+            {{ track.title }}
+          </button>
+        } @else {
+          {{ track.title }}
+        }
+      </h2>
+      @if (separateArticle(); as article) {
+        <button type="button" class="article-title" (click)="openArticle(article)">
+          {{ article.title }}
+        </button>
       }
-    </section>
-  }
+      @if (entry) {
+        <p class="source">{{ entry.feedTitle }} · {{ published() }}</p>
+        @if (entry.excerpt) {
+          <p class="excerpt">{{ entry.excerpt }}</p>
+        }
+      }
+    </div>
 
-  @if (playlistShown()) {
+    <section class="card playback" [attr.aria-label]="'reader.audioPlayer.label' | transloco">
+      <div class="scrub" [class.dragging]="dragging()">
+        <app-scrubber
+          [position]="player.position()"
+          [duration]="player.duration()"
+          [buffered]="player.buffered()"
+          [chapters]="player.chapters()"
+          (seek)="player.seek($event)"
+          (dragging)="dragging.set($event)"
+        />
+        <div class="times">
+          <span class="time">{{ format(player.position()) }}</span>
+          <span class="time">−{{ remaining() }}</span>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button
+          class="ctrl previous"
+          type="button"
+          [attr.aria-label]="'reader.audioPlayer.previous' | transloco"
+          (click)="player.previous()"
+        >
+          <app-icon name="skip_previous" size="lg" />
+        </button>
+        <button
+          class="ctrl skip back"
+          type="button"
+          [attr.aria-label]="'reader.audioPlayer.back' | transloco: { seconds: skipStep }"
+          (click)="player.skip(-skipStep)"
+        >
+          <app-icon name="replay" size="xl" />
+          <span class="skip-seconds" aria-hidden="true">{{ skipStep }}</span>
+        </button>
+        <button
+          class="ctrl play"
+          type="button"
+          [attr.aria-label]="
+            (player.playing() ? 'reader.audioPlayer.pause' : 'reader.audioPlayer.play') | transloco
+          "
+          (click)="player.toggle()"
+        >
+          <app-icon [name]="player.playing() ? 'pause' : 'play_arrow'" size="2xl" [fill]="true" />
+        </button>
+        <button
+          class="ctrl skip forward"
+          type="button"
+          [attr.aria-label]="'reader.audioPlayer.forward' | transloco: { seconds: skipStep }"
+          (click)="player.skip(skipStep)"
+        >
+          <app-icon class="mirrored" name="replay" size="xl" />
+          <span class="skip-seconds" aria-hidden="true">{{ skipStep }}</span>
+        </button>
+        <button
+          class="ctrl next"
+          type="button"
+          [disabled]="!player.hasNext()"
+          [attr.aria-label]="'reader.audioPlayer.next' | transloco"
+          (click)="player.next()"
+        >
+          <app-icon name="skip_next" size="lg" />
+        </button>
+      </div>
+    </section>
+
+    @if (player.hasChapters()) {
+      <section
+        class="card chapter-card"
+        #chapterSection
+        [attr.aria-label]="'reader.chapters' | transloco"
+      >
+        <div class="chapter-strip">
+          <button
+            class="ctrl previous-chapter"
+            type="button"
+            [disabled]="!player.hasPreviousChapter()"
+            [attr.aria-label]="'reader.audioPlayer.previousChapter' | transloco"
+            (click)="player.previousChapter()"
+          >
+            <app-icon name="chevron_left" size="lg" />
+          </button>
+          <button
+            class="chapter-title"
+            type="button"
+            [attr.aria-expanded]="chaptersShown()"
+            [attr.aria-controls]="chaptersShown() ? 'big-player-chapters' : null"
+            (click)="toggleChapters()"
+          >
+            @if (player.currentChapter(); as chapter) {
+              <span class="chapter-position group-caption">
+                {{
+                  'reader.audioPlayer.chapterPosition'
+                    | transloco
+                      : { index: player.chapterIndex() + 1, count: player.chapters().length }
+                }}
+              </span>
+              <span class="chapter-name">{{ chapter.title }}</span>
+              @if (chapterLeft(); as left) {
+                <span class="chapter-left">
+                  <app-icon name="schedule" size="sm" />
+                  {{ left }}
+                </span>
+              }
+            } @else {
+              <span class="chapter-name">
+                {{
+                  'reader.audioPlayer.chapterCount' | transloco: { count: player.chapters().length }
+                }}
+              </span>
+            }
+          </button>
+          <button
+            class="ctrl next-chapter"
+            type="button"
+            [disabled]="!player.hasNextChapter()"
+            [attr.aria-label]="'reader.audioPlayer.nextChapter' | transloco"
+            (click)="player.nextChapter()"
+          >
+            <app-icon name="chevron_right" size="lg" />
+          </button>
+        </div>
+        <button
+          class="card-row chapters-heading"
+          type="button"
+          [attr.aria-expanded]="chaptersShown()"
+          [attr.aria-controls]="chaptersShown() ? 'big-player-chapters' : null"
+          (click)="toggleChapters()"
+        >
+          <app-icon class="row-lead" name="format_list_bulleted" size="md" />
+          <span class="row-label">{{ 'reader.audioPlayer.allChapters' | transloco }}</span>
+          <span class="count">{{ player.chapters().length }}</span>
+          <app-icon class="row-trail" [name]="chaptersShown() ? 'expand_less' : 'expand_more'" />
+        </button>
+        @if (chaptersShown()) {
+          <app-audio-chapters
+            id="big-player-chapters"
+            class="chapters"
+            [chapters]="player.chapters()"
+            [playhead]="player.chapterPlayhead()"
+            (pick)="player.playChapter($event)"
+          />
+        }
+      </section>
+    }
+
     <section
-      id="big-player-playlist"
-      class="queue"
+      class="card playlist-card"
       [attr.aria-label]="'reader.audioPlayer.playlist' | transloco"
     >
-      <app-audio-playlist />
+      <button
+        #playlistButton
+        type="button"
+        class="card-row show-playlist"
+        [attr.aria-expanded]="playlistShown()"
+        [attr.aria-controls]="playlistShown() ? 'big-player-playlist' : null"
+        (click)="togglePlaylist()"
+      >
+        <app-icon class="row-lead" name="queue_music" size="md" />
+        <span class="row-label">{{ 'reader.audioPlayer.playlist' | transloco }}</span>
+        <span class="count">{{ player.tracks().length }}</span>
+        <app-icon class="row-trail" [name]="playlistShown() ? 'expand_less' : 'expand_more'" />
+      </button>
+      @if (playlistShown()) {
+        <app-audio-playlist id="big-player-playlist" class="queue" />
+      }
     </section>
-  }
+  </div>
 }

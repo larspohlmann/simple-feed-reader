@@ -21,12 +21,12 @@ final class CountingSource implements EmbedDetailsSourceInterface
 
     public static function describing(string $description): self
     {
-        return new self(new EmbedDescriptionModel(null, null, $description));
+        return new self(new EmbedDescriptionModel(null, null, $description, null));
     }
 
     public static function failingWith(int $status): self
     {
-        return new self(new EmbedDescriptionModel(null, null, ''), $status);
+        return new self(new EmbedDescriptionModel(null, null, '', null), $status);
     }
 
     public static function provider(): string

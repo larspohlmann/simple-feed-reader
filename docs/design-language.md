@@ -96,7 +96,7 @@ Every row height is `--tap-target` on a coarse pointer.
 
 ### Icon sizes
 
-Five steps. The same tag glyph runs from a 12px pill to a 20px sidebar lead, and the sidebar's 28px buttons, its segmented controls and a child tag's lead carry an 18px glyph (#1749).
+Seven steps. The same tag glyph runs from a 12px pill to a 20px sidebar lead, and the sidebar's 28px buttons, its segmented controls and a child tag's lead carry an 18px glyph (#1749).
 
 | Token | Value | Named size |
 |---|---|---|
@@ -105,6 +105,8 @@ Five steps. The same tag glyph runs from a 12px pill to a 20px sidebar lead, and
 | `--icon-dense` | `18px` | `dense` |
 | `--icon-md` | `20px` | `md` (default) |
 | `--icon-lg` | `24px` | `lg` |
+| `--icon-xl` | `32px` | `xl` (the big player's skip glyphs) |
+| `--icon-2xl` | `36px` | `2xl` (the big player's play glyph) |
 | — | `0.85em` | `text` |
 
 Never write these directly in a component if an `<app-icon>` / `<app-tag-glyph>`
@@ -1356,6 +1358,25 @@ expression metacharacters in a term match literally, so a search for `c++`
 behaves.
 
 **Not for:** general emphasis. Use it only where a term genuinely matched.
+
+---
+
+### `<app-marquee>`
+
+One line of text that, when wider than its box, loops sideways without end
+(24 px/s, holding the start still briefly each lap): a hidden second copy follows
+the first, so the end runs into the start. The line is an `<ng-template>` child,
+since projected content renders only once. A line that fits stays put; under
+`prefers-reduced-motion` it ends in an ellipsis instead. No inputs.
+
+```html
+<app-marquee class="title">
+  <ng-template>{{ chapter.title }} · {{ track.title }}</ng-template>
+</app-marquee>
+```
+
+Used for the audio player bar's title line (#1829). **Not for:** list rows,
+where many moving lines at once compete for attention; truncate those.
 
 ---
 

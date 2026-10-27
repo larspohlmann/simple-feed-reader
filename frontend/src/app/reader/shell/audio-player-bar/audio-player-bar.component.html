@@ -87,14 +87,16 @@
         }
       </div>
       <div class="meta">
-        <span class="title">
-          @if (player.currentChapter(); as chapter) {
-            {{ chapter.title }}
-            <span class="subtitle">· {{ track.title }}</span>
-          } @else {
-            {{ track.title }}
-          }
-        </span>
+        <app-marquee class="title" [paused]="surface.playerOpen()">
+          <ng-template>
+            @if (player.currentChapter(); as chapter) {
+              {{ chapter.title }}
+              <span class="subtitle">· {{ track.title }}</span>
+            } @else {
+              {{ track.title }}
+            }
+          </ng-template>
+        </app-marquee>
         <div class="track">
           <span class="time">{{ format(player.position()) }}</span>
           <app-scrubber

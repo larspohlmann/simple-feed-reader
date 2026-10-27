@@ -35,6 +35,8 @@ const episode: AudioTrack = {
   },
 };
 
+const sameTitle: AudioTrack = { ...episode, entry: { ...episode.entry!, title: 'Episode 2' } };
+
 function stub() {
   return {
     ...bigPlayerAudioSignals(),
@@ -117,7 +119,22 @@ describe('BigPlayerComponent', () => {
     expect(query(fixture, '.title')!.textContent).toContain('Episode 2');
     expect(query(fixture, '.source')!.textContent).toContain('Fixture podcast · ');
     expect(query(fixture, '.excerpt')!.textContent).toContain('What this episode is about.');
-    expect(query(fixture, '.position')!.textContent!.trim()).toBe('2 of 2');
+    expect(query(fixture, '.position')!.textContent!.trim()).toBe('Track 2 of 2');
+  });
+
+  it('links the article a track came from below its own title', () => {
+    const fixture = render();
+
+    expect(query(fixture, '.article-title')!.textContent!.trim()).toBe('Episode 2: the headline');
+    expect(query(fixture, '.article-title')!.tagName).toBe('BUTTON');
+    expect(query(fixture, '.title-link')).toBeNull();
+  });
+
+  it('links the track title itself when the article shares it', () => {
+    const fixture = render(sameTitle);
+
+    expect(query(fixture, '.article-title')).toBeNull();
+    expect(query(fixture, '.title-link')!.textContent!.trim()).toBe('Episode 2');
   });
 
   it('drives the scrubber, with elapsed and remaining time', () => {
@@ -162,6 +179,17 @@ describe('BigPlayerComponent', () => {
     expect(query(fixture, '.scrub')!.classList).not.toContain('dragging');
   });
 
+  it('labels the skip buttons with their step', () => {
+    const fixture = render();
+
+    for (const skip of ['.back', '.forward']) {
+      expect(query(fixture, `${skip} .skip-seconds`)!.textContent!.trim()).toBe(`${SKIP_SECONDS}`);
+    }
+    expect(query(fixture, '.back')!.getAttribute('aria-label')).toBe(
+      `Back ${SKIP_SECONDS} seconds`,
+    );
+  });
+
   it('drives the transport controls', () => {
     const fixture = render();
     player.hasNext.set(true);
@@ -202,17 +230,16 @@ describe('BigPlayerComponent', () => {
     expect(ref.close).toHaveBeenCalledWith();
   });
 
-  it('hands over to the playlist panel', () => {
+  it('names the playlist with its track count', () => {
     const fixture = render();
 
-    query(fixture, '.show-playlist')!.click();
-
-    expect(ref.close).toHaveBeenCalledWith('playlist');
+    expect(query(fixture, '.show-playlist .row-label')!.textContent!.trim()).toBe('Playlist');
+    expect(query(fixture, '.show-playlist .count')!.textContent!.trim()).toBe('2');
   });
 
-  describe('in the phone sheet', () => {
-    it('shows and hides the playlist under the controls instead of handing over', () => {
-      const fixture = render(episode, true);
+  for (const phone of [false, true]) {
+    it(`shows and hides the playlist inside the ${phone ? 'phone sheet' : 'card'}`, () => {
+      const fixture = render(episode, phone);
       const button = query<HTMLButtonElement>(fixture, '.show-playlist')!;
       expect(button.getAttribute('aria-expanded')).toBe('false');
 
@@ -229,7 +256,9 @@ describe('BigPlayerComponent', () => {
       expect(playlistShown()).toBe(false);
       expect(query(fixture, 'app-audio-playlist')).toBeNull();
     });
+  }
 
+  describe('in the phone sheet', () => {
     it('scrolls the bottom row to the top when the playlist appears, not when it goes', () => {
       const fixture = render(episode, true);
       const scrollIntoView = Element.prototype.scrollIntoView as jest.Mock;
@@ -238,7 +267,7 @@ describe('BigPlayerComponent', () => {
       fixture.detectChanges();
       expect(scrollIntoView).toHaveBeenCalledTimes(1);
       expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' });
-      expect(scrollIntoView.mock.contexts[0]).toBe(query(fixture, '.extras'));
+      expect(scrollIntoView.mock.contexts[0]).toBe(query(fixture, '.show-playlist'));
 
       query(fixture, '.show-playlist')!.click();
       fixture.detectChanges();
@@ -304,21 +333,23 @@ describe('BigPlayerComponent', () => {
         .map((row) => row.nativeElement);
     }
 
-    it('shows neither the strip nor the list for a track without chapters', () => {
+    it('shows neither the chapter card nor the list for a track without chapters', () => {
       const fixture = render();
 
-      expect(query(fixture, '.chapter-strip')).toBeNull();
+      expect(query(fixture, '.chapter-card')).toBeNull();
+      expect(query(fixture, '.playback + .playlist-card')).not.toBeNull();
       expect(query(fixture, '.chapters')).toBeNull();
       expect(query(fixture, 'app-audio-chapters')).toBeNull();
     });
 
-    it('names the current chapter with its position and time left under the transport', () => {
+    it('names the current chapter with its position and time left in a card under the playback', () => {
       const fixture = chaptered();
 
-      expect(query(fixture, '.transport + .chapter-strip')).not.toBeNull();
+      expect(query(fixture, '.playback + .chapter-card + .playlist-card')).not.toBeNull();
+      expect(query(fixture, '.chapter-position')!.textContent!.trim()).toBe('Chapter 2 of 3');
       expect(query(fixture, '.chapter-name')!.textContent!.trim()).toBe('Main');
-      expect(query(fixture, '.chapter-meta')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
-        'Chapter 2 of 3 schedule 1:45',
+      expect(query(fixture, '.chapter-left')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+        'schedule 1:45 left',
       );
     });
 
@@ -327,9 +358,7 @@ describe('BigPlayerComponent', () => {
       player.chapterProgress.set(null);
       fixture.detectChanges();
 
-      expect(query(fixture, '.chapter-meta')!.textContent!.replace(/\s+/g, ' ').trim()).toBe(
-        'Chapter 2 of 3',
-      );
+      expect(query(fixture, '.chapter-position')!.textContent!.trim()).toBe('Chapter 2 of 3');
       expect(query(fixture, '.chapter-left')).toBeNull();
     });
 
@@ -341,7 +370,7 @@ describe('BigPlayerComponent', () => {
       fixture.detectChanges();
 
       expect(query(fixture, '.chapter-name')!.textContent!.trim()).toBe('Chapters (3)');
-      expect(query(fixture, '.chapter-meta')).toBeNull();
+      expect(query(fixture, '.chapter-position')).toBeNull();
     });
 
     it('steps between chapters, leaving previous and next to the tracks', () => {
@@ -376,24 +405,28 @@ describe('BigPlayerComponent', () => {
       expect(control(fixture, '.next-chapter').disabled).toBe(true);
     });
 
-    it('opens the only queued track with its list under a counted heading, between the extras and the queue', () => {
+    it('opens the only queued track with its list right under the heading, in the chapter card', () => {
       const fixture = chapteredAlone(true);
       playlistShown.set(true);
       fixture.detectChanges();
 
       const heading = control(fixture, '.chapters-heading');
-      expect(heading.textContent!.replace(/\s+/g, ' ').trim()).toBe('expand_more Chapters (3)');
+      expect(query(fixture, '.chapters-heading .row-label')!.textContent!.trim()).toBe(
+        'All chapters',
+      );
+      expect(query(fixture, '.chapters-heading .count')!.textContent!.trim()).toBe('3');
+      expect(heading.textContent).toContain('expand_less');
       expect(heading.getAttribute('aria-expanded')).toBe('true');
       expect(heading.getAttribute('aria-controls')).toBe('big-player-chapters');
-      expect(query(fixture, '.now-playing + .chapters')).not.toBeNull();
-      expect(query(fixture, '.chapters + .queue')).not.toBeNull();
+      expect(query(fixture, '.chapter-card .chapters-heading + .chapters')).not.toBeNull();
+      expect(query(fixture, '.playlist-card .show-playlist + .queue')).not.toBeNull();
     });
 
     it('keeps the list closed while the queue holds more tracks', () => {
       const fixture = chaptered();
 
       const heading = control(fixture, '.chapters-heading');
-      expect(heading.textContent).toContain('chevron_right');
+      expect(heading.textContent).toContain('expand_more');
       expect(heading.getAttribute('aria-expanded')).toBe('false');
       expect(heading.hasAttribute('aria-controls')).toBe(false);
       expect(control(fixture, '.chapter-title').getAttribute('aria-expanded')).toBe('false');
@@ -439,7 +472,7 @@ describe('BigPlayerComponent', () => {
         expect(control(fixture, '.chapter-title').getAttribute('aria-expanded')).toBe('false');
         expect(control(fixture, '.chapters-heading').getAttribute('aria-expanded')).toBe('false');
         expect(control(fixture, '.chapters-heading').hasAttribute('aria-controls')).toBe(false);
-        expect(control(fixture, '.chapters-heading').textContent).toContain('chevron_right');
+        expect(control(fixture, '.chapters-heading').textContent).toContain('expand_more');
 
         control(fixture, toggle).click();
         fixture.detectChanges();
@@ -460,7 +493,7 @@ describe('BigPlayerComponent', () => {
       fixture.detectChanges();
       expect(scrollIntoView).toHaveBeenCalledTimes(1);
       expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' });
-      expect(scrollIntoView.mock.contexts[0]).toBe(query(fixture, '.chapters'));
+      expect(scrollIntoView.mock.contexts[0]).toBe(query(fixture, '.chapter-card'));
     });
 
     it('shows the reopened list in place on the card', () => {
@@ -476,31 +509,25 @@ describe('BigPlayerComponent', () => {
     });
   });
 
-  it('keeps the card free of the playlist, even when the sheet last showed it', () => {
-    const fixture = render();
-    playlistShown.set(true);
-    fixture.detectChanges();
-
-    expect(query(fixture, 'app-audio-playlist')).toBeNull();
-    expect(query(fixture, '.show-playlist')!.hasAttribute('aria-expanded')).toBe(false);
-  });
-
   it('is the scroll container a dragged row scrolls', () => {
     const fixture = render();
 
     expect(fixture.debugElement.injector.get(CdkScrollable, null)).not.toBeNull();
   });
 
-  for (const control of ['.open-article', '.title-link']) {
+  for (const [control, track, slug] of [
+    ['.article-title', episode, '42-episode-2-the-headline'],
+    ['.title-link', sameTitle, '42-episode-2'],
+  ] as const) {
     it(`opens the article from ${control}, keeping the list it was played from`, async () => {
-      const fixture = render();
+      const fixture = render(track);
       const router = TestBed.inject(Router);
       await router.navigateByUrl('/?subscription=1');
 
       query(fixture, control)!.click();
       await fixture.whenStable();
 
-      expect(router.url).toBe('/?subscription=1&entry=42-episode-2-the-headline');
+      expect(router.url).toBe(`/?subscription=1&entry=${slug}`);
       expect(ref.close).toHaveBeenCalledWith();
     });
   }
@@ -510,7 +537,7 @@ describe('BigPlayerComponent', () => {
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/?subscription=1&link=7.1');
 
-    query(fixture, '.open-article')!.click();
+    query(fixture, '.article-title')!.click();
     await fixture.whenStable();
 
     expect(router.url).toBe('/?subscription=1&entry=42-episode-2-the-headline');
@@ -520,9 +547,9 @@ describe('BigPlayerComponent', () => {
     const fixture = render(first);
 
     expect(query(fixture, '.title')!.textContent).toContain('Episode 1');
+    expect(query(fixture, '.article-title')).toBeNull();
     expect(query(fixture, '.source')).toBeNull();
     expect(query(fixture, '.excerpt')).toBeNull();
-    expect(query(fixture, '.open-article')).toBeNull();
     expect(query(fixture, '.title-link')).toBeNull();
   });
 

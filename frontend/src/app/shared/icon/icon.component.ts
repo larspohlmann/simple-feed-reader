@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type IconSize = 'text' | 'xs' | 'sm' | 'dense' | 'md' | 'lg';
+export type IconSize = 'text' | 'xs' | 'sm' | 'dense' | 'md' | 'lg' | 'xl' | '2xl';
 
 /**
  * Maps the named size onto its token. Kept here so no consumer writes a px.
@@ -23,6 +23,8 @@ export const ICON_SIZE_TOKEN: Record<IconSize, string> = {
   dense: 'var(--icon-dense)',
   md: 'var(--icon-md)',
   lg: 'var(--icon-lg)',
+  xl: 'var(--icon-xl)',
+  '2xl': 'var(--icon-2xl)',
 };
 
 /* The size lands on the host rather than the glyph span so the two consumers

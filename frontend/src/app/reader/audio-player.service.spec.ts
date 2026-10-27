@@ -739,6 +739,7 @@ describe('AudioPlayerService', () => {
         title: 'Its own',
         durationSeconds: 300,
         chapters,
+        artworkUrl: null,
       });
 
       expect(service.current()?.title).toBe('Its own');
@@ -761,6 +762,7 @@ describe('AudioPlayerService', () => {
         title: null,
         durationSeconds: 300,
         chapters: [],
+        artworkUrl: null,
       });
 
       expect(service.duration()).toBe(300);
@@ -777,6 +779,7 @@ describe('AudioPlayerService', () => {
         title: null,
         durationSeconds: 300,
         chapters: [],
+        artworkUrl: null,
       });
 
       expect(service.duration()).toBe(290);

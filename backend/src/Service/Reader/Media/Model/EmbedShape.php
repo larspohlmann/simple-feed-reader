@@ -9,4 +9,5 @@ enum EmbedShape: string
     case Landscape = 'landscape';
     case Tall = 'tall';
     case Portrait = 'portrait';
+    case Strip = 'strip';
 }

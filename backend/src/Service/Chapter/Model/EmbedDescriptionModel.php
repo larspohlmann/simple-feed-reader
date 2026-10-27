@@ -11,6 +11,7 @@ final readonly class EmbedDescriptionModel
         public ?string $title,
         public ?int $durationSeconds,
         public string $description,
+        public ?string $artworkUrl,
     ) {
     }
 }

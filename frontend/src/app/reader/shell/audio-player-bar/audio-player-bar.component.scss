@@ -91,9 +91,6 @@
 .title {
   font-size: var(--fs-sm);
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .subtitle {
@@ -130,12 +127,14 @@ app-scrubber {
   .controls {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: repeat(3, auto);
     gap: var(--space-1) var(--space-2);
     padding-inline: var(--space-2);
   }
 
   .open-player {
     grid-row: 1 / -1;
+    align-self: center;
     grid-column: 1;
     border-radius: var(--radius);
   }

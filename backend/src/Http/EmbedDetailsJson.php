@@ -9,13 +9,14 @@ use App\Service\Chapter\Model\EmbedDetailsModel;
 
 final class EmbedDetailsJson
 {
-    /** @return array{title: string|null, durationSeconds: int|null, chapters: list<array{startSeconds: int, title: string}>} */
+    /** @return array{title: string|null, durationSeconds: int|null, chapters: list<array{startSeconds: int, title: string}>, artworkUrl: string|null} */
     public static function of(EmbedDetailsModel $details): array
     {
         return [
             'title' => $details->title,
             'durationSeconds' => $details->durationSeconds,
             'chapters' => EntryMedia::toJsonList($details->chapters),
+            'artworkUrl' => $details->artworkUrl,
         ];
     }
 

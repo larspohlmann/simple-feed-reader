@@ -18,18 +18,19 @@ final class EmbedDetailsCacheTest extends TestCase
 {
     public function testChapteredDetailsLiveThirtyDays(): void
     {
-        $this->assertLifetime(new EmbedDetailsModel('A mix', 4964, [new EntryChapter(0, 'Intro')]), 2592000);
+        $this->assertLifetime(new EmbedDetailsModel('A mix', 4964, [new EntryChapter(0, 'Intro')], null), 2592000);
     }
 
     public function testDetailsWithoutChaptersLiveADay(): void
     {
-        $this->assertLifetime(new EmbedDetailsModel('A mix', 4964, []), 86400);
+        $this->assertLifetime(new EmbedDetailsModel('A mix', 4964, [], null), 86400);
     }
 
     public function testRememberedDetailsReadBackEqual(): void
     {
         $cache = new EmbedDetailsCache(new ArrayAdapter());
-        $details = new EmbedDetailsModel('A mix', 4964, [new EntryChapter(0, 'Intro'), new EntryChapter(60, 'Two')]);
+        $chapters = [new EntryChapter(0, 'Intro'), new EntryChapter(60, 'Two')];
+        $details = new EmbedDetailsModel('A mix', 4964, $chapters, null);
 
         $cache->remember($this->youTube(), $details);
 
@@ -39,7 +40,7 @@ final class EmbedDetailsCacheTest extends TestCase
     public function testRememberedEmptyDetailsReadBackAsEmptyNotAMiss(): void
     {
         $cache = new EmbedDetailsCache(new ArrayAdapter());
-        $details = new EmbedDetailsModel(null, null, []);
+        $details = new EmbedDetailsModel(null, null, [], null);
 
         $cache->remember($this->youTube(), $details);
 
@@ -73,7 +74,7 @@ final class EmbedDetailsCacheTest extends TestCase
         $cache = new EmbedDetailsCache(new ArrayAdapter());
         $cache->remember(
             new EmbedAddressModel(ChapteredEmbed::YouTube, '123'),
-            new EmbedDetailsModel('Video', null, [new EntryChapter(0, 'Video')]),
+            new EmbedDetailsModel('Video', null, [new EntryChapter(0, 'Video')], null),
         );
 
         self::assertNull($cache->find(new EmbedAddressModel(ChapteredEmbed::SoundCloud, '123')));

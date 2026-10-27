@@ -75,6 +75,7 @@ describe('toEmbedTrack', () => {
       title: 'The video itself',
       durationSeconds: 4964,
       chapters,
+      artworkUrl: null,
       ...overrides,
     });
 
@@ -85,6 +86,16 @@ describe('toEmbedTrack', () => {
       expect(track.durationInSeconds).toBe(4964);
       expect(track.chapters).toEqual(chapters);
       expect(track.entry?.title).toBe('The entry headline');
+    });
+
+    it("shows the embed's own artwork over the poster and the entry image (#1831)", () => {
+      const track = toEmbedTrack(
+        entry(),
+        video(),
+        details({ artworkUrl: 'https://i1.sndcdn.com/artworks-a-t500x500.jpg' }),
+      );
+
+      expect(track.imageUrl).toBe('https://i1.sndcdn.com/artworks-a-t500x500.jpg');
     });
 
     it('falls back to the post title and an unknown length for what the details lack', () => {

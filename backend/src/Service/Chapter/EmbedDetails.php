@@ -16,7 +16,7 @@ use App\Service\Text\Support\LinkedPlainText;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
-/** An embed's title, length and description chapters, kept per embed so every reader of every post shares one fetch (#1824). */
+/** An embed's title, length, artwork and description chapters, kept per embed so every reader of every post shares one fetch (#1824). */
 final readonly class EmbedDetails
 {
     public function __construct(
@@ -46,6 +46,7 @@ final readonly class EmbedDetails
             $described->title,
             $described->durationSeconds,
             self::chaptersBefore($described->durationSeconds, self::chaptersIn($described->description)),
+            $described->artworkUrl,
         );
     }
 

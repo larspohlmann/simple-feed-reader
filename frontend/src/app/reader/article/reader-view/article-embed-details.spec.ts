@@ -19,13 +19,20 @@ const VIDEO_DETAILS: TrackDetails = {
     { startSeconds: 0, title: 'Intro' },
     { startSeconds: 90, title: 'Demo' },
   ],
+  artworkUrl: null,
 };
 const TRACK_DETAILS: TrackDetails = {
   title: 'A track',
   durationSeconds: null,
   chapters: [{ startSeconds: 30, title: 'Side B' }],
+  artworkUrl: null,
 };
-const UNCHAPTERED: TrackDetails = { title: 'A plain video', durationSeconds: 120, chapters: [] };
+const UNCHAPTERED: TrackDetails = {
+  title: 'A plain video',
+  durationSeconds: 120,
+  chapters: [],
+  artworkUrl: null,
+};
 const BODY_CHAPTERS = [
   { startSeconds: 0, title: 'Opening' },
   { startSeconds: 45, title: 'Body' },

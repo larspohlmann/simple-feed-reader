@@ -87,6 +87,27 @@ final class SoundCloudOembedDetailsSourceTest extends TestCase
         yield 'a title not a string' => ['{"title":5}'];
     }
 
+    public function testReadsTheArtwork(): void
+    {
+        $details = $this->detailsAnswering('{"thumbnail_url":"https://i1.sndcdn.com/artworks-a-t500x500.jpg"}');
+
+        self::assertSame('https://i1.sndcdn.com/artworks-a-t500x500.jpg', $details->artworkUrl);
+    }
+
+    #[DataProvider('answersWithoutArtwork')]
+    public function testAnAnswerWithoutHttpsArtworkGivesNone(string $body): void
+    {
+        self::assertNull($this->detailsAnswering($body)->artworkUrl);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function answersWithoutArtwork(): iterable
+    {
+        yield 'no artwork' => ['{}'];
+        yield 'artwork not a string' => ['{"thumbnail_url":5}'];
+        yield 'artwork over plain http' => ['{"thumbnail_url":"http://i1.sndcdn.com/a.jpg"}'];
+    }
+
     public function testIsTheSoundCloudSource(): void
     {
         self::assertSame('soundcloud', SoundCloudOembedDetailsSource::provider());

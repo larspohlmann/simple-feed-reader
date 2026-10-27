@@ -29,6 +29,7 @@ const VIDEO_DETAILS: TrackDetails = {
   title: 'Its own title',
   durationSeconds: 300,
   chapters: CHAPTERS,
+  artworkUrl: null,
 };
 const ENTRY = anEntry({ id: 42, title: 'The video' });
 

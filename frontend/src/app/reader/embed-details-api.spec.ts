@@ -13,6 +13,7 @@ const DETAILS: TrackDetails = {
   title: 'A mix',
   durationSeconds: 4964,
   chapters: [{ startSeconds: 0, title: 'Intro' }],
+  artworkUrl: null,
 };
 
 describe('EmbedDetailsApi', () => {

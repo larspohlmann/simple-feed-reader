@@ -182,6 +182,7 @@ describe('playlist', () => {
         title: 'Bravo itself',
         durationSeconds: 300,
         chapters,
+        artworkUrl: null,
       });
 
       expect(playlist.tracks).toEqual([
@@ -190,6 +191,25 @@ describe('playlist', () => {
         charlie,
       ]);
       expect(playlist.index).toBe(1);
+    });
+
+    it("shows the source's own artwork over the track's picture", () => {
+      const pictured = { ...alpha, imageUrl: 'https://x.test/post.jpg' };
+
+      const playlist = withDetails(of(0, pictured), alpha.url, {
+        ...nothing,
+        artworkUrl: 'https://x.test/artwork.jpg',
+      });
+
+      expect(playlist.tracks[0].imageUrl).toBe('https://x.test/artwork.jpg');
+    });
+
+    it('keeps the picture when the details bring no artwork', () => {
+      const pictured = { ...alpha, imageUrl: 'https://x.test/post.jpg' };
+
+      const playlist = withDetails(of(0, pictured), alpha.url, { ...nothing, title: 'Renamed' });
+
+      expect(playlist.tracks[0].imageUrl).toBe('https://x.test/post.jpg');
     });
 
     it('keeps the title when the details name none', () => {
@@ -241,9 +261,14 @@ describe('playlist', () => {
       const playlist = of(0, { ...alpha, durationInSeconds: 290, chapters });
 
       expect(withDetails(playlist, alpha.url, nothing)).toBe(playlist);
-      expect(withDetails(playlist, alpha.url, { title: 'a', durationSeconds: 300, chapters })).toBe(
-        playlist,
-      );
+      expect(
+        withDetails(playlist, alpha.url, {
+          title: 'a',
+          durationSeconds: 300,
+          chapters,
+          artworkUrl: null,
+        }),
+      ).toBe(playlist);
     });
   });
 });
