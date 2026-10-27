@@ -18,6 +18,7 @@ final readonly class ParsedMediaBundleModel
         public array $media = [],
         public array $attachments = [],
         public ParsedChaptersModel $chapters = new ParsedChaptersModel(),
+        public ?ParsedTranscriptModel $transcript = null,
     ) {
     }
 
