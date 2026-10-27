@@ -82,13 +82,15 @@ function describedTrack(track: AudioTrack, details: TrackDetails): AudioTrack {
   const title = details.title ?? track.title;
   const durationInSeconds = track.durationInSeconds ?? details.durationSeconds;
   const chapters = details.chapters.length > 0 ? details.chapters : track.chapters;
+  const imageUrl = details.artworkUrl ?? track.imageUrl;
   if (
     title === track.title &&
     durationInSeconds === track.durationInSeconds &&
-    chapters === track.chapters
+    chapters === track.chapters &&
+    imageUrl === track.imageUrl
   ) {
     return track;
   }
-  const described = { ...track, title, durationInSeconds };
+  const described = { ...track, title, durationInSeconds, imageUrl };
   return chapters ? { ...described, chapters } : described;
 }

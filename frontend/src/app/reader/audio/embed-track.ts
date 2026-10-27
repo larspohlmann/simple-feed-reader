@@ -16,10 +16,18 @@ export function toEmbedTrack(
     url: media.url,
     title: details?.title ?? entryDisplayTitle(entry),
     faviconUrl: entry.faviconUrl,
-    imageUrl: media.posterUrl ?? entry.imageUrl,
+    imageUrl: pictureOf(entry, media, details),
     durationInSeconds: details?.durationSeconds ?? null,
     entry: audioTrackEntry(entry),
   };
   const chapters = details?.chapters ?? [];
   return chapters.length > 0 ? { ...track, chapters } : track;
+}
+
+function pictureOf(
+  entry: EntryDto,
+  media: EmbedMedia,
+  details: TrackDetails | null,
+): string | null {
+  return details?.artworkUrl ?? media.posterUrl ?? entry.imageUrl;
 }

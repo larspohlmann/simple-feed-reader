@@ -2,7 +2,7 @@ import generatedFrames from './embed-frame-allowlist.generated.json';
 import { SOUNDCLOUD_PLAYER_URL } from './soundcloud-widget-protocol';
 
 type EmbedKind = 'audio' | 'video';
-type EmbedShape = 'landscape' | 'tall' | 'portrait';
+type EmbedShape = 'landscape' | 'tall' | 'portrait' | 'strip';
 
 interface EmbedPlayer {
   kind: EmbedKind;

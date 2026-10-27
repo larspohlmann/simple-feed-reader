@@ -14,16 +14,18 @@ final readonly class EmbedDetailsModel
         public ?string $title,
         public ?int $durationSeconds,
         public array $chapters,
+        public ?string $artworkUrl = null,
     ) {
     }
 
-    /** @return array{title: string|null, durationSeconds: int|null, chapters: list<array{startSeconds: int, title: string}>} */
+    /** @return array{title: string|null, durationSeconds: int|null, chapters: list<array{startSeconds: int, title: string}>, artworkUrl: string|null} */
     public function toCacheEntry(): array
     {
         return [
             'title' => $this->title,
             'durationSeconds' => $this->durationSeconds,
             'chapters' => EntryMedia::toJsonList($this->chapters),
+            'artworkUrl' => $this->artworkUrl,
         ];
     }
 
@@ -35,11 +37,15 @@ final readonly class EmbedDetailsModel
         $title = $stored['title'];
         $durationSeconds = $stored['durationSeconds'];
         $chapters = self::chaptersFrom($stored['chapters']);
-        if (!self::isTitle($title) || !self::isDuration($durationSeconds) || $chapters === null) {
+        $artworkUrl = $stored['artworkUrl'];
+        if (!self::isOptionalText($title) || !self::isDuration($durationSeconds) || $chapters === null) {
+            return null;
+        }
+        if (!self::isOptionalText($artworkUrl)) {
             return null;
         }
 
-        return new self($title, $durationSeconds, $chapters);
+        return new self($title, $durationSeconds, $chapters, $artworkUrl);
     }
 
     /** @param array<mixed> $stored */
@@ -47,13 +53,14 @@ final readonly class EmbedDetailsModel
     {
         return \array_key_exists('title', $stored)
             && \array_key_exists('durationSeconds', $stored)
-            && \array_key_exists('chapters', $stored);
+            && \array_key_exists('chapters', $stored)
+            && \array_key_exists('artworkUrl', $stored);
     }
 
-    /** @phpstan-assert-if-true string|null $title */
-    private static function isTitle(mixed $title): bool
+    /** @phpstan-assert-if-true string|null $text */
+    private static function isOptionalText(mixed $text): bool
     {
-        return $title === null || \is_string($title);
+        return $text === null || \is_string($text);
     }
 
     /** @phpstan-assert-if-true int|null $durationSeconds */

@@ -24,6 +24,7 @@ final class EmbedDetailsControllerTest extends ApiTestCase
     private const string TRACKLIST = "0:00 Intro\n3:10 Two\n7:45 Three";
     private const string VIDEO_TITLE = 'Psytrance mix 570';
     private const string TRACK_TITLE = 'Catching Flies | Anjunadeep Open Air: London 2026 by Anjunadeep';
+    private const string TRACK_ARTWORK = 'https://i1.sndcdn.com/artworks-PJVELNvg6xpRhmdv-WoUxbw-t500x500.jpg';
 
     /** Must match framework.rate_limiter.embed_details.limit in rate_limiter.yaml. */
     private const int DETAILS_BUDGET = 120;
@@ -59,13 +60,18 @@ final class EmbedDetailsControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['title' => self::VIDEO_TITLE, 'durationSeconds' => 4964, 'chapters' => self::CHAPTERS],
+            [
+                'title' => self::VIDEO_TITLE,
+                'durationSeconds' => 4964,
+                'chapters' => self::CHAPTERS,
+                'artworkUrl' => null,
+            ],
             $this->payload($client),
         );
         self::assertSame([self::YOUTUBE_PLAYER], $this->http->requestLines());
     }
 
-    public function testATrackAnswersItsTitleAndChaptersButNoLength(): void
+    public function testATrackAnswersItsTitleChaptersAndArtworkButNoLength(): void
     {
         $client = $this->routedClient([self::SOUNDCLOUD_OEMBED => self::track(self::TRACKLIST)]);
         $this->signIn($client, 'chapters-track@example.test');
@@ -74,7 +80,12 @@ final class EmbedDetailsControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['title' => self::TRACK_TITLE, 'durationSeconds' => null, 'chapters' => self::CHAPTERS],
+            [
+                'title' => self::TRACK_TITLE,
+                'durationSeconds' => null,
+                'chapters' => self::CHAPTERS,
+                'artworkUrl' => self::TRACK_ARTWORK,
+            ],
             $this->payload($client),
         );
         self::assertSame([self::SOUNDCLOUD_OEMBED], $this->http->requestLines());
@@ -90,7 +101,12 @@ final class EmbedDetailsControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['title' => self::VIDEO_TITLE, 'durationSeconds' => 4964, 'chapters' => self::CHAPTERS],
+            [
+                'title' => self::VIDEO_TITLE,
+                'durationSeconds' => 4964,
+                'chapters' => self::CHAPTERS,
+                'artworkUrl' => null,
+            ],
             $this->payload($client),
         );
         self::assertSame([self::YOUTUBE_PLAYER], $this->http->requestLines());
@@ -105,7 +121,7 @@ final class EmbedDetailsControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            '{"title":"Psytrance mix 570","durationSeconds":4964,"chapters":[]}',
+            '{"title":"Psytrance mix 570","durationSeconds":4964,"chapters":[],"artworkUrl":null}',
             $client->getResponse()->getContent(),
         );
     }
@@ -187,7 +203,10 @@ final class EmbedDetailsControllerTest extends ApiTestCase
     private static function track(string $description): MockResponse
     {
         return new MockResponse(
-            json_encode(['title' => self::TRACK_TITLE, 'description' => $description], \JSON_THROW_ON_ERROR),
+            json_encode(
+                ['title' => self::TRACK_TITLE, 'description' => $description, 'thumbnail_url' => self::TRACK_ARTWORK],
+                \JSON_THROW_ON_ERROR,
+            ),
         );
     }
 }

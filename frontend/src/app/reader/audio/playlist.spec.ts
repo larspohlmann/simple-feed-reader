@@ -192,6 +192,25 @@ describe('playlist', () => {
       expect(playlist.index).toBe(1);
     });
 
+    it("shows the source's own artwork over the track's picture", () => {
+      const pictured = { ...alpha, imageUrl: 'https://x.test/post.jpg' };
+
+      const playlist = withDetails(of(0, pictured), alpha.url, {
+        ...nothing,
+        artworkUrl: 'https://x.test/artwork.jpg',
+      });
+
+      expect(playlist.tracks[0].imageUrl).toBe('https://x.test/artwork.jpg');
+    });
+
+    it('keeps the picture when the details bring no artwork', () => {
+      const pictured = { ...alpha, imageUrl: 'https://x.test/post.jpg' };
+
+      const playlist = withDetails(of(0, pictured), alpha.url, { ...nothing, title: 'Renamed' });
+
+      expect(playlist.tracks[0].imageUrl).toBe('https://x.test/post.jpg');
+    });
+
     it('keeps the title when the details name none', () => {
       const playlist = withDetails(of(0, alpha), alpha.url, { ...nothing, durationSeconds: 300 });
 

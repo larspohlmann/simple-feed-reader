@@ -86,11 +86,11 @@ final class SoundCloudEmbedProviderTest extends TestCase
         );
     }
 
-    public function testIsAnAudioPlayerInALandscapeBox(): void
+    public function testIsAnAudioPlayerInAFixedHeightStrip(): void
     {
         $frame = self::onlyFrame($this->provider);
 
         self::assertSame(EmbedKind::Audio, $frame->kind);
-        self::assertSame(EmbedShape::Landscape, $frame->shape);
+        self::assertSame(EmbedShape::Strip, $frame->shape);
     }
 }

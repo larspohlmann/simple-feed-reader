@@ -29,6 +29,8 @@ export interface TrackDetails {
   title: string | null;
   durationSeconds: number | null;
   chapters: ChapterDto[];
+  /** The source's own picture of the track; absent where it tells none. */
+  artworkUrl?: string | null;
 }
 
 export function chaptersOnly(chapters: ChapterDto[]): TrackDetails {

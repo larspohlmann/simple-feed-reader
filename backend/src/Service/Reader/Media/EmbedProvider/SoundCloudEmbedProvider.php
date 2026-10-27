@@ -38,7 +38,7 @@ final readonly class SoundCloudEmbedProvider implements EmbedProviderInterface
             '^https://' . preg_quote(self::HOST, '#')
                 . '/player/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F\d+$',
             EmbedKind::Audio,
-            EmbedShape::Landscape,
+            EmbedShape::Strip,
         )];
     }
 

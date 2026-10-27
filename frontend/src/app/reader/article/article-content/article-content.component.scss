@@ -350,6 +350,12 @@
   height: 31.25rem;
 }
 
+/* A one-track audio widget is drawn for a fixed height (SoundCloud's classic player: 166px), not a share of the width (#1831). */
+:host ::ng-deep .reader-embed--strip {
+  aspect-ratio: auto;
+  height: 10.375rem;
+}
+
 /* A portrait player gets a 9:16 box, centred and capped so it fits a desktop screen. */
 :host ::ng-deep .reader-embed--portrait {
   aspect-ratio: 9 / 16;

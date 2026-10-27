@@ -10,7 +10,7 @@ use App\Service\Chapter\Model\EmbedAddressModel;
 use App\Service\Chapter\Model\EmbedDescriptionModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 
-/** Reads a track's title and description from SoundCloud's oEmbed endpoint, which needs no key and tells no length. */
+/** Reads a track's title, description and artwork from SoundCloud's oEmbed endpoint, which needs no key and tells no length. */
 final readonly class SoundCloudOembedDetailsSource implements EmbedDetailsSourceInterface
 {
     private const string OEMBED = 'https://soundcloud.com/oembed?';
@@ -32,11 +32,13 @@ final readonly class SoundCloudOembedDetailsSource implements EmbedDetailsSource
         ), $embed);
         $title = $oembed['title'] ?? null;
         $description = $oembed['description'] ?? null;
+        $artwork = $oembed['thumbnail_url'] ?? null;
 
         return new EmbedDescriptionModel(
             \is_string($title) && $title !== '' ? $title : null,
             null,
             \is_string($description) ? $description : '',
+            \is_string($artwork) && str_starts_with($artwork, 'https://') ? $artwork : null,
         );
     }
 }
