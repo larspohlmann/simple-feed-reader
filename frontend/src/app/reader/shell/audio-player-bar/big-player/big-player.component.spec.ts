@@ -120,6 +120,18 @@ describe('BigPlayerComponent', () => {
     expect(query(fixture, '.position')!.textContent!.trim()).toBe('2 of 2');
   });
 
+  it('names the article a track came from below its own title', () => {
+    const fixture = render();
+
+    expect(query(fixture, '.article-title')!.textContent!.trim()).toBe('Episode 2: the headline');
+  });
+
+  it('names the article once when it shares the track title', () => {
+    const fixture = render({ ...episode, entry: { ...episode.entry!, title: 'Episode 2' } });
+
+    expect(query(fixture, '.article-title')).toBeNull();
+  });
+
   it('drives the scrubber, with elapsed and remaining time', () => {
     const fixture = render();
 
@@ -520,6 +532,7 @@ describe('BigPlayerComponent', () => {
     const fixture = render(first);
 
     expect(query(fixture, '.title')!.textContent).toContain('Episode 1');
+    expect(query(fixture, '.article-title')).toBeNull();
     expect(query(fixture, '.source')).toBeNull();
     expect(query(fixture, '.excerpt')).toBeNull();
     expect(query(fixture, '.open-article')).toBeNull();

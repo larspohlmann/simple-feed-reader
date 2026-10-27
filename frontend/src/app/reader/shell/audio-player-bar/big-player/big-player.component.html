@@ -31,6 +31,9 @@
         }
       </h2>
       @if (track.entry; as entry) {
+        @if (entry.title !== track.title) {
+          <p class="article-title">{{ entry.title }}</p>
+        }
         <p class="source">{{ entry.feedTitle }} · {{ published() }}</p>
         @if (entry.excerpt) {
           <p class="excerpt">{{ entry.excerpt }}</p>

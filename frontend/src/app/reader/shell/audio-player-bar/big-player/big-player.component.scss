@@ -123,6 +123,12 @@
   cursor: pointer;
 }
 
+.article-title {
+  margin: 0;
+  font-size: var(--fs-base);
+  color: var(--text-primary);
+}
+
 .source,
 .excerpt {
   margin: 0;
