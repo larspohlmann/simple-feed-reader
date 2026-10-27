@@ -71,7 +71,7 @@ transcript (accepted for v1).
 - `TranscriptReader` picks the cue reader with a `match` on the format, not a keyed locator: the readers
   are pure static helpers in `Support/` (`TimedCues` for VTT and SRT, which share one cue reader, with the
   speaker from `<v Name>`, else from an inline ALL-CAPS label such as `JACK: ` at the start of the cue
-  (letters, digits, spaces, `.`, `'`, `’`, `-`; at most 40 characters; stripped from the text); `JsonCues` for podcast-namespace JSON `segments[].startTime/speaker/body`), and
+  (it starts with an uppercase letter, then letters, digits, spaces, `.`, `'`, `’`, `-`; at most 40 characters; stripped from the text); `JsonCues` for podcast-namespace JSON `segments[].startTime/speaker/body`), and
   HTML goes through the existing sanitiser to plain paragraphs without timestamps. Each yields
   `Model/TranscriptCueModel(startSeconds, speaker, text)`.
 - Reading is defensive: bodies are scrubbed to valid UTF-8 first; timings accept 1–3 digit hours and
@@ -80,7 +80,8 @@ transcript (accepted for v1).
 - `Support/TranscriptParagraphs` (per-call state in `Pass/ParagraphRun`) — a cue without a speaker joins the open
   paragraph, a cue with a speaker joins it only when the speaker is the open paragraph's, otherwise a new paragraph
   starts; a paragraph also closes at a sentence end (`.`, `?`, `!`, `…`, optionally a closing quote or bracket) once
-  it holds 400 characters, and the next paragraph keeps its speaker unless the cue names one. A paragraph starts at
+  it holds 400 characters, or at any cue boundary once it holds 2,000 characters (auto-captions have no sentence
+  ends), and the next paragraph keeps its speaker unless the cue names one. A paragraph starts at
   its first cue (an `int` `startSeconds`, as `EntryChapter` has). HTML bodies skip merging: each block is its own
   paragraph. `searchText` is built from the result.
 - `TranscriptSource/GuardedTranscriptSource` — fetches through `GuardedApiClient` with a new
@@ -97,10 +98,15 @@ transcript (accepted for v1).
   (PHPMD `ExcessiveParameterList` fires at 10): link cards and transcripts sit behind one
   `FollowUpFetchSweeps` service and one report model. Claims due `pending` rows, newest entry first
   (`EntryTranscriptRepository::findClaimable(now, limit)`), fills them, flushes, then hands the filled
-  entries to `EntryIndexer::index()`. Its report joins `MaintenanceSweepsModel` and
-  `MaintenanceTickJson`.
-- `TranscriptOnOpen` — when the opened entry's row is still `pending`, fills it within a 3 s budget
-  (like `ChaptersOnOpen`); a transient failure leaves the row `pending` for the sweep, a permanent one marks it `failed`; either way the
+  entries to `EntryIndexer::index()` and `SavedSearchRematch::rematch()`. Its report joins
+  `MaintenanceSweepsModel` and `MaintenanceTickJson`.
+- `SavedSearchRematch` (`Service/Search/Membership`) — the membership sweep matches an entry once, shortly after
+  ingest, so a transcript that fills later would never add a transcript-only hit. After the sweep or on-open fills
+  entries, this matches them against every saved search through `SavedSearchMatcherInterface` and stores the pairs
+  with `insertMissing()` (idempotent); an engine failure is logged, never thrown.
+- `TranscriptOnOpen` — when the opened entry's row is `pending` and due (`nextAttemptAt` empty or past), claims it
+  as the sweep does and, if the claim wins, fills it within a 3 s budget (like `ChaptersOnOpen`); a row in backoff
+  or inside a sweep lease is not fetched and the response has no transcript; a transient failure leaves the row `pending` for the sweep, a permanent one marks it `failed`; either way the
   response has no transcript.
 
 ### Search
@@ -129,8 +135,8 @@ Plain JSON, no browser-only input: an iOS client can render it as is.
 - **Open or collapsed**: the section renders open when the feed body has no text (the audio-first case,
   #1428), collapsed otherwise, below the body and chapters, styled like the #1817 chapter details toggle.
 - **Seeking** goes through the `ChapterPlayer` interface (`seek(seconds)`) by the path
-  `reader-chapters.ts` uses, so audio, YouTube and SoundCloud players all work. With no player,
-  timestamps render as plain text.
+  `reader-chapters.ts` uses, so a timestamp seeks the episode's audio player (`AudioChapterPlayer`). With no
+  audio player, timestamps render as plain text.
 
 ## Testing
 
