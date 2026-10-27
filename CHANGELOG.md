@@ -10,6 +10,30 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.3] - 2026-10-27
+
+## What's Changed
+* docs(#1812): homepage copy, social previews, search metadata and the missing features by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1813
+* Chapter progress and time left on the playing chapter (#1814) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1816
+* fix(#1817): the chapter list opens as a native details by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1818
+* feat(#1810): chapters in the audio player by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1819
+* feat(#1815): listen to a YouTube or SoundCloud embed in the audio player by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1820
+* fix(#1821): player chapter lists start closed unless the track is queued alone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1822
+* Chapters, title and length for embedded YouTube and SoundCloud media (#1824) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1825
+* fix(#1823): learn OpenAI's token parameter and output cap per model by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1826
+* feat(#1827): capture and show image alt text by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1828
+* Audio player: shorter phone bar, looping title, article title and cards in the full player, SoundCloud strip and artwork by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1832
+* docs(#1834): retake the audio player screenshots by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1835
+* feat(#1833): the debug log shows what a rejected-request fallback adjusted by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1836
+* fix(#1837): the big player's controls fit the first screen by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1838
+* fix(#1839): big player cards never overlap the controls; excerpt clamps on iPhone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1840
+* fix(#1841): More / Less on the big player's excerpt; less space above the scrubber by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1842
+* feat(#1843): glassy play/pause button in the big player by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1844
+* feat(#1845): glossy play buttons in both audio players; expand hint on the footer player by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1846
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.2...v1.6.3
+
 ## [v1.6.2] - 2026-10-25
 
 ## What's Changed
