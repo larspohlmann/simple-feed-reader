@@ -10,30 +10,30 @@ use App\Service\Transcript\Model\TranscriptCueModel;
 final class ParagraphRun
 {
     private const int CLOSING_LENGTH = 400;
+    private const int FORCED_CLOSING_LENGTH = 2000;
     private const string SENTENCE_END = '/[.?!…]["\'”’»)\]]*$/u';
 
     /** @var list<TranscriptParagraph> */
     private array $paragraphs = [];
-    private ?TranscriptParagraph $open = null;
+    private ?TranscriptCueModel $opening = null;
+    private ?string $openSpeaker = null;
+    /** @var list<string> */
+    private array $openParts = [];
+    private int $openLength = 0;
     private ?string $carriedSpeaker = null;
 
     public function add(TranscriptCueModel $cue): void
     {
-        if ($this->open !== null && $this->joins($cue, $this->open)) {
-            $this->open = new TranscriptParagraph(
-                $this->open->startSeconds,
-                $this->open->speaker,
-                $this->open->text . ' ' . $cue->text,
-            );
+        if ($this->opening !== null && $this->joins($cue)) {
+            $this->append($cue->text, 1);
         } else {
             $this->close();
-            $speaker = $cue->speaker ?? $this->carriedSpeaker;
-            $this->open = new TranscriptParagraph($cue->startSeconds, $speaker, $cue->text);
+            $this->open($cue);
             $this->carriedSpeaker = null;
         }
 
-        if ($this->isComplete($this->open)) {
-            $this->carriedSpeaker = $this->open->speaker;
+        if ($this->isComplete($cue->text)) {
+            $this->carriedSpeaker = $this->openSpeaker;
             $this->close();
         }
     }
@@ -46,22 +46,41 @@ final class ParagraphRun
         return $this->paragraphs;
     }
 
-    private function joins(TranscriptCueModel $cue, TranscriptParagraph $open): bool
+    private function open(TranscriptCueModel $cue): void
     {
-        return $cue->speaker === null || $cue->speaker === $open->speaker;
+        $this->opening = $cue;
+        $this->openSpeaker = $cue->speaker ?? $this->carriedSpeaker;
+        $this->openParts = [];
+        $this->openLength = 0;
+        $this->append($cue->text, 0);
     }
 
-    private function isComplete(TranscriptParagraph $paragraph): bool
+    private function append(string $text, int $separatorLength): void
     {
-        return mb_strlen($paragraph->text) >= self::CLOSING_LENGTH
-            && preg_match(self::SENTENCE_END, $paragraph->text) === 1;
+        $this->openParts[] = $text;
+        $this->openLength += $separatorLength + mb_strlen($text);
+    }
+
+    private function joins(TranscriptCueModel $cue): bool
+    {
+        return $cue->speaker === null || $cue->speaker === $this->openSpeaker;
+    }
+
+    private function isComplete(string $lastCueText): bool
+    {
+        return $this->openLength >= self::FORCED_CLOSING_LENGTH
+            || ($this->openLength >= self::CLOSING_LENGTH && preg_match(self::SENTENCE_END, $lastCueText) === 1);
     }
 
     private function close(): void
     {
-        if ($this->open !== null) {
-            $this->paragraphs[] = $this->open;
-            $this->open = null;
+        if ($this->opening !== null) {
+            $this->paragraphs[] = new TranscriptParagraph(
+                $this->opening->startSeconds,
+                $this->openSpeaker,
+                implode(' ', $this->openParts),
+            );
+            $this->opening = null;
         }
     }
 }

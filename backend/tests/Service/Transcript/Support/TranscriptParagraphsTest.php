@@ -77,6 +77,39 @@ final class TranscriptParagraphsTest extends TestCase
         );
     }
 
+    public function testAnUnpunctuatedSpeakerlessRunClosesOnceItPassesTwoThousandCharacters(): void
+    {
+        $cues = [];
+        for ($index = 0; $index < 250; $index++) {
+            $cues[] = new TranscriptCueModel($index, null, 'caption words here');
+        }
+
+        $paragraphs = TranscriptParagraphs::from($cues);
+
+        self::assertCount(3, $paragraphs);
+        foreach ($paragraphs as $paragraph) {
+            self::assertLessThanOrEqual(2000 + 19, mb_strlen($paragraph->text));
+        }
+        self::assertSame(
+            250 * 18 + 247,
+            array_sum(array_map(static fn (TranscriptParagraph $paragraph): int => mb_strlen($paragraph->text), $paragraphs)),
+        );
+        self::assertSame([0, 106, 212], array_map(
+            static fn (TranscriptParagraph $paragraph): int => $paragraph->startSeconds,
+            $paragraphs,
+        ));
+    }
+
+    public function testASpeakerlessRunBelowTwoThousandCharactersWithoutASentenceEndStaysOneParagraph(): void
+    {
+        $paragraphs = TranscriptParagraphs::from([
+            new TranscriptCueModel(0, null, str_repeat('word ', 300)),
+            new TranscriptCueModel(5, null, 'more words'),
+        ]);
+
+        self::assertCount(1, $paragraphs);
+    }
+
     public function testASpeakerOnTheCueAfterAClosedParagraphWinsOverTheCarriedOne(): void
     {
         $long = str_repeat('word ', 80) . 'end.';

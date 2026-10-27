@@ -28,7 +28,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class SearchReindexCommand extends Command
 {
     /** DELETE_CHUNK_SIZE's value (EntryPruner, OrphanedFeedReclaimer): few engine round-trips, little memory each. */
-    private const int BATCH_SIZE = 500;
+    private const int BATCH_SIZE = 100;
 
     public function __construct(
         private readonly SearchIndexWriterInterface $writer,
