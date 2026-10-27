@@ -103,6 +103,26 @@ final class TranscriptParagraphsTest extends TestCase
         ));
     }
 
+    public function testAParagraphClosesExactlyAtTwoThousandCharacters(): void
+    {
+        $paragraphs = TranscriptParagraphs::from([
+            new TranscriptCueModel(0, null, str_repeat('a', 2000)),
+            new TranscriptCueModel(5, null, 'b'),
+        ]);
+
+        self::assertCount(2, $paragraphs);
+    }
+
+    public function testAParagraphOneCharacterUnderTwoThousandStaysOpen(): void
+    {
+        $paragraphs = TranscriptParagraphs::from([
+            new TranscriptCueModel(0, null, str_repeat('a', 1999)),
+            new TranscriptCueModel(5, null, 'b'),
+        ]);
+
+        self::assertCount(1, $paragraphs);
+    }
+
     public function testASpeakerlessRunBelowTwoThousandCharactersWithoutASentenceEndStaysOneParagraph(): void
     {
         $paragraphs = TranscriptParagraphs::from([
