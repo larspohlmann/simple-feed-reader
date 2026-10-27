@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { MarqueeComponent } from '../../../shared/marquee/marquee.component';
 import { AudioPlayerService, SKIP_SECONDS } from '../../audio-player.service';
 import { formatDuration } from '../../format';
 import { AudioArtworkComponent } from './audio-artwork/audio-artwork.component';
@@ -24,6 +25,7 @@ import { ScrubberComponent } from './scrubber/scrubber.component';
     CdkScrollable,
     AudioPlaylistComponent,
     ScrubberComponent,
+    MarqueeComponent,
   ],
   templateUrl: './audio-player-bar.component.html',
   styleUrl: './audio-player-bar.component.scss',

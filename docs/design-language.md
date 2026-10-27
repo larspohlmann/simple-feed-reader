@@ -1359,6 +1359,25 @@ behaves.
 
 ---
 
+### `<app-marquee>`
+
+One line of text that, when wider than its box, loops sideways without end
+(24 px/s, holding the start still briefly each lap): a hidden second copy follows
+the first, so the end runs into the start. The line is an `<ng-template>` child,
+since projected content renders only once. A line that fits stays put; under
+`prefers-reduced-motion` it ends in an ellipsis instead. No inputs.
+
+```html
+<app-marquee class="title">
+  <ng-template>{{ chapter.title }} · {{ track.title }}</ng-template>
+</app-marquee>
+```
+
+Used for the audio player bar's title line (#1829). **Not for:** list rows,
+where many moving lines at once compete for attention; truncate those.
+
+---
+
 ### `<app-entry-meta>`
 
 The line a magazine card or a list row ends on: `app-entry-pills` on the left,

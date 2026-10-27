@@ -1,0 +1,50 @@
+:host {
+  --marquee-gap: var(--space-6);
+
+  display: block;
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.copy {
+  display: inline-block;
+}
+
+.repeat {
+  margin-inline-start: var(--marquee-gap);
+}
+
+:host(.overflowing) .copy {
+  animation: marquee var(--marquee-duration) linear infinite;
+}
+
+@keyframes marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(calc(-1 * (var(--marquee-copy) + var(--marquee-gap))));
+  }
+}
+
+/* Held still, the line ends in an ellipsis, which hides an inline-block whole. */
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    text-overflow: ellipsis;
+  }
+
+  .copy {
+    display: inline;
+  }
+
+  :host(.overflowing) .copy {
+    animation: none;
+  }
+
+  .repeat {
+    display: none;
+  }
+}
