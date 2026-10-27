@@ -84,11 +84,35 @@ final class RecommendationCallRepositoryAdjustmentTest extends DbTestCase
         self::assertSame([RequestAdjustment::OutputCap, '32768'], $adjusted[$newer->requireId()]);
     }
 
-    private function settledFailure(RecommendationRun $run, int $attempt, string $errorDetail): RecommendationRunLog
+    public function testAnotherRunsRejectionAndANonTransportVerdictAreNeverMarked(): void
     {
+        $run = $this->fixtures->createRun($this->user);
+        $rejected = $this->settledFailure($run, 1, self::REJECTION);
+        $unusable = $this->settledFailure($run, 2, self::REJECTION, CallVerdict::Unusable);
+        $otherRun = $this->fixtures->createRun($this->user);
+        $otherRunRejected = $this->settledFailure($otherRun, 3, self::REJECTION);
+
+        $this->calls->recordAdjustment(
+            CallingRun::recommendationRun($run->requireId()),
+            RequestAdjustmentModel::outputCap(32_768),
+            self::REJECTION,
+        );
+
+        $adjusted = $this->adjustmentsByLog($run) + $this->adjustmentsByLog($otherRun);
+        self::assertSame([RequestAdjustment::OutputCap, '32768'], $adjusted[$rejected->requireId()]);
+        self::assertSame([null, null], $adjusted[$unusable->requireId()]);
+        self::assertSame([null, null], $adjusted[$otherRunRejected->requireId()]);
+    }
+
+    private function settledFailure(
+        RecommendationRun $run,
+        int $attempt,
+        string $errorDetail,
+        CallVerdict $verdict = CallVerdict::TransportFailed,
+    ): RecommendationRunLog {
         $log = $this->newLog($run, $attempt);
         $this->calls->settleTransportFailure(
-            new CallSettlement($log->requireId(), $this->outcome(CallVerdict::TransportFailed)),
+            new CallSettlement($log->requireId(), $this->outcome($verdict)),
             $errorDetail,
         );
 
