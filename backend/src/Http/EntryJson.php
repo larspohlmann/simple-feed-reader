@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Entity\Entry;
 use App\Entity\EntryMedia;
+use App\Entity\EntryTranscript;
 use App\Entity\ImageRendition;
 use App\Enum\SourceFormat;
 use App\Repository\EntryListRow;
@@ -18,7 +19,7 @@ use App\Service\Url\Support\YouTubeUrl;
 
 /**
  * Three shapes off one row: listRow() drops contentHtml for a plain-text
- * excerpt; detail() adds contentHtml back for the single body-rendering page;
+ * excerpt; detail() adds contentHtml, chapters and transcript back for the single body-rendering page;
  * completed() holds only what completing a pending entry can change (#1551).
  *
  * @phpstan-import-type QuoteRow from QuotedPostJson
@@ -28,6 +29,10 @@ use App\Service\Url\Support\YouTubeUrl;
  *   id: int|null, title: string, url: string|null, author: string|null,
  *   summary: string|null, excerpt: string, contentHtml?: string|null,
  *   chapters?: list<array{startSeconds: int, title: string}>|null,
+ *   transcript?: array{
+ *     language: string|null,
+ *     paragraphs: list<array{startSeconds: int|null, speaker: string|null, text: string}>,
+ *   }|null,
  *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
  *   imageRenditions: list<array{url: string, width: int}>,
  *   media: list<array<string, string|int|true>>,
@@ -132,11 +137,12 @@ final readonly class EntryJson
     /**
      * @return EntryRow
      */
-    public function detail(EntryListRow $row, ServedChaptersModel $served): array
+    public function detail(EntryListRow $row, ServedChaptersModel $served, ?EntryTranscript $transcript): array
     {
         return $this->listRow($row) + [
             'contentHtml' => $served->contentHtml,
             'chapters' => ChaptersJson::of($served->chapters),
+            'transcript' => EntryTranscriptJson::of($transcript),
         ];
     }
 
