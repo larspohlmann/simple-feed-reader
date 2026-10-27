@@ -39,49 +39,54 @@ async function stubEntries(page: Page): Promise<void> {
   });
 }
 
+declare global {
+  interface Window {
+    leaveAnimations: string[];
+  }
+}
+
 /** Opens the article and waits out its slide-in, so the next animation seen is the leave. */
 async function openArticle(page: Page): Promise<void> {
+  test.skip(!(await signInWithLayout(page, 'magazine')), 'seeded admin login unavailable');
   await stubEntries(page);
   await page.reload();
   await page.getByText('Entry number 1', { exact: false }).first().click();
-  await expect(page.locator('.article-overlay app-reader-view')).toBeVisible();
-  await page.waitForTimeout(400);
+  const overlay = page.locator('.article-overlay');
+  await expect(overlay.locator('app-reader-view')).toBeVisible();
+  await overlay.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
 }
 
-async function watchLeaves(page: Page): Promise<void> {
+/** Closes the article and returns the animation each leaving overlay was given. */
+async function closeArticle(page: Page, close: () => Promise<unknown>): Promise<string[]> {
   await page.evaluate(() => {
-    const seen: string[] = [];
-    (window as unknown as { leaveAnimations: string[] }).leaveAnimations = seen;
+    window.leaveAnimations = [];
     new MutationObserver((records) => {
       for (const record of records) {
         const target = record.target as HTMLElement;
         if (target.matches('.article-overlay.article-leave')) {
-          seen.push(getComputedStyle(target).animationName);
+          window.leaveAnimations.push(getComputedStyle(target).animationName);
         }
       }
     }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
   });
+  await close();
+  await expect(page.locator('.article-overlay')).toHaveCount(0);
+  return page.evaluate(() => window.leaveAnimations);
 }
 
-async function leaveAnimations(page: Page): Promise<string[]> {
-  return page.evaluate(() => (window as unknown as { leaveAnimations: string[] }).leaveAnimations);
-}
+const SLID_OUT = [expect.stringMatching(/article-leave$/)];
 
 test.describe('Article slide-out (#1847)', () => {
   test.describe('wide single-pane', () => {
     test.use({ viewport: DESKTOP });
 
     test('the toolbar back arrow slides the article out', async ({ page }) => {
-      test.skip(!(await signInWithLayout(page, 'magazine')), 'seeded admin login unavailable');
       await openArticle(page);
-      await watchLeaves(page);
+      const back = page.locator('app-reader-view .bar .close');
 
-      await page.locator('app-reader-view .bar .close').click();
-
-      await expect(page.locator('.article-overlay')).toHaveCount(0);
-      const animations = await leaveAnimations(page);
-      expect(animations).toHaveLength(1);
-      expect(animations[0]).toMatch(/article-leave$/);
+      expect(await closeArticle(page, () => back.click())).toEqual(SLID_OUT);
     });
   });
 
@@ -89,28 +94,16 @@ test.describe('Article slide-out (#1847)', () => {
     test.use({ viewport: PHONE });
 
     test('the browser back button slides the article out', async ({ page }) => {
-      test.skip(!(await signInWithLayout(page, 'magazine')), 'seeded admin login unavailable');
       await openArticle(page);
-      await watchLeaves(page);
 
-      await page.goBack();
-
-      await expect(page.locator('.article-overlay')).toHaveCount(0);
-      const animations = await leaveAnimations(page);
-      expect(animations).toHaveLength(1);
-      expect(animations[0]).toMatch(/article-leave$/);
+      expect(await closeArticle(page, () => page.goBack())).toEqual(SLID_OUT);
     });
 
     test('a reduced-motion close leaves at once', async ({ page }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      test.skip(!(await signInWithLayout(page, 'magazine')), 'seeded admin login unavailable');
       await openArticle(page);
-      await watchLeaves(page);
 
-      await page.goBack();
-
-      await expect(page.locator('.article-overlay')).toHaveCount(0);
-      expect(await leaveAnimations(page)).toEqual(['none']);
+      expect(await closeArticle(page, () => page.goBack())).toEqual(['none']);
     });
   });
 });

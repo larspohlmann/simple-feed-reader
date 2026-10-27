@@ -108,11 +108,13 @@ app-reader-header.hidden {
 
 .article-overlay.article-leave {
   pointer-events: none;
-  animation: article-leave 0.22s ease-in forwards;
+  animation: none;
 }
 
-.main.split > .article-overlay.article-leave {
-  animation: none;
+@media (prefers-reduced-motion: no-preference) {
+  .main:not(.split) > .article-overlay.article-leave {
+    animation: article-leave 0.22s ease-in forwards;
+  }
 }
 
 @keyframes article-enter {
@@ -136,8 +138,7 @@ app-reader-header.hidden {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .article-overlay,
-  .article-overlay.article-leave {
+  .article-overlay {
     animation: none;
   }
 }
