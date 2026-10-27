@@ -74,10 +74,7 @@ final class EntryTranscript
     /** @param list<TranscriptParagraph> $paragraphs */
     public function fill(array $paragraphs, string $searchText): void
     {
-        $this->paragraphs = array_map(
-            static fn (TranscriptParagraph $paragraph): array => $paragraph->jsonSerialize(),
-            $paragraphs,
-        );
+        $this->paragraphs = TranscriptParagraph::toJsonList($paragraphs);
         $this->searchText = $searchText;
         $this->status = TranscriptStatus::Filled;
         $this->nextAttemptAt = null;

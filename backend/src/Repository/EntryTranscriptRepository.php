@@ -29,6 +29,9 @@ final class EntryTranscriptRepository extends ServiceEntityRepository implements
     {
         /** @var list<EntryTranscript> $rows */
         $rows = $this->due($now)
+            ->innerJoin('transcript.entry', 'entry')
+            ->innerJoin('entry.feed', 'feed')
+            ->addSelect('entry', 'feed')
             ->orderBy('transcript.id', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()

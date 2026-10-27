@@ -28,8 +28,11 @@ final readonly class SavedSearchRematch
     /** @param list<Entry> $entries flushed entries; a failed match is logged, never thrown */
     public function rematch(array $entries): void
     {
+        if ($entries === []) {
+            return;
+        }
         $searches = $this->searches->findAll();
-        if ($entries === [] || $searches === []) {
+        if ($searches === []) {
             return;
         }
 

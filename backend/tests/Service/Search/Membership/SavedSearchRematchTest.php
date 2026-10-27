@@ -4,13 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Search\Membership;
 
-use App\Entity\Entry;
-use App\Entity\EntryTranscript;
-use App\Entity\Feed;
 use App\Entity\SavedSearch;
-use App\Entity\TranscriptParagraph;
 use App\Entity\User;
-use App\Enum\TranscriptFormat;
 use App\Repository\SavedSearchEntryMembershipRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
@@ -18,36 +13,48 @@ use App\Service\Search\Membership\SavedSearchRematch;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RecordingSavedSearchMatcher;
+use App\Tests\Support\TranscriptFixtures;
+use App\Tests\Support\TranscriptSearchFixtures;
 use Symfony\Component\Clock\MockClock;
 
 final class SavedSearchRematchTest extends DbTestCase
 {
+    private TranscriptFixtures $fixtures;
+    private TranscriptSearchFixtures $searchFixtures;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->fixtures = new TranscriptFixtures($this->entityManager);
+        $this->searchFixtures = new TranscriptSearchFixtures($this->entityManager);
+    }
+
     public function testAnEntryGainsTheSearchWhoseTermIsOnlyInItsTranscript(): void
     {
         $search = $this->search('quantum');
         $other = $this->search('rocket');
-        $entry = $this->entryWithTranscript('quantum computing explained');
+        $entry = $this->fixtures->entryWithFilledTranscript('quantum computing explained');
 
         $this->rematch()->rematch([$entry]);
 
-        self::assertSame([$entry->requireId()], $this->memberEntryIds($search));
-        self::assertSame([], $this->memberEntryIds($other));
+        self::assertSame([$entry->requireId()], $this->searchFixtures->memberEntryIds($search));
+        self::assertSame([], $this->searchFixtures->memberEntryIds($other));
     }
 
     public function testASecondRematchKeepsOneRow(): void
     {
         $search = $this->search('quantum');
-        $entry = $this->entryWithTranscript('quantum computing explained');
+        $entry = $this->fixtures->entryWithFilledTranscript('quantum computing explained');
 
         $this->rematch()->rematch([$entry]);
         $this->rematch()->rematch([$entry]);
 
-        self::assertSame([$entry->requireId()], $this->memberEntryIds($search));
+        self::assertSame([$entry->requireId()], $this->searchFixtures->memberEntryIds($search));
     }
 
     public function testNoEntriesOrNoSearchesTouchNothing(): void
     {
-        $entry = $this->entryWithTranscript('quantum');
+        $entry = $this->fixtures->entryWithFilledTranscript('quantum');
         $this->rematch()->rematch([$entry]);
         $this->rematch()->rematch([]);
 
@@ -61,7 +68,7 @@ final class SavedSearchRematchTest extends DbTestCase
     {
         $first = $this->search('quantum');
         $second = $this->search('rocket');
-        $entry = $this->entryWithTranscript('quantum');
+        $entry = $this->fixtures->entryWithFilledTranscript('quantum');
         $matcher = new RecordingSavedSearchMatcher([$second->requireId() => [$entry->requireId()]]);
 
         $this->rematchWith($matcher)->rematch([$entry]);
@@ -70,8 +77,8 @@ final class SavedSearchRematchTest extends DbTestCase
             [['searchIds' => [$first->requireId(), $second->requireId()], 'candidates' => [$entry->requireId()]]],
             $matcher->calls,
         );
-        self::assertSame([], $this->memberEntryIds($first));
-        self::assertSame([$entry->requireId()], $this->memberEntryIds($second));
+        self::assertSame([], $this->searchFixtures->memberEntryIds($first));
+        self::assertSame([$entry->requireId()], $this->searchFixtures->memberEntryIds($second));
     }
 
     public function testNothingIsAskedWithoutEntries(): void
@@ -86,7 +93,7 @@ final class SavedSearchRematchTest extends DbTestCase
 
     public function testNothingIsAskedWithoutSavedSearches(): void
     {
-        $entry = $this->entryWithTranscript('quantum');
+        $entry = $this->fixtures->entryWithFilledTranscript('quantum');
         $matcher = new RecordingSavedSearchMatcher();
 
         $this->rematchWith($matcher)->rematch([$entry]);
@@ -97,13 +104,13 @@ final class SavedSearchRematchTest extends DbTestCase
     public function testAnUnavailableEngineIsLoggedAndStoresNothing(): void
     {
         $search = $this->search('quantum');
-        $entry = $this->entryWithTranscript('quantum');
+        $entry = $this->fixtures->entryWithFilledTranscript('quantum');
         $logger = new RecordingLogger();
         $matcher = new RecordingSavedSearchMatcher([], new SearchEngineUnavailableException('down'));
 
         $this->rematchWith($matcher, $logger)->rematch([$entry]);
 
-        self::assertSame([], $this->memberEntryIds($search));
+        self::assertSame([], $this->searchFixtures->memberEntryIds($search));
         self::assertCount(1, $logger->records);
         self::assertSame('warning', $logger->records[0]['level']);
         self::assertInstanceOf(SearchEngineUnavailableException::class, $logger->records[0]['context']['exception']);
@@ -147,38 +154,5 @@ final class SavedSearchRematchTest extends DbTestCase
         $this->entityManager->flush();
 
         return $search;
-    }
-
-    private function entryWithTranscript(string $text): Entry
-    {
-        $feed = new Feed('https://pod.test/feed.xml');
-        $this->entityManager->persist($feed);
-        $entry = new Entry(
-            $feed,
-            'guid-1',
-            'https://pod.test/ep1',
-            'Episode 1',
-            new \DateTimeImmutable('2026-10-27 06:00:00'),
-            new \DateTimeImmutable('2026-10-27 05:00:00'),
-        );
-        $this->entityManager->persist($entry);
-        $transcript = new EntryTranscript($entry, 'https://pod.test/ep1.vtt', TranscriptFormat::Vtt, null);
-        $transcript->fill([new TranscriptParagraph(0, null, $text)], $text);
-        $this->entityManager->persist($transcript);
-        $this->entityManager->flush();
-
-        return $entry;
-    }
-
-    /** @return list<int> */
-    private function memberEntryIds(SavedSearch $search): array
-    {
-        /** @var list<int|string> $ids */
-        $ids = $this->entityManager->getConnection()->fetchFirstColumn(
-            'SELECT entry_id FROM saved_search_entry WHERE saved_search_id = ? ORDER BY entry_id',
-            [$search->getId()],
-        );
-
-        return array_map(intval(...), $ids);
     }
 }

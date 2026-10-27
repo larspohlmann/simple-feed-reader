@@ -16,9 +16,11 @@ use App\Service\Transcript\Exception\TranscriptUnusableException;
 use App\Service\Transcript\TranscriptFiller;
 use App\Service\Transcript\TranscriptReader;
 use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
+use App\Tests\Support\TranscriptFixtures;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -27,13 +29,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class TranscriptFillerTest extends TestCase
 {
-    private const string READABLE = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHallo.\n";
-
     public function testAReadableBodyFillsTheRow(): void
     {
         $transcript = $this->transcript();
 
-        $this->filler(static fn (): string => self::READABLE)->fill($transcript, 10.0);
+        $this->filler(static fn (): string => TranscriptFixtures::READABLE)->fill($transcript, 10.0);
 
         self::assertTrue($transcript->isFilled());
         self::assertSame('Hallo.', $transcript->getSearchText());
@@ -81,46 +81,32 @@ final class TranscriptFillerTest extends TestCase
         self::assertEquals(new \DateTimeImmutable('2026-10-27 12:30:00'), $transcript->getNextAttemptAt());
     }
 
-    public function testAnUnusableAnswerIsLoggedWithItsUrlAndCause(): void
+    #[DataProvider('loggedFailures')]
+    public function testAFailureIsLoggedWithItsLevelUrlAndCause(\Throwable $failure, Level $level): void
     {
         $handler = new TestHandler();
-        $failure = TranscriptUnusableException::answered('u', Response::HTTP_NOT_FOUND);
 
         $this->filler(static fn (): never => throw $failure, new Logger('test', [$handler]))
             ->fill($this->transcript(), 10.0);
 
         self::assertCount(1, $handler->getRecords());
-        self::assertSame(Level::Info, $handler->getRecords()[0]->level);
+        self::assertSame($level, $handler->getRecords()[0]->level);
         self::assertSame('https://pod.test/ep1.vtt', $handler->getRecords()[0]->context['url']);
         self::assertSame($failure, $handler->getRecords()[0]->context['exception']);
     }
 
-    public function testAnUnreachableHostIsLoggedAtInfo(): void
+    /** @return iterable<string, array{\Throwable, Level}> */
+    public static function loggedFailures(): iterable
     {
-        $handler = new TestHandler();
-        $failure = TranscriptUnreachableException::answered('u', Response::HTTP_SERVICE_UNAVAILABLE);
-
-        $this->filler(static fn (): never => throw $failure, new Logger('test', [$handler]))
-            ->fill($this->transcript(), 10.0);
-
-        self::assertCount(1, $handler->getRecords());
-        self::assertSame(Level::Info, $handler->getRecords()[0]->level);
-        self::assertSame('https://pod.test/ep1.vtt', $handler->getRecords()[0]->context['url']);
-        self::assertSame($failure, $handler->getRecords()[0]->context['exception']);
-    }
-
-    public function testAnUnexpectedFailureIsLoggedAtError(): void
-    {
-        $handler = new TestHandler();
-        $failure = new \RuntimeException('boom');
-
-        $this->filler(static fn (): never => throw $failure, new Logger('test', [$handler]))
-            ->fill($this->transcript(), 10.0);
-
-        self::assertCount(1, $handler->getRecords());
-        self::assertSame(Level::Error, $handler->getRecords()[0]->level);
-        self::assertSame('https://pod.test/ep1.vtt', $handler->getRecords()[0]->context['url']);
-        self::assertSame($failure, $handler->getRecords()[0]->context['exception']);
+        yield 'an unusable answer' => [
+            TranscriptUnusableException::answered('u', Response::HTTP_NOT_FOUND),
+            Level::Info,
+        ];
+        yield 'an unreachable host' => [
+            TranscriptUnreachableException::answered('u', Response::HTTP_SERVICE_UNAVAILABLE),
+            Level::Info,
+        ];
+        yield 'an unexpected failure' => [new \RuntimeException('boom'), Level::Error];
     }
 
     public function testTheBudgetReachesTheSource(): void
@@ -129,7 +115,7 @@ final class TranscriptFillerTest extends TestCase
         $this->filler(static function (string $url, float $budget) use (&$seen): string {
             $seen = $budget;
 
-            return self::READABLE;
+            return TranscriptFixtures::READABLE;
         })->fill($this->transcript(), 3.0);
 
         self::assertSame(3.0, $seen);

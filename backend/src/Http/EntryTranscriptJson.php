@@ -23,10 +23,7 @@ final class EntryTranscriptJson
 
         return [
             'language' => $transcript->getLanguage(),
-            'paragraphs' => array_map(
-                static fn (TranscriptParagraph $paragraph): array => $paragraph->jsonSerialize(),
-                $transcript->getParagraphs(),
-            ),
+            'paragraphs' => TranscriptParagraph::toJsonList($transcript->getParagraphs()),
         ];
     }
 

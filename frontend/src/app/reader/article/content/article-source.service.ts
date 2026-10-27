@@ -100,7 +100,7 @@ export class ArticleSource {
   /** With no show notes of its own, the transcript is what there is to read, so it opens. */
   readonly transcriptIsTheBody = computed(() => {
     const body = this.feedBody();
-    return body?.status === 'ok' && textOf(body.html) === '';
+    return body?.status === 'ok' && body.transcript !== null && textOf(body.html) === '';
   });
 
   readonly displayHtml = computed(() => {

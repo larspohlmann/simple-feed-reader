@@ -14,6 +14,7 @@ use App\Enum\TranscriptFormat;
 use App\Service\Transcript\Exception\TranscriptUnreachableException;
 use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
 use App\Tests\Support\ScriptedTranscriptSource;
+use App\Tests\Support\TranscriptFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -25,7 +26,6 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class EntryTranscriptControllerTest extends WebTestCase
 {
     private const string TRANSCRIPT_URL = 'https://pod.test/ep.vtt';
-    private const string READABLE = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHallo.\n";
 
     public function testAFilledTranscriptIsServed(): void
     {
@@ -81,7 +81,7 @@ final class EntryTranscriptControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('transcript-pending@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId);
-        $source = ScriptedTranscriptSource::answering(self::READABLE);
+        $source = ScriptedTranscriptSource::answering(TranscriptFixtures::READABLE);
         self::getContainer()->set(TranscriptSourceInterface::class, $source);
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
@@ -101,7 +101,7 @@ final class EntryTranscriptControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('transcript-unreachable@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId);
-        $source = ScriptedTranscriptSource::answering(self::READABLE)->failingAt(
+        $source = ScriptedTranscriptSource::answering(TranscriptFixtures::READABLE)->failingAt(
             self::TRANSCRIPT_URL,
             TranscriptUnreachableException::answered(self::TRANSCRIPT_URL, Response::HTTP_SERVICE_UNAVAILABLE),
         );

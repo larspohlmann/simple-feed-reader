@@ -13,13 +13,11 @@ use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshHousekeeping;
 use App\Service\Retention\EntryPruner;
-use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
-use App\Tests\Support\NoTranscriptTexts;
+use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SubscriptionHistoryFixtures;
-use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 /** Pruning itself, and recording before it, are pinned by RefreshRunnerTest against a whole run. */
@@ -120,7 +118,7 @@ final class RefreshHousekeepingTest extends DbTestCase
                 new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
                 $this->retentionSettings(),
                 new MockClock(self::NOW, 'UTC'),
-                new EntryIndexer(new RecordingSearchIndexWriter(), new NoTranscriptTexts(), new NullLogger()),
+                EntryIndexers::with(new RecordingSearchIndexWriter()),
             ),
             $this->historyWiring(self::NOW)->recorder(),
             $this->logger,

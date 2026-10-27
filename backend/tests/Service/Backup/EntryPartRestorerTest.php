@@ -24,13 +24,11 @@ use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Factory\RestoreEntryLoaderFactory;
 use App\Service\Backup\Factory\RestoredEntryStateFactory;
-use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
-use App\Tests\Support\NoTranscriptTexts;
+use App\Tests\Support\EntryIndexers;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
-use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -472,7 +470,7 @@ final class EntryPartRestorerTest extends DbTestCase
             $entries,
             $entryStates,
             $inserter,
-            new EntryIndexer($this->indexWriter, new NoTranscriptTexts(), new NullLogger()),
+            EntryIndexers::with($this->indexWriter),
             new RestoredEntryStateFactory(new MockClock('2026-08-20 00:00:00', 'UTC')),
             $feeds,
         );

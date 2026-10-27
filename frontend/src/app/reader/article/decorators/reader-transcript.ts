@@ -24,9 +24,10 @@ export function addTranscript(
   summary.append(materialIcon('chevron_right'), heading);
   const details = document.createElement('details');
   details.open = open;
+  const timeAt = player ? seekButton(player, playFromLabel) : plainTime;
   details.append(
     summary,
-    ...transcript.paragraphs.map((paragraph) => paragraphOf(paragraph, player, playFromLabel)),
+    ...transcript.paragraphs.map((paragraph) => paragraphOf(paragraph, timeAt)),
   );
   const section = document.createElement('section');
   section.className = SECTION;
@@ -39,13 +40,11 @@ export function addTranscript(
 
 function paragraphOf(
   paragraph: TranscriptParagraphDto,
-  player: ChapterPlayer | null,
-  playFromLabel: (time: string) => string,
+  timeAt: (seconds: number) => HTMLElement,
 ): HTMLParagraphElement {
   const element = document.createElement('p');
   element.className = `${SECTION}__paragraph`;
-  if (paragraph.startSeconds !== null)
-    element.append(timeOf(paragraph.startSeconds, player, playFromLabel));
+  if (paragraph.startSeconds !== null) element.append(timeAt(paragraph.startSeconds));
   if (paragraph.speaker) {
     const speaker = document.createElement('strong');
     speaker.className = `${SECTION}__speaker`;
@@ -59,19 +58,25 @@ function paragraphOf(
   return element;
 }
 
-function timeOf(
-  seconds: number,
-  player: ChapterPlayer | null,
+function seekButton(
+  player: ChapterPlayer,
   playFromLabel: (time: string) => string,
-): HTMLElement {
-  const time = document.createElement(player ? 'button' : 'span');
+): (seconds: number) => HTMLElement {
+  return (seconds) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `${SECTION}__time`;
+    const time = formatDuration(seconds);
+    button.textContent = time;
+    button.setAttribute('aria-label', playFromLabel(time));
+    button.addEventListener('click', () => player.playFrom(seconds));
+    return button;
+  };
+}
+
+function plainTime(seconds: number): HTMLElement {
+  const time = document.createElement('span');
   time.className = `${SECTION}__time`;
-  const formatted = formatDuration(seconds);
-  time.textContent = formatted;
-  if (player && time instanceof HTMLButtonElement) {
-    time.type = 'button';
-    time.setAttribute('aria-label', playFromLabel(formatted));
-    time.addEventListener('click', () => player.playFrom(seconds));
-  }
+  time.textContent = formatDuration(seconds);
   return time;
 }

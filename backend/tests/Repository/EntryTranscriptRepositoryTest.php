@@ -4,33 +4,29 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Entity\Entry;
 use App\Entity\EntryTranscript;
-use App\Entity\Feed;
 use App\Entity\TranscriptParagraph;
-use App\Enum\TranscriptFormat;
 use App\Repository\EntryTranscriptRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\TranscriptFixtures;
 
 final class EntryTranscriptRepositoryTest extends DbTestCase
 {
-    private Feed $feed;
+    private TranscriptFixtures $fixtures;
     private EntryTranscriptRepository $transcripts;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->feed = new Feed('https://pod.test/feed.xml');
-        $this->entityManager->persist($this->feed);
-        $this->entityManager->flush();
+        $this->fixtures = new TranscriptFixtures($this->entityManager);
         $this->transcripts = self::getContainer()->get(EntryTranscriptRepository::class);
     }
 
     public function testClaimableRowsArePendingAndDueNewestEntryFirst(): void
     {
         $now = new \DateTimeImmutable('2026-10-27 12:00:00');
-        [$older, $newer, $backedOff, $filled] = $this->seedTranscripts(4);
+        [$older, $newer, $backedOff, $filled] = $this->fixtures->pendingTranscripts(4);
         $backedOff->retryAfter($now);
         $filled->fill([new TranscriptParagraph(0, null, 'x')], 'x');
         $this->entityManager->flush();
@@ -47,7 +43,7 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
     public function testARowIsClaimedOnceUntilItsLeaseRunsOut(): void
     {
         $now = new \DateTimeImmutable('2026-10-27 12:00:00');
-        [$row] = $this->seedTranscripts(1);
+        [$row] = $this->fixtures->pendingTranscripts(1);
 
         self::assertCount(1, $this->transcripts->claim([$row], $now));
         self::assertSame([], $this->transcripts->claim([$row], $now));
@@ -58,7 +54,7 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
     public function testAFilledFailedOrNotYetDueRowIsNotClaimed(): void
     {
         $now = new \DateTimeImmutable('2026-10-27 12:00:00');
-        [$filled, $failed, $notYetDue] = $this->seedTranscripts(3);
+        [$filled, $failed, $notYetDue] = $this->fixtures->pendingTranscripts(3);
         $filled->fill([new TranscriptParagraph(0, null, 'x')], 'x');
         $failed->fail();
         $notYetDue->retryAfter($now);
@@ -69,7 +65,7 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
 
     public function testSearchTextsAreKeyedByEntryIdForFilledRowsOnly(): void
     {
-        [$filled, $pending] = $this->seedTranscripts(2);
+        [$filled, $pending] = $this->fixtures->pendingTranscripts(2);
         $filled->fill([new TranscriptParagraph(0, null, 'Hallo')], 'Hallo');
         $this->entityManager->flush();
         $filledEntryId = $filled->getEntry()->requireId();
@@ -82,7 +78,7 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
 
     public function testEveryFilledEntrysSearchTextIsReturned(): void
     {
-        [$first, $second] = $this->seedTranscripts(2);
+        [$first, $second] = $this->fixtures->pendingTranscripts(2);
         $first->fill([new TranscriptParagraph(0, null, 'Eins')], 'Eins');
         $second->fill([new TranscriptParagraph(0, null, 'Zwei')], 'Zwei');
         $this->entityManager->flush();
@@ -102,14 +98,14 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
 
     public function testFindsTheTranscriptOfAnEntry(): void
     {
-        [$row] = $this->seedTranscripts(1);
+        [$row] = $this->fixtures->pendingTranscripts(1);
 
         self::assertSame($row, $this->transcripts->findForEntry($row->getEntry()));
     }
 
     public function testFindsOnlyTheTranscriptOfTheEntryAsked(): void
     {
-        [$first, $second] = $this->seedTranscripts(2);
+        [$first, $second] = $this->fixtures->pendingTranscripts(2);
 
         self::assertSame($second, $this->transcripts->findForEntry($second->getEntry()));
         self::assertNotSame($first, $this->transcripts->findForEntry($second->getEntry()));
@@ -117,35 +113,12 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
 
     public function testDeletingTheEntryDeletesItsTranscript(): void
     {
-        [$row] = $this->seedTranscripts(1);
+        [$row] = $this->fixtures->pendingTranscripts(1);
         $entryId = $row->getEntry()->requireId();
         $this->entityManager->clear();
 
         $this->entityManager->getConnection()->executeStatement('DELETE FROM entry WHERE id = ?', [$entryId]);
 
         self::assertSame(0, $this->transcripts->count([]));
-    }
-
-    /** @return list<EntryTranscript> */
-    private function seedTranscripts(int $count): array
-    {
-        $rows = [];
-        for ($index = 1; $index <= $count; $index++) {
-            $entry = new Entry(
-                $this->feed,
-                'guid-' . $index,
-                'https://pod.test/ep' . $index,
-                'Episode ' . $index,
-                new \DateTimeImmutable('2026-10-27 06:00:00'),
-                new \DateTimeImmutable('2026-10-27 05:00:00'),
-            );
-            $this->entityManager->persist($entry);
-            $row = new EntryTranscript($entry, 'https://pod.test/ep' . $index . '.vtt', TranscriptFormat::Vtt, null);
-            $this->entityManager->persist($row);
-            $rows[] = $row;
-        }
-        $this->entityManager->flush();
-
-        return $rows;
     }
 }

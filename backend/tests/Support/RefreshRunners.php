@@ -174,7 +174,7 @@ final readonly class RefreshRunners
     ): RefreshRunner {
         /** @var FeedRepository $feedRepository */
         $feedRepository = $this->entityManager->getRepository(Feed::class);
-        $indexer = new EntryIndexer($this->indexWriter, new NoTranscriptTexts(), new NullLogger());
+        $indexer = EntryIndexers::with($this->indexWriter);
         $retentionSettings = new RetentionSettings(
             $this->entityManager->getRepository(RetentionSetting::class),
             $this->entityManager,

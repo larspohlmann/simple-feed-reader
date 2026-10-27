@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Transcript\Support;
 
+use App\Service\Text\Support\PlainText;
 use App\Service\Transcript\Model\TranscriptCueModel;
 
 /** WebVTT and SubRip cues: a block's timing line starts it, the lines after it are its text. */
@@ -63,20 +64,13 @@ final class TimedCues
     {
         $raw = trim(implode(' ', $textLines));
         $voice = preg_match(self::VOICE, $raw, $match) === 1 ? trim($match[1]) : '';
-        $text = self::plain($raw);
+        $text = PlainText::from($raw) ?? '';
         if ($voice === '' && preg_match(self::INLINE_LABEL, $text, $match) === 1) {
             $voice = trim($match[1]);
             $text = substr($text, \strlen($match[0]));
         }
 
         return $text === '' ? null : new TranscriptCueModel($start, $voice === '' ? null : $voice, $text);
-    }
-
-    private static function plain(string $markup): string
-    {
-        $text = html_entity_decode(strip_tags($markup), \ENT_QUOTES | \ENT_HTML5, 'UTF-8');
-
-        return trim((string) preg_replace('/\s+/u', ' ', $text));
     }
 
     private function __construct()

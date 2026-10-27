@@ -114,7 +114,7 @@ export class ArticleBody {
    *  releasing the swapped-out body's streams; the effect never re-runs under a playing video. */
   private decorateEachRender(parts: ArticleBodyParts): void {
     const chapters = computed(parts.chapters, { equal: sameChapters });
-    const transcript = computed(parts.transcript, { equal: (left, right) => left === right });
+    const transcript = computed(parts.transcript);
     effect(
       (onCleanup) => {
         parts.html();

@@ -37,6 +37,16 @@ final readonly class TranscriptParagraph implements \JsonSerializable
         return new self($stored['startSeconds'] ?? null, $stored['speaker'] ?? null, $stored['text']);
     }
 
+    /**
+     * @param list<self> $paragraphs
+     *
+     * @return list<array{startSeconds: int|null, speaker: string|null, text: string}>
+     */
+    public static function toJsonList(array $paragraphs): array
+    {
+        return array_map(static fn (self $paragraph): array => $paragraph->jsonSerialize(), $paragraphs);
+    }
+
     /** @return array{startSeconds: int|null, speaker: string|null, text: string} */
     public function jsonSerialize(): array
     {
