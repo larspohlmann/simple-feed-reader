@@ -75,8 +75,8 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'l.finishedAt AS finishedAt',
                 'l.errorDetail AS errorDetail',
                 'l.finishReason AS finishReason',
-                'l.receipt.adjustedSetting AS adjustedSetting',
-                'l.receipt.adjustedValue AS adjustedValue',
+                'l.adjustment.setting AS adjustedSetting',
+                'l.adjustment.value AS adjustedValue',
             )
             ->join('l.' . $owner, 'r')
             ->where('r.user = :user')

@@ -81,6 +81,9 @@ final class RecommendationRunLog
     #[ORM\Embedded(class: CallReceipt::class, columnPrefix: false)]
     private CallReceipt $receipt;
 
+    #[ORM\Embedded(class: CallAdjustment::class, columnPrefix: false)]
+    private CallAdjustment $adjustment;
+
     /** Private: forRun() and forProfileRun() are the only ways in, so exactly one of the two owners is set. */
     private function __construct(
         ?RecommendationRun $run,
@@ -99,6 +102,7 @@ final class RecommendationRunLog
         $this->requestBody = $requestBody;
         $this->createdAt = $createdAt;
         $this->receipt = new CallReceipt();
+        $this->adjustment = new CallAdjustment();
     }
 
     public static function forRun(

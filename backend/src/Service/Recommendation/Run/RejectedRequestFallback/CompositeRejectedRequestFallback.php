@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Run\Model\RequestAdjustmentModel;
 
-/** Specific readings first: the suppressed-reasoning member absorbs any 400 and would misfile the others' refusals. */
+/** Specific readings first: the suppressed-reasoning member answers any 400 and would misfile the others' refusals. */
 final readonly class CompositeRejectedRequestFallback implements RejectedRequestFallbackInterface
 {
     public function __construct(

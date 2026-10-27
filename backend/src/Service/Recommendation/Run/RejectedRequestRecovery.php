@@ -28,7 +28,7 @@ final readonly class RejectedRequestRecovery
             return false;
         }
 
-        $this->calls->recordAdjustment($callingRun, $adjustment);
+        $this->calls->recordAdjustment($callingRun, $adjustment, $rejection->getMessage());
 
         return true;
     }

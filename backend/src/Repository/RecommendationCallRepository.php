@@ -64,18 +64,23 @@ final readonly class RecommendationCallRepository
         ], ['id' => $settlement->logId]);
     }
 
-    /** Onto the run's newest rejected call: the one whose rejection the adjustment answers. */
-    public function recordAdjustment(CallingRun $callingRun, RequestAdjustmentModel $adjustment): void
-    {
+    /** Onto the run's newest transport-failed call carrying the rejection's message, never a sibling's timeout. */
+    public function recordAdjustment(
+        CallingRun $callingRun,
+        RequestAdjustmentModel $adjustment,
+        string $rejectionMessage,
+    ): void {
         $this->connection->executeStatement(
             'UPDATE recommendation_run_log SET adjusted_setting = :setting, adjusted_value = :value'
             . ' WHERE id = (SELECT newest.id FROM (SELECT MAX(id) AS id FROM recommendation_run_log'
-            . ' WHERE ' . $callingRun->logOwnerColumn . ' = :runId AND verdict = :rejected) AS newest)',
+            . ' WHERE ' . $callingRun->logOwnerColumn . ' = :runId AND verdict = :rejected'
+            . ' AND error_detail = :rejection) AS newest)',
             [
                 'setting' => $adjustment->setting->value,
                 'value' => $adjustment->value,
                 'runId' => $callingRun->id,
                 'rejected' => CallVerdict::TransportFailed->value,
+                'rejection' => $rejectionMessage,
             ],
         );
     }
