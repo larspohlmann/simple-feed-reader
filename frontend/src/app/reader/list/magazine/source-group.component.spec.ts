@@ -8,6 +8,7 @@ import { anEntry } from '../../../../testing/entry-testing';
 import { holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -38,7 +39,11 @@ describe('SourceGroupComponent', () => {
   function mount(entries: EntryDto[], previewCount: number, arrange?: () => void) {
     TestBed.configureTestingModule({
       imports: [SourceGroupComponent, provideTranslocoTesting()],
-      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+      providers: [
+        provideAccountIdentity(),
+        { provide: EntryActionHandler, useValue: entryActions },
+        provideRouter([]),
+      ],
     });
     arrange?.();
     const fixture = TestBed.createComponent(SourceGroupComponent);

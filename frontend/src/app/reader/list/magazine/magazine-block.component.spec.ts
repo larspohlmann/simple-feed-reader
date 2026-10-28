@@ -9,6 +9,7 @@ import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handl
 import { LinkReaderNavigation } from '../../shell/link-reader-navigation.service';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { aQuotedPost, anEntry } from '../../../../testing/entry-testing';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
@@ -30,6 +31,7 @@ function mount(block: MagazineBlock): HTMLElement {
   TestBed.configureTestingModule({
     imports: [MagazineBlockComponent, provideTranslocoTesting()],
     providers: [
+      provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: { open: jest.fn() } },
       { provide: ImageProxyService, useValue: neverRecoveringImageProxy() },
       { provide: LinkReaderNavigation, useValue: { openAlone: jest.fn() } },

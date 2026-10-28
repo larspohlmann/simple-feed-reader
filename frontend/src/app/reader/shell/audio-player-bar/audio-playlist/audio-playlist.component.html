@@ -91,7 +91,7 @@
         <app-audio-chapters
           class="nested"
           [chapters]="chapters"
-          [playhead]="row.current ? player.chapterPlayhead() : null"
+          [playhead]="row.current ? player.chapterControls.playhead() : null"
           (pick)="player.playTrackChapter(index, $event)"
         />
       }

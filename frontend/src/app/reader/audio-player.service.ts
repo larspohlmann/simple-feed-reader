@@ -12,8 +12,8 @@ import {
   select,
   withDetails,
 } from './audio/playlist';
-import { PlaylistStore, type SavedPlaylist } from './audio/playlist.store';
-import { PlaylistPersistence } from './audio/playlist-persistence';
+import { PlaylistStore } from './audio/playlist.store';
+import { PlaybackMemory } from './audio/playback-memory';
 import { AudioDeck } from './audio/audio-deck';
 import type { PlaybackElement } from './audio/playback/playback-element';
 import {
@@ -21,11 +21,12 @@ import {
   playbackSlotFactory,
   providerPlayback,
 } from './audio/playback/playback-slots';
+import { ListenPositions } from './audio/listen-positions';
 import { cachedEnd } from './audio/cached-end';
 import { AudioTrack, TrackDetails } from './audio/audio-track';
 import { reflectInMediaSession } from './audio/media-session-reflection';
 import { PlaybackRate } from './audio/playback-rate';
-import { TrackChapters } from './audio/track-chapters';
+import { RESTART_THRESHOLD_SECONDS, TrackChapters } from './audio/track-chapters';
 import { PlaybackPosition } from './chapters/chapter-player';
 
 export type { AudioTrack, AudioTrackEntry, TrackDetails } from './audio/audio-track';
@@ -44,8 +45,7 @@ export const FRAME_PLAYBACK_FACTORY = new InjectionToken<FramePlaybackFactory>(
 
 /** Jump size for the skip controls and the OS seek keys (#915). */
 export const SKIP_SECONDS = 15;
-/** Past this, previous restarts the current track instead of stepping back (#1429). */
-export const RESTART_THRESHOLD_SECONDS = 3;
+export { RESTART_THRESHOLD_SECONDS };
 
 /**
  * The reader's single audio player. It owns its playback elements in code, never
@@ -69,12 +69,14 @@ export class AudioPlayerService {
       durationchange: () => this.onMetadata(),
       play: () => this.onPlaying(true),
       pause: () => this.onPlaying(false),
-      ended: () => this.playNextOrStop(),
+      ended: () => this.onEnded(),
       error: () => this.onError(),
     },
   );
-  private readonly persistence = new PlaylistPersistence(inject(PlaylistStore), () =>
-    this.snapshot(),
+  private readonly memory = new PlaybackMemory(
+    inject(PlaylistStore),
+    inject(ListenPositions),
+    () => ({ playlist: this._playlist(), position: this._position(), duration: this._duration() }),
   );
   private readonly playbackRate = inject(PlaybackRate);
 
@@ -103,17 +105,11 @@ export class AudioPlayerService {
     seconds: this._position(),
     durationSeconds: this._duration() > 0 ? this._duration() : null,
   }));
-  private readonly trackChapters = new TrackChapters(
-    this.chapters,
-    this.playbackPosition,
-    RESTART_THRESHOLD_SECONDS,
-  );
-  readonly chapterIndex = this.trackChapters.index;
-  readonly currentChapter = this.trackChapters.current;
-  readonly chapterProgress = this.trackChapters.progress;
-  readonly chapterPlayhead = this.trackChapters.playhead;
-  readonly hasPreviousChapter = this.trackChapters.hasPrevious;
-  readonly hasNextChapter = this.trackChapters.hasNext;
+  readonly chapterControls = new TrackChapters(this.chapters, this.playbackPosition, {
+    current: () => this.current(),
+    seek: (seconds) => this.seek(seconds),
+    playFrom: (track, seconds) => this.playFrom(track, seconds),
+  });
 
   private pendingSeek: number | null = null;
 
@@ -132,7 +128,7 @@ export class AudioPlayerService {
     );
     this.restore();
     this.deck.setRate(this.rate());
-    this.persistence.saveOnPageHide(inject(DestroyRef));
+    this.memory.saveOnPageHide(inject(DestroyRef));
     onIdentityChange(() => this.stop());
   }
 
@@ -185,24 +181,10 @@ export class AudioPlayerService {
     this.go(select(this._playlist(), this.index() - 1));
   }
 
-  previousChapter(): void {
-    this.seekToChapterStart(this.trackChapters.previousStart());
-  }
-
-  nextChapter(): void {
-    this.seekToChapterStart(this.trackChapters.nextStart());
-  }
-
-  playChapter(index: number): void {
-    const track = this.current();
-    const chapter = this.chapters()[index];
-    if (track && chapter) this.playFrom(track, chapter.startSeconds);
-  }
-
   /** Plays the queued track at `trackIndex` from its chapter `chapterIndex`; another track loads first. */
   playTrackChapter(trackIndex: number, chapterIndex: number): void {
     if (trackIndex !== this.index()) this.apply(select(this._playlist(), trackIndex));
-    this.playChapter(chapterIndex);
+    this.chapterControls.play(chapterIndex);
   }
 
   /** Gives the queued track at `url` its own title, length and chapters, for a track queued
@@ -234,6 +216,7 @@ export class AudioPlayerService {
   }
 
   stop(): void {
+    this.memory.rememberPlace();
     this.element.pause();
     this.deck.release();
     this._playlist.set(EMPTY_PLAYLIST);
@@ -241,11 +224,7 @@ export class AudioPlayerService {
     this._position.set(0);
     this._duration.set(0);
     this._buffered.set(0);
-    this.persistence.save();
-  }
-
-  private seekToChapterStart(start: number | null): void {
-    if (start !== null) this.seek(start);
+    this.memory.saveQueue();
   }
 
   private go(playlist: Playlist): void {
@@ -258,10 +237,11 @@ export class AudioPlayerService {
     const track = currentTrack(playlist);
     if (!track) return this.stop();
     const changed = track.url !== this.current()?.url;
+    if (changed) this.memory.rememberPlace();
     this._playlist.set(playlist);
     if (changed) this.load(track);
     else if (this._duration() === 0) this._duration.set(track.durationInSeconds ?? 0);
-    this.persistence.save();
+    this.memory.saveQueue();
     this.precacheNext();
   }
 
@@ -299,7 +279,7 @@ export class AudioPlayerService {
   private onTimeUpdate(): void {
     this._position.set(this.element.currentTime);
     this.onProgress();
-    this.persistence.saveThrottled();
+    this.memory.saveThrottled();
   }
 
   private onProgress(): void {
@@ -316,7 +296,7 @@ export class AudioPlayerService {
 
   private onPlaying(playing: boolean): void {
     this._playing.set(playing);
-    if (!playing) this.persistence.save();
+    if (!playing) this.memory.save();
   }
 
   /** A dead enclosure (an expired podcast link) never ends, so it is skipped; a dropped
@@ -327,7 +307,13 @@ export class AudioPlayerService {
       return;
     }
     this._playing.set(false);
-    this.persistence.save();
+    this.memory.save();
+  }
+
+  private onEnded(): void {
+    this._position.set(this._duration());
+    this.memory.forgetPlace();
+    this.playNextOrStop();
   }
 
   private playNextOrStop(): void {
@@ -351,7 +337,7 @@ export class AudioPlayerService {
   }
 
   private restore(): void {
-    const saved = this.persistence.load();
+    const saved = this.memory.load();
     if (!saved) return;
     const track = currentTrack(saved.playlist);
     if (!track) return;
@@ -359,11 +345,6 @@ export class AudioPlayerService {
     this.load(track);
     this._position.set(saved.position);
     this.pendingSeek = saved.position;
-  }
-
-  private snapshot(): SavedPlaylist | null {
-    if (!this.current()) return null;
-    return { playlist: this._playlist(), position: this._position() };
   }
 
   private get element(): PlaybackElement {

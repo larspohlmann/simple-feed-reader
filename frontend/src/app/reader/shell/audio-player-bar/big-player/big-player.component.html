@@ -147,9 +147,9 @@
         <button
           class="ctrl previous-chapter"
           type="button"
-          [disabled]="!player.hasPreviousChapter()"
+          [disabled]="!player.chapterControls.hasPrevious()"
           [attr.aria-label]="'reader.audioPlayer.previousChapter' | transloco"
-          (click)="player.previousChapter()"
+          (click)="player.chapterControls.previous()"
         >
           <app-icon name="chevron_left" size="lg" />
         </button>
@@ -160,11 +160,12 @@
           [attr.aria-controls]="chaptersShown() ? 'big-player-chapters' : null"
           (click)="toggleChapters()"
         >
-          @if (player.currentChapter(); as chapter) {
+          @if (player.chapterControls.current(); as chapter) {
             <span class="chapter-position group-caption">
               {{
                 'reader.audioPlayer.chapterPosition'
-                  | transloco: { index: player.chapterIndex() + 1, count: player.chapters().length }
+                  | transloco
+                    : { index: player.chapterControls.index() + 1, count: player.chapters().length }
               }}
             </span>
             <span class="chapter-name">{{ chapter.title }}</span>
@@ -185,9 +186,9 @@
         <button
           class="ctrl next-chapter"
           type="button"
-          [disabled]="!player.hasNextChapter()"
+          [disabled]="!player.chapterControls.hasNext()"
           [attr.aria-label]="'reader.audioPlayer.nextChapter' | transloco"
-          (click)="player.nextChapter()"
+          (click)="player.chapterControls.next()"
         >
           <app-icon name="chevron_right" size="lg" />
         </button>
@@ -209,8 +210,8 @@
           id="big-player-chapters"
           class="chapters"
           [chapters]="player.chapters()"
-          [playhead]="player.chapterPlayhead()"
-          (pick)="player.playChapter($event)"
+          [playhead]="player.chapterControls.playhead()"
+          (pick)="player.chapterControls.play($event)"
         />
       }
     </section>

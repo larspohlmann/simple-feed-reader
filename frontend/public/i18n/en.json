@@ -1176,7 +1176,12 @@
       "position": "Track {{ index }} of {{ count }}",
       "speed": "Playback speed {{ rate }}×",
       "more": "More",
-      "less": "Less"
+      "less": "Less",
+      "resume": {
+        "message": "You stopped at {{ position }} of {{ duration }}.",
+        "continue": "Continue",
+        "fromStart": "From start"
+      }
     },
     "savedSearches": "Saved searches",
     "savedSearchesEmpty": "No saved searches yet. Save a search to see it here.",

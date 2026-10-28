@@ -2,6 +2,7 @@ import { EffectRef, Injector, effect } from '@angular/core';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia } from '../../audio/embed-media';
 import { toEmbedTrack } from '../../audio/embed-track';
+import { ListenLauncher } from '../../audio/listen-launcher';
 import { pauseEmbedFrame } from '../../media/embed-frame-commands';
 import { EntryDto } from '../../models';
 import type { TrackDetails } from '../../audio/audio-track';
@@ -21,6 +22,7 @@ export class ArticleEmbedAudio {
 
   constructor(
     private readonly audio: AudioPlayerService,
+    private readonly launcher: ListenLauncher,
     private readonly injector: Injector,
   ) {}
 
@@ -34,8 +36,7 @@ export class ArticleEmbedAudio {
       listen: (media, frame) => {
         pauseEmbedFrame(frame, media.kind);
         const track = trackOf(media);
-        this.audio.play(track);
-        context.onListened(track);
+        this.launcher.listen(track, () => context.onListened(track));
       },
       toggleQueued: (media) => this.audio.toggleQueued(trackOf(media)),
     };

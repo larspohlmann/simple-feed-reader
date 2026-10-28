@@ -55,6 +55,7 @@ import { relativeTime } from '../../format';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
+import { ListenLauncher } from '../../audio/listen-launcher';
 import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
 import { ShareButtonComponent } from '../share/share-button.component';
@@ -171,9 +172,9 @@ export class ReaderViewComponent {
   /** The entry's first playable audio enclosure, surfaced as a listen control
    *  above the article; its attachment is null when the feed declared none (#915). */
   protected readonly audio = new EntryAudio(
-    this.entry,
+    { entry: this.entry, chapters: this.source.chapters },
     inject(AudioPlayerService),
-    this.source.chapters,
+    inject(ListenLauncher),
   );
 
   /** Summary plus player is the whole of an audio-first entry whose page holds no article (#1428). */

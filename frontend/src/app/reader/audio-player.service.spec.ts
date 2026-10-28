@@ -11,7 +11,9 @@ import { PRECACHE_LEAD_SECONDS } from './audio/audio-deck';
 import type { FramePlayback } from './audio/playback/frame-playback';
 import type { FrameKind } from './audio/playback/playback-kind';
 import { PlaylistStore } from './audio/playlist.store';
+import { ListenPositions } from './audio/listen-positions';
 import { TokenStore } from '../core/auth/token.store';
+import { provideAccountIdentity } from '../../testing/account-identity-testing';
 import { FakeAudio } from '../../testing/fake-audio-element';
 import { installFakeMediaSession } from '../../testing/fake-media-session';
 import { timeRanges } from '../../testing/time-ranges-testing';
@@ -51,6 +53,7 @@ function make(): AudioPlayerService {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
+      provideAccountIdentity(),
       {
         provide: AUDIO_ELEMENT_FACTORY,
         useValue: () => {
@@ -587,23 +590,23 @@ describe('AudioPlayerService', () => {
       at(42);
 
       expect(service.chapters()).toEqual([]);
-      expect(service.chapterIndex()).toBe(-1);
-      expect(service.currentChapter()).toBeNull();
-      expect(service.chapterProgress()).toBeNull();
-      expect(service.hasPreviousChapter()).toBe(false);
-      expect(service.hasNextChapter()).toBe(false);
+      expect(service.chapterControls.index()).toBe(-1);
+      expect(service.chapterControls.current()).toBeNull();
+      expect(service.chapterControls.progress()).toBeNull();
+      expect(service.chapterControls.hasPrevious()).toBe(false);
+      expect(service.chapterControls.hasNext()).toBe(false);
     });
 
     it('follows the current chapter as playback moves', () => {
       const service = playingChaptered();
 
       at(30);
-      expect(service.chapterIndex()).toBe(0);
-      expect(service.currentChapter()?.title).toBe('Intro');
+      expect(service.chapterControls.index()).toBe(0);
+      expect(service.chapterControls.current()?.title).toBe('Intro');
 
       at(61);
-      expect(service.chapterIndex()).toBe(1);
-      expect(service.currentChapter()?.title).toBe('Main');
+      expect(service.chapterControls.index()).toBe(1);
+      expect(service.chapterControls.current()?.title).toBe('Main');
     });
 
     it('titles the OS metadata with the current chapter and clears it on stop', () => {
@@ -631,52 +634,52 @@ describe('AudioPlayerService', () => {
 
       at(90);
 
-      expect(service.chapterProgress()).toEqual({ fraction: 0.25, secondsLeft: 90 });
+      expect(service.chapterControls.progress()).toEqual({ fraction: 0.25, secondsLeft: 90 });
     });
 
     it('has no progress on the last chapter until the metadata tells the length', () => {
       const service = make();
       service.play(track({ chapters, durationInSeconds: null }));
       at(240);
-      expect(service.chapterProgress()).toBeNull();
+      expect(service.chapterControls.progress()).toBeNull();
 
       audio.duration = 300;
       audio.fire('loadedmetadata');
 
-      expect(service.chapterProgress()).toEqual({ fraction: 0.5, secondsLeft: 60 });
+      expect(service.chapterControls.progress()).toEqual({ fraction: 0.5, secondsLeft: 60 });
     });
 
     it('steps to the next chapter until the last one', () => {
       const service = playingChaptered();
       at(30);
-      expect(service.hasNextChapter()).toBe(true);
+      expect(service.chapterControls.hasNext()).toBe(true);
 
-      service.nextChapter();
+      service.chapterControls.next();
       expect(audio.currentTime).toBe(60);
       expect(service.position()).toBe(60);
 
-      service.nextChapter();
+      service.chapterControls.next();
       expect(service.position()).toBe(180);
-      expect(service.hasNextChapter()).toBe(false);
+      expect(service.chapterControls.hasNext()).toBe(false);
 
-      service.nextChapter();
+      service.chapterControls.next();
       expect(service.position()).toBe(180);
     });
 
     it('restarts the chapter on previous once past the threshold, and steps back within it', () => {
       const service = playingChaptered();
       at(60 + RESTART_THRESHOLD_SECONDS + 1);
-      expect(service.hasPreviousChapter()).toBe(true);
+      expect(service.chapterControls.hasPrevious()).toBe(true);
 
-      service.previousChapter();
+      service.chapterControls.previous();
       expect(audio.currentTime).toBe(60);
       expect(service.position()).toBe(60);
 
-      service.previousChapter();
+      service.chapterControls.previous();
       expect(service.position()).toBe(0);
-      expect(service.hasPreviousChapter()).toBe(false);
+      expect(service.chapterControls.hasPrevious()).toBe(false);
 
-      service.previousChapter();
+      service.chapterControls.previous();
       expect(service.position()).toBe(0);
     });
 
@@ -685,7 +688,7 @@ describe('AudioPlayerService', () => {
       service.toggle();
       expect(service.playing()).toBe(false);
 
-      service.playChapter(2);
+      service.chapterControls.play(2);
 
       expect(audio.currentTime).toBe(180);
       expect(service.position()).toBe(180);
@@ -696,7 +699,7 @@ describe('AudioPlayerService', () => {
       const service = playingChaptered();
       at(30);
 
-      service.playChapter(7);
+      service.chapterControls.play(7);
 
       expect(service.position()).toBe(30);
     });
@@ -718,7 +721,7 @@ describe('AudioPlayerService', () => {
       expect(service.playing()).toBe(true);
     });
 
-    it('plays a chapter of the current track like playChapter', () => {
+    it('plays a chapter of the current track through chapterControls.play', () => {
       const service = playingChaptered();
       service.toggle();
       audio.load.mockClear();
@@ -1186,6 +1189,91 @@ describe('AudioPlayerService', () => {
       expect(standby.src).toBe('');
       expect(standby.load).toHaveBeenCalled();
       expect(localStorage.getItem('sfr.audio')).toBeNull();
+    });
+  });
+
+  describe('remembering where a long track was left (#1866)', () => {
+    const LONG = track({ url: 'https://x.test/long.mp3', durationInSeconds: 3600 });
+    const OTHER = track({ url: 'https://x.test/other.mp3', durationInSeconds: 3600 });
+    const positions = () => TestBed.inject(ListenPositions);
+
+    function playedTo(service: AudioPlayerService, ...seconds: number[]): void {
+      service.play(LONG);
+      for (const second of seconds) {
+        audio.currentTime = second;
+        audio.fire('timeupdate');
+      }
+    }
+
+    it('remembers the place when playback pauses', () => {
+      const service = make();
+      playedTo(service, 100, 600);
+
+      audio.pause();
+
+      expect(positions().get(LONG.url)).toEqual({
+        url: LONG.url,
+        seconds: 600,
+        durationSeconds: 3600,
+      });
+    });
+
+    it('remembers nothing of a short track', () => {
+      const service = make();
+      service.play(track({ durationInSeconds: 600 }));
+      audio.currentTime = 300;
+      audio.fire('timeupdate');
+
+      audio.pause();
+
+      expect(positions().get(track().url)).toBeNull();
+    });
+
+    it('remembers the place of the track another one replaces', () => {
+      const service = make();
+      playedTo(service, 100, 600);
+
+      service.play(OTHER);
+
+      expect(positions().get(LONG.url)?.seconds).toBe(600);
+    });
+
+    it('remembers the place when the connection drops', () => {
+      const service = make();
+      playedTo(service, 100, 600);
+
+      audio.fail(NETWORK);
+
+      expect(positions().get(LONG.url)?.seconds).toBe(600);
+    });
+
+    it('remembers the place when the player is closed', () => {
+      const service = make();
+      playedTo(service, 100, 600);
+      audio.pause = jest.fn();
+
+      service.stop();
+
+      expect(positions().get(LONG.url)?.seconds).toBe(600);
+    });
+
+    it('forgets the place once the track ends', () => {
+      const service = make();
+      playedTo(service, 100, 600);
+
+      audio.fire('ended');
+
+      expect(positions().get(LONG.url)).toBeNull();
+    });
+
+    it('forgets the place of a track that ends with another one queued', () => {
+      const service = make();
+      playedTo(service, 100, 600);
+      service.enqueue(OTHER);
+
+      audio.fire('ended');
+
+      expect(positions().get(LONG.url)).toBeNull();
     });
   });
 });

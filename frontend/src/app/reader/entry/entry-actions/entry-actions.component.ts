@@ -7,6 +7,7 @@ import { EntryDto } from '../../models';
 import { likeableSocial } from '../../entry-social';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
+import { ListenLauncher } from '../../audio/listen-launcher';
 
 /**
  * The per-entry actions — favorite, like on the post's network (#1600), keep,
@@ -41,6 +42,10 @@ export class EntryActionsComponent {
   protected readonly likeable = computed(() => {
     return this.like() ? likeableSocial(this.entry()) : null;
   });
-  protected readonly entryAudio = new EntryAudio(this.entry, inject(AudioPlayerService));
+  protected readonly entryAudio = new EntryAudio(
+    { entry: this.entry },
+    inject(AudioPlayerService),
+    inject(ListenLauncher),
+  );
   protected readonly actions = inject(EntryActionHandler);
 }

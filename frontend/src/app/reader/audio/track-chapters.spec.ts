@@ -1,10 +1,18 @@
 import { signal } from '@angular/core';
 import { PlaybackPosition } from '../chapters/chapter-player';
 import type { ChapterDto } from '../models';
+import type { AudioTrack } from './audio-track';
 import { TrackChapters, nextChapterStart, previousChapterStart } from './track-chapters';
 
 const starts = [30, 90, 180];
 const threshold = 3;
+const track: AudioTrack = {
+  url: 'https://x.test/ep.mp3',
+  title: 'Episode',
+  faviconUrl: null,
+  imageUrl: null,
+  durationInSeconds: null,
+};
 
 describe('previousChapterStart', () => {
   it('restarts the current chapter once past the threshold', () => {
@@ -62,8 +70,9 @@ describe('TrackChapters', () => {
 
   function setUp(initial: ChapterDto[] = chapters) {
     const position = signal<PlaybackPosition>({ seconds: 0, durationSeconds: null });
-    const followed = new TrackChapters(signal(initial), position, threshold);
-    return { position, followed };
+    const player = { current: jest.fn(() => track), seek: jest.fn(), playFrom: jest.fn() };
+    const followed = new TrackChapters(signal(initial), position, player);
+    return { position, followed, player };
   }
 
   it('follows the chapter at the position', () => {
@@ -111,5 +120,50 @@ describe('TrackChapters', () => {
     expect(followed.progress()).toBeNull();
     expect(followed.previousStart()).toBeNull();
     expect(followed.nextStart()).toBeNull();
+  });
+
+  it('seeks to the previous chapter start', () => {
+    const { position, followed, player } = setUp();
+    position.set({ seconds: 92, durationSeconds: null });
+
+    followed.previous();
+
+    expect(player.seek).toHaveBeenCalledWith(30);
+  });
+
+  it('seeks to the next chapter start', () => {
+    const { position, followed, player } = setUp();
+    position.set({ seconds: 100, durationSeconds: null });
+
+    followed.next();
+
+    expect(player.seek).toHaveBeenCalledWith(180);
+  });
+
+  it('does not seek with nowhere to go', () => {
+    const { position, followed, player } = setUp();
+    position.set({ seconds: 500, durationSeconds: null });
+
+    followed.next();
+
+    expect(player.seek).not.toHaveBeenCalled();
+  });
+
+  it('plays the track from a chapter start', () => {
+    const { followed, player } = setUp();
+
+    followed.play(1);
+
+    expect(player.playFrom).toHaveBeenCalledWith(track, 90);
+  });
+
+  it('plays nothing for a chapter that does not exist, or without a track', () => {
+    const { followed, player } = setUp();
+
+    followed.play(9);
+    player.current.mockReturnValue(null as never);
+    followed.play(1);
+
+    expect(player.playFrom).not.toHaveBeenCalled();
   });
 });

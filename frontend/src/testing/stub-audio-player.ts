@@ -8,6 +8,7 @@ export class StubAudioPlayer implements Pick<
   | 'current'
   | 'playing'
   | 'play'
+  | 'playFrom'
   | 'toggle'
   | 'isQueued'
   | 'enqueue'
@@ -19,11 +20,16 @@ export class StubAudioPlayer implements Pick<
   readonly current = signal<AudioTrack | null>(null);
   readonly playing = signal(false);
   readonly played: AudioTrack[] = [];
+  readonly playedFrom: { track: AudioTrack; seconds: number }[] = [];
   readonly described: { url: string; details: TrackDetails }[] = [];
   toggles = 0;
 
   play(track: AudioTrack): void {
     this.played.push(track);
+  }
+
+  playFrom(track: AudioTrack, seconds: number): void {
+    this.playedFrom.push({ track, seconds });
   }
 
   toggle(): void {

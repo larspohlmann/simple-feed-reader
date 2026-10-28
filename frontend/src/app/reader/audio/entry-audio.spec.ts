@@ -1,7 +1,9 @@
 import { signal } from '@angular/core';
 import { StubAudioPlayer } from '../../../testing/stub-audio-player';
 import { ChapterDto, EntryDto } from '../models';
+import { StubListenLauncher } from '../../../testing/stub-listen-launcher';
 import { EntryAudio } from './entry-audio';
+import type { ListenLauncher } from './listen-launcher';
 
 const EPISODE = 'https://x.test/ep.mp3';
 
@@ -16,7 +18,11 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
 
 function setUp(subject: EntryDto | null = entry()) {
   const player = new StubAudioPlayer();
-  const audio = new EntryAudio(() => subject, player.asService());
+  const audio = new EntryAudio(
+    { entry: () => subject },
+    player.asService(),
+    new StubListenLauncher(player).asService(),
+  );
   return { player, audio };
 }
 
@@ -48,7 +54,12 @@ describe('EntryAudio', () => {
 
   it('carries the chapters its source gives, once they load (#1810)', () => {
     const chapters = signal<ChapterDto[]>([]);
-    const audio = new EntryAudio(() => entry(), new StubAudioPlayer().asService(), chapters);
+    const player = new StubAudioPlayer();
+    const audio = new EntryAudio(
+      { entry: () => entry(), chapters },
+      player.asService(),
+      new StubListenLauncher(player).asService(),
+    );
     expect(audio.track()).not.toHaveProperty('chapters');
 
     chapters.set([{ startSeconds: 0, title: 'Intro' }]);
@@ -59,7 +70,11 @@ describe('EntryAudio', () => {
   it('shares the chapters with the player only once the track has some (#1810)', () => {
     const chapters = signal<ChapterDto[]>([]);
     const player = new StubAudioPlayer();
-    const audio = new EntryAudio(() => entry(), player.asService(), chapters);
+    const audio = new EntryAudio(
+      { entry: () => entry(), chapters },
+      player.asService(),
+      new StubListenLauncher(player).asService(),
+    );
 
     audio.shareChapters();
     expect(player.described).toEqual([]);
@@ -135,5 +150,18 @@ describe('EntryAudio', () => {
     audio.toggleQueued();
     expect(player.queue()).toEqual([]);
     expect(audio.queued()).toBe(false);
+  });
+
+  it('starts the track through the launcher, which may ask first (#1866)', () => {
+    const player = new StubAudioPlayer();
+    const listen = jest.fn();
+    const audio = new EntryAudio({ entry: () => entry() }, player.asService(), {
+      listen,
+    } as unknown as ListenLauncher);
+
+    audio.play();
+
+    expect(listen).toHaveBeenCalledWith(expect.objectContaining({ url: EPISODE }));
+    expect(player.played).toEqual([]);
   });
 });

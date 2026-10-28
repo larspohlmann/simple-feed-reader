@@ -45,9 +45,6 @@ function stub() {
     skip: jest.fn(),
     previous: jest.fn(),
     next: jest.fn(),
-    previousChapter: jest.fn(),
-    nextChapter: jest.fn(),
-    playChapter: jest.fn(),
     cycleRate: jest.fn(),
   };
 }
@@ -382,11 +379,11 @@ describe('BigPlayerComponent', () => {
     function chaptered(phone = false) {
       const fixture = render(episode, phone);
       player.chapters.set(chapters);
-      player.chapterIndex.set(1);
-      player.currentChapter.set(chapters[1]);
-      player.chapterProgress.set({ fraction: 0.5, secondsLeft: 105 });
-      player.hasPreviousChapter.set(true);
-      player.hasNextChapter.set(true);
+      player.chapterControls.index.set(1);
+      player.chapterControls.current.set(chapters[1]);
+      player.chapterControls.progress.set({ fraction: 0.5, secondsLeft: 105 });
+      player.chapterControls.hasPrevious.set(true);
+      player.chapterControls.hasNext.set(true);
       fixture.detectChanges();
       return fixture;
     }
@@ -431,7 +428,7 @@ describe('BigPlayerComponent', () => {
 
     it('leaves the time left out while the chapter end is unknown', () => {
       const fixture = chaptered();
-      player.chapterProgress.set(null);
+      player.chapterControls.progress.set(null);
       fixture.detectChanges();
 
       expect(query(fixture, '.chapter-position')!.textContent!.trim()).toBe('Chapter 2 of 3');
@@ -440,9 +437,9 @@ describe('BigPlayerComponent', () => {
 
     it('offers the chapter count where the title goes before the first chapter starts', () => {
       const fixture = chaptered();
-      player.chapterIndex.set(-1);
-      player.currentChapter.set(null);
-      player.chapterProgress.set(null);
+      player.chapterControls.index.set(-1);
+      player.chapterControls.current.set(null);
+      player.chapterControls.progress.set(null);
       fixture.detectChanges();
 
       expect(query(fixture, '.chapter-name')!.textContent!.trim()).toBe('Chapters (3)');
@@ -455,8 +452,8 @@ describe('BigPlayerComponent', () => {
       control(fixture, '.previous-chapter').click();
       control(fixture, '.next-chapter').click();
 
-      expect(player.previousChapter).toHaveBeenCalledTimes(1);
-      expect(player.nextChapter).toHaveBeenCalledTimes(1);
+      expect(player.chapterControls.previous).toHaveBeenCalledTimes(1);
+      expect(player.chapterControls.next).toHaveBeenCalledTimes(1);
       expect(player.previous).not.toHaveBeenCalled();
       expect(player.next).not.toHaveBeenCalled();
       expect(control(fixture, '.previous-chapter').getAttribute('aria-label')).toBe(
@@ -467,14 +464,14 @@ describe('BigPlayerComponent', () => {
 
     it('disables the chapter steps at the ends of the track', () => {
       const fixture = chaptered();
-      player.hasPreviousChapter.set(false);
+      player.chapterControls.hasPrevious.set(false);
       fixture.detectChanges();
 
       expect(control(fixture, '.previous-chapter').disabled).toBe(true);
       expect(control(fixture, '.next-chapter').disabled).toBe(false);
 
-      player.hasPreviousChapter.set(true);
-      player.hasNextChapter.set(false);
+      player.chapterControls.hasPrevious.set(true);
+      player.chapterControls.hasNext.set(false);
       fixture.detectChanges();
 
       expect(control(fixture, '.previous-chapter').disabled).toBe(false);
@@ -535,7 +532,7 @@ describe('BigPlayerComponent', () => {
 
       listRows(fixture)[2].click();
 
-      expect(player.playChapter).toHaveBeenCalledWith(2);
+      expect(player.chapterControls.play).toHaveBeenCalledWith(2);
     });
 
     for (const toggle of ['.chapter-title', '.chapters-heading']) {

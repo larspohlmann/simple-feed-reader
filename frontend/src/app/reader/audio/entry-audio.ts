@@ -4,16 +4,26 @@ import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
 import { chaptersOnly } from './audio-track';
 import { ChapterDto, EntryDto } from '../models';
 import { formatDuration } from '../format';
+import { ListenLauncher } from './listen-launcher';
+
+export interface EntryAudioSource {
+  readonly entry: () => EntryDto | null | undefined;
+  readonly chapters?: () => ChapterDto[];
+}
 
 /** An entry's audio enclosure as the player sees it, with the controls the
  *  article view and the list rows share (#1436). */
 export class EntryAudio {
-  readonly attachment = computed(() => firstAudioAttachment(this.entry()?.attachments ?? []));
+  readonly attachment = computed(() =>
+    firstAudioAttachment(this.source.entry()?.attachments ?? []),
+  );
 
   readonly track = computed(() => {
-    const entry = this.entry();
+    const entry = this.source.entry();
     const attachment = this.attachment();
-    return entry && attachment ? toAudioTrack(entry, attachment, this.chapters()) : null;
+    return entry && attachment
+      ? toAudioTrack(entry, attachment, this.source.chapters?.() ?? [])
+      : null;
   });
 
   /** The feed-declared length as `m:ss`, or null when the feed declares none. */
@@ -33,14 +43,14 @@ export class EntryAudio {
   });
 
   constructor(
-    private readonly entry: () => EntryDto | null | undefined,
+    private readonly source: EntryAudioSource,
     private readonly player: AudioPlayerService,
-    private readonly chapters: () => ChapterDto[] = () => [],
+    private readonly launcher: ListenLauncher,
   ) {}
 
   play(): void {
     const track = this.track();
-    if (track) this.player.play(track);
+    if (track) this.launcher.listen(track);
   }
 
   togglePlaying(): void {

@@ -9,6 +9,7 @@ import { EntryDto } from '../../models';
 import { EntryActionHandler } from './entry-action-handler';
 import { AudioPlayerService } from '../../audio-player.service';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { OpensEntryDirective } from '../../list/opens-entry.directive';
 
@@ -99,7 +100,10 @@ describe('EntryActionsComponent', () => {
     player = new StubAudioPlayer();
     TestBed.configureTestingModule({
       imports: [HostComponent, provideTranslocoTesting()],
-      providers: [{ provide: AudioPlayerService, useValue: player.asService() }],
+      providers: [
+        { provide: AudioPlayerService, useValue: player.asService() },
+        provideAccountIdentity(),
+      ],
     });
   });
 

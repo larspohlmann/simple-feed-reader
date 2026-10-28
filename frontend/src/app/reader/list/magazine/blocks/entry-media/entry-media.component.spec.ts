@@ -15,6 +15,7 @@ import {
   restoreIntersectionObserver,
   stubIntersectionObserver,
 } from '../../../../../../testing/intersection-observer-testing';
+import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
 
 jest.mock(
   'hls.js',
@@ -68,7 +69,11 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
 async function mountFixture(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryMediaComponent, provideTranslocoTesting()],
-    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+    providers: [
+      provideAccountIdentity(),
+      { provide: EntryActionHandler, useValue: entryActions },
+      provideRouter([]),
+    ],
   });
   const fixture = TestBed.createComponent(EntryMediaComponent);
   fixture.componentRef.setInput('entry', testEntry);
@@ -345,6 +350,7 @@ describe('EntryMediaComponent in an autoplaying list', () => {
     TestBed.configureTestingModule({
       imports: [EntryMediaComponent, provideTranslocoTesting()],
       providers: [
+        provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: ListAutoplayCoordinator, useValue: coordinator },
         provideRouter([]),
