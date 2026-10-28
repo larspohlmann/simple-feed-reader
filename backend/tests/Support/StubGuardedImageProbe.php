@@ -13,6 +13,9 @@ final class StubGuardedImageProbe implements GuardedImageProbeInterface
     /** @var array<string, true> */
     private array $existing = [];
 
+    /** @var array<string, true> */
+    private array $unreachable = [];
+
     /** @var array<string, ImageDimensionsModel> */
     private array $measured = [];
 
@@ -22,6 +25,11 @@ final class StubGuardedImageProbe implements GuardedImageProbeInterface
     public function willExist(string $url): void
     {
         $this->existing[$url] = true;
+    }
+
+    public function willBeUnreachable(string $url): void
+    {
+        $this->unreachable[$url] = true;
     }
 
     public function willMeasure(string $url, int $width, int $height): void
@@ -35,9 +43,12 @@ final class StubGuardedImageProbe implements GuardedImageProbeInterface
         return $this->requested;
     }
 
-    public function exists(string $imageUrl): bool
+    public function exists(string $imageUrl, int $expectedWidth): bool
     {
         $this->requested[] = $imageUrl;
+        if (isset($this->unreachable[$imageUrl])) {
+            throw new GuardedImageUnavailableException('unreachable: ' . $imageUrl);
+        }
 
         return isset($this->existing[$imageUrl]);
     }

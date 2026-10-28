@@ -16,9 +16,9 @@ use App\Service\Image\Model\ImageVerifyOutcome;
 use App\Service\Image\Model\LeadImageModel;
 
 /**
- * Verifies one pending image via the SSRF-guarded downloader, retrying a bounded
- * number of times before dropping it. A refusal the downloader cannot recover
- * from keeps the image unmeasured instead — a browser may still render it.
+ * Verifies one pending image via the SSRF-guarded downloader, retrying a bounded number of times before dropping it,
+ * and probes the size variants the list views need. A refusal the downloader cannot recover from keeps the image
+ * unmeasured instead — a browser may still render it.
  */
 final readonly class ImageVerifier
 {

@@ -39,6 +39,13 @@ final class UndeclaredPrefixesTest extends TestCase
         self::assertSame($xml, UndeclaredPrefixes::declaredIn($xml));
     }
 
+    public function testWhitespaceAroundTheEqualsSignStillCountsAsDeclared(): void
+    {
+        $xml = '<rss xmlns:media = "http://search.yahoo.com/mrss/"><media:content url="x"/></rss>';
+
+        self::assertSame($xml, UndeclaredPrefixes::declaredIn($xml));
+    }
+
     public function testLeavesAFeedWithoutPrefixesAlone(): void
     {
         $xml = '<rss><channel><title>T</title></channel></rss>';

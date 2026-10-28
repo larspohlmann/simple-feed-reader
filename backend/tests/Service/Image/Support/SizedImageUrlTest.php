@@ -49,4 +49,28 @@ final class SizedImageUrlTest extends TestCase
             SizedImageUrl::atSize('https://h/a.jpg?u=https://h/b.jpg', 10, 5),
         );
     }
+
+    public function testAScaledOriginalIsNamedAfterItsUnscaledStem(): void
+    {
+        self::assertSame(
+            'https://h/u/name-768x403.jpg',
+            SizedImageUrl::atSize('https://h/u/name-scaled.jpg', 768, 403),
+        );
+        self::assertSame(
+            'https://h/u/name-300x158.jpg',
+            SizedImageUrl::atSize('https://h/u/name-rotated.jpg', 300, 158),
+        );
+    }
+
+    public function testAStemMerelyContainingScaledIsUntouched(): void
+    {
+        self::assertSame(
+            'https://h/u/scaled-model-300x158.jpg',
+            SizedImageUrl::atSize('https://h/u/scaled-model.jpg', 300, 158),
+        );
+        self::assertSame(
+            'https://h/u/a-scaled-model-300x158.jpg',
+            SizedImageUrl::atSize('https://h/u/a-scaled-model.jpg', 300, 158),
+        );
+    }
 }

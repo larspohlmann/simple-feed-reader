@@ -8,6 +8,7 @@ namespace App\Service\Image\Support;
 final class SizedImageUrl
 {
     private const string SUFFIX = '/-\d+x\d+(?=\.[a-z0-9]{2,5}(?:[?#]|$))/i';
+    private const string UNSCALED_MARKER = '/-(?:scaled|rotated)(?=\.[a-z0-9]{2,5}(?:[?#]|$))/i';
     private const string EXTENSION = '/(?=\.[a-z0-9]{2,5}(?:[?#]|$))/i';
 
     public static function hasSizeSuffix(string $url): bool
@@ -22,7 +23,9 @@ final class SizedImageUrl
 
     public static function atSize(string $url, int $width, int $height): string
     {
-        return (string) preg_replace(self::EXTENSION, '-' . $width . 'x' . $height, self::withoutSizeSuffix($url), 1);
+        $stem = (string) preg_replace(self::UNSCALED_MARKER, '', self::withoutSizeSuffix($url), 1);
+
+        return (string) preg_replace(self::EXTENSION, '-' . $width . 'x' . $height, $stem, 1);
     }
 
     private function __construct()

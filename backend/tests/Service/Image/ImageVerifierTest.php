@@ -112,9 +112,12 @@ final class ImageVerifierTest extends TestCase
         $downloader = new StubGuardedImageDownloader();
         $downloader->willReturnBytes('https://i/wp-content/uploads/a.png', PngImageFactory::bytes(1600, 900));
 
-        $outcome = $this->verifier($downloader)->verify($this->pendingImage('https://i/wp-content/uploads/a.png'));
+        $entry = $this->pendingImage('https://i/wp-content/uploads/a.png');
+
+        $outcome = $this->verifier($downloader)->verify($entry);
 
         self::assertSame(ImageVerifyOutcome::Measured, $outcome);
+        self::assertSame([], $entry->getImage()->getRenditions());
     }
 
     public function testARefusedOrRetriedDownloadMakesNoProbeRequest(): void

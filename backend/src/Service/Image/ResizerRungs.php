@@ -15,7 +15,8 @@ use App\Service\Image\Support\WidthQuery;
 final readonly class ResizerRungs
 {
     private const int CHECK_WIDTH = RenditionTargets::WIDTHS[0];
-    private const int ROUNDING_TOLERANCE = 1;
+    private const int WIDTH_TOLERANCE = 1;
+    private const int HEIGHT_TOLERANCE = 2;
 
     public function __construct(private GuardedImageProbeInterface $probe)
     {
@@ -32,7 +33,13 @@ final readonly class ResizerRungs
             return false;
         }
 
-        return abs($measured->width - self::CHECK_WIDTH) <= self::ROUNDING_TOLERANCE;
+        return abs($measured->width - self::CHECK_WIDTH) <= self::WIDTH_TOLERANCE
+            && abs($measured->height - self::proportionalHeight($lead)) <= self::HEIGHT_TOLERANCE;
+    }
+
+    private static function proportionalHeight(LeadImageModel $lead): int
+    {
+        return (int) round(self::CHECK_WIDTH * $lead->dimensions->height / $lead->dimensions->width);
     }
 
     /** @return list<ImageRendition> */

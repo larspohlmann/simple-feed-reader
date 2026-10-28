@@ -14,6 +14,7 @@ use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\PngImageFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,6 +24,7 @@ final class GuardedImageProbeTest extends TestCase
     use NoEgressProxy;
 
     private const string IMAGE_URL = 'https://img.example.com/a-768x432.jpg';
+    private const int WIDTH = 768;
 
     /** @var list<array{method: string, headers: list<string>, timeout: mixed}> */
     private array $requests = [];
@@ -64,18 +66,18 @@ final class GuardedImageProbeTest extends TestCase
 
     public function testAnImageAnsweringHeadExists(): void
     {
-        self::assertTrue($this->probe([self::image()])->exists(self::IMAGE_URL));
+        self::assertTrue($this->probe([self::image()])->exists(self::IMAGE_URL, self::WIDTH));
         self::assertSame('HEAD', $this->requests[0]['method']);
     }
 
     public function testAMissingImageDoesNotExist(): void
     {
-        self::assertFalse($this->probe([self::image(Response::HTTP_NOT_FOUND)])->exists(self::IMAGE_URL));
+        self::assertFalse($this->probe([self::image(Response::HTTP_NOT_FOUND)])->exists(self::IMAGE_URL, self::WIDTH));
     }
 
     public function testAnHtmlPageAnsweringOkIsNoImage(): void
     {
-        self::assertFalse($this->probe([self::image(type: 'text/html')])->exists(self::IMAGE_URL));
+        self::assertFalse($this->probe([self::image(type: 'text/html')])->exists(self::IMAGE_URL, self::WIDTH));
     }
 
     /** @return iterable<string, array{int}> */
@@ -94,20 +96,110 @@ final class GuardedImageProbeTest extends TestCase
             self::image(Response::HTTP_PARTIAL_CONTENT, 'image/png', PngImageFactory::bytes(768, 432)),
         ]);
 
-        self::assertTrue($probe->exists(self::IMAGE_URL));
+        self::assertTrue($probe->exists(self::IMAGE_URL, self::WIDTH));
         self::assertSame('GET', $this->requests[1]['method']);
     }
 
     public function testAnotherErrorStatusDoesNotFallBack(): void
     {
-        self::assertFalse($this->probe([self::image(Response::HTTP_GONE)])->exists(self::IMAGE_URL));
+        self::assertFalse($this->probe([self::image(Response::HTTP_GONE)])->exists(self::IMAGE_URL, self::WIDTH));
         self::assertCount(1, $this->requests);
     }
 
-    public function testABlockedAddressDoesNotExist(): void
+    public function testABlockedAddressIsUnreachable(): void
     {
-        self::assertFalse($this->probe([self::image()], '10.0.0.1')->exists(self::IMAGE_URL));
-        self::assertSame([], $this->requests);
+        $this->expectException(GuardedImageUnavailableException::class);
+
+        try {
+            $this->probe([self::image()], '10.0.0.1')->exists(self::IMAGE_URL, self::WIDTH);
+        } finally {
+            self::assertSame([], $this->requests);
+        }
+    }
+
+    public function testAHeadRedirectedElsewhereDoesNotExist(): void
+    {
+        $redirect = new MockResponse('', [
+            'http_code' => Response::HTTP_FOUND,
+            'response_headers' => ['location' => ['https://img.example.com/placeholder.jpg']],
+        ]);
+
+        self::assertFalse($this->probe([$redirect, self::image()])->exists(self::IMAGE_URL, self::WIDTH));
+    }
+
+    public function testAFallbackGetOfAnotherWidthDoesNotExist(): void
+    {
+        $probe = $this->probe([
+            self::image(Response::HTTP_FORBIDDEN),
+            self::image(Response::HTTP_PARTIAL_CONTENT, 'image/png', PngImageFactory::bytes(300, 169)),
+        ]);
+
+        self::assertFalse($probe->exists(self::IMAGE_URL, self::WIDTH));
+    }
+
+    public function testAFallbackGetAnsweringNotFoundDoesNotExist(): void
+    {
+        $probe = $this->probe([self::image(Response::HTTP_FORBIDDEN), self::image(Response::HTTP_NOT_FOUND)]);
+
+        self::assertFalse($probe->exists(self::IMAGE_URL, self::WIDTH));
+    }
+
+    public function testAFallbackGetFailingOnTheWireIsUnreachable(): void
+    {
+        $this->expectException(GuardedImageUnavailableException::class);
+
+        $this->probe([self::image(Response::HTTP_FORBIDDEN), new MockResponse('', ['error' => 'reset'])])
+            ->exists(self::IMAGE_URL, self::WIDTH);
+    }
+
+    public function testAMidBodyFailureIsUnavailableNotAnErrorException(): void
+    {
+        $this->expectException(GuardedImageUnavailableException::class);
+        set_error_handler(static function (int $severity, string $message): never {
+            throw new \ErrorException($message, 0, $severity);
+        });
+
+        $interrupted = new MockResponse(
+            [PngImageFactory::bytes(264, 149), new TransportException('connection lost')],
+            ['http_code' => Response::HTTP_OK, 'response_headers' => ['content-type' => ['image/png']]],
+        );
+
+        try {
+            $this->probe([$interrupted])->measure(self::IMAGE_URL);
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    public function testAnImageHeaderBeyondTheFirst64KibIsNotFound(): void
+    {
+        $this->expectException(GuardedImageUnavailableException::class);
+
+        $bytes = str_repeat("\0", 65_536) . PngImageFactory::bytes(264, 149);
+
+        $this->probe([self::image(Response::HTTP_OK, 'image/png', $bytes)])->measure(self::IMAGE_URL);
+    }
+
+    public function testABodyBeyondTheDownloadCapIsUnavailable(): void
+    {
+        $this->expectException(GuardedImageUnavailableException::class);
+
+        $bytes = PngImageFactory::bytes(264, 149) . str_repeat("\0", 5_000_001);
+
+        $this->probe([self::image(Response::HTTP_OK, 'image/png', $bytes)])->measure(self::IMAGE_URL);
+    }
+
+    public function testARedirectChainSharesOneTimeBudget(): void
+    {
+        $this->expectException(GuardedImageUnavailableException::class);
+
+        $slow = static fn (): MockResponse => new MockResponse('', [
+            'http_code' => Response::HTTP_FOUND,
+            'response_headers' => ['location' => ['https://img.example.com/next.jpg']],
+            'total_time' => 3.0,
+        ]);
+
+        $this->probe([$slow(), $slow(), self::image()])->exists(self::IMAGE_URL, self::WIDTH);
     }
 
     public function testMeasureAsksForTheFirst64KibOnly(): void
@@ -159,11 +251,11 @@ final class GuardedImageProbeTest extends TestCase
         $this->probe([self::image()], '10.0.0.1')->measure(self::IMAGE_URL);
     }
 
-    public function testATransportFailureDoesNotExist(): void
+    public function testATransportFailureIsUnreachable(): void
     {
-        $failure = new MockResponse('', ['error' => 'connection reset']);
+        $this->expectException(GuardedImageUnavailableException::class);
 
-        self::assertFalse($this->probe([$failure])->exists(self::IMAGE_URL));
+        $this->probe([new MockResponse('', ['error' => 'connection reset'])])->exists(self::IMAGE_URL, self::WIDTH);
     }
 
     public function testMeasureRejectsATransportFailure(): void
@@ -175,14 +267,14 @@ final class GuardedImageProbeTest extends TestCase
 
     public function testTheRequestCarriesAShortTimeout(): void
     {
-        $this->probe([self::image()])->exists(self::IMAGE_URL);
+        $this->probe([self::image()])->exists(self::IMAGE_URL, self::WIDTH);
 
         self::assertEquals(4, $this->requests[0]['timeout']);
     }
 
     public function testSendsTheOutboundUserAgentWithoutCompression(): void
     {
-        $this->probe([self::image()])->exists(self::IMAGE_URL);
+        $this->probe([self::image()])->exists(self::IMAGE_URL, self::WIDTH);
 
         self::assertContains('User-Agent: TestAgent/1.0', $this->requests[0]['headers']);
         self::assertContains('Accept-Encoding: identity', $this->requests[0]['headers']);

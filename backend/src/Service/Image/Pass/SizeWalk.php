@@ -26,6 +26,7 @@ final class SizeWalk
     public function wants(int $width): bool
     {
         return $width < $this->basis->width
+            && $this->candidateAt($width) !== $this->basisUrl
             && \in_array(RenditionTargets::bandOf($width), RenditionTargets::uncovered($this->knownWidths), true);
     }
 

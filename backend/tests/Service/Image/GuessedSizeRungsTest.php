@@ -134,4 +134,40 @@ final class GuessedSizeRungsTest extends TestCase
         self::assertSame([], $rungs);
         self::assertSame([], $probe->requestedUrls());
     }
+
+    public function testAnUnreachableHostEndsTheWalkKeepingWhatWasFound(): void
+    {
+        $base = 'https://h.example/wp-content/uploads/a';
+        $probe = new StubGuardedImageProbe();
+        $probe->willExist($base . '-300x158.jpg');
+        $probe->willBeUnreachable($base . '-640x336.jpg');
+
+        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '.jpg', 1200, 630));
+
+        self::assertSame([300], self::widths($rungs));
+        self::assertSame([$base . '-300x158.jpg', $base . '-640x336.jpg'], $probe->requestedUrls());
+    }
+
+    public function testAnExtensionlessLeadIsNeverProbedAgainstItself(): void
+    {
+        $url = 'https://h.example/wp-content/uploads/a';
+        $probe = new StubGuardedImageProbe();
+        $probe->willExist($url);
+
+        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($url, 1200, 630));
+
+        self::assertSame([], $rungs);
+        self::assertSame([], $probe->requestedUrls());
+    }
+
+    public function testAScaledOriginalIsWalkedUnderItsUnscaledName(): void
+    {
+        $base = 'https://h.example/wp-content/uploads/2026/10/name';
+        $probe = new StubGuardedImageProbe();
+        $probe->willExist($base . '-768x403.jpg');
+
+        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '-scaled.jpg', 2560, 1344));
+
+        self::assertContains(768, self::widths($rungs));
+    }
 }

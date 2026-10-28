@@ -41,7 +41,7 @@ final class UndeclaredPrefixes
 
     private static function usesUndeclared(string $xml, string $prefix): bool
     {
-        return str_contains($xml, '<' . $prefix . ':') && !str_contains($xml, 'xmlns:' . $prefix . '=');
+        return str_contains($xml, '<' . $prefix . ':') && preg_match('/xmlns:' . $prefix . '\s*=/', $xml) !== 1;
     }
 
     private function __construct()

@@ -56,12 +56,26 @@ final readonly class GuessedSizeRungs
     /** @return list<ImageRendition> */
     private function walk(SizeWalk $walk): array
     {
-        foreach (self::GUESSED_WIDTHS as $width) {
-            if ($walk->wants($width) && $this->probe->exists($walk->candidateAt($width))) {
-                $walk->keep(new ImageRendition($walk->candidateAt($width), $width));
-            }
+        try {
+            $this->probeGuessedWidths($walk);
+        } catch (GuardedImageUnavailableException) {
+            return $walk->found();
         }
 
         return $walk->found();
+    }
+
+    /** @throws GuardedImageUnavailableException when the host cannot be reached */
+    private function probeGuessedWidths(SizeWalk $walk): void
+    {
+        foreach (self::GUESSED_WIDTHS as $width) {
+            if (!$walk->wants($width)) {
+                continue;
+            }
+            $candidate = $walk->candidateAt($width);
+            if ($this->probe->exists($candidate, $width)) {
+                $walk->keep(new ImageRendition($candidate, $width));
+            }
+        }
     }
 }

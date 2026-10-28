@@ -49,6 +49,24 @@ final class ResizerRungsTest extends TestCase
         self::assertSame($expected, new ResizerRungs($probe)->resizes(self::lead(1600)));
     }
 
+    /** @return iterable<string, array{int, bool}> */
+    public static function measuredHeights(): iterable
+    {
+        yield 'proportional' => [132, true];
+        yield 'two pixels off' => [134, true];
+        yield 'three pixels off' => [135, false];
+        yield 'pinned tall' => [900, false];
+    }
+
+    #[DataProvider('measuredHeights')]
+    public function testTheHeightMustFollowTheLeadAspect(int $measuredHeight, bool $expected): void
+    {
+        $probe = new StubGuardedImageProbe();
+        $probe->willMeasure(self::CHECK, 264, $measuredHeight);
+
+        self::assertSame($expected, new ResizerRungs($probe)->resizes(self::lead(1600)));
+    }
+
     public function testAHostReturningTheFullImageDoesNotResize(): void
     {
         $probe = new StubGuardedImageProbe();
