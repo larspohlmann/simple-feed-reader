@@ -4,14 +4,12 @@ import type { PlaybackPosition } from '../chapters/chapter-player';
 import type { AudioTrack } from './audio-track';
 import { TrackChapters } from './track-chapters';
 
-/** What chapter navigation needs of the player. */
-export interface ChapterPlayer {
+export interface ChapterNavigationPlayer {
   current(): AudioTrack | null;
   seek(seconds: number): void;
   playFrom(track: AudioTrack, seconds: number): void;
 }
 
-/** The track's chapters and the playhead they are followed from. */
 export interface ChapterSource {
   chapters: Signal<readonly ChapterDto[]>;
   position: Signal<PlaybackPosition>;
@@ -30,7 +28,7 @@ export class ChapterControls {
 
   constructor(
     private readonly source: ChapterSource,
-    private readonly player: ChapterPlayer,
+    private readonly player: ChapterNavigationPlayer,
   ) {
     this.trackChapters = new TrackChapters(
       source.chapters,

@@ -721,7 +721,7 @@ describe('AudioPlayerService', () => {
       expect(service.playing()).toBe(true);
     });
 
-    it('plays a chapter of the current track like playChapter', () => {
+    it('plays a chapter of the current track through chapterControls.play', () => {
       const service = playingChaptered();
       service.toggle();
       audio.load.mockClear();
@@ -1234,6 +1234,15 @@ describe('AudioPlayerService', () => {
       playedTo(service, 100, 600);
 
       service.play(OTHER);
+
+      expect(positions().get(LONG.url)?.seconds).toBe(600);
+    });
+
+    it('remembers the place when the connection drops', () => {
+      const service = make();
+      playedTo(service, 100, 600);
+
+      audio.fail(NETWORK);
 
       expect(positions().get(LONG.url)?.seconds).toBe(600);
     });

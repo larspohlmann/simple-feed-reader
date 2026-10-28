@@ -5,7 +5,7 @@ import { Playlist, currentTrack } from './playlist';
 import { PlaylistPersistence } from './playlist-persistence';
 import { PlaylistStore, type SavedPlaylist } from './playlist.store';
 
-export interface PlayerState {
+interface PlayerState {
   playlist: Playlist;
   position: number;
   duration: number;

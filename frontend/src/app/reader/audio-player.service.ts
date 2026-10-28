@@ -315,7 +315,7 @@ export class AudioPlayerService {
       return;
     }
     this._playing.set(false);
-    this.memory.saveQueue();
+    this.memory.savePaused();
   }
 
   private onEnded(): void {
