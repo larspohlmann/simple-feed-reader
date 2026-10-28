@@ -237,3 +237,15 @@ Lars's verdict on the deployed-locally result: still too static — "many entrie
 - [ ] **Step 3:** run `docker compose exec -T frontend npx jest src/app/reader/list/magazine`, then `docker compose exec -T frontend npm run check` (exit 0).
 - [ ] **Step 4: Break test:** make the loop stop after the first lift; the rhythm test and mixed-page test FAIL (quote); restore by hand.
 - [ ] **Step 5: Commit** `fix(#1852): a featureless page lifts every image slot to its template's ask`.
+
+### Task 3 addendum: seeded randomization (Lars: "use some kind of randomization")
+
+- The page's tallest asked image slot lifts to its ask (within the cap) as above. Every OTHER eligible slot starts its ladder walk at its asked kind or, by seeded chance (1 in 3), one `DEMOTION` step lower — a `split` drawn down stays `thumb`. Seed with the planner's existing `seed(page, salt)` hash (move it to `magazine-page.ts`, exported, and import it in the planner) using a salt distinct from the ones in use (`position` for `either` slots, `position + 97` for the split side): use `position + 211`. `SettledPage` gains `readonly page: number`.
+- Deterministic and page-local, so prefix stability holds (the prefix test must keep passing).
+- Tests: replace the exact per-page expectations of the rhythm test and the mixed-page test with properties over `many(60, smallThumb)` (complete):
+  1. every page's blocks contain at least one `hero`/`wide`/`split` (split the plan by page with `templateFor(page, IMAGE_TEMPLATES).length`, since nothing pins or collapses here);
+  2. `trigramEntropy(kinds(blocks)) > 4` (the floor the other planner tests use);
+  3. the `split` blocks' `imageSide` values include both `'left'` and `'right'`;
+  4. pages 0 and 12 (the same template, `templateFor` cycles every 12) differ in their kinds — if the seeds happen to make them equal, compare another same-template pair within 60 entries and say which in the report; if none differ, report it rather than tuning the seed.
+  Keep the mixed-page test as a property: the image-less entry stays `kicker`, and the page contains a `hero`/`wide`/`split`. Portrait and cap tests keep their exact expectations (the tallest slot is not jittered).
+- Break test: disable the jitter (always start at the ask) — property 4 must FAIL; quote it; restore by hand.
