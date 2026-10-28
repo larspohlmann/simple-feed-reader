@@ -11,7 +11,7 @@ use App\Service\Url\Support\HttpsImageUrl;
 
 /**
  * Stores a feed-declared image on an entry, pending the background verify: declared dimensions don't prove it loads.
- * A social network's image is stored as declared, since its posts render through share templates that never read it.
+ * A social network's is stored as declared, since its posts render through share templates that never measure it.
  */
 final readonly class EntryImageWriter
 {

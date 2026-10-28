@@ -56,7 +56,7 @@ final class EntryImage
     }
 
     /**
-     * The renditions of the stored picture; storePending() and drop() clear them, so they never outlive their URL.
+     * The renditions of the stored picture; storing a URL or drop() clears them, so they never outlive their URL.
      *
      * @param list<ImageRendition> $renditions
      */
