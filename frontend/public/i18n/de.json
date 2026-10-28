@@ -1176,7 +1176,12 @@
       "position": "Titel {{ index }} von {{ count }}",
       "speed": "Wiedergabegeschwindigkeit {{ rate }}×",
       "more": "Mehr",
-      "less": "Weniger"
+      "less": "Weniger",
+      "resume": {
+        "message": "Du hast bei {{ position }} von {{ duration }} aufgehört.",
+        "continue": "Fortsetzen",
+        "fromStart": "Von vorn"
+      }
     },
     "savedSearches": "Gespeicherte Suchen",
     "savedSearchesEmpty": "Noch keine gespeicherten Suchen. Speichern Sie eine Suche, um sie hier zu sehen.",

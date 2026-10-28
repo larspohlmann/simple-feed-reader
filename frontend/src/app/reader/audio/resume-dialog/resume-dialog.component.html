@@ -1,0 +1,18 @@
+<app-overlay-panel [heading]="data.title" cdkTrapFocus>
+  <p class="msg">
+    {{ 'reader.audioPlayer.resume.message' | transloco: { position, duration } }}
+  </p>
+
+  <app-button footer data-testid="from-start" (click)="ref.close('fromStart')">
+    {{ 'reader.audioPlayer.resume.fromStart' | transloco }}
+  </app-button>
+  <app-button
+    footer
+    focusInitial
+    data-testid="continue"
+    variant="primary"
+    (click)="ref.close('continue')"
+  >
+    {{ 'reader.audioPlayer.resume.continue' | transloco }}
+  </app-button>
+</app-overlay-panel>

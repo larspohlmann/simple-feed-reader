@@ -1,0 +1,11 @@
+// `display: contents` lets the CDK dialog container lay out app-overlay-panel's .panel directly.
+:host {
+  display: contents;
+
+  --panel-w: 400px;
+}
+
+.msg {
+  margin: 0;
+  color: var(--text-secondary);
+}
