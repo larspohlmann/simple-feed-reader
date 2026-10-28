@@ -9,8 +9,8 @@ use App\Entity\ImageRendition;
 interface ProbedLadderInterface
 {
     /**
-     * The renditions an entry measured earlier stored for this image URL, empty when its probe found none; null when
-     * no entry with this image has been measured.
+     * The renditions an entry judged earlier stored for this image URL, empty when its probe found none; null when
+     * no entry with this image has been judged.
      *
      * @return list<ImageRendition>|null
      */

@@ -18,11 +18,13 @@ final class ProbedLadderRepositoryTest extends DbTestCase
     {
         $this->measured('earlier', self::LOGO, [new ImageRendition('https://i/podcast/logo-512x512.jpg', 512)]);
         $this->entityManager->flush();
+        $this->entityManager->clear();
 
         self::assertEquals(
             [new ImageRendition('https://i/podcast/logo-512x512.jpg', 512)],
             $this->repository()->findProbedLadder(self::LOGO),
         );
+        $this->assertNoneManaged(Entry::class);
     }
 
     public function testAMeasuredEntryWhoseProbeFoundNothingHandsOnAnEmptyLadder(): void
