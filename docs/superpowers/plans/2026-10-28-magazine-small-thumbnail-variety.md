@@ -211,3 +211,29 @@ git commit -m "fix(#1852): a magazine page without a large image block lifts one
 - [ ] **Step 1:** `docker compose exec -T frontend npm run check` — Expected: exit 0.
 - [ ] **Step 2:** Open `http://green-tara.local:4200/?subscription=707` in the built-in browser (Mobile viewport preset — the desktop UA is bot-blocked) and screenshot the first two screens. Expected: a `wide` block opens the list, a `hero` follows six entries later, thumbnails between. Keep each browser call short; no long in-page waits.
 - [ ] **Step 3:** Push the branch and open a PR into `develop` with `Closes #1852`.
+
+---
+
+## Amendment (after Lars's live check): lift every image slot, not one
+
+Lars's verdict on the deployed-locally result: still too static — "many entries with a small image on the left and then one entry with a big image on top"; templates also have small images on the right (`split`, seeded `imageSide`): mix it up, don't repeat one pattern.
+
+**Rule now:** on a page that settled without an unpinned `hero`/`wide`/`split`, *every* unpinned slot whose template kind is an image kind and whose entry has a picture walks down the image ladder from its asked kind to the first kind the picture can take at any size within the height cap. Slots are visited tallest-asked first (ties: first position), each cap check including the slots already lifted. The page then shows its template's authored rhythm.
+
+### Task 3: Lift every image slot of a featureless page
+
+**Files:** `frontend/src/app/reader/list/magazine/magazine-page-lift.ts`, `frontend/src/app/reader/list/magazine/magazine-planner.spec.ts`
+
+- [ ] **Step 1: Update the expectations (they must fail first)**
+  - `gives each page of a small-thumbnail feed …` → rename `follows each template's own rhythm in a small-thumbnail feed`; expect
+    `ks.slice(0, 11)` = `['wide','split','thumb','split','thumb','split','hero','split','thumb','thumb','thumb']`
+    and `ks.slice(11, 17)` = `['hero','thumb','split','thumb','thumb','thumb']`.
+    (Page 0 = template 1 `wide,split,thumb,split,thumb,split` = 951; page 1 = template 6 `hero,split,thumb,thumb,kicker` → kicker slot stays `thumb`, 883; page 2 = template 11, 973.)
+  - Add to the same test: the `split` blocks' `imageSide` values in the first 17 blocks include both `'left'` and `'right'`.
+  - `lifts a page that mixes thumbnails with text blocks …` → expect `['wide','split','kicker','split','thumb','split']` (1001).
+  - Portrait test and cap test keep their expectations (`split` at 0 and 6; `['wide','media']` at 6–7) — run them, they must still pass.
+  - Run the planner spec; the two changed tests FAIL (lifted only one slot).
+- [ ] **Step 2: Implement** — in `liftFeaturelessPage`, replace the single tallest-slot pick with a loop: repeatedly pick, among unpinned positions not yet visited, the tallest asked image kind taller than its settled kind whose entry `hasPicture` (reuse `tallestWhere` with a visited set or by returning on each lifted position), walk its ladder as today against the running `lifted` array, keep the first kind that `fitsAtAnySize` and keeps `pageHeight(lifted, layout) <= PAGE_HEIGHT_CAP`, else restore that slot to its settled kind; continue until no candidate remains. Keep the function under the max-params/max-lines lint limits and readable as a sentence; split a helper `liftSlot(…)` if it helps.
+- [ ] **Step 3:** run `docker compose exec -T frontend npx jest src/app/reader/list/magazine`, then `docker compose exec -T frontend npm run check` (exit 0).
+- [ ] **Step 4: Break test:** make the loop stop after the first lift; the rhythm test and mixed-page test FAIL (quote); restore by hand.
+- [ ] **Step 5: Commit** `fix(#1852): a featureless page lifts every image slot to its template's ask`.
