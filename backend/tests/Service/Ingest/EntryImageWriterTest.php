@@ -7,6 +7,7 @@ namespace App\Tests\Service\Ingest;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
+use App\Enum\SocialNetwork;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Parser\FeedItemImageSelector;
@@ -28,6 +29,20 @@ final class EntryImageWriterTest extends TestCase
         self::assertSame(600, $entry->getImage()->getHeight());
         self::assertNull($entry->getImage()->getCheckedAt());
         self::assertSame(0, $entry->getImage()->getVerifyAttempts());
+        self::assertTrue($entry->getImage()->isPendingVerification());
+    }
+
+    public function testASocialNetworkFeedsImageIsStoredAsDeclaredWithoutVerification(): void
+    {
+        $entry = $this->entry();
+        $entry->getFeed()->classifyAs(SocialNetwork::Bluesky);
+
+        $stored = $this->writer()->write($entry, new DeclaredImageModel('https://cdn.bsky.app/img/a@jpeg', 1080, 1350));
+
+        self::assertTrue($stored);
+        self::assertSame('https://cdn.bsky.app/img/a@jpeg', $entry->getImage()->getUrl());
+        self::assertSame(1080, $entry->getImage()->getWidth());
+        self::assertFalse($entry->getImage()->isPendingVerification());
     }
 
     public function testAnUpgradedHttpImageIsStoredPendingVerification(): void

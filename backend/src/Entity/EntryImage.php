@@ -40,12 +40,18 @@ final class EntryImage
 
     public function storePending(?string $url, ?int $width, ?int $height): void
     {
+        $this->storeUnverified($url, $width, $height);
+        $this->verifyAttempts = $url === null ? null : 0;
+    }
+
+    public function storeUnverified(?string $url, ?int $width, ?int $height): void
+    {
         $this->url = $url;
         $this->urlHash = $url === null ? null : self::hashOf($url);
         $this->width = $width;
         $this->height = $height;
         $this->checkedAt = null;
-        $this->verifyAttempts = $url === null ? null : 0;
+        $this->verifyAttempts = null;
         $this->renditions = null;
     }
 
@@ -163,6 +169,11 @@ final class EntryImage
     public function getCheckedAt(): ?\DateTimeImmutable
     {
         return $this->checkedAt;
+    }
+
+    public function isPendingVerification(): bool
+    {
+        return $this->verifyAttempts !== null;
     }
 
     public function getVerifyAttempts(): int

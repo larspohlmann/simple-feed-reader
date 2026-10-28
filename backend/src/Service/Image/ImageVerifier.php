@@ -68,10 +68,7 @@ final readonly class ImageVerifier
         }
 
         $entry->getImage()->recordMeasurement($dimensions->width, $dimensions->height, $this->clock->now());
-        // A social network's CDN serves fixed variants by path, which neither probe strategy can find.
-        if ($entry->getFeed()->getNetwork() === null) {
-            $this->addProbedRungs($entry->getImage(), $url, $dimensions);
-        }
+        $this->addProbedRungs($entry->getImage(), $url, $dimensions);
 
         return ImageVerifyOutcome::Measured;
     }
