@@ -17,6 +17,9 @@ final class EntryImage
     #[ORM\Column(name: 'image_url', length: 2048, nullable: true)]
     private ?string $url = null;
 
+    #[ORM\Column(name: 'image_url_hash', length: 64, nullable: true)]
+    private ?string $urlHash = null;
+
     #[ORM\Column(name: 'image_width', nullable: true)]
     private ?int $width = null;
 
@@ -38,6 +41,7 @@ final class EntryImage
     public function storePending(?string $url, ?int $width, ?int $height): void
     {
         $this->url = $url;
+        $this->urlHash = $url === null ? null : self::hashOf($url);
         $this->width = $width;
         $this->height = $height;
         $this->checkedAt = null;
@@ -67,6 +71,7 @@ final class EntryImage
     public function drop(\DateTimeImmutable $checkedAt): void
     {
         $this->url = null;
+        $this->urlHash = null;
         $this->width = null;
         $this->height = null;
         $this->checkedAt = $checkedAt;
@@ -86,6 +91,11 @@ final class EntryImage
         $this->verifyAttempts = ($this->verifyAttempts ?? 0) + 1;
     }
 
+    public static function hashOf(string $url): string
+    {
+        return hash('sha256', $url);
+    }
+
     public function isMissing(): bool
     {
         return $this->url === null && $this->checkedAt === null;
@@ -94,6 +104,11 @@ final class EntryImage
     public function getUrl(): ?string
     {
         return $this->url;
+    }
+
+    public function getUrlHash(): ?string
+    {
+        return $this->urlHash;
     }
 
     public function getWidth(): ?int

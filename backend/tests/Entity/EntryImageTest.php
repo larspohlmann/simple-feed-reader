@@ -26,6 +26,7 @@ final class EntryImageTest extends TestCase
         $image->storePending('https://i/a.jpg', null, null);
 
         self::assertSame('https://i/a.jpg', $image->getUrl());
+        self::assertSame(hash('sha256', 'https://i/a.jpg'), $image->getUrlHash());
         self::assertNull($image->getCheckedAt());
         self::assertFalse($image->isMissing());
     }
@@ -49,6 +50,7 @@ final class EntryImageTest extends TestCase
         $image->drop($at);
 
         self::assertNull($image->getUrl());
+        self::assertNull($image->getUrlHash());
         self::assertNull($image->getWidth());
         self::assertNull($image->getHeight());
         self::assertEquals($at, $image->getCheckedAt());

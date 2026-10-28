@@ -15,6 +15,7 @@ use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class RedirectFollowerTest extends TestCase
 {
@@ -192,5 +193,36 @@ final class RedirectFollowerTest extends TestCase
         $this->expectException(RedirectChainException::class);
         $this->expectExceptionMessage('https://example.com/second: more than 2 redirects');
         $follower->follow('https://example.com/second', [], $budget);
+    }
+
+    public function testFollowHeadSendsEveryHopAsHead(): void
+    {
+        $methods = [];
+        $follower = $this->follower(static function (string $method) use (&$methods): MockResponse {
+            $methods[] = $method;
+
+            return \count($methods) === 1
+                ? self::redirect('https://cdn.example.com/a.jpg')
+                : new MockResponse('', ['http_code' => Response::HTTP_OK]);
+        });
+
+        $landed = $follower->followHead('https://example.com/a.jpg', [], new RedirectBudget(5));
+
+        self::assertSame(['HEAD', 'HEAD'], $methods);
+        self::assertSame('https://cdn.example.com/a.jpg', $landed->url);
+    }
+
+    public function testFollowStillSendsGet(): void
+    {
+        $methods = [];
+        $follower = $this->follower(static function (string $method) use (&$methods): MockResponse {
+            $methods[] = $method;
+
+            return new MockResponse('', ['http_code' => Response::HTTP_OK]);
+        });
+
+        $follower->follow('https://example.com/a.jpg', [], new RedirectBudget(5));
+
+        self::assertSame(['GET'], $methods);
     }
 }

@@ -250,6 +250,23 @@ final class EntryBatchInserterTest extends DbTestCase
         self::assertNull($rows[1]['url_hash'], 'A url-less entry dedupes on guid alone.');
     }
 
+    public function testRecomputesTheImageUrlHashForEveryInsertedRow(): void
+    {
+        $feedId = $this->createFeed('https://hash.example/feed.xml');
+        $this->inserter()->insert($feedId, [
+            $this->entryLine(guid: 'a', imageUrl: 'https://hash.example/image.jpg'),
+            $this->entryLine(guid: 'b'),
+        ]);
+
+        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+            'SELECT guid, image_url_hash FROM entry WHERE feed_id = ? ORDER BY guid',
+            [$feedId],
+        );
+
+        self::assertSame(hash('sha256', 'https://hash.example/image.jpg'), $rows[0]['image_url_hash']);
+        self::assertNull($rows[1]['image_url_hash']);
+    }
+
     public function testInsertsTheLinkCardsOfTheEntriesItWasGiven(): void
     {
         $feedId = $this->createFeed('https://batch.example/feed.xml');

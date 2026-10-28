@@ -45,10 +45,26 @@ final readonly class RedirectFollower
      */
     public function follow(string $url, array $options, RedirectBudget $budget): LandedResponse
     {
+        return $this->land('GET', $url, $options, $budget);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @throws RedirectChainException as follow()
+     */
+    public function followHead(string $url, array $options, RedirectBudget $budget): LandedResponse
+    {
+        return $this->land('HEAD', $url, $options, $budget);
+    }
+
+    /** @param array<string, mixed> $options */
+    private function land(string $method, string $url, array $options, RedirectBudget $budget): LandedResponse
+    {
         $currentUrl = $url;
         while (true) {
             self::assertTimeLeft($url, $budget);
-            $response = $this->send($currentUrl, self::withinBudget($options, $budget));
+            $response = $this->send($method, $currentUrl, self::withinBudget($options, $budget));
             $status = $this->statusCode($response, $currentUrl);
             $budget->spendSeconds(self::secondsTaken($response));
             if (!\in_array($status, self::REDIRECT_STATUSES, true)) {
@@ -93,12 +109,12 @@ final readonly class RedirectFollower
     }
 
     /** @param array<string, mixed> $options */
-    private function send(string $url, array $options): ResponseInterface
+    private function send(string $method, string $url, array $options): ResponseInterface
     {
         try {
             $guarded = $this->urlGuard->assertSafe($url);
 
-            return $this->requestSender->send('GET', $url, $guarded, ['max_redirects' => 0] + $options);
+            return $this->requestSender->send($method, $url, $guarded, ['max_redirects' => 0] + $options);
         } catch (FetchException | ExceptionInterface $exception) {
             throw new RedirectChainException(sprintf('%s: %s', $url, $exception->getMessage()), previous: $exception);
         }

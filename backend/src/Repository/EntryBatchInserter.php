@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\EntryImage;
 use App\Entity\EntryMedia;
 use App\Entity\QuotedPostContent;
 use App\Enum\CommentsLoad;
@@ -15,7 +16,8 @@ use Doctrine\DBAL\Connection;
 
 /**
  * Multi-row INSERTs into `entry`, 500 rows a statement: 14× faster than the ORM at restore scale (spec appendix).
- * url_hash is recomputed, never read from the file (#556); dates bind as the naive-UTC strings Doctrine stores.
+ * url_hash and image_url_hash are recomputed, never read from the file (#556); dates bind as the naive-UTC
+ * strings Doctrine stores.
  */
 final readonly class EntryBatchInserter
 {
@@ -24,7 +26,7 @@ final readonly class EntryBatchInserter
 
     private const array COLUMNS = [
         'feed_id', 'guid', 'guid_hash', 'url', 'url_hash', 'title', 'author',
-        'summary', 'content_html', 'image_url', 'image_width', 'image_height', 'image_renditions',
+        'summary', 'content_html', 'image_url', 'image_url_hash', 'image_width', 'image_height', 'image_renditions',
         'media', 'attachments', 'chapters', 'chapters_url',
         'published_at', 'created_at', 'effective_date',
         'discussion_url', 'comments_feed_url', 'comments_load',
@@ -128,6 +130,7 @@ final readonly class EntryBatchInserter
             $feedId, $line->guid, $line->guidHash, $line->url,
             $this->urlNormalizer->hash($line->url), $line->title,
             $line->author, $line->summary, $line->contentHtml, $line->imageUrl,
+            $line->imageUrl === null ? null : EntryImage::hashOf($line->imageUrl),
             $line->imageWidth, $line->imageHeight, self::encodeList($line->imageRenditions),
             self::encodeList($line->media), self::encodeList($line->attachments),
             self::encodeList($line->chapters), $line->chaptersUrl,

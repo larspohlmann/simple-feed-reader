@@ -17,6 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_entry_feed_created', columns: ['feed_id', 'created_at', 'id'])]
 #[ORM\Index(name: 'idx_entry_url_hash', columns: ['url_hash', 'id'])]
 #[ORM\Index(name: 'idx_entry_image_verify', columns: ['image_verify_attempts', 'id'])]
+#[ORM\Index(name: 'idx_entry_image_url_hash', columns: ['image_url_hash'])]
 final class Entry
 {
     use PersistedId;

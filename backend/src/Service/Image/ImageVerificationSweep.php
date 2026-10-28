@@ -32,7 +32,6 @@ final readonly class ImageVerificationSweep
         $kept = 0;
         $dropped = 0;
         $retried = 0;
-        $processed = 0;
 
         foreach ($this->pendingVerifications->findPendingImageVerification(self::MAX_PER_TICK) as $entry) {
             if (microtime(true) >= $deadline) {
@@ -44,10 +43,6 @@ final readonly class ImageVerificationSweep
                 ImageVerifyOutcome::Dropped => $dropped++,
                 ImageVerifyOutcome::Retried => $retried++,
             };
-            $processed++;
-        }
-
-        if ($processed > 0) {
             $this->entityManager->flush();
         }
 

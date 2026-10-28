@@ -6,24 +6,37 @@ namespace App\Tests\Service\Image;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\ImageRendition;
 use App\Repository\PendingImageVerificationRepository;
+use App\Repository\ProbedLadderRepository;
 use App\Service\Image\Exception\GuardedImageRejectedException;
 use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RenditionProbes;
 use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\StubGuardedImageDownloader;
+use App\Tests\Support\StubGuardedImageProbe;
 use Symfony\Component\Clock\MockClock;
 
 final class ImageVerificationSweepTest extends DbTestCase
 {
-    private function sweep(StubGuardedImageDownloader $downloader): ImageVerificationSweep
-    {
+    private function sweep(
+        StubGuardedImageDownloader $downloader,
+        StubGuardedImageProbe $probe = new StubGuardedImageProbe(),
+    ): ImageVerificationSweep {
         /** @var PendingImageVerificationRepository $repository */
         $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
-        $verifier = new ImageVerifier($downloader, new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')));
+        /** @var ProbedLadderRepository $probedLadders */
+        $probedLadders = self::getContainer()->get(ProbedLadderRepository::class);
+        $verifier = new ImageVerifier(
+            $downloader,
+            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
+            RenditionProbes::over($probe),
+            $probedLadders,
+        );
 
         return new ImageVerificationSweep($repository, $verifier, $this->entityManager);
     }
@@ -75,6 +88,30 @@ final class ImageVerificationSweepTest extends DbTestCase
         self::assertNotNull($rejected);
         self::assertSame('https://i/rejected.png', $rejected->getImageUrl());
         self::assertNotNull($rejected->getImage()->getCheckedAt());
+    }
+
+    public function testImagesSharingAUrlInOneTickAreProbedOnce(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->pendingEntry($feed, 'episode-1', 'https://i/podcast/logo-600x600.jpg');
+        $this->pendingEntry($feed, 'episode-2', 'https://i/podcast/logo-600x600.jpg');
+        $this->entityManager->flush();
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 600));
+        $probe = new StubGuardedImageProbe();
+        $probe->willExist('https://i/podcast/logo-512x512.jpg');
+
+        $this->sweep($downloader, $probe)->verifyDue();
+
+        self::assertCount(1, array_keys($probe->requestedUrls(), 'https://i/podcast/logo-512x512.jpg', true));
+        $this->entityManager->clear();
+        $second = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'episode-2']);
+        self::assertNotNull($second);
+        self::assertEquals(
+            [new ImageRendition('https://i/podcast/logo-512x512.jpg', 512)],
+            $second->getImage()->getRenditions(),
+        );
     }
 
     public function testCountsARetriedImageAndLeavesItPending(): void

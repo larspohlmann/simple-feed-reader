@@ -18,4 +18,21 @@ enum FeedNamespace: string
     case Podcast = 'https://podcastindex.org/namespace/1.0';
     case PodloveSimpleChapters = 'http://podlove.org/simple-chapters';
     case GooglePlay = 'http://www.google.com/schemas/play-podcasts/1.0';
+
+    public function conventionalPrefix(): ?string
+    {
+        return match ($this) {
+            self::Atom10 => 'atom',
+            self::Rdf => 'rdf',
+            self::DublinCore => 'dc',
+            self::Content => 'content',
+            self::WellFormedWeb => 'wfw',
+            self::MediaRss => 'media',
+            self::Itunes => 'itunes',
+            self::Podcast => 'podcast',
+            self::PodloveSimpleChapters => 'psc',
+            self::GooglePlay => 'googleplay',
+            self::Atom03, self::Rss1 => null,
+        };
+    }
 }
