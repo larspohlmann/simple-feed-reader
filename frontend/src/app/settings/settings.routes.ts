@@ -143,6 +143,15 @@ export const SETTINGS_ROUTES: Routes = [
           ),
       },
       {
+        path: 'admin/queues',
+        title: sectionLabelKey('admin/queues'),
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./admin/queues/queues-section.component').then(
+            (module) => module.QueuesSectionComponent,
+          ),
+      },
+      {
         path: 'admin/mail',
         title: sectionLabelKey('admin/mail'),
         canActivate: [adminGuard],

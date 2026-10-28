@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\ProfileRun;
 use App\Entity\User;
 use App\Enum\RunStatus;
+use App\Service\Queue\Model\QueueBacklogModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -99,6 +100,17 @@ final class ProfileRunRepository extends ServiceEntityRepository
             ->getArrayResult();
 
         return array_column($rows, 'id');
+    }
+
+    public function activeBacklog(): QueueBacklogModel
+    {
+        /** @var array{waiting: int|string, oldest: ?string} $row */
+        $row = $this->activeStatusQuery()
+            ->select('COUNT(p.id) AS waiting', 'MIN(p.createdAt) AS oldest')
+            ->getQuery()
+            ->getSingleResult();
+
+        return QueueBacklogModel::fromAggregate($row['waiting'], $row['oldest']);
     }
 
     private function activeStatusQuery(): QueryBuilder

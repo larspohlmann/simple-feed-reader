@@ -1,0 +1,37 @@
+.state {
+  margin-bottom: var(--space-4);
+}
+
+.queues {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.queues th,
+.queues td {
+  padding: var(--row-pad-y) var(--row-pad-x);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+
+  // body's `anywhere` lets the auto table layout squeeze a column below its longest word.
+  overflow-wrap: break-word;
+}
+
+.queues thead th {
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.queues .waiting {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.queues .oldest {
+  color: var(--text-secondary);
+}
+
+.queues tbody .oldest {
+  white-space: nowrap;
+}

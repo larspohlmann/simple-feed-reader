@@ -586,6 +586,25 @@
         "piaCredentials": "Private Internet Access benötigt einen separat erzeugten Proxy-Benutzernamen und ein Proxy-Passwort — nicht deine Kontoanmeldedaten."
       }
     },
+    "queues": {
+      "title": "Warteschlangen",
+      "refresh": "Aktualisieren",
+      "loading": "Warteschlangen werden geladen",
+      "queue": "Warteschlange",
+      "waiting": "Wartend",
+      "oldest": "Ältestes",
+      "name": {
+        "failed_messages": "Fehlgeschlagene Worker-Nachrichten",
+        "recommendation_runs": "Empfehlungsläufe",
+        "profile_runs": "Profilläufe",
+        "image_verification": "Bildprüfung",
+        "share_enrichment_appview": "Bluesky-Einbettungen",
+        "share_enrichment_link_cards": "Linkkarten",
+        "share_enrichment_self_thread": "Eigene Antwort-Threads",
+        "transcripts": "Transkripte",
+        "due_feeds": "Fällige Feeds"
+      }
+    },
     "retention": {
       "title": "Aufbewahrung",
       "caption": "Wie lange Einträge bleiben, bevor die Aktualisierung sie löscht. Die neuesten 20 Einträge eines Feeds, Favoriten und behaltene Einträge werden nie gelöscht.",

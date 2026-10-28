@@ -7,9 +7,8 @@ namespace App\Tests\Service\Worker;
 use App\Service\Worker\Handler\PurgeFailedMessagesHandler;
 use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Tests\DbTestCase;
+use App\Tests\Support\TemporaryMessengerMessagesTable;
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Schema\Table;
-use Doctrine\DBAL\Types\Types;
 
 /**
  * `messenger_messages` exists only after auto_setup's first failed delivery (doctrine.yaml's schema_filter hides it
@@ -17,6 +16,12 @@ use Doctrine\DBAL\Types\Types;
  */
 final class PurgeFailedMessagesHandlerTest extends DbTestCase
 {
+    protected function tearDown(): void
+    {
+        TemporaryMessengerMessagesTable::drop($this->connection());
+        parent::tearDown();
+    }
+
     public function testFiringWithoutTheFailedTransportTableDoesNotThrow(): void
     {
         $this->handler()->__invoke(new PurgeFailedMessages());
@@ -26,7 +31,7 @@ final class PurgeFailedMessagesHandlerTest extends DbTestCase
 
     public function testFiringDeletesOnlyOldRowsFromTheFailedQueue(): void
     {
-        $this->createMessengerMessagesTable();
+        TemporaryMessengerMessagesTable::create($this->connection());
         $this->insertMessage(id: 1, queueName: 'failed', createdAt: '-31 days');
         $this->insertMessage(id: 2, queueName: 'failed', createdAt: '-1 day');
         $this->insertMessage(id: 3, queueName: 'default', createdAt: '-31 days');
@@ -34,31 +39,6 @@ final class PurgeFailedMessagesHandlerTest extends DbTestCase
         $this->handler()->__invoke(new PurgeFailedMessages());
 
         self::assertSame([2, 3], $this->remainingMessageIds());
-    }
-
-    /**
-     * DBAL schema API, not raw DDL, so the column types suit SQLite and MySQL. TEMPORARY, because a plain CREATE
-     * TABLE commits implicitly on MySQL and would end the transaction DAMA wraps every test in.
-     */
-    private function createMessengerMessagesTable(): void
-    {
-        $table = new Table('messenger_messages');
-        $table->addColumn('id', Types::INTEGER)->setAutoincrement(true);
-        $table->addColumn('body', Types::TEXT);
-        $table->addColumn('headers', Types::TEXT);
-        $table->addColumn('queue_name', Types::STRING, ['length' => 190]);
-        $table->addColumn('created_at', Types::DATETIME_MUTABLE);
-        $table->addColumn('available_at', Types::DATETIME_MUTABLE);
-        $table->addColumn('delivered_at', Types::DATETIME_MUTABLE, ['notnull' => false]);
-        $table->setPrimaryKey(['id']);
-
-        $platform = $this->connection()->getDatabasePlatform();
-
-        foreach ($platform->getCreateTableSQL($table) as $statement) {
-            $temporaryStatement = str_replace('CREATE TABLE', 'CREATE TEMPORARY TABLE', $statement);
-
-            $this->connection()->executeStatement($temporaryStatement);
-        }
     }
 
     private function insertMessage(int $id, string $queueName, string $createdAt): void

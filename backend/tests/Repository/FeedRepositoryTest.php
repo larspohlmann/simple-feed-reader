@@ -252,4 +252,29 @@ final class FeedRepositoryTest extends DbTestCase
         self::assertSame([], $this->feeds->findDue(new DueFeedCriteria($this->now), 10));
         self::assertSame(0, $this->feeds->countDue(new DueFeedCriteria($this->now)));
     }
+
+    public function testTheDueBacklogCountsDueFeedsAndDatesTheMostOverdue(): void
+    {
+        $this->feed('https://a.test/feed', $this->now->modify('-3 hours'));
+        $this->feed('https://b.test/feed', $this->now->modify('-1 hour'));
+        $this->feed('https://never.test/feed', null);
+        $this->feed('https://later.test/feed', $this->now->modify('+1 hour'));
+        $this->goneFeed('https://gone.test/feed', $this->now->modify('-5 hours'));
+        $this->entityManager->flush();
+
+        $backlog = $this->feeds->dueBacklog(new DueFeedCriteria($this->now));
+
+        self::assertSame(3, $backlog->waiting);
+        self::assertSame('2026-07-21 09:00:00', $backlog->oldestQueuedAt?->format('Y-m-d H:i:s'));
+    }
+
+    public function testTheDueBacklogCountsWhatCountDueCounts(): void
+    {
+        $this->feed('https://a.test/feed', $this->now->modify('-3 hours'));
+        $this->feed('https://never.test/feed', null);
+        $this->entityManager->flush();
+        $criteria = new DueFeedCriteria($this->now);
+
+        self::assertSame($this->feeds->countDue($criteria), $this->feeds->dueBacklog($criteria)->waiting);
+    }
 }

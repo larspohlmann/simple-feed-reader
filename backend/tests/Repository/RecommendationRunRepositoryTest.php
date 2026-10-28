@@ -126,6 +126,21 @@ final class RecommendationRunRepositoryTest extends DbTestCase
         self::assertSame(1, $persisted->getTransportFailures());
     }
 
+    public function testTheActiveBacklogCountsPendingAndRunningRuns(): void
+    {
+        $user = $this->user('backlog@example.com');
+        $this->persistRun($user, RunStatus::Pending);
+        $this->persistRun($user, RunStatus::Running);
+        $this->persistRun($user, RunStatus::Completed);
+        $this->persistRun($user, RunStatus::Failed);
+        $this->entityManager->flush();
+
+        $backlog = $this->runs()->activeBacklog();
+
+        self::assertSame(2, $backlog->waiting);
+        self::assertSame('2026-08-07 09:00:00', $backlog->oldestQueuedAt?->format('Y-m-d H:i:s'));
+    }
+
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */

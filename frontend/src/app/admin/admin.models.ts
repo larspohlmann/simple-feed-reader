@@ -147,3 +147,20 @@ export interface AdminCatalogFeedDto {
   faviconFetchedAt: string | null;
   faviconFailedAt: string | null;
 }
+
+export type QueueNameDto =
+  | 'failed_messages'
+  | 'recommendation_runs'
+  | 'profile_runs'
+  | 'image_verification'
+  | 'share_enrichment_appview'
+  | 'share_enrichment_link_cards'
+  | 'share_enrichment_self_thread'
+  | 'transcripts'
+  | 'due_feeds';
+
+export interface QueueDepthDto {
+  queue: QueueNameDto;
+  waiting: number;
+  oldestQueuedAt: string | null;
+}
