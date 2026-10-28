@@ -9,6 +9,7 @@ import {
   PageLayout,
   PinnedShare,
   pageHeight,
+  seed,
   tallestWhere,
 } from './magazine-page';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
@@ -229,13 +230,6 @@ export function templateFor(
   return templates[(page * 5 + 1) % templates.length];
 }
 
-/** Cheap deterministic hash. Seeded from the page index for the same reason
- *  the template is: the plan must not change when more entries arrive. */
-function seed(page: number, salt: number): number {
-  const x = Math.sin(page * 127.1 + salt * 311.7) * 43758.5453;
-  return x - Math.floor(x);
-}
-
 function resolveSlot(slot: Slot, page: number, position: number): TemplateKind {
   if (typeof slot === 'string') return slot;
   return seed(page, position) < 0.5 ? slot.either[0] : slot.either[1];
@@ -255,7 +249,7 @@ function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]
     settle(DEMOTION[kind], slice[position], layout.imageBar),
   );
 
-  const lifted = liftFeaturelessPage({ wanted, assigned, entries: slice }, layout);
+  const lifted = liftFeaturelessPage({ page, wanted, assigned, entries: slice }, layout);
 
   return lifted.map((kind, position) =>
     toBlock(layout.pinned[position]?.kind ?? kind, slice[position], { page, position }),

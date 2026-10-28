@@ -703,32 +703,46 @@ describe('planMagazine', () => {
     expect(ks[16]).toBe('thumb');
   });
 
-  it("follows each template's own rhythm in a small-thumbnail feed", () => {
-    const blocks = planMagazine({ entries: many(17, smallThumb), grouping: false, complete: true });
-    const ks = kinds(blocks);
-    expect(ks.slice(0, 11)).toEqual([
-      'wide',
-      'split',
-      'thumb',
-      'split',
-      'thumb',
-      'split',
-      'hero',
-      'split',
-      'thumb',
-      'thumb',
-      'thumb',
-    ]);
-    expect(ks.slice(11, 17)).toEqual(['hero', 'thumb', 'split', 'thumb', 'thumb', 'thumb']);
-    const sides = blocks.flatMap((block) => (block.kind === 'split' ? [block.imageSide] : []));
-    expect(sides).toContain('left');
-    expect(sides).toContain('right');
+  describe('a small-thumbnail feed', () => {
+    const blocks = planMagazine({
+      entries: many(100, smallThumb),
+      grouping: false,
+      complete: true,
+    });
+    const pages: MagazineBlock[][] = [];
+    for (let start = 0, page = 0; start < blocks.length; page++) {
+      const size = templateFor(page, IMAGE_TEMPLATES).length;
+      if (start + size <= blocks.length) pages.push(blocks.slice(start, start + size));
+      start += size;
+    }
+    const LARGE = ['hero', 'wide', 'split'];
+
+    it('shows a large image block on every page', () => {
+      for (const page of pages) {
+        expect(kinds(page).some((kind) => LARGE.includes(kind))).toBe(true);
+      }
+    });
+
+    it('varies its block sequence', () => {
+      expect(trigramEntropy(kinds(blocks))).toBeGreaterThan(4);
+    });
+
+    it('places split pictures on both sides', () => {
+      const sides = blocks.flatMap((block) => (block.kind === 'split' ? [block.imageSide] : []));
+      expect(sides).toContain('left');
+      expect(sides).toContain('right');
+    });
+
+    it('lays the same template out differently on a later page', () => {
+      expect(kinds(pages[12])).not.toEqual(kinds(pages[0]));
+    });
   });
 
   it('lifts a page that mixes thumbnails with text blocks but shows no large image', () => {
     const entries = many(6, (index) => (index === 3 ? entryAt(index) : smallThumb(index)));
     const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
-    expect(ks).toEqual(['wide', 'split', 'kicker', 'split', 'thumb', 'split']);
+    expect(ks[2]).toBe('kicker');
+    expect(ks.some((kind) => ['hero', 'wide', 'split'].includes(kind))).toBe(true);
   });
 
   it('keeps a small portrait picture out of a lifted hero or wide', () => {

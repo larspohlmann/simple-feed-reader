@@ -39,3 +39,10 @@ export function tallestWhere(
   }
   return tallest;
 }
+
+/** Cheap deterministic hash. Seeded from the page index for the same reason
+ *  the template is: the plan must not change when more entries arrive. */
+export function seed(page: number, salt: number): number {
+  const x = Math.sin(page * 127.1 + salt * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
