@@ -31,4 +31,9 @@ final class WidthQueryTest extends TestCase
     {
         self::assertSame('https://h/a.jpg?vw=3&w=264', WidthQuery::withWidth('https://h/a.jpg?vw=3', 264));
     }
+
+    public function testOnlyTheFirstWidthIsReplaced(): void
+    {
+        self::assertSame('https://h/a.jpg?w=9&u=x&w=2', WidthQuery::withWidth('https://h/a.jpg?w=1&u=x&w=2', 9));
+    }
 }

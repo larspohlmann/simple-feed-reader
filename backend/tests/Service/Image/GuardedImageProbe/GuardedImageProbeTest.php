@@ -24,7 +24,7 @@ final class GuardedImageProbeTest extends TestCase
 
     private const string IMAGE_URL = 'https://img.example.com/a-768x432.jpg';
 
-    /** @var list<array{method: string, headers: list<string>}> */
+    /** @var list<array{method: string, headers: list<string>, timeout: mixed}> */
     private array $requests = [];
 
     /** @param list<MockResponse> $responses */
@@ -33,7 +33,7 @@ final class GuardedImageProbeTest extends TestCase
         $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$responses) {
             /** @var list<string> $headers */
             $headers = $options['headers'];
-            $this->requests[] = ['method' => $method, 'headers' => $headers];
+            $this->requests[] = ['method' => $method, 'headers' => $headers, 'timeout' => $options['timeout']];
 
             return array_shift($responses) ?? new MockResponse('', ['http_code' => Response::HTTP_NOT_FOUND]);
         });
@@ -139,6 +139,7 @@ final class GuardedImageProbeTest extends TestCase
     public function testMeasureRejectsAMissingImage(): void
     {
         $this->expectException(GuardedImageUnavailableException::class);
+        $this->expectExceptionMessage('Image responded 404.');
 
         $this->probe([self::image(Response::HTTP_NOT_FOUND)])->measure(self::IMAGE_URL);
     }
@@ -146,8 +147,37 @@ final class GuardedImageProbeTest extends TestCase
     public function testMeasureRejectsBytesThatAreNoImage(): void
     {
         $this->expectException(GuardedImageUnavailableException::class);
+        $this->expectExceptionMessage('No image header in the first bytes of ' . self::IMAGE_URL);
 
         $this->probe([self::image(Response::HTTP_OK, 'image/jpeg', 'not an image')])->measure(self::IMAGE_URL);
+    }
+
+    public function testMeasureRejectsABlockedAddress(): void
+    {
+        $this->expectException(GuardedImageUnavailableException::class);
+
+        $this->probe([self::image()], '10.0.0.1')->measure(self::IMAGE_URL);
+    }
+
+    public function testATransportFailureDoesNotExist(): void
+    {
+        $failure = new MockResponse('', ['error' => 'connection reset']);
+
+        self::assertFalse($this->probe([$failure])->exists(self::IMAGE_URL));
+    }
+
+    public function testMeasureRejectsATransportFailure(): void
+    {
+        $this->expectException(GuardedImageUnavailableException::class);
+
+        $this->probe([new MockResponse('', ['error' => 'connection reset'])])->measure(self::IMAGE_URL);
+    }
+
+    public function testTheRequestCarriesAShortTimeout(): void
+    {
+        $this->probe([self::image()])->exists(self::IMAGE_URL);
+
+        self::assertEquals(4, $this->requests[0]['timeout']);
     }
 
     public function testSendsTheOutboundUserAgentWithoutCompression(): void

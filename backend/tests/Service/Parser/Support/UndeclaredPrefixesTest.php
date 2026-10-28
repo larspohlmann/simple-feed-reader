@@ -52,4 +52,31 @@ final class UndeclaredPrefixesTest extends TestCase
 
         self::assertSame($xml, UndeclaredPrefixes::declaredIn($xml));
     }
+
+    public function testAnAttributeNamedLikeThePrefixIsNoDeclaration(): void
+    {
+        $xml = '<rss><item media="x"><media:content url="y"/></item></rss>';
+
+        self::assertSame(
+            '<rss xmlns:media="http://search.yahoo.com/mrss/"><item media="x"><media:content url="y"/></item></rss>',
+            UndeclaredPrefixes::declaredIn($xml),
+        );
+    }
+
+    public function testADeclarationOfALongerPrefixIsNoDeclaration(): void
+    {
+        $xml = '<rss xmlns:mediax="urn:x"><media:content url="y"/></rss>';
+
+        self::assertSame(
+            '<rss xmlns:media="http://search.yahoo.com/mrss/" xmlns:mediax="urn:x"><media:content url="y"/></rss>',
+            UndeclaredPrefixes::declaredIn($xml),
+        );
+    }
+
+    public function testAnElementNamedLikeThePrefixIsNoUsage(): void
+    {
+        $xml = '<rss><media>x</media></rss>';
+
+        self::assertSame($xml, UndeclaredPrefixes::declaredIn($xml));
+    }
 }

@@ -73,6 +73,29 @@ final class ImageVerifierTest extends TestCase
         ], $entry->getImage()->getRenditions());
     }
 
+    public function testEveryKnownAndEveryProbedRungSurvivesTheMerge(): void
+    {
+        $lead = 'https://i/wp-content/uploads/a.png';
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes($lead, PngImageFactory::bytes(1600, 900));
+        $probe = new StubGuardedImageProbe();
+        $probe->willExist('https://i/wp-content/uploads/a-640x360.png');
+        $probe->willExist('https://i/wp-content/uploads/a-768x432.png');
+        $entry = $this->pendingImage($lead);
+        $entry->getImage()->storeRenditions([
+            new ImageRendition('https://i/wp-content/uploads/a-300x169.png', 300),
+            new ImageRendition('https://i/wp-content/uploads/a-1280x720.png', 1280),
+        ]);
+
+        $this->verifier($downloader, $probe)->verify($entry);
+
+        $widths = array_map(
+            static fn (ImageRendition $rung): int => $rung->width,
+            $entry->getImage()->getRenditions(),
+        );
+        self::assertSame([300, 640, 768, 1280], $widths);
+    }
+
     public function testADroppedImageIsNeverProbed(): void
     {
         $downloader = new StubGuardedImageDownloader();

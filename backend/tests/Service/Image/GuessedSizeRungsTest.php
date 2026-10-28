@@ -73,6 +73,29 @@ final class GuessedSizeRungsTest extends TestCase
         self::assertNotContains($base . '-1280x720.jpg', $probe->requestedUrls());
     }
 
+    public function testAnOriginalAtTheLargestTargetIsARung(): void
+    {
+        $base = 'https://h.example/wp-content/uploads/a';
+
+        $probe = new StubGuardedImageProbe();
+        $probe->willMeasure($base . '.jpg', 1360, 700);
+
+        $rungs = new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '-202x202.jpg', 202, 202));
+
+        self::assertSame([1360], self::widths($rungs));
+    }
+
+    public function testTheBasisWidthItselfIsNotProbed(): void
+    {
+        $base = 'https://h.example/wp-content/uploads/a';
+        $probe = new StubGuardedImageProbe();
+
+        new GuessedSizeRungs($probe)->rungsFor(self::lead($base . '.jpg', 768, 403));
+
+        self::assertNotContains($base . '-768x403.jpg', $probe->requestedUrls());
+        self::assertContains($base . '-640x336.jpg', $probe->requestedUrls());
+    }
+
     public function testWithoutAnOriginalTheSuffixedLeadIsTheBasis(): void
     {
         $base = 'https://bilder.deutschlandfunk.de/15/1b/gadi-eisenkot-104';

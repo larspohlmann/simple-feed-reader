@@ -33,4 +33,20 @@ final class SizedImageUrlTest extends TestCase
     {
         self::assertSame('https://h/v1.2/a-300x200.jpg', SizedImageUrl::atSize('https://h/v1.2/a.jpg', 300, 200));
     }
+
+    public function testOnlyTheFirstSuffixIsStripped(): void
+    {
+        self::assertSame(
+            'https://h/a.jpg?u=https://h/b-2x2.jpg',
+            SizedImageUrl::withoutSizeSuffix('https://h/a-1x1.jpg?u=https://h/b-2x2.jpg'),
+        );
+    }
+
+    public function testOnlyTheFirstExtensionTakesTheSize(): void
+    {
+        self::assertSame(
+            'https://h/a-10x5.jpg?u=https://h/b.jpg',
+            SizedImageUrl::atSize('https://h/a.jpg?u=https://h/b.jpg', 10, 5),
+        );
+    }
 }
