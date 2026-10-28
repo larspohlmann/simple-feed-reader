@@ -296,7 +296,7 @@ export class AudioPlayerService {
 
   private onPlaying(playing: boolean): void {
     this._playing.set(playing);
-    if (!playing) this.memory.savePaused();
+    if (!playing) this.memory.save();
   }
 
   /** A dead enclosure (an expired podcast link) never ends, so it is skipped; a dropped
@@ -307,7 +307,7 @@ export class AudioPlayerService {
       return;
     }
     this._playing.set(false);
-    this.memory.savePaused();
+    this.memory.save();
   }
 
   private onEnded(): void {

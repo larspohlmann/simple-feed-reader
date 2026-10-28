@@ -51,7 +51,7 @@ export class PlaybackMemory {
     this.places.forget();
   }
 
-  savePaused(): void {
+  save(): void {
     this.playlist.save();
     this.places.record();
   }
@@ -59,11 +59,11 @@ export class PlaybackMemory {
   saveThrottled(): void {
     if (Date.now() - this.lastSaveAt < SAVE_INTERVAL_MS) return;
     this.lastSaveAt = Date.now();
-    this.savePaused();
+    this.save();
   }
 
   saveOnPageHide(destroyRef: DestroyRef): void {
-    const save = (): void => this.savePaused();
+    const save = (): void => this.save();
     window.addEventListener('pagehide', save);
     destroyRef.onDestroy(() => window.removeEventListener('pagehide', save));
   }
