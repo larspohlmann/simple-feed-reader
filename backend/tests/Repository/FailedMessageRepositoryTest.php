@@ -7,13 +7,12 @@ namespace App\Tests\Repository;
 use App\Repository\FailedMessageRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\TemporaryMessengerMessagesTable;
-use Doctrine\DBAL\Connection;
 
 final class FailedMessageRepositoryTest extends DbTestCase
 {
     protected function tearDown(): void
     {
-        TemporaryMessengerMessagesTable::drop($this->connection());
+        TemporaryMessengerMessagesTable::drop($this->entityManager->getConnection());
         parent::tearDown();
     }
 
@@ -27,7 +26,7 @@ final class FailedMessageRepositoryTest extends DbTestCase
 
     public function testCountsOnlyTheFailureQueueAndFindsItsOldestMessage(): void
     {
-        TemporaryMessengerMessagesTable::create($this->connection());
+        TemporaryMessengerMessagesTable::create($this->entityManager->getConnection());
         $this->insertMessage('failed', '2026-10-28 08:00:00');
         $this->insertMessage('failed', '2026-10-28 07:30:00');
         $this->insertMessage('default', '2026-10-28 06:00:00');
@@ -40,21 +39,13 @@ final class FailedMessageRepositoryTest extends DbTestCase
 
     private function insertMessage(string $queueName, string $createdAt): void
     {
-        $this->connection()->insert('messenger_messages', [
+        $this->entityManager->getConnection()->insert('messenger_messages', [
             'body' => '{}',
             'headers' => '{}',
             'queue_name' => $queueName,
             'created_at' => $createdAt,
             'available_at' => $createdAt,
         ]);
-    }
-
-    private function connection(): Connection
-    {
-        /** @var Connection $connection */
-        $connection = self::getContainer()->get(Connection::class);
-
-        return $connection;
     }
 
     private function repository(): FailedMessageRepository

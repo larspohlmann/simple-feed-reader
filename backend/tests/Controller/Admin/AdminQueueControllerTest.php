@@ -60,10 +60,7 @@ final class AdminQueueControllerTest extends ApiTestCase
 
         $this->getAs($admin);
 
-        $runs = array_values(array_filter(
-            $this->queues(),
-            static fn (array $queue): bool => $queue['queue'] === 'recommendation_runs',
-        ))[0];
+        $runs = array_column($this->queues(), null, 'queue')['recommendation_runs'];
         self::assertSame(1, $runs['waiting']);
         self::assertSame('2026-10-28T07:00:00+00:00', $runs['oldestQueuedAt']);
     }
@@ -82,9 +79,9 @@ final class AdminQueueControllerTest extends ApiTestCase
     /** @return list<array{queue: string, waiting: int, oldestQueuedAt: ?string}> */
     private function queues(): array
     {
-        /** @var array{queues: list<array{queue: string, waiting: int, oldestQueuedAt: ?string}>} $body */
-        $body = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        /** @var list<array{queue: string, waiting: int, oldestQueuedAt: ?string}> $queues */
+        $queues = $this->payload($this->client)['queues'];
 
-        return $body['queues'];
+        return $queues;
     }
 }
