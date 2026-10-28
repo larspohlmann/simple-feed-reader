@@ -3,8 +3,10 @@ import { TestBed } from '@angular/core/testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { frameWithWindow, messagesOf } from '../../../../testing/frame-playback-testing';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
+import { StubListenLauncher } from '../../../../testing/stub-listen-launcher';
 import { AudioTrack } from '../../audio-player.service';
 import { EmbedMedia } from '../../audio/embed-media';
+import type { ListenLauncher } from '../../audio/listen-launcher';
 import { toEmbedTrack } from '../../audio/embed-track';
 import { ChapterDto } from '../../models';
 import type { TrackDetails } from '../../audio/audio-track';
@@ -35,7 +37,11 @@ const ENTRY = anEntry({ id: 42, title: 'The video' });
 
 function setUp(context: Partial<EmbedListenContext> = {}) {
   const player = new StubAudioPlayer();
-  const embedAudio = new ArticleEmbedAudio(player.asService(), TestBed.inject(Injector));
+  const embedAudio = new ArticleEmbedAudio(
+    player.asService(),
+    new StubListenLauncher(player).asService(),
+    TestBed.inject(Injector),
+  );
   const listened: AudioTrack[] = [];
   const actions = embedAudio.actions({
     entry: ENTRY,
@@ -57,6 +63,25 @@ describe('ArticleEmbedAudio', () => {
   });
 
   describe('listen', () => {
+    it('follows the track only once the launcher starts it (#1866)', () => {
+      const player = new StubAudioPlayer();
+      const embedAudio = new ArticleEmbedAudio(
+        player.asService(),
+        { listen: jest.fn() } as unknown as ListenLauncher,
+        TestBed.inject(Injector),
+      );
+      const listened: AudioTrack[] = [];
+      const actions = embedAudio.actions({
+        entry: ENTRY,
+        detailsOf: () => null,
+        onListened: (track) => listened.push(track),
+      }) as ListenActions;
+
+      actions.listen(VIDEO, frameWithWindow().frame);
+
+      expect(listened).toEqual([]);
+    });
+
     it('pauses the visible player, then plays the embed with the details the body gives it', () => {
       const { player, listened, actions } = setUp();
       const { frame, posted } = frameWithWindow();

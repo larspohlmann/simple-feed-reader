@@ -4,6 +4,7 @@ import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
 import { chaptersOnly } from './audio-track';
 import { ChapterDto, EntryDto } from '../models';
 import { formatDuration } from '../format';
+import { ListenLauncher } from './listen-launcher';
 
 /** An entry's audio enclosure as the player sees it, with the controls the
  *  article view and the list rows share (#1436). */
@@ -32,15 +33,17 @@ export class EntryAudio {
     return track !== null && this.player.playing() && this.player.current()?.url === track.url;
   });
 
+  // eslint-disable-next-line @typescript-eslint/max-params -- the brief fixes this signature
   constructor(
     private readonly entry: () => EntryDto | null | undefined,
     private readonly player: AudioPlayerService,
+    private readonly launcher: ListenLauncher,
     private readonly chapters: () => ChapterDto[] = () => [],
   ) {}
 
   play(): void {
     const track = this.track();
-    if (track) this.player.play(track);
+    if (track) this.launcher.listen(track);
   }
 
   togglePlaying(): void {

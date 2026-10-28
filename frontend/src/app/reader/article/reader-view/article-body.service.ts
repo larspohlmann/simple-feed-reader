@@ -25,6 +25,7 @@ import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { ChapterDto, EntryDto, TranscriptDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
+import { ListenLauncher } from '../../audio/listen-launcher';
 import { ArticleEmbedAudio } from './article-embed-audio';
 import { ArticleEmbedDetails } from './article-embed-details';
 import { ArticleTranscript } from './article-transcript';
@@ -64,7 +65,11 @@ export class ArticleBody {
   private readonly audio = inject(AudioPlayerService);
   private readonly chapters = new ArticleChapters(this.audio, this.injector);
   private readonly transcriptSection = new ArticleTranscript(this.audio, this.injector);
-  private readonly embedAudio = new ArticleEmbedAudio(this.audio, this.injector);
+  private readonly embedAudio = new ArticleEmbedAudio(
+    this.audio,
+    inject(ListenLauncher),
+    this.injector,
+  );
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
   private destroyed = false;
