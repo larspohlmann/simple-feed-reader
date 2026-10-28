@@ -16,14 +16,12 @@
   margin-inline-start: var(--marquee-gap);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  :host(.overflowing) .track {
-    animation: marquee var(--marquee-duration) linear infinite;
-  }
+:host(.overflowing) .track {
+  animation: marquee var(--marquee-duration) linear infinite;
+}
 
-  :host(.paused) .track {
-    animation-play-state: paused;
-  }
+:host(.paused) .track {
+  animation-play-state: paused;
 }
 
 @keyframes marquee {
@@ -46,6 +44,10 @@
   .track,
   .copy {
     display: inline;
+  }
+
+  :host(.overflowing) .track {
+    animation: none;
   }
 
   .repeat {
