@@ -208,6 +208,28 @@ final class GuardedImageProbeTest extends TestCase
         $this->probe([self::image(Response::HTTP_OK, 'image/png', $bytes)])->measure(self::IMAGE_URL);
     }
 
+    public function testARangeIgnoringBodyOfExactlyHalfAMebibyteStillMeasures(): void
+    {
+        $png = PngImageFactory::bytes(1200, 630);
+        $bytes = $png . str_repeat("\0", 524_288 - \strlen($png));
+
+        $dimensions = $this->probe([self::image(Response::HTTP_OK, 'image/png', $bytes)])->measure(self::IMAGE_URL);
+
+        self::assertSame(1200, $dimensions->width);
+    }
+
+    public function testUnavailabilityKeepsTheTransportCauseAndNoCode(): void
+    {
+        try {
+            $this->probe([new MockResponse('', ['error' => 'reset'])])->measure(self::IMAGE_URL);
+            self::fail('expected the image to be unavailable');
+        } catch (GuardedImageUnavailableException $exception) {
+            self::assertSame(0, $exception->getCode());
+            self::assertInstanceOf(\Throwable::class, $exception->getPrevious());
+            self::assertSame($exception->getPrevious()->getMessage(), $exception->getMessage());
+        }
+    }
+
     public function testARangeIgnoringBodyUnderHalfAMebibyteStillMeasures(): void
     {
         $bytes = PngImageFactory::bytes(1200, 630) . str_repeat("\0", 400 * 1024);
