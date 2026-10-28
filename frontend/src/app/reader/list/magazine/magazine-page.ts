@@ -1,4 +1,4 @@
-import { ImageBar } from './magazine-slot-fit';
+import { SlotRules } from './magazine-slot-fit';
 import { BLOCK_HEIGHT, ShareKind, TemplateKind } from './magazine-block';
 
 /** Per-page height ceiling, in BLOCK_HEIGHT units — about one and a half phone
@@ -12,10 +12,9 @@ export interface PinnedShare {
   readonly height: number;
 }
 
-/** The share each entry of a page claims (null where the template decides), and the image bar its family holds the page to. */
-export interface PageLayout {
+/** The share each entry of a page claims (null where the template decides), and the rules its family judges the page by. */
+export interface PageLayout extends SlotRules {
   readonly pinned: readonly (PinnedShare | null)[];
-  readonly imageBar: ImageBar;
 }
 
 export function pageHeight(kinds: TemplateKind[], layout: PageLayout): number {

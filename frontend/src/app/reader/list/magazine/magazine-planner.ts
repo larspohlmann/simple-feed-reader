@@ -2,8 +2,15 @@ import { EntryDto } from '../../models';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock, TemplateKind } from './magazine-block';
 import { leadWithImage, prefersTextFamily } from './magazine-family';
 import { blockHeight } from './magazine-block-height';
-import { fits, ImageBar, shareKind, settle } from './magazine-slot-fit';
-import { liftFeaturelessPage } from './magazine-page-lift';
+import {
+  fits,
+  fitsWithoutSizeFloor,
+  IMAGE_KINDS,
+  ImageBar,
+  shareKind,
+  settle,
+  SlotFit,
+} from './magazine-slot-fit';
 import {
   PAGE_HEIGHT_CAP,
   PageLayout,
@@ -46,16 +53,40 @@ const WIDGET_PREVIEW = 4;
 const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** The largest slot may reach this far ahead for an entry that fits it. */
 const LOOK_AHEAD = 2;
+/** Distinct from the salts of `either` slots (position) and the split side (position + 97). */
+const JITTER_SALT = 211;
+const JITTER_CHANCE = 1 / 3;
 /** A template family, and the image an entry needs before the family refuses to
  *  hide it in a text block. The text family serves wire services whose every entry
  *  carries a miniature, so only a picture that fills a `split` counts there. */
 interface MagazineFamily {
   readonly templates: readonly (readonly Slot[])[];
   readonly imageBar: ImageBar;
+  readonly fitFor: (slice: readonly EntryDto[], pinned: readonly (PinnedShare | null)[]) => SlotFit;
 }
 
-const IMAGE_FAMILY: MagazineFamily = { templates: IMAGE_TEMPLATES, imageBar: 'thumb' };
-const TEXT_FAMILY: MagazineFamily = { templates: TEXT_TEMPLATES, imageBar: 'split' };
+/** Variety over fit: a page with no entry that fills a `split` strictly judges its pictures
+ *  without the size floor, so a feed of small thumbnails still gets larger blocks. */
+function imageFamilyFit(
+  slice: readonly EntryDto[],
+  pinned: readonly (PinnedShare | null)[],
+): SlotFit {
+  const fillsSplit = slice.some(
+    (entry, position) => pinned[position] === null && fits('split', entry),
+  );
+  return fillsSplit ? fits : fitsWithoutSizeFloor;
+}
+
+const IMAGE_FAMILY: MagazineFamily = {
+  templates: IMAGE_TEMPLATES,
+  imageBar: 'thumb',
+  fitFor: imageFamilyFit,
+};
+const TEXT_FAMILY: MagazineFamily = {
+  templates: TEXT_TEMPLATES,
+  imageBar: 'split',
+  fitFor: () => fits,
+};
 
 /** A same-source run, with any single foreign entries it bridges pulled aside. */
 interface DetectedRun {
@@ -236,23 +267,41 @@ function resolveSlot(slot: Slot, page: number, position: number): TemplateKind {
 }
 
 function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]): MagazineBlock[] {
-  const { page } = pass;
+  const { page, family } = pass;
+  const pinned = slice.map(pinnedShare);
   const layout: PageLayout = {
-    pinned: slice.map(pinnedShare),
-    imageBar: pass.family.imageBar,
+    pinned,
+    imageBar: family.imageBar,
+    fit: family.fitFor(slice, pinned),
   };
-  const wanted = template
-    .slice(0, slice.length)
-    .map((slot, position) => resolveSlot(slot, page, position));
+  const wanted = jittered(
+    template.slice(0, slice.length).map((slot, position) => resolveSlot(slot, page, position)),
+    page,
+    layout,
+  );
   const budgeted = withinBudget(wanted, layout, (kind) => DEMOTION[kind]);
   const assigned = withinBudget(assign(budgeted, slice, layout), layout, (kind, position) =>
-    settle(DEMOTION[kind], slice[position], layout.imageBar),
+    settle(DEMOTION[kind], slice[position], layout),
   );
 
-  const lifted = liftFeaturelessPage({ page, wanted, assigned, entries: slice }, layout);
+  return assigned.map((kind, position) =>
+    toBlock(pinned[position]?.kind ?? kind, slice[position], { page, position }),
+  );
+}
 
-  return lifted.map((kind, position) =>
-    toBlock(layout.pinned[position]?.kind ?? kind, slice[position], { page, position }),
+/** On a page judged without the size floor, every large image slot but the tallest draws down
+ *  one step by seeded chance, so the template's rhythm does not repeat page after page. */
+function jittered(wanted: TemplateKind[], page: number, layout: PageLayout): TemplateKind[] {
+  if (layout.fit !== fitsWithoutSizeFloor) return wanted;
+  const isLarge = (kind: TemplateKind, position: number): boolean =>
+    IMAGE_KINDS.includes(kind) && kind !== 'thumb' && layout.pinned[position] === null;
+  const tallest = tallestWhere(wanted, isLarge);
+  return wanted.map((kind, position) =>
+    isLarge(kind, position) &&
+    position !== tallest &&
+    seed(page, position + JITTER_SALT) < JITTER_CHANCE
+      ? DEMOTION[kind]
+      : kind,
   );
 }
 
@@ -316,15 +365,15 @@ function withinBudget(
  * stops at a share that claims its own block, so every pinned slot keeps the entry it was pinned for.
  */
 function assign(kinds: TemplateKind[], slice: EntryDto[], layout: PageLayout): TemplateKind[] {
-  const { pinned, imageBar } = layout;
+  const { pinned } = layout;
   const order = [...slice];
   const tallest = tallestWhere(kinds, (_kind, position) => pinned[position] === null);
 
-  if (tallest !== null && !fits(kinds[tallest], order[tallest])) {
+  if (tallest !== null && !layout.fit(kinds[tallest], order[tallest])) {
     const limit = Math.min(order.length, tallest + LOOK_AHEAD + 1);
     for (let index = tallest + 1; index < limit; index++) {
       if (pinned[index] !== null) break;
-      if (fits(kinds[tallest], order[index])) {
+      if (layout.fit(kinds[tallest], order[index])) {
         const [picked] = order.splice(index, 1);
         order.splice(tallest, 0, picked);
         break;
@@ -335,7 +384,7 @@ function assign(kinds: TemplateKind[], slice: EntryDto[], layout: PageLayout): T
   slice.splice(0, slice.length, ...order);
 
   return kinds.map((kind, position) =>
-    pinned[position] === null ? settle(kind, order[position], imageBar) : kind,
+    pinned[position] === null ? settle(kind, order[position], layout) : kind,
   );
 }
 

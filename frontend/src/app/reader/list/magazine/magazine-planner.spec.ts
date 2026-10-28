@@ -55,6 +55,8 @@ const smallThumb = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
+const LARGE_IMAGE_KINDS: string[] = ['hero', 'wide', 'split'];
+
 const CARD = aLinkCard();
 const linkShare = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   big(id, { titleDerived: true, share: 'link', linkCards: [CARD], ...over });
@@ -263,7 +265,7 @@ describe('planMagazine', () => {
     const first = blocks[0];
     expect(first.kind).not.toBe('group');
     expect(first.kind === 'group' ? null : first.entry.id).toBe(4);
-    expect(['hero', 'wide', 'split']).toContain(first.kind);
+    expect(LARGE_IMAGE_KINDS).toContain(first.kind);
     expect(entryCount(blocks)).toBe(8);
   });
 
@@ -715,11 +717,10 @@ describe('planMagazine', () => {
       if (start + size <= blocks.length) pages.push(blocks.slice(start, start + size));
       start += size;
     }
-    const LARGE = ['hero', 'wide', 'split'];
 
     it('shows a large image block on every page', () => {
       for (const page of pages) {
-        expect(kinds(page).some((kind) => LARGE.includes(kind))).toBe(true);
+        expect(kinds(page).some((kind) => LARGE_IMAGE_KINDS.includes(kind))).toBe(true);
       }
     });
 
@@ -742,7 +743,7 @@ describe('planMagazine', () => {
     const entries = many(6, (index) => (index === 3 ? entryAt(index) : smallThumb(index)));
     const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
     expect(ks[2]).toBe('kicker');
-    expect(ks.some((kind) => ['hero', 'wide', 'split'].includes(kind))).toBe(true);
+    expect(ks.some((kind) => LARGE_IMAGE_KINDS.includes(kind))).toBe(true);
   });
 
   it('keeps a small portrait picture out of a lifted hero or wide', () => {
@@ -753,15 +754,15 @@ describe('planMagazine', () => {
   });
 
   it('lifts only as far as the page height cap allows', () => {
-    // Page 1 asks for a hero beside a pinned media share: 463 + 463 + 3 × 90 exceeds the cap.
+    // Page 1 asks for a hero beside a pinned media share: the budget pass steps it down to split.
     const entries = many(11, (index) => (index === 8 ? mediaShare(index) : smallThumb(index)));
     const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
-    expect(ks.slice(6, 8)).toEqual(['wide', 'media']);
+    expect(ks.slice(6, 8)).toEqual(['split', 'media']);
   });
 
   it('never lifts a text-family page to a larger image block', () => {
     const ks = kinds(planMagazine({ entries: many(18, wire), grouping: false, complete: true }));
-    expect(ks.filter((kind) => ['hero', 'wide', 'split'].includes(kind))).toEqual([]);
+    expect(ks.filter((kind) => LARGE_IMAGE_KINDS.includes(kind))).toEqual([]);
   });
 
   it('is prefix-stable for a small-thumbnail feed', () => {
