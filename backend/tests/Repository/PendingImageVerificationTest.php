@@ -77,6 +77,21 @@ final class PendingImageVerificationTest extends DbTestCase
         self::assertSame(['fresh', 'retried'], $guids);
     }
 
+    public function testTheBacklogCountsPendingImagesAndDatesThemByTheirEntry(): void
+    {
+        $feed = $this->feed();
+        $this->entry($feed, 'pending')->getImage()->storePending('https://i/pending.jpg', null, null);
+        $verified = $this->entry($feed, 'verified');
+        $verified->getImage()->storePending('https://i/verified.jpg', null, null);
+        $verified->getImage()->recordMeasurement(800, 600, new \DateTimeImmutable('2026-09-21 10:00:00'));
+        $this->entityManager->flush();
+
+        $backlog = $this->repository()->backlog();
+
+        self::assertSame(1, $backlog->waiting);
+        self::assertSame('2026-09-21 06:00:00', $backlog->oldestQueuedAt?->format('Y-m-d H:i:s'));
+    }
+
     private function feed(): Feed
     {
         $feed = new Feed('https://example.test/feed.xml');

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryTranscript;
 use App\Enum\TranscriptStatus;
+use App\Service\Queue\Model\QueueBacklogModel;
 use App\Service\Search\TranscriptText\TranscriptTextInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
@@ -104,12 +105,29 @@ final class EntryTranscriptRepository extends ServiceEntityRepository implements
         return $texts;
     }
 
-    private function due(\DateTimeImmutable $now): QueryBuilder
+    public function pendingBacklog(): QueueBacklogModel
+    {
+        /** @var array{waiting: int|string, oldest: ?string} $row */
+        $row = $this->pendingQuery()
+            ->select('COUNT(transcript.id) AS waiting', 'MIN(entry.createdAt) AS oldest')
+            ->join('transcript.entry', 'entry')
+            ->getQuery()
+            ->getSingleResult();
+
+        return QueueBacklogModel::fromAggregate($row['waiting'], $row['oldest']);
+    }
+
+    private function pendingQuery(): QueryBuilder
     {
         return $this->createQueryBuilder('transcript')
             ->andWhere('transcript.status = :pending')
+            ->setParameter('pending', TranscriptStatus::Pending);
+    }
+
+    private function due(\DateTimeImmutable $now): QueryBuilder
+    {
+        return $this->pendingQuery()
             ->andWhere('(transcript.nextAttemptAt IS NULL OR transcript.nextAttemptAt <= :now)')
-            ->setParameter('pending', TranscriptStatus::Pending)
             ->setParameter('now', $now, Types::DATETIME_IMMUTABLE);
     }
 }

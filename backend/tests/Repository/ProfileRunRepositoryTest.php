@@ -98,6 +98,19 @@ final class ProfileRunRepositoryTest extends DbTestCase
         );
     }
 
+    public function testTheActiveBacklogCountsOnlyUnfinishedRuns(): void
+    {
+        $owner = $this->user('profile-runs-backlog@example.test');
+        $this->running($owner, 'a');
+        $this->completed($owner, 'b');
+        $this->failed($owner);
+
+        $backlog = $this->profileRuns()->activeBacklog();
+
+        self::assertSame(1, $backlog->waiting);
+        self::assertSame('2026-10-03 09:00:00', $backlog->oldestQueuedAt?->format('Y-m-d H:i:s'));
+    }
+
     private function running(User $owner, string $fingerprint): ProfileRun
     {
         $profileRun = new ProfileRun(

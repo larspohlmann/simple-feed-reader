@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RunStatus;
+use App\Service\Queue\Model\QueueBacklogModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\QueryBuilder;
@@ -26,6 +27,17 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('r')
             ->andWhere('r.status IN (:active)')->setParameter('active', RunStatus::active());
+    }
+
+    public function activeBacklog(): QueueBacklogModel
+    {
+        /** @var array{waiting: int|string, oldest: ?string} $row */
+        $row = $this->activeStatusQuery()
+            ->select('COUNT(r.id) AS waiting', 'MIN(r.createdAt) AS oldest')
+            ->getQuery()
+            ->getSingleResult();
+
+        return QueueBacklogModel::fromAggregate($row['waiting'], $row['oldest']);
     }
 
     /**

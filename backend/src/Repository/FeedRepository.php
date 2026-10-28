@@ -12,6 +12,7 @@ use App\Enum\SocialAccountStatus;
 use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
+use App\Service\Queue\Model\QueueBacklogModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -52,6 +53,17 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
             ->select('COUNT(f.id)')
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    public function dueBacklog(DueFeedCriteria $criteria): QueueBacklogModel
+    {
+        /** @var array{waiting: int|string, oldest: ?string} $row */
+        $row = $this->dueQueryBuilder($criteria)
+            ->select('COUNT(f.id) AS waiting', 'MIN(f.fetchSchedule.nextFetchAt) AS oldest')
+            ->getQuery()
+            ->getSingleResult();
+
+        return QueueBacklogModel::fromAggregate($row['waiting'], $row['oldest']);
     }
 
     /**

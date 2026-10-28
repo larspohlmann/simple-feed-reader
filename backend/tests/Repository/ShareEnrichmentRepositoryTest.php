@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
+use App\Repository\ShareEnrichmentBacklogRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Tests\DbTestCase;
 
@@ -243,6 +244,31 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         return array_map(static fn (ShareEnrichment $pending): string => $pending->getEntry()->getGuid(), $rows);
     }
 
+    public function testTheBacklogOfAKindCountsItsUnfinishedRows(): void
+    {
+        $feed = $this->feed('https://example.test/a.xml');
+        $this->queued($feed, 'old', '2026-10-11 09:00:00', ShareEnrichmentKind::LinkCards);
+        $this->queued($feed, 'new', '2026-10-11 10:00:00', ShareEnrichmentKind::LinkCards);
+        $this->queued($feed, 'other-kind', '2026-10-11 08:00:00', ShareEnrichmentKind::AppView);
+        $this->entityManager->flush();
+
+        $backlog = $this->backlogs()->backlogOf(ShareEnrichmentKind::LinkCards);
+
+        self::assertSame(2, $backlog->waiting);
+        self::assertSame('2026-10-11 09:00:00', $backlog->oldestQueuedAt?->format('Y-m-d H:i:s'));
+    }
+
+    public function testAFinishedRowLeavesTheBacklog(): void
+    {
+        $feed = $this->feed('https://example.test/a.xml');
+        $done = $this->queued($feed, 'done', '2026-10-11 09:00:00', ShareEnrichmentKind::LinkCards);
+        $this->entityManager->flush();
+        $claimed = $this->repository()->claim([$done], $this->now());
+        $this->repository()->markDone($claimed, $this->now());
+
+        self::assertSame(0, $this->backlogs()->backlogOf(ShareEnrichmentKind::LinkCards)->waiting);
+    }
+
     /** @return list<Entry> */
     private function entriesOf(Feed $feed): array
     {
@@ -298,6 +324,14 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
     {
         $repository = self::getContainer()->get(ShareEnrichmentRepository::class);
         self::assertInstanceOf(ShareEnrichmentRepository::class, $repository);
+
+        return $repository;
+    }
+
+    private function backlogs(): ShareEnrichmentBacklogRepository
+    {
+        $repository = self::getContainer()->get(ShareEnrichmentBacklogRepository::class);
+        self::assertInstanceOf(ShareEnrichmentBacklogRepository::class, $repository);
 
         return $repository;
     }

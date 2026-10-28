@@ -121,4 +121,18 @@ final class EntryTranscriptRepositoryTest extends DbTestCase
 
         self::assertSame(0, $this->transcripts->count([]));
     }
+
+    public function testThePendingBacklogCountsBackedOffRowsAndSkipsSettledOnes(): void
+    {
+        [$pending, $backedOff, $filled, $failed] = $this->fixtures->pendingTranscripts(4);
+        $backedOff->retryAfter(new \DateTimeImmutable('2026-10-27 12:00:00'));
+        $filled->fill([new TranscriptParagraph(0, null, 'x')], 'x');
+        $failed->fail();
+        $this->entityManager->flush();
+
+        $backlog = $this->transcripts->pendingBacklog();
+
+        self::assertSame(2, $backlog->waiting);
+        self::assertSame('2026-10-27 06:00:00', $backlog->oldestQueuedAt?->format('Y-m-d H:i:s'));
+    }
 }
