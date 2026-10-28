@@ -70,7 +70,7 @@ export class AudioPlayerService {
       durationchange: () => this.onMetadata(),
       play: () => this.onPlaying(true),
       pause: () => this.onPlaying(false),
-      ended: () => this.playNextOrStop(),
+      ended: () => this.onEnded(),
       error: () => this.onError(),
     },
   );
@@ -318,9 +318,14 @@ export class AudioPlayerService {
     this.memory.saveQueue();
   }
 
+  private onEnded(): void {
+    this._position.set(this._duration());
+    this.memory.forgetPlace();
+    this.playNextOrStop();
+  }
+
   private playNextOrStop(): void {
     if (this.hasNext()) return this.next();
-    this.memory.rememberPlace();
     this._playing.set(false);
   }
 

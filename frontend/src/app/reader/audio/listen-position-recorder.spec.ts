@@ -95,6 +95,25 @@ describe('ListenPositionRecorder', () => {
     expect(positions.get(URL)).toBeNull();
   });
 
+  it('forgets a place outright, wherever the track stood', () => {
+    const { positions, recorder, at } = setUp();
+    at(600);
+    recorder.record();
+
+    recorder.forget();
+
+    expect(positions.get(URL)).toBeNull();
+  });
+
+  it('forgets nothing without a track', () => {
+    const { recorder, clear } = setUp();
+    clear();
+
+    recorder.forget();
+
+    expect(localStorage.length).toBe(0);
+  });
+
   it('does nothing without a track', () => {
     const { recorder, clear } = setUp();
     clear();

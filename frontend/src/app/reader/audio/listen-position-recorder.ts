@@ -26,6 +26,11 @@ export class ListenPositionRecorder {
     if (position.seconds >= POSITION_MARGIN_SECONDS) this.positions.remember(position);
   }
 
+  forget(): void {
+    const position = this.snapshot();
+    if (position) this.positions.forget(position.url);
+  }
+
   recordThrottled(): void {
     if (Date.now() - this.lastSaveAt < SAVE_INTERVAL_MS) return;
     this.lastSaveAt = Date.now();

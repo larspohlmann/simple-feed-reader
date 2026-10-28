@@ -44,6 +44,10 @@ export class PlaybackMemory {
     this.places.record();
   }
 
+  forgetPlace(): void {
+    this.places.forget();
+  }
+
   savePaused(): void {
     this.playlist.save();
     this.places.record();

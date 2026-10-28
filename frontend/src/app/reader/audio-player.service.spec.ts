@@ -1251,9 +1251,6 @@ describe('AudioPlayerService', () => {
     it('forgets the place once the track ends', () => {
       const service = make();
       playedTo(service, 100, 600);
-      audio.pause();
-      audio.currentTime = 3600;
-      audio.fire('timeupdate');
 
       audio.fire('ended');
 
@@ -1264,9 +1261,6 @@ describe('AudioPlayerService', () => {
       const service = make();
       playedTo(service, 100, 600);
       service.enqueue(OTHER);
-      audio.pause();
-      audio.currentTime = 3600;
-      audio.fire('timeupdate');
 
       audio.fire('ended');
 
