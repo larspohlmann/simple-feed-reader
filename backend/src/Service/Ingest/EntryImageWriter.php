@@ -9,7 +9,10 @@ use App\Entity\ImageRendition;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Url\Support\HttpsImageUrl;
 
-/** Stores a feed-declared image on an entry, pending the background verify: declared dimensions don't prove it loads. */
+/**
+ * Stores a feed-declared image on an entry, pending the background verify: declared dimensions don't prove it loads.
+ * A social network's is stored as declared, since its posts render through share templates that never measure it.
+ */
 final readonly class EntryImageWriter
 {
     private const int FEWEST_RENDITIONS_TO_CHOOSE_FROM = 2;
@@ -21,10 +24,20 @@ final readonly class EntryImageWriter
         if ($url === null) {
             return false;
         }
-        $entry->getImage()->storePending($url, $image->width, $image->height);
+        $this->store($entry, $url, $image);
         $entry->getImage()->storeRenditions(self::storableRenditions($image->renditions, $url));
 
         return true;
+    }
+
+    private function store(Entry $entry, string $url, DeclaredImageModel $image): void
+    {
+        if ($entry->getFeed()->getNetwork() !== null) {
+            $entry->getImage()->storeUnverified($url, $image->width, $image->height);
+
+            return;
+        }
+        $entry->getImage()->storePending($url, $image->width, $image->height);
     }
 
     public function writeOrMarkNone(Entry $entry, ?DeclaredImageModel $image): void

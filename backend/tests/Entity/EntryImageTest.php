@@ -31,6 +31,30 @@ final class EntryImageTest extends TestCase
         self::assertFalse($image->isMissing());
     }
 
+    public function testStoringAUrlUnverifiedKeepsItsDeclaredSizeWithoutQueueingIt(): void
+    {
+        $image = new EntryImage();
+
+        $image->storeUnverified('https://i/a.jpg', 800, 600);
+
+        self::assertSame('https://i/a.jpg', $image->getUrl());
+        self::assertSame(hash('sha256', 'https://i/a.jpg'), $image->getUrlHash());
+        self::assertSame(800, $image->getWidth());
+        self::assertSame(600, $image->getHeight());
+        self::assertNull($image->getCheckedAt());
+        self::assertFalse($image->isPendingVerification());
+        self::assertFalse($image->isMissing());
+    }
+
+    public function testStoringAUrlPendingAwaitsVerification(): void
+    {
+        $image = new EntryImage();
+
+        $image->storePending('https://i/a.jpg', null, null);
+
+        self::assertTrue($image->isPendingVerification());
+    }
+
     public function testStoringNoUrlPendingQueuesNothing(): void
     {
         $image = new EntryImage();
