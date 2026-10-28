@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AdminApi } from '../../../admin/admin-api';
 import { QueueDepthDto } from '../../../admin/admin.models';
@@ -31,6 +31,9 @@ export class QueuesSectionComponent {
   private readonly language = inject(LanguageService);
 
   readonly queues = signal<QueueDepthDto[]>([]);
+  readonly sortedQueues = computed(() =>
+    [...this.queues()].sort((left, right) => right.waiting - left.waiting),
+  );
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 

@@ -25,7 +25,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (queue of queues(); track queue.queue) {
+          @for (queue of sortedQueues(); track queue.queue) {
             <tr>
               <th scope="row">{{ 'settings.queues.name.' + queue.queue | transloco }}</th>
               <td class="waiting">{{ queue.waiting }}</td>

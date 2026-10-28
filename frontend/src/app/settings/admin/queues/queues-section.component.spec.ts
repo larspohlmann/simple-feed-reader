@@ -48,6 +48,27 @@ describe('QueuesSectionComponent', () => {
     expect(rows[1].querySelector('.oldest').textContent.trim()).toBe('—');
   });
 
+  it('lists the longest queue first and keeps the API order among ties', () => {
+    const fixture = mount();
+    respond([
+      { queue: 'transcripts', waiting: 1, oldestQueuedAt: null },
+      { queue: 'due_feeds', waiting: 52, oldestQueuedAt: null },
+      { queue: 'failed_messages', waiting: 0, oldestQueuedAt: null },
+      { queue: 'image_verification', waiting: 52, oldestQueuedAt: null },
+    ]);
+    fixture.detectChanges();
+
+    const names = Array.from(
+      fixture.nativeElement.querySelectorAll('tbody th[scope=row]') as NodeListOf<HTMLElement>,
+    ).map((cell) => cell.textContent?.trim());
+    expect(names).toEqual([
+      'Feeds due for refresh',
+      'Image verification',
+      'Transcripts',
+      'Failed worker messages',
+    ]);
+  });
+
   it('shows the age of the oldest waiting item', () => {
     jest.useFakeTimers({ now: new Date('2026-10-28T10:00:00Z') });
     const fixture = mount();
