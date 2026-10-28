@@ -249,3 +249,30 @@ Lars's verdict on the deployed-locally result: still too static — "many entrie
   4. pages 0 and 12 (the same template, `templateFor` cycles every 12) differ in their kinds — if the seeds happen to make them equal, compare another same-template pair within 60 entries and say which in the report; if none differ, report it rather than tuning the seed.
   Keep the mixed-page test as a property: the image-less entry stays `kicker`, and the page contains a `hero`/`wide`/`split`. Portrait and cap tests keep their exact expectations (the tallest slot is not jittered).
 - Break test: disable the jitter (always start at the ask) — property 4 must FAIL; quote it; restore by hand.
+
+---
+
+## Amendment 2 (/simplify altitude finding): relax the fit, delete the lift pass
+
+The lift post-pass re-walks the demotion ladder and re-checks the cap that `settle`/`withinBudget` already own. Fix it at the root instead: a page decides which **fit predicate** its slots are judged by, and the existing machinery does the rest.
+
+### Task 4: Page-level fit predicate replaces `liftFeaturelessPage`
+
+**Files:** `magazine-slot-fit.ts`, `magazine-page.ts`, `magazine-planner.ts`, delete `magazine-page-lift.ts`, `magazine-planner.spec.ts` (all under `frontend/src/app/reader/list/magazine/`).
+
+1. **`magazine-slot-fit.ts`**
+   - `export type SlotFit = (kind: TemplateKind, entry: EntryDto) => boolean;`
+   - Rename `fitsAtAnySize` → `fitsWithoutSizeFloor` and make it total: a non-image kind returns `fits(kind, entry)`; an image kind returns `hasPicture(entry)` and, for `hero`/`wide`, not portrait.
+   - `export interface SlotRules { readonly imageBar: ImageBar; readonly fit: SlotFit; }`; `settle(kind, entry, rules: SlotRules)`; `demoteUntilFit` and `promotedToImage` use `rules.fit` instead of `fits` (the image-bar check becomes `rules.fit(rules.imageBar, entry)`). Update every `settle` caller and its spec.
+2. **`magazine-page.ts`**: `PageLayout extends SlotRules` (keeps `pinned`); move the planner's `seed` here only if still needed by both files, else leave it in the planner.
+3. **`magazine-planner.ts`**
+   - `MagazineFamily` gains `readonly fitFor: (slice: readonly EntryDto[], pinned: readonly (PinnedShare | null)[]) => SlotFit`. `TEXT_FAMILY.fitFor = () => fits` (wire miniatures must never fill a `split`). `IMAGE_FAMILY.fitFor` = `fits` when some unpinned entry of the slice `fits('split', …)`, else `fitsWithoutSizeFloor`.
+   - `layOutPage` builds `layout = { pinned, imageBar, fit: family.fitFor(slice, pinned) }`; `assign`'s look-ahead uses `layout.fit`; `withinBudget`'s post-assign demote calls `settle(…, layout)`.
+   - Seeded jitter moves into the `wanted` resolution: on a page whose fit is `fitsWithoutSizeFloor`, every image kind in `wanted` except the first tallest one demotes one `DEMOTION` step when `seed(page, position + 211) < 1/3`. Keep it one small named function.
+   - Delete `magazine-page-lift.ts` and its call; delete `hasLargeImageBlock`/`liftSlot`/`nextToLift`.
+   - Stay within max-params 3 / max-lines 300; no boolean flag params.
+4. **Tests** (`magazine-planner.spec.ts`, plus `magazine-slot-fit.spec.ts` for the `settle` signature):
+   - All existing #1852 tests stay, expectations unchanged, except the cap test: the first budget pass now demotes the asked hero beside the pinned media share hero→wide→split (1246 → 1104 → 933), so expect `['split', 'media']` at 6–7. Every other spec in the folder must pass unchanged — any other failure is a bug, not an expectation to update.
+   - Hoist the repeated `['hero', 'wide', 'split']` in the spec into one `const LARGE_IMAGE_KINDS`.
+   - Break test: make `IMAGE_FAMILY.fitFor` always return `fits` → the rhythm property tests FAIL (quote); restore by hand.
+5. Run the magazine folder, then `npm run check` (exit 0). Commit `refactor(#1852): a page picks its slot fit; the lift pass goes`.
