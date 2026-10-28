@@ -10,9 +10,11 @@
 
 .queues th,
 .queues td {
-  padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
+  padding: var(--row-pad-y) var(--row-pad-x);
   border-bottom: 1px solid var(--border);
   text-align: left;
+  // body's `anywhere` lets the auto table layout squeeze a column below its longest word.
+  overflow-wrap: break-word;
 }
 
 .queues thead th {
@@ -27,5 +29,8 @@
 
 .queues .oldest {
   color: var(--text-secondary);
+}
+
+.queues tbody .oldest {
   white-space: nowrap;
 }
