@@ -592,7 +592,7 @@
       "loading": "Loading queues",
       "queue": "Queue",
       "waiting": "Waiting",
-      "oldest": "Oldest waiting since",
+      "oldest": "Oldest",
       "name": {
         "failed_messages": "Failed worker messages",
         "recommendation_runs": "Recommendation runs",

@@ -592,7 +592,7 @@
       "loading": "Warteschlangen werden geladen",
       "queue": "Warteschlange",
       "waiting": "Wartend",
-      "oldest": "Ältestes wartet seit",
+      "oldest": "Ältestes",
       "name": {
         "failed_messages": "Fehlgeschlagene Worker-Nachrichten",
         "recommendation_runs": "Empfehlungsläufe",
