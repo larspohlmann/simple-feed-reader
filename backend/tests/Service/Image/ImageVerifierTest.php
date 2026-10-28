@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
+use App\Enum\SocialNetwork;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\Exception\GuardedImageRejectedException;
 use App\Service\Image\Exception\GuardedImageUnavailableException;
@@ -56,6 +57,22 @@ final class ImageVerifierTest extends TestCase
             RenditionProbes::over($probe ?? new StubGuardedImageProbe()),
             $probedLadders ?? new StubProbedLadders(),
         );
+    }
+
+    public function testASocialFeedsImageIsMeasuredButNeverProbed(): void
+    {
+        $lead = 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:abc/cid@jpeg';
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes($lead, PngImageFactory::bytes(1600, 900));
+        $probe = new StubGuardedImageProbe();
+        $entry = $this->pendingImage($lead);
+        $entry->getFeed()->classifyAs(SocialNetwork::Bluesky);
+
+        $outcome = $this->verifier($downloader, $probe)->verify($entry);
+
+        self::assertSame(ImageVerifyOutcome::Measured, $outcome);
+        self::assertSame(1600, $entry->getImage()->getWidth());
+        self::assertSame([], $probe->requestedUrls());
     }
 
     public function testAnImageMeasuredBeforeHandsOnItsLadderWithoutAProbeRequest(): void

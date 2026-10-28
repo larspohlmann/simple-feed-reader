@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Image;
 
 use App\Entity\Entry;
-use App\Entity\EntryImage;
 use App\Entity\ImageRendition;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\Exception\GuardedImageRejectedException;
@@ -18,8 +17,9 @@ use App\Service\Image\ProbedLadder\ProbedLadderInterface;
 
 /**
  * Verifies one pending image via the SSRF-guarded downloader, retrying a bounded number of times before dropping it,
- * and probes the size variants the list views need, once per image URL. A refusal the downloader cannot recover from
- * keeps the image unmeasured instead — a browser may still render it.
+ * and probes the size variants the list views need, once per image URL and never for a social network's feed, whose
+ * CDN serves fixed variants by path. A refusal the downloader cannot recover from keeps the image unmeasured instead —
+ * a browser may still render it.
  */
 final readonly class ImageVerifier
 {
@@ -68,13 +68,17 @@ final readonly class ImageVerifier
         }
 
         $entry->getImage()->recordMeasurement($dimensions->width, $dimensions->height, $this->clock->now());
-        $this->addProbedRungs($entry->getImage(), $url, $dimensions);
+        $this->addProbedRungs($entry, $url, $dimensions);
 
         return ImageVerifyOutcome::Measured;
     }
 
-    private function addProbedRungs(EntryImage $image, string $url, ImageDimensionsModel $dimensions): void
+    private function addProbedRungs(Entry $entry, string $url, ImageDimensionsModel $dimensions): void
     {
+        if ($entry->getFeed()->getNetwork() !== null) {
+            return;
+        }
+        $image = $entry->getImage();
         $known = $image->getRenditions();
         $probed = $this->probedLadders->findProbedLadder($url)
             ?? $this->renditionProbe->rungsFor(new LeadImageModel($url, $dimensions, $known));
