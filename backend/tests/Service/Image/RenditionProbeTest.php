@@ -42,4 +42,22 @@ final class RenditionProbeTest extends TestCase
 
         self::assertEquals([new ImageRendition($base . '-768x432.jpg', 768)], $rungs);
     }
+
+    public function testALeadWhoseWidthsCoverEveryBandMakesNoRequest(): void
+    {
+        $base = 'https://h.example/wp-content/uploads/a';
+        $probe = new StubGuardedImageProbe();
+
+        $rungs = RenditionProbes::over($probe)->rungsFor(new LeadImageModel(
+            $base . '-1152x648.jpg',
+            new ImageDimensionsModel(1152, 648),
+            array_map(
+                static fn (int $width): ImageRendition => new ImageRendition($base . '-' . $width . '.jpg', $width),
+                [264, 520, 680, 1100, 1360],
+            ),
+        ));
+
+        self::assertSame([], $rungs);
+        self::assertSame([], $probe->requestedUrls());
+    }
 }
