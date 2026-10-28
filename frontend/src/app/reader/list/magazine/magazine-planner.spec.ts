@@ -743,6 +743,11 @@ describe('planMagazine', () => {
     expect(ks.slice(6, 8)).toEqual(['wide', 'media']);
   });
 
+  it('never lifts a text-family page to a larger image block', () => {
+    const ks = kinds(planMagazine({ entries: many(18, wire), grouping: false, complete: true }));
+    expect(ks.filter((kind) => ['hero', 'wide', 'split'].includes(kind))).toEqual([]);
+  });
+
   it('is prefix-stable for a small-thumbnail feed', () => {
     const entries = many(40, smallThumb);
     const full = planned(planMagazine({ entries, grouping: false, complete: true }));

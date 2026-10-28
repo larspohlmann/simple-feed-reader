@@ -5,14 +5,14 @@ import { BLOCK_HEIGHT, ShareKind, TemplateKind } from './magazine-block';
  *  screens. Without it three heroes can land in one page. */
 export const PAGE_HEIGHT_CAP = 1100;
 
-/** The share block each entry of a page claims (null where the template decides), and the image
- *  bar its family holds the page to. */
+/** The share block an entry claims in place of its template slot. */
 export interface PinnedShare {
   readonly kind: ShareKind;
   /** A quote share takes its height from its entry (#1612). */
   readonly height: number;
 }
 
+/** The share each entry of a page claims (null where the template decides), and the image bar its family holds the page to. */
 export interface PageLayout {
   readonly pinned: readonly (PinnedShare | null)[];
   readonly imageBar: ImageBar;
