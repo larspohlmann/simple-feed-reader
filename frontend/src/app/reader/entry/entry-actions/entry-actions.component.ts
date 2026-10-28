@@ -43,7 +43,7 @@ export class EntryActionsComponent {
     return this.like() ? likeableSocial(this.entry()) : null;
   });
   protected readonly entryAudio = new EntryAudio(
-    this.entry,
+    { entry: this.entry },
     inject(AudioPlayerService),
     inject(ListenLauncher),
   );

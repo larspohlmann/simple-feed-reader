@@ -19,7 +19,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
 function setUp(subject: EntryDto | null = entry()) {
   const player = new StubAudioPlayer();
   const audio = new EntryAudio(
-    () => subject,
+    { entry: () => subject },
     player.asService(),
     new StubListenLauncher(player).asService(),
   );
@@ -56,10 +56,9 @@ describe('EntryAudio', () => {
     const chapters = signal<ChapterDto[]>([]);
     const player = new StubAudioPlayer();
     const audio = new EntryAudio(
-      () => entry(),
+      { entry: () => entry(), chapters },
       player.asService(),
       new StubListenLauncher(player).asService(),
-      chapters,
     );
     expect(audio.track()).not.toHaveProperty('chapters');
 
@@ -72,10 +71,9 @@ describe('EntryAudio', () => {
     const chapters = signal<ChapterDto[]>([]);
     const player = new StubAudioPlayer();
     const audio = new EntryAudio(
-      () => entry(),
+      { entry: () => entry(), chapters },
       player.asService(),
       new StubListenLauncher(player).asService(),
-      chapters,
     );
 
     audio.shareChapters();
@@ -157,7 +155,7 @@ describe('EntryAudio', () => {
   it('starts the track through the launcher, which may ask first (#1866)', () => {
     const player = new StubAudioPlayer();
     const listen = jest.fn();
-    const audio = new EntryAudio(() => entry(), player.asService(), {
+    const audio = new EntryAudio({ entry: () => entry() }, player.asService(), {
       listen,
     } as unknown as ListenLauncher);
 

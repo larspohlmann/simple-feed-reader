@@ -172,10 +172,9 @@ export class ReaderViewComponent {
   /** The entry's first playable audio enclosure, surfaced as a listen control
    *  above the article; its attachment is null when the feed declared none (#915). */
   protected readonly audio = new EntryAudio(
-    this.entry,
+    { entry: this.entry, chapters: this.source.chapters },
     inject(AudioPlayerService),
     inject(ListenLauncher),
-    this.source.chapters,
   );
 
   /** Summary plus player is the whole of an audio-first entry whose page holds no article (#1428). */

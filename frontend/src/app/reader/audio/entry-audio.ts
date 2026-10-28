@@ -6,15 +6,25 @@ import { ChapterDto, EntryDto } from '../models';
 import { formatDuration } from '../format';
 import { ListenLauncher } from './listen-launcher';
 
+/** What an entry's audio is made of: the entry, and its chapters once they load. */
+export interface EntryAudioSource {
+  readonly entry: () => EntryDto | null | undefined;
+  readonly chapters?: () => ChapterDto[];
+}
+
 /** An entry's audio enclosure as the player sees it, with the controls the
  *  article view and the list rows share (#1436). */
 export class EntryAudio {
-  readonly attachment = computed(() => firstAudioAttachment(this.entry()?.attachments ?? []));
+  readonly attachment = computed(() =>
+    firstAudioAttachment(this.source.entry()?.attachments ?? []),
+  );
 
   readonly track = computed(() => {
-    const entry = this.entry();
+    const entry = this.source.entry();
     const attachment = this.attachment();
-    return entry && attachment ? toAudioTrack(entry, attachment, this.chapters()) : null;
+    return entry && attachment
+      ? toAudioTrack(entry, attachment, this.source.chapters?.() ?? [])
+      : null;
   });
 
   /** The feed-declared length as `m:ss`, or null when the feed declares none. */
@@ -33,12 +43,10 @@ export class EntryAudio {
     return track !== null && this.player.playing() && this.player.current()?.url === track.url;
   });
 
-  // eslint-disable-next-line @typescript-eslint/max-params -- the brief fixes this signature
   constructor(
-    private readonly entry: () => EntryDto | null | undefined,
+    private readonly source: EntryAudioSource,
     private readonly player: AudioPlayerService,
     private readonly launcher: ListenLauncher,
-    private readonly chapters: () => ChapterDto[] = () => [],
   ) {}
 
   play(): void {
