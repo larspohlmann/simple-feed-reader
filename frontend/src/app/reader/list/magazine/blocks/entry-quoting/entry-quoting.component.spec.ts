@@ -5,6 +5,7 @@ import { EntryQuotingComponent } from './entry-quoting.component';
 import { EntryDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { aQuotedPost, anEntry } from '../../../../../../testing/entry-testing';
+import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
 
 const entryActions = { open: jest.fn() };
 
@@ -23,7 +24,11 @@ const quoting = (over: Partial<EntryDto> = {}): EntryDto =>
 function mount(entry: EntryDto): HTMLElement {
   TestBed.configureTestingModule({
     imports: [EntryQuotingComponent, provideTranslocoTesting()],
-    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+    providers: [
+      provideAccountIdentity(),
+      { provide: EntryActionHandler, useValue: entryActions },
+      provideRouter([]),
+    ],
   });
   const fixture = TestBed.createComponent(EntryQuotingComponent);
   fixture.componentRef.setInput('entry', entry);

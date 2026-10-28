@@ -1,5 +1,6 @@
 import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { AudioPlayerService } from '../../audio-player.service';
 import { TranscriptDto } from '../../models';
 import { ArticleTranscript } from './article-transcript';
@@ -30,7 +31,10 @@ function transcript(): ArticleTranscript {
 }
 
 describe('ArticleTranscript', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({ providers: [provideAccountIdentity()] });
+  });
 
   it('leaves one section after attaching twice', () => {
     const host = document.createElement('div');

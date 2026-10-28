@@ -12,8 +12,8 @@ import {
   select,
   withDetails,
 } from './audio/playlist';
-import { PlaylistStore, type SavedPlaylist } from './audio/playlist.store';
-import { PlaylistPersistence } from './audio/playlist-persistence';
+import { PlaylistStore } from './audio/playlist.store';
+import { PlaybackMemory } from './audio/playback-memory';
 import { AudioDeck } from './audio/audio-deck';
 import type { PlaybackElement } from './audio/playback/playback-element';
 import {
@@ -21,6 +21,7 @@ import {
   playbackSlotFactory,
   providerPlayback,
 } from './audio/playback/playback-slots';
+import { ListenPositions } from './audio/listen-positions';
 import { cachedEnd } from './audio/cached-end';
 import { AudioTrack, TrackDetails } from './audio/audio-track';
 import { reflectInMediaSession } from './audio/media-session-reflection';
@@ -73,8 +74,10 @@ export class AudioPlayerService {
       error: () => this.onError(),
     },
   );
-  private readonly persistence = new PlaylistPersistence(inject(PlaylistStore), () =>
-    this.snapshot(),
+  private readonly memory = new PlaybackMemory(
+    inject(PlaylistStore),
+    inject(ListenPositions),
+    () => ({ playlist: this._playlist(), position: this._position(), duration: this._duration() }),
   );
   private readonly playbackRate = inject(PlaybackRate);
 
@@ -132,7 +135,7 @@ export class AudioPlayerService {
     );
     this.restore();
     this.deck.setRate(this.rate());
-    this.persistence.saveOnPageHide(inject(DestroyRef));
+    this.memory.saveOnPageHide(inject(DestroyRef));
     onIdentityChange(() => this.stop());
   }
 
@@ -234,6 +237,7 @@ export class AudioPlayerService {
   }
 
   stop(): void {
+    this.memory.rememberPlace();
     this.element.pause();
     this.deck.release();
     this._playlist.set(EMPTY_PLAYLIST);
@@ -241,7 +245,7 @@ export class AudioPlayerService {
     this._position.set(0);
     this._duration.set(0);
     this._buffered.set(0);
-    this.persistence.save();
+    this.memory.saveQueue();
   }
 
   private seekToChapterStart(start: number | null): void {
@@ -258,10 +262,11 @@ export class AudioPlayerService {
     const track = currentTrack(playlist);
     if (!track) return this.stop();
     const changed = track.url !== this.current()?.url;
+    if (changed) this.memory.rememberPlace();
     this._playlist.set(playlist);
     if (changed) this.load(track);
     else if (this._duration() === 0) this._duration.set(track.durationInSeconds ?? 0);
-    this.persistence.save();
+    this.memory.saveQueue();
     this.precacheNext();
   }
 
@@ -299,7 +304,7 @@ export class AudioPlayerService {
   private onTimeUpdate(): void {
     this._position.set(this.element.currentTime);
     this.onProgress();
-    this.persistence.saveThrottled();
+    this.memory.saveThrottled();
   }
 
   private onProgress(): void {
@@ -316,7 +321,7 @@ export class AudioPlayerService {
 
   private onPlaying(playing: boolean): void {
     this._playing.set(playing);
-    if (!playing) this.persistence.save();
+    if (!playing) this.memory.savePaused();
   }
 
   /** A dead enclosure (an expired podcast link) never ends, so it is skipped; a dropped
@@ -327,11 +332,12 @@ export class AudioPlayerService {
       return;
     }
     this._playing.set(false);
-    this.persistence.save();
+    this.memory.saveQueue();
   }
 
   private playNextOrStop(): void {
     if (this.hasNext()) return this.next();
+    this.memory.rememberPlace();
     this._playing.set(false);
   }
 
@@ -351,7 +357,7 @@ export class AudioPlayerService {
   }
 
   private restore(): void {
-    const saved = this.persistence.load();
+    const saved = this.memory.load();
     if (!saved) return;
     const track = currentTrack(saved.playlist);
     if (!track) return;
@@ -359,11 +365,6 @@ export class AudioPlayerService {
     this.load(track);
     this._position.set(saved.position);
     this.pendingSeek = saved.position;
-  }
-
-  private snapshot(): SavedPlaylist | null {
-    if (!this.current()) return null;
-    return { playlist: this._playlist(), position: this._position() };
   }
 
   private get element(): PlaybackElement {

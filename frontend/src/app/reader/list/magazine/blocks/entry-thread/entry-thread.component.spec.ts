@@ -10,6 +10,7 @@ import { ImageProxyService } from '../../../../../shared/proxied-image/image-pro
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
 import { aLinkCard, aQuotedPost, anEntry } from '../../../../../../testing/entry-testing';
 import { aThreadPost } from '../../../../../../testing/thread-testing';
+import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -42,6 +43,7 @@ function mount(testEntry: EntryDto): HTMLElement {
   TestBed.configureTestingModule({
     imports: [EntryThreadComponent, provideTranslocoTesting()],
     providers: [
+      provideAccountIdentity(),
       { provide: EntryActionHandler, useValue: entryActions },
       { provide: LinkReaderNavigation, useValue: navigation },
       { provide: PreviewProgress, useValue: { isLoading: () => true } },

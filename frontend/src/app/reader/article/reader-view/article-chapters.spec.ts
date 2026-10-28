@@ -1,5 +1,6 @@
 import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import {
   deliverMessage,
   messagesOf,
@@ -38,7 +39,10 @@ function chapters(): ArticleChapters {
 }
 
 describe('ArticleChapters', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({ providers: [provideAccountIdentity()] });
+  });
 
   it('puts a video list after the cinema box of the API player', () => {
     const host = document.createElement('div');

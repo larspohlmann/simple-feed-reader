@@ -7,6 +7,7 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { anEntry } from '../../../../testing/entry-testing';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -30,7 +31,11 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
 function mount(testEntry: EntryDto, arrange?: () => void) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
-    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+    providers: [
+      provideAccountIdentity(),
+      { provide: EntryActionHandler, useValue: entryActions },
+      provideRouter([]),
+    ],
   });
   arrange?.();
   const fixture = TestBed.createComponent(EntryDuplicatesComponent);

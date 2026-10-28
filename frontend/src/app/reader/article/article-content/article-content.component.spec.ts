@@ -6,6 +6,7 @@ import { ArticleContentComponent } from './article-content.component';
 import { ListAutoplayService } from '../../../core/preferences/list-autoplay.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 @Component({
   imports: [ArticleContentComponent],
@@ -26,6 +27,7 @@ describe('ArticleContentComponent', () => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
+        provideAccountIdentity(),
         { provide: ListAutoplayService, useValue: { enabled: signal(false) } },
         NO_EMBED_DETAILS,
       ],

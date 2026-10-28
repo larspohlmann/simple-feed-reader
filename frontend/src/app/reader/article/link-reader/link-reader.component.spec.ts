@@ -16,6 +16,7 @@ import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/i
 import { LinkReaderComponent } from './link-reader.component';
 import { LinkArticleSource } from './link-article-source.service';
 import { ReaderRouteState } from '../../shell/reader-route-state.service';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 const FIRST_LINK: SignedUrl = { url: 'https://news.test/story', token: A_READER_TOKEN };
 const SECOND_LINK: SignedUrl = { url: 'https://news.test/second', token: A_READER_TOKEN };
@@ -50,6 +51,7 @@ describe('LinkReaderComponent', () => {
     TestBed.configureTestingModule({
       imports: [LinkReaderComponent, provideTranslocoTesting()],
       providers: [
+        provideAccountIdentity(),
         LinkArticleSource,
         { provide: ReaderRouteState, useValue: routeState },
         { provide: ReaderContentService, useValue: { load: loadTarget, reload: reloadTarget } },

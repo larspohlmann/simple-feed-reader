@@ -8,6 +8,7 @@ import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeSubscription } from '../../testing/subscription.factory';
 import { anEntry } from '../../../../testing/entry-testing';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -32,7 +33,11 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
 function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imageShown?: boolean) {
   TestBed.configureTestingModule({
     imports: [EntryMetaComponent, provideTranslocoTesting()],
-    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+    providers: [
+      provideAccountIdentity(),
+      { provide: EntryActionHandler, useValue: entryActions },
+      provideRouter([]),
+    ],
   });
   const fixture = TestBed.createComponent(EntryMetaComponent);
   fixture.componentRef.setInput('entry', testEntry);
@@ -99,7 +104,11 @@ describe('EntryMetaComponent', () => {
     const testEntry = { ...anEntry(), subscriptionId: 7 };
     TestBed.configureTestingModule({
       imports: [EntryMetaComponent, provideTranslocoTesting()],
-      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+      providers: [
+        provideAccountIdentity(),
+        { provide: EntryActionHandler, useValue: entryActions },
+        provideRouter([]),
+      ],
     });
     TestBed.inject(SubscriptionRows).stored.set([
       makeSubscription({ id: 7, social: { network: 'mastodon', accountId: 1, kind: 'home' } }),

@@ -40,6 +40,7 @@ import { EntryMediumDto } from '../../entry-medium';
 import { PostMediaComponent } from '../../media/post-media/post-media.component';
 import { EntryCommentDto } from '../../entry-comment';
 import { authorlessHomePost, holdUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -175,6 +176,7 @@ describe('ReaderViewComponent', () => {
     TestBed.configureTestingModule({
       imports: [ReaderViewComponent, provideTranslocoTesting()],
       providers: [
+        provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
         { provide: LinkReaderNavigation, useValue: { layer: jest.fn() } },

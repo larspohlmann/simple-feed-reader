@@ -21,6 +21,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { TrackDetails, chaptersOnly } from '../../audio/audio-track';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { EmbedMedia } from '../../audio/embed-media';
+import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
@@ -129,6 +130,7 @@ describe('ArticleBody', () => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
+        provideAccountIdentity(),
         { provide: ImageProxyService, useValue: imageProxy },
         { provide: EmbedDetailsApi, useValue: { detailsOf: embedDetails } },
       ],

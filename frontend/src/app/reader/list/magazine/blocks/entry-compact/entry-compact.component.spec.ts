@@ -9,6 +9,7 @@ import {
   SHORT_PLAYER_URL,
 } from '../../../../../../testing/short-marking-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
+import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -40,7 +41,11 @@ describe('EntryCompactComponent', () => {
   function mount(testEntry: EntryDto = entry) {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+      providers: [
+        provideAccountIdentity(),
+        { provide: EntryActionHandler, useValue: entryActions },
+        provideRouter([]),
+      ],
     });
     const fixture = TestBed.createComponent(EntryCompactComponent);
     fixture.componentRef.setInput('entry', testEntry);
@@ -79,7 +84,11 @@ describe('EntryCompactComponent', () => {
   it('shows a one-line dek when the entry has a summary (#515)', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+      providers: [
+        provideAccountIdentity(),
+        { provide: EntryActionHandler, useValue: entryActions },
+        provideRouter([]),
+      ],
     });
     const fixture = TestBed.createComponent(EntryCompactComponent);
     fixture.componentRef.setInput('entry', { ...entry, excerpt: 'A short description.' });
@@ -98,7 +107,10 @@ describe('EntryCompactComponent', () => {
 
   it('hides the source when showSource is false', () => {
     TestBed.configureTestingModule({
-      providers: [{ provide: EntryActionHandler, useValue: entryActions }],
+      providers: [
+        provideAccountIdentity(),
+        { provide: EntryActionHandler, useValue: entryActions },
+      ],
       imports: [EntryCompactComponent, provideTranslocoTesting()],
     });
     const fixture = TestBed.createComponent(EntryCompactComponent);
@@ -113,7 +125,11 @@ describe('EntryCompactComponent', () => {
   it('shows tag pills when standalone', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+      providers: [
+        provideAccountIdentity(),
+        { provide: EntryActionHandler, useValue: entryActions },
+        provideRouter([]),
+      ],
     });
     const fixture = TestBed.createComponent(EntryCompactComponent);
     fixture.componentRef.setInput('entry', entry);
@@ -127,7 +143,11 @@ describe('EntryCompactComponent', () => {
   it('hides tag pills inside a source group (showSource=false)', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+      providers: [
+        provideAccountIdentity(),
+        { provide: EntryActionHandler, useValue: entryActions },
+        provideRouter([]),
+      ],
     });
     const fixture = TestBed.createComponent(EntryCompactComponent);
     fixture.componentRef.setInput('entry', entry);

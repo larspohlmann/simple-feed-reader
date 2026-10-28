@@ -6,6 +6,7 @@ import { EntryDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { describeShortPill } from '../../../../../../testing/short-marking-testing';
 import { anEntry } from '../../../../../../testing/entry-testing';
+import { provideAccountIdentity } from '../../../../../../testing/account-identity-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -32,7 +33,11 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
 function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryKickerComponent, provideTranslocoTesting()],
-    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+    providers: [
+      provideAccountIdentity(),
+      { provide: EntryActionHandler, useValue: entryActions },
+      provideRouter([]),
+    ],
   });
   const fixture = TestBed.createComponent(EntryKickerComponent);
   fixture.componentRef.setInput('entry', testEntry);
