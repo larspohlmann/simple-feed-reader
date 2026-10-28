@@ -234,16 +234,6 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         );
     }
 
-    /**
-     * @param list<ShareEnrichment> $rows
-     *
-     * @return list<string>
-     */
-    private static function guidsOf(array $rows): array
-    {
-        return array_map(static fn (ShareEnrichment $pending): string => $pending->getEntry()->getGuid(), $rows);
-    }
-
     public function testTheBacklogOfAKindCountsItsUnfinishedRows(): void
     {
         $feed = $this->feed('https://example.test/a.xml');
@@ -267,6 +257,16 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         $this->repository()->markDone($claimed, $this->now());
 
         self::assertSame(0, $this->backlogs()->backlogOf(ShareEnrichmentKind::LinkCards)->waiting);
+    }
+
+    /**
+     * @param list<ShareEnrichment> $rows
+     *
+     * @return list<string>
+     */
+    private static function guidsOf(array $rows): array
+    {
+        return array_map(static fn (ShareEnrichment $pending): string => $pending->getEntry()->getGuid(), $rows);
     }
 
     /** @return list<Entry> */

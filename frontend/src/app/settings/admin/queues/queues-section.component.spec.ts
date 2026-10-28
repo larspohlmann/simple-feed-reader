@@ -32,7 +32,10 @@ describe('QueuesSectionComponent', () => {
     http.expectOne(ENDPOINT).flush({ queues });
   }
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    jest.useRealTimers();
+  });
 
   it('lists every queue with its waiting count', () => {
     const fixture = mount();
@@ -78,7 +81,6 @@ describe('QueuesSectionComponent', () => {
     expect(fixture.nativeElement.querySelector('tbody .oldest').textContent.trim()).toBe(
       '3 hr. ago',
     );
-    jest.useRealTimers();
   });
 
   it('reloads on refresh', () => {
