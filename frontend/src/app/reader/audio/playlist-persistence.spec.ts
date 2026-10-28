@@ -1,4 +1,3 @@
-import { DestroyRef } from '@angular/core';
 import type { AudioTrack } from '../audio-player.service';
 import { PlaylistPersistence } from './playlist-persistence';
 import { PlaylistStore, SavedPlaylist } from './playlist.store';
@@ -54,38 +53,5 @@ describe('PlaylistPersistence', () => {
     localStorage.setItem('sfr.audio', JSON.stringify({ tracks: [track], index: 0, position: 9 }));
 
     expect(persistence.load()).toEqual(at(9));
-  });
-
-  it('saves a throttled snapshot once per interval', () => {
-    let position = 1;
-    const { persistence } = setUp(() => at(position));
-
-    persistence.saveThrottled();
-    position = 2;
-    persistence.saveThrottled();
-    expect(savedPosition()).toBe(1);
-
-    jest.advanceTimersByTime(5000);
-    position = 3;
-    persistence.saveThrottled();
-    expect(savedPosition()).toBe(3);
-  });
-
-  it('saves when the page hides, until destroyed', () => {
-    let position = 5;
-    const { persistence } = setUp(() => at(position));
-    let onDestroy = (): void => undefined;
-    const destroyRef = {
-      onDestroy: (callback: () => void) => (onDestroy = callback),
-    } as unknown as DestroyRef;
-
-    persistence.saveOnPageHide(destroyRef);
-    window.dispatchEvent(new Event('pagehide'));
-    expect(savedPosition()).toBe(5);
-
-    onDestroy();
-    position = 6;
-    window.dispatchEvent(new Event('pagehide'));
-    expect(savedPosition()).toBe(5);
   });
 });

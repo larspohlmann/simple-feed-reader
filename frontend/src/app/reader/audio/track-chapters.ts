@@ -2,6 +2,16 @@ import { Signal, computed } from '@angular/core';
 import { PlaybackPosition } from '../chapters/chapter-player';
 import { ChapterProgress, chapterProgress, currentChapterIndex } from '../chapters/current-chapter';
 import type { ChapterDto } from '../models';
+import type { AudioTrack } from './audio-track';
+
+/** Past this, previous restarts the current track or chapter instead of stepping back (#1429). */
+export const RESTART_THRESHOLD_SECONDS = 3;
+
+export interface ChapterNavigationPlayer {
+  current(): AudioTrack | null;
+  seek(seconds: number): void;
+  playFrom(track: AudioTrack, seconds: number): void;
+}
 
 /** Where previous chapter seeks to, or null when there is nowhere to go: the current chapter's
  *  start once `position` is past it by more than `threshold` (like `previous()` on a track),
@@ -28,7 +38,7 @@ export interface ChapterPlayhead {
   readonly progress: ChapterProgress | null;
 }
 
-/** The playing track's chapters, followed from the player's position (#1810). */
+/** Follows the playing track's chapters and moves the player between them (#1810, #1814). */
 export class TrackChapters {
   private readonly starts = computed(() => this.chapters().map((chapter) => chapter.startSeconds));
   /** -1 before the first chapter and without chapters. */
@@ -44,7 +54,7 @@ export class TrackChapters {
     return index === -1 ? null : { index, progress: this.progress() };
   });
   readonly previousStart = computed(() =>
-    previousChapterStart(this.starts(), this.position().seconds, this.restartThreshold),
+    previousChapterStart(this.starts(), this.position().seconds, RESTART_THRESHOLD_SECONDS),
   );
   readonly nextStart = computed(() => nextChapterStart(this.starts(), this.position().seconds));
   readonly hasPrevious = computed(() => this.previousStart() !== null);
@@ -53,6 +63,24 @@ export class TrackChapters {
   constructor(
     private readonly chapters: Signal<readonly ChapterDto[]>,
     private readonly position: Signal<PlaybackPosition>,
-    private readonly restartThreshold: number,
+    private readonly player: ChapterNavigationPlayer,
   ) {}
+
+  previous(): void {
+    this.seekToStart(this.previousStart());
+  }
+
+  next(): void {
+    this.seekToStart(this.nextStart());
+  }
+
+  play(index: number): void {
+    const track = this.player.current();
+    const chapter = this.chapters()[index];
+    if (track && chapter) this.player.playFrom(track, chapter.startSeconds);
+  }
+
+  private seekToStart(start: number | null): void {
+    if (start !== null) this.player.seek(start);
+  }
 }

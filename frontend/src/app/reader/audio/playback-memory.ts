@@ -5,6 +5,8 @@ import { Playlist, currentTrack } from './playlist';
 import { PlaylistPersistence } from './playlist-persistence';
 import { PlaylistStore, type SavedPlaylist } from './playlist.store';
 
+const SAVE_INTERVAL_MS = 5000;
+
 interface PlayerState {
   playlist: Playlist;
   position: number;
@@ -26,6 +28,7 @@ function placeSnapshot(state: PlayerState): SavedPosition | null {
 export class PlaybackMemory {
   private readonly playlist: PlaylistPersistence;
   private readonly places: ListenPositionRecorder;
+  private lastSaveAt = 0;
 
   constructor(store: PlaylistStore, positions: ListenPositions, state: () => PlayerState) {
     this.playlist = new PlaylistPersistence(store, () => playlistSnapshot(state()));
@@ -54,12 +57,14 @@ export class PlaybackMemory {
   }
 
   saveThrottled(): void {
-    this.playlist.saveThrottled();
-    this.places.recordThrottled();
+    if (Date.now() - this.lastSaveAt < SAVE_INTERVAL_MS) return;
+    this.lastSaveAt = Date.now();
+    this.savePaused();
   }
 
   saveOnPageHide(destroyRef: DestroyRef): void {
-    this.playlist.saveOnPageHide(destroyRef);
-    this.places.recordOnPageHide(destroyRef);
+    const save = (): void => this.savePaused();
+    window.addEventListener('pagehide', save);
+    destroyRef.onDestroy(() => window.removeEventListener('pagehide', save));
   }
 }

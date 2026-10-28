@@ -6,7 +6,6 @@ import { ChapterDto, EntryDto } from '../models';
 import { formatDuration } from '../format';
 import { ListenLauncher } from './listen-launcher';
 
-/** What an entry's audio is made of: the entry, and its chapters once they load. */
 export interface EntryAudioSource {
   readonly entry: () => EntryDto | null | undefined;
   readonly chapters?: () => ChapterDto[];

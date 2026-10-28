@@ -21,15 +21,18 @@ export class ListenPositions {
   }
 
   remember(position: SavedPosition): void {
-    this.write([position, ...this.without(position.url)].slice(0, KEPT_POSITIONS));
+    this.write(
+      [position, ...this.all().filter((saved) => saved.url !== position.url)].slice(
+        0,
+        KEPT_POSITIONS,
+      ),
+    );
   }
 
   forget(url: string): void {
-    if (this.get(url)) this.write(this.without(url));
-  }
-
-  private without(url: string): SavedPosition[] {
-    return this.all().filter((saved) => saved.url !== url);
+    const all = this.all();
+    const kept = all.filter((saved) => saved.url !== url);
+    if (kept.length !== all.length) this.write(kept);
   }
 
   private all(): SavedPosition[] {

@@ -26,7 +26,7 @@ import { cachedEnd } from './audio/cached-end';
 import { AudioTrack, TrackDetails } from './audio/audio-track';
 import { reflectInMediaSession } from './audio/media-session-reflection';
 import { PlaybackRate } from './audio/playback-rate';
-import { ChapterControls } from './audio/chapter-controls';
+import { RESTART_THRESHOLD_SECONDS, TrackChapters } from './audio/track-chapters';
 import { PlaybackPosition } from './chapters/chapter-player';
 
 export type { AudioTrack, AudioTrackEntry, TrackDetails } from './audio/audio-track';
@@ -45,8 +45,7 @@ export const FRAME_PLAYBACK_FACTORY = new InjectionToken<FramePlaybackFactory>(
 
 /** Jump size for the skip controls and the OS seek keys (#915). */
 export const SKIP_SECONDS = 15;
-/** Past this, previous restarts the current track instead of stepping back (#1429). */
-export const RESTART_THRESHOLD_SECONDS = 3;
+export { RESTART_THRESHOLD_SECONDS };
 
 /**
  * The reader's single audio player. It owns its playback elements in code, never
@@ -106,18 +105,11 @@ export class AudioPlayerService {
     seconds: this._position(),
     durationSeconds: this._duration() > 0 ? this._duration() : null,
   }));
-  readonly chapterControls = new ChapterControls(
-    {
-      chapters: this.chapters,
-      position: this.playbackPosition,
-      restartThreshold: RESTART_THRESHOLD_SECONDS,
-    },
-    {
-      current: () => this.current(),
-      seek: (seconds) => this.seek(seconds),
-      playFrom: (track, seconds) => this.playFrom(track, seconds),
-    },
-  );
+  readonly chapterControls = new TrackChapters(this.chapters, this.playbackPosition, {
+    current: () => this.current(),
+    seek: (seconds) => this.seek(seconds),
+    playFrom: (track, seconds) => this.playFrom(track, seconds),
+  });
 
   private pendingSeek: number | null = null;
 

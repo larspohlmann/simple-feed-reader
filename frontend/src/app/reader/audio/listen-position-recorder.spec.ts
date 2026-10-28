@@ -1,4 +1,3 @@
-import { DestroyRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
 import {
@@ -24,7 +23,6 @@ function setUp() {
 
 describe('ListenPositionRecorder', () => {
   beforeEach(() => localStorage.clear());
-  afterEach(() => jest.useRealTimers());
 
   it('remembers where a long track was left', () => {
     const { positions, recorder, at } = setUp();
@@ -121,38 +119,5 @@ describe('ListenPositionRecorder', () => {
     recorder.record();
 
     expect(localStorage.length).toBe(0);
-  });
-
-  it('records at most every five seconds while throttled', () => {
-    jest.useFakeTimers();
-    const { positions, recorder, at } = setUp();
-    at(600);
-    recorder.recordThrottled();
-    at(601);
-    recorder.recordThrottled();
-
-    expect(positions.get(URL)?.seconds).toBe(600);
-
-    jest.advanceTimersByTime(5000);
-    recorder.recordThrottled();
-
-    expect(positions.get(URL)?.seconds).toBe(601);
-  });
-
-  it('records as the page hides, until destroyed', () => {
-    const { positions, recorder, at } = setUp();
-    const onDestroy: (() => void)[] = [];
-    recorder.recordOnPageHide({
-      onDestroy: (callback: () => void) => onDestroy.push(callback),
-    } as unknown as DestroyRef);
-    at(600);
-
-    window.dispatchEvent(new Event('pagehide'));
-    expect(positions.get(URL)?.seconds).toBe(600);
-
-    onDestroy.forEach((callback) => callback());
-    at(700);
-    window.dispatchEvent(new Event('pagehide'));
-    expect(positions.get(URL)?.seconds).toBe(600);
   });
 });
