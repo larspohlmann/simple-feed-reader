@@ -13,12 +13,17 @@ import {
   CatalogImportCounts,
   CatalogWarmReport,
   ImportMode,
+  QueueDepthDto,
 } from './admin.models';
 
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
+
+  queues(): Observable<{ queues: QueueDepthDto[] }> {
+    return this.http.get<{ queues: QueueDepthDto[] }>(`${this.base}/api/admin/queues`);
+  }
 
   listUsers(status?: AdminUserStatus | null): Observable<{ users: AdminUserDto[] }> {
     let params = new HttpParams();

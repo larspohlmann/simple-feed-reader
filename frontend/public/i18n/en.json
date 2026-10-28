@@ -586,6 +586,25 @@
         "piaCredentials": "Private Internet Access needs a separately generated proxy username and password — not your account login."
       }
     },
+    "queues": {
+      "title": "Queues",
+      "refresh": "Refresh",
+      "loading": "Loading queues",
+      "queue": "Queue",
+      "waiting": "Waiting",
+      "oldest": "Oldest waiting since",
+      "name": {
+        "failed_messages": "Failed worker messages",
+        "recommendation_runs": "Recommendation runs",
+        "profile_runs": "Profile runs",
+        "image_verification": "Image verification",
+        "share_enrichment_appview": "Bluesky embeds",
+        "share_enrichment_link_cards": "Link cards",
+        "share_enrichment_self_thread": "Self-reply threads",
+        "transcripts": "Transcripts",
+        "due_feeds": "Feeds due for refresh"
+      }
+    },
     "retention": {
       "title": "Retention",
       "caption": "How long entries stay before refresh deletes them. A feed's newest 20 entries, favourites and kept entries are never deleted.",

@@ -1,0 +1,31 @@
+.state {
+  margin-bottom: var(--space-4);
+}
+
+.queues {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.queues th,
+.queues td {
+  padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.queues thead th {
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.queues .waiting {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.queues .oldest {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}

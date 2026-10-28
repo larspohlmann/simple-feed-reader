@@ -1,0 +1,39 @@
+<app-settings-stack>
+  <app-settings-group icon="stacks" [title]="'settings.queues.title' | transloco">
+    <div groupActions class="refresh">
+      <app-button (click)="load()" [disabled]="loading()">
+        {{ 'settings.queues.refresh' | transloco }}
+      </app-button>
+    </div>
+
+    @if (loading()) {
+      <app-skeleton class="state" [label]="'settings.queues.loading' | transloco" [rows]="9" />
+    } @else if (error()) {
+      <app-error-banner
+        class="state"
+        [message]="error()!.detail || error()!.title"
+        [actionLabel]="'admin.retry' | transloco"
+        (action)="load()"
+      />
+    } @else {
+      <table class="queues">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'settings.queues.queue' | transloco }}</th>
+            <th scope="col" class="waiting">{{ 'settings.queues.waiting' | transloco }}</th>
+            <th scope="col" class="oldest">{{ 'settings.queues.oldest' | transloco }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (queue of queues(); track queue.queue) {
+            <tr>
+              <th scope="row">{{ 'settings.queues.name.' + queue.queue | transloco }}</th>
+              <td class="waiting">{{ queue.waiting }}</td>
+              <td class="oldest">{{ oldest(queue) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </app-settings-group>
+</app-settings-stack>
