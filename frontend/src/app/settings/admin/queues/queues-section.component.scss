@@ -13,6 +13,7 @@
   padding: var(--row-pad-y) var(--row-pad-x);
   border-bottom: 1px solid var(--border);
   text-align: left;
+
   // body's `anywhere` lets the auto table layout squeeze a column below its longest word.
   overflow-wrap: break-word;
 }
