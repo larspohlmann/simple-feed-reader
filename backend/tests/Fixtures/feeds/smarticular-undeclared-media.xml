@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+<channel>
+	<title>smarticular Verlag</title>
+	<link>https://www.smarticular.net/</link>
+	<description>einfach nachhaltiger leben</description>
+	<item>
+		<title>Bröselknödel selber machen</title>
+		<link>https://www.smarticular.net/broeselknoedel-rezept/</link>
+		<guid isPermaLink="false">https://www.smarticular.net/?p=201250</guid>
+		<pubDate>Tue, 27 Oct 2026 14:14:33 +0000</pubDate>
+		<description><![CDATA[<p>smarticular.net -</p>
+<div><img src="https://www.smarticular.net/wp-content/uploads/2026/10/broeselknoedel-rezept-202x202.jpg"></div>
+<p>Mit diesem einfachen Rezept wird aus Paniermehl eine Suppeneinlage.</p>]]></description>
+		<media:content url="https://www.smarticular.net/wp-content/uploads/2026/10/broeselknoedel-rezept.jpg" fileSize="111598" type="image/jpeg"
+medium="image" isDefault="true">
+			<media:credit role="photographer" scheme="urn:ebu">smarticular Verlag</media:credit>
+		</media:content>
+	</item>
+</channel>
+</rss>

@@ -9,6 +9,7 @@ use App\Service\Parser\Factory\FeedParserFactory;
 use App\Service\Parser\FeedFormatParser\FeedFormatParserInterface;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Parser\Support\UndeclaredPrefixes;
 
 /**
  * One feed read as a stream: each entry is expanded into a DOM of its own and parsed on the spot, and the skeleton
@@ -35,7 +36,11 @@ final class StreamedFeedDocument
         $previousErrorMode = libxml_use_internal_errors(true);
         libxml_clear_errors();
         try {
-            $document = new self(\XMLReader::fromStream(self::spooled($xml), null, LIBXML_NONET));
+            $document = new self(\XMLReader::fromStream(
+                self::spooled(UndeclaredPrefixes::declaredIn($xml)),
+                null,
+                LIBXML_NONET,
+            ));
 
             return $document->parseWith($parserFactory->parserFor($document->readToRoot()));
         } finally {
