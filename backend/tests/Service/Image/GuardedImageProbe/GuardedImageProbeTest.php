@@ -199,6 +199,24 @@ final class GuardedImageProbeTest extends TestCase
         $this->probe([self::image(Response::HTTP_OK, 'image/png', $bytes)])->measure(self::IMAGE_URL);
     }
 
+    public function testARangeIgnoringBodyBeyondHalfAMebibyteIsUnavailable(): void
+    {
+        $this->expectException(GuardedImageUnavailableException::class);
+
+        $bytes = PngImageFactory::bytes(1200, 630) . str_repeat("\0", 600 * 1024);
+
+        $this->probe([self::image(Response::HTTP_OK, 'image/png', $bytes)])->measure(self::IMAGE_URL);
+    }
+
+    public function testARangeIgnoringBodyUnderHalfAMebibyteStillMeasures(): void
+    {
+        $bytes = PngImageFactory::bytes(1200, 630) . str_repeat("\0", 400 * 1024);
+
+        $dimensions = $this->probe([self::image(Response::HTTP_OK, 'image/png', $bytes)])->measure(self::IMAGE_URL);
+
+        self::assertSame(1200, $dimensions->width);
+    }
+
     public function testARedirectChainSharesOneTimeBudget(): void
     {
         $this->expectException(GuardedImageUnavailableException::class);

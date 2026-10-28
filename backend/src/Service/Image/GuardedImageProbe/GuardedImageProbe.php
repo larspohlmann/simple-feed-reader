@@ -6,7 +6,6 @@ namespace App\Service\Image\GuardedImageProbe;
 
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
@@ -22,6 +21,7 @@ final readonly class GuardedImageProbe implements GuardedImageProbeInterface
     private const int TIMEOUT_SECONDS = 4;
     private const int MAX_REDIRECTS = 3;
     private const int HEADER_BYTES = 65_536;
+    private const int MEASURE_MAX_BYTES = 524_288;
     private const array RANGE_HEADERS = ['Range' => 'bytes=0-' . (self::HEADER_BYTES - 1)];
 
     private const array HEAD_REFUSALS = [
@@ -112,7 +112,9 @@ final readonly class GuardedImageProbe implements GuardedImageProbeInterface
             'max_duration' => self::TIMEOUT_SECONDS,
             'headers' => ['Accept-Encoding' => 'identity', 'User-Agent' => $this->userAgent] + $extraHeaders,
             'on_progress' => static function (int $downloaded): void {
-                ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Download, $downloaded);
+                if ($downloaded > self::MEASURE_MAX_BYTES) {
+                    throw new ResponseTooLargeException('the image answered with more than the bytes a probe reads');
+                }
             },
         ];
     }
