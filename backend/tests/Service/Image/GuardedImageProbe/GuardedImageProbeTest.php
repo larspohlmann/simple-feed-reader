@@ -137,6 +137,16 @@ final class GuardedImageProbeTest extends TestCase
         self::assertFalse($probe->exists(self::IMAGE_URL, self::WIDTH));
     }
 
+    public function testAFallbackGetOfBytesThatAreNoImageDoesNotExist(): void
+    {
+        $probe = $this->probe([
+            self::image(Response::HTTP_FORBIDDEN),
+            self::image(Response::HTTP_OK, 'image/jpeg', 'not an image'),
+        ]);
+
+        self::assertFalse($probe->exists(self::IMAGE_URL, self::WIDTH));
+    }
+
     public function testAFallbackGetAnsweringNotFoundDoesNotExist(): void
     {
         $probe = $this->probe([self::image(Response::HTTP_FORBIDDEN), self::image(Response::HTTP_NOT_FOUND)]);
