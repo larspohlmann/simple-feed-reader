@@ -1,7 +1,7 @@
 import { EntryDto } from '../../models';
 import { entryDek } from '../../entry/entry-text';
 import { entryImage } from '../preview-image';
-import { fits, QUOTE_MIN_TEXT } from './magazine-slot-fit';
+import { fits, hasPicture, QUOTE_MIN_TEXT } from './magazine-slot-fit';
 
 /** The text-forward family is chosen only when the leading window is image-poor
  *  AND text-rich (see isImageRich/isTextRich). Both shares are judged over the
@@ -49,7 +49,7 @@ function isTextRich(entries: EntryDto[]): boolean {
  *  Any usable image counts (`entryImage`); an empty view is not image-poor. */
 function isImagePoor(entries: EntryDto[]): boolean {
   if (entries.length === 0) return false;
-  const withImage = entries.filter((entry) => entryImage(entry) !== null).length;
+  const withImage = entries.filter(hasPicture).length;
   return withImage / entries.length < IMAGE_POOR_SHARE;
 }
 

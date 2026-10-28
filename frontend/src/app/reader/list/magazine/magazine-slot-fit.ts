@@ -11,9 +11,20 @@ export const IMAGE_KINDS: readonly TemplateKind[] = ['hero', 'wide', 'split', 't
 /** The smallest image block whose fit means the entry's image must show. */
 export type ImageBar = Extract<TemplateKind, 'thumb' | 'split'>;
 
-export function settle(kind: TemplateKind, entry: EntryDto, imageBar: ImageBar): TemplateKind {
-  const settled = demoteUntilFit(kind, entry);
-  if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(kind, entry);
+/** How a page judges whether an entry can fill a block kind. */
+export type SlotFit = (kind: TemplateKind, entry: EntryDto) => boolean;
+
+export interface SlotRules {
+  readonly imageBar: ImageBar;
+  readonly fit: SlotFit;
+}
+
+export function settle(kind: TemplateKind, entry: EntryDto, rules: SlotRules): TemplateKind {
+  const settled = demoteUntilFit(kind, entry, rules.fit);
+  if (!IMAGE_KINDS.includes(settled) && rules.fit(rules.imageBar, entry)) {
+    return promotedToImage(kind, entry, rules.fit);
+  }
+
   // An image-less entry with a summary must keep its dek: lift the dek-less
   // `compact` floor to `kicker` (#514/#516), applied wherever an entry lands so
   // both families honour it. A bare entry (no image, no summary) stays `compact`.
@@ -22,16 +33,16 @@ export function settle(kind: TemplateKind, entry: EntryDto, imageBar: ImageBar):
 
 /** The tallest image block the entry fills without outgrowing its text slot;
  *  `thumb` when none is that short (a `compact` slot). */
-function promotedToImage(slot: TemplateKind, entry: EntryDto): TemplateKind {
+function promotedToImage(slot: TemplateKind, entry: EntryDto, fit: SlotFit): TemplateKind {
   return (
-    IMAGE_KINDS.find((kind) => BLOCK_HEIGHT[kind] <= BLOCK_HEIGHT[slot] && fits(kind, entry)) ??
+    IMAGE_KINDS.find((kind) => BLOCK_HEIGHT[kind] <= BLOCK_HEIGHT[slot] && fit(kind, entry)) ??
     'thumb'
   );
 }
 
-function demoteUntilFit(kind: TemplateKind, entry: EntryDto): TemplateKind {
+function demoteUntilFit(kind: TemplateKind, entry: EntryDto, fit: SlotFit): TemplateKind {
   let current = kind;
-  while (!fits(current, entry)) {
+  while (!fit(current, entry)) {
     const next = DEMOTION[current];
     if (next === current) return current;
     current = next;
@@ -42,7 +53,7 @@ function demoteUntilFit(kind: TemplateKind, entry: EntryDto): TemplateKind {
 /** An entry with no image but a usable summary — the case the `compact` floor
  *  would strip of its copy. An entry that can fill any image block is excluded. */
 function hasSummaryButNoImage(entry: EntryDto): boolean {
-  return entryImage(entry) === null && hasSummary(entry);
+  return !hasPicture(entry) && hasSummary(entry);
 }
 
 /** Whether the entry carries copy to show as a dek. Mirrors the `snippet` a block
@@ -124,7 +135,7 @@ const FITS: Record<TemplateKind, (entry: EntryDto) => boolean> = {
   // A portrait cover cannot fill a 3:1 band at all.
   wide: (entry) => landscapeImageAtLeast(entry, 400),
   split: (entry) => imageAtLeast(entry, 300),
-  thumb: (entry) => entryImage(entry) !== null,
+  thumb: hasPicture,
   quote: (entry) => entryDek(entry).length >= QUOTE_MIN_TEXT,
   // A kicker shows a title AND a dek; with no dek it is only a taller
   // compact, so a summary-less entry demotes past it to the `compact` floor.
@@ -136,6 +147,20 @@ export function fits(kind: TemplateKind, entry: EntryDto): boolean {
   return FITS[kind](entry);
 }
 
+export function hasPicture(entry: EntryDto): boolean {
+  return entryImage(entry) !== null;
+}
+
+/** A portrait cover fills neither a `hero` nor a 3:1 `wide`. */
+const LANDSCAPE_KINDS: readonly TemplateKind[] = ['hero', 'wide'];
+
+/** `fits` without the image size floors: any picture takes an image block, a portrait
+ *  cover still refuses the landscape ones. */
+export function fitsWithoutSizeFloor(kind: TemplateKind, entry: EntryDto): boolean {
+  if (!IMAGE_KINDS.includes(kind)) return fits(kind, entry);
+  return hasPicture(entry) && (!LANDSCAPE_KINDS.includes(kind) || isLandscape(entry));
+}
+
 /** An unknown width is trusted only alongside the persisted image field. */
 function imageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
   const image = entryImage(entry);
@@ -143,6 +168,10 @@ function imageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
   return !!image && (width >= minimumWidth || (width === 0 && !!entry.imageUrl));
 }
 
+function isLandscape(entry: EntryDto): boolean {
+  return portraitCoverRatio(entry) === null;
+}
+
 function landscapeImageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
-  return portraitCoverRatio(entry) === null && imageAtLeast(entry, minimumWidth);
+  return isLandscape(entry) && imageAtLeast(entry, minimumWidth);
 }
