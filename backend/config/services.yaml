@@ -160,6 +160,7 @@ services:
     App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface: '@App\Repository\PreferencesRepository'
     App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface: '@App\Repository\SavedSearchRepository'
     App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface: '@App\Repository\GrafanaSettingsRepository'
+    App\Service\Image\ProbedLadder\ProbedLadderInterface: '@App\Repository\ProbedLadderRepository'
     App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface: '@App\Repository\ProxyServerSettingsRepository'
     App\Service\Backup\RestoreFeeds\RestoreFeedsInterface: '@App\Repository\FeedRepository'
     App\Service\Backup\RestoreEntries\RestoreEntriesInterface: '@App\Repository\EntryRepository'

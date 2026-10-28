@@ -30,6 +30,7 @@ use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RenditionProbes;
+use App\Tests\Support\StubProbedLadders;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\InMemoryMailFailureRecorder;
@@ -322,7 +323,12 @@ final class MaintenanceTickTest extends DbTestCase
             $sendDueDigests,
             new ImageVerificationSweep(
                 $pendingImageVerificationRepository,
-                new ImageVerifier(new StubGuardedImageDownloader(), new NaiveUtcClock($clock), RenditionProbes::none()),
+                new ImageVerifier(
+                    new StubGuardedImageDownloader(),
+                    new NaiveUtcClock($clock),
+                    RenditionProbes::none(),
+                    new StubProbedLadders(),
+                ),
                 $this->entityManager,
             ),
             $this->followUpFetchSweeps($linkCardSweep, $clock),

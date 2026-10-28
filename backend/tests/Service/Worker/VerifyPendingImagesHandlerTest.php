@@ -14,6 +14,7 @@ use App\Service\Worker\Handler\VerifyPendingImagesHandler;
 use App\Service\Worker\Message\VerifyPendingImages;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RenditionProbes;
+use App\Tests\Support\StubProbedLadders;
 use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StubGuardedImageDownloader;
@@ -64,6 +65,7 @@ final class VerifyPendingImagesHandlerTest extends DbTestCase
             $downloader,
             new NaiveUtcClock(new MockClock('2026-10-01 07:00:00')),
             RenditionProbes::none(),
+            new StubProbedLadders(),
         );
 
         return new VerifyPendingImagesHandler(

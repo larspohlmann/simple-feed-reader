@@ -14,11 +14,12 @@ use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Image\Model\ImageDimensionsModel;
 use App\Service\Image\Model\ImageVerifyOutcome;
 use App\Service\Image\Model\LeadImageModel;
+use App\Service\Image\ProbedLadder\ProbedLadderInterface;
 
 /**
  * Verifies one pending image via the SSRF-guarded downloader, retrying a bounded number of times before dropping it,
- * and probes the size variants the list views need. A refusal the downloader cannot recover from keeps the image
- * unmeasured instead — a browser may still render it.
+ * and probes the size variants the list views need, once per image URL. A refusal the downloader cannot recover from
+ * keeps the image unmeasured instead — a browser may still render it.
  */
 final readonly class ImageVerifier
 {
@@ -28,6 +29,7 @@ final readonly class ImageVerifier
         private GuardedImageDownloaderInterface $downloader,
         private NaiveUtcClock $clock,
         private RenditionProbe $renditionProbe,
+        private ProbedLadderInterface $probedLadders,
     ) {
     }
 
@@ -74,7 +76,8 @@ final readonly class ImageVerifier
     private function addProbedRungs(EntryImage $image, string $url, ImageDimensionsModel $dimensions): void
     {
         $known = $image->getRenditions();
-        $probed = $this->renditionProbe->rungsFor(new LeadImageModel($url, $dimensions, $known));
+        $probed = $this->probedLadders->findProbedLadder($url)
+            ?? $this->renditionProbe->rungsFor(new LeadImageModel($url, $dimensions, $known));
         if ($probed === []) {
             return;
         }

@@ -17,6 +17,7 @@ use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\RenditionProbes;
 use App\Tests\Support\StubGuardedImageDownloader;
 use App\Tests\Support\StubGuardedImageProbe;
+use App\Tests\Support\StubProbedLadders;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -47,12 +48,52 @@ final class ImageVerifierTest extends TestCase
     private function verifier(
         StubGuardedImageDownloader $downloader,
         ?StubGuardedImageProbe $probe = null,
+        ?StubProbedLadders $probedLadders = null,
     ): ImageVerifier {
         return new ImageVerifier(
             $downloader,
             new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
             RenditionProbes::over($probe ?? new StubGuardedImageProbe()),
+            $probedLadders ?? new StubProbedLadders(),
         );
+    }
+
+    public function testAnImageMeasuredBeforeHandsOnItsLadderWithoutAProbeRequest(): void
+    {
+        $lead = 'https://i/podcast/logo-600x600.jpg';
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes($lead, PngImageFactory::bytes(600, 600));
+        $probe = new StubGuardedImageProbe();
+        $probe->willExist('https://i/podcast/logo-512x512.jpg');
+        $probedLadders = new StubProbedLadders();
+        $probedLadders->willHand($lead, [new ImageRendition('https://i/podcast/logo-300x300.jpg', 300)]);
+        $entry = $this->pendingImage($lead);
+
+        $this->verifier($downloader, $probe, $probedLadders)->verify($entry);
+
+        self::assertSame([], $probe->requestedUrls());
+        self::assertEquals(
+            [new ImageRendition('https://i/podcast/logo-300x300.jpg', 300)],
+            $entry->getImage()->getRenditions(),
+        );
+    }
+
+    public function testAnImageWhoseEarlierProbeFoundNothingIsNotProbedAgain(): void
+    {
+        $lead = 'https://i/podcast/logo-600x600.jpg';
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes($lead, PngImageFactory::bytes(600, 600));
+        $probe = new StubGuardedImageProbe();
+        $probe->willExist('https://i/podcast/logo-512x512.jpg');
+        $probedLadders = new StubProbedLadders();
+        $probedLadders->willHand($lead, []);
+        $entry = $this->pendingImage($lead);
+
+        $outcome = $this->verifier($downloader, $probe, $probedLadders)->verify($entry);
+
+        self::assertSame(ImageVerifyOutcome::Measured, $outcome);
+        self::assertSame([], $probe->requestedUrls());
+        self::assertSame([], $entry->getImage()->getRenditions());
     }
 
     public function testAMeasuredLeadGainsItsProbedRungsBesideTheDeclaredOnes(): void
