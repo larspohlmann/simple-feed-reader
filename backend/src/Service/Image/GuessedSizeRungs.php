@@ -31,7 +31,7 @@ final readonly class GuessedSizeRungs
             return $this->walk($this->fromOriginalOrLead($lead));
         }
         if (str_contains($lead->url, self::WORDPRESS_UPLOADS)) {
-            return $this->walk(new SizeWalk($lead->url, $lead->dimensions, $lead->knownWidths()));
+            return $this->walk(SizeWalk::overLead($lead));
         }
 
         return [];
@@ -43,7 +43,7 @@ final readonly class GuessedSizeRungs
         try {
             $original = $this->probe->measure($originalUrl);
         } catch (GuardedImageUnavailableException) {
-            return new SizeWalk($lead->url, $lead->dimensions, $lead->knownWidths());
+            return SizeWalk::overLead($lead);
         }
         $walk = new SizeWalk($originalUrl, $original, $lead->knownWidths());
         if ($original->width <= RenditionTargets::LARGEST && $original->width !== $lead->dimensions->width) {
@@ -59,7 +59,6 @@ final readonly class GuessedSizeRungs
         try {
             $this->probeGuessedWidths($walk);
         } catch (GuardedImageUnavailableException) {
-            return $walk->found();
         }
 
         return $walk->found();
@@ -69,11 +68,8 @@ final readonly class GuessedSizeRungs
     private function probeGuessedWidths(SizeWalk $walk): void
     {
         foreach (self::GUESSED_WIDTHS as $width) {
-            if (!$walk->wants($width)) {
-                continue;
-            }
-            $candidate = $walk->candidateAt($width);
-            if ($this->probe->exists($candidate, $width)) {
+            $candidate = $walk->candidateFor($width);
+            if ($candidate !== null && $this->probe->exists($candidate, $width)) {
                 $walk->keep(new ImageRendition($candidate, $width));
             }
         }

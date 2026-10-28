@@ -10,7 +10,7 @@ final class RenditionTargets
     /** @var list<int> */
     public const array WIDTHS = [264, 520, 680, 1100, 1360];
 
-    public const int LARGEST = 1360;
+    public const int LARGEST = self::WIDTHS[4];
 
     private const float TOP_BAND_STRETCH = 1.5;
 

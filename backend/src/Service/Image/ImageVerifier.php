@@ -75,9 +75,10 @@ final readonly class ImageVerifier
     {
         $known = $image->getRenditions();
         $probed = $this->renditionProbe->rungsFor(new LeadImageModel($url, $dimensions, $known));
-        if ($probed !== []) {
-            $image->storeRenditions(ImageRendition::ladder([...$known, ...$probed]));
+        if ($probed === []) {
+            return;
         }
+        $image->storeRenditions(ImageRendition::ladder([...$known, ...$probed]));
     }
 
     private function recordFailure(Entry $entry): ImageVerifyOutcome

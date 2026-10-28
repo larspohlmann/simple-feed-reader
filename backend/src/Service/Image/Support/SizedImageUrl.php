@@ -7,9 +7,10 @@ namespace App\Service\Image\Support;
 /** The `-640x360` filename suffix CMSes such as WordPress name their stored sizes with. */
 final class SizedImageUrl
 {
-    private const string SUFFIX = '/-\d+x\d+(?=\.[a-z0-9]{2,5}(?:[?#]|$))/i';
-    private const string UNSCALED_MARKER = '/-(?:scaled|rotated)(?=\.[a-z0-9]{2,5}(?:[?#]|$))/i';
-    private const string EXTENSION = '/(?=\.[a-z0-9]{2,5}(?:[?#]|$))/i';
+    private const string BEFORE_EXTENSION = '(?=\.[a-z0-9]{2,5}(?:[?#]|$))';
+    private const string SUFFIX = '/-\d+x\d+' . self::BEFORE_EXTENSION . '/i';
+    private const string UNSCALED_MARKER = '/-(?:scaled|rotated)' . self::BEFORE_EXTENSION . '/i';
+    private const string EXTENSION = '/' . self::BEFORE_EXTENSION . '/i';
 
     public static function hasSizeSuffix(string $url): bool
     {

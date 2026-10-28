@@ -37,11 +37,6 @@ final readonly class ResizerRungs
             && abs($measured->height - self::proportionalHeight($lead)) <= self::HEIGHT_TOLERANCE;
     }
 
-    private static function proportionalHeight(LeadImageModel $lead): int
-    {
-        return (int) round(self::CHECK_WIDTH * $lead->dimensions->height / $lead->dimensions->width);
-    }
-
     /** @return list<ImageRendition> */
     public function rungsFor(LeadImageModel $lead): array
     {
@@ -53,5 +48,10 @@ final readonly class ResizerRungs
         }
 
         return $rungs;
+    }
+
+    private static function proportionalHeight(LeadImageModel $lead): int
+    {
+        return (int) round(self::CHECK_WIDTH * $lead->dimensions->height / $lead->dimensions->width);
     }
 }

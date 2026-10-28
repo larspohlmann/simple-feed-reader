@@ -7,6 +7,7 @@ namespace App\Service\Parser;
 use App\Service\Parser\Factory\FeedParserFactory;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Pass\StreamedFeedDocument;
+use App\Service\Parser\Support\UndeclaredPrefixes;
 
 final readonly class FeedParser
 {
@@ -18,7 +19,7 @@ final readonly class FeedParser
     public function parse(string $xml): ParsedFeedModel
     {
         return StreamedFeedDocument::parse(
-            $this->fromTheDeclaration($this->withoutIllegalControlCharacters($xml)),
+            UndeclaredPrefixes::declaredIn($this->fromTheDeclaration($this->withoutIllegalControlCharacters($xml))),
             $this->parserFactory,
         );
     }

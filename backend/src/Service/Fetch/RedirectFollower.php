@@ -15,7 +15,7 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Follows a GET (followHead(): a HEAD) to the first non-redirect response, passing every hop through the SSRF guard:
+ * Follows a GET to the first response that is not a redirect, passing every hop through the SSRF guard:
  * `max_redirects` is forced to 0, so the client never follows a Location this class has not checked.
  */
 final readonly class RedirectFollower

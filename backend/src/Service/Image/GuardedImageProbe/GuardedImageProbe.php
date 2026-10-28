@@ -22,6 +22,7 @@ final readonly class GuardedImageProbe implements GuardedImageProbeInterface
     private const int TIMEOUT_SECONDS = 4;
     private const int MAX_REDIRECTS = 3;
     private const int HEADER_BYTES = 65_536;
+    private const array RANGE_HEADERS = ['Range' => 'bytes=0-' . (self::HEADER_BYTES - 1)];
 
     private const array HEAD_REFUSALS = [
         Response::HTTP_FORBIDDEN,
@@ -40,9 +41,9 @@ final readonly class GuardedImageProbe implements GuardedImageProbeInterface
     public function exists(string $imageUrl, int $expectedWidth): bool
     {
         try {
-            $landed = $this->redirects->followHead($imageUrl, $this->options([]), $this->budget());
+            $landed = $this->redirects->followHead($imageUrl, $this->options(), $this->budget());
         } catch (FetchException | ExceptionInterface $exception) {
-            throw new GuardedImageUnavailableException($exception->getMessage(), 0, $exception);
+            throw GuardedImageUnavailableException::from($exception);
         }
         if (\in_array($landed->status, self::HEAD_REFUSALS, true)) {
             return $this->rangedGetMeasures($imageUrl, $expectedWidth);
@@ -76,9 +77,9 @@ final readonly class GuardedImageProbe implements GuardedImageProbeInterface
     private function rangedGet(string $imageUrl): LandedResponse
     {
         try {
-            return $this->redirects->follow($imageUrl, $this->options(self::rangeHeader()), $this->budget());
+            return $this->redirects->follow($imageUrl, $this->options(self::RANGE_HEADERS), $this->budget());
         } catch (FetchException | ExceptionInterface $exception) {
-            throw new GuardedImageUnavailableException($exception->getMessage(), 0, $exception);
+            throw GuardedImageUnavailableException::from($exception);
         }
     }
 
@@ -88,7 +89,7 @@ final readonly class GuardedImageProbe implements GuardedImageProbeInterface
         try {
             $bytes = $landed->response->getContent();
         } catch (FetchException | ExceptionInterface $exception) {
-            throw new GuardedImageUnavailableException($exception->getMessage(), 0, $exception);
+            throw GuardedImageUnavailableException::from($exception);
         }
 
         return substr($bytes, 0, self::HEADER_BYTES);
@@ -99,18 +100,12 @@ final readonly class GuardedImageProbe implements GuardedImageProbeInterface
         return str_starts_with(MediaType::of($landed->header('content-type')), 'image/');
     }
 
-    /** @return array<string, string> */
-    private static function rangeHeader(): array
-    {
-        return ['Range' => 'bytes=0-' . (self::HEADER_BYTES - 1)];
-    }
-
     /**
      * @param array<string, string> $extraHeaders
      *
      * @return array<string, mixed>
      */
-    private function options(array $extraHeaders): array
+    private function options(array $extraHeaders = []): array
     {
         return [
             'timeout' => self::TIMEOUT_SECONDS,
