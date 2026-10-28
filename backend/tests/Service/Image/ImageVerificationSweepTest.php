@@ -13,6 +13,7 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RenditionProbes;
 use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\StubGuardedImageDownloader;
 use Symfony\Component\Clock\MockClock;
@@ -23,7 +24,11 @@ final class ImageVerificationSweepTest extends DbTestCase
     {
         /** @var PendingImageVerificationRepository $repository */
         $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
-        $verifier = new ImageVerifier($downloader, new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')));
+        $verifier = new ImageVerifier(
+            $downloader,
+            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
+            RenditionProbes::none(),
+        );
 
         return new ImageVerificationSweep($repository, $verifier, $this->entityManager);
     }

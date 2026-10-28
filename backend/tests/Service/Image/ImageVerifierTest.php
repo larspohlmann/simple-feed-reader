@@ -7,13 +7,16 @@ namespace App\Tests\Service\Image;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\ImageRendition;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\Exception\GuardedImageRejectedException;
 use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Image\ImageVerifier;
 use App\Service\Image\Model\ImageVerifyOutcome;
 use App\Tests\Support\PngImageFactory;
+use App\Tests\Support\RenditionProbes;
 use App\Tests\Support\StubGuardedImageDownloader;
+use App\Tests\Support\StubGuardedImageProbe;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -41,9 +44,68 @@ final class ImageVerifierTest extends TestCase
         );
     }
 
-    private function verifier(StubGuardedImageDownloader $downloader): ImageVerifier
+    private function verifier(
+        StubGuardedImageDownloader $downloader,
+        ?StubGuardedImageProbe $probe = null,
+    ): ImageVerifier {
+        return new ImageVerifier(
+            $downloader,
+            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
+            RenditionProbes::over($probe ?? new StubGuardedImageProbe()),
+        );
+    }
+
+    public function testAMeasuredLeadGainsItsProbedRungsBesideTheDeclaredOnes(): void
     {
-        return new ImageVerifier($downloader, new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')));
+        $lead = 'https://i/wp-content/uploads/a.png';
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes($lead, PngImageFactory::bytes(1600, 900));
+        $probe = new StubGuardedImageProbe();
+        $probe->willExist('https://i/wp-content/uploads/a-768x432.png');
+        $entry = $this->pendingImage($lead);
+        $entry->getImage()->storeRenditions([new ImageRendition('https://i/wp-content/uploads/a-300x169.png', 300)]);
+
+        $this->verifier($downloader, $probe)->verify($entry);
+
+        self::assertEquals([
+            new ImageRendition('https://i/wp-content/uploads/a-300x169.png', 300),
+            new ImageRendition('https://i/wp-content/uploads/a-768x432.png', 768),
+        ], $entry->getImage()->getRenditions());
+    }
+
+    public function testADroppedImageIsNeverProbed(): void
+    {
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes('https://i/pixel.png', PngImageFactory::bytes(1, 1));
+        $probe = new StubGuardedImageProbe();
+
+        $this->verifier($downloader, $probe)->verify($this->pendingImage('https://i/pixel.png'));
+
+        self::assertSame([], $probe->requestedUrls());
+    }
+
+    public function testAFailedProbeLeavesTheOutcomeMeasured(): void
+    {
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes('https://i/wp-content/uploads/a.png', PngImageFactory::bytes(1600, 900));
+
+        $outcome = $this->verifier($downloader)->verify($this->pendingImage('https://i/wp-content/uploads/a.png'));
+
+        self::assertSame(ImageVerifyOutcome::Measured, $outcome);
+    }
+
+    public function testARefusedOrRetriedDownloadMakesNoProbeRequest(): void
+    {
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willFail('https://i/rejected.png', new GuardedImageRejectedException('Image responded 403.'));
+        $downloader->willFail('https://i/gone.png', new GuardedImageUnavailableException('timeout'));
+        $probe = new StubGuardedImageProbe();
+        $verifier = $this->verifier($downloader, $probe);
+
+        $verifier->verify($this->pendingImage('https://i/rejected.png'));
+        $verifier->verify($this->pendingImage('https://i/gone.png'));
+
+        self::assertSame([], $probe->requestedUrls());
     }
 
     public function testMeasuresAndStampsAReachableImage(): void
