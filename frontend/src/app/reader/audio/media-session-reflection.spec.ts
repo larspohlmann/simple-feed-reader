@@ -80,12 +80,12 @@ describe('reflectInMediaSession', () => {
     TestBed.tick();
     expect(session.metadata?.init.title).toBe('Episode 1');
 
-    player.currentChapter.set({ startSeconds: 60, title: 'Main' });
+    player.chapterControls.current.set({ startSeconds: 60, title: 'Main' });
     TestBed.tick();
     expect(session.metadata?.init).toMatchObject({ title: 'Main', artist: 'Episode 1' });
 
     player.current.set(null);
-    player.currentChapter.set(null);
+    player.chapterControls.current.set(null);
     TestBed.tick();
     expect(session.metadata).toBeNull();
   });

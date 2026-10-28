@@ -39,7 +39,7 @@ function stub() {
     current: signal<AudioTrack | null>(second),
     index: signal(1),
     duration: signal(0),
-    chapterPlayhead: signal<ChapterPlayhead | null>(null),
+    chapterControls: { playhead: signal<ChapterPlayhead | null>(null) },
     playAt: jest.fn(),
     move: jest.fn(),
     dequeue: jest.fn(),
@@ -194,7 +194,7 @@ describe('AudioPlaylistComponent', () => {
 
   it("hands only the current row's list the service's chapter and progress", () => {
     const fixture = render();
-    player.chapterPlayhead.set({ index: 1, progress: { fraction: 0.5, secondsLeft: 30 } });
+    player.chapterControls.playhead.set({ index: 1, progress: { fraction: 0.5, secondsLeft: 30 } });
     const [, current, later] = rows(fixture);
     click(current, '.expand');
     click(later, '.expand');

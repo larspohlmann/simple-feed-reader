@@ -19,14 +19,19 @@ export function bigPlayerAudioSignals() {
     buffered: signal(0),
     chapters,
     hasChapters: computed(() => chapters().length > 0),
-    chapterIndex,
-    currentChapter: signal<ChapterDto | null>(null),
-    chapterProgress,
-    chapterPlayhead: computed(() =>
-      chapterIndex() === -1 ? null : { index: chapterIndex(), progress: chapterProgress() },
-    ),
-    hasPreviousChapter: signal(false),
-    hasNextChapter: signal(false),
+    chapterControls: {
+      index: chapterIndex,
+      current: signal<ChapterDto | null>(null),
+      progress: chapterProgress,
+      playhead: computed(() =>
+        chapterIndex() === -1 ? null : { index: chapterIndex(), progress: chapterProgress() },
+      ),
+      hasPrevious: signal(false),
+      hasNext: signal(false),
+      previous: jest.fn(),
+      next: jest.fn(),
+      play: jest.fn(),
+    },
     rate: signal(1),
   };
 }

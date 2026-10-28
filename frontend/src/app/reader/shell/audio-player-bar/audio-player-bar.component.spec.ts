@@ -18,8 +18,6 @@ function stub() {
     stop: jest.fn(),
     previous: jest.fn(),
     next: jest.fn(),
-    previousChapter: jest.fn(),
-    nextChapter: jest.fn(),
     playAt: jest.fn(),
     move: jest.fn(),
     dequeue: jest.fn(),
@@ -171,7 +169,7 @@ describe('AudioPlayerBarComponent', () => {
       const fixture = render();
       service.current.set(track);
       service.chapters.set([intro, main]);
-      service.currentChapter.set(current);
+      service.chapterControls.current.set(current);
       fixture.detectChanges();
       return fixture;
     }
@@ -202,7 +200,7 @@ describe('AudioPlayerBarComponent', () => {
       const fixture = chaptered(intro);
       expect(titleLine(fixture)).toBe('Intro · Episode 1');
 
-      service.currentChapter.set(main);
+      service.chapterControls.current.set(main);
       fixture.detectChanges();
 
       expect(titleLine(fixture)).toBe('Main · Episode 1');
@@ -227,30 +225,30 @@ describe('AudioPlayerBarComponent', () => {
 
     it('steps between chapters, leaving previous and next to the tracks', () => {
       const fixture = chaptered(main);
-      service.hasPreviousChapter.set(true);
-      service.hasNextChapter.set(true);
+      service.chapterControls.hasPrevious.set(true);
+      service.chapterControls.hasNext.set(true);
       fixture.detectChanges();
 
       control(fixture, '.previous-chapter').click();
       control(fixture, '.next-chapter').click();
 
-      expect(service.previousChapter).toHaveBeenCalledTimes(1);
-      expect(service.nextChapter).toHaveBeenCalledTimes(1);
+      expect(service.chapterControls.previous).toHaveBeenCalledTimes(1);
+      expect(service.chapterControls.next).toHaveBeenCalledTimes(1);
       expect(service.previous).not.toHaveBeenCalled();
       expect(service.next).not.toHaveBeenCalled();
     });
 
     it('disables the chapter steps at the ends of the track', () => {
       const fixture = chaptered(intro);
-      service.hasPreviousChapter.set(false);
-      service.hasNextChapter.set(true);
+      service.chapterControls.hasPrevious.set(false);
+      service.chapterControls.hasNext.set(true);
       fixture.detectChanges();
 
       expect(control(fixture, '.previous-chapter').disabled).toBe(true);
       expect(control(fixture, '.next-chapter').disabled).toBe(false);
 
-      service.hasPreviousChapter.set(true);
-      service.hasNextChapter.set(false);
+      service.chapterControls.hasPrevious.set(true);
+      service.chapterControls.hasNext.set(false);
       fixture.detectChanges();
 
       expect(control(fixture, '.previous-chapter').disabled).toBe(false);

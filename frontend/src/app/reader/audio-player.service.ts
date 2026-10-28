@@ -26,7 +26,7 @@ import { cachedEnd } from './audio/cached-end';
 import { AudioTrack, TrackDetails } from './audio/audio-track';
 import { reflectInMediaSession } from './audio/media-session-reflection';
 import { PlaybackRate } from './audio/playback-rate';
-import { TrackChapters } from './audio/track-chapters';
+import { ChapterControls } from './audio/chapter-controls';
 import { PlaybackPosition } from './chapters/chapter-player';
 
 export type { AudioTrack, AudioTrackEntry, TrackDetails } from './audio/audio-track';
@@ -106,17 +106,18 @@ export class AudioPlayerService {
     seconds: this._position(),
     durationSeconds: this._duration() > 0 ? this._duration() : null,
   }));
-  private readonly trackChapters = new TrackChapters(
-    this.chapters,
-    this.playbackPosition,
-    RESTART_THRESHOLD_SECONDS,
+  readonly chapterControls = new ChapterControls(
+    {
+      chapters: this.chapters,
+      position: this.playbackPosition,
+      restartThreshold: RESTART_THRESHOLD_SECONDS,
+    },
+    {
+      current: () => this.current(),
+      seek: (seconds) => this.seek(seconds),
+      playFrom: (track, seconds) => this.playFrom(track, seconds),
+    },
   );
-  readonly chapterIndex = this.trackChapters.index;
-  readonly currentChapter = this.trackChapters.current;
-  readonly chapterProgress = this.trackChapters.progress;
-  readonly chapterPlayhead = this.trackChapters.playhead;
-  readonly hasPreviousChapter = this.trackChapters.hasPrevious;
-  readonly hasNextChapter = this.trackChapters.hasNext;
 
   private pendingSeek: number | null = null;
 
@@ -188,24 +189,10 @@ export class AudioPlayerService {
     this.go(select(this._playlist(), this.index() - 1));
   }
 
-  previousChapter(): void {
-    this.seekToChapterStart(this.trackChapters.previousStart());
-  }
-
-  nextChapter(): void {
-    this.seekToChapterStart(this.trackChapters.nextStart());
-  }
-
-  playChapter(index: number): void {
-    const track = this.current();
-    const chapter = this.chapters()[index];
-    if (track && chapter) this.playFrom(track, chapter.startSeconds);
-  }
-
   /** Plays the queued track at `trackIndex` from its chapter `chapterIndex`; another track loads first. */
   playTrackChapter(trackIndex: number, chapterIndex: number): void {
     if (trackIndex !== this.index()) this.apply(select(this._playlist(), trackIndex));
-    this.playChapter(chapterIndex);
+    this.chapterControls.play(chapterIndex);
   }
 
   /** Gives the queued track at `url` its own title, length and chapters, for a track queued
@@ -246,10 +233,6 @@ export class AudioPlayerService {
     this._duration.set(0);
     this._buffered.set(0);
     this.memory.saveQueue();
-  }
-
-  private seekToChapterStart(start: number | null): void {
-    if (start !== null) this.seek(start);
   }
 
   private go(playlist: Playlist): void {

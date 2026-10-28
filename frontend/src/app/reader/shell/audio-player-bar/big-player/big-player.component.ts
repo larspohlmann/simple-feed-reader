@@ -104,7 +104,7 @@ export class BigPlayerComponent {
   });
   /** Translated here, not by the pipe: the time changes every second, and the pipe resubscribes on each change. */
   protected readonly chapterLeft = computed(() => {
-    const progress = this.player.chapterProgress();
+    const progress = this.player.chapterControls.progress();
     this.language.lang();
     return progress
       ? this.i18n.translate('reader.audioPlayer.chapterLeft', {
