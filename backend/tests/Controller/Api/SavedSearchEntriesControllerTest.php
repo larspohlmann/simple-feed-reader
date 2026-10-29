@@ -13,7 +13,6 @@ use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 /**
  * The combined saved-search list and its mark-read.
@@ -23,13 +22,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     /** @return array<string, string> */
     private function authHeaderFor(User $user): array
     {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
+        return [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'];
     }
 
     private function seedSubscribedFeed(User $user): Feed

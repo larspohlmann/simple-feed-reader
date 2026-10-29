@@ -9,31 +9,18 @@ use App\Entity\CatalogFeed;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Clock\ClockInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /** Fixtures are built in-test: the schema comes from ORM metadata, so no migration seeds the catalog tables. */
-final class CatalogControllerTest extends WebTestCase
+final class CatalogControllerTest extends ApiTestCase
 {
     /** @return array<string, string> */
     private function authHeader(string $email): array
     {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
         return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
+            ...$this->bearerFor($this->factory()->create($email)),
             'CONTENT_TYPE' => 'application/json',
         ];
     }
@@ -141,15 +128,13 @@ final class CatalogControllerTest extends WebTestCase
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
         $clock = self::getContainer()->get(ClockInterface::class);
         self::assertInstanceOf(ClockInterface::class, $clock);
 
         $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
         $catalogFeed = new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
 
-        $stranger = (new UserFactory($entityManager, $hasher))->create('stranger@example.com');
+        $stranger = $this->factory()->create('stranger@example.com');
         $feed = new Feed('https://www.theverge.com/rss/index.xml');
         $subscription = new Subscription($stranger, $feed, $clock->now());
 

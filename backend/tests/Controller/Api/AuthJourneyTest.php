@@ -9,22 +9,18 @@ use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use App\Service\Auth\AltchaService;
 use App\Tests\Support\AltchaSolver;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Register, verify, approve, log in, /api/me, then suspend and reinstate, over HTTP only: nothing but the admin is
  * seeded, and each step starts from what the previous request left in the database. The verification token is read
  * from the sent mail, its only plaintext copy. Each journey solves one real ALTCHA challenge (~60 ms).
  */
-final class AuthJourneyTest extends WebTestCase
+final class AuthJourneyTest extends ApiTestCase
 {
     use EnablesMailInTests;
 
@@ -56,7 +52,7 @@ final class AuthJourneyTest extends WebTestCase
         $this->get('/api/me', $token);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(self::EMAIL, $this->payload()['email']);
+        self::assertSame(self::EMAIL, $this->payload($this->client)['email']);
     }
 
     /**
@@ -75,7 +71,7 @@ final class AuthJourneyTest extends WebTestCase
 
         $this->post('/api/admin/users/' . $userId . '/suspend', null, $adminToken);
         self::assertResponseIsSuccessful();
-        self::assertSame('suspended', $this->payload()['status']);
+        self::assertSame('suspended', $this->payload($this->client)['status']);
         self::assertEmailCount(0, message: 'suspension is not announced to the suspended user');
 
         // Same token, still cryptographically valid and nowhere near expiry.
@@ -84,26 +80,26 @@ final class AuthJourneyTest extends WebTestCase
         $this->get('/api/me', $userToken);
         self::assertResponseStatusCodeSame(401);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertSame('unauthorized', $this->payload()['type']);
+        self::assertSame('unauthorized', $this->payload($this->client)['type']);
 
         // ...and a fresh login is refused too, so this is revocation rather
         // than a quirk of how that one JWT was validated.
         $this->login();
         self::assertResponseStatusCodeSame(403);
-        self::assertSame('account_not_active', $this->payload()['type']);
-        self::assertSame('suspended', $this->payload()['accountStatus']);
+        self::assertSame('account_not_active', $this->payload($this->client)['type']);
+        self::assertSame('suspended', $this->payload($this->client)['accountStatus']);
 
         // Reinstate.
         $this->post('/api/admin/users/' . $userId . '/approve', null, $adminToken);
         self::assertResponseIsSuccessful();
-        self::assertSame('active', $this->payload()['status']);
+        self::assertSame('active', $this->payload($this->client)['status']);
         self::assertEmailCount(0, message: 'reinstatement is not a first-time approval announcement');
 
         $this->login();
         self::assertResponseIsSuccessful();
         $this->get('/api/me', $this->tokenFromLoginResponse());
         self::assertResponseIsSuccessful();
-        self::assertSame(self::EMAIL, $this->payload()['email']);
+        self::assertSame(self::EMAIL, $this->payload($this->client)['email']);
     }
 
     /**
@@ -115,7 +111,7 @@ final class AuthJourneyTest extends WebTestCase
         // 1. A challenge, solved, spent on a registration.
         $this->client->request('GET', '/api/auth/altcha-challenge');
         self::assertResponseIsSuccessful();
-        self::assertArrayHasKey('challenge', $this->payload());
+        self::assertArrayHasKey('challenge', $this->payload($this->client));
 
         $this->post('/api/auth/register', [
             'email' => self::EMAIL,
@@ -123,7 +119,7 @@ final class AuthJourneyTest extends WebTestCase
             'altcha' => $this->solvedAltcha(),
         ]);
         self::assertResponseStatusCodeSame(202);
-        self::assertSame(['status' => 'pending_verification'], $this->payload());
+        self::assertSame(['status' => 'pending_verification'], $this->payload($this->client));
         self::assertSame(UserStatus::PendingVerification, $this->currentStatus());
 
         // The token only exists because that request created it.
@@ -133,27 +129,27 @@ final class AuthJourneyTest extends WebTestCase
         $this->login();
         self::assertResponseStatusCodeSame(403);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertSame('account_not_active', $this->payload()['type']);
-        self::assertSame('pending_verification', $this->payload()['accountStatus']);
+        self::assertSame('account_not_active', $this->payload($this->client)['type']);
+        self::assertSame('pending_verification', $this->payload($this->client)['accountStatus']);
 
         // 3. Confirm the address.
         $this->post('/api/auth/verify-email', ['token' => $verificationToken]);
         self::assertResponseIsSuccessful();
-        self::assertSame(['status' => 'pending_approval'], $this->payload());
+        self::assertSame(['status' => 'pending_approval'], $this->payload($this->client));
         self::assertSame(UserStatus::PendingApproval, $this->currentStatus());
 
         // 4. Still out: confirming an address is the first of two gates, and if
         // this ever returned a token the approval queue would be decorative.
         $this->login();
         self::assertResponseStatusCodeSame(403);
-        self::assertSame('account_not_active', $this->payload()['type']);
-        self::assertSame('pending_approval', $this->payload()['accountStatus']);
+        self::assertSame('account_not_active', $this->payload($this->client)['type']);
+        self::assertSame('pending_approval', $this->payload($this->client)['accountStatus']);
 
         // 5. An admin lets them in. The user id comes from the row registration
         // wrote, so this addresses the account the journey actually created.
         $this->post('/api/admin/users/' . $this->userId() . '/approve', null, $this->adminToken());
         self::assertResponseIsSuccessful();
-        self::assertSame('active', $this->payload()['status']);
+        self::assertSame('active', $this->payload($this->client)['status']);
         self::assertEmailCount(1, message: 'clearing the queue is announced exactly once');
         self::assertSame(UserStatus::Active, $this->currentStatus());
 
@@ -186,18 +182,9 @@ final class AuthJourneyTest extends WebTestCase
         $this->post('/api/auth/login', ['email' => self::EMAIL, 'password' => self::PASSWORD]);
     }
 
-    /** @return array<mixed> */
-    private function payload(): array
-    {
-        $decoded = json_decode((string) $this->client->getResponse()->getContent(), true);
-        self::assertIsArray($decoded);
-
-        return $decoded;
-    }
-
     private function tokenFromLoginResponse(): string
     {
-        $token = $this->payload()['token'] ?? null;
+        $token = $this->payload($this->client)['token'] ?? null;
         self::assertIsString($token);
         self::assertCount(3, explode('.', $token), 'a JWT has three dot-separated parts');
 
@@ -248,20 +235,10 @@ final class AuthJourneyTest extends WebTestCase
      */
     private function adminToken(): string
     {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        /** @var UserRepository $users */
-        $users = self::getContainer()->get(UserRepository::class);
+        $admin = $this->users()->findOneByEmail('journey-admin@example.com')
+            ?? $this->factory()->create('journey-admin@example.com', roles: ['ROLE_ADMIN']);
 
-        $admin = $users->findOneByEmail('journey-admin@example.com')
-            ?? (new UserFactory($entityManager, $hasher))->create('journey-admin@example.com', roles: ['ROLE_ADMIN']);
-
-        /** @var JWTTokenManagerInterface $jwt */
-        $jwt = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $jwt->create($admin);
+        return $this->tokenFor($admin);
     }
 
     private function solvedAltcha(): string

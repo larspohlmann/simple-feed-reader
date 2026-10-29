@@ -8,7 +8,6 @@ use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\PrivateFeeds;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\SocialAccounts;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 final class SubscriptionSocialListTest extends ApiTestCase
 {
@@ -25,12 +24,8 @@ final class SubscriptionSocialListTest extends ApiTestCase
         $privateFeeds = self::getContainer()->get(PrivateFeeds::class);
         self::assertInstanceOf(PrivateFeeds::class, $privateFeeds);
         $privateFeeds->create($account, PrivateFeedModel::home());
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
 
-        $bearer = 'Bearer ' . $tokens->create($user);
-
-        $client->request('GET', '/api/subscriptions', server: ['HTTP_AUTHORIZATION' => $bearer]);
+        $client->request('GET', '/api/subscriptions', server: $this->bearerFor($user));
 
         self::assertResponseIsSuccessful();
         $payload = $this->payload($client);

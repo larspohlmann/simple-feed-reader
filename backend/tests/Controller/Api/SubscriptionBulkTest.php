@@ -9,36 +9,14 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\SubscriptionService;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-final class SubscriptionBulkTest extends WebTestCase
+final class SubscriptionBulkTest extends ApiTestCase
 {
     use SeedsUsers;
-
-    private function entityManager(): EntityManagerInterface
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        return $entityManager;
-    }
-
-    /** @return array<string, string> */
-    private function headers(User $user): array
-    {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
 
     private function makeTag(User $user, string $name): Tag
     {
@@ -68,7 +46,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $client->request(
             $method,
             $url,
-            server: $this->headers($user),
+            server: [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'],
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }

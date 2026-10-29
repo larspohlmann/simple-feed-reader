@@ -13,24 +13,21 @@ use App\Entity\User;
 use App\Enum\TranscriptFormat;
 use App\Service\Transcript\Exception\TranscriptUnreachableException;
 use App\Service\Transcript\TranscriptSource\TranscriptSourceInterface;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ScriptedTranscriptSource;
 use App\Tests\Support\TranscriptFixtures;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class EntryTranscriptControllerTest extends WebTestCase
+final class EntryTranscriptControllerTest extends ApiTestCase
 {
     private const string TRANSCRIPT_URL = 'https://pod.test/ep.vtt';
 
     public function testAFilledTranscriptIsServed(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('transcript-filled@example.com');
+        [$headers, $user] = $this->userAndBearer('transcript-filled@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId)->fill([new TranscriptParagraph(0, 'Ann', 'Hi.')], 'Hi.');
         $this->flush();
@@ -47,7 +44,7 @@ final class EntryTranscriptControllerTest extends WebTestCase
     public function testAnEntryWithoutATranscriptSendsNull(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('transcript-none@example.com');
+        [$headers, $user] = $this->userAndBearer('transcript-none@example.com');
         $entryId = $this->seedEntry($user);
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
@@ -60,7 +57,7 @@ final class EntryTranscriptControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('transcript-failed@example.com');
+        [$headers, $user] = $this->userAndBearer('transcript-failed@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId)->fail();
         $this->flush();
@@ -78,7 +75,7 @@ final class EntryTranscriptControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('transcript-pending@example.com');
+        [$headers, $user] = $this->userAndBearer('transcript-pending@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId);
         $source = ScriptedTranscriptSource::answering(TranscriptFixtures::READABLE);
@@ -98,7 +95,7 @@ final class EntryTranscriptControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('transcript-unreachable@example.com');
+        [$headers, $user] = $this->userAndBearer('transcript-unreachable@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId);
         $source = ScriptedTranscriptSource::answering(TranscriptFixtures::READABLE)->failingAt(
@@ -171,20 +168,5 @@ final class EntryTranscriptControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entityManager->flush();
-    }
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 }

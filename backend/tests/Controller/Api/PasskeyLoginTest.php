@@ -519,7 +519,9 @@ final class PasskeyLoginTest extends ApiTestCase
     /** Enrols a fresh passkey for $email through the real HTTP registration endpoints. */
     private function enrol(KernelBrowser $client, string $email): PasskeyAttestationFixture
     {
-        $this->authenticateAs($client, $email);
+        $user = $this->users()->findOneByEmail($email);
+        self::assertInstanceOf(User::class, $user);
+        $this->authenticate($client, $user);
         $fixture = PasskeyFixtures::attestation(
             self::RELYING_PARTY_ID,
             self::ORIGIN,
@@ -545,17 +547,6 @@ final class PasskeyLoginTest extends ApiTestCase
         $client->setServerParameter('HTTP_AUTHORIZATION', '');
 
         return $fixture;
-    }
-
-    private function authenticateAs(KernelBrowser $client, string $email): void
-    {
-        $user = $this->users()->findOneByEmail($email);
-        self::assertInstanceOf(User::class, $user);
-
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
     }
 
     private function issueRegistrationChallenge(PasskeyAttestationFixture $fixture, string $email): string

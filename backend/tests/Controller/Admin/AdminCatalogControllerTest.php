@@ -11,14 +11,11 @@ use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class AdminCatalogControllerTest extends WebTestCase
+final class AdminCatalogControllerTest extends ApiTestCase
 {
     /**
      * Resolution returns a canned URL and every download fails, so the warm and refresh endpoints run their real wiring
@@ -66,18 +63,8 @@ final class AdminCatalogControllerTest extends WebTestCase
      */
     private function authHeader(string $email, array $roles): array
     {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        $user = (new UserFactory($entityManager, $hasher))->create($email, roles: $roles);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
         return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
+            ...$this->bearerFor($this->factory()->create($email, roles: $roles)),
             'CONTENT_TYPE' => 'application/json',
         ];
     }

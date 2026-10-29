@@ -6,7 +6,6 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -23,14 +22,6 @@ final class AdminProxyControllerTest extends ApiTestCase
         $this->client = self::createClient();
     }
 
-    private function tokenFor(User $user): string
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager->create($user);
-    }
-
     private function admin(string $email = 'boss@example.com'): User
     {
         return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
@@ -43,7 +34,7 @@ final class AdminProxyControllerTest extends ApiTestCase
             $method,
             self::PROXY,
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($user),
+                ...$this->bearerFor($user),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode($body, \JSON_THROW_ON_ERROR),
@@ -83,7 +74,7 @@ final class AdminProxyControllerTest extends ApiTestCase
         $this->client->request(
             'GET',
             self::PROXY,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($plain)],
+            server: $this->bearerFor($plain),
         );
 
         self::assertResponseStatusCodeSame(403);
@@ -100,7 +91,7 @@ final class AdminProxyControllerTest extends ApiTestCase
         $this->client->request(
             'GET',
             self::PROXY,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+            server: $this->bearerFor($admin),
         );
 
         self::assertResponseIsSuccessful();
@@ -174,7 +165,7 @@ final class AdminProxyControllerTest extends ApiTestCase
         $this->client->request(
             'GET',
             self::PROXY,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+            server: $this->bearerFor($admin),
         );
         $stored = $this->payload($this->client);
         self::assertSame('proxy.example', $stored['host']);
@@ -217,7 +208,7 @@ final class AdminProxyControllerTest extends ApiTestCase
         $this->client->request(
             'POST',
             self::PROXY . '/test',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+            server: $this->bearerFor($admin),
         );
 
         self::assertResponseIsSuccessful();

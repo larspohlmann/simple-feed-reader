@@ -8,35 +8,13 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\SeedsUsers;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-final class ReorderTest extends WebTestCase
+final class ReorderTest extends ApiTestCase
 {
     use SeedsUsers;
-
-    private function entityManager(): EntityManagerInterface
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        return $entityManager;
-    }
-
-    /** @return array<string, string> */
-    private function headers(User $user): array
-    {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
 
     private function makeTag(User $user, string $name, int $position): Tag
     {
@@ -72,7 +50,7 @@ final class ReorderTest extends WebTestCase
         $client->request(
             'PATCH',
             $url,
-            server: $this->headers($user),
+            server: $this->bearerFor($user) + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }
@@ -80,7 +58,7 @@ final class ReorderTest extends WebTestCase
     /** @return array<int, int> tagId => position, from GET /api/tags */
     private function tagPositions(KernelBrowser $client, User $user): array
     {
-        $client->request('GET', '/api/tags', server: $this->headers($user));
+        $client->request('GET', '/api/tags', server: $this->bearerFor($user));
         $responseBody = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($responseBody);
         self::assertIsArray($responseBody['tags']);
@@ -254,7 +232,7 @@ final class ReorderTest extends WebTestCase
         self::assertResponseStatusCodeSame(204);
 
         // The embedded tag position on each subscription is the per-tag order.
-        $client->request('GET', '/api/subscriptions', server: $this->headers($user));
+        $client->request('GET', '/api/subscriptions', server: $this->bearerFor($user));
         $responseBody = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($responseBody);
         self::assertIsArray($responseBody['subscriptions']);

@@ -10,51 +10,16 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialNetwork;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use App\Tests\Support\ApiTestCase;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Read-only, so ownership is proven as for the run history: an anonymous request is refused, and opens outside the
  * thirty-day window are dropped.
  */
-final class ReadingActivityControllerTest extends WebTestCase
+final class ReadingActivityControllerTest extends ApiTestCase
 {
     private const string ROUTE = '/api/reading/activity';
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($this->entityManager(), $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
-
-    private function entityManager(): EntityManagerInterface
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        return $entityManager;
-    }
-
-    /** @return array<string, mixed> */
-    private function payload(Response $response): array
-    {
-        $decoded = json_decode((string) $response->getContent(), true);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
-    }
 
     private function openArticle(User $user, Feed $feed, string $guid, \DateTimeImmutable $openedAt): void
     {
@@ -79,12 +44,12 @@ final class ReadingActivityControllerTest extends WebTestCase
     public function testAnAccountWithNoReadsGetsThirtyZeroDays(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('reading-activity-empty@example.test');
+        [$headers] = $this->userAndBearer('reading-activity-empty@example.test');
 
         $client->request('GET', self::ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         /** @var list<array{date: string, arrived: int|null, read: int|null}> $days */
         $days = $payload['days'];
         self::assertCount(30, $days);
@@ -101,7 +66,7 @@ final class ReadingActivityControllerTest extends WebTestCase
     public function testLeavesSocialFeedsOutOfTheReadingTotalsAndRankings(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reading-activity-social@example.test');
+        [$headers, $user] = $this->userAndBearer('reading-activity-social@example.test');
 
         $plain = new Feed('https://example.com/plain-totals.xml');
         $bluesky = new Feed('https://bsky.app/profile/totals.bsky.social/rss');
@@ -120,7 +85,7 @@ final class ReadingActivityControllerTest extends WebTestCase
         $client->request('GET', self::ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame(1, $payload['viewedCount']);
         self::assertSame([['feedId' => $plain->getId(), 'readCount' => 1]], $payload['topFeedsByRead']);
     }
@@ -128,7 +93,7 @@ final class ReadingActivityControllerTest extends WebTestCase
     public function testRanksTopFeedsByReadBusiestFirst(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reading-activity-top-read@example.test');
+        [$headers, $user] = $this->userAndBearer('reading-activity-top-read@example.test');
 
         $busy = new Feed('https://example.com/busy.xml');
         $quiet = new Feed('https://example.com/quiet.xml');
@@ -147,7 +112,7 @@ final class ReadingActivityControllerTest extends WebTestCase
         $client->request('GET', self::ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame(
             [
                 ['feedId' => $busy->getId(), 'readCount' => 2],
@@ -160,7 +125,7 @@ final class ReadingActivityControllerTest extends WebTestCase
     public function testCountsOpensPerDayWithinTheWindowAndDropsOlderOnes(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reading-activity-counts@example.test');
+        [$headers, $user] = $this->userAndBearer('reading-activity-counts@example.test');
 
         $feed = new Feed('https://example.com/f.xml');
         $this->entityManager()->persist($feed);
@@ -181,7 +146,7 @@ final class ReadingActivityControllerTest extends WebTestCase
         $client->request('GET', self::ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame(3, $payload['total']);
 
         /** @var list<array{date: string, arrived: int|null, read: int|null}> $days */
@@ -195,7 +160,7 @@ final class ReadingActivityControllerTest extends WebTestCase
     public function testCountsNewArticlesPerUtcDayAndAveragesTheLastSevenCompletedDays(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reading-activity-arrivals@example.test');
+        [$headers, $user] = $this->userAndBearer('reading-activity-arrivals@example.test');
 
         $feed = new Feed('https://example.com/arrivals.xml');
         $this->entityManager()->persist($feed);
@@ -212,7 +177,7 @@ final class ReadingActivityControllerTest extends WebTestCase
         $client->request('GET', self::ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         /** @var list<array{date: string, arrived: int|null, read: int|null}> $days */
         $days = $payload['days'];
         $arrivedByDate = array_column($days, 'arrived', 'date');

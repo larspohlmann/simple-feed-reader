@@ -10,7 +10,6 @@ use App\Repository\UserPasskeyRepository;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\PasskeyRegistrations;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -31,17 +30,9 @@ final class AdminSettingsControllerTest extends ApiTestCase
         $this->seedEnabledMailInstance();
     }
 
-    private function tokenFor(User $user): string
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager->create($user);
-    }
-
     private function authenticateAs(User $user): KernelBrowser
     {
-        $this->client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $this->tokenFor($user));
+        $this->authenticate($this->client, $user);
 
         return $this->client;
     }

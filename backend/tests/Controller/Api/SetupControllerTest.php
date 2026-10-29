@@ -8,17 +8,14 @@ use App\Entity\InstanceSettingsUpdate;
 use App\EventListener\AddUserIdClaimOnTokenIssueListener;
 use App\Repository\UserRepository;
 use App\Service\Settings\InstanceSettings;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\TogglesPasskeySignIn;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class SetupControllerTest extends WebTestCase
+final class SetupControllerTest extends ApiTestCase
 {
     use EnablesMailInTests;
     use TogglesPasskeySignIn;
@@ -59,13 +56,9 @@ final class SetupControllerTest extends WebTestCase
         putenv('ADMIN_SETUP_SECRET=' . self::SECRET);
     }
 
-    private function seedAdmin(KernelBrowser $client): void
+    private function seedAdmin(): void
     {
-        $entityManager = $client->getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = $client->getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        (new UserFactory($entityManager, $hasher))->create('existing@example.com', roles: ['ROLE_ADMIN']);
+        $this->factory()->create('existing@example.com', roles: ['ROLE_ADMIN']);
     }
 
     /** @return array<string, mixed> */
@@ -102,7 +95,7 @@ final class SetupControllerTest extends WebTestCase
     public function testStatusReportsFalseOnceAnAdminExists(): void
     {
         $client = self::createClient();
-        $this->seedAdmin($client);
+        $this->seedAdmin();
 
         $client->request('GET', '/api/setup/status');
 

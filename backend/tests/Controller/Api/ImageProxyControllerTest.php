@@ -10,7 +10,6 @@ use App\Service\Image\ImageProxy\ImageProxyInterface;
 use App\Service\Image\Model\ProxiedImageModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubImageProxy;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 
 final class ImageProxyControllerTest extends ApiTestCase
@@ -26,15 +25,6 @@ final class ImageProxyControllerTest extends ApiTestCase
         self::ensureKernelShutdown();
     }
 
-    /** @return array<string, string> */
-    private function bearer(string $email): array
-    {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($this->factory()->create($email))];
-    }
-
     private function install(ProxiedImageModel|\Throwable $answer): StubImageProxy
     {
         $proxy = new StubImageProxy($answer);
@@ -46,7 +36,7 @@ final class ImageProxyControllerTest extends ApiTestCase
     public function testServesTheProxiedImage(): void
     {
         $client = self::createClient();
-        $headers = $this->bearer('image-proxy-ok@example.com');
+        $headers = $this->bearerFor($this->factory()->create('image-proxy-ok@example.com'));
         $proxy = $this->install(new ProxiedImageModel('png-bytes', 'image/png'));
 
         $client->request('GET', '/api/image-proxy', ['url' => self::IMAGE], [], $headers);
@@ -60,7 +50,7 @@ final class ImageProxyControllerTest extends ApiTestCase
     public function testAnUnavailableImageIsA404Problem(): void
     {
         $client = self::createClient();
-        $headers = $this->bearer('image-proxy-refused@example.com');
+        $headers = $this->bearerFor($this->factory()->create('image-proxy-refused@example.com'));
         $this->install(new ImageRefusedException(self::IMAGE . ': HTTP 403'));
 
         $client->request('GET', '/api/image-proxy', ['url' => self::IMAGE], [], $headers);
@@ -72,7 +62,7 @@ final class ImageProxyControllerTest extends ApiTestCase
     public function testABadUrlIsA400Problem(): void
     {
         $client = self::createClient();
-        $headers = $this->bearer('image-proxy-bad@example.com');
+        $headers = $this->bearerFor($this->factory()->create('image-proxy-bad@example.com'));
         $this->install(new InvalidImageUrlException('Not an http(s) URL: file:///etc/passwd'));
 
         $client->request('GET', '/api/image-proxy', ['url' => 'file:///etc/passwd'], [], $headers);
@@ -95,7 +85,7 @@ final class ImageProxyControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        $headers = $this->bearer('image-proxy-limit@example.com');
+        $headers = $this->bearerFor($this->factory()->create('image-proxy-limit@example.com'));
         $proxy = $this->install(new ProxiedImageModel('png-bytes', 'image/png'));
 
         for ($attempt = 0; $attempt < 300; $attempt++) {

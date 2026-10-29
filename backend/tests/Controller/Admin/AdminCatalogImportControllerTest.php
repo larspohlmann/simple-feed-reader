@@ -7,14 +7,11 @@ namespace App\Tests\Controller\Admin;
 use App\Entity\CatalogFeed;
 use App\Service\Catalog\BundledCatalog;
 use App\Service\Catalog\Model\ParsedCatalogModel;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class AdminCatalogImportControllerTest extends WebTestCase
+final class AdminCatalogImportControllerTest extends ApiTestCase
 {
     /**
      * @param list<string> $roles
@@ -23,24 +20,14 @@ final class AdminCatalogImportControllerTest extends WebTestCase
      */
     private function authHeader(string $email, array $roles): array
     {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        $user = (new UserFactory($entityManager, $hasher))->create($email, roles: $roles);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
         return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
+            ...$this->bearerFor($this->factory()->create($email, roles: $roles)),
             'CONTENT_TYPE' => 'application/json',
         ];
     }
 
     /** @param list<array{title: string, url: string}> $feeds */
-    private function payload(array $feeds, string $mode): string
+    private function importRequest(array $feeds, string $mode): string
     {
         $outlines = '';
         foreach ($feeds as $feed) {
@@ -78,7 +65,7 @@ final class AdminCatalogImportControllerTest extends WebTestCase
             'POST',
             '/api/admin/catalog/import',
             server: $this->authHeader('plain@example.com', []),
-            content: $this->payload([], 'merge'),
+            content: $this->importRequest([], 'merge'),
         );
 
         self::assertResponseStatusCodeSame(403);
@@ -93,7 +80,7 @@ final class AdminCatalogImportControllerTest extends WebTestCase
             'POST',
             '/api/admin/catalog/import',
             server: $headers,
-            content: $this->payload(
+            content: $this->importRequest(
                 [['title' => 'The Verge', 'url' => 'https://www.theverge.com/rss/index.xml']],
                 'merge',
             ),
@@ -138,7 +125,7 @@ final class AdminCatalogImportControllerTest extends WebTestCase
             'POST',
             '/api/admin/catalog/import',
             server: $headers,
-            content: $this->payload([], 'obliterate'),
+            content: $this->importRequest([], 'obliterate'),
         );
 
         self::assertResponseStatusCodeSame(422);

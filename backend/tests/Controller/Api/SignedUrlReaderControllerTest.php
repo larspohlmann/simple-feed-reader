@@ -4,17 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\User;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ReaderEndpointFixtures;
 use App\Tests\Support\SignsReaderUrls;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SignedUrlReaderControllerTest extends ApiTestCase
 {
@@ -31,7 +26,7 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
     public function testExtractsTheSignedCardsPage(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('card-reader-ok@example.com');
+        $headers = $this->bearerFor($this->factory()->create('card-reader-ok@example.com'));
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             url: self::URL,
@@ -55,7 +50,7 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
     public function testAFailedExtractionIsAnsweredWithoutALead(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('card-reader-fail@example.com');
+        $headers = $this->bearerFor($this->factory()->create('card-reader-fail@example.com'));
         $this->installFake()->willReturn(
             ExtractionResultModel::failed(self::URL, ExtractionFailure::Fetch, 'HTTP 403 Forbidden'),
         );
@@ -70,7 +65,8 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
     public function testAForgedTokenIsNotFoundAndSpendsNoBudget(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('card-reader-forged@example.com');
+        $user = $this->factory()->create('card-reader-forged@example.com');
+        $headers = $this->bearerFor($user);
         $fake = $this->installFake();
         $this->spendReaderBudget($user);
 
@@ -84,7 +80,7 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
     public function testAnotherCardsTokenIsNotFound(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('card-reader-swapped@example.com');
+        $headers = $this->bearerFor($this->factory()->create('card-reader-swapped@example.com'));
         $fake = $this->installFake();
 
         $client->request(
@@ -100,7 +96,7 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
     public function testAMissingTokenIsNotFound(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('card-reader-tokenless@example.com');
+        $headers = $this->bearerFor($this->factory()->create('card-reader-tokenless@example.com'));
         $fake = $this->installFake();
 
         $client->request('GET', '/api/reader?' . http_build_query(['url' => self::URL]), server: $headers);
@@ -112,7 +108,8 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
     public function testSharesTheEntryReadersBudget(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('card-reader-limit@example.com');
+        $user = $this->factory()->create('card-reader-limit@example.com');
+        $headers = $this->bearerFor($user);
         $fake = $this->installFake();
         $this->spendReaderBudget($user);
 
@@ -129,21 +126,6 @@ final class SignedUrlReaderControllerTest extends ApiTestCase
         $client->request('GET', self::readerPath(self::URL, str_repeat('A', 43)));
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
-    }
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 
     private static function readerPath(string $url, string $token): string

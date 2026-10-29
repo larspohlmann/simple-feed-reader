@@ -6,29 +6,24 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /** Includes first-enable seeding: an account's first digest covers only entries that arrive after it opts in. */
 final class MeDigestControllerTest extends ApiTestCase
 {
-    /** Attaches a bearer token to every subsequent request this client makes. */
-    private function authenticate(KernelBrowser $client, string $email): void
+    private function authenticateAs(KernelBrowser $client, string $email): void
     {
         $user = $this->users()->findOneByEmail($email);
         self::assertInstanceOf(User::class, $user);
 
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
+        $this->authenticate($client, $user);
     }
 
     public function testTheDigestConfigurationCanBeUpdated(): void
     {
         $client = static::createClient();
         $user = $this->factory()->create('digest-update@example.test');
-        $this->authenticate($client, 'digest-update@example.test');
+        $this->authenticateAs($client, 'digest-update@example.test');
 
         $client->request(
             'PATCH',
@@ -65,7 +60,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('digest-hour-boundary@example.test');
-        $this->authenticate($client, 'digest-hour-boundary@example.test');
+        $this->authenticateAs($client, 'digest-hour-boundary@example.test');
 
         $client->request(
             'PATCH',
@@ -78,7 +73,7 @@ final class MeDigestControllerTest extends ApiTestCase
         );
         self::assertResponseIsSuccessful();
 
-        $this->authenticate($client, 'digest-hour-boundary@example.test');
+        $this->authenticateAs($client, 'digest-hour-boundary@example.test');
         $client->request(
             'PATCH',
             '/api/me/digest',
@@ -100,7 +95,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('digest-hour-negative@example.test');
-        $this->authenticate($client, 'digest-hour-negative@example.test');
+        $this->authenticateAs($client, 'digest-hour-negative@example.test');
 
         $client->request(
             'PATCH',
@@ -123,7 +118,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('digest-bad-hour@example.test');
-        $this->authenticate($client, 'digest-bad-hour@example.test');
+        $this->authenticateAs($client, 'digest-bad-hour@example.test');
 
         $client->request(
             'PATCH',
@@ -146,7 +141,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('digest-weekday-boundary@example.test');
-        $this->authenticate($client, 'digest-weekday-boundary@example.test');
+        $this->authenticateAs($client, 'digest-weekday-boundary@example.test');
 
         $client->request(
             'PATCH',
@@ -170,7 +165,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('digest-bad-weekday@example.test');
-        $this->authenticate($client, 'digest-bad-weekday@example.test');
+        $this->authenticateAs($client, 'digest-bad-weekday@example.test');
 
         $client->request(
             'PATCH',
@@ -193,7 +188,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('digest-weekday-zero@example.test');
-        $this->authenticate($client, 'digest-weekday-zero@example.test');
+        $this->authenticateAs($client, 'digest-weekday-zero@example.test');
 
         $client->request(
             'PATCH',
@@ -216,7 +211,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('digest-bad-cadence@example.test');
-        $this->authenticate($client, 'digest-bad-cadence@example.test');
+        $this->authenticateAs($client, 'digest-bad-cadence@example.test');
 
         $client->request(
             'PATCH',
@@ -239,7 +234,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $user = $this->factory()->create('digest-first-enable@example.test');
-        $this->authenticate($client, 'digest-first-enable@example.test');
+        $this->authenticateAs($client, 'digest-first-enable@example.test');
 
         self::assertNull($user->getPreferences()->getDigestLastSentAt());
 
@@ -265,7 +260,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $user = $this->factory()->create('digest-second-enable@example.test');
-        $this->authenticate($client, 'digest-second-enable@example.test');
+        $this->authenticateAs($client, 'digest-second-enable@example.test');
 
         $client->request(
             'PATCH',
@@ -284,7 +279,7 @@ final class MeDigestControllerTest extends ApiTestCase
         $seededAt = $afterFirstEnable->getPreferences()->getDigestLastSentAt();
         self::assertNotNull($seededAt);
 
-        $this->authenticate($client, 'digest-second-enable@example.test');
+        $this->authenticateAs($client, 'digest-second-enable@example.test');
         $client->request(
             'PATCH',
             '/api/me/digest',
@@ -306,7 +301,7 @@ final class MeDigestControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $user = $this->factory()->create('digest-reenable@example.test');
-        $this->authenticate($client, 'digest-reenable@example.test');
+        $this->authenticateAs($client, 'digest-reenable@example.test');
 
         $client->request(
             'PATCH',
@@ -325,7 +320,7 @@ final class MeDigestControllerTest extends ApiTestCase
         $seededAt = $afterEnable->getPreferences()->getDigestLastSentAt();
         self::assertNotNull($seededAt);
 
-        $this->authenticate($client, 'digest-reenable@example.test');
+        $this->authenticateAs($client, 'digest-reenable@example.test');
         $client->request(
             'PATCH',
             '/api/me/digest',
@@ -337,7 +332,7 @@ final class MeDigestControllerTest extends ApiTestCase
         );
         self::assertResponseIsSuccessful();
 
-        $this->authenticate($client, 'digest-reenable@example.test');
+        $this->authenticateAs($client, 'digest-reenable@example.test');
         $client->request(
             'PATCH',
             '/api/me/digest',

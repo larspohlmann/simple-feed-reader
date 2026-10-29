@@ -6,7 +6,6 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,14 +23,6 @@ final class AdminRetentionControllerTest extends ApiTestCase
         $this->client = self::createClient();
     }
 
-    private function tokenFor(User $user): string
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager->create($user);
-    }
-
     private function admin(): User
     {
         return $this->factory()->create('boss@example.com', roles: ['ROLE_ADMIN']);
@@ -42,7 +33,7 @@ final class AdminRetentionControllerTest extends ApiTestCase
         $this->client->request(
             'GET',
             self::RETENTION,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($user)],
+            server: $this->bearerFor($user),
         );
     }
 
@@ -53,7 +44,7 @@ final class AdminRetentionControllerTest extends ApiTestCase
             'PUT',
             self::RETENTION,
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($user),
+                ...$this->bearerFor($user),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode($body, \JSON_THROW_ON_ERROR),

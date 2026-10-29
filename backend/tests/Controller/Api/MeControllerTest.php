@@ -7,7 +7,6 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /** Tokens come straight from the JWT manager, so no case touches, or is poisoned by, the login throttler's pool. */
@@ -15,16 +14,12 @@ final class MeControllerTest extends ApiTestCase
 {
     use EnablesMailInTests;
 
-    /** Attaches a bearer token to every subsequent request this client makes. */
-    private function authenticate(KernelBrowser $client, string $email): void
+    private function authenticateAs(KernelBrowser $client, string $email): void
     {
         $user = $this->users()->findOneByEmail($email);
         self::assertInstanceOf(User::class, $user);
 
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
+        $this->authenticate($client, $user);
     }
 
     public function testTheProfileCarriesTheAccountLocale(): void
@@ -34,7 +29,7 @@ final class MeControllerTest extends ApiTestCase
         $user->setLocale('de');
         $this->entityManager()->flush();
 
-        $this->authenticate($client, 'locale-reader@example.test');
+        $this->authenticateAs($client, 'locale-reader@example.test');
         $client->request('GET', '/api/me');
 
         self::assertResponseIsSuccessful();
@@ -45,7 +40,7 @@ final class MeControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('switcher@example.test');
-        $this->authenticate($client, 'switcher@example.test');
+        $this->authenticateAs($client, 'switcher@example.test');
 
         $client->request(
             'PATCH',
@@ -67,7 +62,7 @@ final class MeControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('klingon@example.test');
-        $this->authenticate($client, 'klingon@example.test');
+        $this->authenticateAs($client, 'klingon@example.test');
 
         $client->request(
             'PATCH',
@@ -110,7 +105,7 @@ final class MeControllerTest extends ApiTestCase
 
         $client = static::createClient();
         $this->factory()->create('has-trial@example.test', trialEndsAt: $trialEndsAt);
-        $this->authenticate($client, 'has-trial@example.test');
+        $this->authenticateAs($client, 'has-trial@example.test');
 
         $client->request('GET', '/api/me');
 
@@ -125,7 +120,7 @@ final class MeControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('no-trial@example.test');
-        $this->authenticate($client, 'no-trial@example.test');
+        $this->authenticateAs($client, 'no-trial@example.test');
 
         $client->request('GET', '/api/me');
 
@@ -138,7 +133,7 @@ final class MeControllerTest extends ApiTestCase
         $client = static::createClient();
         $this->seedEnabledMailInstance();
         $this->factory()->create('mail-flags@example.test');
-        $this->authenticate($client, 'mail-flags@example.test');
+        $this->authenticateAs($client, 'mail-flags@example.test');
 
         $client->request('GET', '/api/me');
 
@@ -152,7 +147,7 @@ final class MeControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $user = $this->factory()->create('prefs-enable@example.com');
-        $this->authenticate($client, 'prefs-enable@example.com');
+        $this->authenticateAs($client, 'prefs-enable@example.com');
 
         $client->request(
             'PATCH',
@@ -191,7 +186,7 @@ final class MeControllerTest extends ApiTestCase
         $user = $this->factory()->create('prefs-invalid@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $this->entityManager()->flush();
-        $this->authenticate($client, 'prefs-invalid@example.com');
+        $this->authenticateAs($client, 'prefs-invalid@example.com');
 
         $client->request(
             'PATCH',
@@ -214,7 +209,7 @@ final class MeControllerTest extends ApiTestCase
         $user = $this->factory()->create('prefs-empty@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $this->entityManager()->flush();
-        $this->authenticate($client, 'prefs-empty@example.com');
+        $this->authenticateAs($client, 'prefs-empty@example.com');
 
         $client->request(
             'PATCH',
@@ -235,7 +230,7 @@ final class MeControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('prefs-default@example.com');
-        $this->authenticate($client, 'prefs-default@example.com');
+        $this->authenticateAs($client, 'prefs-default@example.com');
 
         $client->request('GET', '/api/me');
 
@@ -263,7 +258,7 @@ final class MeControllerTest extends ApiTestCase
         $client = static::createClient();
         $user = $this->factory()->create('bye@example.com');
         $userId = $user->requireId();
-        $this->authenticate($client, 'bye@example.com');
+        $this->authenticateAs($client, 'bye@example.com');
 
         $client->request('DELETE', '/api/me');
         self::assertResponseStatusCodeSame(204);
@@ -280,7 +275,7 @@ final class MeControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('last-admin@example.com', roles: ['ROLE_ADMIN']);
-        $this->authenticate($client, 'last-admin@example.com');
+        $this->authenticateAs($client, 'last-admin@example.com');
 
         $client->request('DELETE', '/api/me');
 
@@ -293,7 +288,7 @@ final class MeControllerTest extends ApiTestCase
         $client = static::createClient();
         $this->factory()->create('remaining-admin@example.com', roles: ['ROLE_ADMIN']);
         $suspended = $this->factory()->create('to-be-suspended-admin@example.com', roles: ['ROLE_ADMIN']);
-        $this->authenticate($client, 'remaining-admin@example.com');
+        $this->authenticateAs($client, 'remaining-admin@example.com');
 
         $client->request('POST', '/api/admin/users/' . $suspended->getId() . '/suspend');
         self::assertResponseIsSuccessful();

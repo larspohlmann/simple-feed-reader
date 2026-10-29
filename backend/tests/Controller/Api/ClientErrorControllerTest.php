@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\User;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -135,13 +133,6 @@ final class ClientErrorControllerTest extends ApiTestCase
         self::assertSame('jest', $line['context']['userAgent']);
         self::assertSame('at Foo (main.js:1:2)', $line['context']['stack']);
         self::assertSame('2026-09-11T00:00:00.000Z', $line['context']['at']);
-    }
-
-    private function authenticate(KernelBrowser $client, User $user): void
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
     }
 
     /** @param list<array<string, mixed>> $errors */

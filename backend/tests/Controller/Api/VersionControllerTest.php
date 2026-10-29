@@ -10,26 +10,10 @@ use App\Service\Version\Model\LatestReleaseModel;
 use App\Service\Version\Model\ReleaseVersionModel;
 use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use App\Service\Version\VersionReporter;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\ApiTestCase;
 
-final class VersionControllerTest extends WebTestCase
+final class VersionControllerTest extends ApiTestCase
 {
-    private function bearerToken(): string
-    {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        /** @var JWTTokenManagerInterface $tokens */
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $tokens->create((new UserFactory($entityManager, $hasher))->create('version@example.com'));
-    }
-
     /**
      * The route carries no access_control rule of its own — it is covered by the
      * `^/api/` catch-all. Asserted through the real firewall, because that is
@@ -46,9 +30,9 @@ final class VersionControllerTest extends WebTestCase
     public function testReportsTheRunningBuild(): void
     {
         $client = self::createClient();
-        $token = $this->bearerToken();
+        $headers = $this->bearerFor($this->factory()->create('version@example.com'));
 
-        $client->request('GET', '/api/version', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', '/api/version', server: $headers);
 
         self::assertResponseIsSuccessful();
         $payload = json_decode((string) $client->getResponse()->getContent(), true);
@@ -65,9 +49,9 @@ final class VersionControllerTest extends WebTestCase
     public function testExposesTheUpdateCheckWithoutReachingGitHub(): void
     {
         $client = self::createClient();
-        $token = $this->bearerToken();
+        $headers = $this->bearerFor($this->factory()->create('version@example.com'));
 
-        $client->request('GET', '/api/version', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', '/api/version', server: $headers);
 
         self::assertResponseIsSuccessful();
         $payload = json_decode((string) $client->getResponse()->getContent(), true);

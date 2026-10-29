@@ -8,17 +8,15 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Service\Fetch\Model\FetchResponseModel;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
 use App\Tests\Support\RefreshFetchers;
 use App\Tests\Support\StubPassFetcher;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
-final class RefreshControllerTest extends WebTestCase
+final class RefreshControllerTest extends ApiTestCase
 {
     protected function setUp(): void
     {
@@ -34,16 +32,6 @@ final class RefreshControllerTest extends WebTestCase
         self::ensureKernelShutdown();
     }
 
-    /** @return array<string, string> */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
-        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($factory->create($email));
-
-        return ['HTTP_AUTHORIZATION' => 'Bearer ' . $token];
-    }
-
     public function testAnonymousIsRejected(): void
     {
         $client = self::createClient();
@@ -54,7 +42,7 @@ final class RefreshControllerTest extends WebTestCase
     public function testRefreshWithNoFeedsReportsCompleted(): void
     {
         $client = self::createClient();
-        $headers = $this->auth('norefresh@example.com');
+        $headers = $this->bearerFor($this->factory()->create('norefresh@example.com'));
         $client->request('POST', '/api/refresh', server: $headers);
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
@@ -73,7 +61,7 @@ final class RefreshControllerTest extends WebTestCase
         $entityManager->persist($feed);
         $entityManager->flush();
 
-        $headers = $this->auth('nosub@example.com');
+        $headers = $this->bearerFor($this->factory()->create('nosub@example.com'));
         $client->request('POST', '/api/refresh?feedId=' . $feed->getId(), server: $headers);
         self::assertResponseStatusCodeSame(404);
         self::assertStringContainsString(
@@ -86,14 +74,13 @@ final class RefreshControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
+        $factory = $this->factory();
         $user = $factory->create('owner3@example.com');
         $feed = new Feed('https://example.com/mine.xml');
         $entityManager->persist($feed);
         $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
         $entityManager->flush();
 
-        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
         $passes = new StubPassFetcher();
         $passes->willReturn(
             'https://example.com/mine.xml',
@@ -104,7 +91,7 @@ final class RefreshControllerTest extends WebTestCase
         $client->request(
             'POST',
             '/api/refresh?feedId=' . $feed->getId(),
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: $this->bearerFor($user),
         );
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
@@ -115,7 +102,7 @@ final class RefreshControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
+        $factory = $this->factory();
         $owner = $factory->create('tagowner@example.com');
         $stranger = $factory->create('tagstranger@example.com');
         $tag = new Tag($owner, 'news');
@@ -124,11 +111,10 @@ final class RefreshControllerTest extends WebTestCase
 
         // The stranger asking to refresh a tag they do not own must get a 404,
         // mirroring the per-feed IDOR guard (not 403 — do not confirm it exists).
-        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($stranger);
         $client->request(
             'POST',
             '/api/refresh?tag=' . $tag->getId(),
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: $this->bearerFor($stranger),
         );
         self::assertResponseStatusCodeSame(404);
     }
@@ -136,7 +122,7 @@ final class RefreshControllerTest extends WebTestCase
     public function testTagRefreshOfAnUnknownTagIs404(): void
     {
         $client = self::createClient();
-        $headers = $this->auth('unknowntag@example.com');
+        $headers = $this->bearerFor($this->factory()->create('unknowntag@example.com'));
         $client->request('POST', '/api/refresh?tag=999999', server: $headers);
         self::assertResponseStatusCodeSame(404);
         self::assertStringContainsString('"detail":"No such tag."', (string) $client->getResponse()->getContent());
@@ -146,7 +132,7 @@ final class RefreshControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
+        $factory = $this->factory();
         $user = $factory->create('tagowner2@example.com');
         $tag = new Tag($user, 'news');
         $entityManager->persist($tag);
@@ -164,11 +150,10 @@ final class RefreshControllerTest extends WebTestCase
         );
         RefreshFetchers::install(self::getContainer(), $passes, 'https://example.com');
 
-        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
         $client->request(
             'POST',
             '/api/refresh?tag=' . $tag->getId(),
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: $this->bearerFor($user),
         );
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
@@ -179,7 +164,7 @@ final class RefreshControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
+        $factory = $this->factory();
         $user = $factory->create('network-refresh@example.com');
         $fixtures = new NetworkFeedSubscriptions($entityManager);
         $fixtures->subscribe($user, NetworkFeedSubscriptions::MASTODON_PROFILE);
@@ -192,11 +177,10 @@ final class RefreshControllerTest extends WebTestCase
         );
         RefreshFetchers::install(self::getContainer(), $passes, 'https://mastodon.social');
 
-        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
         $client->request(
             'POST',
             '/api/refresh?network=mastodon',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: $this->bearerFor($user),
         );
 
         self::assertResponseIsSuccessful();
@@ -210,7 +194,7 @@ final class RefreshControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
+        $factory = $this->factory();
         $user = $factory->create('group-refresh@example.com');
         $fixtures = new NetworkFeedSubscriptions($entityManager);
         $tag = new Tag($user, 'news');
@@ -225,11 +209,10 @@ final class RefreshControllerTest extends WebTestCase
         }
         RefreshFetchers::install(self::getContainer(), $passes, 'https://example.com');
 
-        $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
         $client->request(
             'POST',
             '/api/refresh?group=feeds',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: $this->bearerFor($user),
         );
 
         self::assertResponseIsSuccessful();
@@ -242,7 +225,7 @@ final class RefreshControllerTest extends WebTestCase
     public function testRefreshOfAnUnknownFeedGroupIsAValidationError(): void
     {
         $client = self::createClient();
-        $headers = $this->auth('unknown-group-refresh@example.com');
+        $headers = $this->bearerFor($this->factory()->create('unknown-group-refresh@example.com'));
 
         $client->request('POST', '/api/refresh?group=folders', server: $headers);
 
@@ -252,7 +235,7 @@ final class RefreshControllerTest extends WebTestCase
     public function testRefreshOfAnUnknownNetworkIsAValidationError(): void
     {
         $client = self::createClient();
-        $headers = $this->auth('unknown-network-refresh@example.com');
+        $headers = $this->bearerFor($this->factory()->create('unknown-network-refresh@example.com'));
 
         $client->request('POST', '/api/refresh?network=myspace', server: $headers);
 
@@ -262,7 +245,7 @@ final class RefreshControllerTest extends WebTestCase
     public function testRefreshOfAnUnknownFeedKindIsAValidationError(): void
     {
         $client = self::createClient();
-        $headers = $this->auth('unknown-feed-kind-refresh@example.com');
+        $headers = $this->bearerFor($this->factory()->create('unknown-feed-kind-refresh@example.com'));
 
         $client->request('POST', '/api/refresh?network=mastodon&feedKind=other', server: $headers);
 

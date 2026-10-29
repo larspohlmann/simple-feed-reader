@@ -6,7 +6,6 @@ namespace App\Tests\Support;
 
 use App\Entity\User;
 use App\Service\Fetch\DnsResolver\NativeDnsResolver;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -38,9 +37,7 @@ trait RoutesOutboundApis
     private function signIn(KernelBrowser $client, string $email): User
     {
         $user = $this->factory()->create($email);
-        /** @var JWTTokenManagerInterface $tokens */
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $tokens->create($user));
+        $this->authenticate($client, $user);
 
         return $user;
     }

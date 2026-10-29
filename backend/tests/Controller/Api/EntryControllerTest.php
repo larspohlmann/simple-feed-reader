@@ -23,34 +23,16 @@ use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SignsReaderUrls;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class EntryControllerTest extends WebTestCase
+final class EntryControllerTest extends ApiTestCase
 {
     use SignsReaderUrls;
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
 
     private function seedFeedWithEntries(User $user, int $count): Subscription
     {
@@ -179,7 +161,7 @@ final class EntryControllerTest extends WebTestCase
     public function testListsNewestFirstWithState(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-list@example.com');
+        [$headers, $user] = $this->userAndBearer('e-list@example.com');
         $this->seedFeedWithEntries($user, 3);
 
         $client->request('GET', '/api/entries', server: $headers);
@@ -251,7 +233,7 @@ final class EntryControllerTest extends WebTestCase
     public function testEntryListCarriesLinkCardsInPositionOrderAndEmptyOtherwise(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-list-link-cards@example.com');
+        [$headers, $user] = $this->userAndBearer('e-list-link-cards@example.com');
         $subscription = $this->seedFeedWithEntries($user, 2);
         $this->seedLinkCards($this->entryWithGuid($subscription, 'g2'));
 
@@ -271,7 +253,7 @@ final class EntryControllerTest extends WebTestCase
     public function testGetCarriesLinkCardsAndEmptyWhenThereAreNone(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-get-link-cards@example.com');
+        [$headers, $user] = $this->userAndBearer('e-get-link-cards@example.com');
         $subscription = $this->seedFeedWithEntries($user, 2);
         $withCards = $this->entryWithGuid($subscription, 'g2');
         $this->seedLinkCards($withCards);
@@ -293,7 +275,7 @@ final class EntryControllerTest extends WebTestCase
     public function testEntryListCarriesSavedSearchMembership(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-list-saved-search@example.com');
+        [$headers, $user] = $this->userAndBearer('e-list-saved-search@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -317,7 +299,7 @@ final class EntryControllerTest extends WebTestCase
     public function testListEntriesCarryAnExcerptButNoContentHtml(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-excerpt-list@example.com');
+        [$headers, $user] = $this->userAndBearer('e-excerpt-list@example.com');
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -345,7 +327,7 @@ final class EntryControllerTest extends WebTestCase
     public function testExposesThePersistedImageOnEachEntry(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-image@example.com');
+        [$headers, $user] = $this->userAndBearer('e-image@example.com');
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -393,7 +375,7 @@ final class EntryControllerTest extends WebTestCase
     public function testEntryDuplicatesNameTheOtherFeedAsSource(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-duplicates@example.com');
+        [$headers, $user] = $this->userAndBearer('e-duplicates@example.com');
 
         $earlier = new \DateTimeImmutable('2026-07-05T09:00:00Z');
         $later = new \DateTimeImmutable('2026-07-05T10:00:00Z');
@@ -420,7 +402,7 @@ final class EntryControllerTest extends WebTestCase
     public function testPaginatesWithCursor(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-page@example.com');
+        [$headers, $user] = $this->userAndBearer('e-page@example.com');
         $this->seedFeedWithEntries($user, 3);
 
         $client->request('GET', '/api/entries?limit=2', server: $headers);
@@ -451,7 +433,7 @@ final class EntryControllerTest extends WebTestCase
         // the cursor is the only tiebreaker: if it defaulted to 0 instead of
         // the real row id, the tied group would skip or repeat across pages.
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-tied-cursor@example.com');
+        [$headers, $user] = $this->userAndBearer('e-tied-cursor@example.com');
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -500,7 +482,7 @@ final class EntryControllerTest extends WebTestCase
     public function testRejectsUnknownView(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-view@example.com');
+        [$headers] = $this->userAndBearer('e-view@example.com');
 
         $client->request('GET', '/api/entries?view=bogus', server: $headers);
         self::assertResponseStatusCodeSame(422);
@@ -517,7 +499,7 @@ final class EntryControllerTest extends WebTestCase
     public function testListsOldestFirstWhenAskedAndPagesOnward(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-oldest@example.com');
+        [$headers, $user] = $this->userAndBearer('e-oldest@example.com');
         $this->seedFeedWithEntries($user, 3);
 
         $client->request('GET', '/api/entries?order=asc&limit=2', server: $headers);
@@ -549,7 +531,7 @@ final class EntryControllerTest extends WebTestCase
     public function testRejectsAnUnknownOrder(string $url): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-order@example.com');
+        [$headers] = $this->userAndBearer('e-order@example.com');
 
         $client->request('GET', $url, server: $headers);
 
@@ -563,7 +545,7 @@ final class EntryControllerTest extends WebTestCase
     public function testTheForYouViewAcceptsAnOrderItDoesNotApply(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-order-for-you@example.com');
+        [$headers] = $this->userAndBearer('e-order-for-you@example.com');
 
         $client->request('GET', '/api/entries?view=for-you&order=asc', server: $headers);
 
@@ -573,7 +555,7 @@ final class EntryControllerTest extends WebTestCase
     public function testEveryNamedViewIsAccepted(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-view-all@example.com');
+        [$headers, $user] = $this->userAndBearer('e-view-all@example.com');
         $this->seedFeedWithEntries($user, 1);
 
         foreach (['all', 'unread', 'favorites', 'kept', 'viewed', 'for-you'] as $view) {
@@ -585,7 +567,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkingAnEntryUnreadClearsItsViewedFlag(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-unview@example.com');
+        [$headers, $user] = $this->userAndBearer('e-unview@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -627,7 +609,7 @@ final class EntryControllerTest extends WebTestCase
     public function testForYouViewOmitsBothDebugAnnotationsWhenDebugIsOff(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-foryou@example.com');
+        [$headers, $user] = $this->userAndBearer('e-foryou@example.com');
         $subscription = $this->seedFeedWithEntries($user, 2);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -668,7 +650,7 @@ final class EntryControllerTest extends WebTestCase
     public function testForYouViewNarrowsToUnreadPicksWhenAsked(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-foryou-unread@example.com');
+        [$headers, $user] = $this->userAndBearer('e-foryou-unread@example.com');
         $subscription = $this->seedFeedWithEntries($user, 2);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -707,7 +689,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkForYouReadClearsThePicksWithoutMovingTheWatermark(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-foryou-mark@example.com');
+        [$headers, $user] = $this->userAndBearer('e-foryou-mark@example.com');
         $subscription = $this->seedFeedWithEntries($user, 2);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -761,7 +743,7 @@ final class EntryControllerTest extends WebTestCase
     public function testForYouViewWithholdsBothAnnotationsFromDebugAlone(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-foryou-debug@example.com');
+        [$headers, $user] = $this->userAndBearer('e-foryou-debug@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -793,7 +775,7 @@ final class EntryControllerTest extends WebTestCase
     public function testForYouViewIncludesTheReasonAndItsScoreWhenShowScoreAndReasonsIsEnabled(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-foryou-reasons@example.com');
+        [$headers, $user] = $this->userAndBearer('e-foryou-reasons@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -825,7 +807,7 @@ final class EntryControllerTest extends WebTestCase
     public function testForYouViewPaginatesWithCursor(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-foryou-page@example.com');
+        [$headers, $user] = $this->userAndBearer('e-foryou-page@example.com');
         $subscription = $this->seedFeedWithEntries($user, 3);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -865,7 +847,7 @@ final class EntryControllerTest extends WebTestCase
     public function testForYouViewWithAMalformedCursorDegradesToTheFirstPageInsteadOfErroring(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-foryou-badcursor@example.com');
+        [$headers, $user] = $this->userAndBearer('e-foryou-badcursor@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -893,7 +875,7 @@ final class EntryControllerTest extends WebTestCase
     public function testInvalidCursorIsRejected(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-cursor@example.com');
+        [$headers] = $this->userAndBearer('e-cursor@example.com');
 
         $client->request('GET', '/api/entries?cursor=not-a-cursor', server: $headers);
         self::assertResponseStatusCodeSame(422);
@@ -907,7 +889,7 @@ final class EntryControllerTest extends WebTestCase
     public function testPatchStateLazilyCreatesAndReturnsState(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-patch@example.com');
+        [$headers, $user] = $this->userAndBearer('e-patch@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -935,7 +917,7 @@ final class EntryControllerTest extends WebTestCase
     public function testPatchStateUnreadClearsReadAt(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-unread@example.com');
+        [$headers, $user] = $this->userAndBearer('e-unread@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -966,7 +948,7 @@ final class EntryControllerTest extends WebTestCase
     public function testPatchStateMarksViewed(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-viewed@example.com');
+        [$headers, $user] = $this->userAndBearer('e-viewed@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -995,7 +977,7 @@ final class EntryControllerTest extends WebTestCase
     public function testPatchStateUnviewingKeepsTheEntryRead(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-unview@example.com');
+        [$headers, $user] = $this->userAndBearer('e-unview@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1027,7 +1009,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkingViewedKeepsAWatermarkReadEntryRead(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-viewed-watermark@example.com');
+        [$headers, $user] = $this->userAndBearer('e-viewed-watermark@example.com');
         $subscription = $this->seedFeedWithEntries($user, 3);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1076,7 +1058,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkingViewedReadsTheEntryEvenAboveTheWatermark(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-viewed-boundary@example.com');
+        [$headers, $user] = $this->userAndBearer('e-viewed-boundary@example.com');
         $subscription = $this->seedFeedWithEntries($user, 3);
 
         // Sweep to exactly the second entry's date: entry 2 is read (the
@@ -1165,7 +1147,7 @@ final class EntryControllerTest extends WebTestCase
     public function testViewedSurvivesOtherStatePatches(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-viewed-keep@example.com');
+        [$headers, $user] = $this->userAndBearer('e-viewed-keep@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1202,7 +1184,7 @@ final class EntryControllerTest extends WebTestCase
     public function testHidingASurvivorMirrorsToTheSiblingSoItsBadgeClearsToo(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-mirror@example.com');
+        [$headers, $user] = $this->userAndBearer('e-mirror@example.com');
 
         $earlier = new \DateTimeImmutable('2026-07-05T09:00:00Z');
         $later = new \DateTimeImmutable('2026-07-05T10:00:00Z');
@@ -1240,8 +1222,8 @@ final class EntryControllerTest extends WebTestCase
     public function testCannotPatchEntryOfUnsubscribedFeed(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-idor@example.com');
-        [, $stranger] = $this->auth('e-owner@example.com');
+        [$headers] = $this->userAndBearer('e-idor@example.com');
+        [, $stranger] = $this->userAndBearer('e-owner@example.com');
         $strangerSubscription = $this->seedFeedWithEntries($stranger, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1263,7 +1245,7 @@ final class EntryControllerTest extends WebTestCase
     public function testGetReturnsOwnedEntry(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-get@example.com');
+        [$headers, $user] = $this->userAndBearer('e-get@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1290,7 +1272,7 @@ final class EntryControllerTest extends WebTestCase
     public function testGetReturnsSavedSearchMembership(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-get-saved-search@example.com');
+        [$headers, $user] = $this->userAndBearer('e-get-saved-search@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1313,7 +1295,7 @@ final class EntryControllerTest extends WebTestCase
     public function testGetReturnsContentHtmlOnTheDetailShape(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-get-detail@example.com');
+        [$headers, $user] = $this->userAndBearer('e-get-detail@example.com');
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1342,7 +1324,7 @@ final class EntryControllerTest extends WebTestCase
     public function testGetReturnsTheDiscussionUrlAndCommentsLoad(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-get-discussion@example.com');
+        [$headers, $user] = $this->userAndBearer('e-get-discussion@example.com');
         $entryId = $this->seedEntryWithDiscussion(
             $user,
             Discussion::withCommentsFeed('https://t.example/1', 'https://t.example/1/.rss', CommentsLoad::Auto),
@@ -1361,7 +1343,7 @@ final class EntryControllerTest extends WebTestCase
     public function testGetReturnsNullDiscussionFieldsWhenAbsent(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-get-no-discussion@example.com');
+        [$headers, $user] = $this->userAndBearer('e-get-no-discussion@example.com');
         $entryId = $this->seedEntryWithDiscussion($user, Discussion::none());
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
@@ -1379,8 +1361,8 @@ final class EntryControllerTest extends WebTestCase
     public function testGetUnsubscribedEntryIs404(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-get-idor@example.com');
-        [, $stranger] = $this->auth('e-get-owner@example.com');
+        [$headers] = $this->userAndBearer('e-get-idor@example.com');
+        [, $stranger] = $this->userAndBearer('e-get-owner@example.com');
         $strangerSubscription = $this->seedFeedWithEntries($stranger, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1399,7 +1381,7 @@ final class EntryControllerTest extends WebTestCase
     public function testOpeningAPostSharingALinkWritesNothing(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-get-post@example.com');
+        [$headers, $user] = $this->userAndBearer('e-get-post@example.com');
         $entryId = $this->seedPostSharingALink($user);
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
@@ -1444,7 +1426,7 @@ final class EntryControllerTest extends WebTestCase
     public function testGetMissingEntryIs404(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-get-missing@example.com');
+        [$headers] = $this->userAndBearer('e-get-missing@example.com');
 
         $client->request('GET', '/api/entries/99999999', server: $headers);
 
@@ -1454,7 +1436,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkReadAllThenListUnreadIsEmpty(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-markread@example.com');
+        [$headers, $user] = $this->userAndBearer('e-markread@example.com');
         $this->seedFeedWithEntries($user, 3);
 
         $client->request(
@@ -1475,7 +1457,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkReadRejectsBadTimestamp(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-markbad@example.com');
+        [$headers] = $this->userAndBearer('e-markbad@example.com');
         $client->request(
             'POST',
             '/api/entries/mark-read',
@@ -1493,7 +1475,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkReadValidationErrorsKeepTheirKeysAndMessages(array $payload, array $errors): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-markinvalid@example.com');
+        [$headers] = $this->userAndBearer('e-markinvalid@example.com');
         $client->request(
             'POST',
             '/api/entries/mark-read',
@@ -1528,7 +1510,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkReadBatchMarksOnlyTheGivenEntries(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-markbatch@example.com');
+        [$headers, $user] = $this->userAndBearer('e-markbatch@example.com');
         $subscription = $this->seedFeedWithEntries($user, 3);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1547,7 +1529,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkReadBatchToleratesDuplicateIds(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-markbatch-dup@example.com');
+        [$headers, $user] = $this->userAndBearer('e-markbatch-dup@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1565,7 +1547,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkReadBatchIgnoresNonexistentIds(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('e-markbatch-missing@example.com');
+        [$headers, $user] = $this->userAndBearer('e-markbatch-missing@example.com');
         $subscription = $this->seedFeedWithEntries($user, 1);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1594,7 +1576,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkReadBatchRejectsEmptyIds(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-markbatch-empty@example.com');
+        [$headers] = $this->userAndBearer('e-markbatch-empty@example.com');
 
         $this->postMarkReadBatch($client, $headers, []);
         self::assertResponseStatusCodeSame(422);
@@ -1606,7 +1588,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkReadBatchRejectsNonPositiveIds(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-markbatch-neg@example.com');
+        [$headers] = $this->userAndBearer('e-markbatch-neg@example.com');
 
         $this->postMarkReadBatch($client, $headers, [0, -5]);
         self::assertResponseStatusCodeSame(422);
@@ -1615,7 +1597,7 @@ final class EntryControllerTest extends WebTestCase
     public function testMarkReadBatchRejectsOverTheCap(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('e-markbatch-cap@example.com');
+        [$headers] = $this->userAndBearer('e-markbatch-cap@example.com');
 
         $this->postMarkReadBatch($client, $headers, range(1, MarkEntriesReadRequest::MAX_IDS + 1));
         self::assertResponseStatusCodeSame(422);

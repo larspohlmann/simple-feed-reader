@@ -6,29 +6,11 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Entity\User;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class OpmlControllerTest extends WebTestCase
+final class OpmlControllerTest extends ApiTestCase
 {
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
-
     public function testExportRequiresAuth(): void
     {
         $client = self::createClient();
@@ -39,7 +21,7 @@ final class OpmlControllerTest extends WebTestCase
     public function testExportReturnsOpmlAttachment(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('opml-export@example.com');
+        [$headers, $user] = $this->userAndBearer('opml-export@example.com');
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $feed = new Feed('https://example.com/feed.xml');
@@ -58,7 +40,7 @@ final class OpmlControllerTest extends WebTestCase
     public function testImportCreatesSubscriptions(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('opml-import@example.com');
+        [$headers] = $this->userAndBearer('opml-import@example.com');
         $opml = (string) file_get_contents(__DIR__ . '/../../Fixtures/opml/subscriptions.opml');
 
         $server = $headers + ['CONTENT_TYPE' => 'text/x-opml'];
@@ -78,7 +60,7 @@ final class OpmlControllerTest extends WebTestCase
     public function testImportRejectsEmptyBody(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('opml-empty@example.com');
+        [$headers] = $this->userAndBearer('opml-empty@example.com');
         $client->request('POST', '/api/opml/import', server: $headers + ['CONTENT_TYPE' => 'text/x-opml'], content: '');
         self::assertResponseStatusCodeSame(422);
     }
@@ -86,7 +68,7 @@ final class OpmlControllerTest extends WebTestCase
     public function testImportRejectsOversizedBody(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('opml-big@example.com');
+        [$headers] = $this->userAndBearer('opml-big@example.com');
         $server = $headers + ['CONTENT_TYPE' => 'text/x-opml'];
         $client->request('POST', '/api/opml/import', server: $server, content: str_repeat('a', 1_048_577));
         self::assertResponseStatusCodeSame(422);

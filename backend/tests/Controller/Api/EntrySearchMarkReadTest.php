@@ -9,18 +9,14 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 final class EntrySearchMarkReadTest extends ApiTestCase
 {
     /** @return array<string, string> */
     private function authHeader(User $user): array
     {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
         return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
+            ...$this->bearerFor($user),
             'CONTENT_TYPE' => 'application/json',
         ];
     }

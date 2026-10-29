@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
-use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouterInterface;
@@ -45,7 +43,7 @@ final class AdminRouteGuardTest extends ApiTestCase
     {
         $client = self::createClient();
         $member = $this->factory()->create('member@example.com');
-        $authorization = ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($member)];
+        $authorization = $this->bearerFor($member);
 
         $statuses = [];
         foreach ($this->oneRequestPerMethod($member->requireId()) as [$method, $url]) {
@@ -103,13 +101,5 @@ final class AdminRouteGuardTest extends ApiTestCase
         self::assertInstanceOf(RouterInterface::class, $router);
 
         return $router;
-    }
-
-    private function tokenFor(User $user): string
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager->create($user);
     }
 }

@@ -9,48 +9,19 @@ use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\ClockInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /** No AI provider row is seeded unless a case adds one, so the context window resolves to the fallback. */
-final class RecommendationSettingsControllerTest extends WebTestCase
+final class RecommendationSettingsControllerTest extends ApiTestCase
 {
     use ProvidesWorkerHeartbeats;
 
     private const string URI = '/api/me/ai/recommendations';
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
-
-    /** @return array<string, mixed> */
-    private function payload(KernelBrowser $client): array
-    {
-        $decoded = json_decode((string) $client->getResponse()->getContent(), true);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
-    }
 
     private function fullPayloadJson(): string
     {
@@ -94,7 +65,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testAnUnconfiguredAccountReportsAllDefaults(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-empty@example.test');
+        [$headers] = $this->userAndBearer('recsettings-empty@example.test');
 
         $client->request('GET', self::URI, server: $headers);
 
@@ -126,7 +97,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testAScoringAccountGetsNoneOfTheLlmsPromptPieces(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->auth('recsettings-jev@example.test');
+        [$headers, $user] = $this->userAndBearer('recsettings-jev@example.test');
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
@@ -144,7 +115,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testAProviderContextWindowIsReportedAsTheEffectiveValueWithNoOverride(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->auth('recsettings-provider@example.test');
+        [$headers, $user] = $this->userAndBearer('recsettings-provider@example.test');
         $this->seedProviderContextWindow($user, 98304);
 
         $client->request('GET', self::URI, server: $headers);
@@ -168,7 +139,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testSavingFullSettingsEchoesTheNewStateAndPersists(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-save@example.test');
+        [$headers] = $this->userAndBearer('recsettings-save@example.test');
 
         $client->request(
             'PUT',
@@ -202,7 +173,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testSavingASmallBatchSizeRoundTrips(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-batchsize-small@example.test');
+        [$headers] = $this->userAndBearer('recsettings-batchsize-small@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -226,7 +197,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testAnUnknownBatchSizeIsUnprocessable(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-batchsize-bad@example.test');
+        [$headers] = $this->userAndBearer('recsettings-batchsize-bad@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -245,7 +216,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testAnOutOfRangeCapIsUnprocessable(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-invalid@example.test');
+        [$headers] = $this->userAndBearer('recsettings-invalid@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -284,7 +255,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testARejectedLoadBearingBoundIsUnprocessable(string $field, int $rejectedValue): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-bound-' . strtolower($field) . '@example.test');
+        [$headers] = $this->userAndBearer('recsettings-bound-' . strtolower($field) . '@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -319,7 +290,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testAnAcceptedLookbackDaysBoundIsPersisted(int $acceptedValue): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-lookback-bound-' . $acceptedValue . '@example.test');
+        [$headers] = $this->userAndBearer('recsettings-lookback-bound-' . $acceptedValue . '@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -343,7 +314,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testClearingAContextWindowOverrideFallsBackToTheProvider(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->auth('recsettings-clear-override@example.test');
+        [$headers, $user] = $this->userAndBearer('recsettings-clear-override@example.test');
         $this->seedProviderContextWindow($user, 98304);
 
         // First set a user override.
@@ -391,7 +362,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testABlankGuidancePromptNormalisesToNull(string $blank): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-blank@example.test');
+        [$headers] = $this->userAndBearer('recsettings-blank@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -414,7 +385,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testARealGuidancePromptIsKeptVerbatim(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-real@example.test');
+        [$headers] = $this->userAndBearer('recsettings-real@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -434,7 +405,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testANullGuidancePromptStaysNull(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-null@example.test');
+        [$headers] = $this->userAndBearer('recsettings-null@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -454,7 +425,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testShowExposesTheIntervalAndWorkerLiveness(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-worker-liveness@example.test');
+        [$headers] = $this->userAndBearer('recsettings-worker-liveness@example.test');
 
         $client->request('GET', self::URI, server: $headers);
 
@@ -472,7 +443,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testALiveDrainerIsNotReportedAsAWorker(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-drainer-alive@example.test');
+        [$headers] = $this->userAndBearer('recsettings-drainer-alive@example.test');
         $this->touchHeartbeatNow(RecommendationDriverKind::OnDemandDrainer->heartbeatName());
 
         $client->request('GET', self::URI, server: $headers);
@@ -484,7 +455,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testAPersistentWorkerIsReportedAsAWorker(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-worker-alive@example.test');
+        [$headers] = $this->userAndBearer('recsettings-worker-alive@example.test');
         $this->touchHeartbeatNow(RecommendationDriverKind::PersistentWorker->heartbeatName());
 
         $client->request('GET', self::URI, server: $headers);
@@ -509,7 +480,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testSaveAcceptsAnAllowedInterval(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-interval-allowed@example.test');
+        [$headers] = $this->userAndBearer('recsettings-interval-allowed@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -529,7 +500,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testSaveRejectsADisallowedInterval(): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-interval-rejected@example.test');
+        [$headers] = $this->userAndBearer('recsettings-interval-rejected@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -565,7 +536,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testSaveAcceptsEachAllowedInterval(int $hours): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-interval-ok-' . $hours . '@example.test');
+        [$headers] = $this->userAndBearer('recsettings-interval-ok-' . $hours . '@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -604,7 +575,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     public function testSaveRejectsEachDisallowedInterval(int $hours): void
     {
         $client = static::createClient();
-        [$headers] = $this->auth('recsettings-interval-off-' . $hours . '@example.test');
+        [$headers] = $this->userAndBearer('recsettings-interval-off-' . $hours . '@example.test');
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);

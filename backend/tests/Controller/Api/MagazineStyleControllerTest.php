@@ -7,21 +7,16 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Enum\MagazineStyle;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class MagazineStyleControllerTest extends ApiTestCase
 {
-    /** Attaches a bearer token to every subsequent request this client makes. */
-    private function authenticate(KernelBrowser $client, string $email): void
+    private function authenticateAs(KernelBrowser $client, string $email): void
     {
         $user = $this->users()->findOneByEmail($email);
         self::assertInstanceOf(User::class, $user);
 
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
+        $this->authenticate($client, $user);
     }
 
     private function patchStyle(KernelBrowser $client, string $style): void
@@ -46,7 +41,7 @@ final class MagazineStyleControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('boxed-by-default@example.test');
-        $this->authenticate($client, 'boxed-by-default@example.test');
+        $this->authenticateAs($client, 'boxed-by-default@example.test');
 
         $client->request('GET', '/api/me');
 
@@ -58,7 +53,7 @@ final class MagazineStyleControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('airy-reader@example.test');
-        $this->authenticate($client, 'airy-reader@example.test');
+        $this->authenticateAs($client, 'airy-reader@example.test');
 
         $this->patchStyle($client, 'airy');
 
@@ -75,7 +70,7 @@ final class MagazineStyleControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('cards-please@example.test');
-        $this->authenticate($client, 'cards-please@example.test');
+        $this->authenticateAs($client, 'cards-please@example.test');
 
         $this->patchStyle($client, 'cards');
 
@@ -86,7 +81,7 @@ final class MagazineStyleControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('empty-body@example.test');
-        $this->authenticate($client, 'empty-body@example.test');
+        $this->authenticateAs($client, 'empty-body@example.test');
 
         $client->request(
             'PATCH',
@@ -111,7 +106,7 @@ final class MagazineStyleControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->factory()->create('independent-writes@example.test');
-        $this->authenticate($client, 'independent-writes@example.test');
+        $this->authenticateAs($client, 'independent-writes@example.test');
         $this->patchStyle($client, 'airy');
 
         $client->request(

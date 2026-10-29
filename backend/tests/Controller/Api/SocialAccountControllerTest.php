@@ -6,7 +6,6 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\SocialAccount;
-use App\Entity\User;
 use App\Enum\PrivateFeedSyncReason;
 use App\Enum\PrivateFeedSyncSkip;
 use App\Enum\SocialFeedKind;
@@ -17,7 +16,6 @@ use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Model\VerifiedAccountModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubAccountVerifier;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
@@ -476,13 +474,7 @@ final class SocialAccountControllerTest extends ApiTestCase
 
     private function accountOn(KernelBrowser $client, string $email): void
     {
-        $this->factory()->create($email);
-        $user = $this->users()->findOneByEmail($email);
-        self::assertInstanceOf(User::class, $user);
-
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
+        $this->authenticate($client, $this->factory()->create($email));
     }
 
     private function connectBluesky(

@@ -14,7 +14,6 @@ use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PasskeyRegistrations;
 use App\Tests\Support\PinsPasskeyRelyingParty;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -36,8 +35,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $client = static::createClient();
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
-        $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $this->factory()->create('enroller@example.test'));
 
         $client->request('POST', '/api/auth/passkey/register/options');
 
@@ -60,8 +58,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->disablePasskeySignIn();
-        $this->factory()->create('disabled-options@example.test');
-        $this->authenticate($client, 'disabled-options@example.test');
+        $this->authenticate($client, $this->factory()->create('disabled-options@example.test'));
 
         $client->request('POST', '/api/auth/passkey/register/options');
 
@@ -73,8 +70,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->disablePasskeySignIn();
-        $this->factory()->create('disabled-register@example.test');
-        $this->authenticate($client, 'disabled-register@example.test');
+        $this->authenticate($client, $this->factory()->create('disabled-register@example.test'));
 
         $client->request(
             'POST',
@@ -99,8 +95,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $client = static::createClient();
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
-        $this->factory()->create('name-checker@example.test');
-        $this->authenticate($client, 'name-checker@example.test');
+        $this->authenticate($client, $this->factory()->create('name-checker@example.test'));
 
         $client->request('POST', '/api/auth/passkey/register/options');
 
@@ -120,7 +115,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $client = static::createClient();
         $user = $this->factory()->create('enroller@example.test');
         $this->givenAPasskeyFor($user, credentialId: 'Y3JlZC1hYmM');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         $this->enablePasskeySignIn();
 
         $client->request('POST', '/api/auth/passkey/register/options');
@@ -138,7 +133,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
 
         $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
@@ -161,7 +156,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
 
         $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
@@ -178,7 +173,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
         $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
         self::assertResponseStatusCodeSame(201);
@@ -198,7 +193,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         $fixture = $this->buildFixture('example.test', 'https://example.test');
 
         $handle = $this->issueExpiredChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
@@ -213,9 +208,9 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $client = static::createClient();
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
-        $this->factory()->create('caller@example.test');
+        $caller = $this->factory()->create('caller@example.test');
         $owner = $this->factory()->create('owner@example.test');
-        $this->authenticate($client, 'caller@example.test');
+        $this->authenticate($client, $caller);
         [$fixture, $handle] = $this->seedRegistrationChallenge($owner->getId(), 'example.test', 'https://example.test');
 
         $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
@@ -229,7 +224,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
 
         $this->registerPasskey($client, $handle, $this->withTamperedChallenge($fixture->credential), 'My phone');
@@ -247,7 +242,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
 
         $this->registerPasskey($client, $handle, $this->withGarbageAttestationObject($fixture->credential), 'My phone');
@@ -265,7 +260,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         $fixture = PasskeyFixtures::attestation(
             'example.test',
             'https://example.test',
@@ -291,7 +286,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('green-tara.example.ts.net', 'Reader', 'http://localhost:4200');
         $this->serveFrom($client, 'http://localhost');
         $user = $this->factory()->create('proxied@example.test');
-        $this->authenticate($client, 'proxied@example.test');
+        $this->authenticate($client, $user);
         $fixture = $this->buildFixture('green-tara.example.ts.net', 'https://green-tara.example.ts.net');
         $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
 
@@ -308,7 +303,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         $fixture = $this->buildFixture('example.test', 'https://evil.test');
         $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
 
@@ -325,7 +320,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://sub.example.test');
         $this->serveFrom($client, 'https://sub.example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         $fixture = $this->buildFixture('different-domain.test', 'https://sub.example.test');
         $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
 
@@ -340,7 +335,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
 
         $this->registerPasskey($client, $handle, $fixture->credential, '');
@@ -358,7 +353,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
 
         $client->request('POST', '/api/auth/passkey/register/options');
         self::assertResponseIsSuccessful();
@@ -390,7 +385,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
         $this->givenAPasskeyFor($user, credentialId: 'ZXhpc3RpbmctY3JlZA', userHandle: 'ZXhpc3RpbmctaGFuZGxl');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
 
         $client->request('POST', '/api/auth/passkey/register/options');
         self::assertResponseIsSuccessful();
@@ -426,7 +421,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         $credentialId = random_bytes(16);
 
         $fixtureOne = PasskeyFixtures::attestation(
@@ -466,7 +461,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
-        $this->authenticate($client, 'enroller@example.test');
+        $this->authenticate($client, $user);
         // 200 raw bytes: within the library's own 1023-byte ceiling, but its
         // base64url encoding (~267 chars) overflows the VARCHAR(255) column.
         $fixture = PasskeyFixtures::attestation(
@@ -493,7 +488,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('at-limit@example.test');
-        $this->authenticate($client, 'at-limit@example.test');
+        $this->authenticate($client, $user);
         $fixture = PasskeyFixtures::attestation(
             'example.test',
             'https://example.test',
@@ -515,7 +510,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('over-limit@example.test');
-        $this->authenticate($client, 'over-limit@example.test');
+        $this->authenticate($client, $user);
         $fixture = PasskeyFixtures::attestation(
             'example.test',
             'https://example.test',
@@ -540,7 +535,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('transports@example.test');
-        $this->authenticate($client, 'transports@example.test');
+        $this->authenticate($client, $user);
         $fixture = PasskeyFixtures::attestation(
             'example.test',
             'https://example.test',
@@ -587,18 +582,6 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $value = $payload[$key];
 
         return $value;
-    }
-
-    /** Attaches a bearer token to every subsequent request this client makes. */
-    private function authenticate(KernelBrowser $client, string $email): void
-    {
-        $user = $this->users()->findOneByEmail($email);
-        self::assertInstanceOf(User::class, $user);
-
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
     }
 
     /**

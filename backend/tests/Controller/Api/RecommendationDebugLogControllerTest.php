@@ -5,55 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\CallOutcome;
-use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class RecommendationDebugLogControllerTest extends WebTestCase
+final class RecommendationDebugLogControllerTest extends ApiTestCase
 {
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
-
-    /** @return array<string, mixed> */
-    private function payload(Response $response): array
-    {
-        $decoded = json_decode((string) $response->getContent(), true);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
-    }
-
-    private function entityManager(): EntityManagerInterface
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        return $entityManager;
-    }
-
     private function fixtures(): RecommendationRunFixtures
     {
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
@@ -65,7 +26,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
     public function testListReturnsEntriesWithStreamingTextOnlyForTheOpenCall(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('debug-log-list@example.test');
+        [$headers, $user] = $this->userAndBearer('debug-log-list@example.test');
         $run = $this->fixtures()->createRun($user);
         $finished = $this->fixtures()->log(
             $run,
@@ -98,7 +59,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         $entries = $payload['entries'];
         self::assertIsArray($entries);
         self::assertSame(
@@ -150,21 +111,21 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
     public function testListIsEmptyForAUserWithoutLogs(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('debug-log-empty@example.test');
+        [$headers] = $this->userAndBearer('debug-log-empty@example.test');
 
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
         self::assertResponseIsSuccessful();
         self::assertSame(
             ['entries' => [], 'run' => null, 'runs' => []],
-            $this->payload($client->getResponse()),
+            $this->payload($client),
         );
     }
 
     public function testListCarriesTheLatestRunsStatusAndRetryCounters(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('debug-log-run-summary@example.test');
+        [$headers, $user] = $this->userAndBearer('debug-log-run-summary@example.test');
         $run = $this->fixtures()->createRun($user);
         $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->getRunningCallAttempts()->recordInvalidReply('bad reply');
@@ -174,7 +135,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $runSummary = $this->payload($client->getResponse())['run'];
+        $runSummary = $this->payload($client)['run'];
         self::assertSame(
             [
                 'status' => 'failed',
@@ -193,7 +154,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
     public function testListNamesTheRetainedRunsAndDefaultsToTheNewest(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('debug-log-run-list@example.test');
+        [$headers, $user] = $this->userAndBearer('debug-log-run-list@example.test');
         $older = $this->fixtures()->createRun($user);
         $this->fixtures()->log($older, CallPhase::Batch, 1, 1, 'older request');
         $newer = $this->fixtures()->createRun($user);
@@ -204,7 +165,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         /** @var array{entries: list<array<string, mixed>>, runs: list<array<string, mixed>>} $payload */
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame(
             [
                 [
@@ -226,7 +187,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
     public function testListReturnsTheRequestedRunsRows(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('debug-log-run-pick@example.test');
+        [$headers, $user] = $this->userAndBearer('debug-log-run-pick@example.test');
         $older = $this->fixtures()->createRun($user);
         $this->fixtures()->log($older, CallPhase::Batch, 1, 1, 'older request');
         $newer = $this->fixtures()->createRun($user);
@@ -237,7 +198,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         /** @var array{entries: list<array<string, mixed>>, run: array<string, mixed>} $payload */
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame([$older->getId()], array_column($payload['entries'], 'runId'));
         self::assertSame(
             $older->getCreatedAt()->format(\DATE_ATOM),
@@ -253,7 +214,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
     public function testAnUnknownRunFallsBackToTheNewest(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('debug-log-run-stale@example.test');
+        [$headers, $user] = $this->userAndBearer('debug-log-run-stale@example.test');
         $run = $this->fixtures()->createRun($user);
         $this->fixtures()->log($run, CallPhase::Batch, 1, 1, 'request');
         $this->entityManager()->flush();
@@ -262,14 +223,14 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         /** @var array{entries: list<array<string, mixed>>} $payload */
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame([$run->getId()], array_column($payload['entries'], 'runId'));
     }
 
     public function testDetailReturnsFullBodies(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('debug-log-detail@example.test');
+        [$headers, $user] = $this->userAndBearer('debug-log-detail@example.test');
         $run = $this->fixtures()->createRun($user);
         $log = $this->fixtures()->log($run, CallPhase::Batch, 1, 1, 'req');
         $this->fixtures()->settleLog(
@@ -301,15 +262,15 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'wireBytes' => 4_096,
                 'finishReason' => 'length',
             ],
-            $this->payload($client->getResponse()),
+            $this->payload($client),
         );
     }
 
     public function testDetailOfAnotherUsersRowIs404ProblemJson(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('debug-log-detail-mine@example.test');
-        [, $otherUser] = $this->auth('debug-log-detail-theirs@example.test');
+        [$headers] = $this->userAndBearer('debug-log-detail-mine@example.test');
+        [, $otherUser] = $this->userAndBearer('debug-log-detail-theirs@example.test');
         $theirRun = $this->fixtures()->createRun($otherUser);
         $theirLog = $this->fixtures()->log($theirRun, CallPhase::Batch, 1, 1, 'req');
         $this->entityManager()->flush();

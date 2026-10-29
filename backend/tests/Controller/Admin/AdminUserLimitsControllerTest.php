@@ -5,19 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Admin;
 
 use App\Entity\User;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use App\Tests\Support\ApiTestCase;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * The admin's per-account limit controls: start/clear a trial, set/clear a
  * per-user subscription cap. Split from AdminUserControllerTest alongside its
  * controller — see AdminUserLimitsController for why.
  */
-final class AdminUserLimitsControllerTest extends WebTestCase
+final class AdminUserLimitsControllerTest extends ApiTestCase
 {
     private const LIST = '/api/admin/users';
 
@@ -30,37 +26,9 @@ final class AdminUserLimitsControllerTest extends WebTestCase
         $this->client = self::createClient();
     }
 
-    private function factory(): UserFactory
-    {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return new UserFactory($entityManager, $hasher);
-    }
-
-    private function tokenFor(User $user): string
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager->create($user);
-    }
-
     private function admin(string $email = 'boss@example.com'): User
     {
         return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
-    }
-
-    /** @return array<string, mixed> */
-    private function payload(): array
-    {
-        $decoded = json_decode((string) $this->client->getResponse()->getContent(), true);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
     }
 
     /** @param array<string, mixed> $body */
@@ -70,7 +38,7 @@ final class AdminUserLimitsControllerTest extends WebTestCase
             $method,
             $uri,
             server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin),
+                ...$this->bearerFor($admin),
                 'CONTENT_TYPE' => 'application/json',
             ],
             content: json_encode($body, \JSON_THROW_ON_ERROR),
@@ -85,8 +53,8 @@ final class AdminUserLimitsControllerTest extends WebTestCase
         $this->requestWithJsonBody('POST', self::LIST . '/' . $user->getId() . '/trial', $admin, ['days' => 14]);
 
         self::assertResponseIsSuccessful();
-        self::assertSame('active', $this->payload()['status']);
-        self::assertNotNull($this->payload()['trialEndsAt']);
+        self::assertSame('active', $this->payload($this->client)['status']);
+        self::assertNotNull($this->payload($this->client)['trialEndsAt']);
     }
 
     public function testStartTrialRejectsNonPositiveDays(): void
@@ -120,11 +88,11 @@ final class AdminUserLimitsControllerTest extends WebTestCase
         $this->client->request(
             'DELETE',
             self::LIST . '/' . $user->getId() . '/trial',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+            server: $this->bearerFor($admin),
         );
 
         self::assertResponseIsSuccessful();
-        self::assertNull($this->payload()['trialEndsAt']);
+        self::assertNull($this->payload($this->client)['trialEndsAt']);
     }
 
     public function testSetSubscriptionLimitStoresTheOverride(): void
@@ -140,7 +108,7 @@ final class AdminUserLimitsControllerTest extends WebTestCase
         );
 
         self::assertResponseIsSuccessful();
-        self::assertSame(42, $this->payload()['maxSubscriptions']);
+        self::assertSame(42, $this->payload($this->client)['maxSubscriptions']);
     }
 
     public function testSetSubscriptionLimitRejectsNonPositiveValues(): void
@@ -171,6 +139,6 @@ final class AdminUserLimitsControllerTest extends WebTestCase
         );
 
         self::assertResponseIsSuccessful();
-        self::assertNull($this->payload()['maxSubscriptions']);
+        self::assertNull($this->payload($this->client)['maxSubscriptions']);
     }
 }

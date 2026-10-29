@@ -6,16 +6,12 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Enum\SourceFormat;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class EntryNetworkScopeTest extends WebTestCase
+final class EntryNetworkScopeTest extends ApiTestCase
 {
     private KernelBrowser $client;
 
@@ -26,7 +22,7 @@ final class EntryNetworkScopeTest extends WebTestCase
 
     public function testANetworkListsItsPrivateAndProfileFeedsAndNothingElse(): void
     {
-        [$headers, $user] = $this->auth('network-list@example.com');
+        [$headers, $user] = $this->userAndBearer('network-list@example.com');
         $this->seedNetworks($user);
 
         $this->client->request('GET', '/api/entries?network=bluesky', server: $headers);
@@ -37,9 +33,9 @@ final class EntryNetworkScopeTest extends WebTestCase
 
     public function testANetworkNeverListsAnotherUsersFeeds(): void
     {
-        [$headers, $user] = $this->auth('network-own@example.com');
+        [$headers, $user] = $this->userAndBearer('network-own@example.com');
         $this->seedNetworks($user);
-        [, $stranger] = $this->auth('network-stranger@example.com');
+        [, $stranger] = $this->userAndBearer('network-stranger@example.com');
         $foreign = $this->fixtures()->subscribe($stranger, 'https://bsky.app/profile/bob.bsky.social/rss');
         $this->fixtures()->post($foreign, 'foreign-post', '2026-10-09T00:00:00Z');
 
@@ -50,7 +46,7 @@ final class EntryNetworkScopeTest extends WebTestCase
 
     public function testAProfileFeedKindListsOnlyTheNetworksProfileFeeds(): void
     {
-        [$headers, $user] = $this->auth('network-profiles@example.com');
+        [$headers, $user] = $this->userAndBearer('network-profiles@example.com');
         $this->seedNetworks($user);
 
         $this->client->request('GET', '/api/entries?network=bluesky&feedKind=profile', server: $headers);
@@ -61,7 +57,7 @@ final class EntryNetworkScopeTest extends WebTestCase
 
     public function testAnUnknownFeedKindIsAValidationError(): void
     {
-        [$headers] = $this->auth('network-feedkind-unknown@example.com');
+        [$headers] = $this->userAndBearer('network-feedkind-unknown@example.com');
 
         $this->client->request('GET', '/api/entries?network=bluesky&feedKind=home', server: $headers);
 
@@ -71,7 +67,7 @@ final class EntryNetworkScopeTest extends WebTestCase
 
     public function testAFeedKindWithoutANetworkIsAValidationError(): void
     {
-        [$headers] = $this->auth('network-feedkind-alone@example.com');
+        [$headers] = $this->userAndBearer('network-feedkind-alone@example.com');
 
         $this->client->request('GET', '/api/entries?feedKind=profile', server: $headers);
 
@@ -81,7 +77,7 @@ final class EntryNetworkScopeTest extends WebTestCase
 
     public function testAnUnknownNetworkIsAValidationError(): void
     {
-        [$headers] = $this->auth('network-unknown@example.com');
+        [$headers] = $this->userAndBearer('network-unknown@example.com');
 
         $this->client->request('GET', '/api/entries?network=myspace', server: $headers);
 
@@ -93,7 +89,7 @@ final class EntryNetworkScopeTest extends WebTestCase
 
     public function testMarkingANetworkReadLeavesItsUnreadListEmptyAndOtherFeedsUnread(): void
     {
-        [$headers, $user] = $this->auth('network-mark@example.com');
+        [$headers, $user] = $this->userAndBearer('network-mark@example.com');
         $this->seedNetworks($user);
 
         $this->client->request(
@@ -115,7 +111,7 @@ final class EntryNetworkScopeTest extends WebTestCase
 
     public function testMarkingANetworksProfilesReadLeavesItsPrivateFeedsUnread(): void
     {
-        [$headers, $user] = $this->auth('network-mark-profiles@example.com');
+        [$headers, $user] = $this->userAndBearer('network-mark-profiles@example.com');
         $this->seedNetworks($user);
 
         $this->client->request(
@@ -140,7 +136,7 @@ final class EntryNetworkScopeTest extends WebTestCase
 
     public function testMarkingANetworkReadWithoutANetworkIsAValidationError(): void
     {
-        [$headers] = $this->auth('network-mark-missing@example.com');
+        [$headers] = $this->userAndBearer('network-mark-missing@example.com');
 
         $this->client->request(
             'POST',
@@ -193,28 +189,8 @@ final class EntryNetworkScopeTest extends WebTestCase
         return $body;
     }
 
-    /** @return array{0: array<string, string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($this->entityManager(), $hasher))->create($email);
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
-
     private function fixtures(): NetworkFeedSubscriptions
     {
         return new NetworkFeedSubscriptions($this->entityManager());
-    }
-
-    private function entityManager(): EntityManagerInterface
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        return $entityManager;
     }
 }

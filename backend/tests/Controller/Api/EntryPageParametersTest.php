@@ -12,7 +12,6 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryQuery;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -25,7 +24,7 @@ final class EntryPageParametersTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('page-parameters-entries@example.com');
 
-        $client->request('GET', '/api/entries?limit=abc', server: $this->authHeaderFor($user));
+        $client->request('GET', '/api/entries?limit=abc', server: $this->bearerFor($user));
 
         $this->assertValidationErrorOn($client, 'limit');
     }
@@ -35,7 +34,7 @@ final class EntryPageParametersTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('page-parameters-saved@example.com');
 
-        $client->request('GET', '/api/entries/saved-searches?limit=abc', server: $this->authHeaderFor($user));
+        $client->request('GET', '/api/entries/saved-searches?limit=abc', server: $this->bearerFor($user));
 
         $this->assertValidationErrorOn($client, 'limit');
     }
@@ -46,7 +45,7 @@ final class EntryPageParametersTest extends ApiTestCase
         $user = $this->factory()->create('page-parameters-one@example.com');
         $search = $this->seedSavedSearch($user);
 
-        $client->request('GET', $this->savedSearchPath($search) . '?unread=maybe', server: $this->authHeaderFor($user));
+        $client->request('GET', $this->savedSearchPath($search) . '?unread=maybe', server: $this->bearerFor($user));
 
         $this->assertValidationErrorOn($client, 'unread');
     }
@@ -56,7 +55,7 @@ final class EntryPageParametersTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('page-parameters-ok@example.com');
 
-        $client->request('GET', '/api/entries?limit=2&unread=1&order=asc', server: $this->authHeaderFor($user));
+        $client->request('GET', '/api/entries?limit=2&unread=1&order=asc', server: $this->bearerFor($user));
 
         self::assertResponseIsSuccessful();
         self::assertSame([], $this->payload($client)['entries']);
@@ -85,7 +84,7 @@ final class EntryPageParametersTest extends ApiTestCase
         $this->hide($client, $user, $read);
 
         foreach (['/api/entries/saved-searches', $this->savedSearchPath($search)] as $path) {
-            $client->request('GET', $path . '?' . $query, server: $this->authHeaderFor($user));
+            $client->request('GET', $path . '?' . $query, server: $this->bearerFor($user));
 
             self::assertResponseIsSuccessful();
             self::assertSame($expectedTitles, $this->titlesOf($client), $path);
@@ -116,7 +115,7 @@ final class EntryPageParametersTest extends ApiTestCase
         }
         $search = $this->seedSavedSearch($user, ...$entries);
 
-        $client->request('GET', $this->withSavedSearchId($path, $search), server: $this->authHeaderFor($user));
+        $client->request('GET', $this->withSavedSearchId($path, $search), server: $this->bearerFor($user));
 
         self::assertResponseIsSuccessful();
         $titles = $this->titlesOf($client);
@@ -152,7 +151,7 @@ final class EntryPageParametersTest extends ApiTestCase
         $client->request(
             'PATCH',
             '/api/entries/' . $entry->requireId() . '/state',
-            server: $this->authHeaderFor($user) + ['CONTENT_TYPE' => 'application/json'],
+            server: $this->bearerFor($user) + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseIsSuccessful();
@@ -200,14 +199,5 @@ final class EntryPageParametersTest extends ApiTestCase
         $this->entityManager()->flush();
 
         return $search;
-    }
-
-    /** @return array<string, string> */
-    private function authHeaderFor(User $user): array
-    {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
     }
 }

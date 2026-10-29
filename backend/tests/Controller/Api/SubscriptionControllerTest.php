@@ -14,37 +14,13 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Service\Scraper\ScrapedFixtures;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubFeedFetcher;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class SubscriptionControllerTest extends WebTestCase
+final class SubscriptionControllerTest extends ApiTestCase
 {
     use ScrapedFixtures;
-
-    private function userFactory(): UserFactory
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return new UserFactory($entityManager, $hasher);
-    }
-
-    /** @return array<string, string> */
-    private function authHeader(string $email): array
-    {
-        $user = $this->userFactory()->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
-    }
 
     /**
      * Swaps the SSRF-guarded fetcher for a stub, so the real FeedDiscovery runs (it is final and cannot be stubbed).
@@ -84,7 +60,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testSubscribeToDirectFeedThenList(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('reader@example.com');
+        $headers = $this->bearerFor($this->factory()->create('reader@example.com'));
 
         $rss = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($rss);
@@ -150,7 +126,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testCountsReturnsUnreadPerFeedAndSurfaceTotals(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('counter@example.com');
+        $headers = $this->bearerFor($this->factory()->create('counter@example.com'));
 
         $rss = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($rss);
@@ -210,7 +186,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testAFeedWithNoEntriesReportsZeroCounts(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('empty-feed@example.com');
+        $headers = $this->bearerFor($this->factory()->create('empty-feed@example.com'));
 
         $stub = new StubFeedFetcher();
         $stub->willReturn(
@@ -259,7 +235,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $user = $this->userFactory()->create('withtags@example.com');
+        $user = $this->factory()->create('withtags@example.com');
         $news = new Tag($user, 'News');
         $tech = new Tag($user, 'Tech');
         $entityManager->persist($news);
@@ -283,9 +259,7 @@ final class SubscriptionControllerTest extends WebTestCase
         );
         $this->installFetcher($stub);
 
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+        $headers = $this->bearerFor($user);
 
         $client->request(
             'POST',
@@ -320,7 +294,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $factory = $this->userFactory();
+        $factory = $this->factory();
         $stranger = $factory->create('tagstranger@example.com');
         $strangerTag = new Tag($stranger, 'Secret');
         $entityManager->persist($strangerTag);
@@ -348,9 +322,7 @@ final class SubscriptionControllerTest extends WebTestCase
         );
         $this->installFetcher($stub);
 
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($subscriber)];
+        $headers = $this->bearerFor($subscriber);
 
         $client->request(
             'POST',
@@ -375,7 +347,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testSubscribeToHtmlReturnsCandidates(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('html@example.com');
+        $headers = $this->bearerFor($this->factory()->create('html@example.com'));
 
         $html = /** @lang TEXT */ '<!doctype html><html><head>'
             . '<link rel="alternate" type="application/rss+xml" href="/rss.xml">'
@@ -417,7 +389,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testSubscribeToFeedlessPageOffersScrapedCandidate(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('feedless@example.com');
+        $headers = $this->bearerFor($this->factory()->create('feedless@example.com'));
         $this->enableScrapeFallback('feedless@example.com');
 
         $stub = new StubFeedFetcher();
@@ -459,7 +431,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testAFeedlessPageOffersNoScrapedCandidateWhenTheFallbackIsDisabled(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('feedlessdisabled@example.com');
+        $headers = $this->bearerFor($this->factory()->create('feedlessdisabled@example.com'));
 
         $stub = new StubFeedFetcher();
         $stub->willReturn(
@@ -490,7 +462,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testBlockedSiteReportsReasonWithEmptyCandidates(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('blocked@example.com');
+        $headers = $this->bearerFor($this->factory()->create('blocked@example.com'));
 
         $stub = new StubFeedFetcher();
         $stub->willThrow('https://forbidden.example.com', new FeedUnreachableException('x: HTTP 403', 403));
@@ -512,7 +484,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testScrapedFormatSubscribeSkipsDiscoveryAndMarksTheFeed(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('scraper@example.com');
+        $headers = $this->bearerFor($this->factory()->create('scraper@example.com'));
         $this->enableScrapeFallback('scraper@example.com');
 
         // No stubbed URLs at all: the scraped-format path re-posts a candidate
@@ -550,7 +522,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $user = $this->userFactory()->create('atcap@example.com');
+        $user = $this->factory()->create('atcap@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         for ($index = 0; $index < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $index++) {
@@ -564,9 +536,7 @@ final class SubscriptionControllerTest extends WebTestCase
         // makes it fetch, the stub fails the test instead of hitting the net.
         $this->installFetcher(new StubFeedFetcher());
 
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+        $headers = $this->bearerFor($user);
 
         $client->request(
             'POST',
@@ -589,7 +559,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testScrapedFormatSubscribeIsRefusedWhenScrapingIsDisabled(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('scrapedisabled@example.com');
+        $headers = $this->bearerFor($this->factory()->create('scrapedisabled@example.com'));
         $this->installFetcher(new StubFeedFetcher());
 
         $client->request(
@@ -612,7 +582,7 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testWpJsonFormatSubscribeSeedsTheCandidateTitleWithoutFetching(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('wpjson-title@example.com');
+        $headers = $this->bearerFor($this->factory()->create('wpjson-title@example.com'));
         $stub = new StubFeedFetcher();
         $this->installFetcher($stub);
         $url = 'https://wp.example/wp-json/wp/v2/posts?per_page=20';
@@ -649,7 +619,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $factory = $this->userFactory();
+        $factory = $this->factory();
         $stranger = $factory->create('stranger@example.com');
         $feed = new Feed('https://example.com/x.xml');
         $entityManager->persist($feed);
@@ -657,10 +627,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager->persist($subscription);
         $entityManager->flush();
 
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $attacker = $factory->create('attacker@example.com');
-        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($attacker)];
+        $headers = $this->bearerFor($factory->create('attacker@example.com'));
 
         $client->request(
             'PATCH',
@@ -681,16 +648,14 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $user = $this->userFactory()->create('flagsetter@example.com');
+        $user = $this->factory()->create('flagsetter@example.com');
         $feed = new Feed('https://flags.example.com/rss');
         $entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $entityManager->persist($subscription);
         $entityManager->flush();
 
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+        $headers = $this->bearerFor($user);
 
         $client->request(
             'PATCH',
@@ -716,7 +681,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $user = $this->userFactory()->create('flagkeeper@example.com');
+        $user = $this->factory()->create('flagkeeper@example.com');
         $feed = new Feed('https://flagkeeper.example.com/rss');
         $entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
@@ -724,9 +689,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager->persist($subscription);
         $entityManager->flush();
 
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+        $headers = $this->bearerFor($user);
 
         $client->request(
             'PATCH',
@@ -750,7 +713,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $user = $this->userFactory()->create('tagclearer@example.com');
+        $user = $this->factory()->create('tagclearer@example.com');
         $tag = new Tag($user, 'Keepsake');
         $entityManager->persist($tag);
         $feed = new Feed('https://tagclearer.example.com/rss');
@@ -760,9 +723,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager->persist($subscription);
         $entityManager->flush();
 
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+        $headers = $this->bearerFor($user);
 
         $client->request(
             'PATCH',
@@ -783,7 +744,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $user = $this->userFactory()->create('solo@example.com');
+        $user = $this->factory()->create('solo@example.com');
         $feed = new Feed('https://solo.example.com/rss');
         $entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
@@ -791,9 +752,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager->flush();
         $feedId = $feed->requireId();
 
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+        $headers = $this->bearerFor($user);
 
         $client->request(
             'DELETE',
@@ -814,7 +773,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $factory = $this->userFactory();
+        $factory = $this->factory();
         $leaver = $factory->create('leaver@example.com');
         $stayer = $factory->create('stayer@example.com');
         $feed = new Feed('https://shared.example.com/rss');
@@ -825,9 +784,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager->flush();
         $feedId = $feed->requireId();
 
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($leaver)];
+        $headers = $this->bearerFor($leaver);
 
         $client->request(
             'DELETE',

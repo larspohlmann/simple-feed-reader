@@ -8,50 +8,17 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class TagControllerTest extends WebTestCase
+final class TagControllerTest extends ApiTestCase
 {
-    private function userFactory(): UserFactory
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return new UserFactory($entityManager, $hasher);
-    }
-
-    /** @return array<string, string> */
-    private function authHeader(string $email): array
-    {
-        $user = $this->userFactory()->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
-
     /** @return array<string, string> */
     private function headersFor(User $user): array
     {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
+        return [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'];
     }
 
     public function testAnonymousIsRejected(): void
@@ -64,7 +31,7 @@ final class TagControllerTest extends WebTestCase
     public function testCreateListAndRejectDuplicateName(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('tagger@example.com');
+        $headers = $this->headersFor($this->factory()->create('tagger@example.com'));
 
         $client->request(
             'POST',
@@ -107,7 +74,7 @@ final class TagControllerTest extends WebTestCase
     public function testCreatingASecondTagAppendsAfterTheFirst(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('tag-positions@example.com');
+        $headers = $this->headersFor($this->factory()->create('tag-positions@example.com'));
 
         $client->request(
             'POST',
@@ -137,7 +104,7 @@ final class TagControllerTest extends WebTestCase
     public function testInvalidColorIsRejected(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('badcolor@example.com');
+        $headers = $this->headersFor($this->factory()->create('badcolor@example.com'));
 
         $client->request(
             'POST',
@@ -157,13 +124,13 @@ final class TagControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $factory = $this->userFactory();
+        $factory = $this->factory();
         $owner = $factory->create('owner2@example.com');
         $tag = new Tag($owner, 'private');
         $entityManager->persist($tag);
         $entityManager->flush();
 
-        $headers = $this->authHeader('intruder@example.com');
+        $headers = $this->headersFor($this->factory()->create('intruder@example.com'));
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $headers);
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND); // not 403 — do not reveal existence
         self::assertStringContainsString('"detail":"No such tag."', (string) $client->getResponse()->getContent());
@@ -176,7 +143,7 @@ final class TagControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $user = $this->userFactory()->create('tag-row-gone@example.com');
+        $user = $this->factory()->create('tag-row-gone@example.com');
         $tag = new Tag($user, 'Gone soon');
         $entityManager->persist($tag);
         $entityManager->flush();
@@ -199,7 +166,7 @@ final class TagControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $user = $this->userFactory()->create('detacher@example.com');
+        $user = $this->factory()->create('detacher@example.com');
         $tag = new Tag($user, 'Detach me');
         $entityManager->persist($tag);
         $feed = new Feed('https://detach.example/feed.xml');
@@ -226,7 +193,7 @@ final class TagControllerTest extends WebTestCase
     public function testACreatedChildEchoesItsParentAndTheListCarriesParentIds(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('tag-parent-wire@example.com');
+        $headers = $this->headersFor($this->factory()->create('tag-parent-wire@example.com'));
 
         $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
         $child = $this->createTagBody($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
@@ -242,7 +209,7 @@ final class TagControllerTest extends WebTestCase
     public function testAThirdLevelBelowTheTopIsAnInvalidParentProblem(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('tag-depth-wire@example.com');
+        $headers = $this->headersFor($this->factory()->create('tag-depth-wire@example.com'));
         $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
         $childId = $this->createTag($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
         $grandchildId = $this->createTag($client, $headers, ['name' => 'Essays', 'parentId' => $childId]);
@@ -266,7 +233,7 @@ final class TagControllerTest extends WebTestCase
     public function testAnUpdateWithoutParentIdIsRefusedAndKeepsTheParent(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('tag-partial-patch@example.com');
+        $headers = $this->headersFor($this->factory()->create('tag-partial-patch@example.com'));
         $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
         $childId = $this->createTag($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
 
