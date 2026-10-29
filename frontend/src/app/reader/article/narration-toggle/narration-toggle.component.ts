@@ -11,6 +11,7 @@ const OPEN = 'reader-narration--open';
   templateUrl: './narration-toggle.component.html',
   styleUrl: './narration-toggle.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.open]': 'open()' },
 })
 export class NarrationToggleComponent {
   readonly player = input.required<HTMLAudioElement>();

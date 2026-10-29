@@ -79,14 +79,32 @@ describe('SlideshowControlsComponent', () => {
     expect(slides[1].hasAttribute('inert')).toBe(false);
   });
 
-  it('preserves a caption link inside a slide', () => {
-    const { host } = mounted(
-      '<figure class="reader-slideshow"><ol>' +
-        '<li><img src="https://img/1.jpg" alt="one"><a href="https://example.com/a">One</a></li>' +
-        '<li><img src="https://img/2.jpg" alt="two"><a href="https://example.com/b">Two</a></li></ol></figure>',
-    );
-    const link = host.querySelector<HTMLAnchorElement>('.reader-slideshow li a');
-    expect(link!.getAttribute('href')).toBe('https://example.com/a');
+  it('steps back from the first slide to the last', () => {
+    const { host } = mounted();
+    host.querySelector<HTMLButtonElement>('.reader-slideshow__prev')!.click();
+    TestBed.tick();
+    expect(host.textContent).toContain('3 of 3');
+    expect(track(host).style.transform).toBe('translateX(-200%)');
+  });
+
+  it('steps back on ArrowLeft', () => {
+    const { host, figure } = mounted();
+    const forward = new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    });
+    const back = new KeyboardEvent('keydown', {
+      key: 'ArrowLeft',
+      bubbles: true,
+      cancelable: true,
+    });
+    figure.dispatchEvent(forward);
+    figure.dispatchEvent(back);
+    TestBed.tick();
+    expect(host.textContent).toContain('1 of 3');
+    expect(forward.defaultPrevented).toBe(true);
+    expect(back.defaultPrevented).toBe(true);
   });
 
   it('advances on a leftward swipe', () => {

@@ -11,9 +11,9 @@ const slide = (fill: string) =>
   )}"></li>`;
 
 const BODY = [
+  '<audio class="reader-narration" controls src="data:audio/mpeg;base64,"></audio>',
   '<p>Opening paragraph of the article.</p>',
   `<figure class="reader-slideshow"><ol>${slide('red')}${slide('green')}${slide('blue')}</ol></figure>`,
-  '<audio class="reader-narration" controls src="data:audio/mpeg;base64,"></audio>',
 ].join('');
 
 const entry = entryWire({
@@ -80,13 +80,11 @@ test.describe('Islands mounted into the article body', () => {
 
     await figure.locator('.reader-slideshow__next').click();
     await expect(counter).toHaveText('2 of 3');
-    expect(await track.evaluate((element) => (element as HTMLElement).style.transform)).toBe(
-      'translateX(-100%)',
-    );
-    const inert = await figure
-      .locator('ol > li')
-      .evaluateAll((items) => items.map((item) => item.hasAttribute('inert')));
-    expect(inert).toEqual([true, false, true]);
+    await expect(track).toHaveAttribute('style', /translateX\(-100%\)/);
+    const items = figure.locator('ol > li');
+    await expect(items.nth(0)).toHaveAttribute('inert', '');
+    await expect(items.nth(1)).not.toHaveAttribute('inert');
+    await expect(items.nth(2)).toHaveAttribute('inert', '');
 
     await figure.focus();
     await page.keyboard.press('ArrowRight');
@@ -101,6 +99,19 @@ test.describe('Islands mounted into the article body', () => {
     expect(
       await toggle.evaluate((host) => host.nextElementSibling?.matches('audio.reader-narration')),
     ).toBe(true);
+
+    const toggleBox = (await toggle.boundingBox())!;
+    const paragraphBox = (await pane.locator('.content p').first().boundingBox())!;
+    const space3 = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.style.height = 'var(--space-3)';
+      document.body.appendChild(probe);
+      const height = probe.getBoundingClientRect().height;
+      probe.remove();
+      return height;
+    });
+    const gap = paragraphBox.y - (toggleBox.y + toggleBox.height);
+    expect(gap).toBeGreaterThanOrEqual(space3 - 0.5);
 
     await toggle.getByRole('button').click();
     await expect(audio).toBeVisible();

@@ -1,6 +1,10 @@
 :host {
   display: block;
-  margin-top: var(--space-3);
+  margin: var(--space-3) 0;
+}
+
+:host(.open) {
+  margin-bottom: 0;
 }
 
 button {

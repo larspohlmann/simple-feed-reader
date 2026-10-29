@@ -1,7 +1,5 @@
-import { TestBed } from '@angular/core/testing';
 import { articleHost, attachedArticleHost } from '../../../../testing/article-host-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
-import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { decorateArticle } from './decorate-article';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
@@ -12,10 +10,6 @@ const decorated = (html: string): HTMLElement =>
 const YOUTUBE_LINK = '<a href="https://www.youtube-nocookie.com/embed/GhUuOxrCato">x</a>';
 
 describe('decorateArticle', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
-  });
-
   afterEach(() => {
     document.body.innerHTML = '';
   });
