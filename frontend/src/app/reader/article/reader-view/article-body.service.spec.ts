@@ -238,20 +238,6 @@ describe('ArticleBody', () => {
     expect(content.querySelector('app-link-card img')).toBe(poster);
   });
 
-  it('keeps the card of an unplayable video through a chapters-only re-render', async () => {
-    connectBody(VIDEO);
-    await Promise.resolve();
-    content.querySelector('video')!.dispatchEvent(new Event('error'));
-    const before = content.querySelector('app-link-card');
-
-    chapters.set(CHAPTERS);
-    TestBed.tick();
-    await Promise.resolve();
-
-    expect(content.querySelector('app-link-card')).not.toBe(before);
-    expect(content.querySelectorAll('app-link-card')).toHaveLength(1);
-  });
-
   it('keeps the card first and the player bar after the video through a chapters-only re-render', async () => {
     connectBody(VIDEO);
     await Promise.resolve();
@@ -263,6 +249,7 @@ describe('ArticleBody', () => {
     await Promise.resolve();
 
     expect(content.querySelector('app-link-card')).not.toBe(before);
+    expect(content.querySelectorAll('app-link-card')).toHaveLength(1);
     const box = content.querySelector('.reader-cinema')!;
     expect(box.firstElementChild!.matches('app-link-card')).toBe(true);
     expect(box.querySelector('video')!.nextElementSibling!.matches('app-player-bar')).toBe(true);

@@ -46,6 +46,12 @@ export class ArticleIslands {
     });
   }
 
+  instancesOf<C>(component: Type<C>): C[] {
+    return this.mounted
+      .filter((ref) => ref.componentType === component)
+      .map((ref) => ref.instance as C);
+  }
+
   releaseAll(): void {
     for (const ref of this.mounted) {
       const host = hostOf(ref);

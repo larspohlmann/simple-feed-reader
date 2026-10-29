@@ -7,7 +7,6 @@ import { ArticleIslands } from './article-islands';
 
 const UNPLAYABLE = 'reader-video--unplayable';
 
-/** A body video the browser cannot decode, hidden behind a card to where it can be watched. */
 export class ArticleUnplayableVideos {
   constructor(
     private readonly islands: ArticleIslands,

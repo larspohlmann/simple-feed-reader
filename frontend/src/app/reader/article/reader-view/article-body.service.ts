@@ -74,7 +74,6 @@ export class ArticleBody {
       this.destroyed = true;
       this.chapters.forget();
       this.islands.releaseAll();
-      this.playerBars.forget();
       this.embedDetails.release();
       document.removeEventListener('keydown', onKeydown);
     });
@@ -125,7 +124,6 @@ export class ArticleBody {
           this.media.forgetAll();
           this.chapters.forget();
           this.islands.releaseAll();
-          this.playerBars.forget();
           this.embedDetails.release();
         });
         queueMicrotask(() => {

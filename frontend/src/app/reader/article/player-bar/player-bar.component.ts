@@ -46,7 +46,6 @@ export class PlayerBarComponent {
     box.scrollIntoView({ block: 'nearest' });
   }
 
-  /** The toggle shows only where the reading pane has room to widen. */
   offersCinema(): boolean {
     const toggle = this.cinemaToggle()?.nativeElement;
     return toggle !== undefined && getComputedStyle(toggle).display !== 'none';

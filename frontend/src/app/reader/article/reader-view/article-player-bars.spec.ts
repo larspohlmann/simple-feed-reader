@@ -22,14 +22,22 @@ const VIMEO_CINEMA_BOX =
 const SHORT_BOX =
   '<div class="reader-embed reader-embed--portrait"><iframe src="https://www.youtube-nocookie.com/embed/GhUuOxrCato?enablejsapi=1#shorts"></iframe></div>';
 
-function mountBars(
-  html: string,
-  actions: ListenActions | undefined,
-): { host: HTMLElement; bars: ArticlePlayerBars } {
+function mountBars(html: string, actions: ListenActions | undefined): HTMLElement {
   const host = articleHost(html);
-  const bars = new ArticlePlayerBars(new ArticleIslands(TestBed.inject(Injector)));
+  new ArticlePlayerBars(new ArticleIslands(TestBed.inject(Injector))).mount(host, actions);
+  return host;
+}
+
+function barsOver(html: string, actions: ListenActions | undefined) {
+  const host = articleHost(html);
+  const islands = new ArticleIslands(TestBed.inject(Injector));
+  const bars = new ArticlePlayerBars(islands);
   bars.mount(host, actions);
-  return { host, bars };
+  return { host, bars, islands };
+}
+
+function twoCinemaBars() {
+  return barsOver(CINEMA_BOX + CINEMA_BOX, undefined);
 }
 
 function key(init: KeyboardEventInit = {}, target?: HTMLElement): KeyboardEvent {
@@ -56,7 +64,7 @@ describe('ArticlePlayerBars', () => {
   });
 
   it('puts a bar in a cinema box after its player, with Listen before the cinema toggle', () => {
-    const { host } = mountBars(CINEMA_BOX, fakeListenActions());
+    const host = mountBars(CINEMA_BOX, fakeListenActions());
 
     const bar = host.querySelector('.reader-cinema')!.children[1];
     expect(bar.matches('app-player-bar.reader-player-bar')).toBe(true);
@@ -68,28 +76,28 @@ describe('ArticlePlayerBars', () => {
   });
 
   it('gives a SoundCloud box a bar of its own, right after the box', () => {
-    const { host } = mountBars(SOUNDCLOUD_BOX, fakeListenActions());
+    const host = mountBars(SOUNDCLOUD_BOX, fakeListenActions());
 
     expect(host.children[1].matches('app-player-bar')).toBe(true);
     expect(host.querySelector('.reader-cinema__toggle')).toBeNull();
   });
 
   it('offers only the cinema toggle without listen actions', () => {
-    const { host } = mountBars(CINEMA_BOX, undefined);
+    const host = mountBars(CINEMA_BOX, undefined);
 
     expect(host.querySelector('app-player-bar .reader-cinema__toggle')).not.toBeNull();
     expect(host.querySelector('.reader-listen__button')).toBeNull();
   });
 
   it('adds no bar after an embed Listen cannot play', () => {
-    const { host } = mountBars(VIMEO_BOX, fakeListenActions());
+    const host = mountBars(VIMEO_BOX, fakeListenActions());
 
     expect(host.querySelector('app-player-bar')).toBeNull();
   });
 
   it('hands Listen the media and the frame', () => {
     const actions = fakeListenActions();
-    const { host } = mountBars(CINEMA_BOX, actions);
+    const host = mountBars(CINEMA_BOX, actions);
 
     host.querySelector<HTMLButtonElement>('.reader-listen__button')!.click();
 
@@ -100,28 +108,28 @@ describe('ArticlePlayerBars', () => {
   });
 
   it('gives a native video in a cinema box a cinema-only bar', () => {
-    const { host } = mountBars(NATIVE_VIDEO_BOX, fakeListenActions());
+    const host = mountBars(NATIVE_VIDEO_BOX, fakeListenActions());
 
     expect(host.querySelector('app-player-bar .reader-cinema__toggle')).not.toBeNull();
     expect(host.querySelector('.reader-listen__button')).toBeNull();
   });
 
   it('gives a landscape Vimeo frame in a cinema box a cinema-only bar', () => {
-    const { host } = mountBars(VIMEO_CINEMA_BOX, fakeListenActions());
+    const host = mountBars(VIMEO_CINEMA_BOX, fakeListenActions());
 
     expect(host.querySelector('app-player-bar .reader-cinema__toggle')).not.toBeNull();
     expect(host.querySelector('.reader-listen__button')).toBeNull();
   });
 
   it('gives a portrait Short outside any cinema box no bar', () => {
-    const { host } = mountBars(SHORT_BOX, fakeListenActions());
+    const host = mountBars(SHORT_BOX, fakeListenActions());
 
     expect(host.querySelector('app-player-bar')).toBeNull();
   });
 
   describe('toggleCinemaByKey', () => {
     it('toggles the first video when none is in view', () => {
-      const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+      const { host, bars } = twoCinemaBars();
       const event = key();
 
       bars.toggleCinemaByKey(event);
@@ -131,7 +139,7 @@ describe('ArticlePlayerBars', () => {
     });
 
     it('toggles the video in view', () => {
-      const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+      const { host, bars } = twoCinemaBars();
       host.querySelectorAll<HTMLElement>('app-player-bar')[1].getBoundingClientRect = () =>
         ({ top: 100, bottom: 400 }) as DOMRect;
 
@@ -143,7 +151,7 @@ describe('ArticlePlayerBars', () => {
     it.each([{ metaKey: true }, { ctrlKey: true }, { altKey: true }, { key: 'T' }, { key: 'x' }])(
       'ignores %o',
       (init) => {
-        const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+        const { host, bars } = twoCinemaBars();
 
         bars.toggleCinemaByKey(key(init));
 
@@ -152,7 +160,7 @@ describe('ArticlePlayerBars', () => {
     );
 
     it.each(['input', 'select'])('ignores a key typed into a %s', (tagName) => {
-      const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+      const { host, bars } = twoCinemaBars();
 
       bars.toggleCinemaByKey(key({}, document.createElement(tagName)));
 
@@ -160,7 +168,7 @@ describe('ArticlePlayerBars', () => {
     });
 
     it('does nothing where cinema is not offered', () => {
-      const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+      const { host, bars } = twoCinemaBars();
       host.querySelectorAll<HTMLElement>('.reader-cinema__toggle').forEach((toggle) => {
         toggle.style.display = 'none';
       });
@@ -173,7 +181,7 @@ describe('ArticlePlayerBars', () => {
     });
 
     it('does nothing with no bars mounted', () => {
-      const { bars } = mountBars('<p>Text</p>', undefined);
+      const { bars } = barsOver('<p>Text</p>', undefined);
       const event = key();
 
       bars.toggleCinemaByKey(event);
@@ -181,17 +189,17 @@ describe('ArticlePlayerBars', () => {
       expect(event.defaultPrevented).toBe(false);
     });
 
-    it('does nothing once the bars are forgotten', () => {
-      const { host, bars } = mountBars(CINEMA_BOX, undefined);
+    it('does nothing once the islands are released', () => {
+      const { host, bars, islands } = twoCinemaBars();
 
-      bars.forget();
+      islands.releaseAll();
       bars.toggleCinemaByKey(key());
 
-      expect(widened(host)).toEqual([false]);
+      expect(widened(host)).toEqual([false, false]);
     });
 
     it('widens the cinema box next to a bar that offers no cinema', () => {
-      const { host, bars } = mountBars(SOUNDCLOUD_BOX + CINEMA_BOX, fakeListenActions());
+      const { host, bars } = barsOver(SOUNDCLOUD_BOX + CINEMA_BOX, fakeListenActions());
 
       bars.toggleCinemaByKey(key());
 
