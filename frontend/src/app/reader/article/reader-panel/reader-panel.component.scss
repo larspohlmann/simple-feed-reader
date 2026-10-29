@@ -1,12 +1,25 @@
-@use '../../../theme/reader-panel';
+@use '../../../theme/glass-rim';
 
 :host {
-  @include reader-panel.frame;
+  @include glass-rim.filled(var(--surface-1));
 
   display: block;
   margin: 0 0 var(--space-4);
+  border-radius: var(--radius);
 }
 
+// A <button>, so inside .text-scaled it keeps the fixed UI type scale; a <summary> would scale.
 .reader-panel__toggle {
-  @include reader-panel.toggle;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  cursor: pointer;
 }

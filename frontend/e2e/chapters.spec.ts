@@ -77,8 +77,8 @@ test('a video lists its chapters under an API-enabled player', async ({ page }) 
 
   const article = page.locator('app-article-content');
   await expect(article.locator('iframe')).toHaveAttribute('src', /\?enablejsapi=1&origin=/);
-  await expect(article.locator('.reader-chapters__list')).toBeHidden();
-  await article.locator('.reader-chapters__toggle').click();
+  await expect(article.locator('.reader-chapters__list')).toHaveCount(0);
+  await article.locator('.reader-chapters .reader-panel__toggle').click();
   await expect(article.locator('.reader-chapters__row')).toHaveText([
     '0:00Opening',
     '0:20Middle',

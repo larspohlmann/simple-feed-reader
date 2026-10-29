@@ -6,9 +6,12 @@ import {
   messagesOf,
   recordPosts,
 } from '../../../../testing/frame-playback-testing';
+import { openReaderPanels } from '../../../../testing/reader-panel-testing';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AudioPlayerService } from '../../audio-player.service';
 import { SOUNDCLOUD_WIDGET_ORIGIN } from '../../media/soundcloud-widget-protocol';
 import { ArticleChapters, chapterFrames } from './article-chapters';
+import { ArticleIslands } from './article-islands';
 
 const CHAPTERS = [
   { startSeconds: 0, title: 'A' },
@@ -29,30 +32,43 @@ const NEXT_CHAPTERS = [
 ];
 
 function titles(host: HTMLElement): string[] {
+  openReaderPanels(host);
   return Array.from(host.querySelectorAll('.reader-chapters__title')).map(
     (title) => title.textContent ?? '',
   );
 }
 
+function mountedChapters(): { articleChapters: ArticleChapters; islands: ArticleIslands } {
+  const islands = new ArticleIslands(TestBed.inject(Injector));
+  const articleChapters = new ArticleChapters(
+    TestBed.inject(AudioPlayerService),
+    islands,
+    TestBed.inject(Injector),
+  );
+  return { articleChapters, islands };
+}
+
 function chapters(): ArticleChapters {
-  return new ArticleChapters(TestBed.inject(AudioPlayerService), TestBed.inject(Injector));
+  return mountedChapters().articleChapters;
 }
 
 describe('ArticleChapters', () => {
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideAccountIdentity()] });
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [provideAccountIdentity()],
+    });
   });
+
+  afterEach(() => jest.restoreAllMocks());
 
   it('puts a video list after the cinema box of the API player', () => {
     const host = document.createElement('div');
     host.innerHTML =
       '<div class="reader-cinema"><div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x"></iframe></div></div><p>Notes</p>';
 
-    chapters().attachToFrame(host.querySelector('iframe')!, {
-      chapters: CHAPTERS,
-      heading: 'Chapters',
-    });
+    chapters().attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
     expect(host.children[1].classList.contains('reader-chapters')).toBe(true);
   });
@@ -61,27 +77,49 @@ describe('ArticleChapters', () => {
     const host = document.createElement('div');
     host.innerHTML = '<iframe src="https://player.vimeo.com/video/1"></iframe><p>Notes</p>';
 
-    chapters().attachToFrame(host.querySelector('iframe')!, {
-      chapters: CHAPTERS,
-      heading: 'Chapters',
-    });
+    chapters().attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
     expect(host.querySelector('.reader-chapters')).toBeNull();
   });
 
-  it('takes its list away on release', () => {
+  it("stops following an embed's player once its list is released", () => {
     const host = document.createElement('div');
     host.innerHTML =
       '<div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x"></iframe></div><p>Notes</p>';
-    const articleChapters = chapters();
-    articleChapters.attachToFrame(host.querySelector('iframe')!, {
-      chapters: CHAPTERS,
-      heading: 'Chapters',
-    });
+    const frame = host.querySelector('iframe')!;
+    const { articleChapters, islands } = mountedChapters();
+    articleChapters.attachToFrame(frame, CHAPTERS);
+    openReaderPanels(host);
+    const list = host.querySelector('.reader-chapters')!;
+    const removeListener = jest.spyOn(window, 'removeEventListener');
 
-    articleChapters.release();
+    islands.releaseAll();
+    deliverMessage(
+      frame,
+      JSON.stringify({ event: 'infoDelivery', info: { currentTime: 70 } }),
+      'https://www.youtube-nocookie.com',
+    );
+    TestBed.tick();
 
-    expect(host.querySelector('.reader-chapters')).toBeNull();
+    expect(removeListener).toHaveBeenCalledWith('message', expect.any(Function));
+    expect(list.querySelector('.reader-chapters__row[aria-current="true"]')).toBeNull();
+  });
+
+  it('gives a frame a list again once it forgets the shown ones', () => {
+    const host = document.createElement('div');
+    host.innerHTML =
+      '<div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x"></iframe></div><p>Notes</p>';
+    const frame = host.querySelector('iframe')!;
+    const { articleChapters, islands } = mountedChapters();
+    articleChapters.attachToFrame(frame, CHAPTERS);
+    islands.releaseAll();
+
+    articleChapters.forget();
+    articleChapters.attachToFrame(frame, NEXT_CHAPTERS);
+
+    expect(host.querySelectorAll('.reader-chapters')).toHaveLength(1);
+    expect(titles(host)).toEqual(['X', 'Y', 'Z']);
+    islands.releaseAll();
   });
 
   describe('followTrack', () => {
@@ -96,13 +134,12 @@ describe('ArticleChapters', () => {
       host.innerHTML = VIDEO_BODY;
       const posted = recordPosts(host.querySelector('iframe')!);
       const articleChapters = chapters();
-      articleChapters.attachToFrame(host.querySelector('iframe')!, {
-        chapters: CHAPTERS,
-        heading: 'Chapters',
-      });
+      articleChapters.attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
       articleChapters.followTrack(VIDEO_TRACK);
+      openReaderPanels(host);
       host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+      TestBed.tick();
 
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(1);
       expect(host.children[1].classList.contains('reader-chapters')).toBe(true);
@@ -111,20 +148,36 @@ describe('ArticleChapters', () => {
       expect(posted).toEqual([]);
     });
 
+    it('keeps an open list open when Listen follows the track', () => {
+      const host = document.createElement('div');
+      host.innerHTML = VIDEO_BODY;
+      const articleChapters = chapters();
+      articleChapters.attachToFrame(host.querySelector('iframe')!, CHAPTERS);
+      openReaderPanels(host);
+      const list = host.querySelector('.reader-chapters');
+
+      articleChapters.followTrack(VIDEO_TRACK);
+      TestBed.tick();
+
+      expect(host.querySelector('.reader-chapters')).toBe(list);
+      expect(host.querySelector('.reader-panel__toggle')?.getAttribute('aria-expanded')).toBe(
+        'true',
+      );
+      expect(host.querySelectorAll('.reader-chapters__row')).toHaveLength(CHAPTERS.length);
+    });
+
     it('follows the audio player once the video is its track', () => {
       const host = document.createElement('div');
       host.innerHTML = VIDEO_BODY;
       const articleChapters = chapters();
-      articleChapters.attachToFrame(host.querySelector('iframe')!, {
-        chapters: CHAPTERS,
-        heading: 'Chapters',
-      });
+      articleChapters.attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
       articleChapters.followTrack(VIDEO_TRACK);
       const audio = TestBed.inject(AudioPlayerService);
       audio.enqueue(VIDEO_TRACK);
       audio.seek(70);
       TestBed.tick();
+      openReaderPanels(host);
 
       const current = host.querySelector('.reader-chapters__row[aria-current="true"]');
       expect(current?.querySelector('.reader-chapters__title')?.textContent).toBe('B');
@@ -138,7 +191,7 @@ describe('ArticleChapters', () => {
       const frame = host.querySelector('iframe')!;
       const posted = recordPosts(frame);
       const articleChapters = chapters();
-      articleChapters.attachToFrame(frame, { chapters: CHAPTERS, heading: 'Chapters' });
+      articleChapters.attachToFrame(frame, CHAPTERS);
       deliverMessage(
         frame,
         JSON.stringify({ event: 'onReady' }),
@@ -146,7 +199,9 @@ describe('ArticleChapters', () => {
       );
 
       articleChapters.followTrack(NEXT_TRACK);
+      openReaderPanels(host);
       host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+      TestBed.tick();
 
       expect(playFrom).not.toHaveBeenCalled();
       expect(messagesOf(posted)).toContainEqual(
@@ -161,7 +216,7 @@ describe('ArticleChapters', () => {
       'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F123';
     const EMBEDS_BODY = `<div class="reader-embed"><iframe src="${VIDEO_SRC}"></iframe></div><p>Between</p><div class="reader-embed"><iframe src="${WIDGET_SRC}"></iframe></div><p>End</p>`;
     const WIDGET_TRACK = { ...TRACK, url: WIDGET_SRC };
-    const LIST = { chapters: CHAPTERS, heading: 'Chapters' };
+    const LIST = CHAPTERS;
 
     function embedsHost(): {
       host: HTMLElement;
@@ -179,7 +234,10 @@ describe('ArticleChapters', () => {
     }
 
     function tapSecondRow(frame: HTMLIFrameElement): void {
-      listAfter(frame)?.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+      const list = listAfter(frame) as HTMLElement;
+      openReaderPanels(list);
+      list.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+      TestBed.tick();
     }
 
     it('finds every API video frame and SoundCloud widget in order', () => {
@@ -194,7 +252,7 @@ describe('ArticleChapters', () => {
 
     it('puts a list right after each embed', () => {
       const { host, video, widget } = embedsHost();
-      const articleChapters = chapters();
+      const { articleChapters, islands } = mountedChapters();
 
       articleChapters.attachToFrame(video, LIST);
       articleChapters.attachToFrame(widget, LIST);
@@ -202,14 +260,14 @@ describe('ArticleChapters', () => {
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(2);
       expect(listAfter(video)?.classList.contains('reader-chapters')).toBe(true);
       expect(listAfter(widget)?.classList.contains('reader-chapters')).toBe(true);
-      articleChapters.release();
+      islands.releaseAll();
     });
 
     it('seeks only the video from the video list', () => {
       const { video, widget } = embedsHost();
       const videoPosts = recordPosts(video);
       const widgetPosts = recordPosts(widget);
-      const articleChapters = chapters();
+      const { articleChapters, islands } = mountedChapters();
       articleChapters.attachToFrame(video, LIST);
       articleChapters.attachToFrame(widget, LIST);
       widgetPosts.length = 0;
@@ -225,14 +283,14 @@ describe('ArticleChapters', () => {
         expect.objectContaining({ func: 'seekTo', args: [60, true] }),
       );
       expect(widgetPosts).toEqual([]);
-      articleChapters.release();
+      islands.releaseAll();
     });
 
     it('plays only the widget from the widget list, seeking once it plays', () => {
       const { video, widget } = embedsHost();
       const videoPosts = recordPosts(video);
       const widgetPosts = recordPosts(widget);
-      const articleChapters = chapters();
+      const { articleChapters, islands } = mountedChapters();
       articleChapters.attachToFrame(video, LIST);
       articleChapters.attachToFrame(widget, LIST);
       widgetPosts.length = 0;
@@ -246,7 +304,7 @@ describe('ArticleChapters', () => {
         { method: 'seekTo', value: 60000 },
       ]);
       expect(videoPosts).toEqual([]);
-      articleChapters.release();
+      islands.releaseAll();
     });
 
     it("hands only the listened embed's list to the audio player", () => {
@@ -255,7 +313,7 @@ describe('ArticleChapters', () => {
       const { host, video, widget } = embedsHost();
       const videoPosts = recordPosts(video);
       const widgetPosts = recordPosts(widget);
-      const articleChapters = chapters();
+      const { articleChapters, islands } = mountedChapters();
       articleChapters.attachToFrame(video, LIST);
       articleChapters.attachToFrame(widget, LIST);
       widgetPosts.length = 0;
@@ -274,7 +332,7 @@ describe('ArticleChapters', () => {
       });
       expect(listAfter(widget)?.classList.contains('reader-chapters')).toBe(true);
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(2);
-      articleChapters.release();
+      islands.releaseAll();
     });
 
     it('hands the list of every frame of the listened embed to the audio player', () => {
@@ -286,7 +344,7 @@ describe('ArticleChapters', () => {
       const [first, second] = Array.from(host.querySelectorAll('iframe'));
       const firstPosts = recordPosts(first);
       const secondPosts = recordPosts(second);
-      const articleChapters = chapters();
+      const { articleChapters, islands } = mountedChapters();
       articleChapters.attachToFrame(first, LIST);
       articleChapters.attachToFrame(second, LIST);
       firstPosts.length = 0;
@@ -300,7 +358,7 @@ describe('ArticleChapters', () => {
       expect(firstPosts).toEqual([]);
       expect(secondPosts).toEqual([]);
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(2);
-      articleChapters.release();
+      islands.releaseAll();
     });
 
     it('leaves every list on its own player when the listened embed has no list', () => {
@@ -309,7 +367,7 @@ describe('ArticleChapters', () => {
       const { video, widget } = embedsHost();
       const videoPosts = recordPosts(video);
       const widgetPosts = recordPosts(widget);
-      const articleChapters = chapters();
+      const { articleChapters, islands } = mountedChapters();
       articleChapters.attachToFrame(video, LIST);
 
       articleChapters.followTrack(WIDGET_TRACK);
@@ -325,12 +383,12 @@ describe('ArticleChapters', () => {
         expect.objectContaining({ func: 'seekTo', args: [60, true] }),
       );
       expect(widgetPosts).toEqual([]);
-      articleChapters.release();
+      islands.releaseAll();
     });
 
     it('gives an embed one list however often it is attached', () => {
       const { host, video, widget } = embedsHost();
-      const articleChapters = chapters();
+      const { articleChapters, islands } = mountedChapters();
       articleChapters.attachToFrame(video, LIST);
 
       articleChapters.attachToFrame(video, LIST);
@@ -340,19 +398,19 @@ describe('ArticleChapters', () => {
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(2);
       expect(listAfter(video)?.classList.contains('reader-chapters')).toBe(true);
       expect(listAfter(widget)?.classList.contains('reader-chapters')).toBe(true);
-      articleChapters.release();
+      islands.releaseAll();
     });
 
     it('keeps the first list attached to an embed, not a later one', () => {
       const { host, video } = embedsHost();
-      const articleChapters = chapters();
+      const { articleChapters, islands } = mountedChapters();
       articleChapters.attachToFrame(video, LIST);
 
-      articleChapters.attachToFrame(video, { chapters: NEXT_CHAPTERS, heading: 'Chapters' });
+      articleChapters.attachToFrame(video, NEXT_CHAPTERS);
 
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(1);
       expect(titles(host)).toEqual(['A', 'B']);
-      articleChapters.release();
+      islands.releaseAll();
     });
 
     it('drives the audio player when the embed is already its track', () => {
@@ -361,26 +419,14 @@ describe('ArticleChapters', () => {
       const playFrom = jest.spyOn(audio, 'playFrom').mockImplementation(() => undefined);
       const { widget } = embedsHost();
       const widgetPosts = recordPosts(widget);
-      const articleChapters = chapters();
+      const { articleChapters, islands } = mountedChapters();
 
       articleChapters.attachToFrame(widget, LIST);
       tapSecondRow(widget);
 
       expect(playFrom).toHaveBeenCalledWith(expect.objectContaining({ url: WIDGET_SRC }), 60);
       expect(widgetPosts).toEqual([]);
-      articleChapters.release();
-    });
-
-    it('takes every list away on release', () => {
-      const { host, video, widget } = embedsHost();
-      const articleChapters = chapters();
-      articleChapters.attachToFrame(video, LIST);
-      articleChapters.attachToFrame(widget, LIST);
-
-      articleChapters.release();
-
-      expect(host.querySelector('.reader-chapters')).toBeNull();
-      expect(host.innerHTML).toBe(EMBEDS_BODY.replace('&origin', '&amp;origin'));
+      islands.releaseAll();
     });
   });
 });
