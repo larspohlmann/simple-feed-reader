@@ -4,7 +4,6 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 
 const OPEN = 'reader-narration--open';
 
-/** Shows or hides a machine-generated narration player in the body (#903, #1889). */
 @Component({
   selector: 'app-narration-toggle',
   imports: [TranslocoPipe, IconComponent],

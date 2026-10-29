@@ -76,7 +76,7 @@ describe('ArticleChapters', () => {
 
   it("puts a SoundCloud list after the widget's player bar", () => {
     const host = document.createElement('div');
-    host.innerHTML = `<div class="reader-embed reader-embed--strip"><iframe src="${WIDGET_URL}"></iframe></div><app-player-bar></app-player-bar><p>Notes</p>`;
+    host.innerHTML = `<div class="reader-embed reader-embed--strip"><iframe src="${WIDGET_URL}"></iframe></div><app-player-bar class="reader-island"></app-player-bar><p>Notes</p>`;
 
     chapters().attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 

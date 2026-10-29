@@ -68,6 +68,30 @@ describe('ArticleIslands', () => {
     expect(host.children[1]).toBe(anchor);
   });
 
+  it('keeps two islands mounted after one anchor in mount order', () => {
+    const { host, anchor } = bodyWithAnchor();
+    const registry = islands();
+
+    registry.mountAfter(anchor, IslandProbeComponent, [inputBinding('label', () => 'first')]);
+    registry.mountAfter(anchor, IslandProbeComponent, [inputBinding('label', () => 'second')]);
+
+    expect(host.children[0]).toBe(anchor);
+    expect(host.children[1].textContent).toBe('first');
+    expect(host.children[2].textContent).toBe('second');
+  });
+
+  it('keeps two islands mounted before one anchor in mount order', () => {
+    const { host, anchor } = bodyWithAnchor();
+    const registry = islands();
+
+    registry.mountBefore(anchor, IslandProbeComponent, [inputBinding('label', () => 'first')]);
+    registry.mountBefore(anchor, IslandProbeComponent, [inputBinding('label', () => 'second')]);
+
+    expect(host.children[0].textContent).toBe('first');
+    expect(host.children[1].textContent).toBe('second');
+    expect(host.children[2]).toBe(anchor);
+  });
+
   it('follows a bound signal', () => {
     const { host, anchor } = bodyWithAnchor();
     const label = signal('Chapters');

@@ -2,7 +2,6 @@ import { inputBinding } from '@angular/core';
 import { SlideshowControlsComponent } from '../slideshow/slideshow-controls.component';
 import { ArticleIslands } from './article-islands';
 
-/** Controls for every backend-emitted slideshow of two or more slides in a rendered body (#926, #1889). */
 export class ArticleSlideshows {
   constructor(private readonly islands: ArticleIslands) {}
 

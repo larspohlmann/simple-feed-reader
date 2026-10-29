@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
-import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
+import { entryWire, stubOneArticle } from './support/reader';
 
 const DESKTOP = { width: 1280, height: 800 };
 const TITLE = 'Entry with body islands';
@@ -29,33 +29,7 @@ const entry = entryWire({
 });
 
 async function openArticle(page: Page) {
-  await page.route('**/api/entries/*/reader', async (route) =>
-    route.fulfill({ status: 200, json: readerFailedJson() }),
-  );
-  await page.route('**/api/entries/*/state', async (route) => {
-    const patch = (route.request().postDataJSON() ?? {}) as Record<string, boolean>;
-    await route.fulfill({
-      status: 200,
-      json: {
-        state: {
-          entryId: 1,
-          isHidden: false,
-          isFavorite: false,
-          isKept: false,
-          hiddenAt: null,
-          ...patch,
-        },
-      },
-    });
-  });
-  await page.route('**/api/entries/1', async (route) => {
-    if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({ status: 200, json: entryDetailJson(entry, BODY) });
-  });
-  await page.route('**/api/entries*', async (route) => {
-    if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({ status: 200, json: { entries: [entry], nextCursor: null } });
-  });
+  await stubOneArticle(page, entry, BODY);
   await page.reload();
   await page.getByText(TITLE, { exact: false }).first().click();
   const pane = page.locator('app-reader-view');

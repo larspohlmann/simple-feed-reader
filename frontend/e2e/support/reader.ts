@@ -184,3 +184,33 @@ export function oneFeedJson(
 ): SubscriptionsResponse {
   return subscriptionsJson([aSubscription({ title, unreadCount: 1, entryCount: 1, ...overrides })]);
 }
+
+export async function stubOneArticle(page: Page, entry: EntryDto, body: string): Promise<void> {
+  await page.route('**/api/entries/*/reader', async (route) =>
+    route.fulfill({ status: 200, json: readerFailedJson() }),
+  );
+  await page.route('**/api/entries/*/state', async (route) => {
+    const patch = (route.request().postDataJSON() ?? {}) as Record<string, boolean>;
+    await route.fulfill({
+      status: 200,
+      json: {
+        state: {
+          entryId: entry.id,
+          isHidden: false,
+          isFavorite: false,
+          isKept: false,
+          hiddenAt: null,
+          ...patch,
+        },
+      },
+    });
+  });
+  await page.route(`**/api/entries/${entry.id}`, async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, json: entryDetailJson(entry, body) });
+  });
+  await page.route('**/api/entries*', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, json: { entries: [entry], nextCursor: null } });
+  });
+}

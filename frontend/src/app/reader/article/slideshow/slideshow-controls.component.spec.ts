@@ -1,4 +1,4 @@
-import { Injector, inputBinding } from '@angular/core';
+import { Injector, NgZone, inputBinding } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { articleHost } from '../../../../testing/article-host-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -134,7 +134,7 @@ describe('SlideshowControlsComponent', () => {
     parent.addEventListener('touchend', pageEnd);
 
     figure.dispatchEvent(touch(200, 100, 'touchstart'));
-    const move = touch(120, 105, 'touchmove'); // horizontal-dominant
+    const move = touch(120, 105, 'touchmove');
     figure.dispatchEvent(move);
     figure.dispatchEvent(touch(110, 105, 'touchend'));
 
@@ -152,9 +152,20 @@ describe('SlideshowControlsComponent', () => {
     parent.addEventListener('touchmove', pageMove);
 
     figure.dispatchEvent(touch(200, 100, 'touchstart'));
-    figure.dispatchEvent(touch(195, 260, 'touchmove')); // vertical-dominant
+    figure.dispatchEvent(touch(195, 260, 'touchmove'));
 
     expect(pageMove).toHaveBeenCalled();
+  });
+
+  it('handles touch moves outside the Angular zone', () => {
+    const { figure } = mounted();
+    const zones: boolean[] = [];
+    figure.addEventListener('touchmove', () => zones.push(NgZone.isInAngularZone()));
+
+    figure.dispatchEvent(touch(200, 100, 'touchstart'));
+    figure.dispatchEvent(touch(120, 105, 'touchmove'));
+
+    expect(zones).toEqual([false]);
   });
 
   it('ignores a non-arrow key', () => {

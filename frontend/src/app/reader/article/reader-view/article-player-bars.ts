@@ -1,12 +1,9 @@
 import { inputBinding } from '@angular/core';
 import { embedMediaOfFrame } from '../../audio/embed-media';
-import { EMBED_BOX } from '../decorators/player-box';
-import { CINEMA_BOX_CLASS } from '../decorators/reader-cinema';
+import { CINEMA_BOX, EMBED_BOX } from '../decorators/player-box';
 import { EmbedListen, ListenActions } from '../player-bar/embed-listen';
 import { PlayerBarComponent } from '../player-bar/player-bar.component';
 import { ArticleIslands } from './article-islands';
-
-const CINEMA_BOX = `.${CINEMA_BOX_CLASS}`;
 
 /** A rendered body's player bars: one in every cinema box and after every embed Listen plays (#1888). */
 export class ArticlePlayerBars {

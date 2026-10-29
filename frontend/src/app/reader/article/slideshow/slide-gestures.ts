@@ -1,6 +1,5 @@
 import { AXIS_LOCK_MIN, isSlideSwipe } from '../../reader-gestures';
 
-/** Arrow keys and swipes on a slideshow figure step it; the returned function unbinds them. */
 export function bindSlideGestures(figure: HTMLElement, step: (delta: number) => void): () => void {
   const onKeydown = (event: KeyboardEvent): void => {
     if (event.key === 'ArrowRight') step(1);
@@ -43,18 +42,12 @@ export function bindSlideGestures(figure: HTMLElement, step: (delta: number) => 
     }
     axis = 'none';
   };
-  const passive: AddEventListenerOptions = { passive: true };
-  const blocking: AddEventListenerOptions = { passive: false };
+  const controller = new AbortController();
+  const { signal } = controller;
+  figure.addEventListener('keydown', onKeydown, { signal });
+  figure.addEventListener('touchstart', onTouchstart, { signal, passive: true });
+  figure.addEventListener('touchmove', onTouchmove, { signal, passive: false });
+  figure.addEventListener('touchend', onTouchend, { signal });
 
-  figure.addEventListener('keydown', onKeydown);
-  figure.addEventListener('touchstart', onTouchstart, passive);
-  figure.addEventListener('touchmove', onTouchmove, blocking);
-  figure.addEventListener('touchend', onTouchend);
-
-  return () => {
-    figure.removeEventListener('keydown', onKeydown);
-    figure.removeEventListener('touchstart', onTouchstart, passive);
-    figure.removeEventListener('touchmove', onTouchmove, blocking);
-    figure.removeEventListener('touchend', onTouchend);
-  };
+  return () => controller.abort();
 }

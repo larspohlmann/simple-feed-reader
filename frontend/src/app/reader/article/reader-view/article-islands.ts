@@ -18,7 +18,7 @@ export class ArticleIslands {
   constructor(private readonly injector: Injector) {}
 
   mountAfter<C>(anchor: Element, component: Type<C>, bindings: Binding[]): ComponentRef<C> {
-    return this.mount(component, bindings, (host) => anchor.after(host));
+    return this.mount(component, bindings, (host) => lastTrailingIsland(anchor).after(host));
   }
 
   mountBefore<C>(anchor: Element, component: Type<C>, bindings: Binding[]): ComponentRef<C> {
@@ -54,6 +54,14 @@ export class ArticleIslands {
     }
     this.mounted = [];
   }
+}
+
+function lastTrailingIsland(anchor: Element): Element {
+  let last = anchor;
+  while (last.nextElementSibling?.classList.contains(READER_ISLAND)) {
+    last = last.nextElementSibling;
+  }
+  return last;
 }
 
 function hostOf(ref: ComponentRef<unknown>): HTMLElement {

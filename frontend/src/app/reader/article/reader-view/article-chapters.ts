@@ -24,13 +24,6 @@ export function chapterFrames(host: HTMLElement): HTMLIFrameElement[] {
   return Array.from(host.querySelectorAll<HTMLIFrameElement>(CHAPTER_FRAMES));
 }
 
-/** After the player's box, or after the bar that follows it, so a list never splits a player from its bar. */
-function listAnchorOf(frame: Element): Element {
-  const box = playerBoxOf(frame);
-  const next = box.nextElementSibling;
-  return next?.matches('app-player-bar') ? next : box;
-}
-
 interface ShownList {
   readonly frame: HTMLIFrameElement;
   readonly mediaUrl: string;
@@ -50,7 +43,7 @@ export class ArticleChapters {
   /** The first list attached to a frame stays its only one. */
   attachToFrame(frame: HTMLIFrameElement, chapters: readonly ChapterDto[]): void {
     const media = embedMediaOfFrame(frame);
-    const after = listAnchorOf(frame);
+    const after = playerBoxOf(frame);
     if (!media || !after.parentElement || chapters.length === 0 || this.hasList(frame)) return;
     const player = signal(this.embedPlayer(frame, media));
     this.islands.mountAfter(after, EmbedChaptersComponent, [

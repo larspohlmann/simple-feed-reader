@@ -1,7 +1,9 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  NgZone,
   effect,
+  inject,
   input,
   linkedSignal,
   untracked,
@@ -11,16 +13,15 @@ import { bindSlideGestures } from './slide-gestures';
 
 const READY = 'reader-slideshow--ready';
 
-/** The prev/next controls of a body slideshow, stepping its own slides (#926, #1889). */
 @Component({
   selector: 'app-slideshow-controls',
   imports: [TranslocoPipe],
   templateUrl: './slideshow-controls.component.html',
   styleUrl: './slideshow-controls.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'reader-slideshow__controls' },
 })
 export class SlideshowControlsComponent {
+  private readonly zone = inject(NgZone);
   readonly figure = input.required<HTMLElement>();
   readonly slides = input.required<readonly HTMLElement[]>();
 
@@ -36,7 +37,9 @@ export class SlideshowControlsComponent {
       const figure = this.figure();
       const slides = this.slides();
       untracked(() => markReady(figure, slides));
-      onCleanup(bindSlideGestures(figure, (delta) => this.step(delta)));
+      onCleanup(
+        this.zone.runOutsideAngular(() => bindSlideGestures(figure, (delta) => this.step(delta))),
+      );
     });
     effect(() => show(this.slides(), this.current()));
   }
