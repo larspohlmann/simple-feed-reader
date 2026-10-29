@@ -103,19 +103,23 @@ jobs:
           composer tramp -- --format github
 
   backend:
-    name: Backend (${{ matrix.database }})
+    name: Backend (${{ matrix.database }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        database: [sqlite, mysql]
+        include:
+          - { database: sqlite }
+          - { database: mysql, shard: 1/2 }
+          - { database: mysql, shard: 2/2 }
 
     defaults:
       run:
         working-directory: backend
 
     steps:
-      # Awaited only before its first use, so its first boot overlaps checkout and install.
+      # Backgrounded and awaited only before its first use, so the image pull and
+      # first boot overlap checkout and install.
       - name: Start MySQL
         if: matrix.database == 'mysql'
         working-directory: ${{ github.workspace }}
@@ -124,7 +128,12 @@ jobs:
           --env MYSQL_ROOT_PASSWORD=root
           --env MYSQL_DATABASE=feedreader_test
           --publish 3306:3306
+          --tmpfs /var/lib/mysql
           mysql:8.4
+          --innodb-flush-log-at-trx-commit=0
+          --skip-log-bin
+          --innodb-doublewrite=OFF
+          > "$RUNNER_TEMP/mysql-start.log" 2>&1 &
 
       - uses: actions/checkout@v5
 
@@ -155,6 +164,7 @@ jobs:
             fi
             sleep 1
           done
+          cat "$RUNNER_TEMP/mysql-start.log"
           docker logs mysql
           echo 'MySQL accepted no TCP connection within 90s.' >&2
           exit 1
@@ -193,7 +203,7 @@ jobs:
           php bin/console doctrine:schema:validate
 
       - name: PHPUnit (ParaTest)
-        run: composer test:parallel
+        run: composer test:parallel ${{ matrix.shard && format('-- --shard={0}', matrix.shard) || '' }}
 
   # Line coverage says a line ran; it does not say a test would notice if the
   # line were wrong. Infection changes the line and reports whether anything

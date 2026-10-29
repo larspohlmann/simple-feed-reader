@@ -158,7 +158,7 @@ enter the repository, and each developer's cert is signed by their own local
 CA. The first `up` also creates both databases: `feedreader` for dev (via the
 image's `MYSQL_DATABASE` variable) and `feedreader_test` for the suite (via
 `docker/mysql/init.sql`, which also grants the `feedreader` user access to
-it and to the per-worker `feedreader_test<N>` databases that `composer test:parallel` creates).
+it and to the per-worker `feedreader_test_test<N>` databases that `composer test:parallel` creates).
 
 A volume created before that pattern grant needs it applied by hand:
 
@@ -173,7 +173,7 @@ docker compose exec mysql mysql -uroot -proot \
 
 | Task | Command |
 |---|---|
-| Full test suite | `docker compose exec php composer test` |
+| Full test suite | `docker compose exec php composer test:parallel` |
 | Coding standard | `docker compose exec php composer cs` |
 | Static analysis | `docker compose exec php composer stan` |
 | Any console command | `docker compose exec php bin/console …` |
@@ -276,7 +276,7 @@ work in one browser and silently fail in another, which is exactly the kind of
 - **The test suite always runs with no search engine, even in here.** `php`
   and `worker` carry a real `MEILISEARCH_URL` (§1) for every `APP_ENV`, but
   `backend/phpunit.dist.xml` forces it back to empty for `APP_ENV=test`
-  specifically, so `docker compose exec php composer test` exercises the
+  specifically, so `docker compose exec php composer test:parallel` exercises the
   same database-fallback path the native SQLite run does. Without that
   override, the suite would silently talk to — and write into — this
   container's live index instead. If you ever need a test that genuinely
@@ -286,7 +286,8 @@ work in one browser and silently fail in another, which is exactly the kind of
   `APP_CACHE_DIR`, so their compiled container and cache pools (rate limiters
   included) live in `backend/var/cache-docker`, apart from a native run's
   `backend/var/cache`. That is what lets the native SQLite suite and
-  `docker compose exec php composer test` run at the same time (#1173). It also
+  `docker compose exec php composer test:parallel` run at the same time (#1173),
+  both under ParaTest: their workers share `TEST_TOKEN`s but not a database. It also
   means a native `bin/console cache:clear` never reaches the stack: clear it
   with `docker compose exec php bin/console cache:clear`.
 - **Run e2e from the checkout that owns the stack.** Both e2e suites are
