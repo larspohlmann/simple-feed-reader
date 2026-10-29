@@ -103,12 +103,15 @@ jobs:
           composer tramp -- --format github
 
   backend:
-    name: Backend (${{ matrix.database }})
+    name: Backend (${{ matrix.database }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        database: [sqlite, mysql]
+        include:
+          - { database: sqlite }
+          - { database: mysql, shard: 1/2 }
+          - { database: mysql, shard: 2/2 }
 
     defaults:
       run:
@@ -200,7 +203,7 @@ jobs:
           php bin/console doctrine:schema:validate
 
       - name: PHPUnit (ParaTest)
-        run: composer test:parallel
+        run: composer test:parallel ${{ matrix.shard && format('-- --shard={0}', matrix.shard) || '' }}
 
   # Line coverage says a line ran; it does not say a test would notice if the
   # line were wrong. Infection changes the line and reports whether anything
