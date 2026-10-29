@@ -17,15 +17,9 @@ export interface ChapterList {
   readonly heading: string;
 }
 
-/** Where a chapter list goes: after `after`, or first in `host`. */
-export interface ChapterListPlace {
-  readonly host: HTMLElement;
-  readonly after: Element | null;
-}
-
 /** A collapsed chapter list whose rows start `player` at their chapter and follow its position (#1808). */
 export function addChapterList(
-  { host, after }: ChapterListPlace,
+  after: Element,
   { chapters, heading }: ChapterList,
   player: ChapterPlayer,
 ): HTMLElement | null {
@@ -69,8 +63,7 @@ export function addChapterList(
   const details = document.createElement('details');
   details.append(toggle(heading), items);
   list.append(details);
-  if (after) after.after(list);
-  else host.prepend(list);
+  after.after(list);
   return list;
 }
 

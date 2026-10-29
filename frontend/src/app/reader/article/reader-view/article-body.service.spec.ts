@@ -14,7 +14,7 @@ import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testin
 import { ArticleBody } from './article-body.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { PlayingMedium } from '../../media/autoplay/autoplay-player';
-import { ChapterDto, EntryDto, TranscriptDto } from '../../models';
+import { ChapterDto, EntryDto } from '../../models';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { anEntry } from '../../../../testing/entry-testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
@@ -72,8 +72,6 @@ describe('ArticleBody', () => {
   let embedDetails: jest.Mock<Observable<TrackDetails>, [EmbedMedia]>;
   const html = signal('');
   const chapters = signal<ChapterDto[]>([]);
-  const transcript = signal<TranscriptDto | null>(null);
-  const transcriptIsTheBody = signal(false);
   const audioTrack = signal<AudioTrack | null>(null);
   const entry = signal<EntryDto | null>(null);
 
@@ -87,8 +85,6 @@ describe('ArticleBody', () => {
       pageUrl: () => 'https://news.test/story',
       enclosureUrl: () => null,
       chapters,
-      transcript,
-      transcriptIsTheBody,
       audioTrack,
       entry,
       decorated,
@@ -121,8 +117,6 @@ describe('ArticleBody', () => {
   beforeEach(() => {
     localStorage.clear();
     chapters.set([]);
-    transcript.set(null);
-    transcriptIsTheBody.set(false);
     audioTrack.set(null);
     entry.set(null);
     imageProxy = neverRecoveringImageProxy();
@@ -292,78 +286,14 @@ describe('ArticleBody', () => {
     });
   });
 
-  describe('its transcript', () => {
-    const TRANSCRIPT: TranscriptDto = {
-      language: null,
-      paragraphs: [{ startSeconds: 60, speaker: null, text: 'Hello.' }],
-    };
-
-    it('puts a collapsed Transcript section atop the body', async () => {
-      transcript.set(TRANSCRIPT);
-      connectBody('<p>Notes</p>');
-      await Promise.resolve();
-
-      const section = content.firstElementChild!;
-      expect(section.getAttribute('aria-label')).toBe('Transcript');
-      expect(section.querySelector('details')!.open).toBe(false);
-    });
-
-    it("follows the episode's chapters", async () => {
-      transcript.set(TRANSCRIPT);
-      chapters.set(CHAPTERS);
-      audioTrack.set(EPISODE);
-      connectBody('<p>Notes</p>');
-      await Promise.resolve();
-
-      const labels = Array.from(content.children, (child) => child.getAttribute('aria-label'));
-      expect(labels).toEqual(['Chapters', 'Transcript', null]);
-    });
-
-    it('opens it when the transcript is the body', async () => {
-      transcript.set(TRANSCRIPT);
-      transcriptIsTheBody.set(true);
-      connectBody('');
-      await Promise.resolve();
-
-      expect(content.querySelector('details')!.open).toBe(true);
-    });
-
-    it('seeks the episode from a timestamp', async () => {
-      const playFrom = jest
-        .spyOn(TestBed.inject(AudioPlayerService), 'playFrom')
-        .mockImplementation(() => undefined);
-      transcript.set(TRANSCRIPT);
-      audioTrack.set(EPISODE);
-      connectBody('<p>Notes</p>');
-      await Promise.resolve();
-
-      content.querySelector<HTMLButtonElement>('.reader-transcript__time')!.click();
-
-      expect(playFrom).toHaveBeenCalledWith(EPISODE, 60);
-    });
-
-    it('adds no section without a transcript', async () => {
-      connectBody('<p>Notes</p>');
-      await Promise.resolve();
-
-      expect(content.querySelector('.reader-transcript')).toBeNull();
-    });
-  });
-
   describe('its chapters', () => {
-    const chapterRows = (): string[] =>
-      Array.from(content.querySelectorAll('.reader-chapters__row')).map(
-        (row) => row.textContent ?? '',
-      );
-
-    it("lists an episode's chapters atop the body", async () => {
+    it('lists no episode chapters in the body, its header panel owns them (#1880)', async () => {
       chapters.set(CHAPTERS);
       audioTrack.set(EPISODE);
       connectBody('<p>Notes</p>');
       await Promise.resolve();
 
-      expect(content.firstElementChild!.getAttribute('aria-label')).toBe('Chapters');
-      expect(chapterRows()).toEqual(['0:00Intro', '4:16How it works']);
+      expect(content.querySelector('.reader-chapters')).toBeNull();
     });
 
     it('drives a video with chapters through its API player, listing them beneath it', async () => {
@@ -393,7 +323,7 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       expect(content.querySelector('iframe')!.getAttribute('src')).toBe(API_FRAME_URL);
-      expect(content.firstElementChild!.classList).toContain('reader-chapters');
+      expect(content.querySelector('.reader-chapters')).toBeNull();
     });
 
     it('hands the player the chapters of the video it lists, for a copy queued earlier, even when its own details fail', async () => {
@@ -433,7 +363,6 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       expect(decorated).toHaveBeenCalledTimes(2);
-      expect(chapterRows()).toHaveLength(2);
     });
 
     it('does not decorate again for an equal chapter list or a changed episode object', async () => {
