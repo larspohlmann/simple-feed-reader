@@ -1,32 +1,19 @@
-@use '../../../theme/bare-summary';
-@use '../../../theme/glass-rim';
+@use '../../../theme/reader-panel';
 @use '../../chapters/chapter-rows';
 
 :host ::ng-deep .reader-chapters {
-  @include glass-rim.filled(var(--surface-1));
+  @include reader-panel.frame;
 
   margin: var(--space-3) 0 var(--space-4);
-  border-radius: var(--radius);
   font-size: var(--fs-sm);
 }
 
 :host ::ng-deep .reader-chapters__toggle {
-  @include bare-summary.marker-hidden;
-
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  color: var(--text-secondary);
-  cursor: pointer;
+  @include reader-panel.toggle;
 }
 
 :host ::ng-deep .reader-chapters__toggle .material-symbols-outlined {
   font-size: var(--icon-md);
-}
-
-:host ::ng-deep [open] > .reader-chapters__toggle .material-symbols-outlined {
-  transform: rotate(90deg);
 }
 
 :host ::ng-deep .reader-chapters__left .material-symbols-outlined {

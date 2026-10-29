@@ -60,18 +60,25 @@ export function addChapterList(
     item.append(row);
     items.append(item);
   }
-  const details = document.createElement('details');
-  details.append(toggle(heading), items);
-  list.append(details);
+  list.append(toggle(heading, items), items);
   after.after(list);
   return list;
 }
 
-function toggle(heading: string): HTMLElement {
-  const summary = document.createElement('summary');
-  summary.className = `${LIST}__toggle`;
-  summary.append(materialIcon('chevron_right'), heading);
-  return summary;
+function toggle(heading: string, items: HTMLElement): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `${LIST}__toggle`;
+  const icon = materialIcon('chevron_right');
+  button.append(icon, heading);
+  const show = (open: boolean): void => {
+    button.setAttribute('aria-expanded', String(open));
+    icon.textContent = open ? 'expand_more' : 'chevron_right';
+    items.hidden = !open;
+  };
+  show(false);
+  button.addEventListener('click', () => show(items.hidden));
+  return button;
 }
 
 function showProgress(row: HTMLElement, progress: ChapterProgress | null): void {

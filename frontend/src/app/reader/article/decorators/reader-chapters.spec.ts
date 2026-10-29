@@ -50,21 +50,27 @@ describe('addChapterList', () => {
     ]);
   });
 
-  it('starts collapsed and opens from its toggle', () => {
+  it('starts collapsed and opens from its toggle button, like the header panels', () => {
     const host = document.createElement('div');
     addChapterList(anchorIn(host), { chapters: CHAPTERS, heading: 'Chapters' }, fakePlayer());
-    const details = host.querySelector<HTMLDetailsElement>('nav.reader-chapters > details');
-    const toggle = details?.querySelector<HTMLElement>(':scope > summary.reader-chapters__toggle');
+    const toggle = host.querySelector<HTMLButtonElement>(
+      'nav.reader-chapters > button.reader-chapters__toggle',
+    )!;
+    const list = host.querySelector<HTMLElement>('nav.reader-chapters > ol.reader-chapters__list')!;
 
-    expect(toggle?.textContent).toContain('Chapters');
-    expect(details?.querySelector(':scope > ol.reader-chapters__list')).not.toBeNull();
-    expect(details?.open).toBe(false);
+    expect(toggle.type).toBe('button');
+    expect(toggle.textContent).toBe('chevron_rightChapters');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(list.hidden).toBe(true);
 
-    toggle?.click();
-    expect(details?.open).toBe(true);
+    toggle.click();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.textContent).toBe('expand_moreChapters');
+    expect(list.hidden).toBe(false);
 
-    toggle?.click();
-    expect(details?.open).toBe(false);
+    toggle.click();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(list.hidden).toBe(true);
   });
 
   it('plays from a tapped chapter and marks it at once', () => {
