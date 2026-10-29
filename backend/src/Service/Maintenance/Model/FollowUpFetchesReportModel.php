@@ -21,7 +21,7 @@ final readonly class FollowUpFetchesReportModel
     public static function none(): self
     {
         return new self(
-            new ImageVerificationReportModel(0, 0, 0, 0),
+            ImageVerificationReportModel::none(),
             LinkCardSweepReportModel::none(),
             TranscriptSweepReportModel::none(),
         );

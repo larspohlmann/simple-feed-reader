@@ -6,15 +6,10 @@ namespace App\Tests\Service\Worker;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Repository\PendingImageVerificationRepository;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\ImageVerificationSweep;
-use App\Service\Image\ImageVerifier;
 use App\Service\Worker\Handler\VerifyPendingImagesHandler;
 use App\Service\Worker\Message\VerifyPendingImages;
 use App\Tests\DbTestCase;
-use App\Tests\Support\RenditionProbes;
-use App\Tests\Support\StubProbedLadders;
+use App\Tests\Support\ImageVerificationSweepWiring;
 use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StubGuardedImageDownloader;
@@ -59,19 +54,10 @@ final class VerifyPendingImagesHandlerTest extends DbTestCase
         StubGuardedImageDownloader $downloader,
         RecordingLogger $logger,
     ): VerifyPendingImagesHandler {
-        /** @var PendingImageVerificationRepository $pendingVerifications */
-        $pendingVerifications = self::getContainer()->get(PendingImageVerificationRepository::class);
         $clock = new MockClock('2026-10-01 07:00:00');
-        $verifier = new ImageVerifier(
-            $downloader,
-            new NaiveUtcClock($clock),
-            RenditionProbes::none(),
-            new StubProbedLadders(),
-        );
 
         return new VerifyPendingImagesHandler(
-            new ImageVerificationSweep($pendingVerifications, $verifier, $this->entityManager, $clock),
-            $clock,
+            ImageVerificationSweepWiring::build(self::getContainer(), $this->entityManager, $downloader, $clock),
             $logger,
         );
     }

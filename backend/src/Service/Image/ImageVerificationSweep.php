@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Image;
 
 use App\Repository\PendingImageVerificationRepository;
+use App\Service\Image\Model\ImageVerificationBudgetModel;
 use App\Service\Image\Model\ImageVerificationReportModel;
 use App\Service\Image\Model\ImageVerifyOutcome;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * A capped batch of pending images per pass, bounded by the caller's deadline
+ * A capped batch of pending images per pass, bounded by a wall-clock budget
  * so a run of dead hosts can't overrun the tick.
  */
 final readonly class ImageVerificationSweep
@@ -26,14 +27,16 @@ final readonly class ImageVerificationSweep
     ) {
     }
 
-    public function verifyDueBefore(\DateTimeImmutable $deadline): ImageVerificationReportModel
+    public function verifyDue(ImageVerificationBudgetModel $budget): ImageVerificationReportModel
     {
+        $deadline = $budget->deadlineFrom($this->clock->now());
+        $entries = $this->pendingVerifications->findPendingImageVerification(self::MAX_PER_PASS);
         $measured = 0;
         $kept = 0;
         $dropped = 0;
         $retried = 0;
 
-        foreach ($this->pendingVerifications->findPendingImageVerification(self::MAX_PER_PASS) as $entry) {
+        foreach ($entries as $entry) {
             if ($this->clock->now() >= $deadline) {
                 break;
             }
@@ -45,6 +48,7 @@ final readonly class ImageVerificationSweep
             };
             $this->entityManager->flush();
         }
+        array_walk($entries, $this->entityManager->detach(...));
 
         return new ImageVerificationReportModel($measured, $kept, $dropped, $retried);
     }

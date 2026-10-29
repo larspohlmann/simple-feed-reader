@@ -7,11 +7,8 @@ namespace App\Tests\Service\Maintenance;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\PendingImageVerificationRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Image\ImageVerificationSweep;
-use App\Service\Image\ImageVerifier;
 use App\Service\LinkCard\LinkCardSweep;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Logging\Loki\LokiClient;
@@ -29,8 +26,7 @@ use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
-use App\Tests\Support\RenditionProbes;
-use App\Tests\Support\StubProbedLadders;
+use App\Tests\Support\ImageVerificationSweepWiring;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\InMemoryMailFailureRecorder;
@@ -353,17 +349,10 @@ final class MaintenanceTickTest extends DbTestCase
         $transcriptSweep = self::getContainer()->get(TranscriptSweep::class);
         self::assertInstanceOf(TranscriptSweep::class, $transcriptSweep);
 
-        $pendingImageVerificationRepository = self::getContainer()->get(PendingImageVerificationRepository::class);
-        self::assertInstanceOf(PendingImageVerificationRepository::class, $pendingImageVerificationRepository);
-        $imageVerificationSweep = new ImageVerificationSweep(
-            $pendingImageVerificationRepository,
-            new ImageVerifier(
-                new StubGuardedImageDownloader(),
-                new NaiveUtcClock($clock),
-                RenditionProbes::none(),
-                new StubProbedLadders(),
-            ),
+        $imageVerificationSweep = ImageVerificationSweepWiring::build(
+            self::getContainer(),
             $this->entityManager,
+            new StubGuardedImageDownloader(),
             $clock,
         );
 

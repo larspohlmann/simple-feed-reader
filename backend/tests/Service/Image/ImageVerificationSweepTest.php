@@ -14,8 +14,10 @@ use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
+use App\Service\Image\Model\ImageVerificationBudgetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RenditionProbes;
+use App\Tests\Support\PendingImageFixtures;
 use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\StubGuardedImageDownloader;
 use App\Tests\Support\StubGuardedImageProbe;
@@ -36,7 +38,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         $probedLadders = self::getContainer()->get(ProbedLadderRepository::class);
         $verifier = new ImageVerifier(
             $downloader,
-            new NaiveUtcClock(new MockClock(self::NOW)),
+            new NaiveUtcClock($clock),
             RenditionProbes::over($probe),
             $probedLadders,
         );
@@ -46,16 +48,7 @@ final class ImageVerificationSweepTest extends DbTestCase
 
     private function pendingEntry(Feed $feed, string $guid, string $imageUrl): void
     {
-        $entry = new Entry(
-            $feed,
-            $guid,
-            'https://example.test/' . $guid,
-            'Title ' . $guid,
-            new \DateTimeImmutable('2026-09-21 06:00:00'),
-            new \DateTimeImmutable('2026-09-21 05:00:00'),
-        );
-        $entry->getImage()->storePending($imageUrl, null, null);
-        $this->entityManager->persist($entry);
+        (new PendingImageFixtures($this->entityManager))->pendingImage($feed, $guid, $imageUrl);
     }
 
     public function testMeasuresDropsAndReportsCounts(): void
@@ -72,7 +65,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         $downloader->willReturnBytes('https://i/beacon.png', PngImageFactory::bytes(1, 1));
         $downloader->willFail('https://i/rejected.png', new GuardedImageRejectedException('Image responded 403.'));
 
-        $report = $this->sweep($downloader)->verifyDueBefore(self::farDeadline());
+        $report = $this->sweep($downloader)->verifyDue(self::anHour());
 
         self::assertSame(1, $report->measured);
         self::assertSame(1, $report->kept);
@@ -105,7 +98,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         $probe = new StubGuardedImageProbe();
         $probe->willExist('https://i/podcast/logo-512x512.jpg');
 
-        $this->sweep($downloader, $probe)->verifyDueBefore(self::farDeadline());
+        $this->sweep($downloader, $probe)->verifyDue(self::anHour());
 
         self::assertCount(1, array_keys($probe->requestedUrls(), 'https://i/podcast/logo-512x512.jpg', true));
         $this->entityManager->clear();
@@ -127,7 +120,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         $downloader = new StubGuardedImageDownloader();
         $downloader->willFail('https://i/gone.png', new GuardedImageUnavailableException('timeout'));
 
-        $report = $this->sweep($downloader)->verifyDueBefore(self::farDeadline());
+        $report = $this->sweep($downloader)->verifyDue(self::anHour());
 
         self::assertSame(0, $report->measured);
         self::assertSame(0, $report->dropped);
@@ -152,7 +145,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         );
         $this->entityManager->clear();
 
-        $report = $this->sweep(new StubGuardedImageDownloader())->verifyDueBefore(self::farDeadline());
+        $report = $this->sweep(new StubGuardedImageDownloader())->verifyDue(self::anHour());
 
         self::assertSame(1, $report->dropped);
         /** @var PendingImageVerificationRepository $repository */
@@ -169,7 +162,7 @@ final class ImageVerificationSweepTest extends DbTestCase
 
         $downloader = new StubGuardedImageDownloader();
         $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
-        $this->sweep($downloader)->verifyDueBefore(self::farDeadline());
+        $this->sweep($downloader)->verifyDue(self::anHour());
         $this->entityManager->clear();
 
         /** @var PendingImageVerificationRepository $repository */
@@ -186,7 +179,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         $downloader = new StubGuardedImageDownloader();
         $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
 
-        $report = $this->sweep($downloader)->verifyDueBefore(new \DateTimeImmutable(self::NOW));
+        $report = $this->sweep($downloader)->verifyDue(ImageVerificationBudgetModel::seconds(0));
 
         self::assertSame(0, $report->measured);
     }
@@ -200,17 +193,31 @@ final class ImageVerificationSweepTest extends DbTestCase
         }
         $this->entityManager->flush();
         $clock = new MockClock(self::NOW);
-        $downloader = new StubGuardedImageDownloader();
+        $downloader = new StubGuardedImageDownloader($clock);
         $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
-        $downloader->takingSecondsEach($clock, 10);
+        $downloader->secondsPerDownload = 10;
 
-        $report = $this->sweep($downloader, clock: $clock)->verifyDueBefore($clock->now()->modify('+15 seconds'));
+        $report = $this->sweep($downloader, clock: $clock)->verifyDue(ImageVerificationBudgetModel::seconds(15));
 
         self::assertSame(2, $report->measured);
     }
 
-    private static function farDeadline(): \DateTimeImmutable
+    public function testAPassLeavesNoEntryManaged(): void
     {
-        return new \DateTimeImmutable(self::NOW)->modify('+1 hour');
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $verified = (new PendingImageFixtures($this->entityManager))->pendingImage($feed, 'good', 'https://i/good.png');
+        $this->entityManager->flush();
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
+
+        $this->sweep($downloader)->verifyDue(self::anHour());
+
+        self::assertFalse($this->entityManager->contains($verified));
+    }
+
+    private static function anHour(): ImageVerificationBudgetModel
+    {
+        return ImageVerificationBudgetModel::seconds(3600);
     }
 }

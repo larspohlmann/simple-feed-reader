@@ -9,8 +9,7 @@ parameters:
     # worker's OS-level memory cap sits far below memory_limit (#1025).
     fetch_concurrency: '%env(int:FETCH_CONCURRENCY)%'
 
-    # The request window a worker-less install's cron tick must fit; the membership sweep takes what is left of it.
-    # Read from the environment so a host with a longer request limit can drain the follow-up queues faster (#1876).
+    # The request window a worker-less install's cron tick must fit (#1876).
     maintenance_tick_seconds: '%env(int:MAINTENANCE_TICK_SECONDS)%'
 
     # In-flight requests to one host: many Substack, YouTube or shared-CDN feeds would otherwise burst one origin
