@@ -39,7 +39,11 @@ final readonly class TranscriptSearchFixtures
         return $search;
     }
 
-    /** @return list<int> */
+    /**
+     * @return list<int>
+     *
+     * @phpstan-impure
+     */
     public function memberEntryIds(SavedSearch $search): array
     {
         /** @var list<int|string> $ids */

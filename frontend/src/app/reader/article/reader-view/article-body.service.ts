@@ -162,7 +162,7 @@ export class ArticleBody {
     });
     const list = { chapters: chapterList, heading: this.i18n.translate('reader.chapters') };
     this.zone.runOutsideAngular(() => {
-      this.attachBodyChapters(host, list, track);
+      // Both are prepended: the transcript goes first so the chapters land above it.
       if (transcript) {
         this.transcriptSection.attach(
           host,
@@ -175,6 +175,7 @@ export class ArticleBody {
           track,
         );
       }
+      this.attachBodyChapters(host, list, track);
       this.embedAudio.follow(controls);
       this.loadEmbedDetails(chapterFrames(host), list.heading);
       this.media.follow(host);

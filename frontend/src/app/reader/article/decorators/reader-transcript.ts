@@ -12,7 +12,7 @@ export interface TranscriptView {
   readonly open: boolean;
 }
 
-/** An episode's transcript under its body; with a player, each timestamp starts it there (#1809). */
+/** An episode's transcript atop its body; with a player, each timestamp starts it there (#1809). */
 export function addTranscript(
   host: HTMLElement,
   { transcript, heading, playFromLabel, open }: TranscriptView,
@@ -34,7 +34,7 @@ export function addTranscript(
   section.setAttribute('aria-label', heading);
   if (transcript.language) section.lang = transcript.language;
   section.append(details);
-  host.append(section);
+  host.prepend(section);
   return section;
 }
 

@@ -71,7 +71,7 @@ final class QuotedViewRecord
         };
         $url = $nested === null ? null : AtPostUri::webUrl($nested->string('uri') ?? '');
 
-        return $url === null ? null : new QuotedPostReference($url, $nested?->node('author')->string('handle'));
+        return $url === null ? null : new QuotedPostReference($url, $nested->node('author')->string('handle'));
     }
 
     private function __construct()

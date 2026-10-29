@@ -168,7 +168,11 @@ final class EntryTagScopeTest extends ApiTestCase
         return $tag;
     }
 
-    /** @return list<string> */
+    /**
+     * @return list<string>
+     *
+     * @phpstan-impure
+     */
     private function titlesOfResponse(): array
     {
         $entries = $this->payload($this->client)['entries'];
