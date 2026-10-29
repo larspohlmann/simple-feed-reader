@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.5] - 2026-10-29
+
+## What's Changed
+* fix(#1898): a pull past the article's end slides the article up, not right by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1899
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.4...v1.6.5
+
 ## [v1.6.4] - 2026-10-29
 
 ## What's Changed
