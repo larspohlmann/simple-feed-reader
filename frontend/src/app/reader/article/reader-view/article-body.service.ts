@@ -65,18 +65,11 @@ export class ArticleBody {
   private readonly chapters = new ArticleChapters(this.audio, this.islands, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(this.audio, inject(ListenLauncher));
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
-  private destroyed = false;
 
   constructor() {
     const onKeydown = (event: KeyboardEvent): void => this.playerBars.toggleCinemaByKey(event);
     this.zone.runOutsideAngular(() => document.addEventListener('keydown', onKeydown));
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-      this.chapters.forget();
-      this.islands.releaseAll();
-      this.embedDetails.release();
-      document.removeEventListener('keydown', onKeydown);
-    });
+    inject(DestroyRef).onDestroy(() => document.removeEventListener('keydown', onKeydown));
   }
 
   connect(parts: ArticleBodyParts): void {
@@ -119,21 +112,27 @@ export class ArticleBody {
         // container replacing the placeholder is the only render signal (#101).
         const content = parts.content()?.nativeElement;
         if (!content) return;
+        let cancelled = false;
         onCleanup(() => {
-          releaseHlsStreams(content);
-          this.media.forgetAll();
-          this.chapters.forget();
-          this.islands.releaseAll();
-          this.embedDetails.release();
+          cancelled = true;
+          this.releaseRender(content);
         });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
-          if (!host || this.destroyed) return;
+          if (!host || cancelled) return;
           this.render(parts, host, chapterList);
         });
       },
       { injector: this.injector },
     );
+  }
+
+  private releaseRender(content: HTMLElement): void {
+    releaseHlsStreams(content);
+    this.media.forgetAll();
+    this.chapters.forget();
+    this.islands.releaseAll();
+    this.embedDetails.release();
   }
 
   private render(parts: ArticleBodyParts, host: HTMLElement, chapterList: ChapterDto[]): void {

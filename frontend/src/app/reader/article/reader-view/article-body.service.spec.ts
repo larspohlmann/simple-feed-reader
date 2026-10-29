@@ -297,6 +297,22 @@ describe('ArticleBody', () => {
 
     expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
   });
+
+  it('releases the mounted islands once destroyed', async () => {
+    const appRef = TestBed.inject(ApplicationRef);
+    const baseline = appRef.viewCount;
+    chapters.set(CHAPTERS);
+    connectBody(YOUTUBE);
+    document.body.append(content);
+    await Promise.resolve();
+    expect(appRef.viewCount).toBe(baseline + 2);
+
+    injector.destroy();
+
+    expect(appRef.viewCount).toBe(baseline);
+    expect(content.querySelector('.reader-island')).toBeNull();
+  });
+
   describe('its media', () => {
     it('tells the autoplay coordinator when the user plays one', async () => {
       connectBody(VIDEO);
