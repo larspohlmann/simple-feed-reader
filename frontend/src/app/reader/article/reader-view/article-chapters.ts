@@ -11,7 +11,7 @@ import { ChapterList, addChapterList } from '../decorators/reader-chapters';
 const API_PLAYER = 'iframe[src*="enablejsapi=1"]';
 const CHAPTER_FRAMES = `${API_PLAYER}, iframe[src^="${SOUNDCLOUD_PLAYER_URL}"]`;
 
-/** The video player frame a body's chapter list drives when no episode owns the chapters. */
+/** The video player frame a body's chapter list drives. */
 export function apiPlayerFrame(host: HTMLElement): HTMLIFrameElement | null {
   return host.querySelector<HTMLIFrameElement>(API_PLAYER);
 }

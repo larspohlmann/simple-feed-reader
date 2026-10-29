@@ -1,29 +1,31 @@
 @if (transcript().paragraphs.length) {
   <section [attr.aria-label]="'reader.transcript' | transloco" [attr.lang]="transcript().language">
     <app-reader-panel [label]="'reader.transcript' | transloco" [(open)]="open">
-      @for (paragraph of transcript().paragraphs; track $index) {
-        <p class="reader-transcript__paragraph">
-          @if (paragraph.startSeconds !== null) {
-            @let time = format(paragraph.startSeconds);
-            @if (track(); as episode) {
-              <button
-                type="button"
-                class="reader-transcript__time"
-                [attr.aria-label]="'reader.transcriptPlayFrom' | transloco: { time }"
-                (click)="playFrom(episode, paragraph.startSeconds)"
-              >
-                {{ time }}
-              </button>
-            } @else {
-              <span class="reader-transcript__time">{{ time }}</span>
+      <ng-template>
+        @for (paragraph of transcript().paragraphs; track $index) {
+          <p class="reader-transcript__paragraph">
+            @if (paragraph.startSeconds !== null) {
+              @let time = format(paragraph.startSeconds);
+              @if (track(); as episode) {
+                <button
+                  type="button"
+                  class="reader-transcript__time"
+                  [attr.aria-label]="'reader.transcriptPlayFrom' | transloco: { time }"
+                  (click)="player.playFrom(episode, paragraph.startSeconds)"
+                >
+                  {{ time }}
+                </button>
+              } @else {
+                <span class="reader-transcript__time">{{ time }}</span>
+              }
             }
-          }
-          @if (paragraph.speaker) {
-            <strong class="reader-transcript__speaker">{{ paragraph.speaker }}</strong>
-          }
-          <span class="reader-transcript__text">{{ paragraph.text }}</span>
-        </p>
-      }
+            @if (paragraph.speaker) {
+              <strong class="reader-transcript__speaker">{{ paragraph.speaker }}</strong>
+            }
+            <span class="reader-transcript__text">{{ paragraph.text }}</span>
+          </p>
+        }
+      </ng-template>
     </app-reader-panel>
   </section>
 }

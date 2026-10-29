@@ -1,5 +1,7 @@
 <nav [attr.aria-label]="'reader.chapters' | transloco">
   <app-reader-panel [label]="'reader.chapters' | transloco" [(open)]="open">
-    <app-audio-chapters [chapters]="chapters()" [playhead]="playhead()" (pick)="play($event)" />
+    <ng-template>
+      <app-audio-chapters [chapters]="chapters()" [playhead]="playhead()" (pick)="play($event)" />
+    </ng-template>
   </app-reader-panel>
 </nav>

@@ -5,7 +5,7 @@ import { ReaderPanelComponent } from './reader-panel.component';
 @Component({
   imports: [ReaderPanelComponent],
   template: `<app-reader-panel label="Chapters" [(open)]="open"
-    ><p class="inside">Rows</p></app-reader-panel
+    ><ng-template><p class="inside">Rows</p></ng-template></app-reader-panel
   >`,
 })
 class HostComponent {

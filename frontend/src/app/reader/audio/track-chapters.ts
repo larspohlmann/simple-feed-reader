@@ -53,12 +53,9 @@ export class TrackChapters {
   /** -1 before the first chapter and without chapters. */
   readonly index = computed(() => currentChapterIndex(this.starts(), this.position().seconds));
   readonly current = computed(() => this.chapters()[this.index()] ?? null);
-  /** Null without a chapter or while its end is unknown. */
-  readonly progress = computed(() => {
-    const index = this.index();
-    return index === -1 ? null : chapterProgress(this.starts(), index, this.position());
-  });
   readonly playhead = computed(() => chapterPlayhead(this.starts(), this.position()));
+  /** Null without a chapter or while its end is unknown. */
+  readonly progress = computed(() => this.playhead()?.progress ?? null);
   readonly previousStart = computed(() =>
     previousChapterStart(this.starts(), this.position().seconds, RESTART_THRESHOLD_SECONDS),
   );

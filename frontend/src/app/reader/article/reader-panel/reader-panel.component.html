@@ -8,5 +8,5 @@
   {{ label() }}
 </button>
 @if (open()) {
-  <ng-content />
+  <ng-container [ngTemplateOutlet]="body()" />
 }

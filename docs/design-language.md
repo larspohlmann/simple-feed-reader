@@ -886,8 +886,9 @@ finished, a bulk action applied) that the user does not have to act on.
 ### `<app-reader-panel>`
 
 The article header's collapsible panel (Contents, Chapters, Transcript): a
-`label` input and an `open` model, the body projected and rendered only while
-open. Its toggle is a `<button>`, so it keeps the fixed UI type scale inside
+`label` input and an `open` model. The body is a projected `<ng-template>`, so
+a collapsed panel builds none of it (a transcript runs to hundreds of
+paragraphs). Its toggle is a `<button>`, so it keeps the fixed UI type scale inside
 `.text-scaled`; a `<summary>` would scale with the text-size slider (#1880).
 Header panels therefore use it, not `<app-disclosure>`.
 

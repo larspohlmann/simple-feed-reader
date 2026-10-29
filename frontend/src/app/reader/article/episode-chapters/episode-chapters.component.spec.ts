@@ -1,8 +1,7 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
-import { PlaybackPosition } from '../../chapters/chapter-player';
 import { ChapterDto } from '../../models';
 import { EpisodeChaptersComponent } from './episode-chapters.component';
 
@@ -19,11 +18,7 @@ const EPISODE: AudioTrack = {
 };
 
 function render() {
-  const player = {
-    current: signal<AudioTrack | null>(null),
-    playbackPosition: signal<PlaybackPosition>({ seconds: 0, durationSeconds: null }),
-    playFrom: jest.fn(),
-  };
+  const player = new StubAudioPlayer();
   TestBed.configureTestingModule({
     imports: [EpisodeChaptersComponent, provideTranslocoTesting()],
     providers: [{ provide: AudioPlayerService, useValue: player }],
@@ -69,7 +64,7 @@ describe('EpisodeChaptersComponent', () => {
 
     rows(element)[1].click();
 
-    expect(player.playFrom).toHaveBeenCalledWith(EPISODE, 256);
+    expect(player.playedFrom).toEqual([{ track: EPISODE, seconds: 256 }]);
   });
 
   it('marks the playing chapter while its own track plays', () => {

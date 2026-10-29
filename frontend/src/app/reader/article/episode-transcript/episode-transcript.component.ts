@@ -18,15 +18,11 @@ export class EpisodeTranscriptComponent {
   readonly track = input<AudioTrack | null>(null);
   readonly startOpen = input(false);
 
-  private readonly player = inject(AudioPlayerService);
+  protected readonly player = inject(AudioPlayerService);
 
   protected readonly open = linkedSignal({
     source: () => ({ transcript: this.transcript(), startOpen: this.startOpen() }),
     computation: ({ startOpen }) => startOpen,
   });
   protected readonly format = formatDuration;
-
-  protected playFrom(track: AudioTrack, seconds: number): void {
-    this.player.playFrom(track, seconds);
-  }
 }

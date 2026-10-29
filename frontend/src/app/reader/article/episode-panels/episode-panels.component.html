@@ -1,7 +1,5 @@
-@if (track(); as audioTrack) {
-  @if (chapters().length) {
-    <app-episode-chapters [chapters]="chapters()" [track]="audioTrack" />
-  }
+@if (chapters().length && track(); as audioTrack) {
+  <app-episode-chapters [chapters]="chapters()" [track]="audioTrack" />
 }
 @if (transcript(); as episodeTranscript) {
   <app-episode-transcript

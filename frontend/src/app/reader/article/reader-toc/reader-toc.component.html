@@ -1,15 +1,17 @@
 @if (visible()) {
   <nav class="toc" [attr.aria-label]="'reader.contents' | transloco">
     <app-reader-panel [label]="'reader.contents' | transloco" [(open)]="open">
-      <ul class="toc-list">
-        @for (item of entries(); track item.id) {
-          <li [class]="'lvl-' + item.level">
-            <button type="button" class="reads-as-text" (click)="jump.emit(item.id)">
-              {{ item.text }}
-            </button>
-          </li>
-        }
-      </ul>
+      <ng-template>
+        <ul class="toc-list">
+          @for (item of entries(); track item.id) {
+            <li [class]="'lvl-' + item.level">
+              <button type="button" class="reads-as-text" (click)="jump.emit(item.id)">
+                {{ item.text }}
+              </button>
+            </li>
+          }
+        </ul>
+      </ng-template>
     </app-reader-panel>
   </nav>
 }
