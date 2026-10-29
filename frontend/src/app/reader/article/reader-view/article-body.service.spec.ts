@@ -65,6 +65,10 @@ const EPISODE: AudioTrack = {
   durationInSeconds: 600,
 };
 
+beforeAll(() => {
+  Element.prototype.scrollIntoView = jest.fn();
+});
+
 describe('ArticleBody', () => {
   let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
   let injector: EnvironmentInjector;
@@ -111,10 +115,8 @@ describe('ArticleBody', () => {
   const pressT = (): void => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 't', cancelable: true }));
   };
-  const cinemaToggleClicks = (): jest.SpyInstance =>
-    jest
-      .spyOn(content.querySelector<HTMLButtonElement>('.reader-cinema__toggle')!, 'click')
-      .mockImplementation(() => undefined);
+  const cinemaWidened = (): boolean =>
+    content.querySelector('.reader-cinema')!.classList.contains('reader-cinema--on');
 
   beforeEach(() => {
     localStorage.clear();
@@ -237,20 +239,32 @@ describe('ArticleBody', () => {
     expect(content.querySelectorAll('app-link-card')).toHaveLength(1);
   });
 
+  it('keeps the card first and the player bar after the video through a chapters-only re-render', async () => {
+    connectBody(VIDEO);
+    await Promise.resolve();
+    content.querySelector('video')!.dispatchEvent(new Event('error'));
+
+    chapters.set(CHAPTERS);
+    TestBed.tick();
+    await Promise.resolve();
+
+    const box = content.querySelector('.reader-cinema')!;
+    expect(box.firstElementChild!.matches('app-link-card')).toBe(true);
+    expect(box.querySelector('video')!.nextElementSibling!.matches('app-player-bar')).toBe(true);
+  });
+
   it('widens the video on the t key', async () => {
     connectBody(VIDEO);
     await Promise.resolve();
-    const clicks = cinemaToggleClicks();
 
     pressT();
 
-    expect(clicks).toHaveBeenCalled();
+    expect(cinemaWidened()).toBe(true);
   });
 
   it('lets go of the body and the document once destroyed', async () => {
     connectBody(VIDEO);
     await Promise.resolve();
-    const clicks = cinemaToggleClicks();
     const image = document.createElement('img');
     content.append(image);
 
@@ -258,7 +272,7 @@ describe('ArticleBody', () => {
     pressT();
     image.dispatchEvent(new Event('error'));
 
-    expect(clicks).not.toHaveBeenCalled();
+    expect(cinemaWidened()).toBe(false);
     expect(imageProxy.attempts).toEqual([]);
   });
 

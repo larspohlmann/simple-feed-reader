@@ -8,12 +8,10 @@ import {
   computed,
   effect,
   inject,
-  signal,
 } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { decorateArticle } from '../decorators/decorate-article';
-import { toggleCinemaByKey } from '../decorators/reader-cinema';
 import { releaseHlsStreams } from '../../media/hls-streams';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
@@ -67,24 +65,22 @@ export class ArticleBody {
   private readonly chapters = new ArticleChapters(this.audio, this.islands, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(this.audio, inject(ListenLauncher));
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
-  private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
   private destroyed = false;
 
   constructor() {
-    const onKeydown = (event: KeyboardEvent): void =>
-      toggleCinemaByKey(event, this.content()?.nativeElement);
+    const onKeydown = (event: KeyboardEvent): void => this.playerBars.toggleCinemaByKey(event);
     document.addEventListener('keydown', onKeydown);
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
       this.chapters.forget();
       this.islands.releaseAll();
+      this.playerBars.forget();
       this.embedDetails.release();
       document.removeEventListener('keydown', onKeydown);
     });
   }
 
   connect(parts: ArticleBodyParts): void {
-    this.content = parts.content;
     this.recoverFailedMedia(parts);
     this.decorateEachRender(parts);
   }
@@ -128,6 +124,7 @@ export class ArticleBody {
           this.media.forgetAll();
           this.chapters.forget();
           this.islands.releaseAll();
+          this.playerBars.forget();
           this.embedDetails.release();
         });
         queueMicrotask(() => {

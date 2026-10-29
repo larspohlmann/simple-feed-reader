@@ -22,11 +22,30 @@ const VIMEO_CINEMA_BOX =
 const SHORT_BOX =
   '<div class="reader-embed reader-embed--portrait"><iframe src="https://www.youtube-nocookie.com/embed/GhUuOxrCato?enablejsapi=1#shorts"></iframe></div>';
 
-function mountBars(html: string, actions: ListenActions | undefined): HTMLElement {
+function mountBars(
+  html: string,
+  actions: ListenActions | undefined,
+): { host: HTMLElement; bars: ArticlePlayerBars } {
   const host = articleHost(html);
-  new ArticlePlayerBars(new ArticleIslands(TestBed.inject(Injector))).mount(host, actions);
-  return host;
+  const bars = new ArticlePlayerBars(new ArticleIslands(TestBed.inject(Injector)));
+  bars.mount(host, actions);
+  return { host, bars };
 }
+
+function key(init: KeyboardEventInit = {}, target?: HTMLElement): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', { key: 't', cancelable: true, ...init });
+  if (target) Object.defineProperty(event, 'target', { value: target });
+  return event;
+}
+
+const widened = (host: HTMLElement): boolean[] =>
+  Array.from(host.querySelectorAll('.reader-cinema'), (box) =>
+    box.classList.contains('reader-cinema--on'),
+  );
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = jest.fn();
+});
 
 describe('ArticlePlayerBars', () => {
   beforeEach(() => {
@@ -37,7 +56,7 @@ describe('ArticlePlayerBars', () => {
   });
 
   it('puts a bar in a cinema box after its player, with Listen before the cinema toggle', () => {
-    const host = mountBars(CINEMA_BOX, fakeListenActions());
+    const { host } = mountBars(CINEMA_BOX, fakeListenActions());
 
     const bar = host.querySelector('.reader-cinema')!.children[1];
     expect(bar.matches('app-player-bar.reader-player-bar')).toBe(true);
@@ -49,28 +68,28 @@ describe('ArticlePlayerBars', () => {
   });
 
   it('gives a SoundCloud box a bar of its own, right after the box', () => {
-    const host = mountBars(SOUNDCLOUD_BOX, fakeListenActions());
+    const { host } = mountBars(SOUNDCLOUD_BOX, fakeListenActions());
 
     expect(host.children[1].matches('app-player-bar')).toBe(true);
     expect(host.querySelector('.reader-cinema__toggle')).toBeNull();
   });
 
   it('offers only the cinema toggle without listen actions', () => {
-    const host = mountBars(CINEMA_BOX, undefined);
+    const { host } = mountBars(CINEMA_BOX, undefined);
 
     expect(host.querySelector('app-player-bar .reader-cinema__toggle')).not.toBeNull();
     expect(host.querySelector('.reader-listen__button')).toBeNull();
   });
 
   it('adds no bar after an embed Listen cannot play', () => {
-    const host = mountBars(VIMEO_BOX, fakeListenActions());
+    const { host } = mountBars(VIMEO_BOX, fakeListenActions());
 
     expect(host.querySelector('app-player-bar')).toBeNull();
   });
 
   it('hands Listen the media and the frame', () => {
     const actions = fakeListenActions();
-    const host = mountBars(CINEMA_BOX, actions);
+    const { host } = mountBars(CINEMA_BOX, actions);
 
     host.querySelector<HTMLButtonElement>('.reader-listen__button')!.click();
 
@@ -81,22 +100,102 @@ describe('ArticlePlayerBars', () => {
   });
 
   it('gives a native video in a cinema box a cinema-only bar', () => {
-    const host = mountBars(NATIVE_VIDEO_BOX, fakeListenActions());
+    const { host } = mountBars(NATIVE_VIDEO_BOX, fakeListenActions());
 
     expect(host.querySelector('app-player-bar .reader-cinema__toggle')).not.toBeNull();
     expect(host.querySelector('.reader-listen__button')).toBeNull();
   });
 
   it('gives a landscape Vimeo frame in a cinema box a cinema-only bar', () => {
-    const host = mountBars(VIMEO_CINEMA_BOX, fakeListenActions());
+    const { host } = mountBars(VIMEO_CINEMA_BOX, fakeListenActions());
 
     expect(host.querySelector('app-player-bar .reader-cinema__toggle')).not.toBeNull();
     expect(host.querySelector('.reader-listen__button')).toBeNull();
   });
 
   it('gives a portrait Short outside any cinema box no bar', () => {
-    const host = mountBars(SHORT_BOX, fakeListenActions());
+    const { host } = mountBars(SHORT_BOX, fakeListenActions());
 
     expect(host.querySelector('app-player-bar')).toBeNull();
+  });
+
+  describe('toggleCinemaByKey', () => {
+    it('toggles the first video when none is in view', () => {
+      const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+      const event = key();
+
+      bars.toggleCinemaByKey(event);
+
+      expect(widened(host)).toEqual([true, false]);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('toggles the video in view', () => {
+      const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+      host.querySelectorAll<HTMLElement>('app-player-bar')[1].getBoundingClientRect = () =>
+        ({ top: 100, bottom: 400 }) as DOMRect;
+
+      bars.toggleCinemaByKey(key());
+
+      expect(widened(host)).toEqual([false, true]);
+    });
+
+    it.each([{ metaKey: true }, { ctrlKey: true }, { altKey: true }, { key: 'T' }, { key: 'x' }])(
+      'ignores %o',
+      (init) => {
+        const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+
+        bars.toggleCinemaByKey(key(init));
+
+        expect(widened(host)).toEqual([false, false]);
+      },
+    );
+
+    it.each(['input', 'select'])('ignores a key typed into a %s', (tagName) => {
+      const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+
+      bars.toggleCinemaByKey(key({}, document.createElement(tagName)));
+
+      expect(widened(host)).toEqual([false, false]);
+    });
+
+    it('does nothing where cinema is not offered', () => {
+      const { host, bars } = mountBars(CINEMA_BOX + CINEMA_BOX, undefined);
+      host.querySelectorAll<HTMLElement>('.reader-cinema__toggle').forEach((toggle) => {
+        toggle.style.display = 'none';
+      });
+      const event = key();
+
+      bars.toggleCinemaByKey(event);
+
+      expect(widened(host)).toEqual([false, false]);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('does nothing with no bars mounted', () => {
+      const { bars } = mountBars('<p>Text</p>', undefined);
+      const event = key();
+
+      bars.toggleCinemaByKey(event);
+
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('does nothing once the bars are forgotten', () => {
+      const { host, bars } = mountBars(CINEMA_BOX, undefined);
+
+      bars.forget();
+      bars.toggleCinemaByKey(key());
+
+      expect(widened(host)).toEqual([false]);
+    });
+
+    it('widens the cinema box next to a bar that offers no cinema', () => {
+      const { host, bars } = mountBars(SOUNDCLOUD_BOX + CINEMA_BOX, fakeListenActions());
+
+      bars.toggleCinemaByKey(key());
+
+      expect(widened(host)).toEqual([true]);
+    });
   });
 });
