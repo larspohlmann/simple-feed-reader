@@ -298,14 +298,25 @@ describe('ArticleBody', () => {
       paragraphs: [{ startSeconds: 60, speaker: null, text: 'Hello.' }],
     };
 
-    it('appends a collapsed Transcript section under the body', async () => {
+    it('puts a collapsed Transcript section atop the body', async () => {
       transcript.set(TRANSCRIPT);
       connectBody('<p>Notes</p>');
       await Promise.resolve();
 
-      const section = content.lastElementChild!;
+      const section = content.firstElementChild!;
       expect(section.getAttribute('aria-label')).toBe('Transcript');
       expect(section.querySelector('details')!.open).toBe(false);
+    });
+
+    it("follows the episode's chapters", async () => {
+      transcript.set(TRANSCRIPT);
+      chapters.set(CHAPTERS);
+      audioTrack.set(EPISODE);
+      connectBody('<p>Notes</p>');
+      await Promise.resolve();
+
+      const labels = Array.from(content.children, (child) => child.getAttribute('aria-label'));
+      expect(labels).toEqual(['Chapters', 'Transcript', null]);
     });
 
     it('opens it when the transcript is the body', async () => {
