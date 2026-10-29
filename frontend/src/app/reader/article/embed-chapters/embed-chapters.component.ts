@@ -14,7 +14,6 @@ import { ChapterDto } from '../../models';
 import { AudioChaptersComponent } from '../../shell/audio-player-bar/audio-chapters/audio-chapters.component';
 import { ReaderPanelComponent } from '../reader-panel/reader-panel.component';
 
-/** The chapter list under an embedded video or SoundCloud track, mounted into the body (#1808, #1886). */
 @Component({
   selector: 'app-embed-chapters',
   imports: [TranslocoPipe, ReaderPanelComponent, AudioChaptersComponent],

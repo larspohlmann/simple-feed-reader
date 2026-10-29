@@ -12,8 +12,6 @@ interface EmbedFrames {
 
 type DetailsFound = (frame: HTMLIFrameElement, details: TrackDetails) => void;
 
-/** Each body embed's own title, length and chapters, fetched once, the body's chapters winning (#1824).
- *  Every queued copy of an embed is described as its details become known. */
 export class ArticleEmbedDetails {
   private readonly byEmbedUrl = new Map<string, TrackDetails>();
   private readonly bodyChapters = new Map<string, ChapterDto[]>();
@@ -24,13 +22,11 @@ export class ArticleEmbedDetails {
     private readonly audio: AudioPlayerService,
   ) {}
 
-  /** The body's chapters for the embed they belong to; they outrank whatever its answer lists. */
   seed(embedUrl: string, chapters: ChapterDto[]): void {
     this.bodyChapters.set(embedUrl, chapters);
     this.record(embedUrl, chaptersOnly(chapters));
   }
 
-  /** Asks for every frame's embed once; `found` runs per frame for every answer. */
   load(frames: HTMLIFrameElement[], found: DetailsFound): void {
     for (const { media, frames: framesOfEmbed } of framesByEmbed(frames)) {
       const subscription = this.api
@@ -44,7 +40,6 @@ export class ArticleEmbedDetails {
     }
   }
 
-  /** What is known of an embed URL; null while nothing is. */
   detailsOf(embedUrl: string): TrackDetails | null {
     return this.byEmbedUrl.get(embedUrl) ?? null;
   }

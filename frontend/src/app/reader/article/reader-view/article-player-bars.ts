@@ -6,7 +6,6 @@ import { EmbedListen, ListenActions } from '../player-bar/embed-listen';
 import { PlayerBarComponent } from '../player-bar/player-bar.component';
 import { ArticleIslands } from './article-islands';
 
-/** A rendered body's player bars: one in every cinema box and after every embed Listen plays (#1888). */
 export class ArticlePlayerBars {
   constructor(private readonly islands: ArticleIslands) {}
 

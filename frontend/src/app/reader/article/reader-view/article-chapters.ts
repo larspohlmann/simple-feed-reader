@@ -14,12 +14,10 @@ import { ArticleIslands } from './article-islands';
 const API_PLAYER = 'iframe[src*="enablejsapi=1"]';
 const CHAPTER_FRAMES = `${API_PLAYER}, iframe[src^="${SOUNDCLOUD_PLAYER_URL}"]`;
 
-/** The video player frame a body's chapter list drives. */
 export function apiPlayerFrame(host: HTMLElement): HTMLIFrameElement | null {
   return host.querySelector<HTMLIFrameElement>(API_PLAYER);
 }
 
-/** Every embed a chapter list can drive: YouTube API frames and SoundCloud widgets, in document order. */
 export function chapterFrames(host: HTMLElement): HTMLIFrameElement[] {
   return Array.from(host.querySelectorAll<HTMLIFrameElement>(CHAPTER_FRAMES));
 }
@@ -30,7 +28,6 @@ interface ShownList {
   readonly player: WritableSignal<ChapterPlayer>;
 }
 
-/** A rendered body's chapter lists: one under each embed (#1808, #1824, #1886). */
 export class ArticleChapters {
   private shown: ShownList[] = [];
 
@@ -40,7 +37,6 @@ export class ArticleChapters {
     private readonly injector: Injector,
   ) {}
 
-  /** The first list attached to a frame stays its only one. */
   attachToFrame(frame: HTMLIFrameElement, chapters: readonly ChapterDto[]): void {
     const media = embedMediaOfFrame(frame);
     const after = playerBoxOf(frame);

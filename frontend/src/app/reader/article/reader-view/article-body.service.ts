@@ -46,8 +46,6 @@ export interface ArticleBodyParts {
   readonly decorated: (host: HTMLElement) => void;
 }
 
-/** The rendered article body's DOM wiring: its decorations, its media recovery, its media's
- *  turn in the article's one-at-a-time playback and the `t` cinema key. */
 @Injectable()
 export class ArticleBody {
   private readonly injector = inject(Injector);
@@ -107,9 +105,7 @@ export class ArticleBody {
       (onCleanup) => {
         parts.html();
         const chapterList = chapters();
-        // Depend on the container too, not just the HTML: when extraction fails,
-        // the HTML recomputes to the same string and never notifies, so the
-        // container replacing the placeholder is the only render signal (#101).
+        // The container is the render signal when the HTML string repeats (#101).
         const content = parts.content()?.nativeElement;
         if (!content) return;
         let cancelled = false;
