@@ -891,7 +891,7 @@ and the chapter list under an embed (`app-embed-chapters`, #1886): a
 a collapsed panel builds none of it (a transcript runs to hundreds of
 paragraphs). Its toggle is a `<button>`, so it keeps the fixed UI type scale inside
 `.text-scaled`; a `<summary>` would scale with the text-size slider (#1880).
-Header panels therefore use it, not `<app-disclosure>`.
+Article panels therefore use it, not `<app-disclosure>`.
 
 ---
 
@@ -2090,13 +2090,13 @@ tag row pills-only. The projected element must stay inline: the kicker is a
 drops the icons onto a second line without any error.
 
 **Reader-body decorators use a plain `<details>`, not `<app-disclosure>`.**
-They work on the article body rendered via `[innerHTML]` (#903), which Angular
+A decorator that only marks up or adjusts body markup stays a decorator; a widget with its own UI that also exists outside the body is mounted (below). They work on the article body rendered via `[innerHTML]` (#903), which Angular
 does not compile. So the narration player (`reader-narration.ts`) and publisher
 FAQs (`reader-faq.ts`) build bare `<details>`, styled in
 `article-content.component.scss`. A summary that drops the native marker includes
 `bare-summary.marker-hidden` (`theme/_bare-summary.scss`), as `<app-disclosure>` does.
 
-**A component inside the article body is mounted, not decorated (#1886).** A decorator finds the place; `ArticleIslands` (`reader-view/article-islands.ts`) mounts the component after it (`mountAfter(anchor, Component, [inputBinding(…)])`), inside the Angular zone, tagged `.reader-island`, and destroys it before the next render. The body's element rules end at `.reader-island` (the `$prose` barrier, `:where(:not(.reader-island *))`, in `article-content.component.scss`), so a mounted component looks as it does anywhere else. First user: `app-embed-chapters`.
+**A component inside the article body is mounted, not decorated (#1886).** A decorator finds the place; `ArticleIslands` (`reader-view/article-islands.ts`) mounts the component after it (`mountAfter(anchor, Component, [inputBinding(…)])`), inside the Angular zone, tagged `.reader-island`, and destroys it before the next render. The body's element rules end at `.reader-island` (the `$prose` barrier, `:where(:not(.reader-island *))`, in `article-content.component.scss`), so the bare-element rules never reach a mounted component. Inherited properties still flow in from the body's host (font size, colour), except line-height, which `.reader-island` resets to `--lh-normal`. Class-rooted body rules (`details.reader-faq > …`, `.reader-slideshow--ready ol`, `.reader-card > :first-child`) are not barred either, so a component mounted inside such a wrapper checks them. First user: `app-embed-chapters`.
 
 ---
 
