@@ -23,9 +23,12 @@ use Symfony\Component\Clock\MockClock;
 
 final class ImageVerificationSweepTest extends DbTestCase
 {
+    private const string NOW = '2026-09-21 12:00:00';
+
     private function sweep(
         StubGuardedImageDownloader $downloader,
         StubGuardedImageProbe $probe = new StubGuardedImageProbe(),
+        MockClock $clock = new MockClock(self::NOW),
     ): ImageVerificationSweep {
         /** @var PendingImageVerificationRepository $repository */
         $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
@@ -33,12 +36,12 @@ final class ImageVerificationSweepTest extends DbTestCase
         $probedLadders = self::getContainer()->get(ProbedLadderRepository::class);
         $verifier = new ImageVerifier(
             $downloader,
-            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
+            new NaiveUtcClock(new MockClock(self::NOW)),
             RenditionProbes::over($probe),
             $probedLadders,
         );
 
-        return new ImageVerificationSweep($repository, $verifier, $this->entityManager);
+        return new ImageVerificationSweep($repository, $verifier, $this->entityManager, $clock);
     }
 
     private function pendingEntry(Feed $feed, string $guid, string $imageUrl): void
@@ -69,7 +72,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         $downloader->willReturnBytes('https://i/beacon.png', PngImageFactory::bytes(1, 1));
         $downloader->willFail('https://i/rejected.png', new GuardedImageRejectedException('Image responded 403.'));
 
-        $report = $this->sweep($downloader)->verifyDue();
+        $report = $this->sweep($downloader)->verifyDueBefore(self::farDeadline());
 
         self::assertSame(1, $report->measured);
         self::assertSame(1, $report->kept);
@@ -102,7 +105,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         $probe = new StubGuardedImageProbe();
         $probe->willExist('https://i/podcast/logo-512x512.jpg');
 
-        $this->sweep($downloader, $probe)->verifyDue();
+        $this->sweep($downloader, $probe)->verifyDueBefore(self::farDeadline());
 
         self::assertCount(1, array_keys($probe->requestedUrls(), 'https://i/podcast/logo-512x512.jpg', true));
         $this->entityManager->clear();
@@ -124,7 +127,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         $downloader = new StubGuardedImageDownloader();
         $downloader->willFail('https://i/gone.png', new GuardedImageUnavailableException('timeout'));
 
-        $report = $this->sweep($downloader)->verifyDue();
+        $report = $this->sweep($downloader)->verifyDueBefore(self::farDeadline());
 
         self::assertSame(0, $report->measured);
         self::assertSame(0, $report->dropped);
@@ -149,7 +152,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         );
         $this->entityManager->clear();
 
-        $report = $this->sweep(new StubGuardedImageDownloader())->verifyDue();
+        $report = $this->sweep(new StubGuardedImageDownloader())->verifyDueBefore(self::farDeadline());
 
         self::assertSame(1, $report->dropped);
         /** @var PendingImageVerificationRepository $repository */
@@ -166,11 +169,48 @@ final class ImageVerificationSweepTest extends DbTestCase
 
         $downloader = new StubGuardedImageDownloader();
         $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
-        $this->sweep($downloader)->verifyDue();
+        $this->sweep($downloader)->verifyDueBefore(self::farDeadline());
         $this->entityManager->clear();
 
         /** @var PendingImageVerificationRepository $repository */
         $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
         self::assertCount(0, $repository->findPendingImageVerification(50));
+    }
+
+    public function testAPassedDeadlineVerifiesNothing(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        $this->pendingEntry($feed, 'good', 'https://i/good.png');
+        $this->entityManager->flush();
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
+
+        $report = $this->sweep($downloader)->verifyDueBefore(new \DateTimeImmutable(self::NOW));
+
+        self::assertSame(0, $report->measured);
+    }
+
+    public function testStopsAtTheDeadlineWhenDownloadsTakeTime(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->entityManager->persist($feed);
+        foreach (['one', 'two', 'three'] as $guid) {
+            $this->pendingEntry($feed, $guid, 'https://i/' . $guid . '.png');
+        }
+        $this->entityManager->flush();
+        $clock = new MockClock(self::NOW);
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
+        $downloader->takingSecondsEach($clock, 10);
+
+        $report = $this->sweep($downloader, clock: $clock)->verifyDueBefore($clock->now()->modify('+15 seconds'));
+
+        self::assertSame(2, $report->measured);
+    }
+
+    private static function farDeadline(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable(self::NOW)->modify('+1 hour');
     }
 }

@@ -66,6 +66,8 @@ use Symfony\Component\HttpClient\MockHttpClient;
 
 final class MaintenanceTickTest extends DbTestCase
 {
+    private const int TICK_WINDOW_SECONDS = 25;
+
     public function testRunProducesAReportCarryingBothHalves(): void
     {
         $tick = self::getContainer()->get(MaintenanceTick::class);
@@ -314,23 +316,11 @@ final class MaintenanceTickTest extends DbTestCase
     ): MaintenanceTick {
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
         self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
-        $pendingImageVerificationRepository = self::getContainer()->get(PendingImageVerificationRepository::class);
-        self::assertInstanceOf(PendingImageVerificationRepository::class, $pendingImageVerificationRepository);
 
         return new MaintenanceTick(
             $refreshRunner,
             $forYouSweep,
             $sendDueDigests,
-            new ImageVerificationSweep(
-                $pendingImageVerificationRepository,
-                new ImageVerifier(
-                    new StubGuardedImageDownloader(),
-                    new NaiveUtcClock($clock),
-                    RenditionProbes::none(),
-                    new StubProbedLadders(),
-                ),
-                $this->entityManager,
-            ),
             $this->followUpFetchSweeps($linkCardSweep, $clock),
             new SocialMaintenance(
                 $this->profileImageSweep($appViewFetcher ?? self::unreachableAppView(), $clock),
@@ -354,6 +344,7 @@ final class MaintenanceTickTest extends DbTestCase
                 sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
             ),
             $clock,
+            self::TICK_WINDOW_SECONDS,
         );
     }
 
@@ -362,7 +353,21 @@ final class MaintenanceTickTest extends DbTestCase
         $transcriptSweep = self::getContainer()->get(TranscriptSweep::class);
         self::assertInstanceOf(TranscriptSweep::class, $transcriptSweep);
 
-        return new FollowUpFetchSweeps($linkCardSweep, $transcriptSweep, $clock);
+        $pendingImageVerificationRepository = self::getContainer()->get(PendingImageVerificationRepository::class);
+        self::assertInstanceOf(PendingImageVerificationRepository::class, $pendingImageVerificationRepository);
+        $imageVerificationSweep = new ImageVerificationSweep(
+            $pendingImageVerificationRepository,
+            new ImageVerifier(
+                new StubGuardedImageDownloader(),
+                new NaiveUtcClock($clock),
+                RenditionProbes::none(),
+                new StubProbedLadders(),
+            ),
+            $this->entityManager,
+            $clock,
+        );
+
+        return new FollowUpFetchSweeps($imageVerificationSweep, $linkCardSweep, $transcriptSweep, $clock);
     }
 
     private function hiddenProfileSwitchSweep(): HiddenProfileSwitchSweep

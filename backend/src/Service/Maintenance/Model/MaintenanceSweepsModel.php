@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance\Model;
 
-use App\Service\Image\Model\ImageVerificationReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
@@ -18,7 +17,6 @@ final readonly class MaintenanceSweepsModel
     public function __construct(
         public ForYouSweepReportModel $recommendations,
         public DigestSweepReportModel $digests,
-        public ImageVerificationReportModel $imageVerification,
         public FollowUpFetchesReportModel $followUpFetches,
         public ProfileImageSweepReportModel $profileImages,
         public HiddenProfileSwitchReportModel $hiddenProfiles,
@@ -33,7 +31,6 @@ final readonly class MaintenanceSweepsModel
         return new self(
             new ForYouSweepReportModel(0, 0, 0),
             new DigestSweepReportModel(0, 0, 0),
-            new ImageVerificationReportModel(0, 0, 0, 0),
             FollowUpFetchesReportModel::none(),
             ProfileImageSweepReportModel::none(),
             HiddenProfileSwitchReportModel::none(),

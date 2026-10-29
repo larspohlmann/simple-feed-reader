@@ -35,7 +35,7 @@ final class MaintenanceTickJson
             'digests' => self::markedIfSkipped($sweeps, self::digests($sweeps->digests)),
             'imageVerification' => self::markedIfSkipped(
                 $sweeps,
-                self::imageVerification($sweeps->imageVerification),
+                self::imageVerification($sweeps->followUpFetches->imageVerification),
             ),
             'linkCards' => self::markedIfSkipped($sweeps, self::linkCards($sweeps->followUpFetches->linkCards)),
             'transcripts' => self::markedIfSkipped($sweeps, self::transcripts($sweeps->followUpFetches->transcripts)),

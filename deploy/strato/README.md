@@ -167,6 +167,10 @@ while the URL 404s. Verification step 1 is what catches that.
    180–245 MB of PHP heap, far below the advertised 512M, and the ceiling moves between
    requests; at the committed default of eight in-flight fetches the maintenance tick
    occasionally dies with an OS-level `Out of memory` three seconds in.
+
+   Also set `MAINTENANCE_TICK_SECONDS=150` (#1876). The committed default of 25 s fits a host
+   that cuts requests at 30 s and leaves the image-verification and transcript queues draining
+   slowly here; the cron's `curl --max-time` must exceed it.
 9. **Remove the placeholder `current`** — `~/simplefeedreader/current` exists on the host
    as a **real directory**, holding a placeholder `public/index.html` from before this
    deployment was built. It has to be gone before the first deploy:

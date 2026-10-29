@@ -61,15 +61,17 @@ final class VerifyPendingImagesHandlerTest extends DbTestCase
     ): VerifyPendingImagesHandler {
         /** @var PendingImageVerificationRepository $pendingVerifications */
         $pendingVerifications = self::getContainer()->get(PendingImageVerificationRepository::class);
+        $clock = new MockClock('2026-10-01 07:00:00');
         $verifier = new ImageVerifier(
             $downloader,
-            new NaiveUtcClock(new MockClock('2026-10-01 07:00:00')),
+            new NaiveUtcClock($clock),
             RenditionProbes::none(),
             new StubProbedLadders(),
         );
 
         return new VerifyPendingImagesHandler(
-            new ImageVerificationSweep($pendingVerifications, $verifier, $this->entityManager),
+            new ImageVerificationSweep($pendingVerifications, $verifier, $this->entityManager, $clock),
+            $clock,
             $logger,
         );
     }
