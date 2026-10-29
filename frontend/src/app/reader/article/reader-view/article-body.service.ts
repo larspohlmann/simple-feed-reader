@@ -10,11 +10,11 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { decorateArticle } from '../decorators/decorate-article';
 import { toggleCinemaByKey } from '../decorators/reader-cinema';
 import { releaseHlsStreams } from '../../media/hls-streams';
-import { UnplayableVideoService } from '../../media/unplayable-video.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
 import { withScriptablePlayer } from '../../media/media-embeds';
@@ -29,6 +29,7 @@ import { ArticleEmbedAudio } from './article-embed-audio';
 import { ArticleNarration } from './article-narration';
 import { ArticleSlideshows } from './article-slideshows';
 import { ArticlePlayerBars } from './article-player-bars';
+import { ArticleUnplayableVideos } from './article-unplayable-videos';
 import { ArticleEmbedDetails } from './article-embed-details';
 
 interface ChapteredEmbed {
@@ -52,11 +53,14 @@ export interface ArticleBodyParts {
 @Injectable()
 export class ArticleBody {
   private readonly injector = inject(Injector);
-  private readonly unplayableVideos = inject(UnplayableVideoService);
   private readonly zone = inject(NgZone);
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private readonly audio = inject(AudioPlayerService);
   private readonly islands = new ArticleIslands(this.injector);
+  private readonly unplayableVideos = new ArticleUnplayableVideos(
+    this.islands,
+    inject(TranslocoService),
+  );
   private readonly playerBars = new ArticlePlayerBars(this.islands);
   private readonly narration = new ArticleNarration(this.islands);
   private readonly slideshows = new ArticleSlideshows(this.islands);
@@ -97,7 +101,7 @@ export class ArticleBody {
             void this.injector.get(ImageProxyService).recover(event.target);
             return;
           }
-          this.unplayableVideos.replace(event.target, parts.pageUrl());
+          this.unplayableVideos.fail(event.target, parts.pageUrl());
         };
         content.addEventListener('error', recover, true);
         onCleanup(() => content.removeEventListener('error', recover, true));
@@ -149,6 +153,7 @@ export class ArticleBody {
     });
     this.zone.runOutsideAngular(() => {
       this.playerBars.mount(host, listen);
+      this.unplayableVideos.mount(host, parts.pageUrl());
       this.narration.mount(host);
       this.slideshows.mount(host);
       this.attachBodyChapters(host, chapterList, track);

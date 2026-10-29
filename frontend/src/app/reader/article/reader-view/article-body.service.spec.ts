@@ -213,15 +213,28 @@ describe('ArticleBody', () => {
     expect(imageProxy.attempts).toEqual([image]);
   });
 
-  it('replaces a body video the browser cannot play with a link to the original page', () => {
+  it('hides a body video the browser cannot play behind a link to the original page', () => {
     connectBody(VIDEO);
+    const video = content.querySelector('video')!;
 
-    content.querySelector('video')!.dispatchEvent(new Event('error'));
+    video.dispatchEvent(new Event('error'));
 
-    expect(content.querySelector('video')).toBeNull();
-    const link = content.querySelector<HTMLAnchorElement>('figure.link-card a')!;
+    expect(video.classList.contains('reader-video--unplayable')).toBe(true);
+    const link = content.querySelector<HTMLAnchorElement>('app-link-card a')!;
     expect(link.href).toBe('https://news.test/story');
     expect(link.querySelector('strong')!.textContent).toBe("This video can't play in your browser");
+  });
+
+  it('keeps the card of an unplayable video through a chapters-only re-render', async () => {
+    connectBody(VIDEO);
+    await Promise.resolve();
+    content.querySelector('video')!.dispatchEvent(new Event('error'));
+
+    chapters.set(CHAPTERS);
+    TestBed.tick();
+    await Promise.resolve();
+
+    expect(content.querySelectorAll('app-link-card')).toHaveLength(1);
   });
 
   it('widens the video on the t key', async () => {
