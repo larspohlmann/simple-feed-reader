@@ -12,7 +12,10 @@ import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { RefreshScope, Selection, queryFromSelection, selectionQueryParams } from '../query/query';
 import { SubscriptionDto } from '../models';
-import { AddFeedDialogComponent } from '../feeds/add-feed/add-feed-dialog.component';
+import {
+  AddFeedDialogComponent,
+  AddFeedDialogData,
+} from '../feeds/add-feed/add-feed-dialog.component';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
@@ -123,9 +126,10 @@ export class RefreshActions {
       });
   }
 
-  addFeed(): void {
-    const ref = this.dialog.open<SubscriptionDto>(AddFeedDialogComponent, {
+  addFeed(url?: string): void {
+    const ref = this.dialog.open<SubscriptionDto, AddFeedDialogData>(AddFeedDialogComponent, {
       panelClass: 'app-dialog',
+      data: { url },
     });
     ref.closed.subscribe((sub) => {
       if (!sub) return;

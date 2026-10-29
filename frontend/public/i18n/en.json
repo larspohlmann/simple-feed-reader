@@ -1098,6 +1098,7 @@
     }
   },
   "reader": {
+    "dropToSubscribe": "Drop to subscribe",
     "toggleSidebar": "Toggle sidebar",
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",

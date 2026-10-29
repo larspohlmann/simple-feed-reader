@@ -195,6 +195,7 @@
   </ng-template>
 </div>
 <app-audio-player-bar />
+<app-url-drop-zone (urlDropped)="refresh.addFeed($event)" />
 
 <!-- Defined once and outlet-rendered into whichever `.list` header via
      `headerActions`, so split and single-pane share one template. Idle shows

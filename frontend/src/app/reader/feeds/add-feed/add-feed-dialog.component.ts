@@ -3,7 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
-import { DialogRef } from '@angular/cdk/dialog';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TagPickerComponent } from '../tag-picker/tag-picker.component';
@@ -31,6 +31,11 @@ const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
   ['too_large', 'failTooLarge'],
 ]);
 
+/** `url` opens the dialog already searching for it (a dropped link, #1884). */
+export interface AddFeedDialogData {
+  url?: string;
+}
+
 @Component({
   selector: 'app-add-feed-dialog',
   imports: [
@@ -51,6 +56,7 @@ const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
 })
 export class AddFeedDialogComponent implements OnInit {
   readonly ref = inject<DialogRef<SubscriptionDto>>(DialogRef);
+  private readonly data = inject<AddFeedDialogData | null>(DIALOG_DATA, { optional: true });
   private readonly api = inject(ReaderApi);
   readonly tagsStore = inject(TagsStore);
   private readonly fb = inject(NonNullableFormBuilder);
@@ -78,6 +84,11 @@ export class AddFeedDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.tagsStore.tags().length === 0) this.tagsStore.load();
+    const url = this.data?.url;
+    if (url) {
+      this.form.setValue({ url });
+      this.submit();
+    }
   }
 
   toggleTag(id: number): void {
