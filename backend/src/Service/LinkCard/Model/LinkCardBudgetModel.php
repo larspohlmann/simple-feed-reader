@@ -27,6 +27,12 @@ final readonly class LinkCardBudgetModel
         return new self($count);
     }
 
+    /** The most fetches one pass may claim: every fetch must end before the claim lease lapses. */
+    public static function largestPass(): int
+    {
+        return (int) ceil(ShareEnrichment::CLAIM_LEASE_SECONDS / PageHeadFetcher::MAX_DURATION_SECONDS) - 1;
+    }
+
     /** The whole fetches that end before $deadline, at most $maxFetches: none once less than one fits. */
     public static function fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $maxFetches): self
     {

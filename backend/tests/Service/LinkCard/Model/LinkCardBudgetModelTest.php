@@ -44,14 +44,17 @@ final class LinkCardBudgetModelTest extends TestCase
 
     public function testABudgetThatWouldOutlastTheClaimLeaseIsRefused(): void
     {
-        $largestFit = (int) ceil(ShareEnrichment::CLAIM_LEASE_SECONDS / PageHeadFetcher::MAX_DURATION_SECONDS) - 1;
-
-        $longestAccepted = LinkCardBudgetModel::fetches($largestFit)->seconds();
+        $longestAccepted = LinkCardBudgetModel::fetches(LinkCardBudgetModel::largestPass())->seconds();
         self::assertLessThan(ShareEnrichment::CLAIM_LEASE_SECONDS, $longestAccepted);
 
         $this->expectException(\InvalidArgumentException::class);
 
-        LinkCardBudgetModel::fetches($largestFit + 1);
+        LinkCardBudgetModel::fetches(LinkCardBudgetModel::largestPass() + 1);
+    }
+
+    public function testTheLargestPassIsSevenFetchesUnderTheOneMinuteLease(): void
+    {
+        self::assertSame(7, LinkCardBudgetModel::largestPass());
     }
 
     public function testFitsTheWholeFetchesLeftBeforeADeadlineUpToAMaximum(): void

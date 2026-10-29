@@ -17,7 +17,6 @@ use Psr\Clock\ClockInterface;
 final readonly class FollowUpFetchSweeps
 {
     private const int IMAGE_VERIFICATION_MAX_SECONDS = 45;
-    private const int LINK_CARD_MAX_FETCHES = 2;
     private const int TRANSCRIPT_MAX_FETCHES = 10;
 
     public function __construct(
@@ -38,7 +37,7 @@ final readonly class FollowUpFetchSweeps
             ),
         );
         $linkCards = $this->linkCardSweep->sweep(
-            LinkCardBudgetModel::fittingBefore($deadline, $this->clock->now(), self::LINK_CARD_MAX_FETCHES),
+            LinkCardBudgetModel::fittingBefore($deadline, $this->clock->now(), LinkCardBudgetModel::largestPass()),
         );
         $transcripts = $this->transcriptSweep->sweep(
             TranscriptBudgetModel::fittingBefore($deadline, $this->clock->now(), self::TRANSCRIPT_MAX_FETCHES),
