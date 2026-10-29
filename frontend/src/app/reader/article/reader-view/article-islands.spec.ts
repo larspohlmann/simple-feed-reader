@@ -68,6 +68,18 @@ describe('ArticleIslands', () => {
     expect(host.children[1]).toBe(anchor);
   });
 
+  it('mounts a component as the last child of its container, after what the container holds', () => {
+    const { host } = bodyWithAnchor();
+    const registry = islands();
+
+    registry.mountAtEnd(host, IslandProbeComponent, [inputBinding('label', () => 'first')]);
+    registry.mountAtEnd(host, IslandProbeComponent, [inputBinding('label', () => 'second')]);
+
+    expect(host.children[2].textContent).toBe('first');
+    expect(host.children[3].textContent).toBe('second');
+    expect(host.children[3].classList).toContain('reader-island');
+  });
+
   it('keeps two islands mounted after one anchor in mount order', () => {
     const { host, anchor } = bodyWithAnchor();
     const registry = islands();

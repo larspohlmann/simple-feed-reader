@@ -24,6 +24,10 @@ export class ArticleIslands {
     return this.mount(component, bindings, (host) => anchor.before(host));
   }
 
+  mountAtEnd<C>(container: Element, component: Type<C>, bindings: Binding[]): ComponentRef<C> {
+    return this.mount(component, bindings, (host) => container.append(host));
+  }
+
   private mount<C>(
     component: Type<C>,
     bindings: Binding[],

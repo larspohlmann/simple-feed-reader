@@ -1,4 +1,4 @@
-import { inputBinding } from '@angular/core';
+import { Binding, inputBinding } from '@angular/core';
 import { isTextEntryTarget } from '../../../shared/text-entry-target';
 import { embedMediaOfFrame } from '../../audio/embed-media';
 import { CINEMA_BOX, EMBED_BOX } from '../decorators/player-box';
@@ -11,14 +11,13 @@ export class ArticlePlayerBars {
 
   mount(host: HTMLElement, actions: ListenActions | undefined): void {
     for (const box of Array.from(host.querySelectorAll<HTMLElement>(CINEMA_BOX))) {
-      const player = box.firstElementChild;
-      if (!player) continue;
-      this.mountBar(player, box, listenOf(box.querySelector(EMBED_BOX), actions));
+      const listen = listenOf(box.querySelector(EMBED_BOX), actions);
+      this.islands.mountAtEnd(box, PlayerBarComponent, barBindings(box, listen));
     }
     for (const embed of Array.from(host.querySelectorAll<HTMLElement>(EMBED_BOX))) {
       if (embed.closest(CINEMA_BOX)) continue;
       const listen = listenOf(embed, actions);
-      if (listen) this.mountBar(embed, null, listen);
+      if (listen) this.islands.mountAfter(embed, PlayerBarComponent, barBindings(null, listen));
     }
   }
 
@@ -33,17 +32,10 @@ export class ArticlePlayerBars {
     event.preventDefault();
     bar.toggleCinema();
   }
+}
 
-  private mountBar(
-    after: Element,
-    cinemaBox: HTMLElement | null,
-    listen: EmbedListen | null,
-  ): void {
-    this.islands.mountAfter(after, PlayerBarComponent, [
-      inputBinding('cinemaBox', () => cinemaBox),
-      inputBinding('listen', () => listen),
-    ]);
-  }
+function barBindings(cinemaBox: HTMLElement | null, listen: EmbedListen | null): Binding[] {
+  return [inputBinding('cinemaBox', () => cinemaBox), inputBinding('listen', () => listen)];
 }
 
 function isCinemaKey(event: KeyboardEvent): boolean {
