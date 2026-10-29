@@ -2051,7 +2051,7 @@ describe('ReaderViewComponent', () => {
       gestures(fixture).onTouchStart(touch(0, 0));
       gestures(fixture).onTouchMove(touch(40, 4));
       fixture.detectChanges();
-      expect(frame.style.transform).toBe('translate3d(40px, 0, 0)');
+      expect(frame.style.transform).toBe('translate3d(40px, 0px, 0)');
       expect(reader.style.transform).toBe('none');
       gestures(fixture).onTouchEnd();
 
@@ -2131,6 +2131,18 @@ describe('ReaderViewComponent', () => {
       component.onTouchMove(touch(7, 0)); // strong upward pull → rubber-banded past threshold
       component.onTouchEnd();
       expect(component.leaving()).toBe(true);
+      fixture.destroy();
+    });
+
+    it('slides the article straight up off-screen on a pull past the end (#1898)', () => {
+      const fixture = fullscreen();
+      const component = gestures(fixture);
+      component.onTouchStart(touch(5, 300));
+      component.onTouchMove(touch(7, 0));
+      component.onTouchEnd();
+      fixture.detectChanges();
+      const frame = (fixture.nativeElement as HTMLElement).querySelector('.frame') as HTMLElement;
+      expect(frame.style.transform).toBe(`translate3d(0px, ${-window.innerHeight}px, 0)`);
       fixture.destroy();
     });
 
