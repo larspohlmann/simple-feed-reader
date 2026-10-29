@@ -10,6 +10,14 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.7] - 2026-10-29
+
+## What's Changed
+* fix(#1901): the back-to-top button hides the moment the article leaves by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1902
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.6...v1.6.7
+
 ## [v1.6.6] - 2026-10-29
 
 ## What's Changed
