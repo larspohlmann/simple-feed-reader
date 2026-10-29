@@ -10,6 +10,39 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.4] - 2026-10-29
+
+## What's Changed
+* feat(#1847): the article slides out on every close by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1849
+* fix(#1848): the playlist smokes assert the big player #1829 shipped by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1850
+* feat(#1809): podcast transcripts as body, seekable and searchable by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1851
+* fix(#1852): magazine variety for small-thumbnail feeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1854
+* feat(#1855): probe image variants for the magazine planner by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1856
+* feat(#1857): never probe image variants for social network feeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1858
+* feat(#1859): store social-network lead images as declared, never queued for verification by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1860
+* fix(#1862): the article leaves on back in production builds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1863
+* Admin dashboard: waiting items per background queue (#1861) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1865
+* Remember the position of long tracks and offer to continue on Listen by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1867
+* fix(#1853): repair the Playwright e2e rot by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1868
+* feat(#1869): the podcast transcript sits atop the article body by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1870
+* ci(#1871): PHPStan runs beside the lint steps and keeps its result cache by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1872
+* refactor(#1864): one shared bearer helper in ApiTestCase by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1873
+* test(#1874): MySQL leg under ParaTest, sharded in CI by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1875
+* feat(#1876): relax the maintenance tick budgets so image verification and transcripts drain by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1877
+* fix(#1878): one prod log file per host by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1879
+* fix(#1880): episode chapters and transcript as header panels by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1881
+* fix(#1882): interpolate prod file log messages again by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1883
+* feat(#1884): drop a URL onto the reader to start subscribing by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1885
+* refactor(#1886): mount Angular components into the article body by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1887
+* refactor(#1888): mount the player bar as a component by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1890
+* refactor(#1889): mount the slideshow controls and narration toggle as components by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1891
+* fix(#1893): a tick completes as many link cards as one claim lease holds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1894
+* Move the unplayable-video card and the cinema shortcut onto components (#1892) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1895
+* Simplify the article body islands series (#1896) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1897
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.3...v1.6.4
+
 ## [v1.6.3] - 2026-10-27
 
 ## What's Changed
