@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { articleHost } from '../../../../testing/article-host-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ArticleIslands } from '../reader-view/article-islands';
+import * as gestures from './slide-gestures';
 import { SlideshowControlsComponent } from './slideshow-controls.component';
 
 const SLIDES =
@@ -157,15 +158,17 @@ describe('SlideshowControlsComponent', () => {
     expect(pageMove).toHaveBeenCalled();
   });
 
-  it('handles touch moves outside the Angular zone', () => {
-    const { figure } = mounted();
+  it('binds its gestures outside the Angular zone', () => {
     const zones: boolean[] = [];
-    figure.addEventListener('touchmove', () => zones.push(NgZone.isInAngularZone()));
+    const bind = jest.spyOn(gestures, 'bindSlideGestures').mockImplementation(() => {
+      zones.push(NgZone.isInAngularZone());
+      return () => undefined;
+    });
 
-    figure.dispatchEvent(touch(200, 100, 'touchstart'));
-    figure.dispatchEvent(touch(120, 105, 'touchmove'));
+    mounted();
 
     expect(zones).toEqual([false]);
+    bind.mockRestore();
   });
 
   it('ignores a non-arrow key', () => {
