@@ -1,5 +1,5 @@
-import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { injectIslands } from '../../../../testing/article-islands-testing';
 import { articleHost } from '../../../../testing/article-host-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ArticleIslands } from './article-islands';
@@ -19,7 +19,7 @@ describe('ArticleSlideshows', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
-    islands = new ArticleIslands(TestBed.inject(Injector));
+    islands = injectIslands();
     slideshows = new ArticleSlideshows(islands);
   });
 

@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { articleHost } from '../../../../testing/article-host-testing';
+import { stubScrollIntoView } from '../../../../testing/article-islands-testing';
 import { openReaderPanels } from '../../../../testing/reader-panel-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
@@ -65,9 +66,7 @@ const EPISODE: AudioTrack = {
   durationInSeconds: 600,
 };
 
-beforeAll(() => {
-  Element.prototype.scrollIntoView = jest.fn();
-});
+stubScrollIntoView();
 
 describe('ArticleBody', () => {
   let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;

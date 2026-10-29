@@ -1,5 +1,5 @@
-import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { injectIslands } from '../../../../testing/article-islands-testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { articleHost } from '../../../../testing/article-host-testing';
@@ -18,7 +18,7 @@ describe('ArticleUnplayableVideos', () => {
       imports: [provideTranslocoTesting()],
       providers: [provideAccountIdentity()],
     });
-    islands = new ArticleIslands(TestBed.inject(Injector));
+    islands = injectIslands();
     videos = new ArticleUnplayableVideos(islands, TestBed.inject(TranslocoService));
   });
 

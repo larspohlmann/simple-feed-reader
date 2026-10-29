@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  Injector,
   NgZone,
   inject,
   input,
@@ -10,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { injectIslands } from '../../../../testing/article-islands-testing';
 import { ArticleIslands } from './article-islands';
 
 let destroyed = 0;
@@ -45,7 +45,7 @@ describe('ArticleIslands', () => {
   });
 
   function islands(): ArticleIslands {
-    return new ArticleIslands(TestBed.inject(Injector));
+    return injectIslands();
   }
 
   it('mounts the component right after its anchor, rendered and marked as an island', () => {

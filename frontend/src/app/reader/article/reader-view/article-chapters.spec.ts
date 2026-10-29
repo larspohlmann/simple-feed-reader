@@ -1,5 +1,6 @@
 import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { injectIslands } from '../../../../testing/article-islands-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { WIDGET_URL } from '../../../../testing/embed-media-testing';
 import {
@@ -40,7 +41,7 @@ function titles(host: HTMLElement): string[] {
 }
 
 function mountedChapters(): { articleChapters: ArticleChapters; islands: ArticleIslands } {
-  const islands = new ArticleIslands(TestBed.inject(Injector));
+  const islands = injectIslands();
   const articleChapters = new ArticleChapters(
     TestBed.inject(AudioPlayerService),
     islands,
