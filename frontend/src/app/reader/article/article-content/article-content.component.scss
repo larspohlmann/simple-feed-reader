@@ -6,6 +6,10 @@
 // Mounted components (#1886) keep their own look: the body's element rules stop at them.
 $prose: ':where(:not(.reader-island *))';
 
+:host ::ng-deep .reader-island {
+  line-height: var(--lh-normal);
+}
+
 /* Article typography. The body is [innerHTML]-injected, so descendant rules
    need ::ng-deep (scoped under the host). The sanitizer strips default
    margins, so h2/p/li/blockquote need an explicit vertical rhythm here. */

@@ -128,6 +128,24 @@ describe('ArticleChapters', () => {
       expect(posted).toEqual([]);
     });
 
+    it('keeps an open list open when Listen follows the track', () => {
+      const host = document.createElement('div');
+      host.innerHTML = VIDEO_BODY;
+      const articleChapters = chapters();
+      articleChapters.attachToFrame(host.querySelector('iframe')!, CHAPTERS);
+      openLists(host);
+      const list = host.querySelector('.reader-chapters');
+
+      articleChapters.followTrack(VIDEO_TRACK);
+      TestBed.tick();
+
+      expect(host.querySelector('.reader-chapters')).toBe(list);
+      expect(host.querySelector('.reader-panel__toggle')?.getAttribute('aria-expanded')).toBe(
+        'true',
+      );
+      expect(host.querySelectorAll('.reader-chapters__row')).toHaveLength(CHAPTERS.length);
+    });
+
     it('follows the audio player once the video is its track', () => {
       const host = document.createElement('div');
       host.innerHTML = VIDEO_BODY;

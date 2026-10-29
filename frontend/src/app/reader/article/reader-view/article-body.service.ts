@@ -72,8 +72,8 @@ export class ArticleBody {
     document.addEventListener('keydown', onKeydown);
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
-      this.islands.releaseAll();
       this.chapters.release();
+      this.islands.releaseAll();
       this.embedAudio.release();
       this.embedDetails.release();
       document.removeEventListener('keydown', onKeydown);
@@ -123,8 +123,8 @@ export class ArticleBody {
         onCleanup(() => {
           releaseHlsStreams(content);
           this.media.forgetAll();
-          this.islands.releaseAll();
           this.chapters.release();
+          this.islands.releaseAll();
           this.embedAudio.release();
           this.embedDetails.release();
         });
