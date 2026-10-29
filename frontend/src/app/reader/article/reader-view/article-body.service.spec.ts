@@ -353,16 +353,20 @@ describe('ArticleBody', () => {
       );
     });
 
-    it('decorates again when the chapters arrive after the body', async () => {
-      audioTrack.set(EPISODE);
-      connectBody('<p>Notes</p>');
+    it('lists the chapters under a video when they arrive after the body', async () => {
+      connectBody(YOUTUBE);
       await Promise.resolve();
+      expect(content.querySelector('.reader-chapters')).toBeNull();
 
       chapters.set(CHAPTERS);
       TestBed.tick();
       await Promise.resolve();
 
-      expect(decorated).toHaveBeenCalledTimes(2);
+      const frame = content.querySelector('iframe')!;
+      expect(frame.closest('.reader-cinema')!.nextElementSibling!.classList).toContain(
+        'reader-chapters',
+      );
+      expect(content.querySelectorAll('.reader-chapters__row')).toHaveLength(CHAPTERS.length);
     });
 
     it('does not decorate again for an equal chapter list or a changed episode object', async () => {

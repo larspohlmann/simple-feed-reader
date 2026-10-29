@@ -883,6 +883,16 @@ finished, a bulk action applied) that the user does not have to act on.
 
 ---
 
+### `<app-reader-panel>`
+
+The article header's collapsible panel (Contents, Chapters, Transcript): a
+`label` input and an `open` model, the body projected and rendered only while
+open. Its toggle is a `<button>`, so it keeps the fixed UI type scale inside
+`.text-scaled`; a `<summary>` would scale with the text-size slider (#1880).
+Header panels therefore use it, not `<app-disclosure>`.
+
+---
+
 ### `<app-disclosure>`
 
 The one wrapper for a native `<details>`/`<summary>` collapsed-content pattern:
@@ -1549,7 +1559,8 @@ Used by: the audio player bar, the big player.
 The chapter rows of the article's list (#1808, #1814) as a component (#1810). It
 reads nothing from the player: `chapters` (required) and `playhead`
 (`ChapterPlayhead | null`: the chapter playback is in and its progress, from
-`AudioPlayerService.chapterPlayhead`) come in, a tapped row's index goes out as
+`AudioPlayerService.chapterControls.playhead` or `chapterPlayhead()` in
+`reader/audio/track-chapters.ts`) come in, a tapped row's index goes out as
 `(pick)`. The current row carries `aria-current="true"`, fills to
 `--chapter-progress` in `--accent-soft` and ends in its time left behind a
 `schedule` icon. The row rules live in `reader/chapters/_chapter-rows.scss`, a
@@ -1558,10 +1569,10 @@ the two lists cannot drift apart; the rows inherit their font size from the list
 host and take their inline inset from `--chapter-row-inset` (`--space-3`), which
 the queue zeroes for its nested rows and sets to `--fs-xs`.
 
-Used by: the big player's chapter list, the queue's expanded rows.
+Used by: the big player's chapter list, the queue's expanded rows, `app-episode-chapters` (the episode's list in the article header).
 
-**Not for:** the article body. Its list is decorated into the article's HTML
-by `decorators/reader-chapters.ts`, which drives a `ChapterPlayer`.
+**Not for:** the lists under embedded videos. They stay body decorations, decorated
+into the article's HTML by `decorators/reader-chapters.ts`, which drives a `ChapterPlayer`.
 
 ---
 

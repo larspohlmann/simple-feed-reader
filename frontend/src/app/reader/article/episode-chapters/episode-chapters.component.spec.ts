@@ -52,6 +52,18 @@ describe('EpisodeChaptersComponent', () => {
     ]);
   });
 
+  it('comes back collapsed for another entry', () => {
+    const { fixture, element } = render();
+
+    fixture.componentRef.setInput('chapters', [{ startSeconds: 0, title: 'Other' }]);
+    fixture.detectChanges();
+
+    expect(element.querySelector('.reader-panel__toggle')!.getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+    expect(rows(element)).toHaveLength(0);
+  });
+
   it('starts the episode at a picked chapter', () => {
     const { element, player } = render();
 

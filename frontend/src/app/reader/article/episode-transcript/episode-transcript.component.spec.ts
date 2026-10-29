@@ -85,6 +85,27 @@ describe('EpisodeTranscriptComponent', () => {
     expect(element.querySelectorAll('.reader-transcript__paragraph')).toHaveLength(3);
   });
 
+  it('comes back collapsed for another entry', () => {
+    const { fixture, element } = render();
+
+    fixture.componentRef.setInput('transcript', { ...TRANSCRIPT });
+    fixture.detectChanges();
+
+    expect(toggle(element).getAttribute('aria-expanded')).toBe('false');
+    expect(element.querySelector('.reader-transcript__paragraph')).toBeNull();
+  });
+
+  it('comes back open for another entry when asked to start open', () => {
+    const { fixture, element } = render({ startOpen: true, open: false });
+    toggle(element).click();
+    fixture.detectChanges();
+
+    fixture.componentRef.setInput('transcript', { ...TRANSCRIPT });
+    fixture.detectChanges();
+
+    expect(toggle(element).getAttribute('aria-expanded')).toBe('true');
+  });
+
   it('opens on a click of the toggle', () => {
     const { element } = render();
 
