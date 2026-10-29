@@ -6,7 +6,7 @@
 // Mounted components (#1886) keep their own look: the body's element rules stop at them.
 $prose: ':where(:not(.reader-island *))';
 
-:host ::ng-deep .reader-island {
+:host ::ng-deep :where(.reader-island) {
   line-height: var(--lh-normal);
 }
 
