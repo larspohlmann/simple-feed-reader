@@ -115,7 +115,8 @@ jobs:
         working-directory: backend
 
     steps:
-      # Awaited only before its first use, so its first boot overlaps checkout and install.
+      # Backgrounded and awaited only before its first use, so the image pull and
+      # first boot overlap checkout and install.
       - name: Start MySQL
         if: matrix.database == 'mysql'
         working-directory: ${{ github.workspace }}
@@ -129,6 +130,7 @@ jobs:
           --innodb-flush-log-at-trx-commit=0
           --skip-log-bin
           --innodb-doublewrite=OFF
+          > "$RUNNER_TEMP/mysql-start.log" 2>&1 &
 
       - uses: actions/checkout@v5
 
@@ -159,6 +161,7 @@ jobs:
             fi
             sleep 1
           done
+          cat "$RUNNER_TEMP/mysql-start.log"
           docker logs mysql
           echo 'MySQL accepted no TCP connection within 90s.' >&2
           exit 1
