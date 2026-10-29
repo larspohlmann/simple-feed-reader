@@ -13,7 +13,6 @@ import { EmbedListen } from './embed-listen';
 
 const WIDENED = 'reader-cinema--on';
 
-/** The bar under a body player: Listen, the queue toggle and Cinema (#1479, #1815, #1888). */
 @Component({
   selector: 'app-player-bar',
   imports: [TranslocoPipe, IconComponent],
@@ -36,18 +35,8 @@ export class PlayerBarComponent {
     return offer !== null && this.audio.isQueued(offer.media.url);
   });
 
-  protected play(offer: EmbedListen): void {
-    offer.actions.listen(offer.media, offer.frame);
-  }
-
-  protected toggleQueued(offer: EmbedListen): void {
-    offer.actions.toggleQueued(offer.media);
-  }
-
   protected toggleCinema(box: HTMLElement): void {
-    const widened = !this.widened();
-    box.classList.toggle(WIDENED, widened);
-    this.widened.set(widened);
+    this.widened.set(box.classList.toggle(WIDENED));
     box.scrollIntoView({ block: 'nearest' });
   }
 }

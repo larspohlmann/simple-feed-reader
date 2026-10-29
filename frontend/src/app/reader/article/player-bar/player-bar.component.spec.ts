@@ -1,43 +1,34 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { VIDEO_MEDIA } from '../../../../testing/embed-media-testing';
+import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { AudioPlayerService } from '../../audio-player.service';
-import type { EmbedMedia } from '../../audio/embed-media';
+import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedListen } from './embed-listen';
 import { PlayerBarComponent } from './player-bar.component';
 
-const MEDIA: EmbedMedia = {
-  kind: 'youtube',
-  url: 'https://www.youtube.com/watch?v=GhUuOxrCato',
-  posterUrl: null,
-};
-
-class QueueStub {
-  readonly queued = signal<string[]>([]);
-  isQueued(url: string): boolean {
-    return this.queued().includes(url);
-  }
-}
-
 function render(inputs: { cinemaBox?: HTMLElement | null; listen?: EmbedListen | null }) {
-  const queue = new QueueStub();
+  const player = new StubAudioPlayer();
   TestBed.configureTestingModule({
     imports: [PlayerBarComponent, provideTranslocoTesting()],
-    providers: [{ provide: AudioPlayerService, useValue: queue }],
+    providers: [{ provide: AudioPlayerService, useValue: player.asService() }],
   });
   const fixture = TestBed.createComponent(PlayerBarComponent);
   fixture.componentRef.setInput('cinemaBox', inputs.cinemaBox ?? null);
   fixture.componentRef.setInput('listen', inputs.listen ?? null);
   fixture.detectChanges();
-  return { fixture, element: fixture.nativeElement as HTMLElement, queue };
+  return { fixture, element: fixture.nativeElement as HTMLElement, player };
 }
 
+const TRACK: AudioTrack = {
+  url: VIDEO_MEDIA.url,
+  title: 'Talk',
+  faviconUrl: null,
+  imageUrl: null,
+  durationInSeconds: null,
+};
+
 function offer(): EmbedListen {
-  return {
-    media: MEDIA,
-    frame: document.createElement('iframe'),
-    actions: { listen: jest.fn(), toggleQueued: jest.fn() },
-  };
+  return { media: VIDEO_MEDIA, listen: jest.fn(), toggleQueued: jest.fn() };
 }
 
 const text = (element: Element | null) => element?.textContent?.replace(/\s+/g, '') ?? '';
@@ -62,39 +53,39 @@ describe('PlayerBarComponent', () => {
     expect(listen.title).toBe("Play the sound in the reader's audio player");
   });
 
-  it('hands Listen the media and the frame that shows it', () => {
+  it('runs the offer when Listen is clicked', () => {
     const listen = offer();
     const { element } = render({ listen });
 
     element.querySelectorAll<HTMLButtonElement>('.reader-listen__button')[0].click();
 
-    expect(listen.actions.listen).toHaveBeenCalledWith(MEDIA, listen.frame);
+    expect(listen.listen).toHaveBeenCalledTimes(1);
   });
 
-  it('hands the queue toggle the media', () => {
+  it('runs the offer when the queue toggle is clicked', () => {
     const listen = offer();
     const { element } = render({ listen });
 
     element.querySelectorAll<HTMLButtonElement>('.reader-listen__button')[1].click();
 
-    expect(listen.actions.toggleQueued).toHaveBeenCalledWith(MEDIA);
+    expect(listen.toggleQueued).toHaveBeenCalledTimes(1);
   });
 
   it('shows the queue state through icon, label, pressed state and class, following the playlist', () => {
-    const { fixture, element, queue } = render({ listen: offer() });
+    const { fixture, element, player } = render({ listen: offer() });
     const toggle = () => element.querySelectorAll<HTMLButtonElement>('.reader-listen__button')[1];
 
     expect(text(toggle())).toBe('playlist_addAddtoplaylist');
     expect(toggle().getAttribute('aria-pressed')).toBe('false');
     expect(toggle().classList).not.toContain('reader-listen__button--queued');
 
-    queue.queued.set([MEDIA.url]);
+    player.enqueue(TRACK);
     fixture.detectChanges();
     expect(text(toggle())).toBe('playlist_add_checkInplaylist');
     expect(toggle().getAttribute('aria-pressed')).toBe('true');
     expect(toggle().classList).toContain('reader-listen__button--queued');
 
-    queue.queued.set([]);
+    player.dequeue(VIDEO_MEDIA.url);
     fixture.detectChanges();
     expect(toggle().getAttribute('aria-pressed')).toBe('false');
   });

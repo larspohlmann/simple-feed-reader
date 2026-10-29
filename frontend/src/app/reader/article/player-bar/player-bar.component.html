@@ -3,7 +3,7 @@
     type="button"
     class="reader-listen__button"
     [title]="'reader.audioPlayer.listenEmbed' | transloco"
-    (click)="play(offer)"
+    (click)="offer.listen()"
   >
     <app-icon name="play_circle" size="xs" />
     <span>{{ 'reader.audioPlayer.listen' | transloco }}</span>
@@ -13,7 +13,7 @@
     class="reader-listen__button"
     [class.reader-listen__button--queued]="queued()"
     [attr.aria-pressed]="queued()"
-    (click)="toggleQueued(offer)"
+    (click)="offer.toggleQueued()"
   >
     <app-icon [name]="queued() ? 'playlist_add_check' : 'playlist_add'" size="xs" />
     <span>{{

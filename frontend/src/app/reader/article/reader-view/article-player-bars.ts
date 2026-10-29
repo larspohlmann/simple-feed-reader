@@ -2,9 +2,10 @@ import { inputBinding } from '@angular/core';
 import { embedMediaOfFrame } from '../../audio/embed-media';
 import { EmbedListen, ListenActions } from '../player-bar/embed-listen';
 import { PlayerBarComponent } from '../player-bar/player-bar.component';
+import { CINEMA_BOX_CLASS } from '../decorators/reader-cinema';
 import { ArticleIslands } from './article-islands';
 
-const CINEMA_BOX = '.reader-cinema';
+const CINEMA_BOX = `.${CINEMA_BOX_CLASS}`;
 const EMBED_BOX = '.reader-embed';
 
 /** A rendered body's player bars: one in every cinema box and after every embed Listen plays (#1888). */
@@ -39,5 +40,10 @@ export class ArticlePlayerBars {
 function listenOf(embed: Element | null, actions: ListenActions | undefined): EmbedListen | null {
   const frame = embed?.querySelector<HTMLIFrameElement>(':scope > iframe') ?? null;
   const media = frame && embedMediaOfFrame(frame);
-  return actions && frame && media ? { media, frame, actions } : null;
+  if (!actions || !frame || !media) return null;
+  return {
+    media,
+    listen: () => actions.listen(media, frame),
+    toggleQueued: () => actions.toggleQueued(media),
+  };
 }
