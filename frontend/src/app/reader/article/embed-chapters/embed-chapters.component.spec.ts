@@ -171,4 +171,25 @@ describe('EmbedChaptersComponent', () => {
     expect(next.playFrom).toHaveBeenCalledWith(0);
     expect(first.playFrom).not.toHaveBeenCalled();
   });
+
+  it('releases the player it follows when handed another', () => {
+    const first = fakePlayer();
+    const next = fakePlayer();
+    const { fixture } = render(first);
+
+    fixture.componentRef.setInput('player', next);
+    fixture.detectChanges();
+
+    expect(first.release).toHaveBeenCalledTimes(1);
+    expect(next.release).not.toHaveBeenCalled();
+  });
+
+  it('releases its player when destroyed', () => {
+    const player = fakePlayer();
+    const { fixture } = render(player);
+
+    fixture.destroy();
+
+    expect(player.release).toHaveBeenCalled();
+  });
 });

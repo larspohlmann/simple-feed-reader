@@ -33,9 +33,10 @@ export class EmbedChaptersComponent {
   protected readonly playhead = signal<ChapterPlayhead | null>(null);
 
   constructor() {
-    effect(() => {
+    effect((onCleanup) => {
       const player = this.player();
       untracked(() => this.follow(player));
+      onCleanup(() => player.release());
     });
   }
 

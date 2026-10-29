@@ -72,7 +72,7 @@ export class ArticleBody {
     document.addEventListener('keydown', onKeydown);
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
-      this.chapters.release();
+      this.chapters.forget();
       this.islands.releaseAll();
       this.embedAudio.release();
       this.embedDetails.release();
@@ -123,7 +123,7 @@ export class ArticleBody {
         onCleanup(() => {
           releaseHlsStreams(content);
           this.media.forgetAll();
-          this.chapters.release();
+          this.chapters.forget();
           this.islands.releaseAll();
           this.embedAudio.release();
           this.embedDetails.release();
