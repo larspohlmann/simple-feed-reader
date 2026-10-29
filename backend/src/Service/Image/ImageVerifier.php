@@ -33,6 +33,7 @@ final readonly class ImageVerifier
     ) {
     }
 
+    /** @phpstan-impure */
     public function verify(Entry $entry): ImageVerifyOutcome
     {
         $url = $entry->getImage()->getUrl();

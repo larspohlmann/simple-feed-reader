@@ -36,6 +36,7 @@ final readonly class RecommendationRunAdvancer
     ) {
     }
 
+    /** @phpstan-impure */
     public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReportModel
     {
         $held = $this->tickLock->acquire($user, $this->lockTtl->secondsFor($user));

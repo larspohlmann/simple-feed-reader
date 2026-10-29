@@ -71,7 +71,7 @@ final readonly class FeedLinkScanner
         foreach ($document->querySelectorAll('link[rel~="alternate" i][type]') as $link) {
             $format = self::ADVERTISED_TYPES[$this->attribute($link, 'type')] ?? null;
             $url = null === $format ? null : $this->subscribableUrl($link, $pageUrls);
-            if (null === $url || null === $format || isset($candidates[$url])) {
+            if (null === $url || isset($candidates[$url])) {
                 continue;
             }
 

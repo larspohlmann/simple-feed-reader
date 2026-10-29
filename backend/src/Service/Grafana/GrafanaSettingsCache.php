@@ -25,6 +25,8 @@ final readonly class GrafanaSettingsCache
      * @param callable():GrafanaSettingsSnapshotModel $loadFromDatabase
      *
      * @throws InvalidArgumentException
+     *
+     * @phpstan-impure
      */
     public function remember(callable $loadFromDatabase): GrafanaSettingsSnapshotModel
     {

@@ -6,9 +6,39 @@ on:
   pull_request:
 
 jobs:
-  # Nothing here reads a database, so it runs once instead of in each leg below.
-  backend-static:
-    name: Backend (static)
+  # Neither static job reads a database, so each runs once instead of in each
+  # leg below. PHPStan is most of the static time, so the rest runs beside it.
+  backend-phpstan:
+    name: Backend (PHPStan)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-backend
+
+      - name: Warm cache for PHPStan
+        run: php bin/console cache:warmup
+
+      # PHPStan drops whatever a change invalidated, so any earlier run's cache
+      # is a safe start. No tramp:update in this job, so vendor stays lock-pinned.
+      - name: Restore PHPStan's result cache
+        uses: actions/cache@v6
+        with:
+          path: /tmp/phpstan
+          key: phpstan-${{ github.sha }}
+          restore-keys: phpstan-
+
+      # -vvv prints why a restored result cache was not used (#1871).
+      - name: PHPStan
+        run: composer stan -- -vvv
+
+  backend-lint:
+    name: Backend (lint)
     runs-on: ubuntu-latest
 
     defaults:
@@ -23,20 +53,8 @@ jobs:
       - name: PHPCS (PSR-12)
         run: composer cs
 
-      - name: Warm cache for PHPStan
+      - name: Warm cache for symfony-lsp
         run: php bin/console cache:warmup
-
-      # PHPStan drops whatever a change invalidated, so any earlier run's cache
-      # is a safe start. It must stay before tramp:update, which rewrites vendor.
-      - name: Restore PHPStan's result cache
-        uses: actions/cache@v6
-        with:
-          path: /tmp/phpstan
-          key: phpstan-${{ github.sha }}
-          restore-keys: phpstan-
-
-      - name: PHPStan
-        run: composer stan
 
       # PHPMD codesize was a local-only discipline gate and silently broke once
       # (pdepend could not parse PHP 8.4 syntax, #183) — so the sweep now runs

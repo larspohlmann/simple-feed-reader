@@ -128,9 +128,10 @@ final class EntryPageParametersTest extends ApiTestCase
     private function assertValidationErrorOn(KernelBrowser $client, string $field): void
     {
         $this->assertRejected($client, 422);
-        self::assertSame('validation_error', $this->payload($client)['type']);
-        self::assertIsArray($this->payload($client)['errors']);
-        self::assertArrayHasKey($field, $this->payload($client)['errors']);
+        $problem = $this->payload($client);
+        self::assertSame('validation_error', $problem['type']);
+        self::assertIsArray($problem['errors']);
+        self::assertArrayHasKey($field, $problem['errors']);
     }
 
     /** @return list<string> */
