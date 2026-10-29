@@ -885,7 +885,8 @@ finished, a bulk action applied) that the user does not have to act on.
 
 ### `<app-reader-panel>`
 
-The article header's collapsible panel (Contents, Chapters, Transcript): a
+The article's collapsible panel: the header's Contents, Chapters and Transcript,
+and the chapter list under an embed (`app-embed-chapters`, #1886): a
 `label` input and an `open` model. The body is a projected `<ng-template>`, so
 a collapsed panel builds none of it (a transcript runs to hundreds of
 paragraphs). Its toggle is a `<button>`, so it keeps the fixed UI type scale inside
@@ -1564,16 +1565,12 @@ reads nothing from the player: `chapters` (required) and `playhead`
 `reader/audio/track-chapters.ts`) come in, a tapped row's index goes out as
 `(pick)`. The current row carries `aria-current="true"`, fills to
 `--chapter-progress` in `--accent-soft` and ends in its time left behind a
-`schedule` icon. The row rules live in `reader/chapters/_chapter-rows.scss`, a
-mixin the article's `article-chapters.scss` and this component both include, so
-the two lists cannot drift apart; the rows inherit their font size from the list's
+`schedule` icon. The row rules live in the component's own scss, the one place rows are
+drawn; the rows inherit their font size from the list's
 host and take their inline inset from `--chapter-row-inset` (`--space-3`), which
 the queue zeroes for its nested rows and sets to `--fs-xs`.
 
-Used by: the big player's chapter list, the queue's expanded rows, `app-episode-chapters` (the episode's list in the article header).
-
-**Not for:** the lists under embedded videos. They stay body decorations, decorated
-into the article's HTML by `decorators/reader-chapters.ts`, which drives a `ChapterPlayer`.
+Used by: the big player's chapter list, the queue's expanded rows, `app-episode-chapters` (the episode's list in the article header), `app-embed-chapters` (the list under an embedded video or SoundCloud track).
 
 ---
 
@@ -2093,12 +2090,13 @@ tag row pills-only. The projected element must stay inline: the kicker is a
 drops the icons onto a second line without any error.
 
 **Reader-body decorators use a plain `<details>`, not `<app-disclosure>`.**
-They work on the article body rendered via `[innerHTML]` (#903), where an Angular
-component cannot mount. So the narration player (`reader-narration.ts`), the
-chapter list (`reader-chapters.ts`, #1817) and publisher FAQs (`reader-faq.ts`)
-build bare `<details>`, styled in `article-content.component.scss` and
-`article-chapters.scss`. A summary that drops the native marker includes
+They work on the article body rendered via `[innerHTML]` (#903), which Angular
+does not compile. So the narration player (`reader-narration.ts`) and publisher
+FAQs (`reader-faq.ts`) build bare `<details>`, styled in
+`article-content.component.scss`. A summary that drops the native marker includes
 `bare-summary.marker-hidden` (`theme/_bare-summary.scss`), as `<app-disclosure>` does.
+
+**A component inside the article body is mounted, not decorated (#1886).** A decorator finds the place; `ArticleIslands` (`reader-view/article-islands.ts`) mounts the component after it (`mountAfter(anchor, Component, [inputBinding(…)])`), inside the Angular zone, tagged `.reader-island`, and destroys it before the next render. The body's element rules end at `.reader-island` (the `$prose` barrier, `:where(:not(.reader-island *))`, in `article-content.component.scss`), so a mounted component looks as it does anywhere else. First user: `app-embed-chapters`.
 
 ---
 
