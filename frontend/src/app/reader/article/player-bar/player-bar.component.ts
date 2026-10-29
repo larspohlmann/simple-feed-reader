@@ -21,7 +21,6 @@ const WIDENED = 'reader-cinema--on';
   templateUrl: './player-bar.component.html',
   styleUrl: './player-bar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'reader-player-bar' },
 })
 export class PlayerBarComponent {
   readonly cinemaBox = input<HTMLElement | null>(null);

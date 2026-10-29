@@ -11,7 +11,6 @@ import {
 
 const READER_ISLAND = 'reader-island';
 
-/** Angular components mounted into the rendered article body, each living until the next render (#1886). */
 export class ArticleIslands {
   private mounted: ComponentRef<unknown>[] = [];
 
@@ -23,6 +22,10 @@ export class ArticleIslands {
 
   mountBefore<C>(anchor: Element, component: Type<C>, bindings: Binding[]): ComponentRef<C> {
     return this.mount(component, bindings, (host) => anchor.before(host));
+  }
+
+  mountAtEnd<C>(container: Element, component: Type<C>, bindings: Binding[]): ComponentRef<C> {
+    return this.mount(component, bindings, (host) => container.append(host));
   }
 
   private mount<C>(

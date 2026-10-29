@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { articleHost } from '../../../../testing/article-host-testing';
+import { stubScrollIntoView } from '../../../../testing/article-islands-testing';
 import { openReaderPanels } from '../../../../testing/reader-panel-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
@@ -65,9 +66,7 @@ const EPISODE: AudioTrack = {
   durationInSeconds: 600,
 };
 
-beforeAll(() => {
-  Element.prototype.scrollIntoView = jest.fn();
-});
+stubScrollIntoView();
 
 describe('ArticleBody', () => {
   let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
@@ -298,6 +297,22 @@ describe('ArticleBody', () => {
 
     expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
   });
+
+  it('releases the mounted islands once destroyed', async () => {
+    const appRef = TestBed.inject(ApplicationRef);
+    const baseline = appRef.viewCount;
+    chapters.set(CHAPTERS);
+    connectBody(YOUTUBE);
+    document.body.append(content);
+    await Promise.resolve();
+    expect(appRef.viewCount).toBe(baseline + 2);
+
+    injector.destroy();
+
+    expect(appRef.viewCount).toBe(baseline);
+    expect(content.querySelector('.reader-island')).toBeNull();
+  });
+
   describe('its media', () => {
     it('tells the autoplay coordinator when the user plays one', async () => {
       connectBody(VIDEO);
@@ -355,7 +370,7 @@ describe('ArticleBody', () => {
       connectBody('<p>Notes</p>');
       await Promise.resolve();
 
-      expect(content.querySelector('.reader-chapters')).toBeNull();
+      expect(content.querySelector('app-embed-chapters')).toBeNull();
     });
 
     it('drives a video with chapters through its API player, listing them beneath it', async () => {
@@ -365,8 +380,8 @@ describe('ArticleBody', () => {
 
       const frame = content.querySelector('iframe')!;
       expect(frame.getAttribute('src')).toBe(API_FRAME_URL);
-      expect(frame.closest('.reader-cinema')!.nextElementSibling!.classList).toContain(
-        'reader-chapters',
+      expect(frame.closest('.reader-cinema')!.nextElementSibling!.tagName).toBe(
+        'APP-EMBED-CHAPTERS',
       );
     });
 
@@ -375,7 +390,7 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       expect(content.querySelector('iframe')!.getAttribute('src')).toBe(API_FRAME_URL);
-      expect(content.querySelector('.reader-chapters')).toBeNull();
+      expect(content.querySelector('app-embed-chapters')).toBeNull();
     });
 
     it("keeps an episode's chapters on the episode when its notes embed a video", async () => {
@@ -385,7 +400,7 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       expect(content.querySelector('iframe')!.getAttribute('src')).toBe(API_FRAME_URL);
-      expect(content.querySelector('.reader-chapters')).toBeNull();
+      expect(content.querySelector('app-embed-chapters')).toBeNull();
     });
 
     it('hands the player the chapters of the video it lists, for a copy queued earlier, even when its own details fail', async () => {
@@ -418,15 +433,15 @@ describe('ArticleBody', () => {
     it('lists the chapters under a video when they arrive after the body', async () => {
       connectBody(YOUTUBE);
       await Promise.resolve();
-      expect(content.querySelector('.reader-chapters')).toBeNull();
+      expect(content.querySelector('app-embed-chapters')).toBeNull();
 
       chapters.set(CHAPTERS);
       TestBed.tick();
       await Promise.resolve();
 
       const frame = content.querySelector('iframe')!;
-      expect(frame.closest('.reader-cinema')!.nextElementSibling!.classList).toContain(
-        'reader-chapters',
+      expect(frame.closest('.reader-cinema')!.nextElementSibling!.tagName).toBe(
+        'APP-EMBED-CHAPTERS',
       );
       openReaderPanels(content);
       expect(content.querySelectorAll('.reader-chapters__row')).toHaveLength(CHAPTERS.length);
@@ -573,7 +588,7 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       expect(askedUrls()).toEqual([VIDEO_URL, WIDGET_URL]);
-      const lists = content.querySelectorAll('.reader-chapters');
+      const lists = content.querySelectorAll('app-embed-chapters');
       expect(lists).toHaveLength(2);
       expect(listRows(lists[0])).toEqual(['0:00Opening', '1:01Q&A']);
       expect(listRows(lists[1])).toEqual(['0:00Side A', '2:00Side B']);
@@ -588,7 +603,7 @@ describe('ArticleBody', () => {
 
       const bar = content.querySelector('.reader-embed--audio')!.nextElementSibling!;
       expect(bar.tagName).toBe('APP-PLAYER-BAR');
-      expect(bar.nextElementSibling!.classList).toContain('reader-chapters');
+      expect(bar.nextElementSibling!.tagName).toBe('APP-EMBED-CHAPTERS');
     });
 
     describe("for the video the body's chapters belong to", () => {
@@ -612,7 +627,7 @@ describe('ArticleBody', () => {
       });
 
       it("lists only the body's chapters under it, even when its answer has chapters", () => {
-        const lists = content.querySelectorAll('.reader-chapters');
+        const lists = content.querySelectorAll('app-embed-chapters');
 
         expect(lists).toHaveLength(1);
         expect(listRows(lists[0])).toEqual(['0:00Intro', '4:16How it works']);
@@ -644,10 +659,10 @@ describe('ArticleBody', () => {
 
       const frames = Array.from(content.querySelectorAll('iframe'));
       expect(frames).toHaveLength(2);
-      expect(content.querySelectorAll('.reader-chapters')).toHaveLength(2);
+      expect(content.querySelectorAll('app-embed-chapters')).toHaveLength(2);
       for (const frame of frames) {
         const list = frame.closest('.reader-cinema')!.nextElementSibling!;
-        expect(list.classList).toContain('reader-chapters');
+        expect(list.tagName).toBe('APP-EMBED-CHAPTERS');
         expect(listRows(list)).toEqual(['0:00Intro', '4:16How it works']);
       }
     });
@@ -702,7 +717,7 @@ describe('ArticleBody', () => {
       expect(audio.tracks()[0]).toEqual(
         expect.objectContaining({ title: 'The post', durationInSeconds: 600, chapters: CHAPTERS }),
       );
-      const lists = content.querySelectorAll('.reader-chapters');
+      const lists = content.querySelectorAll('app-embed-chapters');
       expect(lists).toHaveLength(1);
       expect(listRows(lists[0])).toEqual(['0:00Intro', '4:16How it works']);
     });
@@ -779,7 +794,7 @@ describe('ArticleBody', () => {
       connectBody(SOUNDCLOUD);
       await Promise.resolve();
 
-      expect(content.querySelector('.reader-chapters')).toBeNull();
+      expect(content.querySelector('app-embed-chapters')).toBeNull();
       expect(describeTrack).toHaveBeenCalledWith(WIDGET_URL, unchaptered);
     });
 
@@ -797,7 +812,7 @@ describe('ArticleBody', () => {
       TestBed.tick();
       late.next(TRACK_DETAILS);
 
-      expect(swappedOut.parentElement!.querySelector('.reader-chapters')).toBeNull();
+      expect(swappedOut.parentElement!.querySelector('app-embed-chapters')).toBeNull();
       expect(describeTrack).not.toHaveBeenCalled();
     });
 
@@ -810,7 +825,7 @@ describe('ArticleBody', () => {
       injector.destroy();
       late.next(TRACK_DETAILS);
 
-      expect(content.querySelector('.reader-chapters')).toBeNull();
+      expect(content.querySelector('app-embed-chapters')).toBeNull();
     });
   });
 });

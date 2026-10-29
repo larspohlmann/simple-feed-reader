@@ -1,5 +1,5 @@
-import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { injectIslands } from '../../../../testing/article-islands-testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { articleHost } from '../../../../testing/article-host-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -17,7 +17,7 @@ describe('ArticleNarration', () => {
       imports: [provideTranslocoTesting()],
       providers: [provideAccountIdentity()],
     });
-    islands = new ArticleIslands(TestBed.inject(Injector));
+    islands = injectIslands();
     narration = new ArticleNarration(islands);
   });
 

@@ -1,8 +1,8 @@
-import { Injector, NgZone, inputBinding } from '@angular/core';
+import { NgZone, inputBinding } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { injectIslands } from '../../../../testing/article-islands-testing';
 import { articleHost } from '../../../../testing/article-host-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { ArticleIslands } from '../reader-view/article-islands';
 import * as gestures from './slide-gestures';
 import { SlideshowControlsComponent } from './slideshow-controls.component';
 
@@ -17,7 +17,7 @@ function mounted(html = SLIDES) {
   const host = articleHost(html);
   const figure = host.querySelector<HTMLElement>('.reader-slideshow')!;
   const slides = Array.from(figure.querySelectorAll<HTMLElement>('li'));
-  const islands = new ArticleIslands(TestBed.inject(Injector));
+  const islands = injectIslands();
   islands.mountAfter(slides[0].parentElement!, SlideshowControlsComponent, [
     inputBinding('figure', () => figure),
     inputBinding('slides', () => slides),
@@ -186,7 +186,7 @@ describe('SlideshowControlsComponent', () => {
     TestBed.tick();
     islands.releaseAll();
 
-    const again = new ArticleIslands(TestBed.inject(Injector));
+    const again = injectIslands();
     again.mountAfter(slides[0].parentElement!, SlideshowControlsComponent, [
       inputBinding('figure', () => figure),
       inputBinding('slides', () => slides),

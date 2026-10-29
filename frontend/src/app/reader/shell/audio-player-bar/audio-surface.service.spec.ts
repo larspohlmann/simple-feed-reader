@@ -2,6 +2,7 @@ import { ApplicationRef, WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideRouter } from '@angular/router';
+import { stubScrollIntoView } from '../../../../testing/article-islands-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { bigPlayerAudioSignals } from '../../../../testing/big-player-audio-signals';
 import { AudioPlayerService } from '../../audio-player.service';
@@ -9,12 +10,12 @@ import { LayoutService } from '../../layout.service';
 import { AudioSurface } from './audio-surface.service';
 
 describe('AudioSurface', () => {
+  stubScrollIntoView();
   let surface: AudioSurface;
   let container: HTMLElement;
   let layout: { isPhone: WritableSignal<boolean> };
 
   beforeEach(() => {
-    Element.prototype.scrollIntoView = jest.fn();
     layout = { isPhone: signal(false) };
     const player = bigPlayerAudioSignals();
     const track = {
@@ -37,10 +38,6 @@ describe('AudioSurface', () => {
     });
     surface = TestBed.inject(AudioSurface);
     container = TestBed.inject(OverlayContainer).getContainerElement();
-  });
-
-  afterEach(() => {
-    delete (Element.prototype as Partial<Element>).scrollIntoView;
   });
 
   const settle = () => TestBed.inject(ApplicationRef).tick();

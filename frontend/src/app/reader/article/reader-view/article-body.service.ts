@@ -46,8 +46,6 @@ export interface ArticleBodyParts {
   readonly decorated: (host: HTMLElement) => void;
 }
 
-/** The rendered article body's DOM wiring: its decorations, its media recovery, its media's
- *  turn in the article's one-at-a-time playback and the `t` cinema key. */
 @Injectable()
 export class ArticleBody {
   private readonly injector = inject(Injector);
@@ -65,18 +63,11 @@ export class ArticleBody {
   private readonly chapters = new ArticleChapters(this.audio, this.islands, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(this.audio, inject(ListenLauncher));
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
-  private destroyed = false;
 
   constructor() {
     const onKeydown = (event: KeyboardEvent): void => this.playerBars.toggleCinemaByKey(event);
-    document.addEventListener('keydown', onKeydown);
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-      this.chapters.forget();
-      this.islands.releaseAll();
-      this.embedDetails.release();
-      document.removeEventListener('keydown', onKeydown);
-    });
+    this.zone.runOutsideAngular(() => document.addEventListener('keydown', onKeydown));
+    inject(DestroyRef).onDestroy(() => document.removeEventListener('keydown', onKeydown));
   }
 
   connect(parts: ArticleBodyParts): void {
@@ -114,26 +105,30 @@ export class ArticleBody {
       (onCleanup) => {
         parts.html();
         const chapterList = chapters();
-        // Depend on the container too, not just the HTML: when extraction fails,
-        // the HTML recomputes to the same string and never notifies, so the
-        // container replacing the placeholder is the only render signal (#101).
+        // The container is the render signal when the HTML string repeats (#101).
         const content = parts.content()?.nativeElement;
         if (!content) return;
+        let cancelled = false;
         onCleanup(() => {
-          releaseHlsStreams(content);
-          this.media.forgetAll();
-          this.chapters.forget();
-          this.islands.releaseAll();
-          this.embedDetails.release();
+          cancelled = true;
+          this.releaseRender(content);
         });
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
-          if (!host || this.destroyed) return;
+          if (!host || cancelled) return;
           this.render(parts, host, chapterList);
         });
       },
       { injector: this.injector },
     );
+  }
+
+  private releaseRender(content: HTMLElement): void {
+    releaseHlsStreams(content);
+    this.media.forgetAll();
+    this.chapters.forget();
+    this.islands.releaseAll();
+    this.embedDetails.release();
   }
 
   private render(parts: ArticleBodyParts, host: HTMLElement, chapterList: ChapterDto[]): void {
@@ -147,12 +142,14 @@ export class ArticleBody {
       detailsOf: (media) => this.embedDetails.detailsOf(media.url),
       onListened: (listened) => this.chapters.followTrack(listened),
     });
-    this.zone.runOutsideAngular(() => {
+    this.zone.run(() => {
       this.playerBars.mount(host, listen);
       this.unplayableVideos.mount(host, parts.pageUrl());
       this.narration.mount(host);
       this.slideshows.mount(host);
       this.attachBodyChapters(host, chapterList, track);
+    });
+    this.zone.runOutsideAngular(() => {
       this.loadEmbedDetails(chapterFrames(host));
       this.media.follow(host);
     });

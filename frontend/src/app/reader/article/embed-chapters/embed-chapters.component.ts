@@ -14,14 +14,12 @@ import { ChapterDto } from '../../models';
 import { AudioChaptersComponent } from '../../shell/audio-player-bar/audio-chapters/audio-chapters.component';
 import { ReaderPanelComponent } from '../reader-panel/reader-panel.component';
 
-/** The chapter list under an embedded video or SoundCloud track, mounted into the body (#1808, #1886). */
 @Component({
   selector: 'app-embed-chapters',
   imports: [TranslocoPipe, ReaderPanelComponent, AudioChaptersComponent],
   templateUrl: './embed-chapters.component.html',
   styleUrl: './embed-chapters.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'reader-chapters' },
 })
 export class EmbedChaptersComponent {
   readonly chapters = input.required<readonly ChapterDto[]>();

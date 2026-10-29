@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  Injector,
   NgZone,
   inject,
   input,
@@ -10,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { injectIslands } from '../../../../testing/article-islands-testing';
 import { ArticleIslands } from './article-islands';
 
 let destroyed = 0;
@@ -45,7 +45,7 @@ describe('ArticleIslands', () => {
   });
 
   function islands(): ArticleIslands {
-    return new ArticleIslands(TestBed.inject(Injector));
+    return injectIslands();
   }
 
   it('mounts the component right after its anchor, rendered and marked as an island', () => {
@@ -66,6 +66,18 @@ describe('ArticleIslands', () => {
 
     expect(host.children[0].tagName).toBe('APP-ISLAND-PROBE');
     expect(host.children[1]).toBe(anchor);
+  });
+
+  it('mounts a component as the last child of its container, after what the container holds', () => {
+    const { host } = bodyWithAnchor();
+    const registry = islands();
+
+    registry.mountAtEnd(host, IslandProbeComponent, [inputBinding('label', () => 'first')]);
+    registry.mountAtEnd(host, IslandProbeComponent, [inputBinding('label', () => 'second')]);
+
+    expect(host.children[2].textContent).toBe('first');
+    expect(host.children[3].textContent).toBe('second');
+    expect(host.children[3].classList).toContain('reader-island');
   });
 
   it('keeps two islands mounted after one anchor in mount order', () => {
