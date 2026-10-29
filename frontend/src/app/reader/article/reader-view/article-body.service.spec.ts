@@ -1,4 +1,5 @@
 import {
+  ApplicationRef,
   ElementRef,
   EnvironmentInjector,
   NgZone,
@@ -173,19 +174,25 @@ describe('ArticleBody', () => {
   });
 
   it('destroys the list under a video when the HTML changes, leaving none behind', async () => {
+    const appRef = TestBed.inject(ApplicationRef);
+    const baseline = appRef.viewCount;
     chapters.set(CHAPTERS);
     connectBody(YOUTUBE);
     document.body.append(content);
     await Promise.resolve();
-    expect(content.querySelectorAll('.reader-island')).toHaveLength(1);
+    expect(content.querySelectorAll('app-embed-chapters.reader-island')).toHaveLength(1);
+    expect(content.querySelectorAll('app-player-bar.reader-island')).toHaveLength(1);
+    expect(appRef.viewCount).toBe(baseline + 2);
 
     html.set('<p>Reader.</p>');
+    content.innerHTML = '<p>Reader.</p>';
     chapters.set([]);
     TestBed.tick();
     await Promise.resolve();
 
+    expect(appRef.viewCount).toBe(baseline);
     expect(content.querySelectorAll('.reader-island')).toHaveLength(0);
-    expect(document.querySelectorAll('app-embed-chapters')).toHaveLength(0);
+    expect(document.querySelectorAll('app-embed-chapters, app-player-bar')).toHaveLength(0);
     content.remove();
   });
 
@@ -462,6 +469,29 @@ describe('ArticleBody', () => {
       expect(queueToggle().getAttribute('aria-pressed')).toBe('true');
     });
 
+    it('follows a playlist change made outside the body', async () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      const track: AudioTrack = {
+        url: VIDEO_URL,
+        title: 'V',
+        faviconUrl: null,
+        imageUrl: null,
+        durationInSeconds: null,
+      };
+      entry.set(anEntry());
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+      TestBed.tick();
+
+      audio.enqueue(track);
+      TestBed.tick();
+      expect(queueToggle().getAttribute('aria-pressed')).toBe('true');
+
+      audio.dequeue(VIDEO_URL);
+      TestBed.tick();
+      expect(queueToggle().getAttribute('aria-pressed')).toBe('false');
+    });
+
     it('stops following the playlist once destroyed', async () => {
       const audio = TestBed.inject(AudioPlayerService);
       entry.set(anEntry());
@@ -639,7 +669,7 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       content
-        .querySelectorAll('.reader-listen')[1]
+        .querySelectorAll('app-player-bar')[1]
         .querySelector<HTMLButtonElement>('.reader-listen__button')!
         .click();
 

@@ -1,0 +1,57 @@
+@use '../../../theme/breakpoints' as bp;
+@use '../../../theme/glass-rim';
+
+:host {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-1);
+}
+
+.reader-listen__button,
+.reader-cinema__toggle {
+  --rim-fill: transparent;
+
+  gap: var(--space-1);
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: var(--rim-fill);
+
+  @include glass-rim.ring(var(--border), control);
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+}
+
+.reader-listen__button {
+  display: inline-flex;
+}
+
+.reader-listen__button--queued {
+  --rim-fill: var(--accent-soft);
+}
+
+.reader-cinema__toggle {
+  display: none;
+  margin-inline-start: auto;
+}
+
+.reader-cinema__toggle kbd {
+  font-family: inherit;
+  color: var(--text-muted);
+}
+
+@container reader-pane (width > #{bp.$container-reader-cinema}) {
+  .reader-cinema__toggle {
+    display: inline-flex;
+  }
+}

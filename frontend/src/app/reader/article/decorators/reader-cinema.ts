@@ -1,62 +1,17 @@
 import { isTextEntryTarget } from '../../../shared/text-entry-target';
-import { materialIcon } from './material-icon';
-
-export interface CinemaLabels {
-  enter: string;
-  exit: string;
-}
 
 const LANDSCAPE_PLAYER = '.reader-embed--landscape:not(.reader-embed--audio), video';
-const BOX = 'reader-cinema';
-const WIDENED = 'reader-cinema--on';
-const PLAYER_BAR = 'reader-player-bar';
+export const CINEMA_BOX_CLASS = 'reader-cinema';
 
-/** The bar under a player that the cinema toggle and the listen controls share. */
-export function playerBar(): HTMLElement {
-  const bar = document.createElement('div');
-  bar.className = PLAYER_BAR;
-  return bar;
-}
-
-/** Puts a Cinema toggle beneath every landscape player, which widens it past the reading measure (#1479). Idempotent. */
-export function addCinemaToggles(host: HTMLElement, labels: CinemaLabels): void {
+/** Wraps every landscape player in a cinema box its player bar can widen past the reading measure (#1479). Idempotent. */
+export function wrapCinemaBoxes(host: HTMLElement): void {
   for (const player of Array.from(host.querySelectorAll<HTMLElement>(LANDSCAPE_PLAYER))) {
-    if (player.parentElement?.classList.contains(BOX)) continue;
+    if (player.parentElement?.classList.contains(CINEMA_BOX_CLASS)) continue;
     const box = document.createElement('div');
-    box.className = BOX;
+    box.className = CINEMA_BOX_CLASS;
     player.replaceWith(box);
-    box.append(player, toggleBar(box, labels));
+    box.append(player);
   }
-}
-
-function toggleBar(box: HTMLElement, labels: CinemaLabels): HTMLElement {
-  const icon = materialIcon('width_wide');
-  const label = document.createElement('span');
-  const key = document.createElement('kbd');
-  key.setAttribute('aria-hidden', 'true');
-  key.textContent = '(t)';
-
-  const toggle = document.createElement('button');
-  toggle.type = 'button';
-  toggle.className = 'reader-cinema__toggle';
-  toggle.setAttribute('aria-keyshortcuts', 't');
-  toggle.append(icon, label, key);
-
-  const render = (): void => {
-    const widened = box.classList.contains(WIDENED);
-    icon.textContent = widened ? 'width_normal' : 'width_wide';
-    label.textContent = widened ? labels.exit : labels.enter;
-  };
-  toggle.addEventListener('click', () => {
-    box.classList.toggle(WIDENED);
-    render();
-    box.scrollIntoView({ block: 'nearest' });
-  });
-  render();
-
-  const bar = playerBar();
-  bar.append(toggle);
-  return bar;
 }
 
 /** `t` widens or narrows the video in view, else the first one, like YouTube's theatre key. */

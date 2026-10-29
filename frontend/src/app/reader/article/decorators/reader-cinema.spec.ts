@@ -1,30 +1,27 @@
 import { articleHost } from '../../../../testing/article-host-testing';
-import { addCinemaToggles, toggleCinemaByKey, type CinemaLabels } from './reader-cinema';
-
-const labels: CinemaLabels = { enter: 'Cinema mode', exit: 'Exit cinema mode' };
+import { toggleCinemaByKey, wrapCinemaBoxes } from './reader-cinema';
 
 const LANDSCAPE =
   '<div class="reader-embed reader-embed--landscape"><iframe src="https://www.youtube-nocookie.com/embed/x"></iframe></div>';
+
+const BOXED = `<div class="reader-cinema">${LANDSCAPE}<button class="reader-cinema__toggle"></button></div>`;
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = jest.fn();
 });
 
-describe('addCinemaToggles', () => {
-  it('wraps a landscape embed with a cinema toggle beneath it', () => {
+describe('wrapCinemaBoxes', () => {
+  it('wraps a landscape embed in a box holding only the player', () => {
     const element = articleHost(LANDSCAPE);
-    addCinemaToggles(element, labels);
+    wrapCinemaBoxes(element);
     const box = element.querySelector('.reader-cinema')!;
+    expect(box.children).toHaveLength(1);
     expect(box.firstElementChild!.classList.contains('reader-embed')).toBe(true);
-    const toggle = box.querySelector('.reader-player-bar > button.reader-cinema__toggle')!;
-    expect(toggle.getAttribute('type')).toBe('button');
-    expect(toggle.getAttribute('aria-keyshortcuts')).toBe('t');
-    expect(toggle.textContent).toBe('width_wideCinema mode(t)');
   });
 
   it('wraps a native video', () => {
     const element = articleHost('<p>Intro</p><video src="https://cdn/clip.mp4"></video>');
-    addCinemaToggles(element, labels);
+    wrapCinemaBoxes(element);
     expect(element.querySelector('.reader-cinema > video')).not.toBeNull();
   });
 
@@ -35,32 +32,15 @@ describe('addCinemaToggles', () => {
         '<div class="reader-embed reader-embed--landscape reader-embed--audio"><iframe></iframe></div>' +
         '<audio src="https://cdn/a.mp3"></audio>',
     );
-    addCinemaToggles(element, labels);
+    wrapCinemaBoxes(element);
     expect(element.querySelector('.reader-cinema')).toBeNull();
   });
 
   it('is idempotent', () => {
     const element = articleHost(LANDSCAPE);
-    addCinemaToggles(element, labels);
-    addCinemaToggles(element, labels);
+    wrapCinemaBoxes(element);
+    wrapCinemaBoxes(element);
     expect(element.querySelectorAll('.reader-cinema')).toHaveLength(1);
-    expect(element.querySelectorAll('.reader-cinema__toggle')).toHaveLength(1);
-  });
-
-  it('widens on click, flips the label and icon, and narrows again', () => {
-    const element = articleHost(LANDSCAPE);
-    addCinemaToggles(element, labels);
-    const box = element.querySelector<HTMLElement>('.reader-cinema')!;
-    const toggle = element.querySelector<HTMLButtonElement>('.reader-cinema__toggle')!;
-
-    toggle.click();
-    expect(box.classList.contains('reader-cinema--on')).toBe(true);
-    expect(toggle.textContent).toBe('width_normalExit cinema mode(t)');
-    expect(box.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
-
-    toggle.click();
-    expect(box.classList.contains('reader-cinema--on')).toBe(false);
-    expect(toggle.textContent).toBe('width_wideCinema mode(t)');
   });
 });
 
@@ -71,8 +51,12 @@ function key(init: KeyboardEventInit = {}, target?: HTMLElement): KeyboardEvent 
 }
 
 function twoVideos(): HTMLElement {
-  const element = articleHost(LANDSCAPE + LANDSCAPE);
-  addCinemaToggles(element, labels);
+  const element = articleHost(BOXED + BOXED);
+  element.querySelectorAll<HTMLElement>('.reader-cinema').forEach((box) => {
+    box
+      .querySelector('.reader-cinema__toggle')!
+      .addEventListener('click', () => box.classList.toggle('reader-cinema--on'));
+  });
   return element;
 }
 

@@ -1,4 +1,5 @@
 import type { EmbedMedia } from '../app/reader/audio/embed-media';
+import type { ListenActions } from '../app/reader/article/player-bar/embed-listen';
 
 export const VIDEO_ID = 'dQw4w9WgXcQ';
 export const WATCH_URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
@@ -8,3 +9,7 @@ export const WIDGET_URL =
 
 export const VIDEO_MEDIA: EmbedMedia = { kind: 'youtube', url: WATCH_URL, posterUrl: POSTER_URL };
 export const SOUND_MEDIA: EmbedMedia = { kind: 'soundcloud', url: WIDGET_URL, posterUrl: null };
+
+export function fakeListenActions(): ListenActions {
+  return { listen: jest.fn(), toggleQueued: jest.fn() };
+}

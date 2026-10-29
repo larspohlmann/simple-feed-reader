@@ -1,0 +1,35 @@
+@if (listen(); as offer) {
+  <button
+    type="button"
+    class="reader-listen__button"
+    [title]="'reader.audioPlayer.listenEmbed' | transloco"
+    (click)="offer.listen()"
+  >
+    <app-icon name="play_circle" size="xs" />
+    <span>{{ 'reader.audioPlayer.listen' | transloco }}</span>
+  </button>
+  <button
+    type="button"
+    class="reader-listen__button"
+    [class.reader-listen__button--queued]="queued()"
+    [attr.aria-pressed]="queued()"
+    (click)="offer.toggleQueued()"
+  >
+    <app-icon [name]="queued() ? 'playlist_add_check' : 'playlist_add'" size="xs" />
+    <span>{{
+      (queued() ? 'reader.audioPlayer.inPlaylist' : 'reader.audioPlayer.addToPlaylist') | transloco
+    }}</span>
+  </button>
+}
+@if (cinemaBox(); as box) {
+  <button
+    type="button"
+    class="reader-cinema__toggle"
+    aria-keyshortcuts="t"
+    (click)="toggleCinema(box)"
+  >
+    <app-icon [name]="widened() ? 'width_normal' : 'width_wide'" size="xs" />
+    <span>{{ (widened() ? 'reader.cinemaExit' : 'reader.cinema') | transloco }}</span>
+    <kbd aria-hidden="true">(t)</kbd>
+  </button>
+}

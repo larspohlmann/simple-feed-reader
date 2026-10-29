@@ -1810,13 +1810,14 @@ restored with the playlist; every surface reads the current one from
 
 ### Player bar under embeds (#1815)
 
-One `.reader-player-bar` sits under a landscape video or a SoundCloud box,
-shared by the decorators that fill it. A YouTube video or a SoundCloud track
-leads with **Listen** (`play_circle`), which sends the embed's sound to the
-audio player and pauses the visible embed, then the queue toggle
-(`aria-pressed`, "Add to playlist" / "In playlist"); a landscape video ends
-with the cinema toggle (`margin-inline-start: auto`). The bar shows at every
-width; only the cinema toggle hides below `bp.$container-reader-cinema`.
+`app-player-bar` (mounted by `ArticlePlayerBars`, #1888) sits inside a landscape
+video's `.reader-cinema` box and after a SoundCloud or other embed Listen can
+play. A YouTube video or a SoundCloud track leads with **Listen**
+(`play_circle`), which sends the embed's sound to the audio player and pauses
+the visible embed, then the queue toggle (`aria-pressed`, "Add to playlist" /
+"In playlist"); a landscape video ends with the cinema toggle
+(`margin-inline-start: auto`). The bar shows at every width; only the cinema
+toggle hides below `bp.$container-reader-cinema`.
 
 The sound plays in a provider frame inside `.hidden-playback`
 (`src/styles/_hidden-playback.scss`), the one sanctioned invisible iframe: fixed
@@ -2096,7 +2097,7 @@ FAQs (`reader-faq.ts`) build bare `<details>`, styled in
 `article-content.component.scss`. A summary that drops the native marker includes
 `bare-summary.marker-hidden` (`theme/_bare-summary.scss`), as `<app-disclosure>` does.
 
-**A component inside the article body is mounted, not decorated (#1886).** A decorator that only marks up or adjusts body markup stays a decorator; a widget with its own UI that also exists outside the body is mounted. A decorator finds the place; `ArticleIslands` (`reader-view/article-islands.ts`) mounts the component after it (`mountAfter(anchor, Component, [inputBinding(…)])`), inside the Angular zone, tagged `.reader-island`, and destroys it before the next render. The body's element rules end at `.reader-island` (the `$prose` barrier, `:where(:not(.reader-island *))`, in `article-content.component.scss`), so the bare-element rules never reach a mounted component. Inherited properties still flow in from the body's host (font size, colour), except line-height, which `.reader-island` resets to `--lh-normal`. Class-rooted body rules (`details.reader-faq > …`, `.reader-slideshow--ready ol`, `.reader-card > :first-child`) are not barred either, so a component mounted inside such a wrapper checks them. First user: `app-embed-chapters`.
+**A component inside the article body is mounted, not decorated (#1886).** A decorator that only marks up or adjusts body markup stays a decorator; a widget with its own UI that also exists outside the body is mounted. A decorator finds the place; `ArticleIslands` (`reader-view/article-islands.ts`) mounts the component after it (`mountAfter(anchor, Component, [inputBinding(…)])`), inside the Angular zone, tagged `.reader-island`, and destroys it before the next render. The body's element rules end at `.reader-island` (the `$prose` barrier, `:where(:not(.reader-island *))`, in `article-content.component.scss`), so the bare-element rules never reach a mounted component. Inherited properties still flow in from the body's host (font size, colour), except line-height, which `.reader-island` resets to `--lh-normal`. Class-rooted body rules (`details.reader-faq > …`, `.reader-slideshow--ready ol`, `.reader-card > :first-child`) are not barred either, so a component mounted inside such a wrapper checks them. Users: `app-embed-chapters` and `app-player-bar` (the Listen, queue and Cinema bar under a body player, #1888).
 
 ---
 
