@@ -1,5 +1,6 @@
+import { CINEMA_BOX_CLASS } from './player-box';
+
 const LANDSCAPE_PLAYER = '.reader-embed--landscape:not(.reader-embed--audio), video';
-export const CINEMA_BOX_CLASS = 'reader-cinema';
 
 /** Wraps every landscape player in a cinema box its player bar can widen past the reading measure (#1479). Idempotent. */
 export function wrapCinemaBoxes(host: HTMLElement): void {
