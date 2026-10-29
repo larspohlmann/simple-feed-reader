@@ -14,7 +14,6 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { decorateArticle } from '../decorators/decorate-article';
 import { toggleCinemaByKey } from '../decorators/reader-cinema';
-import { ChapterList } from '../decorators/reader-chapters';
 import { releaseHlsStreams } from '../../media/hls-streams';
 import { UnplayableVideoService } from '../../media/unplayable-video.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
@@ -25,6 +24,7 @@ import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { ChapterDto, EntryDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
+import { ArticleIslands } from './article-islands';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { ArticleEmbedAudio } from './article-embed-audio';
 import { ArticleEmbedDetails } from './article-embed-details';
@@ -55,7 +55,8 @@ export class ArticleBody {
   private readonly zone = inject(NgZone);
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private readonly audio = inject(AudioPlayerService);
-  private readonly chapters = new ArticleChapters(this.audio, this.injector);
+  private readonly islands = new ArticleIslands(this.injector);
+  private readonly chapters = new ArticleChapters(this.audio, this.islands, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(
     this.audio,
     inject(ListenLauncher),
@@ -71,6 +72,7 @@ export class ArticleBody {
     document.addEventListener('keydown', onKeydown);
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
+      this.islands.releaseAll();
       this.chapters.release();
       this.embedAudio.release();
       this.embedDetails.release();
@@ -121,6 +123,7 @@ export class ArticleBody {
         onCleanup(() => {
           releaseHlsStreams(content);
           this.media.forgetAll();
+          this.islands.releaseAll();
           this.chapters.release();
           this.embedAudio.release();
           this.embedDetails.release();
@@ -146,30 +149,33 @@ export class ArticleBody {
         onListened: (listened) => this.chapters.followTrack(listened),
       }),
     });
-    const list = { chapters: chapterList, heading: this.i18n.translate('reader.chapters') };
     this.zone.runOutsideAngular(() => {
-      this.attachBodyChapters(host, list, track);
+      this.attachBodyChapters(host, chapterList, track);
       this.embedAudio.follow(controls);
-      this.loadEmbedDetails(chapterFrames(host), list.heading);
+      this.loadEmbedDetails(chapterFrames(host));
       this.media.follow(host);
     });
     parts.decorated(host);
   }
 
   /** Before any fetched list, so the body's chapters are the one list under their frame. */
-  private attachBodyChapters(host: HTMLElement, list: ChapterList, track: AudioTrack | null): void {
+  private attachBodyChapters(
+    host: HTMLElement,
+    chapters: ChapterDto[],
+    track: AudioTrack | null,
+  ): void {
     if (track) return;
     // Only decoration gives the player frame its API flag, so the embed is resolved after it.
-    const chaptered = chapteredEmbedOf(host, list.chapters);
+    const chaptered = chapteredEmbedOf(host, chapters);
     if (!chaptered) return;
     // A video queued from a list row gains its chapters once its article opens (#1810).
-    this.embedDetails.seed(chaptered.media.url, list.chapters);
-    this.chapters.attachToFrame(chaptered.frame, list);
+    this.embedDetails.seed(chaptered.media.url, chapters);
+    this.chapters.attachToFrame(chaptered.frame, chapters);
   }
 
-  private loadEmbedDetails(frames: HTMLIFrameElement[], heading: string): void {
+  private loadEmbedDetails(frames: HTMLIFrameElement[]): void {
     this.embedDetails.load(frames, (frame, details) =>
-      this.chapters.attachToFrame(frame, { chapters: details.chapters, heading }),
+      this.chapters.attachToFrame(frame, details.chapters),
     );
   }
 }

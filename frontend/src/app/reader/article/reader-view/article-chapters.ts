@@ -1,4 +1,4 @@
-import { Injector } from '@angular/core';
+import { Injector, WritableSignal, inputBinding, signal } from '@angular/core';
 import { AudioPlayerService, AudioTrack } from '../../audio-player.service';
 import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { AudioChapterPlayer } from '../../chapters/audio-chapter-player';
@@ -6,7 +6,9 @@ import { ChapterPlayer } from '../../chapters/chapter-player';
 import { SoundCloudChapterPlayer } from '../../chapters/soundcloud-chapter-player';
 import { YouTubeChapterPlayer } from '../../chapters/youtube-chapter-player';
 import { SOUNDCLOUD_PLAYER_URL } from '../../media/soundcloud-widget-protocol';
-import { ChapterList, addChapterList } from '../decorators/reader-chapters';
+import { ChapterDto } from '../../models';
+import { EmbedChaptersComponent } from '../embed-chapters/embed-chapters.component';
+import { ArticleIslands } from './article-islands';
 
 const API_PLAYER = 'iframe[src*="enablejsapi=1"]';
 const CHAPTER_FRAMES = `${API_PLAYER}, iframe[src^="${SOUNDCLOUD_PLAYER_URL}"]`;
@@ -21,58 +23,46 @@ export function chapterFrames(host: HTMLElement): HTMLIFrameElement[] {
   return Array.from(host.querySelectorAll<HTMLIFrameElement>(CHAPTER_FRAMES));
 }
 
-interface ListToShow {
-  readonly after: Element;
-  readonly list: ChapterList;
-  readonly player: ChapterPlayer;
-  readonly mediaUrl: string;
+interface ShownList {
   readonly frame: HTMLIFrameElement;
+  readonly mediaUrl: string;
+  readonly player: WritableSignal<ChapterPlayer>;
 }
 
-interface ShownList extends ListToShow {
-  readonly element: HTMLElement | null;
-}
-
-/** A rendered body's chapter lists: one under each embed (#1808, #1824). */
+/** A rendered body's chapter lists: one under each embed (#1808, #1824, #1886). */
 export class ArticleChapters {
   private shown: ShownList[] = [];
 
   constructor(
     private readonly audio: AudioPlayerService,
+    private readonly islands: ArticleIslands,
     private readonly injector: Injector,
   ) {}
 
   /** The first list attached to a frame stays its only one. */
-  attachToFrame(frame: HTMLIFrameElement, list: ChapterList): void {
+  attachToFrame(frame: HTMLIFrameElement, chapters: readonly ChapterDto[]): void {
     const media = embedMediaOfFrame(frame);
     const after = frame.closest('.reader-cinema') ?? frame.closest('.reader-embed') ?? frame;
-    if (!media || !after.parentElement || list.chapters.length === 0 || this.hasList(frame)) return;
-    const player = this.embedPlayer(frame, media);
-    this.show({ after, list, player, mediaUrl: media.url, frame });
+    if (!media || !after.parentElement || chapters.length === 0 || this.hasList(frame)) return;
+    const player = signal(this.embedPlayer(frame, media));
+    this.islands.mountAfter(after, EmbedChaptersComponent, [
+      inputBinding('chapters', () => chapters),
+      inputBinding('player', player),
+    ]);
+    this.shown.push({ frame, mediaUrl: media.url, player });
   }
 
   /** Once an embed is the audio player's track, its list seeks the player, not the paused frame (#1815). */
   followTrack(track: AudioTrack): void {
-    const following = this.shown.filter((each) => each.mediaUrl === track.url);
-    this.drop(following);
-    for (const shown of following) this.show({ ...shown, player: this.audioPlayer(track) });
+    for (const shown of this.shown.filter((each) => each.mediaUrl === track.url)) {
+      shown.player().release();
+      shown.player.set(this.audioPlayer(track));
+    }
   }
 
   release(): void {
-    this.drop(this.shown);
-  }
-
-  private drop(lists: ShownList[]): void {
-    for (const shown of lists) {
-      shown.player.release();
-      shown.element?.remove();
-    }
-    this.shown = this.shown.filter((shown) => !lists.includes(shown));
-  }
-
-  private show(toShow: ListToShow): void {
-    const { after, list, player } = toShow;
-    this.shown.push({ ...toShow, element: addChapterList(after, list, player) });
+    for (const shown of this.shown) shown.player().release();
+    this.shown = [];
   }
 
   private hasList(frame: HTMLIFrameElement): boolean {

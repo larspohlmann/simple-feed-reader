@@ -63,6 +63,15 @@ const EPISODE: AudioTrack = {
   durationInSeconds: 600,
 };
 
+function openLists(host: HTMLElement): void {
+  for (const toggle of Array.from(
+    host.querySelectorAll<HTMLButtonElement>('.reader-panel__toggle'),
+  )) {
+    if (toggle.getAttribute('aria-expanded') === 'false') toggle.click();
+  }
+  TestBed.tick();
+}
+
 describe('ArticleBody', () => {
   let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
   let injector: EnvironmentInjector;
@@ -169,6 +178,23 @@ describe('ArticleBody', () => {
     await Promise.resolve();
 
     expect(decorated).toHaveBeenCalledTimes(2);
+  });
+
+  it('destroys the list under a video when the HTML changes, leaving none behind', async () => {
+    chapters.set(CHAPTERS);
+    connectBody(YOUTUBE);
+    document.body.append(content);
+    await Promise.resolve();
+    expect(content.querySelectorAll('.reader-island')).toHaveLength(1);
+
+    html.set('<p>Reader.</p>');
+    chapters.set([]);
+    TestBed.tick();
+    await Promise.resolve();
+
+    expect(content.querySelectorAll('.reader-island')).toHaveLength(0);
+    expect(document.querySelectorAll('app-embed-chapters')).toHaveLength(0);
+    content.remove();
   });
 
   it('hands a failed body image to the proxy', () => {
@@ -366,6 +392,7 @@ describe('ArticleBody', () => {
       expect(frame.closest('.reader-cinema')!.nextElementSibling!.classList).toContain(
         'reader-chapters',
       );
+      openLists(content);
       expect(content.querySelectorAll('.reader-chapters__row')).toHaveLength(CHAPTERS.length);
     });
 
@@ -415,7 +442,9 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       listenButton().click();
+      openLists(content);
       content.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+      TestBed.tick();
 
       const track = expect.objectContaining({
         url: VIDEO_URL,
@@ -467,10 +496,14 @@ describe('ArticleBody', () => {
       embedDetails.mockImplementation((media) => byUrl[media.url] ?? of(NO_DETAILS));
     };
     const askedUrls = (): string[] => embedDetails.mock.calls.map(([media]) => media.url);
-    const listRows = (list: Element): string[] =>
-      Array.from(list.querySelectorAll('.reader-chapters__row')).map(
-        (row) => row.textContent ?? '',
+    const listRows = (list: Element): string[] => {
+      openLists(list as HTMLElement);
+      return Array.from(list.querySelectorAll('.reader-chapters__row')).map((row) =>
+        ['.reader-chapters__time', '.reader-chapters__title']
+          .map((part) => row.querySelector(part)?.textContent ?? '')
+          .join(''),
       );
+    };
 
     it('asks for every embed and lists the chapters under each', async () => {
       answers({

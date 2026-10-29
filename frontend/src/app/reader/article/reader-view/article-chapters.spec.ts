@@ -6,9 +6,11 @@ import {
   messagesOf,
   recordPosts,
 } from '../../../../testing/frame-playback-testing';
+import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AudioPlayerService } from '../../audio-player.service';
 import { SOUNDCLOUD_WIDGET_ORIGIN } from '../../media/soundcloud-widget-protocol';
 import { ArticleChapters, chapterFrames } from './article-chapters';
+import { ArticleIslands } from './article-islands';
 
 const CHAPTERS = [
   { startSeconds: 0, title: 'A' },
@@ -29,19 +31,36 @@ const NEXT_CHAPTERS = [
 ];
 
 function titles(host: HTMLElement): string[] {
+  openLists(host);
   return Array.from(host.querySelectorAll('.reader-chapters__title')).map(
     (title) => title.textContent ?? '',
   );
 }
 
+function openLists(host: HTMLElement): void {
+  for (const toggle of Array.from(
+    host.querySelectorAll<HTMLButtonElement>('.reader-panel__toggle'),
+  )) {
+    if (toggle.getAttribute('aria-expanded') === 'false') toggle.click();
+  }
+  TestBed.tick();
+}
+
 function chapters(): ArticleChapters {
-  return new ArticleChapters(TestBed.inject(AudioPlayerService), TestBed.inject(Injector));
+  return new ArticleChapters(
+    TestBed.inject(AudioPlayerService),
+    new ArticleIslands(TestBed.inject(Injector)),
+    TestBed.inject(Injector),
+  );
 }
 
 describe('ArticleChapters', () => {
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideAccountIdentity()] });
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [provideAccountIdentity()],
+    });
   });
 
   it('puts a video list after the cinema box of the API player', () => {
@@ -49,10 +68,7 @@ describe('ArticleChapters', () => {
     host.innerHTML =
       '<div class="reader-cinema"><div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x"></iframe></div></div><p>Notes</p>';
 
-    chapters().attachToFrame(host.querySelector('iframe')!, {
-      chapters: CHAPTERS,
-      heading: 'Chapters',
-    });
+    chapters().attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
     expect(host.children[1].classList.contains('reader-chapters')).toBe(true);
   });
@@ -61,27 +77,29 @@ describe('ArticleChapters', () => {
     const host = document.createElement('div');
     host.innerHTML = '<iframe src="https://player.vimeo.com/video/1"></iframe><p>Notes</p>';
 
-    chapters().attachToFrame(host.querySelector('iframe')!, {
-      chapters: CHAPTERS,
-      heading: 'Chapters',
-    });
+    chapters().attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
     expect(host.querySelector('.reader-chapters')).toBeNull();
   });
 
-  it('takes its list away on release', () => {
+  it('stops following its players on release', () => {
     const host = document.createElement('div');
     host.innerHTML =
       '<div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/JsBZOcqZerk?enablejsapi=1&origin=x"></iframe></div><p>Notes</p>';
+    const frame = host.querySelector('iframe')!;
     const articleChapters = chapters();
-    articleChapters.attachToFrame(host.querySelector('iframe')!, {
-      chapters: CHAPTERS,
-      heading: 'Chapters',
-    });
+    articleChapters.attachToFrame(frame, CHAPTERS);
+    openLists(host);
 
     articleChapters.release();
+    deliverMessage(
+      frame,
+      JSON.stringify({ event: 'infoDelivery', info: { currentTime: 70 } }),
+      'https://www.youtube-nocookie.com',
+    );
+    TestBed.tick();
 
-    expect(host.querySelector('.reader-chapters')).toBeNull();
+    expect(host.querySelector('.reader-chapters__row[aria-current="true"]')).toBeNull();
   });
 
   describe('followTrack', () => {
@@ -96,13 +114,12 @@ describe('ArticleChapters', () => {
       host.innerHTML = VIDEO_BODY;
       const posted = recordPosts(host.querySelector('iframe')!);
       const articleChapters = chapters();
-      articleChapters.attachToFrame(host.querySelector('iframe')!, {
-        chapters: CHAPTERS,
-        heading: 'Chapters',
-      });
+      articleChapters.attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
       articleChapters.followTrack(VIDEO_TRACK);
+      openLists(host);
       host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+      TestBed.tick();
 
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(1);
       expect(host.children[1].classList.contains('reader-chapters')).toBe(true);
@@ -115,16 +132,14 @@ describe('ArticleChapters', () => {
       const host = document.createElement('div');
       host.innerHTML = VIDEO_BODY;
       const articleChapters = chapters();
-      articleChapters.attachToFrame(host.querySelector('iframe')!, {
-        chapters: CHAPTERS,
-        heading: 'Chapters',
-      });
+      articleChapters.attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
       articleChapters.followTrack(VIDEO_TRACK);
       const audio = TestBed.inject(AudioPlayerService);
       audio.enqueue(VIDEO_TRACK);
       audio.seek(70);
       TestBed.tick();
+      openLists(host);
 
       const current = host.querySelector('.reader-chapters__row[aria-current="true"]');
       expect(current?.querySelector('.reader-chapters__title')?.textContent).toBe('B');
@@ -138,7 +153,7 @@ describe('ArticleChapters', () => {
       const frame = host.querySelector('iframe')!;
       const posted = recordPosts(frame);
       const articleChapters = chapters();
-      articleChapters.attachToFrame(frame, { chapters: CHAPTERS, heading: 'Chapters' });
+      articleChapters.attachToFrame(frame, CHAPTERS);
       deliverMessage(
         frame,
         JSON.stringify({ event: 'onReady' }),
@@ -146,7 +161,9 @@ describe('ArticleChapters', () => {
       );
 
       articleChapters.followTrack(NEXT_TRACK);
+      openLists(host);
       host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+      TestBed.tick();
 
       expect(playFrom).not.toHaveBeenCalled();
       expect(messagesOf(posted)).toContainEqual(
@@ -161,7 +178,7 @@ describe('ArticleChapters', () => {
       'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F123';
     const EMBEDS_BODY = `<div class="reader-embed"><iframe src="${VIDEO_SRC}"></iframe></div><p>Between</p><div class="reader-embed"><iframe src="${WIDGET_SRC}"></iframe></div><p>End</p>`;
     const WIDGET_TRACK = { ...TRACK, url: WIDGET_SRC };
-    const LIST = { chapters: CHAPTERS, heading: 'Chapters' };
+    const LIST = CHAPTERS;
 
     function embedsHost(): {
       host: HTMLElement;
@@ -179,7 +196,10 @@ describe('ArticleChapters', () => {
     }
 
     function tapSecondRow(frame: HTMLIFrameElement): void {
-      listAfter(frame)?.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+      const list = listAfter(frame) as HTMLElement;
+      openLists(list);
+      list.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
+      TestBed.tick();
     }
 
     it('finds every API video frame and SoundCloud widget in order', () => {
@@ -348,7 +368,7 @@ describe('ArticleChapters', () => {
       const articleChapters = chapters();
       articleChapters.attachToFrame(video, LIST);
 
-      articleChapters.attachToFrame(video, { chapters: NEXT_CHAPTERS, heading: 'Chapters' });
+      articleChapters.attachToFrame(video, NEXT_CHAPTERS);
 
       expect(host.querySelectorAll('.reader-chapters')).toHaveLength(1);
       expect(titles(host)).toEqual(['A', 'B']);
@@ -369,18 +389,6 @@ describe('ArticleChapters', () => {
       expect(playFrom).toHaveBeenCalledWith(expect.objectContaining({ url: WIDGET_SRC }), 60);
       expect(widgetPosts).toEqual([]);
       articleChapters.release();
-    });
-
-    it('takes every list away on release', () => {
-      const { host, video, widget } = embedsHost();
-      const articleChapters = chapters();
-      articleChapters.attachToFrame(video, LIST);
-      articleChapters.attachToFrame(widget, LIST);
-
-      articleChapters.release();
-
-      expect(host.querySelector('.reader-chapters')).toBeNull();
-      expect(host.innerHTML).toBe(EMBEDS_BODY.replace('&origin', '&amp;origin'));
     });
   });
 });
