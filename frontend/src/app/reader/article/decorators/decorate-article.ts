@@ -1,4 +1,3 @@
-import { TranslocoService } from '@jsverse/transloco';
 import { EmbedSourceOf, upgradeMediaEmbeds } from '../../media/media-embeds';
 import { markLeadParagraph } from './lead-paragraph';
 import { markInsetCards } from './reader-cards';
@@ -7,7 +6,6 @@ import { highlightCodeBlocks } from './code-highlight';
 import { armHlsStreams } from '../../media/hls-streams';
 import { playVideosInline } from './inline-videos';
 import { expandFaqDisclosures } from './reader-faq';
-import { hydrateSlideshows } from './reader-slideshow';
 import { removeEnclosurePlayers } from './enclosure-players';
 import { wrapCinemaBoxes } from './reader-cinema';
 
@@ -18,11 +16,7 @@ export interface ArticleDecorations {
 }
 
 /** Every decoration the rendered article body gets, in order. */
-export function decorateArticle(
-  host: HTMLElement,
-  i18n: TranslocoService,
-  decorations: ArticleDecorations,
-): void {
+export function decorateArticle(host: HTMLElement, decorations: ArticleDecorations): void {
   openExternalLinksInNewTab(host);
   removeEnclosurePlayers(host, decorations.enclosureUrl);
   markLeadParagraph(host);
@@ -32,11 +26,6 @@ export function decorateArticle(
   upgradeMediaEmbeds(host, decorations.embedSource);
   wrapCinemaBoxes(host);
   expandFaqDisclosures(host);
-  hydrateSlideshows(host, {
-    previous: i18n.translate('reader.slideshowPrevious'),
-    next: i18n.translate('reader.slideshowNext'),
-    position: (current, total) => i18n.translate('reader.slideshowPosition', { current, total }),
-  });
   playVideosInline(host);
   armHlsStreams(host);
 }

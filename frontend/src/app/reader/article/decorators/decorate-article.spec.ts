@@ -1,5 +1,4 @@
 import { TestBed } from '@angular/core/testing';
-import { TranslocoService } from '@jsverse/transloco';
 import { articleHost, attachedArticleHost } from '../../../../testing/article-host-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -8,9 +7,7 @@ import { decorateArticle } from './decorate-article';
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
 const decorated = (html: string): HTMLElement =>
-  articleHost(html, (host) =>
-    decorateArticle(host, TestBed.inject(TranslocoService), { enclosureUrl: null }),
-  );
+  articleHost(html, (host) => decorateArticle(host, { enclosureUrl: null }));
 
 const YOUTUBE_LINK = '<a href="https://www.youtube-nocookie.com/embed/GhUuOxrCato">x</a>';
 
@@ -52,7 +49,7 @@ describe('decorateArticle', () => {
   it('streams a playlist video through hls.js once the cinema box has wrapped it', async () => {
     resetFakeHls();
     const host = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
-    decorateArticle(host, TestBed.inject(TranslocoService), { enclosureUrl: null });
+    decorateArticle(host, { enclosureUrl: null });
     const video = host.querySelector<HTMLVideoElement>('.reader-cinema video')!;
 
     await firstPlay(video);

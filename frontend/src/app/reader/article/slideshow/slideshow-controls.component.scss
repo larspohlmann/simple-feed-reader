@@ -1,0 +1,30 @@
+@use '../../../theme/glass-rim';
+
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.reader-slideshow__counter {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.reader-slideshow__prev,
+.reader-slideshow__next {
+  @include glass-rim.filled(var(--surface-2), var(--border), control);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: var(--fs-xl);
+  line-height: 1;
+  cursor: pointer;
+}
