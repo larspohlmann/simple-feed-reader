@@ -8,13 +8,11 @@ import {
   computed,
   effect,
   inject,
-  signal,
 } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { decorateArticle } from '../decorators/decorate-article';
-import { toggleCinemaByKey } from '../decorators/reader-cinema';
 import { releaseHlsStreams } from '../../media/hls-streams';
-import { UnplayableVideoService } from '../../media/unplayable-video.service';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { HandPlayedMedia } from '../../media/autoplay/hand-played-media';
 import { withScriptablePlayer } from '../../media/media-embeds';
@@ -23,12 +21,13 @@ import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { ChapterDto, EntryDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
-import { ArticleIslands } from './article-islands';
+import { ArticleIslands, isInIsland } from './article-islands';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { ArticleEmbedAudio } from './article-embed-audio';
 import { ArticleNarration } from './article-narration';
 import { ArticleSlideshows } from './article-slideshows';
 import { ArticlePlayerBars } from './article-player-bars';
+import { ArticleUnplayableVideos } from './article-unplayable-videos';
 import { ArticleEmbedDetails } from './article-embed-details';
 
 interface ChapteredEmbed {
@@ -52,23 +51,24 @@ export interface ArticleBodyParts {
 @Injectable()
 export class ArticleBody {
   private readonly injector = inject(Injector);
-  private readonly unplayableVideos = inject(UnplayableVideoService);
   private readonly zone = inject(NgZone);
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private readonly audio = inject(AudioPlayerService);
   private readonly islands = new ArticleIslands(this.injector);
+  private readonly unplayableVideos = new ArticleUnplayableVideos(
+    this.islands,
+    inject(TranslocoService),
+  );
   private readonly playerBars = new ArticlePlayerBars(this.islands);
   private readonly narration = new ArticleNarration(this.islands);
   private readonly slideshows = new ArticleSlideshows(this.islands);
   private readonly chapters = new ArticleChapters(this.audio, this.islands, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(this.audio, inject(ListenLauncher));
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
-  private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
   private destroyed = false;
 
   constructor() {
-    const onKeydown = (event: KeyboardEvent): void =>
-      toggleCinemaByKey(event, this.content()?.nativeElement);
+    const onKeydown = (event: KeyboardEvent): void => this.playerBars.toggleCinemaByKey(event);
     document.addEventListener('keydown', onKeydown);
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
@@ -80,7 +80,6 @@ export class ArticleBody {
   }
 
   connect(parts: ArticleBodyParts): void {
-    this.content = parts.content;
     this.recoverFailedMedia(parts);
     this.decorateEachRender(parts);
   }
@@ -93,11 +92,12 @@ export class ArticleBody {
         const content = parts.content()?.nativeElement;
         if (!content) return;
         const recover = (event: Event) => {
+          if (event.target instanceof Element && isInIsland(event.target)) return;
           if (event.target instanceof HTMLImageElement) {
             void this.injector.get(ImageProxyService).recover(event.target);
             return;
           }
-          this.unplayableVideos.replace(event.target, parts.pageUrl());
+          this.unplayableVideos.fail(event.target, parts.pageUrl());
         };
         content.addEventListener('error', recover, true);
         onCleanup(() => content.removeEventListener('error', recover, true));
@@ -149,6 +149,7 @@ export class ArticleBody {
     });
     this.zone.runOutsideAngular(() => {
       this.playerBars.mount(host, listen);
+      this.unplayableVideos.mount(host, parts.pageUrl());
       this.narration.mount(host);
       this.slideshows.mount(host);
       this.attachBodyChapters(host, chapterList, track);

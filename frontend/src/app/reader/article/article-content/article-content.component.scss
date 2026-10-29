@@ -396,6 +396,10 @@ $prose: ':where(:not(.reader-island *))';
   margin: 0;
 }
 
+:host ::ng-deep video.reader-video--unplayable {
+  display: none;
+}
+
 @container reader-pane (width > #{bp.$container-reader-cinema}) {
   /* Cinema mode (#1479): the widened box fills the pane but stays short enough for
      the whole 16:9 frame and its toggle to fit the visible pane; never narrower than the column. */

@@ -14,6 +14,7 @@ const BODY = [
   '<audio class="reader-narration" controls src="data:audio/mpeg;base64,"></audio>',
   '<p>Opening paragraph of the article.</p>',
   `<figure class="reader-slideshow"><ol>${slide('red')}${slide('green')}${slide('blue')}</ol></figure>`,
+  '<video controls src="https://media.example.invalid/missing.mp4"></video>',
 ].join('');
 
 const entry = entryWire({
@@ -30,6 +31,9 @@ const entry = entryWire({
 
 async function openArticle(page: Page) {
   await stubOneArticle(page, entry, BODY);
+  await page.route('https://media.example.invalid/**', (route) =>
+    route.fulfill({ status: 404, body: '' }),
+  );
   await page.reload();
   await page.getByText(TITLE, { exact: false }).first().click();
   const pane = page.locator('app-reader-view');
@@ -101,5 +105,16 @@ test.describe('Islands mounted into the article body', () => {
       };
     });
     expect(sizes.toggle).toBeLessThan(sizes.paragraph);
+  });
+
+  test('replaces a video the browser cannot play with a card to the original page', async ({
+    page,
+  }) => {
+    const pane = await openArticle(page);
+    const card = pane.locator('app-link-card');
+
+    await expect(card).toContainText("This video can't play in your browser");
+    await expect(card.locator('a')).toHaveAttribute('href', 'https://example.invalid/1');
+    await expect(pane.locator('video.reader-video--unplayable')).toBeHidden();
   });
 });

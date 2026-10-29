@@ -21,12 +21,13 @@
     }}</span>
   </button>
 }
-@if (cinemaBox(); as box) {
+@if (cinemaBox()) {
   <button
+    #cinemaToggle
     type="button"
     class="reader-cinema__toggle"
     aria-keyshortcuts="t"
-    (click)="toggleCinema(box)"
+    (click)="toggleCinema()"
   >
     <app-icon [name]="widened() ? 'width_normal' : 'width_wide'" size="xs" />
     <span>{{ (widened() ? 'reader.cinemaExit' : 'reader.cinema') | transloco }}</span>

@@ -28,6 +28,33 @@ function mountBars(html: string, actions: ListenActions | undefined): HTMLElemen
   return host;
 }
 
+function barsOver(html: string, actions: ListenActions | undefined) {
+  const host = articleHost(html);
+  const islands = new ArticleIslands(TestBed.inject(Injector));
+  const bars = new ArticlePlayerBars(islands);
+  bars.mount(host, actions);
+  return { host, bars, islands };
+}
+
+function twoCinemaBars() {
+  return barsOver(CINEMA_BOX + CINEMA_BOX, undefined);
+}
+
+function key(init: KeyboardEventInit = {}, target?: HTMLElement): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', { key: 't', cancelable: true, ...init });
+  if (target) Object.defineProperty(event, 'target', { value: target });
+  return event;
+}
+
+const widened = (host: HTMLElement): boolean[] =>
+  Array.from(host.querySelectorAll('.reader-cinema'), (box) =>
+    box.classList.contains('reader-cinema--on'),
+  );
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = jest.fn();
+});
+
 describe('ArticlePlayerBars', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -98,5 +125,85 @@ describe('ArticlePlayerBars', () => {
     const host = mountBars(SHORT_BOX, fakeListenActions());
 
     expect(host.querySelector('app-player-bar')).toBeNull();
+  });
+
+  describe('toggleCinemaByKey', () => {
+    it('toggles the first video when none is in view', () => {
+      const { host, bars } = twoCinemaBars();
+      const event = key();
+
+      bars.toggleCinemaByKey(event);
+
+      expect(widened(host)).toEqual([true, false]);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('toggles the video in view', () => {
+      const { host, bars } = twoCinemaBars();
+      host.querySelectorAll<HTMLElement>('app-player-bar')[1].getBoundingClientRect = () =>
+        ({ top: 100, bottom: 400 }) as DOMRect;
+
+      bars.toggleCinemaByKey(key());
+
+      expect(widened(host)).toEqual([false, true]);
+    });
+
+    it.each([{ metaKey: true }, { ctrlKey: true }, { altKey: true }, { key: 'T' }, { key: 'x' }])(
+      'ignores %o',
+      (init) => {
+        const { host, bars } = twoCinemaBars();
+
+        bars.toggleCinemaByKey(key(init));
+
+        expect(widened(host)).toEqual([false, false]);
+      },
+    );
+
+    it.each(['input', 'select'])('ignores a key typed into a %s', (tagName) => {
+      const { host, bars } = twoCinemaBars();
+
+      bars.toggleCinemaByKey(key({}, document.createElement(tagName)));
+
+      expect(widened(host)).toEqual([false, false]);
+    });
+
+    it('does nothing where cinema is not offered', () => {
+      const { host, bars } = twoCinemaBars();
+      host.querySelectorAll<HTMLElement>('.reader-cinema__toggle').forEach((toggle) => {
+        toggle.style.display = 'none';
+      });
+      const event = key();
+
+      bars.toggleCinemaByKey(event);
+
+      expect(widened(host)).toEqual([false, false]);
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('does nothing with no bars mounted', () => {
+      const { bars } = barsOver('<p>Text</p>', undefined);
+      const event = key();
+
+      bars.toggleCinemaByKey(event);
+
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('does nothing once the islands are released', () => {
+      const { host, bars, islands } = twoCinemaBars();
+
+      islands.releaseAll();
+      bars.toggleCinemaByKey(key());
+
+      expect(widened(host)).toEqual([false, false]);
+    });
+
+    it('widens the cinema box next to a bar that offers no cinema', () => {
+      const { host, bars } = barsOver(SOUNDCLOUD_BOX + CINEMA_BOX, fakeListenActions());
+
+      bars.toggleCinemaByKey(key());
+
+      expect(widened(host)).toEqual([true]);
+    });
   });
 });

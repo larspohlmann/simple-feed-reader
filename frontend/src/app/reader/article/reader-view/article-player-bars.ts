@@ -1,4 +1,5 @@
 import { inputBinding } from '@angular/core';
+import { isTextEntryTarget } from '../../../shared/text-entry-target';
 import { embedMediaOfFrame } from '../../audio/embed-media';
 import { CINEMA_BOX, EMBED_BOX } from '../decorators/player-box';
 import { EmbedListen, ListenActions } from '../player-bar/embed-listen';
@@ -22,6 +23,18 @@ export class ArticlePlayerBars {
     }
   }
 
+  /** `t` widens or narrows the video in view, else the first one, like YouTube's theatre key. */
+  toggleCinemaByKey(event: KeyboardEvent): void {
+    if (!isCinemaKey(event)) return;
+    const offered = this.islands
+      .instancesOf(PlayerBarComponent)
+      .filter((bar) => bar.offersCinema());
+    const bar = offered.find((candidate) => candidate.isInView()) ?? offered[0];
+    if (!bar) return;
+    event.preventDefault();
+    bar.toggleCinema();
+  }
+
   private mountBar(
     after: Element,
     cinemaBox: HTMLElement | null,
@@ -32,6 +45,12 @@ export class ArticlePlayerBars {
       inputBinding('listen', () => listen),
     ]);
   }
+}
+
+function isCinemaKey(event: KeyboardEvent): boolean {
+  if (event.key !== 't' || event.defaultPrevented) return false;
+  if (event.metaKey || event.ctrlKey || event.altKey) return false;
+  return !isTextEntryTarget(event.target);
 }
 
 function listenOf(embed: Element | null, actions: ListenActions | undefined): EmbedListen | null {

@@ -1,7 +1,7 @@
 @use '../../theme/link-card';
 
 // The card #1499 writes into a post's body and every <app-link-card>: the image, then the text, flat
-// in one link. Old stored bodies and unplayable-video.service.ts carry this markup, so it must not change.
+// in one link. Old stored bodies carry this markup, so it must not change.
 @mixin frame {
   @include link-card.surface;
 
