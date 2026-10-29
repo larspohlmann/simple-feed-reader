@@ -543,6 +543,17 @@ describe('ArticleBody', () => {
       expect(content.querySelector('.reader-embed--audio')!.nextElementSibling).toBe(lists[1]);
     });
 
+    it("puts a SoundCloud widget's chapter list after its player bar", async () => {
+      answers({ [WIDGET_URL]: of(TRACK_DETAILS) });
+      entry.set(anEntry());
+      connectBody(SOUNDCLOUD);
+      await Promise.resolve();
+
+      const bar = content.querySelector('.reader-embed--audio')!.nextElementSibling!;
+      expect(bar.tagName).toBe('APP-PLAYER-BAR');
+      expect(bar.nextElementSibling!.classList).toContain('reader-chapters');
+    });
+
     describe("for the video the body's chapters belong to", () => {
       const fetched: TrackDetails = {
         title: 'The video itself',
