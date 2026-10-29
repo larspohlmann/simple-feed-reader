@@ -7,11 +7,8 @@ namespace App\Tests\Service\Maintenance;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\PendingImageVerificationRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Image\ImageVerificationSweep;
-use App\Service\Image\ImageVerifier;
 use App\Service\LinkCard\LinkCardSweep;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Logging\Loki\LokiClient;
@@ -29,8 +26,7 @@ use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
-use App\Tests\Support\RenditionProbes;
-use App\Tests\Support\StubProbedLadders;
+use App\Tests\Support\ImageVerificationSweepWiring;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\InMemoryMailFailureRecorder;
@@ -66,6 +62,8 @@ use Symfony\Component\HttpClient\MockHttpClient;
 
 final class MaintenanceTickTest extends DbTestCase
 {
+    private const int TICK_WINDOW_SECONDS = 25;
+
     public function testRunProducesAReportCarryingBothHalves(): void
     {
         $tick = self::getContainer()->get(MaintenanceTick::class);
@@ -314,23 +312,11 @@ final class MaintenanceTickTest extends DbTestCase
     ): MaintenanceTick {
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
         self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
-        $pendingImageVerificationRepository = self::getContainer()->get(PendingImageVerificationRepository::class);
-        self::assertInstanceOf(PendingImageVerificationRepository::class, $pendingImageVerificationRepository);
 
         return new MaintenanceTick(
             $refreshRunner,
             $forYouSweep,
             $sendDueDigests,
-            new ImageVerificationSweep(
-                $pendingImageVerificationRepository,
-                new ImageVerifier(
-                    new StubGuardedImageDownloader(),
-                    new NaiveUtcClock($clock),
-                    RenditionProbes::none(),
-                    new StubProbedLadders(),
-                ),
-                $this->entityManager,
-            ),
             $this->followUpFetchSweeps($linkCardSweep, $clock),
             new SocialMaintenance(
                 $this->profileImageSweep($appViewFetcher ?? self::unreachableAppView(), $clock),
@@ -354,6 +340,7 @@ final class MaintenanceTickTest extends DbTestCase
                 sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
             ),
             $clock,
+            self::TICK_WINDOW_SECONDS,
         );
     }
 
@@ -362,7 +349,14 @@ final class MaintenanceTickTest extends DbTestCase
         $transcriptSweep = self::getContainer()->get(TranscriptSweep::class);
         self::assertInstanceOf(TranscriptSweep::class, $transcriptSweep);
 
-        return new FollowUpFetchSweeps($linkCardSweep, $transcriptSweep, $clock);
+        $imageVerificationSweep = ImageVerificationSweepWiring::build(
+            self::getContainer(),
+            $this->entityManager,
+            new StubGuardedImageDownloader(),
+            $clock,
+        );
+
+        return new FollowUpFetchSweeps($imageVerificationSweep, $linkCardSweep, $transcriptSweep, $clock);
     }
 
     private function hiddenProfileSwitchSweep(): HiddenProfileSwitchSweep

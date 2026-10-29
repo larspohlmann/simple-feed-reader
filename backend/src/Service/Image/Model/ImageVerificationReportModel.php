@@ -14,6 +14,11 @@ final readonly class ImageVerificationReportModel
     ) {
     }
 
+    public static function none(): self
+    {
+        return new self(0, 0, 0, 0);
+    }
+
     /** @return array{measured: int, kept: int, dropped: int, retried: int} */
     public function toLogContext(): array
     {

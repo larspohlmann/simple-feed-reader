@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance;
 
-use App\Service\Image\ImageVerificationSweep;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
@@ -25,31 +24,25 @@ final readonly class MaintenanceTick
 {
     public const int REFRESH_BUDGET_SECONDS = 20;
 
-    /**
-     * The request window a worker-less install's cron tick must fit. The halves
-     * before the membership sweep carry fixed budgets, so it takes what is left.
-     */
-    private const int TICK_WINDOW_SECONDS = 25;
-
-    /** The membership sweep's own cap inside that window: enough for ~50 chunks on Strato. */
+    /** The membership sweep's own cap inside the tick window: enough for ~50 chunks on Strato. */
     private const int MEMBERSHIP_BUDGET_SECONDS = 10;
 
     public function __construct(
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
         private SendDueDigests $sendDueDigests,
-        private ImageVerificationSweep $imageVerificationSweep,
         private FollowUpFetchSweeps $followUpFetchSweeps,
         private SocialMaintenance $socialMaintenance,
         private SavedSearchMembershipSweep $membershipSweep,
         private LokiSpoolShipper $logSpoolShipper,
         private ClockInterface $clock,
+        private int $tickWindowSeconds,
     ) {
     }
 
     public function run(): MaintenanceTickReportModel
     {
-        $deadline = $this->clock->now()->modify(\sprintf('+%d seconds', self::TICK_WINDOW_SECONDS));
+        $deadline = $this->clock->now()->modify(\sprintf('+%d seconds', $this->tickWindowSeconds));
         $refresh = $this->refreshRunner->run(RefreshRequestModel::allDue(self::REFRESH_BUDGET_SECONDS));
         $sweeps = $refresh->isAborted()
             ? MaintenanceSweepsModel::skippedAfterAbortedRefresh()
@@ -62,7 +55,6 @@ final readonly class MaintenanceTick
     {
         $recommendations = $this->forYouSweep->sweepOnce();
         $digests = $this->sendDueDigests->run();
-        $imageVerification = $this->imageVerificationSweep->verifyDue();
         $followUpFetches = $this->followUpFetchSweeps->sweep($deadline);
         $profileImages = $this->socialMaintenance->refreshProfileImages($deadline);
         $hiddenProfiles = $this->socialMaintenance->switchHiddenProfiles($deadline);
@@ -72,7 +64,6 @@ final readonly class MaintenanceTick
         return new MaintenanceSweepsModel(
             $recommendations,
             $digests,
-            $imageVerification,
             $followUpFetches,
             $profileImages,
             $hiddenProfiles,

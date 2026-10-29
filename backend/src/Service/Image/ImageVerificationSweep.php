@@ -5,36 +5,39 @@ declare(strict_types=1);
 namespace App\Service\Image;
 
 use App\Repository\PendingImageVerificationRepository;
+use App\Service\Image\Model\ImageVerificationBudgetModel;
 use App\Service\Image\Model\ImageVerificationReportModel;
 use App\Service\Image\Model\ImageVerifyOutcome;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
 
 /**
- * A capped batch of pending images per tick, bounded by a wall-clock budget
+ * A capped batch of pending images per pass, bounded by a wall-clock budget
  * so a run of dead hosts can't overrun the tick.
  */
 final readonly class ImageVerificationSweep
 {
-    private const int MAX_PER_TICK = 25;
-    private const int BUDGET_SECONDS = 15;
+    private const int MAX_PER_PASS = 100;
 
     public function __construct(
         private PendingImageVerificationRepository $pendingVerifications,
         private ImageVerifier $imageVerifier,
         private EntityManagerInterface $entityManager,
+        private ClockInterface $clock,
     ) {
     }
 
-    public function verifyDue(): ImageVerificationReportModel
+    public function verifyDue(ImageVerificationBudgetModel $budget): ImageVerificationReportModel
     {
-        $deadline = microtime(true) + self::BUDGET_SECONDS;
+        $deadline = $budget->deadlineFrom($this->clock->now());
+        $entries = $this->pendingVerifications->findPendingImageVerification(self::MAX_PER_PASS);
         $measured = 0;
         $kept = 0;
         $dropped = 0;
         $retried = 0;
 
-        foreach ($this->pendingVerifications->findPendingImageVerification(self::MAX_PER_TICK) as $entry) {
-            if (microtime(true) >= $deadline) {
+        foreach ($entries as $entry) {
+            if ($this->clock->now() >= $deadline) {
                 break;
             }
             match ($this->imageVerifier->verify($entry)) {
@@ -45,6 +48,7 @@ final readonly class ImageVerificationSweep
             };
             $this->entityManager->flush();
         }
+        array_walk($entries, $this->entityManager->detach(...));
 
         return new ImageVerificationReportModel($measured, $kept, $dropped, $retried);
     }

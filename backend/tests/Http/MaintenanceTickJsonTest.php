@@ -30,8 +30,8 @@ final class MaintenanceTickJsonTest extends TestCase
             new MaintenanceSweepsModel(
                 new ForYouSweepReportModel(1, 2, 3),
                 new DigestSweepReportModel(4, 5, 6),
-                new ImageVerificationReportModel(7, 8, 9, 10),
                 new FollowUpFetchesReportModel(
+                    new ImageVerificationReportModel(7, 8, 9, 10),
                     new LinkCardSweepReportModel(16, 17),
                     new TranscriptSweepReportModel(26, 27),
                 ),
