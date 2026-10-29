@@ -124,7 +124,11 @@ jobs:
           --env MYSQL_ROOT_PASSWORD=root
           --env MYSQL_DATABASE=feedreader_test
           --publish 3306:3306
+          --tmpfs /var/lib/mysql
           mysql:8.4
+          --innodb-flush-log-at-trx-commit=0
+          --skip-log-bin
+          --innodb-doublewrite=OFF
 
       - uses: actions/checkout@v5
 

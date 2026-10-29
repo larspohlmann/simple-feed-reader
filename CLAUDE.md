@@ -36,7 +36,7 @@ Docker stack (from the repo root) — see [docs/local-docker.md](docs/local-dock
 
 ```bash
 docker compose up -d
-docker compose exec php composer test         # the MySQL leg of the suite
+docker compose exec php composer test:parallel   # the MySQL leg of the suite
 docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
@@ -325,7 +325,8 @@ control, not ceremony — do not "simplify" it away, and do not delete
 ## Testing
 
 - Backend unit/integration: `php bin/phpunit` (SQLite) natively, or
-  `docker compose exec php composer test` (MySQL). Run both legs before a PR.
+  `docker compose exec php composer test:parallel` (MySQL). Run both legs before a PR;
+  they can run at the same time.
 - **Direct-invocation tests mislead.** A listener test that bypasses the dispatcher
   can assert something the real wiring makes impossible — back it with a
   functional test.
