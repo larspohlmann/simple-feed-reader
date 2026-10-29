@@ -23,17 +23,6 @@ describe('expandFaqDisclosures', () => {
     expect([...boxes].every((box) => box.open)).toBe(true);
   });
 
-  it('leaves the machine-narration box collapsed and unstyled', () => {
-    const element = host(
-      '<details class="reader-narration-box"><summary>Listen</summary>' +
-        '<audio src="https://x.test/full.mp3"></audio></details>',
-    );
-    const box = element.querySelector<HTMLDetailsElement>('details.reader-narration-box')!;
-
-    expect(box.classList.contains('reader-faq')).toBe(false);
-    expect(box.open).toBe(false);
-  });
-
   it('is idempotent on a second pass', () => {
     const element = host('<details><summary>Question?</summary><p>Answer.</p></details>');
     expandFaqDisclosures(element);

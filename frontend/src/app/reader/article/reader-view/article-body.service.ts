@@ -10,7 +10,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { TranslocoService } from '@jsverse/transloco';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { decorateArticle } from '../decorators/decorate-article';
 import { toggleCinemaByKey } from '../decorators/reader-cinema';
@@ -27,6 +26,8 @@ import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapte
 import { ArticleIslands } from './article-islands';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { ArticleEmbedAudio } from './article-embed-audio';
+import { ArticleNarration } from './article-narration';
+import { ArticleSlideshows } from './article-slideshows';
 import { ArticlePlayerBars } from './article-player-bars';
 import { ArticleEmbedDetails } from './article-embed-details';
 
@@ -50,7 +51,6 @@ export interface ArticleBodyParts {
  *  turn in the article's one-at-a-time playback and the `t` cinema key. */
 @Injectable()
 export class ArticleBody {
-  private readonly i18n = inject(TranslocoService);
   private readonly injector = inject(Injector);
   private readonly unplayableVideos = inject(UnplayableVideoService);
   private readonly zone = inject(NgZone);
@@ -58,6 +58,8 @@ export class ArticleBody {
   private readonly audio = inject(AudioPlayerService);
   private readonly islands = new ArticleIslands(this.injector);
   private readonly playerBars = new ArticlePlayerBars(this.islands);
+  private readonly narration = new ArticleNarration(this.islands);
+  private readonly slideshows = new ArticleSlideshows(this.islands);
   private readonly chapters = new ArticleChapters(this.audio, this.islands, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(this.audio, inject(ListenLauncher));
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
@@ -136,7 +138,7 @@ export class ArticleBody {
 
   private render(parts: ArticleBodyParts, host: HTMLElement, chapterList: ChapterDto[]): void {
     const track = parts.audioTrack();
-    decorateArticle(host, this.i18n, {
+    decorateArticle(host, {
       enclosureUrl: parts.enclosureUrl(),
       embedSource: (url) => withScriptablePlayer(url, window.location.origin),
     });
@@ -147,6 +149,8 @@ export class ArticleBody {
     });
     this.zone.runOutsideAngular(() => {
       this.playerBars.mount(host, listen);
+      this.narration.mount(host);
+      this.slideshows.mount(host);
       this.attachBodyChapters(host, chapterList, track);
       this.loadEmbedDetails(chapterFrames(host));
       this.media.follow(host);

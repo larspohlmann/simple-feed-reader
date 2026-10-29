@@ -152,6 +152,14 @@ describe('ArticleBody', () => {
     expect(decorated).not.toHaveBeenCalled();
   });
 
+  it("puts a narration toggle above a narrated body's player", async () => {
+    connectBody('<p>x</p><audio class="reader-narration" src="https://x.test/n.mp3"></audio>');
+
+    await Promise.resolve();
+
+    expect(content.querySelector('app-narration-toggle + audio.reader-narration')).not.toBeNull();
+  });
+
   it('decorates the body once it renders, then hands it on', async () => {
     connectBody('<a href="https://ext.test/z">ext</a>');
     expect(decorated).not.toHaveBeenCalled();
@@ -541,6 +549,17 @@ describe('ArticleBody', () => {
       expect(listRows(lists[0])).toEqual(['0:00Opening', '1:01Q&A']);
       expect(listRows(lists[1])).toEqual(['0:00Side A', '2:00Side B']);
       expect(content.querySelector('.reader-embed--audio')!.nextElementSibling).toBe(lists[1]);
+    });
+
+    it("puts a SoundCloud widget's chapter list after its player bar", async () => {
+      answers({ [WIDGET_URL]: of(TRACK_DETAILS) });
+      entry.set(anEntry());
+      connectBody(SOUNDCLOUD);
+      await Promise.resolve();
+
+      const bar = content.querySelector('.reader-embed--audio')!.nextElementSibling!;
+      expect(bar.tagName).toBe('APP-PLAYER-BAR');
+      expect(bar.nextElementSibling!.classList).toContain('reader-chapters');
     });
 
     describe("for the video the body's chapters belong to", () => {

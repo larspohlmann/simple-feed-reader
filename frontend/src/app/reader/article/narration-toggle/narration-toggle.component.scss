@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  margin: var(--space-3) 0;
+}
+
+:host(.open) {
+  margin-bottom: 0;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}

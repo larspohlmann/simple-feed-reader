@@ -7,7 +7,7 @@ import { SoundCloudChapterPlayer } from '../../chapters/soundcloud-chapter-playe
 import { YouTubeChapterPlayer } from '../../chapters/youtube-chapter-player';
 import { SOUNDCLOUD_PLAYER_URL } from '../../media/soundcloud-widget-protocol';
 import { ChapterDto } from '../../models';
-import { CINEMA_BOX_CLASS } from '../decorators/reader-cinema';
+import { playerBoxOf } from '../decorators/player-box';
 import { EmbedChaptersComponent } from '../embed-chapters/embed-chapters.component';
 import { ArticleIslands } from './article-islands';
 
@@ -43,7 +43,7 @@ export class ArticleChapters {
   /** The first list attached to a frame stays its only one. */
   attachToFrame(frame: HTMLIFrameElement, chapters: readonly ChapterDto[]): void {
     const media = embedMediaOfFrame(frame);
-    const after = frame.closest(`.${CINEMA_BOX_CLASS}`) ?? frame.closest('.reader-embed') ?? frame;
+    const after = playerBoxOf(frame);
     if (!media || !after.parentElement || chapters.length === 0 || this.hasList(frame)) return;
     const player = signal(this.embedPlayer(frame, media));
     this.islands.mountAfter(after, EmbedChaptersComponent, [

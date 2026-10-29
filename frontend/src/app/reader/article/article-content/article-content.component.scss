@@ -413,21 +413,12 @@ $prose: ':where(:not(.reader-island *))';
   }
 }
 
-// Machine-generated narration (#903): one muted, collapsed line, no card, so it
-// never reads as editorial audio. A plain <details> stands in for <app-disclosure>,
-// which cannot render inside [innerHTML] (recorded exception in design-language.md).
-:host ::ng-deep .reader-narration-box {
-  margin: var(--space-3) 0;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
+:host ::ng-deep audio.reader-narration:not(.reader-narration--open) {
+  display: none;
 }
 
-:host ::ng-deep .reader-narration-box summary {
-  cursor: pointer;
-}
-
-:host ::ng-deep .reader-narration-box[open] audio {
-  margin: var(--space-2) 0 0;
+:host ::ng-deep audio.reader-narration {
+  margin: var(--space-2) 0 var(--space-3);
 }
 
 /* Publisher FAQ disclosures (#1071): the reader-faq pass opens each <details>
@@ -534,35 +525,6 @@ $prose: ':where(:not(.reader-island *))';
   :host ::ng-deep .reader-slideshow--ready ol {
     transition: none;
   }
-}
-
-:host ::ng-deep .reader-slideshow__controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
-}
-
-:host ::ng-deep .reader-slideshow__counter {
-  font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
-}
-
-:host ::ng-deep .reader-slideshow__prev,
-:host ::ng-deep .reader-slideshow__next {
-  @include glass-rim.filled(var(--surface-2), var(--border), control);
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--tap-target);
-  height: var(--tap-target);
-  border-radius: var(--radius-pill);
-  color: var(--text-secondary);
-  font-size: var(--fs-xl);
-  line-height: 1;
-  cursor: pointer;
 }
 
 /* Recipe fact block (#932): the publisher's servings/calories/time row loses

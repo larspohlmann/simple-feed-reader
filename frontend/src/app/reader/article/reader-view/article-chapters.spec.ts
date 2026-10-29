@@ -1,6 +1,7 @@
 import { Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
+import { WIDGET_URL } from '../../../../testing/embed-media-testing';
 import {
   deliverMessage,
   messagesOf,
@@ -71,6 +72,15 @@ describe('ArticleChapters', () => {
     chapters().attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
     expect(host.children[1].classList.contains('reader-chapters')).toBe(true);
+  });
+
+  it("puts a SoundCloud list after the widget's player bar", () => {
+    const host = document.createElement('div');
+    host.innerHTML = `<div class="reader-embed reader-embed--strip"><iframe src="${WIDGET_URL}"></iframe></div><app-player-bar class="reader-island"></app-player-bar><p>Notes</p>`;
+
+    chapters().attachToFrame(host.querySelector('iframe')!, CHAPTERS);
+
+    expect(host.children[2].classList.contains('reader-chapters')).toBe(true);
   });
 
   it('adds nothing under a frame that plays no embed', () => {

@@ -1,0 +1,19 @@
+<button
+  type="button"
+  class="reader-slideshow__prev"
+  [attr.aria-label]="'reader.slideshowPrevious' | transloco"
+  (click)="step(-1)"
+>
+  <span aria-hidden="true">‹</span>
+</button>
+<span class="reader-slideshow__counter" aria-live="polite">{{
+  'reader.slideshowPosition' | transloco: { current: current() + 1, total: slides().length }
+}}</span>
+<button
+  type="button"
+  class="reader-slideshow__next"
+  [attr.aria-label]="'reader.slideshowNext' | transloco"
+  (click)="step(1)"
+>
+  <span aria-hidden="true">›</span>
+</button>
