@@ -9,7 +9,7 @@
   isolation: isolate;
 }
 
-/* The article layer the return swipe moves, back-to-top button included.
+/* The article layer the return swipe moves.
    Isolated so the chrome's z-indices stay off the shell's pane divider (#128). */
 .frame {
   position: relative;
