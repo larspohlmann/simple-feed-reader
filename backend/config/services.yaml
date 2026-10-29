@@ -288,6 +288,16 @@ services:
         arguments:
             $spoolDirectory: '%app.loki_spool_directory%'
 
+    App\Service\Logging\Factory\HostLogFileHandlerFactory:
+        arguments:
+            $logsDirectory: '%kernel.logs_dir%'
+            $environment: '%kernel.environment%'
+            $formatter: '@monolog.formatter.json'
+
+    app.host_log_file_handler:
+        class: Monolog\Handler\RotatingFileHandler
+        factory: ['@App\Service\Logging\Factory\HostLogFileHandlerFactory', 'create']
+
     App\Service\Logging\Loki\LokiSink\LokiSinkInterface:
         factory: ['@App\Service\Logging\Loki\Factory\LokiSinkFactory', 'create']
 

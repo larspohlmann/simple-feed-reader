@@ -183,6 +183,8 @@ services:
 
   php:
     <<: *php-image
+    # Names its log file (prod-php-YYYY-MM-DD.log); a container id would start a new file on every recreate.
+    hostname: php
     restart: unless-stopped
     environment: *app-environment
     extra_hosts:
@@ -207,6 +209,7 @@ services:
   # degrades to #308's poll-driven behaviour automatically -- no config.
   worker:
     <<: *php-image
+    hostname: worker
     # --memory-limit raised from 128M in #437: one recommendation wave reads
     # several answer streams at once, and 128M cut a live run short at 201 MB.
     command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "--time-limit=3600", "--memory-limit=512M"]
