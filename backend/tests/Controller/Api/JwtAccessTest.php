@@ -29,7 +29,7 @@ final class JwtAccessTest extends ApiTestCase
         self::ensureKernelShutdown();
     }
 
-    private function tokenFor(KernelBrowser $client, string $email): string
+    private function loginTokenFor(KernelBrowser $client, string $email): string
     {
         $client->request(
             'POST',
@@ -60,9 +60,9 @@ final class JwtAccessTest extends ApiTestCase
     {
         $client = self::createClient();
         $this->factory()->create('holder@example.com');
-        $token = $this->tokenFor($client, 'holder@example.com');
+        $token = $this->loginTokenFor($client, 'holder@example.com');
 
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', self::PROTECTED, server: $this->bearer($token));
 
         self::assertResponseIsSuccessful();
         $payload = json_decode((string) $client->getResponse()->getContent(), true);
@@ -97,7 +97,7 @@ final class JwtAccessTest extends ApiTestCase
         $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
         $expired = $manager->createFromPayload($user, ['exp' => time() - 3600]);
 
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $expired]);
+        $client->request('GET', self::PROTECTED, server: $this->bearer($expired));
 
         $this->assertUnauthorizedProblem($client);
     }
@@ -110,9 +110,9 @@ final class JwtAccessTest extends ApiTestCase
     {
         $client = self::createClient();
         $this->factory()->create('revoked@example.com');
-        $token = $this->tokenFor($client, 'revoked@example.com');
+        $token = $this->loginTokenFor($client, 'revoked@example.com');
 
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', self::PROTECTED, server: $this->bearer($token));
         self::assertResponseIsSuccessful();
 
         // Re-fetch through the current kernel's EntityManager: flushing the factory's entity, from a rebooted kernel,
@@ -124,7 +124,7 @@ final class JwtAccessTest extends ApiTestCase
         $user->suspend();
         $entityManager->flush();
 
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', self::PROTECTED, server: $this->bearer($token));
 
         $this->assertUnauthorizedProblem($client);
     }
@@ -137,7 +137,7 @@ final class JwtAccessTest extends ApiTestCase
     {
         $client = self::createClient();
         $this->factory()->create('quiet@example.com');
-        $token = $this->tokenFor($client, 'quiet@example.com');
+        $token = $this->loginTokenFor($client, 'quiet@example.com');
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
@@ -146,7 +146,7 @@ final class JwtAccessTest extends ApiTestCase
         $user->suspend();
         $entityManager->flush();
 
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', self::PROTECTED, server: $this->bearer($token));
 
         $this->assertUnauthorizedProblem($client);
 
@@ -164,9 +164,9 @@ final class JwtAccessTest extends ApiTestCase
     {
         $client = self::createClient();
         $this->factory()->create('shape@example.com');
-        $token = $this->tokenFor($client, 'shape@example.com');
+        $token = $this->loginTokenFor($client, 'shape@example.com');
 
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', self::PROTECTED, server: $this->bearer($token));
 
         self::assertResponseIsSuccessful();
         $payload = json_decode((string) $client->getResponse()->getContent(), true);
@@ -239,7 +239,7 @@ final class JwtAccessTest extends ApiTestCase
         $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
         $token = $manager->createFromPayload($stored, ['iat' => $changedAt->getTimestamp() + $offsetSeconds]);
 
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', self::PROTECTED, server: $this->bearer($token));
 
         if ($shouldBeAccepted) {
             self::assertResponseIsSuccessful();
@@ -272,8 +272,8 @@ final class JwtAccessTest extends ApiTestCase
         );
         $entityManager->clear();
 
-        $token = $this->tokenFor($client, 'nostamp@example.com');
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $token = $this->loginTokenFor($client, 'nostamp@example.com');
+        $client->request('GET', self::PROTECTED, server: $this->bearer($token));
 
         self::assertResponseIsSuccessful();
     }
@@ -282,9 +282,9 @@ final class JwtAccessTest extends ApiTestCase
     {
         $client = self::createClient();
         $this->factory()->create('plain@example.com');
-        $token = $this->tokenFor($client, 'plain@example.com');
+        $token = $this->loginTokenFor($client, 'plain@example.com');
 
-        $client->request('GET', '/api/admin/users', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', '/api/admin/users', server: $this->bearer($token));
 
         self::assertResponseStatusCodeSame(403);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
@@ -294,9 +294,9 @@ final class JwtAccessTest extends ApiTestCase
     {
         $client = self::createClient();
         $this->factory()->create('boss@example.com', roles: ['ROLE_ADMIN']);
-        $token = $this->tokenFor($client, 'boss@example.com');
+        $token = $this->loginTokenFor($client, 'boss@example.com');
 
-        $client->request('GET', '/api/admin/users', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', '/api/admin/users', server: $this->bearer($token));
 
         self::assertResponseIsSuccessful();
     }
@@ -334,7 +334,7 @@ final class JwtAccessTest extends ApiTestCase
             'expired-trial@example.com',
             trialEndsAt: new \DateTimeImmutable('+7 days'),
         );
-        $token = $this->tokenFor($client, 'expired-trial@example.com');
+        $token = $this->loginTokenFor($client, 'expired-trial@example.com');
 
         /** @var EntityManagerInterface $entityManager */
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
@@ -343,7 +343,7 @@ final class JwtAccessTest extends ApiTestCase
         $user->setTrialEndsAt(new \DateTimeImmutable('-1 day'));
         $entityManager->flush();
 
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', self::PROTECTED, server: $this->bearer($token));
         $this->assertUnauthorizedProblem($client);
 
         $user = $entityManager->getRepository(User::class)->findOneBy(['email' => 'expired-trial@example.com']);
@@ -358,9 +358,9 @@ final class JwtAccessTest extends ApiTestCase
             'active-trial@example.com',
             trialEndsAt: new \DateTimeImmutable('+7 days'),
         );
-        $token = $this->tokenFor($client, 'active-trial@example.com');
+        $token = $this->loginTokenFor($client, 'active-trial@example.com');
 
-        $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', self::PROTECTED, server: $this->bearer($token));
         self::assertResponseIsSuccessful();
     }
 }

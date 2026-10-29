@@ -9,51 +9,13 @@ use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /** A second account's runs must never leak into the month summaries, the newest month's runs or the total. */
-final class RecommendationRunHistoryControllerTest extends WebTestCase
+final class RecommendationRunHistoryControllerTest extends ApiTestCase
 {
     private const string HISTORY_ROUTE = '/api/recommendations/runs/history';
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
-
-    /** @return array<string, mixed> */
-    private function payload(Response $response): array
-    {
-        $decoded = json_decode((string) $response->getContent(), true);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
-    }
-
-    private function entityManager(): EntityManagerInterface
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        return $entityManager;
-    }
 
     private function fixtures(): RecommendationRunFixtures
     {
@@ -66,8 +28,8 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testOverviewAnswersWithTheAccountsMonthLatestRunsAndTheAllTimeTotal(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-history-mine@example.test');
-        [, $otherUser] = $this->auth('run-history-theirs@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-mine@example.test');
+        $otherUser = $this->factory()->create('run-history-theirs@example.test');
 
         $older = $this->fixtures()->createRun($user);
         $older->stampProvider('openrouter.ai', 'x-ai/grok-4-fast');
@@ -103,7 +65,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame(3_000, $payload['totalCostNanoCredits']);
         self::assertSame(
             [['month' => '2026-08', 'runCount' => 2, 'costNanoCredits' => 3_000]],
@@ -130,7 +92,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testCapsTheNewestMonthAtTheLimitKeepingTheNewestRunsAndReportsANextCursor(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-history-cap@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-cap@example.test');
 
         $runCount = RecommendationRunHistoryRepository::HISTORY_LIMIT + 1;
         $seededRuns = [];
@@ -144,7 +106,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         /** @var array<string, mixed> $latest */
         $latest = $payload['latest'];
         /** @var list<array<string, mixed>> $returnedRuns */
@@ -157,7 +119,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client->request('GET', self::HISTORY_ROUTE . '/2026-08?before=' . $seededIds[1], server: $headers);
 
         self::assertResponseIsSuccessful();
-        $nextPage = $this->payload($client->getResponse());
+        $nextPage = $this->payload($client);
         /** @var list<array<string, mixed>> $nextPageRuns */
         $nextPageRuns = $nextPage['runs'];
         self::assertSame([$seededIds[0]], array_column($nextPageRuns, 'id'));
@@ -171,7 +133,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testAResumedRunReportsNeitherACompletionTimeNorADuration(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-history-resumed@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-resumed@example.test');
 
         $run = $this->fixtures()->createRun($user);
         $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
@@ -186,7 +148,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         /** @var array<string, mixed> $latest */
         $latest = $payload['latest'];
         /** @var list<array<string, mixed>> $runs */
@@ -199,12 +161,12 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testAnAccountThatNeverRanGetsAnEmptyOverviewAndNoTotal(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('run-history-empty@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-history-empty@example.test'));
 
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame([], $payload['months']);
         self::assertNull($payload['latest']);
         self::assertNull($payload['totalCostNanoCredits']);
@@ -223,7 +185,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testRunsInTwoDifferentMonthsProduceTwoMonthEntriesWithLatestTheNewerOne(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-history-two-months@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-two-months@example.test');
 
         $julyOne = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-10 09:00:00'));
         $julyTwo = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-20 09:00:00'));
@@ -238,7 +200,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame(
             [
                 ['month' => '2026-08', 'runCount' => 1, 'costNanoCredits' => 1_200],
@@ -261,14 +223,14 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testLatestOpensOnTheNewestMonthWithRunsEvenYearsInThePast(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-history-past-month@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-past-month@example.test');
 
         $only = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2024-03-14 09:00:00'));
 
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame(
             [['month' => '2024-03', 'runCount' => 1, 'costNanoCredits' => null]],
             $payload['months'],
@@ -284,7 +246,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testTheMonthRouteReturnsOnlyThatMonthsRuns(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-history-month-route@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-month-route@example.test');
 
         $july = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-12 09:00:00'));
         $user = $this->entityManager()->getRepository(User::class)->find($user->getId());
@@ -294,7 +256,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $client->request('GET', self::HISTORY_ROUTE . '/2026-07', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame('2026-07', $payload['month']);
         /** @var list<array<string, mixed>> $runs */
         $runs = $payload['runs'];
@@ -305,7 +267,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testAMonthOutsideTheRouteRequirementIs404(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('run-history-bad-month@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-history-bad-month@example.test'));
 
         $client->request('GET', self::HISTORY_ROUTE . '/2026-13', server: $headers);
 
@@ -320,14 +282,14 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testAnUnrecognisedTimezoneStillAnswersOkBucketedInUtc(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-history-bad-tz@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-bad-tz@example.test');
 
         $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-12 09:00:00'));
 
         $client->request('GET', self::HISTORY_ROUTE . '?tz=Not/AZone', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         /** @var array<string, mixed> $latest */
         $latest = $payload['latest'];
         self::assertSame('2026-08', $latest['month']);
@@ -341,7 +303,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     public function testBeforeCursorPagesWithinAMonth(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-history-cursor@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-cursor@example.test');
 
         $oldest = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-01 09:00:00'));
         $user = $this->entityManager()->getRepository(User::class)->find($user->getId());
@@ -358,7 +320,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         );
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         /** @var list<array<string, mixed>> $runs */
         $runs = $payload['runs'];
         self::assertSame([$oldest->getId()], array_column($runs, 'id'));

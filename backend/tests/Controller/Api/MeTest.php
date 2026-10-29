@@ -5,33 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Enum\UserStatus;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\DBAL\Connection;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class MeTest extends WebTestCase
+final class MeTest extends ApiTestCase
 {
-    private function factory(): UserFactory
-    {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return new UserFactory($entityManager, $hasher);
-    }
-
-    private function jwt(): JWTTokenManagerInterface
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager;
-    }
-
     public function testAnonymousIs401(): void
     {
         $client = self::createClient();
@@ -44,9 +22,8 @@ final class MeTest extends WebTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('me@example.com');
-        $token = $this->jwt()->create($user);
 
-        $client->request('GET', '/api/me', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', '/api/me', server: $this->bearerFor($user));
 
         self::assertResponseIsSuccessful();
         $payload = json_decode((string) $client->getResponse()->getContent(), true);
@@ -65,9 +42,9 @@ final class MeTest extends WebTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('soon-suspended@example.com');
-        $token = $this->jwt()->create($user);
+        $headers = $this->bearerFor($user);
 
-        $client->request('GET', '/api/me', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', '/api/me', server: $headers);
         self::assertResponseIsSuccessful();
 
         /** @var Connection $connection */
@@ -78,7 +55,7 @@ final class MeTest extends WebTestCase
         );
         self::assertSame(1, $updated, 'The suspension must actually have hit a row.');
 
-        $client->request('GET', '/api/me', server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $client->request('GET', '/api/me', server: $headers);
 
         self::assertResponseStatusCodeSame(401);
     }

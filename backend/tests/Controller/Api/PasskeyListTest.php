@@ -11,7 +11,6 @@ use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\PasskeyRegistrations;
 use App\Tests\Support\PinsPasskeyRelyingParty;
 use App\Tests\Support\TogglesPasskeySignIn;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
@@ -45,7 +44,7 @@ final class PasskeyListTest extends ApiTestCase
             label: 'YubiKey',
             createdAt: new \DateTimeImmutable('2026-01-02 10:00:00'),
         );
-        $this->authenticate($client, 'lister@example.test');
+        $this->authenticate($client, $user);
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
 
@@ -71,8 +70,7 @@ final class PasskeyListTest extends ApiTestCase
     public function testListingReportsNoUserHandleAndNoAcceptedIdsForAnAccountWithoutPasskeys(): void
     {
         $client = static::createClient();
-        $this->factory()->create('empty@example.test');
-        $this->authenticate($client, 'empty@example.test');
+        $this->authenticate($client, $this->factory()->create('empty@example.test'));
         $this->enablePasskeySignIn();
 
         $client->request('GET', '/api/auth/passkeys');
@@ -91,7 +89,7 @@ final class PasskeyListTest extends ApiTestCase
         $this->givenAPasskeyFor($owner, credentialId: 'b3duZXItY3JlZA');
         $caller = $this->factory()->create('caller@example.test');
         $this->givenAPasskeyFor($caller, credentialId: 'Y2FsbGVyLWNyZWQ');
-        $this->authenticate($client, 'caller@example.test');
+        $this->authenticate($client, $caller);
         $this->enablePasskeySignIn();
 
         $client->request('GET', '/api/auth/passkeys');
@@ -112,7 +110,7 @@ final class PasskeyListTest extends ApiTestCase
         // SAME entity manager this test shares, so Doctrine nulls the id field
         // on this very object once the deletion succeeds.
         $deletedId = $toDelete->requireId();
-        $this->authenticate($client, 'remover@example.test');
+        $this->authenticate($client, $user);
 
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', $deletedId));
 
@@ -129,8 +127,7 @@ final class PasskeyListTest extends ApiTestCase
         $client = static::createClient();
         $owner = $this->factory()->create('owner@example.test');
         $foreignPasskey = $this->givenAPasskeyFor($owner, credentialId: 'b3duZXItY3JlZA');
-        $this->factory()->create('caller@example.test');
-        $this->authenticate($client, 'caller@example.test');
+        $this->authenticate($client, $this->factory()->create('caller@example.test'));
 
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', $foreignPasskey->requireId()));
 
@@ -153,7 +150,7 @@ final class PasskeyListTest extends ApiTestCase
         $user->setPasswordHash(null, new \DateTimeImmutable());
         $this->entityManager()->flush();
         $onlyPasskey = $this->givenAPasskeyFor($user, credentialId: 'b25seS1jcmVk');
-        $this->authenticate($client, 'oauth-only@example.test');
+        $this->authenticate($client, $user);
 
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', $onlyPasskey->requireId()));
 
@@ -172,7 +169,7 @@ final class PasskeyListTest extends ApiTestCase
         $client = static::createClient();
         $user = $this->factory()->create('list-disabled@example.test');
         $this->givenAPasskeyFor($user, credentialId: 'ZGlzYWJsZWQtY3JlZA');
-        $this->authenticate($client, 'list-disabled@example.test');
+        $this->authenticate($client, $user);
         $this->disablePasskeySignIn();
 
         $client->request('GET', '/api/auth/passkeys');
@@ -186,24 +183,12 @@ final class PasskeyListTest extends ApiTestCase
         $client = static::createClient();
         $user = $this->factory()->create('delete-while-disabled@example.test');
         $toDelete = $this->givenAPasskeyFor($user, credentialId: 'c3RpbGwtZGVsZXRhYmxl');
-        $this->authenticate($client, 'delete-while-disabled@example.test');
+        $this->authenticate($client, $user);
         $this->disablePasskeySignIn();
 
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', $toDelete->requireId()));
 
         self::assertResponseStatusCodeSame(204);
-    }
-
-    /** Attaches a bearer token to every subsequent request this client makes. */
-    private function authenticate(KernelBrowser $client, string $email): void
-    {
-        $user = $this->users()->findOneByEmail($email);
-        self::assertInstanceOf(User::class, $user);
-
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
     }
 
     /** Stores the credential id and handle verbatim, not through a ceremony: this suite tests listing and removal. */

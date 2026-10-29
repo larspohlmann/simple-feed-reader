@@ -9,36 +9,14 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\SubscriptionService;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
-use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-final class SubscriptionBulkTest extends WebTestCase
+final class SubscriptionBulkTest extends ApiTestCase
 {
     use SeedsUsers;
-
-    private function entityManager(): EntityManagerInterface
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-
-        return $entityManager;
-    }
-
-    /** @return array<string, string> */
-    private function headers(User $user): array
-    {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
 
     private function makeTag(User $user, string $name): Tag
     {
@@ -68,19 +46,9 @@ final class SubscriptionBulkTest extends WebTestCase
         $client->request(
             $method,
             $url,
-            server: $this->headers($user),
+            server: $this->jsonBearerFor($user),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
-    }
-
-    /** @return array<string, mixed> */
-    private function json(KernelBrowser $client): array
-    {
-        $decoded = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
     }
 
     public function testAnonymousIsRejected(): void
@@ -105,7 +73,7 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $body = $this->json($client);
+        $body = $this->payload($client);
         self::assertIsArray($body['subscriptions']);
         self::assertCount(2, $body['subscriptions']);
         foreach ($body['subscriptions'] as $subscription) {
@@ -157,7 +125,7 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $body = $this->json($client);
+        $body = $this->payload($client);
         self::assertIsArray($body['subscriptions']);
         self::assertIsArray($body['subscriptions'][0]);
         self::assertFalse($body['subscriptions'][0]['includeInAllItems']);
@@ -246,7 +214,7 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $body = $this->json($client);
+        $body = $this->payload($client);
         self::assertIsArray($body['subscriptions']);
         self::assertCount($count, $body['subscriptions']);
     }
@@ -434,7 +402,7 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['removed' => 2], $this->json($client));
+        self::assertSame(['removed' => 2], $this->payload($client));
         $this->entityManager()->clear();
         self::assertNotNull($this->entityManager()->getRepository(Subscription::class)->find($keptId));
         self::assertNull(

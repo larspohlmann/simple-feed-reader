@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Fixture access shared by controller tests. Authentication stays in each test class: how a suite gets its token
- * depends on what it proves.
+ * Fixture access shared by controller tests. A suite that proves how a token is issued logs in through the API
+ * instead of minting one here.
  */
 abstract class ApiTestCase extends WebTestCase
 {
@@ -40,6 +42,53 @@ abstract class ApiTestCase extends WebTestCase
         $repository = self::getContainer()->get(UserRepository::class);
 
         return $repository;
+    }
+
+    protected function tokenFor(User $user): string
+    {
+        /** @var JWTTokenManagerInterface $tokens */
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+
+        return $tokens->create($user);
+    }
+
+    /** @return array{HTTP_AUTHORIZATION: string} */
+    protected function bearer(string $token): array
+    {
+        return ['HTTP_AUTHORIZATION' => 'Bearer ' . $token];
+    }
+
+    /** @return array{HTTP_AUTHORIZATION: string} */
+    protected function bearerFor(User $user): array
+    {
+        return $this->bearer($this->tokenFor($user));
+    }
+
+    /** @return array{HTTP_AUTHORIZATION: string, CONTENT_TYPE: string} */
+    protected function jsonBearerFor(User $user): array
+    {
+        return [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'];
+    }
+
+    /** @return array{0: array{HTTP_AUTHORIZATION: string}, 1: User} */
+    protected function bearerAndUser(string $email): array
+    {
+        $user = $this->factory()->create($email);
+
+        return [$this->bearerFor($user), $user];
+    }
+
+    protected function authenticate(KernelBrowser $client, User $user): void
+    {
+        $client->setServerParameter('HTTP_AUTHORIZATION', $this->bearerFor($user)['HTTP_AUTHORIZATION']);
+    }
+
+    protected function signIn(KernelBrowser $client, string $email): User
+    {
+        $user = $this->factory()->create($email);
+        $this->authenticate($client, $user);
+
+        return $user;
     }
 
     /** Every deliberate API failure answers problem+json — the contract this pins beside the status. */

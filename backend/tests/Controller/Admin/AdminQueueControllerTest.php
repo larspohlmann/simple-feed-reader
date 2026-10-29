@@ -7,7 +7,6 @@ namespace App\Tests\Controller\Admin;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -67,12 +66,10 @@ final class AdminQueueControllerTest extends ApiTestCase
 
     private function getAs(User $user): void
     {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
         $this->client->request(
             'GET',
             self::QUEUES,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $manager->create($user)],
+            server: $this->bearerFor($user),
         );
     }
 

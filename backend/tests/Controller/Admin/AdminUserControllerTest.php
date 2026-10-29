@@ -12,15 +12,13 @@ use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use App\Service\Subscription\SubscriptionService;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\ReloadsEntities;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -28,7 +26,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * than through POST /api/auth/login, so these cases never touch the login
  * throttler's filesystem pool and cannot be poisoned by it.
  */
-final class AdminUserControllerTest extends WebTestCase
+final class AdminUserControllerTest extends ApiTestCase
 {
     use EnablesMailInTests;
     use ReloadsEntities;
@@ -45,24 +43,6 @@ final class AdminUserControllerTest extends WebTestCase
         $this->seedEnabledMailInstance();
     }
 
-    private function factory(): UserFactory
-    {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return new UserFactory($entityManager, $hasher);
-    }
-
-    private function tokenFor(User $user): string
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager->create($user);
-    }
-
     private function admin(string $email = 'boss@example.com'): User
     {
         return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
@@ -73,18 +53,8 @@ final class AdminUserControllerTest extends WebTestCase
         $this->client->request(
             $method,
             $uri,
-            server: null === $token ? [] : ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: null === $token ? [] : $this->bearer($token),
         );
-    }
-
-    /** @return array<string, mixed> */
-    private function payload(): array
-    {
-        $decoded = json_decode((string) $this->client->getResponse()->getContent(), true);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
     }
 
     /**
@@ -111,7 +81,7 @@ final class AdminUserControllerTest extends WebTestCase
      */
     private function rowFor(string $email): array
     {
-        $users = $this->payload()['users'];
+        $users = $this->payload($this->client)['users'];
         self::assertIsArray($users);
 
         foreach ($users as $row) {
@@ -163,7 +133,7 @@ final class AdminUserControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertSame('unauthorized', $this->payload()['type']);
+        self::assertSame('unauthorized', $this->payload($this->client)['type']);
     }
 
     /**
@@ -213,7 +183,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', self::LIST, $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload();
+        $payload = $this->payload($this->client);
         self::assertIsArray($payload['users']);
         self::assertCount(2, $payload['users']);
 
@@ -246,7 +216,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', self::LIST . '?status=pending_approval', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload();
+        $payload = $this->payload($this->client);
         self::assertIsArray($payload['users']);
         self::assertSame(['waiting@example.com'], array_column($payload['users'], 'email'));
     }
@@ -258,7 +228,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', self::LIST . '?status=not-a-status', $this->tokenFor($admin));
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSame('validation_error', $this->payload()['type']);
+        self::assertSame('validation_error', $this->payload($this->client)['type']);
     }
 
     public function testApproveActivatesTheUserAndSendsExactlyOneMail(): void
@@ -270,7 +240,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        self::assertSame('active', $this->payload()['status']);
+        self::assertSame('active', $this->payload($this->client)['status']);
         self::assertEmailCount(1);
 
         $reloaded = $this->reload($target);
@@ -291,7 +261,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        self::assertSame('active', $this->payload()['status']);
+        self::assertSame('active', $this->payload($this->client)['status']);
         self::assertEmailCount(1, message: 'a first-time grant is announced whichever queue it came from');
 
         self::assertSame(UserStatus::Active, $this->reload($target)->getStatus());
@@ -311,7 +281,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', $uri, $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        self::assertSame('active', $this->payload()['status']);
+        self::assertSame('active', $this->payload($this->client)['status']);
         self::assertEmailCount(0, message: 'no queue was left, so there is nothing to announce');
     }
 
@@ -328,7 +298,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        self::assertSame('active', $this->payload()['status']);
+        self::assertSame('active', $this->payload($this->client)['status']);
         self::assertEmailCount(1, message: 'a reversed rejection grants access for the first time');
 
         $reloaded = $this->reload($target);
@@ -350,7 +320,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        self::assertSame('active', $this->payload()['status']);
+        self::assertSame('active', $this->payload($this->client)['status']);
         self::assertEmailCount(0, message: 'restoring access the user already had is not an announcement');
 
         $reloaded = $this->reload($target);
@@ -395,7 +365,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . $id . '/reject', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        self::assertSame('rejected', $this->payload()['status']);
+        self::assertSame('rejected', $this->payload($this->client)['status']);
         self::assertEmailCount(0);
         self::assertSame(UserStatus::Rejected, $this->reload($target)->getStatus());
     }
@@ -409,7 +379,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . $id . '/suspend', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        self::assertSame('suspended', $this->payload()['status']);
+        self::assertSame('suspended', $this->payload($this->client)['status']);
         self::assertEmailCount(0);
         self::assertSame(UserStatus::Suspended, $this->reload($target)->getStatus());
     }
@@ -448,7 +418,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . $id . '/reset-password', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload();
+        $payload = $this->payload($this->client);
         self::assertIsString($payload['password']);
         self::assertNotSame('', $payload['password']);
 
@@ -482,8 +452,8 @@ final class AdminUserControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(404);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertSame('not_found', $this->payload()['type']);
-        self::assertSame('User not found.', $this->payload()['detail']);
+        self::assertSame('not_found', $this->payload($this->client)['type']);
+        self::assertSame('User not found.', $this->payload($this->client)['detail']);
     }
 
     public function testAdminCannotSuspendThemselves(): void
@@ -493,7 +463,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . $admin->requireId() . '/suspend', $this->tokenFor($admin));
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSame('validation_error', $this->payload()['type']);
+        self::assertSame('validation_error', $this->payload($this->client)['type']);
     }
 
     /**
@@ -566,7 +536,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', self::LIST, $token);
 
         self::assertResponseIsSuccessful();
-        $listed = $this->payload()['users'];
+        $listed = $this->payload($this->client)['users'];
         self::assertIsArray($listed);
         self::assertCount(8, $listed);
 
@@ -589,7 +559,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', self::LIST . '?status=suspended', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        self::assertSame([], $this->payload()['users']);
+        self::assertSame([], $this->payload($this->client)['users']);
     }
 
     public function testAdminCannotRejectThemselves(): void
@@ -707,7 +677,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
 
         self::assertResponseIsSuccessful();
-        $body = $this->payload();
+        $body = $this->payload($this->client);
         $account = $this->section($body, 'user');
         $footprint = $this->section($body, 'footprint');
 
@@ -761,7 +731,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
 
         self::assertResponseIsSuccessful();
-        $limits = $this->section($this->payload(), 'limits');
+        $limits = $this->section($this->payload($this->client), 'limits');
 
         self::assertIsString($limits['trialEndsAt']);
         self::assertStringStartsWith('2026-08-15T00:00:00', $limits['trialEndsAt']);
@@ -794,7 +764,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
 
         self::assertResponseIsSuccessful();
-        $body = $this->payload();
+        $body = $this->payload($this->client);
         $footprint = $this->section($body, 'footprint');
         $expectedFetchStamp = $lastFetch->format(\DateTimeInterface::ATOM);
 
@@ -885,7 +855,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
 
         self::assertResponseIsSuccessful();
-        $body = $this->payload();
+        $body = $this->payload($this->client);
         $footprint = $this->section($body, 'footprint');
 
         self::assertSame(2, $footprint['feedsCount']);
@@ -1018,9 +988,7 @@ final class AdminUserControllerTest extends WebTestCase
         $target = $factory->create('victim@example.com');
         $targetId = $target->requireId();
 
-        $this->client->request('DELETE', self::LIST . '/' . $targetId, server: [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $targetId, server: $this->bearerFor($admin));
 
         self::assertResponseStatusCodeSame(204);
     }
@@ -1030,9 +998,7 @@ final class AdminUserControllerTest extends WebTestCase
         $admin = $this->factory()->create('self-del@example.com', roles: ['ROLE_ADMIN']);
         $this->factory()->create('spare-admin@example.com', roles: ['ROLE_ADMIN']);
 
-        $this->client->request('DELETE', self::LIST . '/' . $admin->getId(), server: [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $admin->getId(), server: $this->bearerFor($admin));
 
         self::assertResponseStatusCodeSame(422);
     }
@@ -1051,14 +1017,10 @@ final class AdminUserControllerTest extends WebTestCase
         // EntityManager, so minting after would token a now-id-less $deputy.
         $deputyToken = $this->tokenFor($deputy);
 
-        $this->client->request('DELETE', self::LIST . '/' . $deputy->getId(), server: [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($soleAdmin),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $deputy->getId(), server: $this->bearerFor($soleAdmin));
         self::assertResponseStatusCodeSame(204);
 
-        $this->client->request('DELETE', self::LIST . '/' . $soleAdmin->getId(), server: [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $deputyToken,
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $soleAdmin->getId(), server: $this->bearer($deputyToken));
         self::assertResponseStatusCodeSame(401);
 
         self::assertNotNull(
@@ -1080,9 +1042,7 @@ final class AdminUserControllerTest extends WebTestCase
             status: UserStatus::Suspended,
         );
 
-        $this->client->request('DELETE', self::LIST . '/' . $suspended->getId(), server: [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($caller),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $suspended->getId(), server: $this->bearerFor($caller));
 
         self::assertResponseStatusCodeSame(409);
     }
@@ -1094,9 +1054,7 @@ final class AdminUserControllerTest extends WebTestCase
         $plainUser = $factory->create('plain@example.com');
         $target = $factory->create('other-target@example.com');
 
-        $this->client->request('DELETE', self::LIST . '/' . $target->getId(), server: [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($plainUser),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $target->getId(), server: $this->bearerFor($plainUser));
 
         self::assertResponseStatusCodeSame(403);
     }

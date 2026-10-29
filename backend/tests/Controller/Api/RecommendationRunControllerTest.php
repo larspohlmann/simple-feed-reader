@@ -20,13 +20,12 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
 use App\Service\Recommendation\Profile\ProfileRunStarter;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\StubChatClient;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
@@ -34,13 +33,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class RecommendationRunControllerTest extends WebTestCase
+final class RecommendationRunControllerTest extends ApiTestCase
 {
     use ProvidesWorkerHeartbeats;
 
@@ -58,21 +54,6 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
         $rateLimiterCache->clear();
         self::ensureKernelShutdown();
-    }
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 
     private function seedReadyAiSettings(User $user): void
@@ -126,10 +107,10 @@ final class RecommendationRunControllerTest extends WebTestCase
         return $client;
     }
 
-    /** @return array{0: array<string,string>, 1: User} */
-    private function authWithReadyAi(string $email): array
+    /** @return array{0: array{HTTP_AUTHORIZATION: string}, 1: User} */
+    private function bearerAndUserWithReadyAi(string $email): array
     {
-        [$headers, $user] = $this->auth($email);
+        [$headers, $user] = $this->bearerAndUser($email);
         $this->seedReadyAiSettings($user);
 
         return [$headers, $user];
@@ -179,27 +160,17 @@ final class RecommendationRunControllerTest extends WebTestCase
         $this->heartbeats()->touch($name, $clock->now());
     }
 
-    /** @return array<string, mixed> */
-    private function payload(Response $response): array
-    {
-        $decoded = json_decode((string) $response->getContent(), true);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
-    }
-
     public function testTheStatusOfARunWaitingForItsProfileSaysSo(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('runs-waiting-profile@example.test');
+        [$headers, $user] = $this->bearerAndUser('runs-waiting-profile@example.test');
         $this->fixtures()->seedSingleBatchFixture($user);
 
         $client->request('POST', '/api/recommendations/runs', server: $headers);
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame('pending', $payload['status']);
         self::assertTrue($payload['waitingForProfile']);
     }
@@ -209,7 +180,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('runs-running-profile@example.test');
+        [$headers, $user] = $this->bearerAndUser('runs-running-profile@example.test');
         $this->fixtures()->seedSingleBatchFixture($user);
         $this->fixtures()->storeProfile($user, 'a stored profile');
         $client->request('POST', '/api/recommendations/runs', server: $headers);
@@ -225,7 +196,7 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
 
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame('running', $payload['status']);
         self::assertFalse($payload['waitingForProfile']);
     }
@@ -242,24 +213,24 @@ final class RecommendationRunControllerTest extends WebTestCase
     public function testStartingWithoutAiConfiguredIsNotFound(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('run-noai@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-noai@example.test'));
 
         $client->request('POST', '/api/recommendations/runs', server: $headers);
 
         self::assertResponseStatusCodeSame(404);
-        self::assertSame('ai_not_configured', $this->payload($client->getResponse())['type']);
+        self::assertSame('ai_not_configured', $this->payload($client)['type']);
     }
 
     public function testStartingAReadyAccountReportsPending(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-start@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-start@example.test');
         $this->seedReadyAiSettings($user);
 
         $client->request('POST', '/api/recommendations/runs', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertIsInt($payload['elapsedSeconds']);
         self::assertGreaterThanOrEqual(0, $payload['elapsedSeconds']);
         unset($payload['elapsedSeconds']);
@@ -286,31 +257,31 @@ final class RecommendationRunControllerTest extends WebTestCase
     public function testResumeWithoutAFailedRunConflicts(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-resume-none@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-resume-none@example.test');
         $this->seedReadyAiSettings($user);
 
         $client->request('POST', '/api/recommendations/runs/resume', server: $headers);
 
         self::assertResponseStatusCodeSame(409);
-        self::assertSame('no_resumable_recommendation_run', $this->payload($client->getResponse())['type']);
+        self::assertSame('no_resumable_recommendation_run', $this->payload($client)['type']);
     }
 
     public function testTheStatusOfAFailedRunSaysItCanResume(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-status-resumable@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-status-resumable@example.test');
         $this->seedReadyAiSettings($user);
         $this->persistFailedRun($user);
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
 
-        self::assertTrue($this->payload($client->getResponse())['resumable']);
+        self::assertTrue($this->payload($client)['resumable']);
     }
 
     public function testTheStatusOfARunThatFailedWaitingForItsProfileSaysItCannotResume(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-status-not-resumable@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-status-not-resumable@example.test');
         $this->seedReadyAiSettings($user);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -321,7 +292,7 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
 
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame('failed', $payload['status']);
         self::assertFalse($payload['resumable']);
     }
@@ -329,14 +300,14 @@ final class RecommendationRunControllerTest extends WebTestCase
     public function testResumeContinuesAFailedRun(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('run-resume@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-resume@example.test');
         $this->seedReadyAiSettings($user);
         $this->persistFailedRun($user);
 
         $client->request('POST', '/api/recommendations/runs/resume', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame('running', $payload['status']);
         self::assertSame(1, $payload['batchesDone']);
         self::assertNull($payload['error']);
@@ -346,7 +317,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('run-tick@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-tick@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a distilled profile');
@@ -358,7 +329,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         // calling the provider.
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
         self::assertResponseIsSuccessful();
-        self::assertSame('running', $this->payload($client->getResponse())['status']);
+        self::assertSame('running', $this->payload($client)['status']);
 
         $entry = self::getContainer()->get(EntityManagerInterface::class)
             ->getRepository(Entry::class)
@@ -372,7 +343,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         // The batch tick spends the one queued reply and checkpoints for the consolidation phase.
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
         self::assertResponseIsSuccessful();
-        self::assertSame('running', $this->payload($client->getResponse())['status']);
+        self::assertSame('running', $this->payload($client)['status']);
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $entry->getId(), 'score' => 95, 'reason' => 'a good read']],
@@ -383,11 +354,11 @@ final class RecommendationRunControllerTest extends WebTestCase
         // the run.
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
         self::assertResponseIsSuccessful();
-        self::assertSame('completed', $this->payload($client->getResponse())['status']);
+        self::assertSame('completed', $this->payload($client)['status']);
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
         self::assertResponseIsSuccessful();
-        $current = $this->payload($client->getResponse());
+        $current = $this->payload($client);
         self::assertSame('completed', $current['status']);
         self::assertArrayHasKey('elapsedSeconds', $current);
         self::assertIsInt($current['elapsedSeconds']);
@@ -405,7 +376,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     public function testCurrentWithoutAnyRunReportsNone(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('run-current-none@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-current-none@example.test'));
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
 
@@ -427,7 +398,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'finishedShare' => null,
                 'forYou' => ['totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
-            $this->payload($client->getResponse()),
+            $this->payload($client),
         );
     }
 
@@ -439,7 +410,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('defer@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('defer@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
         $this->touchWorkerHeartbeatNow();
@@ -447,7 +418,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $report = $this->payload($client->getResponse());
+        $report = $this->payload($client);
         self::assertSame('pending', $report['status']);
         self::assertTrue($report['background']);
         self::assertFalse($report['waitingForLock']);
@@ -462,7 +433,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('defer-to-drainer@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('defer-to-drainer@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
         $this->touchDrainerHeartbeatNow();
@@ -470,7 +441,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $report = $this->payload($client->getResponse());
+        $report = $this->payload($client);
         self::assertSame('pending', $report['status']);
         self::assertTrue($report['background']);
         self::assertSame([], $this->stubChatClient()->calls());
@@ -484,7 +455,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('stale-heartbeat@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('stale-heartbeat@example.test');
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a stored profile');
         $this->startRun($client, $headers);
@@ -492,7 +463,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $report = $this->payload($client->getResponse());
+        $report = $this->payload($client);
         self::assertSame('running', $report['status']);
         self::assertFalse($report['background']);
         self::assertFalse($report['waitingForLock']);
@@ -506,7 +477,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     public function testATickOnAnActiveRunWithNoFreshHeartbeatSpawnsAReplacementDrainer(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->authWithReadyAi('tick-spawns-drainer@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('tick-spawns-drainer@example.test');
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
 
@@ -527,7 +498,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('locked-tick@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('locked-tick@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
 
@@ -541,7 +512,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         }
 
         self::assertResponseIsSuccessful();
-        $report = $this->payload($client->getResponse());
+        $report = $this->payload($client);
         self::assertNotSame('busy', $report['status']);
         self::assertSame('pending', $report['status']);
         self::assertTrue($report['background']);
@@ -569,7 +540,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('healthy-contention@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('healthy-contention@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
         $this->touchWorkerHeartbeatNow();
@@ -584,7 +555,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         }
 
         self::assertResponseIsSuccessful();
-        $report = $this->payload($client->getResponse());
+        $report = $this->payload($client);
         self::assertTrue($report['background']);
         self::assertFalse($report['waitingForLock']);
         self::assertSame([], $logSpy->getRecords());
@@ -619,27 +590,27 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->authWithReadyAi('current-background@example.test');
+        [$headers] = $this->bearerAndUserWithReadyAi('current-background@example.test');
         $this->startRun($client, $headers);
         $this->touchWorkerHeartbeatNow();
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertTrue($this->payload($client->getResponse())['background']);
+        self::assertTrue($this->payload($client)['background']);
     }
 
     public function testCurrentReportsForegroundWhenNoWorkerIsAlive(): void
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->authWithReadyAi('current-foreground@example.test');
+        [$headers] = $this->bearerAndUserWithReadyAi('current-foreground@example.test');
         $this->startRun($client, $headers);
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertFalse($this->payload($client->getResponse())['background']);
+        self::assertFalse($this->payload($client)['background']);
     }
 
     /**
@@ -661,7 +632,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('run-refused-' . $refusal::class . '@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-refused-' . $refusal::class . '@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a stored profile');
@@ -676,7 +647,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSame('ai_provider_rejected', $this->payload($client->getResponse())['type']);
+        self::assertSame('ai_provider_rejected', $this->payload($client)['type']);
     }
 
     /**
@@ -687,7 +658,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('run-tick-noai@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-tick-noai@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
 
@@ -704,7 +675,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 
         self::assertResponseStatusCodeSame(404);
-        self::assertSame('ai_not_configured', $this->payload($client->getResponse())['type']);
+        self::assertSame('ai_not_configured', $this->payload($client)['type']);
 
         $entityManager->clear();
         $run = $entityManager->getRepository(RecommendationRun::class)->findOneBy(['user' => $user], ['id' => 'DESC']);
@@ -718,7 +689,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('run-tick-unreadable@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-tick-unreadable@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a stored profile');
@@ -738,7 +709,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSame('ai_key_unreadable', $this->payload($client->getResponse())['type']);
+        self::assertSame('ai_key_unreadable', $this->payload($client)['type']);
     }
 
     /**
@@ -749,7 +720,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('run-budget@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-budget@example.test');
         $this->seedReadyAiSettings($user);
 
         for ($spent = 1; $spent <= self::START_BUDGET; ++$spent) {
@@ -760,7 +731,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs', server: $headers);
 
         self::assertResponseStatusCodeSame(429);
-        self::assertSame('rate_limited', $this->payload($client->getResponse())['type']);
+        self::assertSame('rate_limited', $this->payload($client)['type']);
         self::assertGreaterThan(0, (int) $client->getResponse()->headers->get('Retry-After'));
     }
 
@@ -769,7 +740,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->auth('run-tick-budget@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-tick-budget@example.test'));
 
         for ($spent = 1; $spent <= self::TICK_BUDGET; ++$spent) {
             $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
@@ -779,14 +750,14 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 
         self::assertResponseStatusCodeSame(429);
-        self::assertSame('rate_limited', $this->payload($client->getResponse())['type']);
+        self::assertSame('rate_limited', $this->payload($client)['type']);
     }
 
     public function testCurrentIsNeverRateLimited(): void
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->auth('run-current-unlimited@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-current-unlimited@example.test'));
 
         for ($tick = 0; $tick <= self::TICK_BUDGET; ++$tick) {
             $client->request('GET', '/api/recommendations/runs/current', server: $headers);
@@ -797,7 +768,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     public function testPurgeWithNoRunsReportsNone(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('run-purge-none@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-purge-none@example.test'));
 
         $client->request('DELETE', '/api/recommendations/runs', server: $headers);
 
@@ -819,7 +790,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'finishedShare' => null,
                 'forYou' => ['totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
-            $this->payload($client->getResponse()),
+            $this->payload($client),
         );
     }
 
@@ -827,7 +798,7 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('run-purge-completed@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('run-purge-completed@example.test');
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a distilled profile');
         $this->startRun($client, $headers);
@@ -851,12 +822,12 @@ final class RecommendationRunControllerTest extends WebTestCase
         ], \JSON_THROW_ON_ERROR));
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers); // consolidation tick
         self::assertResponseIsSuccessful();
-        self::assertSame('completed', $this->payload($client->getResponse())['status']);
+        self::assertSame('completed', $this->payload($client)['status']);
 
         $client->request('DELETE', '/api/recommendations/runs', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $payload = $this->payload($client->getResponse());
+        $payload = $this->payload($client);
         self::assertSame('none', $payload['status']);
         $forYou = $payload['forYou'];
         self::assertIsArray($forYou);
@@ -865,14 +836,14 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
         self::assertResponseIsSuccessful();
-        self::assertSame('none', $this->payload($client->getResponse())['status']);
+        self::assertSame('none', $this->payload($client)['status']);
     }
 
     public function testPurgeWithAnActiveRunIsRejected(): void
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('run-purge-active@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('run-purge-active@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
 
@@ -880,21 +851,21 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(409);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertSame('recommendation_run_active', $this->payload($client->getResponse())['type']);
+        self::assertSame('recommendation_run_active', $this->payload($client)['type']);
     }
 
     public function testStopEndsTheActiveRunAndFreesTheAccountToStartAnother(): void
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('run-stop-active@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('run-stop-active@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
 
         $client->request('POST', '/api/recommendations/runs/stop', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame('cancelled', $this->payload($client->getResponse())['status']);
+        self::assertSame('cancelled', $this->payload($client)['status']);
 
         // The point of the button: a stopped run must not keep the account
         // locked out of starting a fresh one. Purge is the cheapest probe for
@@ -907,12 +878,12 @@ final class RecommendationRunControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->auth('run-stop-idle@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-stop-idle@example.test'));
 
         $client->request('POST', '/api/recommendations/runs/stop', server: $headers);
 
         self::assertResponseStatusCodeSame(409);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
-        self::assertSame('no_active_recommendation_run', $this->payload($client->getResponse())['type']);
+        self::assertSame('no_active_recommendation_run', $this->payload($client)['type']);
     }
 }

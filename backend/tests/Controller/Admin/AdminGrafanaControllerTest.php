@@ -8,7 +8,6 @@ use App\Entity\GrafanaSettings;
 use App\Entity\User;
 use App\Service\Grafana\GrafanaSettingsCache;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -39,14 +38,6 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         $cache->forget();
     }
 
-    private function tokenFor(User $user): string
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager->create($user);
-    }
-
     private function admin(string $email = 'boss@example.com'): User
     {
         return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
@@ -58,10 +49,7 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         $this->client->request(
             $method,
             self::GRAFANA,
-            server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($user),
-                'CONTENT_TYPE' => 'application/json',
-            ],
+            server: $this->jsonBearerFor($user),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }
@@ -95,7 +83,7 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         $this->client->request(
             'GET',
             self::GRAFANA,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($plain)],
+            server: $this->bearerFor($plain),
         );
 
         self::assertResponseStatusCodeSame(403);
@@ -108,7 +96,7 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         $this->client->request(
             'GET',
             self::GRAFANA,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+            server: $this->bearerFor($admin),
         );
 
         self::assertResponseIsSuccessful();
@@ -132,7 +120,7 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         $this->client->request(
             'GET',
             self::GRAFANA,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+            server: $this->bearerFor($admin),
         );
 
         self::assertResponseIsSuccessful();
@@ -175,7 +163,7 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         $this->client->request(
             'GET',
             self::GRAFANA,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+            server: $this->bearerFor($admin),
         );
         $stored = $this->payload($this->client);
         self::assertSame('https://cloud.example/grafana', $stored['grafanaUrl']);

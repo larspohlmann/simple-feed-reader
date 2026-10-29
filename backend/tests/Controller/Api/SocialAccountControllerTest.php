@@ -6,7 +6,6 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\PrivateFeedSyncChange;
 use App\Entity\SocialAccount;
-use App\Entity\User;
 use App\Enum\PrivateFeedSyncReason;
 use App\Enum\PrivateFeedSyncSkip;
 use App\Enum\SocialFeedKind;
@@ -17,7 +16,6 @@ use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Model\VerifiedAccountModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubAccountVerifier;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
@@ -51,7 +49,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testAnAccountWithoutConnectionsListsNothing(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-empty@example.test');
+        $this->signIn($client, 'social-empty@example.test');
 
         $client->request('GET', '/api/me/social-accounts');
 
@@ -62,7 +60,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testConnectingBlueskyReturnsTheAccountWithoutTheSecret(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-bluesky@example.test');
+        $this->signIn($client, 'social-bluesky@example.test');
 
         $this->connectBluesky($client);
 
@@ -88,7 +86,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     {
         $stub = $this->alice();
         $client = $this->clientVerifying($stub);
-        $this->accountOn($client, 'social-handle@example.test');
+        $this->signIn($client, 'social-handle@example.test');
 
         $this->connectBluesky($client, '@Alice.bsky.social');
 
@@ -99,7 +97,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     {
         $stub = $this->alice();
         $client = $this->clientVerifying($stub);
-        $this->accountOn($client, 'social-main-password@example.test');
+        $this->signIn($client, 'social-main-password@example.test');
 
         $this->connectBluesky($client, self::ALICE, 'hunter2hunter2');
 
@@ -112,7 +110,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testAnAppPasswordTypedWithATrailingSpaceConnects(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-trailing-space@example.test');
+        $this->signIn($client, 'social-trailing-space@example.test');
 
         $this->connectBluesky($client, self::ALICE, self::APP_PASSWORD . ' ');
 
@@ -123,7 +121,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     {
         $stub = $this->alice();
         $client = $this->clientVerifying($stub);
-        $this->accountOn($client, 'social-reconnect-main-password@example.test');
+        $this->signIn($client, 'social-reconnect-main-password@example.test');
         $id = $this->connectedId($client);
         $stub->lastCredentials = null;
 
@@ -148,7 +146,7 @@ final class SocialAccountControllerTest extends ApiTestCase
             new VerifiedAccountModel('42', 'alice@mastodon.example.test', 'https://mastodon.example.test'),
         );
         $client = $this->clientVerifying($stub);
-        $this->accountOn($client, 'social-mastodon@example.test');
+        $this->signIn($client, 'social-mastodon@example.test');
 
         $this->connectMastodon($client, 'mastodon.example.test/');
 
@@ -160,7 +158,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testAPlainHttpInstanceIsRefused(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-http@example.test');
+        $this->signIn($client, 'social-http@example.test');
 
         $this->connectMastodon($client, 'http://mastodon.example.test');
 
@@ -173,7 +171,7 @@ final class SocialAccountControllerTest extends ApiTestCase
         $client = $this->clientVerifying(new StubAccountVerifier(
             new VerifiedAccountModel('42', 'alice@mastodon.example.test', 'https://mastodon.example.test'),
         ));
-        $this->accountOn($client, 'social-http-budget@example.test');
+        $this->signIn($client, 'social-http-budget@example.test');
 
         for ($attempt = 0; $attempt < self::CONNECT_BUDGET; ++$attempt) {
             $this->connectMastodon($client, 'http://mastodon.example.test');
@@ -187,7 +185,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testRejectedCredentialsAnswer422(): void
     {
         $client = $this->clientVerifying(new StubAccountVerifier(new SocialCredentialsRejectedException('Nope.')));
-        $this->accountOn($client, 'social-rejected@example.test');
+        $this->signIn($client, 'social-rejected@example.test');
 
         $this->connectBluesky($client);
 
@@ -199,7 +197,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testAnUnreachableNetworkAnswers502(): void
     {
         $client = $this->clientVerifying(new StubAccountVerifier(new SocialNetworkUnreachableException('Down.')));
-        $this->accountOn($client, 'social-unreachable@example.test');
+        $this->signIn($client, 'social-unreachable@example.test');
 
         $this->connectBluesky($client);
 
@@ -210,7 +208,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testConnectingTheSameAccountTwiceAnswers409(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-twice@example.test');
+        $this->signIn($client, 'social-twice@example.test');
         $this->connectBluesky($client);
 
         $this->connectBluesky($client);
@@ -222,7 +220,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testReconnectReplacesTheHint(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-reconnect@example.test');
+        $this->signIn($client, 'social-reconnect@example.test');
         $id = $this->connectedId($client);
 
         $this->replaceCredential($client, $id);
@@ -237,9 +235,9 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testAnotherUsersAccountAnswers404OnEveryIdRoute(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-owner@example.test');
+        $this->signIn($client, 'social-owner@example.test');
         $id = $this->connectedId($client);
-        $this->accountOn($client, 'social-intruder@example.test');
+        $this->signIn($client, 'social-intruder@example.test');
 
         $this->replaceCredential($client, $id);
         $this->assertNotFound($client);
@@ -252,9 +250,9 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testOwnershipIsCheckedBeforeTheBudget(): void
     {
         $client = $this->clientVerifying($this->echoingVerifier());
-        $this->accountOn($client, 'social-budget-owner@example.test');
+        $this->signIn($client, 'social-budget-owner@example.test');
         $ownerId = $this->connectedId($client);
-        $this->accountOn($client, 'social-budget-intruder@example.test');
+        $this->signIn($client, 'social-budget-intruder@example.test');
         for ($attempt = 0; $attempt < self::CONNECT_BUDGET; ++$attempt) {
             $this->connectBluesky($client);
         }
@@ -267,7 +265,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testReconnectSpendsTheConnectBudget(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-reconnect-budget@example.test');
+        $this->signIn($client, 'social-reconnect-budget@example.test');
         $id = $this->connectedId($client);
         for ($attempt = 1; $attempt < self::CONNECT_BUDGET; ++$attempt) {
             $this->replaceCredential($client, $id);
@@ -282,7 +280,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testMakeDefaultReturnsTheListWithTheFlagMoved(): void
     {
         $client = $this->clientVerifying($this->echoingVerifier());
-        $this->accountOn($client, 'social-default@example.test');
+        $this->signIn($client, 'social-default@example.test');
         $firstId = $this->connectedId($client);
         $this->connectBluesky($client, 'bob.bsky.social');
         $secondId = $this->payload($client)['id'];
@@ -301,7 +299,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testDisconnectReturnsTheListWithoutTheAccount(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-disconnect@example.test');
+        $this->signIn($client, 'social-disconnect@example.test');
         $id = $this->connectedId($client);
 
         $client->request('DELETE', sprintf('/api/me/social-accounts/%d', $id));
@@ -313,7 +311,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testTheConnectBudgetIsTenPerQuarterHour(): void
     {
         $client = $this->clientVerifying(new StubAccountVerifier(new SocialCredentialsRejectedException('Nope.')));
-        $this->accountOn($client, 'social-budget@example.test');
+        $this->signIn($client, 'social-budget@example.test');
 
         for ($attempt = 0; $attempt < self::CONNECT_BUDGET; ++$attempt) {
             $this->connectBluesky($client);
@@ -327,7 +325,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testTheListShowsTheLastCheckAndTheRecentChangesNewestFirst(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-sync-list@example.test');
+        $this->signIn($client, 'social-sync-list@example.test');
         $id = $this->connectedId($client);
         $this->stampSkippedCheck($id, '2026-10-17 11:00:00');
         $this->recordChange($id, PrivateFeedSyncReason::Saved, '2026-10-17 10:00:00');
@@ -351,7 +349,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testEachListedAccountCarriesOnlyItsOwnChanges(): void
     {
         $client = $this->clientVerifying($this->echoingVerifier());
-        $this->accountOn($client, 'social-sync-own@example.test');
+        $this->signIn($client, 'social-sync-own@example.test');
         $firstId = $this->connectedId($client);
         $this->connectBluesky($client, 'bob.bsky.social');
         $secondId = $this->payload($client)['id'];
@@ -370,10 +368,10 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testAnotherUsersSyncChangesAreAbsentFromTheList(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-sync-owner@example.test');
+        $this->signIn($client, 'social-sync-owner@example.test');
         $ownerAccountId = $this->connectedId($client);
         $this->recordChange($ownerAccountId, PrivateFeedSyncReason::Created, '2026-10-17 10:00:00');
-        $this->accountOn($client, 'social-sync-other@example.test');
+        $this->signIn($client, 'social-sync-other@example.test');
         $this->connectBluesky($client, 'bob.bsky.social');
 
         $client->request('GET', '/api/me/social-accounts');
@@ -386,7 +384,7 @@ final class SocialAccountControllerTest extends ApiTestCase
     public function testAReconnectAnswersTheAccountWithItsRecentChanges(): void
     {
         $client = $this->clientVerifying($this->alice());
-        $this->accountOn($client, 'social-sync-reconnect@example.test');
+        $this->signIn($client, 'social-sync-reconnect@example.test');
         $id = $this->connectedId($client);
         $this->recordChange($id, PrivateFeedSyncReason::Unsaved, '2026-10-17 10:00:00');
 
@@ -472,17 +470,6 @@ final class SocialAccountControllerTest extends ApiTestCase
         self::getContainer()->set(AccountVerifierInterface::class, $stub);
 
         return $client;
-    }
-
-    private function accountOn(KernelBrowser $client, string $email): void
-    {
-        $this->factory()->create($email);
-        $user = $this->users()->findOneByEmail($email);
-        self::assertInstanceOf(User::class, $user);
-
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
     }
 
     private function connectBluesky(

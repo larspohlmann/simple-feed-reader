@@ -9,22 +9,9 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 final class EntrySearchMarkReadTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function authHeader(User $user): array
-    {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
-
     private function seedSubscribedMatchingEntry(User $user): void
     {
         $entityManager = $this->entityManager();
@@ -62,7 +49,7 @@ final class EntrySearchMarkReadTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('short-query@example.com');
-        $headers = $this->authHeader($user);
+        $headers = $this->jsonBearerFor($user);
 
         $client->request(
             'POST',
@@ -81,7 +68,7 @@ final class EntrySearchMarkReadTest extends ApiTestCase
         // SearchTermsModel::fromInput() enforces may count.
         $client = self::createClient();
         $user = $this->factory()->create('hundred-char-term@example.com');
-        $headers = $this->authHeader($user);
+        $headers = $this->jsonBearerFor($user);
 
         $client->request(
             'POST',
@@ -100,7 +87,7 @@ final class EntrySearchMarkReadTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('search-mark-read@example.com');
         $this->seedSubscribedMatchingEntry($user);
-        $headers = $this->authHeader($user);
+        $headers = $this->jsonBearerFor($user);
 
         $client->request(
             'POST',

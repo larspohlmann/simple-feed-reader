@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
-use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\PasskeyRegistrations;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -31,24 +29,11 @@ final class AdminSettingsControllerTest extends ApiTestCase
         $this->seedEnabledMailInstance();
     }
 
-    private function tokenFor(User $user): string
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager->create($user);
-    }
-
-    private function authenticateAs(User $user): KernelBrowser
-    {
-        $this->client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $this->tokenFor($user));
-
-        return $this->client;
-    }
-
     private function adminClient(string $email = 'boss@example.com'): KernelBrowser
     {
-        return $this->authenticateAs($this->factory()->create($email, roles: ['ROLE_ADMIN']));
+        $this->authenticate($this->client, $this->factory()->create($email, roles: ['ROLE_ADMIN']));
+
+        return $this->client;
     }
 
     /** The relying party is judged against the host the request arrived on, so
@@ -275,7 +260,8 @@ final class AdminSettingsControllerTest extends ApiTestCase
 
     public function testNonAdminIsForbidden(): void
     {
-        $client = $this->authenticateAs($this->factory()->create('plain@example.com'));
+        $client = $this->client;
+        $this->signIn($client, 'plain@example.com');
 
         $client->request('GET', self::SETTINGS);
 

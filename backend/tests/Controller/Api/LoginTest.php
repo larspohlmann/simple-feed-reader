@@ -9,16 +9,14 @@ use App\Enum\UserStatus;
 use App\EventListener\AddUserIdClaimOnTokenIssueListener;
 use App\Security\PasswordWorkEqualizer;
 use App\Tests\Support\HashCountingWork;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class LoginTest extends WebTestCase
+final class LoginTest extends ApiTestCase
 {
     /** login_throttling counters live in a filesystem pool that outlives the run; clear them or later tests 429. */
     protected function setUp(): void
@@ -32,16 +30,6 @@ final class LoginTest extends WebTestCase
         self::ensureKernelShutdown();
     }
 
-    private function factory(): UserFactory
-    {
-        /** @var EntityManagerInterface $entityManager */
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return new UserFactory($entityManager, $hasher);
-    }
-
     private function login(KernelBrowser $client, string $email, string $password): void
     {
         $client->request(
@@ -50,15 +38,6 @@ final class LoginTest extends WebTestCase
             server: ['CONTENT_TYPE' => 'application/json'],
             content: (string) json_encode(['email' => $email, 'password' => $password]),
         );
-    }
-
-    /** @return array<mixed> */
-    private function payload(KernelBrowser $client): array
-    {
-        $decoded = json_decode((string) $client->getResponse()->getContent(), true);
-        self::assertIsArray($decoded);
-
-        return $decoded;
     }
 
     public function testActiveUserReceivesAToken(): void

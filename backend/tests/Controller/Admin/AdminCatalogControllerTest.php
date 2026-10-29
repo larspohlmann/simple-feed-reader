@@ -11,14 +11,11 @@ use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class AdminCatalogControllerTest extends WebTestCase
+final class AdminCatalogControllerTest extends ApiTestCase
 {
     /**
      * Resolution returns a canned URL and every download fails, so the warm and refresh endpoints run their real wiring
@@ -40,16 +37,6 @@ final class AdminCatalogControllerTest extends WebTestCase
         self::getContainer()->set(FaviconResolver::class, $resolver);
     }
 
-    /** @return array<string, mixed> */
-    private function responseBody(KernelBrowser $client): array
-    {
-        $decoded = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
-    }
-
     private function reloadedCategory(int $id): ?CatalogCategory
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
@@ -59,40 +46,21 @@ final class AdminCatalogControllerTest extends WebTestCase
         return $entityManager->find(CatalogCategory::class, $id);
     }
 
-    /**
-     * @param list<string> $roles
-     *
-     * @return array<string, string>
-     */
-    private function authHeader(string $email, array $roles): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        $user = (new UserFactory($entityManager, $hasher))->create($email, roles: $roles);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
-
     public function testANonAdminIsRefused(): void
     {
         $client = self::createClient();
-        $client->request('GET', '/api/admin/catalog', server: $this->authHeader('plain@example.com', []));
+        $client->request(
+            'GET',
+            '/api/admin/catalog',
+            server: $this->jsonBearerFor($this->factory()->create('plain@example.com')),
+        );
         self::assertResponseStatusCodeSame(403);
     }
 
     public function testAdminCanCreateUpdateAndDeleteACategory(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('admin@example.com', ['ROLE_ADMIN']);
+        $headers = $this->jsonBearerFor($this->factory()->create('admin@example.com', roles: ['ROLE_ADMIN']));
 
         $client->request(
             'POST',
@@ -110,7 +78,7 @@ final class AdminCatalogControllerTest extends WebTestCase
             ),
         );
         self::assertResponseStatusCodeSame(201);
-        $created = $this->responseBody($client);
+        $created = $this->payload($client);
         $category = $created['category'];
         self::assertIsArray($category);
         $id = $category['id'];
@@ -143,7 +111,7 @@ final class AdminCatalogControllerTest extends WebTestCase
         // to survive from here to the refresh call. KernelBrowser otherwise reboots
         // the kernel before every request and would discard it.
         $client->disableReboot();
-        $headers = $this->authHeader('admin2@example.com', ['ROLE_ADMIN']);
+        $headers = $this->jsonBearerFor($this->factory()->create('admin2@example.com', roles: ['ROLE_ADMIN']));
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -184,7 +152,7 @@ final class AdminCatalogControllerTest extends WebTestCase
     public function testWarmingReportsASliceAndWhatIsLeft(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('warm@example.com', ['ROLE_ADMIN']);
+        $headers = $this->jsonBearerFor($this->factory()->create('warm@example.com', roles: ['ROLE_ADMIN']));
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -201,7 +169,7 @@ final class AdminCatalogControllerTest extends WebTestCase
         $client->request('POST', '/api/admin/catalog/favicons/warm', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $body = $this->responseBody($client);
+        $body = $this->payload($client);
 
         self::assertSame(0, $body['warmed']);
         self::assertSame(1, $body['failed']);
@@ -211,7 +179,7 @@ final class AdminCatalogControllerTest extends WebTestCase
     public function testReorderingRewritesPositions(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('admin3@example.com', ['ROLE_ADMIN']);
+        $headers = $this->jsonBearerFor($this->factory()->create('admin3@example.com', roles: ['ROLE_ADMIN']));
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);

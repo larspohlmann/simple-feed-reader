@@ -15,7 +15,6 @@ use App\Tests\Support\BlueskyProfiles;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubHiddenProfiles;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -90,15 +89,10 @@ final class SubscriptionHiddenProfileTest extends ApiTestCase
     /** @param array<string, mixed> $body */
     private function post(array $body): void
     {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
         $this->client->request(
             'POST',
             '/api/subscriptions',
-            server: [
-                'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($this->user),
-                'CONTENT_TYPE' => 'application/json',
-            ],
+            server: $this->jsonBearerFor($this->user),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }

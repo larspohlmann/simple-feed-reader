@@ -8,17 +8,14 @@ use App\Entity\InstanceSettingsUpdate;
 use App\EventListener\AddUserIdClaimOnTokenIssueListener;
 use App\Repository\UserRepository;
 use App\Service\Settings\InstanceSettings;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\TogglesPasskeySignIn;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class SetupControllerTest extends WebTestCase
+final class SetupControllerTest extends ApiTestCase
 {
     use EnablesMailInTests;
     use TogglesPasskeySignIn;
@@ -59,23 +56,9 @@ final class SetupControllerTest extends WebTestCase
         putenv('ADMIN_SETUP_SECRET=' . self::SECRET);
     }
 
-    private function seedAdmin(KernelBrowser $client): void
+    private function seedAdmin(): void
     {
-        $entityManager = $client->getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = $client->getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        (new UserFactory($entityManager, $hasher))->create('existing@example.com', roles: ['ROLE_ADMIN']);
-    }
-
-    /** @return array<string, mixed> */
-    private function body(KernelBrowser $client): array
-    {
-        $decoded = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
+        $this->factory()->create('existing@example.com', roles: ['ROLE_ADMIN']);
     }
 
     private function post(KernelBrowser $client, string $email, string $password, string $secret): void
@@ -96,17 +79,17 @@ final class SetupControllerTest extends WebTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        self::assertTrue($this->body($client)['needsSetup']);
+        self::assertTrue($this->payload($client)['needsSetup']);
     }
 
     public function testStatusReportsFalseOnceAnAdminExists(): void
     {
         $client = self::createClient();
-        $this->seedAdmin($client);
+        $this->seedAdmin();
 
         $client->request('GET', '/api/setup/status');
 
-        self::assertFalse($this->body($client)['needsSetup']);
+        self::assertFalse($this->payload($client)['needsSetup']);
     }
 
     public function testStatusReportsMailEnabled(): void
@@ -116,7 +99,7 @@ final class SetupControllerTest extends WebTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        $body = $this->body($client);
+        $body = $this->payload($client);
         self::assertIsBool($body['needsSetup']);
         self::assertIsBool($body['mailEnabled']);
         self::assertTrue($body['mailEnabled']);
@@ -128,7 +111,7 @@ final class SetupControllerTest extends WebTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        self::assertFalse($this->body($client)['passkeySignInAvailable']);
+        self::assertFalse($this->payload($client)['passkeySignInAvailable']);
     }
 
     public function testStatusReportsPasskeySignInAvailableOnceEnabledWithAValidRelyingParty(): void
@@ -148,7 +131,7 @@ final class SetupControllerTest extends WebTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        self::assertTrue($this->body($client)['passkeySignInAvailable']);
+        self::assertTrue($this->payload($client)['passkeySignInAvailable']);
     }
 
     public function testStatusReportsPasskeySignInUnavailableWhenTheToggleIsOff(): void
@@ -159,7 +142,7 @@ final class SetupControllerTest extends WebTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        self::assertFalse($this->body($client)['passkeySignInAvailable']);
+        self::assertFalse($this->payload($client)['passkeySignInAvailable']);
     }
 
     public function testCreatesAdminWithTheCorrectSecret(): void
@@ -170,7 +153,7 @@ final class SetupControllerTest extends WebTestCase
         $this->post($client, 'root@example.com', 'a-strong-password-123', self::SECRET);
 
         self::assertResponseStatusCodeSame(201);
-        $token = $this->body($client)['token'];
+        $token = $this->payload($client)['token'];
         self::assertIsString($token);
 
         $users = $client->getContainer()->get(UserRepository::class);

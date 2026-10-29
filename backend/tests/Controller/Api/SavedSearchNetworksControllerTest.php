@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,12 +19,7 @@ final class SavedSearchNetworksControllerTest extends ApiTestCase
     {
         $this->client = self::createClient();
         $user = $this->factory()->create('networks-api@example.com');
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $this->headers = [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
+        $this->headers = $this->jsonBearerFor($user);
     }
 
     public function testANetworkIsExcludedUntilIncludedAndTheListReportsIt(): void

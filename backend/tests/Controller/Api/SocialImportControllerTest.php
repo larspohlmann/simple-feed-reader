@@ -19,7 +19,6 @@ use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StubSocialCandidates;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
@@ -644,16 +643,6 @@ final class SocialImportControllerTest extends ApiTestCase
         self::getContainer()->set(SocialCandidatesInterface::class, $candidates);
 
         return $client;
-    }
-
-    private function signIn(KernelBrowser $client, string $email): User
-    {
-        $user = $this->factory()->create($email);
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $tokens->create($user));
-
-        return $user;
     }
 
     private function blueskyAccountOf(User $user): SocialAccount

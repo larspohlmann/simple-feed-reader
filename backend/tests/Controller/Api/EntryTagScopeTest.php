@@ -8,7 +8,6 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -23,7 +22,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testATopTagListsAndMarksReadItsGrandchildsEntries(): void
     {
-        [$headers, $user] = $this->auth('tag-grandchild@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-grandchild@example.com');
         $reading = $this->tag($user, 'reading', null);
         $longReads = $this->tag($user, 'long reads', $reading);
         $essays = $this->tag($user, 'essays', $longReads);
@@ -42,7 +41,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testAParentListsItsOwnAndItsChildrensEntriesEachOnce(): void
     {
-        [$headers, $user] = $this->auth('tag-parent@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-parent@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
 
         $this->client->request('GET', '/api/entries?tag=' . $tagIds['reading'], server: $headers);
@@ -53,7 +52,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testAChildListsOnlyItsOwnEntries(): void
     {
-        [$headers, $user] = $this->auth('tag-child@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-child@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
 
         $this->client->request('GET', '/api/entries?tag=' . $tagIds['long reads'], server: $headers);
@@ -63,9 +62,9 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testAParentNeverListsAnotherUsersFeeds(): void
     {
-        [$headers, $user] = $this->auth('tag-own@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-own@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
-        [, $stranger] = $this->auth('tag-stranger@example.com');
+        $stranger = $this->factory()->create('tag-stranger@example.com');
         $this->seedHierarchy($stranger, 'stranger.example');
         $this->seedStrangerChildOf($stranger, $tagIds['reading']);
 
@@ -76,7 +75,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testMarkingAParentReadReachesItsChildrensFeeds(): void
     {
-        [$headers, $user] = $this->auth('tag-mark-parent@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-mark-parent@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
 
         $this->markRead($headers, $tagIds['reading']);
@@ -90,7 +89,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testMarkingAChildReadLeavesTheParentsOwnFeedUnread(): void
     {
-        [$headers, $user] = $this->auth('tag-mark-child@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-mark-child@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
 
         $this->markRead($headers, $tagIds['long reads']);
@@ -185,15 +184,5 @@ final class EntryTagScopeTest extends ApiTestCase
 
             return $entry['title'];
         }, array_values($entries));
-    }
-
-    /** @return array{0: array<string, string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $user = $this->factory()->create($email);
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 }

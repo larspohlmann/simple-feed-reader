@@ -9,7 +9,6 @@ use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\NetworkFeedSubscriptions;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -24,7 +23,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testTheTagsGroupListsEveryTaggedFeedOnceAndNothingUntagged(): void
     {
-        [$headers, $user] = $this->auth('group-tags@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-tags@example.com');
         $this->seedGroups($user);
 
         $this->client->request('GET', '/api/entries?group=tags', server: $headers);
@@ -35,7 +34,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testTheFeedsGroupListsOnlyUntaggedFeedsOnNoNetwork(): void
     {
-        [$headers, $user] = $this->auth('group-feeds@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-feeds@example.com');
         $this->seedGroups($user);
 
         $this->client->request('GET', '/api/entries?group=feeds', server: $headers);
@@ -46,9 +45,9 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testAGroupNeverListsAnotherUsersFeeds(): void
     {
-        [$headers, $user] = $this->auth('group-own@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-own@example.com');
         $this->seedGroups($user);
-        [, $stranger] = $this->auth('group-stranger@example.com');
+        $stranger = $this->factory()->create('group-stranger@example.com');
         $foreign = $this->fixtures()->subscribe($stranger, 'https://example.org/foreign.xml');
         $this->fixtures()->post($foreign, 'foreign-post', '2026-10-09T00:00:00Z');
 
@@ -59,7 +58,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testAnUnknownGroupIsAValidationError(): void
     {
-        [$headers] = $this->auth('group-unknown@example.com');
+        $headers = $this->bearerFor($this->factory()->create('group-unknown@example.com'));
 
         $this->client->request('GET', '/api/entries?group=folders', server: $headers);
 
@@ -72,7 +71,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testMarkingTheFeedsGroupReadLeavesTaggedFeedsUnread(): void
     {
-        [$headers, $user] = $this->auth('group-mark@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-mark@example.com');
         $this->seedGroups($user);
 
         $this->markRead($headers, ['scope' => 'group', 'group' => 'feeds']);
@@ -86,7 +85,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testMarkingTheTagsGroupReadReachesFeedsHiddenFromAllItems(): void
     {
-        [$headers, $user] = $this->auth('group-mark-tags@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-mark-tags@example.com');
         $this->seedGroups($user);
 
         $this->markRead($headers, ['scope' => 'group', 'group' => 'tags']);
@@ -99,7 +98,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testMarkingAGroupReadWithoutAGroupIsAValidationError(): void
     {
-        [$headers] = $this->auth('group-mark-missing@example.com');
+        $headers = $this->bearerFor($this->factory()->create('group-mark-missing@example.com'));
 
         $this->markRead($headers, ['scope' => 'group']);
 
@@ -177,16 +176,6 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
             return $entry['title'];
         }, array_values($entries));
-    }
-
-    /** @return array{0: array<string, string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $user = $this->factory()->create($email);
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 
     private function fixtures(): NetworkFeedSubscriptions

@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\ModelDescriptor;
-use App\Entity\User;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -47,23 +45,6 @@ trait AiConfigurationRequests
         self::getContainer()->set(ModelCatalogInterface::class, new StubModelCatalog($models));
 
         return $client;
-    }
-
-    private function authenticate(KernelBrowser $client, string $email): void
-    {
-        $user = $this->users()->findOneByEmail($email);
-        self::assertInstanceOf(User::class, $user);
-
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
-    }
-
-    private function accountOn(KernelBrowser $client, string $email): void
-    {
-        $this->factory()->create($email);
-        $this->authenticate($client, $email);
     }
 
     private function putJson(KernelBrowser $client, string $uri, string $json): void

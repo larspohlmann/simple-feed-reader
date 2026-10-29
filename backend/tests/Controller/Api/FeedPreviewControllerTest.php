@@ -4,20 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\User;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Scraper\ScrapedFixtures;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubFeedFetcher;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class FeedPreviewControllerTest extends WebTestCase
+final class FeedPreviewControllerTest extends ApiTestCase
 {
     use ScrapedFixtures;
 
@@ -34,21 +30,6 @@ final class FeedPreviewControllerTest extends WebTestCase
         self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
         $rateLimiterCache->clear();
         self::ensureKernelShutdown();
-    }
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 
     /**
@@ -106,7 +87,7 @@ final class FeedPreviewControllerTest extends WebTestCase
     public function testAuthenticatedValidUrlReturnsPreviewJson(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('preview-ok@example.com');
+        $headers = $this->bearerFor($this->factory()->create('preview-ok@example.com'));
         $this->installFetcher($this->fetcherWithBody($this->feedXml()));
 
         $client->request(
@@ -146,7 +127,7 @@ final class FeedPreviewControllerTest extends WebTestCase
     public function testScrapedFormatPreviewsTheHtmlPageAsAFeed(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('preview-scraped@example.com');
+        [$headers, $user] = $this->bearerAndUser('preview-scraped@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -196,7 +177,7 @@ final class FeedPreviewControllerTest extends WebTestCase
     public function testScrapedFormatPreviewReturnsProblemWhenScrapingIsDisabled(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('preview-disabled@example.com');
+        $headers = $this->bearerFor($this->factory()->create('preview-disabled@example.com'));
         $this->installFetcher(new StubFeedFetcher());
 
         $client->request(
@@ -220,7 +201,7 @@ final class FeedPreviewControllerTest extends WebTestCase
     public function testScrapedFormatOnAnArticleFreePageReturns422(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('preview-navonly@example.com');
+        [$headers, $user] = $this->bearerAndUser('preview-navonly@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -261,7 +242,7 @@ final class FeedPreviewControllerTest extends WebTestCase
     public function testUnreadableXmlPreviewReturns422WithFeedMessage(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('preview-notfeed@example.com');
+        $headers = $this->bearerFor($this->factory()->create('preview-notfeed@example.com'));
         $this->installFetcher(
             $this->fetcherWithBody(/** @lang TEXT */ '<html><body>Not a feed at all.</body></html>'),
         );
@@ -284,7 +265,7 @@ final class FeedPreviewControllerTest extends WebTestCase
     public function testFetchFailureReturns422(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('preview-fail@example.com');
+        $headers = $this->bearerFor($this->factory()->create('preview-fail@example.com'));
         $fetcher = new StubFeedFetcher();
         $fetcher->willThrow(self::URL, new FeedUnreachableException('blocked'));
         $this->installFetcher($fetcher);

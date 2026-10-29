@@ -12,30 +12,13 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Service\Backup\AccountBackupExporter;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\BackupArchiveReader;
 use App\Tests\Support\CorruptGzip;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class AccountBackupControllerTest extends WebTestCase
+final class AccountBackupControllerTest extends ApiTestCase
 {
-    /** @return array{0: array<string, string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
-    }
-
     /**
      * Seeds one tag, one feed, one subscription, one entry and a favourited
      * entry state for $user — the fixture every restore test in this file
@@ -111,7 +94,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testBackupStreamsAZipOfGzipPartsAttachment(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('backup-download@example.com');
+        [$headers, $user] = $this->bearerAndUser('backup-download@example.com');
         $this->seedSourceAccount($user);
 
         $client->request('GET', '/api/account/backup', server: $headers);
@@ -147,7 +130,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testPreviewReportsLoadAndDeleteCounts(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('restore-preview@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-preview@example.com');
         $userId = $user->requireId();
         $gzip = $this->seededFoundationFor($user);
 
@@ -180,7 +163,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testStartWithoutConfirmIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('restore-no-confirm@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-no-confirm@example.com');
         $userId = $user->requireId();
         $gzip = $this->seededFoundationFor($user);
 
@@ -207,14 +190,14 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testABackupRestoresIntoAnotherAccountOnePartPerRequest(): void
     {
         $client = self::createClient();
-        [$sourceHeaders, $sourceUser] = $this->auth('roundtrip-source@example.com');
+        [$sourceHeaders, $sourceUser] = $this->bearerAndUser('roundtrip-source@example.com');
         $this->seedSourceAccount($sourceUser);
 
         $client->request('GET', '/api/account/backup', server: $sourceHeaders);
         self::assertResponseIsSuccessful();
         $archive = BackupArchiveReader::fromResponseContent((string) $client->getInternalResponse()->getContent());
 
-        [$targetHeaders] = $this->auth('roundtrip-target@example.com');
+        $targetHeaders = $this->bearerFor($this->factory()->create('roundtrip-target@example.com'));
         $gzipHeaders = $targetHeaders + ['CONTENT_TYPE' => 'application/gzip'];
 
         $client->request(
@@ -250,7 +233,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testEntriesEndpointNeedsNoConfirmation(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('restore-entries-no-confirm@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-entries-no-confirm@example.com');
         $this->seedSourceAccount($user);
         [$foundation, $entryParts] = $this->partsOf($user);
         $gzipHeaders = $headers + ['CONTENT_TYPE' => 'application/gzip'];
@@ -272,7 +255,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testGarbageBodyIs422InvalidBackup(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('restore-garbage@example.com');
+        $headers = $this->bearerFor($this->factory()->create('restore-garbage@example.com'));
 
         $client->request(
             'POST',
@@ -290,7 +273,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testAFileWithoutAHeaderLineIsRejected(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('restore-missing-header@example.com');
+        $headers = $this->bearerFor($this->factory()->create('restore-missing-header@example.com'));
         $gzip = (string) gzencode(json_encode(['kind' => 'account'], \JSON_THROW_ON_ERROR) . "\n");
 
         $client->request(
@@ -335,7 +318,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testTheOldRestoreRouteIsGone(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('restore-old-route-gone@example.com');
+        $headers = $this->bearerFor($this->factory()->create('restore-old-route-gone@example.com'));
 
         $client->request(
             'POST',
@@ -349,7 +332,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testACorruptGzipBodyIs422InvalidBackupRatherThan500(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('restore-corrupt@example.com');
+        $headers = $this->bearerFor($this->factory()->create('restore-corrupt@example.com'));
 
         $client->request(
             'POST',
@@ -368,7 +351,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testACorruptGzipBodyToTheDestructiveRouteIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('restore-corrupt-destructive@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-corrupt-destructive@example.com');
         $userId = $user->requireId();
         $this->seedSourceAccount($user);
 
@@ -395,7 +378,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testAMiscountedFooterIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('restore-bad-footer@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-bad-footer@example.com');
         $userId = $user->requireId();
         $gzip = $this->withAMiscountedFooter($this->seededFoundationFor($user));
 
@@ -421,7 +404,7 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testADuplicateFeedUrlIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('restore-duplicate-feed@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-duplicate-feed@example.com');
         $userId = $user->requireId();
         $gzip = $this->withANewFeedUrlDeclaredTwice($this->seededFoundationFor($user));
 

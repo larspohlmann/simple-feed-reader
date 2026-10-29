@@ -6,30 +6,11 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class CatalogFaviconControllerTest extends WebTestCase
+final class CatalogFaviconControllerTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function authHeader(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
-    }
-
     private function persistFeedWithIcon(): CatalogFeed
     {
         $feed = $this->newFeed();
@@ -70,7 +51,7 @@ final class CatalogFaviconControllerTest extends WebTestCase
     public function testServesTheCachedBytesWithAnEtag(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('icons@example.com');
+        $headers = $this->bearerFor($this->factory()->create('icons@example.com'));
         $feed = $this->persistFeedWithIcon();
 
         $client->request('GET', '/api/catalog/feeds/' . $feed->getId() . '/favicon', server: $headers);
@@ -84,7 +65,7 @@ final class CatalogFaviconControllerTest extends WebTestCase
     public function testServesTheMonogramWhenNoIconIsCached(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('placeholder@example.com');
+        $headers = $this->bearerFor($this->factory()->create('placeholder@example.com'));
         $feed = $this->persistFeedWithoutIcon();
 
         $client->request('GET', '/api/catalog/feeds/' . $feed->getId() . '/favicon', server: $headers);
@@ -97,7 +78,7 @@ final class CatalogFaviconControllerTest extends WebTestCase
     public function testAnUnknownFeedIs404(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('missing@example.com');
+        $headers = $this->bearerFor($this->factory()->create('missing@example.com'));
 
         $client->request('GET', '/api/catalog/feeds/999999/favicon', server: $headers);
 

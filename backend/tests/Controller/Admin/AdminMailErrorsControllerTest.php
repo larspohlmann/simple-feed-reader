@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
-use App\Entity\User;
 use App\Enum\MailKind;
 use App\Service\Mail\MailFailureRecorder\MailDeliveryHealth;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class AdminMailErrorsControllerTest extends ApiTestCase
@@ -33,7 +31,7 @@ final class AdminMailErrorsControllerTest extends ApiTestCase
         $this->client->request(
             'GET',
             self::ERRORS,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+            server: $this->bearerFor($admin),
         );
 
         self::assertResponseIsSuccessful();
@@ -52,13 +50,5 @@ final class AdminMailErrorsControllerTest extends ApiTestCase
         $this->client->request('GET', self::ERRORS);
 
         self::assertSame(401, $this->client->getResponse()->getStatusCode());
-    }
-
-    private function tokenFor(User $user): string
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        return $manager->create($user);
     }
 }

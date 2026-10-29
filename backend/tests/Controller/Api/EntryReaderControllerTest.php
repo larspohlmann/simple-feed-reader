@@ -13,35 +13,17 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\ReaderEndpointFixtures;
-use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class EntryReaderControllerTest extends WebTestCase
+final class EntryReaderControllerTest extends ApiTestCase
 {
     use ReaderEndpointFixtures;
 
     protected function setUp(): void
     {
         $this->clearReaderRateLimiter();
-    }
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 
     private function seedEntry(User $user, ?string $url): Entry
@@ -73,7 +55,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testOwnedEntryOkReturnsExtractedArticle(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-ok@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-ok@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
@@ -113,7 +95,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testDeclaresAPaywalledPreviewSoTheClientCanSaySo(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-paywalled@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-paywalled@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
@@ -138,7 +120,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testOwnedEntryFetchFailureReturnsFailedStatus(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-fail@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-fail@example.com');
         $fake = $this->installFake();
         $fake->willReturn(
             ExtractionResultModel::failed(
@@ -170,7 +152,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testCarriesTheEntryAuthorIntoTheReaderExtraction(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-author@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-author@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             'https://example.com/article',
@@ -193,7 +175,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testCarriesTheFeedPosterFallbackIntoTheReaderExtraction(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-poster@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-poster@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             'https://example.com/article',
@@ -219,7 +201,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testOffTopicExtractionOfAFullFeedArticleFallsBackToTheFeed(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-mismatch@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-mismatch@example.com');
         $fake = $this->installFake();
         // Readability grabbed page furniture, not the story (#654).
         $fake->willReturn(ExtractionResultModel::ok(
@@ -246,7 +228,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testExtractionThatReflectsTheFullFeedArticleStaysOk(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-reflects@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-reflects@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
@@ -305,7 +287,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testEntryWithoutUrlShortCircuitsWithoutCallingExtractor(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-nourl@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-nourl@example.com');
         $fake = $this->installFake();
         $entry = $this->seedEntry($user, null);
 
@@ -323,7 +305,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testAPostAnswersFeedBodyIsPostWithoutCallingExtractor(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-post@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-post@example.com');
         $fake = $this->installFake();
         $entry = $this->seedEntry($user, 'https://example.social/@a/1');
         $entry->setHeadline(Headline::derived('Post'));
@@ -344,7 +326,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testAPostIsAnsweredWhenTheReaderBudgetIsSpent(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-post-budget@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-post-budget@example.com');
         $this->installFake();
         $post = $this->seedEntry($user, 'https://example.social/@a/2');
         $post->setHeadline(Headline::derived('Post'));
@@ -360,7 +342,7 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testAUrlLessEntryIsAnsweredWhenTheReaderBudgetIsSpent(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-nourl-budget@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-nourl-budget@example.com');
         $this->installFake();
         $entry = $this->seedEntry($user, null);
         $this->spendReaderBudget($user);
@@ -373,8 +355,8 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testEntryOfAnotherUserIs404AndDoesNotCallExtractor(): void
     {
         $client = self::createClient();
-        [$headers] = $this->auth('reader-idor@example.com');
-        [, $stranger] = $this->auth('reader-owner@example.com');
+        $headers = $this->bearerFor($this->factory()->create('reader-idor@example.com'));
+        $stranger = $this->factory()->create('reader-owner@example.com');
         $fake = $this->installFake();
         $entry = $this->seedEntry($stranger, 'https://example.com/article');
 
@@ -387,8 +369,8 @@ final class EntryReaderControllerTest extends WebTestCase
     public function testOwnershipIsCheckedBeforeTheReaderBudget(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-idor-budget@example.com');
-        [, $stranger] = $this->auth('reader-owner-budget@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-idor-budget@example.com');
+        $stranger = $this->factory()->create('reader-owner-budget@example.com');
         $this->installFake();
         $entry = $this->seedEntry($stranger, 'https://example.com/article');
         $this->spendReaderBudget($user);

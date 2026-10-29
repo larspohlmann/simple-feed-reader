@@ -10,19 +10,16 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Chapter\ChapterFileSource\ChapterFileSourceInterface;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class EntryChaptersControllerTest extends WebTestCase
+final class EntryChaptersControllerTest extends ApiTestCase
 {
     public function testAYouTubeEntryServesItsChaptersAndATrimmedBody(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('chapters-youtube@example.com');
+        [$headers, $user] = $this->bearerAndUser('chapters-youtube@example.com');
         $entryId = $this->seedEntry(
             $user,
             'https://www.youtube.com/watch?v=JsBZOcqZerk',
@@ -47,7 +44,7 @@ final class EntryChaptersControllerTest extends WebTestCase
     public function testAnEntryWithoutChaptersSendsNull(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('chapters-none@example.com');
+        [$headers, $user] = $this->bearerAndUser('chapters-none@example.com');
         $entryId = $this->seedEntry($user, 'https://blog.test/post', '<p>Plain</p>');
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
@@ -59,7 +56,7 @@ final class EntryChaptersControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->auth('chapters-file@example.com');
+        [$headers, $user] = $this->bearerAndUser('chapters-file@example.com');
         $entryId = $this->seedEntry($user, 'https://pod.test/ep1', '<p>Notes</p>', 'https://pod.test/ch.json');
         $files = $this->createMock(ChapterFileSourceInterface::class);
         $files->expects($this->once())->method('chaptersAt')
@@ -108,20 +105,5 @@ final class EntryChaptersControllerTest extends WebTestCase
         $entityManager->flush();
 
         return $entry->requireId();
-    }
-
-    /** @return array{0: array<string,string>, 1: User} */
-    private function auth(string $email): array
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($entityManager, $hasher))->create($email);
-
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 }

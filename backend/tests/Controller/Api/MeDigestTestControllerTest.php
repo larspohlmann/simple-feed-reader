@@ -12,9 +12,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
  * The "send me a test digest" button: a preview send over the last N days that never advances digestLastSentAt,
@@ -34,14 +32,6 @@ final class MeDigestTestControllerTest extends ApiTestCase
         self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
         $rateLimiterCache->clear();
         self::ensureKernelShutdown();
-    }
-
-    private function authenticate(KernelBrowser $client, User $user): void
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
     }
 
     /**

@@ -8,26 +8,12 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
-use App\Entity\User;
 use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Tests\Support\ApiTestCase;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 final class SavedSearchControllerTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function authHeaderFor(User $user): array
-    {
-        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
-
-        return [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
-
     public function testAnonymousIsRejected(): void
     {
         $client = self::createClient();
@@ -39,7 +25,7 @@ final class SavedSearchControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('saver@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
 
         // Seed a subscribed feed with one unread matching entry.
         $entityManager = $this->entityManager();
@@ -111,7 +97,7 @@ final class SavedSearchControllerTest extends ApiTestCase
     public function testValidationRejectsShortTerm(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->factory()->create('shorty@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('shorty@example.com'));
         $client->request(
             'POST',
             '/api/saved-searches',
@@ -129,7 +115,7 @@ final class SavedSearchControllerTest extends ApiTestCase
     public function testThreeCharTermIsAcceptedAtTheLowerBound(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->factory()->create('lower-bound@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('lower-bound@example.com'));
         $client->request(
             'POST',
             '/api/saved-searches',
@@ -142,7 +128,7 @@ final class SavedSearchControllerTest extends ApiTestCase
     public function testHundredCharTermIsAcceptedAndHundredOneIsRejected(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->factory()->create('upper-bound@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('upper-bound@example.com'));
 
         $client->request(
             'POST',
@@ -170,7 +156,7 @@ final class SavedSearchControllerTest extends ApiTestCase
     public function testWholeWordDefaultsToFalseWhenOmitted(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->factory()->create('default-wholeword@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('default-wholeword@example.com'));
 
         $client->request(
             'POST',
@@ -188,7 +174,7 @@ final class SavedSearchControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('counts-independent@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
 
         $entityManager = $this->entityManager();
         $feed = new Feed('https://example.com/counts.xml');
@@ -257,7 +243,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         $savedId = $saved->getId();
         self::assertIsInt($savedId);
 
-        $headers = $this->authHeaderFor($owner);
+        $headers = $this->jsonBearerFor($owner);
         $client->request(
             'PATCH',
             '/api/saved-searches/' . $savedId,
@@ -284,7 +270,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         $entityManager->persist($saved);
         $entityManager->flush();
 
-        $headers = $this->authHeaderFor($this->factory()->create('digest-intruder@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('digest-intruder@example.com'));
         $client->request(
             'PATCH',
             '/api/saved-searches/' . $saved->getId(),
@@ -297,7 +283,7 @@ final class SavedSearchControllerTest extends ApiTestCase
     public function testUpdateUnknownSavedSearchIs404(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->factory()->create('digest-unknown@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('digest-unknown@example.com'));
         $client->request(
             'PATCH',
             '/api/saved-searches/999999',
@@ -316,7 +302,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         $entityManager->persist($saved);
         $entityManager->flush();
 
-        $headers = $this->authHeaderFor($this->factory()->create('intruder3@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('intruder3@example.com'));
         $client->request('DELETE', '/api/saved-searches/' . $saved->getId(), server: $headers);
         self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
         self::assertStringContainsString(

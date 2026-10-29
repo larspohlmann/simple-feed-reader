@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -29,15 +27,6 @@ final class MeResendVerificationTest extends ApiTestCase
         self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
         $rateLimiterCache->clear();
         self::ensureKernelShutdown();
-    }
-
-    /** Attaches a bearer token to every subsequent request this client makes. */
-    private function authenticate(KernelBrowser $client, User $user): void
-    {
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
     }
 
     private function resendVerification(KernelBrowser $client): void
