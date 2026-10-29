@@ -3,7 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { A11yModule } from '@angular/cdk/a11y';
-import { DialogRef } from '@angular/cdk/dialog';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { TagPickerComponent } from '../tag-picker/tag-picker.component';
@@ -31,6 +31,11 @@ const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
   ['too_large', 'failTooLarge'],
 ]);
 
+/** Opens the dialog already searching for `url`. */
+export interface AddFeedDialogData {
+  url: string;
+}
+
 @Component({
   selector: 'app-add-feed-dialog',
   imports: [
@@ -51,12 +56,13 @@ const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
 })
 export class AddFeedDialogComponent implements OnInit {
   readonly ref = inject<DialogRef<SubscriptionDto>>(DialogRef);
+  private readonly data = inject<AddFeedDialogData | undefined>(DIALOG_DATA);
   private readonly api = inject(ReaderApi);
   readonly tagsStore = inject(TagsStore);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly i18n = inject(TranslocoService);
 
-  readonly form = this.fb.group({ url: ['', [Validators.required]] });
+  readonly form = this.fb.group({ url: [this.data?.url ?? '', [Validators.required]] });
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly candidates = signal<FeedCandidate[]>([]);
@@ -78,6 +84,7 @@ export class AddFeedDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.tagsStore.tags().length === 0) this.tagsStore.load();
+    if (this.data) this.submit();
   }
 
   toggleTag(id: number): void {

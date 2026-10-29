@@ -66,6 +66,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
+import { UrlDropZoneComponent } from './url-drop/url-drop-zone.component';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 @Component({
@@ -78,6 +79,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
     ReaderViewComponent,
     LinkReaderComponent,
     AudioPlayerBarComponent,
+    UrlDropZoneComponent,
     DrawerSwipeDirective,
     PaneResizeDirective,
     IconComponent,

@@ -1,0 +1,27 @@
+@use '../../../theme/veil';
+
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--drawer-scrim);
+}
+
+/* The elements underneath must stay the drag's targets, or the enter/leave
+   pairs the depth count relies on stop arriving. */
+@include veil.host-fade;
+
+.card {
+  @include veil.card;
+
+  border: 2px dashed var(--accent);
+  color: var(--accent);
+}
+
+.label {
+  color: var(--text-primary);
+  font-size: var(--fs-lg);
+}

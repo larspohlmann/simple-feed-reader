@@ -2,10 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { DialogRef } from '@angular/cdk/dialog';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../../core/api';
-import { AddFeedDialogComponent } from './add-feed-dialog.component';
+import { AddFeedDialogComponent, AddFeedDialogData } from './add-feed-dialog.component';
 import { SubscriptionRows } from '../../state/subscription-rows';
 import { makeTag } from '../../testing/tag.factory';
 import { makeSubscription } from '../../testing/subscription.factory';
@@ -13,8 +13,10 @@ import { makeSubscription } from '../../testing/subscription.factory';
 describe('AddFeedDialogComponent', () => {
   let ctrl: HttpTestingController;
   const close = jest.fn();
+  let dialogData: AddFeedDialogData | undefined;
   beforeEach(() => {
     close.mockReset();
+    dialogData = undefined;
     TestBed.configureTestingModule({
       imports: [AddFeedDialogComponent, provideTranslocoTesting()],
       providers: [
@@ -23,6 +25,7 @@ describe('AddFeedDialogComponent', () => {
         provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: DialogRef, useValue: { close } },
+        { provide: DIALOG_DATA, useFactory: () => dialogData },
       ],
     });
     ctrl = TestBed.inject(HttpTestingController);
@@ -607,5 +610,18 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.toggleTag(2);
     fixture.detectChanges();
     expect(suggestions()).toEqual(['Tech']);
+  });
+
+  it('starts searching for a URL it was opened with', () => {
+    dialogData = { url: 'https://dropped.example/' };
+    const fixture = create();
+
+    expect(fixture.componentInstance.form.getRawValue().url).toBe('https://dropped.example/');
+    const request = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(request.request.body).toEqual(
+      expect.objectContaining({ url: 'https://dropped.example/' }),
+    );
+    request.flush({ subscription: { id: 4 } }, { status: 201, statusText: 'Created' });
+    expect(close).toHaveBeenCalledWith({ id: 4 });
   });
 });

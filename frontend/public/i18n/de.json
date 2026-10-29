@@ -1098,6 +1098,7 @@
     }
   },
   "reader": {
+    "dropToSubscribe": "Zum Abonnieren ablegen",
     "toggleSidebar": "Seitenleiste umschalten",
     "hideSidebar": "Seitenleiste ausblenden",
     "showSidebar": "Seitenleiste einblenden",

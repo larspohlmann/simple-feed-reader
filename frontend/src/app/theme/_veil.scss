@@ -1,0 +1,40 @@
+// A host veil that fades in on `.shown` and never takes a hit; include it at the top level.
+@mixin host-fade {
+  :host {
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+
+    /* Visibility flips only after the fade has finished, so the veil is never
+       hit-tested while it is still on screen. */
+    transition:
+      opacity 0.2s ease,
+      visibility 0s linear 0.2s;
+  }
+
+  :host(.shown) {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 0.2s ease,
+      visibility 0s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :host,
+    :host(.shown) {
+      transition: none;
+    }
+  }
+}
+
+// The near-opaque card a veil centres its message on, legible over whatever it covers (#254).
+@mixin card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-7);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface-1) 96%, transparent);
+}
