@@ -87,7 +87,7 @@ test.describe('Add feed on a phone', () => {
     const field = dialog.getByRole('textbox', { name: 'Feed or site URL' });
     await expect(field).toBeFocused();
     await field.fill(SITE);
-    await dialog.getByRole('button', { name: 'Add' }).click();
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
 
     const subscribes = dialog.getByRole('button', { name: 'Subscribe' });
     await expect(subscribes).toHaveCount(CANDIDATES.length);
@@ -141,7 +141,7 @@ test.describe('Add feed on a phone', () => {
 
     const dialog = await openAddFeedDialog(page);
     await dialog.getByRole('textbox', { name: 'Feed or site URL' }).fill(SITE);
-    await dialog.getByRole('button', { name: 'Add' }).click();
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(dialog.getByRole('button', { name: 'Subscribe' })).toHaveCount(CANDIDATES.length);
 
     const cancel = dialog.getByRole('button', { name: 'Cancel' });

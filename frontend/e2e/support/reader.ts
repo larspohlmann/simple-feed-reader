@@ -8,6 +8,7 @@ import type {
   SubscriptionsResponse,
   UnreadTotalsDto,
 } from '../../src/app/reader/models';
+import type { TrackDetails } from '../../src/app/reader/audio/audio-track';
 import type { EntryDetailResponse } from '../../src/app/reader/state/completed-entry';
 import { anEntry } from '../../src/testing/entry-testing';
 import { aSubscription } from '../../src/testing/subscription-testing';
@@ -83,7 +84,18 @@ export async function stubOneFeedReader(
   await page.route('**/api/version**', json({ version: 'dev' }));
   await page.route('**/api/recommendations/**', json({ run: null }));
   await page.route('**/api/saved-searches**', json(savedSearchesJson(...savedSearches)));
+  await page.route('**/api/youtube/videos/**', json(NOTHING_KNOWN_OF_EMBED));
+  await page.route('**/api/soundcloud/tracks/**', json(NOTHING_KNOWN_OF_EMBED));
 }
+
+/** An unstubbed embed-details read reaches the real backend, whose 401 for the stub token signs the
+ *  spec out mid-test (#1853). */
+const NOTHING_KNOWN_OF_EMBED: TrackDetails = {
+  title: null,
+  durationSeconds: null,
+  chapters: [],
+  artworkUrl: null,
+};
 
 /** One list entry, contract-true, with the fields a spec cares about overridable. */
 export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): EntryDto {
