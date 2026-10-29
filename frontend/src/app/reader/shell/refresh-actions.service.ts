@@ -129,7 +129,7 @@ export class RefreshActions {
   addFeed(url?: string): void {
     const ref = this.dialog.open<SubscriptionDto, AddFeedDialogData>(AddFeedDialogComponent, {
       panelClass: 'app-dialog',
-      data: { url },
+      data: url ? { url } : undefined,
     });
     ref.closed.subscribe((sub) => {
       if (!sub) return;

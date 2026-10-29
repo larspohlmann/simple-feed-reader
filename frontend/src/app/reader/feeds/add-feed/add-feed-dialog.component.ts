@@ -31,9 +31,9 @@ const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
   ['too_large', 'failTooLarge'],
 ]);
 
-/** `url` opens the dialog already searching for it (a dropped link, #1884). */
+/** Opens the dialog already searching for `url`. */
 export interface AddFeedDialogData {
-  url?: string;
+  url: string;
 }
 
 @Component({
@@ -56,13 +56,13 @@ export interface AddFeedDialogData {
 })
 export class AddFeedDialogComponent implements OnInit {
   readonly ref = inject<DialogRef<SubscriptionDto>>(DialogRef);
-  private readonly data = inject<AddFeedDialogData | null>(DIALOG_DATA, { optional: true });
+  private readonly data = inject<AddFeedDialogData | undefined>(DIALOG_DATA);
   private readonly api = inject(ReaderApi);
   readonly tagsStore = inject(TagsStore);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly i18n = inject(TranslocoService);
 
-  readonly form = this.fb.group({ url: ['', [Validators.required]] });
+  readonly form = this.fb.group({ url: [this.data?.url ?? '', [Validators.required]] });
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly candidates = signal<FeedCandidate[]>([]);
@@ -84,11 +84,7 @@ export class AddFeedDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.tagsStore.tags().length === 0) this.tagsStore.load();
-    const url = this.data?.url;
-    if (url) {
-      this.form.setValue({ url });
-      this.submit();
-    }
+    if (this.data) this.submit();
   }
 
   toggleTag(id: number): void {

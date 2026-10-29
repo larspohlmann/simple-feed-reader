@@ -1,5 +1,5 @@
 import { carriesUrl, droppedUrl } from './dropped-url';
-import { fakeDataTransfer } from './fake-data-transfer';
+import { fakeDataTransfer } from '../../../../testing/fake-data-transfer';
 
 describe('carriesUrl', () => {
   it('accepts a drag that carries a uri-list', () => {
@@ -37,6 +37,10 @@ describe('droppedUrl', () => {
     });
 
     expect(droppedUrl(transfer)).toBe('https://example.com/');
+  });
+
+  it('finds nothing without a transfer', () => {
+    expect(droppedUrl(null)).toBeNull();
   });
 
   it('finds nothing in text that is not an address', () => {

@@ -6,7 +6,8 @@ export function carriesUrl(transfer: DataTransfer | null): boolean {
 
 /** The first web address a drop carries: `text/uri-list` lines (`#` starts a
  *  comment), else a plain-text payload that is itself one address. */
-export function droppedUrl(transfer: DataTransfer): string | null {
+export function droppedUrl(transfer: DataTransfer | null): string | null {
+  if (!transfer) return null;
   const listed = transfer
     .getData(URI_LIST)
     .split(/\r?\n/)
@@ -19,7 +20,6 @@ export function droppedUrl(transfer: DataTransfer): string | null {
 }
 
 function isWebAddress(candidate: string): boolean {
-  if (!URL.canParse(candidate)) return false;
-  const { protocol } = new URL(candidate);
+  const protocol = URL.parse(candidate)?.protocol;
   return protocol === 'http:' || protocol === 'https:';
 }

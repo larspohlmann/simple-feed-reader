@@ -13,10 +13,10 @@ import { makeSubscription } from '../../testing/subscription.factory';
 describe('AddFeedDialogComponent', () => {
   let ctrl: HttpTestingController;
   const close = jest.fn();
-  let dialogData: AddFeedDialogData | null;
+  let dialogData: AddFeedDialogData | undefined;
   beforeEach(() => {
     close.mockReset();
-    dialogData = null;
+    dialogData = undefined;
     TestBed.configureTestingModule({
       imports: [AddFeedDialogComponent, provideTranslocoTesting()],
       providers: [
@@ -623,12 +623,5 @@ describe('AddFeedDialogComponent', () => {
     );
     request.flush({ subscription: { id: 4 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 4 });
-  });
-
-  it('waits for the user when it was opened without a URL', () => {
-    dialogData = { url: undefined };
-    create();
-
-    ctrl.expectNone('https://api.test/api/subscriptions');
   });
 });

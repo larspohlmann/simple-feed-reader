@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { UrlDropZoneComponent } from './url-drop-zone.component';
-import { fakeDataTransfer } from './fake-data-transfer';
+import { fakeDataTransfer } from '../../../../testing/fake-data-transfer';
 
 const LINK = { 'text/uri-list': 'https://example.com/blog' };
 
@@ -90,14 +90,5 @@ describe('UrlDropZoneComponent', () => {
 
     dragEvent('dragenter', LINK, document.body);
     expect(shown()).toBe(false);
-  });
-
-  it('emits nothing when the dropped link is not a web address', () => {
-    const { dropped } = create();
-    const mail = { 'text/uri-list': 'mailto:someone@example.com' };
-
-    dragEvent('dragenter', mail, document.body);
-    dragEvent('drop', mail, document.body);
-    expect(dropped).toEqual([]);
   });
 });

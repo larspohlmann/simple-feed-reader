@@ -1,3 +1,5 @@
+@use '../../../theme/veil';
+
 :host {
   position: fixed;
   inset: 0;
@@ -6,45 +8,20 @@
   align-items: center;
   justify-content: center;
   background: var(--drawer-scrim);
-
-  /* The elements underneath must stay the drag's targets, or the enter/leave
-     pairs the depth count relies on stop arriving. */
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.15s ease,
-    visibility 0s linear 0.15s;
 }
 
-:host(.shown) {
-  opacity: 1;
-  visibility: visible;
-  transition:
-    opacity 0.15s ease,
-    visibility 0s;
-}
+/* The elements underneath must stay the drag's targets, or the enter/leave
+   pairs the depth count relies on stop arriving. */
+@include veil.host-fade;
 
 .card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-7);
+  @include veil.card;
+
   border: 2px dashed var(--accent);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--surface-1) 96%, transparent);
   color: var(--accent);
 }
 
 .label {
   color: var(--text-primary);
   font-size: var(--fs-lg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :host,
-  :host(.shown) {
-    transition: none;
-  }
 }
