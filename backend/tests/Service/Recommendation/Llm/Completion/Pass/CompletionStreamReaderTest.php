@@ -260,8 +260,10 @@ final class CompletionStreamReaderTest extends TestCase
 
         $reader->consume($this->contentEvent('once'));
 
-        self::assertSame('once', $reader->assistantContent());
-        self::assertSame('once', $reader->assistantContent());
+        $firstRead = $reader->assistantContent();
+
+        self::assertSame('once', $firstRead);
+        self::assertSame($firstRead, $reader->assistantContent());
     }
 
     /**

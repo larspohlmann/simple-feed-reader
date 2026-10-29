@@ -37,6 +37,7 @@ final class FetchQueueTest extends TestCase
         return FetchAttemptModel::start(0, FeedTickets::of($url));
     }
 
+    /** @phpstan-impure */
     private function runnable(FetchQueue $queue): FetchAttemptModel
     {
         $attempt = $queue->takeRunnable();

@@ -50,7 +50,11 @@ abstract class ApiTestCase extends WebTestCase
         self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @return array<string, mixed>
+     *
+     * @phpstan-impure
+     */
     protected function payload(KernelBrowser $client): array
     {
         $decoded = json_decode((string) $client->getResponse()->getContent(), true);
