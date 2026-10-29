@@ -95,10 +95,15 @@ describe('ArticleLayerComponent', () => {
     expect(fixture.componentInstance.toTops).toBe(1);
   });
 
-  it('carries the to-top button in the frame, so it leaves with the article (#1898)', () => {
+  it('hides the to-top button the moment the article starts to leave (#1901)', () => {
+    goFullscreen();
     scrollTo(BACK_TO_TOP_AFTER_PX + 1);
 
-    expect(element.querySelector('.frame app-to-top-button')).not.toBeNull();
+    (element.querySelector('.bar .close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('app-to-top-button')).toBeNull();
+    expect(fixture.componentInstance.closes).toBe(0);
   });
 
   it('retracts the full-screen toolbar scrolling down and returns it scrolling up', () => {
