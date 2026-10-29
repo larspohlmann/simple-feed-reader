@@ -49,10 +49,7 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         $this->client->request(
             $method,
             self::GRAFANA,
-            server: [
-                ...$this->bearerFor($user),
-                'CONTENT_TYPE' => 'application/json',
-            ],
+            server: $this->jsonBearerFor($user),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }

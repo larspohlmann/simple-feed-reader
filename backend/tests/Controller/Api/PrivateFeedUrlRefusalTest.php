@@ -17,7 +17,7 @@ final class PrivateFeedUrlRefusalTest extends ApiTestCase
         $client->request(
             'POST',
             '/api/subscriptions',
-            server: $this->bearerFor($user) + ['CONTENT_TYPE' => 'application/json'],
+            server: $this->jsonBearerFor($user),
             content: json_encode(['url' => 'social:bluesky:1:home'], \JSON_THROW_ON_ERROR),
         );
 

@@ -33,10 +33,7 @@ final class AdminProxyControllerTest extends ApiTestCase
         $this->client->request(
             $method,
             self::PROXY,
-            server: [
-                ...$this->bearerFor($user),
-                'CONTENT_TYPE' => 'application/json',
-            ],
+            server: $this->jsonBearerFor($user),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }

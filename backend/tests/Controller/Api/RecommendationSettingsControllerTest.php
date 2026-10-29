@@ -65,7 +65,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testAnUnconfiguredAccountReportsAllDefaults(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-empty@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-empty@example.test'));
 
         $client->request('GET', self::URI, server: $headers);
 
@@ -97,7 +97,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testAScoringAccountGetsNoneOfTheLlmsPromptPieces(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->userAndBearer('recsettings-jev@example.test');
+        [$headers, $user] = $this->bearerAndUser('recsettings-jev@example.test');
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
@@ -115,7 +115,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testAProviderContextWindowIsReportedAsTheEffectiveValueWithNoOverride(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->userAndBearer('recsettings-provider@example.test');
+        [$headers, $user] = $this->bearerAndUser('recsettings-provider@example.test');
         $this->seedProviderContextWindow($user, 98304);
 
         $client->request('GET', self::URI, server: $headers);
@@ -139,7 +139,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testSavingFullSettingsEchoesTheNewStateAndPersists(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-save@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-save@example.test'));
 
         $client->request(
             'PUT',
@@ -173,7 +173,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testSavingASmallBatchSizeRoundTrips(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-batchsize-small@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-batchsize-small@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -197,7 +197,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testAnUnknownBatchSizeIsUnprocessable(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-batchsize-bad@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-batchsize-bad@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -216,7 +216,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testAnOutOfRangeCapIsUnprocessable(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-invalid@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-invalid@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -255,7 +255,8 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testARejectedLoadBearingBoundIsUnprocessable(string $field, int $rejectedValue): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-bound-' . strtolower($field) . '@example.test');
+        $user = $this->factory()->create('recsettings-bound-' . strtolower($field) . '@example.test');
+        $headers = $this->bearerFor($user);
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -290,7 +291,8 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testAnAcceptedLookbackDaysBoundIsPersisted(int $acceptedValue): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-lookback-bound-' . $acceptedValue . '@example.test');
+        $user = $this->factory()->create('recsettings-lookback-bound-' . $acceptedValue . '@example.test');
+        $headers = $this->bearerFor($user);
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -314,7 +316,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testClearingAContextWindowOverrideFallsBackToTheProvider(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->userAndBearer('recsettings-clear-override@example.test');
+        [$headers, $user] = $this->bearerAndUser('recsettings-clear-override@example.test');
         $this->seedProviderContextWindow($user, 98304);
 
         // First set a user override.
@@ -362,7 +364,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testABlankGuidancePromptNormalisesToNull(string $blank): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-blank@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-blank@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -385,7 +387,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testARealGuidancePromptIsKeptVerbatim(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-real@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-real@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -405,7 +407,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testANullGuidancePromptStaysNull(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-null@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-null@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -425,7 +427,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testShowExposesTheIntervalAndWorkerLiveness(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-worker-liveness@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-worker-liveness@example.test'));
 
         $client->request('GET', self::URI, server: $headers);
 
@@ -443,7 +445,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testALiveDrainerIsNotReportedAsAWorker(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-drainer-alive@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-drainer-alive@example.test'));
         $this->touchHeartbeatNow(RecommendationDriverKind::OnDemandDrainer->heartbeatName());
 
         $client->request('GET', self::URI, server: $headers);
@@ -455,7 +457,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testAPersistentWorkerIsReportedAsAWorker(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-worker-alive@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-worker-alive@example.test'));
         $this->touchHeartbeatNow(RecommendationDriverKind::PersistentWorker->heartbeatName());
 
         $client->request('GET', self::URI, server: $headers);
@@ -480,7 +482,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testSaveAcceptsAnAllowedInterval(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-interval-allowed@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-interval-allowed@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -500,7 +502,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testSaveRejectsADisallowedInterval(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-interval-rejected@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-interval-rejected@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -536,7 +538,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testSaveAcceptsEachAllowedInterval(int $hours): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-interval-ok-' . $hours . '@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-interval-ok-' . $hours . '@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -575,7 +577,7 @@ final class RecommendationSettingsControllerTest extends ApiTestCase
     public function testSaveRejectsEachDisallowedInterval(int $hours): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('recsettings-interval-off-' . $hours . '@example.test');
+        $headers = $this->bearerFor($this->factory()->create('recsettings-interval-off-' . $hours . '@example.test'));
 
         $body = json_decode($this->fullPayloadJson(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);

@@ -6,7 +6,6 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
-use App\Repository\UserRepository;
 use App\Service\Auth\AltchaService;
 use App\Tests\Support\AltchaSolver;
 use App\Tests\Support\ApiTestCase;
@@ -165,7 +164,7 @@ final class AuthJourneyTest extends ApiTestCase
     {
         $server = ['CONTENT_TYPE' => 'application/json'];
         if (null !== $token) {
-            $server['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+            $server += $this->bearer($token);
         }
 
         $this->client->request('POST', $path, server: $server, content: (string) json_encode($body));
@@ -173,7 +172,7 @@ final class AuthJourneyTest extends ApiTestCase
 
     private function get(string $path, string $token): void
     {
-        $this->client->request('GET', $path, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
+        $this->client->request('GET', $path, server: $this->bearer($token));
     }
 
     /** Always the same credentials, so a changed outcome can only mean changed state. */
@@ -198,9 +197,7 @@ final class AuthJourneyTest extends ApiTestCase
      */
     private function currentUser(): User
     {
-        /** @var UserRepository $users */
-        $users = self::getContainer()->get(UserRepository::class);
-        $user = $users->findOneByEmail(self::EMAIL);
+        $user = $this->users()->findOneByEmail(self::EMAIL);
         self::assertInstanceOf(User::class, $user);
 
         return $user;

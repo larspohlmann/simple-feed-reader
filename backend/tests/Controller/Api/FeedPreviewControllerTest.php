@@ -87,7 +87,7 @@ final class FeedPreviewControllerTest extends ApiTestCase
     public function testAuthenticatedValidUrlReturnsPreviewJson(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('preview-ok@example.com');
+        $headers = $this->bearerFor($this->factory()->create('preview-ok@example.com'));
         $this->installFetcher($this->fetcherWithBody($this->feedXml()));
 
         $client->request(
@@ -127,7 +127,7 @@ final class FeedPreviewControllerTest extends ApiTestCase
     public function testScrapedFormatPreviewsTheHtmlPageAsAFeed(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('preview-scraped@example.com');
+        [$headers, $user] = $this->bearerAndUser('preview-scraped@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -177,7 +177,7 @@ final class FeedPreviewControllerTest extends ApiTestCase
     public function testScrapedFormatPreviewReturnsProblemWhenScrapingIsDisabled(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('preview-disabled@example.com');
+        $headers = $this->bearerFor($this->factory()->create('preview-disabled@example.com'));
         $this->installFetcher(new StubFeedFetcher());
 
         $client->request(
@@ -201,7 +201,7 @@ final class FeedPreviewControllerTest extends ApiTestCase
     public function testScrapedFormatOnAnArticleFreePageReturns422(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('preview-navonly@example.com');
+        [$headers, $user] = $this->bearerAndUser('preview-navonly@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -242,7 +242,7 @@ final class FeedPreviewControllerTest extends ApiTestCase
     public function testUnreadableXmlPreviewReturns422WithFeedMessage(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('preview-notfeed@example.com');
+        $headers = $this->bearerFor($this->factory()->create('preview-notfeed@example.com'));
         $this->installFetcher(
             $this->fetcherWithBody(/** @lang TEXT */ '<html><body>Not a feed at all.</body></html>'),
         );
@@ -265,7 +265,7 @@ final class FeedPreviewControllerTest extends ApiTestCase
     public function testFetchFailureReturns422(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('preview-fail@example.com');
+        $headers = $this->bearerFor($this->factory()->create('preview-fail@example.com'));
         $fetcher = new StubFeedFetcher();
         $fetcher->willThrow(self::URL, new FeedUnreachableException('blocked'));
         $this->installFetcher($fetcher);

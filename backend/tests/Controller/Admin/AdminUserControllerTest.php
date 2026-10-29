@@ -53,7 +53,7 @@ final class AdminUserControllerTest extends ApiTestCase
         $this->client->request(
             $method,
             $uri,
-            server: null === $token ? [] : ['HTTP_AUTHORIZATION' => 'Bearer ' . $token],
+            server: null === $token ? [] : $this->bearer($token),
         );
     }
 
@@ -988,9 +988,7 @@ final class AdminUserControllerTest extends ApiTestCase
         $target = $factory->create('victim@example.com');
         $targetId = $target->requireId();
 
-        $this->client->request('DELETE', self::LIST . '/' . $targetId, server: [
-            ...$this->bearerFor($admin),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $targetId, server: $this->bearerFor($admin));
 
         self::assertResponseStatusCodeSame(204);
     }
@@ -1000,9 +998,7 @@ final class AdminUserControllerTest extends ApiTestCase
         $admin = $this->factory()->create('self-del@example.com', roles: ['ROLE_ADMIN']);
         $this->factory()->create('spare-admin@example.com', roles: ['ROLE_ADMIN']);
 
-        $this->client->request('DELETE', self::LIST . '/' . $admin->getId(), server: [
-            ...$this->bearerFor($admin),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $admin->getId(), server: $this->bearerFor($admin));
 
         self::assertResponseStatusCodeSame(422);
     }
@@ -1021,14 +1017,10 @@ final class AdminUserControllerTest extends ApiTestCase
         // EntityManager, so minting after would token a now-id-less $deputy.
         $deputyToken = $this->tokenFor($deputy);
 
-        $this->client->request('DELETE', self::LIST . '/' . $deputy->getId(), server: [
-            ...$this->bearerFor($soleAdmin),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $deputy->getId(), server: $this->bearerFor($soleAdmin));
         self::assertResponseStatusCodeSame(204);
 
-        $this->client->request('DELETE', self::LIST . '/' . $soleAdmin->getId(), server: [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $deputyToken,
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $soleAdmin->getId(), server: $this->bearer($deputyToken));
         self::assertResponseStatusCodeSame(401);
 
         self::assertNotNull(
@@ -1050,9 +1042,7 @@ final class AdminUserControllerTest extends ApiTestCase
             status: UserStatus::Suspended,
         );
 
-        $this->client->request('DELETE', self::LIST . '/' . $suspended->getId(), server: [
-            ...$this->bearerFor($caller),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $suspended->getId(), server: $this->bearerFor($caller));
 
         self::assertResponseStatusCodeSame(409);
     }
@@ -1064,9 +1054,7 @@ final class AdminUserControllerTest extends ApiTestCase
         $plainUser = $factory->create('plain@example.com');
         $target = $factory->create('other-target@example.com');
 
-        $this->client->request('DELETE', self::LIST . '/' . $target->getId(), server: [
-            ...$this->bearerFor($plainUser),
-        ]);
+        $this->client->request('DELETE', self::LIST . '/' . $target->getId(), server: $this->bearerFor($plainUser));
 
         self::assertResponseStatusCodeSame(403);
     }

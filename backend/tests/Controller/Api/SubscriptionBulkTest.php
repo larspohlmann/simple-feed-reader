@@ -46,19 +46,9 @@ final class SubscriptionBulkTest extends ApiTestCase
         $client->request(
             $method,
             $url,
-            server: [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'],
+            server: $this->jsonBearerFor($user),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
-    }
-
-    /** @return array<string, mixed> */
-    private function json(KernelBrowser $client): array
-    {
-        $decoded = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
     }
 
     public function testAnonymousIsRejected(): void
@@ -83,7 +73,7 @@ final class SubscriptionBulkTest extends ApiTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $body = $this->json($client);
+        $body = $this->payload($client);
         self::assertIsArray($body['subscriptions']);
         self::assertCount(2, $body['subscriptions']);
         foreach ($body['subscriptions'] as $subscription) {
@@ -135,7 +125,7 @@ final class SubscriptionBulkTest extends ApiTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $body = $this->json($client);
+        $body = $this->payload($client);
         self::assertIsArray($body['subscriptions']);
         self::assertIsArray($body['subscriptions'][0]);
         self::assertFalse($body['subscriptions'][0]['includeInAllItems']);
@@ -224,7 +214,7 @@ final class SubscriptionBulkTest extends ApiTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $body = $this->json($client);
+        $body = $this->payload($client);
         self::assertIsArray($body['subscriptions']);
         self::assertCount($count, $body['subscriptions']);
     }
@@ -412,7 +402,7 @@ final class SubscriptionBulkTest extends ApiTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['removed' => 2], $this->json($client));
+        self::assertSame(['removed' => 2], $this->payload($client));
         $this->entityManager()->clear();
         self::assertNotNull($this->entityManager()->getRepository(Subscription::class)->find($keptId));
         self::assertNull(

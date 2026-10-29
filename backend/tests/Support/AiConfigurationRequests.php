@@ -47,11 +47,6 @@ trait AiConfigurationRequests
         return $client;
     }
 
-    private function accountOn(KernelBrowser $client, string $email): void
-    {
-        $this->authenticate($client, $this->factory()->create($email));
-    }
-
     private function putJson(KernelBrowser $client, string $uri, string $json): void
     {
         $client->request('PUT', $uri, server: ['CONTENT_TYPE' => 'application/json'], content: $json);

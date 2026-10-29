@@ -43,11 +43,11 @@ final class AdminRouteGuardTest extends ApiTestCase
     {
         $client = self::createClient();
         $member = $this->factory()->create('member@example.com');
-        $authorization = $this->bearerFor($member);
+        $headers = $this->bearerFor($member);
 
         $statuses = [];
         foreach ($this->oneRequestPerMethod($member->requireId()) as [$method, $url]) {
-            $client->request($method, $url, server: $authorization);
+            $client->request($method, $url, server: $headers);
             $statuses[$method . ' ' . $url] = $client->getResponse()->getStatusCode();
         }
 

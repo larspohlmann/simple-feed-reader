@@ -15,16 +15,10 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class SavedSearchSlugRoutingTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function authHeaderFor(User $user): array
-    {
-        return [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'];
-    }
-
     public function testCreateReturnsAnIdPrefixedSlug(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->factory()->create('slug-create@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('slug-create@example.com'));
 
         $client->request(
             'POST',
@@ -49,7 +43,7 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
     {
         $client = self::createClient();
         $entityManager = $this->entityManager();
-        $headers = $this->authHeaderFor($this->factory()->create('slug-persist@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('slug-persist@example.com'));
 
         $client->request(
             'POST',
@@ -78,7 +72,7 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('single-search-members@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = new Feed('https://example.com/single-search-feed.xml');
         $this->entityManager()->persist($feed);
         $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
@@ -112,7 +106,7 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('single-search-membership@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = new Feed('https://example.com/single-search-membership-feed.xml');
         $this->entityManager()->persist($feed);
         $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
@@ -179,7 +173,7 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
     private function seedReadAndUnreadMember(string $email): array
     {
         $user = $this->factory()->create($email);
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = new Feed('https://example.com/' . $email . '-feed.xml');
         $this->entityManager()->persist($feed);
         $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
@@ -232,7 +226,7 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('single-search-owner@example.com');
         $stranger = $this->factory()->create('single-search-stranger@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $strangerSearch = new SavedSearch($stranger, 'sports', false);
         $this->entityManager()->persist($strangerSearch);
         $this->entityManager()->flush();

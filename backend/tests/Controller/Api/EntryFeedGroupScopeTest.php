@@ -23,7 +23,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testTheTagsGroupListsEveryTaggedFeedOnceAndNothingUntagged(): void
     {
-        [$headers, $user] = $this->userAndBearer('group-tags@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-tags@example.com');
         $this->seedGroups($user);
 
         $this->client->request('GET', '/api/entries?group=tags', server: $headers);
@@ -34,7 +34,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testTheFeedsGroupListsOnlyUntaggedFeedsOnNoNetwork(): void
     {
-        [$headers, $user] = $this->userAndBearer('group-feeds@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-feeds@example.com');
         $this->seedGroups($user);
 
         $this->client->request('GET', '/api/entries?group=feeds', server: $headers);
@@ -45,9 +45,9 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testAGroupNeverListsAnotherUsersFeeds(): void
     {
-        [$headers, $user] = $this->userAndBearer('group-own@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-own@example.com');
         $this->seedGroups($user);
-        [, $stranger] = $this->userAndBearer('group-stranger@example.com');
+        $stranger = $this->factory()->create('group-stranger@example.com');
         $foreign = $this->fixtures()->subscribe($stranger, 'https://example.org/foreign.xml');
         $this->fixtures()->post($foreign, 'foreign-post', '2026-10-09T00:00:00Z');
 
@@ -58,7 +58,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testAnUnknownGroupIsAValidationError(): void
     {
-        [$headers] = $this->userAndBearer('group-unknown@example.com');
+        $headers = $this->bearerFor($this->factory()->create('group-unknown@example.com'));
 
         $this->client->request('GET', '/api/entries?group=folders', server: $headers);
 
@@ -71,7 +71,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testMarkingTheFeedsGroupReadLeavesTaggedFeedsUnread(): void
     {
-        [$headers, $user] = $this->userAndBearer('group-mark@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-mark@example.com');
         $this->seedGroups($user);
 
         $this->markRead($headers, ['scope' => 'group', 'group' => 'feeds']);
@@ -85,7 +85,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testMarkingTheTagsGroupReadReachesFeedsHiddenFromAllItems(): void
     {
-        [$headers, $user] = $this->userAndBearer('group-mark-tags@example.com');
+        [$headers, $user] = $this->bearerAndUser('group-mark-tags@example.com');
         $this->seedGroups($user);
 
         $this->markRead($headers, ['scope' => 'group', 'group' => 'tags']);
@@ -98,7 +98,7 @@ final class EntryFeedGroupScopeTest extends ApiTestCase
 
     public function testMarkingAGroupReadWithoutAGroupIsAValidationError(): void
     {
-        [$headers] = $this->userAndBearer('group-mark-missing@example.com');
+        $headers = $this->bearerFor($this->factory()->create('group-mark-missing@example.com'));
 
         $this->markRead($headers, ['scope' => 'group']);
 

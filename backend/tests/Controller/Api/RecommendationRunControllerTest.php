@@ -108,9 +108,9 @@ final class RecommendationRunControllerTest extends ApiTestCase
     }
 
     /** @return array{0: array{HTTP_AUTHORIZATION: string}, 1: User} */
-    private function authWithReadyAi(string $email): array
+    private function bearerAndUserWithReadyAi(string $email): array
     {
-        [$headers, $user] = $this->userAndBearer($email);
+        [$headers, $user] = $this->bearerAndUser($email);
         $this->seedReadyAiSettings($user);
 
         return [$headers, $user];
@@ -163,7 +163,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testTheStatusOfARunWaitingForItsProfileSaysSo(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('runs-waiting-profile@example.test');
+        [$headers, $user] = $this->bearerAndUser('runs-waiting-profile@example.test');
         $this->fixtures()->seedSingleBatchFixture($user);
 
         $client->request('POST', '/api/recommendations/runs', server: $headers);
@@ -180,7 +180,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('runs-running-profile@example.test');
+        [$headers, $user] = $this->bearerAndUser('runs-running-profile@example.test');
         $this->fixtures()->seedSingleBatchFixture($user);
         $this->fixtures()->storeProfile($user, 'a stored profile');
         $client->request('POST', '/api/recommendations/runs', server: $headers);
@@ -213,7 +213,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testStartingWithoutAiConfiguredIsNotFound(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('run-noai@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-noai@example.test'));
 
         $client->request('POST', '/api/recommendations/runs', server: $headers);
 
@@ -224,7 +224,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testStartingAReadyAccountReportsPending(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-start@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-start@example.test');
         $this->seedReadyAiSettings($user);
 
         $client->request('POST', '/api/recommendations/runs', server: $headers);
@@ -257,7 +257,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testResumeWithoutAFailedRunConflicts(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-resume-none@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-resume-none@example.test');
         $this->seedReadyAiSettings($user);
 
         $client->request('POST', '/api/recommendations/runs/resume', server: $headers);
@@ -269,7 +269,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testTheStatusOfAFailedRunSaysItCanResume(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-status-resumable@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-status-resumable@example.test');
         $this->seedReadyAiSettings($user);
         $this->persistFailedRun($user);
 
@@ -281,7 +281,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testTheStatusOfARunThatFailedWaitingForItsProfileSaysItCannotResume(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-status-not-resumable@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-status-not-resumable@example.test');
         $this->seedReadyAiSettings($user);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -300,7 +300,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testResumeContinuesAFailedRun(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-resume@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-resume@example.test');
         $this->seedReadyAiSettings($user);
         $this->persistFailedRun($user);
 
@@ -317,7 +317,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('run-tick@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-tick@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a distilled profile');
@@ -376,7 +376,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testCurrentWithoutAnyRunReportsNone(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('run-current-none@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-current-none@example.test'));
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
 
@@ -410,7 +410,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('defer@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('defer@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
         $this->touchWorkerHeartbeatNow();
@@ -433,7 +433,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('defer-to-drainer@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('defer-to-drainer@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
         $this->touchDrainerHeartbeatNow();
@@ -455,7 +455,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('stale-heartbeat@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('stale-heartbeat@example.test');
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a stored profile');
         $this->startRun($client, $headers);
@@ -477,7 +477,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testATickOnAnActiveRunWithNoFreshHeartbeatSpawnsAReplacementDrainer(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->authWithReadyAi('tick-spawns-drainer@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('tick-spawns-drainer@example.test');
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
 
@@ -498,7 +498,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('locked-tick@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('locked-tick@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
 
@@ -540,7 +540,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('healthy-contention@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('healthy-contention@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
         $this->touchWorkerHeartbeatNow();
@@ -590,7 +590,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->authWithReadyAi('current-background@example.test');
+        [$headers] = $this->bearerAndUserWithReadyAi('current-background@example.test');
         $this->startRun($client, $headers);
         $this->touchWorkerHeartbeatNow();
 
@@ -604,7 +604,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->authWithReadyAi('current-foreground@example.test');
+        [$headers] = $this->bearerAndUserWithReadyAi('current-foreground@example.test');
         $this->startRun($client, $headers);
 
         $client->request('GET', '/api/recommendations/runs/current', server: $headers);
@@ -632,7 +632,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('run-refused-' . $refusal::class . '@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-refused-' . $refusal::class . '@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a stored profile');
@@ -658,7 +658,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('run-tick-noai@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-tick-noai@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
 
@@ -689,7 +689,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('run-tick-unreadable@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-tick-unreadable@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a stored profile');
@@ -720,7 +720,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('run-budget@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-budget@example.test');
         $this->seedReadyAiSettings($user);
 
         for ($spent = 1; $spent <= self::START_BUDGET; ++$spent) {
@@ -740,7 +740,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->userAndBearer('run-tick-budget@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-tick-budget@example.test'));
 
         for ($spent = 1; $spent <= self::TICK_BUDGET; ++$spent) {
             $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
@@ -757,7 +757,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->userAndBearer('run-current-unlimited@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-current-unlimited@example.test'));
 
         for ($tick = 0; $tick <= self::TICK_BUDGET; ++$tick) {
             $client->request('GET', '/api/recommendations/runs/current', server: $headers);
@@ -768,7 +768,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     public function testPurgeWithNoRunsReportsNone(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('run-purge-none@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-purge-none@example.test'));
 
         $client->request('DELETE', '/api/recommendations/runs', server: $headers);
 
@@ -798,7 +798,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('run-purge-completed@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('run-purge-completed@example.test');
         $this->seedOneCandidateEntry($user);
         $this->fixtures()->storeProfile($user, 'a distilled profile');
         $this->startRun($client, $headers);
@@ -843,7 +843,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('run-purge-active@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('run-purge-active@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
 
@@ -858,7 +858,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->authWithReadyAi('run-stop-active@example.test');
+        [$headers, $user] = $this->bearerAndUserWithReadyAi('run-stop-active@example.test');
         $this->seedOneCandidateEntry($user);
         $this->startRun($client, $headers);
 
@@ -878,7 +878,7 @@ final class RecommendationRunControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers] = $this->userAndBearer('run-stop-idle@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-stop-idle@example.test'));
 
         $client->request('POST', '/api/recommendations/runs/stop', server: $headers);
 

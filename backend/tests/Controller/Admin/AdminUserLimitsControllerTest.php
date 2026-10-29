@@ -37,10 +37,7 @@ final class AdminUserLimitsControllerTest extends ApiTestCase
         $this->client->request(
             $method,
             $uri,
-            server: [
-                ...$this->bearerFor($admin),
-                'CONTENT_TYPE' => 'application/json',
-            ],
+            server: $this->jsonBearerFor($admin),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }

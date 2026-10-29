@@ -19,12 +19,6 @@ use App\Tests\Support\ApiTestCase;
  */
 final class SavedSearchEntriesControllerTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function authHeaderFor(User $user): array
-    {
-        return [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'];
-    }
-
     private function seedSubscribedFeed(User $user): Feed
     {
         $entityManager = $this->entityManager();
@@ -82,7 +76,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('list-matches@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $climate = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
         $rocket = $this->seedEntry($feed, 'Rocket launch', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
@@ -116,7 +110,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('saved-search-excerpt@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $entry = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
         $entry->setContentHtml('<p>Climate body text.</p>');
@@ -140,7 +134,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('saved-search-membership@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $entry = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
         $search = new SavedSearch($user, 'climate', false);
@@ -166,7 +160,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('saved-search-categories@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $entry = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
         $category = new Category('world', '');
@@ -191,7 +185,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('matched-search@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $climateReport = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
         $rocketLaunch = $this->seedEntry($feed, 'Rocket launch', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
@@ -252,7 +246,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('unread-narrows@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $read = $this->seedEntry($feed, 'Climate read', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $unread = $this->seedEntry($feed, 'Climate unread', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
@@ -285,7 +279,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('no-searches@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager()->flush();
@@ -301,7 +295,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('mark-read-watermark@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $old = $this->seedEntry($feed, 'Climate old', new \DateTimeImmutable('2026-07-05T00:00:00Z'));
         $new = $this->seedEntry($feed, 'Climate new', new \DateTimeImmutable('2026-07-15T00:00:00Z'));
@@ -332,7 +326,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('idor-victim@example.com');
         $stranger = $this->factory()->create('idor-stranger@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->entityManager()->persist(new SavedSearch($stranger, 'climate', false));
@@ -349,7 +343,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('mark-one-watermark@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $old = $this->seedEntry($feed, 'Climate old', new \DateTimeImmutable('2026-07-05T00:00:00Z'));
         $new = $this->seedEntry($feed, 'Climate new', new \DateTimeImmutable('2026-07-15T00:00:00Z'));
@@ -385,7 +379,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('mark-one-idor-victim@example.com');
         $stranger = $this->factory()->create('mark-one-idor-stranger@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $strangerSearch = new SavedSearch($stranger, 'climate', false);
         $this->entityManager()->persist($strangerSearch);
         $this->entityManager()->flush();
@@ -404,7 +398,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('saved-oldest@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $search = $this->seedTwoClimateMembers($user);
 
         foreach (['/api/entries/saved-searches', '/api/entries/saved-searches/' . $search->getId()] as $path) {
@@ -420,7 +414,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('saved-oldest-pages@example.com');
-        $headers = $this->authHeaderFor($user);
+        $headers = $this->jsonBearerFor($user);
         $this->seedTwoClimateMembers($user);
 
         $client->request('GET', '/api/entries/saved-searches?order=asc&limit=1', server: $headers);
@@ -444,7 +438,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('saved-bad-order@example.com');
 
-        $client->request('GET', '/api/entries/saved-searches?order=sideways', server: $this->authHeaderFor($user));
+        $client->request('GET', '/api/entries/saved-searches?order=sideways', server: $this->jsonBearerFor($user));
 
         self::assertResponseStatusCodeSame(422);
         self::assertSame(['order' => ['Unknown order. Use one of: desc, asc.']], $this->payload($client)['errors']);

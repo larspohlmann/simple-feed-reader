@@ -94,7 +94,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testBackupStreamsAZipOfGzipPartsAttachment(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('backup-download@example.com');
+        [$headers, $user] = $this->bearerAndUser('backup-download@example.com');
         $this->seedSourceAccount($user);
 
         $client->request('GET', '/api/account/backup', server: $headers);
@@ -130,7 +130,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testPreviewReportsLoadAndDeleteCounts(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('restore-preview@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-preview@example.com');
         $userId = $user->requireId();
         $gzip = $this->seededFoundationFor($user);
 
@@ -163,7 +163,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testStartWithoutConfirmIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('restore-no-confirm@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-no-confirm@example.com');
         $userId = $user->requireId();
         $gzip = $this->seededFoundationFor($user);
 
@@ -190,14 +190,14 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testABackupRestoresIntoAnotherAccountOnePartPerRequest(): void
     {
         $client = self::createClient();
-        [$sourceHeaders, $sourceUser] = $this->userAndBearer('roundtrip-source@example.com');
+        [$sourceHeaders, $sourceUser] = $this->bearerAndUser('roundtrip-source@example.com');
         $this->seedSourceAccount($sourceUser);
 
         $client->request('GET', '/api/account/backup', server: $sourceHeaders);
         self::assertResponseIsSuccessful();
         $archive = BackupArchiveReader::fromResponseContent((string) $client->getInternalResponse()->getContent());
 
-        [$targetHeaders] = $this->userAndBearer('roundtrip-target@example.com');
+        $targetHeaders = $this->bearerFor($this->factory()->create('roundtrip-target@example.com'));
         $gzipHeaders = $targetHeaders + ['CONTENT_TYPE' => 'application/gzip'];
 
         $client->request(
@@ -233,7 +233,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testEntriesEndpointNeedsNoConfirmation(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('restore-entries-no-confirm@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-entries-no-confirm@example.com');
         $this->seedSourceAccount($user);
         [$foundation, $entryParts] = $this->partsOf($user);
         $gzipHeaders = $headers + ['CONTENT_TYPE' => 'application/gzip'];
@@ -255,7 +255,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testGarbageBodyIs422InvalidBackup(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('restore-garbage@example.com');
+        $headers = $this->bearerFor($this->factory()->create('restore-garbage@example.com'));
 
         $client->request(
             'POST',
@@ -273,7 +273,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testAFileWithoutAHeaderLineIsRejected(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('restore-missing-header@example.com');
+        $headers = $this->bearerFor($this->factory()->create('restore-missing-header@example.com'));
         $gzip = (string) gzencode(json_encode(['kind' => 'account'], \JSON_THROW_ON_ERROR) . "\n");
 
         $client->request(
@@ -318,7 +318,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testTheOldRestoreRouteIsGone(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('restore-old-route-gone@example.com');
+        $headers = $this->bearerFor($this->factory()->create('restore-old-route-gone@example.com'));
 
         $client->request(
             'POST',
@@ -332,7 +332,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testACorruptGzipBodyIs422InvalidBackupRatherThan500(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('restore-corrupt@example.com');
+        $headers = $this->bearerFor($this->factory()->create('restore-corrupt@example.com'));
 
         $client->request(
             'POST',
@@ -351,7 +351,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testACorruptGzipBodyToTheDestructiveRouteIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('restore-corrupt-destructive@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-corrupt-destructive@example.com');
         $userId = $user->requireId();
         $this->seedSourceAccount($user);
 
@@ -378,7 +378,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testAMiscountedFooterIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('restore-bad-footer@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-bad-footer@example.com');
         $userId = $user->requireId();
         $gzip = $this->withAMiscountedFooter($this->seededFoundationFor($user));
 
@@ -404,7 +404,7 @@ final class AccountBackupControllerTest extends ApiTestCase
     public function testADuplicateFeedUrlIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('restore-duplicate-feed@example.com');
+        [$headers, $user] = $this->bearerAndUser('restore-duplicate-feed@example.com');
         $userId = $user->requireId();
         $gzip = $this->withANewFeedUrlDeclaredTwice($this->seededFoundationFor($user));
 

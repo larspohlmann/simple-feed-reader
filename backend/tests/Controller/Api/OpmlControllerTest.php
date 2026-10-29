@@ -21,7 +21,7 @@ final class OpmlControllerTest extends ApiTestCase
     public function testExportReturnsOpmlAttachment(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('opml-export@example.com');
+        [$headers, $user] = $this->bearerAndUser('opml-export@example.com');
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $feed = new Feed('https://example.com/feed.xml');
@@ -40,7 +40,7 @@ final class OpmlControllerTest extends ApiTestCase
     public function testImportCreatesSubscriptions(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('opml-import@example.com');
+        $headers = $this->bearerFor($this->factory()->create('opml-import@example.com'));
         $opml = (string) file_get_contents(__DIR__ . '/../../Fixtures/opml/subscriptions.opml');
 
         $server = $headers + ['CONTENT_TYPE' => 'text/x-opml'];
@@ -60,7 +60,7 @@ final class OpmlControllerTest extends ApiTestCase
     public function testImportRejectsEmptyBody(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('opml-empty@example.com');
+        $headers = $this->bearerFor($this->factory()->create('opml-empty@example.com'));
         $client->request('POST', '/api/opml/import', server: $headers + ['CONTENT_TYPE' => 'text/x-opml'], content: '');
         self::assertResponseStatusCodeSame(422);
     }
@@ -68,7 +68,7 @@ final class OpmlControllerTest extends ApiTestCase
     public function testImportRejectsOversizedBody(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('opml-big@example.com');
+        $headers = $this->bearerFor($this->factory()->create('opml-big@example.com'));
         $server = $headers + ['CONTENT_TYPE' => 'text/x-opml'];
         $client->request('POST', '/api/opml/import', server: $server, content: str_repeat('a', 1_048_577));
         self::assertResponseStatusCodeSame(422);

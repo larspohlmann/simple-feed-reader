@@ -9,23 +9,9 @@ use App\Service\Catalog\BundledCatalog;
 use App\Service\Catalog\Model\ParsedCatalogModel;
 use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class AdminCatalogImportControllerTest extends ApiTestCase
 {
-    /**
-     * @param list<string> $roles
-     *
-     * @return array<string, string>
-     */
-    private function authHeader(string $email, array $roles): array
-    {
-        return [
-            ...$this->bearerFor($this->factory()->create($email, roles: $roles)),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
-
     /** @param list<array{title: string, url: string}> $feeds */
     private function importRequest(array $feeds, string $mode): string
     {
@@ -48,23 +34,13 @@ final class AdminCatalogImportControllerTest extends ApiTestCase
         return json_encode(['mode' => $mode, 'document' => $document], \JSON_THROW_ON_ERROR);
     }
 
-    /** @return array<string, mixed> */
-    private function responseBody(KernelBrowser $client): array
-    {
-        $decoded = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
-    }
-
     public function testANonAdminIsRefused(): void
     {
         $client = self::createClient();
         $client->request(
             'POST',
             '/api/admin/catalog/import',
-            server: $this->authHeader('plain@example.com', []),
+            server: $this->jsonBearerFor($this->factory()->create('plain@example.com')),
             content: $this->importRequest([], 'merge'),
         );
 
@@ -74,7 +50,7 @@ final class AdminCatalogImportControllerTest extends ApiTestCase
     public function testAdminCanImportAndGetsCounts(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('importer@example.com', ['ROLE_ADMIN']);
+        $headers = $this->jsonBearerFor($this->factory()->create('importer@example.com', roles: ['ROLE_ADMIN']));
 
         $client->request(
             'POST',
@@ -87,7 +63,7 @@ final class AdminCatalogImportControllerTest extends ApiTestCase
         );
 
         self::assertResponseIsSuccessful();
-        $body = $this->responseBody($client);
+        $body = $this->payload($client);
 
         self::assertSame(1, $body['categoriesCreated']);
         self::assertSame(1, $body['feedsCreated']);
@@ -96,7 +72,7 @@ final class AdminCatalogImportControllerTest extends ApiTestCase
     public function testAMalformedDocumentChangesNothingAndReturns422(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('badimport@example.com', ['ROLE_ADMIN']);
+        $headers = $this->jsonBearerFor($this->factory()->create('badimport@example.com', roles: ['ROLE_ADMIN']));
 
         $badDocument = '<opml version="2.0"><head><title>t</title></head><body>'
             . '<outline text="X" key="x" icon="memory" color="not-a-colour"/>'
@@ -119,7 +95,7 @@ final class AdminCatalogImportControllerTest extends ApiTestCase
     public function testAnUnknownModeIsRejected(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('mode@example.com', ['ROLE_ADMIN']);
+        $headers = $this->jsonBearerFor($this->factory()->create('mode@example.com', roles: ['ROLE_ADMIN']));
 
         $client->request(
             'POST',
@@ -134,12 +110,12 @@ final class AdminCatalogImportControllerTest extends ApiTestCase
     public function testTheBundledDocumentIsDescribedWithoutImportingIt(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('bundledinfo@example.com', ['ROLE_ADMIN']);
+        $headers = $this->jsonBearerFor($this->factory()->create('bundledinfo@example.com', roles: ['ROLE_ADMIN']));
 
         $client->request('GET', '/api/admin/catalog/bundled', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $body = $this->responseBody($client);
+        $body = $this->payload($client);
 
         $document = $this->bundledDocument();
         self::assertTrue($body['available']);
@@ -158,7 +134,7 @@ final class AdminCatalogImportControllerTest extends ApiTestCase
     public function testTheBundledDocumentCanBeImportedWithoutUploadingAFile(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('bundled@example.com', ['ROLE_ADMIN']);
+        $headers = $this->jsonBearerFor($this->factory()->create('bundled@example.com', roles: ['ROLE_ADMIN']));
 
         $client->request(
             'POST',
@@ -168,7 +144,7 @@ final class AdminCatalogImportControllerTest extends ApiTestCase
         );
 
         self::assertResponseIsSuccessful();
-        $body = $this->responseBody($client);
+        $body = $this->payload($client);
 
         $document = $this->bundledDocument();
         self::assertSame(\count($document->categories), $body['categoriesCreated']);

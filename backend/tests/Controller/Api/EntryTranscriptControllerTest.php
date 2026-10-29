@@ -27,7 +27,7 @@ final class EntryTranscriptControllerTest extends ApiTestCase
     public function testAFilledTranscriptIsServed(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('transcript-filled@example.com');
+        [$headers, $user] = $this->bearerAndUser('transcript-filled@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId)->fill([new TranscriptParagraph(0, 'Ann', 'Hi.')], 'Hi.');
         $this->flush();
@@ -44,7 +44,7 @@ final class EntryTranscriptControllerTest extends ApiTestCase
     public function testAnEntryWithoutATranscriptSendsNull(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('transcript-none@example.com');
+        [$headers, $user] = $this->bearerAndUser('transcript-none@example.com');
         $entryId = $this->seedEntry($user);
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
@@ -57,7 +57,7 @@ final class EntryTranscriptControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('transcript-failed@example.com');
+        [$headers, $user] = $this->bearerAndUser('transcript-failed@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId)->fail();
         $this->flush();
@@ -75,7 +75,7 @@ final class EntryTranscriptControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('transcript-pending@example.com');
+        [$headers, $user] = $this->bearerAndUser('transcript-pending@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId);
         $source = ScriptedTranscriptSource::answering(TranscriptFixtures::READABLE);
@@ -95,7 +95,7 @@ final class EntryTranscriptControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('transcript-unreachable@example.com');
+        [$headers, $user] = $this->bearerAndUser('transcript-unreachable@example.com');
         $entryId = $this->seedEntry($user);
         $this->transcriptOf($entryId);
         $source = ScriptedTranscriptSource::answering(TranscriptFixtures::READABLE)->failingAt(

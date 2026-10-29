@@ -61,16 +61,6 @@ final class SetupControllerTest extends ApiTestCase
         $this->factory()->create('existing@example.com', roles: ['ROLE_ADMIN']);
     }
 
-    /** @return array<string, mixed> */
-    private function body(KernelBrowser $client): array
-    {
-        $decoded = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
-    }
-
     private function post(KernelBrowser $client, string $email, string $password, string $secret): void
     {
         $body = ['email' => $email, 'password' => $password, 'secret' => $secret];
@@ -89,7 +79,7 @@ final class SetupControllerTest extends ApiTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        self::assertTrue($this->body($client)['needsSetup']);
+        self::assertTrue($this->payload($client)['needsSetup']);
     }
 
     public function testStatusReportsFalseOnceAnAdminExists(): void
@@ -99,7 +89,7 @@ final class SetupControllerTest extends ApiTestCase
 
         $client->request('GET', '/api/setup/status');
 
-        self::assertFalse($this->body($client)['needsSetup']);
+        self::assertFalse($this->payload($client)['needsSetup']);
     }
 
     public function testStatusReportsMailEnabled(): void
@@ -109,7 +99,7 @@ final class SetupControllerTest extends ApiTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        $body = $this->body($client);
+        $body = $this->payload($client);
         self::assertIsBool($body['needsSetup']);
         self::assertIsBool($body['mailEnabled']);
         self::assertTrue($body['mailEnabled']);
@@ -121,7 +111,7 @@ final class SetupControllerTest extends ApiTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        self::assertFalse($this->body($client)['passkeySignInAvailable']);
+        self::assertFalse($this->payload($client)['passkeySignInAvailable']);
     }
 
     public function testStatusReportsPasskeySignInAvailableOnceEnabledWithAValidRelyingParty(): void
@@ -141,7 +131,7 @@ final class SetupControllerTest extends ApiTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        self::assertTrue($this->body($client)['passkeySignInAvailable']);
+        self::assertTrue($this->payload($client)['passkeySignInAvailable']);
     }
 
     public function testStatusReportsPasskeySignInUnavailableWhenTheToggleIsOff(): void
@@ -152,7 +142,7 @@ final class SetupControllerTest extends ApiTestCase
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        self::assertFalse($this->body($client)['passkeySignInAvailable']);
+        self::assertFalse($this->payload($client)['passkeySignInAvailable']);
     }
 
     public function testCreatesAdminWithTheCorrectSecret(): void
@@ -163,7 +153,7 @@ final class SetupControllerTest extends ApiTestCase
         $this->post($client, 'root@example.com', 'a-strong-password-123', self::SECRET);
 
         self::assertResponseStatusCodeSame(201);
-        $token = $this->body($client)['token'];
+        $token = $this->payload($client)['token'];
         self::assertIsString($token);
 
         $users = $client->getContainer()->get(UserRepository::class);

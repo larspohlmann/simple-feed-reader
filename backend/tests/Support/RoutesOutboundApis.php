@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Entity\User;
 use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-/** For an ApiTestCase that answers the app's outbound API calls itself and signs a user in. */
+/** For an ApiTestCase that answers the app's outbound API calls itself. */
 trait RoutesOutboundApis
 {
     private RoutedHttpClient $http;
@@ -32,13 +31,5 @@ trait RoutesOutboundApis
         );
 
         return $client;
-    }
-
-    private function signIn(KernelBrowser $client, string $email): User
-    {
-        $user = $this->factory()->create($email);
-        $this->authenticate($client, $user);
-
-        return $user;
     }
 }

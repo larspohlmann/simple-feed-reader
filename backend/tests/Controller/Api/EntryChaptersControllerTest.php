@@ -19,7 +19,7 @@ final class EntryChaptersControllerTest extends ApiTestCase
     public function testAYouTubeEntryServesItsChaptersAndATrimmedBody(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('chapters-youtube@example.com');
+        [$headers, $user] = $this->bearerAndUser('chapters-youtube@example.com');
         $entryId = $this->seedEntry(
             $user,
             'https://www.youtube.com/watch?v=JsBZOcqZerk',
@@ -44,7 +44,7 @@ final class EntryChaptersControllerTest extends ApiTestCase
     public function testAnEntryWithoutChaptersSendsNull(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('chapters-none@example.com');
+        [$headers, $user] = $this->bearerAndUser('chapters-none@example.com');
         $entryId = $this->seedEntry($user, 'https://blog.test/post', '<p>Plain</p>');
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
@@ -56,7 +56,7 @@ final class EntryChaptersControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('chapters-file@example.com');
+        [$headers, $user] = $this->bearerAndUser('chapters-file@example.com');
         $entryId = $this->seedEntry($user, 'https://pod.test/ep1', '<p>Notes</p>', 'https://pod.test/ch.json');
         $files = $this->createMock(ChapterFileSourceInterface::class);
         $files->expects($this->once())->method('chaptersAt')

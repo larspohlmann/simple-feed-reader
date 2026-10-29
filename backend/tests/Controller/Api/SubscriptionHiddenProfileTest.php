@@ -92,7 +92,7 @@ final class SubscriptionHiddenProfileTest extends ApiTestCase
         $this->client->request(
             'POST',
             '/api/subscriptions',
-            server: [...$this->bearerFor($this->user), 'CONTENT_TYPE' => 'application/json'],
+            server: $this->jsonBearerFor($this->user),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }

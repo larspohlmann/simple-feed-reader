@@ -22,7 +22,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testATopTagListsAndMarksReadItsGrandchildsEntries(): void
     {
-        [$headers, $user] = $this->userAndBearer('tag-grandchild@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-grandchild@example.com');
         $reading = $this->tag($user, 'reading', null);
         $longReads = $this->tag($user, 'long reads', $reading);
         $essays = $this->tag($user, 'essays', $longReads);
@@ -41,7 +41,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testAParentListsItsOwnAndItsChildrensEntriesEachOnce(): void
     {
-        [$headers, $user] = $this->userAndBearer('tag-parent@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-parent@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
 
         $this->client->request('GET', '/api/entries?tag=' . $tagIds['reading'], server: $headers);
@@ -52,7 +52,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testAChildListsOnlyItsOwnEntries(): void
     {
-        [$headers, $user] = $this->userAndBearer('tag-child@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-child@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
 
         $this->client->request('GET', '/api/entries?tag=' . $tagIds['long reads'], server: $headers);
@@ -62,9 +62,9 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testAParentNeverListsAnotherUsersFeeds(): void
     {
-        [$headers, $user] = $this->userAndBearer('tag-own@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-own@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
-        [, $stranger] = $this->userAndBearer('tag-stranger@example.com');
+        $stranger = $this->factory()->create('tag-stranger@example.com');
         $this->seedHierarchy($stranger, 'stranger.example');
         $this->seedStrangerChildOf($stranger, $tagIds['reading']);
 
@@ -75,7 +75,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testMarkingAParentReadReachesItsChildrensFeeds(): void
     {
-        [$headers, $user] = $this->userAndBearer('tag-mark-parent@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-mark-parent@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
 
         $this->markRead($headers, $tagIds['reading']);
@@ -89,7 +89,7 @@ final class EntryTagScopeTest extends ApiTestCase
 
     public function testMarkingAChildReadLeavesTheParentsOwnFeedUnread(): void
     {
-        [$headers, $user] = $this->userAndBearer('tag-mark-child@example.com');
+        [$headers, $user] = $this->bearerAndUser('tag-mark-child@example.com');
         $tagIds = $this->seedHierarchy($user, 'own.example');
 
         $this->markRead($headers, $tagIds['long reads']);

@@ -38,7 +38,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testAnUnconfiguredAccountReportsAnEmptyList(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-empty@example.test');
+        $this->signIn($client, 'ai-empty@example.test');
 
         $client->request('GET', '/api/me/ai');
 
@@ -64,7 +64,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testAddingAConfigurationReturnsItWithTheOfferedModels(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
-        $this->accountOn($client, 'ai-add@example.test');
+        $this->signIn($client, 'ai-add@example.test');
 
         $added = $this->addConfiguration($client, name: 'Work OpenAI');
 
@@ -98,7 +98,7 @@ final class AiSettingsControllerTest extends ApiTestCase
             'gpt-4o',
             new ModelDescriptor('jev-latest', 32_000, ScoringProtocol::SystemOne),
         ]);
-        $this->accountOn($client, 'ai-models-scoring@example.test');
+        $this->signIn($client, 'ai-models-scoring@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
@@ -134,7 +134,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testAddingAConfigurationWithNoApiKeyIsAccepted(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-no-key@example.test');
+        $this->signIn($client, 'ai-no-key@example.test');
 
         $added = $this->addConfiguration($client, apiKey: '');
 
@@ -145,7 +145,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testChoosingAModelOnTheOnlyConfigurationMakesItActive(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
-        $this->accountOn($client, 'ai-ready@example.test');
+        $this->signIn($client, 'ai-ready@example.test');
 
         $id = $this->addAndReadyConfiguration($client, 'gpt-4o-mini');
 
@@ -168,7 +168,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testActivatingASecondConfigurationSwitchesTheActiveOne(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
-        $this->accountOn($client, 'ai-switch@example.test');
+        $this->signIn($client, 'ai-switch@example.test');
 
         $first = $this->addAndReadyConfiguration($client, 'gpt-4o');
         $second = $this->addAndReadyConfiguration($client, 'gpt-4o-mini');
@@ -194,7 +194,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testEveryConfigurationAndTheProfileReportTheLlmEnginesCapabilities(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
-        $this->accountOn($client, 'ai-capabilities@example.test');
+        $this->signIn($client, 'ai-capabilities@example.test');
         $this->addAndReadyConfiguration($client, 'gpt-4o-mini');
 
         $client->request('GET', '/api/me/ai');
@@ -212,7 +212,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testAnAccountWithoutAnActiveConfigurationReportsNoCapabilities(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-no-capabilities@example.test');
+        $this->signIn($client, 'ai-no-capabilities@example.test');
 
         $client->request('GET', '/api/me');
         $me = $this->payload($client);
@@ -224,7 +224,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testRenamingAConfigurationChangesItsName(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-rename@example.test');
+        $this->signIn($client, 'ai-rename@example.test');
         $added = $this->addConfiguration($client, name: 'Old name');
         $id = $added['id'];
         self::assertIsInt($id);
@@ -244,7 +244,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testSettingReasoningChangesTheConfiguration(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-reasoning@example.test');
+        $this->signIn($client, 'ai-reasoning@example.test');
         $added = $this->addConfiguration($client);
         $id = $added['id'];
         self::assertIsInt($id);
@@ -265,7 +265,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testSettingBatchConcurrencyChangesTheConfiguration(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-batch-concurrency@example.test');
+        $this->signIn($client, 'ai-batch-concurrency@example.test');
         $added = $this->addConfiguration($client);
         $id = $added['id'];
         self::assertIsInt($id);
@@ -286,7 +286,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testSettingSlowModelChangesTheConfiguration(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-slow-model@example.test');
+        $this->signIn($client, 'ai-slow-model@example.test');
         $added = $this->addConfiguration($client);
         $id = $added['id'];
         self::assertIsInt($id);
@@ -307,7 +307,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testSettingBatchConcurrencyRejectsOutOfRange(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-batch-concurrency-range@example.test');
+        $this->signIn($client, 'ai-batch-concurrency-range@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
@@ -319,7 +319,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testSettingBatchConcurrencyRejectsZero(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-batch-concurrency-zero@example.test');
+        $this->signIn($client, 'ai-batch-concurrency-zero@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
@@ -331,7 +331,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testSettingBatchConcurrencyAcceptsTheMinimum(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-batch-concurrency-minimum@example.test');
+        $this->signIn($client, 'ai-batch-concurrency-minimum@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
@@ -343,7 +343,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testMaxBatchSizeDefaultsToNull(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-max-batch-size-default@example.test');
+        $this->signIn($client, 'ai-max-batch-size-default@example.test');
 
         $added = $this->addConfiguration($client);
 
@@ -361,7 +361,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testSettingMaxBatchSizeChangesTheConfiguration(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-max-batch-size@example.test');
+        $this->signIn($client, 'ai-max-batch-size@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
@@ -380,7 +380,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testClearingMaxBatchSizeSetsItBackToNull(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-max-batch-size-clear@example.test');
+        $this->signIn($client, 'ai-max-batch-size-clear@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
         $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{"maxBatchSize":30}');
@@ -399,7 +399,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testSettingMaxBatchSizeRejectsABodyThatOmitsTheKey(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-max-batch-size-omitted@example.test');
+        $this->signIn($client, 'ai-max-batch-size-omitted@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
         $this->putJson($client, sprintf('/api/me/ai/configs/%d/max-batch-size', $id), '{"maxBatchSize":30}');
@@ -421,7 +421,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testSettingMaxBatchSizeRejectsOutOfRange(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-max-batch-size-range@example.test');
+        $this->signIn($client, 'ai-max-batch-size-range@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
@@ -435,7 +435,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testDeletingANonActiveConfigurationDropsItFromTheList(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
-        $this->accountOn($client, 'ai-delete-inactive@example.test');
+        $this->signIn($client, 'ai-delete-inactive@example.test');
         $active = $this->addAndReadyConfiguration($client, 'gpt-4o');
         $extra = $this->addConfiguration($client)['id'];
         self::assertIsInt($extra);
@@ -453,7 +453,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testDeletingTheActiveConfigurationLeavesNoActiveId(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-delete-active@example.test');
+        $this->signIn($client, 'ai-delete-active@example.test');
         $active = $this->addAndReadyConfiguration($client);
 
         $client->request('DELETE', sprintf('/api/me/ai/configs/%d', $active));
@@ -492,10 +492,10 @@ final class AiSettingsControllerTest extends ApiTestCase
         string $body,
     ): void {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-stranger-victim@example.test');
+        $this->signIn($client, 'ai-stranger-victim@example.test');
         $strangerId = $this->addAndReadyConfiguration($client);
 
-        $this->accountOn($client, 'ai-stranger-attacker@example.test');
+        $this->signIn($client, 'ai-stranger-attacker@example.test');
         $uri = sprintf('/api/me/ai/configs/%d%s', $strangerId, $suffix);
 
         if ('GET' === $method) {
@@ -515,7 +515,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testDuplicatingAConfigurationReturnsAKeylessCopy(): void
     {
         $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
-        $this->accountOn($client, 'ai-duplicate@example.test');
+        $this->signIn($client, 'ai-duplicate@example.test');
         $added = $this->addConfiguration($client, name: 'Work OpenAI');
         $source = $added['id'];
         self::assertIsInt($source);
@@ -538,7 +538,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testAddingBeyondTheCapIsRefused(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-cap@example.test');
+        $this->signIn($client, 'ai-cap@example.test');
         $this->persistConfigurationsUpToTheCap('ai-cap@example.test');
 
         $this->addConfiguration($client);
@@ -550,7 +550,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testDuplicatingAtTheCapIsRefused(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-duplicate-cap@example.test');
+        $this->signIn($client, 'ai-duplicate-cap@example.test');
         $this->persistConfigurationsUpToTheCap('ai-duplicate-cap@example.test');
 
         $client->request('GET', '/api/me/ai');
@@ -594,7 +594,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testActivatingAConfigurationWithoutAModelIsRefused(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-activate-no-model@example.test');
+        $this->signIn($client, 'ai-activate-no-model@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
@@ -621,7 +621,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testAProviderRefusalOnAddIsUnprocessable(\Throwable $refusal): void
     {
         $client = $this->clientAnswering($refusal);
-        $this->accountOn($client, 'ai-refused@example.test');
+        $this->signIn($client, 'ai-refused@example.test');
 
         $this->addConfiguration($client, 'sk-wrong-key');
 
@@ -638,7 +638,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         $client = $this->clientAnswering(
             new \LogicException('The provider must not be called for an invalid body.'),
         );
-        $this->accountOn($client, 'ai-blank@example.test');
+        $this->signIn($client, 'ai-blank@example.test');
 
         $this->postJson($client, '/api/me/ai/configs', '{"name":null,"baseUrl":"","apiKey":""}');
 
@@ -653,7 +653,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testAnUnreadableStoredKeyIsReportedAsUnprocessable(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-unreadable@example.test');
+        $this->signIn($client, 'ai-unreadable@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
@@ -680,7 +680,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testNoEndpointEverReturnsTheApiKey(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-secret@example.test');
+        $this->signIn($client, 'ai-secret@example.test');
 
         $added = $this->addConfiguration($client);
         $id = $added['id'];
@@ -720,7 +720,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testTheProviderBudgetIsSpentAndRunsOut(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-budget@example.test');
+        $this->signIn($client, 'ai-budget@example.test');
 
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
@@ -744,7 +744,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     public function testAnOwnedConfigurationLookupFailureDoesNotSpendTheProviderBudget(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
-        $this->accountOn($client, 'ai-nobudget@example.test');
+        $this->signIn($client, 'ai-nobudget@example.test');
 
         for ($attempt = 0; $attempt <= self::PROVIDER_BUDGET; ++$attempt) {
             $client->request('GET', '/api/me/ai/configs/999999/models');

@@ -19,7 +19,7 @@ final class SavedSearchNetworksControllerTest extends ApiTestCase
     {
         $this->client = self::createClient();
         $user = $this->factory()->create('networks-api@example.com');
-        $this->headers = [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'];
+        $this->headers = $this->jsonBearerFor($user);
     }
 
     public function testANetworkIsExcludedUntilIncludedAndTheListReportsIt(): void

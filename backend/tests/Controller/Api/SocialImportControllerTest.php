@@ -645,14 +645,6 @@ final class SocialImportControllerTest extends ApiTestCase
         return $client;
     }
 
-    private function signIn(KernelBrowser $client, string $email): User
-    {
-        $user = $this->factory()->create($email);
-        $this->authenticate($client, $user);
-
-        return $user;
-    }
-
     private function blueskyAccountOf(User $user): SocialAccount
     {
         return $this->stored(SocialAccounts::blueskyOf($user));

@@ -12,15 +12,6 @@ use App\Tests\Support\ApiTestCase;
 
 final class EntrySearchMarkReadTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function authHeader(User $user): array
-    {
-        return [
-            ...$this->bearerFor($user),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
-
     private function seedSubscribedMatchingEntry(User $user): void
     {
         $entityManager = $this->entityManager();
@@ -58,7 +49,7 @@ final class EntrySearchMarkReadTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('short-query@example.com');
-        $headers = $this->authHeader($user);
+        $headers = $this->jsonBearerFor($user);
 
         $client->request(
             'POST',
@@ -77,7 +68,7 @@ final class EntrySearchMarkReadTest extends ApiTestCase
         // SearchTermsModel::fromInput() enforces may count.
         $client = self::createClient();
         $user = $this->factory()->create('hundred-char-term@example.com');
-        $headers = $this->authHeader($user);
+        $headers = $this->jsonBearerFor($user);
 
         $client->request(
             'POST',
@@ -96,7 +87,7 @@ final class EntrySearchMarkReadTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('search-mark-read@example.com');
         $this->seedSubscribedMatchingEntry($user);
-        $headers = $this->authHeader($user);
+        $headers = $this->jsonBearerFor($user);
 
         $client->request(
             'POST',

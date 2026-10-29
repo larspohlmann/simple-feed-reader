@@ -7,7 +7,6 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -15,12 +14,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class TagControllerTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function headersFor(User $user): array
-    {
-        return [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'];
-    }
-
     public function testAnonymousIsRejected(): void
     {
         $client = self::createClient();
@@ -31,7 +24,7 @@ final class TagControllerTest extends ApiTestCase
     public function testCreateListAndRejectDuplicateName(): void
     {
         $client = self::createClient();
-        $headers = $this->headersFor($this->factory()->create('tagger@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('tagger@example.com'));
 
         $client->request(
             'POST',
@@ -74,7 +67,7 @@ final class TagControllerTest extends ApiTestCase
     public function testCreatingASecondTagAppendsAfterTheFirst(): void
     {
         $client = self::createClient();
-        $headers = $this->headersFor($this->factory()->create('tag-positions@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('tag-positions@example.com'));
 
         $client->request(
             'POST',
@@ -104,7 +97,7 @@ final class TagControllerTest extends ApiTestCase
     public function testInvalidColorIsRejected(): void
     {
         $client = self::createClient();
-        $headers = $this->headersFor($this->factory()->create('badcolor@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('badcolor@example.com'));
 
         $client->request(
             'POST',
@@ -130,7 +123,7 @@ final class TagControllerTest extends ApiTestCase
         $entityManager->persist($tag);
         $entityManager->flush();
 
-        $headers = $this->headersFor($this->factory()->create('intruder@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('intruder@example.com'));
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $headers);
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND); // not 403 — do not reveal existence
         self::assertStringContainsString('"detail":"No such tag."', (string) $client->getResponse()->getContent());
@@ -149,7 +142,7 @@ final class TagControllerTest extends ApiTestCase
         $entityManager->flush();
         $tagId = $tag->requireId();
 
-        $client->request('DELETE', '/api/tags/' . $tagId, server: $this->headersFor($user));
+        $client->request('DELETE', '/api/tags/' . $tagId, server: $this->jsonBearerFor($user));
 
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
         $entityManager->clear();
@@ -177,7 +170,7 @@ final class TagControllerTest extends ApiTestCase
         $entityManager->flush();
         $subscriptionId = $subscription->requireId();
 
-        $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $this->headersFor($user));
+        $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $this->jsonBearerFor($user));
 
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
         $entityManager->clear();
@@ -193,7 +186,7 @@ final class TagControllerTest extends ApiTestCase
     public function testACreatedChildEchoesItsParentAndTheListCarriesParentIds(): void
     {
         $client = self::createClient();
-        $headers = $this->headersFor($this->factory()->create('tag-parent-wire@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('tag-parent-wire@example.com'));
 
         $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
         $child = $this->createTagBody($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
@@ -209,7 +202,7 @@ final class TagControllerTest extends ApiTestCase
     public function testAThirdLevelBelowTheTopIsAnInvalidParentProblem(): void
     {
         $client = self::createClient();
-        $headers = $this->headersFor($this->factory()->create('tag-depth-wire@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('tag-depth-wire@example.com'));
         $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
         $childId = $this->createTag($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
         $grandchildId = $this->createTag($client, $headers, ['name' => 'Essays', 'parentId' => $childId]);
@@ -233,7 +226,7 @@ final class TagControllerTest extends ApiTestCase
     public function testAnUpdateWithoutParentIdIsRefusedAndKeepsTheParent(): void
     {
         $client = self::createClient();
-        $headers = $this->headersFor($this->factory()->create('tag-partial-patch@example.com'));
+        $headers = $this->jsonBearerFor($this->factory()->create('tag-partial-patch@example.com'));
         $parentId = $this->createTag($client, $headers, ['name' => 'Reading']);
         $childId = $this->createTag($client, $headers, ['name' => 'Long reads', 'parentId' => $parentId]);
 

@@ -22,7 +22,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
 
     public function testANetworkListsItsPrivateAndProfileFeedsAndNothingElse(): void
     {
-        [$headers, $user] = $this->userAndBearer('network-list@example.com');
+        [$headers, $user] = $this->bearerAndUser('network-list@example.com');
         $this->seedNetworks($user);
 
         $this->client->request('GET', '/api/entries?network=bluesky', server: $headers);
@@ -33,9 +33,9 @@ final class EntryNetworkScopeTest extends ApiTestCase
 
     public function testANetworkNeverListsAnotherUsersFeeds(): void
     {
-        [$headers, $user] = $this->userAndBearer('network-own@example.com');
+        [$headers, $user] = $this->bearerAndUser('network-own@example.com');
         $this->seedNetworks($user);
-        [, $stranger] = $this->userAndBearer('network-stranger@example.com');
+        $stranger = $this->factory()->create('network-stranger@example.com');
         $foreign = $this->fixtures()->subscribe($stranger, 'https://bsky.app/profile/bob.bsky.social/rss');
         $this->fixtures()->post($foreign, 'foreign-post', '2026-10-09T00:00:00Z');
 
@@ -46,7 +46,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
 
     public function testAProfileFeedKindListsOnlyTheNetworksProfileFeeds(): void
     {
-        [$headers, $user] = $this->userAndBearer('network-profiles@example.com');
+        [$headers, $user] = $this->bearerAndUser('network-profiles@example.com');
         $this->seedNetworks($user);
 
         $this->client->request('GET', '/api/entries?network=bluesky&feedKind=profile', server: $headers);
@@ -57,39 +57,42 @@ final class EntryNetworkScopeTest extends ApiTestCase
 
     public function testAnUnknownFeedKindIsAValidationError(): void
     {
-        [$headers] = $this->userAndBearer('network-feedkind-unknown@example.com');
+        $headers = $this->bearerFor($this->factory()->create('network-feedkind-unknown@example.com'));
 
         $this->client->request('GET', '/api/entries?network=bluesky&feedKind=home', server: $headers);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertSame(['feedKind' => ['Unknown feedKind. Use one of: profile.']], $this->body()['errors']);
+        self::assertSame(
+            ['feedKind' => ['Unknown feedKind. Use one of: profile.']],
+            $this->payload($this->client)['errors'],
+        );
     }
 
     public function testAFeedKindWithoutANetworkIsAValidationError(): void
     {
-        [$headers] = $this->userAndBearer('network-feedkind-alone@example.com');
+        $headers = $this->bearerFor($this->factory()->create('network-feedkind-alone@example.com'));
 
         $this->client->request('GET', '/api/entries?feedKind=profile', server: $headers);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        self::assertSame(['feedKind' => ['A feedKind needs a network.']], $this->body()['errors']);
+        self::assertSame(['feedKind' => ['A feedKind needs a network.']], $this->payload($this->client)['errors']);
     }
 
     public function testAnUnknownNetworkIsAValidationError(): void
     {
-        [$headers] = $this->userAndBearer('network-unknown@example.com');
+        $headers = $this->bearerFor($this->factory()->create('network-unknown@example.com'));
 
         $this->client->request('GET', '/api/entries?network=myspace', server: $headers);
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        $body = $this->body();
+        $body = $this->payload($this->client);
         self::assertSame('validation_error', $body['type']);
         self::assertSame(['network' => ['Unknown network. Use one of: bluesky, mastodon.']], $body['errors']);
     }
 
     public function testMarkingANetworkReadLeavesItsUnreadListEmptyAndOtherFeedsUnread(): void
     {
-        [$headers, $user] = $this->userAndBearer('network-mark@example.com');
+        [$headers, $user] = $this->bearerAndUser('network-mark@example.com');
         $this->seedNetworks($user);
 
         $this->client->request(
@@ -111,7 +114,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
 
     public function testMarkingANetworksProfilesReadLeavesItsPrivateFeedsUnread(): void
     {
-        [$headers, $user] = $this->userAndBearer('network-mark-profiles@example.com');
+        [$headers, $user] = $this->bearerAndUser('network-mark-profiles@example.com');
         $this->seedNetworks($user);
 
         $this->client->request(
@@ -136,7 +139,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
 
     public function testMarkingANetworkReadWithoutANetworkIsAValidationError(): void
     {
-        [$headers] = $this->userAndBearer('network-mark-missing@example.com');
+        $headers = $this->bearerFor($this->factory()->create('network-mark-missing@example.com'));
 
         $this->client->request(
             'POST',
@@ -148,7 +151,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         self::assertSame(
             ['network' => ['A network is required when scope is "network".']],
-            $this->body()['errors'],
+            $this->payload($this->client)['errors'],
         );
     }
 
@@ -169,7 +172,7 @@ final class EntryNetworkScopeTest extends ApiTestCase
     /** @return list<string> */
     private function guidsOfResponse(): array
     {
-        $entries = $this->body()['entries'];
+        $entries = $this->payload($this->client)['entries'];
         self::assertIsArray($entries);
 
         return array_map(static function (mixed $entry): string {
@@ -178,15 +181,6 @@ final class EntryNetworkScopeTest extends ApiTestCase
 
             return $entry['title'];
         }, array_values($entries));
-    }
-
-    /** @return array<array-key, mixed> */
-    private function body(): array
-    {
-        $body = json_decode((string) $this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-
-        return $body;
     }
 
     private function fixtures(): NetworkFeedSubscriptions

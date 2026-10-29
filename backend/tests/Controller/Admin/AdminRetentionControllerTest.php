@@ -43,10 +43,7 @@ final class AdminRetentionControllerTest extends ApiTestCase
         $this->client->request(
             'PUT',
             self::RETENTION,
-            server: [
-                ...$this->bearerFor($user),
-                'CONTENT_TYPE' => 'application/json',
-            ],
+            server: $this->jsonBearerFor($user),
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
     }

@@ -26,7 +26,7 @@ final class RecommendationDebugLogControllerTest extends ApiTestCase
     public function testListReturnsEntriesWithStreamingTextOnlyForTheOpenCall(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('debug-log-list@example.test');
+        [$headers, $user] = $this->bearerAndUser('debug-log-list@example.test');
         $run = $this->fixtures()->createRun($user);
         $finished = $this->fixtures()->log(
             $run,
@@ -111,7 +111,7 @@ final class RecommendationDebugLogControllerTest extends ApiTestCase
     public function testListIsEmptyForAUserWithoutLogs(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('debug-log-empty@example.test');
+        $headers = $this->bearerFor($this->factory()->create('debug-log-empty@example.test'));
 
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
@@ -125,7 +125,7 @@ final class RecommendationDebugLogControllerTest extends ApiTestCase
     public function testListCarriesTheLatestRunsStatusAndRetryCounters(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('debug-log-run-summary@example.test');
+        [$headers, $user] = $this->bearerAndUser('debug-log-run-summary@example.test');
         $run = $this->fixtures()->createRun($user);
         $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->getRunningCallAttempts()->recordInvalidReply('bad reply');
@@ -154,7 +154,7 @@ final class RecommendationDebugLogControllerTest extends ApiTestCase
     public function testListNamesTheRetainedRunsAndDefaultsToTheNewest(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('debug-log-run-list@example.test');
+        [$headers, $user] = $this->bearerAndUser('debug-log-run-list@example.test');
         $older = $this->fixtures()->createRun($user);
         $this->fixtures()->log($older, CallPhase::Batch, 1, 1, 'older request');
         $newer = $this->fixtures()->createRun($user);
@@ -187,7 +187,7 @@ final class RecommendationDebugLogControllerTest extends ApiTestCase
     public function testListReturnsTheRequestedRunsRows(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('debug-log-run-pick@example.test');
+        [$headers, $user] = $this->bearerAndUser('debug-log-run-pick@example.test');
         $older = $this->fixtures()->createRun($user);
         $this->fixtures()->log($older, CallPhase::Batch, 1, 1, 'older request');
         $newer = $this->fixtures()->createRun($user);
@@ -214,7 +214,7 @@ final class RecommendationDebugLogControllerTest extends ApiTestCase
     public function testAnUnknownRunFallsBackToTheNewest(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('debug-log-run-stale@example.test');
+        [$headers, $user] = $this->bearerAndUser('debug-log-run-stale@example.test');
         $run = $this->fixtures()->createRun($user);
         $this->fixtures()->log($run, CallPhase::Batch, 1, 1, 'request');
         $this->entityManager()->flush();
@@ -230,7 +230,7 @@ final class RecommendationDebugLogControllerTest extends ApiTestCase
     public function testDetailReturnsFullBodies(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('debug-log-detail@example.test');
+        [$headers, $user] = $this->bearerAndUser('debug-log-detail@example.test');
         $run = $this->fixtures()->createRun($user);
         $log = $this->fixtures()->log($run, CallPhase::Batch, 1, 1, 'req');
         $this->fixtures()->settleLog(
@@ -269,8 +269,8 @@ final class RecommendationDebugLogControllerTest extends ApiTestCase
     public function testDetailOfAnotherUsersRowIs404ProblemJson(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('debug-log-detail-mine@example.test');
-        [, $otherUser] = $this->userAndBearer('debug-log-detail-theirs@example.test');
+        $headers = $this->bearerFor($this->factory()->create('debug-log-detail-mine@example.test'));
+        $otherUser = $this->factory()->create('debug-log-detail-theirs@example.test');
         $theirRun = $this->fixtures()->createRun($otherUser);
         $theirLog = $this->fixtures()->log($theirRun, CallPhase::Batch, 1, 1, 'req');
         $this->entityManager()->flush();

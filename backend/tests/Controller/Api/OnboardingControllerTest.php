@@ -17,12 +17,6 @@ use Psr\Clock\ClockInterface;
 
 final class OnboardingControllerTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function authHeader(string $email): array
-    {
-        return $this->bearerFor($this->factory()->create($email)) + ['CONTENT_TYPE' => 'application/json'];
-    }
-
     /** @return list<CatalogFeed> */
     private function catalog(): array
     {
@@ -51,7 +45,7 @@ final class OnboardingControllerTest extends ApiTestCase
     public function testSubscribesAndReportsTheTagsItCreated(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('onboard@example.com');
+        $headers = $this->jsonBearerFor($this->factory()->create('onboard@example.com'));
         [$verge, $ars] = $this->catalog();
 
         $client->request(
@@ -83,7 +77,7 @@ final class OnboardingControllerTest extends ApiTestCase
     public function testSubscribingIssuesNoDiscoveryRequests(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('nodiscovery@example.com');
+        $headers = $this->jsonBearerFor($this->factory()->create('nodiscovery@example.com'));
         [$verge] = $this->catalog();
 
         $discovery = $this->createMock(FeedDiscoveryInterface::class);
@@ -103,7 +97,7 @@ final class OnboardingControllerTest extends ApiTestCase
     public function testAnEmptySelectionIsRejected(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('empty@example.com');
+        $headers = $this->jsonBearerFor($this->factory()->create('empty@example.com'));
 
         $client->request(
             'POST',
@@ -118,7 +112,7 @@ final class OnboardingControllerTest extends ApiTestCase
     public function testResubmittingTheSameSelectionIsANoOpNotAnError(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('again@example.com');
+        $headers = $this->jsonBearerFor($this->factory()->create('again@example.com'));
         [$verge] = $this->catalog();
         $payload = json_encode(['catalogFeedIds' => [$verge->requireId()]], \JSON_THROW_ON_ERROR);
 
@@ -138,7 +132,7 @@ final class OnboardingControllerTest extends ApiTestCase
     public function testASelectionCrossingTheCapStopsCleanlyAndReportsWhatItCreated(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('cap@example.com');
+        $headers = $this->jsonBearerFor($this->factory()->create('cap@example.com'));
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);

@@ -115,7 +115,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     public function testOkReturnsComments(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('comments-ok@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-ok@example.com');
         $this->serveRedditThread($this->installFetcher());
         $entry = $this->seedEntry($user, self::redditThread());
 
@@ -143,7 +143,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     public function testThrottledCarriesRetryAfter(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('comments-throttled@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-throttled@example.com');
         $fetcher = $this->installFetcher();
         $fetcher->willThrow(self::FEED, new FeedThrottledException('429', 90));
         $entry = $this->seedEntry($user, self::redditThread());
@@ -157,7 +157,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     public function testAFetchFailureIsFailed(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('comments-failed@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-failed@example.com');
         $fetcher = $this->installFetcher();
         $fetcher->willThrow(self::FEED, new FeedUnreachableException('HTTP 500', statusCode: 500));
         $entry = $this->seedEntry($user, self::redditThread());
@@ -172,7 +172,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('comments-limited@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-limited@example.com');
         $fetcher = $this->installFetcher();
         $fetcher->willThrow(self::FEED, new FeedUnreachableException('HTTP 500', statusCode: 500));
         $entry = $this->seedEntry($user, self::redditThread());
@@ -192,7 +192,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('comments-cached@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-cached@example.com');
         $fetcher = $this->installFetcher();
         $this->serveRedditThread($fetcher);
         $url = '/api/entries/' . $this->seedEntry($user, self::redditThread())->getId() . '/comments';
@@ -210,7 +210,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('comments-refresh@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-refresh@example.com');
         $fetcher = $this->installFetcher();
         $this->serveRedditThread($fetcher);
         $url = '/api/entries/' . $this->seedEntry($user, self::redditThread())->getId() . '/comments';
@@ -227,7 +227,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     {
         $client = self::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('comments-budget@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-budget@example.com');
         $fetcher = $this->installFetcher();
         $this->serveRedditThread($fetcher);
         $url = '/api/entries/' . $this->seedEntry($user, self::redditThread())->getId() . '/comments';
@@ -243,7 +243,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     public function testEntryWithoutCommentsFeedIs404(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('comments-nofeed@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-nofeed@example.com');
         $this->installFetcher();
         $entry = $this->seedEntry($user, Discussion::of(self::THREAD, null, CommentsLoad::Auto));
 
@@ -255,8 +255,8 @@ final class EntryCommentsControllerTest extends ApiTestCase
     public function testSomeoneElsesEntryIs404(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('comments-idor@example.com');
-        [, $stranger] = $this->userAndBearer('comments-owner@example.com');
+        $headers = $this->bearerFor($this->factory()->create('comments-idor@example.com'));
+        $stranger = $this->factory()->create('comments-owner@example.com');
         $this->installFetcher();
         $entry = $this->seedEntry($stranger, self::redditThread());
 
@@ -268,7 +268,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     public function testAMastodonPostsRepliesComeFromItsOriginWithoutAnAccount(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [self::PUBLIC_CONTEXT => self::mastodonContext()]);
-        [$headers, $user] = $this->userAndBearer('comments-mastodon@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-mastodon@example.com');
 
         $client->request('GET', '/api/entries/' . $this->mastodonPostFor($user) . '/comments', server: $headers);
 
@@ -298,7 +298,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     public function testASubstackPostsCommentsComeFromSubstack(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('comments-substack@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-substack@example.com');
         $fetcher = $this->installFetcher();
         $fixtures = __DIR__ . '/../../Fixtures/substack';
         $fetcher->willReturnBody(
@@ -323,7 +323,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
     public function testASocialPostsRepliesAreCachedAndRefreshable(): void
     {
         $client = $this->clientRouting(self::ROUTED_HOSTS, [self::PUBLIC_CONTEXT => self::mastodonContext()]);
-        [$headers, $user] = $this->userAndBearer('comments-mastodon-cached@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-mastodon-cached@example.com');
         $url = '/api/entries/' . $this->mastodonPostFor($user) . '/comments';
 
         $client->request('GET', $url, server: $headers);
@@ -343,7 +343,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
         $client = $this->clientRouting(self::ROUTED_HOSTS, [self::PUBLIC_CONTEXT => self::mastodonContext()]);
         $fetcher = $this->installFetcher();
         $this->serveRedditThread($fetcher);
-        [$headers, $user] = $this->userAndBearer('comments-mastodon-priority@example.com');
+        [$headers, $user] = $this->bearerAndUser('comments-mastodon-priority@example.com');
         $entryId = $this->mastodonPostWith($user, self::redditThread());
 
         $client->request('GET', '/api/entries/' . $entryId . '/comments', server: $headers);

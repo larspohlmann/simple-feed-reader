@@ -46,7 +46,7 @@ final class ProfileControllerTest extends ApiTestCase
     public function testANewAccountReadsTheDefaultsWithItsActiveConnection(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->userAndBearer('profile-show@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-show@example.test');
         $active = $this->fixtures()->seedReadyAiSettingsFor($user, 'qwen3-14b');
 
         $client->request('GET', self::URI, server: $headers);
@@ -69,7 +69,7 @@ final class ProfileControllerTest extends ApiTestCase
     public function testSavingPersistsTheScheduleTheConnectionAndTheCaps(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->userAndBearer('profile-save@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-save@example.test');
         $this->fixtures()->seedReadyAiSettingsFor($user, 'qwen3-14b');
         $chosen = $this->fixtures()->seedInactiveAiSettingsFor($user, 'gpt-4o');
 
@@ -92,7 +92,7 @@ final class ProfileControllerTest extends ApiTestCase
     public function testAConnectionThatCannotBuildAProfileIsRefused(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->userAndBearer('profile-jev@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-jev@example.test');
         $jev = $this->fixtures()->seedReadyScoringSettings($user);
 
         $this->put(
@@ -108,7 +108,7 @@ final class ProfileControllerTest extends ApiTestCase
     public function testAStoredPickThatCanNoLongerBuildAProfileDoesNotBlockSavingTheRest(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->userAndBearer('profile-stale-pick@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-stale-pick@example.test');
         $this->fixtures()->seedReadyAiSettingsFor($user, 'qwen3-14b');
         $chosen = $this->fixtures()->seedInactiveAiSettingsFor($user, 'gpt-4o');
         $this->put(
@@ -143,8 +143,8 @@ final class ProfileControllerTest extends ApiTestCase
     public function testAnotherAccountsConnectionReadsAsMissing(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('profile-owner@example.test');
-        [, $stranger] = $this->userAndBearer('profile-stranger@example.test');
+        $headers = $this->bearerFor($this->factory()->create('profile-owner@example.test'));
+        $stranger = $this->factory()->create('profile-stranger@example.test');
         $theirs = $this->fixtures()->seedReadyAiSettingsFor($stranger, 'gpt-4o');
 
         $this->put(
@@ -159,7 +159,7 @@ final class ProfileControllerTest extends ApiTestCase
     public function testAScheduleOutsideTheChoicesIsAValidationError(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->userAndBearer('profile-interval@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-interval@example.test');
         $this->fixtures()->seedReadyAiSettingsFor($user, 'qwen3-14b');
 
         $this->put(
@@ -175,7 +175,7 @@ final class ProfileControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('profile-start@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-start@example.test');
         $this->fixtures()->seedReadyAiSettingsFor($user, 'qwen3-14b');
 
         $client->request('POST', self::URI . '/runs', server: $headers);
@@ -193,7 +193,7 @@ final class ProfileControllerTest extends ApiTestCase
     public function testStartingWithoutAUsableConnectionIsRefused(): void
     {
         $client = static::createClient();
-        [$headers, $user] = $this->userAndBearer('profile-start-jev@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-start-jev@example.test');
         $this->fixtures()->seedReadyScoringSettings($user);
 
         $client->request('POST', self::URI . '/runs', server: $headers);
@@ -205,7 +205,7 @@ final class ProfileControllerTest extends ApiTestCase
     public function testAnAccountThatNeverRanReadsNoCurrentRun(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('profile-current-none@example.test');
+        $headers = $this->bearerFor($this->factory()->create('profile-current-none@example.test'));
 
         $client->request('GET', self::URI . '/runs/current', server: $headers);
 
@@ -218,7 +218,7 @@ final class ProfileControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('profile-active-free@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-active-free@example.test');
         $this->fixtures()->seedReadyAiSettingsFor($user, 'qwen3-14b');
 
         for ($click = 1; $click <= self::START_BUDGET + 2; ++$click) {
@@ -231,7 +231,7 @@ final class ProfileControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('profile-refused-free@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-refused-free@example.test');
         $this->fixtures()->seedReadyScoringSettings($user);
 
         for ($click = 1; $click <= self::START_BUDGET + 1; ++$click) {
@@ -244,7 +244,7 @@ final class ProfileControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $client->disableReboot();
-        [$headers, $user] = $this->userAndBearer('profile-budget@example.test');
+        [$headers, $user] = $this->bearerAndUser('profile-budget@example.test');
         $this->fixtures()->seedReadyAiSettingsFor($user, 'qwen3-14b');
 
         for ($spent = 1; $spent <= self::START_BUDGET; ++$spent) {
@@ -264,8 +264,8 @@ final class ProfileControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $client->disableReboot();
-        [$headers, $owner] = $this->userAndBearer('profile-row-owner@example.test');
-        [$strangerHeaders] = $this->userAndBearer('profile-row-stranger@example.test');
+        [$headers, $owner] = $this->bearerAndUser('profile-row-owner@example.test');
+        $strangerHeaders = $this->bearerFor($this->factory()->create('profile-row-stranger@example.test'));
         $row = $this->profileRunRowOf($owner, '{"profile-request":1}');
         $uri = '/api/recommendations/runs/debug-log/' . $row->getId();
 
@@ -281,7 +281,7 @@ final class ProfileControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $client->disableReboot();
-        [$headers, $owner] = $this->userAndBearer('profile-log-rows@example.test');
+        [$headers, $owner] = $this->bearerAndUser('profile-log-rows@example.test');
         $row = $this->profileRunRowOf($owner, '{}');
 
         $client->request('GET', self::URI . '/runs/current/log', server: $headers);
@@ -295,7 +295,7 @@ final class ProfileControllerTest extends ApiTestCase
     public function testTheLogOfAnAccountWithoutProfileRunsIsEmpty(): void
     {
         $client = static::createClient();
-        [$headers] = $this->userAndBearer('profile-log@example.test');
+        $headers = $this->bearerFor($this->factory()->create('profile-log@example.test'));
 
         $client->request('GET', self::URI . '/runs/current/log', server: $headers);
 

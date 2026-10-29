@@ -28,8 +28,8 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testOverviewAnswersWithTheAccountsMonthLatestRunsAndTheAllTimeTotal(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-history-mine@example.test');
-        [, $otherUser] = $this->userAndBearer('run-history-theirs@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-mine@example.test');
+        $otherUser = $this->factory()->create('run-history-theirs@example.test');
 
         $older = $this->fixtures()->createRun($user);
         $older->stampProvider('openrouter.ai', 'x-ai/grok-4-fast');
@@ -92,7 +92,7 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testCapsTheNewestMonthAtTheLimitKeepingTheNewestRunsAndReportsANextCursor(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-history-cap@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-cap@example.test');
 
         $runCount = RecommendationRunHistoryRepository::HISTORY_LIMIT + 1;
         $seededRuns = [];
@@ -133,7 +133,7 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testAResumedRunReportsNeitherACompletionTimeNorADuration(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-history-resumed@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-resumed@example.test');
 
         $run = $this->fixtures()->createRun($user);
         $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
@@ -161,7 +161,7 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testAnAccountThatNeverRanGetsAnEmptyOverviewAndNoTotal(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('run-history-empty@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-history-empty@example.test'));
 
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
 
@@ -185,7 +185,7 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testRunsInTwoDifferentMonthsProduceTwoMonthEntriesWithLatestTheNewerOne(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-history-two-months@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-two-months@example.test');
 
         $julyOne = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-10 09:00:00'));
         $julyTwo = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-20 09:00:00'));
@@ -223,7 +223,7 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testLatestOpensOnTheNewestMonthWithRunsEvenYearsInThePast(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-history-past-month@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-past-month@example.test');
 
         $only = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2024-03-14 09:00:00'));
 
@@ -246,7 +246,7 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testTheMonthRouteReturnsOnlyThatMonthsRuns(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-history-month-route@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-month-route@example.test');
 
         $july = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-12 09:00:00'));
         $user = $this->entityManager()->getRepository(User::class)->find($user->getId());
@@ -267,7 +267,7 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testAMonthOutsideTheRouteRequirementIs404(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('run-history-bad-month@example.test');
+        $headers = $this->bearerFor($this->factory()->create('run-history-bad-month@example.test'));
 
         $client->request('GET', self::HISTORY_ROUTE . '/2026-13', server: $headers);
 
@@ -282,7 +282,7 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testAnUnrecognisedTimezoneStillAnswersOkBucketedInUtc(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-history-bad-tz@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-bad-tz@example.test');
 
         $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-12 09:00:00'));
 
@@ -303,7 +303,7 @@ final class RecommendationRunHistoryControllerTest extends ApiTestCase
     public function testBeforeCursorPagesWithinAMonth(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('run-history-cursor@example.test');
+        [$headers, $user] = $this->bearerAndUser('run-history-cursor@example.test');
 
         $oldest = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-01 09:00:00'));
         $user = $this->entityManager()->getRepository(User::class)->find($user->getId());

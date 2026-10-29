@@ -42,9 +42,9 @@ final class MeTest extends ApiTestCase
     {
         $client = self::createClient();
         $user = $this->factory()->create('soon-suspended@example.com');
-        $bearer = $this->bearerFor($user);
+        $headers = $this->bearerFor($user);
 
-        $client->request('GET', '/api/me', server: $bearer);
+        $client->request('GET', '/api/me', server: $headers);
         self::assertResponseIsSuccessful();
 
         /** @var Connection $connection */
@@ -55,7 +55,7 @@ final class MeTest extends ApiTestCase
         );
         self::assertSame(1, $updated, 'The suspension must actually have hit a row.');
 
-        $client->request('GET', '/api/me', server: $bearer);
+        $client->request('GET', '/api/me', server: $headers);
 
         self::assertResponseStatusCodeSame(401);
     }

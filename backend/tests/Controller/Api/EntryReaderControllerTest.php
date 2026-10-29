@@ -55,7 +55,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testOwnedEntryOkReturnsExtractedArticle(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-ok@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-ok@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
@@ -95,7 +95,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testDeclaresAPaywalledPreviewSoTheClientCanSaySo(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-paywalled@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-paywalled@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
@@ -120,7 +120,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testOwnedEntryFetchFailureReturnsFailedStatus(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-fail@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-fail@example.com');
         $fake = $this->installFake();
         $fake->willReturn(
             ExtractionResultModel::failed(
@@ -152,7 +152,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testCarriesTheEntryAuthorIntoTheReaderExtraction(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-author@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-author@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             'https://example.com/article',
@@ -175,7 +175,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testCarriesTheFeedPosterFallbackIntoTheReaderExtraction(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-poster@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-poster@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             'https://example.com/article',
@@ -201,7 +201,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testOffTopicExtractionOfAFullFeedArticleFallsBackToTheFeed(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-mismatch@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-mismatch@example.com');
         $fake = $this->installFake();
         // Readability grabbed page furniture, not the story (#654).
         $fake->willReturn(ExtractionResultModel::ok(
@@ -228,7 +228,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testExtractionThatReflectsTheFullFeedArticleStaysOk(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-reflects@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-reflects@example.com');
         $fake = $this->installFake();
         $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
@@ -287,7 +287,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testEntryWithoutUrlShortCircuitsWithoutCallingExtractor(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-nourl@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-nourl@example.com');
         $fake = $this->installFake();
         $entry = $this->seedEntry($user, null);
 
@@ -305,7 +305,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testAPostAnswersFeedBodyIsPostWithoutCallingExtractor(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-post@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-post@example.com');
         $fake = $this->installFake();
         $entry = $this->seedEntry($user, 'https://example.social/@a/1');
         $entry->setHeadline(Headline::derived('Post'));
@@ -326,7 +326,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testAPostIsAnsweredWhenTheReaderBudgetIsSpent(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-post-budget@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-post-budget@example.com');
         $this->installFake();
         $post = $this->seedEntry($user, 'https://example.social/@a/2');
         $post->setHeadline(Headline::derived('Post'));
@@ -342,7 +342,7 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testAUrlLessEntryIsAnsweredWhenTheReaderBudgetIsSpent(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-nourl-budget@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-nourl-budget@example.com');
         $this->installFake();
         $entry = $this->seedEntry($user, null);
         $this->spendReaderBudget($user);
@@ -355,8 +355,8 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testEntryOfAnotherUserIs404AndDoesNotCallExtractor(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('reader-idor@example.com');
-        [, $stranger] = $this->userAndBearer('reader-owner@example.com');
+        $headers = $this->bearerFor($this->factory()->create('reader-idor@example.com'));
+        $stranger = $this->factory()->create('reader-owner@example.com');
         $fake = $this->installFake();
         $entry = $this->seedEntry($stranger, 'https://example.com/article');
 
@@ -369,8 +369,8 @@ final class EntryReaderControllerTest extends ApiTestCase
     public function testOwnershipIsCheckedBeforeTheReaderBudget(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reader-idor-budget@example.com');
-        [, $stranger] = $this->userAndBearer('reader-owner-budget@example.com');
+        [$headers, $user] = $this->bearerAndUser('reader-idor-budget@example.com');
+        $stranger = $this->factory()->create('reader-owner-budget@example.com');
         $this->installFake();
         $entry = $this->seedEntry($stranger, 'https://example.com/article');
         $this->spendReaderBudget($user);

@@ -44,7 +44,7 @@ final class ReadingActivityControllerTest extends ApiTestCase
     public function testAnAccountWithNoReadsGetsThirtyZeroDays(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('reading-activity-empty@example.test');
+        $headers = $this->bearerFor($this->factory()->create('reading-activity-empty@example.test'));
 
         $client->request('GET', self::ROUTE, server: $headers);
 
@@ -66,7 +66,7 @@ final class ReadingActivityControllerTest extends ApiTestCase
     public function testLeavesSocialFeedsOutOfTheReadingTotalsAndRankings(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reading-activity-social@example.test');
+        [$headers, $user] = $this->bearerAndUser('reading-activity-social@example.test');
 
         $plain = new Feed('https://example.com/plain-totals.xml');
         $bluesky = new Feed('https://bsky.app/profile/totals.bsky.social/rss');
@@ -93,7 +93,7 @@ final class ReadingActivityControllerTest extends ApiTestCase
     public function testRanksTopFeedsByReadBusiestFirst(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reading-activity-top-read@example.test');
+        [$headers, $user] = $this->bearerAndUser('reading-activity-top-read@example.test');
 
         $busy = new Feed('https://example.com/busy.xml');
         $quiet = new Feed('https://example.com/quiet.xml');
@@ -125,7 +125,7 @@ final class ReadingActivityControllerTest extends ApiTestCase
     public function testCountsOpensPerDayWithinTheWindowAndDropsOlderOnes(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reading-activity-counts@example.test');
+        [$headers, $user] = $this->bearerAndUser('reading-activity-counts@example.test');
 
         $feed = new Feed('https://example.com/f.xml');
         $this->entityManager()->persist($feed);
@@ -160,7 +160,7 @@ final class ReadingActivityControllerTest extends ApiTestCase
     public function testCountsNewArticlesPerUtcDayAndAveragesTheLastSevenCompletedDays(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('reading-activity-arrivals@example.test');
+        [$headers, $user] = $this->bearerAndUser('reading-activity-arrivals@example.test');
 
         $feed = new Feed('https://example.com/arrivals.xml');
         $this->entityManager()->persist($feed);

@@ -16,15 +16,6 @@ use Psr\Clock\ClockInterface;
 /** Fixtures are built in-test: the schema comes from ORM metadata, so no migration seeds the catalog tables. */
 final class CatalogControllerTest extends ApiTestCase
 {
-    /** @return array<string, string> */
-    private function authHeader(string $email): array
-    {
-        return [
-            ...$this->bearerFor($this->factory()->create($email)),
-            'CONTENT_TYPE' => 'application/json',
-        ];
-    }
-
     public function testAnonymousIsRejected(): void
     {
         $client = self::createClient();
@@ -35,7 +26,7 @@ final class CatalogControllerTest extends ApiTestCase
     public function testCategoriesAndFeedsComeBackInOrderWithoutDisabledRows(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('catalog@example.com');
+        $headers = $this->jsonBearerFor($this->factory()->create('catalog@example.com'));
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -82,7 +73,7 @@ final class CatalogControllerTest extends ApiTestCase
     public function testAFeedTheUserAlreadySubscribesToIsMarkedSubscribed(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('subscribed@example.com');
+        $headers = $this->jsonBearerFor($this->factory()->create('subscribed@example.com'));
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -124,7 +115,7 @@ final class CatalogControllerTest extends ApiTestCase
     public function testAnotherUsersSubscriptionDoesNotMarkTheFeedSubscribed(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeader('newcomer@example.com');
+        $headers = $this->jsonBearerFor($this->factory()->create('newcomer@example.com'));
 
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);

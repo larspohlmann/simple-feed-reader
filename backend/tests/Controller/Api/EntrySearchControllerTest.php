@@ -69,7 +69,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testMatchingEntryComesBackWithAnEntriesArray(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('s-match@example.com');
+        [$headers, $user] = $this->bearerAndUser('s-match@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
         $this->seedSubscribedFeedWithEntries($user, 'Symfony', 1);
 
@@ -88,7 +88,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testMatchingEntryCarriesAnExcerptButNoContentHtml(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('s-excerpt@example.com');
+        [$headers, $user] = $this->bearerAndUser('s-excerpt@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
         $entityManager = $this->entityManager();
         $entry = $entityManager->getRepository(Entry::class)->findOneBy(['headline.title' => 'Angular Post 1']);
@@ -110,7 +110,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testMatchingEntryCarriesItsFeedDeclaredCategories(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('s-categories@example.com');
+        [$headers, $user] = $this->bearerAndUser('s-categories@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
         $entityManager = $this->entityManager();
         $entry = $entityManager->getRepository(Entry::class)->findOneBy(['headline.title' => 'Angular Post 1']);
@@ -133,7 +133,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testMatchingEntryCarriesSavedSearchMembership(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('s-saved-search@example.com');
+        [$headers, $user] = $this->bearerAndUser('s-saved-search@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
         $entityManager = $this->entityManager();
         $entry = $entityManager->getRepository(Entry::class)->findOneBy(['headline.title' => 'Angular Post 1']);
@@ -161,8 +161,8 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testEntryInAFeedTheCallerDoesNotSubscribeToIsAbsent(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('s-idor@example.com');
-        [, $stranger] = $this->userAndBearer('s-idor-owner@example.com');
+        $headers = $this->bearerFor($this->factory()->create('s-idor@example.com'));
+        $stranger = $this->factory()->create('s-idor-owner@example.com');
         $this->seedUnsubscribedFeedWithEntry($stranger, 'Angular Exclusive');
 
         $client->request('GET', '/api/entries/search?q=angular', server: $headers);
@@ -176,7 +176,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testUnreadSearchReturnsOnlyEffectivelyUnreadEntries(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('s-unread@example.com');
+        [$headers, $user] = $this->bearerAndUser('s-unread@example.com');
         $subscription = $this->seedSubscribedFeedWithEntries($user, 'Angular', 4);
         $entityManager = $this->entityManager();
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
@@ -206,7 +206,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testTooShortQueryIsAValidationError(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('s-short@example.com');
+        $headers = $this->bearerFor($this->factory()->create('s-short@example.com'));
 
         $client->request('GET', '/api/entries/search?q=ab', server: $headers);
 
@@ -218,7 +218,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testUnknownParameterIsAValidationError(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('s-unknown@example.com');
+        $headers = $this->bearerFor($this->factory()->create('s-unknown@example.com'));
 
         $client->request('GET', '/api/entries/search?q=angular&tag=3', server: $headers);
 
@@ -230,7 +230,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testMalformedCursorIsAValidationError(): void
     {
         $client = self::createClient();
-        [$headers] = $this->userAndBearer('s-cursor@example.com');
+        $headers = $this->bearerFor($this->factory()->create('s-cursor@example.com'));
 
         $client->request('GET', '/api/entries/search?q=angular&cursor=not-a-cursor', server: $headers);
 
@@ -251,7 +251,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testSearchesOldestFirstWhenAsked(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('s-oldest@example.com');
+        [$headers, $user] = $this->bearerAndUser('s-oldest@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 3);
 
         $client->request('GET', '/api/entries/search?q=angular&order=asc', server: $headers);
@@ -268,7 +268,7 @@ final class EntrySearchControllerTest extends ApiTestCase
     public function testAFullPagePaginatesWithoutSkippingOrRepeating(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->userAndBearer('s-page@example.com');
+        [$headers, $user] = $this->bearerAndUser('s-page@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 3);
 
         $client->request('GET', '/api/entries/search?q=angular&limit=2', server: $headers);

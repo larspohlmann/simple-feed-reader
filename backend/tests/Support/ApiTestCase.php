@@ -53,13 +53,25 @@ abstract class ApiTestCase extends WebTestCase
     }
 
     /** @return array{HTTP_AUTHORIZATION: string} */
+    protected function bearer(string $token): array
+    {
+        return ['HTTP_AUTHORIZATION' => 'Bearer ' . $token];
+    }
+
+    /** @return array{HTTP_AUTHORIZATION: string} */
     protected function bearerFor(User $user): array
     {
-        return ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($user)];
+        return $this->bearer($this->tokenFor($user));
+    }
+
+    /** @return array{HTTP_AUTHORIZATION: string, CONTENT_TYPE: string} */
+    protected function jsonBearerFor(User $user): array
+    {
+        return [...$this->bearerFor($user), 'CONTENT_TYPE' => 'application/json'];
     }
 
     /** @return array{0: array{HTTP_AUTHORIZATION: string}, 1: User} */
-    protected function userAndBearer(string $email): array
+    protected function bearerAndUser(string $email): array
     {
         $user = $this->factory()->create($email);
 
@@ -68,7 +80,15 @@ abstract class ApiTestCase extends WebTestCase
 
     protected function authenticate(KernelBrowser $client, User $user): void
     {
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $this->tokenFor($user));
+        $client->setServerParameter('HTTP_AUTHORIZATION', $this->bearerFor($user)['HTTP_AUTHORIZATION']);
+    }
+
+    protected function signIn(KernelBrowser $client, string $email): User
+    {
+        $user = $this->factory()->create($email);
+        $this->authenticate($client, $user);
+
+        return $user;
     }
 
     /** Every deliberate API failure answers problem+json — the contract this pins beside the status. */

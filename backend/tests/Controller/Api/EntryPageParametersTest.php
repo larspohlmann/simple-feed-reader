@@ -151,7 +151,7 @@ final class EntryPageParametersTest extends ApiTestCase
         $client->request(
             'PATCH',
             '/api/entries/' . $entry->requireId() . '/state',
-            server: $this->bearerFor($user) + ['CONTENT_TYPE' => 'application/json'],
+            server: $this->jsonBearerFor($user),
             content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseIsSuccessful();

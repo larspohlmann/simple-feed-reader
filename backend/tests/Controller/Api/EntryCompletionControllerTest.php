@@ -71,7 +71,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testPendingPostsFillAndComeBackSettled(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-fill@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-fill@example.com');
         $feed = $this->subscribedFeed($user);
         $blueskyPost = $this->queuedPost($feed, self::TISCH);
         $linkPost = $this->queuedLinkPost($feed, 1, '<p>See https://example.com/story</p>');
@@ -102,7 +102,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testAFilledPostIsIndexedWithItsNewText(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-index@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-index@example.com');
         $feed = $this->subscribedFeed($user);
         $post = $this->queuedPost($feed, self::TISCH, '<p>Read this.<br />' . Bluesky::CARD . '</p>');
         $this->appView->knowsFixture('external');
@@ -117,7 +117,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testAFoldedThreadHandsItsLinkRootOnToItsCardInTheSameCompletion(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-self-thread@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-self-thread@example.com');
         $feed = $this->subscribedFeed($user, 'https://bsky.app/profile/a.example/rss');
         $root = $this->post($feed, self::TISCH, '<p>See https://example.com/story</p>');
         $root->setShareKind(ShareKind::Link);
@@ -154,7 +154,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testATitledShareOffTheFeedsSiteComesBackWithItsLinkCard(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-titled-link@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-titled-link@example.com');
         $item = $this->queuedHackerNewsItem($this->subscribedFeed($user), 'https://ghuntley.com/unikernels/');
 
         $this->complete($headers, [$item->requireId()]);
@@ -170,7 +170,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testATitledShareOfAPictureComesBackAsMediaWithThePictureFirst(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-titled-media@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-titled-media@example.com');
         $item = $this->queuedHackerNewsItem($this->subscribedFeed($user), 'https://i.example/chart');
 
         $this->complete($headers, [$item->requireId()]);
@@ -186,8 +186,8 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testAStrangersIdsAreDroppedWithoutWork(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-own@example.com');
-        [, $stranger] = $this->userAndBearer('complete-stranger@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-own@example.com');
+        $stranger = $this->factory()->create('complete-stranger@example.com');
         $own = $this->post($this->subscribedFeed($user), 'https://mastodon.example/@a/1', '<p>Just words.</p>');
         $strangersFeed = $this->subscribedFeed($stranger);
         $strangersBlueskyPost = $this->queuedPost($strangersFeed, self::TISCH);
@@ -206,7 +206,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testACallSpendsOnePageFetchOnTheOldestPost(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-budget@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-budget@example.com');
         $feed = $this->subscribedFeed($user);
         $posts = array_map(
             fn (int $number): Entry => $this->queuedLinkPost($feed, $number, self::sharing($number)),
@@ -228,7 +228,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testAPostAnotherCallIsWorkingIsLeftToIt(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-held@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-held@example.com');
         $post = $this->queuedLinkPost($this->subscribedFeed($user), 1, '<p>https://example.com/1</p>');
         $enrichments = PostEnrichers::enrichments($this->entityManager());
         $enrichments->claim($enrichments->findBy(['entry' => $post]), $this->clock->now());
@@ -242,7 +242,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testAThrottledAppViewLeavesThePostQueuedAndPending(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-throttled@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-throttled@example.com');
         $blueskyPost = $this->queuedPost($this->subscribedFeed($user), self::TISCH);
         $this->throttle->record(Bluesky::GET_POSTS, 120);
 
@@ -259,7 +259,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testMoreThanTwentyFiveIdsAreRejected(): void
     {
-        [$headers] = $this->userAndBearer('complete-cap@example.com');
+        $headers = $this->bearerFor($this->factory()->create('complete-cap@example.com'));
 
         $this->complete($headers, range(1, CompleteEntriesRequest::MAX_IDS + 1));
 
@@ -278,7 +278,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
     #[DataProvider('invalidBodies')]
     public function testAnInvalidBodyIsRejected(array $body): void
     {
-        [$headers] = $this->userAndBearer('complete-invalid@example.com');
+        $headers = $this->bearerFor($this->factory()->create('complete-invalid@example.com'));
 
         $this->client->request(
             'POST',
@@ -292,7 +292,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testASpentCompletionBudgetIsRateLimitedWithoutWork(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-limited@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-limited@example.com');
         $blueskyPost = $this->queuedPost($this->subscribedFeed($user), self::TISCH);
         $this->limiter('limiter.entry_completion')->create('user-' . $user->requireId())->consume(120);
 
@@ -304,7 +304,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testASpentReaderBudgetDoesNotBlockCompleting(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-reader-spent@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-reader-spent@example.com');
         $post = $this->post($this->subscribedFeed($user), 'https://mastodon.example/@a/1', '<p>Just words.</p>');
         $this->limiter('limiter.reader')->create('user-' . $user->requireId())->consume(60);
 
@@ -315,7 +315,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     public function testCompletingSpendsNothingOfTheReaderBudget(): void
     {
-        [$headers, $user] = $this->userAndBearer('complete-reader-kept@example.com');
+        [$headers, $user] = $this->bearerAndUser('complete-reader-kept@example.com');
         $post = $this->post($this->subscribedFeed($user), 'https://mastodon.example/@a/1', '<p>Just words.</p>');
         $readerBudget = $this->limiter('limiter.reader')->create('user-' . $user->requireId());
         self::assertTrue($readerBudget->consume(59)->isAccepted());
