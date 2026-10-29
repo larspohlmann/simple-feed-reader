@@ -469,6 +469,29 @@ describe('ArticleBody', () => {
       expect(queueToggle().getAttribute('aria-pressed')).toBe('true');
     });
 
+    it('follows a playlist change made outside the body', async () => {
+      const audio = TestBed.inject(AudioPlayerService);
+      const track: AudioTrack = {
+        url: VIDEO_URL,
+        title: 'V',
+        faviconUrl: null,
+        imageUrl: null,
+        durationInSeconds: null,
+      };
+      entry.set(anEntry());
+      connectBody(YOUTUBE);
+      await Promise.resolve();
+      TestBed.tick();
+
+      audio.enqueue(track);
+      TestBed.tick();
+      expect(queueToggle().getAttribute('aria-pressed')).toBe('true');
+
+      audio.dequeue(VIDEO_URL);
+      TestBed.tick();
+      expect(queueToggle().getAttribute('aria-pressed')).toBe('false');
+    });
+
     it('stops following the playlist once destroyed', async () => {
       const audio = TestBed.inject(AudioPlayerService);
       entry.set(anEntry());
@@ -646,7 +669,7 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       content
-        .querySelectorAll('.reader-listen')[1]
+        .querySelectorAll('app-player-bar')[1]
         .querySelector<HTMLButtonElement>('.reader-listen__button')!
         .click();
 

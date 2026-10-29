@@ -15,6 +15,13 @@ const SOUNDCLOUD_BOX =
 const VIMEO_BOX =
   '<div class="reader-embed"><iframe src="https://player.vimeo.com/video/1"></iframe></div>';
 
+const NATIVE_VIDEO_BOX =
+  '<div class="reader-cinema"><video controls src="https://x.test/clip.mp4"></video></div>';
+const VIMEO_CINEMA_BOX =
+  '<div class="reader-cinema"><div class="reader-embed reader-embed--landscape"><iframe src="https://player.vimeo.com/video/1"></iframe></div></div>';
+const SHORT_BOX =
+  '<div class="reader-embed reader-embed--portrait"><iframe src="https://www.youtube-nocookie.com/embed/GhUuOxrCato?enablejsapi=1#shorts"></iframe></div>';
+
 const listenActions = (): ListenActions => ({ listen: jest.fn(), toggleQueued: jest.fn() });
 
 function mountBars(html: string, actions: ListenActions | undefined): HTMLElement {
@@ -35,7 +42,7 @@ describe('ArticlePlayerBars', () => {
     const host = mountBars(CINEMA_BOX, listenActions());
 
     const bar = host.querySelector('.reader-cinema')!.children[1];
-    expect(bar.matches('app-player-bar.reader-player-bar.reader-listen')).toBe(true);
+    expect(bar.matches('app-player-bar.reader-player-bar')).toBe(true);
     expect(Array.from(bar.querySelectorAll('button'), (button) => button.className)).toEqual([
       'reader-listen__button',
       'reader-listen__button',
@@ -73,5 +80,25 @@ describe('ArticlePlayerBars', () => {
       expect.objectContaining({ url: 'https://www.youtube.com/watch?v=GhUuOxrCato' }),
       host.querySelector('iframe'),
     );
+  });
+
+  it('gives a native video in a cinema box a cinema-only bar', () => {
+    const host = mountBars(NATIVE_VIDEO_BOX, listenActions());
+
+    expect(host.querySelector('app-player-bar .reader-cinema__toggle')).not.toBeNull();
+    expect(host.querySelector('.reader-listen__button')).toBeNull();
+  });
+
+  it('gives a landscape Vimeo frame in a cinema box a cinema-only bar', () => {
+    const host = mountBars(VIMEO_CINEMA_BOX, listenActions());
+
+    expect(host.querySelector('app-player-bar .reader-cinema__toggle')).not.toBeNull();
+    expect(host.querySelector('.reader-listen__button')).toBeNull();
+  });
+
+  it('gives a portrait Short outside any cinema box no bar', () => {
+    const host = mountBars(SHORT_BOX, listenActions());
+
+    expect(host.querySelector('app-player-bar')).toBeNull();
   });
 });

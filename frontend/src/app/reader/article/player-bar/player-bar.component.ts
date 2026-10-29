@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+} from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { AudioPlayerService } from '../../audio-player.service';
@@ -13,7 +20,7 @@ const WIDENED = 'reader-cinema--on';
   templateUrl: './player-bar.component.html',
   styleUrl: './player-bar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'reader-player-bar', '[class.reader-listen]': 'listen() !== null' },
+  host: { class: 'reader-player-bar' },
 })
 export class PlayerBarComponent {
   readonly cinemaBox = input<HTMLElement | null>(null);
@@ -21,7 +28,9 @@ export class PlayerBarComponent {
 
   private readonly audio = inject(AudioPlayerService);
 
-  protected readonly widened = signal(false);
+  protected readonly widened = linkedSignal(
+    () => this.cinemaBox()?.classList.contains(WIDENED) ?? false,
+  );
   protected readonly queued = computed(() => {
     const offer = this.listen();
     return offer !== null && this.audio.isQueued(offer.media.url);

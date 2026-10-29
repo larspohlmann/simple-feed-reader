@@ -47,7 +47,6 @@ describe('PlayerBarComponent', () => {
     const { element } = render({ cinemaBox: document.createElement('div'), listen: offer() });
 
     expect(element.classList).toContain('reader-player-bar');
-    expect(element.classList).toContain('reader-listen');
     expect(Array.from(element.querySelectorAll('button'), (button) => button.className)).toEqual([
       'reader-listen__button',
       'reader-listen__button',
@@ -103,7 +102,6 @@ describe('PlayerBarComponent', () => {
   it('offers no Listen controls without an offer', () => {
     const { element } = render({ cinemaBox: document.createElement('div') });
 
-    expect(element.classList).not.toContain('reader-listen');
     expect(element.querySelector('.reader-listen__button')).toBeNull();
   });
 
@@ -127,6 +125,21 @@ describe('PlayerBarComponent', () => {
     expect(box.classList).toContain('reader-cinema--on');
     expect(text(toggle)).toBe('width_normalExitcinemamode(t)');
     expect(box.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(box.classList).not.toContain('reader-cinema--on');
+    expect(text(toggle)).toBe('width_wideCinemamode(t)');
+  });
+
+  it('starts widened on a box already in cinema mode, and narrows it on click', () => {
+    const box = document.createElement('div');
+    box.classList.add('reader-cinema--on');
+    box.scrollIntoView = jest.fn();
+    const { fixture, element } = render({ cinemaBox: box });
+    const toggle = element.querySelector<HTMLButtonElement>('.reader-cinema__toggle')!;
+
+    expect(text(toggle)).toBe('width_normalExitcinemamode(t)');
 
     toggle.click();
     fixture.detectChanges();
