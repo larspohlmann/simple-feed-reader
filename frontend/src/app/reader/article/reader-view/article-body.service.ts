@@ -69,7 +69,7 @@ export class ArticleBody {
 
   constructor() {
     const onKeydown = (event: KeyboardEvent): void => this.playerBars.toggleCinemaByKey(event);
-    document.addEventListener('keydown', onKeydown);
+    this.zone.runOutsideAngular(() => document.addEventListener('keydown', onKeydown));
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
       this.chapters.forget();
@@ -147,12 +147,14 @@ export class ArticleBody {
       detailsOf: (media) => this.embedDetails.detailsOf(media.url),
       onListened: (listened) => this.chapters.followTrack(listened),
     });
-    this.zone.runOutsideAngular(() => {
+    this.zone.run(() => {
       this.playerBars.mount(host, listen);
       this.unplayableVideos.mount(host, parts.pageUrl());
       this.narration.mount(host);
       this.slideshows.mount(host);
       this.attachBodyChapters(host, chapterList, track);
+    });
+    this.zone.runOutsideAngular(() => {
       this.loadEmbedDetails(chapterFrames(host));
       this.media.follow(host);
     });
