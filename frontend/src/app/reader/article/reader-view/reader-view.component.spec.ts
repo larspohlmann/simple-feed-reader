@@ -550,7 +550,7 @@ describe('ReaderViewComponent', () => {
       await Promise.resolve(); // content-processing microtask builds the TOC
       fixture.detectChanges();
       const element = fixture.nativeElement as HTMLElement;
-      const toggle = element.querySelector('.toc-toggle') as HTMLButtonElement;
+      const toggle = element.querySelector('.reader-panel__toggle') as HTMLButtonElement;
       expect(toggle).not.toBeNull();
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(element.querySelectorAll('.toc-list li').length).toBe(0); // collapsed

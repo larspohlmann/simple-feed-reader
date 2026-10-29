@@ -1,15 +1,6 @@
 @if (visible()) {
   <nav class="toc" [attr.aria-label]="'reader.contents' | transloco">
-    <button
-      class="toc-toggle"
-      type="button"
-      [attr.aria-expanded]="open()"
-      (click)="open.set(!open())"
-    >
-      <app-icon [name]="open() ? 'expand_more' : 'chevron_right'" size="md" />
-      {{ 'reader.contents' | transloco }}
-    </button>
-    @if (open()) {
+    <app-reader-panel [label]="'reader.contents' | transloco" [(open)]="open">
       <ul class="toc-list">
         @for (item of entries(); track item.id) {
           <li [class]="'lvl-' + item.level">
@@ -19,6 +10,6 @@
           </li>
         }
       </ul>
-    }
+    </app-reader-panel>
   </nav>
 }

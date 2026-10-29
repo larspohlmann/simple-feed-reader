@@ -1,0 +1,23 @@
+@use '../../../theme/glass-rim';
+
+:host {
+  @include glass-rim.filled(var(--surface-1));
+
+  display: block;
+  margin: 0 0 var(--space-4);
+  border-radius: var(--radius);
+}
+
+.reader-panel__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
