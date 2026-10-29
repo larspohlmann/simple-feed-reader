@@ -1,4 +1,5 @@
 import {
+  ApplicationRef,
   ElementRef,
   EnvironmentInjector,
   NgZone,
@@ -173,11 +174,15 @@ describe('ArticleBody', () => {
   });
 
   it('destroys the list under a video when the HTML changes, leaving none behind', async () => {
+    const appRef = TestBed.inject(ApplicationRef);
+    const baseline = appRef.viewCount;
     chapters.set(CHAPTERS);
     connectBody(YOUTUBE);
     document.body.append(content);
     await Promise.resolve();
     expect(content.querySelectorAll('app-embed-chapters.reader-island')).toHaveLength(1);
+    expect(content.querySelectorAll('app-player-bar.reader-island')).toHaveLength(1);
+    expect(appRef.viewCount).toBe(baseline + 2);
 
     html.set('<p>Reader.</p>');
     content.innerHTML = '<p>Reader.</p>';
@@ -185,8 +190,9 @@ describe('ArticleBody', () => {
     TestBed.tick();
     await Promise.resolve();
 
+    expect(appRef.viewCount).toBe(baseline);
     expect(content.querySelectorAll('.reader-island')).toHaveLength(0);
-    expect(document.querySelectorAll('app-embed-chapters')).toHaveLength(0);
+    expect(document.querySelectorAll('app-embed-chapters, app-player-bar')).toHaveLength(0);
     content.remove();
   });
 
