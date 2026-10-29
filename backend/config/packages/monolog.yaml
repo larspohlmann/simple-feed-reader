@@ -53,12 +53,10 @@ when@test:
 when@prod:
     monolog:
         handlers:
+            # prod-<host>-YYYY-MM-DD.log: one file per machine, see HostLogFileHandlerFactory (#1878).
             main:
-                type: rotating_file
-                path: '%kernel.logs_dir%/%kernel.environment%.log'
-                level: info
-                max_files: 7
-                formatter: monolog.formatter.json
+                type: service
+                id: app.host_log_file_handler
             loki:
                 type: service
                 id: App\Service\Logging\Loki\LokiPushHandler

@@ -25,6 +25,10 @@ certificate is the only alternative and it costs money.
     var/cache-pools/         rate limiter, ALTCHA replay, OAuth state, login codes
 ```
 
+The log is one file per host and day, `var/log/prod-<host>-YYYY-MM-DD.log` (#1878): appends from
+several hosts to one file on this storage corrupt it. Search a day across hosts with
+`grep -h … shared/var/log/prod-*-YYYY-MM-DD.log`.
+
 Symfony derives its base path from `SCRIPT_NAME`, so no route carries a `/reader` prefix and
 none needs to. Angular gets its `/reader/` base href from the `strato` build configuration.
 `public/.htaccess` sends `/api` and `/maintenance` to `index.php`, serves anything that
