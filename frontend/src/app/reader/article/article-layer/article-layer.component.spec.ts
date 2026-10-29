@@ -95,6 +95,12 @@ describe('ArticleLayerComponent', () => {
     expect(fixture.componentInstance.toTops).toBe(1);
   });
 
+  it('carries the to-top button in the frame, so it leaves with the article (#1898)', () => {
+    scrollTo(BACK_TO_TOP_AFTER_PX + 1);
+
+    expect(element.querySelector('.frame app-to-top-button')).not.toBeNull();
+  });
+
   it('retracts the full-screen toolbar scrolling down and returns it scrolling up', () => {
     goFullscreen();
 

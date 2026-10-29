@@ -40,7 +40,7 @@
   </div>
   <!-- No progressbar role: announcing every scroll frame would only be noise. -->
   <app-progress-rail [progress]="progressRail()" />
+  @if (showToTop()) {
+    <app-to-top-button (activate)="toTop.emit()" />
+  }
 </div>
-@if (showToTop()) {
-  <app-to-top-button (activate)="toTop.emit()" />
-}

@@ -10,8 +10,8 @@ export const BACK_TO_TOP_AFTER_PX = 500;
  * presentational: it reports a click and nothing else, because "the top" means a
  * different scroller in each place.
  *
- * Placement is the consumer's job too — the article pins its copy to the viewport
- * (`position: fixed`), the list to its own pane — so this stylesheet defines the
+ * Placement is the consumer's job too — the article and the list each pin their
+ * copy to their own pane — so this stylesheet defines the
  * button's appearance and leaves the host element's offsets alone.
  */
 @Component({
