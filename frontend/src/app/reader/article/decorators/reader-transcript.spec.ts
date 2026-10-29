@@ -30,7 +30,7 @@ function recordingPlayer(): ChapterPlayer & { playedFrom: number[] } {
 }
 
 describe('addTranscript', () => {
-  it('appends a collapsed section after the body', () => {
+  it('puts a collapsed section atop the body', () => {
     const host = bodyWith('<p>Notes</p>');
 
     const section = addTranscript(
@@ -39,7 +39,7 @@ describe('addTranscript', () => {
       null,
     );
 
-    expect(host.lastElementChild).toBe(section);
+    expect(host.firstElementChild).toBe(section);
     expect(section?.querySelector('details')?.open).toBe(false);
   });
 
