@@ -38,18 +38,15 @@ describe('decorateArticle', () => {
     expect(host.querySelector('.reader-cinema')).toBeNull();
   });
 
-  it('keeps the narration box a collapsed player while a publisher disclosure becomes a FAQ', () => {
+  it('turns a publisher disclosure into a FAQ and leaves the narration player in place', () => {
     const host = decorated(
       '<audio class="reader-narration" src="https://x.test/full.mp3"></audio>' +
         '<details><summary>Question?</summary><p>Answer.</p></details>',
     );
-    const [narration, disclosure] = Array.from(host.querySelectorAll('details'));
 
-    expect(narration.querySelector('audio')).not.toBeNull();
-    expect(narration.classList.contains('reader-faq')).toBe(false);
-    expect(narration.open).toBe(false);
-    expect(disclosure.classList.contains('reader-faq')).toBe(true);
-    expect(disclosure.open).toBe(true);
+    expect(host.querySelectorAll('details.reader-faq[open]')).toHaveLength(1);
+    expect(host.querySelectorAll('details')).toHaveLength(1);
+    expect(host.querySelector('audio.reader-narration')!.closest('details')).toBeNull();
   });
 
   it('streams a playlist video through hls.js once the cinema box has wrapped it', async () => {

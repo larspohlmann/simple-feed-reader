@@ -18,6 +18,18 @@ export class ArticleIslands {
   constructor(private readonly injector: Injector) {}
 
   mountAfter<C>(anchor: Element, component: Type<C>, bindings: Binding[]): ComponentRef<C> {
+    return this.mount(component, bindings, (host) => anchor.after(host));
+  }
+
+  mountBefore<C>(anchor: Element, component: Type<C>, bindings: Binding[]): ComponentRef<C> {
+    return this.mount(component, bindings, (host) => anchor.before(host));
+  }
+
+  private mount<C>(
+    component: Type<C>,
+    bindings: Binding[],
+    insert: (host: HTMLElement) => void,
+  ): ComponentRef<C> {
     return this.injector.get(NgZone).run(() => {
       const ref = createComponent(component, {
         environmentInjector: this.injector.get(EnvironmentInjector),
@@ -26,7 +38,7 @@ export class ArticleIslands {
       });
       const host = hostOf(ref);
       host.classList.add(READER_ISLAND);
-      anchor.after(host);
+      insert(host);
       this.injector.get(ApplicationRef).attachView(ref.hostView);
       ref.changeDetectorRef.detectChanges();
       this.mounted.push(ref);

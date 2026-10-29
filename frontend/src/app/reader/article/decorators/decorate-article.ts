@@ -6,7 +6,6 @@ import { fitReaderImages } from './reader-image-fit';
 import { highlightCodeBlocks } from './code-highlight';
 import { armHlsStreams } from '../../media/hls-streams';
 import { playVideosInline } from './inline-videos';
-import { markNarrationPlayers } from './reader-narration';
 import { expandFaqDisclosures } from './reader-faq';
 import { hydrateSlideshows } from './reader-slideshow';
 import { removeEnclosurePlayers } from './enclosure-players';
@@ -32,7 +31,6 @@ export function decorateArticle(
   void highlightCodeBlocks(host);
   upgradeMediaEmbeds(host, decorations.embedSource);
   wrapCinemaBoxes(host);
-  markNarrationPlayers(host, i18n.translate('reader.narrationPlayer'));
   expandFaqDisclosures(host);
   hydrateSlideshows(host, {
     previous: i18n.translate('reader.slideshowPrevious'),

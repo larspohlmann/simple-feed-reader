@@ -413,21 +413,12 @@ $prose: ':where(:not(.reader-island *))';
   }
 }
 
-// Machine-generated narration (#903): one muted, collapsed line, no card, so it
-// never reads as editorial audio. A plain <details> stands in for <app-disclosure>,
-// which cannot render inside [innerHTML] (recorded exception in design-language.md).
-:host ::ng-deep .reader-narration-box {
-  margin: var(--space-3) 0;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
+:host ::ng-deep audio.reader-narration:not(.reader-narration--open) {
+  display: none;
 }
 
-:host ::ng-deep .reader-narration-box summary {
-  cursor: pointer;
-}
-
-:host ::ng-deep .reader-narration-box[open] audio {
-  margin: var(--space-2) 0 0;
+:host ::ng-deep audio.reader-narration {
+  margin: var(--space-2) 0 var(--space-3);
 }
 
 /* Publisher FAQ disclosures (#1071): the reader-faq pass opens each <details>

@@ -152,6 +152,14 @@ describe('ArticleBody', () => {
     expect(decorated).not.toHaveBeenCalled();
   });
 
+  it("puts a narration toggle above a narrated body's player", async () => {
+    connectBody('<p>x</p><audio class="reader-narration" src="https://x.test/n.mp3"></audio>');
+
+    await Promise.resolve();
+
+    expect(content.querySelector('app-narration-toggle + audio.reader-narration')).not.toBeNull();
+  });
+
   it('decorates the body once it renders, then hands it on', async () => {
     connectBody('<a href="https://ext.test/z">ext</a>');
     expect(decorated).not.toHaveBeenCalled();

@@ -27,6 +27,7 @@ import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapte
 import { ArticleIslands } from './article-islands';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { ArticleEmbedAudio } from './article-embed-audio';
+import { ArticleNarration } from './article-narration';
 import { ArticlePlayerBars } from './article-player-bars';
 import { ArticleEmbedDetails } from './article-embed-details';
 
@@ -58,6 +59,7 @@ export class ArticleBody {
   private readonly audio = inject(AudioPlayerService);
   private readonly islands = new ArticleIslands(this.injector);
   private readonly playerBars = new ArticlePlayerBars(this.islands);
+  private readonly narration = new ArticleNarration(this.islands);
   private readonly chapters = new ArticleChapters(this.audio, this.islands, this.injector);
   private readonly embedAudio = new ArticleEmbedAudio(this.audio, inject(ListenLauncher));
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
@@ -147,6 +149,7 @@ export class ArticleBody {
     });
     this.zone.runOutsideAngular(() => {
       this.playerBars.mount(host, listen);
+      this.narration.mount(host);
       this.attachBodyChapters(host, chapterList, track);
       this.loadEmbedDetails(chapterFrames(host));
       this.media.follow(host);

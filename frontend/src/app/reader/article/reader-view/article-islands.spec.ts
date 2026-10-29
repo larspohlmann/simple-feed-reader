@@ -59,6 +59,15 @@ describe('ArticleIslands', () => {
     expect(mounted.textContent).toBe('Chapters');
   });
 
+  it('mounts a component right before its anchor', () => {
+    const { host, anchor } = bodyWithAnchor();
+
+    islands().mountBefore(anchor, IslandProbeComponent, [inputBinding('label', () => 'Notes')]);
+
+    expect(host.children[0].tagName).toBe('APP-ISLAND-PROBE');
+    expect(host.children[1]).toBe(anchor);
+  });
+
   it('follows a bound signal', () => {
     const { host, anchor } = bodyWithAnchor();
     const label = signal('Chapters');

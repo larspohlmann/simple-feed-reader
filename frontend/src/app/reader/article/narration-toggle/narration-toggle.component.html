@@ -1,0 +1,4 @@
+<button type="button" [attr.aria-expanded]="open()" (click)="toggle()">
+  <app-icon [name]="open() ? 'expand_more' : 'chevron_right'" size="sm" />
+  {{ 'reader.narrationPlayer' | transloco }}
+</button>
