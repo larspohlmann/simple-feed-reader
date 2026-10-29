@@ -2251,7 +2251,7 @@ describe('ReaderViewComponent', () => {
         const element = root(mount(episode()));
 
         expect(element.querySelector('app-episode-chapters')).not.toBeNull();
-        expect(element.querySelector('.content .reader-chapters')).toBeNull();
+        expect(element.querySelector('.content app-embed-chapters')).toBeNull();
       });
 
       it('shows the transcript as a header panel, not in the body', () => {

@@ -50,7 +50,6 @@ describe('EmbedChaptersComponent', () => {
     const { element, open } = render();
     const toggle = element.querySelector<HTMLButtonElement>('.reader-panel__toggle')!;
 
-    expect(element.classList).toContain('reader-chapters');
     expect(element.querySelector('nav')!.getAttribute('aria-label')).toBe('Chapters');
     expect(toggle.textContent?.trim()).toContain('Chapters');
     expect(toggle.getAttribute('aria-expanded')).toBe('false');

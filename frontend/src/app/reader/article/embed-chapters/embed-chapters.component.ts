@@ -21,7 +21,6 @@ import { ReaderPanelComponent } from '../reader-panel/reader-panel.component';
   templateUrl: './embed-chapters.component.html',
   styleUrl: './embed-chapters.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'reader-chapters' },
 })
 export class EmbedChaptersComponent {
   readonly chapters = input.required<readonly ChapterDto[]>();

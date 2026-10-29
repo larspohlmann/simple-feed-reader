@@ -58,7 +58,7 @@ describe('ArticlePlayerBars', () => {
     const { host } = barsOver(CINEMA_BOX, fakeListenActions());
 
     const bar = host.querySelector('.reader-cinema')!.children[1];
-    expect(bar.matches('app-player-bar.reader-player-bar')).toBe(true);
+    expect(bar.matches('app-player-bar')).toBe(true);
     expect(Array.from(bar.querySelectorAll('button'), (button) => button.className)).toEqual([
       'reader-listen__button',
       'reader-listen__button',

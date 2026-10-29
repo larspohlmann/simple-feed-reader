@@ -44,7 +44,7 @@ test.beforeEach(async ({ page }) => {
 test('Listen under a video fills the audio player bar and queues the video', async ({ page }) => {
   await page.locator('app-entry-list').getByText('A video to listen to', { exact: true }).click();
 
-  const playerBar = page.locator('app-article-content .reader-player-bar');
+  const playerBar = page.locator('app-article-content app-player-bar');
   await expect(playerBar).toHaveCount(1);
   const listen = playerBar.getByRole('button', { name: 'Listen', exact: true });
   const queueToggle = playerBar.getByRole('button', { name: 'Add to playlist', exact: true });

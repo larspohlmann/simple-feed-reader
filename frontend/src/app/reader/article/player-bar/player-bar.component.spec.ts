@@ -37,7 +37,6 @@ describe('PlayerBarComponent', () => {
   it('is the player bar, offering Listen and the queue toggle before the cinema toggle', () => {
     const { element } = render({ cinemaBox: document.createElement('div'), listen: offer() });
 
-    expect(element.classList).toContain('reader-player-bar');
     expect(Array.from(element.querySelectorAll('button'), (button) => button.className)).toEqual([
       'reader-listen__button',
       'reader-listen__button',
