@@ -396,64 +396,7 @@ $prose: ':where(:not(.reader-island *))';
   margin: 0;
 }
 
-:host ::ng-deep .reader-player-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-items: center;
-  margin-top: var(--space-1);
-}
-
-:host ::ng-deep :is(.reader-cinema__toggle, .reader-listen__button) {
-  --rim-fill: transparent;
-
-  gap: var(--space-1);
-  align-items: center;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-size: var(--fs-xs);
-  color: var(--text-secondary);
-  cursor: pointer;
-  background: var(--rim-fill);
-
-  @include glass-rim.ring(var(--border), control);
-
-  @media (hover: hover) {
-    &:hover {
-      color: var(--text-primary);
-    }
-  }
-}
-
-:host ::ng-deep :is(.reader-cinema__toggle, .reader-listen__button) .material-symbols-outlined {
-  font-size: var(--icon-xs);
-}
-
-:host ::ng-deep .reader-listen__button {
-  display: inline-flex;
-}
-
-:host ::ng-deep .reader-listen__button--queued {
-  --rim-fill: var(--accent-soft);
-}
-
-/* Below the breakpoint the cinema toggle alone hides; the bar stays for the listen controls. */
-:host ::ng-deep .reader-cinema__toggle {
-  display: none;
-  margin-inline-start: auto;
-}
-
-:host ::ng-deep .reader-cinema__toggle kbd {
-  font-family: inherit;
-  color: var(--text-muted);
-}
-
 @container reader-pane (width > #{bp.$container-reader-cinema}) {
-  :host ::ng-deep .reader-cinema__toggle {
-    display: inline-flex;
-  }
-
   /* Cinema mode (#1479): the widened box fills the pane but stays short enough for
      the whole 16:9 frame and its toggle to fit the visible pane; never narrower than the column. */
   :host ::ng-deep .reader-cinema--on {

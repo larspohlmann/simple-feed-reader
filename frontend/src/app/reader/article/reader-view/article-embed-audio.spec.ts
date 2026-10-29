@@ -1,5 +1,3 @@
-import { Injector } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import { frameWithWindow, messagesOf } from '../../../../testing/frame-playback-testing';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
@@ -10,7 +8,7 @@ import type { ListenLauncher } from '../../audio/listen-launcher';
 import { toEmbedTrack } from '../../audio/embed-track';
 import { ChapterDto } from '../../models';
 import type { TrackDetails } from '../../audio/audio-track';
-import { EmbedListenControl, ListenActions } from '../decorators/reader-listen';
+import { ListenActions } from '../player-bar/embed-listen';
 import { ArticleEmbedAudio, EmbedListenContext } from './article-embed-audio';
 
 const VIDEO: EmbedMedia = {
@@ -40,7 +38,6 @@ function setUp(context: Partial<EmbedListenContext> = {}) {
   const embedAudio = new ArticleEmbedAudio(
     player.asService(),
     new StubListenLauncher(player).asService(),
-    TestBed.inject(Injector),
   );
   const listened: AudioTrack[] = [];
   const actions = embedAudio.actions({
@@ -52,11 +49,6 @@ function setUp(context: Partial<EmbedListenContext> = {}) {
   return { player, embedAudio, listened, actions };
 }
 
-function control(media: EmbedMedia): EmbedListenControl & { shown: boolean[] } {
-  const shown: boolean[] = [];
-  return { media, shown, showQueued: (queued) => shown.push(queued) };
-}
-
 describe('ArticleEmbedAudio', () => {
   it('offers no actions without an entry to make a track of', () => {
     expect(setUp({ entry: null }).actions).toBeUndefined();
@@ -65,11 +57,9 @@ describe('ArticleEmbedAudio', () => {
   describe('listen', () => {
     it('follows the track only once the launcher starts it (#1866)', () => {
       const player = new StubAudioPlayer();
-      const embedAudio = new ArticleEmbedAudio(
-        player.asService(),
-        { listen: jest.fn() } as unknown as ListenLauncher,
-        TestBed.inject(Injector),
-      );
+      const embedAudio = new ArticleEmbedAudio(player.asService(), {
+        listen: jest.fn(),
+      } as unknown as ListenLauncher);
       const listened: AudioTrack[] = [];
       const actions = embedAudio.actions({
         entry: ENTRY,
@@ -121,53 +111,6 @@ describe('ArticleEmbedAudio', () => {
       (actions as ListenActions).toggleQueued(VIDEO);
 
       expect(player.queue()).toEqual([]);
-    });
-  });
-
-  describe('follow', () => {
-    it('shows every control whether its embed is queued, and follows the playlist', () => {
-      const { player, embedAudio } = setUp();
-      const video = control(VIDEO);
-      const sound = control(SOUND);
-      player.enqueue(toEmbedTrack(ENTRY, SOUND));
-
-      embedAudio.follow([video, sound]);
-      TestBed.tick();
-      player.enqueue(toEmbedTrack(ENTRY, VIDEO));
-      player.dequeue(SOUND.url);
-      TestBed.tick();
-
-      expect(video.shown).toEqual([false, true]);
-      expect(sound.shown).toEqual([true, false]);
-    });
-
-    it('lets go of the controls of an earlier body', () => {
-      const { player, embedAudio } = setUp();
-      const earlier = control(VIDEO);
-      const later = control(VIDEO);
-      embedAudio.follow([earlier]);
-      TestBed.tick();
-
-      embedAudio.follow([later]);
-      TestBed.tick();
-      player.enqueue(toEmbedTrack(ENTRY, VIDEO));
-      TestBed.tick();
-
-      expect(earlier.shown).toEqual([false]);
-      expect(later.shown).toEqual([false, true]);
-    });
-
-    it('stops following once released', () => {
-      const { player, embedAudio } = setUp();
-      const video = control(VIDEO);
-      embedAudio.follow([video]);
-      TestBed.tick();
-
-      embedAudio.release();
-      player.enqueue(toEmbedTrack(ENTRY, VIDEO));
-      TestBed.tick();
-
-      expect(video.shown).toEqual([false]);
     });
   });
 });

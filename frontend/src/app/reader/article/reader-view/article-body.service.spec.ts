@@ -177,9 +177,10 @@ describe('ArticleBody', () => {
     connectBody(YOUTUBE);
     document.body.append(content);
     await Promise.resolve();
-    expect(content.querySelectorAll('.reader-island')).toHaveLength(1);
+    expect(content.querySelectorAll('app-embed-chapters.reader-island')).toHaveLength(1);
 
     html.set('<p>Reader.</p>');
+    content.innerHTML = '<p>Reader.</p>';
     chapters.set([]);
     TestBed.tick();
     await Promise.resolve();

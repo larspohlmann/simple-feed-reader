@@ -27,6 +27,7 @@ import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapte
 import { ArticleIslands } from './article-islands';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { ArticleEmbedAudio } from './article-embed-audio';
+import { ArticlePlayerBars } from './article-player-bars';
 import { ArticleEmbedDetails } from './article-embed-details';
 
 interface ChapteredEmbed {
@@ -56,12 +57,9 @@ export class ArticleBody {
   private readonly media = new HandPlayedMedia(inject(ListAutoplayCoordinator));
   private readonly audio = inject(AudioPlayerService);
   private readonly islands = new ArticleIslands(this.injector);
+  private readonly playerBars = new ArticlePlayerBars(this.islands);
   private readonly chapters = new ArticleChapters(this.audio, this.islands, this.injector);
-  private readonly embedAudio = new ArticleEmbedAudio(
-    this.audio,
-    inject(ListenLauncher),
-    this.injector,
-  );
+  private readonly embedAudio = new ArticleEmbedAudio(this.audio, inject(ListenLauncher));
   private readonly embedDetails = new ArticleEmbedDetails(inject(EmbedDetailsApi), this.audio);
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
   private destroyed = false;
@@ -74,7 +72,6 @@ export class ArticleBody {
       this.destroyed = true;
       this.chapters.forget();
       this.islands.releaseAll();
-      this.embedAudio.release();
       this.embedDetails.release();
       document.removeEventListener('keydown', onKeydown);
     });
@@ -125,7 +122,6 @@ export class ArticleBody {
           this.media.forgetAll();
           this.chapters.forget();
           this.islands.releaseAll();
-          this.embedAudio.release();
           this.embedDetails.release();
         });
         queueMicrotask(() => {
@@ -140,18 +136,18 @@ export class ArticleBody {
 
   private render(parts: ArticleBodyParts, host: HTMLElement, chapterList: ChapterDto[]): void {
     const track = parts.audioTrack();
-    const controls = decorateArticle(host, this.i18n, {
+    decorateArticle(host, this.i18n, {
       enclosureUrl: parts.enclosureUrl(),
       embedSource: (url) => withScriptablePlayer(url, window.location.origin),
-      listen: this.embedAudio.actions({
-        entry: parts.entry(),
-        detailsOf: (media) => this.embedDetails.detailsOf(media.url),
-        onListened: (listened) => this.chapters.followTrack(listened),
-      }),
+    });
+    const listen = this.embedAudio.actions({
+      entry: parts.entry(),
+      detailsOf: (media) => this.embedDetails.detailsOf(media.url),
+      onListened: (listened) => this.chapters.followTrack(listened),
     });
     this.zone.runOutsideAngular(() => {
+      this.playerBars.mount(host, listen);
       this.attachBodyChapters(host, chapterList, track);
-      this.embedAudio.follow(controls);
       this.loadEmbedDetails(chapterFrames(host));
       this.media.follow(host);
     });
