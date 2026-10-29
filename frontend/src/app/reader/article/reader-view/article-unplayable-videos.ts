@@ -27,6 +27,7 @@ export class ArticleUnplayableVideos {
     const video = failedVideo(target);
     if (!video || streamsThroughHls(video) || video.classList.contains(UNPLAYABLE)) return;
     video.classList.add(UNPLAYABLE);
+    video.pause();
     this.mountCard(video, pageUrl);
   }
 

@@ -21,7 +21,7 @@ import { EmbedMedia, embedMediaOfFrame } from '../../audio/embed-media';
 import { ChapterDto, EntryDto } from '../../models';
 import { EmbedDetailsApi } from '../../embed-details-api';
 import { ArticleChapters, apiPlayerFrame, chapterFrames } from './article-chapters';
-import { ArticleIslands } from './article-islands';
+import { ArticleIslands, isInIsland } from './article-islands';
 import { ListenLauncher } from '../../audio/listen-launcher';
 import { ArticleEmbedAudio } from './article-embed-audio';
 import { ArticleNarration } from './article-narration';
@@ -93,6 +93,7 @@ export class ArticleBody {
         const content = parts.content()?.nativeElement;
         if (!content) return;
         const recover = (event: Event) => {
+          if (event.target instanceof Element && isInIsland(event.target)) return;
           if (event.target instanceof HTMLImageElement) {
             void this.injector.get(ImageProxyService).recover(event.target);
             return;

@@ -44,6 +44,17 @@ describe('ArticleUnplayableVideos', () => {
     expect(link.querySelector('small')!.textContent).toBe('news.test');
   });
 
+  it('pauses a failed video, so it gives up its turn in the playback coordinator', () => {
+    const element = articleHost('<video src="https://cdn.test/clip.mp4"></video>');
+    const video = element.querySelector('video')!;
+    const pause = jest.fn();
+    video.pause = pause;
+
+    videos.fail(video, PAGE);
+
+    expect(pause).toHaveBeenCalledTimes(1);
+  });
+
   it('links the video file itself when the entry has no page', () => {
     const element = articleHost('<video src="https://cdn.test/clip.mp4"></video>');
 

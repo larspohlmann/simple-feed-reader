@@ -64,6 +64,10 @@ function lastTrailingIsland(anchor: Element): Element {
   return last;
 }
 
+export function isInIsland(node: Element): boolean {
+  return node.closest(`.${READER_ISLAND}`) !== null;
+}
+
 function hostOf(ref: ComponentRef<unknown>): HTMLElement {
   return ref.location.nativeElement as HTMLElement;
 }

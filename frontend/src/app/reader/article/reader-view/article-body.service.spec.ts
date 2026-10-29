@@ -227,15 +227,28 @@ describe('ArticleBody', () => {
     expect(link.querySelector('strong')!.textContent).toBe("This video can't play in your browser");
   });
 
+  it("leaves an island's own image to its island, not the body's proxy recovery", () => {
+    connectBody('<video src="https://cdn.test/clip.mp4" poster="https://cdn.test/p.jpg"></video>');
+    content.querySelector('video')!.dispatchEvent(new Event('error'));
+    const poster = content.querySelector('app-link-card img')!;
+
+    poster.dispatchEvent(new Event('error'));
+
+    expect(imageProxy.attempts.filter((image) => image === poster)).toHaveLength(1);
+    expect(content.querySelector('app-link-card img')).toBe(poster);
+  });
+
   it('keeps the card of an unplayable video through a chapters-only re-render', async () => {
     connectBody(VIDEO);
     await Promise.resolve();
     content.querySelector('video')!.dispatchEvent(new Event('error'));
+    const before = content.querySelector('app-link-card');
 
     chapters.set(CHAPTERS);
     TestBed.tick();
     await Promise.resolve();
 
+    expect(content.querySelector('app-link-card')).not.toBe(before);
     expect(content.querySelectorAll('app-link-card')).toHaveLength(1);
   });
 
@@ -243,11 +256,13 @@ describe('ArticleBody', () => {
     connectBody(VIDEO);
     await Promise.resolve();
     content.querySelector('video')!.dispatchEvent(new Event('error'));
+    const before = content.querySelector('app-link-card');
 
     chapters.set(CHAPTERS);
     TestBed.tick();
     await Promise.resolve();
 
+    expect(content.querySelector('app-link-card')).not.toBe(before);
     const box = content.querySelector('.reader-cinema')!;
     expect(box.firstElementChild!.matches('app-link-card')).toBe(true);
     expect(box.querySelector('video')!.nextElementSibling!.matches('app-player-bar')).toBe(true);
