@@ -7,10 +7,12 @@ namespace App\Service\Logging\Factory;
 use Monolog\Formatter\FormatterInterface;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Level;
+use Monolog\Processor\PsrLogMessageProcessor;
 
 /**
  * One daily log file per machine: appends from several hosts to one file on Strato's
  * network storage interleave and leave NUL runs (#1878); appends from one host do not.
+ * MonologBundle adds no PSR-3 interpolation to a `type: service` handler, so this one does (#1882).
  */
 final readonly class HostLogFileHandlerFactory
 {
@@ -31,6 +33,7 @@ final readonly class HostLogFileHandlerFactory
             Level::Info,
         );
         $handler->setFormatter($this->formatter);
+        $handler->pushProcessor(new PsrLogMessageProcessor());
 
         return $handler;
     }

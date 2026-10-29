@@ -39,6 +39,17 @@ final class HostLogFileHandlerFactoryTest extends TestCase
         self::assertStringContainsString('"message":"Tick finished."', (string) file_get_contents($expected));
     }
 
+    public function testFillsPlaceholdersFromTheContext(): void
+    {
+        $factory = new HostLogFileHandlerFactory($this->logsDirectory, 'prod', new JsonFormatter());
+        $logger = new Logger('app', [$factory->create()]);
+
+        $logger->info('Refreshed {count} feeds.', ['count' => 3]);
+
+        $file = \sprintf('%s/prod-%s-%s.log', $this->logsDirectory, gethostname(), date('Y-m-d'));
+        self::assertStringContainsString('"message":"Refreshed 3 feeds."', (string) file_get_contents($file));
+    }
+
     public function testDropsRecordsBelowInfo(): void
     {
         $factory = new HostLogFileHandlerFactory($this->logsDirectory, 'prod', new JsonFormatter());
