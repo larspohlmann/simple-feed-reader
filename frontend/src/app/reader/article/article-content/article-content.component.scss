@@ -3,6 +3,9 @@
 @use '../../../theme/glass-rim';
 @use '../../link-card/link-card-layout';
 
+// Mounted components (#1886) keep their own look: the body's element rules stop at them.
+$prose: ':where(:not(.reader-island *))';
+
 /* Article typography. The body is [innerHTML]-injected, so descendant rules
    need ::ng-deep (scoped under the host). The sanitizer strips default
    margins, so h2/p/li/blockquote need an explicit vertical rhythm here. */
@@ -13,11 +16,11 @@
   line-height: 1.75;
 }
 
-:host ::ng-deep p {
+:host ::ng-deep p#{$prose} {
   margin: 0 0 var(--space-4);
 }
 
-:host ::ng-deep :is(h1, h2, h3, h4, h5, h6) {
+:host ::ng-deep :is(h1, h2, h3, h4, h5, h6)#{$prose} {
   margin: var(--space-6) 0 var(--space-3);
   line-height: 1.3;
   font-weight: 650;
@@ -26,11 +29,11 @@
 
 /* An h2 opens a new section, so it carries a divider: extra air plus a short
    hairline rule above. h3+ are subordinate and keep the plain heading margin. */
-:host ::ng-deep h2 {
+:host ::ng-deep h2#{$prose} {
   margin-top: var(--space-7);
 }
 
-:host ::ng-deep h2::before {
+:host ::ng-deep h2#{$prose}::before {
   content: '';
   display: block;
   border-top: 1px solid var(--border);
@@ -40,56 +43,56 @@
 /* When the article already carries a real rule between its sections (Substack
    emits an <hr> before each heading), the synthetic divider would double it, so
    the <hr> owns the separation and the heading drops its own. */
-:host ::ng-deep hr + h2 {
+:host ::ng-deep hr + h2#{$prose} {
   margin-top: 0;
 }
 
-:host ::ng-deep hr + h2::before {
+:host ::ng-deep hr + h2#{$prose}::before {
   content: none;
 }
 
 /* The article's lead paragraph gets a slightly larger size. The class is set
    by the component's post-render pass — pure CSS :first-of-type can't reach
    it through the wrapper elements feeds and readability emit. */
-:host ::ng-deep p.lead {
+:host ::ng-deep p.lead#{$prose} {
   font-size: 1.0625em;
 }
 
 /* Headings sized in `em` against the host's type, not the UI type scale:
    that scale has five steps, and h2/h3 would land on the same one, flattening
    the hierarchy. Ratios are the long-standing sizes at 16px: 22, 20, 17px. */
-:host ::ng-deep h1 {
+:host ::ng-deep h1#{$prose} {
   font-size: 1.375em;
 }
 
-:host ::ng-deep h2 {
+:host ::ng-deep h2#{$prose} {
   font-size: 1.25em;
 }
 
-:host ::ng-deep h3 {
+:host ::ng-deep h3#{$prose} {
   font-size: 1.0625em;
 }
 
-:host ::ng-deep :is(h4, h5, h6) {
+:host ::ng-deep :is(h4, h5, h6)#{$prose} {
   font-size: 1em;
 }
 
-:host ::ng-deep :is(ul, ol) {
+:host ::ng-deep :is(ul, ol)#{$prose} {
   margin: 0 0 var(--space-4);
   padding-left: 1.5em;
 }
 
-:host ::ng-deep li {
+:host ::ng-deep li#{$prose} {
   margin: var(--space-1) 0;
 }
 
-:host ::ng-deep li::marker {
+:host ::ng-deep li#{$prose}::marker {
   color: var(--text-muted);
 }
 
 /* A quiet card rather than a bare indent: the surface fill and radius set the
    quote apart from the body without shouting. */
-:host ::ng-deep blockquote {
+:host ::ng-deep blockquote#{$prose} {
   margin: var(--space-5) 0;
   padding: var(--space-3) var(--space-4);
   border-left: 3px solid var(--border-strong);
@@ -98,7 +101,7 @@
   color: var(--text-secondary);
 }
 
-:host ::ng-deep blockquote p:last-child {
+:host ::ng-deep blockquote p#{$prose}:last-child {
   margin-bottom: 0;
 }
 
@@ -125,7 +128,7 @@
 
 /* Tables arrive unstyled from the sanitizer; give them the article's rhythm
    and let a wide one scroll inside the column instead of stretching it. */
-:host ::ng-deep table {
+:host ::ng-deep table#{$prose} {
   display: block;
   max-width: 100%;
   overflow-x: auto;
@@ -135,19 +138,19 @@
   line-height: 1.5;
 }
 
-:host ::ng-deep :is(th, td) {
+:host ::ng-deep :is(th, td)#{$prose} {
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
 }
 
-:host ::ng-deep th {
+:host ::ng-deep th#{$prose} {
   border-bottom-color: var(--border-strong);
   color: var(--text-primary);
 }
 
-:host ::ng-deep mark {
+:host ::ng-deep mark#{$prose} {
   padding: 0 0.15em;
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 22%, transparent);
@@ -155,41 +158,41 @@
 }
 
 /* Keep super- and subscripts from opening up the line they sit in. */
-:host ::ng-deep :is(sub, sup) {
+:host ::ng-deep :is(sub, sup)#{$prose} {
   line-height: 0;
 }
 
-:host ::ng-deep dl {
+:host ::ng-deep dl#{$prose} {
   margin: 0 0 var(--space-4);
 }
 
-:host ::ng-deep dt {
+:host ::ng-deep dt#{$prose} {
   font-weight: 650;
   color: var(--text-primary);
 }
 
-:host ::ng-deep dd {
+:host ::ng-deep dd#{$prose} {
   margin: 0 0 var(--space-2) var(--space-4);
 }
 
-:host ::ng-deep figure {
+:host ::ng-deep figure#{$prose} {
   margin: var(--space-5) 0;
 }
 
-:host ::ng-deep figcaption {
+:host ::ng-deep figcaption#{$prose} {
   margin-top: var(--space-2);
   font-size: var(--fs-sm);
   color: var(--text-muted);
   text-align: center;
 }
 
-:host ::ng-deep :is(img, video, iframe) {
+:host ::ng-deep :is(img, video, iframe)#{$prose} {
   max-width: 100%;
   height: auto;
   border-radius: var(--radius);
 }
 
-:host ::ng-deep img {
+:host ::ng-deep img#{$prose} {
   width: auto;
 }
 
@@ -197,19 +200,19 @@
    feed that serves a small teaser rendition still reads full-bleed; genuinely
    small images (icons, logos) keep their natural size (#923). The class is set
    at render time from each image's own intrinsic width, never its URL. */
-:host ::ng-deep img.reader-fill {
+:host ::ng-deep img.reader-fill#{$prose} {
   width: 100%;
 }
 
 /* Substack video placeholders (#627) carry no class — the sanitizer strips
    class/style/data-*, so alt text is the only stable hook. A play badge
    marks the poster as video, not a still image. */
-:host ::ng-deep a:has(> img[alt='Video — open the original article to watch']) {
+:host ::ng-deep a:has(> img[alt='Video — open the original article to watch'])#{$prose} {
   position: relative;
   display: inline-block;
 }
 
-:host ::ng-deep a:has(> img[alt='Video — open the original article to watch'])::after {
+:host ::ng-deep a:has(> img[alt='Video — open the original article to watch'])#{$prose}::after {
   content: '▶';
   position: absolute;
   top: 50%;
@@ -228,14 +231,14 @@
   pointer-events: none;
 }
 
-:host ::ng-deep :not(pre) > code {
+:host ::ng-deep :not(pre) > code#{$prose} {
   padding: 0.1em 0.35em;
   background: var(--surface-1);
   border-radius: var(--radius);
   font-size: 0.9em;
 }
 
-:host ::ng-deep pre {
+:host ::ng-deep pre#{$prose} {
   @include glass-rim.filled(var(--surface-1));
 
   margin: 0 0 var(--space-4);
@@ -245,7 +248,7 @@
   line-height: 1.5;
 }
 
-:host ::ng-deep pre code {
+:host ::ng-deep pre code#{$prose} {
   padding: 0;
   background: none;
 }
@@ -314,7 +317,7 @@
   }
 }
 
-:host ::ng-deep hr {
+:host ::ng-deep hr#{$prose} {
   margin: var(--space-5) 0;
   border: 0;
   border-top: 1px solid var(--border);
@@ -323,7 +326,7 @@
 /* Only real links (with an href) get the accent colour. Some feeds wrap
    headings/TOC entries in <a> tags whose href the sanitiser strips; unscoped,
    this painted every heading teal ("all titles turn green", #21). */
-:host ::ng-deep a[href] {
+:host ::ng-deep a[href]#{$prose} {
   color: var(--accent);
 }
 
@@ -363,8 +366,8 @@
   margin-inline: auto;
 }
 
-:host ::ng-deep audio,
-:host ::ng-deep video {
+:host ::ng-deep audio#{$prose},
+:host ::ng-deep video#{$prose} {
   display: block;
   width: 100%;
   margin: var(--space-5) 0;
@@ -375,7 +378,7 @@
    ships a badly shaped poster (ZDF served a 1140×120 strip for a 16:9 clip, #952)
    then collapses the player to a sliver. Pin the 16:9 box every .reader-embed
    iframe already gets, and letterbox whatever the poster or the frames are. */
-:host ::ng-deep video {
+:host ::ng-deep video#{$prose} {
   aspect-ratio: 16 / 9;
   object-fit: contain;
   background: var(--surface-1);
