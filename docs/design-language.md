@@ -1812,12 +1812,12 @@ restored with the playlist; every surface reads the current one from
 
 `app-player-bar` (mounted by `ArticlePlayerBars`, #1888) sits inside a landscape
 video's `.reader-cinema` box and after a SoundCloud or other embed Listen can
-play. A YouTube video or a SoundCloud track
-leads with **Listen** (`play_circle`), which sends the embed's sound to the
-audio player and pauses the visible embed, then the queue toggle
-(`aria-pressed`, "Add to playlist" / "In playlist"); a landscape video ends
-with the cinema toggle (`margin-inline-start: auto`). The bar shows at every
-width; only the cinema toggle hides below `bp.$container-reader-cinema`.
+play. A YouTube video or a SoundCloud track leads with **Listen**
+(`play_circle`), which sends the embed's sound to the audio player and pauses
+the visible embed, then the queue toggle (`aria-pressed`, "Add to playlist" /
+"In playlist"); a landscape video ends with the cinema toggle
+(`margin-inline-start: auto`). The bar shows at every width; only the cinema
+toggle hides below `bp.$container-reader-cinema`.
 
 The sound plays in a provider frame inside `.hidden-playback`
 (`src/styles/_hidden-playback.scss`), the one sanctioned invisible iframe: fixed
