@@ -54,7 +54,6 @@
   margin-inline-end: calc(-1 * var(--space-1));
 }
 
-// The current row fills to `--chapter-progress` and ends in its time left.
 .reader-chapters__row[aria-current='true']::before,
 .reader-chapters__row[aria-current='true']::after {
   content: '';

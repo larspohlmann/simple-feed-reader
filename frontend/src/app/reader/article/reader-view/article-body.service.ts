@@ -161,16 +161,16 @@ export class ArticleBody {
   /** Before any fetched list, so the body's chapters are the one list under their frame. */
   private attachBodyChapters(
     host: HTMLElement,
-    chapters: ChapterDto[],
+    chapterList: ChapterDto[],
     track: AudioTrack | null,
   ): void {
     if (track) return;
     // Only decoration gives the player frame its API flag, so the embed is resolved after it.
-    const chaptered = chapteredEmbedOf(host, chapters);
+    const chaptered = chapteredEmbedOf(host, chapterList);
     if (!chaptered) return;
     // A video queued from a list row gains its chapters once its article opens (#1810).
-    this.embedDetails.seed(chaptered.media.url, chapters);
-    this.chapters.attachToFrame(chaptered.frame, chapters);
+    this.embedDetails.seed(chaptered.media.url, chapterList);
+    this.chapters.attachToFrame(chaptered.frame, chapterList);
   }
 
   private loadEmbedDetails(frames: HTMLIFrameElement[]): void {

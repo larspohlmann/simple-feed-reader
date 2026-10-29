@@ -9,7 +9,7 @@ import {
   createComponent,
 } from '@angular/core';
 
-export const READER_ISLAND = 'reader-island';
+const READER_ISLAND = 'reader-island';
 
 /** Angular components mounted into the rendered article body, each living until the next render (#1886). */
 export class ArticleIslands {

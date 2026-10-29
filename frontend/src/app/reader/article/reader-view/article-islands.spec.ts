@@ -10,7 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ArticleIslands, READER_ISLAND } from './article-islands';
+import { ArticleIslands } from './article-islands';
 
 let destroyed = 0;
 let clickedInZone: boolean | null = null;
@@ -55,7 +55,7 @@ describe('ArticleIslands', () => {
 
     const mounted = host.children[1];
     expect(mounted.tagName).toBe('APP-ISLAND-PROBE');
-    expect(mounted.classList).toContain(READER_ISLAND);
+    expect(mounted.classList).toContain('reader-island');
     expect(mounted.textContent).toBe('Chapters');
   });
 

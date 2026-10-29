@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { articleHost } from '../../../../testing/article-host-testing';
+import { openReaderPanels } from '../../../../testing/reader-panel-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
@@ -62,15 +63,6 @@ const EPISODE: AudioTrack = {
   imageUrl: null,
   durationInSeconds: 600,
 };
-
-function openLists(host: HTMLElement): void {
-  for (const toggle of Array.from(
-    host.querySelectorAll<HTMLButtonElement>('.reader-panel__toggle'),
-  )) {
-    if (toggle.getAttribute('aria-expanded') === 'false') toggle.click();
-  }
-  TestBed.tick();
-}
 
 describe('ArticleBody', () => {
   let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
@@ -392,7 +384,7 @@ describe('ArticleBody', () => {
       expect(frame.closest('.reader-cinema')!.nextElementSibling!.classList).toContain(
         'reader-chapters',
       );
-      openLists(content);
+      openReaderPanels(content);
       expect(content.querySelectorAll('.reader-chapters__row')).toHaveLength(CHAPTERS.length);
     });
 
@@ -442,7 +434,7 @@ describe('ArticleBody', () => {
       await Promise.resolve();
 
       listenButton().click();
-      openLists(content);
+      openReaderPanels(content);
       content.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
       TestBed.tick();
 
@@ -497,7 +489,7 @@ describe('ArticleBody', () => {
     };
     const askedUrls = (): string[] => embedDetails.mock.calls.map(([media]) => media.url);
     const listRows = (list: Element): string[] => {
-      openLists(list as HTMLElement);
+      openReaderPanels(list as HTMLElement);
       return Array.from(list.querySelectorAll('.reader-chapters__row')).map((row) =>
         ['.reader-chapters__time', '.reader-chapters__title']
           .map((part) => row.querySelector(part)?.textContent ?? '')

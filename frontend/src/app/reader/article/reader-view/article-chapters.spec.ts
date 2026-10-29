@@ -6,6 +6,7 @@ import {
   messagesOf,
   recordPosts,
 } from '../../../../testing/frame-playback-testing';
+import { openReaderPanels } from '../../../../testing/reader-panel-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AudioPlayerService } from '../../audio-player.service';
 import { SOUNDCLOUD_WIDGET_ORIGIN } from '../../media/soundcloud-widget-protocol';
@@ -31,19 +32,10 @@ const NEXT_CHAPTERS = [
 ];
 
 function titles(host: HTMLElement): string[] {
-  openLists(host);
+  openReaderPanels(host);
   return Array.from(host.querySelectorAll('.reader-chapters__title')).map(
     (title) => title.textContent ?? '',
   );
-}
-
-function openLists(host: HTMLElement): void {
-  for (const toggle of Array.from(
-    host.querySelectorAll<HTMLButtonElement>('.reader-panel__toggle'),
-  )) {
-    if (toggle.getAttribute('aria-expanded') === 'false') toggle.click();
-  }
-  TestBed.tick();
 }
 
 function mountedChapters(): { articleChapters: ArticleChapters; islands: ArticleIslands } {
@@ -97,7 +89,7 @@ describe('ArticleChapters', () => {
     const frame = host.querySelector('iframe')!;
     const { articleChapters, islands } = mountedChapters();
     articleChapters.attachToFrame(frame, CHAPTERS);
-    openLists(host);
+    openReaderPanels(host);
     const list = host.querySelector('.reader-chapters')!;
     const removeListener = jest.spyOn(window, 'removeEventListener');
 
@@ -145,7 +137,7 @@ describe('ArticleChapters', () => {
       articleChapters.attachToFrame(host.querySelector('iframe')!, CHAPTERS);
 
       articleChapters.followTrack(VIDEO_TRACK);
-      openLists(host);
+      openReaderPanels(host);
       host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
       TestBed.tick();
 
@@ -161,7 +153,7 @@ describe('ArticleChapters', () => {
       host.innerHTML = VIDEO_BODY;
       const articleChapters = chapters();
       articleChapters.attachToFrame(host.querySelector('iframe')!, CHAPTERS);
-      openLists(host);
+      openReaderPanels(host);
       const list = host.querySelector('.reader-chapters');
 
       articleChapters.followTrack(VIDEO_TRACK);
@@ -185,7 +177,7 @@ describe('ArticleChapters', () => {
       audio.enqueue(VIDEO_TRACK);
       audio.seek(70);
       TestBed.tick();
-      openLists(host);
+      openReaderPanels(host);
 
       const current = host.querySelector('.reader-chapters__row[aria-current="true"]');
       expect(current?.querySelector('.reader-chapters__title')?.textContent).toBe('B');
@@ -207,7 +199,7 @@ describe('ArticleChapters', () => {
       );
 
       articleChapters.followTrack(NEXT_TRACK);
-      openLists(host);
+      openReaderPanels(host);
       host.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
       TestBed.tick();
 
@@ -243,7 +235,7 @@ describe('ArticleChapters', () => {
 
     function tapSecondRow(frame: HTMLIFrameElement): void {
       const list = listAfter(frame) as HTMLElement;
-      openLists(list);
+      openReaderPanels(list);
       list.querySelectorAll<HTMLButtonElement>('.reader-chapters__row')[1].click();
       TestBed.tick();
     }
