@@ -1,7 +1,7 @@
 import { Component, computed, input, model, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { IconComponent } from '../../../shared/icon/icon.component';
 import { TocEntry } from '../reading/reading-toc';
+import { ReaderPanelComponent } from '../reader-panel/reader-panel.component';
 
 /** Below this many headings an article is too short to warrant a contents list. */
 const TOC_MIN_HEADINGS = 3;
@@ -10,7 +10,7 @@ const TOC_MIN_HEADINGS = 3;
  *  shown once an article has enough headings. */
 @Component({
   selector: 'app-reader-toc',
-  imports: [TranslocoPipe, IconComponent],
+  imports: [TranslocoPipe, ReaderPanelComponent],
   templateUrl: './reader-toc.component.html',
   styleUrl: './reader-toc.component.scss',
 })

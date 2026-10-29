@@ -1,0 +1,12 @@
+<button
+  class="reader-panel__toggle"
+  type="button"
+  [attr.aria-expanded]="open()"
+  (click)="open.set(!open())"
+>
+  <app-icon [name]="open() ? 'expand_more' : 'chevron_right'" size="md" />
+  {{ label() }}
+</button>
+@if (open()) {
+  <ng-container [ngTemplateOutlet]="body()" />
+}

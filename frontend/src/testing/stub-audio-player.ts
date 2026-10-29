@@ -1,11 +1,13 @@
 import { signal } from '@angular/core';
 import { AudioPlayerService, AudioTrack, TrackDetails } from '../app/reader/audio-player.service';
+import { PlaybackPosition } from '../app/reader/chapters/chapter-player';
 
 /** The slice of the player a control reads, with its queue kept as plain urls:
  *  jsdom plays no media, so the real service never reaches `playing`. */
 export class StubAudioPlayer implements Pick<
   AudioPlayerService,
   | 'current'
+  | 'playbackPosition'
   | 'playing'
   | 'play'
   | 'playFrom'
@@ -18,6 +20,7 @@ export class StubAudioPlayer implements Pick<
 > {
   readonly queue = signal<string[]>([]);
   readonly current = signal<AudioTrack | null>(null);
+  readonly playbackPosition = signal<PlaybackPosition>({ seconds: 0, durationSeconds: null });
   readonly playing = signal(false);
   readonly played: AudioTrack[] = [];
   readonly playedFrom: { track: AudioTrack; seconds: number }[] = [];

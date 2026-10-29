@@ -1,29 +1,5 @@
-@use '../../../theme/glass-rim';
-
 :host {
   display: block;
-}
-
-/* Collapsible table of contents for longer articles. Collapsed by default. */
-.toc {
-  @include glass-rim.filled(var(--surface-1));
-
-  margin: 0 0 var(--space-4);
-  border-radius: var(--radius);
-}
-
-.toc-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: var(--fs-sm);
-  cursor: pointer;
 }
 
 .toc-list {

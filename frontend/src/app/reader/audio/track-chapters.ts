@@ -38,21 +38,24 @@ export interface ChapterPlayhead {
   readonly progress: ChapterProgress | null;
 }
 
+/** Where `position` is among the chapters starting at `starts`; null before the first. */
+export function chapterPlayhead(
+  starts: readonly number[],
+  position: PlaybackPosition,
+): ChapterPlayhead | null {
+  const index = currentChapterIndex(starts, position.seconds);
+  return index === -1 ? null : { index, progress: chapterProgress(starts, index, position) };
+}
+
 /** Follows the playing track's chapters and moves the player between them (#1810, #1814). */
 export class TrackChapters {
   private readonly starts = computed(() => this.chapters().map((chapter) => chapter.startSeconds));
   /** -1 before the first chapter and without chapters. */
   readonly index = computed(() => currentChapterIndex(this.starts(), this.position().seconds));
   readonly current = computed(() => this.chapters()[this.index()] ?? null);
+  readonly playhead = computed(() => chapterPlayhead(this.starts(), this.position()));
   /** Null without a chapter or while its end is unknown. */
-  readonly progress = computed(() => {
-    const index = this.index();
-    return index === -1 ? null : chapterProgress(this.starts(), index, this.position());
-  });
-  readonly playhead = computed<ChapterPlayhead | null>(() => {
-    const index = this.index();
-    return index === -1 ? null : { index, progress: this.progress() };
-  });
+  readonly progress = computed(() => this.playhead()?.progress ?? null);
   readonly previousStart = computed(() =>
     previousChapterStart(this.starts(), this.position().seconds, RESTART_THRESHOLD_SECONDS),
   );

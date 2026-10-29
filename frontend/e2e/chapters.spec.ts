@@ -3,7 +3,7 @@ import { presetLocalStorage } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson, stubOneFeedReader } from './support/reader';
 import { silentWav } from './support/audio';
 
-/** #1808: chapters under a video and atop an episode. Every API read is stubbed; the spec owns its data. */
+/** #1808: chapters under a video and in an episode's header panel. Every API read is stubbed; the spec owns its data. */
 const CHAPTERS = [
   { startSeconds: 0, title: 'Opening' },
   { startSeconds: 20, title: 'Middle' },
@@ -96,8 +96,8 @@ test('a video lists its chapters under an API-enabled player', async ({ page }) 
 test('an episode starts at a tapped chapter and the list follows it', async ({ page }) => {
   await page.locator('app-entry-list').getByText('An episode', { exact: true }).click();
 
-  await page.locator('app-article-content .reader-chapters__toggle').click();
-  const rows = page.locator('app-article-content .reader-chapters__row');
+  await page.locator('app-episode-chapters .reader-panel__toggle').click();
+  const rows = page.locator('app-episode-chapters .reader-chapters__row');
   await expect(rows).toHaveCount(3);
   await rows.nth(1).click();
   await expect(rows.nth(1)).toHaveAttribute('aria-current', 'true');

@@ -134,6 +134,12 @@
       @if (audio.attachment()) {
         <app-listen-row [audio]="audio" />
       }
+      <app-episode-panels
+        [track]="audio.track()"
+        [chapters]="source.chapters()"
+        [transcript]="source.transcript()"
+        [transcriptIsTheBody]="source.transcriptIsTheBody()"
+      />
       <app-reader-toc [entries]="toc()" [(open)]="tocOpen" (jump)="scrollToHeading($event)" />
       @if (!source.loading()) {
         @if (source.paywalled()) {
@@ -197,8 +203,6 @@
           [pageUrl]="e.url"
           [enclosureUrl]="audio.attachment()?.url ?? null"
           [chapters]="source.chapters()"
-          [transcript]="source.transcript()"
-          [transcriptIsTheBody]="source.transcriptIsTheBody()"
           [audioTrack]="audio.track()"
           [entry]="e"
           (decorated)="onDecorated($event)"

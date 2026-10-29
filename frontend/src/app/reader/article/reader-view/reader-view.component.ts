@@ -35,6 +35,7 @@ import { ArticleScrollRestore } from '../reading/article-scroll-restore.service'
 import { ReadingScope, type TrailingPart } from '../reading/reading-scope.service';
 import { prefersReducedMotion } from '../../../core/reduced-motion';
 import { TocEntry, collectToc } from '../reading/reading-toc';
+import { EpisodePanelsComponent } from '../episode-panels/episode-panels.component';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
 import { ListenRowComponent } from '../listen-row/listen-row.component';
 import { LinkCardsComponent } from '../link-cards/link-cards.component';
@@ -77,6 +78,7 @@ import { ShareButtonComponent } from '../share/share-button.component';
     ErrorBannerComponent,
     EntryCommentsComponent,
     ReaderTocComponent,
+    EpisodePanelsComponent,
     LinkCardsComponent,
     ThreadRepliesComponent,
     ListenRowComponent,

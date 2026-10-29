@@ -6,12 +6,12 @@ import { ChapterPlayer } from '../../chapters/chapter-player';
 import { SoundCloudChapterPlayer } from '../../chapters/soundcloud-chapter-player';
 import { YouTubeChapterPlayer } from '../../chapters/youtube-chapter-player';
 import { SOUNDCLOUD_PLAYER_URL } from '../../media/soundcloud-widget-protocol';
-import { ChapterList, ChapterListPlace, addChapterList } from '../decorators/reader-chapters';
+import { ChapterList, addChapterList } from '../decorators/reader-chapters';
 
 const API_PLAYER = 'iframe[src*="enablejsapi=1"]';
 const CHAPTER_FRAMES = `${API_PLAYER}, iframe[src^="${SOUNDCLOUD_PLAYER_URL}"]`;
 
-/** The video player frame a body's chapter list drives when no episode owns the chapters. */
+/** The video player frame a body's chapter list drives. */
 export function apiPlayerFrame(host: HTMLElement): HTMLIFrameElement | null {
   return host.querySelector<HTMLIFrameElement>(API_PLAYER);
 }
@@ -22,18 +22,18 @@ export function chapterFrames(host: HTMLElement): HTMLIFrameElement[] {
 }
 
 interface ListToShow {
-  readonly place: ChapterListPlace;
+  readonly after: Element;
   readonly list: ChapterList;
   readonly player: ChapterPlayer;
   readonly mediaUrl: string;
-  readonly frame: HTMLIFrameElement | null;
+  readonly frame: HTMLIFrameElement;
 }
 
 interface ShownList extends ListToShow {
   readonly element: HTMLElement | null;
 }
 
-/** A rendered body's chapter lists: the episode's atop the body, and one under each embed (#1808, #1824). */
+/** A rendered body's chapter lists: one under each embed (#1808, #1824). */
 export class ArticleChapters {
   private shown: ShownList[] = [];
 
@@ -42,22 +42,13 @@ export class ArticleChapters {
     private readonly injector: Injector,
   ) {}
 
-  /** A later episode list replaces an earlier one. */
-  attachToEpisode(host: HTMLElement, list: ChapterList, track: AudioTrack): void {
-    this.drop(this.shown.filter((shown) => shown.frame === null));
-    if (list.chapters.length === 0) return;
-    const place = { host, after: null };
-    this.show({ place, list, player: this.audioPlayer(track), mediaUrl: track.url, frame: null });
-  }
-
   /** The first list attached to a frame stays its only one. */
   attachToFrame(frame: HTMLIFrameElement, list: ChapterList): void {
     const media = embedMediaOfFrame(frame);
     const after = frame.closest('.reader-cinema') ?? frame.closest('.reader-embed') ?? frame;
-    const host = after.parentElement;
-    if (!media || !host || list.chapters.length === 0 || this.hasList(frame)) return;
+    if (!media || !after.parentElement || list.chapters.length === 0 || this.hasList(frame)) return;
     const player = this.embedPlayer(frame, media);
-    this.show({ place: { host, after }, list, player, mediaUrl: media.url, frame });
+    this.show({ after, list, player, mediaUrl: media.url, frame });
   }
 
   /** Once an embed is the audio player's track, its list seeks the player, not the paused frame (#1815). */
@@ -80,8 +71,8 @@ export class ArticleChapters {
   }
 
   private show(toShow: ListToShow): void {
-    const { place, list, player } = toShow;
-    this.shown.push({ ...toShow, element: addChapterList(place, list, player) });
+    const { after, list, player } = toShow;
+    this.shown.push({ ...toShow, element: addChapterList(after, list, player) });
   }
 
   private hasList(frame: HTMLIFrameElement): boolean {

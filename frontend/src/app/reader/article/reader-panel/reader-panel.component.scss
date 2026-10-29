@@ -1,0 +1,12 @@
+@use '../../../theme/reader-panel';
+
+:host {
+  @include reader-panel.frame;
+
+  display: block;
+  margin: 0 0 var(--space-4);
+}
+
+.reader-panel__toggle {
+  @include reader-panel.toggle;
+}

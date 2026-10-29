@@ -1,0 +1,32 @@
+:host {
+  display: block;
+}
+
+.reader-transcript__paragraph {
+  margin: 0;
+  font-size: var(--fs-read);
+  line-height: 1.75;
+  padding: var(--space-1) var(--space-3);
+}
+
+.reader-transcript__paragraph:last-child {
+  padding-bottom: var(--space-3);
+}
+
+.reader-transcript__time {
+  margin-inline-end: var(--space-2);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+button.reader-transcript__time {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.reader-transcript__speaker {
+  margin-inline-end: var(--space-1);
+}

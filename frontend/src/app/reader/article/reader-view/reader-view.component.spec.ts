@@ -12,7 +12,7 @@ import { ArticleLayerComponent } from '../article-layer/article-layer.component'
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { entryScrollKey } from '../../scroll/list-scroll-memory';
-import { ChapterDto, EntryDto, ReaderContent } from '../../models';
+import { ChapterDto, EntryDto, ReaderContent, TranscriptDto } from '../../models';
 import { aReaderArticle, aReaderFailure } from '../../../../testing/reader-content-testing';
 import { ReaderModeService } from '../content/reader-mode.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
@@ -70,6 +70,18 @@ class FakeEntryBodyService {
 
   seed(id: number, html: string | null, chapters: ChapterDto[] = []): void {
     this.stateFor(id).set({ status: 'ok', html, chapters, transcript: null });
+  }
+
+  seedTranscript(id: number, html: string, transcript: TranscriptDto): void {
+    this.seedEpisode(id, html, { chapters: [], transcript });
+  }
+
+  seedEpisode(
+    id: number,
+    html: string,
+    text: { chapters: ChapterDto[]; transcript: TranscriptDto },
+  ): void {
+    this.stateFor(id).set({ status: 'ok', html, ...text });
   }
 
   retry(id: number): void {
@@ -550,7 +562,7 @@ describe('ReaderViewComponent', () => {
       await Promise.resolve(); // content-processing microtask builds the TOC
       fixture.detectChanges();
       const element = fixture.nativeElement as HTMLElement;
-      const toggle = element.querySelector('.toc-toggle') as HTMLButtonElement;
+      const toggle = element.querySelector('.reader-panel__toggle') as HTMLButtonElement;
       expect(toggle).not.toBeNull();
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(element.querySelectorAll('.toc-list li').length).toBe(0); // collapsed
@@ -2211,6 +2223,97 @@ describe('ReaderViewComponent', () => {
       fixture.detectChanges();
 
       expect(player.tracks()[0].chapters).toEqual(chapters);
+    });
+
+    describe('episode panels in the header (#1880)', () => {
+      const CHAPTERS: ChapterDto[] = [
+        { startSeconds: 0, title: 'Intro' },
+        { startSeconds: 60, title: 'Main' },
+      ];
+      const TRANSCRIPT: TranscriptDto = {
+        language: 'en',
+        paragraphs: [{ startSeconds: 0, speaker: null, text: 'Hello there.' }],
+      };
+      const episode = () =>
+        entry({ attachments: [{ url: 'https://x.test/ep.mp3', mimeType: 'audio/mpeg' }] });
+      const root = (fixture: { nativeElement: unknown }) => fixture.nativeElement as HTMLElement;
+
+      beforeEach(() => {
+        for (const method of ['pause', 'load'] as const) {
+          jest.spyOn(HTMLMediaElement.prototype, method).mockImplementation(() => {
+            /* jsdom implements no media playback. */
+          });
+        }
+      });
+
+      it('lists the chapters as a header panel, not in the body', () => {
+        fakeBody.seed(1, '<p>Notes</p>', CHAPTERS);
+        const element = root(mount(episode()));
+
+        expect(element.querySelector('app-episode-chapters')).not.toBeNull();
+        expect(element.querySelector('.content .reader-chapters')).toBeNull();
+      });
+
+      it('shows the transcript as a header panel, not in the body', () => {
+        fakeBody.seedTranscript(1, '<p>Notes</p>', TRANSCRIPT);
+        const element = root(mount(episode()));
+
+        expect(element.querySelector('app-episode-transcript')).not.toBeNull();
+        expect(element.querySelector('.content .reader-transcript__paragraph')).toBeNull();
+      });
+
+      it('stacks chapters, transcript and contents above the body', () => {
+        fakeBody.seedEpisode(1, '<h2>A</h2><h2>B</h2><h2>C</h2><p>Notes</p>', {
+          chapters: CHAPTERS,
+          transcript: TRANSCRIPT,
+        });
+        const element = root(mount(episode()));
+
+        const order = Array.from(
+          element.querySelectorAll(
+            'app-episode-chapters, app-episode-transcript, app-reader-toc, app-article-content',
+          ),
+          (node) => node.tagName.toLowerCase(),
+        );
+        expect(order).toEqual([
+          'app-episode-chapters',
+          'app-episode-transcript',
+          'app-reader-toc',
+          'app-article-content',
+        ]);
+      });
+
+      it('puts the original hero after the panels', () => {
+        loadMock.mockReturnValue(
+          of<ReaderContent>(
+            aReaderArticle({
+              originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 },
+            }),
+          ),
+        );
+        fakeBody.seedTranscript(1, '<p>Notes</p>', TRANSCRIPT);
+        const fixture = mount(episode());
+        TestBed.inject(ReaderModeService).toggle();
+        fixture.detectChanges();
+
+        const panel = root(fixture).querySelector('app-episode-transcript')!;
+        const lead = root(fixture).querySelector('.lead-image')!;
+        expect(panel.compareDocumentPosition(lead) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      });
+
+      it('lists no chapters without an audio attachment', () => {
+        fakeBody.seed(1, '<p>Notes</p>', CHAPTERS);
+
+        expect(root(mount(entry())).querySelector('app-episode-chapters')).toBeNull();
+      });
+
+      it('opens the transcript when it is the whole body', () => {
+        fakeBody.seedTranscript(1, '', TRANSCRIPT);
+        const element = root(mount(episode()));
+
+        const toggle = element.querySelector('app-episode-transcript .reader-panel__toggle');
+        expect(toggle!.getAttribute('aria-expanded')).toBe('true');
+      });
     });
 
     it("drops the page's own player for the enclosure, so only Listen plays it (#1434)", async () => {
