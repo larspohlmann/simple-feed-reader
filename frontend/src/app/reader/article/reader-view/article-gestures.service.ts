@@ -21,6 +21,10 @@ const MAX_PULL = 160;
 /** Slide-out/return animation before the list takes over. */
 const LEAVE_ANIM_MS = 220;
 
+/** How far the frame travels to leave the screen, rightward or upward. */
+const offscreenRight = (): number => (typeof window !== 'undefined' ? window.innerWidth : 999);
+const offscreenAbove = (): number => (typeof window !== 'undefined' ? -window.innerHeight : -999);
+
 /** Players whose own horizontal drag (a scrubber, an embed) the back-swipe must yield to (#1057). */
 const MEDIA_CONTROL_SELECTOR = 'audio, video, input[type="range"], .reader-embed';
 
@@ -37,7 +41,8 @@ export interface ArticleGestureHost {
 
 /** Touch gestures (full-screen only): a rightward swipe or a pull past the end
  *  returns to the list. dragX follows a horizontal swipe; pull follows an
- *  at-the-end overscroll (rubber-banded). `leaving` commits to going back. */
+ *  at-the-end overscroll (rubber-banded). `leaving` commits to going back, sliding
+ *  the frame off-screen the way the gesture went: right, or up after a pull. */
 @Injectable()
 export class ArticleGestures {
   private readonly layer = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -49,6 +54,7 @@ export class ArticleGestures {
   };
 
   private readonly dragX = signal(0);
+  private readonly dragY = signal(0);
   private readonly pull = signal(0);
   private readonly snapping = signal(false);
   private readonly leavingState = signal(false);
@@ -65,7 +71,9 @@ export class ArticleGestures {
   private leaveTimer = 0;
 
   readonly swipeTransform = computed(() =>
-    this.dragX() === 0 ? 'none' : `translate3d(${this.dragX()}px, 0, 0)`,
+    this.dragX() === 0 && this.dragY() === 0
+      ? 'none'
+      : `translate3d(${this.dragX()}px, ${this.dragY()}px, 0)`,
   );
   /** Moves the article alone, not the layer: the spinner the pull reveals sits at its end. */
   readonly pullTransform = computed(() =>
@@ -137,11 +145,12 @@ export class ArticleGestures {
     this.axis = 'none';
     this.snapping.set(true);
     if (axis === 'h' && isBackSwipe(this.touchDx, this.touchDy)) {
-      this.dragX.set(typeof window !== 'undefined' ? window.innerWidth : 999);
+      this.dragX.set(offscreenRight());
       this.pull.set(0);
       this.leave();
     } else if (axis === 'v' && overscrollTriggersBack(this.pull())) {
-      this.leave(); // hold the pull spinner while we go back
+      this.dragY.set(offscreenAbove());
+      this.leave();
     } else {
       this.dragX.set(0);
       this.pull.set(0);
@@ -153,7 +162,7 @@ export class ArticleGestures {
     if (this.leaving()) return;
     this.snapping.set(true);
     this.pull.set(0);
-    this.dragX.set(typeof window !== 'undefined' ? window.innerWidth : 999);
+    this.dragX.set(offscreenRight());
     this.leave();
   }
 
