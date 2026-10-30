@@ -7,6 +7,7 @@ import { SavedSearchesStore } from '../../state/saved-searches.store';
 import { LayoutService } from '../../layout.service';
 import { TagDto } from '../../models';
 import { TagsStore } from '../../state/tags.store';
+import { tagsStoreStub } from '../../testing/tags-store.stub';
 import { SidebarRowActions } from './sidebar-row-actions.service';
 import { SidebarTagRowMenuComponent } from './sidebar-tag-row-menu.component';
 
@@ -30,7 +31,7 @@ function openMenuFor(target: TagDto): HTMLElement {
       { provide: ManageActions, useValue: {} },
       {
         provide: TagsStore,
-        useValue: { tags: signal([tagOf(1, null), tagOf(2, 1), tagOf(3, 2)]) },
+        useValue: tagsStoreStub(signal([tagOf(1, null), tagOf(2, 1), tagOf(3, 2)])),
       },
     ],
   });

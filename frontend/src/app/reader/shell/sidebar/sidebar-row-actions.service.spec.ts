@@ -10,6 +10,7 @@ import { heldUnrenamedHome } from '../../../../testing/unrenamed-home-testing';
 import { SocialFeedsPicker } from '../../feeds/social-picker/social-feeds-picker.service';
 import { socialProfiles, SocialSection } from '../../state/social-sections';
 import { TagsStore } from '../../state/tags.store';
+import { tagsStoreStub } from '../../testing/tags-store.stub';
 import { TagDto } from '../../models';
 import { ACTION_SHEET_DIVIDER } from '../../../shared/action-sheet/action-sheet.component';
 import { SidebarRowActions } from './sidebar-row-actions.service';
@@ -24,7 +25,7 @@ describe('SidebarRowActions', () => {
         { provide: ActionSheet, useValue: { open } },
         { provide: ManageActions, useValue: {} },
         { provide: SavedSearchesStore, useValue: {} },
-        { provide: TagsStore, useValue: { tags: signal<TagDto[]>([]) } },
+        { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
       ],
     });
     TestBed.inject(SidebarRowActions).openFeedSheet(heldUnrenamedHome(1));
@@ -76,7 +77,7 @@ describe('SidebarRowActions', () => {
             provide: SavedSearchesStore,
             useValue: { includedNetworks, toggleNetwork },
           },
-          { provide: TagsStore, useValue: { tags: signal<TagDto[]>([]) } },
+          { provide: TagsStore, useValue: tagsStoreStub(signal<TagDto[]>([])) },
         ],
       });
     });
@@ -195,7 +196,7 @@ describe('SidebarRowActions', () => {
           { provide: ActionSheet, useValue: { open: sheetOpen } },
           { provide: ManageActions, useValue: { reorderTags, editTag, deleteTag, createTag } },
           { provide: SavedSearchesStore, useValue: {} },
-          { provide: TagsStore, useValue: { tags } },
+          { provide: TagsStore, useValue: tagsStoreStub(tags) },
         ],
       });
     });

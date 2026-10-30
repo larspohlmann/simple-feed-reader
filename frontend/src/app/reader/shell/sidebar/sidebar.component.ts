@@ -54,6 +54,8 @@ import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TOUCH_DRAG_START_DELAY } from '../../../shared/touch-drag-delay';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
+import { sameIds } from '../../../core/same-ids';
+import { TagsStore } from '../../state/tags.store';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -172,6 +174,7 @@ export class SidebarComponent {
   readonly recs = inject(RecommendationsService);
   readonly screen = inject(LayoutService);
   readonly visibility = inject(SidebarVisibilityService);
+  private readonly tagsStore = inject(TagsStore);
   readonly organising = model(false);
 
   private readonly collapseButton = viewChild<ElementRef<HTMLButtonElement>>('collapseButton');
@@ -223,6 +226,26 @@ export class SidebarComponent {
     label: 'reader.tags',
     toggleLabel: 'reader.toggleTags',
   };
+
+  /** The active tag's id followed by its ancestors' ids; empty while the list is not a tag's. */
+  private readonly activeTagPath = computed(
+    () => {
+      const selection = this.selection();
+      if (selection.kind !== 'tag' || selection.id === null) return [];
+      return [selection.id, ...this.tagsStore.hierarchy().ancestorIdsOf(selection.id)];
+    },
+    { equal: sameIds },
+  );
+
+  /** Opening a tag's list reveals its row; a parent collapsed while that list stays open stays collapsed. */
+  private readonly revealActiveTag = effect(() => {
+    const [tagId, ...ancestorIds] = this.activeTagPath();
+    if (tagId === undefined) return;
+    untracked(() => {
+      this.tagsSection.open();
+      this.expanded.update((open) => new Set([...open, ...ancestorIds]));
+    });
+  });
 
   /** The drop list the Feeds section heads stays mounted while collapsed (see the template), so a feed drag out of
    *  a tag still lands. */

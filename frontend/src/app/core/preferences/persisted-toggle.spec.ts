@@ -35,6 +35,17 @@ describe('persistedToggle', () => {
     expect(persistedToggle(() => 'sfr.test.start', 'collapsed').expanded()).toBe(true);
   });
 
+  it('opens a collapsed section and remembers it, leaving an open one as it is', () => {
+    localStorage.setItem('sfr.test.collapsed', 'true');
+    const toggle = persistedToggle(() => 'sfr.test.collapsed');
+
+    toggle.open();
+    expect(toggle.expanded()).toBe(true);
+    expect(localStorage.getItem('sfr.test.collapsed')).toBe('false');
+    toggle.open();
+    expect(toggle.expanded()).toBe(true);
+  });
+
   it('follows a key that changes', () => {
     localStorage.setItem('sfr.mastodon.collapsed', 'true');
     const network = signal('bluesky');
