@@ -1,3 +1,5 @@
+@use '../../../theme/corner-circle-button' as circle;
+
 /* `clip`, not `hidden`: the return swipe's overflow is cut without the host
    becoming a scroller the chrome would sit in (#1332). Isolated so the back-to-top
    button's z-index stays under a layer stacked over this one (#1664). */
@@ -71,19 +73,27 @@
   color: var(--accent);
 }
 
-/* Back-to-top affordance, pinned to the pane's corner, so it sits clear of the audio player. */
-app-to-top-button {
+/* The corner buttons, pinned to the pane's corners, so they sit clear of the audio player. */
+app-to-top-button,
+.corner-actions {
   position: absolute;
-  right: 24px;
-  bottom: calc(24px + var(--toast-lift, 0px));
+  bottom: var(--space-5);
   z-index: 20;
 }
 
-/* A narrow-layout run pill is a bottom toast that would bury this button
-   (#641). `--app-toast-height` is the live toast's measured height; its
-   fallback is zero so the button keeps its base offset when none is up. */
-:host-context(.is-narrow) app-to-top-button {
-  --toast-lift: calc(var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
+app-to-top-button {
+  right: var(--space-5);
+}
+
+.corner-actions {
+  left: var(--space-5);
+
+  @include circle.corner-group;
+}
+
+:host-context(.is-narrow) app-to-top-button,
+:host-context(.is-narrow) .corner-actions {
+  @include circle.corner-toast-lift;
 }
 
 /* Standing nameplate: the toolbar retracts, leaving nothing naming a

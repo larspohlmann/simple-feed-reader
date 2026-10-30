@@ -21,6 +21,7 @@ import { ArticleLayerComponent } from './article-layer.component';
       (toTop)="toTops = toTops + 1"
     >
       <span articleBar class="probe">x</span>
+      <span articleCorner class="corner-probe">c</span>
       <article>body</article>
     </app-article-layer>
   `,
@@ -67,6 +68,11 @@ describe('ArticleLayerComponent', () => {
   it('projects the toolbar slot into the bar and the article into the reader', () => {
     expect(element.querySelector('.bar .probe')).not.toBeNull();
     expect(element.querySelector('.reader article')!.textContent).toBe('body');
+  });
+
+  it('projects the corner slot into the corner actions, outside the scroller (#1914)', () => {
+    expect(element.querySelector('.corner-actions .corner-probe')).not.toBeNull();
+    expect(element.querySelector('.scroller .corner-probe')).toBeNull();
   });
 
   it('emits close from the back button in the split pane', () => {

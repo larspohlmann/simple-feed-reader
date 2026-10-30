@@ -1,3 +1,4 @@
+@use '../../../theme/corner-circle-button' as circle;
 @use 'article-page';
 @use 'article-toolbar';
 
@@ -8,6 +9,10 @@
 
 @include article-page.article-page;
 @include article-toolbar.article-toolbar;
+
+.corner-flag {
+  @include circle.corner-circle-toggle;
+}
 
 /* Feed-declared categories (#953): a muted footnote line closing the
    article, the same weight as the meta row that opens it. */
