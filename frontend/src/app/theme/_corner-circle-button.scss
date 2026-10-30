@@ -1,9 +1,10 @@
 @mixin corner-circle-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--tap-target);
-  height: var(--tap-target);
+  width: var(--corner-button-size);
+  height: var(--corner-button-size);
   border: none;
   border-radius: 50%;
 
@@ -27,5 +28,15 @@
 
   @media (prefers-reduced-motion: reduce) {
     animation: none;
+  }
+
+  /* The hit area keeps the touch minimum around the smaller disc. */
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      inset: calc((var(--corner-button-size) - var(--tap-target)) / 2);
+      border-radius: 50%;
+    }
   }
 }

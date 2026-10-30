@@ -1793,6 +1793,53 @@ describe('EntryListComponent', () => {
     });
   });
 
+  describe('mark-all-read corner button (#1912)', () => {
+    function scrolledDown(over: Record<string, unknown> = {}) {
+      const fixture = mount(over);
+      fixture.componentInstance.scrolling.showToTop.set(true);
+      fixture.detectChanges();
+      return fixture;
+    }
+    const markAll = (fixture: ReturnType<typeof mount>) =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+        '.corner-actions .mark-all',
+      );
+
+    it('shows once scrolled down, with nothing above the fold yet', () => {
+      expect(markAll(mount())).toBeNull();
+
+      const fixture = scrolledDown();
+
+      expect(markAll(fixture)).not.toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
+    });
+
+    it('sits left of Mark above read', () => {
+      const fixture = scrolledDown();
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
+      fixture.detectChanges();
+
+      const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll(
+        '.corner-actions button',
+      );
+      expect([...buttons].map((button) => button.className)).toEqual(['mark-all', 'mark-above']);
+    });
+
+    it('is absent where the list cannot be marked read', () => {
+      expect(markAll(scrolledDown({ canMarkAllRead: false }))).toBeNull();
+    });
+
+    it('asks for mark all read when clicked', () => {
+      const fixture = scrolledDown();
+      let emitted = 0;
+      fixture.componentInstance.markAllRead.subscribe(() => emitted++);
+
+      markAll(fixture)!.click();
+
+      expect(emitted).toBe(1);
+    });
+  });
+
   // #1080: the lower-left "mark everything above as read" button. jsdom lays
   // nothing out, so geometry is driven through fakes standing in for the
   // `#rows`/`#listHdr` viewChild signals, exactly like the real elements they
@@ -1971,14 +2018,14 @@ describe('EntryListComponent', () => {
       expect(emitted).toEqual([above]);
     });
 
-    it('labels the button with the done_all icon', () => {
+    it('labels the button with the playlist_add_check icon', () => {
       const fixture = mount();
       fixture.componentInstance.scrolling.showToTop.set(true);
       fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
       const button = (fixture.nativeElement as HTMLElement).querySelector('.mark-above')!;
-      expect(button.querySelector('app-icon[name="done_all"]')).not.toBeNull();
+      expect(button.querySelector('app-icon[name="playlist_add_check"]')).not.toBeNull();
     });
 
     // The scroll path resolves the scroller from the `#rows` viewChild — the

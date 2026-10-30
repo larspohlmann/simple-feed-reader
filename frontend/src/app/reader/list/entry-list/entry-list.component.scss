@@ -8,7 +8,7 @@
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 
 /* Tail room so the last row can scroll up clear of the corner buttons. */
-$corner-clear: calc(3 * (var(--space-5) + var(--tap-target) + var(--space-3)));
+$corner-clear: calc(3 * (var(--space-5) + var(--corner-button-size) + var(--space-3)));
 
 :host {
   display: flex;
@@ -418,12 +418,16 @@ app-to-top-button {
   z-index: 4;
 }
 
-.mark-above {
+.corner-actions {
   position: absolute;
   left: var(--space-5);
   bottom: var(--space-5);
   z-index: 4;
+  display: flex;
+  gap: var(--space-2);
+}
 
+.corner-actions button {
   @include circle.corner-circle-button;
 }
 
@@ -431,7 +435,7 @@ app-to-top-button {
    would ride up over the list header, and the player wins. */
 @container entry-list (height < #{bp.$container-list-corner-buttons}) {
   app-to-top-button,
-  .mark-above {
+  .corner-actions {
     display: none;
   }
 }
@@ -440,7 +444,7 @@ app-to-top-button {
    `--app-toast-height` is the live toast's measured height, published by
    ToastService; its fallback is zero so the buttons keep their base offset. */
 :host-context(.is-narrow) app-to-top-button,
-:host-context(.is-narrow) .mark-above {
+:host-context(.is-narrow) .corner-actions {
   bottom: calc(
     var(--space-5) + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3)))
   );

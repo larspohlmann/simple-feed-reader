@@ -54,6 +54,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--control-h` | `40px` | the height of a button, input or select |
 | `--bar-h` | `56px` | **fallback** for the floating app bar's height; also the wide list toolbar band's height (#1749) |
 | `--tap-target` | `44px` | the documented minimum touch target |
+| `--corner-button-size` | `36px` | the floating corner buttons' disc (back to top, the list's mark-read pair); on a coarse pointer the hit area stays `--tap-target` (#1912) |
 | `--focus-ring` | `1px solid` accent at 60%; `none` on a coarse pointer | the `outline` of every `:focus-visible` rule (#1723) |
 | `--list-bar-h` | `0px` | the entry list's own bar; overwritten on its host once measured |
 | `--reader-bar-h` | `0px` | the article's toolbar; overwritten on the reader view's host once measured |
