@@ -42,7 +42,6 @@ import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
 import { isDirectSearch } from '../query/query';
 import { entryChangeParams } from '../query/link-param';
-import { UnreadFilterService } from '../list/unread-filter.service';
 import { ListOrderService } from '../list/list-order.service';
 import { ListPreferences } from '../list/list-preferences.service';
 import { ListScrollReset } from '../scroll/list-scroll-reset';
@@ -147,7 +146,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Injected for its effect: holding it opens the passkey offer when due. */
   private readonly passkeyOffer = inject(PasskeyFirstBootOffer);
 
-  readonly unreadFilter = inject(UnreadFilterService);
   readonly listOrder = inject(ListOrderService);
   private readonly listPreferences = inject(ListPreferences);
   readonly listLoading = computed(() => this.entries.loading() || !this.listPreferences.ready());
@@ -341,6 +339,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   onMarkAboveRead(ids: number[]): void {
     this.markRead.confirmMarkAboveRead(ids, () => this.list()?.hideAboveMarked(ids));
+  }
+
+  onUnreadOnlyChange(unreadOnly: boolean): void {
+    this.listPreferences.setUnreadOnly(this.selection(), unreadOnly);
   }
 
   // Preserve the underlying list so clearing a direct search returns to it.

@@ -31,6 +31,53 @@ describe('ListPreferences', () => {
     expect(applied).toEqual({ kind: 'tag', id: 9, unread: true, order: 'oldest' });
   });
 
+  describe('a direct search (#1922)', () => {
+    const search = { kind: 'search', id: null, unread: false, term: 'angular' } as const;
+
+    it("opens on all posts, whatever the account's filter says", () => {
+      TestBed.inject(UnreadFilterService).set(true);
+
+      expect(TestBed.inject(ListPreferences).appliedTo(search).unread).toBe(false);
+    });
+
+    it("keeps a flip to the search and away from the account's filter", () => {
+      const preferences = TestBed.inject(ListPreferences);
+
+      preferences.setUnreadOnly(search, true);
+
+      expect(preferences.appliedTo(search).unread).toBe(true);
+      expect(TestBed.inject(UnreadFilterService).unreadOnly()).toBe(false);
+      expect(preferences.appliedTo({ kind: 'all', id: null, unread: false }).unread).toBe(false);
+    });
+
+    it('forgets the flip once the search ends', () => {
+      const preferences = TestBed.inject(ListPreferences);
+      preferences.setUnreadOnly(search, true);
+
+      preferences.endSearch();
+
+      expect(preferences.appliedTo(search).unread).toBe(false);
+    });
+
+    it('reports a flip inside a search as a preference change, and its end as none', () => {
+      const preferences = TestBed.inject(ListPreferences);
+      const before = preferences.values();
+
+      preferences.setUnreadOnly(search, true);
+      const flipped = preferences.values();
+      preferences.endSearch();
+
+      expect(flipped).not.toEqual(before);
+      expect(preferences.values()).toEqual(flipped);
+    });
+  });
+
+  it("writes a flip on any other list to the account's filter", () => {
+    TestBed.inject(ListPreferences).setUnreadOnly({ kind: 'tag', id: 9, unread: false }, true);
+
+    expect(TestBed.inject(UnreadFilterService).unreadOnly()).toBe(true);
+  });
+
   it('is ready only once the account is known', () => {
     const preferences = TestBed.inject(ListPreferences);
     expect(preferences.ready()).toBe(true);
