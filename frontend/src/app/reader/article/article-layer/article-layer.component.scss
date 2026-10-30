@@ -71,18 +71,26 @@
   color: var(--accent);
 }
 
-/* Back-to-top affordance, pinned to the pane's corner, so it sits clear of the audio player. */
-app-to-top-button {
+/* The corner buttons, pinned to the pane's corners, so they sit clear of the audio player. */
+app-to-top-button,
+.corner-actions {
   position: absolute;
-  right: 24px;
-  bottom: calc(24px + var(--toast-lift, 0px));
+  bottom: calc(var(--space-5) + var(--toast-lift, 0px));
   z-index: 20;
 }
 
-/* A narrow-layout run pill is a bottom toast that would bury this button
+app-to-top-button {
+  right: var(--space-5);
+}
+
+.corner-actions {
+  left: var(--space-5);
+}
+
+/* A narrow-layout run pill is a bottom toast that would bury these buttons
    (#641). `--app-toast-height` is the live toast's measured height; its
-   fallback is zero so the button keeps its base offset when none is up. */
-:host-context(.is-narrow) app-to-top-button {
+   fallback is zero so the buttons keep their base offset when none is up. */
+:host-context(.is-narrow) {
   --toast-lift: calc(var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
 }
 

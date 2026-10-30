@@ -8,11 +8,12 @@
   border: none;
   border-radius: 50%;
 
-  /* A mild frost, not a full-glass panel: the button keeps its accent
-     identity, so it can only thin so far. 65% is where the accent still
-     looks like itself while the blur gives a gentle frost behind rows. */
-  background: var(--accent);
-  background: color-mix(in srgb, var(--accent) 65%, transparent);
+  /* A mild frost, not a full-glass panel: the button keeps its tone (the
+     accent unless a consumer sets --corner-button-tone), so it can only thin so
+     far. 65% is where the accent still looks like itself while the blur gives
+     a gentle frost behind rows. */
+  background: var(--corner-button-tone, var(--accent));
+  background: color-mix(in srgb, var(--corner-button-tone, var(--accent)) 65%, transparent);
   backdrop-filter: blur(12px) saturate(1.4);
   color: var(--on-accent);
   cursor: pointer;

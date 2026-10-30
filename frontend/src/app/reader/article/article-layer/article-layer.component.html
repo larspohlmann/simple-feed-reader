@@ -40,6 +40,9 @@
   </div>
   <!-- No progressbar role: announcing every scroll frame would only be noise. -->
   <app-progress-rail [progress]="progressRail()" />
+  <div class="corner-actions">
+    <ng-content select="[articleCorner]" />
+  </div>
   @if (showToTop() && !leaving()) {
     <app-to-top-button (activate)="toTop.emit()" />
   }

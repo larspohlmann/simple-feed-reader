@@ -975,6 +975,45 @@ describe('ReaderViewComponent', () => {
     expect(closes).toBe(1);
   });
 
+  describe('the keep and favourite corner discs (#1914)', () => {
+    const discs = (element: HTMLElement) => [
+      ...element.querySelectorAll<HTMLButtonElement>('.corner-actions .corner-flags button'),
+    ];
+
+    it('puts Keep first and Favourite right of it, off: outline and not pressed', () => {
+      const [keep, favourite] = discs(mount(entry()).nativeElement as HTMLElement);
+
+      expect(keep.getAttribute('aria-label')).toBe('Keep');
+      expect(favourite.getAttribute('aria-label')).toBe('Favorite');
+      for (const disc of [keep, favourite]) {
+        expect(disc.classList).not.toContain('on');
+        expect(disc.getAttribute('aria-pressed')).toBe('false');
+        expect(disc.querySelector('app-icon')!.classList).not.toContain('filled');
+      }
+    });
+
+    it('fills and marks the disc of a kept, favourite entry', () => {
+      const element = mount(entry({ isKept: true, isFavorite: true })).nativeElement as HTMLElement;
+
+      for (const disc of discs(element)) {
+        expect(disc.classList).toContain('on');
+        expect(disc.querySelector('app-icon')!.classList).toContain('filled');
+      }
+    });
+
+    it('keeps and favourites the entry like the toolbar does', () => {
+      const [keep, favourite] = discs(mount(entry()).nativeElement as HTMLElement);
+      entryActions.keep.mockClear();
+      entryActions.favorite.mockClear();
+
+      keep.click();
+      favourite.click();
+
+      expect(entryActions.keep).toHaveBeenCalledTimes(1);
+      expect(entryActions.favorite).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('the counts row of a social post (#1615)', () => {
     const realIntersectionObserver = globalThis.IntersectionObserver;
     const post = (over: Partial<EntryDto> = {}): EntryDto =>

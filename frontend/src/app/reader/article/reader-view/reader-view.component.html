@@ -238,6 +238,26 @@
     <!-- Laid over the whole pane while an article loads or refetches, in place
          of a line of text — the same overlay the feed list raises on reload. -->
     <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
+    <div articleCorner class="corner-flags">
+      <button
+        type="button"
+        [appFlagToggle]="e.isKept"
+        [attr.aria-label]="'reader.keep' | transloco"
+        [attr.title]="'reader.keep' | transloco"
+        (click)="actions.keep(e)"
+      >
+        <app-icon name="bookmark" size="dense" [fill]="e.isKept" />
+      </button>
+      <button
+        type="button"
+        [appFlagToggle]="e.isFavorite"
+        [attr.aria-label]="'reader.favorite' | transloco"
+        [attr.title]="'reader.favorite' | transloco"
+        (click)="actions.favorite(e)"
+      >
+        <app-icon name="star" size="dense" [fill]="e.isFavorite" />
+      </button>
+    </div>
   </app-article-layer>
 } @else {
   <div class="placeholder text-scaled">
