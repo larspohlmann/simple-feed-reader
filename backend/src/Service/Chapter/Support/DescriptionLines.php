@@ -8,7 +8,7 @@ use App\Service\Chapter\Pass\DescriptionLine;
 use Dom\Document;
 use Dom\Element;
 
-/** A description's non-blank `<br>`-separated lines in reading order; a block element ends a line and holds lines of its own. */
+/** A description's non-blank `<br>`-separated lines in reading order; a block element, or one holding a block, ends a line and holds lines of its own. */
 final class DescriptionLines
 {
     private const array BLOCKS = [
@@ -56,7 +56,8 @@ final class DescriptionLines
 
     private static function isBlock(Element $element): bool
     {
-        return \in_array($element->localName, self::BLOCKS, true);
+        return \in_array($element->localName, self::BLOCKS, true)
+            || $element->querySelector(implode(',', self::BLOCKS)) !== null;
     }
 
     private static function isBreak(Element $element): bool

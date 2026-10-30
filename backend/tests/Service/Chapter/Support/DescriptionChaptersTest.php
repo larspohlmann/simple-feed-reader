@@ -306,6 +306,21 @@ final class DescriptionChaptersTest extends TestCase
         self::assertCount(3, $described->chapters);
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function wrappedParagraphs(): iterable
+    {
+        yield 'span' => ['<span><p>0:00 A<br>1:00 B<br>2:00 C</p></span>'];
+        yield 'font' => ['<font><p>0:00 A<br>1:00 B<br>2:00 C</p></font>'];
+        yield 'main' => ['<main><p>0:00 A<br>1:00 B<br>2:00 C</p></main>'];
+        yield 'details' => ['<details><p>0:00 A<br>1:00 B<br>2:00 C</p></details>'];
+    }
+
+    #[DataProvider('wrappedParagraphs')]
+    public function testReadsAParagraphWrappedInAnUnlistedElement(string $html): void
+    {
+        self::assertCount(3, DescriptionChapters::in($html)->chapters);
+    }
+
     public function testWhitespaceBetweenListItemsKeepsTheRun(): void
     {
         $described = DescriptionChapters::in("<ul>\n<li>0:00 A</li>\n<li>1:00 B</li>\n<li>2:00 C</li>\n</ul>");
