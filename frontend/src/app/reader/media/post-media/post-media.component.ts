@@ -11,7 +11,9 @@ import { EntryMediumDto, isGif } from '../../entry-medium';
 import { AltTextComponent } from '../alt-text/alt-text.component';
 import { GifComponent } from '../gif/gif.component';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
-import { armHlsStreams, releaseHlsStreams } from '../hls-streams';
+import { armHlsStreams, releaseHlsStream, releaseHlsStreams } from '../hls-streams';
+import { NearViewportMedia } from '../near-viewport-media';
+import { ReleasableVideo } from '../releasable-video';
 import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
 import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
@@ -35,6 +37,8 @@ export class PostMediaComponent {
 
   private readonly autoplay = inject(ListAutoplayCoordinator, { optional: true });
   private readonly unlockedVideos = inject(UnlockedVideoElements, { optional: true });
+  private readonly nearViewport = inject(NearViewportMedia, { optional: true });
+  private readonly releasable = new Map<HTMLVideoElement, ReleasableVideo>();
   private readonly players = new Map<HTMLVideoElement, VideoAutoplayPlayer>();
 
   constructor() {
@@ -47,7 +51,10 @@ export class PostMediaComponent {
     });
     inject(DestroyRef).onDestroy(() => {
       this.scrollAway?.disconnect();
-      for (const video of this.mountedVideos()) video.pause();
+      for (const video of this.releasable.keys()) {
+        this.nearViewport?.unwatch(video);
+        this.release(video);
+      }
       releaseHlsStreams(this.host);
       this.unregisterVideosWhere(() => true);
     });
@@ -66,13 +73,34 @@ export class PostMediaComponent {
   }
 
   private newVideo(clip: EntryMediumDto): HTMLVideoElement {
-    const video = this.unlockedVideos?.take() ?? document.createElement('video');
-    video.controls = true;
-    video.setAttribute('playsinline', '');
-    video.setAttribute('preload', 'none');
-    video.setAttribute('src', clip.url);
-    if (clip.previewImageUrl) video.setAttribute('poster', clip.previewImageUrl);
-    return video;
+    const element = this.unlockedVideos?.take() ?? document.createElement('video');
+    element.controls = true;
+    element.setAttribute('playsinline', '');
+    element.setAttribute('preload', 'none');
+    if (clip.previewImageUrl) element.setAttribute('poster', clip.previewImageUrl);
+    const video = new ReleasableVideo(element, clip.url);
+    this.releasable.set(element, video);
+    this.attachWhenNear(video);
+    return element;
+  }
+
+  private attachWhenNear(video: ReleasableVideo): void {
+    if (this.nearViewport === null) {
+      video.attach();
+      return;
+    }
+    this.nearViewport.watch(video.element, {
+      approach: () => {
+        video.attach();
+        armHlsStreams(this.host);
+      },
+      leave: () => this.release(video.element),
+    });
+  }
+
+  private release(element: HTMLVideoElement): void {
+    this.releasable.get(element)?.release();
+    releaseHlsStream(this.host, element);
   }
 
   private pauseWhenScrolledAway(videos: HTMLVideoElement[]): void {

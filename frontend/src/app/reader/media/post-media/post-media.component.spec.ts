@@ -5,6 +5,7 @@ import { EntryMediumDto } from '../../entry-medium';
 import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
 import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
+import { NearViewportClient, NearViewportMedia } from '../near-viewport-media';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
@@ -149,6 +150,14 @@ describe('PostMediaComponent', () => {
     );
   });
 
+  it('gives a video its source at once outside a list', async () => {
+    const { fixture } = await mount([clip]);
+
+    expect(fixture.nativeElement.querySelector('.video-slot video').getAttribute('src')).toBe(
+      'https://video.test/playlist.m3u8',
+    );
+  });
+
   it('pauses its video and releases its stream when destroyed', async () => {
     const { fixture } = await mount([clip]);
     await firstPlay(fixture.nativeElement.querySelector('video'));
@@ -249,5 +258,85 @@ describe('PostMediaComponent in the list', () => {
     await fixture.whenStable();
 
     expect(coordinator.unregister).toHaveBeenCalledWith(player);
+  });
+});
+
+const nearViewport = { watch: jest.fn(), unwatch: jest.fn() };
+const clientOf = (video: Element): NearViewportClient =>
+  nearViewport.watch.mock.calls.find(([element]) => element === video)![1];
+
+async function mountNearViewport(media: EntryMediumDto[]) {
+  TestBed.configureTestingModule({
+    imports: [HostComponent, provideTranslocoTesting()],
+    providers: [{ provide: NearViewportMedia, useValue: nearViewport }],
+  });
+  const fixture = TestBed.createComponent(HostComponent);
+  fixture.componentInstance.media = media;
+  fixture.detectChanges();
+  await fixture.whenStable();
+  return fixture;
+}
+
+describe('PostMediaComponent near the viewport', () => {
+  beforeEach(() => Object.values(nearViewport).forEach((spy) => spy.mockReset()));
+
+  const mp4: EntryMediumDto = { ...clip, url: 'https://video.test/clip.mp4' };
+  const videoOf = (fixture: { nativeElement: HTMLElement }) =>
+    fixture.nativeElement.querySelector('.video-slot video') as HTMLVideoElement;
+
+  it('gives a video no source until it comes near the screen', async () => {
+    const fixture = await mountNearViewport([mp4]);
+    const video = videoOf(fixture);
+
+    expect(video.hasAttribute('src')).toBe(false);
+    expect(video.getAttribute('poster')).toBe('https://video.test/thumb.jpg');
+
+    clientOf(video).approach();
+    expect(video.getAttribute('src')).toBe('https://video.test/clip.mp4');
+  });
+
+  it('takes the source back when the video goes far, keeping the element', async () => {
+    const fixture = await mountNearViewport([mp4]);
+    const video = videoOf(fixture);
+    clientOf(video).approach();
+
+    clientOf(video).leave();
+
+    expect(videoOf(fixture)).toBe(video);
+    expect(video.hasAttribute('src')).toBe(false);
+  });
+
+  it('destroys a far video’s hls.js stream', async () => {
+    const fixture = await mountNearViewport([clip]);
+    const video = videoOf(fixture);
+    clientOf(video).approach();
+    await firstPlay(video);
+
+    clientOf(video).leave();
+
+    expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('arms a playlist that came near for its first play', async () => {
+    const fixture = await mountNearViewport([clip]);
+    const video = videoOf(fixture);
+
+    clientOf(video).approach();
+    await firstPlay(video);
+
+    expect(fakeHls.loadSource).toHaveBeenCalledWith('https://video.test/playlist.m3u8');
+  });
+
+  it('releases its videos and stops watching them when it goes away', async () => {
+    const fixture = await mountNearViewport([mp4]);
+    const video = videoOf(fixture);
+    clientOf(video).approach();
+
+    fixture.componentInstance.media = [];
+    fixture.detectChanges();
+    fixture.destroy();
+
+    expect(nearViewport.unwatch).toHaveBeenCalledWith(video);
+    expect(video.hasAttribute('src')).toBe(false);
   });
 });
