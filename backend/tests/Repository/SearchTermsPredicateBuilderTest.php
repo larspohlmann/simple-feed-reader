@@ -23,6 +23,15 @@ final class SearchTermsPredicateBuilderTest extends DbTestCase
         self::assertStringNotContainsString(' LIKE ', $predicate);
     }
 
+    public function testSqliteNarrowsAWholeWordCheckToTheIndexCandidates(): void
+    {
+        $this->skipUnlessSqlite();
+        $predicate = $this->predicateFor('E-Mail ');
+
+        self::assertSame(1, substr_count($predicate, 'SEARCH_INDEX_MATCHES('));
+        self::assertSame(3, substr_count($predicate, 'NORMALIZE_WORD_BOUNDARIES('));
+    }
+
     public function testSqliteFoldsTermsTooShortForTheIndex(): void
     {
         $this->skipUnlessSqlite();
