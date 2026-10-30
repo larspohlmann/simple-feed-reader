@@ -46,6 +46,13 @@ describe('TagHierarchy', () => {
     expect(hierarchy.mayPlaceUnder(null, 3)).toBe(false);
   });
 
+  it("lists a tag's ancestors from its parent up to its root", () => {
+    expect(hierarchy.ancestorIdsOf(3)).toEqual([2, 1]);
+    expect(hierarchy.ancestorIdsOf(6)).toEqual([5]);
+    expect(hierarchy.ancestorIdsOf(1)).toEqual([]);
+    expect(hierarchy.ancestorIdsOf(99)).toEqual([]);
+  });
+
   it('treats a tag whose parent is unknown as a root', () => {
     const orphan = makeTag(7, 'Orphan', { parentId: 99 });
     expect(new TagHierarchy([orphan]).depthOf(7)).toBe(0);

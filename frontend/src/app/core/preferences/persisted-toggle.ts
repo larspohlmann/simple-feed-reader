@@ -4,6 +4,7 @@ import { Signal, linkedSignal } from '@angular/core';
 export interface PersistedToggle {
   readonly expanded: Signal<boolean>;
   toggle(): void;
+  open(): void;
 }
 
 export type ToggleStart = 'expanded' | 'collapsed';
@@ -17,12 +18,16 @@ export function persistedToggle(
     source: key,
     computation: (current) => isExpanded(storedValue(current), start),
   });
+  const toggle = (): void => {
+    const open = !expanded();
+    expanded.set(open);
+    store(key(), String(!open));
+  };
   return {
     expanded: expanded.asReadonly(),
-    toggle: () => {
-      const open = !expanded();
-      expanded.set(open);
-      store(key(), String(!open));
+    toggle,
+    open: () => {
+      if (!expanded()) toggle();
     },
   };
 }

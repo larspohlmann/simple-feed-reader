@@ -32,6 +32,11 @@ export class TagHierarchy {
     );
   }
 
+  ancestorIdsOf(tagId: number): number[] {
+    const parentId = this.parentIds.get(tagId) ?? null;
+    return parentId === null ? [] : [parentId, ...this.ancestorIdsOf(parentId)];
+  }
+
   /** Whether `tagId` is `ancestorId` itself or sits anywhere below it. */
   isWithin(tagId: number, ancestorId: number): boolean {
     if (tagId === ancestorId) return true;

@@ -931,6 +931,67 @@ describe('SidebarComponent', () => {
     expect(element.querySelector('.feedrow .feed-exclusion-marker')).toBeNull();
   });
 
+  describe('revealing the active tag (#1910)', () => {
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
+
+    const tagNode = (id: number, parentId: number | null, children: TagNode[] = []): TagNode => ({
+      tag: { id, name: `t${id}`, color: null, icon: null, position: 0, parentId },
+      subscriptions: [],
+      children,
+      unreadCount: 0,
+      entryCount: 0,
+      descendantCount: countDescendants(children),
+    });
+    const tree = (): TagNode[] => [
+      tagNode(1, null, [tagNode(2, 1, [tagNode(3, 2)])]),
+      tagNode(4, null),
+    ];
+    const tagSelection = (id: number): Selection => ({ kind: 'tag', id, unread: true });
+
+    it('expands every parent of a nested tag when its list opens', () => {
+      const fixture = mount({ tagTree: tree(), selection: tagSelection(3) });
+
+      expect([...fixture.componentInstance.expanded()].sort()).toEqual([1, 2]);
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('[data-tag-id="3"]'),
+      ).not.toBeNull();
+    });
+
+    it('expands nothing for a top-level tag', () => {
+      const fixture = mount({ tagTree: tree(), selection: tagSelection(4) });
+
+      expect(fixture.componentInstance.expanded().size).toBe(0);
+    });
+
+    it('opens a collapsed Tags section when a tag list opens', () => {
+      localStorage.setItem('sfr.tags.collapsed', 'true');
+      const fixture = mount({ tagTree: tree(), selection: tagSelection(4) });
+
+      expect(fixture.componentInstance.tagsExpanded()).toBe(true);
+    });
+
+    it('keeps a parent collapsed by hand while the list stays open', () => {
+      const fixture = mount({ tagTree: tree(), selection: tagSelection(3) });
+      fixture.componentInstance.toggle(1);
+      fixture.detectChanges();
+
+      fixture.componentRef.setInput('tagTree', tree());
+      fixture.componentRef.setInput('selection', { ...tagSelection(3), unread: false });
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.expanded().has(1)).toBe(false);
+    });
+
+    it('expands the parents of a tag whose tree arrives after the selection', () => {
+      const fixture = mount({ tagTree: [], selection: tagSelection(3) });
+      fixture.componentRef.setInput('tagTree', tree());
+      fixture.detectChanges();
+
+      expect([...fixture.componentInstance.expanded()].sort()).toEqual([1, 2]);
+    });
+  });
+
   describe('dragging tags (#1765)', () => {
     const root = (id: number, position: number): TagDto => ({
       id,

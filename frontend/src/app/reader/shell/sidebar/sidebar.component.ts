@@ -54,6 +54,8 @@ import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TOUCH_DRAG_START_DELAY } from '../../../shared/touch-drag-delay';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
+import { sameIds } from '../../../core/same-ids';
+import { TagHierarchy } from '../../state/tag-hierarchy';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -212,6 +214,31 @@ export class SidebarComponent {
       return { node, open, depth, children };
     };
     return this.tagTree().map((root) => branch(root, 0));
+  });
+
+  private readonly activeTagId = computed(() => {
+    const selection = this.selection();
+    return selection.kind === 'tag' ? selection.id : null;
+  });
+  private readonly activeTagAncestorIds = computed(
+    () => {
+      const tagId = this.activeTagId();
+      if (tagId === null) return [];
+      const tags = [...this.tagNodeById().values()].map((node) => node.tag);
+      return new TagHierarchy(tags).ancestorIdsOf(tagId);
+    },
+    { equal: sameIds },
+  );
+
+  /** Opening a tag's list reveals its row; a parent collapsed while that list stays open stays collapsed. */
+  private readonly revealActiveTag = effect(() => {
+    const tagId = this.activeTagId();
+    const ancestorIds = this.activeTagAncestorIds();
+    if (tagId === null) return;
+    untracked(() => {
+      this.tagsSection.open();
+      this.expanded.update((open) => new Set([...open, ...ancestorIds]));
+    });
   });
 
   /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */

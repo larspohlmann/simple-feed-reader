@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { onIdentityChange } from '../../core/auth/session-identity';
+import { sameIds } from '../../core/same-ids';
 import { isTabHidden, onTabVisibilityChange } from '../../core/tab-visibility';
 import { PreviewProgress } from '../link-card/preview-progress';
 import { ReaderApi } from '../reader-api';
@@ -166,8 +167,4 @@ export class PendingEntriesPoll implements PreviewProgress {
     clearTimeout(this.timerId);
     this.timerId = null;
   }
-}
-
-function sameIds(left: number[], right: number[]): boolean {
-  return left.length === right.length && left.every((id, index) => id === right[index]);
 }

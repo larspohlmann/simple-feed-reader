@@ -1,4 +1,5 @@
 import { moveItemInArray } from '@angular/cdk/drag-drop';
+import { sameIds } from '../core/same-ids';
 import { TagDto } from './models';
 import { childrenByParentId, rootsOf } from './state/subscription-derivations';
 import { TagHierarchy } from './state/tag-hierarchy';
@@ -58,7 +59,7 @@ export function resolveTagDrop(
   const slot = slotAt({ dragged, tree, layout: drag.layout }, pointerY);
   if (slot === null || !tree.mayLandUnder(dragged, slot.parentId)) return null;
   const order = tree.orderWith(dragged, slot);
-  if (slot.parentId === dragged.parentId && sameOrder(order, tree.siblingIds(slot.parentId))) {
+  if (slot.parentId === dragged.parentId && sameIds(order, tree.siblingIds(slot.parentId))) {
     return null;
   }
   return { parentId: slot.parentId, order, mark: slot.mark };
@@ -114,10 +115,6 @@ function nearestHeaderIndex(headers: readonly TagHeaderBox[], pointerY: number):
     }
   });
   return nearest;
-}
-
-function sameOrder(left: readonly number[], right: readonly number[]): boolean {
-  return left.length === right.length && left.every((id, index) => id === right[index]);
 }
 
 class TagTree {
