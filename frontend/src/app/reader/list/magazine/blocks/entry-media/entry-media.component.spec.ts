@@ -1,3 +1,4 @@
+import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
@@ -8,6 +9,7 @@ import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action
 import { EMBED_FRAME_ATTRIBUTES } from '../../../../media/media-embeds';
 import { ListAutoplayCoordinator } from '../../../../media/autoplay/list-autoplay-coordinator';
 import { AutoplayPlayer } from '../../../../media/autoplay/autoplay-player';
+import { NearViewportMedia } from '../../../../media/near-viewport-media';
 import { MEDIA_PAUSE } from './pause-media';
 import { anEntry } from '../../../../../../testing/entry-testing';
 import { fakeHls, firstPlay, resetFakeHls } from '../../../../../../testing/hls-testing';
@@ -241,7 +243,7 @@ describe('EntryMediaComponent', () => {
 
     const frame = element.querySelector('iframe')!;
     expect(frame.getAttribute('src')).toBe(
-      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1#shorts',
+      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1&enablejsapi=1&origin=http%3A%2F%2Flocalhost#shorts',
     );
     expect(frame.getAttribute('sandbox')).toBe(EMBED_FRAME_ATTRIBUTES.sandbox);
     expect(frame.getAttribute('referrerpolicy')).toBe(EMBED_FRAME_ATTRIBUTES.referrerpolicy);
@@ -286,26 +288,33 @@ describe('EntryMediaComponent', () => {
     expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
   });
 
-  it('puts a Short’s player back to its cover when the card scrolls out of view', async () => {
+  it('pauses a Short’s player, keeping it, when the card scrolls out of view', async () => {
     const { observed, report } = stubIntersectionObserver();
     const fixture = await mountFixture(short());
     const element = fixture.nativeElement as HTMLElement;
     element.querySelector<HTMLButtonElement>('.play')!.click();
     fixture.detectChanges();
     await fixture.whenStable();
-    const frame = element.querySelector('.short-player')!;
+    const box = element.querySelector('.short-player')!;
     const pill = element.querySelector('.pill.short')!;
-    expect(observed).toContain(frame);
+    expect(observed).toContain(box);
     expect(observed).not.toContain(pill);
+    const frame = element.querySelector('iframe')!;
+    const post = jest.fn();
+    Object.defineProperty(frame, 'contentWindow', { value: { postMessage: post } });
 
-    report(frame, true);
+    report(box, true);
     fixture.detectChanges();
-    expect(element.querySelector('iframe')).not.toBeNull();
+    expect(post).not.toHaveBeenCalled();
 
-    report(frame, false);
+    report(box, false);
     fixture.detectChanges();
-    expect(element.querySelector('iframe')).toBeNull();
-    expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
+
+    expect(element.querySelector('iframe')).toBe(frame);
+    expect(JSON.parse(post.mock.calls[0][0])).toMatchObject({
+      event: 'command',
+      func: 'pauseVideo',
+    });
   });
 
   it('shows the cover of a Short whose player is not allow-listed, with no play button', async () => {
@@ -344,15 +353,26 @@ describe('EntryMediaComponent in an autoplaying list', () => {
     soundChanged: jest.fn(),
   };
 
-  beforeEach(() => Object.values(coordinator).forEach((spy) => spy.mockReset()));
+  const nearViewport = { watch: jest.fn(), unwatch: jest.fn() };
 
-  async function mountInList(testEntry: EntryDto) {
+  beforeEach(() => {
+    Object.values(coordinator).forEach((spy) => spy.mockReset());
+    Object.values(nearViewport).forEach((spy) => spy.mockReset());
+  });
+
+  const mountInList = (testEntry: EntryDto) => mountWith(testEntry, []);
+
+  const mountNearViewport = (testEntry: EntryDto) =>
+    mountWith(testEntry, [{ provide: NearViewportMedia, useValue: nearViewport }]);
+
+  async function mountWith(testEntry: EntryDto, extraProviders: Provider[]) {
     TestBed.configureTestingModule({
       imports: [EntryMediaComponent, provideTranslocoTesting()],
       providers: [
         provideAccountIdentity(),
         { provide: EntryActionHandler, useValue: entryActions },
         { provide: ListAutoplayCoordinator, useValue: coordinator },
+        ...extraProviders,
         provideRouter([]),
       ],
     });
@@ -372,20 +392,66 @@ describe('EntryMediaComponent in an autoplaying list', () => {
     expect(registered().element).toBe(fixture.nativeElement.querySelector('.short-player'));
   });
 
-  it('plays the Short muted when the list starts it, and puts it away when stopped', async () => {
+  it('plays the Short muted when the list starts it, and pauses it when stopped', async () => {
     const fixture = await mountInList(short());
 
     registered().start(true);
     fixture.detectChanges();
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('iframe').getAttribute('src')).toBe(
-      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1&mute=1&playsinline=1#shorts',
+      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1&enablejsapi=1&origin=http%3A%2F%2Flocalhost&mute=1&playsinline=1#shorts',
     );
+
+    const frame = fixture.nativeElement.querySelector('iframe') as HTMLIFrameElement;
+    const post = jest.fn();
+    Object.defineProperty(frame, 'contentWindow', { value: { postMessage: post } });
 
     registered().stop();
     fixture.detectChanges();
     await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('iframe')).toBe(frame);
+    expect(JSON.parse(post.mock.calls[0][0])).toMatchObject({ func: 'pauseVideo' });
+  });
+
+  it('resumes the same paused frame when the list starts the Short again', async () => {
+    const fixture = await mountInList(short());
+    registered().start(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const frame = fixture.nativeElement.querySelector('iframe') as HTMLIFrameElement;
+    const post = jest.fn();
+    Object.defineProperty(frame, 'contentWindow', { value: { postMessage: post } });
+    registered().stop();
+
+    registered().start(false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('iframe')).toBe(frame);
+    expect(JSON.parse(post.mock.calls.at(-1)![0])).toMatchObject({ func: 'playVideo' });
+  });
+
+  it('puts the Short back to its cover once it is far from the screen', async () => {
+    const fixture = await mountNearViewport(short());
+    fixture.nativeElement.querySelector('button.play').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const [box, client] = nearViewport.watch.mock.calls[0];
+    expect(box).toBe(fixture.nativeElement.querySelector('.short-player'));
+
+    client.leave();
+    fixture.detectChanges();
+
     expect(fixture.nativeElement.querySelector('iframe')).toBeNull();
+  });
+
+  it('stops watching its Short when it goes away', async () => {
+    const fixture = await mountNearViewport(short());
+    const box = fixture.nativeElement.querySelector('.short-player');
+
+    fixture.destroy();
+
+    expect(nearViewport.unwatch).toHaveBeenCalledWith(box);
   });
 
   it('tells the list a tapped Short is playing, with sound', async () => {
@@ -397,7 +463,7 @@ describe('EntryMediaComponent in an autoplaying list', () => {
 
     expect(coordinator.nowPlaying).toHaveBeenCalledWith(registered());
     expect(fixture.nativeElement.querySelector('iframe').getAttribute('src')).toBe(
-      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1#shorts',
+      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1&enablejsapi=1&origin=http%3A%2F%2Flocalhost#shorts',
     );
   });
 
