@@ -20,24 +20,30 @@ final class DescriptionChapters
     /** YouTube's chapter rule: the run starts at `0:00`. */
     public static function in(string $html): ServedChaptersModel
     {
-        return self::read($html, ChapterRunRule::YouTube);
+        return self::read($html, ChapterRunRule::YouTube, null);
     }
 
     /** A show often opens on an intro its notes leave out, so an episode's run may start later. */
     public static function inEpisode(string $html): ServedChaptersModel
     {
-        return self::read($html, ChapterRunRule::Episode);
+        return self::read($html, ChapterRunRule::Episode, null);
     }
 
-    private static function read(string $html, ChapterRunRule $rule): ServedChaptersModel
+    /** A chapter starting at or past the audio's end stays in the body, and fewer than three left read as none. */
+    public static function inEpisodeLasting(string $html, int $durationInSeconds): ServedChaptersModel
+    {
+        return self::read($html, ChapterRunRule::Episode, $durationInSeconds);
+    }
+
+    private static function read(string $html, ChapterRunRule $rule, ?int $endSeconds): ServedChaptersModel
     {
         if (ChapterLine::holdsNoStamp($html)) {
             return new ServedChaptersModel([], $html);
         }
 
         $document = HtmlDocumentParser::parseFragment($html);
-        $run = self::firstRun(DescriptionLines::of($document), $rule);
-        if ($run === []) {
+        $run = self::startingBefore(self::firstRun(DescriptionLines::of($document), $rule), $endSeconds);
+        if (\count($run) < self::MINIMUM) {
             return new ServedChaptersModel([], $html);
         }
 
@@ -77,6 +83,23 @@ final class DescriptionChapters
         }
 
         return self::isChapterBlock($run, $rule) ? $run : [];
+    }
+
+    /**
+     * @param list<array{DescriptionLine, EntryChapter}> $run
+     *
+     * @return list<array{DescriptionLine, EntryChapter}>
+     */
+    private static function startingBefore(array $run, ?int $endSeconds): array
+    {
+        if ($endSeconds === null) {
+            return $run;
+        }
+
+        return array_values(array_filter(
+            $run,
+            static fn (array $pair): bool => $pair[1]->startSeconds < $endSeconds,
+        ));
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */

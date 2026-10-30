@@ -25,16 +25,21 @@ final readonly class ChaptersOnOpen
         }
 
         $this->filler->fillOnOpen($entry);
-        if ($body !== null && self::isEpisodeWithoutChapters($entry)) {
-            return DescriptionChapters::inEpisode($body);
+        $audio = self::audioOf($entry);
+        if ($body !== null && $audio !== null && $entry->getChapters() === []) {
+            return self::episodeChapters($body, $audio);
         }
 
         return new ServedChaptersModel($entry->getChapters(), $body);
     }
 
-    private static function isEpisodeWithoutChapters(Entry $entry): bool
+    private static function episodeChapters(string $body, EntryAttachment $audio): ServedChaptersModel
     {
-        return self::audioOf($entry) !== null && $entry->getChapters() === [];
+        if ($audio->durationInSeconds === null) {
+            return DescriptionChapters::inEpisode($body);
+        }
+
+        return DescriptionChapters::inEpisodeLasting($body, $audio->durationInSeconds);
     }
 
     private static function audioOf(Entry $entry): ?EntryAttachment

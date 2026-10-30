@@ -446,6 +446,24 @@ final class DescriptionChaptersTest extends TestCase
         self::assertSame($html, $described->contentHtml);
     }
 
+    public function testAnEpisodeKeepsTheChapterLinesPastItsEndInTheBody(): void
+    {
+        $described = DescriptionChapters::inEpisodeLasting('<p>0:10 A<br>1:00 B<br>2:00 C<br>3:00 D</p>', 180);
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('<p>3:00 D</p>', $described->contentHtml);
+    }
+
+    public function testAnEpisodeWithFewerThanThreeChaptersBeforeItsEndKeepsItsBody(): void
+    {
+        $html = '<p>0:10 A<br>1:00 B<br>2:00 C</p>';
+
+        $described = DescriptionChapters::inEpisodeLasting($html, 120);
+
+        self::assertSame([], $described->chapters);
+        self::assertSame($html, $described->contentHtml);
+    }
+
     public function testReadsADeutschlandfunkEpisodeDescription(): void
     {
         $html = (string) file_get_contents(self::FIXTURES . 'deutschlandfunk-description-ki-verstehen.html');
