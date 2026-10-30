@@ -3866,16 +3866,55 @@ describe('ReaderShellComponent', () => {
       expect(nav).not.toHaveBeenCalled();
     });
 
-    it('filters a direct search to unread', () => {
+    function searchFor(fixture: ComponentFixture<ReaderShellComponent>, term: string) {
+      qp.next(convertToParamMap({ q: term }));
+      fixture.detectChanges();
+      return ctrl.expectOne((request) => request.url === 'https://api.test/api/entries/search');
+    }
+
+    it('opens a direct search on all posts, whatever the account prefers (#1922)', () => {
       localStorage.setItem('sfr.user.1.unread-only', '1');
       const fixture = boot();
-      qp.next(convertToParamMap({ q: 'angular' }));
+
+      const testRequest = searchFor(fixture, 'angular');
+
+      expect(testRequest.request.params.get('unread')).toBeNull();
+      testRequest.flush({ entries: [], nextCursor: null, matchedWords: [] });
+    });
+
+    it("narrows a search to unread without touching the account's preference (#1922)", () => {
+      const fixture = boot();
+      searchFor(fixture, 'angular').flush({ entries: [], nextCursor: null, matchedWords: [] });
+      fixture.detectChanges();
+
+      (fixture.nativeElement.querySelector('.unread-switch') as HTMLButtonElement).click();
       fixture.detectChanges();
 
       const testRequest = ctrl.expectOne(
         (request) => request.url === 'https://api.test/api/entries/search',
       );
       expect(testRequest.request.params.get('unread')).toBe('1');
+      expect(localStorage.getItem('sfr.user.1.unread-only')).toBeNull();
+      testRequest.flush({ entries: [], nextCursor: null, matchedWords: [] });
+    });
+
+    it('opens the next search on all posts once the last one ends (#1922)', () => {
+      const fixture = boot();
+      searchFor(fixture, 'angular').flush({ entries: [], nextCursor: null, matchedWords: [] });
+      fixture.componentInstance.onUnreadOnlyChange(true);
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null, matchedWords: [] });
+
+      qp.next(convertToParamMap({}));
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+
+      const testRequest = searchFor(fixture, 'signals');
+      expect(testRequest.request.params.get('unread')).toBeNull();
       testRequest.flush({ entries: [], nextCursor: null, matchedWords: [] });
     });
 

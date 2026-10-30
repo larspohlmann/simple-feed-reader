@@ -167,7 +167,7 @@
         (retry)="entries.retry()"
         (dismiss)="entries.dismissError()"
         (markAllRead)="markRead.confirmMarkAllRead()"
-        (unreadOnlyChange)="unreadFilter.set($event)"
+        (unreadOnlyChange)="onUnreadOnlyChange($event)"
         (orderChange)="listOrder.set(selection(), $event)"
         (markAboveRead)="onMarkAboveRead($event)"
         (refresh)="refresh.refreshScoped()"

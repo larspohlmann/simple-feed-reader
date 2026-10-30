@@ -6,7 +6,7 @@ import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntriesStore } from '../state/entries.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
-import { sameSelection } from '../query/query';
+import { isDirectSearch, sameSelection } from '../query/query';
 import { signedUrlFromParam, sameSignedUrl } from '../query/link-param';
 import { linkCardWithUrl } from '../link-card/link-card-with-url';
 import { LinkReaderNavigation } from './link-reader-navigation.service';
@@ -61,6 +61,10 @@ export class ReaderRouteState {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.entries.releaseUnlisted());
+    effect(() => {
+      if (isDirectSearch(this.parsed().selection)) return;
+      untracked(() => this.listPreferences.endSearch());
+    });
     effect(() => {
       const id = this.entryId();
       untracked(() => this.fetchUnlistedEntry(id));
