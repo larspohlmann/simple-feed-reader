@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { GifComponent } from './gif.component';
+import { NearViewportClient, NearViewportMedia } from '../near-viewport-media';
 import { EntryMediumDto } from '../../entry-medium';
 import {
   restoreIntersectionObserver,
@@ -35,12 +36,14 @@ class HostComponent {
 
 let play: jest.SpyInstance;
 let pause: jest.SpyInstance;
+let load: jest.SpyInstance;
 let viewport: ReturnType<typeof stubIntersectionObserver>;
 
 beforeEach(() => {
   viewport = stubIntersectionObserver();
   play = jest.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
   pause = jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+  load = jest.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined);
 });
 
 afterEach(() => {
@@ -123,6 +126,12 @@ describe('GifComponent', () => {
     expect(TestBed.inject(TranslocoService).translate('reader.media.gif')).toBe('GIF');
   });
 
+  it('gives its clip a source at once outside a list', async () => {
+    const { gif } = await mount(gifv);
+
+    expect(gif.querySelector('video')!.getAttribute('src')).toBe('https://files.test/wave.mp4');
+  });
+
   it('plays a looping clip muted and without controls', async () => {
     const { gif } = await mount(gifv);
     const clip = gif.querySelector('video')!;
@@ -190,5 +199,62 @@ describe('GifComponent', () => {
     fixture.destroy();
 
     expect(viewport.disconnect).toHaveBeenCalled();
+  });
+});
+
+describe('GifComponent in a list', () => {
+  const nearViewport = { watch: jest.fn(), unwatch: jest.fn() };
+
+  beforeEach(() => {
+    Object.values(nearViewport).forEach((spy) => spy.mockReset());
+  });
+
+  async function mountInList() {
+    TestBed.configureTestingModule({
+      imports: [HostComponent, provideTranslocoTesting()],
+      providers: [{ provide: NearViewportMedia, useValue: nearViewport }],
+    });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.medium = gifv;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const host = fixture.nativeElement.querySelector('app-gif') as HTMLElement;
+    const client = nearViewport.watch.mock.calls[0][1] as NearViewportClient;
+    return { fixture, host, client, clip: host.querySelector('video')! };
+  }
+
+  it('watches its own box', async () => {
+    const { host } = await mountInList();
+
+    expect(nearViewport.watch).toHaveBeenCalledWith(host, expect.anything());
+  });
+
+  it('gives its clip no source until it comes near', async () => {
+    const { clip, client } = await mountInList();
+    expect(clip.hasAttribute('src')).toBe(false);
+
+    client.approach();
+
+    expect(clip.getAttribute('src')).toBe('https://files.test/wave.mp4');
+  });
+
+  it('lets go of its clip’s media when it goes far', async () => {
+    const { clip, client } = await mountInList();
+    client.approach();
+
+    client.leave();
+
+    expect(clip.hasAttribute('src')).toBe(false);
+    expect(load).toHaveBeenCalled();
+  });
+
+  it('releases and stops watching when it goes away', async () => {
+    const { fixture, host, clip, client } = await mountInList();
+    client.approach();
+
+    fixture.destroy();
+
+    expect(nearViewport.unwatch).toHaveBeenCalledWith(host);
+    expect(clip.hasAttribute('src')).toBe(false);
   });
 });
