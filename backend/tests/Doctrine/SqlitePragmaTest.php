@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Doctrine;
 
 use App\Tests\DbTestCase;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 /**
  * The pragmas are read back from the connection the APPLICATION uses, not from
@@ -17,10 +16,7 @@ final class SqlitePragmaTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        if (!$this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            self::markTestSkipped('The pragmas apply to SQLite; this leg runs on another platform.');
-        }
+        $this->skipUnlessSqlite();
     }
 
     public function testForeignKeysAreEnforced(): void

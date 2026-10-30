@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Search\Membership\SavedSearchMatcher;
 
 use App\Repository\DatabaseSavedSearchMatcher;
+use App\Repository\IndexSearchPredicates;
+use App\Repository\LikeSearchPredicates;
 use App\Repository\SearchTermsPredicateBuilder;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Membership\SavedSearchMatcher\EngineOrDatabaseSavedSearchMatcher;
@@ -25,7 +27,7 @@ final class EngineOrDatabaseSavedSearchMatcherTest extends TestCase
 
         $matcher = new EngineOrDatabaseSavedSearchMatcher(
             new IndexedSavedSearchMatcher($engine),
-            new DatabaseSavedSearchMatcher($entityManager, new SearchTermsPredicateBuilder()),
+            new DatabaseSavedSearchMatcher($entityManager, self::predicateBuilder()),
             new SearchEngineCapability('', ''),
         );
 
@@ -40,7 +42,7 @@ final class EngineOrDatabaseSavedSearchMatcherTest extends TestCase
 
         $matcher = new EngineOrDatabaseSavedSearchMatcher(
             new IndexedSavedSearchMatcher($engine),
-            new DatabaseSavedSearchMatcher($entityManager, new SearchTermsPredicateBuilder()),
+            new DatabaseSavedSearchMatcher($entityManager, self::predicateBuilder()),
             new SearchEngineCapability('http://meilisearch:7700', 'key'),
         );
 
@@ -52,5 +54,10 @@ final class EngineOrDatabaseSavedSearchMatcherTest extends TestCase
     private function search(int $id): SavedSearchTermModel
     {
         return new SavedSearchTermModel($id, SearchTermsModel::fromInput('climate'));
+    }
+
+    private static function predicateBuilder(): SearchTermsPredicateBuilder
+    {
+        return new SearchTermsPredicateBuilder(new LikeSearchPredicates(), new IndexSearchPredicates());
     }
 }

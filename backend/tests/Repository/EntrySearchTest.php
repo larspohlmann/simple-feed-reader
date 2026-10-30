@@ -19,10 +19,7 @@ use App\Repository\EntrySearchQuery;
 use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
-/**
- * The LIKE search over title, summary and transcript text, with ASCII terms only: MySQL's collation folds case and
- * accents, SQLite's LIKE folds ASCII case only, so "Ubung" finding "Übung" would pass in production and fail here.
- */
+/** The database search over title, summary and transcript text, ignoring case and accents on either engine. */
 final class EntrySearchTest extends DbTestCase
 {
     private User $user;
@@ -204,6 +201,72 @@ final class EntrySearchTest extends DbTestCase
         $this->entry('hit', 'ANGULAR ships');
 
         self::assertSame(['hit'], $this->search('angular'));
+    }
+
+    public function testIgnoresCaseForAnUmlautTerm(): void
+    {
+        $this->entry('title', 'ÄRGER im Büro');
+        $this->entry('summary', 'Untitled', 'Viel Ärger heute');
+        $this->entry('miss', 'Nothing here');
+
+        self::assertEqualsCanonicalizing(['title', 'summary'], $this->search('ärger'));
+    }
+
+    public function testIgnoresCaseForATermWithoutAsciiLetters(): void
+    {
+        $this->entry('hit', 'ΑΘΗΝΑ heute');
+        $this->entry('miss', 'Berlin heute');
+
+        self::assertSame(['hit'], $this->search('αθηνα'));
+    }
+
+    public function testIgnoresCaseForAnUmlautWholeWord(): void
+    {
+        $this->entry('hit', 'Viel Ärger heute');
+        $this->entry('miss', 'Ärgernis heute');
+
+        self::assertSame(['hit'], $this->search('ärger '));
+    }
+
+    public function testIgnoresCaseForAnUmlautInTheTranscript(): void
+    {
+        $this->transcribed($this->entry('spoken', 'Episode one', 'Nothing relevant'), 'Ann: Über den Fluss.');
+
+        self::assertSame(['spoken'], $this->search('über den '));
+    }
+
+    public function testIgnoresAccentsEitherWay(): void
+    {
+        $this->entry('accented', 'Ein Café in Zürich');
+        $this->entry('plain', 'Cafe culture');
+        $this->entry('miss', 'Nothing here');
+
+        self::assertEqualsCanonicalizing(['accented', 'plain'], $this->search('cafe'));
+        self::assertEqualsCanonicalizing(['accented', 'plain'], $this->search('CAFÉ'));
+    }
+
+    public function testIgnoresAccentsInAWholeWord(): void
+    {
+        $this->entry('hit', 'Ein Café heute');
+        $this->entry('miss', 'Cafeteria heute');
+
+        self::assertSame(['hit'], $this->search('cafe '));
+    }
+
+    public function testIgnoresAccentsInTheTranscript(): void
+    {
+        $this->transcribed($this->entry('spoken', 'Episode one', 'Nothing relevant'), 'Ann: Über den Fluss.');
+
+        self::assertSame(['spoken'], $this->search('uber den '));
+        self::assertSame(['spoken'], $this->search('"uber den fluss"'));
+    }
+
+    public function testATermTooShortForTheIndexStillIgnoresCaseAndAccents(): void
+    {
+        $this->entry('hit', 'ÖL-Preis steigt');
+        $this->entry('miss', 'Preis fällt');
+
+        self::assertSame(['hit'], $this->search('ol preis'));
     }
 
     public function testRequiresEveryTermToMatch(): void

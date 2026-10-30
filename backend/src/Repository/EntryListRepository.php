@@ -80,8 +80,8 @@ final class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * Entries whose title or summary holds every term, paged like the entry list. The LIKEs use no index, so this
-     * reads every subscribed entry; that cost is accepted and measured in #408.
+     * Entries whose title, summary or transcript holds every term, paged like the entry list. On MySQL the LIKEs use no
+     * index, so this reads every subscribed entry; that cost is accepted and measured in #408. SQLite asks its index.
      *
      * @return list<EntryListRow>
      */

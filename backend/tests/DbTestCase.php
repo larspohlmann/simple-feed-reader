@@ -32,4 +32,11 @@ abstract class DbTestCase extends KernelTestCase
             self::markTestSkipped('SQLite has no row locks; it serialises writers itself.');
         }
     }
+
+    protected function skipUnlessSqlite(): void
+    {
+        if (!$this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+            self::markTestSkipped('This covers SQLite alone; this leg runs on another platform.');
+        }
+    }
 }

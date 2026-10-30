@@ -265,6 +265,9 @@ Enforced mechanically by `composer check` and `composer md`:
 - **Datetimes are stored as naive UTC.** Doctrine persists wall-clock values, so
   normalise anything incoming to UTC *before* persisting. Feed-supplied offsets
   that skip this make entries show up as "now".
+- **SQLite search runs on the `entry_search` FTS5 index**, kept by triggers on `entry` and
+  `entry_transcript` (`App\Doctrine\EntrySearchIndex`). A SQLite migration that rebuilds either
+  table drops those triggers: run `EntrySearchIndex::install()` again in the same migration.
 - **Never nest `cdkDropList`s.** Nesting silently breaks cross-list drag; use
   sibling lists.
 - **Migrations need their own verification.** `tests/bootstrap.php` builds the

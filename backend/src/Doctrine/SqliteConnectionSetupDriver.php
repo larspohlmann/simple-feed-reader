@@ -32,22 +32,34 @@ final class SqliteConnectionSetupDriver extends AbstractDriverMiddleware
         foreach (self::PRAGMAS as $pragma) {
             $connection->exec($pragma);
         }
-        $this->registerWordBoundariesFunction($connection);
+        $this->registerSearchFunctions($connection);
 
         return $connection;
     }
 
     /**
-     * One native call on SQLite: the nested-REPLACE rendering is 26 levels deep, and SQLite before 3.46 overflows its
-     * parser stack on two ORed whole-word searches (#584). WordBoundaries::normalize() stays the one rule.
+     * NORMALIZE_WORD_BOUNDARIES is one native call because the nested-REPLACE rendering overflows the parser stack of
+     * SQLite before 3.46 (#584). It folds too, so a whole-word check costs one call on each index candidate.
      */
-    private function registerWordBoundariesFunction(Connection $connection): void
+    private function registerSearchFunctions(Connection $connection): void
     {
-        $normalize = static fn (?string $value): ?string => $value === null ? null : WordBoundaries::normalize($value);
         $nativeConnection = $connection->getNativeConnection();
+        if (!$nativeConnection instanceof \PDO) {
+            return;
+        }
 
-        if ($nativeConnection instanceof \PDO) {
-            $nativeConnection->sqliteCreateFunction(NormalizeWordBoundariesFunction::NAME, $normalize, 1);
+        $functions = [
+            NormalizeWordBoundariesFunction::NAME => static fn (string $value): string => SearchFolding::fold(
+                WordBoundaries::normalize($value),
+            ),
+            SearchFoldFunction::NAME => SearchFolding::fold(...),
+        ];
+        foreach ($functions as $name => $function) {
+            $nativeConnection->sqliteCreateFunction(
+                $name,
+                static fn (?string $value): ?string => $value === null ? null : $function($value),
+                1,
+            );
         }
     }
 }

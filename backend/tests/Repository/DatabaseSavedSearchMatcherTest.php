@@ -10,6 +10,8 @@ use App\Entity\Feed;
 use App\Entity\TranscriptParagraph;
 use App\Enum\TranscriptFormat;
 use App\Repository\DatabaseSavedSearchMatcher;
+use App\Repository\IndexSearchPredicates;
+use App\Repository\LikeSearchPredicates;
 use App\Repository\SearchTermsPredicateBuilder;
 use App\Service\Search\Model\SavedSearchTermModel;
 use App\Service\Search\Model\SearchMode;
@@ -17,7 +19,6 @@ use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** ASCII terms only: SQLite's LIKE folds ASCII case alone. */
 final class DatabaseSavedSearchMatcherTest extends DbTestCase
 {
     private Feed $feed;
@@ -62,6 +63,26 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
         self::assertSame([1 => [$episode->getId()]], $matches);
     }
 
+    public function testASavedSearchIgnoresCaseForAnUmlautTerm(): void
+    {
+        $hit = $this->entry('a', 'ÄRGER im Büro');
+        $miss = $this->entry('b', 'Nothing here');
+
+        $matches = $this->matcher()->matchingIds([$this->search(1, 'ärger')], [$hit->requireId(), $miss->requireId()]);
+
+        self::assertSame([1 => [$hit->getId()]], $matches);
+    }
+
+    public function testASavedSearchIgnoresAccents(): void
+    {
+        $hit = $this->entry('a', 'Ein Café in Zürich');
+        $miss = $this->entry('b', 'Nothing here');
+
+        $matches = $this->matcher()->matchingIds([$this->search(1, 'cafe')], [$hit->requireId(), $miss->requireId()]);
+
+        self::assertSame([1 => [$hit->getId()]], $matches);
+    }
+
     public function testAMatchOutsideTheCandidatesIsNotReturned(): void
     {
         $inside = $this->entry('a', 'Climate report');
@@ -97,7 +118,7 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->never())->method('createQueryBuilder');
-        $matcher = new DatabaseSavedSearchMatcher($entityManager, new SearchTermsPredicateBuilder());
+        $matcher = new DatabaseSavedSearchMatcher($entityManager, self::predicateBuilder());
 
         self::assertSame([1 => []], $matcher->matchingIds([$this->search(1, 'climate')], []));
     }
@@ -120,7 +141,7 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
 
     private function matcher(): DatabaseSavedSearchMatcher
     {
-        return new DatabaseSavedSearchMatcher($this->entityManager, new SearchTermsPredicateBuilder());
+        return new DatabaseSavedSearchMatcher($this->entityManager, self::predicateBuilder());
     }
 
     private function search(int $id, string $term, SearchMode $mode = SearchMode::Substring): SavedSearchTermModel
@@ -143,5 +164,10 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private static function predicateBuilder(): SearchTermsPredicateBuilder
+    {
+        return new SearchTermsPredicateBuilder(new LikeSearchPredicates(), new IndexSearchPredicates());
     }
 }

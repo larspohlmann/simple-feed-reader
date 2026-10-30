@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Doctrine\EntrySearchIndex;
 use App\Tests\Support\WorkerIsolation;
 use Symfony\Component\Dotenv\Dotenv;
 
@@ -55,14 +56,15 @@ if (!file_exists($jwtDirectory . '/private.pem') || !file_exists($jwtDirectory .
 $rawDatabaseUrl = $_SERVER['DATABASE_URL'] ?? '';
 $databaseUrl = is_string($rawDatabaseUrl) ? $rawDatabaseUrl : '';
 
+$sqlitePath = null;
 if (str_starts_with($databaseUrl, 'sqlite:///')) {
-    $path = str_replace(
+    $sqlitePath = str_replace(
         '%kernel.project_dir%',
         dirname(__DIR__),
         substr($databaseUrl, strlen('sqlite:///')),
     );
-    if (file_exists($path)) {
-        unlink($path);
+    if (file_exists($sqlitePath)) {
+        unlink($sqlitePath);
     }
     $commands = ['doctrine:schema:create --env=test --quiet'];
 } else {
@@ -83,5 +85,13 @@ foreach ($commands as $command) {
             $exitCode,
         ));
         exit(1);
+    }
+}
+
+// schema:create builds only what the ORM maps; SQLite's search index and triggers are DDL of their own.
+if ($sqlitePath !== null) {
+    $sqlite = new PDO('sqlite:' . $sqlitePath);
+    foreach (EntrySearchIndex::install() as $statement) {
+        $sqlite->exec($statement);
     }
 }
