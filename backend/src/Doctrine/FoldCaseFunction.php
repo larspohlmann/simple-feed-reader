@@ -4,17 +4,13 @@ declare(strict_types=1);
 
 namespace App\Doctrine;
 
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\ORM\Query\AST\Functions\FunctionNode;
 use Doctrine\ORM\Query\AST\Node;
 use Doctrine\ORM\Query\Parser;
 use Doctrine\ORM\Query\SqlWalker;
 use Doctrine\ORM\Query\TokenType;
 
-/**
- * FOLD_CASE(expr) lower-cases a haystack for a LIKE against a CaseFolding::fold()ed term. MySQL gets the bare
- * expression: the searched columns are utf8mb4_0900_ai_ci, so LOWER() would only cost a pass over every row.
- */
+/** FOLD_CASE(expr): SQLite's UDF for CaseFolding::fold(), emitted only where LIKE folds ASCII alone. */
 final class FoldCaseFunction extends FunctionNode
 {
     public const string NAME = 'FOLD_CASE';
@@ -31,11 +27,6 @@ final class FoldCaseFunction extends FunctionNode
 
     public function getSql(SqlWalker $sqlWalker): string
     {
-        $sql = $sqlWalker->walkStringPrimary($this->stringExpression);
-        if ($sqlWalker->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            return \sprintf('%s(%s)', self::NAME, $sql);
-        }
-
-        return $sql;
+        return \sprintf('%s(%s)', self::NAME, $sqlWalker->walkStringPrimary($this->stringExpression));
     }
 }

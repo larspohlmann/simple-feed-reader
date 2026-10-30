@@ -43,13 +43,12 @@ final readonly class LikePattern
         }
 
         preg_match_all('/[A-Za-z0-9]+/', $term, $stretches);
-        $longest = array_reduce(
-            $stretches[0],
-            static fn (string $longest, string $stretch): string => \strlen($stretch) > \strlen($longest)
-                ? $stretch
-                : $longest,
-            '',
-        );
+        $longest = '';
+        foreach ($stretches[0] as $stretch) {
+            if (\strlen($stretch) > \strlen($longest)) {
+                $longest = $stretch;
+            }
+        }
 
         return $longest === '' ? null : $longest;
     }

@@ -6,9 +6,11 @@ namespace App\Repository;
 
 use App\Doctrine\CaseFolding;
 use App\Doctrine\FoldCaseFunction;
+use App\Doctrine\NormalizeWordBoundariesFunction;
 use App\Entity\EntryTranscript;
 use App\Service\Search\Model\SearchTermsModel;
 use App\Service\Search\Support\LikePattern;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\ORM\QueryBuilder;
 
 /**
@@ -61,29 +63,37 @@ final readonly class SearchTermsPredicateBuilder
     /** @return \Closure(string): string */
     private function substringMatch(QueryBuilder $qb, string $parameter, string $term): \Closure
     {
+        if (!CaseFolding::isNeededFor($term) || !self::likeFoldsAsciiAlone($qb)) {
+            $qb->setParameter($parameter, LikePattern::containing($term));
+
+            return static fn (string $column): string => self::like($column, $parameter);
+        }
+
         $qb->setParameter($parameter, LikePattern::containing(CaseFolding::fold($term)));
-        $anchor = CaseFolding::isNeededFor($term) ? $this->bindAnchor($qb, $parameter, $term) : null;
-        $haystack = self::haystack($term);
+        $anchor = $this->bindAnchor($qb, $parameter, $term);
 
         return static fn (string $column): string => self::anchored(
             $column,
             $anchor,
-            self::like($haystack($column), $parameter),
+            self::like(\sprintf('%s(%s)', FoldCaseFunction::NAME, $column), $parameter),
         );
     }
 
-    /** @return \Closure(string): string */
+    /**
+     * NORMALIZE_WORD_BOUNDARIES folds case as well on SQLite, so the word is folded alike.
+     *
+     * @return \Closure(string): string
+     */
     private function wholeWordMatch(QueryBuilder $qb, string $parameter, string $term): \Closure
     {
         $word = $parameter . 'Word';
         $qb->setParameter($word, LikePattern::wholeWord(CaseFolding::fold($term)));
         $anchor = $this->bindAnchor($qb, $parameter, $term);
-        $haystack = self::haystack($term);
 
         return static fn (string $column): string => self::anchored(
             $column,
             $anchor,
-            self::like(\sprintf("CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(%s), ' ')", $haystack($column)), $word),
+            self::like(\sprintf("CONCAT(' ', %s(%s), ' ')", NormalizeWordBoundariesFunction::NAME, $column), $word),
         );
     }
 
@@ -99,14 +109,9 @@ final readonly class SearchTermsPredicateBuilder
         return $parameter . 'Anchor';
     }
 
-    /** @return \Closure(string): string */
-    private static function haystack(string $term): \Closure
+    private static function likeFoldsAsciiAlone(QueryBuilder $qb): bool
     {
-        if (!CaseFolding::isNeededFor($term)) {
-            return static fn (string $column): string => $column;
-        }
-
-        return static fn (string $column): string => \sprintf('%s(%s)', FoldCaseFunction::NAME, $column);
+        return $qb->getEntityManager()->getConnection()->getDatabasePlatform() instanceof SQLitePlatform;
     }
 
     private static function anchored(string $column, ?string $anchor, string $match): string

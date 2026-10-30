@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Doctrine;
 
+use App\Doctrine\CaseFolding;
 use App\Doctrine\WordBoundaries;
 use App\Tests\DbTestCase;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 /**
  * The function is read from the connection the APPLICATION uses, so the test
@@ -17,18 +17,15 @@ final class NormalizeWordBoundariesOnSqliteTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        if (!$this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            self::markTestSkipped('The native function is SQLite-only; this leg runs on another platform.');
-        }
+        $this->skipUnlessSqlite();
     }
 
-    public function testTheConnectionNormalizesLikePhpDoes(): void
+    public function testTheConnectionNormalizesAndFoldsLikePhpDoes(): void
     {
-        $text = 'E-Mail (heute), „Corona-Krise“/US-Wahl!';
+        $text = 'E-Mail (heute), „Corona-Krise“/US-Wahl! ÄRGER';
 
         self::assertSame(
-            WordBoundaries::normalize($text),
+            CaseFolding::fold(WordBoundaries::normalize($text)),
             $this->entityManager->getConnection()->fetchOne('SELECT NORMALIZE_WORD_BOUNDARIES(?)', [$text]),
         );
     }

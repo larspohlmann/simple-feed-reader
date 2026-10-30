@@ -6,7 +6,6 @@ namespace App\Tests\Doctrine;
 
 use App\Doctrine\CaseFolding;
 use App\Tests\DbTestCase;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 /** Read from the application's connection, so it proves SqliteConnectionSetupDriver registered the function. */
 final class FoldCaseOnSqliteTest extends DbTestCase
@@ -14,10 +13,7 @@ final class FoldCaseOnSqliteTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        if (!$this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            self::markTestSkipped('The native function is SQLite-only; this leg runs on another platform.');
-        }
+        $this->skipUnlessSqlite();
     }
 
     public function testTheConnectionFoldsLikePhpDoes(): void
