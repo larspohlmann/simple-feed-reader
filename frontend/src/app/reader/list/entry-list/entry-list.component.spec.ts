@@ -22,6 +22,11 @@ import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coor
 import { provideAccountIdentity } from '../../../../testing/account-identity-testing';
 import { anEntry } from '../../../../testing/entry-testing';
 import {
+  MockIntersectionObserver,
+  installMockIntersectionObserver,
+  restoreIntersectionObserver,
+} from '../../../../testing/intersection-observer-testing';
+import {
   MockResizeObserver,
   installMockResizeObserver,
 } from '../../../../testing/resize-observer-testing';
@@ -156,6 +161,24 @@ function fireRowsResize(fixture: ComponentFixture<EntryListComponent>): void {
 }
 
 describe('EntryListComponent', () => {
+  describe('near-viewport media', () => {
+    beforeEach(installMockIntersectionObserver);
+    afterEach(restoreIntersectionObserver);
+
+    it('roots the watch on the list’s own scroller', () => {
+      const element = mount({ layout: 'magazine' }).nativeElement as HTMLElement;
+      const rows = element.querySelector('.rows.magazine');
+
+      expect(rows).not.toBeNull();
+      expect(
+        MockIntersectionObserver.instances.some(
+          (observer) =>
+            observer.options?.root === rows && observer.options?.rootMargin === '100% 0px',
+        ),
+      ).toBe(true);
+    });
+  });
+
   beforeEach(() => {
     localStorage.clear();
     subscriptionsStore.resolved.set(true);
