@@ -365,7 +365,7 @@ export class RecommendationSettingsCardComponent {
     const data: ConfirmData = {
       title: this.i18n.translate('settings.ai.recommendations.purgeConfirm'),
       message: this.i18n.translate('settings.ai.recommendations.purgeExplain'),
-      confirmLabel: this.i18n.translate('settings.ai.recommendations.purge'),
+      confirmLabel: this.i18n.translate('settings.ai.recommendations.purgeConfirmAction'),
       danger: true,
     };
     this.confirm.confirmThen(data, () => this.svc.purge());

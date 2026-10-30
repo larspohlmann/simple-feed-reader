@@ -358,6 +358,7 @@
         "purge": "Empfehlungen leeren",
         "purgeExplain": "Entfernt alle empfohlenen Beiträge aus „Für dich“. Ein neuer Lauf baut die Liste neu auf.",
         "purgeConfirm": "Alle Empfehlungen leeren?",
+        "purgeConfirmAction": "Leeren",
         "purged": "Empfehlungen geleert."
       }
     },
@@ -643,6 +644,7 @@
       "resetToEnv": "Auf Umgebungsstandard zurücksetzen",
       "resetToEnvDesc": "Verwirft diese gespeicherte Konfiguration einschließlich des Passworts und fällt auf die Mail-Einstellungen aus der Server-Umgebung zurück.",
       "resetConfirm": "Dies verwirft den gespeicherten Host, die Zugangsdaten und das Passwort und fällt auf die Mail-Einstellungen aus der Umgebung zurück. Das kann nicht rückgängig gemacht werden.",
+      "resetConfirmAction": "Zurücksetzen",
       "saved": "Mail-Einstellungen gespeichert",
       "save": "Speichern",
       "reset": "Zurücksetzen",
@@ -1192,6 +1194,7 @@
     "removeSavedSearch": "Gespeicherte Suche entfernen",
     "searchSaved": "Suche gespeichert",
     "removeSavedSearchConfirm": "Gespeicherte Suche entfernen?",
+    "removeSavedSearchConfirmAction": "Entfernen",
     "removeSavedSearchConfirmMessage": "Sie wird aus Ihren gespeicherten Suchen entfernt.",
     "digest": {
       "toggleAria": "\"{{term}}\" in den E-Mail-Digest aufnehmen",
@@ -1279,9 +1282,11 @@
     "sortedNewestFirst": "Neueste zuerst, auf älteste zuerst umstellen",
     "sortedOldestFirst": "Älteste zuerst, auf neueste zuerst umstellen",
     "markAllReadConfirm": "Alle als gelesen markieren?",
+    "markAllReadConfirmAction": "Alle markieren",
     "markAllReadConfirmMessage": "Dies markiert alle Beiträge in der aktuellen Ansicht als gelesen.",
     "markAboveRead": "Alles darüber als gelesen markieren",
     "markAboveReadConfirm": "Einträge darüber als gelesen markieren?",
+    "markAboveReadConfirmAction": "Markieren",
     "markAboveReadConfirmMessage": "Die {{count}} Einträge, an denen du vorbeigescrollt bist, als gelesen markieren? Die übrigen bleiben ungelesen.",
     "allCaughtUp": "Alles gelesen.",
     "nothingHere": "Noch nichts vorhanden.",

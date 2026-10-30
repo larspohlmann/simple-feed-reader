@@ -94,7 +94,7 @@ export class SavedSearchToggle {
     const data: ConfirmData = {
       title: this.i18n.translate('reader.removeSavedSearchConfirm'),
       message: this.i18n.translate('reader.removeSavedSearchConfirmMessage'),
-      confirmLabel: this.i18n.translate('reader.removeSavedSearch'),
+      confirmLabel: this.i18n.translate('reader.removeSavedSearchConfirmAction'),
     };
     this.confirm.confirmThen(data, () => {
       // Removing the search you are viewing by its slug path leaves that path
