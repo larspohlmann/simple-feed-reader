@@ -10,6 +10,21 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.9] - 2026-10-30
+
+## What's Changed
+* feat(#1908): unsubscribe from a feed in the edit dialog by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1909
+* feat(#1910): opening a nested tag's list expands its parent tags by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1911
+* feat(#1912): list corner buttons gain Mark all read and shrink by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1913
+* feat(#1914): Keep and Favourite discs in the article's corner by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1915
+* fix(#1916): the active subtag's highlight sits evenly in its box by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1917
+* fix(#1918): confirm buttons keep to one line on a phone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1919
+* feat(#1922): live search opens on All posts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1923
+* fix(#1920): SQLite search ignores case and accents through an FTS5 index by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1921
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.8...v1.6.9
+
 ## [v1.6.8] - 2026-10-30
 
 ## What's Changed
