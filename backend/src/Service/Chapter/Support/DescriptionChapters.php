@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Chapter\Support;
 
 use App\Entity\EntryChapter;
-use App\Service\Chapter\Model\ChapterRunStart;
+use App\Service\Chapter\Model\ChapterRunRule;
 use App\Service\Chapter\Model\ServedChaptersModel;
 use App\Service\Chapter\Pass\DescriptionLine;
 use App\Service\Html\Support\HtmlDocumentParser;
@@ -20,23 +20,23 @@ final class DescriptionChapters
     /** YouTube's chapter rule: the run starts at `0:00`. */
     public static function in(string $html): ServedChaptersModel
     {
-        return self::read($html, ChapterRunStart::AtZero);
+        return self::read($html, ChapterRunRule::YouTube);
     }
 
     /** A show often opens on an intro its notes leave out, so an episode's run may start later. */
     public static function inEpisode(string $html): ServedChaptersModel
     {
-        return self::read($html, ChapterRunStart::Anywhere);
+        return self::read($html, ChapterRunRule::Episode);
     }
 
-    private static function read(string $html, ChapterRunStart $start): ServedChaptersModel
+    private static function read(string $html, ChapterRunRule $rule): ServedChaptersModel
     {
         if (ChapterLine::holdsNoStamp($html)) {
             return new ServedChaptersModel([], $html);
         }
 
         $document = HtmlDocumentParser::parseFragment($html);
-        $run = self::firstRun(DescriptionLines::of($document), $start);
+        $run = self::firstRun(DescriptionLines::of($document), $rule);
         if ($run === []) {
             return new ServedChaptersModel([], $html);
         }
@@ -57,12 +57,12 @@ final class DescriptionChapters
      *
      * @return list<array{DescriptionLine, EntryChapter}>
      */
-    private static function firstRun(array $lines, ChapterRunStart $start): array
+    private static function firstRun(array $lines, ChapterRunRule $rule): array
     {
         $run = [];
         foreach ($lines as $line) {
             $text = $line->text();
-            if (ChapterLine::holdsNoStamp($text) && self::staysInTheBlockOf($run, $line)) {
+            if (self::passesOver($rule, $run, $line)) {
                 continue;
             }
             $chapter = ChapterLine::chapterOf($text);
@@ -70,19 +70,21 @@ final class DescriptionChapters
                 $run[] = [$line, $chapter];
                 continue;
             }
-            if (self::isChapterBlock($run, $start)) {
+            if (self::isChapterBlock($run, $rule)) {
                 return $run;
             }
             $run = $chapter === null ? [] : [[$line, $chapter]];
         }
 
-        return self::isChapterBlock($run, $start) ? $run : [];
+        return self::isChapterBlock($run, $rule) ? $run : [];
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
-    private static function staysInTheBlockOf(array $run, DescriptionLine $line): bool
+    private static function passesOver(ChapterRunRule $rule, array $run, DescriptionLine $line): bool
     {
-        return $run === [] || $line->block === $run[\count($run) - 1][0]->block;
+        return $rule->skipsUnstampedLines()
+            && ChapterLine::holdsNoStamp($line->text())
+            && ($run === [] || $line->block === $run[\count($run) - 1][0]->block);
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
@@ -114,9 +116,9 @@ final class DescriptionChapters
     }
 
     /** @param list<array{DescriptionLine, EntryChapter}> $run */
-    private static function isChapterBlock(array $run, ChapterRunStart $start): bool
+    private static function isChapterBlock(array $run, ChapterRunRule $rule): bool
     {
-        return \count($run) >= self::MINIMUM && $start->admits($run[0][1]->startSeconds);
+        return \count($run) >= self::MINIMUM && $rule->admitsStart($run[0][1]->startSeconds);
     }
 
     private static function tidy(Element $block): void

@@ -422,6 +422,30 @@ final class DescriptionChaptersTest extends TestCase
         self::assertSame('A', DescriptionChapters::inEpisode($html)->chapters[0]->title);
     }
 
+    public function testAnEpisodeRunEndsAtItsFirstUnstampedLine(): void
+    {
+        $described = DescriptionChapters::inEpisode(
+            '(02:23) A<br>(06:38) B<br>(25:20) C<br><br>Mehr zum Thema<br>Lorem<br>30:00 Uhr Wiederholung',
+        );
+
+        self::assertEquals(
+            [new EntryChapter(143, 'A'), new EntryChapter(398, 'B'), new EntryChapter(1520, 'C')],
+            $described->chapters,
+        );
+        self::assertNotNull($described->contentHtml);
+        self::assertStringContainsString('30:00 Uhr Wiederholung', $described->contentHtml);
+    }
+
+    public function testAnEpisodeTakesNoStampsScatteredBetweenUnstampedLines(): void
+    {
+        $html = 'Sprecher: X<br>Zusp. Floßmann (4:02)<br>Text<br>Zusp. Meier (7:10)<br>More<br>Zusp. Kunz (9:00)';
+
+        $described = DescriptionChapters::inEpisode($html);
+
+        self::assertSame([], $described->chapters);
+        self::assertSame($html, $described->contentHtml);
+    }
+
     public function testReadsADeutschlandfunkEpisodeDescription(): void
     {
         $html = (string) file_get_contents(self::FIXTURES . 'deutschlandfunk-description-ki-verstehen.html');
