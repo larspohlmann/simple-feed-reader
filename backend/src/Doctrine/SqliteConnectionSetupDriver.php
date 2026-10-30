@@ -32,22 +32,31 @@ final class SqliteConnectionSetupDriver extends AbstractDriverMiddleware
         foreach (self::PRAGMAS as $pragma) {
             $connection->exec($pragma);
         }
-        $this->registerWordBoundariesFunction($connection);
+        $this->registerSearchFunctions($connection);
 
         return $connection;
     }
 
     /**
-     * One native call on SQLite: the nested-REPLACE rendering is 26 levels deep, and SQLite before 3.46 overflows its
-     * parser stack on two ORed whole-word searches (#584). WordBoundaries::normalize() stays the one rule.
+     * One native call each on SQLite: the nested-REPLACE rendering is 26 levels deep, and SQLite before 3.46
+     * overflows its parser stack on two ORed whole-word searches (#584). WordBoundaries and CaseFolding stay the rule.
      */
-    private function registerWordBoundariesFunction(Connection $connection): void
+    private function registerSearchFunctions(Connection $connection): void
     {
-        $normalize = static fn (?string $value): ?string => $value === null ? null : WordBoundaries::normalize($value);
         $nativeConnection = $connection->getNativeConnection();
-
-        if ($nativeConnection instanceof \PDO) {
-            $nativeConnection->sqliteCreateFunction(NormalizeWordBoundariesFunction::NAME, $normalize, 1);
+        if (!$nativeConnection instanceof \PDO) {
+            return;
         }
+
+        $nativeConnection->sqliteCreateFunction(
+            NormalizeWordBoundariesFunction::NAME,
+            static fn (?string $value): ?string => $value === null ? null : WordBoundaries::normalize($value),
+            1,
+        );
+        $nativeConnection->sqliteCreateFunction(
+            FoldCaseFunction::NAME,
+            static fn (?string $value): ?string => $value === null ? null : CaseFolding::fold($value),
+            1,
+        );
     }
 }
