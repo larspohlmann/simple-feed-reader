@@ -17,14 +17,13 @@ import type Hls from 'hls.js';
  */
 const PLAYLIST = /\.m3u8$/i;
 const streamsByHost = new WeakMap<HTMLElement, Map<HTMLVideoElement, Hls>>();
-const armed = new WeakSet<HTMLVideoElement>();
+const armed = new WeakMap<HTMLVideoElement, AbortController>();
 
 /** Arms the host's playlist videos for their first play, and releases the streams of the videos a re-render removed. */
 export function armHlsStreams(host: HTMLElement): void {
   releaseWhere(host, (video) => !host.contains(video));
   for (const video of Array.from(host.querySelectorAll('video'))) {
     if (!isPlaylist(video) || armed.has(video)) continue;
-    armed.add(video);
     armFirstPlay(host, video, video.getAttribute('src') ?? '');
   }
 }
@@ -32,6 +31,13 @@ export function armHlsStreams(host: HTMLElement): void {
 export function releaseHlsStreams(host: HTMLElement): void {
   for (const hls of streamsByHost.get(host)?.values() ?? []) hls.destroy();
   streamsByHost.delete(host);
+}
+
+/** Releases one video's stream and its arming, for a list video losing its source (#1903). */
+export function releaseHlsStream(host: HTMLElement, video: HTMLVideoElement): void {
+  armed.get(video)?.abort();
+  armed.delete(video);
+  releaseWhere(host, (streamed) => streamed === video);
 }
 
 /** hls.js swaps such a video's source on first play, so the native attempt's error is not a failure. */
@@ -44,15 +50,19 @@ function isPlaylist(video: HTMLVideoElement): boolean {
 }
 
 function armFirstPlay(host: HTMLElement, video: HTMLVideoElement, source: string): void {
+  const arming = new AbortController();
+  armed.set(video, arming);
   const rearm = (): void => armFirstPlay(host, video, source);
   video.addEventListener('play', () => void play(host, video, source).catch(rearm), {
     once: true,
+    signal: arming.signal,
   });
 }
 
 async function play(host: HTMLElement, video: HTMLVideoElement, source: string): Promise<void> {
   const { default: HlsPlayer } = await import('hls.js');
   if (!HlsPlayer.isSupported()) return;
+  if (!isPlaylist(video)) return;
   if (video.paused || !video.isConnected) {
     armFirstPlay(host, video, source);
     return;
