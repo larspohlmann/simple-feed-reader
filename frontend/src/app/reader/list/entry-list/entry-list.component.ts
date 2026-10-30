@@ -43,7 +43,8 @@ import {
 } from './above-fold';
 import { ListAutoplayCoordinator } from '../../media/autoplay/list-autoplay-coordinator';
 import { UnlockedVideoElements } from '../../media/autoplay/unlocked-video-elements';
-import { pauseMedia } from '../magazine/blocks/entry-media/pause-media';
+import { NearViewportMedia } from '../../media/near-viewport-media';
+import { pauseMediaWhileAnEntryIsOpen } from '../magazine/blocks/entry-media/pause-media';
 import { ListBlock } from './hidden-overlay';
 import { ListContent } from './list-content';
 import { PullToRefresh } from './pull-to-refresh';
@@ -60,7 +61,7 @@ const WAIT_OVERLAY_DELAY_MS = 150;
 
 @Component({
   selector: 'app-entry-list',
-  providers: [ListAutoplayCoordinator, UnlockedVideoElements],
+  providers: [ListAutoplayCoordinator, UnlockedVideoElements, NearViewportMedia],
   imports: [
     NgTemplateOutlet,
     TranslocoPipe,
@@ -201,6 +202,11 @@ export class EntryListComponent implements OnDestroy {
   private readonly magazineStyle = inject(MagazineStyleService);
 
   private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
+  private readonly nearViewport = inject(NearViewportMedia);
+  private readonly _nearViewportRoot = effect(() => {
+    const rows = this.rows()?.nativeElement;
+    if (rows) this.nearViewport.scrollWithin(rows);
+  });
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
   private readonly header = viewChild(ListHeaderComponent);
@@ -283,14 +289,11 @@ export class EntryListComponent implements OnDestroy {
     onTrigger: () => this.refresh.emit(),
   });
 
-  private readonly _pauseMediaOfOpenEntry = effect(() => {
-    if (this.openEntryId() === null) {
-      this.autoplay.resume();
-      return;
-    }
-    this.autoplay.suspend();
-    pauseMedia(this.host.nativeElement);
-  });
+  private readonly _pauseMediaOfOpenEntry = pauseMediaWhileAnEntryIsOpen(
+    this.openEntryId,
+    this.autoplay,
+    this.host.nativeElement,
+  );
 
   private observer?: IntersectionObserver;
   // Re-observe whenever the sentinel appears/disappears (hasMore toggles it).

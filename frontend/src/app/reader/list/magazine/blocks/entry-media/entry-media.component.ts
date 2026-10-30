@@ -8,6 +8,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
@@ -21,6 +22,9 @@ import { PostMediaComponent } from '../../../../media/post-media/post-media.comp
 import { autoplayingShortPlayer, mutedShortPlayer } from './short-embed';
 import { AutoplayPlayer } from '../../../../media/autoplay/autoplay-player';
 import { ListAutoplayCoordinator } from '../../../../media/autoplay/list-autoplay-coordinator';
+import { pauseEmbedFrame } from '../../../../media/embed-frame-commands';
+import { playerCommand, postToPlayerFrame } from '../../../../media/youtube-player-protocol';
+import { NearViewportMedia } from '../../../../media/near-viewport-media';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
 
 @Component({
@@ -43,11 +47,16 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
 export class EntryMediaComponent extends EntryBlockBase {
   private readonly autoplay = inject(ListAutoplayCoordinator, { optional: true });
   private shortAutoplay?: AutoplayPlayer;
+  private readonly nearViewport = inject(NearViewportMedia, { optional: true });
+  private readonly origin = inject(DOCUMENT).location.origin;
+  private watchedShort: Element | null = null;
   private scrollAway?: IntersectionObserver;
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   readonly media = computed(() => sharedMedia(this.entry()));
-  readonly shortPlayer = computed(() => autoplayingShortPlayer(this.entry().shortPlayerUrl));
+  readonly shortPlayer = computed(() =>
+    autoplayingShortPlayer(this.entry().shortPlayerUrl, this.origin),
+  );
   protected readonly playingShort = signal<string | null>(null);
 
   constructor() {
@@ -56,9 +65,11 @@ export class EntryMediaComponent extends EntryBlockBase {
       this.playingShort();
       this.pauseWhenScrolledAway();
       this.registerShortForAutoplay();
+      this.removeShortWhenFar();
     });
     inject(DestroyRef).onDestroy(() => {
       this.scrollAway?.disconnect();
+      if (this.watchedShort) this.nearViewport?.unwatch(this.watchedShort);
       if (this.shortAutoplay) this.autoplay?.unregister(this.shortAutoplay);
     });
   }
@@ -68,7 +79,7 @@ export class EntryMediaComponent extends EntryBlockBase {
     if (typeof IntersectionObserver === 'undefined' || players.length === 0) return;
     this.scrollAway ??= new IntersectionObserver((changes) => {
       for (const change of changes) {
-        if (!change.isIntersecting) this.stopShort();
+        if (!change.isIntersecting) this.pauseShort();
       }
     });
     for (const player of players) this.scrollAway.observe(player);
@@ -81,7 +92,7 @@ export class EntryMediaComponent extends EntryBlockBase {
     this.shortAutoplay = {
       element,
       start: () => this.startMutedShort(),
-      stop: () => this.stopShort(),
+      stop: () => this.pauseShort(),
     };
     this.autoplay.register(this.shortAutoplay);
   }
@@ -97,8 +108,30 @@ export class EntryMediaComponent extends EntryBlockBase {
   }
 
   private startMutedShort(): void {
+    const frame = this.shortFrame();
+    if (frame) {
+      postToPlayerFrame(frame, playerCommand('playVideo', []));
+      return;
+    }
     const player = this.shortPlayer();
     if (player !== null) this.playingShort.set(mutedShortPlayer(player));
+  }
+
+  private pauseShort(): void {
+    const frame = this.shortFrame();
+    if (frame) pauseEmbedFrame(frame, 'youtube');
+  }
+
+  private removeShortWhenFar(): void {
+    if (this.nearViewport === null || this.watchedShort) return;
+    const box = this.host.querySelector('.short-player');
+    if (box === null) return;
+    this.watchedShort = box;
+    this.nearViewport.watch(box, { leave: () => this.stopShort() });
+  }
+
+  private shortFrame(): HTMLIFrameElement | null {
+    return this.host.querySelector<HTMLIFrameElement>('.short-player iframe');
   }
 
   protected ratio(medium: EntryMediumDto): number {

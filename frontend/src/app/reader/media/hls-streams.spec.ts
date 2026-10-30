@@ -7,7 +7,13 @@ import {
   resetFakeHls,
   startPlaying,
 } from '../../../testing/hls-testing';
-import { armHlsStreams, releaseHlsStreams, streamsThroughHls } from './hls-streams';
+import {
+  armHlsStream,
+  armHlsStreams,
+  releaseHlsStream,
+  releaseHlsStreams,
+  streamsThroughHls,
+} from './hls-streams';
 
 jest.mock('hls.js', () => jest.requireActual('../../../testing/hls-testing').fakeHlsModule);
 
@@ -152,6 +158,20 @@ describe('armHlsStreams', () => {
   });
 });
 
+describe('armHlsStream', () => {
+  it('arms only the video it is given', async () => {
+    const host = attachedArticleHost(`${PLAYLIST_VIDEO}${PLAYLIST_VIDEO}`);
+    const [armedVideo, otherVideo] = Array.from(host.querySelectorAll('video'));
+
+    armHlsStream(host, armedVideo);
+    await firstPlay(armedVideo);
+    await firstPlay(otherVideo);
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+    expect(fakeHls.attachMedia).toHaveBeenCalledWith(armedVideo);
+  });
+});
+
 describe('releaseHlsStreams', () => {
   it('destroys the stream its host played, once, though the swap detached its video', async () => {
     const host = await playedStream();
@@ -189,5 +209,44 @@ describe('streamsThroughHls', () => {
     expect(streamsThroughHls(videoIn(articleHost('<video src="https://x.test/a.mp4">')))).toBe(
       false,
     );
+  });
+});
+
+describe('releaseHlsStream', () => {
+  it('destroys the one video’s stream and lets it arm afresh', async () => {
+    const host = await playedStream();
+    const video = videoIn(host);
+
+    releaseHlsStream(host, video);
+    expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
+
+    fakeHls.attachMedia.mockClear();
+    armHlsStreams(host);
+    await firstPlay(video);
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it('disarms a video that never played, so it never gets two streams', async () => {
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    const video = videoIn(host);
+    armHlsStreams(host);
+
+    releaseHlsStream(host, video);
+    armHlsStreams(host);
+    await firstPlay(video);
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it('attaches nothing to a video released while hls.js was still loading', async () => {
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    const video = videoIn(host);
+    armHlsStreams(host);
+    startPlaying(video);
+
+    releaseHlsStream(host, video);
+    await flushHls();
+
+    expect(fakeHls.attachMedia).not.toHaveBeenCalled();
   });
 });

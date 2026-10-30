@@ -29,7 +29,10 @@ export function restoreIntersectionObserver(): void {
 export class MockIntersectionObserver {
   static instances: MockIntersectionObserver[] = [];
   readonly targets = new Set<Element>();
-  constructor(readonly callback: IntersectionObserverCallback) {
+  constructor(
+    readonly callback: IntersectionObserverCallback,
+    readonly options?: IntersectionObserverInit,
+  ) {
     MockIntersectionObserver.instances.push(this);
   }
   observe(target: Element): void {

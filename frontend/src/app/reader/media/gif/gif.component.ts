@@ -8,11 +8,14 @@ import {
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { translateSignal } from '@jsverse/transloco';
 import { EntryMediumDto } from '../../entry-medium';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
+import { NearViewportMedia, keepNear } from '../near-viewport-media';
+import { ReleasableVideo } from '../releasable-video';
 
 const NEAR_VIEWPORT = '200px';
 
@@ -43,14 +46,27 @@ export class GifComponent {
   private readonly fallbackLabel = translateSignal('reader.media.gif');
   protected readonly label = computed(() => this.medium().alt || this.fallbackLabel());
   private readonly clip = viewChild<ElementRef<HTMLVideoElement>>('clip');
+  private readonly nearViewportMedia = inject(NearViewportMedia, { optional: true });
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private releasable: ReleasableVideo | null = null;
 
   constructor() {
-    this.watchViewport(inject<ElementRef<HTMLElement>>(ElementRef).nativeElement);
+    this.watchViewport(this.host);
     effect(() => {
       const clip = this.clip()?.nativeElement;
       if (!clip) return;
       if (this.playing()) clip.play().catch(() => undefined);
       else clip.pause();
+    });
+    effect(() => {
+      const clip = this.clip()?.nativeElement;
+      if (!clip || this.releasable?.element === clip) return;
+      this.releasable = new ReleasableVideo(clip, untracked(this.medium).url);
+      untracked(() => this.attachWhenNear());
+    });
+    inject(DestroyRef).onDestroy(() => {
+      this.nearViewportMedia?.unwatch(this.host);
+      this.releasable?.release();
     });
   }
 
@@ -70,5 +86,17 @@ export class GifComponent {
     );
     observer.observe(host);
     inject(DestroyRef).onDestroy(() => observer.disconnect());
+  }
+
+  private attachWhenNear(): void {
+    const video = this.releasable;
+    if (video === null) return;
+    keepNear(this.nearViewportMedia, this.host, {
+      approach: () => {
+        video.attach();
+        if (this.playing()) video.element.play().catch(() => undefined);
+      },
+      leave: () => video.release(),
+    });
   }
 }
