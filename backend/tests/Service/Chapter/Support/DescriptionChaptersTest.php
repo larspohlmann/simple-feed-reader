@@ -397,4 +397,59 @@ final class DescriptionChaptersTest extends TestCase
         self::assertSame([], $described->chapters);
         self::assertSame($html, $described->contentHtml);
     }
+
+    public function testAnEpisodeRunMayStartAfterZero(): void
+    {
+        $described = DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B<br>2:00 C</p>');
+
+        self::assertEquals(
+            [new EntryChapter(10, 'A'), new EntryChapter(60, 'B'), new EntryChapter(120, 'C')],
+            $described->chapters,
+        );
+        self::assertSame('', $described->contentHtml);
+    }
+
+    public function testAnEpisodeRunStillNeedsThreeLines(): void
+    {
+        self::assertSame([], DescriptionChapters::inEpisode('<p>0:10 A<br>1:00 B</p>')->chapters);
+    }
+
+    public function testAVideoSkipsARunThatStartsAfterZeroAndAnEpisodeTakesIt(): void
+    {
+        $html = '<p>0:10 A<br>1:00 B<br>2:00 C</p><p>0:00 X<br>1:00 Y<br>2:00 Z</p>';
+
+        self::assertSame('X', DescriptionChapters::in($html)->chapters[0]->title);
+        self::assertSame('A', DescriptionChapters::inEpisode($html)->chapters[0]->title);
+    }
+
+    public function testReadsADeutschlandfunkEpisodeDescription(): void
+    {
+        $html = (string) file_get_contents(self::FIXTURES . 'deutschlandfunk-description-ki-verstehen.html');
+
+        $described = DescriptionChapters::inEpisode($html);
+
+        self::assertEquals(
+            [
+                new EntryChapter(143, 'Wie weit deutsche Unternehmen beim KI-Einsatz sind'),
+                new EntryChapter(398, 'Erst in der Integrationsphase steigt die Produktivität'),
+                new EntryChapter(677, 'KI ist viel mehr als Chatbots und kann sogar Stahlrohre prüfen'),
+                new EntryChapter(912, 'Die Kehrseite des KI-Booms und die Angst vor dem Jobverlust'),
+                new EntryChapter(1140, 'Nvidia-Boss Jensen Huang sagt: KI schafft massenhaft neue Arbeitsplätze'),
+                new EntryChapter(1520, 'Das Produktivitätsparadoxon und die J-Kurve'),
+            ],
+            $described->chapters,
+        );
+        self::assertNotNull($described->contentHtml);
+        self::assertStringNotContainsString('(02:23)', $described->contentHtml);
+        self::assertStringNotContainsString('(25:20)', $described->contentHtml);
+        self::assertStringContainsString(
+            '<strong>Das erwartet Euch in dieser Folge:</strong>',
+            $described->contentHtml,
+        );
+        self::assertStringContainsString('Barbara Engels', $described->contentHtml);
+        self::assertStringContainsString(
+            '<strong>Mehr zum Thema in der Deutschlandfunk-App:</strong>',
+            $described->contentHtml,
+        );
+    }
 }
