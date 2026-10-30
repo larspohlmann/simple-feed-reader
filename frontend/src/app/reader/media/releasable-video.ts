@@ -3,6 +3,7 @@
 export class ReleasableVideo {
   private resumeAt = 0;
   private pendingResume: AbortController | null = null;
+  private attached = false;
 
   constructor(
     readonly element: HTMLVideoElement,
@@ -10,22 +11,24 @@ export class ReleasableVideo {
   ) {}
 
   attach(): void {
-    if (this.element.hasAttribute('src')) return;
+    if (this.attached) return;
+    this.attached = true;
     this.element.setAttribute('src', this.source);
     if (this.resumeAt > 0) this.resumeOnceLoaded(this.resumeAt);
   }
 
   release(): void {
-    if (!this.element.hasAttribute('src')) return;
-    if (this.pendingResume) this.dropPendingResume();
+    if (!this.attached) return;
+    this.attached = false;
+    if (this.pendingResume) this.dropPendingResume(this.pendingResume);
     else this.resumeAt = this.element.ended ? 0 : this.element.currentTime;
     this.element.pause();
     this.element.removeAttribute('src');
     this.element.load();
   }
 
-  private dropPendingResume(): void {
-    this.pendingResume?.abort();
+  private dropPendingResume(pending: AbortController): void {
+    pending.abort();
     this.pendingResume = null;
   }
 

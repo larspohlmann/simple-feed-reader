@@ -122,4 +122,34 @@ describe('ReleasableVideo', () => {
 
     expect(element.currentTime).toBe(5);
   });
+
+  it('keeps its place when a media source swaps the src attribute for a source child', () => {
+    const element = document.createElement('video');
+    const video = new ReleasableVideo(element, SOURCE);
+    video.attach();
+    element.removeAttribute('src');
+    element.appendChild(document.createElement('source')).setAttribute('src', 'blob:managed');
+    at(element, 42);
+
+    video.release();
+    element.replaceChildren();
+    at(element, 0);
+    video.attach();
+    element.dispatchEvent(new Event('loadedmetadata'));
+
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(element.currentTime).toBe(42);
+  });
+
+  it('does not set src over a source child while attached', () => {
+    const element = document.createElement('video');
+    const video = new ReleasableVideo(element, SOURCE);
+    video.attach();
+    element.removeAttribute('src');
+
+    video.attach();
+
+    expect(element.hasAttribute('src')).toBe(false);
+  });
 });
