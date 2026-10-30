@@ -976,16 +976,16 @@ describe('SidebarComponent', () => {
       fixture.componentInstance.toggle(1);
       fixture.detectChanges();
 
-      fixture.componentRef.setInput('tagTree', tree());
+      TestBed.inject(TagsStore).tags.set(flattenTagTree(tree()).map((node) => node.tag));
       fixture.componentRef.setInput('selection', { ...tagSelection(3), unread: false });
       fixture.detectChanges();
 
       expect(fixture.componentInstance.expanded().has(1)).toBe(false);
     });
 
-    it('expands the parents of a tag whose tree arrives after the selection', () => {
+    it('expands the parents of a tag whose tags arrive after the selection', () => {
       const fixture = mount({ tagTree: [], selection: tagSelection(3) });
-      fixture.componentRef.setInput('tagTree', tree());
+      TestBed.inject(TagsStore).tags.set(flattenTagTree(tree()).map((node) => node.tag));
       fixture.detectChanges();
 
       expect([...fixture.componentInstance.expanded()].sort()).toEqual([1, 2]);

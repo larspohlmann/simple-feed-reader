@@ -55,7 +55,7 @@ import { ManageActions } from '../../feeds/manage/manage-actions.service';
 import { TOUCH_DRAG_START_DELAY } from '../../../shared/touch-drag-delay';
 import { persistedToggle } from '../../../core/preferences/persisted-toggle';
 import { sameIds } from '../../../core/same-ids';
-import { TagHierarchy } from '../../state/tag-hierarchy';
+import { TagsStore } from '../../state/tags.store';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -174,6 +174,7 @@ export class SidebarComponent {
   readonly recs = inject(RecommendationsService);
   readonly screen = inject(LayoutService);
   readonly visibility = inject(SidebarVisibilityService);
+  private readonly tagsStore = inject(TagsStore);
   readonly organising = model(false);
 
   private readonly collapseButton = viewChild<ElementRef<HTMLButtonElement>>('collapseButton');
@@ -216,31 +217,6 @@ export class SidebarComponent {
     return this.tagTree().map((root) => branch(root, 0));
   });
 
-  private readonly activeTagId = computed(() => {
-    const selection = this.selection();
-    return selection.kind === 'tag' ? selection.id : null;
-  });
-  private readonly activeTagAncestorIds = computed(
-    () => {
-      const tagId = this.activeTagId();
-      if (tagId === null) return [];
-      const tags = [...this.tagNodeById().values()].map((node) => node.tag);
-      return new TagHierarchy(tags).ancestorIdsOf(tagId);
-    },
-    { equal: sameIds },
-  );
-
-  /** Opening a tag's list reveals its row; a parent collapsed while that list stays open stays collapsed. */
-  private readonly revealActiveTag = effect(() => {
-    const tagId = this.activeTagId();
-    const ancestorIds = this.activeTagAncestorIds();
-    if (tagId === null) return;
-    untracked(() => {
-      this.tagsSection.open();
-      this.expanded.update((open) => new Set([...open, ...ancestorIds]));
-    });
-  });
-
   /** Unlike the in-memory Saved-searches and per-tag toggles, the Tags section persists across reloads. */
   private readonly tagsSection = persistedToggle(() => TAGS_COLLAPSED_KEY);
   readonly tagsExpanded = this.tagsSection.expanded;
@@ -250,6 +226,26 @@ export class SidebarComponent {
     label: 'reader.tags',
     toggleLabel: 'reader.toggleTags',
   };
+
+  /** The active tag's id followed by its ancestors' ids; empty while the list is not a tag's. */
+  private readonly activeTagPath = computed(
+    () => {
+      const selection = this.selection();
+      if (selection.kind !== 'tag' || selection.id === null) return [];
+      return [selection.id, ...this.tagsStore.hierarchy().ancestorIdsOf(selection.id)];
+    },
+    { equal: sameIds },
+  );
+
+  /** Opening a tag's list reveals its row; a parent collapsed while that list stays open stays collapsed. */
+  private readonly revealActiveTag = effect(() => {
+    const [tagId, ...ancestorIds] = this.activeTagPath();
+    if (tagId === undefined) return;
+    untracked(() => {
+      this.tagsSection.open();
+      this.expanded.update((open) => new Set([...open, ...ancestorIds]));
+    });
+  });
 
   /** The drop list the Feeds section heads stays mounted while collapsed (see the template), so a feed drag out of
    *  a tag still lands. */

@@ -1,8 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagDto } from '../models';
+import { TagHierarchy } from './tag-hierarchy';
 
 /** Position order, name as a stable tiebreak; a position orders a tag among its siblings only. */
 export function compareTagPositions(left: TagDto, right: TagDto): number {
@@ -17,6 +18,7 @@ export class TagsStore {
   private readonly api = inject(ReaderApi);
 
   readonly tags = signal<TagDto[]>([]);
+  readonly hierarchy = computed(() => new TagHierarchy(this.tags()));
   readonly loading = signal(false);
   readonly error = signal<Problem | null>(null);
 
