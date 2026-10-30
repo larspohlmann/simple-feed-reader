@@ -10,6 +10,15 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.6.8] - 2026-10-30
+
+## What's Changed
+* Load list videos only near the viewport and release them when they leave by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1905
+* fix(#1906): Bluesky avatars load as the CDN's 128 px thumbnail by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1907
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.6.7...v1.6.8
+
 ## [v1.6.7] - 2026-10-29
 
 ## What's Changed
