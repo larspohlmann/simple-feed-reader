@@ -120,7 +120,11 @@ final class DescriptionChapters
 
     private static function dropIfEmpty(Element $block): void
     {
-        if (trim((string) $block->textContent) !== '' || $block->firstElementChild !== null) {
+        if (
+            $block->localName === 'body'
+            || trim((string) $block->textContent) !== ''
+            || $block->firstElementChild !== null
+        ) {
             return;
         }
         $parent = $block->parentElement;

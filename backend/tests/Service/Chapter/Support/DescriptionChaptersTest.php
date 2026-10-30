@@ -273,6 +273,46 @@ final class DescriptionChaptersTest extends TestCase
         self::assertSame('<ul><li>Intro</li></ul>', $described->contentHtml);
     }
 
+    public function testReadsLinesThatSitDirectlyInTheBody(): void
+    {
+        $described = DescriptionChapters::in('Intro<br>0:00 A<br>1:00 B<br>2:00 C<br>Outro');
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('Intro<br>Outro', $described->contentHtml);
+    }
+
+    public function testKeepsTheBodyThatHeldOnlyTheBlock(): void
+    {
+        $described = DescriptionChapters::in('0:00 A<br>1:00 B<br>2:00 C');
+
+        self::assertCount(3, $described->chapters);
+        self::assertSame('', $described->contentHtml);
+    }
+
+    public function testReadsTheLinesAroundAListInReadingOrder(): void
+    {
+        $described = DescriptionChapters::in('0:00 A<ul><li>1:00 B</li></ul>2:00 C');
+
+        self::assertEquals(
+            [new EntryChapter(0, 'A'), new EntryChapter(60, 'B'), new EntryChapter(120, 'C')],
+            $described->chapters,
+        );
+    }
+
+    public function testReadsLinesInsideADivision(): void
+    {
+        $described = DescriptionChapters::in('<div>0:00 A<br>1:00 B<br>2:00 C</div><div>Outro</div>');
+
+        self::assertCount(3, $described->chapters);
+    }
+
+    public function testWhitespaceBetweenListItemsKeepsTheRun(): void
+    {
+        $described = DescriptionChapters::in("<ul>\n<li>0:00 A</li>\n<li>1:00 B</li>\n<li>2:00 C</li>\n</ul>");
+
+        self::assertCount(3, $described->chapters);
+    }
+
     public function testReturnsTheBodyVerbatimWhenNothingIsRead(): void
     {
         $html = '<p>No chapters<br />here</p>';
