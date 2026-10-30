@@ -1793,26 +1793,29 @@ describe('EntryListComponent', () => {
     });
   });
 
-  // #1080: the lower-left "mark everything above as read" button. jsdom lays
-  // nothing out, so geometry is driven through fakes standing in for the
-  // `#rows`/`#listHdr` viewChild signals, exactly like the real elements they
-  // replace (getBoundingClientRect, querySelector/All, getAttribute).
   describe('mark-all-read corner button (#1912)', () => {
-    it('shows once scrolled down, with nothing above the fold yet', () => {
-      const fixture = mount();
-      const element = fixture.nativeElement as HTMLElement;
-      expect(element.querySelector('.corner-actions .mark-all')).toBeNull();
-
+    function scrolledDown(over: Record<string, unknown> = {}) {
+      const fixture = mount(over);
       fixture.componentInstance.scrolling.showToTop.set(true);
       fixture.detectChanges();
+      return fixture;
+    }
+    const markAll = (fixture: ReturnType<typeof mount>) =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+        '.corner-actions .mark-all',
+      );
 
-      expect(element.querySelector('.corner-actions .mark-all')).not.toBeNull();
-      expect(element.querySelector('.mark-above')).toBeNull();
+    it('shows once scrolled down, with nothing above the fold yet', () => {
+      expect(markAll(mount())).toBeNull();
+
+      const fixture = scrolledDown();
+
+      expect(markAll(fixture)).not.toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
     });
 
     it('sits left of Mark above read', () => {
-      const fixture = mount();
-      fixture.componentInstance.scrolling.showToTop.set(true);
+      const fixture = scrolledDown();
       fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
@@ -1823,30 +1826,24 @@ describe('EntryListComponent', () => {
     });
 
     it('is absent where the list cannot be marked read', () => {
-      const fixture = mount({ canMarkAllRead: false });
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.detectChanges();
-
-      expect(
-        (fixture.nativeElement as HTMLElement).querySelector('.corner-actions .mark-all'),
-      ).toBeNull();
+      expect(markAll(scrolledDown({ canMarkAllRead: false }))).toBeNull();
     });
 
     it('asks for mark all read when clicked', () => {
-      const fixture = mount();
-      fixture.componentInstance.scrolling.showToTop.set(true);
-      fixture.detectChanges();
+      const fixture = scrolledDown();
       let emitted = 0;
       fixture.componentInstance.markAllRead.subscribe(() => emitted++);
 
-      (
-        fixture.nativeElement.querySelector('.corner-actions .mark-all') as HTMLButtonElement
-      ).click();
+      markAll(fixture)!.click();
 
       expect(emitted).toBe(1);
     });
   });
 
+  // #1080: the lower-left "mark everything above as read" button. jsdom lays
+  // nothing out, so geometry is driven through fakes standing in for the
+  // `#rows`/`#listHdr` viewChild signals, exactly like the real elements they
+  // replace (getBoundingClientRect, querySelector/All, getAttribute).
   describe('mark-above-read button (#1080)', () => {
     const measuredEntry = (id: string, bottom: number): HTMLElement =>
       ({

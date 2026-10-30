@@ -1,4 +1,5 @@
 @mixin corner-circle-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -29,8 +30,7 @@
     animation: none;
   }
 
-  /* The hit area keeps the touch minimum around the smaller disc. It hangs off
-     the button itself, so every consumer must position the button. */
+  /* The hit area keeps the touch minimum around the smaller disc. */
   @media (pointer: coarse) {
     &::after {
       content: '';
