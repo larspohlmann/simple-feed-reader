@@ -9,5 +9,7 @@
 }
 
 button {
+  position: relative;
+
   @include circle.corner-circle-button;
 }
