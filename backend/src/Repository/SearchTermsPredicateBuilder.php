@@ -5,13 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Service\Search\Model\SearchTermsModel;
-use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\ORM\QueryBuilder;
 
-/**
- * One search's terms compiled into a predicate and bound onto the QueryBuilder it is handed: SQLite asks its search
- * index, whose LIKE would fold ASCII case alone; MySQL's collation lets plain LIKEs ignore case and accents.
- */
+/** One search's terms compiled into a predicate, by SQLite's search index or MySQL's LIKEs. */
 final readonly class SearchTermsPredicateBuilder
 {
     public function __construct(
@@ -26,10 +22,10 @@ final readonly class SearchTermsPredicateBuilder
      */
     public function build(QueryBuilder $qb, SearchTermsModel $terms, string $prefix, string $entryAlias = 'e'): string
     {
-        if ($qb->getEntityManager()->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
-            return $this->index->build($qb, $terms, $prefix, $entryAlias);
+        if (DatabasePlatform::isMySql($qb->getEntityManager()->getConnection())) {
+            return $this->likes->build($qb, $terms, $prefix, $entryAlias);
         }
 
-        return $this->likes->build($qb, $terms, $prefix, $entryAlias);
+        return $this->index->build($qb, $terms, $prefix, $entryAlias);
     }
 }

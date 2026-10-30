@@ -2,15 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Support;
+namespace App\Doctrine;
 
-use App\Doctrine\WordBoundaries;
-
-/** The MATCH query for the SQLite search index (App\Doctrine\EntrySearchIndex), built from the pieces it can find. */
+/** The MATCH query for the SQLite search index (EntrySearchIndex), built from the pieces it can find. */
 final readonly class SearchIndexQuery
 {
     /** A trigram index finds nothing shorter, and one such piece ANDed in empties the whole MATCH. */
-    public const int MIN_PIECE_LENGTH = 3;
+    private const int MIN_PIECE_LENGTH = 3;
 
     public static function isIndexable(string $piece): bool
     {

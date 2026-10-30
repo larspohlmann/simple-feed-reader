@@ -8,9 +8,9 @@ use App\Doctrine\NormalizeWordBoundariesFunction;
 use App\Doctrine\SearchFoldFunction;
 use App\Doctrine\SearchFolding;
 use App\Doctrine\SearchIndexMatchFunction;
+use App\Doctrine\SearchIndexQuery;
 use App\Service\Search\Model\SearchTermsModel;
 use App\Service\Search\Support\LikePattern;
-use App\Service\Search\Support\SearchIndexQuery;
 use Doctrine\ORM\QueryBuilder;
 
 /**
@@ -65,11 +65,7 @@ final readonly class IndexSearchPredicates
         );
     }
 
-    /**
-     * NORMALIZE_WORD_BOUNDARIES folds on SQLite as well, so the word is folded alike.
-     *
-     * @return \Closure(string): string
-     */
+    /** @return \Closure(string): string */
     private function wholeWordMatch(QueryBuilder $qb, string $parameter, string $term): \Closure
     {
         $qb->setParameter($parameter, LikePattern::wholeWord(SearchFolding::fold($term)));

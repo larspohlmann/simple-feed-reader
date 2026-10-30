@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Support;
+namespace App\Tests\Doctrine;
 
-use App\Service\Search\Support\SearchIndexQuery;
+use App\Doctrine\SearchIndexQuery;
 use PHPUnit\Framework\TestCase;
 
 final class SearchIndexQueryTest extends TestCase
