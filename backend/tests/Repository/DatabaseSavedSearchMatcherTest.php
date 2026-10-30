@@ -17,7 +17,7 @@ use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** ASCII terms only: SQLite's LIKE folds ASCII case alone. */
+/** Case folds on both engines, accents on MySQL alone, so no term relies on accent folding. */
 final class DatabaseSavedSearchMatcherTest extends DbTestCase
 {
     private Feed $feed;
@@ -60,6 +60,16 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
         $matches = $this->matcher()->matchingIds([$this->search(1, 'Zwiebelring')], [$episode->requireId()]);
 
         self::assertSame([1 => [$episode->getId()]], $matches);
+    }
+
+    public function testASavedSearchIgnoresCaseForAnUmlautTerm(): void
+    {
+        $hit = $this->entry('a', 'ÄRGER im Büro');
+        $miss = $this->entry('b', 'Nothing here');
+
+        $matches = $this->matcher()->matchingIds([$this->search(1, 'ärger')], [$hit->requireId(), $miss->requireId()]);
+
+        self::assertSame([1 => [$hit->getId()]], $matches);
     }
 
     public function testAMatchOutsideTheCandidatesIsNotReturned(): void

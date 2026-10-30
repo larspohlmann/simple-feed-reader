@@ -20,8 +20,8 @@ use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 /**
- * The LIKE search over title, summary and transcript text, with ASCII terms only: MySQL's collation folds case and
- * accents, SQLite's LIKE folds ASCII case only, so "Ubung" finding "Übung" would pass in production and fail here.
+ * The LIKE search over title, summary and transcript text. Case folds on both engines, accents on MySQL alone, so no
+ * test asks "Ubung" to find "Übung": that would pass in production and fail here.
  */
 final class EntrySearchTest extends DbTestCase
 {
@@ -204,6 +204,38 @@ final class EntrySearchTest extends DbTestCase
         $this->entry('hit', 'ANGULAR ships');
 
         self::assertSame(['hit'], $this->search('angular'));
+    }
+
+    public function testIgnoresCaseForAnUmlautTerm(): void
+    {
+        $this->entry('title', 'ÄRGER im Büro');
+        $this->entry('summary', 'Untitled', 'Viel Ärger heute');
+        $this->entry('miss', 'Nothing here');
+
+        self::assertEqualsCanonicalizing(['title', 'summary'], $this->search('ärger'));
+    }
+
+    public function testIgnoresCaseForATermWithoutAsciiLetters(): void
+    {
+        $this->entry('hit', 'ΑΘΗΝΑ heute');
+        $this->entry('miss', 'Berlin heute');
+
+        self::assertSame(['hit'], $this->search('αθηνα'));
+    }
+
+    public function testIgnoresCaseForAnUmlautWholeWord(): void
+    {
+        $this->entry('hit', 'Viel Ärger heute');
+        $this->entry('miss', 'Ärgernis heute');
+
+        self::assertSame(['hit'], $this->search('ärger '));
+    }
+
+    public function testIgnoresCaseForAnUmlautInTheTranscript(): void
+    {
+        $this->transcribed($this->entry('spoken', 'Episode one', 'Nothing relevant'), 'Ann: Über den Fluss.');
+
+        self::assertSame(['spoken'], $this->search('über den '));
     }
 
     public function testRequiresEveryTermToMatch(): void

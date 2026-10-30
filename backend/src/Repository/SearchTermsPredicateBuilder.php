@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Doctrine\WordBoundaries;
+use App\Doctrine\CaseFolding;
+use App\Doctrine\FoldCaseFunction;
 use App\Entity\EntryTranscript;
 use App\Service\Search\Model\SearchTermsModel;
 use App\Service\Search\Support\LikePattern;
@@ -60,50 +61,65 @@ final readonly class SearchTermsPredicateBuilder
     /** @return \Closure(string): string */
     private function substringMatch(QueryBuilder $qb, string $parameter, string $term): \Closure
     {
-        $qb->setParameter($parameter, LikePattern::containing($term));
+        $qb->setParameter($parameter, LikePattern::containing(CaseFolding::fold($term)));
+        $anchor = CaseFolding::isNeededFor($term) ? $this->bindAnchor($qb, $parameter, $term) : null;
+        $haystack = self::haystack($term);
 
-        return static fn (string $column): string => \sprintf(
-            "%s LIKE :%s ESCAPE '%s'",
+        return static fn (string $column): string => self::anchored(
             $column,
-            $parameter,
-            LikePattern::ESCAPE_CHARACTER,
+            $anchor,
+            self::like($haystack($column), $parameter),
         );
     }
 
-    /**
-     * A cheap "%term%" LIKE runs first and rejects most rows before the REPLACE chain. It is sound only while the raw
-     * term is a substring of every row the normalized check accepts, so a term with boundary punctuation skips it:
-     * "E-Mail" must match "E–Mail", which does not contain it.
-     *
-     * @return \Closure(string): string
-     */
+    /** @return \Closure(string): string */
     private function wholeWordMatch(QueryBuilder $qb, string $parameter, string $term): \Closure
     {
         $word = $parameter . 'Word';
-        $cheap = WordBoundaries::areIn($term) ? null : $parameter . 'Cheap';
+        $qb->setParameter($word, LikePattern::wholeWord(CaseFolding::fold($term)));
+        $anchor = $this->bindAnchor($qb, $parameter, $term);
+        $haystack = self::haystack($term);
 
-        $qb->setParameter($word, LikePattern::wholeWord($term));
-        if ($cheap !== null) {
-            $qb->setParameter($cheap, LikePattern::containing($term));
-        }
-
-        return static fn (string $column): string => self::wholeWordColumnMatch($column, $cheap, $word);
+        return static fn (string $column): string => self::anchored(
+            $column,
+            $anchor,
+            self::like(\sprintf("CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(%s), ' ')", $haystack($column)), $word),
+        );
     }
 
-    private static function wholeWordColumnMatch(string $column, ?string $cheap, string $word): string
+    private function bindAnchor(QueryBuilder $qb, string $parameter, string $term): ?string
     {
-        $escape = LikePattern::ESCAPE_CHARACTER;
-        $normalized = \sprintf(
-            "CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(%s), ' ') LIKE :%s ESCAPE '%s'",
-            $column,
-            $word,
-            $escape,
-        );
-
-        if ($cheap === null) {
-            return '(' . $normalized . ')';
+        $anchor = LikePattern::anchor($term);
+        if ($anchor === null) {
+            return null;
         }
 
-        return \sprintf("(%s LIKE :%s ESCAPE '%s' AND %s)", $column, $cheap, $escape, $normalized);
+        $qb->setParameter($parameter . 'Anchor', LikePattern::containing($anchor));
+
+        return $parameter . 'Anchor';
+    }
+
+    /** @return \Closure(string): string */
+    private static function haystack(string $term): \Closure
+    {
+        if (!CaseFolding::isNeededFor($term)) {
+            return static fn (string $column): string => $column;
+        }
+
+        return static fn (string $column): string => \sprintf('%s(%s)', FoldCaseFunction::NAME, $column);
+    }
+
+    private static function anchored(string $column, ?string $anchor, string $match): string
+    {
+        if ($anchor === null) {
+            return '(' . $match . ')';
+        }
+
+        return \sprintf('(%s AND %s)', self::like($column, $anchor), $match);
+    }
+
+    private static function like(string $haystack, string $parameter): string
+    {
+        return \sprintf("%s LIKE :%s ESCAPE '%s'", $haystack, $parameter, LikePattern::ESCAPE_CHARACTER);
     }
 }
