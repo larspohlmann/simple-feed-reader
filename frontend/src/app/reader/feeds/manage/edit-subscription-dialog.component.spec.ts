@@ -5,7 +5,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { API_BASE_URL } from '../../../core/api';
-import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.component';
+import {
+  EditSubscriptionDialogComponent,
+  UNSUBSCRIBE_REQUESTED,
+} from './edit-subscription-dialog.component';
 import { SubscriptionDto } from '../../models';
 import { SubscriptionRows } from '../../state/subscription-rows';
 
@@ -86,6 +89,12 @@ describe('EditSubscriptionDialogComponent', () => {
     expect(link.getAttribute('href')).toBe('https://heise.de');
     expect(link.target).toBe('_blank');
     expect(link.rel).toBe('noopener noreferrer');
+  });
+
+  it('closes asking for the unsubscribe confirmation when Unsubscribe is clicked', () => {
+    const element: HTMLElement = mount().nativeElement;
+    element.querySelector<HTMLButtonElement>('[data-test="edit-feed-unsubscribe"] button')!.click();
+    expect(close).toHaveBeenCalledWith(UNSUBSCRIBE_REQUESTED);
   });
 
   it('prefills the current tags as checked', () => {

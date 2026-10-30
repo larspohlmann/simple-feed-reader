@@ -16,6 +16,9 @@ import { SubscriptionDto } from '../../models';
 import { isUnrenamedHome } from '../display-title';
 import { ButtonComponent } from '../../../shared/button/button.component';
 
+export const UNSUBSCRIBE_REQUESTED = 'unsubscribe';
+export type EditSubscriptionResult = SubscriptionDto | typeof UNSUBSCRIBE_REQUESTED;
+
 @Component({
   selector: 'app-edit-subscription-dialog',
   imports: [
@@ -33,7 +36,7 @@ import { ButtonComponent } from '../../../shared/button/button.component';
   styleUrl: './edit-subscription-dialog.component.scss',
 })
 export class EditSubscriptionDialogComponent implements OnInit {
-  readonly ref = inject<DialogRef<SubscriptionDto>>(DialogRef);
+  readonly ref = inject<DialogRef<EditSubscriptionResult>>(DialogRef);
   readonly data = inject<SubscriptionDto>(DIALOG_DATA);
   private readonly api = inject(ReaderApi);
   readonly tagsStore = inject(TagsStore);
@@ -68,6 +71,10 @@ export class EditSubscriptionDialogComponent implements OnInit {
     const title = this.form.getRawValue().customTitle.trim();
     if (isUnrenamedHome(this.data) && title === this.prefilledTitle) return null;
     return title || null;
+  }
+
+  requestUnsubscribe(): void {
+    this.ref.close(UNSUBSCRIBE_REQUESTED);
   }
 
   toggle(id: number): void {

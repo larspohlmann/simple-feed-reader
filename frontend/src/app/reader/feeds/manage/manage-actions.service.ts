@@ -21,18 +21,15 @@ import { BulkSubscriptionUpdate, SubscriptionFlags } from '../../subscription-bu
 import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../../shared/toast/toast.service';
-import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.component';
+import {
+  EditSubscriptionDialogComponent,
+  EditSubscriptionResult,
+  UNSUBSCRIBE_REQUESTED,
+} from './edit-subscription-dialog.component';
 import { TagFormData, TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
 import { pluralKey } from '../../../core/i18n/plural-key';
-import { bulkSavedNote, unsubscribeMessage } from './unsubscribe-messages';
-
-/** The most feed titles a bulk confirmation names before it says "and N more".
- *  Five is enough to recognise the selection and short enough to read. */
-const CONFIRM_TITLE_LIMIT = 5;
-/** From this many feeds up, the confirmation makes the user type the count.
- *  One feed keeps its single click; a mass delete is what requireText is for. */
-const TYPED_CONFIRM_THRESHOLD = 5;
+import { bulkUnsubscribeConfirm, unsubscribeConfirm } from './unsubscribe-messages';
 
 /** The single place a management dialog is opened and its side effects applied.
  *  Both the settings sections and the sidebar (via the shell) call these, so an
@@ -52,11 +49,15 @@ export class ManageActions {
   private readonly toast = inject(ToastService);
 
   editSubscription(sub: SubscriptionDto): void {
-    const ref = this.dialog.open<SubscriptionDto>(EditSubscriptionDialogComponent, {
+    const ref = this.dialog.open<EditSubscriptionResult>(EditSubscriptionDialogComponent, {
       data: sub,
       panelClass: 'app-dialog',
     });
     ref.closed.subscribe((updated) => {
+      if (updated === UNSUBSCRIBE_REQUESTED) {
+        this.unsubscribe(sub);
+        return;
+      }
       if (!updated) return;
       this.subs.reloadQuietly();
       if (updated.includeInSavedSearches !== sub.includeInSavedSearches) this.savedSearches.load();
@@ -193,13 +194,7 @@ export class ManageActions {
   }
 
   unsubscribe(sub: SubscriptionDto): void {
-    const data: ConfirmData = {
-      title: this.i18n.translate('manage.unsubscribeTitle'),
-      message: unsubscribeMessage(this.i18n, sub),
-      confirmLabel: this.i18n.translate('manage.unsubscribeConfirm'),
-      danger: true,
-    };
-    this.confirm.confirmThen(data, () => {
+    this.confirm.confirmThen(unsubscribeConfirm(this.i18n, sub), () => {
       this.api.deleteSubscription(sub.id).subscribe({ next: () => this.subs.reloadQuietly() });
     });
   }
@@ -282,7 +277,7 @@ export class ManageActions {
   /** Confirm, then unsubscribe from many feeds. Emits false when the user
    *  dismissed the confirmation, so the caller can leave the selection alone. */
   bulkUnsubscribe(subscriptions: SubscriptionDto[]): Observable<boolean> {
-    return this.confirm.ask(this.bulkUnsubscribeConfirm(subscriptions)).pipe(
+    return this.confirm.ask(bulkUnsubscribeConfirm(this.i18n, subscriptions)).pipe(
       switchMap((confirmed) => {
         if (!confirmed) return of(false);
         return this.api.bulkUnsubscribe(subscriptions.map((subscription) => subscription.id)).pipe(
@@ -349,26 +344,5 @@ export class ManageActions {
       }),
       map(() => undefined),
     );
-  }
-
-  private bulkUnsubscribeConfirm(subscriptions: SubscriptionDto[]): ConfirmData {
-    const count = subscriptions.length;
-    const named = subscriptions
-      .slice(0, CONFIRM_TITLE_LIMIT)
-      .map((subscription) => subscription.title)
-      .join(', ');
-    const rest = count - Math.min(count, CONFIRM_TITLE_LIMIT);
-
-    return {
-      title: this.i18n.translate(pluralKey('manage.bulk.unsubscribeTitle', count), { count }),
-      message:
-        (rest > 0
-          ? this.i18n.translate('manage.bulk.unsubscribeMessageMore', { named, rest })
-          : this.i18n.translate('manage.bulk.unsubscribeMessage', { named })) +
-        bulkSavedNote(this.i18n, subscriptions),
-      confirmLabel: this.i18n.translate('manage.unsubscribeConfirm'),
-      danger: true,
-      requireText: count >= TYPED_CONFIRM_THRESHOLD ? String(count) : undefined,
-    };
   }
 }
