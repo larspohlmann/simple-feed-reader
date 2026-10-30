@@ -3,11 +3,10 @@ import { DestroyRef, Injectable, inject } from '@angular/core';
 const NEAR_VIEWPORT = '100% 0px';
 
 export interface NearViewportClient {
-  approach(): void;
+  approach?(): void;
   leave(): void;
 }
 
-/** Tells list media when they come within a screen of the visible list and when they go beyond it (#1903). */
 @Injectable()
 export class NearViewportMedia {
   private readonly clients = new Map<Element, NearViewportClient>();
@@ -30,7 +29,7 @@ export class NearViewportMedia {
 
   watch(element: Element, client: NearViewportClient): void {
     this.clients.set(element, client);
-    if (typeof IntersectionObserver === 'undefined') client.approach();
+    if (typeof IntersectionObserver === 'undefined') client.approach?.();
     else this.observer?.observe(element);
   }
 
@@ -42,8 +41,17 @@ export class NearViewportMedia {
   private sight(changes: IntersectionObserverEntry[]): void {
     for (const change of changes) {
       const client = this.clients.get(change.target);
-      if (change.isIntersecting) client?.approach();
+      if (change.isIntersecting) client?.approach?.();
       else client?.leave();
     }
   }
+}
+
+export function keepNear(
+  nearViewport: NearViewportMedia | null,
+  element: Element,
+  client: NearViewportClient,
+): void {
+  if (nearViewport === null) client.approach?.();
+  else nearViewport.watch(element, client);
 }

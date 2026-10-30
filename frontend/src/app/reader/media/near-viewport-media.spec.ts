@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { NearViewportMedia, NearViewportClient } from './near-viewport-media';
+import { NearViewportMedia, NearViewportClient, keepNear } from './near-viewport-media';
 import {
   MockIntersectionObserver,
   installMockIntersectionObserver,
@@ -87,5 +87,27 @@ describe('NearViewportMedia', () => {
 
     expect(watcher.approach).toHaveBeenCalledTimes(1);
     globalThis.IntersectionObserver = original;
+  });
+});
+
+describe('keepNear', () => {
+  it('brings the element near at once without a service', () => {
+    const watcher = client();
+
+    keepNear(null, document.createElement('video'), watcher);
+
+    expect(watcher.approach).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands the element to the service otherwise', () => {
+    const media = service();
+    const watch = jest.spyOn(media, 'watch');
+    const video = document.createElement('video');
+    const watcher = client();
+
+    keepNear(media, video, watcher);
+
+    expect(watch).toHaveBeenCalledWith(video, watcher);
+    expect(watcher.approach).not.toHaveBeenCalled();
   });
 });

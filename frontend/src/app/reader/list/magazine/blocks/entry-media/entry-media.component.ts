@@ -127,7 +127,7 @@ export class EntryMediaComponent extends EntryBlockBase {
     const box = this.host.querySelector('.short-player');
     if (box === null) return;
     this.watchedShort = box;
-    this.nearViewport.watch(box, { approach: () => undefined, leave: () => this.stopShort() });
+    this.nearViewport.watch(box, { leave: () => this.stopShort() });
   }
 
   private shortFrame(): HTMLIFrameElement | null {

@@ -14,7 +14,7 @@ export function pauseMedia(root: ParentNode): void {
   }
 }
 
-/** Holds the list's autoplay and pauses its media while an entry is open over it; must run in an injection context. */
+/** Must run in an injection context. */
 export function pauseMediaWhileAnEntryIsOpen(
   openEntryId: () => number | null,
   autoplay: Pick<ListAutoplayCoordinator, 'suspend' | 'resume'>,

@@ -14,7 +14,7 @@ import {
 import { translateSignal } from '@jsverse/transloco';
 import { EntryMediumDto } from '../../entry-medium';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
-import { NearViewportMedia } from '../near-viewport-media';
+import { NearViewportMedia, keepNear } from '../near-viewport-media';
 import { ReleasableVideo } from '../releasable-video';
 
 const NEAR_VIEWPORT = '200px';
@@ -91,11 +91,7 @@ export class GifComponent {
   private attachWhenNear(): void {
     const video = this.releasable;
     if (video === null) return;
-    if (this.nearViewportMedia === null) {
-      video.attach();
-      return;
-    }
-    this.nearViewportMedia.watch(this.host, {
+    keepNear(this.nearViewportMedia, this.host, {
       approach: () => {
         video.attach();
         if (this.playing()) video.element.play().catch(() => undefined);
