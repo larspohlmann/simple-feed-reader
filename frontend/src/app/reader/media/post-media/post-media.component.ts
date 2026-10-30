@@ -83,8 +83,10 @@ export class PostMediaComponent {
     this.releasable.set(element, video);
     keepNear(this.nearViewport, element, {
       approach: () => {
+        const wanted = !element.paused;
         video.attach();
         armHlsStream(this.host, element);
+        if (wanted) element.play().catch(() => undefined);
       },
       leave: () => this.release(element),
     });

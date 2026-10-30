@@ -3,8 +3,7 @@ import type Hls from 'hls.js';
 /**
  * Plays an HLS stream the backend emitted as `<video preload="none" src="….m3u8">`.
  * `canPlayType` lies (Chrome says "maybe", then never plays it), so lazy-loaded
- * hls.js takes every browser with Media Source Extensions; only iOS Safari plays it
- * natively.
+ * hls.js takes every browser with Media Source Extensions, iOS 17.1+ through ManagedMediaSource.
  *
  * hls.js attaches on the first play, never on render. Attaching a MediaSource up
  * front holds the video in NETWORK_LOADING with an empty buffer, and the native

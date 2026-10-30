@@ -14,7 +14,6 @@ export function pauseMedia(root: ParentNode): void {
   }
 }
 
-/** Must run in an injection context. */
 export function pauseMediaWhileAnEntryIsOpen(
   openEntryId: () => number | null,
   autoplay: Pick<ListAutoplayCoordinator, 'suspend' | 'resume'>,

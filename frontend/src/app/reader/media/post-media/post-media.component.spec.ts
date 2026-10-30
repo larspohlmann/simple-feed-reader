@@ -6,7 +6,7 @@ import { ListAutoplayCoordinator } from '../autoplay/list-autoplay-coordinator';
 import { VideoAutoplayPlayer } from '../autoplay/video-autoplay-player';
 import { UnlockedVideoElements } from '../autoplay/unlocked-video-elements';
 import { fakeNearViewportMedia } from '../../../../testing/near-viewport-media-testing';
-import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
+import { fakeHls, firstPlay, resetFakeHls, startPlaying } from '../../../../testing/hls-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
 jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
@@ -350,5 +350,59 @@ describe('PostMediaComponent near the viewport', () => {
 
     expect(nearViewport.unwatch).toHaveBeenCalledWith(video);
     expect(video.hasAttribute('src')).toBe(false);
+  });
+
+  it('restores the place of a stream whose attach swaps src for a source child', async () => {
+    fakeHls.attachMedia.mockImplementation((element: HTMLVideoElement) => {
+      element.removeAttribute('src');
+      element.appendChild(document.createElement('source')).setAttribute('src', 'blob:managed');
+    });
+    const fixture = await mountNearViewport([clip]);
+    const video = videoOf(fixture);
+    clientOf(video).approach();
+    await firstPlay(video);
+    Object.defineProperty(video, 'currentTime', { value: 42, writable: true, configurable: true });
+
+    clientOf(video).leave();
+    video.currentTime = 0;
+    clientOf(video).approach();
+    video.dispatchEvent(new Event('loadedmetadata'));
+
+    expect(video.currentTime).toBe(42);
+  });
+
+  it('plays again a video the autoplay started before its source was there', async () => {
+    const fixture = await mountNearViewport([mp4]);
+    const video = videoOf(fixture);
+    const sourceAtPlay: (string | null)[] = [];
+    jest.spyOn(video, 'play').mockImplementation(() => {
+      sourceAtPlay.push(video.getAttribute('src'));
+      return Promise.resolve();
+    });
+    startPlaying(video);
+
+    clientOf(video).approach();
+
+    expect(sourceAtPlay).toEqual(['https://video.test/clip.mp4']);
+  });
+
+  it('does not play a video nobody asked to play when it comes near', async () => {
+    const fixture = await mountNearViewport([mp4]);
+    const video = videoOf(fixture);
+    const play = jest.spyOn(video, 'play').mockResolvedValue(undefined);
+
+    clientOf(video).approach();
+
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it('swallows a rejected replay', async () => {
+    const fixture = await mountNearViewport([mp4]);
+    const video = videoOf(fixture);
+    jest.spyOn(video, 'play').mockRejectedValue(new Error('AbortError'));
+    startPlaying(video);
+
+    expect(() => clientOf(video).approach()).not.toThrow();
+    await Promise.resolve();
   });
 });

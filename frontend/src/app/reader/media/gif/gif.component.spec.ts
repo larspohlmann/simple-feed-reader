@@ -255,4 +255,27 @@ describe('GifComponent in a list', () => {
     expect(nearViewport.unwatch).toHaveBeenCalledWith(host);
     expect(clip.hasAttribute('src')).toBe(false);
   });
+
+  it('plays its clip at once when it comes near while playing', async () => {
+    const { fixture, host, clip, client } = await mountInList();
+    viewport.report(host, true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    play.mockClear();
+
+    client.approach();
+
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(play.mock.contexts[0]).toBe(clip);
+  });
+
+  it('gets its source back when it comes near again after going far', async () => {
+    const { clip, client } = await mountInList();
+    client.approach();
+    client.leave();
+
+    client.approach();
+
+    expect(clip.getAttribute('src')).toBe('https://files.test/wave.mp4');
+  });
 });
