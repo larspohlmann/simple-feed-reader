@@ -10,22 +10,8 @@
 @include article-page.article-page;
 @include article-toolbar.article-toolbar;
 
-.corner-flags {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.corner-flags button {
-  @include circle.corner-circle-button;
-}
-
-/* Outranks the global flag-toggle look, which would recolour the glyph on the disc. */
-.corner-flags button.flag-toggle {
-  color: var(--on-accent);
-}
-
-.corner-flags button:not(.on) {
-  --corner-button-tone: var(--text-muted);
+.corner-flag {
+  @include circle.corner-circle-toggle;
 }
 
 /* Feed-declared categories (#953): a muted footnote line closing the

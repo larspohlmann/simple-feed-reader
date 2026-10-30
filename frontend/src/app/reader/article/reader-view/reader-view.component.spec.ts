@@ -977,7 +977,7 @@ describe('ReaderViewComponent', () => {
 
   describe('the keep and favourite corner discs (#1914)', () => {
     const discs = (element: HTMLElement) => [
-      ...element.querySelectorAll<HTMLButtonElement>('.corner-actions .corner-flags button'),
+      ...element.querySelectorAll<HTMLButtonElement>('.corner-actions .corner-flag'),
     ];
 
     it('puts Keep first and Favourite right of it, off: outline and not pressed', () => {
